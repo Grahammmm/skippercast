@@ -111,7 +111,7 @@ Every inbound and outbound message on every channel.
 | `body` | text, nullable | the text; stored in full, max 4,000 chars; nulled by retention |
 | `media_json` | text, nullable | array of `advisor_media.id` |
 | `intent` | text, nullable | the engine's classification for inbound (`report.count_board`, `fishid`, `advice.rig`, …) |
-| `status` | text | in: `queued`, `processing`, `done`, `dropped`, `failed`; out: `sending`, `sent`, `failed`, `held`, `unknown` |
+| `status` | text | in: `queued`, `processing`, `done`, `held` (`ADVISOR_REPLIES_ENABLED=false`), `dropped`, `failed`; out: `sending`, `sent`, `failed`, `held`, `unknown` |
 | `error` | text, nullable | short reason, no payloads |
 | `in_reply_to` | text, nullable | for outbound: the inbound message id |
 | `tokens_in`, `tokens_out` | integer, nullable | summed model usage for this turn (also goes to analytics) |

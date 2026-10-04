@@ -7,6 +7,7 @@
 // info 'hash' / 'enc'), so one secret serves both and neither subkey is stored.
 // Storage is raw D1 statements, like server/auth.ts.
 import type {AdvisorContactRow, PhoneKeys} from './types.ts';
+import {hex, sha256} from './ids.ts';
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 const E164 = /^\+[1-9]\d{6,14}$/;
@@ -18,8 +19,6 @@ function fromBase64(text: string): Uint8Array<ArrayBuffer> {
   if (!/^[A-Za-z0-9+/]*$/.test(clean) || clean.length % 4 === 1) throw Error('invalid base64');
   return Uint8Array.from(atob(clean + '='.repeat((4 - clean.length % 4) % 4)), c => c.charCodeAt(0));
 }
-const hex = (buffer: ArrayBuffer): string => Array.from(new Uint8Array(buffer), b => b.toString(16).padStart(2, '0')).join('');
-const sha256 = async (text: string): Promise<string> => hex(await crypto.subtle.digest('SHA-256', encoder.encode(text)));
 const randomId = (): string => toBase64(crypto.getRandomValues(new Uint8Array(16))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 function requireE164(value: string): string { if (typeof value !== 'string' || !E164.test(value)) throw Error('not an E.164 number'); return value; }
 function requireId(value: string): string { if (typeof value !== 'string' || !ID.test(value)) throw Error('invalid contact id'); return value; }
