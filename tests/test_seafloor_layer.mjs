@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { legendHTML, detailsHTML, VIEWS } from '../dist/seafloor-layer.js';
+
+test('search area sheet explains limited evidence without inventing a grade', () => {
+  const html = detailsHTML({status: 'search-area', terrain_grade: 'unknown', fit_lingcod: 'unknown',
+    search_area: JSON.stringify({target_species: ['lingcod']}), depth_min_ft: 40, depth_max_ft: 50});
+  assert.match(html, /Limited confidence · unranked search area/);
+  assert.match(html, /surrounding measurements are insufficient/);
+  assert.match(html, /Potential habitat for lingcod/);
+  assert.doesNotMatch(html, /Terrain grade unknown|of 3/);
+  assert.match(legendHTML('terrain'), /Rough-bottom search area · unranked/);
+});
 import { GRADE_STYLE, FIT_STYLE } from '../dist/seafloor-data.js';
 
 test('producer notices survive tile JSON and unsafe credit text cannot become markup', () => {

@@ -249,9 +249,11 @@ export const FIT_STYLE = {
   1: { color: '#9cc9dd', label: '1 · weak physical fit' },
 };
 export const UNKNOWN_COLOR = '#8a949b';
+export const SEARCH_COLOR = '#a67c28';
 
 /** Fill colour for a habitat feature under the chosen view ('terrain' or a fit_* key). */
 export function habitatColor(properties, view = 'terrain') {
+  if (properties?.status === 'search-area') return SEARCH_COLOR;
   if (view === 'terrain') return GRADE_STYLE[properties?.terrain_grade]?.color || UNKNOWN_COLOR;
   return FIT_STYLE[properties?.[view]]?.color || UNKNOWN_COLOR;
 }
@@ -279,6 +281,8 @@ export function sourceRightsDetails(value) {
 
 /** Selected habitat details; missing evidence stays unknown. */
 export function habitatDetails(properties = {}) {
+  const searchArea = properties.status === 'search-area';
+  const search = parse(properties.search_area);
   const sources = parse(properties.source_ids);
   const screen = parse(properties.screen);
   const substrate = parse(properties.substrate);
@@ -290,7 +294,9 @@ export function habitatDetails(properties = {}) {
   }));
   return {
     rights: sourceRightsDetails(properties.source_rights),
-    title: HABITAT_LABEL,
+    title: searchArea ? 'Measured rough-bottom search area' : HABITAT_LABEL,
+    searchArea,
+    searchTargets: searchArea && Array.isArray(search?.target_species) ? search.target_species : [],
     depth: lo !== null && hi !== null ? `${lo}–${hi} ft nominal` : 'Depth unknown',
     depthNote: DEPTH_NOTE,
     grade: GRADE_STYLE[properties.terrain_grade] ? properties.terrain_grade : 'unknown',

@@ -11,6 +11,31 @@ fish are present. Preserve the distinction in map labels. Read current
 `AGENTS.md` and `CONTRIBUTING.md`; use existing `skippercast.seafloor` commands,
 catalogs, grades and progress storage. Paths are relative to the checkout.
 
+## Deliver the appropriate level of detail
+
+Choose one visitor-visible batch with an explicit acceptance test before
+research. First reuse rights-qualified measured rough patches whose only
+physical hold is insufficient surrounding support for a grade. The separate
+search-area screen can release these as unranked, limited-confidence outlines;
+it does not change the 80% grading rule, measured geometry or coverage credit.
+Search areas remain Tier 1 and are not exported as precise fishing spots.
+
+Use detailed rankings where supported and broader search outlines where only
+that claim is supported. Do not make useful habitat information depend on
+navigation-grade certainty. Preserve unknown datum/accuracy and limits on
+depth interpretation; this is not permission to ignore known terrain artifacts,
+private-source qualification, source rights or spatial restrictions. A source
+quality hold stays held until evidence resolves the specific issue. Unknown
+substrate stays unknown. Retain shallow 4–24ft knowledge separately for future
+shore-fishing and spearfishing layers.
+
+Keep the first batch bounded to one reach and its regional publication. Reuse
+hash-verified physical outputs when only the display/screen policy changes.
+Acceptance is a newly usable map outline with accurate labels, current source
+rights and whole-polygon restrictions, verified archive/map readback, and no
+unsupported ranks or precise exports. Count search areas separately from ranked
+habitat and new measurement area. A green job or diagnostic is not that release.
+
 ## Start from the smallest current state
 
 Fetch main, reconcile relevant PRs, latest ledger, saved physical receipts and
@@ -115,10 +140,13 @@ If no new batch is runnable, inspect retained native gaps and qualify the next
 original source instead of repeating maintenance as the expansion task.
 
 After two unsuccessful attempts, change approach. After 20 active investigation
-minutes without a useful artifact or diagnostic evidence, save the blocker and
+minutes without a usable batch or a demonstrated release-blocker fix, save the blocker and
 switch to another executable task. Normally timebox an unresolved source to
 45 active minutes; a prepared incremental batch may get one bounded 60-minute
-test. If two batches add no useful coverage/rankings, reassess source selection.
+test. If two batches add no usable coverage, rankings or screened search areas,
+change source or delivery method immediately. Do not extend a long run merely
+because more metadata or diagnostics can be produced. Report the visible-map
+delta at each checkpoint. Ending a queue does not complete the mapping objective.
 Do not repeatedly enlarge a sparse cruise. Let deterministic jobs run without
 continuous model activity; use bounded completion checks rather than polling.
 

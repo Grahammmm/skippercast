@@ -19,6 +19,7 @@ from .io import sha256
 from .run import run
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
+from .search_areas import published_contract
 from .source_scope import (GOVERNMENT, processing_scope, scoped_manifest,
                            validate_dependencies, validate_receipt)
 
@@ -30,8 +31,9 @@ def flat_properties(properties):
     """MVT supports scalar values: retain nested evidence as canonical JSON."""
     result = {key: (json.dumps(value, sort_keys=True, separators=(',', ':'))
                     if isinstance(value, (dict, list)) else value) for key, value in properties.items()}
-    result['terrain_grade'] = properties['terrain']['grade']
-    result['terrain_score'] = properties['terrain']['score']
+    terrain = properties.get('terrain')
+    result['terrain_grade'] = terrain['grade'] if isinstance(terrain, dict) else 'unknown'
+    result['terrain_score'] = terrain['score'] if isinstance(terrain, dict) else 'unknown'
     result.update({'fit_'+key.replace('-', '_'): value for key, value in properties['fit'].items()})
     return result
 
@@ -115,7 +117,7 @@ def region_layers(root, region, *, rerun=True, now=None):
         calibration_checked = False
         for f in selected:
             p = f['properties']
-            if (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']
+            if ((not published_contract(p) and (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']))
                     or p['screen']['status'] != 'pass' or p.get('hold_reasons')
                     or p.get('habitat_quality_hold') or p.get('habitat_quality_dependencies')):
                 raise ValueError('Unqualified feature in publication input')
@@ -227,6 +229,9 @@ def build(region, *, root=REPO, tool=None, now=None):
     exports = []
     for f in layers['habitat']:
         p = dict(f['properties'])
+        # A broad search outline is displayed, never exported as a precise spot.
+        if p.get('status') == 'search-area':
+            continue
         for key in ('terrain', 'fit', 'substrate', 'screen', 'source_ids', 'independent_evidence', 'source_rights'):
             if isinstance(p.get(key), str):
                 try: p[key] = json.loads(p[key])
