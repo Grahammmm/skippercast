@@ -2,7 +2,7 @@
 // a stable URL, so scripts, styles and pages are published under content-hashed
 // names (scripts/fingerprint.mjs). Stable page paths resolve here, uncached.
 import {Hono} from 'hono';
-import type {Handler} from 'hono';
+import type {Context, Handler} from 'hono';
 import type {AppEnv} from '../env.ts';
 
 export const serveAsset: Handler<AppEnv> = async c => {
@@ -21,6 +21,18 @@ export const serveAsset: Handler<AppEnv> = async c => {
   fresh.headers.set('Cache-Control', 'no-store');
   return fresh;
 };
+
+/**
+ * TA-C4: the built page shell for a stable page path (a SHELLS key such as
+ * '/upload.html'), fetched from ASSETS, for routes that serve a page at another
+ * path (the upload link /u/<token>). 404 when the page or ASSETS is missing.
+ */
+export async function shellResponse(c: Context<AppEnv>, page: string): Promise<Response> {
+  const assets = c.env?.ASSETS, current = SHELLS[page];
+  if (!assets || !current) return new Response('Not found', {status: 404});
+  const assetUrl = new URL(c.req.url); assetUrl.pathname = current.replace(/\.html$/, ''); assetUrl.search = '';
+  return assets.fetch(new Request(assetUrl, {method: 'GET'}));
+}
 
 /** Every path outside /api/ and /feeds/ (registered last). */
 export const assets = new Hono<AppEnv>();

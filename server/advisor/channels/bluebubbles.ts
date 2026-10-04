@@ -65,6 +65,14 @@ export function envelopeError(envelope: Envelope | null): string | null {
   return null;
 }
 
+/** GET /api/v1/attachment/<guid>/download with the password and Access headers (60 s). Rejects when the relay is not configured. */
+function downloadAttachment(guid: string, env: Env, fetcher: Fetcher): Promise<Response> {
+  const config = relayConfig(env);
+  if (!config) return Promise.reject(Error('relay not configured'));
+  if (!GUID.test(guid)) return Promise.reject(Error('invalid attachment guid'));
+  return fetcher(apiUrl(config.base, config.password, `attachment/${encodeURIComponent(guid)}/download`), {headers: config.headers, signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)});
+}
+
 const errorCode = (error: unknown): string => (error as Error)?.name === 'TimeoutError' || (error as Error)?.name === 'AbortError' ? 'timeout' : 'network';
 
 /** Build the BlueBubbles adapter. `fetcher` is injectable for tests (default: the global fetch). */
@@ -183,6 +191,8 @@ export function createBlueBubbles(options: BlueBubblesOptions = {}): ChannelAdap
     name: 'bluebubbles',
     normalize: (request, env) => normalize(request, env, doFetch),
     send, typing, markRead, health, call,
+    // TA-C4: the consumer downloads by the provider_ref stored at the webhook.
+    fetchMediaByRef: (ref, env) => downloadAttachment(ref, env, doFetch),
     // typing/read work only with BLUEBUBBLES_PRIVATE_API=true; the methods no-op otherwise.
     capabilities: {media: true, maxMediaBytes: MAX_MEDIA_BYTES, typing: true, read: true, segments: null},
   };
@@ -242,11 +252,7 @@ function inbound(data: BBMessage, env: Env, fetcher: Fetcher): InboundMessage[] 
     media.push({
       providerRef: guid, mime: str(a.mimeType, 100), bytes: num(a.totalBytes), name: str(a.transferName, 200),
       width: num(a.width), height: num(a.height),
-      fetch: async (e: Env) => {
-        const config = relayConfig(e);
-        if (!config) throw Error('relay not configured');
-        return fetcher(apiUrl(config.base, config.password, `attachment/${encodeURIComponent(guid)}/download`), {headers: config.headers, signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)});
-      },
+      fetch: (e: Env) => downloadAttachment(guid, e, fetcher),
     });
   }
   if (!text && !media.length) return drop('empty');

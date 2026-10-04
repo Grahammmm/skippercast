@@ -256,6 +256,11 @@ export function copyFiles(root = ROOT) {
   const list = [];
   for (const name of readdirSync(join(root, 'dist')).sort())
     if (/\.(html|js)$/.test(name) && !/\.min\.js$/.test(name)) list.push(`dist/${name}`);
+  // Text Advisor page scripts (TA-C4: dist/advisor/upload.js). Their strings live in
+  // web/advisor/copy.ts, which the web/ walk below lints; the scripts are linted too.
+  let advisor = [];
+  try { advisor = readdirSync(join(root, 'dist', 'advisor')).sort(); } catch { advisor = []; }
+  for (const name of advisor) if (/\.(html|js)$/.test(name)) list.push(`dist/advisor/${name}`);
   const walk = dir => {
     for (const entry of readdirSync(join(root, dir), {withFileTypes: true}).sort((a, b) => a.name.localeCompare(b.name))) {
       const path = `${dir}/${entry.name}`;

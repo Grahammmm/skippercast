@@ -164,6 +164,23 @@ The Mac relay's webhook (BlueBubbles server → Worker; [relay setup](../operati
 - **Body:** BlueBubbles' JSON `{type, data}`. `new-message` from a one-to-one chat with text or attachments is stored (contact found or created by phone hash, an `advisor_messages` row `queued`, one placeholder `advisor_media` row per attachment) and queued on `ADVISOR_QUEUE`, or processed inline when the queue is not bound. Messages from us, reactions, group chats, non-text items and senders outside the North American numbering plan are ignored. `updated-message` confirms or fails one of our outbound rows; `message-send-error` marks it `failed`; `new-server` is logged; every other type is ignored. A second delivery of the same message (same channel and provider id) does nothing.
 - **Response:** `200` `{}` in every accepted case, fast, so the relay never retries a stored message.
 
+<!-- TA-C4: upload link and media serving -->
+### `GET /u/<token>`
+
+The upload page a skipper gets by text when a photo or video is too big for the channel ([03 · Uploads for compressed channels](../plans/text-advisor/03-channels.md)). Gated like every advisor path. `<token>` is `base64url(contact_id|expiry|HMAC-SHA256(upload key, contact_id|expiry))`, valid 24 hours, verified statelessly (`server/advisor/media.ts` `verifyUploadToken`; the key is the `upload` HKDF subkey of `ADVISOR_PHONE_KEY`). A valid token for an existing, not blocked contact → `200` with the `dist/upload.html` page (`Cache-Control: no-store`, `X-Robots-Tag: noindex`); a bad, tampered or expired token → `404` `{"error": "Not found"}`, the gate's body. Per-IP `PUBLIC_LIMITER` when bound (`429`).
+
+### `POST /api/advisor/upload/<token>`
+
+The upload page's request (JavaScript, not a form: the CSP has `form-action 'none'`). Same token and `404` rules as `GET /u/<token>`.
+
+- **Body:** `multipart/form-data`; the first part with a filename is read as a stream, at most 300 MB (`413` `{"error": "That file is too large."}`).
+- **Processing:** the file is sniffed by its magic bytes (JPEG, PNG, GIF, WebP, HEIC/HEIF, MP4/MOV, M4A/AAC/AMR/CAF; anything else → `415` `{"error": "That file type is not supported."}`, the media row kept as `rejected`), JPEG/PNG metadata is stripped, and the file is stored privately in `ADVISOR_MEDIA` (an identical file from the same contact is linked, not stored twice). Then a synthetic inbound message (`body` empty, `media_json` the new media id, the contact's channel, `provider_id` `upload:<media id>`) is queued exactly like a webhook message, so the reply comes by text.
+- **Response:** `200` `{"ok": true}`; `400` for a body with no file part; `503` when storage is unavailable.
+
+### `GET /media/<id>.jpg` and `GET /media/<id>.png`
+
+Public images for the site pages and for Meta to fetch ([09 · Media that Meta fetches](../plans/text-advisor/09-social.md)). Gated like every advisor path. Served only when the media's `publish_state` is `approved` or `posted`: `advisor/derived/<id>/public.jpg` when the media job has written it (`.jpg` only), otherwise the metadata-stripped original when its stored type matches the extension. HEIC, video and audio originals are never served. `Content-Type` from the stored row (`image/jpeg` for the derived file), `Cache-Control: public, max-age=3600`, `X-Robots-Tag: noindex`. Anything else (unknown id, private, queued or rejected media, another extension) → `404` with the same body as a missing id.
+
 ## Scheduler
 
 ### `POST /api/jobs/check`
@@ -218,4 +235,4 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving). See [testing](testing.md).

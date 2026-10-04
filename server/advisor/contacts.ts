@@ -5,6 +5,7 @@
 // base64(iv ‖ AES-GCM(K_enc, e164)) is decrypted only by a channel's send().
 // K_hash and K_enc come from ADVISOR_PHONE_KEY through HKDF-SHA256 (empty salt,
 // info 'hash' / 'enc'), so one secret serves both and neither subkey is stored.
+// A third subkey (info 'upload', TA-C4) signs upload-link tokens (media.ts).
 // Storage is raw D1 statements, like server/auth.ts.
 import type {AdvisorContactRow, PhoneKeys} from './types.ts';
 import {hex, sha256, randomId} from './ids.ts';
@@ -22,17 +23,18 @@ function fromBase64(text: string): Uint8Array<ArrayBuffer> {
 function requireE164(value: string): string { if (typeof value !== 'string' || !E164.test(value)) throw Error('not an E.164 number'); return value; }
 function requireId(value: string): string { if (typeof value !== 'string' || !ID.test(value)) throw Error('invalid contact id'); return value; }
 
-/** Both subkeys from the base64 32-byte master key ADVISOR_PHONE_KEY. Throws on any other length. */
+/** The subkeys (hash, enc, upload) from the base64 32-byte master key ADVISOR_PHONE_KEY. Throws on any other length. */
 export async function deriveKeys(masterB64: string): Promise<PhoneKeys> {
   const master = fromBase64(masterB64);
   if (master.length !== 32) throw Error('ADVISOR_PHONE_KEY must be 32 bytes, base64');
   const base = await crypto.subtle.importKey('raw', master, 'HKDF', false, ['deriveKey']);
   const params = (info: string) => ({name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: encoder.encode(info)});
-  const [hashKey, encKey] = await Promise.all([
+  const [hashKey, encKey, uploadKey] = await Promise.all([
     crypto.subtle.deriveKey(params('hash'), base, {name: 'HMAC', hash: 'SHA-256', length: 256}, false, ['sign']),
     crypto.subtle.deriveKey(params('enc'), base, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']),
+    crypto.subtle.deriveKey(params('upload'), base, {name: 'HMAC', hash: 'SHA-256', length: 256}, false, ['sign', 'verify']),
   ]);
-  return {hashKey, encKey};
+  return {hashKey, encKey, uploadKey};
 }
 
 /** HMAC-SHA256(K_hash, e164) as lowercase hex: the lookup key in advisor_contacts.phone_hash. */

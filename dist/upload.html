@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Send a photo · SkipperCast</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="advisor/upload.css" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body class="upload-page">
+    <!-- Served at /u/<token> by server/routes/advisor.ts (TA-C4); every string comes from web/advisor/copy.ts. -->
+    <main class="upload-card">
+      <p class="upload-brand">⌁ SkipperCast</p>
+      <h1 id="upload-heading"></h1>
+      <p id="upload-intro" class="upload-intro"></p>
+      <div id="upload-form" class="upload-form">
+        <label class="upload-pick">
+          <span id="upload-choose"></span>
+          <input id="upload-file" type="file" accept="image/*,video/*" />
+        </label>
+        <p id="upload-name" class="upload-name" hidden></p>
+        <button id="upload-send" type="button" class="upload-send"></button>
+      </div>
+      <div id="upload-progress" class="upload-progress" hidden>
+        <progress id="upload-bar" max="100" value="0"></progress>
+        <p id="upload-percent" aria-live="polite"></p>
+      </div>
+      <p id="upload-status" class="upload-status" role="status" hidden></p>
+      <button id="upload-again" type="button" class="upload-send" hidden></button>
+    </main>
+    <script type="module" src="advisor/upload.js"></script>
+  </body>
+</html>

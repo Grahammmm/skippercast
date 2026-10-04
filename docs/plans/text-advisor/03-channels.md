@@ -207,6 +207,22 @@ to R2), which creates the `advisor_media` row and enqueues a synthetic
 inbound message `{text: '', media: [...]}` so the normal intake runs and the
 skipper gets the confirmation by text.
 
+As built (TA-C4): the token's three fields are joined with `|`, the expiry is
+epoch seconds and the HMAC is hex, keyed with a third HKDF subkey of
+`ADVISOR_PHONE_KEY` (info `upload`, `PhoneKeys.uploadKey`). A bad, tampered or
+expired token, an unknown contact or a blocked one answers the gate's 404 on
+both routes. The synthetic message has `body=''`, `media_json=[media_id]`, the
+contact's channel and `provider_id='upload:<media_id>'`, and goes through
+`server/advisor/inbound.ts` `dispatchInbound()`, the same store-and-dispatch
+the webhooks use. The page sends with `XMLHttpRequest`, not `fetch`: only XHR
+reports upload progress in every browser, and `connect-src 'self'` covers it.
+The multipart body is read as a stream (`server/advisor/multipart.ts`), never
+with `request.formData()`, which would buffer 300 MB. Each adapter gains
+`fetchMediaByRef(ref, env)` (optional on the interface so the Twilio adapter
+can add its own; BlueBubbles: `GET /api/v1/attachment/<guid>/download`); the
+consumer picks the adapter from the message channel and the ref (an https ref
+is a Twilio media URL).
+
 ## Contact card and deep links (FC-3, FC-5)
 
 - `GET /contact.vcf` returns a vCard 3.0: `FN:SkipperCast`, `TEL;TYPE=CELL:<ADVISOR_NUMBER>`,
