@@ -249,3 +249,105 @@ from the text above:
   they own it or crew it, its status (with the "a boat until verified" note
   when not verified) and the photo consent state; a registration in progress
   is listed so the model does not ask the questions itself.
+
+## As built (TA-I2)
+
+Reports are in `server/advisor/intake/reports.ts` (parsers, texts, the D1
+writers the consumer runs, and the Stage 2 flow `reportFlow`, registered after
+TA-I1's in `engine.ts` `STAGE_TWO_FLOWS`), the `read_count_board`,
+`propose_report` and `edit_report` tools, and the consumer's appliers
+(`report_draft`, `report_publish`, `report_withdraw`, `report_edit`,
+`auto_publish`, `media_queue`, `boat_instagram`, `mark_once`). Where the code
+differs from the text above:
+
+- **Who.** Only a phone contact whose `boat_id` is a boat it owns or crews
+  (`boatsForContact`). Crew reports carry the boat and their own `contact_id`;
+  only the owner can switch AUTO / ASK ME or is asked for the Instagram handle.
+- **Pending confirmation.** A report waits for a reply while `pending_confirm`
+  and updated in the last 24 h. `y`, `yes`, `ok`, `sí`, `publish`, `post it`,
+  `looks good`, `publica`, … publish; `n`, `no`, `don't post`, `cancelar`, …
+  withdraw. **`cancel` is not a withdraw word**: 04 lists it, but it is a
+  Stage 1 STOP command (04 § commands) and Stage 1 runs first; withdrawing
+  would need that table changed, which this task does not do. A parseable
+  correction edits and re-asks ("Updated: … Reply Y to post, or tell me what to
+  fix."); anything else goes to the model, whose contact brief carries the
+  pending report with its `report_id` (or the latest report of the last 7 days).
+- **Count text.** The pre-router tries `parseCountText` when 05's trigger
+  matches (`<n> anglers|pax|people|personas`, also `pescadores`, `clientes`,
+  `fishermen`) or the text parses to two lines with known species. Extra
+  grammar: `;`, ` and `/` y `/`&`/`+` separators, items without commas
+  (`45 vermilion 12 lings`), `today/hoy`, `3/4 day`, Spanish trip words
+  (`medio día`, `día completo`, `nocturno`), `liberados`/`sueltos`, and a bare
+  `<n> <label> released` meaning all released. Numbers followed by units
+  (`3 hrs`, `58 degrees`, `12 lb`) go to `notes`. While a report is pending, a
+  count text without anglers is read as a correction of those lines, not a new
+  report.
+- **Species keys.** Labels map through `answers/resolve.ts` (species synonyms and
+  the catalog) and are filed under the catalog parent (`reportSpeciesKey`:
+  vermilion, copper → `rockfish`); cabezon and kelp greenling keep their own
+  keys; unknown labels are `other`. The skipper's label is always kept and shown.
+- **Uncertain lines.** Lines below the 07 acceptance thresholds
+  (`decideAcceptReading`) or with no readable count are stored with
+  `uncertain: true` and shown as `12? lingcod` / `? copper`; correcting a line
+  clears its mark, and publishing drops every mark. An uncertain line also stops
+  auto-publish for that report (it asks first).
+- **Same day.** 05 says a same `(boat, day, 'count-board')` report is an edit.
+  As built, any live report (pending or published) of the boat for that day,
+  **of either source**, takes a new board or text as an edit (one live report
+  per boat and day, so a board and a typed report of the same trip never both
+  publish); a withdrawn one of the same source comes back as pending. The
+  consumer's `insertDraft` does the same if the unique index would collide after
+  the engine read (a race). A report the team rejected is not reopened; the
+  skipper is told it was held. A published report edited this way stays
+  published and the reply shows the updated summary.
+- **Publish.** `verified` frozen from `advisor_boats.status='verified'`,
+  `confirmed_at`/`published_at`, `job_state` `advisor.pages.version` + 1, and the
+  port's `advisor_daily_answers` rows are **deleted** (05 step 4 says the
+  `inputs_hash` changes; TA-A1 owns the hash, so deleting makes it regenerate).
+  `clean_reports` + 1 only on a confirm of an unedited report (`version = 1`);
+  any edit while pending resets it to 0; edits after publishing leave it alone.
+- **Corrections.** Applied to the pending report, else the boat's latest of the
+  last 7 days (pending or published). Grammar as 05 plus Spanish (`los lingcod
+  eran 14`, `quita cabezon`, `fueron 20 personas`, `fue ayer`), several parts per
+  text (`lings were 14 and cabezon 4`), `overnight`, and dates as today/yesterday,
+  weekday names, M/D, `Oct 2`, `2 de oct` within 7 days. A species word that names
+  two lines ("rockfish 50" with vermilion and copper) is ambiguous and goes to the
+  model. Moving a report onto a date the boat already has (same source) is
+  refused with a message. The reply names the changed lines in the skipper's own
+  label ("Updated: 14 lings."); 05's example uses the board's label.
+- **Auto-publish (SC-5).** Dark by default only in effect: the offer appears after
+  a clean confirm when `clean_reports >= ADVISOR_AUTO_PUBLISH_AFTER` (default 5,
+  01) and `auto_publish = 0`, once per boat (`job_state` `advisor.once.autopub.<boat>`);
+  `ADVISOR_AUTO_PUBLISH_AFTER=0` never offers. `auto` / `ask me` (es `automático`,
+  `pregúntame`) toggle it. An auto-published report gets "Posted: <one line>. Text me
+  any fix. <link>", no `confirmed_at`, and does not count as a clean report.
+- **Media from a skipper or crew contact.** Each stored item of a media-only
+  message in order: `classify` (07) → a count board (`decideCountBoard`) →
+  `readCountBoard` → `draftFromBoard` → the confirmation; one report per message.
+  An unreadable board (`decideReadingUsable` fails) gets 05's "couldn't read"
+  text; vision unavailable asks for the numbers by text. A classification that is
+  not a board, fish, action or scenery photo gets a fixed "count board or catch
+  photo?" question instead of a model call. `MediaTooLarge` and any file the intake
+  rejected (over 300 MB, an unknown container) get the upload link and a log line
+  (the TA-M1 wait for `public.jpg` is not built). A photo with a caption goes to the
+  model with its `media_id`, so `read_count_board` can read it.
+- **Photos and videos.** With consent, `fish`/`action`/`scenery` photos, videos
+  and the count-board photo itself are set `publish_state='queued'` with the boat
+  as `credit`; `has_person` (or `nsfw`) opens a `review.media` item (`notifyAdmin`
+  texts the admin). The `post.draft` rows (09) are TA-S1's: nothing in
+  `advisor_posts` is written here, and a video is only logged as a Reel candidate
+  (`advisor_reel_candidate`). Replies: 05's "Nice. That's queued for the SkipperCast
+  feed, tagged @{instagram}. Count board too?"; without a handle the owner is asked
+  once (`@handle`, or a bare handle within 24 h, saves it); crew get the untagged
+  wording. Without consent nothing is queued and a no-consent line is sent at most
+  once per 7 days per boat (`advisor.once.noconsent.<boat>`), a plain thanks
+  otherwise. A turn that leaves a report waiting for Y never also carries TA-I1's
+  consent re-ask, so the skipper's "Y" cannot answer the wrong question.
+- **Tools.** `read_count_board {media_id}` reads one of the contact's own stored
+  photos; `propose_report` takes the 04 schema but maps labels to species itself
+  (the model's `species_key` is ignored) and accepts `report_date` words within 7
+  days; `edit_report {report_id, patch}` takes `patch` as a list of changes
+  (`{label, kept?, released?}`, `{label, remove: true}`, or `{field, value}` for
+  anglers, trip_type, report_date, notes) rather than 04's untyped object. All
+  three produce the same actions and texts as the deterministic path, and the
+  system sends the draft or the corrected lines itself.

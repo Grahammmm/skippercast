@@ -71,3 +71,17 @@ export function resolveSpecies(text: string | null | undefined): {key: string} |
   const found = find(SPECIES_TABLE, raw);
   return found ? {key: found} : null;
 }
+
+/**
+ * TA-I2: a species key only when the whole text is a species word ("lings",
+ * "vermilion rockfish", "colorados"), never a word inside a longer phrase, so a
+ * correction like "lings 14" matches and "any reds over 5" does not.
+ */
+export function exactSpecies(text: string | null | undefined): {key: string} | null {
+  const folded = fold(text);
+  if (!folded) return null;
+  const direct = canonicalSpecies(folded.replace(/ /g, '-'));
+  if (ALL_SPECIES_KEYS.has(direct)) return {key: direct};
+  for (const [phrase, id] of SPECIES_TABLE) if (phrase === folded) return {key: id};
+  return null;
+}

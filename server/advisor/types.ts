@@ -5,6 +5,7 @@
 // advisor module imports its types from one file.
 import type {Env} from '../env.ts';
 import type {LlmUsage} from '../analytics.ts';
+import type {VisionChain} from './vision/index.ts';
 
 export type AdvisorChannel = 'bluebubbles' | 'twilio';
 export type VisionProviderName = 'hermes' | 'claude';
@@ -101,7 +102,27 @@ export type Action =
   | {type: 'consent'; boatId: string; decision: 'yes' | 'revoke'}      // consent_photos_at + consent_message_id, or consent_revoked_at
   | {type: 'post_revoke'; boatId: string}                               // TA-S1 rejects the boat's draft/approved posts; logged only until then
   | {type: 'crew_add'; boatId: string; phoneHash: string; phoneEnc: string}   // find-or-create the crew contact, link it, text the invite
-  | {type: 'crew_remove'; boatId: string; contactId: string};          // removed_at, the contact's boat_id cleared
+  | {type: 'crew_remove'; boatId: string; contactId: string}           // removed_at, the contact's boat_id cleared
+  // TA-I2: skipper reports and the media path (05 § count board, § plain text, § catch photos, § corrections, § auto-publish).
+  | {type: 'report_draft'; report: NewReport; publish?: boolean}       // insert as pending_confirm (a unique collision becomes an edit); publish: auto_publish
+  | {type: 'report_publish'; reportId: string}                          // published, verified frozen, clean_reports, pages version, daily answer invalidated
+  | {type: 'report_withdraw'; reportId: string}                         // pending_confirm -> withdrawn
+  | {type: 'report_edit'; reportId: string; fields: ReportEditFields; patch: ReportPatch[]; reopen?: boolean; publish?: boolean}  // an advisor_report_edits row, version + 1
+  | {type: 'auto_publish'; boatId: string; on: boolean}                 // SC-5: advisor_boats.auto_publish (owner only)
+  | {type: 'media_queue'; mediaId: string}                              // publish_state private -> queued, credited to the boat (TA-S1 adds the post draft)
+  | {type: 'boat_instagram'; boatId: string; instagram: string}         // the handle asked for once after a photo (owner only)
+  | {type: 'mark_once'; key: string};                                   // job_state advisor.once.<key>: a line said once
+
+/** TA-I2: one line of a report (02 § advisor_reports.counts_json). `uncertain` marks a line shown with "?" until confirmed. */
+export interface ReportCount {species_key: string; label: string; kept: number | null; released: number | null; uncertain?: boolean}
+/** TA-I2: the report fields a draft or an edit carries. */
+export interface ReportFields {report_date: string; trip_type: string | null; anglers: number | null; counts: ReportCount[]; notes: string | null}
+/** TA-I2: a new report row (region and port come from the boat when it is applied). */
+export interface NewReport extends ReportFields {id: string; boat_id: string; source: 'count-board' | 'text'; media_id: string | null}
+/** TA-I2: the columns an edit may set. */
+export type ReportEditFields = Partial<ReportFields>;
+/** TA-I2: advisor_report_edits.patch_json entries. */
+export interface ReportPatch {field: keyof ReportFields; from: unknown; to: unknown}
 
 /** TA-I1: the advisor_boats columns registration fills (02 § advisor_boats); status starts 'pending'. */
 export interface NewBoat {
@@ -135,7 +156,7 @@ export interface EngineDeps {
   clock?: () => number;                                               // epoch ms; default Date.now
   random?: () => number;                                              // the web-link code; default crypto
   sleep?: (ms: number) => Promise<void>;                              // the 429/529 back-off; default setTimeout
-  vision?: unknown;                                                   // TA-I2/I3: the vision chain
+  vision?: VisionChain;                                               // TA-I2: a vision chain; default visionChain(env) with this fetcher, clock and sleep
   feeds?: (url: string) => Promise<unknown>;                          // TA-E2: the data tools' feed reader; default readFeed (tests pass fixtures)
 }
 

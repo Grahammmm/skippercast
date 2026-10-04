@@ -156,6 +156,7 @@ export interface BoatRow {
   id: string; slug: string; name: string; landing: string | null; port: string; region: string; instagram: string | null;
   booking_url: string | null; phone_public: string | null; owner_contact_id: string | null; status: string;
   verified_at: string | null; consent_photos_at: string | null; consent_message_id: string | null; consent_revoked_at: string | null; created_at: string;
+  auto_publish: number; clean_reports: number;   // TA-I2 (SC-5)
 }
 export interface ContactBoat extends BoatRow {relation: 'owner' | 'crew'}
 

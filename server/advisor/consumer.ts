@@ -47,6 +47,14 @@
 // crew_add links (or creates) the crew contact and texts it the invite through
 // its own channel; crew_remove sets removed_at and clears the boat. Verifying
 // or rejecting a new_skipper review by text now also texts the boat's owner.
+//
+// TA-I2: skipper reports (05). report_draft inserts the pending report (a
+// same-day one becomes an edit), report_publish / report_withdraw / report_edit
+// run intake/reports.ts (edits rows, version, clean_reports, the pages version
+// and the port's daily answer), auto_publish toggles SC-5, media_queue puts a
+// consented photo in the feed queue, boat_instagram stores the handle asked
+// once, mark_once records a one-time line. Each re-checks that the contact
+// posts for the boat.
 import {advisorSettings} from './settings.ts';
 import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
 // TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
@@ -66,6 +74,8 @@ import {ingestInboundMedia} from './media.ts';
 import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
 // TA-I1: the skipper flow's state key and the crew invite.
 import {flowKey} from './intake/skippers.ts';
+// TA-I2: reports, the media queue and the one-time lines.
+import {insertDraft, publishReport, withdrawReport, applyEdit, postsFor, ONCE_PREFIX} from './intake/reports.ts';
 import type {Env} from '../env.ts';
 import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
@@ -292,6 +302,35 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
       case 'crew_remove':
         await applyCrewRemove(env, deps, contact, action.boatId, action.contactId);
         break;
+      // ---- TA-I2: reports, the media queue, auto-publish ----
+      case 'report_draft':
+        if (ID.test(String(action.report?.id)) && ID.test(String(action.report?.boat_id))) await insertDraft(db, contact, message.id, action.report, action.publish === true, clock(deps), String(index));
+        break;
+      case 'report_publish':
+        if (ID.test(String(action.reportId))) await publishReport(db, contact, action.reportId, clock(deps));
+        break;
+      case 'report_withdraw':
+        if (ID.test(String(action.reportId))) await withdrawReport(db, contact, action.reportId, clock(deps));
+        break;
+      case 'report_edit':
+        if (ID.test(String(action.reportId)) && action.fields && typeof action.fields === 'object')
+          await applyEdit(db, contact, message.id, String(index), action.reportId, action.fields, {reopen: action.reopen === true, publish: action.publish === true}, clock(deps));
+        break;
+      case 'auto_publish':
+        if (await ownsBoat(db, contact.id, action.boatId)) await db.prepare('UPDATE advisor_boats SET auto_publish=?,updated_at=? WHERE id=?').bind(action.on ? 1 : 0, iso(deps), action.boatId).run();
+        break;
+      case 'media_queue':
+        await applyMediaQueue(env, deps, contact, action.mediaId);
+        break;
+      case 'boat_instagram':
+        if (/^[a-z0-9._]{1,30}$/.test(String(action.instagram)) && await ownsBoat(db, contact.id, action.boatId))
+          await db.prepare('UPDATE advisor_boats SET instagram=?,updated_at=? WHERE id=? AND instagram IS NULL').bind(action.instagram, iso(deps), action.boatId).run();
+        break;
+      case 'mark_once':
+        if (/^[a-z]{1,20}\.[\w-]{1,64}$/.test(String(action.key)))
+          // A re-said line (the weekly no-consent line) moves its time; the others are only marked when not yet said.
+          await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET updated_at=excluded.updated_at').bind(ONCE_PREFIX + action.key, '1', iso(deps)).run();
+        break;
       default:
         advisorLog('warn', 'advisor_action_unknown', {index, type: String((action as {type?: unknown})?.type).slice(0, 40)});
     }
@@ -506,6 +545,23 @@ async function applyCrewRemove(env: Env, deps: ConsumerDeps, skipper: AdvisorCon
     db.prepare(`UPDATE advisor_contacts SET boat_id=NULL,role=CASE WHEN role='crew' THEN 'angler' ELSE role END,updated_at=? WHERE id=? AND boat_id=?`).bind(at, contactId, boatId),
   ]);
   advisorLog('info', 'advisor_crew_removed', {count: 1});
+}
+
+/**
+ * TA-I2 (05 § catch and action photos): a skipper's or crew's photo, video or
+ * count board goes to the feed queue (publish_state 'queued', credited to the
+ * boat); TA-S1 adds the post draft. Only the contact's own media, only for a
+ * boat it posts for and whose photo consent is active, only from 'private'.
+ */
+async function applyMediaQueue(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, mediaId: string): Promise<void> {
+  const db = env.DB!;
+  if (!ID.test(String(mediaId))) return;
+  const media = await db.prepare("SELECT boat_id FROM advisor_media WHERE id=? AND contact_id=? AND publish_state='private'").bind(mediaId, contact.id).first<{boat_id: string | null}>();
+  if (!media?.boat_id || !await postsFor(db, contact.id, media.boat_id)) return;
+  const boat = await db.prepare('SELECT name,consent_photos_at,consent_revoked_at FROM advisor_boats WHERE id=?').bind(media.boat_id).first<{name: string; consent_photos_at: string | null; consent_revoked_at: string | null}>();
+  if (!boat?.consent_photos_at || (boat.consent_revoked_at && boat.consent_revoked_at >= boat.consent_photos_at)) return;
+  await db.prepare("UPDATE advisor_media SET publish_state='queued',credit=? WHERE id=? AND publish_state='private'").bind(boat.name.slice(0, 80), mediaId).run();
+  advisorLog('info', 'advisor_media_queued', {count: 1});
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
-  "description": "Golden 2 (TA-I1 part): a new skipper says they run a boat; the model calls register_boat with the name and port it heard; the flow asks landing, Instagram and booking one text at a time (booking skipped), creates the pending boat with the new_skipper review, sends the completion text and the consent question; YES records consent with the message id; the next model turn's brief shows the boat, its status and consent. TA-I2 continues with the count board.",
+  "description": "Golden 2 (TA-I1 part): a new skipper says they run a boat; the model calls register_boat with the name and port it heard; the flow asks landing, Instagram and booking one text at a time (booking skipped), creates the pending boat with the new_skipper review, sends the completion text and the consent question; YES records consent with the message id; the next model turn's brief shows the boat, its status and consent. TA-I2: a media-only count-board photo is classified and read (vision fixtures), drafted and confirmed in the 05 shape, the board photo queued (consent given); Y publishes (verified frozen at 0 for the pending boat, clean_reports 1, pages version); 'lings were 14' corrects the published report; a catch photo with a person in it is queued, tagged and held for a has_person review.",
   "turns": [
     {
       "in": "Hi, I run the Rita G out of Morro Bay. Can I send you my reports?",
@@ -204,6 +204,181 @@
           "- role: skipper",
           "- boat: Rita G (they own it); status: pending",
           "- photo consent for social posts: given"
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m-board",
+          "image": "count-board.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-count-board.json"
+        },
+        {
+          "vision": "count-board.json"
+        }
+      ],
+      "expect": {
+        "intent": "report.count_board",
+        "reply_contains": [
+          "Rita G, Sat Oct 3, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix."
+        ],
+        "actions": [
+          "report_draft",
+          "send_text",
+          "media_queue"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT status,source,media_id,report_date,anglers,version FROM advisor_reports",
+            "row": {
+              "status": "pending_confirm",
+              "source": "count-board",
+              "media_id": "m-board",
+              "report_date": "2026-10-03",
+              "anglers": 22,
+              "version": 1
+            }
+          },
+          {
+            "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m-board'",
+            "row": {
+              "publish_state": "queued",
+              "credit": "Rita G"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "Y",
+      "expect": {
+        "intent": "report.confirm",
+        "reply_contains": [
+          "Posted. https://skippercast.com/boats/rita-g?s=txt"
+        ],
+        "actions": [
+          "report_publish",
+          "send_text"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT status,verified,confirmed_at IS NOT NULL AS confirmed FROM advisor_reports",
+            "row": {
+              "status": "published",
+              "verified": 0,
+              "confirmed": 1
+            }
+          },
+          {
+            "sql": "SELECT clean_reports FROM advisor_boats",
+            "row": {
+              "clean_reports": 1
+            }
+          },
+          {
+            "sql": "SELECT value FROM job_state WHERE key='advisor.pages.version'",
+            "row": {
+              "value": "1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "lings were 14",
+      "expect": {
+        "intent": "report.edit",
+        "reply_contains": [
+          "Updated: 14 lingcod (2 released)."
+        ],
+        "reply_not_contains": [
+          "Reply Y"
+        ],
+        "actions": [
+          "report_edit",
+          "send_text"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT status,version,json_extract(counts_json,'$[1].kept') AS lings FROM advisor_reports",
+            "row": {
+              "status": "published",
+              "version": 2,
+              "lings": 14
+            }
+          },
+          {
+            "sql": "SELECT COUNT(*) AS n, json_extract(patch_json,'$[0].field') AS field FROM advisor_report_edits",
+            "row": {
+              "n": 1,
+              "field": "counts"
+            }
+          },
+          {
+            "sql": "SELECT clean_reports FROM advisor_boats",
+            "row": {
+              "clean_reports": 1
+            }
+          },
+          {
+            "sql": "SELECT value FROM job_state WHERE key='advisor.pages.version'",
+            "row": {
+              "value": "2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m-catch",
+          "image": "deck-person.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-deck-person.json"
+        }
+      ],
+      "expect": {
+        "intent": "media.photo",
+        "reply_contains": [
+          "Nice. That's queued for the SkipperCast feed, tagged @ritag_sportfishing. Count board too?"
+        ],
+        "actions": [
+          "media_queue",
+          "review_open",
+          "send_text"
+        ],
+        "review": "has_person",
+        "rows": [
+          {
+            "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m-catch'",
+            "row": {
+              "publish_state": "queued",
+              "credit": "Rita G"
+            }
+          },
+          {
+            "sql": "SELECT kind,ref_id,status FROM advisor_reviews WHERE reason='has_person'",
+            "row": {
+              "kind": "media",
+              "ref_id": "m-catch",
+              "status": "open"
+            }
+          },
+          {
+            "sql": "SELECT COUNT(*) AS n FROM advisor_reports",
+            "row": {
+              "n": 1
+            }
+          }
         ]
       }
     }
