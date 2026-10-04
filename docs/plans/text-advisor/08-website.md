@@ -425,3 +425,33 @@ in `server/advisor/cron.ts`, `web/admin/rules.tsx`, and the rule-change card in
   form with the jurisdiction, region and species choices the list returns.
 - **Tests.** `tests/test_advisor_admin_rules.mjs`; `tests/test_advisor_cron.mjs`
   lists the new slot; `e2e/admin.spec.ts` opens the Rules view with axe.
+
+## As built (TA-S1)
+
+The Posts view and the queue's social draft card: `server/advisor/admin/posts.ts`,
+`GET /api/admin/posts` in `server/routes/admin.ts`, `web/admin/posts.tsx`,
+`web/admin/post-card.tsx` and `web/admin/posts-form.ts` (09 § Drafts "As built"
+for the drafts themselves). Where the code differs from the table above:
+
+- **Routes.** `GET /api/admin/posts?status=&kind=&cursor=` (any post status or
+  `all`; any post kind) lists posts newest change first, 50 a page. There is no
+  `POST /api/admin/posts/<id>`: a draft is decided as its `post` review through
+  `POST /api/admin/reviews/<review id>` (the list gives each draft's
+  `review_id`), so the queue and the Posts view share one path; "schedule" is
+  the approve or edit decision's `scheduled_for`. "Post now", retry and
+  `POST /api/admin/posts/daily` are TA-S2 and TA-S4.
+- **Card.** The photos (admin thumbnails), the kind and status, the boat (or
+  "Angler photo"), the surfaces, collaborators, tags, the schedule, the caption
+  with its counts against 2,200 characters, 30 hashtags and 20 mentions, and
+  what holds approval (`hold`). Edit (`e`) opens the editor: the caption
+  (counted as you type), the surfaces as checkboxes, collaborators and tagged
+  usernames as comma-separated fields (a new tag is placed at the centre; a
+  kept one keeps its place), a `datetime-local` schedule; "Save and approve"
+  sends only the changed fields as the edit decision, or an approve when
+  nothing changed.
+- **View.** Status (default Draft) and kind filters; a draft renders the queue's
+  card with its decisions, any other post the card read-only. The week calendar
+  and per-post stats are TA-S4 and TA-S7.
+- **Skippers.** `posts` counts the boat's posts that were not rejected.
+- **Tests.** `tests/test_advisor_social_drafts.mjs`; `e2e/admin.spec.ts` opens
+  the Posts view and the editor with axe.

@@ -6,6 +6,7 @@
 import {countsOf} from '../intake/reports.ts';
 import {conversationContact} from './decisions.ts';
 import {ruleChange} from './rules.ts';
+import {postDetail} from './posts.ts';
 import type {ReviewRow} from './decisions.ts';
 import type {ReviewKind} from '../types.ts';
 
@@ -142,6 +143,7 @@ export async function reviewDetail(db: D1Database, row: Pick<ReviewRow, 'kind' |
     case 'skipper': return skipperDetail(db, row.ref_id);
     case 'conversation': return conversationDetail(db, row.ref_id);
     case 'rule': return ruleDetail(db, row.ref_id);
-    default: return null;   // post: TA-S1 adds the draft editor
+    case 'post': return postDetail(db, row.ref_id);   // TA-S1: the draft with its photos, caption counts and hold
+    default: return null;
   }
 }

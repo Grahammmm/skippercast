@@ -25,6 +25,7 @@
 //   POST /api/admin/rules           create (active: the admin reviewed it)
 //   POST /api/admin/rules/:id       edit or confirm: reviewed_at now, review_due, status active, updated_by
 //   POST /api/admin/rules/:id/retire
+//   GET  /api/admin/posts           ?status=draft|approved|...|all &kind= &cursor=   admin/posts.ts (TA-S1); decisions go through /api/admin/reviews/<review_id>
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -46,6 +47,8 @@ import type {FunnelDays, SqlFetcher} from '../advisor/admin/funnel.ts';
 // TA-A4: the rules editor.
 import {listRules, createRule, editRule, retireRule} from '../advisor/admin/rules.ts';
 import type {RuleOutcome} from '../advisor/admin/rules.ts';
+// TA-S1: social posts.
+import {listPosts} from '../advisor/admin/posts.ts';
 import type {Fetcher} from '../advisor/social/meta.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
@@ -111,7 +114,8 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     if (!DECISIONS.includes(decision)) return json({error: 'decision must be approve, edit or reject'}, 400);
     const by = c.var.owner;
     const outcome = await decideReview(c.env, {reviewId: id, decision, patch: input.patch, note: input.note, reply: input.reply, by, inId: id, key: 'admin'},
-      {now: Date.now(), send: teamSender(c.env, deps), sendsEnabled: advisorSettings(c.env).repliesEnabled, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
+      {now: (deps.now ?? Date.now)(), send: teamSender(c.env, deps), sendsEnabled: advisorSettings(c.env).repliesEnabled, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {}),
+        ...(deps.engine?.fetcher ? {fetcher: deps.engine.fetcher} : {})});
     switch (outcome.status) {
       case 'applied': return json({review: outcome.review, sends: outcome.sends, ...(outcome.held ? {held: outcome.held} : {})});
       case 'repeated': return json({review: outcome.review, repeated: true});
@@ -182,6 +186,12 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.post('/api/admin/rules', async c => ruleAnswer(await createRule(c.env.DB!, await body(c.req.raw, 16384), c.var.owner, now())));
   admin.post('/api/admin/rules/:id/retire', async c => ruleAnswer(await retireRule(c.env.DB!, c.req.param('id'), c.var.owner, now())));
   admin.post('/api/admin/rules/:id', async c => ruleAnswer(await editRule(c.env.DB!, c.req.param('id'), await body(c.req.raw, 16384), c.var.owner, now())));
+
+  // ---- TA-S1: social posts (the Posts view; drafts are decided as `post` reviews) ----
+  admin.get('/api/admin/posts', async c => {
+    const list = await listPosts(c.env.DB!, {status: c.req.query('status') || null, kind: c.req.query('kind') || null, cursor: c.req.query('cursor') || null});
+    return 'error' in list ? json({error: list.error}, 400) : json(list);
+  });
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

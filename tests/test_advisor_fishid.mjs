@@ -281,7 +281,8 @@ dbTest('a skipper\'s fish photo still goes through TA-I2 intake (queued to the b
   addMedia(sql, bucket, 'm1', {boat: 'b1'});
   const r = await say(env, sql, null, {media: ['m1'], vision: FISH('fish-id-vermilion-high.json')});
   assert.equal(r.intent, 'media.photo');
-  assert.deepEqual(r.calls, ['record_classification']);
+  assert.deepEqual(r.calls, ['record_classification', 'record_caption_line'], 'TA-S1: the queued photo\'s post draft asks for its caption line; no fish ID');
+  assert.equal(sql.prepare("SELECT COUNT(*) n FROM advisor_posts WHERE boat_id='b1' AND status='draft'").get().n, 1);
   assert.ok(!r.texts.some(x => /That's a|Reply YES/.test(x)));
   assert.deepEqual(media(sql, 'm1'), {publish_state: 'queued', credit: 'Rita G'});
   // A skipper without a boat (or crew whose link ended) gets the plain acknowledgement, not the angler path.

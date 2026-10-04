@@ -3,7 +3,7 @@
 // recruiting tool.
 //
 //   listBoats       every boat with its status, owner channel, last published report,
-//                   published reports in the last 30 days, posts (0 until TA-S1), photo
+//                   published reports in the last 30 days, posts (TA-S1: not rejected), photo
 //                   consent, active crew and the admin's consent note
 //   editBoat        boat fields with the registration's parsers (intake/skippers.ts), a
 //                   verify or reject (the open new_skipper review is decided when there is
@@ -65,13 +65,14 @@ interface BoatJoin {
   id: string; slug: string; name: string; landing: string | null; port: string; region: string; instagram: string | null; booking_url: string | null;
   phone_public: string | null; status: string; verified_at: string | null; created_at: string; consent_photos_at: string | null; consent_revoked_at: string | null;
   owner_contact_id: string | null; o_channel: string | null; o_language: string | null; o_display_name: string | null; o_role: string | null; o_status: string | null;
-  last_report_date: string | null; reports_30d: number;
+  last_report_date: string | null; reports_30d: number; posts: number;
 }
 const BOAT_SQL = `SELECT b.id,b.slug,b.name,b.landing,b.port,b.region,b.instagram,b.booking_url,b.phone_public,b.status,b.verified_at,b.created_at,
     b.consent_photos_at,b.consent_revoked_at,b.owner_contact_id,
     o.channel AS o_channel,o.language AS o_language,o.display_name AS o_display_name,o.role AS o_role,o.status AS o_status,
     (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS last_report_date,
-    (SELECT COUNT(*) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published' AND r.report_date>=?) AS reports_30d
+    (SELECT COUNT(*) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published' AND r.report_date>=?) AS reports_30d,
+    (SELECT COUNT(*) FROM advisor_posts p WHERE p.boat_id=b.id AND p.status<>'rejected') AS posts
   FROM advisor_boats b LEFT JOIN advisor_contacts o ON o.id=b.owner_contact_id`;
 
 async function noteOf(db: D1Database, boatId: string): Promise<BoatView['consent_note']> {
@@ -86,7 +87,7 @@ async function view(db: D1Database, row: BoatJoin, crew: CrewView[], openReviews
     owner: row.owner_contact_id && row.o_channel ? {id: row.owner_contact_id, channel: row.o_channel, language: row.o_language ?? 'en', display_name: row.o_display_name,
       role: row.o_role ?? 'angler', status: row.o_status ?? 'active'} : null,
     last_report_date: row.last_report_date, reports_30d: Number(row.reports_30d) || 0,
-    posts: 0,   // TA-S1: advisor_posts does not exist yet (migration 0011)
+    posts: Number(row.posts) || 0,   // TA-S1: the boat's social posts that were not rejected (drafts, approved, posted)
     consent: consentState(row), consent_photos_at: row.consent_photos_at, consent_revoked_at: row.consent_revoked_at,
     consent_note: await noteOf(db, row.id), crew, review_open: openReviews.has(row.id),
   };

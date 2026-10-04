@@ -225,6 +225,104 @@ reason the admin can see.
   approval in v1; auto-approval is a later owner decision).
 - Angler photos (AC-1): credit line "Photo: {credit}", no collaborators.
 
+### As built (TA-S1)
+
+- **Where.** `server/advisor/social/drafts.ts` (`ensureMediaDraft`,
+  `draftFromMedia`, the caption parts, `revokeBoatPosts`,
+  `rejectPostsForMedia`), `server/advisor/prompts/caption.ts`,
+  `catalog/advisor/hashtags.json`, `server/advisor/admin/posts.ts` (the card,
+  the list and the decision), `tools/propose_post.ts`, the Posts view
+  (`web/admin/posts.tsx`, `post-card.tsx`, `posts-form.ts`) and
+  `scripts/advisor/backfill-drafts.mjs`.
+- **One draft per media item.** The post id is `sha256('post:media:' +
+  media_id)[:32]`, so a retried message, a second `propose_post` or the backfill
+  finds the row instead of drafting again; its review is `kind='post'`, reason
+  `social_draft` (02's deterministic review id), inserted only while the post is
+  a draft. `created_by` is `engine`, or the admin's `users.id` for an angler
+  draft made by approving the share.
+- **When.** `ensureMediaDraft` runs from the consumer's `media_queue` applier
+  (05's catch, action and scenery photos, videos and the count-board photo; a
+  retry of a photo already queued still makes the missing draft), from the new
+  `post_draft` action (`propose_post` on a photo already queued), from a media
+  review approved or edited (an angler's shared photo, 06 § Angler photos; a
+  boat photo with no draft yet) and from the backfill. It drafts a boat's photo
+  or video only while it is `queued` or `approved`, the boat is not `rejected`
+  and photo consent is active (re-checked at apply time); an angler's photo
+  only once the team approved the share. A private photo is never drafted.
+- **Kind and surfaces.** A video is a `reel`, a photo classified `count_board` a
+  `story` (no caption, no collaborators, no tags, targets
+  `["instagram_story","facebook_story"]`), any other still a `photo`
+  (`["instagram","facebook"]`). "Any still the skipper marks story" is not
+  built: there is no text command for it yet.
+- **Caption.** Lines: the model line; the credit, "Aboard {boat} (@{handle}) out
+  of {port}." (the mention; without a handle "Aboard {boat} out of {port}.") or
+  for an angler "Photo: {credit}" ("Photo: a SkipperCast angler" when the credit
+  is missing or anonymous); the boat's published report of the photo's local
+  day as "Trip total: 45 vermilion, 12 lings for 22 anglers." (kept lines, at
+  most four, uncertain ones left out; 09's "Limits of rockfish" wording is not
+  derivable from the counts); "Text SkipperCast for today's report:
+  (805) 555-0100" (`ADVISOR_NUMBER`, else `skippercast.com/text`); then, after a
+  blank line, the hashtags: brand, `angler` for an angler's photo, the region's,
+  then each species (the photo's fish ID top candidate at ≥ 0.6, and the
+  report's kept species) followed by its report parent, at most 12. Every
+  string is in `catalog/advisor/strings.json` (`caption_*`, en and es). The
+  feed language is English (`FEED_LANGUAGE`); Spanish captions work through the
+  same strings when a Spanish account exists. `captionProblem` enforces 2,200
+  characters (code points), 30 hashtags and 20 mentions; a generated caption is
+  cut to 2,200.
+- **The model line.** `prompts/caption.ts`: the facts JSON (kind, species
+  names, boat, port, the report line, the skipper's note), a forced tool
+  `record_caption_line` with `{line}` (≤ 150 characters), `max_tokens` 120,
+  temperature 0.4, 15 s timeout, under the global LLM cap, recorded as LLM
+  feature `advisor:caption`. The model sees facts only, not the image. A line
+  with a `#`, `@`, link, `%`, odds word or a number the facts do not contain is
+  refused. A good line is cached in `job_state` `advisor.caption.<media id>`
+  (`{line, language}`); without `ANTHROPIC_API_KEY`, past the cap, on an error
+  or a refused line the fixed line is "{species} on deck." or "Fresh from the
+  water." (not cached, so a later draft of the same photo can try again).
+- **Collaborators and tags.** With a handle: `collaborators_json` `[handle]`
+  (photos and reels) and `user_tags_json` `[{username: handle, x: 0.5, y: 0.5}]`
+  (photos only). Angler photos get neither.
+- **Holds on approval** (`admin/posts.ts approvalHold`, answered 409 with the
+  reason): a photo of the post rejected or gone, a media review of it still
+  open, a `has_person` photo whose media review has not approved it, a boat
+  whose photo consent is no longer active, and a boat that is not verified (05
+  § Verification excludes unverified boats from the social feed; this applies
+  it to every boat post, not only the daily post).
+- **Decisions** (the queue and the Posts view share `POST
+  /api/admin/reviews/<review id>`): approve (optional `patch.scheduled_for`, a
+  time in the next 60 days) sets `status='approved'`, `approved_by`,
+  `approved_at`, and the post's `queued` photos `approved` (they become public
+  for the pages and Meta's fetch; pages version bumped, the media job asked for
+  `public.jpg`); edit takes `caption`, `targets` (a subset of the kind's),
+  `collaborators` (≤ 3 usernames, none on a story), `user_tags` (≤ 20, x and y
+  0-1, photos only) and `scheduled_for`, then approves (review `edited`);
+  reject sets `rejected`. Only a `draft` can be decided. The text admin never
+  decides a post (its kinds are skipper and media).
+- **Revocation and rejection.** `post_revoke` (05 § Consent) sets every `draft`
+  or `approved` post of the boat to `rejected` with `error='consent_revoked'`
+  and closes its open review; posted ones stay. Rejecting a photo's media
+  review does the same to its unposted posts (`error='media_rejected'`). "Forget
+  me" deletes the contact's unposted posts (any status but `posted`, `partial`,
+  `publishing`), their reviews and cached caption lines.
+- **propose_post.** Skippers and crew, their own photo or video of their boat:
+  refuses a rejected photo, a rejected boat and missing consent (the result says
+  how to give it), says when a post exists; otherwise `media_queue` (a private
+  photo, plus the `has_person`/`nsfw` media review its classification calls for)
+  or `post_draft` (already queued), each with the optional `hint` (≤ 200
+  characters), which reaches the prompt as a fact.
+- **Backfill.** `node scripts/advisor/backfill-drafts.mjs [--apply] [--local]`:
+  candidates are image and video media `queued` or `approved` (TA-S1 adds
+  `approved`, so a photo whose `has_person` review was approved before this
+  task is not missed), each run through `ensureMediaDraft`. The dry run lists
+  what it would draft; `--apply` drafts through `wrangler d1 execute --json`
+  (bindings inlined as SQL literals); a second run changes nothing. With
+  `ANTHROPIC_API_KEY` in the owner's environment the captions get model lines.
+- **Not built here.** Publishing, "post now", the schedule slots, the calendar
+  grid, per-post stats and `GET /media/<id>.mp4` are TA-S2, TA-S4 and TA-S7.
+- **Tests.** `tests/test_advisor_social_drafts.mjs`; `e2e/admin.spec.ts` opens
+  the Posts view on the angler draft its approved share made, with axe.
+
 ## Daily "what's biting" post (SO-2) and weekly roundup (SP-5)
 
 - Cron 06:30 local on days with at least one published verified report from

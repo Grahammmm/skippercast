@@ -200,7 +200,7 @@ dbTest('each kind carries what its card needs, and no phone number or hash reach
   assert.deepEqual(c.messages.map(x => x.body), ['message 4', 'message 5', 'message 6', 'message 7', 'message 8', 'is it legal to keep a cowcod'], 'the last six, oldest first');
   assert.deepEqual(c.messages.map(x => x.team), [false, false, false, false, true, false], 'a team reply is marked');
   assert.equal(c.flagged_message, flagged);
-  assert.equal(by.post.detail, null, 'social drafts render generically until TA-S1');
+  assert.equal(by.post.detail, null, 'a post review whose post is gone has no detail (TA-S1 renders existing drafts: test_advisor_social_drafts.mjs)');
   assert.equal(by.media.id, ids.media);
 });
 
@@ -369,7 +369,9 @@ dbTest('conversation: "reply as team" sends through the channel as an out row wi
   assert.equal(ch.sent.length, 1);
   assert.equal((await decide(b, {decision: 'reject'})).status, 200, 'dismissing needs no text');
   const post_ = await addReview(sql, 'post', 'post-1', 'social_draft');
-  assert.equal((await decide(post_, {decision: 'approve'})).status, 400, 'social drafts wait for TA-S1');
+  const gone = await decide(post_, {decision: 'approve'});
+  assert.equal(gone.status, 409, 'TA-S1 decides post reviews; one whose post is gone is a conflict');
+  assert.match((await gone.json()).error, /no longer exists/);
 });
 
 dbTest('the text admin and the queue share one decision path: decideReview with kinds limits the text admin to skipper and media', async () => {
@@ -464,7 +466,7 @@ test('keyboard: a approves, r rejects, e edits on a focused item; never with a m
   assert.deepEqual(decisionsFor('media', 'has_person'), ['approve', 'edit', 'reject']);
   assert.deepEqual(decisionsFor('skipper', 'new_skipper'), ['approve', 'reject']);
   assert.deepEqual(decisionsFor('skipper', 'owner_forgotten'), ['approve']);
-  assert.deepEqual(decisionsFor('post', 'social_draft'), []);
+  assert.deepEqual(decisionsFor('post', 'social_draft'), ['approve', 'edit', 'reject'], 'TA-S1: edit opens the post editor');
   for (const view of ['queue', 'skippers', 'rules', 'posts', 'funnel', 'health']) assert.ok(ADMIN_COPY.views[view], view);
   for (const kind of ['media', 'report', 'post', 'skipper', 'conversation', 'rule']) assert.ok(ADMIN_COPY.kinds[kind], kind);
 });
