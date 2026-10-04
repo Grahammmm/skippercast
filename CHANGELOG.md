@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Refine Big Sur habitat outlines with the original BSS08 2 m rough/smooth terrain layer. Preserve measured depth, uncertainty, credited noncommercial terms and spatial screening; this adds no new surveyed area.
+
 - Show spatially screened measured rough-bottom patches as limited-confidence,
   unranked search areas when surrounding data cannot support a terrain grade.
   Keep detailed rankings, source-quality holds and precise fishing exports separate.

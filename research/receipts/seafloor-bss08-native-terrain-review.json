@@ -1,0 +1,86 @@
+{
+  "profile": "csumb-native-rough-v1",
+  "scope": "BSS08 original 2 m terrain-support review",
+  "reviewed_at": "2026-10-04",
+  "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/BSS_Block08/multibeam/data/version2/products/BSS_Block08_additional_products.tar.gz",
+  "publisher_landing_url": "https://www.ngdc.noaa.gov/ships/r_v_harold_heath/BSS_Block08_mb.html",
+  "rights_url": "https://csumb.edu/undersea/sfml-data-library/",
+  "legend": {
+    "rough": [
+      -1,
+      -31,
+      -101,
+      -201
+    ],
+    "smooth": [
+      0,
+      -30,
+      -100,
+      -200
+    ],
+    "zero_is_valid_smooth": true
+  },
+  "limitations": [
+    "Same bathymetry lineage, not independent substrate evidence or evidence of fish presence.",
+    "Smooth or missing classification restricts candidate extraction; measured depth pixels remain valid.",
+    "2 m is delivered grid spacing, not verified horizontal or vertical accuracy. Original interpolation masks remain unknown.",
+    "Producer-selected thresholds and conservative artifact masking may omit real rough terrain.",
+    "Preserve NAVD88 depth datum, credited noncommercial rights, source-quality and whole-polygon spatial restrictions. For-profit use requires producer permission.",
+    "This binding adds no new survey acquisition or geographic expansion. Public results require the normal publication pipeline."
+  ],
+  "new_acquisition_km2": 0,
+  "new_independent_evidence_count": 0,
+  "products": [
+    {
+      "source_id": "bss-block08-additional-products-tar-gz-41c3a81783",
+      "source_sha256": "a5cd92c5bae4657d6667159a84dce8d7f6827946f6942c5724572bd7edf964d7",
+      "source_bytes": 81146262,
+      "depth_archive_member": "BSS_Block08/Bathymetry/ArcViewGrids/bss08_2mbathy",
+      "archive_member": "BSS_Block08/Habitat/ArcViewGrids/bss08_2mhab",
+      "metadata_sha256": "bc6a50f76f59d925f50730211c675397eb74dd313cb57c60d8bd4e941964b0d7",
+      "native_shape": [
+        2145,
+        1497
+      ],
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "native_crs": "EPSG:26910",
+      "native_transform": [
+        2.0,
+        0.0,
+        633725.0,
+        0.0,
+        -2.0,
+        3981001.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "native_alignment": "exact",
+      "class_counts": {
+        "0": 205150,
+        "-30": 1178265,
+        "-1": 70544,
+        "-31": 96208
+      },
+      "valid_shallow_cells": 1560971,
+      "rough_shallow_cells": 166752,
+      "shallow_class_nodata_cells": 10804,
+      "same_survey_as_depth": true,
+      "independent_confirmation": false,
+      "original_metadata": [
+        {
+          "archive_member": "BSS_Block08/Habitat/ArcViewGrids/bss08_2mhab/metadata.xml",
+          "sha256": "bc6a50f76f59d925f50730211c675397eb74dd313cb57c60d8bd4e941964b0d7"
+        },
+        {
+          "archive_member": "BSS_Block08/Habitat/ArcViewGrids/bss08_2msub/metadata.xml",
+          "sha256": "6c8ab0daa77acc8f09cc1a10a7cc8dd7a0527e8fac40c075680b4a8d450f1331"
+        }
+      ],
+      "same_survey_interpretation_note": "Producer selected roughness thresholds visually and conservatively masked likely heave artifacts as smooth. Classification can omit real rough terrain; it is not an independent hard-bottom observation."
+    }
+  ]
+}
