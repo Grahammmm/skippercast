@@ -13,6 +13,7 @@
 //   POST /api/admin/reviews/:id     {decision: approve|edit|reject, patch?, note?, reply?}   admin/decisions.ts
 //   GET  /api/admin/media/:id       the photo's bytes from R2: thumb.jpg, public.jpg or the stripped original if upright (?v=original: the original)
 //   GET  /api/admin/health          admin/health.ts
+//   POST /api/admin/meta/subscribe  Instagram DMs and comments to the app's webhook (TA-S6, admin/health.ts subscribeWebhooks)
 //   GET  /api/admin/boats           admin/skippers.ts listBoats (TA-W3)
 //   POST /api/admin/boats/invite    {phone, boat_name?, language?}   the number is hashed on receipt and never echoed; 20 a day
 //   POST /api/admin/boats/:id       {fields?, status?: verified|rejected, consent_note?}
@@ -39,7 +40,7 @@ import {advisorSettings} from '../advisor/settings.ts';
 import {listReviews, REVIEW_KINDS, REVIEW_STATUSES} from '../advisor/admin/queue.ts';
 import {decideReview, DECISIONS} from '../advisor/admin/decisions.ts';
 import type {Decision} from '../advisor/admin/decisions.ts';
-import {adminHealth} from '../advisor/admin/health.ts';
+import {adminHealth, subscribeWebhooks} from '../advisor/admin/health.ts';
 import {teamSender} from '../advisor/consumer.ts';
 import {derivedKey} from '../advisor/media.ts';
 // TA-W3: skippers, crew, invites and contacts.
@@ -166,6 +167,12 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   });
 
   admin.get('/api/admin/health', async c => json(await adminHealth(c.env, (deps.now ?? Date.now)(), deps.metaFetcher ? {metaFetcher: deps.metaFetcher} : {})));
+  // TA-S6: subscribe the Instagram account's DMs and comments to the app's webhook (09 § Inbox).
+  admin.post('/api/admin/meta/subscribe', async c => {
+    const outcome = await subscribeWebhooks(c.env, deps.metaFetcher);
+    if (outcome.status === 'ok') return json({subscribed: outcome.subscribed, fields: outcome.fields});
+    return json({error: outcome.error}, outcome.status === 'not-configured' ? 409 : 502);
+  });
 
   // ---- TA-W3: skippers, crew, invites, contacts ----
   const now = (): number => (deps.now ?? Date.now)();

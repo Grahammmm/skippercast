@@ -226,6 +226,17 @@ export const ADMIN_COPY = {
   metaQuota: 'Instagram posts in the last 24 hours',
   metaQuotaUnavailable: 'Could not read the quota from Meta',
   metaChecked: 'Quota checked',
+  // TA-S6: the Instagram inbox (09 § Inbox).
+  inbox: 'Instagram inbox (DMs and comment keywords)',
+  inboxState: 'Inbox',
+  inboxPublic: 'Public replies to comment questions',
+  inboxWebhook: 'Webhook verify token and app secret',
+  inboxReady: 'Set',
+  inboxMissing: 'Missing',
+  inboxSubscribe: 'Subscribe webhooks',
+  inboxSubscribeHelp: 'Asks Meta to send this account’s DMs and comments to the webhook. Needed once after the app is set up (owner runbook: advisor-meta-app-review).',
+  inboxSubscribed: (fields: string): string => `Subscribed: ${fields}.`,
+  inboxNotSubscribed: 'Meta did not confirm the subscription.',
   // Skippers (TA-W3)
   skippersHeading: 'Skippers',
   inviteHeading: 'Invite a skipper',

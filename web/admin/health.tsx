@@ -2,8 +2,10 @@
 // queue, vision providers, today's caps and the media job, from
 // GET /api/admin/health. TA-S0: whether Meta is configured and the Instagram
 // publishing quota (the Page token of the Facebook-Login route does not expire).
+// TA-S6: the Instagram inbox switches and the "Subscribe webhooks" action.
+import {useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {when} from './api.ts';
+import {when, ApiError, subscribeWebhooks} from './api.ts';
 import type {Health} from './api.ts';
 
 function Row({label, value, tone}: {label: string; value: string | number; tone?: 'go' | 'rough' | 'caution'}) {
@@ -72,8 +74,41 @@ export function HealthView({health, failed, onRefresh}: {health: Health | null; 
               </dl>
             ) : <p class="admin-muted">{COPY.metaNotConfigured}</p>}
           </section>
+          <InboxSection health={health} />
         </div>
       )}
+    </section>
+  );
+}
+
+/** TA-S6 (09 § Inbox): the inbox switches, whether the webhook can be verified, and "Subscribe webhooks". */
+function InboxSection({health}: {health: Health}) {
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  async function subscribe(): Promise<void> {
+    setBusy(true); setNotice(''); setError('');
+    try {
+      const result = await subscribeWebhooks();
+      if (result.subscribed) setNotice(COPY.inboxSubscribed(result.fields)); else setError(COPY.inboxNotSubscribed);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : COPY.loadFailed);
+    } finally { setBusy(false); }
+  }
+  return (
+    <section aria-labelledby="h-inbox">
+      <h2 id="h-inbox">{COPY.inbox}</h2>
+      <dl class="admin-fields">
+        <Row label={COPY.inboxState} value={health.inbox.enabled ? COPY.enabled : COPY.disabled} tone={health.inbox.enabled ? 'go' : undefined} />
+        <Row label={COPY.inboxPublic} value={health.inbox.public_replies ? COPY.enabled : COPY.disabled} />
+        <Row label={COPY.inboxWebhook} value={health.inbox.webhook_ready ? COPY.inboxReady : COPY.inboxMissing} tone={health.inbox.webhook_ready ? undefined : 'caution'} />
+      </dl>
+      <p class="admin-muted">{COPY.inboxSubscribeHelp}</p>
+      <div class="admin-actions">
+        <button type="button" class="admin-button" disabled={busy || !health.meta.configured} onClick={() => void subscribe()}>{COPY.inboxSubscribe}</button>
+      </div>
+      {notice ? <p class="admin-notice" role="status">{notice}</p> : null}
+      {error ? <p class="admin-error" role="alert">{error}</p> : null}
     </section>
   );
 }

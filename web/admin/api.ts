@@ -25,6 +25,7 @@ export interface Health {
   media_jobs: {pending: number};
   reviews: {open: number};
   meta: {configured: boolean; quota_usage: number | null; quota_total: number | null; checked_at: string | null; error: 'unavailable' | null};
+  inbox: {enabled: boolean; public_replies: boolean; webhook_ready: boolean};   // TA-S6
 }
 
 // ---- TA-W3: Skippers and Contacts (server/advisor/admin/skippers.ts) ----
@@ -143,6 +144,7 @@ export const invite = (phone: string, boatName: string, language: 'en' | 'es'): 
 export const getContact = (id: string): Promise<ContactDetail> => call(`/api/admin/contacts/${encodeURIComponent(id)}`);
 export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
+export const subscribeWebhooks = (): Promise<{subscribed: boolean; fields: string}> => postJson('/api/admin/meta/subscribe', {});   // TA-S6
 export const getPosts = (status: string, kind: string, cursor?: string | null): Promise<PostsPage> => call(postsPath(status, kind, cursor));
 export const publishPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/publish`, {});
 export const schedulePost = (id: string, scheduledFor: string | null): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/schedule`, {scheduled_for: scheduledFor});

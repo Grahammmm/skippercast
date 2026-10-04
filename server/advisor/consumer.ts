@@ -73,6 +73,10 @@
 // same code the admin queue uses; teamSender is how either sends the texts a
 // decision owes (created_by set for the admin queue's).
 //
+// TA-S6: Instagram (09 § Inbox). An Instagram contact's address is its IGSID and
+// its channel the Instagram adapter (channels/index.ts channelFor); comment_reply
+// answers a comment once, privately or publicly (channels/instagram.ts commentChannel).
+//
 // TA-S1: social drafts (09 § Drafts). media_queue also makes the photo's post
 // draft and its `post` review (social/drafts.ts ensureMediaDraft: consent
 // re-checked, one model call for the caption line through deps.engine.fetcher);
@@ -91,6 +95,9 @@ import {advisorLog, redact} from './log.ts';
 import {recordAdvisorTurn} from './analytics.ts';
 import {relayState} from './relay.ts';
 import {splitForChannel, ChannelNotImplemented, CHUNK_GAP_MS} from './channels/index.ts';
+import type {AdapterName} from './channels/index.ts';
+// TA-S6: an Instagram comment's private or public reply.
+import {commentChannel} from './channels/instagram.ts';
 // TA-C4: media intake before the handler.
 import {ingestInboundMedia} from './media.ts';
 // TA-M1: waiting for the media job's derived image.
@@ -163,8 +170,8 @@ async function setStatus(db: D1Database, id: string, status: string, from: strin
   return (r.meta.changes ?? 0) > 0;
 }
 
-/** Where a channel sends: the encrypted number (decrypted only inside the adapter) or the web session hash. */
-const address = (contact: AdvisorContactRow): string | null => contact.phone_enc ?? contact.web_session ?? null;
+/** Where a channel sends: the encrypted number (decrypted only inside the adapter), the web session hash, or (TA-S6) the IGSID. */
+const address = (contact: AdvisorContactRow): string | null => contact.phone_enc ?? contact.web_session ?? contact.ig_sid ?? null;
 /** The adapter for this contact: a fixed test channel, else channelFor, else none. */
 const channelOf = (env: Env, deps: ConsumerDeps, contact: AdvisorContactRow): OutboundChannel | null => deps.channel ?? deps.channelFor?.(env, contact) ?? null;
 const hint = (channel: string): OutboundMessage['channelHint'] => channel === 'imessage' || channel === 'sms' ? channel : undefined;
@@ -233,7 +240,7 @@ async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow
  */
 async function sendText(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, text: string, adapterOverride?: OutboundChannel | null, createdBy: string | null = null): Promise<number> {
   const adapter = adapterOverride !== undefined ? adapterOverride : channelOf(env, deps, contact);
-  const chunks = adapter?.name ? splitForChannel(text, {name: adapter.name as 'bluebubbles' | 'twilio' | 'web'}, contact.channel) : [text];
+  const chunks = adapter?.name ? splitForChannel(text, {name: adapter.name as AdapterName}, contact.channel) : [text];
   let sends = 0;
   for (const [n, chunk] of chunks.entries()) {
     if (n > 0) await sleep(deps, CHUNK_GAP_MS);
@@ -377,6 +384,10 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
         break;
       case 'angler_share':
         await applyAnglerShare(env, contact, action.mediaId, action.credit);
+        break;
+      // ---- TA-S6: an Instagram comment's answer (09 § Inbox) ----
+      case 'comment_reply':
+        sends += await applyCommentReply(env, deps, contact, message, action);
         break;
       default:
         advisorLog('warn', 'advisor_action_unknown', {index, type: String((action as {type?: unknown})?.type).slice(0, 40)});
@@ -667,6 +678,19 @@ async function applyAnglerShare(env: Env, contact: AdvisorContactRow, mediaId: s
   const r = await db.prepare(`UPDATE advisor_media SET publish_state=CASE WHEN publish_state='private' THEN 'queued' ELSE publish_state END${clean ? ',credit=?' : ''}
     WHERE id=? AND contact_id=? AND boat_id IS NULL AND publish_state IN ('private','queued')`).bind(...(clean ? [clean] : []), mediaId, contact.id).run();
   if (r.meta.changes) advisorLog('info', 'advisor_angler_photo_queued', {credit: clean ? (clean === 'anonymous' ? 'anonymous' : 'name') : 'none'});
+}
+
+/**
+ * TA-S6 (09 § Inbox): the answer to an Instagram comment, only on a comment's
+ * own inbound row. The outbound key is fixed per mode ('comment:private',
+ * 'comment:public'), so with the inbound row unique per comment id there is at
+ * most one private reply per comment however often the turn is retried, as
+ * Meta allows; the channel itself refuses a second send in the same turn.
+ */
+async function applyCommentReply(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, message: AdvisorMessageRow, action: Extract<Action, {type: 'comment_reply'}>): Promise<number> {
+  if (message.channel !== 'instagram_comment' || !message.provider_id || (action.mode !== 'private' && action.mode !== 'public') || typeof action.text !== 'string' || !action.text.trim()) return 0;
+  const channel = commentChannel(env, {providerId: message.provider_id, receivedAt: message.created_at}, action.mode, deps.instagram ?? {});
+  return Number(await sendOnce(env, deps, contact, message.id, `comment:${action.mode}`, {text: action.text}, channel));
 }
 
 /**

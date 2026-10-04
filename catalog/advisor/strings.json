@@ -817,6 +817,26 @@
     "story_conditions_title": {
       "en": "Today out of {place}",
       "es": "Hoy saliendo de {place}"
+    },
+    "comment_rig": {
+      "en": "Thanks for asking! How the boats rig and fish it, with bait and gear: {guide} Questions about your port? Text us: {text}",
+      "es": "¡Gracias por preguntar! Cómo arman y pescan los barcos, con carnada y equipo: {guide} ¿Preguntas sobre tu puerto? Escríbenos por mensaje: {text}"
+    },
+    "comment_report": {
+      "en": "Here are the latest reports from the boats and today's conditions: {guide} Want them by text? {text}",
+      "es": "Aquí están los últimos reportes de los barcos y las condiciones de hoy: {guide} ¿Los quieres por mensaje? {text}"
+    },
+    "comment_id": {
+      "en": "Reply here with a photo of your fish and we'll name the likely species and its look-alikes. You can also send it on the web: {guide} or by text: {text}",
+      "es": "Responde aquí con una foto de tu pez y te diremos la especie probable y sus parecidas. También puedes mandarla en la web: {guide} o por mensaje: {text}"
+    },
+    "comment_boats": {
+      "en": "These are the boats that report to us, with their booking links: {guide} Questions? Text us: {text}",
+      "es": "Estos son los barcos que nos reportan, con sus enlaces para reservar: {guide} ¿Preguntas? Escríbenos por mensaje: {text}"
+    },
+    "igdm_continue": {
+      "en": "Easier by text? Keep going with us by text message: {{link:text:igdm}}",
+      "es": "¿Más fácil por mensaje de texto? Sigue con nosotros por SMS: {{link:text:igdm}}"
     }
   }
 }

@@ -322,3 +322,52 @@ export async function pageInfo(cfg: MetaConfig, pageId: string): Promise<PageInf
   return {id: requireId(String(r.id ?? ''), 'page'), name: typeof r.name === 'string' ? r.name : null,
     instagram: ig?.id && ID.test(ig.id) ? {id: ig.id, username: typeof ig.username === 'string' ? ig.username : null} : null};
 }
+
+// ---- TA-S6: the inbox (Instagram messaging, comment replies, webhook subscription) -----------------
+
+/** Meta's "outside of allowed window" refusal on a message send (code 10, subcode 2018278). */
+export const OUTSIDE_WINDOW = {code: 10, subcode: 2018278} as const;
+/** An Instagram text message is at most 1,000 characters. */
+export const IG_TEXT_MAX = 1000;
+/** A public comment reply: Instagram allows 2,200 characters, the caption limit. */
+export const IG_COMMENT_MAX = 2200;
+
+export type IgRecipient = {id: string} | {comment_id: string};
+export type IgMessage = {text: string} | {attachment: {type: 'image'; payload: {url: string}}};
+
+/** The form fields of POST /<ig-user-id>/messages (tests pin them): `recipient` and `message` as JSON. */
+export function igMessageParams(recipient: IgRecipient, message: IgMessage): Params {
+  const to = 'id' in recipient ? {id: requireId(recipient.id, 'recipient')} : {comment_id: requireId(recipient.comment_id, 'comment')};
+  if ('text' in message) {
+    if (typeof message.text !== 'string' || !message.text.trim()) throw new TypeError('a message needs text');
+    if (Array.from(message.text).length > IG_TEXT_MAX) throw new TypeError('an Instagram message is at most 1000 characters');
+  } else if (!/^https:\/\/\S+$/.test(message.attachment?.payload?.url ?? '')) throw new TypeError('an image attachment needs an https URL');
+  return {recipient: JSON.stringify(to), message: JSON.stringify(message)};
+}
+
+/**
+ * POST /<ig-user-id>/messages (09 § Inbox): a DM to an IGSID (`{id}`, inside the
+ * 24-hour window after their last message) or the one private reply to a
+ * comment (`{comment_id}`, within 7 days of the comment). One try (`attempts: 1`
+ * from the caller): a send that failed with a 5xx may have been delivered.
+ * Returns Meta's message id.
+ */
+export async function igSendMessage(cfg: MetaConfig, igUserId: string, recipient: IgRecipient, message: IgMessage): Promise<string | null> {
+  const r = await graph<{message_id?: string; recipient_id?: string}>(cfg, 'POST', `/${requireId(igUserId, 'ig user')}/messages`, igMessageParams(recipient, message));
+  return typeof r.message_id === 'string' && /^[\w.:=-]{1,200}$/.test(r.message_id) ? r.message_id : null;
+}
+
+/** POST /<comment-id>/replies message=<text>: a public reply under a comment. Returns the reply's comment id. */
+export async function igCommentReply(cfg: MetaConfig, commentId: string, text: string): Promise<string> {
+  if (typeof text !== 'string' || !text.trim() || Array.from(text).length > IG_COMMENT_MAX) throw new TypeError('a comment reply is 1 to 2200 characters');
+  const r = await graph<{id?: string}>(cfg, 'POST', `/${requireId(commentId, 'comment')}/replies`, {message: text});
+  return requireId(String(r.id ?? ''), 'reply');
+}
+
+/** The webhook fields the inbox subscribes to (09 § Inbox). */
+export const SUBSCRIBED_FIELDS = 'messages,comments';
+/** POST /<ig-user-id>/subscribed_apps?subscribed_fields=messages,comments: deliver this account's DMs and comments to the app's webhook. */
+export async function igSubscribeApps(cfg: MetaConfig, igUserId: string): Promise<boolean> {
+  const r = await graph<{success?: boolean}>(cfg, 'POST', `/${requireId(igUserId, 'ig user')}/subscribed_apps`, {subscribed_fields: SUBSCRIBED_FIELDS});
+  return r.success === true;
+}

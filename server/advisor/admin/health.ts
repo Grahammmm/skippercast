@@ -5,11 +5,12 @@
 // reads this every minute), cached in job_state advisor.meta.quota. The
 // Facebook-Login Page token does not expire (09 § facts), so there is no
 // token expiry to show. Hermes health comes with the Hermes vision provider.
+// TA-S6: the inbox switches, and subscribeWebhooks (the "Subscribe webhooks" action).
 import {advisorSettings} from '../settings.ts';
 import {relayState} from '../relay.ts';
 import {downKey} from '../vision/index.ts';
 import {mediaJobPending} from '../media.ts';
-import {igPublishingLimit, metaConfig, metaConfigured} from '../social/meta.ts';
+import {igPublishingLimit, igSubscribeApps, metaConfig, metaConfigured, MetaError, SUBSCRIBED_FIELDS} from '../social/meta.ts';
 import type {Fetcher} from '../social/meta.ts';
 import type {Env} from '../../env.ts';
 
@@ -30,6 +31,8 @@ export interface AdminHealth {
   media_jobs: {pending: number};
   reviews: {open: number};
   meta: MetaHealth;
+  // TA-S6: the Instagram inbox switches and whether Meta's webhook can be verified (09 § Inbox).
+  inbox: {enabled: boolean; public_replies: boolean; webhook_ready: boolean};
 }
 
 const count = async (db: D1Database, sql: string, ...args: unknown[]): Promise<number> => (await db.prepare(sql).bind(...args).first<{n: number}>())?.n ?? 0;
@@ -89,5 +92,23 @@ export async function adminHealth(env: Env, now: number = Date.now(), deps: {met
     media_jobs: {pending: await mediaJobPending(db)},
     reviews: {open: await count(db, "SELECT COUNT(*) AS n FROM advisor_reviews WHERE status='open'")},
     meta: await metaHealth(env, now, deps.metaFetcher),   // TA-S0
+    inbox: {enabled: settings.inboxEnabled, public_replies: settings.inboxPublicReplies, webhook_ready: Boolean(env.META_VERIFY_TOKEN && env.META_APP_SECRET)},
   };
+}
+
+export type SubscribeOutcome = {status: 'ok'; subscribed: boolean; fields: string} | {status: 'not-configured' | 'failed'; error: string};
+/**
+ * TA-S6, the Health view's "Subscribe webhooks": POST /<ig-user-id>/subscribed_apps
+ * with subscribed_fields=messages,comments, so Meta delivers the account's DMs
+ * and comments to the app's webhook (09 § Inbox). One try; the answer carries
+ * Meta's codes only.
+ */
+export async function subscribeWebhooks(env: Env, fetcher?: Fetcher): Promise<SubscribeOutcome> {
+  const cfg = metaConfig(env, {...(fetcher ? {fetcher} : {}), attempts: 1});
+  if (!cfg) return {status: 'not-configured', error: 'the META_* secrets are not set'};
+  try {
+    return {status: 'ok', subscribed: await igSubscribeApps(cfg, env.META_IG_USER_ID!), fields: SUBSCRIBED_FIELDS};
+  } catch (error) {
+    return {status: 'failed', error: error instanceof MetaError ? error.message : 'the request failed'};
+  }
 }

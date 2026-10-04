@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Answer Instagram direct messages and comment keywords (RIG, REPORT, ID, BOATS, in English and Spanish) once Meta approves the app: one private reply per keyword comment, DM answers within Meta's 24-hour window, public answers to questions only when switched on, and a privacy-notice section for the Text Advisor awaiting review.
+
 - Post the morning Stories automatically: each verified boat's count board from the day before (once its photo has no hold) and a conditions card for the day.
 
 - Draft a daily "what's biting" post from yesterday's verified boat reports and a Sunday roundup carousel of the week's catch photos for the team to approve, and schedule approved posts into a weekly posting calendar shown in the admin Posts view.

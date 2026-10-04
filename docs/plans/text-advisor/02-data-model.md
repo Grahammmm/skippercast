@@ -41,7 +41,7 @@ One row per person (phone number) or web visitor.
 | `phone_hash` | text, unique, nullable | `HMAC-SHA256(K_hash, e164)` hex, where `K_hash = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'hash')`. Null for web-only contacts. |
 | `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(K_enc, e164))`, `K_enc = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'enc')`, 12-byte random iv. Decrypted only to send. |
 | `web_session` | text, unique, nullable | the `sc_adv` cookie value's sha256 for web visitors |
-| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0011) |
+| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0011; TA-S6: also a commenter whose keyword or question comment was stored) |
 | `channel` | text | last channel used: `imessage`, `sms`, `web`, later `whatsapp` |
 | `role` | text | `angler` (default), `skipper`, `crew`, `admin-test` |
 | `boat_id` | text, nullable | the boat a skipper or crew member posts for |
@@ -49,7 +49,7 @@ One row per person (phone number) or web visitor.
 | `language` | text | `en` (default) or `es`; set from the first message, updated when they switch for two consecutive messages |
 | `home_port` | text, nullable | a `catalog/home-ports.json` port id |
 | `targets_json` | text, nullable | array of species keys from `catalog/species.json` |
-| `source` | text, nullable | first-touch attribution: `instagram`, `facebook`, `web`, `qr`, `skipper-invite`, `direct` (from the pre-filled first message, see 08) |
+| `source` | text, nullable | first-touch attribution: `instagram`, `facebook`, `web`, `qr`, `skipper-invite`, `direct` (from the pre-filled first message, see 08). As built: `ig` from the bio link (TA-C6), `igdm` and `igcomment` for a contact whose first message was an Instagram DM or comment (TA-S6) |
 | `status` | text | `active`, `stopped` (texted STOP; no outbound), `blocked` (admin) |
 | `messages_today` | integer | rolling counter reset by date in `messages_day` |
 | `messages_day` | text, nullable | `YYYY-MM-DD` (America/Los_Angeles) the counter belongs to |

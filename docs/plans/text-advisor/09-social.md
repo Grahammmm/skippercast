@@ -841,6 +841,120 @@ the admin calendar shows them so the owner can post something by hand.
 - Off (`ADVISOR_INBOX_ENABLED=false`): the webhook verifies and acks and
   writes nothing.
 
+### As built (TA-S6)
+
+- **Where.** `server/advisor/social/inbox.ts` (handshake, signature, payload,
+  keywords, questions), `server/advisor/channels/instagram.ts` (the adapter and
+  `commentChannel`), `catalog/advisor/keywords.json`, the routes in
+  `server/routes/advisor.ts`, the `comment_reply` action in `consumer.ts`, the
+  comment path and the DM line in `engine.ts`, `igSendMessage`,
+  `igCommentReply` and `igSubscribeApps` in `social/meta.ts`, "Subscribe
+  webhooks" in the Health view (`POST /api/admin/meta/subscribe`),
+  `tests/test_advisor_instagram.mjs` and the owner's runbook
+  [advisor Meta App Review](../../operations/runbooks/advisor-meta-app-review.md).
+  Meta's docs could not be fetched from the build environment: the request
+  shapes below are those this plan and Meta's Instagram messaging docs name
+  (Graph `v26.0`); the first live call in the runbook's step 5 confirms them.
+- **Webhook.** `GET` answers `hub.challenge` as text when `hub.mode=subscribe` and
+  `hub.verify_token` equals `META_VERIFY_TOKEN` (constant time), else `403`.
+  `POST` reads the raw body (at most 256 KB, else `400`) and checks
+  `X-Hub-Signature-256` (`sha256=` + hex HMAC-SHA256 with `META_APP_SECRET`,
+  WebCrypto verify) before parsing; missing or wrong is `401`. Then, with
+  `ADVISOR_INBOX_ENABLED` off or the Meta secrets missing, `200 {}` and nothing
+  written. Both share the other webhooks' per-IP limiter and sit behind the
+  advisor gate (`TEXT_ADVISOR_ENABLED`), so the owner turns the advisor on
+  before Meta can verify the URL.
+- **Payload.** `object: "instagram"`; entries for another account than
+  `META_IG_USER_ID` are skipped. `messaging[].message` with text or image
+  attachments is a DM (`instagram_dm`, `provider_id` the `mid`); echoes, events
+  from our own id, `read`, `reaction`, deleted, unsupported and text-less shares
+  are skipped. Image attachments become media placeholders like any channel's;
+  the consumer downloads them through the Instagram adapter, which fetches only
+  `https` URLs on `fbsbx.com`, `fbcdn.net` or `cdninstagram.com` (not a redirect
+  elsewhere). `changes[]` with `field: comments` is a comment
+  (`instagram_comment`, `provider_id` the comment id, `to` the post's media id);
+  ours (from `META_IG_USER_ID`, which includes our public replies) are skipped.
+- **Only comments that need an answer are stored** (`classifyComment`): the first
+  word, after `@mentions`, emoji and punctuation, folded to lower case without
+  accents, is a keyword word (`catalog/advisor/keywords.json`: RIG rig, rigs,
+  rigging, aparejo, aparejos, montaje; REPORT report, reports, reporte,
+  reportes, informe; ID id, identify, identificar, identifica, especie; BOATS
+  boats, boat, barcos, barco, lanchas, botes), or, with
+  `ADVISOR_INBOX_PUBLIC_REPLIES=true`, a question (`?` or `¿`, or a question
+  word first) that is not a Stage 1 command. Everything else is never written,
+  so a comment that needs nothing leaves no trace. Stored messages go through
+  `storeInbound` (deduplicated by channel and provider id, so Meta's retries
+  change nothing) and the queue like a text.
+- **Contacts.** `findOrCreateContact(db, null, {igSid, channel})` upserts on the
+  unique `ig_sid`; no phone key is needed. Source on the first message: `igdm` or
+  `igcomment` (02's `instagram` became these two, next to TA-C6's `ig` for the
+  bio link). `channelFor` returns the Instagram adapter for a contact with an
+  `ig_sid` and no number, and the consumer's address for it is the IGSID. A
+  person who later texts us is a separate phone contact (there is no linking).
+- **DMs.** The engine runs as for a text: the channel line in the brief says
+  "Instagram direct message (1,000 characters a message)"; there is no texting
+  welcome (rates, HELP, STOP) and no contact card; Stage 1 commands work by DM
+  (STOP, START, HELP, forget me, send me my data). Replies split at 1,000
+  characters (`splitForChannel`, `INSTAGRAM_CHUNK`). `send` posts
+  `POST /<ig-user-id>/messages` with `recipient={"id": IGSID}` and
+  `message={"text": ...}`, then one `{"attachment": {"type": "image", "payload":
+  {"url": ".../media/<id>.jpg"}}}` per media key (approved or posted media only,
+  at most 4, else `media-not-public`). Before any call it checks Meta's 24-hour
+  window against the contact's last inbound DM (`advisor_messages.created_at`);
+  outside it the row is `failed` with `outside-window` and Meta is not called.
+  Meta's own refusal (code 10, subcode 2018278) maps to the same; another 4xx is
+  `failed` `meta-<status>-<code>`; a 5xx or network failure is `unknown` (one try:
+  a POST that failed may have been delivered).
+- **"Continue by text".** `runTurn` wraps the turn for `instagram_dm`: when this
+  is the contact's third, sixth, ... answered DM (distinct `in_reply_to` of
+  outbound `instagram_dm` rows that did not fail, this message excluded so a
+  retry counts the same), the last text gets a blank line and `igdm_continue`
+  ("Easier by text? Keep going with us by text message:" and
+  `{{link:text:igdm}}` = `/text?s=igdm`). Not on commands, guards or caps, and not
+  without `ADVISOR_NUMBER` (`/text` needs it). `links.ts` gained `text:<source>`,
+  `chat` (the web chat) and `boats:<port>` (the port page's boats section), and
+  `resolveLinks` a visit source argument.
+- **Keyword replies.** The engine's comment path (after Stage 0: replies on, not
+  blocked or stopped) answers a keyword with one action `comment_reply` `private`:
+  the keyword's string (`comment_rig`, `comment_report`, `comment_id`,
+  `comment_boats`, en and es by the matched word's language) with `{guide}` and
+  `{text}` links, visit source `ig`: RIG the species page of a species named in
+  the comment (else lingcod), REPORT the port page of a port named (else the
+  region default's first port), ID the web chat (`/chat.html`), BOATS the port
+  page's `#boats-title`; `{text}` is `/text?s=ig`. Intent `comment.keyword.<key>`.
+- **One private reply per comment.** The consumer's `comment_reply` applier works
+  only on the comment's own inbound row and sends through `commentChannel`
+  (`POST /<ig-user-id>/messages` with `recipient={"comment_id": ...}`) under the
+  fixed outbound key `comment:private`: with the inbound row unique per comment
+  id, a retried or redelivered comment never sends a second one, and the channel
+  refuses a second send in one turn (`one-reply`). Meta's 7-day limit for a
+  private reply is checked against the comment row's time (`outside-window`).
+- **Public replies** (`ADVISOR_INBOX_PUBLIC_REPLIES=true` only): a question
+  comment skips the commands and Stage 2 flows and goes to the model with the
+  read-only data tools only (`get_port_report`, `get_conditions`, `get_rules`,
+  `get_species`, `get_strategy`, `get_trips`) and the brief's channel line "a
+  public reply to an Instagram comment under our post: one or two short
+  sentences, nothing personal, no questions back". The answer becomes one
+  `comment_reply` `public` (`POST /<comment-id>/replies`, key `comment:public`);
+  a refusal, an empty answer or a turn that ran out of tools or time posts
+  nothing (`comment.unanswered`, its review kept); the daily caps answer nothing
+  publicly. A question stored while the switch was on is not answered after it
+  is turned off (`comment.ignored`).
+- **Untrusted text.** DM and comment text reaches the model only as the user turn
+  under the same system prompt as a text; a comment can at most produce the one
+  reply under itself.
+- **Subscribing.** Health shows the inbox switches and whether
+  `META_VERIFY_TOKEN` and `META_APP_SECRET` are set; "Subscribe webhooks" calls
+  `POST /<ig-user-id>/subscribed_apps` with `subscribed_fields=messages,comments`
+  (one try; `409` without the secrets, `502` with Meta's codes on failure).
+- **Not built.** Video, audio and sticker attachments in DMs (ignored), linking an
+  Instagram contact to a phone contact, hiding or deleting comments, Meta's
+  `HUMAN_AGENT` tag (7-day window), story mentions and replies.
+- **Owner steps.** Business Verification, App Review, the Instagram "Allow access
+  to messages" toggle, Live, then `ADVISOR_INBOX_ENABLED=true`: the runbook. The
+  privacy notice section (`dist/privacy.html#text-advisor`) is a draft for the
+  owner and counsel to approve.
+
 ## Insights (SP-10, SC-7 feed)
 
 Cron 03:00 local: for every `posted` post from the last 30 days, fetch IG
