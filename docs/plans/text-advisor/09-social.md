@@ -432,6 +432,111 @@ tests. Fixtures in `tests/fixtures/advisor/meta/`.
 - **Tests.** `tests/test_advisor_meta.mjs` with the recorded responses in
   `tests/fixtures/advisor/meta/` (placeholder ids and tokens only).
 
+### As built (TA-S2)
+
+- **Where.** `server/advisor/social/publish.ts` (`publish`, `publishDue`),
+  `fbFeed` added to `social/meta.ts`, the admin actions in
+  `server/advisor/admin/posts.ts` (`postNow`, `schedulePost`, `retryPost`) and
+  their routes, the `/media` route (`server/routes/advisor.ts`), `PostActions`
+  in `web/admin/post-card.tsx`, `tests/test_advisor_social_publish.mjs`.
+- **When.** `advisorCron` runs `publishDue` on every 15-minute tick (not a daily
+  slot), only while `ADVISOR_SOCIAL_ENABLED=true` and `metaConfigured`: posts in
+  `publishing` (a video still processing) first, then `approved` posts whose
+  `scheduled_for` is past or null, oldest due first, at most 5 a tick, one after
+  the other. An approved post without a time therefore goes out within 15
+  minutes; TA-S4's calendar fills `scheduled_for`. The admin's "Post now" runs
+  the same `publish` in the request.
+- **One run** (`publish(env, postId, deps, {retry})`): a lease in `job_state`
+  `advisor.publish.lock.<post id>` (10 minutes, an UPSERT that takes only an
+  expired lock), so the cron and "Post now" never run one post at once. A post
+  that is not `publishing` is checked again with `approvalHold` (consent
+  revoked, the boat unverified, a photo rejected or under review): a hold sets
+  `failed` with the reason. Every image needs `derived_at`: without it the media
+  job is dispatched and the post stays `approved` (`deferred`); a photo the job
+  gave up on (`derived_error`) fails the post. Then `status='publishing'`.
+- **Media URLs.** `${ADVISOR_PUBLIC_BASE}/media/<id>.jpg` (the derived
+  `public.jpg`) for feed images and carousel items, `/media/<id>.story.jpg` (the
+  derived 1080 x 1920 `story.jpg`, no fallback to the original) for Stories, and
+  `/media/<id>.mp4` for videos: an `approved` or `posted` video's original (MP4
+  or MOV, served with its own type, `video/mp4` or `video/quicktime`) with
+  single-range support (`206` with `Content-Range`, `416` past the end) through
+  an R2 range get.
+- **Instagram.** The quota is read first on every run that still needs
+  Instagram (`content_publishing_limit`; `quota_total` 50 when Meta omits it):
+  used up -> `scheduled_for = max(scheduled_for, now) + 1 h` (from now when the
+  time is past, so a past post is not tried every tick), status back to
+  `approved`, nothing sent to either surface. Containers: `image` (caption),
+  `REELS` (`video_url`, `share_to_feed=true`, caption), `STORIES` (`image_url`
+  story.jpg, or `video_url` for a video), carousel (`is_carousel_item` children,
+  `VIDEO` for a video item, then `CAROUSEL` with the children and the caption).
+  `ig_container_id` is written the moment Meta returns it, and carousel
+  children as they are made (`job_state` `advisor.publish.<post id>`
+  `ig_children`), so a rerun never makes a second container. Every container's
+  `status_code` is read before `media_publish` (images are normally `FINISHED`
+  on the first read): every 10 s, at most 30 reads in a run without a bound,
+  6 in a cron run and 1 for "Post now" and retry; still `IN_PROGRESS` -> the post
+  stays `publishing` and the next tick reads it again, until 30 minutes after
+  the container was made (09's 5 minutes is the poll inside one run; a tick is
+  15 minutes). `ERROR` or `EXPIRED` (or the deadline) fails the surface and
+  clears the container, so a retry makes a new one; `PUBLISHED` on a stored
+  container fails the surface with "check Instagram" and keeps it. After
+  `media_publish`: `ig_media_id`, the permalink and the skipper's text.
+- **Facebook.** One photo: `/photos` with `url` and `message` (`fb_post_id` is
+  the returned `post_id`, else the photo id). Several photos: each uploaded with
+  `published=false` (ids kept in `advisor.publish.<post id>` `fb_photos`), then
+  `POST /<page-id>/feed` with `message` and `attached_media[i]={"media_fbid"}`
+  (`fbFeed`); a video item fails the Page side (the Page's multi-photo post
+  takes photos only). A Reel: `fbVideoReel` with the `.mp4` URL and the caption
+  as `description`. A Story: `fbPhotoStory` with `story.jpg`, stored as
+  `fb_story_id`; a video Story to the Page is not built (no `video_stories`
+  helper). Meta's own Page scheduling is not used: our cron posts both surfaces
+  at the time.
+- **Outcome.** Every targeted surface with its id -> `posted`, `posted_at`, the
+  post's media `posted`, the progress state deleted; one done and one failed ->
+  `partial`, both failed -> `failed`, with `error` as `instagram: ...;
+  facebook: ...` (the MetaError text: edge, HTTP status, Meta's code and
+  subcode; never a token, URL or Meta's message). Instagram and the Page run in
+  the same tick, so a Page post goes out while an Instagram video is still
+  processing. A failed surface is not tried again by the cron (its error is in
+  the progress state); the admin retry clears those errors and runs only the
+  surfaces without an id. `recordPublish(env, {kind, outcome, ms})` once per run
+  (outcomes `posted`, `partial`, `failed`, `pending`, `deferred`, `quota`,
+  `held`, `error`).
+- **The skipper's text.** After Instagram publishes and the permalink is read:
+  the boat's owner (an `active` contact; not with `ADVISOR_REPLIES_ENABLED`
+  off) gets `social_posted` "Posted: {link}" or `social_posted_tagged` "Posted:
+  {link}. Tagged @{handle}." when the boat's handle is a collaborator, a user
+  tag or a mention in the caption (strings in en and es). The outbound id is
+  `outboundId(post id, 'posted')`, so it is sent once whatever reruns. A crew
+  member who sent the photo is not texted; an angler's photo texts no one.
+- **Admin.** `POST /api/admin/posts/<id>/publish` (an `approved` post: its
+  `scheduled_for` cleared, published now), `/schedule` `{scheduled_for: ISO |
+  null}` (an `approved` post; future and within 60 days, the approve decision's
+  check; null posts it on the next tick) and `/retry` (a `partial` or `failed`
+  post). Post now and retry answer 409 while `ADVISOR_SOCIAL_ENABLED` is off or
+  the Meta secrets are missing. Each answers `{post, outcome?, error?}`. The
+  Posts view's non-draft cards show `PostActions`: a time field with "Save
+  time", "Clear time" and "Post now" for an approved post, "Retry the failed
+  part" for a partly posted or failed one, and "Published to" with the surfaces
+  that have an id.
+- **Not built here.** `GET /media/post/<post_id>/<name>` for generated graphics
+  (10 lists it under TA-S2; no post references a graphic until TA-S4 builds the
+  daily post, so the route goes with it), the `scheduled` status (unused:
+  `approved` with a time is the schedule), video Stories to the Page and the
+  `ffprobe` checks on videos.
+- **Privacy note.** Video originals are not metadata-stripped at intake (TA-C4
+  strips JPEG and PNG only), so the public `.mp4` can carry the camera's
+  location atoms while the video is approved or posted. Media ids are random
+  128-bit values and only Meta is given the URL; stripping MP4/MOV metadata (or
+  limiting the URL to the publishing window) is an owner decision raised with
+  this task.
+- **Tests.** `tests/test_advisor_social_publish.mjs`: photo, carousel, a Reel
+  `IN_PROGRESS` across two ticks with one container, a Story, the quota, partial
+  failure and the retry of the failed surface only, idempotent reruns (a stored
+  container, the lease, carousel children), the skipper's text in en and es,
+  the switch off, derived files, holds, the admin routes, the cron hook and the
+  `/media` story and video routes with ranges.
+
 ## Stories (SP-4)
 
 Cron 07:00 local: for each verified boat's count-board photo from the

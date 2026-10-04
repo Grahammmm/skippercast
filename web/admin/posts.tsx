@@ -1,13 +1,14 @@
 // The admin Posts view (08 § Admin, Posts; 09 § Drafts; TA-S1): every social
 // post newest change first, filtered by status and kind, 50 a page. A draft is
 // decided here exactly as in the queue (its `post` review: approve, the post
-// editor, reject); other posts are shown read-only. The week calendar, per-post
-// stats and "post now" come with TA-S2, TA-S4 and TA-S7.
+// editor, reject). An approved post can be posted now or given a time, and a
+// partly posted or failed one retried (TA-S2, PostActions); the others are
+// read-only. The week calendar and per-post stats come with TA-S4 and TA-S7.
 import {useEffect, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {POST_KINDS, POST_STATUSES, getPosts} from './api.ts';
 import type {DecisionResult, Post, QueueItem} from './api.ts';
-import {PostDetail} from './post-card.tsx';
+import {PostActions, PostDetail} from './post-card.tsx';
 import {ReviewCard} from './queue.tsx';
 
 /** A draft with an open review as the queue item its card decides. */
@@ -37,6 +38,11 @@ export function PostsView() {
     setNotice(result.repeated ? COPY.alreadyDecided(COPY.statuses[result.review.status].toLowerCase()) : COPY.decided(COPY.statuses[result.review.status].toLowerCase()));
     void load();
     requestAnimationFrame(() => document.getElementById('posts-heading')?.focus());
+  }
+
+  function changed(post: Post, message: string): void {
+    setPosts(all => all.map(p => (p.id === post.id ? post : p)));
+    setNotice(message);
   }
 
   return (
@@ -70,6 +76,7 @@ export function PostsView() {
                     <p class="admin-meta">{post.boat?.name ?? COPY.angler}</p>
                   </header>
                   <PostDetail post={post} />
+                  <PostActions post={post} onChanged={changed} />
                 </article>
               )}
             </li>

@@ -274,6 +274,19 @@ export async function fbVideoReel(cfg: MetaConfig, pageId: string, input: {video
   return {video_id: videoId, post_id: typeof done.post_id === 'string' && ID.test(done.post_id) ? done.post_id : null};
 }
 
+/**
+ * A multi-photo Page post (TA-S2): POST /<page-id>/feed with `message` and
+ * `attached_media[i]={"media_fbid":"<photo id>"}` for photos already uploaded
+ * unpublished (fbPhoto published=false). Returns the feed post id.
+ */
+export async function fbFeed(cfg: MetaConfig, pageId: string, input: {message?: string; photo_ids: string[]}): Promise<string> {
+  if (!input.photo_ids.length || input.photo_ids.length > 10) throw new TypeError('a multi-photo post takes 1 to 10 photos');
+  const params: Params = {message: input.message};
+  input.photo_ids.forEach((id, i) => { params[`attached_media[${i}]`] = JSON.stringify({media_fbid: requireId(id, 'photo')}); });
+  const r = await graph<{id?: string}>(cfg, 'POST', `/${requireId(pageId, 'page')}/feed`, params);
+  return requireId(String(r.id ?? ''), 'post');
+}
+
 /** A Page photo Story: an unpublished photo (POST /<page-id>/photos published=false), then POST /<page-id>/photo_stories photo_id. Returns the story's post id. */
 export async function fbPhotoStory(cfg: MetaConfig, pageId: string, input: {url: string}): Promise<{photo_id: string; post_id: string}> {
   const photo = await fbPhoto(cfg, pageId, {url: input.url, published: false});

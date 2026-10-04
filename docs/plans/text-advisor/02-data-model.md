@@ -362,6 +362,10 @@ quota read for admin health, `{configured, quota_usage, quota_total,
 checked_at, error}`, reused for 10 minutes) and `advisor.caption.<media id>`
 (a social draft's model caption line, `{line, language}`; deleted with the
 media by "forget me").
+As built (TA-S2): `advisor.publish.lock.<post id>` (the publishing lease, an ISO
+expiry) and `advisor.publish.<post id>` (progress without a column:
+`{ig_children, ig_started_at, ig_error, fb_photos, fb_error}`, deleted when the
+post is `posted`). A posted post's media move from `approved` to `posted`.
 
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 

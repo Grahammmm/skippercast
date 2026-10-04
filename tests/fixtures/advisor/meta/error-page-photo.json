@@ -1,0 +1,9 @@
+{
+  "error": {
+    "message": "The parameter url is required.",
+    "type": "OAuthException",
+    "code": 100,
+    "error_subcode": 2069019,
+    "fbtrace_id": "APLACEHOLDERTRACE02"
+  }
+}

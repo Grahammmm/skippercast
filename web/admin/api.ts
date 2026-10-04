@@ -85,7 +85,10 @@ export interface Post {
   scheduled_for: string | null; error: string | null; created_by: string; approved_by: string | null; approved_at: string | null; posted_at: string | null;
   created_at: string; updated_at: string; boat: {id: string; name: string; slug: string; status: string; instagram: string | null} | null;
   media: PostMedia[]; review_id: string | null; hold: string | null;
+  ig_media_id: string | null; fb_post_id: string | null; fb_story_id: string | null; collab_status: string | null;   // TA-S2
 }
+/** POST /api/admin/posts/:id/{publish,schedule,retry} (TA-S2). */
+export interface PostActionResult {post: Post; outcome?: string; error?: string}
 export interface PostsPage {posts: Post[]; next: string | null}
 export const POST_STATUSES: readonly string[] = ['all', 'draft', 'approved', 'scheduled', 'publishing', 'posted', 'partial', 'failed', 'rejected'];
 export const POST_KINDS: readonly string[] = ['photo', 'carousel', 'reel', 'story', 'daily', 'roundup'];
@@ -135,6 +138,9 @@ export const getContact = (id: string): Promise<ContactDetail> => call(`/api/adm
 export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
 export const getPosts = (status: string, kind: string, cursor?: string | null): Promise<PostsPage> => call(postsPath(status, kind, cursor));
+export const publishPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/publish`, {});
+export const schedulePost = (id: string, scheduledFor: string | null): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/schedule`, {scheduled_for: scheduledFor});
+export const retryPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/retry`, {});
 export function rulesPath(jurisdiction: string, status: string): string {
   const q = new URLSearchParams();
   if (jurisdiction) q.set('jurisdiction', jurisdiction);

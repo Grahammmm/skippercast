@@ -313,4 +313,5 @@ within 15 minutes of its time, and never twice. Weekly slots carry a
 `weekday`. Every local time quoted in 05–09 is a slot name defined in one
 table in `cron.ts`. As built: `daily-answers` (05:30, TA-A1) and
 `rules-watch` (06:15, TA-A4: the CDFW change-watch on the daily feed collected
-at 04:17).
+at 04:17). Not a slot: `publishDue` (TA-S2) runs on every tick, posting due
+approved posts and continuing videos Instagram is still processing.
