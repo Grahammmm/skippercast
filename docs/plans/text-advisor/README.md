@@ -55,3 +55,4 @@ The ADR for the decisions that are hard to reverse is
 Append a dated line when a phase starts or finishes; keep the older lines.
 
 - 2026-10-03: plan written (Claude Fable 5.1); no code yet.
+- 2026-10-03: TA-F1 implemented (PR #252, Opus 5.5 under Fable orchestration); plan corrected for the `ADVISOR_`-prefixed secrets and `BLUEBUBBLES_PRIVATE_API`.
