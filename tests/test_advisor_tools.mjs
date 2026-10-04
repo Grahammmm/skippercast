@@ -34,9 +34,10 @@ const ctx = (over = {}, env = {}) => ({env: {ADVISOR_NUMBER: '+15555550199', ...
   language: 'en', settings: advisorSettings({ADVISOR_NUMBER: '+15555550199', ...env}), now: T0, ...over, ...(over.contact ? {contact: contact(over.contact)} : {})});
 
 const STUBS = ['identify_fish',
-  'read_count_board', 'propose_report', 'edit_report', 'propose_post', 'register_boat', 'add_crew', 'remove_crew', 'share_angler_photo'];
+  'read_count_board', 'propose_report', 'edit_report', 'propose_post', 'share_angler_photo'];
 const BUILT = ['update_profile', 'escalate', 'send_upload_link', 'send_contact_card', 'offer_text_link', 'get_rules',   // get_rules: TA-A0 (tests/test_advisor_rules.mjs)
-  'get_port_report', 'get_conditions', 'get_species', 'get_strategy', 'get_trips'];                                     // TA-E2, below
+  'get_port_report', 'get_conditions', 'get_species', 'get_strategy', 'get_trips',                                      // TA-E2, below
+  'register_boat', 'add_crew', 'remove_crew'];                                                                          // TA-I1 (tests/test_advisor_skippers.mjs)
 
 test('the registry has every tool in 04 § Tools, once, with a valid schema and an intent', () => {
   assert.deepEqual(TOOLS.map(t => t.name).sort(), [...STUBS, ...BUILT].sort());

@@ -43,9 +43,9 @@ const iso = ms => new Date(ms).toISOString();
 /** A database with one contact. */
 function setup({contact = {}, env = {}} = {}) {
   const {sql, db} = advisorDatabase();
-  const c = {id: 'c1', phone_hash: 'h1', phone_enc: 'ENC', web_session: null, channel: 'imessage', role: 'angler', language: 'en', status: 'active', home_port: null, ...contact};
-  sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,web_session,channel,role,language,status,home_port,last_seen_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(c.id, c.phone_hash, c.phone_enc, c.web_session, c.channel, c.role, c.language, c.status, c.home_port, iso(T0), iso(T0), iso(T0));
+  const c = {id: 'c1', phone_hash: 'h1', phone_enc: 'ENC', web_session: null, channel: 'imessage', role: 'angler', language: 'en', status: 'active', home_port: null, boat_id: null, display_name: null, ...contact};
+  sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,web_session,channel,role,language,status,home_port,boat_id,display_name,last_seen_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(c.id, c.phone_hash, c.phone_enc, c.web_session, c.channel, c.role, c.language, c.status, c.home_port, c.boat_id, c.display_name, iso(T0), iso(T0), iso(T0));
   return {sql, db, env: {...ON, DB: db, ADVISOR_NUMBER: '+15555550199', ...env}};
 }
 let seq = 0;
@@ -249,8 +249,10 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
 dbTest('stage 2 extension point: a registered flow runs before the model', async t2 => {
   const {sql, env} = setup();
   seen(sql);
+  // TA-I1's skipper flow is registered at import; the test flow goes after it and only it is removed.
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper']);
   STAGE_TWO_FLOWS.push({name: 'test', run: async f => f.text === 'y' ? {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'} : null});
-  t2.after(() => STAGE_TWO_FLOWS.length = 0);
+  t2.after(() => { STAGE_TWO_FLOWS.splice(STAGE_TWO_FLOWS.findIndex(f => f.name === 'test'), 1); });
   assert.deepEqual(await run(env, contactRow(sql), inbound(sql, 'y')), {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'});
   assert.equal((await quiet(() => run(env, contactRow(sql), inbound(sql, 'nonsense')))).value.intent, 'unconfigured', 'anything else falls through');
 });
@@ -523,8 +525,9 @@ dbTest('consumer: send_file attaches on BlueBubbles and falls back to the link e
 // ---- golden conversations (11 § engine golden conversations 6-9) ------------------------
 
 const conversations = readdirSync(new URL('./fixtures/advisor/engine/conversations/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
-test('golden conversations 6-9 exist', () => {
-  for (const n of ['06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
+test('golden conversations 2 (en, es), 3 and 6-9 exist', () => {
+  // TA-I1: 2 up to the consent step (TA-I2 adds the count board onwards), 3 up to the crew member's first reply.
+  for (const n of ['02-skipper-registers', '02-skipper-registers-es', '03-crew', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
 });
 
 for (const file of conversations) {
@@ -533,13 +536,20 @@ for (const file of conversations) {
     const contact = convo.contact ?? {};
     const {sql, env} = setup({contact, env: {ANTHROPIC_API_KEY: 'k', ADVISOR_PHONE_KEY: KEY, ADVISOR_MEDIA: memoryBucket(), ...convo.env}});
     if (convo.seen !== false) seen(sql);
+    // TA-I1: boats that exist before the conversation (golden 3's verified boat).
+    for (const b of convo.boats ?? []) sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)`)
+      .run(b.id, b.slug, b.name, b.port, b.region ?? 'morro-bay', b.owner ?? null, b.status ?? 'pending', iso(T0 - 86400000), iso(T0 - 86400000));
+    const keys = await deriveKeys(KEY);
+    const byNumber = async e164 => sql.prepare('SELECT * FROM advisor_contacts WHERE phone_hash=?').get(await phoneHash(keys, e164));
     const phoneChannel = recorder('bluebubbles'), webChannel = recorder('web');
     const api = fakeApi(convo.turns.flatMap(turn => turn.model ?? []));
     let step = 0, randomValue = convo.random ?? 0.123456;
     for (const turn of convo.turns) {
       step++;
-      const who = contactRow(sql, contact.id ?? 'c1');
+      // TA-I1: `from` is another sender's number (a crew member texting back).
+      const who = turn.from ? await byNumber(turn.from) : contactRow(sql, contact.id ?? 'c1');
       assert.ok(who, `step ${step}: the contact exists`);
+      const phoneBefore = phoneChannel.sent.length, apiBefore = api.requests.length;
       const m = inbound(sql, turn.in, {contact: who.id, status: 'queued', ago: -(step / 60)});
       const before = {phone: phoneChannel.sent.length, web: webChannel.sent.length};
       const actions = [];
@@ -578,6 +588,23 @@ for (const file of conversations) {
         assert.equal(phone.web_session, contact.web_session, 'the web session now belongs to the phone contact');
       }
       if (e.contact_gone) assert.ok(!contactRow(sql, who.id), 'the contact is gone');
+      // TA-I1: a text to another number (the crew invite), rows in D1, and the model's contact brief.
+      for (const x of e.texted ?? []) {
+        const target = await byNumber(x.to);
+        assert.ok(target, `step ${step}: a contact for the texted number`);
+        const hit = phoneChannel.sent.slice(phoneBefore).find(m => m.to === target.phone_enc);
+        assert.ok(hit, `step ${step}: a text went to that number`);
+        for (const part of x.contains ?? []) assert.ok(hit.text.includes(part), `step ${step}: "${part}" in "${hit.text}"`);
+      }
+      for (const q of e.rows ?? []) assert.deepEqual({...sql.prepare(q.sql).get()}, q.row, `step ${step}: ${q.sql}`);
+      for (const part of e.tool_results_exclude ?? []) for (const request of api.requests.slice(apiBefore))
+        for (const block of request.messages.flatMap(m => Array.isArray(m.content) ? m.content : []).filter(b => b.type === 'tool_result'))
+          assert.ok(!block.content.includes(part), `step ${step}: the tool result never echoes "${part}"`);
+      for (const part of e.brief_contains ?? []) {
+        const request = api.requests.slice(apiBefore)[0];
+        assert.ok(request, `step ${step}: a model call`);
+        assert.ok(request.system[1].text.includes(part), `step ${step}: "${part}" in the brief`);
+      }
     }
     assert.equal(api.remaining(), 0, 'every recorded model response was used');
     void encryptPhone; void outboundId;

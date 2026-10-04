@@ -167,3 +167,85 @@ Prerequisite: `advisor_post_stats` populated (09 § insights). Cron, Mondays
 SkipperCast: {reports} reports, {posts} posts, {views} views, {profile_taps}
 profile taps, {link_clicks} link clicks. Keep them coming." Skippers can opt
 out with "no weekly".
+
+## As built (TA-I1)
+
+Registration, consent, crew and the verification state are in
+`server/advisor/intake/skippers.ts` (the Stage 2 flow `skipperFlow`, registered
+in `engine.ts` `STAGE_TWO_FLOWS`), the `register_boat`, `add_crew` and
+`remove_crew` tools, and the consumer's new appliers. Where the code differs
+from the text above:
+
+- **State.** A pending question is `job_state` `advisor.flow.<contact_id>`,
+  JSON `{flow: 'register' | 'consent', step, draft, asked_at, tries?}`, written
+  only by the consumer (`flow_set` action). 04's "boat row lacks a required
+  field" is not how registration is tracked: the boat row is created only on
+  completion, so no half-registered boat ever exists.
+- **Start.** The pre-router starts it without a model call on `register
+  (my|a|our|the) boat`, `I'm/I am the captain|skipper`, `registrar mi barco`
+  and `soy el capitán`; "… of/del <name>" fills the name. The Spanish phrases
+  answer in Spanish. `register_boat` starts it with the fields the model
+  extracted (invalid ones are dropped and asked again; `ignored` in the
+  result); the system texts the next question itself, so the model is told to
+  add one line at most. With every field given it completes at once. A
+  contact that already owns a boat is told it is set up. Web visitors cannot
+  register (the tool refuses; boats register by text).
+- **Steps.** name → port → landing → instagram → booking, one per text.
+  `skip` (also `none`, `no`, `n/a`, `saltar`, `ninguno`, …) answers the three
+  optional steps. A port is a catalog id or name or a `port-aliases.json`
+  alias; anything else gets "Reply with a number: 1) … 2) … 3) …" with the
+  three ports nearest the contact's home port (else the first port of
+  `ADVISOR_REGION_DEFAULT`), and a digit picks one. Three invalid answers to
+  one question, or `never mind`/`olvídalo`, cancel the flow. A register flow
+  whose question is more than 24 h old is deleted and the message goes on to
+  the model (silently).
+- **Validation.** Name 1–60 characters, quotes stripped, case kept; landing
+  ≤ 60; Instagram `@?[a-z0-9._]{1,30}`, stored lower-case without `@`; booking
+  an https URL (no credentials, ≤ 300) or a NANP number, stored in
+  `phone_public`. Slug: ASCII from the name, ≤ 40, `-2`, `-3`, … on collision.
+- **Completion.** 05's `boat.create` is the `boat_create` action: the boat
+  (`status='pending'`, id derived from the message, so a retried message makes
+  the same boat and keeps its slug), the contact's `role='skipper'` (an
+  `admin-test` contact keeps its role), `boat_id`, and `home_port` when it had
+  none; any crew link of that contact ends. Then `review_open` `skipper`
+  `new_skipper` (which texts the admin, `notifyAdmin`), the completion text,
+  the consent question and the consent flow. A registration done in the other
+  language also stores that language.
+- **Consent.** `yes`, `y`, `ok`, `sí`, `si`, `claro`, … while the question is
+  pending (24 h) record `consent_photos_at` and `consent_message_id` (the
+  inbound message id) and clear an earlier revocation. Any other reply:
+  "No problem. Your photos will still go on your boat page and reports, but not
+  on our social feeds." once, and the message itself goes on (a plain `no`
+  gets only that line). Re-asking: a photo from the owner while consent is not
+  active asks again when the last ask (or, with no record, the boat's
+  creation) is 7 days old or more; the question is appended after the photo's
+  reply. `post my photos` / `publica mis fotos` grants it at any time.
+  `revoke`, `stop posting my photos`, `no publiques`, … set
+  `consent_revoked_at` (the original consent stays on record) and emit
+  `post_revoke`, which only logs until TA-S1 rejects the boat's draft and
+  approved posts. Only the boat's owner can change consent; crew are told so.
+- **Crew.** `add_crew` (owner only) hashes and encrypts the number and
+  returns `{added: true}` only; it refuses the skipper's own number, a stopped
+  or blocked contact, another boat's owner and more than 20 crew. The
+  consumer's `crew_add` finds or creates the contact (a new one is an SMS
+  contact in the skipper's language with `source='skipper-invite'`), sets
+  `role='crew'` and `boat_id` (ending any other crew link), upserts
+  `advisor_crew` with `added_by`, and texts the invite through the crew
+  contact's own channel ("The skipper" when the skipper has no display name).
+  The crew member's reply is a normal turn; their media carry the boat
+  (`inbound.ts` already copies `contact.boat_id`). `remove_crew` (owner only)
+  sets `removed_at` and clears the contact's `boat_id`, and a `crew` role goes
+  back to `angler`. Both appliers re-check ownership.
+- **Verification.** `ok <code>` / `no <code>` (08 § text admin) now also text
+  the boat's owner: "{name} is verified. Your page: skippercast.com/boats/{slug}"
+  or "We couldn't confirm {name} yet. Someone from the SkipperCast team will
+  reach out." The shared helpers are `boatsForContact`, `isVerified`,
+  `publicBoat` (a verified boat by name with its page link, otherwise "a boat")
+  and `consentState`; `get_port_report` uses `publicBoat` on the report's
+  frozen `verified`, `get_trips` lists `status='verified'` only. The boat
+  page's "unverified" label and the daily answer/social exclusions belong to
+  TA-W1, TA-A1 and TA-S1.
+- **Brief.** For skippers and crew the contact brief has the boat name, whether
+  they own it or crew it, its status (with the "a boat until verified" note
+  when not verified) and the photo consent state; a registration in progress
+  is listed so the model does not ask the questions itself.

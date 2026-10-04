@@ -8,6 +8,8 @@ import type {AdvisorTool} from './tool.ts';
 import {PORT_IDS, portName} from '../links.ts';
 import {resolvePort} from '../answers/resolve.ts';
 import {addDays, localDate} from '../answers/time.ts';
+// TA-I1: only verified boats are listed (05 § Verification); pending and rejected ones never are.
+import {VERIFIED} from '../intake/skippers.ts';
 
 export const TRIP_TYPE_DAYS = 60, MAX_BOATS = 12;
 interface BoatRow {id: string; slug: string; name: string; landing: string | null; booking_url: string | null; last_report: string | null}
@@ -24,8 +26,8 @@ export const getTrips: AdvisorTool = {
     const port = resolved.port, since = addDays(localDate(ctx.now), -TRIP_TYPE_DAYS);
     const boats = (await ctx.db.prepare(`SELECT b.id,b.slug,b.name,b.landing,b.booking_url,
         (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS last_report
-        FROM advisor_boats b WHERE b.port=? AND b.status='verified' ORDER BY last_report IS NULL, last_report DESC, b.name LIMIT ?`)
-      .bind(port, MAX_BOATS).all<BoatRow>()).results;
+        FROM advisor_boats b WHERE b.port=? AND b.status=? ORDER BY last_report IS NULL, last_report DESC, b.name LIMIT ?`)
+      .bind(port, VERIFIED, MAX_BOATS).all<BoatRow>()).results;
     const types = boats.length ? (await ctx.db.prepare(`SELECT DISTINCT boat_id, trip_type FROM advisor_reports WHERE boat_id IN (${boats.map(() => '?').join(',')})
         AND status='published' AND report_date>=? AND trip_type IS NOT NULL ORDER BY trip_type`).bind(...boats.map(b => b.id), since).all<{boat_id: string; trip_type: string}>()).results : [];
     const list = boats.map(b => ({

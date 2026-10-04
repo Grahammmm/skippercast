@@ -94,7 +94,34 @@ export type Action =
   | {type: 'send_file'; name: string; mime: string; r2Key?: string; inlineBytes?: string; caption?: string; fallbackUrl?: string}  // inlineBytes: base64
   | {type: 'link_start'; phoneHash: string; phoneEnc: string; codeHash: string; expiresAt: number; codeText: string}
   | {type: 'link_merge'; phoneContactId: string}
-  | {type: 'admin_review'; reviewId: string; decision: 'approved' | 'rejected'};
+  | {type: 'admin_review'; reviewId: string; decision: 'approved' | 'rejected'}
+  // TA-I1: skipper registration, consent and crew (05 § Becoming a skipper, § Consent, § Crew).
+  | {type: 'boat_create'; boat: NewBoat}                                // 05's boat.create: the pending boat, the contact made its skipper, the new_skipper review
+  | {type: 'flow_set'; state: FlowState | null}                         // job_state advisor.flow.<contact_id>; null deletes it
+  | {type: 'consent'; boatId: string; decision: 'yes' | 'revoke'}      // consent_photos_at + consent_message_id, or consent_revoked_at
+  | {type: 'post_revoke'; boatId: string}                               // TA-S1 rejects the boat's draft/approved posts; logged only until then
+  | {type: 'crew_add'; boatId: string; phoneHash: string; phoneEnc: string}   // find-or-create the crew contact, link it, text the invite
+  | {type: 'crew_remove'; boatId: string; contactId: string};          // removed_at, the contact's boat_id cleared
+
+/** TA-I1: the advisor_boats columns registration fills (02 § advisor_boats); status starts 'pending'. */
+export interface NewBoat {
+  id: string; slug: string; name: string; port: string; region: string;
+  landing: string | null; instagram: string | null; booking_url: string | null; phone_public: string | null;
+}
+
+/**
+ * TA-I1: a contact's deterministic conversation state (04 § stage 2), stored as
+ * JSON in job_state under advisor.flow.<contact_id>. `asked_at` (ISO) is when
+ * the current question went out: a flow older than 24 h is abandoned, and the
+ * consent question is asked again no sooner than 7 days after it.
+ */
+export interface FlowState {
+  flow: 'register' | 'consent';
+  step: string;                     // register: name | port | landing | instagram | booking; consent: asked | given | declined | revoked
+  draft: Record<string, string | null | string[]>;
+  asked_at: string;
+  tries?: number;                   // invalid answers to the current step
+}
 
 /** TA-E1: the two reply languages (02 § advisor_contacts.language). */
 export type Language = 'en' | 'es';
