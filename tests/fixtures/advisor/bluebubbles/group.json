@@ -1,0 +1,68 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "A message in a group chat that includes the advisor's number: ignored.",
+  "_expect": {
+    "ignore": "group"
+  },
+  "type": "new-message",
+  "data": {
+    "originalROWID": 4101,
+    "guid": "B16D7182-94A5-4FB0-D12C-4D5E6F708192",
+    "text": "Who's in for Saturday?",
+    "attributedBody": null,
+    "handle": {
+      "originalROWID": 12,
+      "address": "+15555550101",
+      "service": "iMessage",
+      "uncanonicalizedId": null,
+      "country": "us"
+    },
+    "handleId": 12,
+    "otherHandle": 0,
+    "chats": [
+      {
+        "originalROWID": 7,
+        "guid": "iMessage;+;chat123456789012345678",
+        "style": 43,
+        "chatIdentifier": "chat123456789012345678",
+        "isArchived": false,
+        "displayName": "",
+        "participants": [
+          {
+            "originalROWID": 12,
+            "address": "+15555550101",
+            "service": "iMessage",
+            "uncanonicalizedId": null,
+            "country": "us"
+          },
+          {
+            "originalROWID": 12,
+            "address": "+15555550104",
+            "service": "iMessage",
+            "uncanonicalizedId": null,
+            "country": "us"
+          }
+        ]
+      }
+    ],
+    "attachments": [],
+    "subject": null,
+    "error": 0,
+    "dateCreated": 1791082800000,
+    "dateRead": null,
+    "dateDelivered": null,
+    "isFromMe": false,
+    "hasDdResults": false,
+    "isArchived": false,
+    "itemType": 0,
+    "groupTitle": null,
+    "groupActionType": 0,
+    "balloonBundleId": null,
+    "associatedMessageGuid": null,
+    "associatedMessageType": null,
+    "expressiveSendStyleId": null,
+    "threadOriginatorGuid": null,
+    "hasPayloadData": false,
+    "isDelivered": true
+  }
+}

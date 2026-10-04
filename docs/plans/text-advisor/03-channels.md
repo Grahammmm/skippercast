@@ -85,6 +85,7 @@ export interface OutboundMessage {
   text?: string;
   mediaKeys?: string[];            // R2 keys to attach (derived public JPEGs)
   replyToProviderId?: string;      // threads the reply where the channel supports it
+  channelHint?: 'imessage' | 'sms'; // the contact's last channel; picks the BlueBubbles chat GUID
 }
 export interface SendResult { providerId: string | null; status: 'sent' | 'failed' | 'unknown'; error?: string }
 export interface ChannelAdapter {
@@ -92,7 +93,7 @@ export interface ChannelAdapter {
   normalize(request: Request, env: Env): Promise<InboundMessage[] | 'ignore' | 'unauthorized'>;
   send(message: OutboundMessage, env: Env): Promise<SendResult>;
   typing?(to: string, on: boolean, env: Env): Promise<void>;
-  markRead?(providerId: string, env: Env): Promise<void>;
+  markRead?(to: string, env: Env): Promise<void>;   // BlueBubbles marks a chat read, so: the stored address
   health(env: Env): Promise<{ok: boolean; detail: string}>;
   capabilities: {media: boolean; maxMediaBytes: number; typing: boolean; read: boolean; segments: number | null};
 }
@@ -102,10 +103,17 @@ export interface ChannelAdapter {
 contact is web-only, otherwise the one named by `ADVISOR_CHANNEL`. Inbound
 webhooks for `bluebubbles` and `twilio` are both always mounted.
 
-Message splitting: `splitForChannel(text, adapter)` breaks a reply at
+Message splitting: `splitForChannel(text, adapter, channel?)` breaks a reply at
 paragraph or sentence boundaries into chunks ≤ 1,000 characters for iMessage
 and ≤ 480 for SMS (3 segments), sent in order with a 300 ms gap; chunks after
-the first are prefixed `(2/3)` only on SMS.
+the first are prefixed `(2/3)` only on SMS. BlueBubbles carries both iMessage
+and SMS, so the contact's channel is the third argument (Twilio is always SMS;
+web is never split). The consumer writes one outbound row per chunk: chunk 0
+keeps the action's id, chunk n is `outboundId(message, '<index>.<n>')`.
+
+`twilio` and `web` are registered as stubs that throw `ChannelNotImplemented`
+until TA-C2 and TA-C3 replace them in `ADAPTERS`; a send through a stub is
+recorded `failed`, not `unknown`.
 
 ## BlueBubbles adapter (`channels/bluebubbles.ts`)
 
@@ -126,6 +134,15 @@ omitted in the text for brevity.
   `fetch = GET /api/v1/attachment/<guid>/download`. `providerId` is
   `data.guid`. `message-send-error` marks the outbound row `failed`.
   `new-server` is logged; with a named tunnel it should not fire.
+  As built (TA-C1): `updated-message` and `message-send-error` find our row by
+  `provider_id = data.guid` or by `data.tempGuid`, which `send` sets to our
+  outbound id (the send-error webhook may carry a guid the send response never
+  returned). 02 has no delivered/read columns, so `updated-message` only
+  promotes an `unknown`/`sending` row to `sent` on delivery or read, and marks
+  it `failed` when `data.error` is non-zero. Groups are also detected by
+  `chats[0].style == 43` or more than one chat; a sender that is not a NANP
+  number (including an email handle) is dropped with a counted log line.
+  U+FFFC (the attachment placeholder iMessage puts in `text`) is stripped.
 - **send**: choose the chat GUID: if the contact's last inbound was `imessage`
   use `iMessage;-;<e164>`; if `sms`, `SMS;-;<e164>`; for a first contact we
   initiate (invites), call `GET /handle/availability/imessage?address=` and

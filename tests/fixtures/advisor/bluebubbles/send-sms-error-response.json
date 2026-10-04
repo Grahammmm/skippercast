@@ -1,0 +1,14 @@
+{
+  "_source": "Shape of a BlueBubbles server REST response ({status, message, data}), server 1.9.x; hand-written, not captured. Values are made up.",
+  "_description": "POST /api/v1/message/text over SMS: HTTP 200 with an error in the body",
+  "status": 500,
+  "message": "Message Send Error",
+  "error": {
+    "type": "iMessage Error",
+    "message": "Failed to send message! Error Code: 4"
+  },
+  "data": {
+    "guid": "",
+    "error": 4
+  }
+}

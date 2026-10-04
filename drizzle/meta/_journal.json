@@ -50,6 +50,13 @@
       "when": 1791081995296,
       "tag": "0006_advisor_core",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791086094700,
+      "tag": "0007_advisor_media_ref",
+      "breakpoints": true
     }
   ]
 }

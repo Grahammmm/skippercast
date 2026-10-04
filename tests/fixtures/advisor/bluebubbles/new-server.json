@@ -1,0 +1,9 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "The relay's public URL changed (only with a quick tunnel; a named tunnel never fires it).",
+  "_expect": {
+    "ignore": "new-server"
+  },
+  "type": "new-server",
+  "data": "https://relay.example.test"
+}

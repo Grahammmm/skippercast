@@ -82,7 +82,7 @@ dbTest('a queued message runs the stub: one sent reply, inbound done with intent
   assert.deepEqual({status: out.status, body: out.body, provider_id: out.provider_id, in_reply_to: out.in_reply_to, contact_id: out.contact_id, channel: out.channel},
     {status: 'sent', body: WARM_UP_TEXT, provider_id: 'p-1', in_reply_to: 'in1', contact_id: 'c1', channel: 'imessage'});
   assert.equal(out.sent_at, new Date(T0).toISOString());
-  assert.deepEqual(ch.sent, [{id: out.id, to: 'ENC-BLOB', text: WARM_UP_TEXT}], 'the adapter gets the encrypted address; it decrypts');
+  assert.deepEqual(ch.sent, [{id: out.id, to: 'ENC-BLOB', text: WARM_UP_TEXT, channelHint: 'imessage'}], 'the adapter gets the encrypted address (it decrypts) and the last channel');
   const [turn] = points.filter(p => p.indexes[0] === 'advisor_turn');
   assert.deepEqual(turn.blobs, ['advisor_turn', 'stub', 'done']);
   assert.deepEqual(turn.doubles.slice(1), [1, 1, 0]);

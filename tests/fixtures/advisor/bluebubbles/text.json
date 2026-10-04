@@ -1,0 +1,64 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "An iMessage text from a new angler.",
+  "_expect": {
+    "inbound": 1,
+    "channel": "imessage",
+    "from": "+15555550101",
+    "media": 0
+  },
+  "type": "new-message",
+  "data": {
+    "originalROWID": 4101,
+    "guid": "6B1E2C3D-4F50-4A6B-8C7D-9E0F1A2B3C4D",
+    "text": "Anything biting out of Morro Bay this weekend?",
+    "attributedBody": null,
+    "handle": {
+      "originalROWID": 12,
+      "address": "+15555550101",
+      "service": "iMessage",
+      "uncanonicalizedId": null,
+      "country": "us"
+    },
+    "handleId": 12,
+    "otherHandle": 0,
+    "chats": [
+      {
+        "originalROWID": 7,
+        "guid": "iMessage;-;+15555550101",
+        "style": 45,
+        "chatIdentifier": "+15555550101",
+        "isArchived": false,
+        "displayName": "",
+        "participants": [
+          {
+            "originalROWID": 12,
+            "address": "+15555550101",
+            "service": "iMessage",
+            "uncanonicalizedId": null,
+            "country": "us"
+          }
+        ]
+      }
+    ],
+    "attachments": [],
+    "subject": null,
+    "error": 0,
+    "dateCreated": 1791082800000,
+    "dateRead": null,
+    "dateDelivered": null,
+    "isFromMe": false,
+    "hasDdResults": false,
+    "isArchived": false,
+    "itemType": 0,
+    "groupTitle": null,
+    "groupActionType": 0,
+    "balloonBundleId": null,
+    "associatedMessageGuid": null,
+    "associatedMessageType": null,
+    "expressiveSendStyleId": null,
+    "threadOriginatorGuid": null,
+    "hasPayloadData": false,
+    "isDelivered": true
+  }
+}

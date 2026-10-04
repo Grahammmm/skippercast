@@ -150,10 +150,19 @@ On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signI
 Text Advisor liveness (docs/plans/text-advisor/). No authentication. Answers `404` `{"error": "Not found"}` unless the Worker var `TEXT_ADVISOR_ENABLED` is `true`, like every advisor path (`/api/advisor/*`, `/ports/*`, `/species/*`, `/boats/*`, `/media/*`, `/u/*`, `/contact.vcf`, `/text`), which are reserved and gated by `server/advisor/gate.ts` before their routes exist. When on, `Cache-Control: no-store`:
 
 ```json
-{"enabled":true,"channel":"bluebubbles","providers":["hermes","claude"]}
+{"enabled":true,"channel":"bluebubbles","providers":["hermes","claude"],"relay":{"state":"up","checked_at":"2026-10-03T15:00:00.000Z"}}
 ```
 
-`channel` is `ADVISOR_CHANNEL` (`bluebubbles` or `twilio`); `providers` is the vision provider chain from `ADVISOR_VISION_PROVIDERS`. Never a secret or the advisor's phone number.
+`channel` is `ADVISOR_CHANNEL` (`bluebubbles` or `twilio`); `providers` is the vision provider chain from `ADVISOR_VISION_PROVIDERS`; `relay` is the Mac relay watchdog's last result from `job_state` `advisor.relay` (`up` or `down`, and when it was checked), or `null` before the first check. Never a secret, the relay URL or the advisor's phone number.
+
+### `POST /api/advisor/inbound/bluebubbles/<token>`
+
+The Mac relay's webhook (BlueBubbles server → Worker; [relay setup](../operations/runbooks/advisor-relay-setup.md), [03 · Channels](../plans/text-advisor/03-channels.md)). Gated like every advisor path (`404` unless `TEXT_ADVISOR_ENABLED=true`).
+
+- **Auth:** BlueBubbles signs nothing, so `<token>` (redacted here) is the secret `ADVISOR_WEBHOOK_TOKEN`, compared in constant time. A wrong or missing token → `401` `{"error": "Unauthorized"}` and a counted log line (`advisor_webhook_unauthorized`), never the body.
+- **Limits:** per-IP `PUBLIC_LIMITER` when bound (`429`); body at most 64 KB (`400`).
+- **Body:** BlueBubbles' JSON `{type, data}`. `new-message` from a one-to-one chat with text or attachments is stored (contact found or created by phone hash, an `advisor_messages` row `queued`, one placeholder `advisor_media` row per attachment) and queued on `ADVISOR_QUEUE`, or processed inline when the queue is not bound. Messages from us, reactions, group chats, non-text items and senders outside the North American numbering plan are ignored. `updated-message` confirms or fails one of our outbound rows; `message-send-error` marks it `failed`; `new-server` is logged; every other type is ignored. A second delivery of the same message (same channel and provider id) does nothing.
+- **Response:** `200` `{}` in every accepted case, fast, so the relay never retries a stored message.
 
 ## Scheduler
 
@@ -209,4 +218,4 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter). See [testing](testing.md).

@@ -14,3 +14,9 @@ export const sha256 = async (text: string): Promise<string> => hex(await crypto.
  * 'error'), so each of those is sent at most once per inbound message.
  */
 export const outboundId = async (inMessageId: string, index: number | string): Promise<string> => (await sha256(`${inMessageId}:${index}`)).slice(0, 32);
+
+/** A random 16-byte id, base64url (user-facing rows: contacts, inbound messages, media). */
+export function randomId(): string {
+  let s = ''; for (const b of crypto.getRandomValues(new Uint8Array(16))) s += String.fromCharCode(b);
+  return btoa(s).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}

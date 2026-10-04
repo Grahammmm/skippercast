@@ -1,0 +1,18 @@
+{
+  "_source": "Shape of a BlueBubbles server REST response ({status, message, data}), server 1.9.x; hand-written, not captured. Values are made up.",
+  "_description": "GET /api/v1/server/info",
+  "status": 200,
+  "message": "Successfully fetched server info",
+  "data": {
+    "computer_id": "Mac-mini.local",
+    "os_version": "15.1",
+    "server_version": "1.9.9",
+    "private_api": true,
+    "proxy_service": "cloudflare",
+    "helper_connected": true,
+    "detected_icloud": "imessage@example.test",
+    "detected_imessage": "imessage@example.test",
+    "local_ipv4s": [],
+    "local_ipv6s": []
+  }
+}

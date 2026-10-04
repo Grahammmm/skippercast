@@ -155,10 +155,10 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 
 ## Phase 3: angler answers
 
-### TA-A0 · Migration 0007 and the rules importer · M
+### TA-A0 · Migration 0008 and the rules importer · M
 - Stories: OP-6 (data).
 - Depends: TA-F2
-- Files: `db/schema.ts`, `drizzle/0007_advisor_answers.sql` (`pnpm db:generate --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
+- Files: `db/schema.ts`, `drizzle/0008_advisor_answers.sql` (`pnpm db:generate --name advisor_answers`), `scripts/advisor/import-rules.mjs` (reads `dist/data/regulations*.json` and `jurisdictions/*.json`, writes `review` rows via `wrangler d1 execute` SQL it prints or applies with `--apply`), `answers/rules.ts`, `tools/get_rules.ts` (switch to the table), `tests/test_advisor_rules.mjs`.
 - Tests: importer maps every species in the regulations files to a row; staleness by `review_due`; the tool never returns `retired`; `review` rows are `stale: true`.
 
 ### TA-A1 · Daily answers: generator, cron, pre-router, both languages · M
@@ -232,10 +232,10 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-S0 for the token script.
 - Done when: `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`, `META_PAGE_ID`, `META_PAGE_TOKEN`, `META_IG_USER_ID` are in secrets and `GET /api/admin/health` shows the publishing quota.
 
-### TA-S0 · Migration 0008, Graph client, token script, health · M
+### TA-S0 · Migration 0009, Graph client, token script, health · M
 - Stories: SO-4 (client), SP-10 (quota).
 - Depends: TA-F2, TA-W2
-- Files: `db/schema.ts`, `drizzle/0008_advisor_social.sql` (`pnpm db:generate --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
+- Files: `db/schema.ts`, `drizzle/0009_advisor_social.sql` (`pnpm db:generate --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
 - Tests: `appsecret_proof` value for a known pair; retry on code 4/17/32; error bodies logged without tokens; quota parse.
 
 ### TA-S1 · Drafts and captions, review items, backfill · M

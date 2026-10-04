@@ -57,3 +57,4 @@ Append a dated line when a phase starts or finishes; keep the older lines.
 - 2026-10-03: plan written (Claude Fable 5.1); no code yet.
 - 2026-10-03: TA-F1 implemented (PR #252, Opus 5.5 under Fable orchestration); plan corrected for the `ADVISOR_`-prefixed secrets and `BLUEBUBBLES_PRIVATE_API`.
 - 2026-10-03: TA-F3 implemented (queue consumer, cron slots and relay watchdog, advisor analytics); plan corrected: inbound `held` status in 02, hard-stop details in 01.
+- 2026-10-03: TA-C1 implemented (BlueBubbles adapter, inbound webhook, relay-down hold and release, relay runbooks and `relay-check.mjs`); plan corrected: migration `0007_advisor_media_ref` added (`advisor_media.provider_ref`), so the answers and social migrations become 0008 and 0009; `channelHint` on `OutboundMessage`; `splitForChannel` takes the contact's channel; outbound `media_json` holds R2 keys.

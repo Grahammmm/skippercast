@@ -9,23 +9,33 @@
 // already did: outbound rows have deterministic ids (ids.ts outboundId), are
 // written as 'sending' before the send and never sent again once 'sent'; a row
 // left 'sending' by a crash may have been delivered, so a retry marks it
-// 'unknown' (reconciled against the provider by TA-C1) instead of resending.
+// 'unknown' instead of resending (BlueBubbles' updated-message webhook confirms
+// it as sent when the relay reports delivery; the cron-side reconciliation by
+// provider query in 01 is not built yet).
 // Review items use reviewId's deterministic id with the same UPSERT as
 // forgetContact. A handler that throws is retried with backoff; after
 // max_retries (scripts/wrangler_config.mjs ADVISOR_QUEUES) Cloudflare moves the
 // message to the dead-letter queue, whose consumer marks it failed and sends
 // the contact one apology an hour at most.
 //
-// Not here yet, by design: media download (TA-C4), the relay-down hold of new
-// outbound rows and their release (TA-C1), STOP/blocked and the daily caps
-// (the engine's stage 0, TA-E1).
+// Outbound goes through deps.channelFor(env, contact) (channels/index.ts, wired
+// in server/index.ts). A text longer than the channel allows is split
+// (splitForChannel) and sent as one row per chunk, 300 ms apart. While the
+// Mac relay is down (job_state advisor.relay, cron.ts) a BlueBubbles send is
+// written as 'held' and not attempted; releaseHeld, run by the cron, sends the
+// held rows once the relay is back and fails those older than 6 hours.
+//
+// Not here yet, by design: media download (TA-C4), STOP/blocked and the daily
+// caps (the engine's stage 0, TA-E1).
 import {advisorSettings} from './settings.ts';
 import {reviewId} from './contacts.ts';
 import {outboundId} from './ids.ts';
 import {advisorLog, redact} from './log.ts';
 import {recordAdvisorTurn} from './analytics.ts';
+import {relayState} from './relay.ts';
+import {splitForChannel, ChannelNotImplemented, CHUNK_GAP_MS} from './channels/index.ts';
 import type {Env} from '../env.ts';
-import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundMessage, ReviewKind, SendResult} from './types.ts';
+import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
 // Must match scripts/wrangler_config.mjs ADVISOR_QUEUES (tests/test_advisor_consumer.mjs checks).
 export const ADVISOR_QUEUE_NAME = 'skippercast-advisor';
@@ -38,6 +48,8 @@ export const MAX_BODY = 4000;                  // 02 § advisor_messages.body
 export const WARM_UP_TEXT = 'SkipperCast is warming up. Check back soon.';
 export const STILL_WORKING_TEXT = 'Still working on that, one moment';
 export const APOLOGY_TEXT = 'Sorry, something went wrong on my end. Please send that again.';
+export const HOLD_MAX_MS = 6 * 3600000;        // 01: held outbound older than this becomes failed
+export const RELEASE_BATCH = 50;               // held rows sent per cron tick
 
 const ID = /^[\w-]{1,64}$/;
 const CODE = /^[a-z][\w.:-]{0,47}$/i;
@@ -74,41 +86,78 @@ async function setStatus(db: D1Database, id: string, status: string, from: strin
 
 /** Where a channel sends: the encrypted number (decrypted only inside the adapter) or the web session hash. */
 const address = (contact: AdvisorContactRow): string | null => contact.phone_enc ?? contact.web_session ?? null;
+/** The adapter for this contact: a fixed test channel, else channelFor, else none. */
+const channelOf = (env: Env, deps: ConsumerDeps, contact: AdvisorContactRow): OutboundChannel | null => deps.channel ?? deps.channelFor?.(env, contact) ?? null;
+const hint = (channel: string): OutboundMessage['channelHint'] => channel === 'imessage' || channel === 'sms' ? channel : undefined;
+const sleep = (deps: ConsumerDeps, ms: number): Promise<void> => (deps.sleep ?? (n => new Promise<void>(resolve => setTimeout(resolve, n))))(ms);
 
-/**
- * Send one outbound message at most once. `key` is the action index (or a
- * fixed word for the consumer's own texts). Returns true when this call sent it.
- *   none -> 'sending' -> send -> 'sent' | 'failed' | 'unknown'
- *   'sent' / 'unknown' / 'held' -> skipped; 'sending' (a crash mid-send) -> 'unknown', skipped;
- *   'failed' -> sent again.
- */
-async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, content: {text?: string; mediaKeys?: string[]}): Promise<boolean> {
-  const db = env.DB!, id = await outboundId(inId, key), at = iso(deps);
-  const body = content.text == null ? null : content.text.slice(0, MAX_BODY);
-  const existing = await db.prepare('SELECT status FROM advisor_messages WHERE id=?').bind(id).first<{status: string}>();
-  if (existing) {
-    if (existing.status === 'sending') { await setStatus(db, id, 'unknown', ['sending'], 'interrupted'); return false; }
-    if (existing.status !== 'failed' || !await setStatus(db, id, 'sending', ['failed'])) return false;
-  } else {
-    const r = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,status,in_reply_to,created_at) VALUES(?,?,'out',?,?,'sending',?,?) ON CONFLICT(id) DO NOTHING`)
-      .bind(id, contact.id, contact.channel, body, inId, at).run();
-    if (!r.meta.changes) return false;   // a concurrent delivery got there first
-  }
+/** True while the relay watchdog says the Mac is down and this adapter is BlueBubbles (01 § idempotency). */
+async function relayHold(env: Env, adapter: OutboundChannel | null): Promise<boolean> {
+  return adapter?.name === 'bluebubbles' && (await relayState(env))?.state === 'down';
+}
+
+/** Send through the adapter and normalise the outcome. A throw is 'unknown' (the provider may have accepted it), except a stub adapter's. */
+async function deliver(env: Env, contact: AdvisorContactRow, adapter: OutboundChannel | null, message: Omit<OutboundMessage, 'to'>): Promise<SendResult> {
   const to = address(contact);
-  let result: SendResult;
-  if (contact.status === 'blocked') result = {providerId: null, status: 'failed', error: 'blocked'};
-  else if (!to) result = {providerId: null, status: 'failed', error: 'no-address'};
-  else if (!deps.channel) result = {providerId: null, status: 'failed', error: 'no-channel'};
-  else {
-    const message: OutboundMessage = {id, to, ...(content.text != null ? {text: content.text} : {}), ...(content.mediaKeys ? {mediaKeys: content.mediaKeys} : {})};
-    // A throw leaves us not knowing whether the provider accepted it: unknown, never resent blindly.
-    result = await deps.channel.send(message, env).catch((error: unknown) => ({providerId: null, status: 'unknown' as const, error: reason(error)}));
-  }
+  if (contact.status === 'blocked') return {providerId: null, status: 'failed', error: 'blocked'};
+  if (!to) return {providerId: null, status: 'failed', error: 'no-address'};
+  if (!adapter) return {providerId: null, status: 'failed', error: 'no-channel'};
+  const outbound: OutboundMessage = {...message, to, ...(hint(contact.channel) ? {channelHint: hint(contact.channel)} : {})};
+  return adapter.send(outbound, env).catch((error: unknown) => error instanceof ChannelNotImplemented
+    ? {providerId: null, status: 'failed' as const, error: reason(error)}
+    : {providerId: null, status: 'unknown' as const, error: reason(error)});
+}
+
+async function recordResult(db: D1Database, deps: ConsumerDeps, id: string, result: SendResult): Promise<boolean> {
   const status = ['sent', 'failed', 'unknown'].includes(result.status) ? result.status : 'unknown';
   await db.prepare('UPDATE advisor_messages SET status=?,provider_id=?,sent_at=?,error=? WHERE id=?')
     .bind(status, result.providerId ?? null, status === 'sent' ? iso(deps) : null, result.error ? String(redact(result.error)).slice(0, 200) : null, id).run();
   if (status !== 'sent') advisorLog('warn', 'advisor_send_not_sent', {status, error: result.error ? String(result.error).slice(0, 200) : null});
   return status === 'sent';
+}
+
+/**
+ * Send one outbound message at most once. `key` is the action index (or a
+ * fixed word for the consumer's own texts). Returns true when this call sent it.
+ *   none -> 'sending' -> send -> 'sent' | 'failed' | 'unknown'
+ *   none -> 'held' while the relay is down (sent later by releaseHeld)
+ *   'sent' / 'unknown' / 'held' -> skipped; 'sending' (a crash mid-send) -> 'unknown', skipped;
+ *   'failed' -> sent again.
+ * media_json on an outbound row holds the R2 keys it attaches, so a held row can be sent later.
+ */
+async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, content: {text?: string; mediaKeys?: string[]}): Promise<boolean> {
+  const db = env.DB!, id = await outboundId(inId, key), at = iso(deps);
+  const body = content.text == null ? null : content.text.slice(0, MAX_BODY);
+  const adapter = channelOf(env, deps, contact);
+  const existing = await db.prepare('SELECT status FROM advisor_messages WHERE id=?').bind(id).first<{status: string}>();
+  if (existing) {
+    if (existing.status === 'sending') { await setStatus(db, id, 'unknown', ['sending'], 'interrupted'); return false; }
+    if (existing.status !== 'failed' || !await setStatus(db, id, 'sending', ['failed'])) return false;
+  } else {
+    const held = await relayHold(env, adapter);
+    const r = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,media_json,status,error,in_reply_to,created_at) VALUES(?,?,'out',?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`)
+      .bind(id, contact.id, contact.channel, body, content.mediaKeys?.length ? JSON.stringify(content.mediaKeys) : null, held ? 'held' : 'sending', held ? 'relay-down' : null, inId, at).run();
+    if (!r.meta.changes) return false;   // a concurrent delivery got there first
+    if (held) { advisorLog('warn', 'advisor_send_held', {reason: 'relay-down'}); return false; }
+  }
+  const result = await deliver(env, contact, adapter, {id, ...(content.text != null ? {text: content.text} : {}), ...(content.mediaKeys ? {mediaKeys: content.mediaKeys} : {})});
+  return recordResult(db, deps, id, result);
+}
+
+/**
+ * A send_text action: split for the contact's channel and sent one row per
+ * chunk, in order, 300 ms apart. Chunk 0 keeps the action's key, so an
+ * unsplit text has the same outbound id as before; chunk n is "<key>.<n>".
+ */
+async function sendText(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, text: string): Promise<number> {
+  const adapter = channelOf(env, deps, contact);
+  const chunks = adapter?.name ? splitForChannel(text, {name: adapter.name as 'bluebubbles' | 'twilio' | 'web'}, contact.channel) : [text];
+  let sends = 0;
+  for (const [n, chunk] of chunks.entries()) {
+    if (n > 0) await sleep(deps, CHUNK_GAP_MS);
+    sends += Number(await sendOnce(env, deps, contact, inId, n === 0 ? key : `${key}.${n}`, {text: chunk}));
+  }
+  return sends;
 }
 
 function contactPatch(fields: ContactFields): [string, string | null][] {
@@ -133,7 +182,7 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
   for (const [index, action] of actions.entries()) {
     switch (action?.type) {
       case 'send_text':
-        if (typeof action.text === 'string' && action.text.trim()) sends += Number(await sendOnce(env, deps, contact, message.id, index, {text: action.text}));
+        if (typeof action.text === 'string' && action.text.trim()) sends += await sendText(env, deps, contact, message.id, index, action.text);
         break;
       case 'send_media':
         if (typeof action.r2Key === 'string' && action.r2Key) sends += Number(await sendOnce(env, deps, contact, message.id, index, {text: action.caption, mediaKeys: [action.r2Key]}));
@@ -323,4 +372,43 @@ export async function runInline(env: Env, messageId: string, deps: ConsumerDeps 
     result.failed += dead.failed; result.sends += dead.apologies;
   }
   return result;
+}
+
+export interface ReleaseResult {released: number; failed: number; aged: number; skipped: string | null}
+
+/**
+ * Held outbound messages (01 § idempotency): run by the cron on every tick.
+ * Rows held for more than 6 hours become 'failed' first. Then, unless the
+ * relay is still down and outbound still goes through BlueBubbles, up to 50
+ * held rows are sent, oldest first, through the contact's current adapter
+ * (so after the owner sets ADVISOR_CHANNEL=twilio they go through Twilio; the
+ * switch is never automatic). Each row is claimed held -> sending first, so
+ * two ticks never send one twice. A stopped or blocked contact's rows fail.
+ */
+export async function releaseHeld(env: Env, deps: ConsumerDeps = {}, now: number = clock(deps)): Promise<ReleaseResult> {
+  const out: ReleaseResult = {released: 0, failed: 0, aged: 0, skipped: null};
+  if (!env.DB) { out.skipped = 'no-db'; return out; }
+  const db = env.DB, cutoff = new Date(now - HOLD_MAX_MS).toISOString();
+  const aged = await db.prepare("UPDATE advisor_messages SET status='failed',error='held-expired' WHERE direction='out' AND status='held' AND created_at<?").bind(cutoff).run();
+  out.aged = aged.meta.changes ?? 0;
+  if (out.aged) advisorLog('warn', 'advisor_held_expired', {count: out.aged});
+  if (advisorSettings(env).channel === 'bluebubbles' && (await relayState(env))?.state === 'down') { out.skipped = 'relay-down'; return out; }
+  const rows = (await db.prepare("SELECT * FROM advisor_messages WHERE direction='out' AND status='held' ORDER BY created_at,id LIMIT ?").bind(RELEASE_BATCH).all<AdvisorMessageRow>()).results;
+  const runDeps: ConsumerDeps = {...deps, now: () => now};
+  let first = true;
+  for (const row of rows) {
+    if (!await setStatus(db, row.id, 'sending', ['held'])) continue;     // another tick took it
+    const contact = await db.prepare('SELECT * FROM advisor_contacts WHERE id=?').bind(row.contact_id).first<AdvisorContactRow>();
+    if (!contact || contact.status !== 'active') {
+      await setStatus(db, row.id, 'failed', ['sending'], contact ? contact.status : 'no-contact'); out.failed++; continue;
+    }
+    if (!first) await sleep(deps, CHUNK_GAP_MS);
+    first = false;
+    let mediaKeys: string[] | undefined;
+    try { const keys = row.media_json ? JSON.parse(row.media_json) : null; if (Array.isArray(keys)) mediaKeys = keys.filter((k): k is string => typeof k === 'string'); } catch { mediaKeys = undefined; }
+    const result = await deliver(env, contact, channelOf(env, deps, contact), {id: row.id, ...(row.body != null ? {text: row.body} : {}), ...(mediaKeys?.length ? {mediaKeys} : {})});
+    if (await recordResult(db, runDeps, row.id, result)) out.released++; else out.failed++;
+  }
+  if (rows.length || out.aged) advisorLog('info', 'advisor_held_release', {...out});
+  return out;
 }

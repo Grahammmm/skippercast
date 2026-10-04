@@ -1,0 +1,82 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "An iMessage photo with a caption (U+FFFC marks the attachment in the text).",
+  "_expect": {
+    "inbound": 1,
+    "channel": "imessage",
+    "from": "+15555550101",
+    "media": 1,
+    "text": "Limits on the Bertha today"
+  },
+  "type": "new-message",
+  "data": {
+    "originalROWID": 4101,
+    "guid": "7C2F3D4E-5061-4B7C-9D8E-0F1A2B3C4D5E",
+    "text": "\ufffcLimits on the Bertha today",
+    "attributedBody": null,
+    "handle": {
+      "originalROWID": 12,
+      "address": "+15555550101",
+      "service": "iMessage",
+      "uncanonicalizedId": null,
+      "country": "us"
+    },
+    "handleId": 12,
+    "otherHandle": 0,
+    "chats": [
+      {
+        "originalROWID": 7,
+        "guid": "iMessage;-;+15555550101",
+        "style": 45,
+        "chatIdentifier": "+15555550101",
+        "isArchived": false,
+        "displayName": "",
+        "participants": [
+          {
+            "originalROWID": 12,
+            "address": "+15555550101",
+            "service": "iMessage",
+            "uncanonicalizedId": null,
+            "country": "us"
+          }
+        ]
+      }
+    ],
+    "attachments": [
+      {
+        "originalROWID": 880,
+        "guid": "at_0_7C2F3D4E-5061-4B7C-9D8E-0F1A2B3C4D5E",
+        "uti": "public.heic",
+        "mimeType": "image/heic",
+        "transferName": "IMG_4821.HEIC",
+        "totalBytes": 2381442,
+        "transferState": 5,
+        "isOutgoing": false,
+        "hideAttachment": false,
+        "isSticker": false,
+        "originalGuid": "at_0_7C2F3D4E-5061-4B7C-9D8E-0F1A2B3C4D5E",
+        "height": 3024,
+        "width": 4032,
+        "metadata": null
+      }
+    ],
+    "subject": null,
+    "error": 0,
+    "dateCreated": 1791082800000,
+    "dateRead": null,
+    "dateDelivered": null,
+    "isFromMe": false,
+    "hasDdResults": false,
+    "isArchived": false,
+    "itemType": 0,
+    "groupTitle": null,
+    "groupActionType": 0,
+    "balloonBundleId": null,
+    "associatedMessageGuid": null,
+    "associatedMessageType": null,
+    "expressiveSendStyleId": null,
+    "threadOriginatorGuid": null,
+    "hasPayloadData": false,
+    "isDelivered": true
+  }
+}

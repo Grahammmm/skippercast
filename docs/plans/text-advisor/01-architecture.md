@@ -53,8 +53,9 @@ server and a Cloudflare Tunnel.
    text and no media. Drop duplicates: `advisor_messages.provider_id` is
    unique per channel; a second delivery answers 200 and does nothing.
 3. **Persist** one `advisor_messages` row (direction `in`, status `queued`)
-   and the media references (`advisor_media`, status `pending` until the
-   consumer downloads them). Resolve or create the `advisor_contacts` row by
+   and the media references (placeholder `advisor_media` rows with
+   `provider_ref` set and `r2_key=''` until the consumer downloads them; 02
+   has no media status column). Resolve or create the `advisor_contacts` row by
    phone hash.
 4. **Enqueue** `{message_id}` on `ADVISOR_QUEUE` and answer `200 {}` within
    the provider's timeout. Without the queue binding (local dev, a deployment
@@ -270,6 +271,12 @@ Nothing under `src/`, `regions/`, `research/`, `atlas/`, `catalog/*.json`
   (status `held`) for up to 6 hours, then the Twilio adapter is tried only if
   `ADVISOR_CHANNEL=twilio` has been set (the runbook step), never automatically,
   because a Twilio send from a number still registered to iMessage would fail.
+  As built (TA-C1): `releaseHeld` runs on every cron tick after the watchdog;
+  it first fails held rows older than 6 hours (`held-expired`), then, unless
+  the relay is still down with `ADVISOR_CHANNEL=bluebubbles`, sends up to 50
+  held rows oldest first through the contact's current adapter. So a held row
+  goes out through BlueBubbles on recovery, or through Twilio once the owner
+  has switched; one still held after 6 hours is failed either way.
 
 ## Security notes (summary; threat-model task has the full list)
 

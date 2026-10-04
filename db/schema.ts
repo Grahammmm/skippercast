@@ -120,14 +120,17 @@ export const advisorMessages=sqliteTable('advisor_messages',{
 
 // Photos, videos and audio a contact sent. The original sits in ADVISOR_MEDIA at
 // r2_key (advisor/media/<contact_id>/<id>.<ext>) with EXIF already stripped;
-// nothing is public unless publish_state allows it.
+// nothing is public unless publish_state allows it. provider_ref (0007) is the
+// channel's attachment reference (BlueBubbles attachment guid, Twilio media URL)
+// on a placeholder row written at the webhook, with r2_key '' until TA-C4's
+// download fills it.
 export const advisorMedia=sqliteTable('advisor_media',{
   id:text('id').primaryKey(),contactId:text('contact_id').notNull(),messageId:text('message_id'),boatId:text('boat_id'),
   kind:text('kind').notNull(),mime:text('mime').notNull(),bytes:integer('bytes').notNull(),
   width:integer('width'),height:integer('height'),r2Key:text('r2_key').notNull(),sha256:text('sha256').notNull(),
   exifStripped:integer('exif_stripped').notNull().default(0),classificationJson:text('classification_json'),
   hasPerson:integer('has_person'),publishState:text('publish_state').notNull().default('private'),credit:text('credit'),
-  createdAt:text('created_at').notNull(),
+  providerRef:text('provider_ref'),createdAt:text('created_at').notNull(),
 },t=>[index('media_contact').on(t.contactId),index('media_publish').on(t.publishState),index('media_boat').on(t.boatId)]);
 
 // A skipper's (or crew member's) fish report for one trip date. contact_id is
