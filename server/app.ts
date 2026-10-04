@@ -3,7 +3,7 @@
 //
 //   metrics -> request-id -> security headers (+ renewed session cookie) -> context
 //   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> advisor (gated) -> /api/auth/ -> /api/session
-//   -> private gate (signed in, Origin, budget) -> private /api/ -> /api/ 404
+//   -> private gate (signed in, Origin, budget) -> private /api/ -> admin (role-gated) -> /api/ 404
 //   -> static assets and page shells
 //
 // Errors thrown under /api/ are mapped once (middleware/error.ts).
@@ -27,6 +27,8 @@ import {boat} from './routes/boat.ts';
 import {trips} from './routes/trips.ts';
 import {subscriptions} from './routes/subscriptions.ts';
 import {feedback} from './routes/feedback.ts';
+// TA-W2: the Text Advisor admin (requireUser, then requireAdmin inside).
+import {admin} from './routes/admin.ts';
 import {assets, serveAsset} from './routes/assets.ts';
 import {json} from './http.ts';
 import type {AppEnv} from './env.ts';
@@ -55,6 +57,8 @@ app.route('/', trips);
 app.route('/', subscriptions);
 app.route('/', feedback);
 app.route('/', privacy);
+// TA-W2: /admin, /admin.html and /api/admin/*: admins only, 404 for everyone else (routes/admin.ts).
+app.route('/', admin);
 app.all('/api/*', () => json({error: 'Not found'}, 404));
 app.route('/', assets);
 app.onError(onError);

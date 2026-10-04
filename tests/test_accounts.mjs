@@ -59,7 +59,7 @@ const count = (sql, table) => sql.prepare(`SELECT COUNT(*) AS n FROM ${table}`).
 
 test('register → session → private trip → sign out → 401 → sign in again', async () => {
   const {sql, adapter} = database(), c = client(adapter), auth = new SoftwareAuthenticator();
-  assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null});
+  assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null, is_admin: false});
   assert.equal((await c.call('/api/trips')).status, 401);
 
   const {options, result} = await register(c, auth, 'Graham');
@@ -74,6 +74,7 @@ test('register → session → private trip → sign out → 401 → sign in aga
 
   const session = (await c.call('/api/session')).data;
   assert.deepEqual([session.signedIn, session.signIn, session.user], [true, '/#account', {id: userId, display_name: 'Graham'}]);
+  assert.equal(session.is_admin, false, 'TA-W2: an account is not an admin until grant-admin.mjs sets the role');
   const created = await c.call('/api/trips', {method: 'POST', body: trip()});
   assert.equal(created.status, 201);
   assert.equal(sql.prepare('SELECT owner FROM trips').get().owner, userId, 'owner is users.id');

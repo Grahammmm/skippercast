@@ -145,6 +145,8 @@ Whether the caller is signed in, the push public key and the sign-in link.
 
 On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signIn` is `null`.
 
+Signed in, it also carries `user` (`{id, display_name}`). `is_admin` (always present, `false` when signed out) is `true` when the account has the Text Advisor admin role (`users.role='admin'`, set only by `scripts/advisor/grant-admin.mjs`); the role itself is never exposed.
+
 ### `GET /api/advisor/health`
 
 Text Advisor liveness (docs/plans/text-advisor/). No authentication. Answers `404` `{"error": "Not found"}` unless the Worker var `TEXT_ADVISOR_ENABLED` is `true`, like every advisor path (`/api/advisor/*`, `/ports/*`, `/species/*`, `/boats/*`, `/media/*`, `/u/*`, `/contact.vcf`, `/text`, `/qr/*`, and the web chat page `/chat.html`), which are reserved and gated by `server/advisor/gate.ts` before their routes exist. When on, `Cache-Control: no-store`:
@@ -307,6 +309,53 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 **Pending changes:** PR #29 ([P0-08]) adds a global daily cap (`BOAT_LOOKUP_GLOBAL_DAILY_LIMIT`, default 500 → `429` `AI boat lookup is busy today…`), a kill switch (`BOAT_LOOKUP_ENABLED=false` → `503`), the model id from `BOAT_AI_MODEL`, and a usage log line per lookup. PR #45 validates `POST /api/events/ack` ids as 64-hex (`400` `event id required`) and trip ids as at most 64 characters. The guide's P3-02 replaces ChatGPT identity with SkipperCast accounts; this whole section changes then.
 
+## Text Advisor admin (signed in, admin role)
+
+The admin app and its API ([08 · Admin](../plans/text-advisor/08-website.md), `server/routes/admin.ts`, mounted after the private routes). Every route needs a passkey session **and** `users.role='admin'` (`server/middleware/admin.ts` `requireAdmin`), and the Text Advisor switched on (`TEXT_ADVISOR_ENABLED=true`). A signed-in caller without the role, or anyone while the advisor is off, gets the same `404` as a path that does not exist (`{"error": "Not found"}` under `/api/`, a plain-text `Not found` for the page paths), so the admin's existence is not confirmed. Under `/api/` a signed-out caller gets the private gate's `401` like any unknown `/api/` path. `POST`s need an allowed `Origin` and count against the 30-a-minute budget (requireUser).
+
+| Method and path | Body / query | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /admin` | — | `302` to `/admin.html` | `404` |
+| `GET /admin.html` | — | `200` the admin shell (`dist/admin.html`, `Cache-Control: no-store`). The built file also exists at its hashed name like every page; it holds no data. | `404` |
+| `GET /api/admin/reviews` | `status` (`open` default, `approved`, `edited`, `rejected`, `all`), `kind` (`media`, `report`, `post`, `skipper`, `conversation`, `rule`), `cursor` (the previous page's `next`) | `200` `{"items": [...], "next": "<cursor>"\|null}`: at most 50 review items, newest `opened_at` first, each `{id, kind, ref_id, reason, status, note, opened_at, decided_at, detail}` | `400` `unknown status` / `unknown kind` |
+| `POST /api/admin/reviews/<id>` | `{"decision": "approve"\|"edit"\|"reject", "patch"?, "note"?, "reply"?}` (16 KB; `reply` alone means approve) | `200` `{"review": {...}, "sends": n}` (`"held": "replies-off"` when `ADVISOR_REPLIES_ENABLED` is off and a text was owed); a review already decided: `200` `{"review": {...}, "repeated": true}` and nothing changes | `400` a decision the kind does not take, an edit without fields; `404` unknown review; `409` the contact stopped or blocked, replies off for a reply, a report date the boat already has |
+| `GET /api/admin/media/<id>` | `v=original` (optional) | `200` the bytes from `ADVISOR_MEDIA`: `advisor/derived/<id>/thumb.jpg`, else `public.jpg`, else the stored original when it is JPEG, PNG, GIF or WebP; with `v=original`, the stored original whatever its type. `Cache-Control: private, no-store`, `Content-Disposition: inline`. | `404` |
+| `GET /api/admin/health` | — | `200` (below) | — |
+
+`detail` by kind (`server/advisor/admin/queue.ts`; `null` when the referenced row is gone, and for `post` until TA-S1). Contacts appear as `{id, channel, language, display_name, role, status}` only; no number or hash leaves the server.
+
+- `media`: `{media: {id, kind, mime, bytes, width, height, has_person, publish_state, credit, created_at, stored, thumb, original, labels, boat}}`; `thumb`/`original` are the media route above; `labels` are the classify result's `kind`, `kind_confidence`, `has_person`, `person_confidence`, `has_fish`, `text_present`, `nsfw`, `provider` (and the top three fish-ID candidates when present).
+- `report`: `{report: {id, port, region, report_date, trip_type, anglers, counts, notes, source, status, verified, version, edits, published_at, media, boat: {id, name, slug, status}}}`.
+- `skipper`: `{boat: {id, slug, name, landing, port, region, instagram, booking_url, phone_public, status, verified_at, consent_photos_at, consent_revoked_at, created_at}, contact, messages}`; `messages` are the bodies of the owner's first three inbound texts.
+- `conversation`: `{contact, flagged_message, messages}`; `messages` are the contact's last six, oldest first, `{direction, body, created_at, team}` (`team`: sent from the queue).
+- `rule`: `{rule: {...the advisor_rules row}, summary: null}` when `ref_id` is a rule id (TA-A4 adds the change-watch summary).
+
+Decisions (`server/advisor/admin/decisions.ts`, shared with the text admin fallback; the review's `status` becomes `approved`, `edited` or `rejected`, `decided_by` the admin's `users.id`):
+
+| Kind | approve | edit (`patch`) | reject |
+| --- | --- | --- | --- |
+| `media` | `publish_state` `private`/`queued` → `approved` | `{credit}`: the credit set, then approved | → `rejected` (also from `approved`) |
+| `report` | a `draft`/`pending_confirm` report published (`verified` frozen; not a skipper confirmation: no `confirmed_at`, no clean count) | report fields (`report_date`, `trip_type`, `anglers`, `counts`, `notes`): an `advisor_report_edits` row with no contact or message, `version + 1` | `status='rejected'`; a published one also bumps the pages version and drops the port's daily answer |
+| `skipper` | `new_skipper`: the boat `verified`, `verified_at`, `verified_by`, the pages version bumped, and 05's verification text to the owner through their channel; other reasons only close the review | `400` (TA-W3) | `new_skipper`: the boat `rejected` and 05's reject text |
+| `conversation` | closes; with `reply` (1–1,000 characters), the text goes to the contact through its channel as an outbound row with `created_by` = the admin and `in_reply_to` the flagged message | `400` | closes |
+| `rule` | closes (TA-A4 edits rules) | `400` | closes |
+| `post` | `400` until TA-S1 | `400` | `400` |
+
+Texts a decision sends have deterministic ids (the review id and the decision), so a repeated request never texts twice; they are held while the relay is down like every outbound text.
+
+`GET /api/admin/health`:
+
+```json
+{"checked_at":"…","enabled":true,"replies_enabled":true,"channel":"bluebubbles",
+ "relay":{"state":"up","failures":0,"checked_at":"…","last_ok_at":"…"},
+ "queue":{"stale_queued":0,"oldest_queued_at":null,"held_outbound":0,"failed_today":0},
+ "vision":[{"name":"hermes","down_until":null},{"name":"claude","down_until":null}],
+ "caps":{"day":"2026-10-04","llm":{"used":12,"limit":2000},"vision":{"used":3,"limit":400}},
+ "media_jobs":{"pending":null},"reviews":{"open":4},"meta":null}
+```
+
+`relay` is `job_state` `advisor.relay` (`null` before the first check); `stale_queued` counts inbound messages still `queued` after 2 minutes; `vision[].down_until` is a provider's 10-minute skip; `caps` are today's UTC-day counters of the global model and vision caps; `media_jobs.pending` counts images the advisor-media job still has to derive once its `derived_at` column exists (TA-M1), `null` before; `meta` is `null` until TA-S0.
+
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait), `tests/test_advisor_admin.mjs` (admin gate, queue, decisions, media bytes, health), `e2e/admin.spec.ts` (an admin approves a review in the browser). See [testing](testing.md).
