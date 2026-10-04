@@ -1,7 +1,7 @@
 # 02. Data model, storage, retention and privacy
 
 All tables are D1 (SQLite) through Drizzle, declared in `db/schema.ts` and
-migrated with `pnpm db:generate -- --name <name>` (drizzle-kit; without
+migrated with `pnpm db:generate --name <name>` (drizzle-kit; without
 `--name` it invents a random file name). `tests/test_migrations.mjs`
 fails if the schema and the committed migrations disagree, so **never
 hand-write a migration**. Ids are `text` primary keys: random 16-byte
@@ -55,7 +55,9 @@ One row per person (phone number) or web visitor.
 | `created_at` | text | |
 | `updated_at` | text | |
 
-Indexes: `contact_boat (boat_id)`, `contact_seen (last_seen_at)`.
+Indexes: unique `contact_phone_hash (phone_hash)`, unique `contact_web_session (web_session)`,
+`contact_boat (boat_id)`, `contact_seen (last_seen_at)`. SQLite unique indexes allow
+any number of nulls, so web-only and phone-only contacts coexist.
 
 ## `advisor_boats`
 
@@ -70,7 +72,7 @@ Indexes: `contact_boat (boat_id)`, `contact_seen (last_seen_at)`.
 | `instagram` | text, nullable | handle without `@`, validated `^[a-z0-9._]{1,30}$` |
 | `booking_url` | text, nullable | https only |
 | `phone_public` | text, nullable | a number the skipper wants on the boat page (not the contact's) |
-| `owner_contact_id` | text | the skipper's contact |
+| `owner_contact_id` | text, nullable | the skipper's contact; null after the owner's "forget me" |
 | `status` | text | `pending` (default), `verified`, `rejected` (SK-4) |
 | `verified_at` | text, nullable | SK-4; set by admin |
 | `verified_by` | text, nullable | users.id of the admin |
@@ -81,7 +83,7 @@ Indexes: `contact_boat (boat_id)`, `contact_seen (last_seen_at)`.
 | `clean_reports` | integer | consecutive confirmed-without-edit reports, for SC-5 |
 | `created_at`, `updated_at` | text | |
 
-Indexes: `boat_port (port)`, `boat_owner (owner_contact_id)`.
+Indexes: unique `boat_slug (slug)`, `boat_port (port)`, `boat_owner (owner_contact_id)`.
 
 ## `advisor_crew`
 
@@ -167,7 +169,7 @@ A skipper's (or crew's) fish report for one trip date.
 | `created_at`, `updated_at` | text | |
 
 Indexes: `report_port_date (port, report_date)`, `report_boat_date (boat_id, report_date)`,
-`report_status (status)`. Unique `(boat_id, report_date, source)` keeps a
+`report_status (status)`. Unique `report_boat_day_source (boat_id, report_date, source)` keeps a
 retry from creating a second draft for the same day; a second real report the
 same day becomes an edit (SC-4).
 
@@ -328,8 +330,14 @@ Runs weekly from `advisorCron` (Sunday 09:00 UTC slot) and is idempotent.
 `START` reactivates. Twilio enforces STOP on SMS itself and still forwards the
 message, so the handler runs on both channels.
 
-**"forget me"** (FC-4): in one D1 batch, delete the contact's messages, media
-rows (and R2 objects by prefix), reviews, report edits and crew rows; set
+**"forget me"** (FC-4, `forgetContact` in `server/advisor/contacts.ts`): R2
+first (originals under `advisor/media/<contact_id>/`, each of its media's
+`advisor/derived/<media_id>/` files and any `advisor/exports/<contact_id>/`), so
+a failure leaves D1 intact and the call can be retried; then in one D1 batch,
+delete the contact's messages, media rows, reviews (those whose `ref_id` is the
+contact, one of its messages or one of its media), report edits and crew rows
+where it is the member (`added_by` on other crew rows stays as an opaque id);
+null `advisor_reports.media_id` where it pointed at the contact's media; set
 `advisor_reports.contact_id` to null (the boat's published reports are the
 boat's business record); if the contact owns a boat, the boat stays but its
 `owner_contact_id` is set to null and the admin queue gets a `skipper`
@@ -347,7 +355,10 @@ before deleting the contact (the send needs the number).
 - `server/analytics.ts` points written by the advisor contain only route
   patterns, intents, outcomes, counts and timings.
 - `console.log` lines in `server/advisor/` go through `advisorLog()` which
-  strips anything matching an E.164 pattern or a 10-digit run before writing.
+  strips anything matching an E.164 pattern or a 10-digit run before writing
+  (`\+\d{10,15}` or `\+?1?\d{10}`, in every string at any depth, keys included).
+  A number written with separators ("805-555-0100") is not matched, so a
+  message body is never a log field.
 - `check_repository.py`'s private-material scan is extended (task TA-C5): over
   `tests/fixtures/advisor/` and `docs/plans/text-advisor/` it rejects any
   E.164 match `\+1\d{10}` except the fictional `+1555` series
