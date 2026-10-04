@@ -1,0 +1,87 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. The advisory and the landing trip come from tests/fixtures/feeds/ (the alert moved to the test day).",
+  "description": "The advisory backstop (TA-A2): the same planning call, but the model's reply does not lead with the Small Craft Advisory. The engine puts the brief's advisory line first, deterministically like the rules guard, and logs advisor_advisory_backstop.",
+  "message": "Worth going out of Morro Bay for rockfish today?",
+  "exchanges": [
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_21",
+              "name": "get_conditions",
+              "input": {
+                "port": "morro-bay",
+                "date": "today",
+                "species": "rockfish"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "tool_result_for": "toolu_21",
+        "tool_result_contains": [
+          "\"advisory_line\":\"SMALL CRAFT ADVISORY posted for today.\"",
+          "\"planning\":{",
+          "\"species_key\":\"rockfish\"",
+          "\"status\":\"no_rule\"",
+          "\"confidence_phrase\":\"recent reported activity: Low\"",
+          "\"closer\":\"Check the latest NWS forecast before you go.\""
+        ]
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "Rockfish have been around: the landing had Starfire with rockfish last Sun; recent reported activity: Low. Keep an eye on the afternoon wind. Check the latest NWS forecast before you go."
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "conditions",
+    "texts": 1,
+    "reply_starts_with": "SMALL CRAFT ADVISORY posted for today. Rockfish have been around",
+    "reply_contains": [
+      "recent reported activity: Low.",
+      "Check the latest NWS forecast before you go."
+    ],
+    "reply_not_matching": [
+      "\\d\\s*%"
+    ],
+    "log": "advisor_advisory_backstop"
+  }
+}

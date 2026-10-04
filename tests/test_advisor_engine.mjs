@@ -6,7 +6,7 @@
 // the six few-shots, rules_without_tool, tool_loop, pause_turn, HTTP 529), the
 // post-processing helpers, the consumer's new appliers (STOP/START, forget,
 // export and its route, send_file, notifyAdmin) and the golden conversations
-// 1-4 and 6-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
+// 1-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
 // real migrations in node:sqlite, a memory R2, a fake fetcher.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -308,7 +308,8 @@ dbTest('notifyAdmin texts the admin-test contact for new skipper and media revie
 // ---- stage 3: recorded model turns -------------------------------------------------------
 
 test('fixtures: every recorded case is complete', () => {
-  const required = ['first-contact', 'whats-biting', 'trip-planning-advisory', 'fish-id-rules', 'rig-question', 'refusal', 'rules-without-tool', 'tool-loop', 'pause-turn', 'http-529'];
+  const required = ['first-contact', 'whats-biting', 'trip-planning-advisory', 'fish-id-rules', 'rig-question', 'refusal', 'rules-without-tool', 'tool-loop', 'pause-turn', 'http-529',
+    'trip-planning-brief', 'trip-planning-backstop'];   // TA-A2: the planning brief and the advisory backstop
   const names = engineFixtures.map(f => f.replace(/\.json$/, ''));
   for (const name of required) assert.ok(names.includes(name), name);
   for (const name of names) { const f = engineFixture(name); assert.ok(f._source && f.description && f.message !== undefined && f.exchanges.length && f.expect, name); }
@@ -324,8 +325,11 @@ for (const file of engineFixtures) {
     const message = inbound(sql, f.message, {media: f.media ? ['m-fixture'] : null});
     const attempt = quiet(() => run(env, contactRow(sql), message, {fetcher: api.fetcher}));
     if (f.expect.throws) { await assert.rejects(attempt, new RegExp(f.expect.throws)); assert.equal(api.requests.length, 2, 'one retry'); return; }
-    const {value: result} = await attempt;
+    const {value: result, lines} = await attempt;
     assert.equal(api.remaining(), 0, 'every recorded response was used');
+    // TA-A2: a log line the case must (or must not) write, such as the advisory backstop's.
+    if (f.expect.log) assert.ok(lines.some(l => l.includes(f.expect.log)), `logged ${f.expect.log}`);
+    if (f.expect.log_not) assert.ok(!lines.some(l => l.includes(f.expect.log_not)), `did not log ${f.expect.log_not}`);
     // Request shape (04 § stage 3).
     for (const request of api.requests) {
       assert.equal(request.max_tokens, MAX_TOKENS); assert.equal(request.temperature, TEMPERATURE); assert.equal(request.model, 'claude-sonnet-5');
@@ -372,6 +376,32 @@ for (const file of engineFixtures) {
     assert.equal(result.usage.turns, api.requests.length);
   });
 }
+
+// TA-A5: a list of boats is the one reply that may run past three segments (04 LIST_INTENTS).
+dbTest('trips (TA-A5): get_trips lists the verified boats and the list reply is not cut at 480 characters', async () => {
+  const {sql, env} = setup({env: {ANTHROPIC_API_KEY: 'k'}});
+  seen(sql);
+  const boat = (id, name, status) => sql.prepare(`INSERT INTO advisor_boats(id,slug,name,landing,port,region,booking_url,status,created_at,updated_at) VALUES(?,?,?,'Example Landing','morro-bay','morro-bay','https://example.com/book',?,?,?)`)
+    .run(id, `slug-${id}`, name, status, iso(T0 - 86400000), iso(T0 - 86400000));
+  boat('b1', 'Example Boat One', 'verified'); boat('b2', 'Example Boat Two', 'verified'); boat('b3', 'Example Pending Boat', 'pending');
+  const message = (content, stop) => ({status: 200, body: {id: 'msg_fixture', type: 'message', role: 'assistant', model: 'claude-sonnet-5', content, stop_reason: stop, usage: {input_tokens: 10, output_tokens: 10}}});
+  const list = ['Boats out of Morro Bay I work with, by latest report, not a ranking.',
+    'Example Boat One, Example Landing: full-day and half-day rockfish and lingcod trips, with booking on its boat page {{link:boat:slug-b1}}.',
+    'Example Boat Two, Example Landing: full-day rockfish trips, booked through the landing office by phone or at the window.',
+    'Both run out of the harbor most days in season. Call the landing for open spots, gear rental and what to bring, and ask about the cutoff for the morning boat.',
+    'Ask me about conditions for the day you pick.'].join(' ');
+  assert.ok(list.length > 480);
+  const api = fakeApi([message([{type: 'tool_use', id: 'toolu_trips', name: 'get_trips', input: {port: 'morro-bay'}}], 'tool_use'), message([{type: 'text', text: list}], 'end_turn')]);
+  const {value: result} = await quiet(() => run(env, contactRow(sql), inbound(sql, 'which boats run trips out of Morro Bay?'), {fetcher: api.fetcher}));
+  assert.equal(result.intent, 'trips');
+  const toolResult = api.requests[1].messages.at(-1).content.find(b => b.type === 'tool_result').content;
+  assert.ok(toolResult.includes('Example Boat One') && toolResult.includes('Example Boat Two') && !toolResult.includes('Example Pending Boat'));
+  assert.ok(toolResult.includes('"few":false'));
+  const [reply] = texts(result);
+  assert.ok(reply.length > 480, 'a list is not capped');
+  assert.ok(reply.endsWith('Ask me about conditions for the day you pick.'));
+  assert.ok(reply.includes('https://skippercast.com/boats/slug-b1?s=txt'), 'the boat page placeholder resolves');
+});
 
 dbTest('the tool loop executes at most four rounds', () => { assert.equal(MAX_TOOL_ROUNDS, 4); });
 
@@ -523,13 +553,14 @@ dbTest('consumer: send_file attaches on BlueBubbles and falls back to the link e
   assert.equal(tw.sent[0].text, "Here's my contact card. https://skippercast.com/contact.vcf"); assert.equal(tw.sent[0].files, undefined);
 });
 
-// ---- golden conversations (11 § engine golden conversations 1-4, 6-9) ------------------------
+// ---- golden conversations (11 § engine golden conversations 1-9) ------------------------
 
 const conversations = readdirSync(new URL('./fixtures/advisor/engine/conversations/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
-test('golden conversations 1, 2 (en, es), 3, 4 and 6-9 exist', () => {
+test('golden conversations 1, 2 (en, es), 3, 4, 5 and 6-9 exist', () => {
   // TA-I1: 2 up to the consent step, 3 the crew add and remove; TA-I2: 2 on through the count board, Y, a correction and a catch photo, 3 the crew member's board.
   // TA-I3: 4, the angler's fish IDs and photo sharing. TA-A1: 1, the new angler's "what's biting", home port and planning question.
-  for (const n of ['01-new-angler', '02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
+  // TA-A6: 5, a Spanish angler end to end (daily answer, planning, fish ID with Spanish cues, sharing, help).
+  for (const n of ['01-new-angler', '02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '05-spanish-angler', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
 });
 
 for (const file of conversations) {

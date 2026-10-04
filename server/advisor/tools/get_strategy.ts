@@ -11,8 +11,10 @@ import type {AdvisorTool, ToolContext} from './tool.ts';
 import {strategyFor} from '../answers/advice.ts';
 import {contactRegion, resolveSpecies} from '../answers/resolve.ts';
 import {regionConfig} from '../answers/regions.ts';
+import {t} from '../strings.ts';
 
-export const AD2_LINE = "General areas only; I don't share anyone's numbers.";
+/** The AD-2 line in English (the prompt quotes it); the note gives it in the reply language (TA-A6). */
+export const AD2_LINE = t('en', 'ad2_line');
 
 /** The spot names in a region's published search plans (dist/regions/<id>/search-plans.json), or [] when ASSETS is not bound or the file is missing. */
 export async function searchPlanNames(ctx: Pick<ToolContext, 'env'>, region: string, species: string): Promise<string[]> {
@@ -44,7 +46,7 @@ export const getStrategy: AdvisorTool = {
     return {result: {
       ...strategy,
       first_time: !earlier,
-      note: `General areas and depth bands only. Missing fields are not in our notes: do not fill them in.${earlier ? '' : ` This is the first time they asked: end the reply with "${AD2_LINE}"`}`,
+      note: `General areas and depth bands only. Missing fields are not in our notes: do not fill them in.${earlier ? '' : ` This is the first time they asked: end the reply with "${t(ctx.language, 'ad2_line')}"`}`,
       link: `{{link:species:${strategy.species_key}}}`,
     }};
   },

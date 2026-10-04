@@ -257,8 +257,8 @@ above:
   `lookalikes.json` cues that share a feature word (the jaw against the jaw),
   else the first of each; names come from the catalog (Spanish: the first
   Spanish synonym, "colorado"). The cues are English, so a Spanish reply leaves
-  them out until TA-A6. Ask: "Not sure from this one. {reason}: can you send a
-  side-on shot with the fins spread?" with a reason per `reason` code (blurry,
+  them out until TA-A6 (now `cues_es`, § As built (TA-A6)). Ask: "Not sure
+  from this one. {reason}: can you send a side-on shot with the fins spread?" with a reason per `reason` code (blurry,
   partial, several fish, no fish, too far; else "I can't tell it apart from its
   look-alikes"). A top candidate under 0.6 is "ask" even without
   `needs_better_photo`.
@@ -386,3 +386,126 @@ from the text above:
   update that changes those numbers regenerates the port's answer on the
   next question (one call per port per change).
 
+
+## As built (TA-A2)
+
+The planning brief is `server/advisor/answers/planning.ts` (`tripConditions`,
+`planningBrief`, `advisoryLine`, `seasonFor`, `leadsWithAdvisory`, `fit`).
+Where the code differs from § "Is Saturday worth going" above:
+
+- **Exposure.** No `plan_trip` tool: `get_conditions` takes an optional
+  `species` and then returns the brief as its `planning` field (the smaller
+  change: one tool, one call, the `conditions` intent, no registry or role
+  change). Without `species` it returns what it did (TA-E2), plus
+  `advisory_line`. The signature is `planningBrief(env, {port, date, species,
+  startHour?, endHour?}, {now, language, deps, contact, settings})`; 06's
+  `boatType?` is not taken (the person's boat is unknown by text, so the
+  comfort word stays the reference boat's).
+- **Dates.** As TA-E2 (`parseTripDate`): English and Spanish weekdays, today/hoy,
+  tomorrow/mañana, pasado mañana, this weekend/fin de semana (two days; on a
+  Sunday only Sunday), `next <weekday>`, ISO. Beyond seven days the result has
+  `beyond_horizon: true`, no conditions and no advisories, and `horizon_line`
+  ("The forecast only reaches 7 days out, so I can't call the weather for Thu
+  yet. Ask me again closer to the day."); the season and recent activity still
+  come back.
+- **Advisory first.** `advisory_line` is written in the reply language from the
+  alerts that overlap each day's window: "SMALL CRAFT ADVISORY posted for Sat
+  and Sun." / "SMALL CRAFT ADVISORY (aviso del NWS) para el sábado y el
+  domingo." (gale first; the NWS event name stays English, in capitals). The
+  closer is `planning.closer` ("Check the latest NWS forecast before you go." /
+  "Revisa el pronóstico más reciente del NWS antes de salir."). The engine
+  backstop is in 04 § As built (TA-A2).
+- **Season.** `lookupRules` for the species (its own row, else its group's:
+  a vermilion uses the rockfish row), checked with `seasonOpen` on every trip
+  date: `open`, `closed` (on any of the dates) or `no_rule`, with `stale` and a
+  line in the reply language. The lines carry no number (the season dates,
+  sizes and limits are `get_rules`' to quote), so a planning call does not
+  satisfy the rules guard; a stale row's line says "double-check"; no row says
+  to check the current CDFW rules. The note puts a closed season right after
+  the advisory.
+- **Recent activity.** `dailyInputs` for the port and today (TA-A1's inputs:
+  published skipper reports of three days, a verified boat by name, any other
+  as "a boat"), narrowed to the species' count lines (at most three reports),
+  and the landing's trips for the species in the seven days before today,
+  labelled "reported by the landing". The brief reads each feed once (a
+  per-call memo around the feed reader), so the conditions, the inputs and the
+  ladder share one read.
+- **Confidence.** One ladder word for the species asked about, not the region
+  target: the landing's `reportEvidence` for the feed species the catalog files
+  it under (vermilion → rockfish; `reef` stays the lingcod-and-rockfish group),
+  so lingcod trips are not rockfish evidence. A published skipper report of the
+  species in the three days lifts Insufficient to Low (positive reports exist,
+  coverage weaker: `docs/bite-evidence.md`'s Low), never to Moderate. Dungeness
+  is always Insufficient (boat reports are no crab evidence). The brief carries
+  the word and `confidence_phrase` ("recent reported activity: Low" /
+  "actividad reciente reportada: Low"; the word stays English, as in TA-A1) and
+  no other confidence word; the prompt says to use the phrase exactly once.
+- **Size.** The engine passes the model at most 4000 characters of a tool
+  result (`TOOL_RESULT_MAX`, now in `tools/tool.ts`); a longer JSON would be cut
+  and no longer parse, so `fit` drops the advisory headlines first, then the
+  oldest skipper reports, then count lines past three.
+- **Prompt.** RULES OF EVIDENCE has the planning order (advisory_line first, a
+  closed season, conditions and comfort, the season line, reports with date and
+  boat, `confidence_phrase` exactly once, the closer last; `horizon_line` past
+  seven days); the planning few-shots (en, es) call `get_conditions` with the
+  species.
+
+## As built (TA-A5)
+
+`get_trips` (TA-E2, verified-only since TA-I1) already met § Trips for
+newcomers, so TA-A5 is tests only: verified boats only (pending and rejected
+never, even with newer reports), the landing, an `https` booking link (else
+null), the `{{link:boat:<slug>}}` boat page, trip types from published reports
+of the last 60 days (the 60th day counts; drafts and withdrawn reports never),
+ordered by the latest published report rather than by name (boats with none
+last), at most twelve, no rank, score or rating field and a note that the
+order is not a ranking, `few: true` under two verified boats with the port
+link, and a `trips` reply that is not cut at 480 characters. Open question for
+the owner: `booking_url` is returned as a raw URL, while the prompt allows
+links only as placeholders, so the model can only point to the boat page.
+
+## As built (TA-A6)
+
+The Spanish pass. Every text the advisor sends without the model comes from
+`catalog/advisor/strings.json` through `t(language, key, vars)`:
+
+- **Moved into the catalog:** the consumer's warm-up, "still working" and
+  apology texts (now in the contact's language; `WARM_UP_TEXT` and the others
+  stay exported as the English strings), the AD-2 line (`ad2_line`, given to
+  the model in the reply language by `get_strategy`), the few-boats phrase
+  (`trips_few`, in `get_trips`' note), `escalate`'s `reply` (the flagged line,
+  or the abuse line), the daily answer's day words and "rockfish and lingcod",
+  the fish-ID articles ("a"/"an"/"un") and the "or" of the release warning, and
+  TA-A2's planning lines. The daily answer's no-model fallback named a landing
+  target by its key ("trips with salmon", "pacific-halibut" in English too);
+  it now uses `target_*` names ("salmón", "halibut del Pacífico", "Pacific
+  halibut"), with the key kept only for halibut, barracuda, bonito and dorado,
+  which are the same word in both languages. The landing attribution
+  (`landing_label`, "reportado por el muelle") follows the reply language in
+  `get_port_report` and the planning brief, like the brief's other lines. Tool
+  notes, descriptions, the rest of the briefs and log or error text stay
+  English: they go to the model or the logs, not to a person.
+- **Spanish cues (the TA-I3 gap).** `catalog/advisor/lookalikes.json` has
+  `cues_es` for every species, the same cues in Latin American Spanish in the
+  same order; the owner reviews them with the English ones. The high ID quotes
+  the first Spanish cue ("Es un colorado. Cuerpo rojo con manchas grises u
+  oscuras."); the medium ID picks the pair on the English cues (the jaw against
+  the jaw) and quotes the Spanish cues at the same places ("busca mandíbula
+  inferior lisa (canario) frente a escamas pequeñas y ásperas debajo de la
+  mandíbula inferior (colorado)"). The provider's own cues are English, so a
+  Spanish reply without a catalog cue still leaves the cue out. `get_species`
+  returns the cues in the reply language.
+- **Few-shots.** The Spanish planning example passes the species and ends with
+  the NWS closer; `fish-id-rules-es` is new (the medium ID with Spanish cues and
+  a stale rule).
+- **Tests.** `tests/test_advisor_strings.mjs` scans `server/advisor/**/*.ts`
+  (outside `strings.ts` and `prompts/`) for a string or template literal of four
+  or more words at a send: a `text`, `caption` or `reply` value (either arm of a
+  conditional there too), an argument of the text-action helpers, or a constant
+  named `*_TEXT`/`*_LINE` or used at one of those places. Log events and error
+  messages never sit at a send, so the allowlist is empty; a synthetic source
+  proves the scan finds what it should and skips logs, errors, comments and
+  regular expressions. It also checks that every `t()` key exists. Golden
+  conversation 5 (`05-spanish-angler.json`) is a Spanish angler end to end: the
+  welcome and the day's answer, a planning question with the advisory first,
+  two fish IDs with Spanish cues, the share and credit, and AYUDA.

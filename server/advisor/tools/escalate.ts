@@ -1,6 +1,7 @@
 // escalate (04 § Tools): a conversation review item for a human. The reply the
 // model sends is "I've flagged this for the team." (or the abuse line).
 import type {AdvisorTool} from './tool.ts';
+import {t} from '../strings.ts';
 
 /** advisor_reviews.reason codes the model may use (02 § advisor_reviews, plus abuse and prompt_injection). */
 export const ESCALATION_REASONS = ['refused', 'abuse', 'prompt_injection', 'low_confidence', 'complaint', 'needs_human'] as const;
@@ -15,6 +16,7 @@ export const escalate: AdvisorTool = {
   intent: 'escalate',
   async run(input, ctx) {
     const reason = (ESCALATION_REASONS as readonly unknown[]).includes(input.reason) ? input.reason as string : 'needs_human';
-    return {result: {flagged: true}, actions: [{type: 'review_open', kind: 'conversation', refId: ctx.message.id, reason}]};
+    // TA-A6: the line to send, in the reply language (the abuse case sends only the stop line instead).
+    return {result: {flagged: true, reply: reason === 'abuse' ? t(ctx.language, 'abuse_stop') : t(ctx.language, 'escalated')}, actions: [{type: 'review_open', kind: 'conversation', refId: ctx.message.id, reason}]};
   },
 };

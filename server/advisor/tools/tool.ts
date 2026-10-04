@@ -25,6 +25,9 @@ export interface AdvisorTool {
 }
 
 /** The result every not-yet-built tool returns, so the model says it can't check that yet. */
+/** The characters of a tool result the model sees (engine.ts cuts longer JSON, which would no longer parse). */
+export const TOOL_RESULT_MAX = 4000;
+
 export const NOT_BUILT = Object.freeze({unavailable: true, reason: 'not built yet'});
 /** A stub with its final schema: answers NOT_BUILT until its task replaces the file. */
 export function stubTool(def: Omit<AdvisorTool, 'run'>): AdvisorTool {

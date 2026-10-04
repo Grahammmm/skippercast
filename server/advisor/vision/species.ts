@@ -14,7 +14,7 @@ export interface VisionSpecies {key: string; name: string; cues: string[]; looka
 export interface ProtectedSpecies {key: string; must_release: boolean; note: string; source: string}
 
 interface ExtraEntry {key: string; name: string; parent: string | null; target?: string; same_as_parent?: boolean}
-interface LookalikeEntry {cues: string[]; lookalikes: string[]; source: string}
+interface LookalikeEntry {cues: string[]; cues_es?: string[]; lookalikes: string[]; source: string}
 
 const EXTRA = extra.species as ExtraEntry[];
 const CUES = lookalikes.species as Record<string, LookalikeEntry>;
@@ -82,5 +82,12 @@ export function speciesName(key: string | null | undefined): string | null {
   return CATALOG.get(k) ?? EXTRA.find(e => e.key === k)?.name ?? null;
 }
 
-/** TA-I3: the look-alike cues (catalog/advisor/lookalikes.json) of a species key, [] when it has none. */
-export const speciesCues = (key: string | null | undefined): string[] => key ? [...(cuesFor(canonicalSpecies(key))?.cues ?? [])] : [];
+/**
+ * TA-I3: the look-alike cues (catalog/advisor/lookalikes.json) of a species key, [] when it has none.
+ * TA-A6: 'es' gives the Spanish cues (`cues_es`, same order as the English), [] when a species has none.
+ */
+export const speciesCues = (key: string | null | undefined, language: 'en' | 'es' = 'en'): string[] => {
+  const entry = key ? cuesFor(canonicalSpecies(key)) : null;
+  if (!entry) return [];
+  return [...(language === 'es' ? (entry.cues_es?.length === entry.cues.length ? entry.cues_es : []) : entry.cues)];
+};

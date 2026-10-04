@@ -1,6 +1,9 @@
-// Every user-facing string the engine sends without the model
+// Every user-facing string the advisor sends without the model
 // (docs/plans/text-advisor/04-advisor-engine.md), keyed, in English and
-// Spanish, from catalog/advisor/strings.json. `{name}` is a variable;
+// Spanish, from catalog/advisor/strings.json. TA-A6: the engine, the flows,
+// the answers, the tools' reply lines and the consumer's own texts all come
+// from here; tests/test_advisor_strings.mjs scans server/advisor/ for a
+// hard-coded sentence at a send. `{name}` is a variable;
 // `{{link:...}}` placeholders are left for links.ts to resolve.
 // tests/test_advisor_strings.mjs checks that every key has both languages
 // with the same variables.

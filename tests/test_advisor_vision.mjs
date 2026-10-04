@@ -341,6 +341,9 @@ test('species-extra, lookalikes and protected reference known keys and sources',
   for (const [k, v] of Object.entries(looks)) {
     assert.ok(known.has(k), k);
     assert.ok(v.cues.length >= 2 && v.cues.length <= 3, `${k} has 2-3 cues`);
+    // TA-A6: the same cues in Spanish, in the same order (fishid.ts pairs them by position).
+    assert.equal(v.cues_es?.length, v.cues.length, `${k} has a Spanish cue for each cue`);
+    v.cues_es.forEach((c, i) => { assert.ok(c.trim().length > 3, `${k} cues_es[${i}]`); assert.notEqual(c, v.cues[i], `${k} cues_es[${i}] is translated`); });
     for (const l of v.lookalikes) assert.ok(known.has(l), `${k} -> ${l}`);
     assert.match(v.source, /^https:\/\/(?:wildlife\.ca\.gov|www\.fisheries\.noaa\.gov)\//, k);
   }

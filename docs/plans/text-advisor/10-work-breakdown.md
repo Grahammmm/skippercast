@@ -176,6 +176,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-E2, TA-A1
 - Files: `answers/planning.ts`, `tools/get_conditions.ts` (date parsing, window), `prompts/system.ts` (confidence words section), tests with a feed fixture carrying a Small Craft Advisory.
 - Tests: advisory first; horizon message beyond 7 days; weekend → two days; only the three confidence words appear.
+- As built: `get_conditions` with `species` returns the brief (no new tool); `answers/planning.ts`; the engine puts the advisory line first when a reply does not lead with it. One PR with TA-A5 and TA-A6 (branch `claude/ta-a2-a6`). See 06 § As built (TA-A2).
 
 ### TA-A3 · Species pages data, look-alikes review, protected list · S
 - Stories: ID-2, WH-4 (data).
@@ -192,11 +193,13 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: AD-3.
 - Depends: TA-I1, TA-E2
 - Files: `tools/get_trips.ts` (switch from stub to `advisor_boats`), tests.
+- As built: nothing was missing (TA-E2 and TA-I1 built it), so the task is the tests that prove each clause of 06 § Trips. See 06 § As built (TA-A5).
 
 ### TA-A6 · Spanish pass · S
 - Stories: FC-6.
 - Depends: TA-A1, TA-I2
 - Files: `prompts/examples.ts` (es), `intake/*.ts` (every user-facing string through `t(language, key)` in `server/advisor/strings.ts`), `catalog/advisor/strings.json`, tests asserting every key has both languages.
+- As built: the intake flows already used `t()`; the hard-coded texts left were the consumer's three, the AD-2 line, the few-boats phrase, escalate's line and a few words in the daily and fish-ID answers. Also the TA-I3 gap (`cues_es` in `lookalikes.json`), the Spanish fish-ID few-shot, a static scan for hard-coded sentences and golden conversation 5. See 06 § As built (TA-A6).
 
 ## Phase 4: media job, public pages, admin
 

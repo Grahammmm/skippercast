@@ -44,10 +44,14 @@ test('the prompt is stable per language (so caching works) and tells the model t
     assert.ok(systemPrompt('en').includes(p), p);
 });
 
-test('few-shots: six English cases and Spanish versions of the first three', () => {
+test('few-shots: six English cases and Spanish versions of the first three and the fish ID (TA-A6)', () => {
   const en = EXAMPLES.filter(e => e.language === 'en').map(e => e.name), es = EXAMPLES.filter(e => e.language === 'es').map(e => e.name);
   assert.deepEqual(en, ['first-contact', 'whats-biting', 'trip-planning-advisory', 'fish-id-rules', 'rig-question', 'refusal']);
-  assert.deepEqual(es, ['first-contact-es', 'whats-biting-es', 'trip-planning-advisory-es']);
+  assert.deepEqual(es, ['first-contact-es', 'whats-biting-es', 'trip-planning-advisory-es', 'fish-id-rules-es']);
+  // The Spanish planning and fish-ID replies follow the English shapes: the advisory first and the NWS closer; the medium-confidence ID.
+  const plan = EXAMPLES.find(e => e.name === 'trip-planning-advisory-es').turns.at(-1).text;
+  assert.match(plan, /^SMALL CRAFT ADVISORY/); assert.match(plan, /actividad reciente reportada: Low\./); assert.match(plan, /Revisa el pronóstico más reciente del NWS antes de salir\.$/);
+  assert.match(EXAMPLES.find(e => e.name === 'fish-id-rules-es').turns.at(-1).text, /^Parece un colorado, podría ser un canario: /);
   assert.ok(examplesFor('es').startsWith('person: hola'), 'the reply language comes first');
 });
 

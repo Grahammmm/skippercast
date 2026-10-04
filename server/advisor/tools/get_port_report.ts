@@ -19,6 +19,7 @@ import {addDays, daysBetween, localDate} from '../answers/time.ts';
 import {publicBoat} from '../intake/skippers.ts';
 // TA-A1: the day's answer.
 import {dailyAnswer} from '../answers/reports.ts';
+import {t} from '../strings.ts';
 
 export const MAX_SKIPPER_REPORTS = 5, MAX_REPORT_AGE_DAYS = 14, MAX_LANDING_REPORTS = 6;
 
@@ -71,7 +72,7 @@ export const getPortReport: AdvisorTool = {
       const recent = bySpecies.flatMap(e => e.reports).filter((r, i, a) => a.findIndex(x => x.id === r.id) === i)
         .sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, MAX_LANDING_REPORTS);
       landing = {
-        available: true, label: 'reported by the landing', feed_generated_at: feed.generated_at,
+        available: true, label: t(ctx.language, 'landing_label'), feed_generated_at: feed.generated_at,
         window: {from: bySpecies[0]?.start ?? null, to: bySpecies[0]?.end ?? null},
         recent_activity: bySpecies.filter(e => e.reports.length || e.target === 'reef').map(e => ({target: e.target, species: targetSpecies(e.target), confidence: e.confidence, trips: e.reports.length, boats: e.boats, days: e.days})),
         reports: recent.map(r => ({date: r.date, age: ago(today, String(r.date)), boat: r.boat, trip_type: r.trip_type ?? null,
