@@ -1,0 +1,75 @@
+{
+  "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
+  "description": "The global LLM cap answers 'swamped' without a model call; the daily message cap answers once, then nothing.",
+  "env": {
+    "ADVISOR_GLOBAL_DAILY_LLM": "1",
+    "ADVISOR_DAILY_MESSAGES_PER_CONTACT": "3"
+  },
+  "contact": {
+    "home_port": "port-san-luis"
+  },
+  "turns": [
+    {
+      "in": "any halibut around?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "I can't pull reports by text yet. The port page will have them: {{link:port:port-san-luis}}"
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "chat",
+        "reply_contains": [
+          "https://skippercast.com/ports/port-san-luis?s=txt"
+        ]
+      }
+    },
+    {
+      "in": "and lingcod?",
+      "expect": {
+        "intent": "global_cap",
+        "reply_contains": [
+          "I'm swamped right now."
+        ]
+      }
+    },
+    {
+      "in": "ok what about rockfish",
+      "expect": {
+        "intent": "global_cap",
+        "reply_contains": [
+          "I'm swamped right now."
+        ]
+      }
+    },
+    {
+      "in": "hello?",
+      "expect": {
+        "intent": "capped",
+        "reply_contains": [
+          "You've hit today's limit with me.",
+          "https://skippercast.com/ports/port-san-luis?s=txt"
+        ]
+      }
+    },
+    {
+      "in": "still there?",
+      "expect": {
+        "intent": "capped",
+        "no_reply": true
+      }
+    }
+  ]
+}

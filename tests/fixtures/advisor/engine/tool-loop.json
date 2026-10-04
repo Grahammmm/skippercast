@@ -1,0 +1,161 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "Five tool_use rounds: the fifth is not executed; the engine sends the check-back line and opens a tool_loop review.",
+  "message": "tell me everything about every port",
+  "exchanges": [
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_41",
+              "name": "get_port_report",
+              "input": {
+                "port": "morro-bay"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_42",
+              "name": "get_port_report",
+              "input": {
+                "port": "port-san-luis"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_43",
+              "name": "get_port_report",
+              "input": {
+                "port": "monterey"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_44",
+              "name": "get_port_report",
+              "input": {
+                "port": "santa-cruz"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_45",
+              "name": "get_port_report",
+              "input": {
+                "port": "bodega-bay"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "reports",
+    "texts": 1,
+    "reply_contains": [
+      "Let me check on that and get back to you."
+    ],
+    "review": "tool_loop",
+    "executed": 4
+  }
+}

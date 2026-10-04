@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "description": "Every user-facing string the Text Advisor engine sends without the model (docs/plans/text-advisor/04-advisor-engine.md), in English and Spanish. server/advisor/strings.ts t(language, key, vars) reads this file; {name} is a variable, {{link:...}} a placeholder server/advisor/links.ts resolves. tests/test_advisor_strings.mjs requires both languages for every key and the same variables in each. The help text is the wording of docs/operations/runbooks/advisor-port-to-twilio.md § HELP and STOP wording: change both together. The welcome carries the 10DLC promise (Msg & data rates, HELP, STOP).",
+  "strings": {
+    "welcome": {
+      "en": "SkipperCast here. Ask me about conditions, rules or recent catches, or send a fish photo for an ID. Msg & data rates may apply. Reply HELP for help, STOP to opt out.",
+      "es": "Aquí SkipperCast. Pregúntame por condiciones, reglas o capturas recientes, o mándame la foto de un pez para identificarlo. Pueden aplicarse tarifas de mensajes y datos. Responde AYUDA para ayuda, STOP para darte de baja."
+    },
+    "help": {
+      "en": "SkipperCast: fishing conditions, rules, catch reports and fish IDs by text. Ask a question or send a photo. Text STOP to stop, FORGET ME to erase your data. Help and contact: skippercast.com",
+      "es": "SkipperCast: condiciones de pesca, reglas, reportes de capturas e identificación de peces por mensaje. Haz una pregunta o manda una foto. Escribe STOP para dejar de recibir mensajes, OLVÍDAME para borrar tus datos. Ayuda y contacto: skippercast.com"
+    },
+    "stop_done": {
+      "en": "Done. You won't hear from me unless you text START.",
+      "es": "Listo. No sabrás de mí a menos que escribas START."
+    },
+    "forget_ask": {
+      "en": "Reply DELETE to erase everything I have about this number. This can't be undone.",
+      "es": "Responde BORRAR para eliminar todo lo que tengo de este número. No se puede deshacer."
+    },
+    "forget_done": {
+      "en": "Done. Everything I had about this number is erased. Text me anytime to start fresh.",
+      "es": "Listo. Borré todo lo que tenía de este número. Escríbeme cuando quieras para empezar de nuevo."
+    },
+    "export_ready": {
+      "en": "Here's everything I have about you, as a file. The link works for 24 hours: {link}",
+      "es": "Aquí está todo lo que tengo de ti, en un archivo. El enlace funciona 24 horas: {link}"
+    },
+    "export_unavailable": {
+      "en": "I can't put your data together right now. Try again later.",
+      "es": "No puedo preparar tus datos en este momento. Inténtalo más tarde."
+    },
+    "capped": {
+      "en": "You've hit today's limit with me. Back tomorrow, or see {{link:{target}}}",
+      "es": "Llegaste al límite de hoy conmigo. Vuelve mañana, o mira {{link:{target}}}"
+    },
+    "global_cap": {
+      "en": "I'm swamped right now. Try again in a bit, or see {{link:home}}",
+      "es": "Estoy saturado en este momento. Inténtalo en un rato, o mira {{link:home}}"
+    },
+    "upload_link": {
+      "en": "Send full-size photos or videos here, good for 24 hours: {link}",
+      "es": "Manda fotos o videos en tamaño completo aquí, válido 24 horas: {link}"
+    },
+    "upload_unavailable": {
+      "en": "I can't make an upload link right now. Try again later.",
+      "es": "No puedo crear un enlace para subir archivos ahora. Inténtalo más tarde."
+    },
+    "media_ack": {
+      "en": "Got your photo, thanks. Reading photos (fish ID, count boards) is coming soon. For now, text me your question.",
+      "es": "Recibí tu foto, gracias. Pronto podré leer fotos (identificar peces, pizarras de capturas). Por ahora, escríbeme tu pregunta."
+    },
+    "warming_up": {
+      "en": "SkipperCast is warming up. Check back soon.",
+      "es": "SkipperCast se está preparando. Vuelve a escribir pronto."
+    },
+    "not_understood": {
+      "en": "Sorry, I didn't catch that. What would you like to know about fishing?",
+      "es": "Perdona, no te entendí. ¿Qué quieres saber de la pesca?"
+    },
+    "tool_loop": {
+      "en": "Let me check on that and get back to you.",
+      "es": "Déjame revisarlo y te aviso."
+    },
+    "escalated": {
+      "en": "I've flagged this for the team.",
+      "es": "Se lo pasé al equipo."
+    },
+    "rules_cdfw": {
+      "en": "Check the current CDFW rules for that: {{link:rules}}",
+      "es": "Revisa las reglas vigentes de CDFW para eso: {{link:rules}}"
+    },
+    "refusal": {
+      "en": "I only do fishing. Ask me what's biting, send a fish photo, or ask how to rig for something.",
+      "es": "Solo hablo de pesca. Pregúntame qué está picando, mándame la foto de un pez o pregúntame cómo armar el equipo."
+    },
+    "abuse_stop": {
+      "en": "I'm going to stop here.",
+      "es": "Aquí lo dejo."
+    },
+    "contact_card_link": {
+      "en": "Save my number: {link}",
+      "es": "Guarda mi número: {link}"
+    },
+    "contact_card_file": {
+      "en": "Here's my contact card.",
+      "es": "Aquí está mi tarjeta de contacto."
+    },
+    "link_code_text": {
+      "en": "Your SkipperCast code is {code}. If you didn't ask for it, ignore this text.",
+      "es": "Tu código de SkipperCast es {code}. Si no lo pediste, ignora este mensaje."
+    },
+    "link_done": {
+      "en": "Linked. Text me from your phone anytime and I'll know it's you.",
+      "es": "Vinculado. Escríbeme desde tu teléfono cuando quieras y sabré que eres tú."
+    },
+    "link_wrong": {
+      "en": "That code doesn't match. Check the text and try again.",
+      "es": "Ese código no coincide. Revisa el mensaje e inténtalo otra vez."
+    },
+    "link_expired": {
+      "en": "That code has expired. Ask me to text you again.",
+      "es": "Ese código ya venció. Pídeme que te escriba otra vez."
+    },
+    "link_failed": {
+      "en": "I couldn't text that number. Check it and try again.",
+      "es": "No pude escribir a ese número. Revísalo e inténtalo otra vez."
+    },
+    "admin_done": {
+      "en": "Done: {decision} {kind} {code}.",
+      "es": "Listo: {decision} {kind} {code}."
+    },
+    "admin_not_found": {
+      "en": "No open review matches {code}.",
+      "es": "Ninguna revisión abierta coincide con {code}."
+    },
+    "admin_notify": {
+      "en": "New {kind} review ({reason}). Reply OK {code} to approve or NO {code} to reject.",
+      "es": "Nueva revisión de {kind} ({reason}). Responde OK {code} para aprobar o NO {code} para rechazar."
+    }
+  }
+}

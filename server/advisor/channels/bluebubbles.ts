@@ -157,6 +157,21 @@ export function createBlueBubbles(options: BlueBubblesOptions = {}): ChannelAdap
       if (!r.ok) return failed(r.error ?? 'error');
       providerId ??= guidOf(r); sentSomething = true;
     }
+    // TA-E1: small inline files (the contact card), attached like media.
+    for (const [i, file] of (message.files ?? []).entries()) {
+      let bytes: Uint8Array;
+      try { bytes = Uint8Array.from(atob(file.base64), c => c.charCodeAt(0)); } catch { bytes = new Uint8Array(0); }
+      if (!bytes.length || bytes.length > MAX_MEDIA_BYTES) return sentSomething ? {providerId, status: 'unknown', error: 'file-invalid'} : {providerId: null, status: 'failed', error: 'file-invalid'};
+      const name = /^[\w.-]{1,80}$/.test(file.name) ? file.name : 'file';
+      const form = new FormData();
+      form.set('attachment', new File([bytes], name, {type: file.mime || 'application/octet-stream'}));
+      form.set('chatGuid', chat);
+      form.set('name', name);
+      form.set('tempGuid', `${message.id}-f${i}`);
+      const r = await call(env, 'message/attachment', {method: 'POST', form});
+      if (!r.ok) return sentSomething ? {providerId, status: 'unknown', error: `file-${r.error ?? 'error'}`} : {providerId: null, status: r.error === 'timeout' ? 'unknown' : 'failed', error: r.error};
+      providerId ??= guidOf(r); sentSomething = true;
+    }
     if (!sentSomething) return {providerId: null, status: 'failed', error: 'empty'};
     return {providerId, status: 'sent'};
   }

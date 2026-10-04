@@ -1,0 +1,45 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "The model states a size and bag limit without calling get_rules: the guard replaces the sentence and opens a review.",
+  "message": "how big do lingcod have to be?",
+  "exchanges": [
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "Lingcod need to be 22 inches to keep, with a 2 fish limit. Good luck out there!"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "chat",
+    "texts": 1,
+    "reply_contains": [
+      "Check the current CDFW rules for that:",
+      "Good luck out there!"
+    ],
+    "reply_not_contains": [
+      "22 inches",
+      "2 fish"
+    ],
+    "review": "rules_without_tool"
+  }
+}

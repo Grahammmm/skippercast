@@ -1,0 +1,81 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "Trip planning: conditions then rules (stubs); the model says it cannot check yet and links the rules.",
+  "message": "Is Saturday worth going for rockfish out of Port San Luis?",
+  "exchanges": [
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_11",
+              "name": "get_conditions",
+              "input": {
+                "port": "port-san-luis",
+                "date": "Saturday"
+              }
+            },
+            {
+              "type": "tool_use",
+              "id": "toolu_12",
+              "name": "get_rules",
+              "input": {
+                "species_key": "rockfish"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "tool_result_for": "toolu_12"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "I can't check Saturday's forecast or the rules by text yet. Check the latest NWS forecast before you go, and the current rules here: {{link:rules:rockfish}}"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "conditions",
+    "texts": 1,
+    "reply_contains": [
+      "/species/rockfish?s=txt#rules",
+      "NWS"
+    ]
+  }
+}

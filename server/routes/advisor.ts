@@ -37,6 +37,9 @@ import {rejectMedia, sniffMime} from '../advisor/media.ts';
 import {randomId, sha256} from '../advisor/ids.ts';
 import {requireOrigin} from '../http.ts';
 import type {Handler} from '../advisor/types.ts';
+// TA-E1: the engine is the inline handler, and "send me my data" links here.
+import {engineHandler} from '../advisor/engine.ts';
+import {verifyExportToken} from '../advisor/exports.ts';
 
 export const advisorPublic = new Hono<AppEnv>();
 
@@ -265,9 +268,8 @@ advisorPublic.get('/qr/text.svg', c => new Response(qrSvg(`${advisorSettings(c.e
 // the outbound channel, so the replies come back in the response.
 
 /**
- * Test seams: the handler the inline turn runs (default: the consumer's stub
- * until TA-E1 passes the engine) and the server-side wait before answering
- * `pending` (08: 40 s).
+ * Test seams: the handler the inline turn runs (default: the engine, TA-E1)
+ * and the server-side wait before answering `pending` (08: 40 s).
  */
 export const webChat: {handler?: Handler; timeoutMs: number} = {timeoutMs: 40000};
 export const WEB_UPLOAD_BYTES = 8 * 1024 * 1024;     // 08: multipart, 8 MB, images only
@@ -293,7 +295,7 @@ advisorPublic.post('/api/advisor/web/message', async c => {
   const id = await storeInbound(env, message!);
   if (!id) throw Error('web message not stored');
   const collector = createWebCollector();
-  const run = runInline(env, id, {channel: collector, ...(webChat.handler ? {handler: webChat.handler} : {})});
+  const run = runInline(env, id, {channel: collector, handler: webChat.handler ?? engineHandler});
   let timer: ReturnType<typeof setTimeout> | undefined;
   const outcome = await Promise.race([
     run.then(() => 'done' as const),
@@ -307,9 +309,10 @@ advisorPublic.post('/api/advisor/web/message', async c => {
     advisorLog('warn', 'advisor_web_pending', {count: 1});
     return withCookie(json({replies: [], pending: true}), cookie);
   }
-  const contact = await env.DB.prepare('SELECT language FROM advisor_contacts WHERE web_session=?').bind(await sha256(session)).first<{language: string}>();
+  // TA-E1: `linked` is true once the session belongs to a phone contact (the web phone link merged it).
+  const contact = await env.DB.prepare('SELECT language,phone_hash FROM advisor_contacts WHERE web_session=?').bind(await sha256(session)).first<{language: string; phone_hash: string | null}>();
   const replies = collector.replies.map(r => ({id: r.id, text: r.text, links: [] as string[], media: r.mediaKeys.map(mediaUrl).filter((u): u is string => u !== null)}));
-  return withCookie(json({replies, contact: {language: contact?.language ?? 'en', linked: false}}), cookie);
+  return withCookie(json({replies, contact: {language: contact?.language ?? 'en', linked: Boolean(contact?.phone_hash)}}), cookie);
 });
 
 /** The upload body as a stream that errors past `limit` bytes or when its first bytes are not an image. */
@@ -360,3 +363,29 @@ advisorPublic.post('/api/advisor/web/upload', async c => {
   return withCookie(json({media_id: mediaId}), cookie);
 });
 // TA-C3 end.
+
+// ---- TA-E1: "send me my data" -------------------------------------------------------
+// (02 § Retention and deletion.) The export the engine wrote to
+// advisor/exports/<contact_id>/<date>.json, behind a signed 24-hour token
+// (server/advisor/exports.ts). A bad, tampered or expired token, a deleted
+// contact or a missing object is the gate's 404. Errors are answered here: the
+// path carries the token.
+advisorPublic.get('/api/advisor/export/:token', async c => {
+  const env = c.env;
+  if (await overLimit(env.PUBLIC_LIMITER, 'advisor-export:' + clientIP(c.req.raw))) return tooManyRequests();
+  try {
+    if (!env.ADVISOR_PHONE_KEY || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
+    const valid = await verifyExportToken(await deriveKeys(env.ADVISOR_PHONE_KEY), c.req.param('token'));
+    if (!valid) return NOT_FOUND();
+    const contact = await env.DB.prepare('SELECT id FROM advisor_contacts WHERE id=?').bind(valid.contactId).first<{id: string}>();
+    if (!contact) return NOT_FOUND();
+    const object = await env.ADVISOR_MEDIA.get(valid.key);
+    if (!object) return NOT_FOUND();
+    return new Response(object.body, {status: 200, headers: {'Content-Type': 'application/json; charset=utf-8', 'Content-Length': String(object.size),
+      'Content-Disposition': 'attachment; filename="skippercast-data.json"', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
+  } catch (error) {
+    advisorLog('error', 'advisor_export_failed', {reason: String((error as Error)?.message).slice(0, 200)});
+    return json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+});
+// TA-E1 end.

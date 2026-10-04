@@ -86,10 +86,30 @@ export type Action =
   | {type: 'send_media'; r2Key: string; caption?: string}          // a derived public JPEG in ADVISOR_MEDIA
   | {type: 'contact_update'; fields: ContactFields}
   | {type: 'review_open'; kind: ReviewKind; refId: string; reason: string}
-  | {type: 'log'; event: string; fields?: Record<string, unknown>};
+  | {type: 'log'; event: string; fields?: Record<string, unknown>}
+  // TA-E1: the engine's commands and flows (04 § stage 1, 02 § retention and deletion, 03 § web linking, 08 § text admin).
+  | {type: 'set_status'; status: 'stopped' | 'active'}               // STOP / START through contacts.ts applyStop / applyStart
+  | {type: 'forget'; language: Language}                              // send the confirmation, then forgetContact
+  | {type: 'export'; language: Language}                              // exportContact -> R2 -> a signed 24 h link by text
+  | {type: 'send_file'; name: string; mime: string; r2Key?: string; inlineBytes?: string; caption?: string; fallbackUrl?: string}  // inlineBytes: base64
+  | {type: 'link_start'; phoneHash: string; phoneEnc: string; codeHash: string; expiresAt: number; codeText: string}
+  | {type: 'link_merge'; phoneContactId: string}
+  | {type: 'admin_review'; reviewId: string; decision: 'approved' | 'rejected'};
+
+/** TA-E1: the two reply languages (02 § advisor_contacts.language). */
+export type Language = 'en' | 'es';
 
 /** One processed turn (04): the actions, the intent recorded on the inbound row, model usage. */
 export interface EngineResult {actions: Action[]; intent: string; usage?: LlmUsage; model?: string | null}
+
+/** TA-E1: what the engine can be handed so every test runs offline and deterministic (04). */
+export interface EngineDeps {
+  fetcher?: (url: string, init: RequestInit) => Promise<Response>;   // the Messages API; default fetch
+  clock?: () => number;                                               // epoch ms; default Date.now
+  random?: () => number;                                              // the web-link code; default crypto
+  sleep?: (ms: number) => Promise<void>;                              // the 429/529 back-off; default setTimeout
+  vision?: unknown;                                                   // TA-I2/I3: the vision chain
+}
 
 /**
  * The outbound message a channel sends (03 § adapter interface). `to` is the
@@ -104,6 +124,7 @@ export interface OutboundMessage {
   mediaKeys?: string[];             // R2 keys to attach (derived public JPEGs)
   replyToProviderId?: string;       // threads the reply where the channel supports it
   channelHint?: 'imessage' | 'sms'; // the contact's last channel: picks the BlueBubbles chat GUID (TA-C1)
+  files?: {name: string; mime: string; base64: string}[];   // TA-E1: small inline attachments (the contact card); BlueBubbles only
 }
 export interface SendResult {providerId: string | null; status: 'sent' | 'failed' | 'unknown'; error?: string}
 /** The part of 03's ChannelAdapter the consumer needs (channels/index.ts ChannelAdapter implements it). */
@@ -116,11 +137,12 @@ export interface ConsumerDeps {
   channel?: OutboundChannel;        // a fixed channel for every contact (tests); wins over channelFor
   channelFor?: (env: Env, contact: AdvisorContactRow) => OutboundChannel; // per-contact adapter; server/index.ts passes channels/index.ts channelFor
   sleep?: (ms: number) => Promise<void>; // the gap between split chunks; default setTimeout
-  handler?: Handler;                // default: warmUpHandler; TA-E1 passes the engine
+  handler?: Handler;                // default: warmUpHandler; server/index.ts, inbound.ts and the web route pass engineHandler (TA-E1)
   turnTimeoutMs?: number;           // hard stop per message; default 45 s (01 § request flow)
   // TA-C4: media download before the handler (server/advisor/media.ts).
   fetchMediaByRef?: (ref: string, channel: string, env: Env) => Promise<Response>; // default: the receiving adapter's fetchMediaByRef
   mediaRetries?: number;            // extra queue attempts after a failed download; default 2, runInline 0
+  engine?: EngineDeps;              // TA-E1: passed through to the engine handler (tests: the fake Messages API)
 }
 
 export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}

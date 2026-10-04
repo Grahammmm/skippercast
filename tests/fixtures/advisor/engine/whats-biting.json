@@ -1,0 +1,90 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "What's biting: get_port_report (a stub until TA-E2) then a reply with a port link placeholder.",
+  "message": "What's biting out of Morro Bay?",
+  "exchanges": [
+    {
+      "request": {
+        "tools_include": [
+          "get_port_report",
+          "update_profile",
+          "escalate"
+        ],
+        "tools_exclude": [
+          "read_count_board",
+          "offer_text_link"
+        ]
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "Let me check."
+            },
+            {
+              "type": "tool_use",
+              "id": "toolu_01",
+              "name": "get_port_report",
+              "input": {
+                "port": "morro-bay"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 2400,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "tool_result_for": "toolu_01",
+        "tool_result_contains": "not built yet"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "I can't pull the latest Morro Bay reports by text yet. The port page has what we have: {{link:port:morro-bay}} Which species are you after?"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "reports",
+    "texts": 1,
+    "reply_contains": [
+      "https://skippercast.com/ports/morro-bay?s=txt"
+    ],
+    "reply_not_contains": [
+      "{{"
+    ]
+  }
+}

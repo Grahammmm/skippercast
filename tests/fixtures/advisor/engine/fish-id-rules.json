@@ -1,0 +1,72 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "A photo with a question: identify_fish and get_rules are stubs; the reply asks for patience and links rules.",
+  "message": "what is this",
+  "media": 1,
+  "exchanges": [
+    {
+      "request": {
+        "last_user_contains": "[photo]"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_21",
+              "name": "identify_fish",
+              "input": {
+                "media_id": "m-fixture"
+              }
+            }
+          ],
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "I can't read photos yet, so I won't guess. If you think it's a rockfish, double-check the rules before you keep it: {{link:rules:rockfish}}"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "fishid",
+    "texts": 1,
+    "reply_contains": [
+      "double-check"
+    ]
+  }
+}

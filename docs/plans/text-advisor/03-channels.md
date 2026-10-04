@@ -252,6 +252,16 @@ this) rather than as a placeholder to download. Capabilities: media true
 Linking and `offer_text_link` are TA-E1; the island only links to
 `/contact.vcf` and `/text?s=web`.
 
+As built (TA-E1): the code is valid 10 minutes and stored only as its SHA-256
+in `job_state` `advisor.link.<web contact id>`; codes are limited to 3 per web
+visitor per day and guesses to 5. The code text goes through the phone
+contact's own channel (a new phone contact's `channel` is `web` until it texts
+in, so BlueBubbles checks iMessage availability). A match moves the web
+contact's messages, media and reviews to the phone contact, moves the session
+cookie hash to it (the chat keeps working and `/api/advisor/web/message`
+answers `linked: true`), and deletes the web contact. 04 § As built has the
+details.
+
 ## Uploads for compressed channels (SMS skippers, big videos)
 
 `GET /u/<token>` is a page with one file input; the token is minted by the

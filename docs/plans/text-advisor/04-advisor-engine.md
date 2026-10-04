@@ -225,3 +225,121 @@ first three.
 - An opt-in live eval `scripts/advisor/eval.mjs` (needs `ANTHROPIC_API_KEY`,
   never in CI) runs the fixture prompts against the real model and prints a
   diff for a human to judge before changing prompts.
+
+## As built (TA-E1)
+
+`server/advisor/engine.ts` exports `runTurn` and `engineHandler` (the
+consumer's `Handler`, wired in `server/index.ts`, `inbound.ts`'s inline runner
+and the web chat route). Where the code differs from the text above:
+
+- **Signature.** `runTurn({env, contact, message, now, deps, signal})`:
+  `contact` and `message` are the D1 rows (`AdvisorContactRow`,
+  `AdvisorMessageRow`), and `signal` is the consumer's 45 s hard stop. The
+  consumer passes `deps.engine` (`EngineDeps`: `fetcher`, `clock`, `random`,
+  `sleep`; `vision` is reserved for TA-I2/I3).
+- **Writes.** The engine writes only counters before replying: the
+  `request_limits` caps and `advisor_contacts.messages_today/messages_day`
+  (recomputed from today's inbound rows, so a retried message counts once).
+  Everything else is an action.
+- **Stage order.** Soft switch, blocked, stopped (only START gets through),
+  then the commands, then the daily message cap, then Stage 2, then the LLM
+  caps and the model. STOP, START, HELP, forget me and the data export work
+  past the daily cap (carriers require STOP and HELP to work). The per-contact
+  LLM cap (`ADVISOR_DAILY_LLM_PER_CONTACT`) and the global cap are counted
+  just before the model call, with the `request_limits` UPSERT…RETURNING idiom
+  (keys `advisor-llm:<contact>:<day>` and `global:advisor-llm:<day>`, UTC
+  day). Each capped reply goes out once a day; the global one ("swamped")
+  every time.
+- **Group chats** never reach the engine: the adapters drop them (03 §
+  BlueBubbles "As built"), so stage 0 step 4 has no code.
+- **No API key.** Without `ANTHROPIC_API_KEY` the model turn answers the
+  warm-up text (intent `unconfigured`), as the stub did.
+- **Commands.** `server/advisor/intents.ts` `COMMANDS`: the 04 table, plus
+  `olvidame` (no accent), `borrar` (the Spanish DELETE the Spanish prompt asks
+  for) and the upload-link words (`send me a link`, `link`, `mándame un
+  enlace`, `enlace`). `yes` is START only for a stopped contact. DELETE runs
+  forget only when the contact's previous inbound message (within 24 h) was
+  answered with the forget prompt (`intent = 'forget.ask'`). On Twilio SMS the
+  engine skips its own STOP confirmation (Twilio sends one and refuses ours
+  with 21610). HELP is the runbook's wording, word for word.
+- **Language.** `detectLanguage` returns `null` when it cannot tell (short or
+  mixed text); `null` keeps the stored language. A message in a `¿`/`¡`/`ñ`
+  with one Spanish word and no English one also counts as Spanish. A Spanish
+  command (`alto`, `ayuda`, …) is answered in Spanish.
+- **Welcome.** The first reply to a brand-new phone contact (no earlier
+  message) starts with the welcome ("… Msg & data rates may apply. Reply HELP
+  for help, STOP to opt out.") and the contact card (a file on iMessage, the
+  `/contact.vcf` link on SMS), once. Web visitors get neither.
+- **Stage 2.** Built here: the text admin fallback (08), the web phone-link
+  code (03 § web), the upload link, and media-only messages, which get a short
+  acknowledgement until TA-I2/I3. `STAGE_TWO_FLOWS: Flow[]` is the extension
+  point TA-I1 (registration, consent) and TA-I2 (pending confirmation,
+  corrections, count text) push into; registered flows run after the built-in
+  ones and before the model.
+- **Stage 3.** The system is two blocks: the prompt with few-shots (one per
+  reply language, `cache_control: ephemeral`) and the contact + situation
+  brief (uncached). The last tool definition carries `cache_control`, so the
+  tool list is cached with the prompt. History is the last 12 rows or 48 h,
+  whichever is fewer; failed outbound rows are skipped; consecutive same-role
+  rows are joined so the turns alternate; photos are `[photo]` notes. 429 and
+  529 are retried once after 2 s; any other HTTP error throws, so the consumer
+  retries the message. `pause_turn` is continued up to 3 times and its text is
+  joined to the continuation. The 30 s budget ends the loop like a fifth
+  `tool_use`: the last text, or "Let me check on that and get back to you."
+  with a `conversation` review (reason `tool_loop`, or `model_timeout` for the
+  budget).
+- **Post-processing order.** Strip markdown → rules guard (only when no
+  `get_rules` call returned data; an `unavailable` stub does not count) →
+  links (the first valid placeholder becomes a URL, the rest are dropped with
+  their "see"/":" lead-in) → the 480-character cap (sentence boundaries, the
+  link kept at the end) unless the intent is `trips`. The guard removes every
+  rule-like sentence and puts the CDFW line in place of the first.
+- **Intent.** `refused` when the reply starts with the refusal or the abuse
+  line (en or es); otherwise the first tool's intent, else `chat`. Stage 0–2
+  intents: `held`, `blocked`, `stopped`, `capped`, `global_cap`, `stop`,
+  `start`, `help`, `forget.ask`, `forget`, `export`, `upload_link`, `media`,
+  `empty`, `unconfigured`, `admin.*`, `link.*`.
+- **Tools.** Every tool in the table exists in `server/advisor/tools/`, with
+  its final name, roles and `input_schema`; the shared types are in
+  `tools/tool.ts` (so tool files never import the registry). Built here:
+  `update_profile`, `escalate` (reasons `refused`, `abuse`,
+  `prompt_injection`, `low_confidence`, `complaint`, `needs_human`),
+  `send_upload_link`, `send_contact_card`, `offer_text_link`. The data tools
+  (TA-E2, `identify_fish` TA-I3) and skipper tools (TA-I1/I2/I3) are stubs
+  answering `{unavailable: true, reason: 'not built yet'}`. Crew see the
+  report tools but not `add_crew`/`remove_crew`; `share_angler_photo` is for
+  anglers only; `admin-test` contacts see the angler set.
+- **New actions** (`types.ts`), applied by the consumer: `set_status`
+  (`applyStop`/`applyStart`), `forget` (the confirmation text, then
+  `forgetContact`), `export` (`exportContact` → R2
+  `advisor/exports/<contact_id>/<local date>.json` → a text with
+  `GET /api/advisor/export/<token>`, token
+  `base64url(contact_id|key|expiry|HMAC(upload subkey))`, 24 h, in
+  `server/advisor/exports.ts`), `send_file` (inline bytes or an R2 key;
+  BlueBubbles attaches it through the new `OutboundMessage.files`, every other
+  channel gets the caption and the fallback link), `link_start`, `link_merge`
+  and `admin_review`.
+- **Web phone link.** `offer_text_link` checks the number (`e164`), 3 codes per
+  web visitor per day (`request_limits`), and returns a `link_start` action
+  with the phone hash, the encrypted number, `sha256(code)` and the expiry
+  (10 minutes). The consumer creates (or finds) the phone contact, stores
+  `{code_hash, expires_at, phone_contact_hash, phone_contact_id}` in
+  `job_state` `advisor.link.<web contact id>`, and texts the code through the
+  phone contact's own channel (the outbound row stores the text with the code
+  masked). Six digits from that web visitor then run the check (5 guesses a
+  day); a match merges: messages, media and reviews move to the phone contact,
+  the web session moves to it (so the chat keeps working, and the web route
+  reports `linked: true`), the web contact and the `job_state` row are
+  deleted.
+- **Text admin.** `ok|no <6 hex>` from the contact whose id is
+  `ADVISOR_ADMIN_CONTACT_ID` and whose role is `admin-test`, for exactly one
+  open `skipper` or `media` review. `skipper`/`new_skipper` sets
+  `advisor_boats.status` `verified` (with `verified_at`) or `rejected`; other
+  skipper reasons only decide the review. `media` sets `publish_state`
+  `approved`/`rejected`. `notifyAdmin(env, review)` texts that contact for each
+  newly opened `skipper` or `media` review, through its own channel.
+- **Strings.** Every engine text is in `catalog/advisor/strings.json` (en and
+  es), read through `server/advisor/strings.ts` `t(language, key, vars)`.
+- **Eval.** `scripts/advisor/eval.mjs` runs the fixture messages against the
+  live model (needs `ANTHROPIC_API_KEY`; never in CI) and prints recorded vs
+  live replies with the format checks.

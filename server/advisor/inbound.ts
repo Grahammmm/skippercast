@@ -5,6 +5,7 @@
 import {deriveKeys, findOrCreateContact} from './contacts.ts';
 import {runInline, MAX_BODY} from './consumer.ts';
 import {channelFor} from './channels/index.ts';
+import {engineHandler} from './engine.ts';
 import type {InboundMessage} from './channels/index.ts';
 import {advisorLog} from './log.ts';
 import {randomId} from './ids.ts';
@@ -79,7 +80,8 @@ export async function dispatchInbound(env: Env, id: string, waitUntil?: (promise
     try { await env.ADVISOR_QUEUE.send({message_id: id}); return; }
     catch (error) { advisorLog('error', 'advisor_enqueue_failed', {reason: String((error as Error)?.message).slice(0, 200)}); }
   }
-  const run = runInline(env, id, {channelFor}).catch(error => { advisorLog('error', 'advisor_inline_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
+  // TA-E1: the engine handles the inline turn, as it does the queued one.
+  const run = runInline(env, id, {channelFor, handler: engineHandler}).catch(error => { advisorLog('error', 'advisor_inline_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
   if (waitUntil) waitUntil(run); else await run;
 }
 
