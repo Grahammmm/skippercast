@@ -39,7 +39,7 @@ test('localClock reads the local date, 24-hour time and weekday in the zone', ()
 
 test('the slot table is one exported array; TA-A1 added the daily answers at 05:30 Pacific', () => {
   assert.ok(Array.isArray(SLOTS));
-  assert.deepEqual(SLOTS.map(s => [s.name, s.time.local, s.time.tz]), [['daily-answers', '05:30', 'America/Los_Angeles']]);
+  assert.deepEqual(SLOTS.map(s => [s.name, s.time.local, s.time.tz]), [['daily-answers', '05:30', 'America/Los_Angeles'], ['rules-watch', '06:15', 'America/Los_Angeles']]);
   assert.equal(new Set(SLOTS.map(s => s.name)).size, SLOTS.length, 'names are unique (they are job_state keys)');
   for (const s of SLOTS) assert.equal(typeof s.run, 'function', s.name);
 });

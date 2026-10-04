@@ -189,6 +189,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: OP-6.
 - Depends: TA-A0, TA-W2
 - Files: `admin/rules.ts`, `routes/admin.ts` (rules endpoints), `cron.ts` (read the daily feed's regulation change flags → set jurisdiction rows to `review`), `web/admin/rules.tsx`, tests.
+- As built: the flag is a `regulations.checks` entry with `status: 'changed'`; the `rules-watch` slot marks the jurisdiction once per set of changed pages and opens one `rule` review whose card links the pages and the Rules view; the list filters by jurisdiction (rules are per jurisdiction, not region); `POST /api/admin/rules/import` is not built (the importer stays an owner-run script). See 08 § As built (TA-A4).
 
 ### TA-A5 · Trips tool from verified boats, newcomer answers · S
 - Stories: AD-3.

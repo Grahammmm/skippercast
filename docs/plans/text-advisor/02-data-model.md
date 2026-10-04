@@ -334,6 +334,14 @@ PK `(post_id, platform, day)`.
 Advisor cron state uses the existing `job_state` table with keys prefixed
 `advisor.`: `advisor.relay` (`up`/`down`, last ping), `advisor.calendar.last_run`,
 `advisor.insights.last_run`, `advisor.rules.last_watch`. No new table.
+As built (TA-W3, TA-A4): `advisor.boat-note.<boat id>` (the admin's consent
+note, `{note, at, by}`; never consent itself), `advisor.block.<contact id>`
+(the status a blocked contact had, restored on unblock),
+`advisor.rules.change.<jurisdiction>:<16 hex>` (one change-watch finding: the
+changed pages with their links and fingerprints, the regions whose feeds
+showed it, when the rows were put into review and how many; the `rule`
+review's `ref_id` is the part after the prefix) and `advisor.rules.last_watch`
+(`{checked_at, regions, unread, changed, opened, rows_marked}`).
 As built (TA-M1): `advisor.media.dispatched_at` (the media job's dispatch
 throttle, an ISO time) and `advisor.graphic.<id>` (one graphic request and its
 result as JSON, 09 § Derived images "As built").

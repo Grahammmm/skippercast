@@ -311,4 +311,6 @@ it claims the key with the same UPSERT-with-WHERE idiom as
 `scheduleTripChecks` and runs `fn`. A slot therefore runs once per local day,
 within 15 minutes of its time, and never twice. Weekly slots carry a
 `weekday`. Every local time quoted in 05–09 is a slot name defined in one
-table in `cron.ts`.
+table in `cron.ts`. As built: `daily-answers` (05:30, TA-A1) and
+`rules-watch` (06:15, TA-A4: the CDFW change-watch on the daily feed collected
+at 04:17).

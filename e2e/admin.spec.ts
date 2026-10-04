@@ -96,5 +96,15 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await page.getByLabel('Window').selectOption('30');
   await expect(page.getByRole('heading', {name: 'Engagement'})).toBeVisible();
   await checkA11y(page, 'admin-funnel', info.project.name);
+
+  // TA-A4: the Rules view on one jurisdiction (e2e/seed/advisor-pages.sql: lingcod active, rockfish in review). Read only:
+  // the seeded rows also feed e2e/advisor-pages.spec.ts.
+  await page.goto('/admin.html#rules?jurisdiction=california-central');
+  await expect(page.getByRole('heading', {level: 1, name: 'Rules'})).toBeVisible();
+  const rockfish = page.getByRole('row', {name: /Rockfish \(RCG complex\)/});
+  await expect(rockfish).toContainText('Due');
+  await expect(rockfish.getByRole('link', {name: 'CDFW Groundfish Summary'})).toBeVisible();
+  await expect(page.getByRole('row', {name: /^Lingcod/})).not.toContainText('Due');
+  await checkA11y(page, 'admin-rules', info.project.name);
   expect(pageErrors).toEqual([]);
 });

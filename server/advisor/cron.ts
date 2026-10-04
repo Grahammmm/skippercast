@@ -32,6 +32,8 @@ import type {DispatchOutcome} from './media.ts';
 // TA-A1: the daily-answers slot.
 import {pregenerateDaily} from './answers/reports.ts';
 import type {DailyDeps} from './answers/reports.ts';
+// TA-A4: the CDFW change-watch slot.
+import {watchRuleSources} from './admin/rules.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -55,6 +57,8 @@ export interface Slot {name: string; time: SlotTime; run: SlotJob}
 export const SLOTS: readonly Slot[] = [
   // TA-A1 (06 § what's biting): every active region's ports, so the first "what's biting" of the day is instant.
   {name: 'daily-answers', time: {local: '05:30', tz: DEFAULT_TZ}, run: (env, now, deps) => pregenerateDaily(env, now, deps?.daily ?? {})},
+  // TA-A4 (OP-6): the daily feed's regulation checks (collected 04:17) -> changed pages put their jurisdiction's rules into review.
+  {name: 'rules-watch', time: {local: '06:15', tz: DEFAULT_TZ}, run: (env, now, deps) => watchRuleSources(env, now, deps?.daily?.feeds ? {feeds: deps.daily.feeds} : {})},
 ];
 
 const parts = new Map<string, Intl.DateTimeFormat>();

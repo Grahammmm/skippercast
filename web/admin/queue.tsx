@@ -7,6 +7,7 @@ import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {ApiError, KINDS, STATUSES, contactHref, decide, getQueue, when} from './api.ts';
 import type {Count, DecisionBody, DecisionResult, QueueItem} from './api.ts';
 import {decisionsFor, shortcutFor} from './keys.ts';
+import {rulesHref} from './route.ts';
 
 const cardId = (id: string): string => `review-${id}`;
 
@@ -145,15 +146,40 @@ function Detail({item}: {item: QueueItem}) {
         <Messages messages={d.messages ?? []} heading={COPY.lastMessages} />
       </>
     );
-    case 'rule': return (
+    case 'rule': return d.summary ? <RuleChangeDetail summary={d.summary} /> : (
       <dl class="admin-fields">
         <Field label={COPY.rule} value={`${d.rule?.species_label ?? ''} (${d.rule?.jurisdiction ?? ''})`} />
         <Field label={COPY.reviewed} value={d.rule?.reviewed_at} />
         {d.rule?.source_url ? <><dt>{COPY.source}</dt><dd><a href={d.rule.source_url} target="_blank" rel="noopener noreferrer">{d.rule.source_name || d.rule.source_url}</a></dd></> : null}
+        {d.rule?.jurisdiction ? <><dt>{COPY.rulesHeading}</dt><dd><a href={rulesHref(d.rule.jurisdiction)}>{COPY.reviewRules}</a></dd></> : null}
       </dl>
     );
     default: return null;
   }
+}
+
+/** A CDFW change-watch finding (TA-A4, admin/rules.ts): the changed pages with their fingerprints, the rows now in review, and the way to the Rules view. */
+function RuleChangeDetail({summary}: {summary: Record<string, any>}) {
+  const short = (hash: string | null): string => (hash ? hash.slice(0, 12) : '—');
+  return (
+    <div>
+      <dl class="admin-fields">
+        <Field label={COPY.jurisdiction} value={summary.jurisdiction} />
+        <Field label={COPY.reviewed} value={summary.checked_at ? COPY.checkedFeed(when(summary.checked_at)) : null} />
+        <Field label={COPY.rulesHeading} value={COPY.rulesInReview(summary.rules?.review ?? 0, summary.rules?.active ?? 0)} />
+      </dl>
+      <h3>{COPY.changedPages}</h3>
+      <ul class="admin-crew">
+        {(summary.sources ?? []).map((s: {id: string; name: string | null; url: string | null; content_sha256: string | null; approved_sha256: string | null}) => (
+          <li key={s.id}>
+            {s.url ? <a href={s.url} target="_blank" rel="noopener noreferrer">{s.name || s.id}</a> : (s.name || s.id)}
+            <span class="admin-muted"> · {COPY.pageHash(short(s.content_sha256), short(s.approved_sha256))}</span>
+          </li>
+        ))}
+      </ul>
+      <p><a class="admin-button is-primary" href={rulesHref(summary.jurisdiction)}>{COPY.reviewRules}</a></p>
+    </div>
+  );
 }
 
 function MediaDetail({media}: {media: Record<string, any>}) {

@@ -21,6 +21,10 @@
 //   GET  /api/admin/contacts/:id/export   the contact's data as a JSON download (contacts.ts exportContact)
 //   POST /api/admin/contacts/:id/block    {blocked: boolean}
 //   GET  /api/admin/funnel          ?days=7|30   admin/funnel.ts (TA-W4): D1 counts and Analytics Engine SQL reads, numbers only
+//   GET  /api/admin/rules           ?jurisdiction= &status=active|review|retired|due   admin/rules.ts (TA-A4)
+//   POST /api/admin/rules           create (active: the admin reviewed it)
+//   POST /api/admin/rules/:id       edit or confirm: reviewed_at now, review_due, status active, updated_by
+//   POST /api/admin/rules/:id/retire
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -39,8 +43,21 @@ import {exportContact} from '../advisor/contacts.ts';
 // TA-W4: the funnel.
 import {adminFunnel, FUNNEL_DAYS} from '../advisor/admin/funnel.ts';
 import type {FunnelDays, SqlFetcher} from '../advisor/admin/funnel.ts';
+// TA-A4: the rules editor.
+import {listRules, createRule, editRule, retireRule} from '../advisor/admin/rules.ts';
+import type {RuleOutcome} from '../advisor/admin/rules.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
+
+/** The JSON answer for an admin/rules.ts outcome. */
+function ruleAnswer(outcome: RuleOutcome): Response {
+  switch (outcome.status) {
+    case 'ok': return json({rule: outcome.rule});
+    case 'not-found': return NOT_FOUND();
+    case 'invalid': return json({error: outcome.error}, 400);
+    case 'conflict': return json({error: outcome.error}, 409);
+  }
+}
 
 /** The JSON answer for an admin/skippers.ts outcome. */
 function answer<T>(outcome: AdminOutcome<T>): Response {
@@ -155,6 +172,15 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     if (!FUNNEL_DAYS.includes(days)) return json({error: 'days must be 7 or 30'}, 400);
     return json(await adminFunnel(c.env, days, {now: now(), ...(deps.analyticsSql !== undefined ? {sql: deps.analyticsSql} : {})}));
   });
+
+  // ---- TA-A4: rules ----
+  admin.get('/api/admin/rules', async c => {
+    const list = await listRules(c.env.DB!, {jurisdiction: c.req.query('jurisdiction') || null, status: c.req.query('status') || null}, now());
+    return 'error' in list ? json({error: list.error}, 400) : json(list);
+  });
+  admin.post('/api/admin/rules', async c => ruleAnswer(await createRule(c.env.DB!, await body(c.req.raw, 16384), c.var.owner, now())));
+  admin.post('/api/admin/rules/:id/retire', async c => ruleAnswer(await retireRule(c.env.DB!, c.req.param('id'), c.var.owner, now())));
+  admin.post('/api/admin/rules/:id', async c => ruleAnswer(await editRule(c.env.DB!, c.req.param('id'), await body(c.req.raw, 16384), c.var.owner, now())));
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

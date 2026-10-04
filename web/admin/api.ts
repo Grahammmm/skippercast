@@ -64,6 +64,19 @@ export interface Funnel {
     pages: {event: string; source: string; count: number}[]};
 }
 
+// ---- TA-A4: Rules (server/advisor/admin/rules.ts) ----
+export interface Rule {
+  id: string; region: string; jurisdiction: string; species_key: string; species_label: string;
+  size_min_in: number | null; size_max_in: number | null; bag_limit: number | null; bag_notes: string | null;
+  season_open: string | null; season_close: string | null; depth_limit_ft: number | null; area_notes: string | null; gear_notes: string | null;
+  source_name: string; source_url: string; reviewed_at: string; review_due: string; status: 'active' | 'review' | 'retired';
+  updated_by: string; updated_at: string; due: boolean;
+}
+export interface RulesList {rules: Rule[]; today: string; jurisdictions: string[]; regions: {id: string; jurisdiction: string}[]; species: {key: string; name: string}[]}
+export type RuleFields = Partial<Record<'species_label' | 'size_min_in' | 'size_max_in' | 'bag_limit' | 'bag_notes' | 'season_open' | 'season_close' |
+  'depth_limit_ft' | 'area_notes' | 'gear_notes' | 'source_name' | 'source_url', string | number | null>>;
+export interface NewRule extends RuleFields {jurisdiction: string; region: string; species_key: string}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) { super(message); this.status = status; }
@@ -101,6 +114,17 @@ export const invite = (phone: string, boatName: string, language: 'en' | 'es'): 
 export const getContact = (id: string): Promise<ContactDetail> => call(`/api/admin/contacts/${encodeURIComponent(id)}`);
 export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
+export function rulesPath(jurisdiction: string, status: string): string {
+  const q = new URLSearchParams();
+  if (jurisdiction) q.set('jurisdiction', jurisdiction);
+  if (status) q.set('status', status);
+  const query = q.toString();
+  return `/api/admin/rules${query ? `?${query}` : ''}`;
+}
+export const getRules = (jurisdiction: string, status: string): Promise<RulesList> => call(rulesPath(jurisdiction, status));
+export const createRule = (rule: NewRule): Promise<{rule: Rule}> => postJson('/api/admin/rules', rule);
+export const editRule = (id: string, fields: RuleFields): Promise<{rule: Rule}> => postJson(`/api/admin/rules/${encodeURIComponent(id)}`, fields);
+export const retireRule = (id: string): Promise<{rule: Rule}> => postJson(`/api/admin/rules/${encodeURIComponent(id)}/retire`, {});
 /** The admin app's link to a contact (08: reached by id from a review or a boat only). */
 export const contactHref = (id: string): string => `#contact/${encodeURIComponent(id)}`;
 

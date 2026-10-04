@@ -363,3 +363,65 @@ Where the code differs from the table above:
   nothing changed here.
 - **Tests.** `tests/test_advisor_admin_funnel.mjs` (a fake SQL API and a fake
   fetch); `e2e/admin.spec.ts` opens the Funnel with axe.
+
+## As built (TA-A4)
+
+The Rules view and the CDFW change-watch: `server/advisor/admin/rules.ts`, the
+routes in `server/routes/admin.ts` (`// TA-A4` block), the `rules-watch` slot
+in `server/advisor/cron.ts`, `web/admin/rules.tsx`, and the rule-change card in
+`web/admin/queue.tsx`. Where the code differs from the table above:
+
+- **Routes.** `GET /api/admin/rules?jurisdiction=&status=` (rules are stored per
+  jurisdiction, 02 § advisor_rules "As built", so the filter is the
+  jurisdiction, not the region; `status` is `active`, `review`, `retired` or
+  `due`), `POST /api/admin/rules`, `POST /api/admin/rules/<id>` and
+  `POST /api/admin/rules/<id>/retire`. `POST /api/admin/rules/import` is not
+  built: re-running the importer stays an owner step
+  (`scripts/advisor/import-rules.mjs --apply`), and its rows still arrive as
+  `review`.
+- **Review stamp.** A create is `active` at once (the admin wrote it from the
+  source); an edit, including an empty one ("Checked, no change"), sets
+  `reviewed_at` now, `review_due` to the sooner of 90 days and the season's
+  close (a `MM-DD` close is its next occurrence; a past one is ignored),
+  `status='active'` and `updated_by` = the admin's `users.id`. Retiring keeps
+  the row; `lookupRules` never returns it. Each change bumps
+  `advisor.pages.version`, so the species pages' rules cards re-render; the
+  daily answers follow by their inputs hash, which includes the rules' stale
+  flags.
+- **Validation.** A create's id is the importer's
+  (`sha256(jurisdiction|region|species_key|label for other)[:32]`), so a row the
+  importer already wrote is `409` ("edit it"); `region` is `*` or a region of
+  that jurisdiction; `species_key` a catalog or species-extra key (synonyms
+  such as `california-halibut` excluded) or `other`; `source_url` https on one
+  of the jurisdiction's `authority_hosts` (`jurisdictions/*.json`); both season
+  ends or neither. The identity fields, `status` and the review dates cannot be
+  edited.
+- **Change-watch.** The flag is the daily feed's `regulations.checks[<source>]`
+  with `status: 'changed'` (`pipeline/regulations.py` `regulatory_snapshot`:
+  the page answered and its normalised fingerprint differs from the reviewed
+  `approved_content_sha256`). `unavailable`, `unreviewed`, mismatch and
+  `out-of-scope` checks are not changes: a page that did not load says nothing
+  about the rules. The `rules-watch` slot runs at 06:15 Pacific (the feed is
+  collected at 04:17) over every active region's daily feed, read like the
+  data tools read it. Per jurisdiction, the changed pages make a finding with
+  ref `<jurisdiction>:<16 hex of the page ids and fingerprints>`, stored in
+  `job_state` `advisor.rules.change.<ref>`; the first time a finding is seen,
+  `markJurisdictionForReview` puts every active row of the jurisdiction into
+  `review` (`updated_by` `rule-watch`) and the pages version is bumped; then one
+  `rule` review (reason `rule_source_changed`, id `sha256(rule:<ref>:rule_source_changed)`)
+  is opened. Each step is idempotent and the finding records when the rows
+  were marked, so the same flag on later days (it stays until the registry's
+  fingerprint is re-approved in the repository) neither re-marks rows an admin
+  has re-confirmed nor opens a second review; a new fingerprint is a new
+  finding. A run writes `advisor.rules.last_watch`. Nothing is texted.
+- **Queue.** A `rule` card with a finding shows the jurisdiction, when the feed
+  checked, the jurisdiction's rows in review and active, each changed page as a
+  link (only when it is on an authority host) with its new and reviewed
+  fingerprints, and "Review rules" to `#rules?jurisdiction=<id>`; "Done"
+  closes it after the review (an edit decision stays `400`).
+- **View.** A table per filter (jurisdiction, status) with due rows marked
+  and listed with their source link, "Checked, no change" on due rows, an
+  inline editor ("Save and mark reviewed") and "Retire"; "Add a rule" opens a
+  form with the jurisdiction, region and species choices the list returns.
+- **Tests.** `tests/test_advisor_admin_rules.mjs`; `tests/test_advisor_cron.mjs`
+  lists the new slot; `e2e/admin.spec.ts` opens the Rules view with axe.
