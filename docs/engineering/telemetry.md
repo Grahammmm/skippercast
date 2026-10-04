@@ -34,8 +34,10 @@ visitor, session or device id.
 | `spot_saved` | A spot is added to the day plan (Export); the plan is kept in this browser |
 | `offline_saved` | "Save for offline" finishes a region pack |
 | `install` | The browser reports the app was installed (`appinstalled`) |
+| `advisor_port_view`, `advisor_species_view`, `advisor_boat_view` | A Text Advisor port, species or boat page is opened (`web/advisor/pages.ts`; [08 · Telemetry](../plans/text-advisor/08-website.md)) |
+| `advisor_cta` | The "Text SkipperCast" link on one of those pages is followed (sent at once) |
 
-Each carries the region id when one is shown. The server records a region it does not publish as `other`.
+Each carries the region id when one is shown. The server records a region it does not publish as `other`. An event may also carry `source`, the page URL's `s` parameter when it is one of `txt` (a link in an advisor text), `ig`, `fb` (Instagram and Facebook posts) or `qr` (the printed QR code); any other value is not sent, and the server rejects it. It says where the visit came from, never who made it.
 
 **Client errors.** Uncaught errors (`error` on `window`) and unhandled promise rejections (`unhandledrejection`), each with:
 
@@ -58,14 +60,14 @@ The module batches events (at most 10 a beacon) and flushes when 10 are waiting,
 1. `PUBLIC_LIMITER`, keyed `telemetry:<ip>` (60 a minute), else `429`.
 2. An allowed `Origin` (production origins or `EXTRA_ORIGINS`), else `400 origin rejected`. Beacons from the site are same-origin and carry it.
 3. A JSON object of at most 4,096 bytes, else `400 body too large`.
-4. Strict validation (`parseBatch`): exactly `{build, events}`; `build` is 10 hex characters or `dev`; 1 to 10 events (the client's batch size); each event is `{type: "funnel", name, region?}` or `{type: "error", kind, message?, source?, line?, column?, request_id?}` with the types and bounds in `server/telemetry.ts`. Any other field, name or type is `400 invalid telemetry`; nothing is written from a rejected batch.
+4. Strict validation (`parseBatch`): exactly `{build, events}`; `build` is 10 hex characters or `dev`; 1 to 10 events (the client's batch size); each event is `{type: "funnel", name, region?, source?}` or `{type: "error", kind, message?, source?, line?, column?, request_id?}` with the types and bounds in `server/telemetry.ts`. Any other field, name or type is `400 invalid telemetry`; nothing is written from a rejected batch.
 5. A funnel event repeated in one batch (same name and region, after unknown regions become `other`) is kept once. One Analytics Engine data point per remaining event, then `204` with `Cache-Control: no-store`.
 
 ## Analytics Engine columns
 
 | Kind (`index1`, `blob1`) | Text columns | Number columns |
 | --- | --- | --- |
-| `client_event` | `blob2` event, `blob3` region id (`''` none, `other` unknown), `blob4` page build | `double1` 1 |
+| `client_event` | `blob2` event, `blob3` region id (`''` none, `other` unknown), `blob4` page build, `blob5` visit source (`txt`, `ig`, `fb`, `qr`; absent when none) | `double1` 1 |
 | `client_error` | `blob2` kind, `blob3` scrubbed message, `blob4` script file name, `blob5` page build, `blob6` first 16 hex of sha256(request id) | `double1` line, `double2` column |
 
 Every telemetry request also writes the usual `request` point for route `/api/telemetry`.
@@ -91,4 +93,4 @@ Analytics Engine's default: Cloudflare stores data points for three months ([lim
 
 ## Adding an event
 
-Add the name to `FUNNEL` in `web/telemetry.ts`, `FUNNEL_EVENTS` in `server/telemetry.ts` and `FUNNEL` in `scripts/ops_report.py`, call `track('<name>')` at the call site, update the tables above and the tests. An event carries no fields beyond its name and region; anything more needs a review of this page and of the privacy policy.
+Add the name to `FUNNEL` in `web/telemetry.ts`, `FUNNEL_EVENTS` in `server/telemetry.ts` and `FUNNEL` in `scripts/ops_report.py`, call `track('<name>')` at the call site, update the tables above and the tests. An event carries no fields beyond its name, region and visit source; anything more needs a review of this page and of the privacy policy. (The advisor page events are not in `scripts/ops_report.py`'s `FUNNEL` while the advisor is dark; the report lists unknown names after the steps.)

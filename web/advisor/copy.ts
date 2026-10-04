@@ -178,3 +178,279 @@ export const ADMIN_COPY = {
 } as const;
 
 export type AdminView = keyof typeof ADMIN_COPY.views;
+
+// ---- TA-W1: the public port, species and boat pages ------------------------------------
+// (08 § Public pages; server/advisor/pages/*.ts render them on the server.) English and
+// Spanish side by side; the pages pick one with ?lang=es or Accept-Language. The
+// footer line is the short form of caveats C1 and C3 in docs/legal/disclaimers.md;
+// the Spanish wording of both is a translation awaiting the owner's review.
+
+export type PageLanguage = 'en' | 'es';
+export type RuleState = 'open' | 'closed' | 'review' | 'unknown';
+
+export interface PageCopy {
+  home: string; ports: string; species: string; boats: string; breadcrumbs: string; skip: string; otherLanguage: string;
+  openMap: string; terms: string; privacy: string; disclaimer: string; forecastNote: string;
+  ctaHeading: string; ctaBody: string; ctaButton: string; ctaChat: string; ctaDefaultMessage: string; saveContact: string; qrAlt: string;
+  notFoundTitle: string; notFoundBody: string;
+  date: string; boat: string; trip: string; anglers: string; catch: string; port: string; kept: string; releasedHeader: string; reports: string;
+  anotherBoat: string; edited: string; released: (n: number) => string; releasedOnly: (n: number, label: string) => string;
+  trips: Record<string, string>;
+  portTitle: (port: string) => string; portDescription: (port: string) => string; portRegion: (region: string) => string;
+  portCtaMessage: (port: string) => string;
+  todayHeading: string;
+  reportsHeading: string; reportsNone: string; reportsUnverifiedNote: string;
+  conditionsHeading: string; conditionsNone: string; seas: string; wind: string; ride: string;
+  seasValue: (range: string, period: number | null) => string; windValue: (range: string, from: string | null) => string;
+  comfort: Record<string, string>; rideValue: (word: string) => string;
+  advisoriesHeading: string;
+  boatsHeading: (port: string) => string; boatsNone: string;
+  seasonsHeading: string; seasonsNote: string; ruleState: Record<RuleState, string>;
+  speciesTitle: (name: string) => string; speciesDescription: (name: string) => string; speciesNames: (en: string, es: string) => string;
+  idHeading: string; lookalikesHeading: string; idNone: string;
+  rulesHeading: string; rulesNone: string; underReview: string; underReviewNote: string; groupRule: (label: string) => string; regionRule: (region: string) => string;
+  minSize: string; maxSize: string; bag: string; season: string; depth: string; area: string; gear: string; source: string; reviewed: string;
+  inches: (n: number) => string; feetMax: (n: number) => string; seasonRange: (open: string, close: string) => string;
+  noTake: string; noSeasonDates: string; bagValue: (n: number) => string;
+  catchesHeading: string; catchesNone: string; catchesNote: string;
+  strategyHeading: string; strategyNone: string; strategyLanguageNote: string; rig: string; baitOrLure: string; where: string; when: string; howTo: string;
+  sourcesHeading: string;
+  boatTitle: (boat: string) => string; boatDescription: (boat: string, port: string) => string;
+  verified: string; unverified: string; unverifiedNote: string; landing: (landing: string, port: string) => string;
+  boatReportsHeading: string; boatReportsNone: string; photosHeading: string; photoAlt: (boat: string) => string; photoCredit: (credit: string) => string;
+  bookHeading: string; bookingLink: string; call: (phone: string) => string; instagram: (handle: string) => string;
+}
+
+const PAGES_EN: PageCopy = {
+  home: 'SkipperCast',
+  ports: 'Ports',
+  species: 'Species',
+  boats: 'Boats',
+  breadcrumbs: 'Breadcrumb',
+  skip: 'Skip to the report',
+  otherLanguage: 'En español',
+  openMap: 'Open the map',
+  terms: 'Terms',
+  privacy: 'Privacy',
+  disclaimer: 'Planning aid · not a navigation chart. Rules change. Verify with CDFW and NOAA before you fish.',
+  forecastNote: 'Forecasts are estimates; conditions can differ. Check the NWS marine forecast.',
+  ctaHeading: 'Get the report by text',
+  ctaBody: 'Text SkipperCast for the bite, the weather window or what you can keep. Same answers, right on your phone.',
+  ctaButton: "Text SkipperCast for today's report",
+  ctaChat: 'Ask SkipperCast',
+  ctaDefaultMessage: 'Hi SkipperCast',
+  saveContact: 'Save the number',
+  qrAlt: 'QR code: scan it to text SkipperCast',
+  notFoundTitle: 'Page not found',
+  notFoundBody: 'We have no page at this address. The map has every port and species.',
+  date: 'Date',
+  boat: 'Boat',
+  trip: 'Trip',
+  anglers: 'Anglers',
+  catch: 'Catch',
+  port: 'Port',
+  kept: 'Kept',
+  releasedHeader: 'Released',
+  reports: 'Reports',
+  anotherBoat: 'Another boat',
+  edited: 'edited',
+  released: n => `${n} released`,
+  releasedOnly: (n, label) => `${n} ${label} released`,
+  trips: {'half-day': 'Half day', '3/4 day': 'Three-quarter day', 'full-day': 'Full day', overnight: 'Overnight'},
+  portTitle: port => `${port} fishing report`,
+  portDescription: port => `What's biting out of ${port}: skipper reports, today's conditions and seasons, updated through the day.`,
+  portRegion: region => `Region: ${region}`,
+  portCtaMessage: port => `What's biting out of ${port}?`,
+  todayHeading: "Today's report",
+  reportsHeading: 'Skipper reports, last 14 days',
+  reportsNone: 'No skipper reports in the last 14 days.',
+  reportsUnverifiedNote: 'Another boat: a boat the SkipperCast team has yet to verify.',
+  conditionsHeading: "Today's fishing window",
+  conditionsNone: 'No forecast for today yet.',
+  seas: 'Seas',
+  wind: 'Wind',
+  ride: 'Ride',
+  seasValue: (range, period) => `${range} ft${period ? ` at ${period} s` : ''}`,
+  windValue: (range, from) => `${range} kt${from ? ` from the ${from}` : ''}`,
+  comfort: {comfortable: 'Comfortable', bumpy: 'Bumpy', rough: 'Rough'},
+  rideValue: word => `${word} for a mid-size center console`,
+  advisoriesHeading: 'Advisories',
+  boatsHeading: port => `Boats out of ${port}`,
+  boatsNone: 'No verified boats here yet.',
+  seasonsHeading: 'Species and seasons',
+  seasonsNote: 'From the SkipperCast rules table, checked against CDFW. Open a species for its rules and source.',
+  ruleState: {open: 'Open today', closed: 'Closed today', review: 'Under review', unknown: 'Check the rules'},
+  speciesTitle: name => `${name}: how to tell it apart, rules and recent catches`,
+  speciesDescription: name => `${name}: field marks and look-alikes, the current rules with their source, and recent catches reported to SkipperCast.`,
+  speciesNames: (en, es) => `English: ${en} · Spanish: ${es}`,
+  idHeading: 'How to tell it apart',
+  lookalikesHeading: 'Often confused with',
+  idNone: 'No field marks on file yet.',
+  rulesHeading: 'Rules',
+  rulesNone: 'No rule on file for this species yet. Check CDFW before you keep one.',
+  underReview: 'Under review',
+  underReviewNote: 'This rule is due for review. Check the source before you keep a fish.',
+  groupRule: label => `Group rule: ${label}`,
+  regionRule: region => `CDFW ${region} region`,
+  minSize: 'Minimum size',
+  maxSize: 'Maximum size',
+  bag: 'Daily bag',
+  season: 'Season',
+  depth: 'Depth',
+  area: 'Area',
+  gear: 'Gear',
+  source: 'Source',
+  reviewed: 'Reviewed',
+  inches: n => `${n} in`,
+  feetMax: n => `${n} ft or shallower`,
+  seasonRange: (open, close) => `${open} to ${close}`,
+  noTake: 'No take',
+  noSeasonDates: 'No season dates on file',
+  bagValue: n => (n === 0 ? 'None: release every fish' : `${n} per angler`),
+  catchesHeading: 'Recent catches, last 14 days',
+  catchesNone: 'No reported catches in the last 14 days.',
+  catchesNote: 'Counts from verified boats that report to SkipperCast.',
+  strategyHeading: 'How it is fished',
+  strategyNone: 'No method notes for this species yet.',
+  strategyLanguageNote: '',
+  rig: 'Rig',
+  baitOrLure: 'Bait or lure',
+  where: 'Where',
+  when: 'When',
+  howTo: 'How',
+  sourcesHeading: 'Sources',
+  boatTitle: boat => `${boat}: fish reports`,
+  boatDescription: (boat, port) => `Fish counts and photos from ${boat} out of ${port}, as the boat reports them to SkipperCast.`,
+  verified: 'Verified boat',
+  unverified: 'Not verified yet',
+  unverifiedNote: 'The SkipperCast team has yet to confirm this boat. Its reports show here meanwhile.',
+  landing: (landing, port) => `${landing}, ${port}`,
+  boatReportsHeading: 'Reports, last 30 days',
+  boatReportsNone: 'No reports in the last 30 days.',
+  photosHeading: 'Photos',
+  photoAlt: boat => `Photo from ${boat}`,
+  photoCredit: credit => `Photo: ${credit}`,
+  bookHeading: 'Book a trip',
+  bookingLink: 'Booking page',
+  call: phone => `Call ${phone}`,
+  instagram: handle => `Instagram: @${handle}`,
+};
+
+const PAGES_ES: PageCopy = {
+  home: 'SkipperCast',
+  ports: 'Puertos',
+  species: 'Especies',
+  boats: 'Barcos',
+  breadcrumbs: 'Ruta de navegación',
+  skip: 'Ir al reporte',
+  otherLanguage: 'In English',
+  openMap: 'Abrir el mapa',
+  terms: 'Términos',
+  privacy: 'Privacidad',
+  disclaimer: 'Ayuda para planear · no es una carta náutica. Las reglas cambian. Confírmalas con CDFW y NOAA antes de pescar.',
+  forecastNote: 'Los pronósticos son estimaciones; las condiciones pueden cambiar. Revisa el pronóstico marino del NWS.',
+  ctaHeading: 'Recibe el reporte por mensaje',
+  ctaBody: 'Escribe a SkipperCast para saber qué está picando, cómo viene el tiempo o qué puedes quedarte. Las mismas respuestas, en tu teléfono.',
+  ctaButton: 'Escribe a SkipperCast para el reporte de hoy',
+  ctaChat: 'Pregunta a SkipperCast',
+  ctaDefaultMessage: 'Hola SkipperCast',
+  saveContact: 'Guarda el número',
+  qrAlt: 'Código QR: escanéalo para escribir a SkipperCast',
+  notFoundTitle: 'Página no encontrada',
+  notFoundBody: 'No hay ninguna página en esta dirección. El mapa tiene todos los puertos y especies.',
+  date: 'Fecha',
+  boat: 'Barco',
+  trip: 'Viaje',
+  anglers: 'Pescadores',
+  catch: 'Captura',
+  port: 'Puerto',
+  kept: 'Guardados',
+  releasedHeader: 'Liberados',
+  reports: 'Reportes',
+  anotherBoat: 'Otro barco',
+  edited: 'editado',
+  released: n => `${n} liberados`,
+  releasedOnly: (n, label) => `${n} ${label} liberados`,
+  trips: {'half-day': 'Medio día', '3/4 day': 'Tres cuartos de día', 'full-day': 'Día completo', overnight: 'Toda la noche'},
+  portTitle: port => `Reporte de pesca de ${port}`,
+  portDescription: port => `Qué está picando en ${port}: reportes de capitanes, las condiciones de hoy y las temporadas, al día.`,
+  portRegion: region => `Región: ${region}`,
+  portCtaMessage: port => `¿Qué está picando en ${port}?`,
+  todayHeading: 'El reporte de hoy',
+  reportsHeading: 'Reportes de capitanes, últimos 14 días',
+  reportsNone: 'Sin reportes de capitanes en los últimos 14 días.',
+  reportsUnverifiedNote: 'Otro barco: un barco que el equipo de SkipperCast aún no verifica.',
+  conditionsHeading: 'La ventana de pesca de hoy',
+  conditionsNone: 'Aún no hay pronóstico para hoy.',
+  seas: 'Mar',
+  wind: 'Viento',
+  ride: 'Navegación',
+  seasValue: (range, period) => `${range} pies${period ? ` a ${period} s` : ''}`,
+  windValue: (range, from) => `${range} nudos${from ? ` del ${from}` : ''}`,
+  comfort: {comfortable: 'Cómodo', bumpy: 'Movido', rough: 'Duro'},
+  rideValue: word => `${word} para una lancha mediana de consola central`,
+  advisoriesHeading: 'Avisos',
+  boatsHeading: port => `Barcos de ${port}`,
+  boatsNone: 'Aún no hay barcos verificados aquí.',
+  seasonsHeading: 'Especies y temporadas',
+  seasonsNote: 'De la tabla de reglas de SkipperCast, revisada contra CDFW. Abre una especie para ver sus reglas y la fuente.',
+  ruleState: {open: 'Abierta hoy', closed: 'Cerrada hoy', review: 'En revisión', unknown: 'Revisa las reglas'},
+  speciesTitle: name => `${name}: cómo distinguirlo, reglas y capturas recientes`,
+  speciesDescription: name => `${name}: señas para identificarlo y especies parecidas, las reglas vigentes con su fuente y las capturas recientes reportadas a SkipperCast.`,
+  speciesNames: (en, es) => `Inglés: ${en} · Español: ${es}`,
+  idHeading: 'Cómo distinguirlo',
+  lookalikesHeading: 'Se confunde con',
+  idNone: 'Aún no hay señas registradas.',
+  rulesHeading: 'Reglas',
+  rulesNone: 'Aún no hay reglas registradas para esta especie. Revisa con CDFW antes de quedarte uno.',
+  underReview: 'En revisión',
+  underReviewNote: 'Esta regla está pendiente de revisión. Revisa la fuente antes de quedarte un pez.',
+  groupRule: label => `Regla del grupo: ${label}`,
+  regionRule: region => `Región ${region} de CDFW`,
+  minSize: 'Talla mínima',
+  maxSize: 'Talla máxima',
+  bag: 'Límite diario',
+  season: 'Temporada',
+  depth: 'Profundidad',
+  area: 'Zona',
+  gear: 'Equipo',
+  source: 'Fuente',
+  reviewed: 'Revisada',
+  inches: n => `${n} pulg`,
+  feetMax: n => `${n} pies o menos`,
+  seasonRange: (open, close) => `del ${open} al ${close}`,
+  noTake: 'Prohibido quedarse',
+  noSeasonDates: 'Sin fechas de temporada registradas',
+  bagValue: n => (n === 0 ? 'Ninguno: libera cada pez' : `${n} por pescador`),
+  catchesHeading: 'Capturas recientes, últimos 14 días',
+  catchesNone: 'Sin capturas reportadas en los últimos 14 días.',
+  catchesNote: 'Conteos de barcos verificados que reportan a SkipperCast.',
+  strategyHeading: 'Cómo se pesca',
+  strategyNone: 'Aún no hay notas de pesca para esta especie.',
+  strategyLanguageNote: 'Las notas de pesca están en inglés.',
+  rig: 'Aparejo',
+  baitOrLure: 'Carnada o señuelo',
+  where: 'Dónde',
+  when: 'Cuándo',
+  howTo: 'Cómo',
+  sourcesHeading: 'Fuentes',
+  boatTitle: boat => `${boat}: reportes de pesca`,
+  boatDescription: (boat, port) => `Conteos y fotos de ${boat}, de ${port}, tal como el barco los reporta a SkipperCast.`,
+  verified: 'Barco verificado',
+  unverified: 'Aún sin verificar',
+  unverifiedNote: 'El equipo de SkipperCast aún no confirma este barco. Mientras tanto, sus reportes aparecen aquí.',
+  landing: (landing, port) => `${landing}, ${port}`,
+  boatReportsHeading: 'Reportes, últimos 30 días',
+  boatReportsNone: 'Sin reportes en los últimos 30 días.',
+  photosHeading: 'Fotos',
+  photoAlt: boat => `Foto de ${boat}`,
+  photoCredit: credit => `Foto: ${credit}`,
+  bookHeading: 'Reserva un viaje',
+  bookingLink: 'Página de reservas',
+  call: phone => `Llama al ${phone}`,
+  instagram: handle => `Instagram: @${handle}`,
+};
+
+/** Every string of the public pages, by language. */
+export const PAGES_COPY: Readonly<Record<PageLanguage, PageCopy>> = {en: PAGES_EN, es: PAGES_ES};
+// TA-W1 end.

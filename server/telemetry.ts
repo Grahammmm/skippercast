@@ -2,7 +2,8 @@
 // client errors from web/telemetry.ts, validated strictly and written to
 // Workers Analytics Engine (server/analytics.ts) as two more kinds:
 //
-//   client_event  blob2 event (a repeated event and region in one batch is written once), blob3 region id ('' none, 'other' unknown), blob4 page build
+//   client_event  blob2 event (a repeated event and region in one batch is written once), blob3 region id ('' none, 'other' unknown), blob4 page build,
+//                 blob5 visit source (txt|ig|fb|qr, the page URL's `s`; absent when none; TA-W1)
 //                 double1 count (always 1)
 //   client_error  blob2 kind (error|rejection), blob3 message (scrubbed, 96 chars),
 //                 blob4 source file basename, blob5 page build, blob6 request-id hash
@@ -19,8 +20,12 @@ import {hash} from './http.ts';
 import {ClientError} from './errors.ts';
 import type {Env} from './env.ts';
 
-export const FUNNEL_EVENTS = ['port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install'] as const;
+export const FUNNEL_EVENTS = ['port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install',
+  // TA-W1: the Text Advisor's public pages (08 § Telemetry).
+  'advisor_port_view', 'advisor_species_view', 'advisor_boat_view', 'advisor_cta'] as const;
 export type FunnelEvent = typeof FUNNEL_EVENTS[number];
+/** TA-W1: visit sources a funnel event may carry (the page URL's `s`: advisor texts, Instagram, Facebook, the QR code). */
+export const SOURCES = ['txt', 'ig', 'fb', 'qr'] as const;
 export const ERROR_KINDS = ['error', 'rejection'] as const;
 /** Largest accepted body, in bytes; a full client batch is well under half of it. */
 export const MAX_BODY = 4096;
@@ -29,7 +34,7 @@ export const MAX_EVENTS = 10;
 export const MESSAGE_MAX = 96;
 
 export type ClientEvent =
-  | {type: 'funnel'; name: FunnelEvent; region: string}
+  | {type: 'funnel'; name: FunnelEvent; region: string; source: string}
   | {type: 'error'; kind: typeof ERROR_KINDS[number]; message: string; source: string; line: number; column: number; request_id: string};
 export interface Batch {build: string; events: ClientEvent[]}
 
@@ -86,10 +91,11 @@ export function parseBatch(body: unknown): Batch {
   const events = list.map((event): ClientEvent => {
     if (!isObject(event)) return invalid();
     if (event.type === 'funnel') {
-      only(event, ['type', 'name', 'region']);
+      only(event, ['type', 'name', 'region', 'source']);
       if (!(FUNNEL_EVENTS as readonly unknown[]).includes(event.name)) invalid();
-      const region = text(event.region, 64);
-      return {type: 'funnel', name: event.name as FunnelEvent, region: region === '' ? '' : regionById(region) ? region : 'other'};
+      const region = text(event.region, 64), source = text(event.source, 8);
+      if (source && !(SOURCES as readonly string[]).includes(source)) invalid();
+      return {type: 'funnel', name: event.name as FunnelEvent, region: region === '' ? '' : regionById(region) ? region : 'other', source};
     }
     if (event.type === 'error') {
       only(event, ['type', 'kind', 'message', 'source', 'line', 'column', 'request_id']);
@@ -105,7 +111,7 @@ export function parseBatch(body: unknown): Batch {
   const seen = new Set<string>();
   return {build, events: events.filter(event => {
     if (event.type !== 'funnel') return true;
-    const key = event.name + '\0' + event.region;
+    const key = event.name + '\0' + event.region + '\0' + event.source;
     if (seen.has(key)) return false;
     seen.add(key); return true;
   })};
@@ -115,7 +121,8 @@ export function parseBatch(body: unknown): Batch {
 export async function recordBatch(env: Pick<Env, 'ANALYTICS'> | undefined, batch: Batch): Promise<number> {
   if (!env?.ANALYTICS) return 0;
   for (const event of batch.events) {
-    if (event.type === 'funnel') writePoint(env, 'client_event', {blobs: [event.name, event.region, batch.build], doubles: [1]});
+    // TA-W1: blob5 is the visit source, written only when the event has one.
+    if (event.type === 'funnel') writePoint(env, 'client_event', {blobs: [event.name, event.region, batch.build, ...(event.source ? [event.source] : [])], doubles: [1]});
     else writePoint(env, 'client_error', {blobs: [event.kind, event.message, event.source, batch.build, event.request_id ? (await hash(event.request_id)).slice(0, 16) : ''],
       doubles: [event.line, event.column]});
   }

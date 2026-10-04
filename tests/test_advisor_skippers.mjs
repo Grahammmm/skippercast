@@ -371,6 +371,8 @@ dbTest('ok <code> from the admin-test contact verifies the boat and texts the sk
     sql.prepare(`INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'skipper','b1','new_skipper','open',?)`).run(review, iso(T0));
     const {ch} = await consume(env, sql, `${word} ${review.slice(0, 6)}`, {contact: ADMIN_ID});
     assert.equal(sql.prepare("SELECT status FROM advisor_boats WHERE id='b1'").get().status, status);
+    // TA-W1: the decision changes the boat and port pages, so their cache version moves.
+    assert.equal(sql.prepare("SELECT value FROM job_state WHERE key='advisor.pages.version'").get()?.value, '1', `${word}: pages version bumped`);
     assert.deepEqual(ch.sent.filter(x => x.to === 'ENC').map(x => x.text), [reply], word);
     assert.equal(ch.sent.filter(x => x.to === 'ENC-ADMIN').length, 1, 'the admin gets the Done line');
   }

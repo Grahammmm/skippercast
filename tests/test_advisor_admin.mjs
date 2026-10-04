@@ -282,6 +282,43 @@ dbTest('report: edit writes an edits row and bumps the version, approve publishe
   assert.equal(Number(sql.prepare('SELECT value FROM job_state WHERE key=?').get(PAGES_VERSION_KEY).value), version + 1, 'pages re-render without it');
 });
 
+dbTest('pages version: every admin-app decision that changes a public page bumps advisor.pages.version (TA-W1); one that changes nothing does not', async () => {
+  const {sql, env, withChannel} = setup();
+  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
+  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero'});
+  for (const id of ['p1', 'p2', 'p3']) addMedia(sql, {id, boat: 'b1'});
+  addReport(sql, {id: 'r1', boat: 'b1', date: '2026-10-03'});
+  addReport(sql, {id: 'r2', boat: 'b1', date: '2026-10-02', status: 'published'});
+  addReport(sql, {id: 'r3', boat: 'b1', date: '2026-10-01', status: 'published'});
+  const version = () => Number(sql.prepare('SELECT value FROM job_state WHERE key=?').get(PAGES_VERSION_KEY)?.value ?? 0);
+  const decide = async (kind, ref, reason, body) => {
+    const id = await addReview(sql, kind, ref, reason);
+    const r = (await quiet(() => post(withChannel, env, `/api/admin/reviews/${id}`, ADMIN, body))).value;
+    assert.equal(r.status, 200, `${kind} ${ref} ${body.decision}`);
+  };
+  const steps = [
+    ['media', 'p1', 'angler_photo', {decision: 'approve'}, 'a photo approved'],
+    ['media', 'p2', 'angler_photo', {decision: 'edit', patch: {credit: 'Capt. Lu'}}, 'a photo credited and approved'],
+    ['media', 'p1', 'has_person', {decision: 'reject'}, 'an approved photo taken back'],
+    ['skipper', 'b1', 'new_skipper', {decision: 'approve'}, 'a boat verified'],
+    ['skipper', 'b2', 'new_skipper', {decision: 'reject'}, 'a boat rejected'],
+    ['report', 'r1', 'low_confidence', {decision: 'approve'}, 'a report published'],
+    ['report', 'r2', 'low_confidence', {decision: 'edit', patch: {anglers: 12}}, 'a published report edited'],
+    ['report', 'r3', 'low_confidence', {decision: 'reject'}, 'a published report rejected'],
+  ];
+  for (const [kind, ref, reason, body, what] of steps) {
+    const before = version();
+    await decide(kind, ref, reason, body);
+    assert.ok(version() > before, `${what} bumps the pages version`);
+  }
+  const before = version();
+  await decide('media', 'p3', 'has_person', {decision: 'reject'});
+  await decide('rule', 'x', 'rule_source_changed', {decision: 'approve'});
+  await decide('skipper', 'b1', 'owner_forgotten', {decision: 'approve'});
+  assert.equal(version(), before, 'a queued photo rejected (never public), a rule review and an owner_forgotten review change no page');
+});
+
 dbTest('skipper: verify sets verified, verified_at and verified_by and texts the skipper once through their channel; reject texts the reject line', async () => {
   const {sql, env, ch, withChannel} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});

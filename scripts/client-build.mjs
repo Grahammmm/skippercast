@@ -74,6 +74,20 @@ export async function hashPages(out, pages) {
   return {buildId, shells};
 }
 
+// TA-W1: the hashed files the Worker's server-rendered advisor pages link
+// (docs/plans/text-advisor/01-architecture.md § touch points, ADVISOR_ASSETS).
+// dist/chat.html carries advisor/pages.css in its stylesheet set, so its one
+// built stylesheet and its entry script serve the pages too.
+export const ADVISOR_PAGE = 'chat.html';
+/** {'advisor/pages.css': '/assets/chat.<hash>.css', 'advisor/chat.js': '/assets/chat.<hash>.js'} from the Vite manifest; throws if the entry is missing. */
+export function advisorAssetPaths(manifest) {
+  const entry = manifest?.[ADVISOR_PAGE];
+  const css = entry?.css?.[0], js = entry?.file;
+  if (!entry?.isEntry || typeof css !== 'string' || typeof js !== 'string') throw Error(`Vite manifest has no ${ADVISOR_PAGE} entry with a stylesheet and a script`);
+  return {'advisor/pages.css': `/${css}`, 'advisor/chat.js': `/${js}`};
+}
+// TA-W1 end.
+
 /**
  * Build the client into `out` (default dist/client). `copy` filters which
  * static entries are copied (tests skip the large data directories).

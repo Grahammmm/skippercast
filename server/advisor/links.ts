@@ -3,8 +3,8 @@
 // {{link:port:morro-bay}} and this module turns the first valid placeholder
 // into a real ADVISOR_PUBLIC_BASE URL carrying ?s=txt (so site visits are
 // attributed to the advisor), drops every other placeholder, and drops any
-// unknown one. The pages behind /ports, /species and /boats arrive with TA-W1;
-// until then those links answer the gate's 404 like every dark advisor path.
+// unknown one. The pages behind /ports, /species and /boats are server/advisor/pages/
+// (TA-W1); while the advisor is dark they answer the gate's 404 like every advisor path.
 import ports from '../../catalog/home-ports.json' with {type: 'json'};
 import {ALL_SPECIES_KEYS, canonicalSpecies} from './vision/species.ts';
 

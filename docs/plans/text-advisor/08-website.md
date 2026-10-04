@@ -121,7 +121,8 @@ skipper confirming); report edit writes an `advisor_report_edits` row with
 for a published report, bumps the pages version and drops the daily answer.
 Verifying sets `verified_by` (null from the text admin) and also bumps the
 pages version (05: the page re-renders). Media reject also takes an `approved`
-photo back. "Reply as team" is refused (409) for a stopped or blocked contact
+photo back; a media approve, an edit, or a reject of an approved photo bumps
+the pages version (TA-W1). "Reply as team" is refused (409) for a stopped or blocked contact
 and while `ADVISOR_REPLIES_ENABLED` is off; other decisions still apply then and
 say `held: 'replies-off'` instead of texting. Post decisions answer 400 until
 TA-S1; skipper edits until TA-W3. The media route serves `thumb.jpg`, then
@@ -163,3 +164,86 @@ Page views on `/ports`, `/species`, `/boats` go through the existing
 `client_event` telemetry with the `s` source (`txt`, `ig`, `fb`, `qr`), and
 the CTA click (`sms:` link) is a `client_event` `advisor_cta`. Nothing
 identifying.
+
+## As built (TA-W1)
+
+Public pages in `server/advisor/pages/`, routes in `server/routes/advisor.ts`
+(`// TA-W1` block). Where the code differs from the text above:
+
+- **Template and layout.** `render.ts` has `html` (escapes every value; arrays
+  join; `raw()` and nested `html` pass through), `jsonLd` (escapes `<`, `>`,
+  `&`) and `layout()`: title, description, canonical (`?lang=es` for Spanish)
+  with `hreflang` alternates, Open Graph image (the port's or boat's latest
+  approved photo, else `/skippercast-parker-preview.jpg`), JSON-LD
+  `Organization` and `BreadcrumbList` (only crumbs that have a page; there is
+  no index of ports, species or boats), the stylesheet and script from
+  `ADVISOR_ASSETS`, the CTA, the footer and the chat island host. It is longer
+  than 40 lines because the shell lives there too.
+- **Assets.** `dist/chat.html` links `advisor/pages.css`, so Vite builds it
+  into the chat page's single stylesheet; `scripts/client-build.mjs`
+  `advisorAssetPaths()` reads the chat page's manifest entry and
+  `build-worker.mjs` defines `ADVISOR_ASSETS = {'advisor/pages.css': <its css>,
+  'advisor/chat.js': <its script>}` (declared in `server/globals.d.ts`). The
+  pages' styles are scoped to `body.adv-page`. The chat page's script imports
+  `web/advisor/pages.ts` (telemetry), so the island mounts closed on every page.
+- **Language.** `?lang=es|en`, else the first `Accept-Language` range that is
+  English or Spanish; English by default. The cache key carries the resolved
+  language. Strings are `PAGES_COPY` in `web/advisor/copy.ts` (en and es). The
+  catalog method notes on the species page are English only and marked
+  `lang="en"`, with a note on the Spanish page. The Spanish footer line
+  translates caveats C1 and C3 and awaits the owner's review.
+- **Port page.** Today's answer is the stored `advisor_daily_answers` row when
+  its inputs hash is current (or a feed is down, as `dailyAnswer` does), else
+  `composeDaily` of the same inputs; a page view never calls the model, and the
+  link back to the page itself is dropped. Conditions and advisories come from
+  the same `dailyInputs` (the fishing window at the port's forecast point).
+  Reports: published, last 14 days; a report frozen as verified whose boat is
+  still verified links the boat, every other one is "Another boat". Species
+  and seasons: the `catalog/coasts.json` targets of the port's coast (else the
+  region's species), expanded as `targetSpecies` does, each with today's state
+  from `lookupRules`: open, closed, under review (stale) or "check the rules"
+  (no row).
+- **Species page.** Rules: every jurisdiction's active and review rows (the
+  species pages are statewide), the default region's jurisdiction first,
+  headed by the CDFW region; a species with no rows of its own shows its
+  group's ("Group rule: …"). Recent catches count only published reports
+  from verified boats (14 days, by date and port); a line counts when its
+  `species_key` is the page key or its label names the species (a "vermilion"
+  line filed under rockfish counts on the vermilion page). Method notes are
+  `strategyFor(key, ADVISOR_REGION_DEFAULT)` with any sentence that mentions a
+  hotspot, a percentage or odds dropped (`pageSafe`). A synonym path
+  (`/species/california-halibut`) answers `301` to the page key.
+- **Boat page.** `pending` boats have a page that says "Not verified yet" and
+  carries `noindex` (05: their reports publish at once); `rejected` boats and
+  unknown slugs are `404`. Photos: `kind='image'`, `approved`/`posted`, and
+  servable by `/media` (a stripped JPEG original, or a derived `public.jpg`
+  found with one `head`).
+- **Cache.** `pageCacheKey(url, language, version)` =
+  `cacheKey(<path>?lang=<language>, {build: build() + ':' + version})`;
+  `?s=` and other parameters are not in the key. 404s are not cached. Admin
+  decisions bump `advisor.pages.version` in `admin/decisions.ts`
+  `decideReview`, so the admin app and the text admin purge alike: a boat
+  verified or rejected, a photo approved, re-credited or taken back, a report
+  published, edited or rejected.
+- **CTA.** `sms:<ADVISOR_NUMBER>?&body=<message> [via web]` (the port page
+  pre-fills "What's biting out of <port>?", which the daily pre-router answers
+  without a model call), with "Save the number" and the QR image; without a
+  number it links `/chat.html`.
+- **Sitemap and robots.** `GET /sitemap-advisor.xml` (gated, 1 h) lists the
+  ports of active regions, every species page and verified boats, each with
+  its `?lang=es` alternate. There is no `dist/robots.txt`; `GET /robots.txt`
+  answers from the Worker only while the advisor is on (allow all, plus the
+  sitemap line) and otherwise falls through to the static site as before.
+- **Telemetry.** New funnel events `advisor_port_view`,
+  `advisor_species_view`, `advisor_boat_view` and `advisor_cta`; funnel events
+  may carry `source` (`txt`, `ig`, `fb`, `qr` from the page URL's `s`), which
+  the server validates and writes as `blob5` (docs/engineering/telemetry.md).
+- **Tests.** `tests/test_advisor_pages.mjs` (template escaping, language,
+  verified and unverified boats, the `<script>` boat inert in HTML, title and
+  JSON-LD, stale rules, 404s, the cache key and a version bump, Spanish, no
+  percentage or hotspot on any of the 34 species pages, ports and boats,
+  sitemap, robots, telemetry) and `e2e/advisor-pages.spec.ts` (the three pages
+  in the real Worker; axe on each). Its D1 rows are `e2e/seed/advisor-pages.sql`,
+  which `e2e/serve.mjs` now loads (every `e2e/seed/*.sql`) after the migrations
+  and before the Worker starts: seeding from a spec while other workers ran
+  tests made page reads fail intermittently.
