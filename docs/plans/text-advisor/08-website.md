@@ -25,6 +25,10 @@ imported from `web/advisor/copy.ts`, which `scripts/check_copy.mjs` lints
 | `GET /species/<key>` | Species name, photo-free ID notes and look-alike cues (`lookalikes.json`), the rules card from `advisor_rules` with source and reviewed date (`#rules` anchor; `stale` rows show "under review"), recent catches of this species across ports (counts by date), the strategy summary (same source as `get_strategy`), CTA. | edge 15 min |
 | `GET /boats/<slug>` | 05 § boat page. | edge 5 min |
 
+The species page's names, description and sources come from
+`catalog/advisor/species-pages.json` (TA-A3; 06 § As built (TA-A3)); its
+season and rules card always comes from the rules table.
+
 Edge caching uses `cached()`/`cacheKey()` with
 `build: build() + ':' + pagesVersion` (05 § boat page); the TTLs above are
 the `Cache-Control` max-age.

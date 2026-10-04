@@ -183,6 +183,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-A0
 - Files: `catalog/advisor/lookalikes.json` (complete for the 20 species in `catalog/species.json`, each cue with a CDFW source URL), `catalog/advisor/protected.json`, `docs/plans/text-advisor/06-angler-answers.md` (source list).
 - Owner review: the owner reads the cues in the PR (fishing knowledge check).
+- As built: every fish key in `catalog/species.json` (18 of the 20; Dungeness and lobster are not fish but have cues too) and every `species-extra.json` key has cues, each entry citing its own CDFW or NOAA Fisheries page (CDFW's identification flyers where they exist); quillback joined `protected.json` (CDFW's no-retention list); new `catalog/advisor/species-pages.json` for TA-W1; `tests/test_advisor_species_data.mjs`. See 06 § As built (TA-A3).
 
 ### TA-A4 · Rules admin API, change-watch hook · M
 - Stories: OP-6.
