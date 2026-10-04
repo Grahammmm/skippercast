@@ -1,8 +1,9 @@
 // The SkipperCast admin app (docs/plans/text-advisor/08-website.md § Admin;
 // TA-W2), mounted by dist/admin.html, which the Worker serves to admins only.
-// Hash-routed views: #queue and #health here; #skippers (TA-W3), #rules
-// (TA-A4), #posts (TA-S1) and #funnel (TA-W4) are placeholders until their
-// tasks. The relay-down banner shows on every view: health is fetched on load
+// Hash-routed views: #queue and #health (TA-W2), #skippers and
+// #contact/<id> (TA-W3, a contact opens by id only, from a review or a boat);
+// #funnel (TA-W4); #rules and #rules?jurisdiction=<id> (TA-A4); #posts
+// (TA-S1) is a placeholder until its task. The relay-down banner shows on every view: health is fetched on load
 // and every minute. Every string is in web/advisor/copy.ts (ADMIN_COPY).
 import {render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
@@ -12,13 +13,17 @@ import {ApiError, getHealth, when} from './api.ts';
 import type {Health} from './api.ts';
 import {Queue} from './queue.tsx';
 import {HealthView} from './health.tsx';
+import {Skippers} from './skippers.tsx';
+import {ContactView} from './contact.tsx';
+import {FunnelView} from './funnel.tsx';
+import {RulesView} from './rules.tsx';
+import {VIEWS, routeOf} from './route.ts';
+import type {Route} from './route.ts';
 
-export const VIEWS: readonly AdminView[] = ['queue', 'skippers', 'rules', 'posts', 'funnel', 'health'];
 export const HEALTH_EVERY_MS = 60000;
-const viewOf = (hash: string): AdminView => (VIEWS as readonly string[]).includes(hash.replace(/^#/, '')) ? hash.replace(/^#/, '') as AdminView : 'queue';
-
 export function App() {
-  const [view, setView] = useState<AdminView>(() => viewOf(location.hash));
+  const [route, setRoute] = useState<Route>(() => routeOf(location.hash));
+  const view = route.view, nav: AdminView = view === 'contact' ? 'skippers' : view;
   const [health, setHealth] = useState<Health | null>(null);
   const [healthFailed, setHealthFailed] = useState(false);
   const [denied, setDenied] = useState(false);
@@ -28,13 +33,13 @@ export function App() {
     catch (e) { setHealthFailed(true); if (e instanceof ApiError && (e.status === 401 || e.status === 404)) setDenied(true); }
   }
   useEffect(() => {
-    const onHash = (): void => setView(viewOf(location.hash));
+    const onHash = (): void => setRoute(routeOf(location.hash));
     addEventListener('hashchange', onHash);
     void refresh();
     const timer = setInterval(() => void refresh(), HEALTH_EVERY_MS);
     return () => { removeEventListener('hashchange', onHash); clearInterval(timer); };
   }, []);
-  useEffect(() => { document.title = `${COPY.views[view]} · ${COPY.pageTitle}`; }, [view]);
+  useEffect(() => { document.title = `${view === 'contact' ? COPY.contactHeading : COPY.views[view]} · ${COPY.pageTitle}`; }, [view]);
 
   return (
     <>
@@ -42,7 +47,7 @@ export function App() {
         <p class="admin-brand"><a href="/">⌁ {COPY.brand}</a></p>
         <nav aria-label={COPY.navLabel}>
           <ul>
-            {VIEWS.map(v => <li key={v}><a href={`#${v}`} aria-current={v === view ? 'page' : undefined}>{COPY.views[v]}</a></li>)}
+            {VIEWS.map(v => <li key={v}><a href={`#${v}`} aria-current={v === nav ? 'page' : undefined}>{COPY.views[v]}</a></li>)}
           </ul>
         </nav>
       </header>
@@ -51,6 +56,10 @@ export function App() {
         {denied ? <p class="admin-error" role="alert">{COPY.signedOut}</p>
           : view === 'queue' ? <Queue />
           : view === 'health' ? <HealthView health={health} failed={healthFailed} onRefresh={() => void refresh()} />
+          : view === 'skippers' ? <Skippers />
+          : view === 'contact' ? <ContactView id={route.arg} />
+          : view === 'funnel' ? <FunnelView />
+          : view === 'rules' ? <RulesView jurisdiction={route.arg} />
           : (
             <section class="admin-view" aria-labelledby="placeholder-heading">
               <h1 id="placeholder-heading">{COPY.views[view]}</h1>

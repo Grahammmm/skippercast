@@ -5,6 +5,7 @@
 // and display name only (CONTRIBUTING: no chat identifiers in casual reach).
 import {countsOf} from '../intake/reports.ts';
 import {conversationContact} from './decisions.ts';
+import {ruleChange} from './rules.ts';
 import type {ReviewRow} from './decisions.ts';
 import type {ReviewKind} from '../types.ts';
 
@@ -119,7 +120,15 @@ async function conversationDetail(db: D1Database, refId: string): Promise<Record
 }
 
 async function ruleDetail(db: D1Database, refId: string): Promise<Record<string, unknown> | null> {
-  // TA-A4 opens rule reviews from the CDFW change-watch; until then this shows the rule row when ref_id is one.
+  // TA-A4: a change-watch review's ref is "<jurisdiction>:<fingerprint>" (admin/rules.ts watchRuleSources);
+  // its summary is the stored finding (the changed pages, their links and hashes) and the jurisdiction's rows by status.
+  const change = await ruleChange(db, refId);
+  if (change) {
+    const rows = await db.prepare("SELECT SUM(CASE WHEN status='review' THEN 1 ELSE 0 END) AS review, SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active FROM advisor_rules WHERE jurisdiction=?")
+      .bind(change.jurisdiction).first<{review: number | null; active: number | null}>();
+    return {rule: null, summary: {...change, rules: {review: rows?.review ?? 0, active: rows?.active ?? 0}}};
+  }
+  // A ref that is a rule id shows that row.
   const rule = await db.prepare('SELECT id,region,jurisdiction,species_key,species_label,size_min_in,bag_limit,bag_notes,season_open,season_close,source_name,source_url,reviewed_at,review_due,status FROM advisor_rules WHERE id=?')
     .bind(refId).first().catch(() => null);
   return rule ? {rule, summary: null} : null;

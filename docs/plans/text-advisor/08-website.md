@@ -247,3 +247,181 @@ Public pages in `server/advisor/pages/`, routes in `server/routes/advisor.ts`
   which `e2e/serve.mjs` now loads (every `e2e/seed/*.sql`) after the migrations
   and before the Worker starts: seeding from a spec while other workers ran
   tests made page reads fail intermittently.
+
+## As built (TA-W3)
+
+The Skippers and Contact views: `server/advisor/admin/skippers.ts`, the routes
+in `server/routes/admin.ts` (`// TA-W3` block), `web/admin/skippers.tsx`,
+`web/admin/contact.tsx` and `web/admin/route.ts` (the hash routes, plain
+TypeScript so the tests load them). Where the code differs from the table above:
+
+- **Routes.** `GET /api/admin/boats`, `POST /api/admin/boats/<id>`,
+  `POST /api/admin/boats/<id>/crew/<contact id>/remove` (the crew row is in the
+  path, not the body), `POST /api/admin/boats/invite` (the invite is not tied
+  to an existing boat: the skipper registers the boat in reply), and for
+  contacts `GET /api/admin/contacts/<id>`, `GET /api/admin/contacts/<id>/export`
+  and `POST /api/admin/contacts/<id>/block`. There is no list or search of
+  contacts; the view opens at `#contact/<id>` from a boat's owner or crew, or
+  from a skipper or conversation card in the queue.
+- **List.** Every boat (up to 500), pending first, then verified, then
+  rejected, newest first: status, the owner as the queue's contact view (id,
+  channel, language, display name, role, status; never the number or its
+  hash), the last published report's date, published reports dated within 30
+  days, `posts` (0 until TA-S1 creates `advisor_posts`), photo consent
+  (`given`, `revoked`, `not given`), the admin's consent note, active crew and
+  whether the registration review is still open. Link clicks per boat are not
+  shown: telemetry has no boat dimension (the Funnel view counts page views
+  and CTA clicks by source).
+- **Edits.** `{fields?, status?, consent_note?}`. Fields go through the
+  registration's parsers (`intake/skippers.ts`): `name` 1-60, `port` a catalog
+  port, name or alias (the region follows the port), `landing` ≤ 60,
+  `instagram` a handle, `booking_url` https only, `phone_public` a phone;
+  `null` or empty clears an optional field. The slug never changes, so links
+  already texted keep working. A change bumps the pages version.
+- **Verify and reject.** `status: verified | rejected`. When the boat's
+  `new_skipper` review is still open, the Skippers view decides it through
+  `decideReview` (note `skippers view`), so the review closes and the text has
+  the queue's outbound id. Otherwise `setBoatVerification` (moved out of
+  `decisions.ts`'s skipper case, which now calls it too) applies the same
+  status, `verified_by`, pages version and 05 text, keyed
+  `admin.skipper.<status>` on the review id, so each status is texted at most
+  once. While replies are off the boat changes and the answer says
+  `held: 'replies-off'`.
+- **Consent note.** A note for the team's record (`job_state`
+  `advisor.boat-note.<boat id>`, `{note, at, by}`); it never changes photo
+  consent, which only the owner's own text sets or revokes (05 § Consent). No
+  migration was needed for it.
+- **Invite.** `{phone, boat_name?, language?}`. The number is parsed with
+  `contacts.ts` `e164`, hashed and encrypted at once, and never returned or
+  logged (the answer is `{contact_id, sends, created}`). The contact is found
+  by hash or created as an SMS contact with `source='skipper-invite'`; a
+  stopped or blocked contact, an existing boat owner, replies switched off
+  (409), a missing `ADVISOR_PHONE_KEY` (503) and more than 20 invites a day
+  (`request_limits` `admin:skipper-invite:<day>`, 409) are refused. The TA-I1
+  path: `startRegistration` writes the register flow (with the boat name when
+  given, so the reply answers "which port"), and the text is `skipper_invite`
+  (or `skipper_invite_boat`) plus the flow's first question, in the contact's
+  language, through `teamSender` with `created_by` = the admin. Its outbound id
+  is per contact and Pacific day, so a double click texts once. The flow
+  expires after 24 hours like any registration; "register my boat" still
+  works afterwards.
+- **Contact.** `{contact, boats, messages, export}`: the contact's fields
+  (source, home port, first and last seen, messages today) without number or
+  hash, its owned and crew boats, its last 50 messages oldest first (body,
+  intent, status, team, attachment count) and the export link, which answers
+  `contacts.ts` `exportContact` as a JSON download (`Content-Disposition:
+  attachment`, `private, no-store`).
+- **Block.** `{blocked: true|false}`. Blocking keeps the status the contact
+  had in `job_state` `advisor.block.<id>`; unblocking restores it, so a
+  contact that had texted STOP stays stopped. START never lifts a block
+  (`contacts.ts` `applyStart`).
+- **Tests.** `tests/test_advisor_admin_skippers.mjs`; `e2e/admin.spec.ts` opens
+  Skippers and a contact with axe.
+
+## As built (TA-W4)
+
+The Funnel view: `server/advisor/admin/funnel.ts`, `GET /api/admin/funnel?days=7|30`
+(any other value is `400`) in `server/routes/admin.ts`, `web/admin/funnel.tsx`.
+Where the code differs from the table above:
+
+- **D1.** New contacts per UTC day by first-touch `source` (`unknown` when
+  none; every day of the window, zeros included); inbound messages by intent
+  (top 20, `none` for unclassified, the rest as `other`); replies per contact
+  (outbound rows that did not fail, over contacts that got one); the return
+  rate (contacts with inbound messages on two or more UTC days, over contacts
+  with any in the window); boats verified in the window, verified in all and
+  pending; reports published in the window per reporting boat; images
+  submitted and approved; boats with active photo consent over boats not
+  rejected. Days are UTC (the caps in Health are UTC days too).
+- **Analytics Engine.** Three statements through the SQL API that
+  `scripts/ops_report.py` uses, run from the Worker: `llm` calls and tokens by
+  feature (every feature, the boat lookup included, so the advisor's share is
+  visible), `advisor_turn` p50 and p95 latency with
+  `quantileExactWeighted`, and the advisor page events (`advisor_port_view`,
+  `advisor_species_view`, `advisor_boat_view`, `advisor_cta`) by visit
+  source. `days` comes from the allowlist, never from caller text. Labels are
+  cleaned (a feature that is not `[\w:.-]` becomes `other`; an unknown source
+  `other`; other events are dropped). The token and account are read from the
+  Worker secrets `CF_ANALYTICS_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; without them
+  `analytics.available` is false (`not-configured`), a dataset never written
+  is `no-data`, any other failure `error` (logged with the HTTP status only);
+  the D1 part answers either way. The fetcher is injected (`adminRoutes`'s
+  `analyticsSql`, `adminFunnel`'s `sql`) so the tests run offline.
+- **Not yet.** Link clicks from texts are the `s=txt` page views (texts link to
+  pages, not to a redirect), so they are in the page table rather than a count
+  of their own; site visits and chats started from posts (SP-10) arrive with
+  TA-S7, which adds the per-post columns.
+- **Deploy.** `deploy-cloudflare.yml` passes `CF_ANALYTICS_TOKEN` from secrets;
+  `scripts/cloudflare_deploy.sh` uploads it as a Worker secret and, only with
+  it, `CLOUDFLARE_ACCOUNT_ID` (already in the job's env). Both files are
+  CODEOWNERS-protected, so the PR needs the owner's approval.
+- **View.** Tables with small inline SVG bars (a sparkline of new contacts per
+  day with a text label, and a bar per table row hidden from assistive
+  technology because the cell holds the number); no chart library.
+- **Text admin fallback.** Built in TA-E1 (`ok <code>` / `no <code>` from the
+  `ADVISOR_ADMIN_CONTACT_ID` contact) and moved onto `decideReview` in TA-W2;
+  nothing changed here.
+- **Tests.** `tests/test_advisor_admin_funnel.mjs` (a fake SQL API and a fake
+  fetch); `e2e/admin.spec.ts` opens the Funnel with axe.
+
+## As built (TA-A4)
+
+The Rules view and the CDFW change-watch: `server/advisor/admin/rules.ts`, the
+routes in `server/routes/admin.ts` (`// TA-A4` block), the `rules-watch` slot
+in `server/advisor/cron.ts`, `web/admin/rules.tsx`, and the rule-change card in
+`web/admin/queue.tsx`. Where the code differs from the table above:
+
+- **Routes.** `GET /api/admin/rules?jurisdiction=&status=` (rules are stored per
+  jurisdiction, 02 § advisor_rules "As built", so the filter is the
+  jurisdiction, not the region; `status` is `active`, `review`, `retired` or
+  `due`), `POST /api/admin/rules`, `POST /api/admin/rules/<id>` and
+  `POST /api/admin/rules/<id>/retire`. `POST /api/admin/rules/import` is not
+  built: re-running the importer stays an owner step
+  (`scripts/advisor/import-rules.mjs --apply`), and its rows still arrive as
+  `review`.
+- **Review stamp.** A create is `active` at once (the admin wrote it from the
+  source); an edit, including an empty one ("Checked, no change"), sets
+  `reviewed_at` now, `review_due` to the sooner of 90 days and the season's
+  close (a `MM-DD` close is its next occurrence; a past one is ignored),
+  `status='active'` and `updated_by` = the admin's `users.id`. Retiring keeps
+  the row; `lookupRules` never returns it. Each change bumps
+  `advisor.pages.version`, so the species pages' rules cards re-render; the
+  daily answers follow by their inputs hash, which includes the rules' stale
+  flags.
+- **Validation.** A create's id is the importer's
+  (`sha256(jurisdiction|region|species_key|label for other)[:32]`), so a row the
+  importer already wrote is `409` ("edit it"); `region` is `*` or a region of
+  that jurisdiction; `species_key` a catalog or species-extra key (synonyms
+  such as `california-halibut` excluded) or `other`; `source_url` https on one
+  of the jurisdiction's `authority_hosts` (`jurisdictions/*.json`); both season
+  ends or neither. The identity fields, `status` and the review dates cannot be
+  edited.
+- **Change-watch.** The flag is the daily feed's `regulations.checks[<source>]`
+  with `status: 'changed'` (`pipeline/regulations.py` `regulatory_snapshot`:
+  the page answered and its normalised fingerprint differs from the reviewed
+  `approved_content_sha256`). `unavailable`, `unreviewed`, mismatch and
+  `out-of-scope` checks are not changes: a page that did not load says nothing
+  about the rules. The `rules-watch` slot runs at 06:15 Pacific (the feed is
+  collected at 04:17) over every active region's daily feed, read like the
+  data tools read it. Per jurisdiction, the changed pages make a finding with
+  ref `<jurisdiction>:<16 hex of the page ids and fingerprints>`, stored in
+  `job_state` `advisor.rules.change.<ref>`; the first time a finding is seen,
+  `markJurisdictionForReview` puts every active row of the jurisdiction into
+  `review` (`updated_by` `rule-watch`) and the pages version is bumped; then one
+  `rule` review (reason `rule_source_changed`, id `sha256(rule:<ref>:rule_source_changed)`)
+  is opened. Each step is idempotent and the finding records when the rows
+  were marked, so the same flag on later days (it stays until the registry's
+  fingerprint is re-approved in the repository) neither re-marks rows an admin
+  has re-confirmed nor opens a second review; a new fingerprint is a new
+  finding. A run writes `advisor.rules.last_watch`. Nothing is texted.
+- **Queue.** A `rule` card with a finding shows the jurisdiction, when the feed
+  checked, the jurisdiction's rows in review and active, each changed page as a
+  link (only when it is on an authority host) with its new and reviewed
+  fingerprints, and "Review rules" to `#rules?jurisdiction=<id>`; "Done"
+  closes it after the review (an edit decision stays `400`).
+- **View.** A table per filter (jurisdiction, status) with due rows marked
+  and listed with their source link, "Checked, no change" on due rows, an
+  inline editor ("Save and mark reviewed") and "Retire"; "Add a rule" opens a
+  form with the jurisdiction, region and species choices the list returns.
+- **Tests.** `tests/test_advisor_admin_rules.mjs`; `tests/test_advisor_cron.mjs`
+  lists the new slot; `e2e/admin.spec.ts` opens the Rules view with axe.

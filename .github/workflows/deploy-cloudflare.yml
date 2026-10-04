@@ -85,6 +85,9 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
+          # TA-W4: the admin funnel's Analytics Engine SQL reads (the ops report's token; Account Analytics: Read).
+          # Uploaded with CLOUDFLARE_ACCOUNT_ID (the job's env) only when set.
+          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
           # Web Push signing pair. Optional: when unset, the deploy keeps the pair in the private
           # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}

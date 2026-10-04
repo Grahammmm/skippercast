@@ -83,6 +83,36 @@ body.admin-page {
 .admin-health { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
 .admin-health > section { padding: var(--space-4); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); }
 
+/* TA-W3: Skippers and Contact */
+a.admin-button { display: inline-flex; align-items: center; text-decoration: none; }
+.admin-button.is-small { min-height: 32px; padding: 0 var(--space-2); font-size: var(--text-14); }
+.admin-crew { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
+.admin-card.is-boat.is-pending { border-left: 4px solid var(--caution); }
+.admin-card.is-boat.is-rejected { opacity: 0.85; }
+.admin-view form.admin-card { margin-bottom: var(--space-3); }
+.admin-page input[type="tel"], .admin-page input[type="url"] {
+  font: inherit; font-size: var(--text-16); min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink);
+}
+
+/* TA-W4: Funnel */
+.admin-funnel { display: flex; flex-direction: column; gap: var(--space-4); }
+.admin-funnel > section { padding: var(--space-4); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.admin-funnel-total { display: flex; align-items: flex-end; gap: var(--space-3); margin: var(--space-2) 0; font-size: var(--text-28); }
+.admin-spark rect, .admin-bar rect { fill: var(--brand); }
+.admin-scroll { max-width: 100%; overflow-x: auto; }
+.admin-scroll:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.admin-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* TA-A4: Rules */
+.admin-rules td, .admin-rules th { vertical-align: top; }
+.admin-rules tr.is-due > * { background: var(--brand-tint); }
+.admin-rules tr.is-retired { color: var(--ink-2); }
+.admin-reason.is-due { background: var(--card); color: var(--ink); border: 2px solid var(--caution); font-weight: var(--weight-instrument); }
+.admin-cell-note { display: block; max-width: 22em; font-size: var(--text-12); }
+.admin-actions.is-tight { margin-top: 0; gap: var(--space-1); }
+.admin-new-rule { margin: var(--space-3) 0; }
+.admin-new-rule > summary { cursor: pointer; font-weight: var(--weight-instrument); min-height: var(--touch-min); display: flex; align-items: center; }
+
 @media (max-width: 600px) {
   .admin-media { grid-template-columns: 1fr; }
   .admin-messages li { max-width: 100%; }

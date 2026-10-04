@@ -146,6 +146,7 @@ Successful `/feeds/` requests are written 1 in 10 with `double3` = 10; every oth
 1. Set the repository variable `ENABLE_ANALYTICS` to `true` and run **Deploy to Cloudflare**.
 2. Create an API token with **Account · Account Analytics · Read** only, limited to the SkipperCast account, and save it as the repository secret `CF_ANALYTICS_TOKEN`. The report uses the existing `CLOUDFLARE_ACCOUNT_ID` secret.
 3. Run **Actions → Operations report → Run workflow** the next day and read the summary.
+4. The Text Advisor admin's Funnel view (TA-W4, [08 · Admin](plans/text-advisor/08-website.md)) reads the same dataset from the Worker: **Deploy to Cloudflare** uploads `CF_ANALYTICS_TOKEN` as a Worker secret, with `CLOUDFLARE_ACCOUNT_ID`, whenever the token secret is set. The Worker only reads; without the token the view shows its D1 counts alone.
 
 **Logpush (owner option, not enabled).** Workers Trace Events Logpush sends every invocation's logs to storage you control, for example a private R2 bucket with a 30-day lifecycle rule. It needs the **Workers Paid** plan and a token with **Logs · Edit**. To turn it on: create the job under **Analytics & Logs → Logpush** (dataset *Workers trace events*, destination R2), then add `"logpush": true` to `wrangler.jsonc` in a reviewed PR. Workers Logs above are enough until the site has real traffic.
 

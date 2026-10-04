@@ -19,6 +19,7 @@
 //                 (publishReport bumps the pages  (applyEdit bumps them for a     (a published one bumps them)
 //                 version)                        published report)
 //   skipper       new_skipper: verified + text    -                               new_skipper: rejected + text
+//                 (setBoatVerification, also the Skippers view's verify and reject, TA-W3)
 //                 (either bumps the pages version)
 //   conversation  closed; with `reply`: sent as   -                               closed
 //                 the team through the channel
@@ -101,7 +102,7 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
   const review = await reviewRow(db, input.reviewId);
   if (!review || (input.kinds && !input.kinds.includes(review.kind))) return {status: 'not-found'};
   if (review.status !== 'open') return {status: 'repeated', review};
-  const at = iso(deps.now), settings = advisorSettings(env);
+  const at = iso(deps.now);
   const sendsEnabled = deps.sendsEnabled ?? true;
   const note = input.note === undefined ? null : clean(input.note, NOTE_MAX);
   const reply = input.reply === undefined || input.reply === null ? null : clean(input.reply, REPLY_MAX);
@@ -151,15 +152,8 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
     case 'skipper': {
       if (input.decision === 'edit') return {status: 'invalid', error: 'boat fields are edited in the Skippers view'};
       if (review.reason !== 'new_skipper') break;   // owner_forgotten and the like: the review only records that someone looked
-      const ok = input.decision === 'approve';
-      const r = ok
-        ? await db.prepare("UPDATE advisor_boats SET status='verified',verified_at=?,verified_by=?,updated_at=? WHERE id=? AND status<>'verified'").bind(at, input.by, at, review.ref_id).run()
-        : await db.prepare("UPDATE advisor_boats SET status='rejected',updated_at=? WHERE id=? AND status<>'rejected'").bind(at, review.ref_id).run();
-      if (r.meta.changes) await bumpPagesVersion(db, deps.now);   // 05: verification re-renders the boat page
-      // 05 § Verification: the skipper hears the decision, through their own channel.
-      const boat = await db.prepare('SELECT name,slug,owner_contact_id FROM advisor_boats WHERE id=?').bind(review.ref_id).first<{name: string; slug: string; owner_contact_id: string | null}>();
-      const owner = boat?.owner_contact_id ? await db.prepare("SELECT * FROM advisor_contacts WHERE id=? AND status='active'").bind(boat.owner_contact_id).first<AdvisorContactRow>() : null;
-      if (boat && owner) await text(owner, input.inId, `${input.key}.skipper`, resolveLinks(t(owner.language, ok ? 'boat_verified' : 'boat_rejected', {name: boat.name, slug: boat.slug}), settings.publicBase).text);
+      await setBoatVerification(env, {boatId: review.ref_id, ok: input.decision === 'approve', by: input.by, now: deps.now,
+        text: (owner, body) => text(owner, input.inId, `${input.key}.skipper`, body)});
       break;
     }
     case 'conversation': {
@@ -190,6 +184,26 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
   if (!closed.meta.changes) return {status: 'repeated', review: after};
   advisorLog('info', 'advisor_review_decided', {kind: review.kind, decision: status, by: input.by ? 'admin' : 'text', sends});
   return {status: 'applied', review: after, sends, ...(held ? {held} : {})};
+}
+
+/**
+ * Verify or reject a boat (05 § Verification), shared by the skipper review and
+ * the Skippers view (TA-W3, admin/skippers.ts): the status (verified_at and
+ * verified_by on a verify), the pages version when it changed (05: the page
+ * re-renders), and the owner's text through `text` while the owner is active.
+ * True when the status changed.
+ */
+export async function setBoatVerification(env: Env, args: {boatId: string; ok: boolean; by: string | null; now: number;
+  text: (owner: AdvisorContactRow, body: string) => Promise<void>}): Promise<boolean> {
+  const db = env.DB!, at = iso(args.now), settings = advisorSettings(env);
+  const r = args.ok
+    ? await db.prepare("UPDATE advisor_boats SET status='verified',verified_at=?,verified_by=?,updated_at=? WHERE id=? AND status<>'verified'").bind(at, args.by, at, args.boatId).run()
+    : await db.prepare("UPDATE advisor_boats SET status='rejected',updated_at=? WHERE id=? AND status<>'rejected'").bind(at, args.boatId).run();
+  if (r.meta.changes) await bumpPagesVersion(db, args.now);
+  const boat = await db.prepare('SELECT name,slug,owner_contact_id FROM advisor_boats WHERE id=?').bind(args.boatId).first<{name: string; slug: string; owner_contact_id: string | null}>();
+  const owner = boat?.owner_contact_id ? await db.prepare("SELECT * FROM advisor_contacts WHERE id=? AND status='active'").bind(boat.owner_contact_id).first<AdvisorContactRow>() : null;
+  if (boat && owner) await args.text(owner, resolveLinks(t(owner.language, args.ok ? 'boat_verified' : 'boat_rejected', {name: boat.name, slug: boat.slug}), settings.publicBase).text);
+  return Boolean(r.meta.changes);
 }
 
 /** The contact behind a conversation review: ref_id is the flagged inbound message (04), or a contact id. */

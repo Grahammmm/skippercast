@@ -72,5 +72,39 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await expect(page.getByRole('heading', {level: 1, name: 'Health'})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Mac relay'})).toBeVisible();
   await checkA11y(page, 'admin-health', info.project.name);
+
+  // TA-W3: the Skippers view (a seeded pending boat owned by the contact) and that contact, opened by id.
+  const boat = `e2e-boat-${tag}`;
+  d1(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,created_at,updated_at) VALUES('${boat}','${boat}','E2E Boat ${tag}','morro-bay','morro-bay','${contact}','pending','${now}','${now}');`);
+  await page.getByRole('link', {name: 'Skippers'}).click();
+  await expect(page.getByRole('heading', {level: 1, name: 'Skippers'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Invite a skipper'})).toBeVisible();
+  const boatCard = page.getByRole('article', {name: new RegExp(`E2E Boat ${tag}`)});
+  await expect(boatCard).toBeVisible();
+  await checkA11y(page, 'admin-skippers', info.project.name);
+  await boatCard.getByRole('link', {name: 'Unnamed contact'}).click();
+  await expect(page).toHaveURL(new RegExp(`#contact/${contact}$`));
+  await expect(page.getByRole('heading', {level: 1, name: 'Contact'})).toBeVisible();
+  await expect(page.getByRole('link', {name: 'Export this contact’s data'})).toBeVisible();
+  await checkA11y(page, 'admin-contact', info.project.name);
+
+  // TA-W4: the Funnel (D1 counts; Analytics Engine is not configured in the browser tests).
+  await page.getByRole('link', {name: 'Funnel'}).click();
+  await expect(page.getByRole('heading', {level: 1, name: 'Funnel'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'New contacts by day and source'})).toBeVisible();
+  await expect(page.getByText('Analytics Engine is not connected', {exact: false})).toBeVisible();
+  await page.getByLabel('Window').selectOption('30');
+  await expect(page.getByRole('heading', {name: 'Engagement'})).toBeVisible();
+  await checkA11y(page, 'admin-funnel', info.project.name);
+
+  // TA-A4: the Rules view on one jurisdiction (e2e/seed/advisor-pages.sql: lingcod active, rockfish in review). Read only:
+  // the seeded rows also feed e2e/advisor-pages.spec.ts.
+  await page.goto('/admin.html#rules?jurisdiction=california-central');
+  await expect(page.getByRole('heading', {level: 1, name: 'Rules'})).toBeVisible();
+  const rockfish = page.getByRole('row', {name: /Rockfish \(RCG complex\)/});
+  await expect(rockfish).toContainText('Due');
+  await expect(rockfish.getByRole('link', {name: 'CDFW Groundfish Summary'})).toBeVisible();
+  await expect(page.getByRole('row', {name: /^Lingcod/})).not.toContainText('Due');
+  await checkA11y(page, 'admin-rules', info.project.name);
   expect(pageErrors).toEqual([]);
 });

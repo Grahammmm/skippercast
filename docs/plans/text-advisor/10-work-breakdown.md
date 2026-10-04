@@ -189,6 +189,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: OP-6.
 - Depends: TA-A0, TA-W2
 - Files: `admin/rules.ts`, `routes/admin.ts` (rules endpoints), `cron.ts` (read the daily feed's regulation change flags → set jurisdiction rows to `review`), `web/admin/rules.tsx`, tests.
+- As built: the flag is a `regulations.checks` entry with `status: 'changed'`; the `rules-watch` slot marks the jurisdiction once per set of changed pages and opens one `rule` review whose card links the pages and the Rules view; the list filters by jurisdiction (rules are per jurisdiction, not region); `POST /api/admin/rules/import` is not built (the importer stays an owner-run script). See 08 § As built (TA-A4).
 
 ### TA-A5 · Trips tool from verified boats, newcomer answers · S
 - Stories: AD-3.
@@ -233,11 +234,13 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: SK-3, SK-4, pilot recruiting.
 - Depends: TA-W2
 - Files: `admin/skippers.ts` (list, edit, crew removal, invite), `web/admin/skippers.tsx`, `web/admin/contact.tsx`, tests.
+- As built: the invite starts the registration flow rather than creating the boat; verify and reject decide the open `new_skipper` review when there is one (`setBoatVerification` is shared with `decisions.ts`); the consent note is a `job_state` note that never changes consent; contacts open by id at `#contact/<id>` with export and block. See 08 § As built (TA-W3).
 
 ### TA-W4 · Funnel dashboard and text-based admin fallback · M · owner approval (secret `CF_ANALYTICS_TOKEN` to the Worker)
 - Stories: OP-5, SP-10 (data), OP-1 (fallback).
 - Depends: TA-W2
 - Files: `admin/funnel.ts` (D1 queries + Analytics Engine SQL via `CF_ANALYTICS_TOKEN`), `web/admin/funnel.tsx`, `engine.ts` (admin-test `ok/no <code>` path), var `ADVISOR_ADMIN_CONTACT_ID`, tests with a fake SQL API.
+- As built: the text admin fallback and `ADVISOR_ADMIN_CONTACT_ID` were already built in TA-E1 (and share `decideReview` since TA-W2), so the task is the funnel; the deploy uploads `CF_ANALYTICS_TOKEN` and, with it, `CLOUDFLARE_ACCOUNT_ID` as Worker secrets (CODEOWNERS: owner approval). Link clicks and chats started from posts wait for TA-S7. See 08 § As built (TA-W4).
 
 ## Phase 5: social
 
