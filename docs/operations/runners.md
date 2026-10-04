@@ -96,7 +96,8 @@ Steps:
 `advisor-media.yml` (TA-M1; [09 · Derived images and graphics](../plans/text-advisor/09-social.md))
 makes the Text Advisor's derived photos (`public.jpg`, `thumb.jpg`, `story.jpg` with the
 "Text SkipperCast" footer), converts HEIC to JPEG and renders the daily, story and roundup
-graphics, with Pillow and pillow-heif (`pip install -e ".[advisor]"`). It has no schedule:
+graphics, with Pillow and pillow-heif (`pip install -e ".[advisor]"`), and strips every video's
+container metadata (location atoms included) with **ffmpeg**. It has no schedule:
 the Worker dispatches it through `dispatchWorkflow` (the watchdog's `GITHUB_TOKEN`, Actions
 read and write) when something becomes pending, at most once a minute, and its cron again
 every 15 minutes while anything still is. A run takes seconds to a few minutes and holds one
@@ -111,6 +112,7 @@ It runs only on the box: the job's `if` needs `ENABLE_ADVISOR=true` and a non-em
 | `CLOUDFLARE_ACCOUNT_ID` | secret | Already set for the data jobs. |
 | `ADVISOR_NUMBER` | variable | The advisor's number for the Story footer (shown as (805) 555-0100); without it the footer reads `skippercast.com/text`. |
 | `ADVISOR_PUBLIC_BASE` | variable, optional | Where the job calls the Worker; default `https://skippercast.com`. |
+| `ffmpeg` and `ffprobe` | on the box's `PATH` | Required for videos (`sudo apt install ffmpeg` on Ubuntu or Debian, `brew install ffmpeg` on macOS). The job copies each video's streams without metadata (`-map_metadata -1 -map_chapters -1 -c copy -movflags +faststart`, no data tracks), checks with `ffprobe` and an atom walk that no `location`, `©xyz` or `com.apple.quicktime.location.ISO6709` tag is left, and uploads `advisor/derived/<id>/video.mp4`. Without ffmpeg each video is reported `no-ffmpeg`: it can never be approved, posted or served (the admin card says why), and the run's log warns. After installing it, put those videos back in the list with `UPDATE advisor_media SET derived_at=NULL, derived_error=NULL WHERE kind='video' AND derived_error='no-ffmpeg'` (`wrangler d1 execute`), and the next dispatch strips them. |
 
 The job proves who it is with a GitHub OIDC token for the audience
 `https://skippercast.com/api/advisor/jobs`; `deployments/production.json`

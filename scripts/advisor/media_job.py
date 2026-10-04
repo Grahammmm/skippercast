@@ -22,14 +22,22 @@ Worker dispatches whenever media or a graphic becomes pending
    dark field above a "Text SkipperCast" band with ADVISOR_NUMBER).
 3. For each graphic request (daily, story, roundup): render it from its data
    and catalog/advisor/graphics.json to its out_key.
-4. POST /api/advisor/jobs/media-done for each item with the keys and sizes, or
+4. For each video (every stored video, private ones too, so it is clean before
+   anyone reviews it): copy its streams without the container's metadata with
+   ffmpeg (`-map_metadata -1 -map_chapters -1 -c copy -movflags +faststart`, no
+   data or subtitle tracks), so no udta/©xyz or keys/mdta location atom
+   survives; check the result with ffprobe and an atom walk, and upload it to
+   advisor/derived/<id>/video.mp4 (00 principle 7: a video never leaks a
+   position). Without ffmpeg on the runner the video is reported 'no-ffmpeg'
+   and its approval stays held.
+5. POST /api/advisor/jobs/media-done for each item with the keys and sizes, or
    with `error` when the file cannot be decoded (the item is then given up).
 
 Idempotent: every object carries x-amz-meta-source-sha256 (the original's
 sha256, or a digest of the graphic request); an item whose files already exist
 with the same value is reported done without decoding anything. Network and R2
 errors leave the item pending for the next run and make this run exit 1.
-Video is not processed (09: no transcoding); the Worker lists images only.
+Video is never transcoded (09): its streams are copied as they are.
 """
 import argparse
 from datetime import datetime, timezone
@@ -39,7 +47,10 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from urllib.error import HTTPError
 from urllib.parse import parse_qsl, quote, urlencode, urlsplit
@@ -145,6 +156,24 @@ class R2:
     def put(self, key, body, metadata, content_type='image/jpeg'):
         headers = {'content-type': content_type, **{f'x-amz-meta-{k}': str(v) for k, v in metadata.items()}}
         self._call('PUT', key, body, headers)
+
+    def get_file(self, key, path):
+        """Stream the object to `path` (a video can be 300 MB); False when it does not exist."""
+        url = f'{self.endpoint}/{self.bucket}/{_uri(key)}'
+        sent = sign_v4('GET', url, {'x-amz-content-sha256': EMPTY_SHA}, EMPTY_SHA, self.access_key, self.secret_key, self.clock())
+        try:
+            with self.opener(Request(url, method='GET', headers=sent), timeout=60) as response, open(path, 'wb') as out:
+                shutil.copyfileobj(response, out, 1 << 20)
+            return True
+        except HTTPError as error:
+            if error.code == 404:
+                return False
+            raise Transient(f'R2 GET HTTP {error.code}') from None
+        except OSError as error:
+            raise Transient(f'R2 GET {type(error).__name__}') from None
+
+    def put_file(self, key, path, metadata, content_type='video/mp4'):
+        self.put(key, Path(path).read_bytes(), metadata, content_type)
 
 
 # ---- the Worker's job API -----------------------------------------------------------
@@ -420,6 +449,160 @@ def roundup_slides(spec, data, photos, number):
     return slides
 
 
+
+# ---- video: container metadata out (00 principle 7) ------------------------------------
+
+STRIPPED = '1'                         # x-amz-meta-stripped: the version of the strip below
+# Boxes whose payload is a list of boxes (ISO-BMFF / QuickTime); `meta` may be a full box.
+_CONTAINERS = {b'moov', b'trak', b'mdia', b'minf', b'stbl', b'dinf', b'edts', b'udta', b'meta', b'ilst', b'moof', b'traf', b'mvex'}
+_LOCATION_BOXES = {b'\xa9xyz': 'xyz-atom', b'loci': 'loci-atom'}
+_LOCATION_WORDS = (b'com.apple.quicktime.location', b'iso6709')
+
+
+def _boxes(data, start, end):
+    """(type, payload start, box end) of each box between start and end; stops at anything malformed."""
+    at = start
+    while at + 8 <= end:
+        size = int.from_bytes(data[at:at + 4], 'big')
+        kind = bytes(data[at + 4:at + 8])
+        head = 8
+        if size == 1:
+            if at + 16 > end:
+                return
+            size, head = int.from_bytes(data[at + 8:at + 16], 'big'), 16
+        elif size == 0:
+            size = end - at
+        if size < head or at + size > end:
+            return
+        yield kind, at + head, at + size
+        at += size
+
+
+def location_atoms(data):
+    """The location metadata the boxes of an MP4/MOV (its bytes, or one top-level box) still carry.
+
+    Finds a udta ©xyz atom, a 3GPP loci atom and a QuickTime keys entry (or any
+    other leaf box) naming com.apple.quicktime.location.* or ISO 6709; returns
+    their names, sorted and unique, so [] means clean. mdat (the samples) is not
+    read. Pure: works on bytes, never raises.
+    """
+    found = set()
+
+    def walk(start, end, depth):
+        for kind, body, stop in _boxes(data, start, end):
+            if kind in _LOCATION_BOXES:
+                found.add(_LOCATION_BOXES[kind])
+            if kind == b'mdat':
+                continue
+            if kind in _CONTAINERS and depth < 12:
+                # A full-box `meta` (ISO) starts with version and flags; a QuickTime one does not.
+                inner = body + 4 if kind == b'meta' and data[body:body + 4] == b'\0\0\0\0' else body
+                walk(inner, stop, depth + 1)
+            elif any(word in bytes(data[body:stop]).lower() for word in _LOCATION_WORDS):
+                found.add(kind.decode('latin-1').strip(' \0').encode('ascii', 'replace').decode() + '-location')
+
+    walk(0, len(data), 0)
+    return sorted(found)
+
+
+def file_location_atoms(path):
+    """location_atoms over a file, one top-level box at a time; mdat (the samples) is skipped, never read."""
+    found = set()
+    size = os.path.getsize(path)
+    with open(path, 'rb') as handle:
+        at = 0
+        while at + 8 <= size:
+            handle.seek(at)
+            head = handle.read(16)
+            box, kind, length = int.from_bytes(head[:4], 'big'), head[4:8], 8
+            if box == 1:
+                box, length = int.from_bytes(head[8:16], 'big'), 16
+            elif box == 0:
+                box = size - at
+            if box < length or at + box > size:
+                found.add('malformed')
+                break
+            if kind in _LOCATION_BOXES:
+                found.add(_LOCATION_BOXES[kind])
+            if kind != b'mdat':
+                handle.seek(at)
+                found.update(location_atoms(handle.read(box)))
+            at += box
+    return sorted(found)
+
+
+def location_tags(probe_json):
+    """ffprobe -show_format -show_streams JSON: every tag whose name says location (format or stream), as 'where:name'."""
+    out = []
+    probe_json = probe_json or {}
+    sections = [('format', probe_json.get('format') or {})] + [(f'stream{i}', s) for i, s in enumerate(probe_json.get('streams') or [])]
+    for where, section in sections:
+        for name in section.get('tags') or {}:
+            low = name.lower()
+            if 'location' in low or 'xyz' in low or 'iso6709' in low or 'gps' in low:
+                out.append(f'{where}:{name}')
+    return out
+
+
+def strip_command(ffmpeg, source, out, hevc=False):
+    """The stream copy without metadata: global, stream and chapter metadata dropped, data and subtitle tracks
+    (a QuickTime timed-metadata track can hold location) left out, no encoder tags, moov first for streaming."""
+    return [ffmpeg, '-nostdin', '-v', 'error', '-y', '-i', str(source),
+            '-map_metadata', '-1', '-map_metadata:s', '-1', '-map_chapters', '-1', '-dn', '-sn',
+            '-c', 'copy', *(['-tag:v', 'hvc1'] if hevc else []),
+            '-fflags', '+bitexact', '-flags:v', '+bitexact', '-flags:a', '+bitexact',
+            '-movflags', '+faststart', '-f', 'mp4', str(out)]
+
+
+def probe(ffprobe, path, run=None):
+    """ffprobe's format and streams as JSON; Unreadable('probe-failed') when it cannot read the file."""
+    result = (run or subprocess.run)([ffprobe, '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)],
+                 capture_output=True, timeout=120, check=False)
+    if result.returncode:
+        raise Unreadable('probe-failed')
+    try:
+        return json.loads(result.stdout or b'{}')
+    except ValueError:
+        raise Unreadable('probe-failed') from None
+
+
+def derive_video(item, r2, log=print, which=None, run=None):
+    """Strip one video to keys.video and return the media-done payload; Unreadable('no-ffmpeg') without ffmpeg."""
+    key, sha = item['keys']['video'], item['sha256']
+    meta = r2.head(key)
+    if meta is not None and meta.get(META) == sha and meta.get('stripped') == STRIPPED:
+        log(f'video {item["id"]}: unchanged, skipped')
+        dims = _dims(meta)
+        return {'media_id': item['id'], 'keys': {'video': key}, **({'width': dims[0], 'height': dims[1]} if dims else {})}
+    which, run = which or shutil.which, run or subprocess.run
+    ffmpeg, ffprobe = which('ffmpeg'), which('ffprobe')
+    if not ffmpeg or not ffprobe:
+        raise Unreadable('no-ffmpeg')
+    with tempfile.TemporaryDirectory(prefix='advisor-video-') as tmp:
+        source, out = Path(tmp) / 'original', Path(tmp) / 'video.mp4'
+        if not r2.get_file(item['r2_key'], source):
+            raise Unreadable('original-missing')
+        streams = [s for s in probe(ffprobe, source, run).get('streams') or []
+                   if s.get('codec_type') == 'video' and not (s.get('disposition') or {}).get('attached_pic')]
+        if not streams:
+            raise Unreadable('no-video-stream')
+        try:
+            done = run(strip_command(ffmpeg, source, out, streams[0].get('codec_name') == 'hevc'), capture_output=True, timeout=900, check=False)
+        except subprocess.TimeoutExpired:
+            raise Unreadable('ffmpeg-timeout') from None
+        if done.returncode or not out.exists():
+            raise Unreadable('ffmpeg-failed')
+        result = probe(ffprobe, out, run)
+        left = location_tags(result) + file_location_atoms(out)
+        if left:
+            raise Unreadable('location-left: ' + ', '.join(left)[:150])
+        video = next((s for s in result.get('streams') or [] if s.get('codec_type') == 'video'), {})
+        width, height = video.get('width'), video.get('height')
+        dims = {'width': width, 'height': height} if isinstance(width, int) and isinstance(height, int) and width > 0 and height > 0 else {}
+        r2.put_file(key, out, {META: sha, 'stripped': STRIPPED, **dims}, content_type='video/mp4')
+        log(f'video {item["id"]}: {item["bytes"]} bytes -> {out.stat().st_size} bytes, metadata removed')
+    return {'media_id': item['id'], 'keys': {'video': key}, **dims}
+
 # ---- the job -----------------------------------------------------------------------
 
 def _dims(meta):
@@ -511,19 +694,25 @@ def render_graphic(item, r2, spec, number, log=print):
 
 def run(api, r2, spec, number, max_rounds=20, log=print):
     """Process pending work until the list is empty (or only items already tried remain). Returns counts."""
-    counts = {'media': 0, 'graphics': 0, 'failed': 0, 'transient': 0}
+    counts = {'media': 0, 'graphics': 0, 'videos': 0, 'failed': 0, 'transient': 0}
     tried = set()
     for _ in range(max_rounds):
         work = api.pending()
         todo = [('media', m) for m in work.get('media', []) if ('m', m['id']) not in tried]
         todo += [('graphic', g) for g in work.get('graphics', []) if ('g', g['id']) not in tried]
+        todo += [('video', v) for v in work.get('videos', []) if ('v', v['id']) not in tried]
         if not todo:
             break
         for kind, item in todo:
             tried.add((kind[0], item['id']))
-            ident = {'media_id': item['id']} if kind == 'media' else {'graphic_id': item['id']}
+            ident = {'graphic_id': item['id']} if kind == 'graphic' else {'media_id': item['id']}
             try:
-                payload = derive_media(item, r2, spec, number, log) if kind == 'media' else render_graphic(item, r2, spec, number, log)
+                if kind == 'media':
+                    payload = derive_media(item, r2, spec, number, log)
+                elif kind == 'video':
+                    payload = derive_video(item, r2, log)
+                else:
+                    payload = render_graphic(item, r2, spec, number, log)
             except Unreadable as error:
                 log(f'::warning title=Advisor media given up::{kind} {item["id"]}: {error}')
                 payload, outcome = {**ident, 'error': str(error)[:200]}, 'failed'
@@ -532,7 +721,7 @@ def run(api, r2, spec, number, max_rounds=20, log=print):
                 counts['transient'] += 1
                 continue
             else:
-                outcome = 'media' if kind == 'media' else 'graphics'
+                outcome = {'media': 'media', 'video': 'videos'}.get(kind, 'graphics')
             try:
                 api.done(payload)
             except Transient as error:

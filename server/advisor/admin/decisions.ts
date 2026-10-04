@@ -12,7 +12,9 @@
 // answers 'repeated'.
 //
 //   kind          approve                         edit                            reject
-//   media         publish_state approved,         credit set, approved,           publish_state rejected,
+//   media         publish_state approved (a       credit set, approved (the       publish_state rejected,
+//                 video only once stripped,       same video hold),
+//                 media.ts videoHold),
 //                 media job requested, pages      media job requested, pages      (pages version bumped if it
 //                 version bumped; the post draft  version bumped; the post draft  was approved); its unposted
 //                 (TA-S1: an angler's shared      likewise                        posts rejected (TA-S1)
@@ -36,7 +38,7 @@ import {resolveLinks} from '../links.ts';
 import {sha256} from '../ids.ts';
 import {advisorLog} from '../log.ts';
 import {publishReport, applyEdit, bumpPagesVersion, invalidateDailyAnswer, cleanFields} from '../intake/reports.ts';
-import {requestMediaJob} from '../media.ts';
+import {requestMediaJob, videoHold} from '../media.ts';
 // TA-S1: social drafts and post decisions.
 import {ensureMediaDraft, rejectPostsForMedia} from '../social/drafts.ts';
 import {decidePost} from './posts.ts';
@@ -125,6 +127,13 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
 
   switch (review.kind) {
     case 'media': {
+      // 00 principle 7: a video is approved only once the media job has removed its location metadata.
+      if (input.decision !== 'reject') {
+        const media = await db.prepare('SELECT kind,derived_at,derived_error FROM advisor_media WHERE id=?').bind(review.ref_id)
+          .first<{kind: string; derived_at: string | null; derived_error: string | null}>();
+        const hold = media ? videoHold(media) : null;
+        if (hold) return {status: 'conflict', error: hold};
+      }
       if (input.decision === 'edit') {
         const credit = clean((input.patch as {credit?: unknown} | undefined)?.credit, CREDIT_MAX);
         if (!credit) return {status: 'invalid', error: 'an edit sets the credit'};

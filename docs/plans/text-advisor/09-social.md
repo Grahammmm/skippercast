@@ -107,10 +107,11 @@ same place the data jobs run, in Python with Pillow:
   originals are safe before the job runs; pages show the original (stripped)
   until `public.jpg` exists.
 
-Video: no processing. Validity checks are done by the job with `ffprobe`
+Video: no transcoding. Validity checks are done by the job with `ffprobe`
 when present on the runner (container, codec, duration, size) and the
 result is stored on the media row; a video that fails gets `failed` with a
-reason the admin can see.
+reason the admin can see. (As built below: the job strips every video's
+container metadata with ffmpeg; the validity checks are still not built.)
 
 ### As built (TA-M1)
 
@@ -202,6 +203,52 @@ reason the admin can see.
   orientation 2-8 is never served as the original (404 until `public.jpg`
   exists), since its pixels are sideways without the tag.
 - PNG `eXIf` orientation is not read (PNG rows have a null orientation).
+
+### As built (video privacy)
+
+Raised with TA-S2: video originals kept the camera's container metadata, so the
+public `.mp4` could carry a position (00 principle 7). Fixed:
+
+- **The job.** `media.ts mediaJobWork` adds `videos`: every stored video that is
+  not rejected and has no `derived_at`, private ones too (so a video is clean
+  before anyone reviews it), oldest first, 5 a call; `mediaJobPending` counts
+  them. `media_job.py derive_video` streams the original from R2 to a temporary
+  file, finds its video stream with `ffprobe`, and runs `ffmpeg -i in
+  -map_metadata -1 -map_metadata:s -1 -map_chapters -1 -dn -sn -c copy
+  -fflags +bitexact -movflags +faststart -f mp4 out` (stream copy, never a
+  transcode; `-tag:v hvc1` for HEVC; data tracks such as QuickTime timed
+  metadata and subtitles dropped; no encoder tags). It then checks the result
+  twice: `location_tags` over `ffprobe -show_format -show_streams` (any
+  format or stream tag naming `location`, `xyz`, `ISO6709` or `gps`) and
+  `file_location_atoms`, a box walk of every top-level box but `mdat` that finds
+  a `©xyz` or `loci` atom and any leaf box (QuickTime `keys` included) naming
+  `com.apple.quicktime.location` or ISO 6709. Anything left gives the video up
+  (`location-left: ...`). The clean file goes to `advisor/derived/<id>/video.mp4`
+  (`video/mp4`, `x-amz-meta-source-sha256`, `x-amz-meta-stripped: 1`, its width
+  and height), and `media-done` reports `{media_id, keys: {video}, width?,
+  height?}`; a rerun on the same original copies nothing. Without `ffmpeg` or
+  `ffprobe` on the runner the video is reported `no-ffmpeg`
+  (docs/operations/runners.md lists ffmpeg as a requirement; the workflow warns
+  when it is missing). The original stays private in R2, as every original does.
+- **`/media/<id>.mp4`** serves only `video.mp4`, as `video/mp4` with the same
+  range support, for an approved or posted video with `derived_at` and no
+  `derived_error`; the original is never served, whatever its type.
+- **Holds.** `media.ts videoHold` names why a video is not ready (waiting for
+  the job; no ffmpeg; another failure). `decideReview` refuses to approve or
+  edit a media review of such a video (409 with that text, shown on the queue
+  card as "Held"); rejecting always works. `approvalHold` refuses a post with
+  such a video, so its draft card shows the same reason. The publisher waits for
+  a pending copy (dispatches the job, the post stays `approved`, outcome
+  `deferred`) and fails the post when stripping failed. The text admin's
+  "ok <code>" on such a video changes nothing.
+- **Tests.** `tests/test_advisor_video_privacy.mjs` (the work list, `media-done`,
+  the holds, the publisher, `/media/<id>.mp4` never serving an original) and
+  `tests/unit/test_advisor_media_job.py` (`location_atoms` on crafted MP4 bytes
+  with a `©xyz` atom, a QuickTime `keys` location, a `loci` atom, malformed
+  boxes; `location_tags`; the command; `no-ffmpeg`; and, with ffmpeg present, a
+  real clip carrying `©xyz` and one carrying a `keys` location stripped clean,
+  else skipped with the allow-listed reason "ffmpeg and ffprobe are not
+  installed ...").
 
 ## Drafts (SO-1, SP-3)
 
@@ -525,11 +572,9 @@ tests. Fixtures in `tests/fixtures/advisor/meta/`.
   `approved` with a time is the schedule), video Stories to the Page and the
   `ffprobe` checks on videos.
 - **Privacy note.** Video originals are not metadata-stripped at intake (TA-C4
-  strips JPEG and PNG only), so the public `.mp4` can carry the camera's
-  location atoms while the video is approved or posted. Media ids are random
-  128-bit values and only Meta is given the URL; stripping MP4/MOV metadata (or
-  limiting the URL to the publishing window) is an owner decision raised with
-  this task.
+  strips JPEG and PNG only), so the public `.mp4` could carry the camera's
+  location atoms. Resolved by the video privacy fix (§ Derived images, As built
+  (video privacy)): `.mp4` now serves only the job's stripped copy.
 - **Tests.** `tests/test_advisor_social_publish.mjs`: photo, carousel, a Reel
   `IN_PROGRESS` across two ticks with one container, a Story, the quota, partial
   failure and the retry of the failed surface only, idempotent reruns (a stored

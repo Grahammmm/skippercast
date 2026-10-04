@@ -11,6 +11,10 @@ from datetime import datetime, timezone
 import hashlib
 import io
 import json
+import os
+import shutil
+import subprocess
+import tempfile
 import unittest
 from unittest import mock
 from urllib.error import HTTPError
@@ -25,6 +29,8 @@ try:
 except ImportError:
     HAVE_PILLOW = False
 NO_PILLOW = 'Pillow and pillow-heif are not installed (pip install -e ".[advisor]")'
+HAVE_FFMPEG = bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
+NO_FFMPEG = 'ffmpeg and ffprobe are not installed (the advisor media runner needs them; docs/operations/runners.md)'
 
 EMPTY = hashlib.sha256(b'').hexdigest()
 
@@ -61,6 +67,19 @@ class FakeR2:
     def put(self, key, body, metadata, content_type='image/jpeg'):
         self.puts.append(key)
         self.objects[key] = (body, {k: str(v) for k, v in metadata.items()})
+        self.types = {**getattr(self, 'types', {}), key: content_type}
+
+    def get_file(self, key, path):
+        found = self.objects.get(key)
+        if not found:
+            return False
+        with open(path, 'wb') as out:
+            out.write(found[0])
+        return True
+
+    def put_file(self, key, path, metadata, content_type='video/mp4'):
+        with open(path, 'rb') as handle:
+            self.put(key, handle.read(), metadata, content_type)
 
 
 class FakeApi:
@@ -199,7 +218,7 @@ class JobLoopTests(unittest.TestCase):
         lines = []
         counts = mj.run(api, Flaky(), {}, None, log=lines.append)
         self.assertEqual(api.reports, [{'media_id': 'gone', 'error': 'original-missing'}])
-        self.assertEqual(counts, {'media': 0, 'graphics': 0, 'failed': 1, 'transient': 1})
+        self.assertEqual(counts, {'media': 0, 'graphics': 0, 'videos': 0, 'failed': 1, 'transient': 1})
         self.assertTrue(any('retry later' in line for line in lines))
 
     def test_display_number(self):
@@ -226,6 +245,136 @@ class JobLoopTests(unittest.TestCase):
                     left, top, right, bottom = box
                     self.assertTrue(0 <= left < right <= width and 0 <= top < bottom <= height, f'{layout}.{name}')
             self.assertEqual(spec[layout]['band_box'][3], height, f'{layout}: the band is at the bottom')
+
+
+# ---- video metadata (00 principle 7) -------------------------------------------------------
+
+def box(kind, payload=b''):
+    kind = kind if isinstance(kind, bytes) else kind.encode('latin-1')
+    return (8 + len(payload)).to_bytes(4, 'big') + kind + payload
+
+
+def mp4(*moov_children, mdat=b'\0' * 16):
+    """A minimal ISO-BMFF file: ftyp, moov with the given children (after an mvhd), mdat."""
+    return box('ftyp', b'isom\0\0\x02\0isomiso2mp41') + box('moov', box('mvhd', b'\0' * 100) + b''.join(moov_children)) + box('mdat', mdat)
+
+
+# A QuickTime udta location atom as an iPhone writes it: ©xyz, a 16-bit length, a 16-bit language, ISO 6709 text.
+XYZ = box(b'\xa9xyz', len(b'+35.3658-120.8499/').to_bytes(2, 'big') + b'\x15\xc7' + b'+35.3658-120.8499/')
+
+
+class VideoMetadataTests(unittest.TestCase):
+    def test_a_udta_xyz_atom_is_found_and_a_clean_file_is_clean(self):
+        self.assertEqual(mj.location_atoms(mp4(box('udta', XYZ))), ['xyz-atom'])
+        self.assertEqual(mj.location_atoms(mp4(box('trak', box('udta', XYZ)))), ['xyz-atom'], 'inside a track too')
+        self.assertEqual(mj.location_atoms(mp4(box('udta', box('name', b'clip')))), [])
+        self.assertEqual(mj.location_atoms(mp4()), [])
+
+    def test_quicktime_keys_naming_the_location_and_a_3gpp_loci_atom_are_found(self):
+        keys_box = box('keys', b'\0\0\0\0' + (1).to_bytes(4, 'big') + box('mdta', b'com.apple.quicktime.location.ISO6709'))
+        quicktime_meta = box('meta', box('hdlr', b'\0' * 24) + keys_box + box('ilst', b''))
+        self.assertEqual(mj.location_atoms(mp4(quicktime_meta)), ['keys-location'])
+        iso_meta = box('meta', b'\0\0\0\0' + box('hdlr', b'\0' * 24) + keys_box)   # a full box (version, flags)
+        self.assertEqual(mj.location_atoms(mp4(box('udta', iso_meta))), ['keys-location'])
+        self.assertEqual(mj.location_atoms(mp4(box('udta', box('loci', b'\0' * 20)))), ['loci-atom'])
+
+    def test_samples_are_not_read_and_malformed_boxes_never_raise(self):
+        self.assertEqual(mj.location_atoms(mp4(mdat=b'com.apple.quicktime.location.ISO6709')), [], 'mdat holds samples, not metadata')
+        for broken in (b'', b'\0\0\0', box('moov')[:-1] + b'\xff' * 3, (2 ** 31).to_bytes(4, 'big') + b'moov' + XYZ, mp4(box('udta', XYZ))[:40]):
+            mj.location_atoms(broken)
+
+    def test_the_file_walk_skips_mdat_and_reads_every_other_top_level_box(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dirty, clean = os.path.join(tmp, 'dirty.mp4'), os.path.join(tmp, 'clean.mp4')
+            with open(dirty, 'wb') as handle:
+                handle.write(mp4(box('udta', XYZ)) + box('udta', XYZ))
+            with open(clean, 'wb') as handle:
+                handle.write(mp4(mdat=XYZ * 4))
+            self.assertEqual(mj.file_location_atoms(dirty), ['xyz-atom'])
+            self.assertEqual(mj.file_location_atoms(clean), [])
+
+    def test_location_tags_reads_ffprobe_format_and_stream_tags(self):
+        probe_json = {'format': {'tags': {'major_brand': 'isom', 'location': '+35.3658-120.8499/', 'com.apple.quicktime.location.ISO6709': 'x'}},
+                      'streams': [{'tags': {'handler_name': 'VideoHandler'}}, {'tags': {'location-eng': 'x'}}]}
+        self.assertEqual(mj.location_tags(probe_json), ['format:location', 'format:com.apple.quicktime.location.ISO6709', 'stream1:location-eng'])
+        self.assertEqual(mj.location_tags({'format': {'tags': {'encoder': 'Lavf'}}, 'streams': []}), [])
+        self.assertEqual(mj.location_tags(None), [])
+
+    def test_the_strip_command_copies_streams_without_any_metadata(self):
+        command = mj.strip_command('ffmpeg', 'in.mov', 'out.mp4')
+        for flag in (['-map_metadata', '-1'], ['-map_metadata:s', '-1'], ['-map_chapters', '-1'], ['-c', 'copy'], ['-movflags', '+faststart'], ['-f', 'mp4']):
+            self.assertTrue(any(command[i:i + 2] == flag for i in range(len(command))), flag)
+        self.assertIn('-dn', command)
+        self.assertNotIn('-tag:v', command)
+        hevc = mj.strip_command('ffmpeg', 'a', 'b', hevc=True)
+        self.assertEqual(hevc[hevc.index('-tag:v') + 1], 'hvc1')
+
+    def test_without_ffmpeg_the_video_is_reported_no_ffmpeg(self):
+        item = {'id': 'v1', 'r2_key': 'advisor/media/c1/v1.mov', 'mime': 'video/quicktime', 'sha256': 'a', 'bytes': 3, 'keys': {'video': 'advisor/derived/v1/video.mp4'}}
+        r2 = FakeR2({item['r2_key']: (b'mov', {})})
+        with self.assertRaises(mj.Unreadable) as raised:
+            mj.derive_video(item, r2, log=lambda *_: None, which=lambda _: None)
+        self.assertEqual(str(raised.exception), 'no-ffmpeg')
+        api = FakeApi([{'media': [], 'graphics': [], 'videos': [item]}])
+        with mock.patch.object(mj.shutil, 'which', return_value=None):
+            counts = mj.run(api, r2, {}, None, log=lambda *_: None)
+        self.assertEqual(api.reports, [{'media_id': 'v1', 'error': 'no-ffmpeg'}])
+        self.assertEqual(counts, {'media': 0, 'graphics': 0, 'videos': 0, 'failed': 1, 'transient': 0})
+        self.assertEqual(r2.puts, [], 'nothing uploaded')
+
+
+def ffmpeg_clip(path, *metadata):
+    subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=64x48:rate=10',
+                    '-f', 'lavfi', '-i', 'sine=duration=1', '-shortest', '-c:v', 'mpeg4', '-c:a', 'aac', *metadata, str(path)], check=True)
+
+
+@unittest.skipUnless(HAVE_FFMPEG, NO_FFMPEG)
+class VideoStripTests(unittest.TestCase):
+    def strip(self, *metadata, name='in.mov'):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, name)
+            ffmpeg_clip(source, *metadata)
+            with open(source, 'rb') as handle:
+                original = handle.read()
+        item = {'id': 'v1', 'r2_key': 'advisor/media/c1/v1.mov', 'mime': 'video/quicktime', 'sha256': hashlib.sha256(original).hexdigest(),
+                'bytes': len(original), 'keys': {'video': 'advisor/derived/v1/video.mp4'}}
+        r2 = FakeR2({item['r2_key']: (original, {})})
+        return mj.derive_video(item, r2, log=lambda *_: None), r2, item, original
+
+    def check_clean(self, data):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'out.mp4')
+            with open(path, 'wb') as handle:
+                handle.write(data)
+            self.assertEqual(mj.file_location_atoms(path), [])
+            probed = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', path],
+                                               capture_output=True, check=True).stdout)
+            self.assertEqual(mj.location_tags(probed), [])
+            self.assertNotIn(b'+35.3658-120.8499', data)
+            return probed
+
+    def test_a_udta_location_atom_is_removed_and_the_streams_are_kept(self):
+        payload, r2, item, original = self.strip('-metadata', 'location=+35.3658-120.8499/')
+        self.assertIn('xyz-atom', mj.location_atoms(original), 'the fixture carries the atom')
+        self.assertEqual(payload, {'media_id': 'v1', 'keys': {'video': 'advisor/derived/v1/video.mp4'}, 'width': 64, 'height': 48})
+        stripped, meta = r2.objects['advisor/derived/v1/video.mp4']
+        self.assertEqual((meta['source-sha256'], meta['stripped'], r2.types['advisor/derived/v1/video.mp4']), (item['sha256'], '1', 'video/mp4'))
+        probed = self.check_clean(stripped)
+        self.assertEqual(sorted(s['codec_type'] for s in probed['streams']), ['audio', 'video'])
+        # A rerun on the same original copies nothing.
+        mj.derive_video(item, r2, log=lambda *_: None)
+        self.assertEqual(r2.puts, ['advisor/derived/v1/video.mp4'])
+
+    def test_a_quicktime_keys_location_is_removed(self):
+        _, r2, _, original = self.strip('-movflags', 'use_metadata_tags', '-metadata', 'com.apple.quicktime.location.ISO6709=+35.3658-120.8499/')
+        self.assertIn('keys-location', mj.location_atoms(original))
+        self.check_clean(r2.objects['advisor/derived/v1/video.mp4'][0])
+
+    def test_a_file_ffprobe_cannot_read_is_given_up(self):
+        item = {'id': 'v2', 'r2_key': 'advisor/media/c1/v2.mp4', 'mime': 'video/mp4', 'sha256': 'b', 'bytes': 9, 'keys': {'video': 'advisor/derived/v2/video.mp4'}}
+        with self.assertRaises(mj.Unreadable) as raised:
+            mj.derive_video(item, FakeR2({item['r2_key']: (b'not a video at all', {})}), log=lambda *_: None)
+        self.assertEqual(str(raised.exception), 'probe-failed')
 
 
 def photo_bytes(size=(4032, 3024), fmt='JPEG', **save):
@@ -335,7 +484,7 @@ class DerivedImageTests(unittest.TestCase):
         item = {'id': 'm1', 'r2_key': 'advisor/media/c1/m1', 'mime': 'image/jpeg', 'sha256': 's', 'bytes': len(data), 'keys': keys('m1')}
         api = FakeApi([{'media': [item], 'graphics': []}, {'media': [item], 'graphics': []}])
         counts = mj.run(api, r2, self.spec, None, log=lambda *_: None)
-        self.assertEqual(counts, {'media': 1, 'graphics': 0, 'failed': 0, 'transient': 0})
+        self.assertEqual(counts, {'media': 1, 'graphics': 0, 'videos': 0, 'failed': 0, 'transient': 0})
         self.assertEqual(api.reports, [{'media_id': 'm1', 'keys': keys('m1'), 'width': 900, 'height': 600, 'source_width': 900, 'source_height': 600}])
 
 

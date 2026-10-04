@@ -10,8 +10,9 @@
 //
 // Approval is refused (409) while a photo is held: a has_person (or nsfw) photo
 // whose media review is not approved, a media review still open, a rejected
-// photo, a boat that is not verified or whose photo consent is no longer
-// active (05 § Verification and § Consent).
+// photo, a video whose location metadata the media job has not removed (00
+// principle 7; media.ts videoHold), a boat that is not verified or whose photo
+// consent is no longer active (05 § Verification and § Consent).
 //
 // TA-S2, publishing an approved post (social/publish.ts):
 //   post now   approved -> scheduled_for cleared, published in the request (one status read for a
@@ -23,7 +24,7 @@ import {adminMediaUrl} from './queue.ts';
 import {reviewId} from '../contacts.ts';
 import {consentActive} from '../intake/skippers.ts';
 import {bumpPagesVersion} from '../intake/reports.ts';
-import {requestMediaJob} from '../media.ts';
+import {requestMediaJob, videoHold} from '../media.ts';
 import {advisorLog} from '../log.ts';
 import {COLLABORATORS_MAX, HANDLE, POST_KINDS, POST_STATUSES, REVIEW_REASON, TARGETS_FOR, USER_TAGS_MAX, captionProblem, captionStats, cleanCaption} from '../social/drafts.ts';
 import type {PostKind, Target, UserTag} from '../social/drafts.ts';
@@ -47,23 +48,30 @@ export interface PostRow {
 const parse = <T>(json: string | null, fallback: T): T => { try { const v = JSON.parse(json ?? 'null'); return v ?? fallback; } catch { return fallback; } };
 export const mediaIdsOf = (post: Pick<PostRow, 'media_json'>): string[] => parse<unknown[]>(post.media_json, []).filter((m): m is string => typeof m === 'string' && /^[\w-]{1,64}$/.test(m)).slice(0, 10);
 
-interface HoldMedia {id: string; kind: string; has_person: number | null; publish_state: string; credit: string | null; r2_key: string; open_review: number}
+interface HoldMedia {id: string; kind: string; has_person: number | null; publish_state: string; credit: string | null; r2_key: string; open_review: number;
+  derived_at: string | null; derived_error: string | null}
 async function mediaOf(db: D1Database, ids: string[]): Promise<HoldMedia[]> {
   if (!ids.length) return [];
-  const rows = (await db.prepare(`SELECT m.id,m.kind,m.has_person,m.publish_state,m.credit,m.r2_key,
+  const rows = (await db.prepare(`SELECT m.id,m.kind,m.has_person,m.publish_state,m.credit,m.r2_key,m.derived_at,m.derived_error,
       (SELECT COUNT(*) FROM advisor_reviews r WHERE r.kind='media' AND r.ref_id=m.id AND r.status='open') AS open_review
       FROM advisor_media m WHERE m.id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all<HoldMedia>()).results;
   return ids.map(id => rows.find(r => r.id === id)).filter((r): r is HoldMedia => Boolean(r));
 }
 
-/** Why the post cannot be approved yet, or null (the hold reasons in the header). */
-export async function approvalHold(db: D1Database, post: Pick<PostRow, 'boat_id' | 'media_json'>): Promise<string | null> {
+/**
+ * Why the post cannot be approved yet, or null (the hold reasons in the header).
+ * `videoPendingOk`: the publisher's re-check, which waits for a video's stripped
+ * copy itself (it dispatches the media job and defers) instead of failing the post.
+ */
+export async function approvalHold(db: D1Database, post: Pick<PostRow, 'boat_id' | 'media_json'>, opts: {videoPendingOk?: boolean} = {}): Promise<string | null> {
   const ids = mediaIdsOf(post), media = await mediaOf(db, ids);
   if (!ids.length || media.length < ids.length) return 'a photo of this post no longer exists';
   for (const m of media) {
     if (m.publish_state === 'rejected') return 'a photo of this post was rejected';
     if (m.open_review) return 'a photo of this post is waiting for its photo review';
     if (m.has_person === 1 && m.publish_state !== 'approved') return 'a photo with a person in it needs its photo review approved first';
+    const video = videoHold(m);
+    if (video && !(opts.videoPendingOk && !m.derived_error)) return video;
   }
   if (post.boat_id) {
     const boat = await db.prepare('SELECT status,consent_photos_at,consent_revoked_at FROM advisor_boats WHERE id=?').bind(post.boat_id)

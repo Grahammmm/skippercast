@@ -587,11 +587,17 @@ export async function verifyUploadToken(keys: {uploadKey: CryptoKey}, token: str
 //   Pillow, and POSTs /api/advisor/jobs/media-done -> mediaJobDone stamps
 //   derived_at (and derived_error when it gave up), or the graphic's state.
 //
+// Videos (00 principle 7): every stored video is stripped by the same job
+// (ffmpeg stream copy without container metadata or location atoms) to
+// advisor/derived/<id>/video.mp4 before it can be approved, posted or served.
+//
 // The Worker never decodes an image: everything here is bookkeeping.
 
 /** The derived files of one media item (02 § R2). */
 export const derivedKeys = (mediaId: string): {public: string; thumb: string; story: string} =>
   ({public: derivedKey(mediaId), thumb: `advisor/derived/${mediaId}/thumb.jpg`, story: `advisor/derived/${mediaId}/story.jpg`});
+/** A video's copy with its container metadata removed (no location atoms): the only video file /media serves. */
+export const derivedVideoKey = (mediaId: string): string => `advisor/derived/${mediaId}/video.mp4`;
 export const MEDIA_JOB_WORKFLOW = 'advisor-media.yml';
 /** job_state key holding the time of the last dispatch (ISO), the throttle's claim. */
 export const MEDIA_JOB_KEY = 'advisor.media.dispatched_at';
@@ -614,7 +620,7 @@ export interface GraphicState extends GraphicRequest {
 const GRAPHIC_KEY = /^advisor\/posts\/[\w-]{1,64}\/[\w-]{1,64}\.jpg$/;
 const MAX_GRAPHIC_DATA = 16 * 1024;
 const MAX_GRAPHIC_MEDIA = 10;
-export const WORK_LIMIT = {media: 25, graphics: 10};
+export const WORK_LIMIT = {media: 25, graphics: 10, videos: 5};
 const HEIF_SQL = HEIF_MIMES.map(m => `'${m}'`).join(',');
 
 /**
@@ -628,10 +634,20 @@ const HEIF_SQL = HEIF_MIMES.map(m => `'${m}'`).join(',');
 const PENDING_MEDIA = `kind='image' AND r2_key<>'' AND publish_state<>'rejected' AND derived_at IS NULL
   AND (bytes>? OR mime IN (${HEIF_SQL}) OR orientation>1 OR publish_state IN ('queued','approved','posted'))`;
 
+/**
+ * Videos the job still has to strip (00 principle 7: a video never leaks a
+ * position): every stored video that is not rejected and has no derived_at,
+ * private ones too, so a video is stripped before anyone reviews or approves it.
+ * The job copies the streams without the container's metadata (ffmpeg
+ * -map_metadata -1, no location atoms) to advisor/derived/<id>/video.mp4.
+ */
+const PENDING_VIDEO = `kind='video' AND r2_key<>'' AND publish_state<>'rejected' AND derived_at IS NULL`;
+
 /** `orientation`: the EXIF value read at intake (1-8, null when not a JPEG); the job applies it, since the stored original has no EXIF. */
 export interface MediaWorkItem {id: string; r2_key: string; mime: string; sha256: string; bytes: number; orientation: number | null; keys: {public: string; thumb: string; story: string}}
 export interface GraphicWorkItem {id: string; kind: GraphicKind; out_key: string; data: Record<string, unknown>; media: {id: string; r2_key: string; mime: string; orientation: number | null; public_key: string}[]}
-export interface MediaWork {media: MediaWorkItem[]; graphics: GraphicWorkItem[]}
+export interface VideoWorkItem {id: string; r2_key: string; mime: string; sha256: string; bytes: number; keys: {video: string}}
+export interface MediaWork {media: MediaWorkItem[]; graphics: GraphicWorkItem[]; videos: VideoWorkItem[]}
 
 const nowMs = (now: number | Date): number => new Date(now).getTime();
 
@@ -639,11 +655,12 @@ const nowMs = (now: number | Date): number => new Date(now).getTime();
 export async function mediaJobPending(db: D1Database): Promise<number> {
   const media = await db.prepare(`SELECT COUNT(*) AS n FROM advisor_media WHERE ${PENDING_MEDIA}`).bind(VISION_MAX_BYTES).first<{n: number}>();
   const graphics = await db.prepare("SELECT COUNT(*) AS n FROM job_state WHERE key LIKE 'advisor.graphic.%' AND json_valid(value) AND json_extract(value,'$.status')='pending'").first<{n: number}>();
-  return (media?.n ?? 0) + (graphics?.n ?? 0);
+  const videos = await db.prepare(`SELECT COUNT(*) AS n FROM advisor_media WHERE ${PENDING_VIDEO}`).first<{n: number}>();
+  return (media?.n ?? 0) + (graphics?.n ?? 0) + (videos?.n ?? 0);
 }
 
 /** One page of work for the job, oldest first: GET /api/advisor/jobs/media. */
-export async function mediaJobWork(db: D1Database, limit = WORK_LIMIT): Promise<MediaWork> {
+export async function mediaJobWork(db: D1Database, limit: {media: number; graphics: number; videos?: number} = WORK_LIMIT): Promise<MediaWork> {
   const rows = (await db.prepare(`SELECT id,r2_key,mime,sha256,bytes,orientation FROM advisor_media WHERE ${PENDING_MEDIA} ORDER BY created_at,id LIMIT ?`)
     .bind(VISION_MAX_BYTES, limit.media).all<{id: string; r2_key: string; mime: string; sha256: string; bytes: number; orientation: number | null}>()).results;
   const media = rows.map(r => ({...r, keys: derivedKeys(r.id)}));
@@ -659,7 +676,22 @@ export async function mediaJobWork(db: D1Database, limit = WORK_LIMIT): Promise<
     graphics.push({id, kind: state.kind, out_key: state.out_key, data: state.data ?? {},
       media: ids.flatMap(m => { const row = byId.get(m); return row ? [{...row, public_key: derivedKey(m)}] : []; })});
   }
-  return {media, graphics};
+  const videos = (await db.prepare(`SELECT id,r2_key,mime,sha256,bytes FROM advisor_media WHERE ${PENDING_VIDEO} ORDER BY created_at,id LIMIT ?`)
+    .bind(limit.videos ?? WORK_LIMIT.videos).all<{id: string; r2_key: string; mime: string; sha256: string; bytes: number}>()).results
+    .map(r => ({...r, keys: {video: derivedVideoKey(r.id)}}));
+  return {media, graphics, videos};
+}
+
+/**
+ * Why a video cannot be approved or published yet, or null when its stripped
+ * copy exists (derived_at set, no derived_error). The admin card shows it.
+ */
+export function videoHold(row: {kind: string; derived_at: string | null; derived_error: string | null}): string | null {
+  if (row.kind !== 'video') return null;
+  if (row.derived_error === 'no-ffmpeg') return 'this video still carries its camera metadata: the media runner has no ffmpeg (docs/operations/runners.md), so its location data could not be removed';
+  if (row.derived_error) return `this video still carries its camera metadata: removing it failed (${row.derived_error.slice(0, 80)})`;
+  if (!row.derived_at) return 'this video is waiting for the media job to remove its location metadata (within 15 minutes)';
+  return null;
 }
 
 export type DispatchOutcome = 'dispatched' | 'throttled' | 'no-token' | 'no-db' | `failed-${number}` | 'error';
@@ -744,7 +776,10 @@ const dim = (v: unknown): number | null => typeof v === 'number' && Number.isInt
 const ERROR_TEXT = /^[\w .:,;()/'-]{1,200}$/;
 
 /**
- * POST /api/advisor/jobs/media-done: the job finished one item. For media,
+ * POST /api/advisor/jobs/media-done: the job finished one item. For a video,
+ * `keys` must be exactly {video: advisor/derived/<id>/video.mp4} (width and
+ * height optional); an `error` ('no-ffmpeg' when the runner lacks it) gives the
+ * video up, which holds its approval. For an image,
  * `keys` must be exactly its derivedKeys (story optional) and width/height the
  * public.jpg's; derived_at is stamped, and the original's width/height filled
  * from source_width/source_height when intake could not read them (HEIC). With
@@ -762,15 +797,27 @@ export async function mediaJobDone(env: Env, input: MediaDoneInput, now: number 
   if (typeof input.media_id === 'string' && input.graphic_id === undefined) {
     const id = input.media_id;
     if (!ID.test(id)) return {ok: false, error: 'invalid'};
+    const found = await db.prepare("SELECT kind FROM advisor_media WHERE id=? AND kind IN ('image','video')").bind(id).first<{kind: string}>();
+    if (!found) return {ok: false, error: 'not-found'};
+    const video = found.kind === 'video';
     if (!error) {
-      const expected = derivedKeys(id);
-      if (!keys || keys.public !== expected.public || keys.thumb !== expected.thumb || (keys.story !== undefined && keys.story !== expected.story)
-        || Object.keys(keys).some(k => !['public', 'thumb', 'story'].includes(k)) || width === null || height === null) return {ok: false, error: 'invalid'};
+      if (video) {
+        // The stripped copy: exactly its key; its size when ffprobe read one.
+        if (!keys || keys.video !== derivedVideoKey(id) || Object.keys(keys).length !== 1
+          || (input.width !== undefined && width === null) || (input.height !== undefined && height === null)) return {ok: false, error: 'invalid'};
+      } else {
+        const expected = derivedKeys(id);
+        if (!keys || keys.public !== expected.public || keys.thumb !== expected.thumb || (keys.story !== undefined && keys.story !== expected.story)
+          || Object.keys(keys).some(k => !['public', 'thumb', 'story'].includes(k)) || width === null || height === null) return {ok: false, error: 'invalid'};
+      }
     }
-    const r = await db.prepare(`UPDATE advisor_media SET derived_at=?,derived_error=?,width=COALESCE(width,?),height=COALESCE(height,?) WHERE id=? AND kind='image'`)
-      .bind(at, error, error ? null : dim(input.source_width), error ? null : dim(input.source_height), id).run();
+    const r = video
+      ? await db.prepare(`UPDATE advisor_media SET derived_at=?,derived_error=?,width=COALESCE(width,?),height=COALESCE(height,?) WHERE id=? AND kind='video'`)
+        .bind(at, error, error ? null : width, error ? null : height, id).run()
+      : await db.prepare(`UPDATE advisor_media SET derived_at=?,derived_error=?,width=COALESCE(width,?),height=COALESCE(height,?) WHERE id=? AND kind='image'`)
+        .bind(at, error, error ? null : dim(input.source_width), error ? null : dim(input.source_height), id).run();
     if (!r.meta.changes) return {ok: false, error: 'not-found'};
-    advisorLog(error ? 'warn' : 'info', error ? 'advisor_media_derive_failed' : 'advisor_media_derived', {count: 1, ...(error ? {reason: error} : {})});
+    advisorLog(error ? 'warn' : 'info', error ? (video ? 'advisor_video_strip_failed' : 'advisor_media_derive_failed') : (video ? 'advisor_video_stripped' : 'advisor_media_derived'), {count: 1, ...(error ? {reason: error} : {})});
     return {ok: true, kind: 'media', status: error ? 'failed' : 'done'};
   }
   if (typeof input.graphic_id === 'string' && input.media_id === undefined) {

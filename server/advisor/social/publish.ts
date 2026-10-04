@@ -9,9 +9,10 @@
 //
 // One run of publish:
 //   1. A lease (job_state advisor.publish.lock.<id>) so the cron and "post now" never run one post twice.
-//   2. Media: every image must be derived (public.jpg, story.jpg; derived_at set): if not, the
-//      media job is dispatched and the post waits (still `approved`). A photo given up by the job
-//      fails the post. An `approved` post is re-checked against admin/posts.ts approvalHold.
+//   2. Media: every image must be derived (public.jpg, story.jpg; derived_at set) and every video
+//      stripped of its container metadata (video.mp4, 00 principle 7): if not, the media job is
+//      dispatched and the post waits (still `approved`). A photo or video given up by the job fails
+//      the post. An `approved` post is re-checked against admin/posts.ts approvalHold.
 //   3. status -> publishing.
 //   4. Instagram (when targeted and ig_media_id is not stored): quota first
 //      (content_publishing_limit; used up -> scheduled_for = max(scheduled_for, now) + 1 h, status
@@ -43,7 +44,7 @@ import {advisorSettings} from '../settings.ts';
 import {advisorLog} from '../log.ts';
 import {t} from '../strings.ts';
 import {recordPublish} from '../analytics.ts';
-import {requestMediaJob} from '../media.ts';
+import {requestMediaJob, videoHold} from '../media.ts';
 import {teamSender} from '../consumer.ts';
 import {channelFor} from '../channels/index.ts';
 import {approvalHold, mediaIdsOf} from '../admin/posts.ts';
@@ -322,14 +323,18 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     const media = ids.map(id => rows.find(r => r.id === id)).filter((m): m is MediaRow => Boolean(m));
     if (post.status !== 'publishing') {
       // Consent, the boat's verification and the photos' reviews are checked again before anything goes out.
-      const hold = await approvalHold(db, post);
+      const hold = await approvalHold(db, post, {videoPendingOk: true});
       if (hold) { await fail(db, post.id, hold, at(), [post.status]); outcome = 'held'; error = hold; return {outcome, error}; }
     }
     if (!media.length || media.length < ids.length) { error = 'a photo of this post no longer exists'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
-    const broken = media.find(m => !m.r2_key || (m.kind === 'image' && m.derived_error) || (m.kind !== 'image' && m.kind !== 'video'));
-    if (broken) { error = 'a photo of this post could not be prepared for posting'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
-    if (media.some(m => m.kind === 'image' && !m.derived_at)) {
-      // public.jpg and story.jpg come from the media job (09 § Derived images): ask for them and wait.
+    const broken = media.find(m => !m.r2_key || m.derived_error || (m.kind !== 'image' && m.kind !== 'video'));
+    if (broken) {
+      error = (broken.r2_key && videoHold(broken)) || 'a photo of this post could not be prepared for posting';
+      await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error};
+    }
+    if (media.some(m => !m.derived_at)) {
+      // public.jpg and story.jpg, and a video's stripped copy (no location metadata), come from the media job
+      // (09 § Derived images): ask for them and wait.
       await requestMediaJob(env, clock(), deps.dispatch ? {dispatch: deps.dispatch} : {});
       outcome = 'deferred';
       return {outcome};
