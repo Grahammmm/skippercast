@@ -225,6 +225,104 @@ reason the admin can see.
   approval in v1; auto-approval is a later owner decision).
 - Angler photos (AC-1): credit line "Photo: {credit}", no collaborators.
 
+### As built (TA-S1)
+
+- **Where.** `server/advisor/social/drafts.ts` (`ensureMediaDraft`,
+  `draftFromMedia`, the caption parts, `revokeBoatPosts`,
+  `rejectPostsForMedia`), `server/advisor/prompts/caption.ts`,
+  `catalog/advisor/hashtags.json`, `server/advisor/admin/posts.ts` (the card,
+  the list and the decision), `tools/propose_post.ts`, the Posts view
+  (`web/admin/posts.tsx`, `post-card.tsx`, `posts-form.ts`) and
+  `scripts/advisor/backfill-drafts.mjs`.
+- **One draft per media item.** The post id is `sha256('post:media:' +
+  media_id)[:32]`, so a retried message, a second `propose_post` or the backfill
+  finds the row instead of drafting again; its review is `kind='post'`, reason
+  `social_draft` (02's deterministic review id), inserted only while the post is
+  a draft. `created_by` is `engine`, or the admin's `users.id` for an angler
+  draft made by approving the share.
+- **When.** `ensureMediaDraft` runs from the consumer's `media_queue` applier
+  (05's catch, action and scenery photos, videos and the count-board photo; a
+  retry of a photo already queued still makes the missing draft), from the new
+  `post_draft` action (`propose_post` on a photo already queued), from a media
+  review approved or edited (an angler's shared photo, 06 § Angler photos; a
+  boat photo with no draft yet) and from the backfill. It drafts a boat's photo
+  or video only while it is `queued` or `approved`, the boat is not `rejected`
+  and photo consent is active (re-checked at apply time); an angler's photo
+  only once the team approved the share. A private photo is never drafted.
+- **Kind and surfaces.** A video is a `reel`, a photo classified `count_board` a
+  `story` (no caption, no collaborators, no tags, targets
+  `["instagram_story","facebook_story"]`), any other still a `photo`
+  (`["instagram","facebook"]`). "Any still the skipper marks story" is not
+  built: there is no text command for it yet.
+- **Caption.** Lines: the model line; the credit, "Aboard {boat} (@{handle}) out
+  of {port}." (the mention; without a handle "Aboard {boat} out of {port}.") or
+  for an angler "Photo: {credit}" ("Photo: a SkipperCast angler" when the credit
+  is missing or anonymous); the boat's published report of the photo's local
+  day as "Trip total: 45 vermilion, 12 lings for 22 anglers." (kept lines, at
+  most four, uncertain ones left out; 09's "Limits of rockfish" wording is not
+  derivable from the counts); "Text SkipperCast for today's report:
+  (805) 555-0100" (`ADVISOR_NUMBER`, else `skippercast.com/text`); then, after a
+  blank line, the hashtags: brand, `angler` for an angler's photo, the region's,
+  then each species (the photo's fish ID top candidate at ≥ 0.6, and the
+  report's kept species) followed by its report parent, at most 12. Every
+  string is in `catalog/advisor/strings.json` (`caption_*`, en and es). The
+  feed language is English (`FEED_LANGUAGE`); Spanish captions work through the
+  same strings when a Spanish account exists. `captionProblem` enforces 2,200
+  characters (code points), 30 hashtags and 20 mentions; a generated caption is
+  cut to 2,200.
+- **The model line.** `prompts/caption.ts`: the facts JSON (kind, species
+  names, boat, port, the report line, the skipper's note), a forced tool
+  `record_caption_line` with `{line}` (≤ 150 characters), `max_tokens` 120,
+  temperature 0.4, 15 s timeout, under the global LLM cap, recorded as LLM
+  feature `advisor:caption`. The model sees facts only, not the image. A line
+  with a `#`, `@`, link, `%`, odds word or a number the facts do not contain is
+  refused. A good line is cached in `job_state` `advisor.caption.<media id>`
+  (`{line, language}`); without `ANTHROPIC_API_KEY`, past the cap, on an error
+  or a refused line the fixed line is "{species} on deck." or "Fresh from the
+  water." (not cached, so a later draft of the same photo can try again).
+- **Collaborators and tags.** With a handle: `collaborators_json` `[handle]`
+  (photos and reels) and `user_tags_json` `[{username: handle, x: 0.5, y: 0.5}]`
+  (photos only). Angler photos get neither.
+- **Holds on approval** (`admin/posts.ts approvalHold`, answered 409 with the
+  reason): a photo of the post rejected or gone, a media review of it still
+  open, a `has_person` photo whose media review has not approved it, a boat
+  whose photo consent is no longer active, and a boat that is not verified (05
+  § Verification excludes unverified boats from the social feed; this applies
+  it to every boat post, not only the daily post).
+- **Decisions** (the queue and the Posts view share `POST
+  /api/admin/reviews/<review id>`): approve (optional `patch.scheduled_for`, a
+  time in the next 60 days) sets `status='approved'`, `approved_by`,
+  `approved_at`, and the post's `queued` photos `approved` (they become public
+  for the pages and Meta's fetch; pages version bumped, the media job asked for
+  `public.jpg`); edit takes `caption`, `targets` (a subset of the kind's),
+  `collaborators` (≤ 3 usernames, none on a story), `user_tags` (≤ 20, x and y
+  0-1, photos only) and `scheduled_for`, then approves (review `edited`);
+  reject sets `rejected`. Only a `draft` can be decided. The text admin never
+  decides a post (its kinds are skipper and media).
+- **Revocation and rejection.** `post_revoke` (05 § Consent) sets every `draft`
+  or `approved` post of the boat to `rejected` with `error='consent_revoked'`
+  and closes its open review; posted ones stay. Rejecting a photo's media
+  review does the same to its unposted posts (`error='media_rejected'`). "Forget
+  me" deletes the contact's unposted posts (any status but `posted`, `partial`,
+  `publishing`), their reviews and cached caption lines.
+- **propose_post.** Skippers and crew, their own photo or video of their boat:
+  refuses a rejected photo, a rejected boat and missing consent (the result says
+  how to give it), says when a post exists; otherwise `media_queue` (a private
+  photo, plus the `has_person`/`nsfw` media review its classification calls for)
+  or `post_draft` (already queued), each with the optional `hint` (≤ 200
+  characters), which reaches the prompt as a fact.
+- **Backfill.** `node scripts/advisor/backfill-drafts.mjs [--apply] [--local]`:
+  candidates are image and video media `queued` or `approved` (TA-S1 adds
+  `approved`, so a photo whose `has_person` review was approved before this
+  task is not missed), each run through `ensureMediaDraft`. The dry run lists
+  what it would draft; `--apply` drafts through `wrangler d1 execute --json`
+  (bindings inlined as SQL literals); a second run changes nothing. With
+  `ANTHROPIC_API_KEY` in the owner's environment the captions get model lines.
+- **Not built here.** Publishing, "post now", the schedule slots, the calendar
+  grid, per-post stats and `GET /media/<id>.mp4` are TA-S2, TA-S4 and TA-S7.
+- **Tests.** `tests/test_advisor_social_drafts.mjs`; `e2e/admin.spec.ts` opens
+  the Posts view on the angler draft its approved share made, with axe.
+
 ## Daily "what's biting" post (SO-2) and weekly roundup (SP-5)
 
 - Cron 06:30 local on days with at least one published verified report from
@@ -265,6 +363,74 @@ Graph API client (`social/meta.ts`): raw `fetch`, `appsecret_proof`
 error bodies logged with `code`/`subcode` only, a tiny retry on 5xx and on
 code 4 / 17 / 32 (rate limits) with backoff, and a `fetcher` injection for
 tests. Fixtures in `tests/fixtures/advisor/meta/`.
+
+### As built (TA-S0)
+
+- **Client.** `server/advisor/social/meta.ts`. `GRAPH_VERSION` is `v26.0` (the
+  versions page, checked 2026-10-04: released 2026-07-29), `GRAPH_BASE`
+  `https://graph.facebook.com/v26.0`. `graph(cfg, method, path, params)` adds
+  `access_token` and `appsecret_proof` (lowercase hex HMAC-SHA256 of the token
+  keyed with `META_APP_SECRET`) to the query of a GET or the
+  `application/x-www-form-urlencoded` body of a POST, with a 20 s timeout. It
+  retries an HTTP 5xx or error code 4, 17, 32 or 613 (613 added to 09's list:
+  Meta's "calls within one hour" limit) up to three tries in all, waiting 2 s
+  then 8 s; a network failure or timeout is retried only for a GET (a POST may
+  have been applied). Failures throw `MetaError` and log `advisor_meta_error`
+  with `edge` (the path's last word, or `node` for an id), `status`, `code`,
+  `subcode`, `fbtrace_id`, `attempt` and `retrying` only: never the URL, the
+  body, Meta's message (it can echo parameters) or a token. `cfg.attempts`
+  lowers the tries (the health read uses 1); `fetcher` and `sleep` are injected
+  by tests. Ids are checked against `^[\w.-]{1,64}$` before they reach a path.
+- **Helpers.** `igContainer` (kinds `image`, `reel` = `REELS`, `story` =
+  `STORIES` with an image or video, `carousel_item`, `carousel` = `CAROUSEL`
+  with 2-10 children; captions dropped for stories and carousel items,
+  `collaborators` (≤ 3) only on images, Reels and carousels, `user_tags` only
+  on images and carousel items; media URLs must be https), `igContainerStatus`
+  (`fields=status_code,status`), `igPublish` (`media_publish creation_id`),
+  `igPublishingLimit` (`content_publishing_limit?fields=quota_usage,config`,
+  parsed to `{quota_usage, quota_total, quota_duration}`), `igPermalink`,
+  `fbPhoto` (`/photos` with `url`, `message`, and `published=false` plus
+  `scheduled_publish_time` when scheduled), `fbVideoReel` (the 3-phase upload:
+  `video_reels upload_phase=start`, then `POST
+  rupload.facebook.com/video-upload/v26.0/<video_id>` with the headers
+  `Authorization: OAuth <token>` and `file_url`, then `upload_phase=finish
+  video_state=PUBLISHED description`), `fbPhotoStory` (an unpublished `/photos`
+  then `/photo_stories photo_id`) and `pageInfo` (`id,name,
+  instagram_business_account{id,username}`). The rupload call is the one
+  request without `appsecret_proof`: that host is not the Graph API and takes
+  the token as an `Authorization` header only.
+- **Config.** `metaConfigured(env)` needs `META_APP_SECRET`, `META_PAGE_TOKEN`,
+  `META_IG_USER_ID` and `META_PAGE_ID`; the Page token serves both surfaces on
+  the Facebook-Login route, so `META_IG_TOKEN` stays declared in `env.ts` and
+  unused. The deploy (`deploy-cloudflare.yml`, `cloudflare_deploy.sh`) uploads
+  `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`, `META_IG_USER_ID`,
+  `META_PAGE_ID` and `META_PAGE_TOKEN` as Worker secrets, each only when set.
+- **Token script.** `scripts/advisor/meta-token.mjs` reads `META_APP_ID` and
+  `META_APP_SECRET` from the environment (never argv), prints the Facebook Login
+  dialog URL (`v26.0/dialog/oauth`, the scopes of step 4, `response_type=code`,
+  a random `state`) with Meta's `https://www.facebook.com/connect/login_success.html`
+  as the redirect (it must be in the app's Valid OAuth Redirect URIs;
+  `--redirect-uri` overrides), takes the pasted landing address (the `state`
+  must match) or a bare code, exchanges it for a short-lived and then a
+  long-lived user token, lists `/me/accounts` with the proof, picks the only
+  Page or `--page <id>`, and prints `META_PAGE_ID`, `META_PAGE_TOKEN` and
+  `META_IG_USER_ID`. It checks `content_publishing_limit` with the Page token
+  (proves `instagram_content_publish`), asks for `account_type` and fails on
+  anything but `BUSINESS`; Meta does not document that field for the IG User
+  node on this route, so when it is refused the script says so and asks the
+  owner to confirm Business in the Instagram app. `debug_token` reports whether
+  the Page token expires (`expires_at: 0`). Nothing is written to disk.
+- **Health.** `GET /api/admin/health` `meta` is `{configured, quota_usage,
+  quota_total, checked_at, error}`: not configured makes no call; otherwise one
+  `content_publishing_limit` read (one try) at most every 10 minutes, cached in
+  `job_state` `advisor.meta.quota` (failures too, as `error: 'unavailable'`), so
+  the banner's once-a-minute health read does not spend Meta's rate limit.
+  There is no token expiry line: the Page token does not expire.
+- **Schema.** Migration `0011_advisor_social` (02): `advisor_posts`,
+  `advisor_post_stats`, `advisor_contacts.ig_sid` with the unique index
+  `contact_ig_sid`.
+- **Tests.** `tests/test_advisor_meta.mjs` with the recorded responses in
+  `tests/fixtures/advisor/meta/` (placeholder ids and tokens only).
 
 ## Stories (SP-4)
 

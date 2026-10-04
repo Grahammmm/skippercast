@@ -43,7 +43,8 @@
 // TA-I1: skipper registration, consent and crew (05). boat_create inserts the
 // pending boat and makes the contact its skipper; flow_set writes or clears
 // job_state advisor.flow.<contact_id>; consent records consent_photos_at with
-// the message id, or consent_revoked_at; post_revoke is logged until TA-S1;
+// the message id, or consent_revoked_at; post_revoke rejects the boat's draft
+// and approved posts (TA-S1);
 // crew_add links (or creates) the crew contact and texts it the invite through
 // its own channel; crew_remove sets removed_at and clears the boat. Verifying
 // or rejecting a new_skipper review by text now also texts the boat's owner.
@@ -71,6 +72,12 @@
 // TA-W2: the text admin's decision runs admin/decisions.ts decideReview, the
 // same code the admin queue uses; teamSender is how either sends the texts a
 // decision owes (created_by set for the admin queue's).
+//
+// TA-S1: social drafts (09 § Drafts). media_queue also makes the photo's post
+// draft and its `post` review (social/drafts.ts ensureMediaDraft: consent
+// re-checked, one model call for the caption line through deps.engine.fetcher);
+// post_draft drafts a photo already queued (propose_post); post_revoke rejects
+// the boat's draft and approved posts.
 import {advisorSettings} from './settings.ts';
 import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
 // TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
@@ -98,6 +105,8 @@ import {shareKey, CREDIT_MAX} from './intake/anglers.ts';
 // TA-W2: admin decisions, shared by the text admin and the admin queue.
 import {decideReview} from './admin/decisions.ts';
 import type {TeamSend} from './admin/decisions.ts';
+// TA-S1: social drafts.
+import {ensureMediaDraft, revokeBoatPosts} from './social/drafts.ts';
 import type {Env} from '../env.ts';
 import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
@@ -321,8 +330,8 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
         await applyConsent(env, deps, contact, message, action.boatId, action.decision);
         break;
       case 'post_revoke':
-        // TA-S1 sets the boat's draft and approved posts to rejected; until then the revocation is the column and this line.
-        if (await ownsBoat(db, contact.id, action.boatId)) advisorLog('info', 'advisor_post_revoke', {pending: 'TA-S1'});
+        // 05 § Consent: every draft or approved post of the boat is rejected; posted ones stay.
+        if (await ownsBoat(db, contact.id, action.boatId)) advisorLog('info', 'advisor_post_revoke', {rejected: await revokeBoatPosts(db, action.boatId, clock(deps))});
         break;
       case 'crew_add':
         sends += await applyCrewAdd(env, deps, contact, message.id, index, action);
@@ -348,7 +357,10 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
         if (await ownsBoat(db, contact.id, action.boatId)) await db.prepare('UPDATE advisor_boats SET auto_publish=?,updated_at=? WHERE id=?').bind(action.on ? 1 : 0, iso(deps), action.boatId).run();
         break;
       case 'media_queue':
-        await applyMediaQueue(env, deps, contact, action.mediaId);
+        await applyMediaQueue(env, deps, contact, action.mediaId, action.hint);
+        break;
+      case 'post_draft':
+        await applyPostDraft(env, deps, contact, action.mediaId, action.hint);
         break;
       case 'boat_instagram':
         if (/^[a-z0-9._]{1,30}$/.test(String(action.instagram)) && await ownsBoat(db, contact.id, action.boatId))
@@ -466,7 +478,7 @@ async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorCo
   const settings = advisorSettings(env);
   if (contact.id !== settings.adminContactId || contact.role !== 'admin-test' || !/^[0-9a-f]{32}$/.test(id) || !['approved', 'rejected'].includes(decision)) return 0;
   const outcome = await decideReview(env, {reviewId: id, decision: decision === 'approved' ? 'approve' : 'reject', note: 'text admin', by: null, kinds: ['skipper', 'media'], inId, key: String(index)},
-    {now: clock(deps), send: teamSender(env, deps), ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
+    {now: clock(deps), send: teamSender(env, deps), ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {}), ...(deps.engine?.fetcher ? {fetcher: deps.engine.fetcher} : {})});
   if (outcome.status !== 'applied') return 0;
   advisorLog('info', 'advisor_text_admin', {kind: outcome.review.kind, decision});
   return outcome.sends;
@@ -588,17 +600,42 @@ async function applyCrewRemove(env: Env, deps: ConsumerDeps, skipper: AdvisorCon
  * boat); TA-S1 adds the post draft. Only the contact's own media, only for a
  * boat it posts for and whose photo consent is active, only from 'private'.
  */
-async function applyMediaQueue(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, mediaId: string): Promise<void> {
+async function applyMediaQueue(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, mediaId: string, hint?: string): Promise<void> {
   const db = env.DB!;
   if (!ID.test(String(mediaId))) return;
-  const media = await db.prepare("SELECT boat_id FROM advisor_media WHERE id=? AND contact_id=? AND publish_state='private'").bind(mediaId, contact.id).first<{boat_id: string | null}>();
+  // A retry finds the photo already queued: the draft below is still made if the first try stopped before it.
+  const media = await db.prepare("SELECT boat_id,publish_state FROM advisor_media WHERE id=? AND contact_id=? AND publish_state IN ('private','queued')").bind(mediaId, contact.id).first<{boat_id: string | null; publish_state: string}>();
   if (!media?.boat_id || !await postsFor(db, contact.id, media.boat_id)) return;
   const boat = await db.prepare('SELECT name,consent_photos_at,consent_revoked_at FROM advisor_boats WHERE id=?').bind(media.boat_id).first<{name: string; consent_photos_at: string | null; consent_revoked_at: string | null}>();
   if (!boat?.consent_photos_at || (boat.consent_revoked_at && boat.consent_revoked_at >= boat.consent_photos_at)) return;
-  const queued = await db.prepare("UPDATE advisor_media SET publish_state='queued',credit=? WHERE id=? AND publish_state='private'").bind(boat.name.slice(0, 80), mediaId).run();
-  advisorLog('info', 'advisor_media_queued', {count: 1});
-  // TA-M1: thumb.jpg for the admin queue, public.jpg and story.jpg for posting.
-  if (queued.meta.changes) await requestMediaJob(env, clock(deps), deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {});
+  if (media.publish_state === 'private') {
+    const queued = await db.prepare("UPDATE advisor_media SET publish_state='queued',credit=? WHERE id=? AND publish_state='private'").bind(boat.name.slice(0, 80), mediaId).run();
+    advisorLog('info', 'advisor_media_queued', {count: 1});
+    // TA-M1: thumb.jpg for the admin queue, public.jpg and story.jpg for posting.
+    if (queued.meta.changes) await requestMediaJob(env, clock(deps), deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {});
+  }
+  // TA-S1 (05 § catch photos, SC-3): the post draft and its review; has_person holds its approval, not the draft.
+  await draftFor(env, deps, mediaId, hint);
+}
+
+/** ensureMediaDraft with the engine's Messages API fetcher (tests) and the hint, at most 200 characters. */
+async function draftFor(env: Env, deps: ConsumerDeps, mediaId: string, hint?: string): Promise<void> {
+  const clean = typeof hint === 'string' ? hint.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 200) : '';
+  const outcome = await ensureMediaDraft(env, mediaId, {now: clock(deps), ...(deps.engine?.fetcher ? {fetcher: deps.engine.fetcher} : {}), ...(clean ? {hint: clean} : {})});
+  if (outcome.status === 'skipped') advisorLog('info', 'advisor_post_draft_skipped', {reason: outcome.reason});
+}
+
+/**
+ * TA-S1 (propose_post): the draft of a photo or video already in the feed
+ * queue, for a contact who posts for its boat. ensureMediaDraft re-checks the
+ * boat's consent.
+ */
+async function applyPostDraft(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, mediaId: string, hint?: string): Promise<void> {
+  const db = env.DB!;
+  if (!ID.test(String(mediaId))) return;
+  const media = await db.prepare("SELECT boat_id FROM advisor_media WHERE id=? AND contact_id=? AND publish_state IN ('queued','approved')").bind(mediaId, contact.id).first<{boat_id: string | null}>();
+  if (!media?.boat_id || !await postsFor(db, contact.id, media.boat_id)) return;
+  await draftFor(env, deps, mediaId, hint);
 }
 
 /**

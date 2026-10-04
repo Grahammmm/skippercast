@@ -27,6 +27,7 @@ export function decisionsFor(kind: ReviewKind, reason: string): Decision[] {
     case 'skipper': return reason === 'new_skipper' ? ['approve', 'reject'] : ['approve'];
     case 'conversation': return ['approve', 'edit', 'reject'];   // edit opens the reply box
     case 'rule': return ['approve', 'reject'];
+    case 'post': return ['approve', 'edit', 'reject'];   // TA-S1: edit opens the post editor, whose save also approves
     default: return [];
   }
 }

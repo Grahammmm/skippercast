@@ -24,7 +24,7 @@ export interface Health {
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
   media_jobs: {pending: number};
   reviews: {open: number};
-  meta: null;
+  meta: {configured: boolean; quota_usage: number | null; quota_total: number | null; checked_at: string | null; error: 'unavailable' | null};
 }
 
 // ---- TA-W3: Skippers and Contacts (server/advisor/admin/skippers.ts) ----
@@ -77,6 +77,26 @@ export type RuleFields = Partial<Record<'species_label' | 'size_min_in' | 'size_
   'depth_limit_ft' | 'area_notes' | 'gear_notes' | 'source_name' | 'source_url', string | number | null>>;
 export interface NewRule extends RuleFields {jurisdiction: string; region: string; species_key: string}
 
+// ---- TA-S1: social posts (server/advisor/admin/posts.ts postView) ----
+export interface PostMedia {id: string; kind: string; has_person: boolean | null; publish_state: string; credit: string | null; review_open: boolean; thumb: string | null; original: string | null}
+export interface Post {
+  id: string; kind: string; region: string; status: string; caption: string; caption_stats: {length: number; hashtags: number; mentions: number};
+  targets: string[]; allowed_targets: string[]; collaborators: string[]; user_tags: {username: string; x: number; y: number}[];
+  scheduled_for: string | null; error: string | null; created_by: string; approved_by: string | null; approved_at: string | null; posted_at: string | null;
+  created_at: string; updated_at: string; boat: {id: string; name: string; slug: string; status: string; instagram: string | null} | null;
+  media: PostMedia[]; review_id: string | null; hold: string | null;
+}
+export interface PostsPage {posts: Post[]; next: string | null}
+export const POST_STATUSES: readonly string[] = ['all', 'draft', 'approved', 'scheduled', 'publishing', 'posted', 'partial', 'failed', 'rejected'];
+export const POST_KINDS: readonly string[] = ['photo', 'carousel', 'reel', 'story', 'daily', 'roundup'];
+/** The query string for a Posts page. */
+export function postsPath(status: string, kind: string, cursor?: string | null): string {
+  const q = new URLSearchParams({status: status || 'all'});
+  if (kind) q.set('kind', kind);
+  if (cursor) q.set('cursor', cursor);
+  return `/api/admin/posts?${q}`;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) { super(message); this.status = status; }
@@ -114,6 +134,7 @@ export const invite = (phone: string, boatName: string, language: 'en' | 'es'): 
 export const getContact = (id: string): Promise<ContactDetail> => call(`/api/admin/contacts/${encodeURIComponent(id)}`);
 export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
+export const getPosts = (status: string, kind: string, cursor?: string | null): Promise<PostsPage> => call(postsPath(status, kind, cursor));
 export function rulesPath(jurisdiction: string, status: string): string {
   const q = new URLSearchParams();
   if (jurisdiction) q.set('jurisdiction', jurisdiction);

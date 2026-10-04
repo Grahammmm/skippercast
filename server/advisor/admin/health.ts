@@ -1,14 +1,24 @@
 // The admin Health view's data (docs/plans/text-advisor/08-website.md § Admin,
 // Health; TA-W2): GET /api/admin/health. Read-only: nothing here pings a
-// provider or counts against a cap. Meta's token expiry and publishing quota
-// come with TA-S0; Hermes health with the Hermes vision provider.
+// provider or counts against a cap, except Meta's publishing quota (TA-S0):
+// GET content_publishing_limit, at most once per META_QUOTA_TTL_MS (the banner
+// reads this every minute), cached in job_state advisor.meta.quota. The
+// Facebook-Login Page token does not expire (09 § facts), so there is no
+// token expiry to show. Hermes health comes with the Hermes vision provider.
 import {advisorSettings} from '../settings.ts';
 import {relayState} from '../relay.ts';
 import {downKey} from '../vision/index.ts';
 import {mediaJobPending} from '../media.ts';
+import {igPublishingLimit, metaConfig, metaConfigured} from '../social/meta.ts';
+import type {Fetcher} from '../social/meta.ts';
 import type {Env} from '../../env.ts';
 
 export const STALE_QUEUED_MS = 2 * 60000;          // 08: open `queued` messages older than 2 min
+export const META_QUOTA_TTL_MS = 10 * 60000;       // TA-S0: the publishing quota is read from Meta at most every 10 minutes
+export const META_QUOTA_KEY = 'advisor.meta.quota';
+
+/** 09 § Publishing: whether the Meta secrets are set, and the Instagram publishing quota (50 API posts per 24 h). */
+export interface MetaHealth {configured: boolean; quota_usage: number | null; quota_total: number | null; checked_at: string | null; error: 'unavailable' | null}
 
 export interface AdminHealth {
   checked_at: string;
@@ -19,12 +29,39 @@ export interface AdminHealth {
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
   media_jobs: {pending: number};
   reviews: {open: number};
-  meta: null;
+  meta: MetaHealth;
 }
 
 const count = async (db: D1Database, sql: string, ...args: unknown[]): Promise<number> => (await db.prepare(sql).bind(...args).first<{n: number}>())?.n ?? 0;
 
-export async function adminHealth(env: Env, now: number = Date.now()): Promise<AdminHealth> {
+/**
+ * The Meta line: not configured (no call), the cached quota when younger than
+ * META_QUOTA_TTL_MS, else one content_publishing_limit read (stored either way,
+ * so a failing Meta is asked again only after the TTL).
+ */
+export async function metaHealth(env: Env, now: number, fetcher?: Fetcher): Promise<MetaHealth> {
+  if (!metaConfigured(env)) return {configured: false, quota_usage: null, quota_total: null, checked_at: null, error: null};
+  const db = env.DB!;
+  const cached = await db.prepare('SELECT value FROM job_state WHERE key=?').bind(META_QUOTA_KEY).first<{value: string}>();
+  try {
+    const value = JSON.parse(cached?.value ?? 'null') as MetaHealth | null;
+    if (value?.checked_at && now - Date.parse(value.checked_at) < META_QUOTA_TTL_MS && now >= Date.parse(value.checked_at)) return {...value, configured: true};
+  } catch { /* re-read */ }
+  const at = new Date(now).toISOString();
+  let result: MetaHealth;
+  try {
+    // A health read is one try: a rate-limited Meta is shown as unavailable rather than retried in the request.
+    const limit = await igPublishingLimit(metaConfig(env, {...(fetcher ? {fetcher} : {}), attempts: 1})!, env.META_IG_USER_ID!);
+    result = {configured: true, quota_usage: limit.quota_usage, quota_total: limit.quota_total, checked_at: at, error: null};
+  } catch {
+    result = {configured: true, quota_usage: null, quota_total: null, checked_at: at, error: 'unavailable'};
+  }
+  await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(META_QUOTA_KEY, JSON.stringify(result), at).run();
+  return result;
+}
+
+export async function adminHealth(env: Env, now: number = Date.now(), deps: {metaFetcher?: Fetcher} = {}): Promise<AdminHealth> {
   const db = env.DB!, settings = advisorSettings(env), at = new Date(now).toISOString();
   const day = Math.floor(now / 86400000), dayStart = new Date(day * 86400000).toISOString();
   const stale = new Date(now - STALE_QUEUED_MS).toISOString();
@@ -51,6 +88,6 @@ export async function adminHealth(env: Env, now: number = Date.now()): Promise<A
     // HEIC, stored sideways, or queued/approved/posted) plus pending graphics, the same count the cron dispatches on.
     media_jobs: {pending: await mediaJobPending(db)},
     reviews: {open: await count(db, "SELECT COUNT(*) AS n FROM advisor_reviews WHERE status='open'")},
-    meta: null,   // TA-S0
+    meta: await metaHealth(env, now, deps.metaFetcher),   // TA-S0
   };
 }

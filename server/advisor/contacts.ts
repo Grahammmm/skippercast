@@ -126,6 +126,7 @@ export const reviewId = async (kind: string, refId: string, reason: string): Pro
 export interface ForgetResult {
   contact: number; messages: number; media: number; reviews: number; reportEdits: number; crew: number;
   reportsDetached: number; boatsOrphaned: number; r2Objects: number;
+  posts: number;   // TA-S1: unposted social posts of the contact's photos, deleted
 }
 
 async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<number> {
@@ -148,7 +149,9 @@ async function deletePrefix(bucket: R2Bucket, prefix: string): Promise<number> {
  * stay as the boat's record with contact_id (and a count-board media_id that is
  * being deleted) set to null; a boat it owns keeps its page but loses
  * owner_contact_id, and the admin queue gets a 'skipper' review 'owner_forgotten'.
- * The contact row goes last. The caller sends the confirmation text before this.
+ * TA-S1: social posts of its photos that never went out are deleted with their
+ * reviews and cached caption lines (a posted one stays: the record of what was
+ * published). The contact row goes last. The caller sends the confirmation text before this.
  */
 export async function forgetContact(db: D1Database, bucket: R2Bucket | undefined, contactId: string, now: Date = new Date()): Promise<ForgetResult> {
   const id = requireId(contactId), at = now.toISOString();
@@ -175,13 +178,23 @@ export async function forgetContact(db: D1Database, bucket: R2Bucket | undefined
     // TA-A1: the one-time home-port question after a daily answer (answers/reports.ts homePortOnceKey).
     db.prepare('DELETE FROM job_state WHERE key=?').bind(`advisor.once.homeport.${id}`),
   ];
+  // TA-S1: social posts of the contact's photos that never went out (drafts, approved, rejected, failed) go with them,
+  // with their reviews and cached caption lines; a posted one stays as the record of what was published (09).
+  const postIds = mediaIds.length ? (await db.prepare(`SELECT p.id FROM advisor_posts p WHERE p.status NOT IN ('posted','partial','publishing')
+      AND EXISTS (SELECT 1 FROM json_each(p.media_json) j WHERE j.value IN (SELECT id FROM advisor_media WHERE contact_id=?))`).bind(id).all<{id: string}>()).results.map(r => r.id) : [];
+  if (postIds.length) {
+    const marks = postIds.map(() => '?').join(',');
+    statements.push(db.prepare(`DELETE FROM advisor_reviews WHERE kind='post' AND ref_id IN (${marks})`).bind(...postIds),
+      db.prepare(`DELETE FROM advisor_posts WHERE id IN (${marks})`).bind(...postIds));
+  }
+  if (mediaIds.length) statements.push(db.prepare(`DELETE FROM job_state WHERE key IN (${mediaIds.map(() => '?').join(',')})`).bind(...mediaIds.map(m => `advisor.caption.${m}`)));
   for (const boat of boats) {
     statements.push(db.prepare(`INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'skipper',?,'owner_forgotten','open',?)
       ON CONFLICT(id) DO UPDATE SET status='open',opened_at=excluded.opened_at,decided_at=NULL,decided_by=NULL`).bind(await reviewId('skipper', boat, 'owner_forgotten'), boat, at));
   }
   const changes = (await db.batch(statements)).map(r => r.meta.changes ?? 0);
   const n = (i: number) => changes[i] ?? 0;
-  return {reviews: n(0), reportEdits: n(1), crew: n(2), media: n(4), messages: n(5), reportsDetached: n(6), boatsOrphaned: n(7), contact: n(8), r2Objects};
+  return {reviews: n(0), reportEdits: n(1), crew: n(2), media: n(4), messages: n(5), reportsDetached: n(6), boatsOrphaned: n(7), contact: n(8), posts: postIds.length ? n(12) : 0, r2Objects};
 }
 
 /**

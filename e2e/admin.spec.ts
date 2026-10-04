@@ -4,7 +4,8 @@
 // scripts/advisor/grant-admin.mjs does it, here with `wrangler d1 execute
 // --local` against the state e2e/serve.mjs runs on. A seeded photo review is
 // then approved from the keyboard (a) and the row checked in D1; axe runs on
-// the queue and the Health view. e2e/serve.mjs sets TEXT_ADVISOR_ENABLED=true.
+// the queue and the Health view. TA-S1: the approved angler share is a social
+// draft, opened in the Posts view (axe). e2e/serve.mjs sets TEXT_ADVISOR_ENABLED=true.
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
@@ -67,6 +68,24 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await expect(card).toHaveCount(0);
   expect(d1(`SELECT publish_state FROM advisor_media WHERE id='${media}'`)).toEqual([{publish_state: 'approved'}]);
   expect(d1(`SELECT status,decided_by FROM advisor_reviews WHERE id='${review}'`)).toEqual([{status: 'approved', decided_by: userId}]);
+
+  // TA-S1: the approved angler share became a social draft (fixed caption line: no model in the browser tests); the
+  // Posts view lists it with its caption and the surfaces, and the editor opens on it.
+  const post = d1(`SELECT id,status,caption FROM advisor_posts WHERE media_json='["${media}"]'`);
+  expect(post).toHaveLength(1);
+  expect(post[0]!.status).toBe('draft');
+  expect(String(post[0]!.caption)).toContain('Photo: E2E angler');
+  await page.getByRole('link', {name: 'Posts'}).click();
+  await expect(page.getByRole('heading', {level: 1, name: 'Posts'})).toBeVisible();
+  // The draft's card is its post review (contacts.ts reviewId: sha256('post:<post id>:social_draft')[:32]); both projects seed one.
+  const draft = page.locator(`#review-${createHash('sha256').update(`post:${String(post[0]!.id)}:social_draft`).digest('hex').slice(0, 32)}`);
+  await expect(draft).toBeVisible();
+  await expect(draft).toContainText('Instagram feed, Facebook Page');
+  await draft.getByRole('button', {name: 'Edit'}).click();
+  await expect(draft.getByRole('checkbox', {name: 'Facebook Page'})).toBeChecked();
+  await expect(draft.getByLabel('Caption')).toHaveValue(/Photo: E2E angler/);
+  await checkA11y(page, 'admin-posts', info.project.name);
+  await draft.getByRole('button', {name: 'Cancel'}).click();
 
   await page.getByRole('link', {name: 'Health'}).click();
   await expect(page.getByRole('heading', {level: 1, name: 'Health'})).toBeVisible();

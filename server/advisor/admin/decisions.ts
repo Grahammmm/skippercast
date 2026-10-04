@@ -14,7 +14,9 @@
 //   kind          approve                         edit                            reject
 //   media         publish_state approved,         credit set, approved,           publish_state rejected,
 //                 media job requested, pages      media job requested, pages      (pages version bumped if it
-//                 version bumped                  version bumped                  was approved)
+//                 version bumped; the post draft  version bumped; the post draft  was approved); its unposted
+//                 (TA-S1: an angler's shared      likewise                        posts rejected (TA-S1)
+//                 photo, a consented boat photo)
 //   report        published (if pending)          applyEdit: edit row, version+1  status rejected
 //                 (publishReport bumps the pages  (applyEdit bumps them for a     (a published one bumps them)
 //                 version)                        published report)
@@ -24,7 +26,10 @@
 //   conversation  closed; with `reply`: sent as   -                               closed
 //                 the team through the channel
 //   rule          closed (TA-A4 edits the rule)   -                               closed
-//   post          TA-S1                           TA-S1                           TA-S1
+//   post          admin/posts.ts decidePost       caption, targets, collaborators, status rejected
+//                 (TA-S1): approved, approved_by/ tags, scheduled_for checked,
+//                 at, scheduled_for; held while   then approved
+//                 a photo is held (has_person)
 import {advisorSettings} from '../settings.ts';
 import {t} from '../strings.ts';
 import {resolveLinks} from '../links.ts';
@@ -32,6 +37,9 @@ import {sha256} from '../ids.ts';
 import {advisorLog} from '../log.ts';
 import {publishReport, applyEdit, bumpPagesVersion, invalidateDailyAnswer, cleanFields} from '../intake/reports.ts';
 import {requestMediaJob} from '../media.ts';
+// TA-S1: social drafts and post decisions.
+import {ensureMediaDraft, rejectPostsForMedia} from '../social/drafts.ts';
+import {decidePost} from './posts.ts';
 import type {Env} from '../../env.ts';
 import type {AdvisorContactRow, ReportEditFields, ReviewKind} from '../types.ts';
 
@@ -67,6 +75,7 @@ export interface DecisionDeps {
   send: TeamSend;
   sendsEnabled?: boolean;              // false while ADVISOR_REPLIES_ENABLED is off: the decision applies, nothing is texted
   dispatch?: (env: Env, file: string) => Promise<number>;   // TA-M1: the media job dispatch (tests); default watchdog.ts dispatchWorkflow
+  fetcher?: (url: string, init: RequestInit) => Promise<Response>;   // TA-S1: the Messages API for a draft's caption line (tests)
 }
 export type DecisionOutcome =
   | {status: 'applied'; review: ReviewRow; sends: number; held?: 'replies-off'}
@@ -130,6 +139,15 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
       if (input.decision === 'edit' || (r.meta.changes && (ok || prior === 'approved'))) await bumpPagesVersion(db, deps.now);
       // TA-M1: an approved photo needs its public.jpg (upright, 07 § orientation) for the pages and Meta.
       if (ok) await requestMediaJob(env, deps.now, deps.dispatch ? {dispatch: deps.dispatch} : {});
+      // TA-S1: an approved angler share becomes its post draft (06 § Angler photos); a boat photo approved after a
+      // has_person hold already has one (ensureMediaDraft makes it if not, with consent re-checked). A rejected
+      // photo takes its unposted posts with it.
+      if (ok) {
+        const draft = await ensureMediaDraft(env, review.ref_id, {now: deps.now, ...(input.by ? {createdBy: input.by} : {}), ...(deps.fetcher ? {fetcher: deps.fetcher} : {})});
+        if (draft.status === 'skipped') advisorLog('info', 'advisor_post_draft_skipped', {reason: draft.reason});
+      } else {
+        await rejectPostsForMedia(db, review.ref_id, deps.now);
+      }
       break;
     }
     case 'report': {
@@ -168,8 +186,12 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
       await text(contact, inId, `team.${(await sha256(reply)).slice(0, 16)}`, reply);
       break;
     }
-    case 'post':
-      return {status: 'invalid', error: 'social drafts are decided in the Posts view (TA-S1)'};
+    case 'post': {
+      // TA-S1 (09 § Drafts): admin/posts.ts checks the patch and the holds; the text admin never reaches here (its kinds).
+      const outcome = await decidePost(env, review.ref_id, input.decision, input.patch, input.by, deps.now, deps.dispatch ? {dispatch: deps.dispatch} : {});
+      if (outcome.status !== 'ok') return outcome;
+      break;
+    }
     case 'rule':
       if (input.decision === 'edit') return {status: 'invalid', error: 'rules are edited in the Rules view'};
       break;

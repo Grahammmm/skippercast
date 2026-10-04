@@ -66,9 +66,9 @@ export interface Env {
   META_APP_ID?: string;              // Graph API app and webhook verification
   META_APP_SECRET?: string;
   META_VERIFY_TOKEN?: string;
-  META_IG_USER_ID?: string;          // Instagram professional account and long-lived token
-  META_IG_TOKEN?: string;
-  META_PAGE_ID?: string;             // Facebook Page and Page token
+  META_IG_USER_ID?: string;          // Instagram professional account linked to the Page (TA-S0, social/meta.ts)
+  META_IG_TOKEN?: string;            // unused: an Instagram-Login token; the Facebook-Login route (09 § Setup) uses META_PAGE_TOKEN for both
+  META_PAGE_ID?: string;             // Facebook Page and its Page token (does not expire; serves the Page and the IG account)
   META_PAGE_TOKEN?: string;
   ADVISOR_PHONE_KEY?: string;        // 32-byte master key (base64) for phone hashing and encryption
   CF_ANALYTICS_TOKEN?: string;       // Analytics Engine SQL reads for the admin funnel

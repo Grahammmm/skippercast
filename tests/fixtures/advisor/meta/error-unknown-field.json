@@ -1,0 +1,8 @@
+{
+  "error": {
+    "message": "(#100) Tried accessing nonexisting field (account_type) on node type (User)",
+    "type": "OAuthException",
+    "code": 100,
+    "fbtrace_id": "APLACEHOLDERTRAC100"
+  }
+}

@@ -19,7 +19,7 @@ const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json'), 'southern-california': read('../regions/southern-california/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 
-const {TOOLS, TOOL_BY_NAME, toolsForRole, claudeTools, dispatchTool, NOT_BUILT, isWebOnly} = await import('../server/advisor/tools/index.ts');
+const {TOOLS, TOOL_BY_NAME, toolsForRole, claudeTools, dispatchTool, NOT_BUILT, stubTool, isWebOnly} = await import('../server/advisor/tools/index.ts');
 const {linkCode, takeDaily, LINK_CODES_PER_DAY, LINK_CODE_TTL_MS} = await import('../server/advisor/tools/offer_text_link.ts');
 const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {deriveKeys, phoneHash, decryptPhone} = await import('../server/advisor/contacts.ts');
@@ -33,12 +33,13 @@ const contact = (over = {}) => ({id: 'c1', phone_hash: 'h', phone_enc: 'ENC', we
 const ctx = (over = {}, env = {}) => ({env: {ADVISOR_NUMBER: '+15555550199', ...env}, contact: contact(over.contact), message: {id: 'in1'}, deps: {}, db: over.db ?? null,
   language: 'en', settings: advisorSettings({ADVISOR_NUMBER: '+15555550199', ...env}), now: T0, ...over, ...(over.contact ? {contact: contact(over.contact)} : {})});
 
-const STUBS = ['propose_post'];
+const STUBS = [];   // TA-S1 built propose_post, the last stub (tests/test_advisor_social_drafts.mjs)
 const BUILT = ['update_profile', 'escalate', 'send_upload_link', 'send_contact_card', 'offer_text_link', 'get_rules',   // get_rules: TA-A0 (tests/test_advisor_rules.mjs)
   'get_port_report', 'get_conditions', 'get_species', 'get_strategy', 'get_trips',                                      // TA-E2, below
   'register_boat', 'add_crew', 'remove_crew',                                                                           // TA-I1 (tests/test_advisor_skippers.mjs)
   'read_count_board', 'propose_report', 'edit_report',                                                                  // TA-I2 (tests/test_advisor_reports.mjs)
-  'identify_fish', 'share_angler_photo'];                                                                               // TA-I3 (tests/test_advisor_fishid.mjs)
+  'identify_fish', 'share_angler_photo',                                                                                // TA-I3 (tests/test_advisor_fishid.mjs)
+  'propose_post'];                                                                                                      // TA-S1 (tests/test_advisor_social_drafts.mjs)
 
 test('the registry has every tool in 04 § Tools, once, with a valid schema and an intent', () => {
   assert.deepEqual(TOOLS.map(t => t.name).sort(), [...STUBS, ...BUILT].sort());
@@ -76,9 +77,11 @@ test('toolsForRole: anglers, skippers, crew, admin-test and web visitors', () =>
   assert.equal(isWebOnly(contact({phone_enc: null, web_session: 'w'})), true);
 });
 
-test('stubs answer {unavailable: true, reason: "not built yet"} with no action', async () => {
+test('stubs answer {unavailable: true, reason: "not built yet"} with no action (none are left; stubTool keeps the shape for later tools)', async () => {
   for (const name of STUBS) assert.deepEqual(await TOOL_BY_NAME.get(name).run({}, ctx()), {result: NOT_BUILT}, name);
   assert.deepEqual(NOT_BUILT, {unavailable: true, reason: 'not built yet'});
+  const stub = stubTool({name: 'later_tool', description: 'x'.repeat(40), input_schema: {type: 'object', properties: {}}, roles: ['angler'], intent: 'later'});
+  assert.deepEqual(await stub.run({}, ctx()), {result: NOT_BUILT});
 });
 
 test('dispatchTool: unknown or disallowed tools and throwing executors are error results, never exceptions', async () => {

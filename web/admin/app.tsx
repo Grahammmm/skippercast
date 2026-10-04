@@ -3,7 +3,7 @@
 // Hash-routed views: #queue and #health (TA-W2), #skippers and
 // #contact/<id> (TA-W3, a contact opens by id only, from a review or a boat);
 // #funnel (TA-W4); #rules and #rules?jurisdiction=<id> (TA-A4); #posts
-// (TA-S1) is a placeholder until its task. The relay-down banner shows on every view: health is fetched on load
+// (TA-S1, the social drafts). The relay-down banner shows on every view: health is fetched on load
 // and every minute. Every string is in web/advisor/copy.ts (ADMIN_COPY).
 import {render} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
@@ -17,6 +17,7 @@ import {Skippers} from './skippers.tsx';
 import {ContactView} from './contact.tsx';
 import {FunnelView} from './funnel.tsx';
 import {RulesView} from './rules.tsx';
+import {PostsView} from './posts.tsx';
 import {VIEWS, routeOf} from './route.ts';
 import type {Route} from './route.ts';
 
@@ -60,12 +61,7 @@ export function App() {
           : view === 'contact' ? <ContactView id={route.arg} />
           : view === 'funnel' ? <FunnelView />
           : view === 'rules' ? <RulesView jurisdiction={route.arg} />
-          : (
-            <section class="admin-view" aria-labelledby="placeholder-heading">
-              <h1 id="placeholder-heading">{COPY.views[view]}</h1>
-              <p>{COPY.placeholder(COPY.views[view])}</p>
-            </section>
-          )}
+          : <PostsView />}
       </main>
     </>
   );

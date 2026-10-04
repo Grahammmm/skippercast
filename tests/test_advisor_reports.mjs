@@ -521,13 +521,14 @@ dbTest('a catch photo with consent is queued and tagged; without consent the no-
   const res = await say(a.env, a.sql, null, {media: [fish], vision: FISH});
   assert.deepEqual([res.intent, res.texts], ['media.photo', ["Nice. That's queued for the SkipperCast feed, tagged @ritag. Count board too?"]]);
   assert.equal(a.sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mf1'").get().publish_state, 'queued');
-  assert.equal(a.sql.prepare('SELECT COUNT(*) n FROM advisor_reviews').get().n, 0, 'no person: no review');
+  assert.equal(a.sql.prepare("SELECT COUNT(*) n FROM advisor_reviews WHERE kind='media'").get().n, 0, 'no person: no photo review');
+  assert.deepEqual(a.sql.prepare("SELECT kind,reason,status FROM advisor_reviews WHERE kind='post'").all().map(x => ({...x})), [{kind: 'post', reason: 'social_draft', status: 'open'}], 'TA-S1: the post draft waits for its one approval');
   // A person in it: queued and a has_person review (which texts the admin, 08).
   const person = addMedia(a.sql, a.env.ADVISOR_MEDIA, {id: 'mp1', bytes: png('deck-person.png')});
   const held = await say(a.env, a.sql, null, {media: [person], vision: PERSON});
   assert.deepEqual(held.texts, ["Nice. That's queued for the SkipperCast feed, tagged @ritag. Count board too?"]);
   assert.equal(a.sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mp1'").get().publish_state, 'queued');
-  assert.deepEqual({...a.sql.prepare('SELECT id,kind,ref_id,reason,status FROM advisor_reviews').get()}, {id: await reviewId('media', 'mp1', 'has_person'), kind: 'media', ref_id: 'mp1', reason: 'has_person', status: 'open'});
+  assert.deepEqual({...a.sql.prepare("SELECT id,kind,ref_id,reason,status FROM advisor_reviews WHERE kind='media'").get()}, {id: await reviewId('media', 'mp1', 'has_person'), kind: 'media', ref_id: 'mp1', reason: 'has_person', status: 'open'});
   // No consent: nothing queued, the line once, then a plain thanks.
   const b = setup();
   {
@@ -562,7 +563,8 @@ dbTest('video: a Reel candidate with consent; a file the intake rejected (over 3
   const vid = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mv1', kind: 'video', mime: 'video/mp4', bytes: Buffer.alloc(64)});
   const v = await say(env, sql, null, {media: [vid]});
   assert.deepEqual([v.intent, v.texts], ['media.video', ['Nice. That video is queued as a Reel for the SkipperCast feed, tagged @ritag.']]);
-  assert.deepEqual([v.visionCalls, sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mv1'").get().publish_state], [[], 'queued'], 'no vision call for a video');
+  assert.deepEqual([v.visionCalls, sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mv1'").get().publish_state], [['record_caption_line'], 'queued'], 'no vision call for a video (TA-S1: its Reel draft asks for the caption line)');
+  assert.equal(sql.prepare("SELECT kind FROM advisor_posts WHERE media_json='[\"mv1\"]'").get()?.kind, 'reel', 'TA-S1: a video is a Reel draft');
   const bad = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mr1', kind: 'unknown', mime: 'application/octet-stream', bytes: Buffer.alloc(8), state: 'rejected'});
   const up = await say(env, sql, null, {media: [bad]});
   assert.equal(up.intent, 'media.upload_link');

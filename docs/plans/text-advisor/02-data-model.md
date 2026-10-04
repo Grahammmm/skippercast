@@ -329,6 +329,18 @@ Indexes: `post_status_time (status, scheduled_for)`, `post_boat (boat_id)`.
 
 PK `(post_id, platform, day)`.
 
+As built (TA-S0): migration `0011_advisor_social` creates both tables as
+above (`kind`, `region`, `media_json`, `caption`, `targets_json`, `status`
+default `draft`, `created_by` and the times not null; the stats' counters
+default 0) and adds `advisor_contacts.ig_sid` with the unique index
+`contact_ig_sid`.
+
+As built (TA-S1): a draft made from one media item has the id
+`sha256('post:media:' + media_id)[:32]` (one post per photo or video, 09 §
+Drafts "As built"); `created_by` is `engine` or the admin's `users.id`; `error`
+records why the team side rejected a draft (`consent_revoked`,
+`media_rejected`). Approving a post sets its `queued` media `approved`.
+
 ## Reusing `job_state`
 
 Advisor cron state uses the existing `job_state` table with keys prefixed
@@ -345,6 +357,11 @@ review's `ref_id` is the part after the prefix) and `advisor.rules.last_watch`
 As built (TA-M1): `advisor.media.dispatched_at` (the media job's dispatch
 throttle, an ISO time) and `advisor.graphic.<id>` (one graphic request and its
 result as JSON, 09 § Derived images "As built").
+As built (TA-S0, TA-S1): `advisor.meta.quota` (the last Instagram publishing
+quota read for admin health, `{configured, quota_usage, quota_total,
+checked_at, error}`, reused for 10 minutes) and `advisor.caption.<media id>`
+(a social draft's model caption line, `{line, language}`; deleted with the
+media by "forget me").
 
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 
@@ -420,7 +437,10 @@ null `advisor_reports.media_id` where it pointed at the contact's media; set
 `advisor_reports.contact_id` to null (the boat's published reports are the
 boat's business record); if the contact owns a boat, the boat stays but its
 `owner_contact_id` is set to null and the admin queue gets a `skipper`
-review item `owner_forgotten`. The contact row itself is deleted; a later
+review item `owner_forgotten`. As built (TA-S1): social posts of the
+contact's media that never went out (any status but `posted`, `partial`,
+`publishing`) are deleted with their `post` reviews and cached caption lines;
+a posted one stays as the record of what was published. The contact row itself is deleted; a later
 text from the same number starts fresh. Reply with one confirmation text
 before deleting the contact (the send needs the number).
 

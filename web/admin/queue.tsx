@@ -1,13 +1,17 @@
 // The admin Queue view (08 § Admin, Queue; TA-W2): one list of review items,
 // newest first, filterable by kind and status. Each card renders by kind and
 // offers approve / edit / reject; with a card focused, a, r and e do the same.
-// Social drafts (kind post) render generically until TA-S1 adds their editor.
+// TA-S1: a social draft (kind post) shows its photos, caption and surfaces
+// (post-card.tsx); edit opens the post editor, whose save is the edit decision
+// (which also approves). ReviewCard is exported for the Posts view.
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {ApiError, KINDS, STATUSES, contactHref, decide, getQueue, when} from './api.ts';
 import type {Count, DecisionBody, DecisionResult, QueueItem} from './api.ts';
 import {decisionsFor, shortcutFor} from './keys.ts';
 import {rulesHref} from './route.ts';
+import {PostDetail, PostEditor} from './post-card.tsx';
+import type {Post} from './api.ts';
 
 const cardId = (id: string): string => `review-${id}`;
 
@@ -74,7 +78,7 @@ export function Queue() {
   );
 }
 
-function ReviewCard({item, onDecided}: {item: QueueItem; onDecided: (result: DecisionResult) => void}) {
+export function ReviewCard({item, onDecided}: {item: QueueItem; onDecided: (result: DecisionResult) => void}) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -110,9 +114,11 @@ function ReviewCard({item, onDecided}: {item: QueueItem; onDecided: (result: Dec
         <h2 id={headingId}>{COPY.kinds[item.kind]} <span class="admin-reason">{item.reason}</span></h2>
         <p class="admin-meta">{COPY.opened(when(item.opened_at))}{item.status !== 'open' ? ` · ${COPY.statuses[item.status]}` : ''}</p>
       </header>
-      {item.detail ? <Detail item={item} /> : item.kind === 'post' ? <p>{COPY.postLater}</p> : <p class="admin-muted">{COPY.missing}</p>}
+      {item.detail ? <Detail item={item} /> : <p class="admin-muted">{COPY.missing}</p>}
       {item.note ? <p class="admin-muted">{item.note}</p> : null}
-      {editing ? <Editor item={item} busy={busy} onSubmit={submit} onCancel={() => { setEditing(false); card.current?.focus(); }} /> : null}
+      {editing ? (item.kind === 'post' && item.detail?.post
+        ? <PostEditor post={item.detail.post as Post} idBase={cardId(item.id)} busy={busy} onSubmit={submit} onCancel={() => { setEditing(false); card.current?.focus(); }} />
+        : <Editor item={item} busy={busy} onSubmit={submit} onCancel={() => { setEditing(false); card.current?.focus(); }} />) : null}
       {offered.length && !editing ? (
         <div class="admin-actions">
           <label class="admin-note">
@@ -139,6 +145,7 @@ function Detail({item}: {item: QueueItem}) {
   switch (item.kind) {
     case 'media': return <MediaDetail media={d.media} />;
     case 'report': return <ReportDetail report={d.report} />;
+    case 'post': return <PostDetail post={d.post as Post} />;
     case 'skipper': return <SkipperDetail detail={d} />;
     case 'conversation': return (
       <>

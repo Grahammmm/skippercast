@@ -229,7 +229,7 @@ dbTest('consent: YES records the time and message id; any other reply declines o
   const b = sql.prepare("SELECT * FROM advisor_boats WHERE id='b1'").get();
   assert.deepEqual([b.consent_photos_at, b.consent_message_id, b.consent_revoked_at], [iso(T0), m.id, null]);
   assert.match(ch.sent.at(-1).text, /^Thanks\. Your photos can go on the SkipperCast feed, tagged to Rita G\./);
-  // Revoke: the column, the post_revoke placeholder (logged), the confirmation.
+  // Revoke: the column, post_revoke (TA-S1 rejects the boat's drafts; logged), the confirmation.
   const later = T0 + DAY;
   const {lines} = await quiet(async () => {
     const msg = inbound(sql, 'Stop posting my photos', {at: later, status: 'queued'});
@@ -239,7 +239,7 @@ dbTest('consent: YES records the time and message id; any other reply declines o
   assert.equal(r.consent_revoked_at, iso(later));
   assert.equal(r.consent_photos_at, iso(T0), 'the original consent stays on record');
   assert.equal(sk.consentActive(r), false);
-  assert.ok(lines.some(l => /advisor_post_revoke/.test(l)), 'post_revoke is logged until TA-S1');
+  assert.ok(lines.some(l => /advisor_post_revoke/.test(l)), 'post_revoke rejects the boat posts and logs it (TA-S1; test_advisor_social_drafts.mjs)');
   assert.match(ch.sent.at(-1).text, /^Done\. I won't post your photos on social anymore\./);
   const es = await run(env, contactRow(sql), inbound(sql, 'No publiques'));
   assert.equal(es.intent, 'consent.revoke');

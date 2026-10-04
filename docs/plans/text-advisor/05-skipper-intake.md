@@ -222,8 +222,8 @@ from the text above:
   reply. `post my photos` / `publica mis fotos` grants it at any time.
   `revoke`, `stop posting my photos`, `no publiques`, … set
   `consent_revoked_at` (the original consent stays on record) and emit
-  `post_revoke`, which only logs until TA-S1 rejects the boat's draft and
-  approved posts. Only the boat's owner can change consent; crew are told so.
+  `post_revoke`, which only logged until TA-S1; it now rejects the boat's draft
+  and approved posts (09 § Drafts, As built (TA-S1)). Only the boat's owner can change consent; crew are told so.
 - **Crew.** `add_crew` (owner only) hashes and encrypts the number and
   returns `{added: true}` only; it refuses the skipper's own number, a stopped
   or blocked contact, another boat's owner and more than 20 crew. The
@@ -336,7 +336,10 @@ differs from the text above:
   as `credit`; `has_person` (or `nsfw`) opens a `review.media` item (`notifyAdmin`
   texts the admin). The `post.draft` rows (09) are TA-S1's: nothing in
   `advisor_posts` is written here, and a video is only logged as a Reel candidate
-  (`advisor_reel_candidate`). Replies: 05's "Nice. That's queued for the SkipperCast
+  (`advisor_reel_candidate`). As built (TA-S1): the consumer's `media_queue`
+  applier now also makes the post draft (a video a Reel, the count-board photo a
+  Story) with its `post` review; `has_person` holds the draft's approval, not the
+  draft (09 § Drafts, As built (TA-S1)). Replies: 05's "Nice. That's queued for the SkipperCast
   feed, tagged @{instagram}. Count board too?"; without a handle the owner is asked
   once (`@handle`, or a bare handle within 24 h, saves it); crew get the untagged
   wording. Without consent nothing is queued and a no-consent line is sent at most

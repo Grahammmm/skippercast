@@ -164,6 +164,15 @@ secrets = {name: os.environ[source] for name, source in [
     ('TWILIO_FROM', 'TWILIO_FROM'),
     # TA-W4: the admin funnel reads Analytics Engine through the SQL API (Account Analytics: Read).
     ('CF_ANALYTICS_TOKEN', 'CF_ANALYTICS_TOKEN'),
+    # TA-S0: Meta Graph API for Instagram and the Facebook Page (docs/plans/text-advisor/09-social.md
+    # § Setup; scripts/advisor/meta-token.mjs prints the Page id, Page token and IG user id). The
+    # Facebook-Login Page token does not expire; META_IG_TOKEN (Instagram Login) is not used.
+    ('META_APP_ID', 'META_APP_ID'),
+    ('META_APP_SECRET', 'META_APP_SECRET'),
+    ('META_VERIFY_TOKEN', 'META_VERIFY_TOKEN'),
+    ('META_IG_USER_ID', 'META_IG_USER_ID'),
+    ('META_PAGE_ID', 'META_PAGE_ID'),
+    ('META_PAGE_TOKEN', 'META_PAGE_TOKEN'),
 ] if os.environ.get(source)}
 # The SQL API's account, only alongside the token that reads it.
 if secrets.get('CF_ANALYTICS_TOKEN') and os.environ.get('CLOUDFLARE_ACCOUNT_ID'):

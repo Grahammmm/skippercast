@@ -132,7 +132,7 @@ const count = (sql, q, ...a) => sql.prepare(`SELECT COUNT(*) AS n FROM ${q}`).ge
 dbTest('forget me removes every row about the contact, keeps the boat and its reports, and opens owner_forgotten', async () => {
   const {sql, db, skipper, other, bucket} = await seeded();
   const result = await forgetContact(db, bucket, skipper.id, T1);
-  assert.deepEqual(result, {reviews: 3, reportEdits: 1, crew: 1, media: 1, messages: 2, reportsDetached: 1, boatsOrphaned: 1, contact: 1, r2Objects: 5});
+  assert.deepEqual(result, {reviews: 3, reportEdits: 1, crew: 1, media: 1, messages: 2, reportsDetached: 1, boatsOrphaned: 1, contact: 1, posts: 0, r2Objects: 5});
   // Nothing references the contact any more, in any table.
   for (const [table, column] of [['advisor_contacts', 'id'], ['advisor_messages', 'contact_id'], ['advisor_media', 'contact_id'], ['advisor_crew', 'contact_id'],
     ['advisor_report_edits', 'contact_id'], ['advisor_reports', 'contact_id'], ['advisor_boats', 'owner_contact_id'], ['advisor_reviews', 'ref_id']])

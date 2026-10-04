@@ -88,6 +88,14 @@ jobs:
           # TA-W4: the admin funnel's Analytics Engine SQL reads (the ops report's token; Account Analytics: Read).
           # Uploaded with CLOUDFLARE_ACCOUNT_ID (the job's env) only when set.
           CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          # TA-S0: Meta Graph API (Instagram and the Facebook Page); values from scripts/advisor/meta-token.mjs
+          # (docs/plans/text-advisor/09-social.md § Setup). Uploaded as Worker secrets only when set.
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_VERIFY_TOKEN: ${{ secrets.META_VERIFY_TOKEN }}
+          META_IG_USER_ID: ${{ secrets.META_IG_USER_ID }}
+          META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+          META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
           # Web Push signing pair. Optional: when unset, the deploy keeps the pair in the private
           # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}

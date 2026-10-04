@@ -709,6 +709,42 @@
     "target_lobster": {
       "en": "lobster",
       "es": "langosta"
+    },
+    "caption_line_species": {
+      "en": "{species} on deck.",
+      "es": "{species} en cubierta."
+    },
+    "caption_line_generic": {
+      "en": "Fresh from the water.",
+      "es": "Recién salido del agua."
+    },
+    "caption_credit_boat": {
+      "en": "Aboard {boat} out of {port}.",
+      "es": "A bordo del {boat}, saliendo de {port}."
+    },
+    "caption_credit_boat_handle": {
+      "en": "Aboard {boat} (@{handle}) out of {port}.",
+      "es": "A bordo del {boat} (@{handle}), saliendo de {port}."
+    },
+    "caption_credit_angler": {
+      "en": "Photo: {credit}",
+      "es": "Foto: {credit}"
+    },
+    "caption_credit_anonymous": {
+      "en": "Photo: a SkipperCast angler",
+      "es": "Foto: un pescador de SkipperCast"
+    },
+    "caption_report": {
+      "en": "Trip total: {counts} for {anglers} anglers.",
+      "es": "Total del viaje: {counts} para {anglers} pescadores."
+    },
+    "caption_report_no_anglers": {
+      "en": "Trip total: {counts}.",
+      "es": "Total del viaje: {counts}."
+    },
+    "caption_cta": {
+      "en": "Text SkipperCast for today's report: {number}",
+      "es": "Escríbele a SkipperCast para el reporte de hoy: {number}"
     }
   }
 }

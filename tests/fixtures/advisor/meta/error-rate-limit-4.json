@@ -1,0 +1,10 @@
+{
+  "error": {
+    "message": "(#4) Application request limit reached EAAB-PLACEHOLDER-TOKEN",
+    "type": "OAuthException",
+    "is_transient": true,
+    "code": 4,
+    "error_subcode": 2207051,
+    "fbtrace_id": "APLACEHOLDERTRACE04"
+  }
+}

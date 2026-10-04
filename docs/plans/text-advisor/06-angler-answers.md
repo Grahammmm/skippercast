@@ -293,7 +293,9 @@ above:
   "me llamo Lupe", `anonymous`/`anónimo`) and stored on `advisor_media.credit`;
   a later shared photo reuses the contact's last credit without asking. A reply
   that is not a name leaves the photo queued with no credit and goes on. The
-  post draft (`kind photo`, caption style `angler`) is TA-S1's.
+  post draft (`kind photo`, caption style `angler`) is TA-S1's: approving the
+  `angler_photo` review now makes it ("Photo: {credit}", no collaborators; 09 §
+  Drafts, As built (TA-S1)).
 - **Tools.** `identify_fish {media_id}` (the contact's own image) returns the
   band, the candidates, `must_release`, the rules summaries, `reply` (the same
   deterministic text, which the model is told to send as it is) and, when

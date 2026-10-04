@@ -43,6 +43,7 @@ export interface AdvisorContactRow {
   home_port: string | null; targets_json: string | null; source: string | null; status: 'active' | 'stopped' | 'blocked';
   messages_today: number; messages_day: string | null; last_seen_at: string; last_error_notice_at: string | null;
   created_at: string; updated_at: string;
+  ig_sid?: string | null;   // 0011 (TA-S0): Instagram-scoped user id of a DM contact (TA-S6)
 }
 
 /** The subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */
@@ -100,7 +101,7 @@ export type Action =
   | {type: 'boat_create'; boat: NewBoat}                                // 05's boat.create: the pending boat, the contact made its skipper, the new_skipper review
   | {type: 'flow_set'; state: FlowState | null}                         // job_state advisor.flow.<contact_id>; null deletes it
   | {type: 'consent'; boatId: string; decision: 'yes' | 'revoke'}      // consent_photos_at + consent_message_id, or consent_revoked_at
-  | {type: 'post_revoke'; boatId: string}                               // TA-S1 rejects the boat's draft/approved posts; logged only until then
+  | {type: 'post_revoke'; boatId: string}                               // TA-S1: the boat's draft and approved posts rejected (social/drafts.ts revokeBoatPosts)
   | {type: 'crew_add'; boatId: string; phoneHash: string; phoneEnc: string}   // find-or-create the crew contact, link it, text the invite
   | {type: 'crew_remove'; boatId: string; contactId: string}           // removed_at, the contact's boat_id cleared
   // TA-I2: skipper reports and the media path (05 § count board, § plain text, § catch photos, § corrections, § auto-publish).
@@ -109,7 +110,8 @@ export type Action =
   | {type: 'report_withdraw'; reportId: string}                         // pending_confirm -> withdrawn
   | {type: 'report_edit'; reportId: string; fields: ReportEditFields; patch: ReportPatch[]; reopen?: boolean; publish?: boolean}  // an advisor_report_edits row, version + 1
   | {type: 'auto_publish'; boatId: string; on: boolean}                 // SC-5: advisor_boats.auto_publish (owner only)
-  | {type: 'media_queue'; mediaId: string}                              // publish_state private -> queued, credited to the boat (TA-S1 adds the post draft)
+  | {type: 'media_queue'; mediaId: string; hint?: string}               // publish_state private -> queued, credited to the boat, and its post draft (TA-S1; hint: propose_post's)
+  | {type: 'post_draft'; mediaId: string; hint?: string}                // TA-S1: the draft of a photo already queued (propose_post); social/drafts.ts ensureMediaDraft
   | {type: 'boat_instagram'; boatId: string; instagram: string}         // the handle asked for once after a photo (owner only)
   | {type: 'mark_once'; key: string}                                    // job_state advisor.once.<key>: a line said once
   // TA-I3: angler photos (06 § Angler photos, AC-1).
