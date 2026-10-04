@@ -204,7 +204,7 @@ the admin calendar shows them so the owner can post something by hand.
   `instagram_comment`). Subscribe the IG account with
   `POST /<ig-user-id>/subscribed_apps?subscribed_fields=messages,comments`.
 - DMs: a contact keyed by IGSID (`advisor_contacts.ig_sid`, added in
-  migration 0008, unique) runs through the same engine with
+  migration 0009, unique) runs through the same engine with
   `channel='instagram_dm'`; replies go to `POST /<ig-user-id>/messages`
   within the 24-hour window; every third reply ends with the "continue by
   text" line and the `text?s=igdm` link.

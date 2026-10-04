@@ -99,16 +99,19 @@ export interface OutboundMessage {
   text?: string;
   mediaKeys?: string[];             // R2 keys to attach (derived public JPEGs)
   replyToProviderId?: string;       // threads the reply where the channel supports it
+  channelHint?: 'imessage' | 'sms'; // the contact's last channel: picks the BlueBubbles chat GUID (TA-C1)
 }
 export interface SendResult {providerId: string | null; status: 'sent' | 'failed' | 'unknown'; error?: string}
-/** The part of 03's ChannelAdapter the consumer needs; TA-C1's adapters implement it. */
-export interface OutboundChannel {send(message: OutboundMessage, env: Env): Promise<SendResult>}
+/** The part of 03's ChannelAdapter the consumer needs (channels/index.ts ChannelAdapter implements it). */
+export interface OutboundChannel {name?: string; send(message: OutboundMessage, env: Env): Promise<SendResult>}
 
 /** Injectable dependencies of the consumer, so tests run offline and deterministic. */
 export interface ConsumerDeps {
   now?: () => number;               // epoch ms; default Date.now
   random?: () => number;            // default Math.random (for the engine)
-  channel?: OutboundChannel;        // default: none (every send is recorded as failed until TA-C1)
+  channel?: OutboundChannel;        // a fixed channel for every contact (tests); wins over channelFor
+  channelFor?: (env: Env, contact: AdvisorContactRow) => OutboundChannel; // per-contact adapter; server/index.ts passes channels/index.ts channelFor
+  sleep?: (ms: number) => Promise<void>; // the gap between split chunks; default setTimeout
   handler?: Handler;                // default: warmUpHandler; TA-E1 passes the engine
   turnTimeoutMs?: number;           // hard stop per message; default 45 s (01 § request flow)
 }

@@ -150,6 +150,13 @@ secrets = {name: os.environ[source] for name, source in [
     # SECRET_-prefixed because scripts/wrangler_config.mjs copies ADVISOR_* environment names
     # into the Worker's plain vars and refuses secret names there.
     ('ADVISOR_PHONE_KEY', 'SECRET_ADVISOR_PHONE_KEY'),
+    # Text Advisor Mac relay (BlueBubbles behind a Cloudflare Tunnel + Access service token) and
+    # the secret path segment of its webhook; runbook: docs/operations/runbooks/advisor-relay-setup.md.
+    ('ADVISOR_WEBHOOK_TOKEN', 'SECRET_ADVISOR_WEBHOOK_TOKEN'),
+    ('BLUEBUBBLES_URL', 'BLUEBUBBLES_URL'),
+    ('BLUEBUBBLES_PASSWORD', 'BLUEBUBBLES_PASSWORD'),
+    ('CF_ACCESS_CLIENT_ID', 'CF_ACCESS_CLIENT_ID'),
+    ('CF_ACCESS_CLIENT_SECRET', 'CF_ACCESS_CLIENT_SECRET'),
 ] if os.environ.get(source)}
 print(json.dumps(secrets))
 PY

@@ -41,9 +41,9 @@ test('the same app answers /api/advisor/health once the flag is on, with no secr
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
   const text = await response.text();
-  assert.deepEqual(JSON.parse(text), {enabled: true, channel: 'twilio', providers: ['claude']});
+  assert.deepEqual(JSON.parse(text), {enabled: true, channel: 'twilio', providers: ['claude'], relay: null}, 'no D1: relay unknown');
   for (const leak of ['8055550123', 'secret-token', 'sk-secret']) assert.ok(!text.includes(leak), leak);
-  assert.deepEqual(await (await get('/api/advisor/health', ON)).json(), {enabled: true, channel: 'bluebubbles', providers: ['hermes', 'claude']});
+  assert.deepEqual(await (await get('/api/advisor/health', ON)).json(), {enabled: true, channel: 'bluebubbles', providers: ['hermes', 'claude'], relay: null});
   // And off again on the next request: the switch is read per request, not at module load.
   assert.equal((await get('/api/advisor/health', OFF)).status, 404);
 });

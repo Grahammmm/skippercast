@@ -1,0 +1,12 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "A typing indicator (Private API only): ignored.",
+  "_expect": {
+    "ignore": "other"
+  },
+  "type": "typing-indicator",
+  "data": {
+    "display": true,
+    "guid": "iMessage;-;+15555550101"
+  }
+}

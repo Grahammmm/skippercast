@@ -13,16 +13,23 @@
 //
 // The relay watchdog is not a slot: it runs on every tick (01 says every 15
 // minutes) and pings the Mac relay. Three consecutive failures mark it down.
-// While it is down, outbound rows with status 'held' stay held: the hold on
-// new sends and their release on recovery (or after 6 hours, through Twilio
-// only once ADVISOR_CHANNEL=twilio is set) belong to the BlueBubbles adapter
-// task (TA-C1), which reads job_state advisor.relay.
+// While it is down the consumer writes new BlueBubbles sends as 'held'
+// (consumer.ts); releaseHeld runs after the watchdog on every tick, sends the
+// held rows once the relay is up again (or through Twilio once the owner has
+// set ADVISOR_CHANNEL=twilio, never automatically) and fails rows older than
+// 6 hours.
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
+import {RELAY_KEY, relayState} from './relay.ts';
+import type {RelayState} from './relay.ts';
+import {releaseHeld} from './consumer.ts';
+import {channelFor} from './channels/index.ts';
+import type {ConsumerDeps} from './types.ts';
 import type {Env} from '../env.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
-export const RELAY_KEY = 'advisor.relay';
+export {RELAY_KEY, relayState} from './relay.ts';
+export type {RelayState} from './relay.ts';
 export const RELAY_DOWN_AFTER = 3;          // consecutive failed pings
 export const RELAY_TIMEOUT_MS = 10000;
 export const DEFAULT_TZ = 'America/Los_Angeles';
@@ -86,16 +93,8 @@ export async function runSlot(env: Env, name: string, time: SlotTime, fn: SlotJo
   }
 }
 
-export interface RelayState {state: 'up' | 'down'; failures: number; checked_at: string; last_ok_at: string | null}
-export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]}
+export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps}
 export type RelayOutcome = 'not-configured' | 'up' | 'failing' | 'down' | 'no-db';
-
-/** The stored relay state, or null when never checked (or unreadable). */
-export async function relayState(env: Env): Promise<RelayState | null> {
-  if (!env.DB) return null;
-  const raw = (await env.DB.prepare('SELECT value FROM job_state WHERE key=?').bind(RELAY_KEY).first<{value: string}>())?.value;
-  try { const v = raw ? JSON.parse(raw) : null; return v && (v.state === 'up' || v.state === 'down') ? v : null; } catch { return null; }
-}
 
 /**
  * Relay watchdog: when outbound goes through BlueBubbles and BLUEBUBBLES_URL is
@@ -149,6 +148,8 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     let partial = false;
     const relay = await relayWatchdog(env, deps, now).catch(error => { advisorLog('error', 'advisor_relay_check_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return 'error'; });
     if (relay === 'failing' || relay === 'down' || relay === 'error') partial = true;
+    const held = await releaseHeld(env, deps.consumer ?? {channelFor}, now).catch(error => { advisorLog('error', 'advisor_release_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });
+    if (!held) partial = true;
     for (const slot of deps.slots ?? SLOTS) {
       const outcome = await runSlot(env, slot.name, slot.time, slot.run, now);
       if (outcome === 'failed') partial = true;

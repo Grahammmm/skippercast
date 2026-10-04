@@ -1,0 +1,73 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "An MMS from an Android phone, forwarded to the Mac by Text Message Forwarding.",
+  "_expect": {
+    "inbound": 1,
+    "channel": "sms",
+    "from": "+15555550103",
+    "media": 1
+  },
+  "type": "new-message",
+  "data": {
+    "originalROWID": 4101,
+    "guid": "9E4B5F60-7283-4D9E-BF0A-2B3C4D5E6F70",
+    "text": "Count board from today",
+    "attributedBody": null,
+    "handle": {
+      "originalROWID": 12,
+      "address": "+15555550103",
+      "service": "SMS",
+      "uncanonicalizedId": null,
+      "country": "us"
+    },
+    "handleId": 12,
+    "otherHandle": 0,
+    "chats": [
+      {
+        "originalROWID": 7,
+        "guid": "SMS;-;+15555550103",
+        "style": 45,
+        "chatIdentifier": "+15555550103",
+        "isArchived": false,
+        "displayName": "",
+        "participants": []
+      }
+    ],
+    "attachments": [
+      {
+        "originalROWID": 880,
+        "guid": "at_0_9E4B5F60-7283-4D9E-BF0A-2B3C4D5E6F70",
+        "uti": "public.jpeg",
+        "mimeType": "image/jpeg",
+        "transferName": "image000000.jpg",
+        "totalBytes": 412233,
+        "transferState": 5,
+        "isOutgoing": false,
+        "hideAttachment": false,
+        "isSticker": false,
+        "originalGuid": "at_0_9E4B5F60-7283-4D9E-BF0A-2B3C4D5E6F70",
+        "height": 960,
+        "width": 1280,
+        "metadata": null
+      }
+    ],
+    "subject": null,
+    "error": 0,
+    "dateCreated": 1791082800000,
+    "dateRead": null,
+    "dateDelivered": null,
+    "isFromMe": false,
+    "hasDdResults": false,
+    "isArchived": false,
+    "itemType": 0,
+    "groupTitle": null,
+    "groupActionType": 0,
+    "balloonBundleId": null,
+    "associatedMessageGuid": null,
+    "associatedMessageType": null,
+    "expressiveSendStyleId": null,
+    "threadOriginatorGuid": null,
+    "hasPayloadData": false,
+    "isDelivered": true
+  }
+}

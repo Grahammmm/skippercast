@@ -1,0 +1,12 @@
+{
+  "_source": "Shape of a BlueBubbles server REST response ({status, message, data}), server 1.9.x; hand-written, not captured. Values are made up.",
+  "_description": "POST /api/v1/message/text, accepted",
+  "status": 200,
+  "message": "Message sent!",
+  "data": {
+    "guid": "F5B1B5C6-D8E9-43F4-1560-8192A3B4C5D6",
+    "text": "SkipperCast is warming up. Check back soon.",
+    "isFromMe": true,
+    "error": 0
+  }
+}

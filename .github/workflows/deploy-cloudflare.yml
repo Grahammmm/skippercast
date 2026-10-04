@@ -74,6 +74,12 @@ jobs:
           # Text Advisor phone-number key, uploaded as the Worker secret ADVISOR_PHONE_KEY. Named
           # SECRET_* here because ADVISOR_* names in this env are copied into plain vars.
           SECRET_ADVISOR_PHONE_KEY: ${{ secrets.ADVISOR_PHONE_KEY }}
+          # Text Advisor Mac relay and its webhook path secret (runbook: advisor-relay-setup.md).
+          SECRET_ADVISOR_WEBHOOK_TOKEN: ${{ secrets.ADVISOR_WEBHOOK_TOKEN }}
+          BLUEBUBBLES_URL: ${{ secrets.BLUEBUBBLES_URL }}
+          BLUEBUBBLES_PASSWORD: ${{ secrets.BLUEBUBBLES_PASSWORD }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           WATCHDOG_GITHUB_TOKEN: ${{ secrets.WATCHDOG_GITHUB_TOKEN }}
           # Web Push signing pair. Optional: when unset, the deploy keeps the pair in the private
           # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).

@@ -1,0 +1,61 @@
+{
+  "_source": "Shape of a BlueBubbles server webhook (MessageSerializer, server 1.9.x) as documented and seen in its API; hand-written, not captured from a real relay. Numbers are the fictional +1555555010x series; GUIDs are made up.",
+  "_description": "A tapback (love) on one of our replies: ignored.",
+  "_expect": {
+    "ignore": "reaction"
+  },
+  "type": "new-message",
+  "data": {
+    "originalROWID": 4101,
+    "guid": "A05C6071-8394-4EAF-C01B-3C4D5E6F7081",
+    "text": "Loved \u201cSkipperCast is warming up.\u201d",
+    "attributedBody": null,
+    "handle": {
+      "originalROWID": 12,
+      "address": "+15555550101",
+      "service": "iMessage",
+      "uncanonicalizedId": null,
+      "country": "us"
+    },
+    "handleId": 12,
+    "otherHandle": 0,
+    "chats": [
+      {
+        "originalROWID": 7,
+        "guid": "iMessage;-;+15555550101",
+        "style": 45,
+        "chatIdentifier": "+15555550101",
+        "isArchived": false,
+        "displayName": "",
+        "participants": [
+          {
+            "originalROWID": 12,
+            "address": "+15555550101",
+            "service": "iMessage",
+            "uncanonicalizedId": null,
+            "country": "us"
+          }
+        ]
+      }
+    ],
+    "attachments": [],
+    "subject": null,
+    "error": 0,
+    "dateCreated": 1791082800000,
+    "dateRead": null,
+    "dateDelivered": null,
+    "isFromMe": false,
+    "hasDdResults": false,
+    "isArchived": false,
+    "itemType": 0,
+    "groupTitle": null,
+    "groupActionType": 0,
+    "balloonBundleId": null,
+    "associatedMessageGuid": "p:0/0F1E2D3C-4B5A-4978-8695-A4B3C2D1E0F9",
+    "associatedMessageType": "love",
+    "expressiveSendStyleId": null,
+    "threadOriginatorGuid": null,
+    "hasPayloadData": false,
+    "isDelivered": true
+  }
+}

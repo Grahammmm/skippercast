@@ -4,8 +4,17 @@
 // state machine with a fake fetcher, and advisorCron's one-word outcome.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
-import {runSlot, localClock, relayWatchdog, relayState, advisorCron, SLOTS, SLOT_PREFIX, RELAY_KEY} from '../server/advisor/cron.ts';
+
+// cron.ts reaches the Worker config (server/http.ts) through the held release and the channel adapters,
+// which need the build-time globals, as in tests/test_advisor_consumer.mjs.
+const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
+globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
+globalThis.DEPLOYMENT = read('../deployments/production.json');
+globalThis.SHELLS = {'/': '/index.0123456789.html'};
+globalThis.BUILD_ID = 'build-test';
+const {runSlot, localClock, relayWatchdog, relayState, advisorCron, SLOTS, SLOT_PREFIX, RELAY_KEY} = await import('../server/advisor/cron.ts');
 
 const dbTest = (name, fn) => test(name, {skip: sqliteUnavailable || false}, fn);
 const ON = {TEXT_ADVISOR_ENABLED: 'true'};

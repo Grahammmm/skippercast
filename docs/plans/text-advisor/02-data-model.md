@@ -9,14 +9,15 @@ base64url for user-facing rows, deterministic hashes where idempotency needs
 them (noted per table). Times are ISO-8601 UTC strings except where an integer
 epoch is needed for an index-driven expiry, matching the existing tables.
 
-Migrations land in three steps so each PR is small and each phase can deploy
+Migrations land in steps so each PR is small and each phase can deploy
 without the later tables:
 
 | Migration | Tables | Phase |
 | --- | --- | --- |
 | `0006_advisor_core` | `advisor_contacts`, `advisor_boats`, `advisor_crew`, `advisor_messages`, `advisor_media`, `advisor_reports`, `advisor_report_edits`, `advisor_reviews`; `users.role` | 1 (channel + intake) |
-| `0007_advisor_answers` | `advisor_rules`, `advisor_daily_answers` | 3 (angler answers) |
-| `0008_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
+| `0007_advisor_media_ref` | `advisor_media.provider_ref` (TA-C1; not in the original plan) | 1 |
+| `0008_advisor_answers` | `advisor_rules`, `advisor_daily_answers` | 3 (angler answers) |
+| `0009_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
 
 Column conventions: `*_at` ISO strings; `*_json` columns hold JSON text and
 are validated on read by a small parser in `server/advisor/types.ts`
@@ -38,7 +39,7 @@ One row per person (phone number) or web visitor.
 | `phone_hash` | text, unique, nullable | `HMAC-SHA256(K_hash, e164)` hex, where `K_hash = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'hash')`. Null for web-only contacts. |
 | `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(K_enc, e164))`, `K_enc = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'enc')`, 12-byte random iv. Decrypted only to send. |
 | `web_session` | text, unique, nullable | the `sc_adv` cookie value's sha256 for web visitors |
-| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0008) |
+| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0009) |
 | `channel` | text | last channel used: `imessage`, `sms`, `web`, later `whatsapp` |
 | `role` | text | `angler` (default), `skipper`, `crew`, `admin-test` |
 | `boat_id` | text, nullable | the boat a skipper or crew member posts for |
@@ -109,7 +110,7 @@ Every inbound and outbound message on every channel.
 | `channel` | text | `imessage`, `sms`, `web`, `instagram_dm`, `instagram_comment` |
 | `provider_id` | text, nullable | BlueBubbles message guid, Twilio MessageSid, IG message id; unique with `channel` |
 | `body` | text, nullable | the text; stored in full, max 4,000 chars; nulled by retention |
-| `media_json` | text, nullable | array of `advisor_media.id` |
+| `media_json` | text, nullable | inbound: array of `advisor_media.id`; outbound: array of the R2 keys it attaches (so a `held` row can be sent later, TA-C1) |
 | `intent` | text, nullable | the engine's classification for inbound (`report.count_board`, `fishid`, `advice.rig`, …) |
 | `status` | text | in: `queued`, `processing`, `done`, `held` (`ADVISOR_REPLIES_ENABLED=false`), `dropped`, `failed`; out: `sending`, `sent`, `failed`, `held`, `unknown` |
 | `error` | text, nullable | short reason, no payloads |
@@ -141,7 +142,15 @@ unique `message_provider (channel, provider_id)`.
 | `has_person` | integer, nullable | copied out of the classification for the OP-2 index |
 | `publish_state` | text | `private` (default), `queued` (in a review), `approved`, `posted`, `rejected` |
 | `credit` | text, nullable | the credit line to use when posted ("Capt. X / Boat Y") |
+| `provider_ref` | text, nullable | added in `0007_advisor_media_ref` (TA-C1): the channel's attachment reference (BlueBubbles attachment guid, later a Twilio media URL) |
 | `created_at` | text | |
+
+The webhook (TA-C1) writes one placeholder row per attachment before anything
+is downloaded: `r2_key=''`, `sha256=''`, `bytes` and `mime` as the provider
+claims them, `provider_ref` set, `publish_state='private'`. TA-C4's download
+fetches by `provider_ref`, then fills `r2_key`, `sha256`, the sniffed `mime`
+and the real `bytes`; a row whose `r2_key` is still `''` has not been
+downloaded.
 
 Indexes: `media_contact (contact_id)`, `media_publish (publish_state)`, `media_boat (boat_id)`.
 
@@ -203,7 +212,7 @@ The admin queue (OP-1). One row per thing needing a human.
 
 Indexes: `review_open (status, opened_at)`.
 
-## `advisor_rules` (migration 0007)
+## `advisor_rules` (migration 0008)
 
 The only source of regulations the advisor may quote (OP-6).
 
@@ -233,7 +242,7 @@ Seeded by `scripts/advisor/import-rules.mjs` from `dist/data/regulations*.json`
 (each imported row starts as `review` until an admin marks it `active`, so
 nothing is quotable before a human has looked).
 
-## `advisor_daily_answers` (migration 0007)
+## `advisor_daily_answers` (migration 0008)
 
 The "one answer per port per day" cache (FR-1).
 
@@ -244,7 +253,7 @@ The "one answer per port per day" cache (FR-1).
 | `inputs_hash` | text | sha256 of the report ids, conditions snapshot and rules used; regenerate when it changes |
 | `generated_at` | text | |
 
-## `advisor_posts` (migration 0008)
+## `advisor_posts` (migration 0009)
 
 A social post in any state.
 
@@ -270,7 +279,7 @@ A social post in any state.
 
 Indexes: `post_status_time (status, scheduled_for)`, `post_boat (boat_id)`.
 
-## `advisor_post_stats` (migration 0008)
+## `advisor_post_stats` (migration 0009)
 
 | Column | Type | Notes |
 | --- | --- | --- |
