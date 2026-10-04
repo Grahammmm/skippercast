@@ -1,0 +1,31 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging Messages.json create response as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "POST /Messages.json accepted the message (201).",
+  "_expect": {
+    "status": 201
+  },
+  "response": {
+    "account_sid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "api_version": "2010-04-01",
+    "body": "Hello",
+    "date_created": "Sat, 03 Oct 2026 15:00:00 +0000",
+    "date_sent": null,
+    "date_updated": "Sat, 03 Oct 2026 15:00:00 +0000",
+    "direction": "outbound-api",
+    "error_code": null,
+    "error_message": null,
+    "from": "+15555550100",
+    "messaging_service_sid": null,
+    "num_media": "0",
+    "num_segments": "1",
+    "price": null,
+    "price_unit": "USD",
+    "sid": "SM7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a",
+    "status": "queued",
+    "subresource_uris": {
+      "media": "/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/Messages/SM7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a/Media.json"
+    },
+    "to": "+15555550101",
+    "uri": "/2010-04-01/Accounts/ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/Messages/SM7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a.json"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging inbound webhook (application/x-www-form-urlencoded POST, shown as its parameters) as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "STOP. Twilio's default opt-out handling replies to it itself; if Twilio also forwards it, it reaches the engine as text. OptOutType is set when Advanced Opt-Out is on.",
+  "_expect": {
+    "inbound": 1,
+    "from": "+15555550101",
+    "text": "STOP",
+    "media": 0
+  },
+  "params": {
+    "ToCountry": "US",
+    "ToState": "CA",
+    "SmsMessageSid": "SM5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+    "NumMedia": "0",
+    "ToCity": "",
+    "FromZip": "",
+    "SmsSid": "SM5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+    "FromState": "CA",
+    "SmsStatus": "received",
+    "FromCity": "",
+    "Body": "STOP",
+    "FromCountry": "US",
+    "To": "+15555550100",
+    "MessagingServiceSid": "",
+    "ToZip": "",
+    "NumSegments": "1",
+    "MessageSid": "SM5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+    "AccountSid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "From": "+15555550101",
+    "ApiVersion": "2010-04-01",
+    "OptOutType": "STOP"
+  }
+}

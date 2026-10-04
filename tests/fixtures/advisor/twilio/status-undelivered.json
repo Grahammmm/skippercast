@@ -1,0 +1,20 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging status callback (application/x-www-form-urlencoded POST, shown as its parameters) as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "Our outbound message was not delivered (30003: unreachable handset).",
+  "_expect": {
+    "row": "failed",
+    "error": "twilio-30003"
+  },
+  "params": {
+    "SmsSid": "SM7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a",
+    "SmsStatus": "undelivered",
+    "MessageStatus": "undelivered",
+    "To": "+15555550101",
+    "MessagingServiceSid": "",
+    "MessageSid": "SM7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a",
+    "AccountSid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "From": "+15555550100",
+    "ApiVersion": "2010-04-01",
+    "ErrorCode": "30003"
+  }
+}

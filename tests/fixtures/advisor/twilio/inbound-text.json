@@ -1,0 +1,32 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging inbound webhook (application/x-www-form-urlencoded POST, shown as its parameters) as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "A plain SMS.",
+  "_expect": {
+    "inbound": 1,
+    "from": "+15555550101",
+    "text": "Hows the rockfish bite out of Morro Bay?",
+    "media": 0
+  },
+  "params": {
+    "ToCountry": "US",
+    "ToState": "CA",
+    "SmsMessageSid": "SM1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+    "NumMedia": "0",
+    "ToCity": "",
+    "FromZip": "",
+    "SmsSid": "SM1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+    "FromState": "CA",
+    "SmsStatus": "received",
+    "FromCity": "",
+    "Body": "Hows the rockfish bite out of Morro Bay?",
+    "FromCountry": "US",
+    "To": "+15555550100",
+    "MessagingServiceSid": "",
+    "ToZip": "",
+    "NumSegments": "1",
+    "MessageSid": "SM1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+    "AccountSid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "From": "+15555550101",
+    "ApiVersion": "2010-04-01"
+  }
+}

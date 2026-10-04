@@ -113,7 +113,7 @@ keeps the action's id, chunk n is `outboundId(message, '<index>.<n>')`.
 
 `twilio` and `web` are registered as stubs that throw `ChannelNotImplemented`
 until TA-C2 and TA-C3 replace them in `ADAPTERS`; a send through a stub is
-recorded `failed`, not `unknown`.
+recorded `failed`, not `unknown`. (TA-C2 replaced the `twilio` stub.)
 
 ## BlueBubbles adapter (`channels/bluebubbles.ts`)
 
@@ -179,6 +179,46 @@ omitted in the text for brevity.
   on skippercast.com), `StatusCallback` = `/api/advisor/inbound/twilio-status/<token>`
   (updates `sent`/`failed`). Error 21610 (opted out) sets the contact
   `stopped`. Media ≤ 600 KB for non-JPEG; JPEG under 5 MB total.
+- As built (TA-C2):
+  - **Both webhooks also carry `ADVISOR_WEBHOOK_TOKEN`** in the path
+    (`/api/advisor/inbound/twilio/<token>`, `/api/advisor/inbound/twilio-status/<token>`)
+    and share the BlueBubbles route's rate limit, on top of the signature. The
+    Twilio console's "A message comes in" URL is therefore
+    `https://skippercast.com/api/advisor/inbound/twilio/<ADVISOR_WEBHOOK_TOKEN>`
+    (HTTP POST). A signature whose `AccountSid` parameter is not
+    `TWILIO_ACCOUNT_SID` is also rejected.
+  - **STOP/HELP forwarding is not verified.** TA-C2 ran offline and could not
+    confirm against Twilio's current docs or console which of STOP and HELP
+    Twilio forwards to the webhook after its own auto-reply. The adapter does
+    not depend on it: every forwarded body, STOP and HELP included, is stored as
+    ordinary text and reaches the engine's STOP/START/HELP paths; `OptOutType`
+    is not read. The owner confirms the forwarding on the Twilio console (send
+    STOP and HELP to the number and check the advisor's inbound rows) during
+    the port runbook, and TA-C7's runbook records the result. 02 § STOP's
+    "still forwards the message" stays a claim until then. If the engine
+    confirms a forwarded STOP itself, Twilio refuses that send with 21610,
+    which only re-applies the stop; TA-E1 may skip the confirmation on Twilio
+    since Twilio has already replied.
+  - **Media URLs**: `MediaUrl` is `${ADVISOR_PUBLIC_BASE}/media/<id>.jpg`
+    (TA-C4's public route). A media key is mapped to its id from the derived
+    key (`advisor/derived/<id>/public.jpg`) or else by `advisor_media.r2_key`.
+    The route serves only `approved`/`posted` media, so a send whose media is
+    still private fails with `media-not-public` instead of an MMS Twilio cannot
+    fetch; more than 10 keys fails with `too-many-media`. 03's "≤ 600 KB for
+    non-JPEG" is not enforced: only JPEGs are ever attached.
+  - **Media fetch** (`fetchMediaByRef`) accepts only `https://api.twilio.com/…`
+    URLs, sends Basic auth there, and follows Twilio's redirect to its media CDN
+    without the `Authorization` header.
+  - **Retries**: one retry on a network error, none on any HTTP status. A
+    timeout or a 5xx is `unknown` (Twilio may have queued it), a 4xx `failed`;
+    21610 stops the contact (by phone hash) and fails with `opted-out`. The
+    status callback maps `sent`/`delivered` to `sent` and
+    `undelivered`/`failed` to `failed` with `twilio-<ErrorCode>` (02 has no
+    delivered column, as for BlueBubbles); a 21610 there also stops the contact.
+  - **`StatusCallback`** is omitted when `ADVISOR_WEBHOOK_TOKEN` is unset;
+    `send` fails with `not-configured` without `TWILIO_FROM` (unset until a port).
+  - `scripts/advisor/relay-check.mjs --twilio` fetches the account, sends one
+    SMS from `TWILIO_FROM` to `--to` (`--no-send` skips it) and prints the sid.
 - Compliance (owner tasks in TA-O3): A2P 10DLC registration (Low Volume
   Standard with an EIN, or Sole Proprietor without; ~$4.50 brand, $15
   campaign vetting, $1.50–2/month, up to 5 business days) before any SMS is

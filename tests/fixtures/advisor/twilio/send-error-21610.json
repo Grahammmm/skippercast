@@ -1,0 +1,13 @@
+{
+  "_source": "Shape of a Twilio Programmable Messaging REST API error response as documented in Twilio's Messaging webhook and Message resource reference (researched 2026-10-03); hand-written, not captured from a real account. Numbers are the fictional +1555555010x series; the account SID is Twilio's documented ACXXX… placeholder and the message SIDs are made up.",
+  "_description": "POST /Messages.json refused: the recipient texted STOP (400, error 21610).",
+  "_expect": {
+    "status": 400
+  },
+  "response": {
+    "code": 21610,
+    "message": "Attempt to send to unsubscribed recipient",
+    "more_info": "https://www.twilio.com/docs/errors/21610",
+    "status": 400
+  }
+}
