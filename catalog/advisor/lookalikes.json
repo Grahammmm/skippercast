@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-03",
+  "method": "Field marks for the fish-ID prompt and replies (07 § Claude provider, 06 § fish ID): 2-3 widely known cues per species and the keys it is most often confused with. Keys are catalog/species.json or catalog/advisor/species-extra.json keys. Each entry cites the agency species page; entries citing https://wildlife.ca.gov/Fishing/Ocean await a more specific CDFW page (owner to refine). Cues describe appearance only; no rule, size or catch claim.",
+  "species": {
+    "vermilion": {"cues": ["red body with grey or dark mottling", "small rough scales on the underside of the lower jaw", "fins red, often edged dark"], "lookalikes": ["canary", "yelloweye"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "canary": {"cues": ["orange-yellow body with three orange stripes across the head", "grey-white blotches along the side", "smooth lower jaw"], "lookalikes": ["vermilion", "yelloweye"], "source": "https://www.fisheries.noaa.gov/species/canary-rockfish"},
+    "yelloweye": {"cues": ["bright yellow eye", "orange-red body, fins often edged black", "white stripe along the side, plain on young fish and faint on adults"], "lookalikes": ["vermilion", "canary"], "source": "https://www.fisheries.noaa.gov/species/yelloweye-rockfish"},
+    "cowcod": {"cues": ["very deeply notched spiny dorsal fin", "pinkish-tan body, young fish with dark bars", "large mouth"], "lookalikes": ["bocaccio", "bronzespotted", "vermilion"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "bronzespotted": {"cues": ["orange to pink body covered in bronze or brown spots", "deeply notched spiny dorsal fin"], "lookalikes": ["cowcod", "vermilion"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "copper": {"cues": ["copper-orange to brown body", "pale stripe along the rear two-thirds of the lateral line", "copper streaks running back from the eye"], "lookalikes": ["gopher", "vermilion"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "bocaccio": {"cues": ["upper jaw reaching past the eye", "lower jaw sticking out well beyond the upper", "long slender body, olive-brown to red"], "lookalikes": ["chilipepper", "cowcod"], "source": "https://www.fisheries.noaa.gov/species/bocaccio"},
+    "chilipepper": {"cues": ["pink-red body with a bright red or pale lateral line stripe", "upper jaw ending around the middle of the eye"], "lookalikes": ["bocaccio"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "black": {"cues": ["grey-black back fading to a lighter belly", "black spots on the spiny dorsal fin", "mouth reaching to the back of the eye"], "lookalikes": ["blue"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "blue": {"cues": ["blue-grey mottled body", "small mouth that ends before the back of the eye", "dark bands across the head"], "lookalikes": ["black"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "gopher": {"cues": ["brown to olive body with pinkish-white blotches", "heavy head spines"], "lookalikes": ["copper"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "cabezon": {"cues": ["scaleless skin", "fleshy flap over each eye", "mottled red, green or brown with large fan-like pectoral fins"], "lookalikes": ["lingcod", "kelp-greenling"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "kelp-greenling": {"cues": ["one long dorsal fin with a shallow notch", "males with blue spots on the head and front", "females with reddish-brown spots and yellowish fins"], "lookalikes": ["lingcod", "cabezon"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "lingcod": {"cues": ["long body and a huge mouth with large teeth", "dorsal fin deeply notched into two parts", "scaled skin (cabezon has none)"], "lookalikes": ["cabezon", "kelp-greenling"], "source": "https://www.fisheries.noaa.gov/species/lingcod"},
+    "white-seabass": {"cues": ["raised ridge along the belly between the pelvic and anal fins", "dark spot at the base of the pectoral fin", "young fish with dark vertical bars (croakers lack the belly ridge)"], "lookalikes": [], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "california-halibut": {"cues": ["jaw reaching past the back of the eye", "lateral line with a high arch over the pectoral fin", "eyes on either the left or the right side"], "lookalikes": ["pacific-halibut"], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "pacific-halibut": {"cues": ["jaw ending around the middle of the eye", "lateral line with a gentle arch", "concave, crescent-shaped tail"], "lookalikes": ["california-halibut"], "source": "https://www.fisheries.noaa.gov/species/pacific-halibut"},
+    "king-salmon": {"cues": ["black gums at the base of the teeth", "small black spots on the back and on both lobes of the tail"], "lookalikes": [], "source": "https://www.fisheries.noaa.gov/species/chinook-salmon"},
+    "albacore": {"cues": ["very long pectoral fins reaching past the start of the anal fin", "thin white trailing edge on the tail"], "lookalikes": ["bluefin", "yellowfin"], "source": "https://www.fisheries.noaa.gov/species/pacific-albacore-tuna"},
+    "bluefin": {"cues": ["short pectoral fins that end before the second dorsal fin", "deep, heavy body", "yellow finlets edged in black"], "lookalikes": ["yellowfin", "albacore"], "source": "https://www.fisheries.noaa.gov/species/pacific-bluefin-tuna"},
+    "yellowtail": {"cues": ["yellow stripe from the eye to the tail", "bright yellow tail", "no finlets behind the dorsal and anal fins"], "lookalikes": [], "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    "dungeness": {"cues": ["purple-tinged brown shell, widest at the last point on each side", "claws with white tips"], "lookalikes": [], "source": "https://wildlife.ca.gov/Fishing/Ocean"}
+  }
+}

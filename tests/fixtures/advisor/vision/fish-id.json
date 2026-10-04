@@ -1,0 +1,54 @@
+{
+  "_source": "Hand-written to the Messages API tool_use response shape and the 07-vision.md result schema (TA-V1); not a recording of a live call. The image it answers is named in _image.",
+  "_image": "images/fish.png",
+  "id": "msg_fixture_fish_id",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu__fish_id",
+      "name": "record_fish_id",
+      "input": {
+        "candidates": [
+          {
+            "species_key": "vermilion",
+            "label": "Vermilion rockfish",
+            "confidence": 0.62,
+            "cues": [
+              "red body",
+              "red fins"
+            ]
+          },
+          {
+            "species_key": "canary",
+            "label": "Canary rockfish",
+            "confidence": 0.21,
+            "cues": [
+              "orange-red colour"
+            ]
+          },
+          {
+            "species_key": "yelloweye",
+            "label": "Yelloweye rockfish",
+            "confidence": 0.12,
+            "cues": [
+              "yellow eye"
+            ]
+          }
+        ],
+        "needs_better_photo": false,
+        "reason": null
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 2300,
+    "output_tokens": 160,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}
