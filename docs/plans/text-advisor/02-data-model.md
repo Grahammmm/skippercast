@@ -152,6 +152,16 @@ fetches by `provider_ref`, then fills `r2_key`, `sha256`, the sniffed `mime`
 and the real `bytes`; a row whose `r2_key` is still `''` has not been
 downloaded.
 
+As built (TA-C4, `server/advisor/media.ts`): `kind` also takes `unknown` for a
+rejected file (an unrecognised type, a JPEG/PNG whose marker or chunk walk
+fails, a JPEG/PNG over 24 MB, anything over 300 MB, or a download that still
+failed after the retries); such a row has `publish_state='rejected'`,
+`mime='application/octet-stream'`, `r2_key=''` and nothing in R2. The table
+has no error column, so a download given up on is recorded on the inbound
+`advisor_messages.error` as `fetch-failed` (the handler still runs). A
+duplicate within the contact gets its own row whose `r2_key` points at the
+first row's object. Upload-link rows have `provider_ref` null.
+
 Indexes: `media_contact (contact_id)`, `media_publish (publish_state)`, `media_boat (boat_id)`.
 
 ## `advisor_reports`
@@ -301,7 +311,7 @@ Advisor cron state uses the existing `job_state` table with keys prefixed
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 
 ```
-advisor/media/<contact_id>/<media_id>.<jpg|mp4|m4a>   original, EXIF stripped, never public
+advisor/media/<contact_id>/<media_id>.<ext>           original, EXIF stripped (JPEG/PNG), never served raw
 advisor/derived/<media_id>/public.jpg                  1440 px max, sRGB JPEG, for pages and Meta
 advisor/derived/<media_id>/story.jpg                   1080×1920 with the "Text SkipperCast" footer baked in
 advisor/derived/<media_id>/thumb.jpg                   320 px for the admin queue
@@ -311,6 +321,20 @@ advisor/exports/<contact_id>/<date>.json               a "send me my data" expor
 
 Served only through `GET /media/<media_id>.jpg` (public derived files, when
 `publish_state` allows) and `GET /api/admin/media/<id>` (admin, originals).
+
+As built (TA-C4): `<ext>` is the sniffed type's: `jpg`, `png`, `gif`, `webp`,
+`heic`, `heif`, `mp4`, `mov`, `m4a`, `aac`, `amr` or `caf`. The
+`advisor/derived/*` files come from the `advisor-media` runner job (TA-M1),
+which does not exist yet; until it writes `public.jpg`, `GET /media/<id>.jpg`
+(and `.png`) falls back to the stripped original when its stored type matches
+the extension. A HEIC, GIF, WebP, video or audio original (stored as received,
+`exif_stripped=0`) is never served, so it becomes public only through its
+derived JPEG; `GET /media/<id>.mp4` (09) is not built yet (TA-S1 adds it with
+the Meta publishing that needs it). The JPEG walk drops everything after EOI as
+well, because an iPhone's MPF secondary image sits there with its own EXIF.
+Files over 24 MB that are stored as received go to R2 as a multipart upload
+(10 MB parts) hashed on the way, so a 300 MB video never sits in the Worker's
+128 MB; their duplicate check runs after the upload and deletes the new copy.
 The Worker never returns an R2 URL. Image processing is split: the Worker
 strips metadata at intake without decoding (a JPEG marker walk that drops
 every APPn segment except APP0, and drops PNG `eXIf`/`tEXt` chunks), so no

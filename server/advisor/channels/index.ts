@@ -47,6 +47,12 @@ export interface ChannelAdapter {
   markRead?(to: string, env: Env): Promise<void>;
   health(env: Env): Promise<{ok: boolean; detail: string}>;
   capabilities: ChannelCapabilities;
+  // TA-C4: download an attachment by the provider_ref stored on its placeholder
+  // advisor_media row (the consumer runs after the webhook, so InboundMedia.fetch
+  // no longer exists). Rejects on a network error; the caller checks response.ok.
+  // Optional so an adapter written in parallel still type-checks; a missing one
+  // counts as a failed download.
+  fetchMediaByRef?(ref: string, env: Env): Promise<Response>;
 }
 
 /** Thrown by an adapter that does not exist yet; the consumer records the send as failed, not unknown. */
@@ -57,7 +63,7 @@ export class ChannelNotImplemented extends Error {
 /** A placeholder adapter: every call throws ChannelNotImplemented. Replaced by TA-C2 (twilio) and TA-C3 (web). */
 export function stubAdapter(name: AdapterName): ChannelAdapter {
   const fail = async (): Promise<never> => { throw new ChannelNotImplemented(name); };
-  return {name, normalize: fail, send: fail, health: fail, capabilities: {media: false, maxMediaBytes: 0, typing: false, read: false, segments: null}};
+  return {name, normalize: fail, send: fail, health: fail, fetchMediaByRef: fail, capabilities: {media: false, maxMediaBytes: 0, typing: false, read: false, segments: null}};
 }
 
 /** Every adapter by name. TA-C2 and TA-C3 replace their stubs here. */
@@ -71,6 +77,22 @@ export const ADAPTERS: Record<AdapterName, ChannelAdapter> = {
 export function channelFor(env: Env, contact: Pick<AdvisorContactRow, 'phone_enc' | 'web_session'>): ChannelAdapter {
   if (!contact.phone_enc && contact.web_session) return ADAPTERS.web;
   return ADAPTERS[advisorSettings(env).channel];
+}
+
+// TA-C4: which adapter received an inbound attachment. advisor_messages records
+// the channel ('imessage', 'sms', 'web'), not the adapter, and SMS arrives through
+// BlueBubbles today and Twilio after a port: a Twilio provider_ref is its https
+// media URL, a BlueBubbles one is an attachment guid.
+export function adapterForMedia(channel: string, ref: string): ChannelAdapter {
+  if (channel === 'web') return ADAPTERS.web;
+  return /^https:\/\//.test(ref) ? ADAPTERS.twilio : ADAPTERS.bluebubbles;
+}
+
+/** TA-C4: the consumer's default media download: the receiving adapter's fetchMediaByRef. */
+export async function fetchMediaByRef(ref: string, channel: string, env: Env): Promise<Response> {
+  const adapter = adapterForMedia(channel, ref);
+  if (!adapter.fetchMediaByRef) throw new ChannelNotImplemented(adapter.name);
+  return adapter.fetchMediaByRef(ref, env);
 }
 
 // ---- message splitting (03 § adapter interface) -------------------------------

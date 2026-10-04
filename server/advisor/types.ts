@@ -44,8 +44,12 @@ export interface AdvisorContactRow {
   created_at: string; updated_at: string;
 }
 
-/** The two subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */
-export interface PhoneKeys {hashKey: CryptoKey; encKey: CryptoKey}
+/** The subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */
+export interface PhoneKeys {
+  hashKey: CryptoKey; encKey: CryptoKey;
+  // TA-C4: HMAC key for upload-link tokens (HKDF info 'upload', 03 § Uploads for compressed channels).
+  uploadKey: CryptoKey;
+}
 
 /** An advisor_messages row as D1 returns it (02 § advisor_messages). */
 export interface AdvisorMessageRow {
@@ -114,6 +118,9 @@ export interface ConsumerDeps {
   sleep?: (ms: number) => Promise<void>; // the gap between split chunks; default setTimeout
   handler?: Handler;                // default: warmUpHandler; TA-E1 passes the engine
   turnTimeoutMs?: number;           // hard stop per message; default 45 s (01 § request flow)
+  // TA-C4: media download before the handler (server/advisor/media.ts).
+  fetchMediaByRef?: (ref: string, channel: string, env: Env) => Promise<Response>; // default: the receiving adapter's fetchMediaByRef
+  mediaRetries?: number;            // extra queue attempts after a failed download; default 2, runInline 0
 }
 
 export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}

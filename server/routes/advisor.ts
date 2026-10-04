@@ -7,13 +7,17 @@ import {Hono} from 'hono';
 import type {Context} from 'hono';
 import {gate} from '../advisor/gate.ts';
 import {advisorSettings} from '../advisor/settings.ts';
-import {deriveKeys, findOrCreateContact} from '../advisor/contacts.ts';
-import {runInline, MAX_BODY} from '../advisor/consumer.ts';
 import {relayState} from '../advisor/relay.ts';
-import {ADAPTERS, channelFor} from '../advisor/channels/index.ts';
-import type {ChannelAdapter, InboundMessage} from '../advisor/channels/index.ts';
+import {ADAPTERS} from '../advisor/channels/index.ts';
+import type {ChannelAdapter} from '../advisor/channels/index.ts';
 import {advisorLog} from '../advisor/log.ts';
-import {randomId} from '../advisor/ids.ts';
+// TA-C4: shared inbound path, media intake, upload links and media serving.
+import {storeInbound, dispatchInbound, storeUpload} from '../advisor/inbound.ts';
+import {deriveKeys} from '../advisor/contacts.ts';
+import {ingestMedia, verifyUploadToken, derivedKey, MAX_MEDIA_BYTES} from '../advisor/media.ts';
+import {firstFile} from '../advisor/multipart.ts';
+import {shellResponse} from './assets.ts';
+import {waitUntil} from './util.ts';
 import {overLimit, clientIP, tooManyRequests} from '../edge-cache.ts';
 import {json} from '../http.ts';
 import {ClientError} from '../errors.ts';
@@ -42,47 +46,13 @@ export async function sameSecret(given: string, expected: string): Promise<boole
   return diff === 0 && expected.length > 0;
 }
 
-const MEDIA_KIND = (mime: string | null): 'image' | 'video' | 'audio' => mime?.startsWith('video/') ? 'video' : mime?.startsWith('audio/') ? 'audio' : 'image';
+// TA-C4: storing and dispatching moved to server/advisor/inbound.ts, shared with the upload link.
+export {storeInbound};
 
-/**
- * Store one normalized inbound message (01 § request flow, steps 2-3): the
- * contact (created on first contact), the advisor_messages row ('queued') and
- * one placeholder advisor_media row per attachment (r2_key '' and the
- * provider's reference in provider_ref until TA-C4 downloads it). The message
- * and its media go in one batch; a second delivery of the same provider id
- * changes nothing. Returns the new message id, or null for a duplicate.
- */
-export async function storeInbound(env: Env, message: InboundMessage, now: Date = new Date()): Promise<string | null> {
-  const db = env.DB!;
-  const seen = await db.prepare('SELECT id FROM advisor_messages WHERE channel=? AND provider_id=?').bind(message.channel, message.providerId).first<{id: string}>();
-  if (seen) return null;
-  if (!env.ADVISOR_PHONE_KEY) throw Error('ADVISOR_PHONE_KEY is not set');
-  const contact = await findOrCreateContact(db, await deriveKeys(env.ADVISOR_PHONE_KEY), {e164: message.from, channel: message.channel}, now);
-  const id = randomId(), at = now.toISOString();
-  const media = message.media.map(m => ({id: randomId(), ...m}));
-  const statements = [
-    db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,provider_id,body,media_json,status,created_at) VALUES(?,?,'in',?,?,?,?,'queued',?) ON CONFLICT DO NOTHING`)
-      .bind(id, contact.id, message.channel, message.providerId, message.text.slice(0, MAX_BODY) || null, media.length ? JSON.stringify(media.map(m => m.id)) : null, at),
-    // Only if this call's message row exists, i.e. it was not a concurrent duplicate.
-    ...media.map(m => db.prepare(`INSERT INTO advisor_media(id,contact_id,message_id,boat_id,kind,mime,bytes,width,height,r2_key,sha256,publish_state,provider_ref,created_at)
-      SELECT ?,?,?,?,?,?,?,?,?,'','','private',?,? WHERE EXISTS (SELECT 1 FROM advisor_messages WHERE id=?)`)
-      .bind(m.id, contact.id, id, contact.boat_id, MEDIA_KIND(m.mime), m.mime ?? 'application/octet-stream', m.bytes ?? 0, m.width ?? null, m.height ?? null, m.providerRef, at, id)),
-  ];
-  const [inserted] = await db.batch(statements);
-  return inserted?.meta.changes ? id : null;
-}
-
-/** Hand a stored message to the queue, or run it inline under waitUntil when there is no queue (or the send fails). */
+/** Hand a stored message to the queue, or run it inline (under waitUntil when there is an execution context). */
 async function dispatch(c: Context<AppEnv>, id: string): Promise<void> {
-  const env = c.env;
-  if (env.ADVISOR_QUEUE) {
-    try { await env.ADVISOR_QUEUE.send({message_id: id}); return; }
-    catch (error) { advisorLog('error', 'advisor_enqueue_failed', {reason: String((error as Error)?.message).slice(0, 200)}); }
-  }
-  const run = runInline(env, id, {channelFor}).catch(error => { advisorLog('error', 'advisor_inline_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
-  let ctx: ExecutionContext | null = null;
-  try { ctx = c.executionCtx as ExecutionContext; } catch { ctx = null; }
-  if (ctx) ctx.waitUntil(run); else await run;   // no execution context (tests): run before answering
+  const ctx = waitUntil(c);
+  await dispatchInbound(c.env, id, ctx ? p => ctx.waitUntil(p) : undefined);
 }
 
 /** One provider webhook: token, rate limit, normalize, store each message, dispatch, 200 {}. */
@@ -117,3 +87,84 @@ async function inboundWebhook(c: Context<AppEnv>, adapter: ChannelAdapter, token
 
 // BlueBubbles sends no signature: the path carries ADVISOR_WEBHOOK_TOKEN (03 § owner checklist step 6).
 advisorPublic.post('/api/advisor/inbound/bluebubbles/:token', c => inboundWebhook(c, ADAPTERS.bluebubbles, c.req.param('token')));
+
+// ---- TA-C4: upload link and media serving ----------------------------------------
+// (03 § Uploads for compressed channels, 02 § R2, 09 § Media that Meta fetches.)
+
+const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);   // the gate's body: a bad token looks like a missing page
+const PUBLIC_STATES = new Set(['approved', 'posted']);
+
+/** The contact an upload token was minted for, or null (bad, expired or tampered token, no key, unknown contact). */
+async function uploadContact(env: Env, token: string, now = Date.now()): Promise<{id: string; channel: string; boat_id: string | null; status: string} | null> {
+  if (!env.ADVISOR_PHONE_KEY || !env.DB) return null;
+  let contactId: string | null = null;
+  try { contactId = await verifyUploadToken(await deriveKeys(env.ADVISOR_PHONE_KEY), token, now); } catch { return null; }
+  if (!contactId) return null;
+  return env.DB.prepare('SELECT id,channel,boat_id,status FROM advisor_contacts WHERE id=?').bind(contactId).first();
+}
+
+// The upload page: the dist/upload.html shell for a valid token, the gate's 404 otherwise.
+advisorPublic.get('/u/:token', async c => {
+  if (await overLimit(c.env.PUBLIC_LIMITER, 'advisor-upload:' + clientIP(c.req.raw))) return tooManyRequests();
+  try {
+    const contact = await uploadContact(c.env, c.req.param('token'));
+    if (!contact || contact.status === 'blocked') return NOT_FOUND();
+    const shell = await shellResponse(c, '/upload.html');
+    if (!shell.ok) return NOT_FOUND();
+    // The page lives at /u/<token>; its hashed assets are linked relative to the site root.
+    const html = (await shell.text()).replace(/<head>/i, '<head><base href="/">');
+    return new Response(html, {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex'}});
+  } catch (error) {
+    // Logged without the path: it carries the token.
+    advisorLog('error', 'advisor_upload_page_failed', {reason: String((error as Error)?.message).slice(0, 200)});
+    return json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+});
+
+// One file (multipart, at most 300 MB) through ingestMedia, then a synthetic inbound message dispatched like a webhook's.
+advisorPublic.post('/api/advisor/upload/:token', async c => {
+  const env = c.env;
+  if (await overLimit(env.PUBLIC_LIMITER, 'advisor-upload:' + clientIP(c.req.raw))) return tooManyRequests();
+  // Errors are answered here, not by the shared onError: its log line carries the path, and the path carries the token.
+  try {
+    const contact = await uploadContact(env, c.req.param('token'));
+    if (!contact || contact.status === 'blocked') return NOT_FOUND();
+    if (!env.DB || !env.ADVISOR_MEDIA) return json({error: 'This service is temporarily unavailable.'}, 503);
+    if (Number(c.req.header('content-length')) > MAX_MEDIA_BYTES + 64 * 1024) return json({error: 'That file is too large.'}, 413);
+    const file = await firstFile(c.req.raw);
+    const result = await ingestMedia(env, {contactId: contact.id, messageId: null, boatId: contact.boat_id, providerRef: null,
+      fetchBytes: async () => new Response(file.body), claimedMime: file.type, name: file.name});
+    if (result.status === 'rejected') return result.reason === 'too-large' ? json({error: 'That file is too large.'}, 413) : json({error: 'That file type is not supported.'}, 415);
+    const id = await storeUpload(env, {id: contact.id, channel: contact.channel}, result.id);
+    if (id) await dispatch(c, id);
+    return json({ok: true});
+  } catch (error) {
+    const client = error instanceof ClientError;
+    advisorLog(client ? 'warn' : 'error', 'advisor_upload_failed', {type: client ? 'validation' : 'dependency', reason: String((error as Error)?.message).slice(0, 200)});
+    return client ? json({error: (error as Error).message}, 400) : json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+});
+
+const MEDIA_FILE = /^([\w-]{1,64})\.(jpg|png)$/;
+const EXT_MIME: Record<string, string> = {jpg: 'image/jpeg', png: 'image/png'};
+
+/**
+ * A public image: advisor/derived/<id>/public.jpg once the media job has made
+ * it, else the metadata-stripped original, only for publish_state approved or
+ * posted. Originals that were not stripped (HEIC, GIF, WebP, video, audio) are
+ * never served. Anything else is the same 404 as a missing id.
+ */
+advisorPublic.get('/media/:file', async c => {
+  const env = c.env, match = MEDIA_FILE.exec(c.req.param('file'));
+  if (!match || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
+  const [, id, ext] = match as unknown as [string, string, string];
+  const row = await env.DB.prepare('SELECT mime,r2_key,exif_stripped,publish_state FROM advisor_media WHERE id=?').bind(id)
+    .first<{mime: string; r2_key: string; exif_stripped: number; publish_state: string}>();
+  if (!row || !PUBLIC_STATES.has(row.publish_state)) return NOT_FOUND();
+  let object: R2ObjectBody | null = null, type = row.mime;
+  if (ext === 'jpg') { object = await env.ADVISOR_MEDIA.get(derivedKey(id)); if (object) type = 'image/jpeg'; }
+  if (!object && row.r2_key && row.exif_stripped === 1 && row.mime === EXT_MIME[ext]) object = await env.ADVISOR_MEDIA.get(row.r2_key);
+  if (!object) return NOT_FOUND();
+  return new Response(object.body, {status: 200, headers: {'Content-Type': type, 'Content-Length': String(object.size), 'Cache-Control': 'public, max-age=3600',
+    'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
+});

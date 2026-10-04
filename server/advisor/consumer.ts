@@ -25,8 +25,14 @@
 // written as 'held' and not attempted; releaseHeld, run by the cron, sends the
 // held rows once the relay is back and fails those older than 6 hours.
 //
-// Not here yet, by design: media download (TA-C4), STOP/blocked and the daily
-// caps (the engine's stage 0, TA-E1).
+// TA-C4: before the handler, every placeholder media row of the message is
+// downloaded through the receiving adapter's fetchMediaByRef, sniffed, stripped
+// and stored (media.ts ingestInboundMedia). A failed download retries the
+// message (at most MEDIA_RETRIES extra attempts); after that the handler runs
+// with that media rejected and the inbound row's error 'fetch-failed'.
+//
+// Not here yet, by design: STOP/blocked and the daily caps (the engine's
+// stage 0, TA-E1).
 import {advisorSettings} from './settings.ts';
 import {reviewId} from './contacts.ts';
 import {outboundId} from './ids.ts';
@@ -34,6 +40,9 @@ import {advisorLog, redact} from './log.ts';
 import {recordAdvisorTurn} from './analytics.ts';
 import {relayState} from './relay.ts';
 import {splitForChannel, ChannelNotImplemented, CHUNK_GAP_MS} from './channels/index.ts';
+// TA-C4: media intake before the handler.
+import {ingestInboundMedia} from './media.ts';
+import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
 import type {Env} from '../env.ts';
 import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
@@ -50,6 +59,7 @@ export const STILL_WORKING_TEXT = 'Still working on that, one moment';
 export const APOLOGY_TEXT = 'Sorry, something went wrong on my end. Please send that again.';
 export const HOLD_MAX_MS = 6 * 3600000;        // 01: held outbound older than this becomes failed
 export const RELEASE_BATCH = 50;               // held rows sent per cron tick
+export const MEDIA_RETRIES = 2;                // TA-C4: extra attempts after a failed media download
 
 const ID = /^[\w-]{1,64}$/;
 const CODE = /^[a-z][\w.:-]{0,47}$/i;
@@ -237,6 +247,19 @@ async function consumeOne(message: QueueMessage, env: Env, deps: ConsumerDeps, o
   const contact = await db.prepare('SELECT * FROM advisor_contacts WHERE id=?').bind(row.contact_id).first<AdvisorContactRow>();
   if (!contact) { await setStatus(db, id, 'dropped', ['processing'], 'no-contact'); out.dropped++; message.ack(); return; }
 
+  // TA-C4: download, strip and store the message's media before the handler sees it.
+  let mediaError: string | null = null;
+  if (row.media_json) {
+    const media = await ingestInboundMedia(env, row, deps.fetchMediaByRef ?? adapterFetchMediaByRef,
+      {attempt: message.attempts ?? 1, retries: deps.mediaRetries ?? MEDIA_RETRIES, now: clock(deps)});
+    if (media.retry) {
+      await setStatus(db, id, 'queued', ['processing'], 'media-fetch');
+      message.retry({delaySeconds: Math.min(300, 20 * Math.max(1, message.attempts ?? 1))});
+      out.retried++; turn(env, started, deps, message, 'media', 'retried'); return;
+    }
+    mediaError = media.error;
+  }
+
   const handler = deps.handler ?? warmUpHandler;
   let result: EngineResult | typeof TIMED_OUT;
   try {
@@ -276,8 +299,8 @@ async function consumeOne(message: QueueMessage, env: Env, deps: ConsumerDeps, o
     out.retried++; turn(env, started, deps, message, intent, 'retried', actions.length); return;
   }
   const usage = result.usage ?? {};
-  await db.prepare("UPDATE advisor_messages SET status='done',intent=?,error=NULL,tokens_in=?,tokens_out=? WHERE id=?")
-    .bind(intent, usage.input_tokens ?? null, usage.output_tokens ?? null, id).run();
+  await db.prepare("UPDATE advisor_messages SET status='done',intent=?,error=?,tokens_in=?,tokens_out=? WHERE id=?")
+    .bind(intent, mediaError, usage.input_tokens ?? null, usage.output_tokens ?? null, id).run();   // TA-C4: mediaError, else NULL
   message.ack();
   out.done++; out.sends += sends;
   turn(env, started, deps, message, intent, 'done', actions.length, sends);
@@ -366,7 +389,8 @@ export async function runInline(env: Env, messageId: string, deps: ConsumerDeps 
   const message = {id: `inline-${messageId}`, timestamp: new Date(clock(deps)), body: {message_id: messageId}, attempts: 1,
     ack() {}, retry() { retried = true; }} as unknown as QueueMessage;
   const batch = {queue: ADVISOR_QUEUE_NAME, messages: [message], ackAll() {}, retryAll() { retried = true; }} as unknown as MessageBatch<AdvisorMessage>;
-  const result = await consumeAdvisor(batch, env, deps);
+  // TA-C4: nothing re-delivers an inline message, so a failed download is final at once.
+  const result = await consumeAdvisor(batch, env, {mediaRetries: 0, ...deps});
   if (retried) {
     const dead = await consumeAdvisorDeadLetters({...batch, queue: ADVISOR_DLQ_NAME} as MessageBatch<AdvisorMessage>, env, deps);
     result.failed += dead.failed; result.sends += dead.apologies;

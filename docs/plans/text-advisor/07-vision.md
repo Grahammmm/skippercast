@@ -131,8 +131,10 @@ Metadata is stripped in the consumer before storage and before any provider
 sees the image (TA-C4): a JPEG marker walk drops every APPn segment except
 APP0 (JFIF) and an APP2 segment whose payload starts with `ICC_PROFILE`
 (kept so Display P3 photos do not shift colour; EXIF, GPS, XMP and
-everything else go) without decoding; PNG `eXIf`, `tEXt`, `iTXt` and `zTXt`
-chunks are dropped the same way. The sniffer accepts `image/heic` and
+everything else go) without decoding; PNG `eXIf`, `tEXt`, `iTXt`, `zTXt`
+and `tIME` chunks are dropped the same way (as built, TA-C4: COM segments and
+anything after the JPEG's EOI go too, and a file whose walk fails is rejected,
+not stored). The sniffer accepts `image/heic` and
 `image/heif` (iMessage can deliver HEIC when the sender's camera format is
 High Efficiency): a HEIC is stored and routed to the media job for
 conversion before any provider sees it. Providers receive the
