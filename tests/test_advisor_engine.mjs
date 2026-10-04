@@ -6,7 +6,7 @@
 // the six few-shots, rules_without_tool, tool_loop, pause_turn, HTTP 529), the
 // post-processing helpers, the consumer's new appliers (STOP/START, forget,
 // export and its route, send_file, notifyAdmin) and the golden conversations
-// 2, 3 and 6-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
+// 1-4 and 6-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
 // real migrations in node:sqlite, a memory R2, a fake fetcher.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -123,12 +123,13 @@ dbTest('stage 3 caps: per-contact LLM cap answers once; the global cap answers "
   const api = fakeApi([]);
   const one = setup({env: {ANTHROPIC_API_KEY: 'k', ADVISOR_DAILY_LLM_PER_CONTACT: '0'}});
   seen(one.sql);
-  const capped = await run(one.env, contactRow(one.sql), inbound(one.sql, 'what is biting'), {fetcher: api.fetcher});
+  // TA-A1: a plain "what is biting" is answered by the pre-router without a chat call, so the caps are tested on a question that needs the model.
+  const capped = await run(one.env, contactRow(one.sql), inbound(one.sql, 'any lingcod around the rock?'), {fetcher: api.fetcher});
   assert.equal(capped.intent, 'capped'); assert.equal(texts(capped).length, 1);
   assert.deepEqual((await run(one.env, contactRow(one.sql), inbound(one.sql, 'again?'), {fetcher: api.fetcher})).actions, []);
   const all = setup({env: {ANTHROPIC_API_KEY: 'k', ADVISOR_GLOBAL_DAILY_LLM: '0'}});
   seen(all.sql);
-  const swamped = (await quiet(() => run(all.env, contactRow(all.sql), inbound(all.sql, 'what is biting'), {fetcher: api.fetcher}))).value;
+  const swamped = (await quiet(() => run(all.env, contactRow(all.sql), inbound(all.sql, 'any lingcod around the rock?'), {fetcher: api.fetcher}))).value;
   assert.equal(swamped.intent, 'global_cap');
   assert.deepEqual(texts(swamped), ["I'm swamped right now. Try again in a bit, or see https://skippercast.com/?s=txt"]);
   assert.equal(api.requests.length, 0);
@@ -249,8 +250,8 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
 dbTest('stage 2 extension point: a registered flow runs before the model', async t2 => {
   const {sql, env} = setup();
   seen(sql);
-  // TA-I1's skipper flow, TA-I2's report flow and TA-I3's angler flow are registered at import; the test flow goes after them and only it is removed.
-  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports', 'anglers']);
+  // TA-I1's skipper flow, TA-I2's report flow, TA-I3's angler flow and TA-A1's daily pre-router are registered at import; the test flow goes after them and only it is removed.
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports', 'anglers', 'daily']);
   STAGE_TWO_FLOWS.push({name: 'test', run: async f => f.text === 'y' ? {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'} : null});
   t2.after(() => { STAGE_TWO_FLOWS.splice(STAGE_TWO_FLOWS.findIndex(f => f.name === 'test'), 1); });
   assert.deepEqual(await run(env, contactRow(sql), inbound(sql, 'y')), {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'});
@@ -348,7 +349,7 @@ for (const file of engineFixtures) {
       if (want.tool_result_for) {
         const block = lastUser.content.find(b => b.type === 'tool_result' && b.tool_use_id === want.tool_result_for);
         assert.ok(block, want.tool_result_for);
-        for (const part of [].concat(want.tool_result_contains ?? [])) assert.ok(block.content.includes(part), `${part} in ${want.tool_result_for}`);
+        for (const part of [].concat(want.tool_result_contains ?? [])) assert.ok(block.content.includes(part), `${part} in ${want.tool_result_for}: ${block.content.slice(0, 600)}`);
       }
     });
     const e = f.expect, sent = texts(result);
@@ -522,13 +523,13 @@ dbTest('consumer: send_file attaches on BlueBubbles and falls back to the link e
   assert.equal(tw.sent[0].text, "Here's my contact card. https://skippercast.com/contact.vcf"); assert.equal(tw.sent[0].files, undefined);
 });
 
-// ---- golden conversations (11 § engine golden conversations 6-9) ------------------------
+// ---- golden conversations (11 § engine golden conversations 1-4, 6-9) ------------------------
 
 const conversations = readdirSync(new URL('./fixtures/advisor/engine/conversations/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
-test('golden conversations 2 (en, es), 3, 4 and 6-9 exist', () => {
+test('golden conversations 1, 2 (en, es), 3, 4 and 6-9 exist', () => {
   // TA-I1: 2 up to the consent step, 3 the crew add and remove; TA-I2: 2 on through the count board, Y, a correction and a catch photo, 3 the crew member's board.
-  // TA-I3: 4, the angler's fish IDs and photo sharing.
-  for (const n of ['02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
+  // TA-I3: 4, the angler's fish IDs and photo sharing. TA-A1: 1, the new angler's "what's biting", home port and planning question.
+  for (const n of ['01-new-angler', '02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
 });
 
 for (const file of conversations) {
@@ -570,7 +571,7 @@ for (const file of conversations) {
       const isWeb = !who.phone_enc;
       await quiet(() => consumeAdvisor(batchOf(m.id), env, {
         channel: isWeb ? webChannel : undefined, channelFor: () => phoneChannel, handler, now: () => T0 + step * 1000,
-        engine: {fetcher: api.fetcher, clock: () => T0 + step * 1000, sleep: async () => {}, random: () => randomValue},
+        engine: {fetcher: api.fetcher, clock: () => T0 + step * 1000, sleep: async () => {}, random: () => randomValue, feeds: fixtureFeeds()},   // TA-A1: the daily answer and data tools read the feed fixtures
       }));
       const replies = (isWeb ? webChannel : phoneChannel).sent.slice(isWeb ? before.web : before.phone).map(x => x.text ?? '');
       const reply = replies.join('\n');

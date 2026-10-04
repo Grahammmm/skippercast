@@ -166,7 +166,7 @@ const INTEL = () => read('./fixtures/feeds/intelligence.json');
 const feedsFrom = (daily = DAILY(), intel = INTEL()) => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? daily : Promise.reject(Error('no feed'));
 const FEED_NOW = Date.parse('2026-09-28T19:00:00Z');   // Mon 12:00 in Morro Bay: the fixtures' day
 const dataCtx = (over = {}) => ({env: {}, contact: {id: 'c1', role: 'angler', home_port: 'morro-bay', ...(over.contact ?? {})}, message: {id: 'in1'},
-  deps: {feeds: over.feeds ?? feedsFrom()}, db: over.db ?? null, language: 'en', settings: advisorSettings({}), now: over.now ?? FEED_NOW});
+  deps: {feeds: over.feeds ?? feedsFrom(), ...(over.fetcher ? {fetcher: over.fetcher} : {})}, db: over.db ?? null, language: 'en', settings: advisorSettings({}), now: over.now ?? FEED_NOW});
 const COORD = /\d{2}\.\d{3,}|°/;
 
 // The tests/test_evidence.mjs feed: seven days of lingcod reports from two boats with full page coverage.
@@ -350,12 +350,18 @@ function seedBoats(sql) {
   for (let i = 0; i < 6; i++) report(`m${i}`, 'b1', `2026-09-2${i}`, 1, 'full-day', 'published', 'morro-bay');
 }
 
-dbTest('get_port_report: no daily answer yet, five recent published skipper reports (unverified as "a boat", 14 days), the landing reports with their label', async () => {
+dbTest('get_port_report: the day\'s answer (composed when none is stored, never a second model call), five recent published skipper reports (unverified as "a boat", 14 days), the landing reports with their label', async () => {
   const {sql, db} = advisorDatabase();
   seedBoats(sql);
-  const out = (await TOOL_BY_NAME.get('get_port_report').run({port: 'Morro'}, dataCtx({db}))).result;
+  const noModel = async () => { throw Error('get_port_report must not call the model'); };
+  const out = (await TOOL_BY_NAME.get('get_port_report').run({port: 'Morro'}, dataCtx({db, fetcher: noModel}))).result;
   assert.equal(out.port, 'morro-bay');
-  assert.equal(out.daily, null);
+  // TA-A1: no stored answer yet, so the same facts composed without a model call, and nothing stored.
+  assert.equal(out.daily.source, 'composed');
+  assert.match(out.daily.text, /^Morro Bay, Mon Sep 28: SMALL CRAFT ADVISORY posted for today\. Example Boat One reported yesterday: 40 vermilion, 8 lings\. Another boat reported Sat: /);
+  assert.ok(out.daily.text.endsWith('https://skippercast.com/ports/morro-bay?s=txt'));
+  assert.ok(out.daily.text.length <= 480);
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM advisor_daily_answers').get().n, 0, 'the tool never stores a composed answer');
   assert.equal(out.skipper_reports.length, 5);
   assert.ok(out.skipper_reports.every(r => r.date >= '2026-09-14'), `at most ${MAX_REPORT_AGE_DAYS} days`);
   assert.deepEqual(out.skipper_reports.map(r => r.date), [...out.skipper_reports.map(r => r.date)].sort().reverse(), 'newest first');
@@ -376,6 +382,14 @@ dbTest('get_port_report: no daily answer yet, five recent published skipper repo
   assert.deepEqual(psl.landing.reports.map(r => r.boat), ['Sunny Day'], 'the feed\'s "Avila Beach" is Port San Luis');
   const offline = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, dataCtx({db, feeds: async () => { throw Error('down'); }}))).result;
   assert.deepEqual(offline.landing, {available: false});
+  // A stored answer whose inputs are current is returned as it is.
+  const {currentInputsHash} = await import('../server/advisor/answers/reports.ts');
+  const hash = await currentInputsHash({DB: db}, 'morro-bay', '2026-09-28', {feeds: feedsFrom()}, FEED_NOW);
+  sql.prepare("INSERT INTO advisor_daily_answers(key,text_en,text_es,inputs_hash,generated_at) VALUES('morro-bay:2026-09-28','Stored en','Stored es',?,?)").run(hash, '2026-09-28T12:30:00Z');
+  const stored = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, dataCtx({db, fetcher: noModel}))).result;
+  assert.deepEqual([stored.daily.source, stored.daily.text], ['stored', 'Stored en']);
+  const storedEs = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, {...dataCtx({db, fetcher: noModel}), language: 'es'})).result;
+  assert.equal(storedEs.daily.text, 'Stored es');
 });
 
 test('get_species: catalog claims with sources, look-alike cues, the group, and the release note; no rule', async () => {

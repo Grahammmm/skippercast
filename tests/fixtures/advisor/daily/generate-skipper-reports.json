@@ -1,0 +1,32 @@
+{
+  "_source": "Hand-written to the Messages API response shape (a forced record_daily_answer tool_use, stop_reason, usage); not captured from the live API. The boats and counts are the made-up rows tests/test_advisor_daily.mjs seeds; the landing trip and the advisory come from tests/fixtures/feeds/.",
+  "description": "Morro Bay, Mon 28 Sep 2026 (the feed fixtures' day, forecast hours moved into the 06:00-14:00 window): a verified boat's report from Sunday and an unverified boat's from Saturday, the Small Craft Advisory, seas and wind. The unverified boat is 'another boat'.",
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "msg_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_daily_1",
+          "name": "record_daily_answer",
+          "input": {
+            "en": "Morro Bay, Mon Sep 28: SMALL CRAFT ADVISORY posted for today. Example Boat One reported Sun: 40 vermilion and 8 lingcod kept on a full-day trip. Another boat reported Sat with the same mix. Seas 7 ft at 17 s, wind 15-19 kt from the NW, rough for a mid-size center console. Full picture: {{link:port:morro-bay}}",
+            "es": "Morro Bay, lun 28 sept: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. Example Boat One reportó el dom: 40 vermilion y 8 lingcod en un viaje de día completo. Otro barco reportó lo mismo el sáb. Mar de 7 pies a 17 s, viento de 15-19 nudos del NW, duro para una lancha mediana. Todo el detalle: {{link:port:morro-bay}}"
+          }
+        }
+      ],
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 1450,
+        "output_tokens": 260,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0
+      }
+    }
+  }
+}

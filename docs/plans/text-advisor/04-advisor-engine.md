@@ -206,7 +206,7 @@ first three.
   served from `advisor_daily_answers`; a "what's biting" needs no model call
   when the cached answer exists and the question has no qualifier (the
   pre-router matches `what's biting|how's the fishing|qué está picando` +
-  optional port name).
+  optional port name; TA-A1 adds `cómo está la pesca`, 06 § As built (TA-A1)).
 - Every model call writes an `llm` analytics point (`feature =
   'advisor:' + intent`, `outcome`, model, tokens, turns) and one
   `console.log` line, like `recordLookupUsage`.
@@ -392,4 +392,21 @@ and the web chat route). Where the code differs from the text above:
 - `capReply` and `REPLY_MAX` moved to `server/advisor/reply.ts` (re-exported
   by `engine.ts`) so the fish-ID answer is capped the same way.
 - New actions: `share_state` (the offer in `job_state`) and `angler_share`.
+
+## As built (TA-A1)
+
+- `STAGE_TWO_FLOWS` ends with the daily pre-router (`answers/reports.ts`
+  `dailyFlow`; 06 § As built (TA-A1)): the plain "what's biting" forms, with
+  an optional port of an active region, are answered from
+  `advisor_daily_answers` with no chat model call (one shared generation call
+  when today's answer is missing or stale), then the home-port question once.
+  Intents `reports.daily.cache|model|composed`.
+- The situation brief's "today's port answer" line carries the stored answer
+  for the home port (else the region default's first port) when one exists.
+- `get_port_report` returns `daily` (`{text, source, note}`), never starting a
+  second model call inside a turn.
+- `rulesGuard`, `statesRuleNumber` and `stripMarkdown` live in `reply.ts`.
+- The `whats-biting` engine fixture now asks a nuanced question ("any
+  lingcod?"), since the plain one never reaches the model; the stage 3 caps
+  test does the same.
 

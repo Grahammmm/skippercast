@@ -51,7 +51,7 @@ Every layer keeps its source, date and coverage state, and the app shows a gap a
 
 ## Status
 
-A working mobile web app, version 0.3. See the [roadmap](docs/roadmap.md) and [changelog](CHANGELOG.md). The Text Advisor (text SkipperCast for reports, rules and fish IDs) is being built dark behind `TEXT_ADVISOR_ENABLED`: the channels, media intake, vision, the conversation engine, the rules table, the data tools (reports, conditions, rules, species, rigging, trips), skipper registration, skipper fish reports (count-board photos, typed counts, confirmation and corrections) and the anglers' fish ID with photo sharing are in; daily answers and public pages are next ([plan](docs/plans/text-advisor/README.md)).
+A working mobile web app, version 0.3. See the [roadmap](docs/roadmap.md) and [changelog](CHANGELOG.md). The Text Advisor (text SkipperCast for reports, rules and fish IDs) is being built dark behind `TEXT_ADVISOR_ENABLED`: the channels, media intake, vision, the conversation engine, the rules table, the data tools (reports, conditions, rules, species, rigging, trips), skipper registration, skipper fish reports (count-board photos, typed counts, confirmation and corrections) the anglers' fish ID with photo sharing and the daily port answers ("what's biting", in English and Spanish) are in; the planning brief and public pages are next ([plan](docs/plans/text-advisor/README.md)).
 
 ## License
 

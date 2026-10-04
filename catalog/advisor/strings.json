@@ -481,6 +481,86 @@
     "share_queued_anonymous": {
       "en": "Thanks. It goes to the team for review and, if posted, goes up without a name.",
       "es": "Gracias. Pasa al equipo para revisión y, si se publica, sale sin nombre."
+    },
+    "daily_advisory": {
+      "en": "{event} posted for today.",
+      "es": "{event} (aviso del NWS) para hoy."
+    },
+    "daily_skipper": {
+      "en": "{boat} reported {day}: {counts}.",
+      "es": "{boat} reportó {day}: {counts}."
+    },
+    "daily_unverified_boat": {
+      "en": "Another boat",
+      "es": "Otro barco"
+    },
+    "daily_no_skipper": {
+      "en": "No skipper reports from the last three days.",
+      "es": "No hay reportes de capitanes de los últimos tres días."
+    },
+    "daily_landing": {
+      "en": "The landing reports {trips} trips with {species} this week; recent reported activity: {label}.",
+      "es": "El muelle reporta {trips} viajes con {species} esta semana; actividad reciente reportada: {label}."
+    },
+    "daily_nothing": {
+      "en": "No reports from the last three days for {port} yet.",
+      "es": "Todavía no hay reportes de los últimos tres días para {port}."
+    },
+    "daily_conditions": {
+      "en": "Conditions: {parts}.",
+      "es": "Condiciones: {parts}."
+    },
+    "daily_conditions_none": {
+      "en": "Today's forecast isn't in yet.",
+      "es": "El pronóstico de hoy todavía no llega."
+    },
+    "daily_seas": {
+      "en": "seas {range} ft at {period} s",
+      "es": "mar de {range} pies a {period} s"
+    },
+    "daily_seas_no_period": {
+      "en": "seas {range} ft",
+      "es": "mar de {range} pies"
+    },
+    "daily_wind": {
+      "en": "wind {range} kt from the {from}",
+      "es": "viento de {range} nudos del {from}"
+    },
+    "daily_wind_no_dir": {
+      "en": "wind {range} kt",
+      "es": "viento de {range} nudos"
+    },
+    "daily_comfort": {
+      "en": "{word} for a mid-size center console",
+      "es": "{word} para una lancha mediana de consola central"
+    },
+    "comfort_comfortable": {
+      "en": "comfortable",
+      "es": "cómodo"
+    },
+    "comfort_bumpy": {
+      "en": "bumpy",
+      "es": "movido"
+    },
+    "comfort_rough": {
+      "en": "rough",
+      "es": "duro"
+    },
+    "daily_link": {
+      "en": "Full picture: {{link:{target}}}",
+      "es": "Todo el detalle: {{link:{target}}}"
+    },
+    "ask_home_port": {
+      "en": "Which port do you fish out of most? I'll keep my answers to it.",
+      "es": "¿De qué puerto sales más a pescar? Así te contesto para ese."
+    },
+    "daily_released": {
+      "en": "{n} {label} released",
+      "es": "{n} {label} liberados"
+    },
+    "daily_landing_one": {
+      "en": "The landing reports 1 trip with {species} this week; recent reported activity: {label}.",
+      "es": "El muelle reporta 1 viaje con {species} esta semana; actividad reciente reportada: {label}."
     }
   }
 }

@@ -32,6 +32,7 @@ import type {Command} from './intents.ts';
 import {t, both} from './strings.ts';
 import type {StringKey} from './strings.ts';
 import {resolveLinks, portRegion, portName} from './links.ts';
+import {resolvePort} from './answers/resolve.ts';
 import {systemPrompt, REFUSAL_EN, ABUSE_EN} from './prompts/system.ts';
 import {toolsForRole, claudeTools, dispatchTool, isWebOnly} from './tools/index.ts';
 import type {AdvisorTool, ToolContext} from './tools/index.ts';
@@ -47,7 +48,9 @@ import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, FLOW_MAX_AGE_MS}
 import {REPORT_FLOWS, reportBrief} from './intake/reports.ts';
 // TA-I3: an angler's photos (fish ID, the AC-1 share offer and credit).
 import {ANGLER_FLOWS} from './intake/anglers.ts';
-import {capReply} from './reply.ts';
+// TA-A1: the plain "what's biting" pre-router and the day's answer in the situation brief.
+import {DAILY_FLOWS, storedDaily} from './answers/reports.ts';
+import {capReply, rulesGuard, stripMarkdown} from './reply.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 700;
@@ -57,8 +60,8 @@ export const MAX_PAUSES = 3;
 export const TURN_BUDGET_MS = 30_000;
 export const HISTORY_TURNS = 12;
 export const HISTORY_MS = 48 * 3600000;
-// REPLY_MAX and capReply live in reply.ts (TA-I3: the fish-ID answer is capped too); re-exported here.
-export {REPLY_MAX, capReply} from './reply.ts';
+// REPLY_MAX, capReply and the rules guard live in reply.ts (TA-I3, TA-A1: the fish-ID and daily answers use them too); re-exported here.
+export {REPLY_MAX, capReply, rulesGuard, statesRuleNumber, stripMarkdown} from './reply.ts';
 export const RETRY_DELAY_MS = 2_000;          // one retry on 429/529, as the vision provider
 export const FORGET_WINDOW_MS = 24 * 3600000; // DELETE confirms a "forget me" asked within a day
 /** Intents whose reply may run past three segments: lists the person asked for (04). */
@@ -85,7 +88,7 @@ export interface FlowContext {
  * STAGE_TWO_FLOWS; they run after the built-in flows below, in order.
  */
 export interface Flow {name: string; run(ctx: FlowContext): Promise<EngineResult | null>}
-export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS, ...REPORT_FLOWS, ...ANGLER_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts); TA-I2: reports (intake/reports.ts); TA-I3: angler photos (intake/anglers.ts)
+export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS, ...REPORT_FLOWS, ...ANGLER_FLOWS, ...DAILY_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts); TA-I2: reports (intake/reports.ts); TA-I3: angler photos (intake/anglers.ts); TA-A1: what's biting (answers/reports.ts)
 
 const ADMIN = /^(ok|no)\s+([0-9a-f]{6})$/i;
 const SIX_DIGITS = /^\d{6}$/;
@@ -183,6 +186,9 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
   try { const v = contact.targets_json ? JSON.parse(contact.targets_json) : []; if (Array.isArray(v)) targets = v.filter((x): x is string => typeof x === 'string'); } catch { targets = []; }
   const local = localClock(now, DEFAULT_TZ);
   const region = portRegion(contact.home_port) ?? settings.regionDefault;
+  // TA-A1 (04 § stage 3): the home port's (else the region's first port's) answer for today, when one is stored.
+  const briefPort = contact.home_port && portRegion(contact.home_port) ? contact.home_port : resolvePort(null, null, settings)?.port ?? null;
+  const daily = briefPort ? await storedDaily(db, briefPort, now) : null;
   const channel = isWebOnly(contact) ? 'web chat (no SMS limits, but keep it short)' : contact.channel === 'imessage' ? 'iMessage' : 'SMS (3 segments, 480 characters)';
   return [
     'CONTACT BRIEF',
@@ -199,60 +205,13 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
     'SITUATION BRIEF',
     `- today: ${WEEKDAYS[local.weekday] ?? local.weekday} ${local.date}, ${local.time} Pacific time`,
     `- region: ${region}`,
-    "- today's port answer: not generated yet (use get_port_report)",
+    daily ? `- today's answer for ${portName(briefPort)}: ${language === 'es' ? daily.text_es : daily.text_en}` : "- today's port answer: not generated yet (use get_port_report)",
     '- advisories: call get_conditions for the port and date before any trip advice',
     `- channel: ${channel}`,
   ].join('\n');
 }
 
 // ---- reply post-processing ---------------------------------------------------------------
-
-/** Plain text from a model reply that slipped into markdown: emphasis, headings, bullets, code and [text](url) links. */
-export function stripMarkdown(text: string): string {
-  return String(text ?? '')
-    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/```[\s\S]*?```/g, m => m.replace(/```\w*\n?/g, ''))
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
-    .replace(/^\s*[-*•]\s+/gm, '')
-    .replace(/(\*\*|__)(.+?)\1/g, '$2')
-    .replace(/(^|[\s(])[*_]([^*_\n]+)[*_](?=[\s).,!?]|$)/g, '$1$2')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-// A number next to a rule word (04 § rules guard). Three shapes:
-//   a length:   "14 inch", "14-inch", '14"', "14 in.", "35 pulgadas"
-//   a limit:    "10 fish limit", "a bag of 5", "limit is 2", "bag limit: 10", "límite de 10"
-//   a season:   "season opens April 1", "closed until May 15", "open through Dec 31", "temporada abre el 1"
-const RULE_NUMBER = new RegExp([
-  String.raw`\d+(?:\.\d+)?\s*(?:-\s*)?(?:inch(?:es)?\b|in\b\.?|["”″]|pulgadas?\b)`,
-  String.raw`\d+\s*(?:-\s*)?(?:fish\s+|per\s+person\s+|a\s+day\s+)?(?:bag|limits?|límites?)\b`,
-  String.raw`\b(?:bag|limit|limits|límite)\s*(?:limit\s*)?(?:is|of|de|es|:|=)?\s*(?:only\s+|up\s+to\s+)?\d`,
-  String.raw`\b(?:season|seasons|closed|closes|closure|closing|open|opens|opening|temporada|cerrad[ao]s?|cierra|abiert[ao]s?|abre)\b[^.!?\n\d]{0,24}\d`,
-  String.raw`\d[^.!?\n\d]{0,12}\b(?:season|temporada)\b`,
-].join('|'), 'i');
-
-/** True when a sentence states a rule-like number. */
-export const statesRuleNumber = (sentence: string): boolean => RULE_NUMBER.test(sentence);
-
-/**
- * The rules guard (04 § stage 3, principle 4): when the turn has no usable
- * get_rules result, every sentence that puts a number next to inch, ",
- * limit, bag, season, closed or open is removed, and the first is replaced by
- * the CDFW line. Returns the new text and whether it fired.
- */
-export function rulesGuard(text: string, language: Language): {text: string; fired: boolean} {
-  const parts = String(text ?? '').split(/(?<=[.!?])\s+|\n+/);
-  let fired = false;
-  const kept: string[] = [];
-  for (const part of parts) {
-    if (!statesRuleNumber(part)) { kept.push(part); continue; }
-    if (!fired) kept.push(t(language, 'rules_cdfw'));
-    fired = true;
-  }
-  return {text: fired ? kept.filter(p => p.trim()).join(' ') : text, fired};
-}
 
 // ---- the Messages API loop --------------------------------------------------------------
 

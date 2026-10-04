@@ -85,3 +85,11 @@ export function exactSpecies(text: string | null | undefined): {key: string} | n
   for (const [phrase, id] of SPECIES_TABLE) if (phrase === folded) return {key: id};
   return null;
 }
+
+/** TA-A1: a port id only when the whole text is a port name or alias ("Morro Bay", "Avila"), never a word inside a longer phrase. */
+export function exactPort(text: string | null | undefined): string | null {
+  const folded = fold(text);
+  if (!folded) return null;
+  for (const [phrase, id] of PORT_TABLE) if (phrase === folded) return id;
+  return null;
+}

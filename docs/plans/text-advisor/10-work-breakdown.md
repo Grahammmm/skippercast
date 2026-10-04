@@ -169,6 +169,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-A0, TA-I2
 - Files: `answers/reports.ts`, `prompts/daily.ts`, `cron.ts` (05:30 slot and the publish-time invalidation), `engine.ts` (pre-router match), fixtures, `tests/test_advisor_daily.mjs`.
 - Tests: inputs hash changes when a report publishes; no reports → the "no reports in three days" text; unverified boats anonymized; length ≤ 480; no `%`; Spanish output present.
+- As built: one PR with TA-I3 (branch `claude/ta-i3-a1`). One forced-tool call for both languages; the slot is `daily-answers` (06 named it `advisor-digest`); the hash also covers feed availability so a failed feed read keeps today's stored answer; golden conversation 1 added. See 06 § As built (TA-A1).
 
 ### TA-A2 · Planning brief with advisories and the confidence ladder · M
 - Stories: FR-2, AD-4.

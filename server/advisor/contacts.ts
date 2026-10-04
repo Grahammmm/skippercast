@@ -172,6 +172,8 @@ export async function forgetContact(db: D1Database, bucket: R2Bucket | undefined
     db.prepare('DELETE FROM advisor_contacts WHERE id=?').bind(id),
     // TA-I3: the AC-1 share offer names one of the contact's photos (intake/anglers.ts shareKey).
     db.prepare('DELETE FROM job_state WHERE key=?').bind(`advisor.share.${id}`),
+    // TA-A1: the one-time home-port question after a daily answer (answers/reports.ts homePortOnceKey).
+    db.prepare('DELETE FROM job_state WHERE key=?').bind(`advisor.once.homeport.${id}`),
   ];
   for (const boat of boats) {
     statements.push(db.prepare(`INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'skipper',?,'owner_forgotten','open',?)

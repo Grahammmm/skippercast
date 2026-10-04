@@ -21,8 +21,8 @@ Next). Code: `server/advisor/answers/*.ts` and the tools in 04.
   pins both to the same fixtures), the live conditions summary (wind, seas,
   advisories) for today, and the active rules with any `stale` flags.
 - Generation is one model call with a fixed template prompt
-  (`prompts/daily.ts`), output ≤ 480 chars, in both languages (two calls, or
-  one call asked for both in JSON; TA-A1 picks after testing), e.g.:
+  (`prompts/daily.ts`), output ≤ 480 chars, in both languages (TA-A1: one
+  call with a forced tool whose input is `{en, es}`), e.g.:
   ```
   Morro Bay, Sat Oct 3: 3 boats reported Fri—limits of rockfish for most
   trips (vermilion, copper), lingcod 8–14 per boat, a few cabezon. Seas 4–5 ft
@@ -35,7 +35,7 @@ Next). Code: `server/advisor/answers/*.ts` and the tools in 04.
   last three days for Morro Bay yet. Conditions: … Want me to text you when
   one comes in?" (the follow offer is Next, FR-3; in v1 the answer stops at
   the conditions).
-- Cron (`advisor-digest` slot at 05:30 local) pre-generates every active
+- Cron (`daily-answers` slot at 05:30 local) pre-generates every active
   port's answer so the first text of the day is instant; the `inputs_hash`
   check regenerates during the day when a report is published.
 
@@ -303,3 +303,86 @@ above:
   consent}` (anglers only): false clears the offer; true runs the same share
   actions and the system sends the credit question itself.
 - **Forget me** also deletes the contact's `advisor.share.` row.
+
+## As built (TA-A1)
+
+The daily answer is `server/advisor/answers/reports.ts` (`portForQuestion`,
+`dailyInputs`, `currentInputsHash`, `dailyAnswer`, `composeDaily`, the
+`daily-answers` slot job `pregenerateDaily` and the pre-router `dailyFlow`),
+with the template in `server/advisor/prompts/daily.ts`. Where the code differs
+from the text above:
+
+- **Inputs and hash.** `dailyInputs(env, port, date)` collects, in a fixed
+  order: the port's `published` skipper reports dated from three days before
+  `date` through `date` (id, version, date, counts; a verified boat by name,
+  any other as `"a boat"`, so the name never reaches the model), the landing
+  reports the daily feed holds for the port with the ladder label per region
+  target (`answers/confidence.ts`), today's advisories and the 06:00–14:00
+  conditions (wind, seas, period, the comfort word), the region's rules for
+  its targets (`open` today, `stale`), and whether each feed loaded.
+  `currentInputsHash` is the sha256 of that JSON. A publish or an edit (new
+  version) changes it; a pending report, another port's report or one older
+  than three days does not. Publishing also deletes the port's rows (TA-I2),
+  so the next question regenerates in any case.
+- **One call, both languages.** `record_daily_answer` is forced
+  (`tool_choice`), `temperature: 0`, its input `{en, es}`; the prompt asks for
+  ≤ 420 characters each so the resolved link fits inside 480 (the cap is
+  applied after link resolution, `capReply`). The prompt is given the facts
+  as JSON plus the conditions sentence and date words already written in both
+  languages, so the model does not restate numbers on its own. The pick was
+  made on the recorded fixtures, not a live eval: `scripts/advisor/eval.mjs`
+  does not run the daily prompt yet.
+- **What is stored.** A model answer is kept only when both languages pass
+  `acceptable`: no markdown, no `%`, "percent", "probab…", "chance", "odds",
+  "por ciento", "probabilidad"; no rule number (the rules-guard pattern); no
+  follow offer ("text you when", "want me to", "te aviso", "quieres que");
+  with no skipper report, the landing's ladder label (kept in English in both
+  languages, the only confidence words) and, in English, "no skipper
+  reports". Anything else (an HTTP error, no API key, the global LLM cap, a
+  refused answer) stores `composeDaily`, the same facts in the fixed
+  `daily_*` strings (en and es). The composed answer stays for the day until
+  the hash changes; it is a correct answer, only plainer.
+- **The two fallbacks.** No skipper report but landing reports: "No skipper
+  reports from the last three days. The landing reports {n} trips with
+  {species} this week; recent reported activity: {label}." (or the model's
+  wording with the same parts). Nothing at all: "No reports from the last
+  three days for {port} yet." and the conditions, with no model call and no
+  link (the follow offer is FR-3, Next). Advisories always lead, the event in
+  capitals ("SMALL CRAFT ADVISORY posted for today.").
+- **Failed feeds.** A feed that fails to load changes the hash but is not new
+  information: when a row exists for today, it is served as it is, so a
+  passing R2 or GitHub error never replaces a good answer with "Today's
+  forecast isn't in yet". With no row, the degraded answer is made and stored,
+  and the next read with both feeds back regenerates it.
+- **Slot.** `SLOTS` has `daily-answers` at 05:30 America/Los_Angeles (01 §
+  cron slots; the name replaces `advisor-digest` above). It runs
+  `pregenerateDaily` for every port in `catalog/home-ports.json` whose region
+  (the build's `REGIONS`) has `status: active`, today Morro Bay and Port San
+  Luis, and throws when any port failed so `runSlot` releases the claim and
+  the next tick retries (ports already stored are cache hits). Slot jobs now
+  receive the cron deps (`CronDeps.daily`: feeds and fetcher, for tests).
+- **Pre-router.** `dailyFlow`, the last Stage 2 flow (after TA-I3's), answers
+  a text-only message that is exactly "what's biting", "what is biting",
+  "how's the fishing", "qué está picando" or "cómo está la pesca" (after
+  folding case, accents and punctuation; optional "hey/hola", an optional
+  port after out of/at/in/en/de…, an optional today/hoy/lately), with the port
+  from the text or `portForQuestion`. Only ports of active regions; a preview
+  region's port, a species ("for lingcod") or any other qualifier goes to the
+  model. A stored current answer costs no model call at all; a missing or
+  stale one costs the one generation call, shared by everyone asking about
+  that port today (the chat model is never called). The reply is in the
+  turn's language. A contact (role `angler`) with no home port gets "Which
+  port do you fish out of most? I'll keep my answers to it." once
+  (`mark_once` `homeport.<contact_id>`, deleted by forget me); the model's
+  `update_profile` saves the answer. Intents: `reports.daily.cache|model|composed`.
+- **Elsewhere.** `get_port_report` returns `daily: {text, source:
+  'stored'|'composed', note}`: the stored answer when current, else the
+  composed one without a second model call and without storing it. The
+  situation brief carries today's stored answer for the home port (else the
+  region default's first port) when one exists. `rulesGuard`,
+  `statesRuleNumber` and `stripMarkdown` moved to `reply.ts` (re-exported by
+  `engine.ts`).
+- **Cost note.** The hash includes the window's wind and seas, so a forecast
+  update that changes those numbers regenerates the port's answer on the
+  next question (one call per port per change).
+

@@ -1,7 +1,7 @@
 {
   "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
-  "description": "What's biting: get_port_report (TA-E2) on the committed daily-feed fixture: no skipper reports yet, the landing's Starfire trip with its Low label; the reply cites the landing and links the port.",
-  "message": "What's biting out of Morro Bay?",
+  "description": "What's biting: get_port_report (TA-E2) on the committed daily-feed fixture: no skipper reports yet, the landing's Starfire trip with its Low label; the reply cites the landing and links the port. TA-A1: the plain \"what's biting\" is answered by the pre-router without the model, so this case asks a more specific question; get_port_report now carries the day's answer, composed from the same facts.",
+  "message": "What's been biting out of Morro Bay, any lingcod?",
   "exchanges": [
     {
       "request": {
@@ -51,7 +51,7 @@
       "request": {
         "tool_result_for": "toolu_01",
         "tool_result_contains": [
-          "\"daily\":null",
+          "No skipper reports from the last three days. The landing reports 1 trip with rockfish and lingcod this week; recent reported activity: Low.",
           "\"skipper_reports\":[]",
           "reported by the landing",
           "Starfire",
