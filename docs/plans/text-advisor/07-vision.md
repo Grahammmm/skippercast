@@ -110,10 +110,10 @@ Prompts (`prompts/vision.ts`):
 
 Usage goes to `recordLlm(env, 'advisor:vision:<method>', outcome, usage)`.
 Fixtures: `tests/fixtures/advisor/vision/*.json` recorded responses, plus
-six synthetic test images (generated SVG→PNG in the repo under 50 KB each:
-a drawn count board, a drawn fish silhouette, a blank, a photo-like scene
-with a stick figure) so the pipeline runs end to end offline. No real
-customer photos ever enter the repo.
+four synthetic test images (as built; six were planned), generated SVG→PNG
+in the repo under 50 KB each (a drawn count board, a drawn fish silhouette,
+a blank, a photo-like scene with a stick figure), so the pipeline runs end
+to end offline. No real customer photos ever enter the repo.
 
 ## Thresholds (single source: `vision/index.ts` `THRESHOLDS`)
 
@@ -148,3 +148,86 @@ iPhones arrives as JPEG via Messages on iMessage; a HEIC from the upload page
 is converted by the job (`pillow-heif` on the runner) or, failing that, the
 person is asked for a JPEG. Species keys in results are `catalog/species.json`
 keys or `catalog/advisor/species-extra.json` keys (02).
+
+## As built (TA-V1)
+
+- **Modules.** `vision/index.ts` holds the contract types, `THRESHOLDS`, the
+  `decide*` functions and `visionChain`; the error classes and `IMAGE_KINDS`
+  live in `vision/errors.ts` (re-exported by `index.ts`) so `claude.ts` can
+  import them without a circular import; `vision/species.ts` builds the
+  per-region species list from `catalog/species.json`, `catalog/targets.json`
+  and the three `catalog/advisor/` files, bundled into the Worker as JSON
+  imports (about 80 KB, mostly `species.json`).
+- **Signature.** `visionChain(env, deps)` takes injectable deps (`fetcher`,
+  `now`, `sleep`, `regionTargets`, and `providers` by name, which TA-V2 uses
+  for the Hermes client). `identifyFish(image, region)` takes the region id;
+  the species list comes from that region's `species` targets, and every key
+  the advisor knows when the region is unknown.
+- **Thresholds as functions.** `decideCountBoard`, `decideReadingUsable`
+  (the `overall_confidence < 0.5` fallback), `decideAcceptReading` (returns the
+  line indexes to mark with `?`, including unreadable counts), `decideHold`,
+  `decideFishBand` (`needs_better_photo` or no candidates is always `ask`) and
+  `decideProtected`. `THRESHOLDS` also holds `maxImageBytes` (4.5 MiB) and
+  `providerDownMs` (10 minutes).
+- **Protected warning.** 06 § fish ID says a yelloweye or cowcod candidate
+  "at any confidence" adds the warning; the table above says `>= 0.3`. TA-V1
+  implements the table (`>= 0.3`); TA-I3 should settle which one the reply
+  uses. `protected.json` lists yelloweye, cowcod and bronzespotted with
+  `must_release: true` and canary with `must_release: false` (a sub-bag
+  species); all four trigger the warning, and the notes defer to the rules
+  table.
+- **Cache.** `classification_json` is `{classify?, count_board?, fish_id?}`,
+  written with SQLite `json_set` so one method never overwrites another; a
+  corrupt value is ignored and replaced. Only `classify` sets `has_person`.
+- **Chain failures.** A provider error marks it down (`job_state`
+  `advisor.vision.<name>.down_until`, an ISO time) and the next is tried; a
+  success after the window clears the key. Input errors (`UnsupportedImage`,
+  `MediaTooLarge`) are thrown at once and never mark a provider down; so are
+  `ProviderNotConfigured` (no `ANTHROPIC_API_KEY`; Hermes without
+  `HERMES_VISION_URL` is skipped before it is called, and the TA-V1 Hermes
+  entry is a stub that always reports `not-configured`) and
+  `VisionCapReached`, which the chain rethrows when no provider answered.
+  Otherwise the chain throws `VisionUnavailable`. The image bytes are read
+  once per chain call, whatever the number of providers.
+- **Over 4.5 MB.** The chain throws `MediaTooLarge` and logs
+  `advisor_vision_too_large`; dispatching the media job and re-queueing until
+  `public.jpg` exists is TA-M1's consumer path (10 lists that test under
+  TA-V1; it moves to TA-M1). The Claude provider also refuses anything over
+  its own 5 MiB limit.
+- **Claude request.** `temperature: 0`, a 60 s `AbortSignal.timeout`, one
+  retry after 2 s on HTTP 429 or 529 (both attempts count as turns in the
+  `llm` point). The tool schemas carry `enum`s (image kinds; for fish ID the
+  region's species keys plus `null`; the `reason` codes) so the model is
+  steered to valid values, and the parser validates every field anyway. The
+  analytics feature names use the cache keys: `advisor:vision:classify`,
+  `advisor:vision:count_board`, `advisor:vision:fish_id`. The global cap key
+  is `global:vision:<UTC day number>` in `request_limits`, counted before the
+  request, as the boat lookup does. A response without the forced
+  `tool_use` block is recorded with outcome `invalid`.
+- **Validation.** Confidences are clamped to 0..1 (non-numbers become 0);
+  booleans must be `true`; `date_iso` must be a real `YYYY-MM-DD` date; counts
+  must be non-negative integers (a digit string is accepted); lines without a
+  label are dropped and at most 40 kept; fish candidates without a label are
+  dropped, an unknown `species_key` becomes null with its label kept, cues
+  are trimmed to 3, candidates sorted by confidence and trimmed to 3; no
+  candidates forces `needs_better_photo` with reason `no_fish`.
+- **Species keys.** `catalog/advisor/species-extra.json` adds the rockfish
+  species (parent `rockfish`), cabezon and kelp greenling (no catalog parent;
+  `target: 'reef'`), bronzespotted (for `protected.json`), and
+  `california-halibut` and `king-salmon` as synonyms (`same_as_parent`) of
+  `halibut` and `salmon`, which the species list canonicalises away.
+  White seabass, Pacific halibut, albacore, bluefin, yellowtail, Dungeness and
+  lingcod already have catalog keys and are not repeated.
+  `catalog/advisor/lookalikes.json` covers those keys with 2–3 cues each;
+  entries whose `source` is `https://wildlife.ca.gov/Fishing/Ocean` await a
+  more specific CDFW page (owner to refine).
+- **Fixtures.** Four synthetic PNGs, not six: `count-board.png`, `fish.png`,
+  `blank.png`, `deck-person.png` (≤ 256 px, about 1 KB each), rendered by
+  `scripts/advisor/make-fixture-images.mjs` from inline SVG with its own
+  rasteriser (rect, circle, ellipse, line, polygon, and text in a 5×7 bitmap
+  font whose `y` is the glyph top) and PNG encoder; `--check` verifies the
+  committed files and the test re-renders them. Their SHA-256 is pinned in
+  `scripts/web-vendor-sha256.json`, which `check_repository.py` requires for
+  every binary file; the script updates those entries. The recorded responses
+  (`classify-*.json`, `count-board.json`, `fish-id*.json`) are hand-written to
+  the tool-use response shape, each with `_source` and `_image`.

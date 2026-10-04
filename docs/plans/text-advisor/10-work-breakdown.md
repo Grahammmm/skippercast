@@ -126,7 +126,8 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: OP-8, ID-1, ID-3, SC-1 (reading), OP-2 (detection).
 - Depends: TA-C4
 - Files: `vision/index.ts`, `vision/claude.ts`, `prompts/vision.ts`, `catalog/advisor/lookalikes.json`, `catalog/advisor/protected.json`, `tests/fixtures/advisor/vision/`, `tests/test_advisor_vision.mjs`, `scripts/advisor/make-fixture-images.mjs` (SVG → PNG at build time; committed PNGs under 50 KB).
-- Tests: schema-forced tool output parses into each result type; thresholds table; cache in `classification_json`; global cap; 10-minute skip after failure; an original over 4.5 MB is routed to the media job and re-queued rather than sent.
+- Tests: schema-forced tool output parses into each result type; thresholds table; cache in `classification_json`; global cap; 10-minute skip after failure; an original over 4.5 MB is not sent (`MediaTooLarge`; as built, the route to the media job and the re-queue are TA-M1).
+- As built: four synthetic images (not six); `catalog/advisor/species-extra.json` is created here (TA-E2 extends it); the PNG hashes are pinned in `scripts/web-vendor-sha256.json`.
 
 ### TA-V2 · Hermes provider and conformance script · S
 - Stories: OP-8.
@@ -203,6 +204,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Owner step: create `R2_ADVISOR_TOKEN` (R2 read/write scoped to `skippercast-advisor-media`) as a GitHub secret.
 - Build: 09 § derived images; the job is idempotent (skips keys that exist with the same source sha); Story footer and daily graphic drawn from the JSON layout; HEIC conversion; `ffprobe` validation when available (skips with the exact allow-listed reason when absent).
 - Tests: Python: resize bounds, footer text present (pixel check of the band colour), graphic renders from a fixture payload; Node: endpoints auth and payload shapes.
+- Also (moved from TA-V1): when `visionChain` throws `MediaTooLarge`, the consumer dispatches the media job and re-queues the message with `retry({delaySeconds: 30})` up to 4 times, then classifies `public.jpg` (07 § Interface); tested here.
 
 ### TA-W1 · Public pages: port, species, boat, sitemap, telemetry source · L
 - Stories: WH-4, SK-5, WH-1 (targets), FC-5 (CTA).

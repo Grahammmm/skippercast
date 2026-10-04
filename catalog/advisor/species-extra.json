@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-03",
+  "method": "Species keys the advisor recognises beyond catalog/species.json (02 § advisor_reports.species_key, 07 § EXIF and derived images). Each entry names its catalog parent: a rockfish species under 'rockfish', a synonym (same_as_parent: true) under the catalog key it duplicates, or no parent with the region target it belongs to ('reef'). Fish that already have a catalog key (white-seabass, pacific-halibut, albacore, bluefin, yellowtail, dungeness, lingcod) are not repeated here. Names are common names; no rule or catch claim is made.",
+  "species": [
+    {"key": "vermilion", "name": "Vermilion rockfish", "scientific_name": "Sebastes miniatus", "parent": "rockfish"},
+    {"key": "canary", "name": "Canary rockfish", "scientific_name": "Sebastes pinniger", "parent": "rockfish"},
+    {"key": "yelloweye", "name": "Yelloweye rockfish", "scientific_name": "Sebastes ruberrimus", "parent": "rockfish"},
+    {"key": "cowcod", "name": "Cowcod", "scientific_name": "Sebastes levis", "parent": "rockfish"},
+    {"key": "bronzespotted", "name": "Bronzespotted rockfish", "scientific_name": "Sebastes gilli", "parent": "rockfish"},
+    {"key": "copper", "name": "Copper rockfish", "scientific_name": "Sebastes caurinus", "parent": "rockfish"},
+    {"key": "bocaccio", "name": "Bocaccio", "scientific_name": "Sebastes paucispinis", "parent": "rockfish"},
+    {"key": "chilipepper", "name": "Chilipepper rockfish", "scientific_name": "Sebastes goodei", "parent": "rockfish"},
+    {"key": "black", "name": "Black rockfish", "scientific_name": "Sebastes melanops", "parent": "rockfish"},
+    {"key": "blue", "name": "Blue rockfish", "scientific_name": "Sebastes mystinus", "parent": "rockfish"},
+    {"key": "gopher", "name": "Gopher rockfish", "scientific_name": "Sebastes carnatus", "parent": "rockfish"},
+    {"key": "cabezon", "name": "Cabezon", "scientific_name": "Scorpaenichthys marmoratus", "parent": null, "target": "reef"},
+    {"key": "kelp-greenling", "name": "Kelp greenling", "scientific_name": "Hexagrammos decagrammus", "parent": null, "target": "reef"},
+    {"key": "california-halibut", "name": "California halibut", "scientific_name": "Paralichthys californicus", "parent": "halibut", "same_as_parent": true},
+    {"key": "king-salmon", "name": "King (Chinook) salmon", "scientific_name": "Oncorhynchus tshawytscha", "parent": "salmon", "same_as_parent": true}
+  ]
+}

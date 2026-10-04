@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-03",
+  "method": "Species that trigger the fish-ID protected-species warning (07 § thresholds, 06 § fish ID). This file only decides when the advisor adds a release reminder; it states no rule. Current rules come from the rules table (advisor_rules), which the reply links to.",
+  "species": [
+    {"key": "yelloweye", "must_release": true, "note": "Release it with a descending device. Check the rules table for the current rule.", "source": "https://www.fisheries.noaa.gov/species/yelloweye-rockfish"},
+    {"key": "cowcod", "must_release": true, "note": "Release it with a descending device. Check the rules table for the current rule.", "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    {"key": "bronzespotted", "must_release": true, "note": "Release it with a descending device. Check the rules table for the current rule.", "source": "https://wildlife.ca.gov/Fishing/Ocean"},
+    {"key": "canary", "must_release": false, "note": "A sub-bag species: a limited number may be kept when the rules allow. Release extras with a descending device, and check the rules table for the current limit.", "source": "https://www.fisheries.noaa.gov/species/canary-rockfish"}
+  ]
+}
