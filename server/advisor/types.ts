@@ -44,6 +44,7 @@ export interface AdvisorContactRow {
   messages_today: number; messages_day: string | null; last_seen_at: string; last_error_notice_at: string | null;
   created_at: string; updated_at: string;
   ig_sid?: string | null;   // 0011 (TA-S0): Instagram-scoped user id of a DM contact (TA-S6)
+  source_post_id?: string | null;   // 0012 (TA-S7): the post a per-post link's first message came from
 }
 
 /** The subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */
@@ -116,7 +117,10 @@ export type Action =
   | {type: 'mark_once'; key: string}                                    // job_state advisor.once.<key>: a line said once
   // TA-I3: angler photos (06 § Angler photos, AC-1).
   | {type: 'share_state'; state: ShareState | null}                     // job_state advisor.share.<contact_id>; null deletes it
-  | {type: 'angler_share'; mediaId: string; credit?: string | null};   // the contact's own photo: private -> queued, and the credit when given
+  | {type: 'angler_share'; mediaId: string; credit?: string | null}    // the contact's own photo: private -> queued, and the credit when given
+  // TA-S6: an Instagram comment's answer (09 § Inbox): `private` is the one private reply Meta allows per comment
+  // (a DM through recipient.comment_id), `public` a reply under the comment (ADVISOR_INBOX_PUBLIC_REPLIES only).
+  | {type: 'comment_reply'; mode: 'private' | 'public'; text: string};
 
 /** TA-I2: one line of a report (02 § advisor_reports.counts_json). `uncertain` marks a line shown with "?" until confirmed. */
 export interface ReportCount {species_key: string; label: string; kept: number | null; released: number | null; uncertain?: boolean}
@@ -176,7 +180,8 @@ export interface EngineDeps {
  * The outbound message a channel sends (03 § adapter interface). `to` is the
  * contact's address as stored: the phone_enc blob for a phone contact (the
  * adapter decrypts it inside send(), so the number never exists outside a
- * channel, 02 § privacy invariants), the web_session hash for a web visitor.
+ * channel, 02 § privacy invariants), the web_session hash for a web visitor,
+ * the Instagram-scoped id (ig_sid) for an Instagram contact (TA-S6).
  */
 export interface OutboundMessage {
   id: string;                       // advisor_messages.id, deterministic
@@ -207,6 +212,8 @@ export interface ConsumerDeps {
   // TA-M1: waiting for the media job's public.jpg (server/advisor/media.ts).
   derivedWaits?: number;            // queue attempts that may wait for it; default DERIVED_WAITS (3), runInline 0
   dispatchWorkflow?: (env: Env, file: string) => Promise<number>; // default: watchdog.ts dispatchWorkflow
+  // TA-S6: the Graph API fetcher and clock of an Instagram comment's reply channel (tests).
+  instagram?: {fetcher?: (url: string, init: RequestInit) => Promise<Response>; now?: () => number};
 }
 
 export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}

@@ -6,10 +6,12 @@
 // approves). Used by the queue's `post` card and the Posts view.
 // TA-S2: PostActions puts an approved post out now or at a time, and retries
 // the failed part of a partly posted or failed one.
+// TA-S7: a posted post shows its latest insights and the chats it started (PostStatsTable).
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {when, ApiError, publishPost, retryPost, schedulePost} from './api.ts';
-import type {DecisionBody, Post, PostActionResult} from './api.ts';
+import type {DecisionBody, Post, PostActionResult, PostStats} from './api.ts';
+import {SOCIAL_COLUMNS} from './api.ts';
 import {postEdits, localInput, fromLocalInput, publishedTo} from './posts-form.ts';
 
 export function PostDetail({post}: {post: Post}) {
@@ -39,7 +41,33 @@ export function PostDetail({post}: {post: Post}) {
         <h3>{COPY.caption}</h3>
         {post.caption ? <p class="admin-caption">{post.caption}</p> : <p class="admin-muted">{COPY.noCaption}</p>}
         {post.caption ? <p class="admin-muted">{COPY.captionCounts(post.caption_stats.length, post.caption_stats.hashtags, post.caption_stats.mentions)}</p> : null}
+        {post.stats ? <PostStatsTable stats={post.stats} idBase={`post-${post.id}`} /> : null}
       </div>
+    </div>
+  );
+}
+
+/** TA-S7: the posted post's latest numbers per surface, one column per metric, and the chats its link started. */
+export function PostStatsTable({stats, idBase}: {stats: PostStats; idBase: string}) {
+  const rows = (['instagram', 'facebook'] as const).flatMap(surface => (stats[surface] ? [{surface, values: stats[surface]!}] : []));
+  const day = rows.map(r => r.values.day).sort().at(-1) ?? '';
+  const notes = rows.flatMap(r => r.values.notes.map(n => `${COPY.statsSurfaces[r.surface]}: ${n}`));
+  return (
+    <div class="admin-post-stats">
+      <h3 id={`${idBase}-stats`}>{COPY.statsHeading}</h3>
+      {!rows.length ? <p class="admin-muted">{COPY.statsNone}</p> : (
+        <div class="admin-scroll" role="region" aria-labelledby={`${idBase}-stats`} tabIndex={0}>
+          <table class="admin-counts">
+            <caption class="admin-muted">{COPY.statsCaption(day)}</caption>
+            <thead><tr><th scope="col">{COPY.statsSurface}</th>{SOCIAL_COLUMNS.map(c => <th key={c} scope="col">{COPY.statsColumns[c]}</th>)}</tr></thead>
+            <tbody>{rows.map(r => (
+              <tr key={r.surface}><th scope="row">{COPY.statsSurfaces[r.surface]}</th>{SOCIAL_COLUMNS.map(c => <td key={c}>{r.values[c]}</td>)}</tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+      <dl class="admin-fields"><dt>{COPY.statsChats}</dt><dd>{stats.chats}</dd></dl>
+      {notes.length ? <p class="admin-muted">{COPY.statsNotes}: {notes.join('; ')}</p> : null}
     </div>
   );
 }

@@ -16,6 +16,13 @@
 //
 // Without the token or the account id the D1 part still answers and
 // `analytics.available` is false. The SQL fetcher is injected for tests.
+//
+// TA-S7, `social` (D1): posts published in the window with the latest insights
+// of each (advisor_post_stats, social/insights.ts) summed per surface and per
+// post kind, the chats those posts' links started (advisor_contacts.source_post_id)
+// and every contact who came from Instagram (sources ig, igdm, igcomment). Site
+// visits per post are not counted: page telemetry carries the visit source
+// (`s=ig`, in `analytics.pages`) but not a post id.
 import {advisorLog} from '../log.ts';
 import {DATASET} from '../../analytics.ts';
 import type {Env} from '../../env.ts';
@@ -84,10 +91,21 @@ export interface Funnel {
   boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
   photos: {submitted: number; approved: number};
   consent: {boats: number; given: number; rate: number | null};
+  social: SocialFunnel;   // TA-S7
   analytics: {available: boolean; reason: 'not-configured' | 'no-data' | 'error' | null;
     llm: {feature: string; calls: number; input_tokens: number; output_tokens: number}[];
     turns: {count: number; p50_ms: number | null; p95_ms: number | null};
     pages: {event: string; source: string; count: number}[]};
+}
+
+/** TA-S7: the social rows (D1). Totals are the latest reading of each post published in the window. */
+export const SOCIAL_COLUMNS = ['views', 'reach', 'likes', 'comments', 'saved', 'shares', 'follows', 'profile_visits'] as const;
+export type SocialTotals = Record<typeof SOCIAL_COLUMNS[number], number>;
+export const INSTAGRAM_SOURCES = ['ig', 'igdm', 'igcomment'] as const;
+export interface SocialFunnel {
+  posts: number; instagram: SocialTotals; facebook: SocialTotals;
+  by_kind: ({kind: string; posts: number; chats: number} & SocialTotals)[];
+  chats_from_posts: number; chats_from_instagram: number; site_visits_per_post: null;
 }
 
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -151,7 +169,39 @@ async function d1Part(db: D1Database, days: FunnelDays, now: number): Promise<Om
       approved: await count(db, "SELECT COUNT(*) AS n FROM advisor_media WHERE kind='image' AND publish_state IN ('approved','posted') AND created_at>=?", since),
     },
     consent: {boats, given, rate: ratio(given, boats)},
+    social: await socialPart(db, since),
   };
+}
+
+const zeros = (): SocialTotals => Object.fromEntries(SOCIAL_COLUMNS.map(c => [c, 0])) as SocialTotals;
+
+/** TA-S7: posts published since `since`, their latest numbers per surface and the chats they started. */
+async function socialPart(db: D1Database, since: string): Promise<SocialFunnel> {
+  const posts = (await db.prepare(`SELECT id,kind,ig_media_id FROM advisor_posts WHERE status IN ('posted','partial') AND posted_at>=?`).bind(since)
+    .all<{id: string; kind: string; ig_media_id: string | null}>()).results;
+  // The latest row of each (post, surface) for those posts.
+  const latest = (await db.prepare(`SELECT s.* FROM advisor_post_stats s JOIN (SELECT post_id, platform, MAX(day) AS day FROM advisor_post_stats GROUP BY post_id, platform) m
+      ON m.post_id=s.post_id AND m.platform=s.platform AND m.day=s.day JOIN advisor_posts p ON p.id=s.post_id
+      WHERE p.status IN ('posted','partial') AND p.posted_at>=?`).bind(since).all<Record<string, unknown>>()).results;
+  // Chats by the post they came from (its id, or its Instagram media id in the link).
+  const chats = (await db.prepare(`SELECT p.id AS post_id, COUNT(c.id) AS n FROM advisor_posts p JOIN advisor_contacts c ON c.source_post_id=p.id OR (p.ig_media_id IS NOT NULL AND c.source_post_id=p.ig_media_id)
+      WHERE p.status IN ('posted','partial') AND p.posted_at>=? GROUP BY p.id`).bind(since).all<{post_id: string; n: number}>()).results;
+  const kindOf = new Map(posts.map(p => [p.id, label(p.kind)]));
+  const totals: Record<'instagram' | 'facebook', SocialTotals> = {instagram: zeros(), facebook: zeros()};
+  const kinds = new Map<string, {kind: string; posts: number; chats: number} & SocialTotals>();
+  const kindRow = (kind: string) => { let row = kinds.get(kind); if (!row) { row = {kind, posts: 0, chats: 0, ...zeros()}; kinds.set(kind, row); } return row; };
+  for (const p of posts) kindRow(label(p.kind)).posts++;
+  for (const row of latest) {
+    const platform = row.platform === 'facebook' ? 'facebook' : row.platform === 'instagram' ? 'instagram' : null;
+    const kind = kindOf.get(String(row.post_id));
+    if (!platform || !kind) continue;
+    for (const c of SOCIAL_COLUMNS) { totals[platform][c] += num(row[c]); kindRow(kind)[c] += num(row[c]); }
+  }
+  let fromPosts = 0;
+  for (const c of chats) { const kind = kindOf.get(c.post_id); if (kind) { kindRow(kind).chats += num(c.n); fromPosts += num(c.n); } }
+  const fromInstagram = await count(db, `SELECT COUNT(*) AS n FROM advisor_contacts WHERE created_at>=? AND source IN (${INSTAGRAM_SOURCES.map(() => '?').join(',')})`, since, ...INSTAGRAM_SOURCES);
+  return {posts: posts.length, instagram: totals.instagram, facebook: totals.facebook, by_kind: [...kinds.values()].sort((a, b) => b.posts - a.posts || a.kind.localeCompare(b.kind)),
+    chats_from_posts: fromPosts, chats_from_instagram: fromInstagram, site_visits_per_post: null};
 }
 
 async function analyticsPart(sql: SqlFetcher | null, days: FunnelDays): Promise<Funnel['analytics']> {

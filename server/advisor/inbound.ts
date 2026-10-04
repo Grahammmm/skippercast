@@ -32,6 +32,9 @@ const MEDIA_KIND = (mime: string | null): 'image' | 'video' | 'audio' => mime?.s
  * finds its contact by session, needs no phone key, records source 'web' when
  * it has no marker, and attaches `mediaIds` (stored uploads of that contact
  * not yet used by a message) to the new message.
+ *
+ * TA-S6: an Instagram DM or comment (`from` the IGSID) finds its contact by
+ * ig_sid and records source 'igdm' or 'igcomment' on a first message.
  */
 export async function storeInbound(env: Env, message: InboundMessage, now: Date = new Date()): Promise<string | null> {
   const db = env.DB!;
@@ -39,9 +42,12 @@ export async function storeInbound(env: Env, message: InboundMessage, now: Date 
   if (seen) return null;
   // TA-C3: a web chat message is from a session cookie, not a number, and needs no phone key.
   const web = message.channel === 'web';
-  if (!web && !env.ADVISOR_PHONE_KEY) throw Error('ADVISOR_PHONE_KEY is not set');
+  // TA-S6: an Instagram DM or comment is from an IGSID (advisor_contacts.ig_sid), and needs no phone key either.
+  const instagram = message.channel === 'instagram_dm' || message.channel === 'instagram_comment';
+  if (!web && !instagram && !env.ADVISOR_PHONE_KEY) throw Error('ADVISOR_PHONE_KEY is not set');
   const contact = web
     ? await findOrCreateContact(db, null, {webSession: message.from, channel: 'web'}, now)
+    : instagram ? await findOrCreateContact(db, null, {igSid: message.from, channel: message.channel}, now)
     : await findOrCreateContact(db, await deriveKeys(env.ADVISOR_PHONE_KEY!), {e164: message.from, channel: message.channel}, now);
   const id = randomId(), at = now.toISOString();
   const media = message.media.map(m => ({id: randomId(), ...m}));
@@ -50,11 +56,13 @@ export async function storeInbound(env: Env, message: InboundMessage, now: Date 
   const mediaIds = [...media.map(m => m.id), ...attached];
   const marker = parseSourceMarker(message.text);
   // TA-C3: a web chat contact without a marker started from the site ('web', 02 § advisor_contacts).
-  const source = marker.source ?? (web ? 'web' : null);
+  // TA-S6: an Instagram contact started from a DM ('igdm') or a comment ('igcomment').
+  const source = marker.source ?? (web ? 'web' : message.channel === 'instagram_dm' ? 'igdm' : message.channel === 'instagram_comment' ? 'igcomment' : null);
   const statements = [
     // TA-C6: first-touch attribution, before the message row so "first inbound" excludes this one.
-    ...(source && !contact.source ? [db.prepare(`UPDATE advisor_contacts SET source=? WHERE id=? AND source IS NULL
-      AND NOT EXISTS (SELECT 1 FROM advisor_messages WHERE contact_id=? AND direction='in')`).bind(source, contact.id, contact.id)] : []),
+    // TA-S7: with the post a per-post link named (`[via ig:<post_id>]`), kept in source_post_id for the post's "chats started".
+    ...(source && !contact.source ? [db.prepare(`UPDATE advisor_contacts SET source=?,source_post_id=? WHERE id=? AND source IS NULL
+      AND NOT EXISTS (SELECT 1 FROM advisor_messages WHERE contact_id=? AND direction='in')`).bind(source, marker.postId ?? null, contact.id, contact.id)] : []),
     db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,provider_id,body,media_json,status,created_at) VALUES(?,?,'in',?,?,?,?,'queued',?) ON CONFLICT DO NOTHING`)
       .bind(id, contact.id, message.channel, message.providerId, marker.text.slice(0, MAX_BODY) || null, mediaIds.length ? JSON.stringify(mediaIds) : null, at),
     // Only if this call's message row exists, i.e. it was not a concurrent duplicate.

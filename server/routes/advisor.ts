@@ -46,6 +46,9 @@ import type {JobClaims, JobScope} from '../job-auth.ts';
 import {deployment, build} from '../config.ts';
 import {body, budget} from '../http.ts';
 import {mediaJobWork, mediaJobDone} from '../advisor/media.ts';
+// TA-S6: Meta's webhook (the inbox).
+import {handshake, readRawBody, verifyMetaSignature, parseMetaWebhook, classifyComment, inboxReady} from '../advisor/social/inbox.ts';
+import type {MetaPayload} from '../advisor/social/inbox.ts';
 // TA-S4: generated post graphics for Meta's fetch.
 import {GRAPHIC_NAME, GRAPHIC_PUBLIC_STATUSES, servableGraphic} from '../advisor/social/graphics.ts';
 // TA-W1: the public pages, their cache key and the sitemap.
@@ -155,6 +158,55 @@ advisorPublic.post('/api/advisor/inbound/twilio-status/:token', async c => {
   }
 });
 // TA-C2 end.
+
+// ---- TA-S6: Meta's webhook for Instagram DMs and comments (09 § Inbox) -------------
+// GET is the subscription handshake (META_VERIFY_TOKEN); POST carries
+// X-Hub-Signature-256 over the raw body (META_APP_SECRET), checked before
+// anything is parsed. With ADVISOR_INBOX_ENABLED off a signed delivery is
+// acknowledged and nothing is written. Meta retries a delivery that is not
+// answered 200, so a dependency failure answers 503 and the retry is
+// deduplicated by message or comment id.
+const plainText = (body: string, status: number): Response => new Response(body, {status, headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
+advisorPublic.get('/api/advisor/inbound/meta', async c => {
+  if (await overLimit(c.env.PUBLIC_LIMITER, 'advisor-inbound:' + clientIP(c.req.raw))) return tooManyRequests();
+  const answer = await handshake(new URL(c.req.url).searchParams, c.env.META_VERIFY_TOKEN);
+  if (answer.status !== 200) advisorLog('warn', 'advisor_webhook_unauthorized', {channel: 'meta-handshake', count: 1, configured: Boolean(c.env.META_VERIFY_TOKEN)});
+  return plainText(answer.body, answer.status);
+});
+advisorPublic.post('/api/advisor/inbound/meta', async c => {
+  const env = c.env;
+  if (await overLimit(env.PUBLIC_LIMITER, 'advisor-inbound:' + clientIP(c.req.raw))) return tooManyRequests();
+  try {
+    const raw = await readRawBody(c.req.raw);
+    if (!await verifyMetaSignature(env.META_APP_SECRET, raw, c.req.header('X-Hub-Signature-256') ?? null)) {
+      advisorLog('warn', 'advisor_webhook_unauthorized', {channel: 'meta', count: 1, configured: Boolean(env.META_APP_SECRET)});
+      return json({error: 'Unauthorized'}, 401);
+    }
+    const settings = advisorSettings(env);
+    if (!inboxReady(env, settings)) return json({});   // dark: verified, acknowledged, nothing written
+    if (!env.DB) throw Error('storage unavailable');
+    let payload: unknown;
+    try { payload = JSON.parse(new TextDecoder().decode(raw)); } catch { throw new ClientError('invalid JSON'); }
+    const events = parseMetaWebhook(payload as MetaPayload, env.META_IG_USER_ID!);
+    // A comment is kept only when it needs an answer (a keyword, or a question with public replies on).
+    const comments = events.comments.filter(m => classifyComment(m.text, settings));
+    let stored = 0, duplicates = 0;
+    const ignored = events.skipped + events.comments.length - comments.length;
+    for (const message of [...events.dms, ...comments]) {
+      const id = await storeInbound(env, message);
+      if (!id) { duplicates++; continue; }
+      stored++;
+      await dispatch(c, id);
+    }
+    if (stored || duplicates || ignored) advisorLog('info', 'advisor_meta_webhook', {stored, duplicates, ignored});
+    return json({});
+  } catch (error) {
+    const client = error instanceof ClientError;
+    advisorLog(client ? 'warn' : 'error', 'advisor_webhook_failed', {channel: 'meta', type: client ? 'validation' : 'dependency', reason: String((error as Error)?.message).slice(0, 200)});
+    return client ? json({error: (error as Error).message}, 400) : json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+});
+// TA-S6 end.
 
 // ---- TA-C4: upload link and media serving ----------------------------------------
 // (03 § Uploads for compressed channels, 02 § R2, 09 § Media that Meta fetches.)
@@ -325,18 +377,22 @@ advisorPublic.get('/contact.vcf', c => {
  * The pre-filled text body for /text: `m` (control characters removed, trimmed,
  * at most 140 characters; default "Hi SkipperCast") plus " [via <s>]" when `s`
  * is a valid source (^[a-z0-9:_-]{1,32}$); any other `s` is dropped.
+ * TA-S7: with `s=ig` and a post id `p` (^[\w-]{1,64}$, the per-post link
+ * /text?s=ig&p=<post_id>, 09 § Insights) the marker is " [via ig:<p>]"; a bad `p` is dropped.
  */
-export function textBody(message: string | null | undefined, source: string | null | undefined): string {
+export const POST_PARAM = /^[\w-]{1,64}$/;
+export function textBody(message: string | null | undefined, source: string | null | undefined, post?: string | null): string {
   const clean = Array.from(String(message ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim()).slice(0, TEXT_MAX_MESSAGE).join('').trim();
   const valid = typeof source === 'string' && SOURCE_PATTERN.test(source) ? source : null;
-  return `${clean || TEXT_DEFAULT_MESSAGE}${valid ? ` [via ${valid}]` : ''}`;
+  const marker = valid === 'ig' && typeof post === 'string' && POST_PARAM.test(post) ? `ig:${post}` : valid;
+  return `${clean || TEXT_DEFAULT_MESSAGE}${marker ? ` [via ${marker}]` : ''}`;
 }
 
 // The `?&body=` form is the one iOS and Android both open with the body filled in (03).
 advisorPublic.get('/text', c => {
   const settings = advisorSettings(c.env);
   if (!settings.number) return NO_NUMBER();
-  const body = textBody(c.req.query('m'), c.req.query('s'));
+  const body = textBody(c.req.query('m'), c.req.query('s'), c.req.query('p'));
   return new Response(null, {status: 302, headers: {Location: `sms:${settings.number}?&body=${encodeURIComponent(body)}`, 'Cache-Control': 'no-store'}});
 });
 

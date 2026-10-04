@@ -262,6 +262,25 @@ cookie hash to it (the chat keeps working and `/api/advisor/web/message`
 answers `linked: true`), and deletes the web contact. 04 § As built has the
 details.
 
+## Instagram adapter (`channels/instagram.ts`; TA-S6)
+
+As built: the fourth adapter, `instagram` (`AdapterName` gained it). Inbound is
+not `normalize` (it answers `ignore`): Meta's webhook needs the raw body for its
+signature, so `POST /api/advisor/inbound/meta` checks `X-Hub-Signature-256` and
+`social/inbox.ts` turns the payload into `InboundMessage`s on `instagram_dm` and
+`instagram_comment` (09 § Inbox, As built (TA-S6)). `from` is the IGSID; the
+contact is found by `advisor_contacts.ig_sid` and needs no phone key.
+`channelFor` returns `instagram` for a contact with an `ig_sid` and no number,
+and the consumer addresses it by the IGSID. `send` is a DM through `POST
+/<ig-user-id>/messages` (`recipient.id`), text split at 1,000 characters by
+`splitForChannel`, then approved media as image URLs; it refuses outside Meta's
+24-hour window (`outside-window`, no call) and makes one try (a 5xx is
+`unknown`). `fetchMediaByRef` downloads a DM image only from Meta's CDN hosts.
+`commentChannel(env, comment, 'private' | 'public')` is the outbound channel of
+one comment's answer (`recipient.comment_id`, or `POST /<comment-id>/replies`).
+Capabilities: media (by URL), no typing or read receipts. `health` says whether
+the Meta secrets are set and the inbox is on.
+
 ## Uploads for compressed channels (SMS skippers, big videos)
 
 `GET /u/<token>` is a page with one file input; the token is minted by the
@@ -320,7 +339,9 @@ when it is exactly the trailing ` [via <s>]` that `/text` writes; `storeInbound`
 stores the body without it and sets `advisor_contacts.source` only on the
 contact's first inbound message while it is still null (a later marker is
 stripped but never replaces it). `[via ig:<post_id>]` records `ig`; keeping
-the post id for SP-10 is TA-S work. The marker is not invisible in the
+the post id for SP-10 is TA-S work. (TA-S7: kept in `advisor_contacts.source_post_id`;
+`/text?s=ig&p=<post_id>` writes that marker, and `ig:` takes up to 64 characters;
+09 § Insights, As built (TA-S7).) The marker is not invisible in the
 person's own message app; it shows as typed. The iPhone and Android manual
 check is still owed (recorded in the PR).
 

@@ -322,3 +322,90 @@ export async function pageInfo(cfg: MetaConfig, pageId: string): Promise<PageInf
   return {id: requireId(String(r.id ?? ''), 'page'), name: typeof r.name === 'string' ? r.name : null,
     instagram: ig?.id && ID.test(ig.id) ? {id: ig.id, username: typeof ig.username === 'string' ? ig.username : null} : null};
 }
+
+// ---- TA-S6: the inbox (Instagram messaging, comment replies, webhook subscription) -----------------
+
+/** Meta's "outside of allowed window" refusal on a message send (code 10, subcode 2018278). */
+export const OUTSIDE_WINDOW = {code: 10, subcode: 2018278} as const;
+/** An Instagram text message is at most 1,000 characters. */
+export const IG_TEXT_MAX = 1000;
+/** A public comment reply: Instagram allows 2,200 characters, the caption limit. */
+export const IG_COMMENT_MAX = 2200;
+
+export type IgRecipient = {id: string} | {comment_id: string};
+export type IgMessage = {text: string} | {attachment: {type: 'image'; payload: {url: string}}};
+
+/** The form fields of POST /<ig-user-id>/messages (tests pin them): `recipient` and `message` as JSON. */
+export function igMessageParams(recipient: IgRecipient, message: IgMessage): Params {
+  const to = 'id' in recipient ? {id: requireId(recipient.id, 'recipient')} : {comment_id: requireId(recipient.comment_id, 'comment')};
+  if ('text' in message) {
+    if (typeof message.text !== 'string' || !message.text.trim()) throw new TypeError('a message needs text');
+    if (Array.from(message.text).length > IG_TEXT_MAX) throw new TypeError('an Instagram message is at most 1000 characters');
+  } else if (!/^https:\/\/\S+$/.test(message.attachment?.payload?.url ?? '')) throw new TypeError('an image attachment needs an https URL');
+  return {recipient: JSON.stringify(to), message: JSON.stringify(message)};
+}
+
+/**
+ * POST /<ig-user-id>/messages (09 § Inbox): a DM to an IGSID (`{id}`, inside the
+ * 24-hour window after their last message) or the one private reply to a
+ * comment (`{comment_id}`, within 7 days of the comment). One try (`attempts: 1`
+ * from the caller): a send that failed with a 5xx may have been delivered.
+ * Returns Meta's message id.
+ */
+export async function igSendMessage(cfg: MetaConfig, igUserId: string, recipient: IgRecipient, message: IgMessage): Promise<string | null> {
+  const r = await graph<{message_id?: string; recipient_id?: string}>(cfg, 'POST', `/${requireId(igUserId, 'ig user')}/messages`, igMessageParams(recipient, message));
+  return typeof r.message_id === 'string' && /^[\w.:=-]{1,200}$/.test(r.message_id) ? r.message_id : null;
+}
+
+/** POST /<comment-id>/replies message=<text>: a public reply under a comment. Returns the reply's comment id. */
+export async function igCommentReply(cfg: MetaConfig, commentId: string, text: string): Promise<string> {
+  if (typeof text !== 'string' || !text.trim() || Array.from(text).length > IG_COMMENT_MAX) throw new TypeError('a comment reply is 1 to 2200 characters');
+  const r = await graph<{id?: string}>(cfg, 'POST', `/${requireId(commentId, 'comment')}/replies`, {message: text});
+  return requireId(String(r.id ?? ''), 'reply');
+}
+
+/** The webhook fields the inbox subscribes to (09 § Inbox). */
+export const SUBSCRIBED_FIELDS = 'messages,comments';
+/** POST /<ig-user-id>/subscribed_apps?subscribed_fields=messages,comments: deliver this account's DMs and comments to the app's webhook. */
+export async function igSubscribeApps(cfg: MetaConfig, igUserId: string): Promise<boolean> {
+  const r = await graph<{success?: boolean}>(cfg, 'POST', `/${requireId(igUserId, 'ig user')}/subscribed_apps`, {subscribed_fields: SUBSCRIBED_FIELDS});
+  return r.success === true;
+}
+
+// ---- TA-S7: insights -----------------------------------------------------------------------------
+
+/**
+ * A Graph insights body's numbers by metric name: `data[].values[0].value`, or
+ * `data[].total_value.value` (the shape Meta uses for some totals). A metric
+ * whose value is not a number is left out (the caller notes it).
+ */
+export function parseInsights(body: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const row of Array.isArray((body as {data?: unknown})?.data) ? (body as {data: unknown[]}).data : []) {
+    const r = row as {name?: unknown; values?: {value?: unknown}[]; total_value?: {value?: unknown}};
+    if (typeof r?.name !== 'string' || !/^[a-z_]{1,60}$/.test(r.name)) continue;
+    const value = Array.isArray(r.values) && r.values.length ? r.values[0]?.value : r.total_value?.value;
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) out[r.name] = value;
+  }
+  return out;
+}
+
+/** GET /<ig-media-id>/insights?metric=a,b,c (lifetime values of one published media). */
+export async function igMediaInsights(cfg: MetaConfig, mediaId: string, metrics: readonly string[]): Promise<Record<string, number>> {
+  if (!metrics.length || metrics.some(m => !/^[a-z_]{1,60}$/.test(m))) throw new TypeError('metrics are lower-case names');
+  return parseInsights(await graph(cfg, 'GET', `/${requireId(mediaId, 'media')}/insights`, {metric: metrics.join(',')}));
+}
+
+/** GET /<page-post-id>/insights?metric=post_impressions_unique: the Page post's unique reach. */
+export async function fbPostReach(cfg: MetaConfig, postId: string): Promise<number | null> {
+  const values = parseInsights(await graph(cfg, 'GET', `/${requireId(postId, 'post')}/insights`, {metric: 'post_impressions_unique'}));
+  return values.post_impressions_unique ?? null;
+}
+
+/** GET /<page-post-id>?fields=shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0): the Page post's counts. */
+export async function fbPostCounts(cfg: MetaConfig, postId: string): Promise<{reactions: number | null; comments: number | null; shares: number | null}> {
+  const r = await graph<{shares?: {count?: unknown}; reactions?: {summary?: {total_count?: unknown}}; comments?: {summary?: {total_count?: unknown}}}>(cfg, 'GET',
+    `/${requireId(postId, 'post')}`, {fields: 'shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)'});
+  // A post nobody shared has no `shares` field at all: that is 0, not unknown.
+  return {reactions: num(r.reactions?.summary?.total_count), comments: num(r.comments?.summary?.total_count), shares: r.shares ? num(r.shares.count) : 0};
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "description": "Instagram comment keywords (docs/plans/text-advisor/09-social.md § Inbox, SP-9; TA-S6). A comment whose first word (after any @mentions, emoji and punctuation; case and accents ignored) is one of a keyword's words gets one private reply (Meta allows exactly one per comment): the keyword's string from catalog/advisor/strings.json in the word's language, with the guide link and the text-us link. `guide` is a link placeholder body for server/advisor/links.ts: {port} is a port named in the comment, else the region default's first port; {species} a species named in the comment, else `species_default`. Words are lower case without accents and unique across keywords. server/advisor/social/inbox.ts reads this file; tests/test_advisor_instagram.mjs checks it.",
+  "text_source": "ig",
+  "keywords": [
+    {
+      "key": "RIG",
+      "string": "comment_rig",
+      "guide": "species:{species}",
+      "species_default": "lingcod",
+      "words": {"en": ["rig", "rigs", "rigging"], "es": ["aparejo", "aparejos", "montaje"]}
+    },
+    {
+      "key": "REPORT",
+      "string": "comment_report",
+      "guide": "port:{port}",
+      "words": {"en": ["report", "reports"], "es": ["reporte", "reportes", "informe"]}
+    },
+    {
+      "key": "ID",
+      "string": "comment_id",
+      "guide": "chat",
+      "words": {"en": ["id", "identify"], "es": ["identificar", "identifica", "especie"]}
+    },
+    {
+      "key": "BOATS",
+      "string": "comment_boats",
+      "guide": "boats:{port}",
+      "words": {"en": ["boats", "boat"], "es": ["barcos", "barco", "lanchas", "botes"]}
+    }
+  ]
+}

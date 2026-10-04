@@ -841,6 +841,120 @@ the admin calendar shows them so the owner can post something by hand.
 - Off (`ADVISOR_INBOX_ENABLED=false`): the webhook verifies and acks and
   writes nothing.
 
+### As built (TA-S6)
+
+- **Where.** `server/advisor/social/inbox.ts` (handshake, signature, payload,
+  keywords, questions), `server/advisor/channels/instagram.ts` (the adapter and
+  `commentChannel`), `catalog/advisor/keywords.json`, the routes in
+  `server/routes/advisor.ts`, the `comment_reply` action in `consumer.ts`, the
+  comment path and the DM line in `engine.ts`, `igSendMessage`,
+  `igCommentReply` and `igSubscribeApps` in `social/meta.ts`, "Subscribe
+  webhooks" in the Health view (`POST /api/admin/meta/subscribe`),
+  `tests/test_advisor_instagram.mjs` and the owner's runbook
+  [advisor Meta App Review](../../operations/runbooks/advisor-meta-app-review.md).
+  Meta's docs could not be fetched from the build environment: the request
+  shapes below are those this plan and Meta's Instagram messaging docs name
+  (Graph `v26.0`); the first live call in the runbook's step 5 confirms them.
+- **Webhook.** `GET` answers `hub.challenge` as text when `hub.mode=subscribe` and
+  `hub.verify_token` equals `META_VERIFY_TOKEN` (constant time), else `403`.
+  `POST` reads the raw body (at most 256 KB, else `400`) and checks
+  `X-Hub-Signature-256` (`sha256=` + hex HMAC-SHA256 with `META_APP_SECRET`,
+  WebCrypto verify) before parsing; missing or wrong is `401`. Then, with
+  `ADVISOR_INBOX_ENABLED` off or the Meta secrets missing, `200 {}` and nothing
+  written. Both share the other webhooks' per-IP limiter and sit behind the
+  advisor gate (`TEXT_ADVISOR_ENABLED`), so the owner turns the advisor on
+  before Meta can verify the URL.
+- **Payload.** `object: "instagram"`; entries for another account than
+  `META_IG_USER_ID` are skipped. `messaging[].message` with text or image
+  attachments is a DM (`instagram_dm`, `provider_id` the `mid`); echoes, events
+  from our own id, `read`, `reaction`, deleted, unsupported and text-less shares
+  are skipped. Image attachments become media placeholders like any channel's;
+  the consumer downloads them through the Instagram adapter, which fetches only
+  `https` URLs on `fbsbx.com`, `fbcdn.net` or `cdninstagram.com` (not a redirect
+  elsewhere). `changes[]` with `field: comments` is a comment
+  (`instagram_comment`, `provider_id` the comment id, `to` the post's media id);
+  ours (from `META_IG_USER_ID`, which includes our public replies) are skipped.
+- **Only comments that need an answer are stored** (`classifyComment`): the first
+  word, after `@mentions`, emoji and punctuation, folded to lower case without
+  accents, is a keyword word (`catalog/advisor/keywords.json`: RIG rig, rigs,
+  rigging, aparejo, aparejos, montaje; REPORT report, reports, reporte,
+  reportes, informe; ID id, identify, identificar, identifica, especie; BOATS
+  boats, boat, barcos, barco, lanchas, botes), or, with
+  `ADVISOR_INBOX_PUBLIC_REPLIES=true`, a question (`?` or `¿`, or a question
+  word first) that is not a Stage 1 command. Everything else is never written,
+  so a comment that needs nothing leaves no trace. Stored messages go through
+  `storeInbound` (deduplicated by channel and provider id, so Meta's retries
+  change nothing) and the queue like a text.
+- **Contacts.** `findOrCreateContact(db, null, {igSid, channel})` upserts on the
+  unique `ig_sid`; no phone key is needed. Source on the first message: `igdm` or
+  `igcomment` (02's `instagram` became these two, next to TA-C6's `ig` for the
+  bio link). `channelFor` returns the Instagram adapter for a contact with an
+  `ig_sid` and no number, and the consumer's address for it is the IGSID. A
+  person who later texts us is a separate phone contact (there is no linking).
+- **DMs.** The engine runs as for a text: the channel line in the brief says
+  "Instagram direct message (1,000 characters a message)"; there is no texting
+  welcome (rates, HELP, STOP) and no contact card; Stage 1 commands work by DM
+  (STOP, START, HELP, forget me, send me my data). Replies split at 1,000
+  characters (`splitForChannel`, `INSTAGRAM_CHUNK`). `send` posts
+  `POST /<ig-user-id>/messages` with `recipient={"id": IGSID}` and
+  `message={"text": ...}`, then one `{"attachment": {"type": "image", "payload":
+  {"url": ".../media/<id>.jpg"}}}` per media key (approved or posted media only,
+  at most 4, else `media-not-public`). Before any call it checks Meta's 24-hour
+  window against the contact's last inbound DM (`advisor_messages.created_at`);
+  outside it the row is `failed` with `outside-window` and Meta is not called.
+  Meta's own refusal (code 10, subcode 2018278) maps to the same; another 4xx is
+  `failed` `meta-<status>-<code>`; a 5xx or network failure is `unknown` (one try:
+  a POST that failed may have been delivered).
+- **"Continue by text".** `runTurn` wraps the turn for `instagram_dm`: when this
+  is the contact's third, sixth, ... answered DM (distinct `in_reply_to` of
+  outbound `instagram_dm` rows that did not fail, this message excluded so a
+  retry counts the same), the last text gets a blank line and `igdm_continue`
+  ("Easier by text? Keep going with us by text message:" and
+  `{{link:text:igdm}}` = `/text?s=igdm`). Not on commands, guards or caps, and not
+  without `ADVISOR_NUMBER` (`/text` needs it). `links.ts` gained `text:<source>`,
+  `chat` (the web chat) and `boats:<port>` (the port page's boats section), and
+  `resolveLinks` a visit source argument.
+- **Keyword replies.** The engine's comment path (after Stage 0: replies on, not
+  blocked or stopped) answers a keyword with one action `comment_reply` `private`:
+  the keyword's string (`comment_rig`, `comment_report`, `comment_id`,
+  `comment_boats`, en and es by the matched word's language) with `{guide}` and
+  `{text}` links, visit source `ig`: RIG the species page of a species named in
+  the comment (else lingcod), REPORT the port page of a port named (else the
+  region default's first port), ID the web chat (`/chat.html`), BOATS the port
+  page's `#boats-title`; `{text}` is `/text?s=ig`. Intent `comment.keyword.<key>`.
+- **One private reply per comment.** The consumer's `comment_reply` applier works
+  only on the comment's own inbound row and sends through `commentChannel`
+  (`POST /<ig-user-id>/messages` with `recipient={"comment_id": ...}`) under the
+  fixed outbound key `comment:private`: with the inbound row unique per comment
+  id, a retried or redelivered comment never sends a second one, and the channel
+  refuses a second send in one turn (`one-reply`). Meta's 7-day limit for a
+  private reply is checked against the comment row's time (`outside-window`).
+- **Public replies** (`ADVISOR_INBOX_PUBLIC_REPLIES=true` only): a question
+  comment skips the commands and Stage 2 flows and goes to the model with the
+  read-only data tools only (`get_port_report`, `get_conditions`, `get_rules`,
+  `get_species`, `get_strategy`, `get_trips`) and the brief's channel line "a
+  public reply to an Instagram comment under our post: one or two short
+  sentences, nothing personal, no questions back". The answer becomes one
+  `comment_reply` `public` (`POST /<comment-id>/replies`, key `comment:public`);
+  a refusal, an empty answer or a turn that ran out of tools or time posts
+  nothing (`comment.unanswered`, its review kept); the daily caps answer nothing
+  publicly. A question stored while the switch was on is not answered after it
+  is turned off (`comment.ignored`).
+- **Untrusted text.** DM and comment text reaches the model only as the user turn
+  under the same system prompt as a text; a comment can at most produce the one
+  reply under itself.
+- **Subscribing.** Health shows the inbox switches and whether
+  `META_VERIFY_TOKEN` and `META_APP_SECRET` are set; "Subscribe webhooks" calls
+  `POST /<ig-user-id>/subscribed_apps` with `subscribed_fields=messages,comments`
+  (one try; `409` without the secrets, `502` with Meta's codes on failure).
+- **Not built.** Video, audio and sticker attachments in DMs (ignored), linking an
+  Instagram contact to a phone contact, hiding or deleting comments, Meta's
+  `HUMAN_AGENT` tag (7-day window), story mentions and replies.
+- **Owner steps.** Business Verification, App Review, the Instagram "Allow access
+  to messages" toggle, Live, then `ADVISOR_INBOX_ENABLED=true`: the runbook. The
+  privacy notice section (`dist/privacy.html#text-advisor`) is a draft for the
+  owner and counsel to approve.
+
 ## Insights (SP-10, SC-7 feed)
 
 Cron 03:00 local: for every `posted` post from the last 30 days, fetch IG
@@ -853,6 +967,72 @@ per post is computed from contacts whose first message carried
 `[via ig:<post_id>]` (the per-post CTA links are `text?s=ig&p=<post_id>`),
 and website visits from telemetry `s=ig&p=`. The admin Posts view and the
 funnel use these.
+
+### As built (TA-S7)
+
+- **Where.** `server/advisor/social/insights.ts` (`collectInsights`,
+  `storyInsightsTick`, `postStats`), `igMediaInsights`, `fbPostReach`,
+  `fbPostCounts` and `parseInsights` in `social/meta.ts`, the `insights` slot and
+  the tick in `cron.ts`, `stats` on the post card (`admin/posts.ts`,
+  `web/admin/post-card.tsx` `PostStatsTable`), `social` in the Funnel
+  (`admin/funnel.ts`, `web/admin/funnel.tsx`), migration
+  `0012_advisor_source_post`, `tests/test_advisor_insights.mjs`. Meta's docs could
+  not be fetched from the build environment; the metric names are this plan's,
+  and the test fixtures are written in the documented response shapes.
+- **The slot.** `insights`, 03:00 Pacific, while the Meta secrets are set (no
+  other switch: it only reads): posts `posted` or `partial` with `posted_at` in the
+  last 30 days, newest first, at most 100. Instagram (`ig_media_id`):
+  `GET /<media>/insights?metric=` FEED `views,reach,likes,comments,saved,shares,
+  follows,profile_visits,profile_activity` for photos, carousels, daily posts and
+  roundups; REELS the same plus `ig_reels_avg_watch_time`; STORY
+  `views,reach,replies,follows,profile_visits`. The Page (`fb_post_id`, not for a
+  Story: a Page photo Story has no post insights): `GET /<post>/insights?metric=
+  post_impressions_unique` and `GET /<post>?fields=shares,reactions.summary(
+  total_count).limit(0),comments.summary(total_count).limit(0)` (09's "reactions,
+  comments, shares"; a post with no `shares` field has 0). `job_state`
+  `advisor.insights.last_run` holds the run's counts.
+- **Stories.** Meta keeps a Story's insights only while it is up, so every cron
+  tick, at most hourly (`job_state` `advisor.insights.stories_at`, an
+  UPSERT-with-WHERE claim), reads the Stories posted less than 24 hours ago; the
+  last read before expiry is the final count. Neither the tick nor the slot reads
+  a Story 24 hours or more after it was posted.
+- **Rows.** `advisor_post_stats` by (post, `instagram`|`facebook`, the local day of
+  the read), an UPSERT: Meta's values are lifetime totals, so the latest row is the
+  count and the rows by day its growth. Instagram fills `views`, `reach`, `likes`,
+  `comments` (a Story's `replies`), `saved`, `shares`, `follows`,
+  `profile_visits`; the Page `reach` (unique impressions), `likes` (reactions),
+  `comments`, `shares`. `link_taps` stays 0: no media metric gives it (a profile's
+  link taps are an account metric). `raw_json` is `{metrics, notes?}`: every value
+  read, `profile_activity` and `ig_reels_avg_watch_time` included.
+- **Tolerance.** Meta refuses the whole set (code 100) when one metric does not
+  apply; then each metric is asked alone, and one still refused counts 0 with the
+  note `<metric>: unavailable` (a metric missing from an answer: `not returned`).
+  Any other failure (an expired Story, a deleted post, the token, rate limits after
+  the client's retries) skips that surface of that post: nothing is written, so an
+  earlier row is never replaced by zeros, and the run counts it `failed`.
+- **Chats started.** TA-C6 parsed `[via ig:<post_id>]` but kept only the source:
+  migration `0012_advisor_source_post` adds `advisor_contacts.source_post_id`
+  (indexed), set with `source` on the contact's first inbound message. `/text`
+  takes `p`: with `s=ig` and `p` matching `^[\w-]{1,64}$` the marker is
+  `[via ig:<p>]` (`intents.ts` accepts `ig:` with up to 64 characters, so a
+  32-character post id fits). The per-post link is
+  `<ADVISOR_PUBLIC_BASE>/text?s=ig&p=<advisor_posts.id>`; a link carrying the
+  Instagram media id instead counts for the post too. Nothing writes the link into
+  captions yet (Instagram captions do not link); it is for the owner's Story link
+  stickers, the bio while a post is pinned, or Page posts.
+- **Website visits per post** are not counted: page telemetry
+  (`server/telemetry.ts`) records the visit source `s` (so `s=ig` visits are in
+  the Funnel's page table) but not a post id. Carrying `p` would change the
+  telemetry contract; left for a later task.
+- **Admin.** A posted or partly posted post's card has `stats`: the latest row per
+  surface (the columns above, `day`, `fetched_at`, `notes`) and `chats`; the card
+  shows a table with one column per metric, the chats started and the notes. The
+  Funnel's `social` (D1): posts published in the window, the latest readings of
+  those posts summed per surface and per post kind, `chats_from_posts` (contacts
+  whose first message named one of them), `chats_from_instagram` (new contacts
+  with source `ig`, `igdm` or `igcomment`) and `site_visits_per_post: null`; no
+  post id leaves the API.
+- **SC-7** (the weekly skipper text) can read these rows; it is not built here.
 
 ## Next
 

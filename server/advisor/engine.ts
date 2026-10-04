@@ -15,6 +15,12 @@
 //   Stage 3  the model turn: caps, Claude with tools (at most 4 tool rounds, 30 s),
 //            then markdown stripped, the rules guard, links, the 3-segment cap
 //
+// TA-S6: an Instagram comment (channel instagram_comment) is answered once: a
+// keyword's private reply (no model), or, with ADVISOR_INBOX_PUBLIC_REPLIES on,
+// a question's public reply from Stage 3 with the read-only data tools; commands
+// and Stage 2 never run on a comment. An Instagram DM is a turn like a text, with
+// no texting welcome, and every third answer ends with "continue by text".
+//
 // Deviations from 04, each deliberate: STOP, START, HELP and the data commands
 // are answered even past the daily cap (carriers require STOP and HELP to
 // work); the global LLM cap is checked just before the model call rather than
@@ -54,6 +60,8 @@ import {DAILY_FLOWS, storedDaily} from './answers/reports.ts';
 import {capReply, rulesGuard, stripMarkdown} from './reply.ts';
 // TA-A2: the advisory backstop on planning turns.
 import {leadsWithAdvisory} from './answers/planning.ts';
+// TA-S6: Instagram comments (a keyword's private reply, a question's public reply) and the DM "continue by text" line.
+import {classifyComment, keywordReply} from './social/inbox.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 700;
@@ -69,6 +77,15 @@ export const RETRY_DELAY_MS = 2_000;          // one retry on 429/529, as the vi
 export const FORGET_WINDOW_MS = 24 * 3600000; // DELETE confirms a "forget me" asked within a day
 /** Intents whose reply may run past three segments: lists the person asked for (04). */
 export const LIST_INTENTS: ReadonlySet<string> = new Set(['trips']);
+/** TA-S6: a public comment reply may use the read-only data tools only (no profile, photo, link or escalation tools). */
+export const COMMENT_TOOLS: ReadonlySet<string> = new Set(['get_port_report', 'get_conditions', 'get_rules', 'get_species', 'get_strategy', 'get_trips']);
+/** TA-S6: every third Instagram DM reply ends with the "continue by text" line (09 § Inbox). */
+export const TEXT_NUDGE_EVERY = 3;
+/** Replies that never carry it: commands, guards and caps. */
+const NO_NUDGE: ReadonlySet<string> = new Set(['stop', 'start', 'help', 'forget', 'forget.ask', 'export', 'held', 'blocked', 'stopped', 'capped', 'global_cap', 'upload_link']);
+
+/** TA-S6: a contact known only by its Instagram id (a DM or a comment), with no number to text. */
+export const isInstagramOnly = (contact: Pick<AdvisorContactRow, 'phone_enc' | 'web_session' | 'ig_sid'>): boolean => !contact.phone_enc && !contact.web_session && Boolean(contact.ig_sid);
 
 export interface EngineInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps?: EngineDeps; signal?: AbortSignal}
 
@@ -192,7 +209,11 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
   // TA-A1 (04 § stage 3): the home port's (else the region's first port's) answer for today, when one is stored.
   const briefPort = contact.home_port && portRegion(contact.home_port) ? contact.home_port : resolvePort(null, null, settings)?.port ?? null;
   const daily = briefPort ? await storedDaily(db, briefPort, now) : null;
-  const channel = isWebOnly(contact) ? 'web chat (no SMS limits, but keep it short)' : contact.channel === 'imessage' ? 'iMessage' : 'SMS (3 segments, 480 characters)';
+  // TA-S6: an Instagram DM, or a public comment under a post (the reply is public too).
+  const channel = isWebOnly(contact) ? 'web chat (no SMS limits, but keep it short)'
+    : contact.channel === 'instagram_comment' ? 'a public reply to an Instagram comment under our post: one or two short sentences, nothing personal, no questions back'
+    : contact.channel === 'instagram_dm' ? 'Instagram direct message (1,000 characters a message)'
+    : contact.channel === 'imessage' ? 'iMessage' : 'SMS (3 segments, 480 characters)';
   return [
     'CONTACT BRIEF',
     `- role: ${contact.role}`,
@@ -325,8 +346,40 @@ function advisoryOf(result: unknown): {line: string; events: string[]} | null {
 
 const SPANISH_COMMANDS = new Set(['alto', 'parar', 'empezar', 'ayuda', 'olvídame', 'olvidame', 'borra mis datos', 'borrar', 'mis datos', 'mándame un enlace', 'mandame un enlace', 'enlace']);
 
-/** The engine. See the file header for the stages. */
+/**
+ * The engine. See the file header for the stages. TA-S6: an Instagram DM's
+ * reply gets the "continue by text" line every third time (textNudge).
+ */
 export async function runTurn(input: EngineInput): Promise<EngineResult> {
+  const result = await answerTurn(input);
+  return input.message.channel === 'instagram_dm' ? textNudge(input, result) : result;
+}
+
+/**
+ * TA-S6 (09 § Inbox): every third reply to an Instagram DM contact ends with
+ * "Easier by text?" and the /text?s=igdm link. "Third" counts the inbound DMs
+ * this contact already got an answer to (outbound DM rows that did not fail, by
+ * in_reply_to, this message's own rows left out so a retry counts the same).
+ * Not on commands, guards or caps, and not without ADVISOR_NUMBER (/text needs it).
+ */
+async function textNudge(input: EngineInput, result: EngineResult): Promise<EngineResult> {
+  const {env, contact, message} = input;
+  const settings = advisorSettings(env);
+  let last = -1;
+  result.actions.forEach((a, i) => { if (a.type === 'send_text') last = i; });
+  if (last < 0 || !settings.number || contact.status !== 'active' || NO_NUDGE.has(result.intent)) return result;
+  const row = await env.DB!.prepare(`SELECT COUNT(DISTINCT in_reply_to) AS n FROM advisor_messages WHERE contact_id=? AND direction='out' AND channel='instagram_dm'
+    AND status<>'failed' AND in_reply_to IS NOT NULL AND in_reply_to<>?`).bind(contact.id, message.id).first<{n: number}>();
+  if (((row?.n ?? 0) + 1) % TEXT_NUDGE_EVERY !== 0) return result;
+  const language = chooseLanguage(contact.language, detectLanguage(String(message.body ?? '')), null).reply;
+  const line = resolveLinks(t(language, 'igdm_continue'), settings.publicBase).text;
+  const actions = [...result.actions];
+  const action = actions[last] as Extract<Action, {type: 'send_text'}>;
+  actions[last] = {...action, text: `${action.text}\n\n${line}`};
+  return {...result, actions};
+}
+
+async function answerTurn(input: EngineInput): Promise<EngineResult> {
   const {env, contact, message, now, signal} = input;
   const deps = input.deps ?? {};
   const settings = advisorSettings(env);
@@ -343,6 +396,16 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
     // No outbound of any kind until START (02 § STOP).
     if (command !== 'start') return done([], 'stopped');
   }
+  // TA-S6 (09 § Inbox): a comment is answered once. A keyword gets its private reply; with public replies on, a
+  // question goes to the model below for one public reply; anything else gets nothing. Commands and the
+  // deterministic flows are for DMs and texts, never for a public comment.
+  const comment = message.channel === 'instagram_comment';
+  if (comment) {
+    if (contact.status !== 'active') return done([], 'stopped');
+    const kind = classifyComment(text, settings);
+    if (!kind) return done([], 'comment.ignored');
+    if (kind.kind === 'keyword') return done([{type: 'comment_reply', mode: 'private', text: keywordReply(kind, settings)}], `comment.keyword.${kind.keyword.key.toLowerCase()}`);
+  }
 
   // Language (FC-6): the reply follows this message; the stored language follows two in a row.
   const rows = await history(db, contact.id, message.id, now);
@@ -356,13 +419,14 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   const say = (key: StringKey, vars: Record<string, string | number> = {}): Action => textAction(settings, t(language, key, vars));
   // The first reply to a brand-new phone contact says who we are, rates and HELP/STOP (the 10DLC promise), once.
   const welcomeFirst = (): Action[] => {
-    if (!isNew || isWebOnly(contact)) return [];
+    // TA-S6: no texting welcome (rates, HELP, STOP) on Instagram: it is not a text message.
+    if (!isNew || isWebOnly(contact) || isInstagramOnly(contact)) return [];
     const card = contactCardAction({contact, language, settings});
     return [say('welcome'), ...(card ? [card] : [])];
   };
 
   // Stage 1: commands. STOP, START, HELP and the data commands work even past the daily cap.
-  if (command && command !== 'upload_link') {
+  if (command && command !== 'upload_link' && !comment) {
     const result = await commandTurn(command, {env, contact, settings, language, say, welcomeFirst, db, message, now, languageUpdate});
     if (result) return result;
   }
@@ -371,24 +435,26 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   const sent = await messagesToday(db, contact, now);
   if (sent > settings.dailyMessagesPerContact) {
     const target = contact.home_port ? `port:${contact.home_port}` : 'home';
-    return done(sent === settings.dailyMessagesPerContact + 1 ? [say('capped', {target})] : [], 'capped');
+    return done(sent === settings.dailyMessagesPerContact + 1 && !comment ? [say('capped', {target})] : [], 'capped');
   }
 
   // Stage 2: the upload-link request (04 § stage 2).
-  if (command === 'upload_link') {
+  if (command === 'upload_link' && !comment) {
     const {text: link} = await uploadLinkText({env, contact, language, settings, now});
     return done([...welcomeFirst(), ...languageUpdate, textAction(settings, link)], 'upload_link');
   }
 
-  // Stage 2: deterministic flows.
+  // Stage 2: deterministic flows (not for a public comment, TA-S6).
   const flow: FlowContext = {env, contact, message, now, deps, signal, settings, language, text, media, db, carry: []};
-  const admin = await adminFlow(flow);
-  if (admin) return admin;
-  const link = await linkCodeFlow(flow);
-  if (link) return link;
-  for (const f of STAGE_TWO_FLOWS) {
-    const r = await f.run(flow);
-    if (r) return {...r, actions: [...welcomeFirst(), ...languageUpdate, ...flow.carry.splice(0), ...r.actions]};
+  if (!comment) {
+    const admin = await adminFlow(flow);
+    if (admin) return admin;
+    const link = await linkCodeFlow(flow);
+    if (link) return link;
+    for (const f of STAGE_TWO_FLOWS) {
+      const r = await f.run(flow);
+      if (r) return {...r, actions: [...welcomeFirst(), ...languageUpdate, ...flow.carry.splice(0), ...r.actions]};
+    }
   }
   if (!text && media.length) {
     // A skipper's or crew's media went through TA-I2's flow above and an angler's through TA-I3's; this answers
@@ -403,19 +469,20 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   if (!env.ANTHROPIC_API_KEY) {
     // Not configured yet: the warm-up text alone, as before the engine (no model, no welcome).
     advisorLog('warn', 'advisor_model_not_configured', {});
-    return done([...languageUpdate, say('warming_up')], 'unconfigured');
+    return done([...languageUpdate, ...(comment ? [] : [say('warming_up')])], 'unconfigured');
   }
   if (await countToday(db, `advisor-llm:${contact.id}`, now) > settings.dailyLlmPerContact) {
     const n = await countToday(db, `advisor-llm-capped:${contact.id}`, now);
     const target = contact.home_port ? `port:${contact.home_port}` : 'home';
-    return done(n === 1 ? [say('capped', {target})] : [], 'capped');
+    return done(n === 1 && !comment ? [say('capped', {target})] : [], 'capped');
   }
   if (await countToday(db, 'global:advisor-llm', now) > settings.globalDailyLlm) {
     advisorLog('warn', 'advisor_global_cap', {limit: settings.globalDailyLlm});
-    return done([say('global_cap')], 'global_cap');
+    return done(comment ? [] : [say('global_cap')], 'global_cap');
   }
 
-  const tools = toolsForRole(contact);
+  // TA-S6: a public comment reply reads data only.
+  const tools = comment ? toolsForRole(contact).filter(tool => COMMENT_TOOLS.has(tool.name)) : toolsForRole(contact);
   const ctx: ToolContext = {env, contact, message, deps, db, language, settings, now};
   const system = [{type: 'text', text: systemPrompt(language), cache_control: {type: 'ephemeral'}},
     {type: 'text', text: await briefs(db, contact, settings, language, isNew, now, message.created_at)}];
@@ -443,10 +510,11 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
     actions.push({type: 'review_open', kind: 'conversation', refId: message.id, reason: turn.outcome === 'tool_loop' ? 'tool_loop' : 'model_timeout'});
   }
   // TA-I1: a tool that texted for itself (register_boat's question) needs no filler when the model added nothing.
-  if (!reply && turn.outcome === 'ok' && turn.actions.some(a => a.type === 'send_text')) {
+  if (!reply && !comment && turn.outcome === 'ok' && turn.actions.some(a => a.type === 'send_text')) {
     actions.push(...turn.actions);
     return done(actions, intent, {usage, model: settings.model});
   }
+  if (!reply && comment) return done(actions.filter(a => a.type === 'review_open' || a.type === 'contact_update'), 'comment.unanswered', {usage, model: settings.model});
   if (!reply) reply = t(language, 'not_understood');
   if (!turn.usableRules) {
     const guarded = rulesGuard(reply, language);
@@ -465,6 +533,13 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   const resolved = resolveLinks(reply, settings.publicBase);
   reply = LIST_INTENTS.has(intent) ? resolved.text : capReply(resolved.text, resolved.links);
   if ([REFUSAL_EN, ABUSE_EN, ...both('refusal'), ...both('abuse_stop')].some(line => reply.startsWith(line))) intent = 'refused';
+  // TA-S6: a comment's answer is one public reply; only reviews and the stored language go with it.
+  // A refusal, or a turn that ran out of tools or time, is not posted under the comment: nothing public, the review stays.
+  if (comment) {
+    const kept = actions.filter(a => a.type === 'review_open' || a.type === 'contact_update');
+    if (intent === 'refused' || turn.outcome !== 'ok') return done(kept, 'comment.unanswered', {usage, model: settings.model});
+    return done([{type: 'comment_reply', mode: 'public', text: reply}, ...kept], intent, {usage, model: settings.model});
+  }
   actions.push({type: 'send_text', text: reply}, ...turn.actions);
   return done(actions, intent, {usage, model: settings.model});
 }

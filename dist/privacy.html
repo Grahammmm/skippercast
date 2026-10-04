@@ -23,7 +23,7 @@
         Draft — pending review by counsel. This notice describes what the
         current code does; it has not yet been reviewed by a lawyer.
       </p>
-      <p class="small">Draft dated September 28, 2026.</p>
+      <p class="small">Draft dated October 4, 2026.</p>
 
       <h2 id="summary">In short</h2>
       <ul>
@@ -36,6 +36,11 @@
         <li>
           If you use the AI boat lookup, the boat description you type is sent to
           Anthropic to find its specifications.
+        </li>
+        <li>
+          If you text the SkipperCast Text Advisor, use its web chat or message
+          us on Instagram, we keep the conversation to answer you until you ask
+          us to erase it. See <a href="#text-advisor">Text Advisor</a>.
         </li>
       </ul>
 
@@ -116,6 +121,107 @@
         provider for up to 30 days, keyed by the description, so the same lookup
         is not repeated. Do not type personal information into the boat field.
       </p>
+
+      <h2 id="text-advisor">Text Advisor (texts, web chat and Instagram)</h2>
+      <p>
+        The Text Advisor answers fishing questions by text message, in a web
+        chat on this site, and by Instagram direct message. Skippers also use it
+        to send catch reports and photos. It is being tested and is not yet open
+        to the public; this section describes what the current code does.
+      </p>
+      <table class="evidence-table">
+        <thead>
+          <tr>
+            <th scope="col">What we store</th>
+            <th scope="col">Why</th>
+            <th scope="col">How long</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Your phone number, as a one-way keyed hash (to recognise you) and an encrypted copy (decrypted only to send you a reply)</th>
+            <td>Reply to you and keep one conversation per number. The number is never stored in plain text, shown to our team or written to logs.</td>
+            <td>Until you erase your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">For the web chat: a random identifier in a cookie (<code>sc_adv</code>, 90 days); we store only a hash of it</th>
+            <td>Keep your chat together between visits.</td>
+            <td>Until you erase your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">For Instagram: the Instagram-scoped id Meta gives us for you (not your username or profile)</th>
+            <td>Reply to your direct message or comment.</td>
+            <td>Until you erase your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">The messages you send and our replies, with their times; what you tell us to remember (the name you want to be called, your home port, the fish you target, your language)</th>
+            <td>Answer you and keep the conversation in context.</td>
+            <td>Until you erase your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">Instagram comments on our posts, only when they start with one of our keywords (RIG, REPORT, ID, BOATS, or the Spanish words) or, if we turn on public answers, ask a question</th>
+            <td>Send one private reply with a link, or one answer under the comment. Other comments are not stored.</td>
+            <td>Until you erase your data.</td>
+          </tr>
+          <tr>
+            <th scope="row">Photos and videos you send</th>
+            <td>Identify fish and read count boards. Location and camera details are removed from photos when they arrive, and from videos before anyone reviews them. Photos stay private unless a skipper has agreed to posting or you agree to share yours with credit, and our team approves it.</td>
+            <td>Until you erase your data. Photos already posted to our Instagram or Facebook stay there until removed.</td>
+          </tr>
+          <tr>
+            <th scope="row">For skippers: the boat's name, port, landing, Instagram handle and booking link, catch reports, and when photo consent was given or withdrawn</th>
+            <td>Publish the boat's reports and page, and credit the boat in posts.</td>
+            <td>Published reports stay as the boat's record; erasing your data removes your contact from them.</td>
+          </tr>
+          <tr>
+            <th scope="row">Daily counters of messages per contact</th>
+            <td>Limit how many messages and AI answers one person can use a day.</td>
+            <td>The counters reset each day; old ones are removed.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        We plan to delete message text after 180 days and unpublished photos
+        after 90 days automatically. That cleanup is not running yet; until it
+        is, conversations are kept until you erase them, and this notice will
+        say when that changes.
+      </p>
+      <p>
+        <strong>Who else handles it.</strong> To write answers and identify
+        fish, the text of your message, the recent conversation and your photos
+        are sent to
+        <a href="https://www.anthropic.com/legal/privacy">Anthropic</a>. Texts
+        travel through Apple (iMessage) or your mobile carrier, and through
+        <a href="https://www.twilio.com/legal/privacy">Twilio</a> if we move our
+        number to it. Instagram messages and comments travel through
+        <a href="https://privacycenter.instagram.com/policy">Meta</a>, which
+        keeps its own copy under its own policy. Everything we store is held
+        with Cloudflare. Our usage statistics count messages, topics and
+        response times only, never message text or numbers.
+      </p>
+      <p>
+        <strong>We message you only in reply.</strong> We do not send
+        promotions. Besides replies we send only service messages: an
+        invitation when a skipper adds you to their crew or our team invites a
+        skipper, and updates to a skipper about their boat (its verification, a
+        photo that was posted). On Instagram we can only reply within 24 hours
+        of your last message, and send one private reply per comment.
+      </p>
+      <p><strong>Your controls.</strong> Send these words as a message, by text or Instagram DM:</p>
+      <ul>
+        <li><strong>STOP:</strong> no more messages of any kind. START turns replies back on.</li>
+        <li><strong>HELP:</strong> what the service does and how to reach us.</li>
+        <li>
+          <strong>FORGET ME</strong>, then <strong>DELETE</strong> to confirm:
+          erases your contact, messages, photos and anything our team reviewed
+          about them. Posts already published and the boat reports a skipper
+          sent stay, without your contact. A later message starts fresh.
+        </li>
+        <li>
+          <strong>SEND ME MY DATA:</strong> a link to a copy of everything we
+          store about you, as JSON. The link works for 24 hours.
+        </li>
+      </ul>
 
       <h2 id="device">Stored on your device</h2>
       <p>

@@ -350,7 +350,8 @@ Where the code differs from the table above:
 - **Not yet.** Link clicks from texts are the `s=txt` page views (texts link to
   pages, not to a redirect), so they are in the page table rather than a count
   of their own; site visits and chats started from posts (SP-10) arrive with
-  TA-S7, which adds the per-post columns.
+  TA-S7, which adds the per-post columns. (TA-S7: chats started per post are
+  counted; site visits per post are not, see As built (TA-S7) below.)
 - **Deploy.** `deploy-cloudflare.yml` passes `CF_ANALYTICS_TOKEN` from secrets;
   `scripts/cloudflare_deploy.sh` uploads it as a Worker secret and, only with
   it, `CLOUDFLARE_ACCOUNT_ID` (already in the job's env). Both files are
@@ -363,6 +364,21 @@ Where the code differs from the table above:
   nothing changed here.
 - **Tests.** `tests/test_advisor_admin_funnel.mjs` (a fake SQL API and a fake
   fetch); `e2e/admin.spec.ts` opens the Funnel with axe.
+
+## As built (TA-S7)
+
+- **Funnel.** `GET /api/admin/funnel` gains `social`: posts published in the
+  window, the latest insights of those posts summed for Instagram and the Page
+  (views, reach, likes, comments, saves, shares, follows, profile visits) and per
+  post kind with the chats each kind started, `chats_from_posts` and
+  `chats_from_instagram` (new contacts with source `ig`, `igdm` or `igcomment`).
+  The view adds a "Social posts" section with those tables. Site visits per post
+  are `null`: page telemetry has the visit source but no post id (09 § Insights,
+  As built (TA-S7)).
+- **Posts.** A posted or partly posted post's card carries `stats` and shows a
+  "Results" table: one row per surface, one column per metric, the day Meta was
+  read, the chats its link started and the metrics Meta did not give.
+- **Tests.** `tests/test_advisor_insights.mjs`.
 
 ## As built (TA-A4)
 

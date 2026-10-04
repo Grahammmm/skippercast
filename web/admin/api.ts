@@ -25,6 +25,7 @@ export interface Health {
   media_jobs: {pending: number};
   reviews: {open: number};
   meta: {configured: boolean; quota_usage: number | null; quota_total: number | null; checked_at: string | null; error: 'unavailable' | null};
+  inbox: {enabled: boolean; public_replies: boolean; webhook_ready: boolean};   // TA-S6
 }
 
 // ---- TA-W3: Skippers and Contacts (server/advisor/admin/skippers.ts) ----
@@ -48,6 +49,12 @@ export interface ContactDetail {
   export: string;
 }
 
+// ---- TA-S7: post insights (server/advisor/social/insights.ts) ----
+export const SOCIAL_COLUMNS = ['views', 'reach', 'likes', 'comments', 'saved', 'shares', 'follows', 'profile_visits'] as const;
+export type SocialTotals = Record<typeof SOCIAL_COLUMNS[number], number>;
+export type SurfaceStats = SocialTotals & {link_taps: number; day: string; fetched_at: string; notes: string[]};
+export interface PostStats {instagram: SurfaceStats | null; facebook: SurfaceStats | null; chats: number}
+
 // ---- TA-W4: the Funnel (server/advisor/admin/funnel.ts) ----
 export interface Funnel {
   days: 7 | 30; since: string; generated_at: string;
@@ -58,6 +65,8 @@ export interface Funnel {
   boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
   photos: {submitted: number; approved: number};
   consent: {boats: number; given: number; rate: number | null};
+  social: {posts: number; instagram: SocialTotals; facebook: SocialTotals; by_kind: ({kind: string; posts: number; chats: number} & SocialTotals)[];   // TA-S7
+    chats_from_posts: number; chats_from_instagram: number; site_visits_per_post: null};
   analytics: {available: boolean; reason: 'not-configured' | 'no-data' | 'error' | null;
     llm: {feature: string; calls: number; input_tokens: number; output_tokens: number}[];
     turns: {count: number; p50_ms: number | null; p95_ms: number | null};
@@ -87,6 +96,7 @@ export interface Post {
   media: PostMedia[]; review_id: string | null; hold: string | null;
   ig_media_id: string | null; fb_post_id: string | null; fb_story_id: string | null; collab_status: string | null;   // TA-S2
   graphics?: string[];   // TA-S4: admin preview URLs of a daily card, roundup slides or Story card
+  stats?: PostStats | null;   // TA-S7: a posted post's latest insights and the chats it started
 }
 /** GET /api/admin/posts/calendar (TA-S4, server/advisor/social/calendar.ts calendarWeek). */
 export interface WeekPost {id: string; kind: string; region: string; status: string; at: string; scheduled_for: string | null; posted_at: string | null; boat: string | null; summary: string}
@@ -143,6 +153,7 @@ export const invite = (phone: string, boatName: string, language: 'en' | 'es'): 
 export const getContact = (id: string): Promise<ContactDetail> => call(`/api/admin/contacts/${encodeURIComponent(id)}`);
 export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
+export const subscribeWebhooks = (): Promise<{subscribed: boolean; fields: string}> => postJson('/api/admin/meta/subscribe', {});   // TA-S6
 export const getPosts = (status: string, kind: string, cursor?: string | null): Promise<PostsPage> => call(postsPath(status, kind, cursor));
 export const publishPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/publish`, {});
 export const schedulePost = (id: string, scheduledFor: string | null): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/schedule`, {scheduled_for: scheduledFor});

@@ -79,8 +79,15 @@ export function e164(input: unknown, defaultCountry: 'US' = 'US'): string | null
   return /^[2-9]\d{2}[2-9]\d{6}$/.test(national) ? '+1' + national : null;
 }
 
-/** Who a message is from: a phone number (E.164) or a web visitor's sc_adv cookie value (hashed here). */
-export interface ContactIdentity {e164?: string; webSession?: string; channel?: string}
+/**
+ * Who a message is from: a phone number (E.164), a web visitor's sc_adv cookie
+ * value (hashed here) or, TA-S6, an Instagram-scoped user id (IGSID, stored as
+ * advisor_contacts.ig_sid: Meta's id for the person on our account only, not
+ * their username).
+ */
+export interface ContactIdentity {e164?: string; webSession?: string; igSid?: string; channel?: string}
+/** TA-S6: an Instagram-scoped user id as Meta sends it (digits; a little slack for the format). */
+export const IG_SID = /^[\w-]{1,64}$/;
 
 /**
  * The contact for this number or web session, created on first contact. One
@@ -89,9 +96,17 @@ export interface ContactIdentity {e164?: string; webSession?: string; channel?: 
  * Channel defaults to 'sms' for a number and 'web' for a session.
  */
 // TA-C3: `keys` may be null for a web session, which needs no phone key.
+// TA-S6: or for an Instagram contact (`igSid`, channel 'instagram_dm' by default), found by the unique ig_sid.
 export async function findOrCreateContact(db: D1Database, keys: PhoneKeys | null, who: ContactIdentity, now: Date = new Date()): Promise<AdvisorContactRow> {
   const at = now.toISOString();
-  if ((who.e164 == null) === (who.webSession == null)) throw Error('exactly one of e164 or webSession');
+  if ([who.e164, who.webSession, who.igSid].filter(v => v != null).length !== 1) throw Error('exactly one of e164, webSession or igSid');
+  if (who.igSid != null) {
+    if (typeof who.igSid !== 'string' || !IG_SID.test(who.igSid)) throw Error('invalid instagram id');
+    const row = await db.prepare(`INSERT INTO advisor_contacts(id,ig_sid,channel,last_seen_at,created_at,updated_at) VALUES(?,?,?,?,?,?)
+      ON CONFLICT(ig_sid) DO UPDATE SET last_seen_at=excluded.last_seen_at,updated_at=excluded.updated_at,channel=excluded.channel RETURNING *`)
+      .bind(randomId(), who.igSid, who.channel || 'instagram_dm', at, at, at).first<AdvisorContactRow>();
+    return row!;
+  }
   if (who.e164 != null) {
     if (!keys) throw Error('phone keys are required for a number');
     const number = requireE164(who.e164), channel = who.channel || 'sms';

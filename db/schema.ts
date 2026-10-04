@@ -81,12 +81,16 @@ export const advisorContacts=sqliteTable('advisor_contacts',{
   targetsJson:text('targets_json'),source:text('source'),status:text('status').notNull().default('active'),
   // 0011 (TA-S0): the Instagram-scoped user id of a DM contact (09 § Inbox); unique, null for everyone else.
   igSid:text('ig_sid'),
+  // 0012 (TA-S7): the post a first message came from (`[via ig:<post_id>]`, the per-post /text?s=ig&p=<post_id>
+  // link, 09 § Insights), set with source on the first inbound message; counts "chats started" per post.
+  sourcePostId:text('source_post_id'),
   // Inbound messages processed on messages_day (YYYY-MM-DD, America/Los_Angeles), for the OP-3 cap.
   messagesToday:integer('messages_today').notNull().default(0),messagesDay:text('messages_day'),
   lastSeenAt:text('last_seen_at').notNull(),lastErrorNoticeAt:text('last_error_notice_at'),
   createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
 },t=>[uniqueIndex('contact_phone_hash').on(t.phoneHash),uniqueIndex('contact_web_session').on(t.webSession),
-  index('contact_boat').on(t.boatId),index('contact_seen').on(t.lastSeenAt),uniqueIndex('contact_ig_sid').on(t.igSid)]);
+  index('contact_boat').on(t.boatId),index('contact_seen').on(t.lastSeenAt),uniqueIndex('contact_ig_sid').on(t.igSid),
+  index('contact_source_post').on(t.sourcePostId)]);
 
 // A skipper's boat. status pending -> verified/rejected by an admin (SK-4); photo
 // consent is recorded with the message that gave it (SK-2). owner_contact_id is

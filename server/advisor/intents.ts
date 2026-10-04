@@ -6,7 +6,8 @@
 
 /** Sources the /text deep link accepts (`s=`): lowercase letters, digits, ':', '_' and '-', 1 to 32 characters. */
 export const SOURCE_PATTERN = /^[a-z0-9:_-]{1,32}$/;
-const MARKER = /\s*\[via ([a-z0-9:_-]{1,32})\]\s*$/;
+// TA-S7: `ig:<post_id>` may run past 32 characters (a post id is up to 64), so it has its own branch.
+const MARKER = /\s*\[via (ig:[\w-]{1,64}|[a-z0-9:_-]{1,32})\]\s*$/;
 const POST_ID = /^[\w-]{1,64}$/;
 
 export interface SourceMarker {
