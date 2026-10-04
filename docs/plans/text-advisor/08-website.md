@@ -317,3 +317,49 @@ TypeScript so the tests load them). Where the code differs from the table above:
   (`contacts.ts` `applyStart`).
 - **Tests.** `tests/test_advisor_admin_skippers.mjs`; `e2e/admin.spec.ts` opens
   Skippers and a contact with axe.
+
+## As built (TA-W4)
+
+The Funnel view: `server/advisor/admin/funnel.ts`, `GET /api/admin/funnel?days=7|30`
+(any other value is `400`) in `server/routes/admin.ts`, `web/admin/funnel.tsx`.
+Where the code differs from the table above:
+
+- **D1.** New contacts per UTC day by first-touch `source` (`unknown` when
+  none; every day of the window, zeros included); inbound messages by intent
+  (top 20, `none` for unclassified, the rest as `other`); replies per contact
+  (outbound rows that did not fail, over contacts that got one); the return
+  rate (contacts with inbound messages on two or more UTC days, over contacts
+  with any in the window); boats verified in the window, verified in all and
+  pending; reports published in the window per reporting boat; images
+  submitted and approved; boats with active photo consent over boats not
+  rejected. Days are UTC (the caps in Health are UTC days too).
+- **Analytics Engine.** Three statements through the SQL API that
+  `scripts/ops_report.py` uses, run from the Worker: `llm` calls and tokens by
+  feature (every feature, the boat lookup included, so the advisor's share is
+  visible), `advisor_turn` p50 and p95 latency with
+  `quantileExactWeighted`, and the advisor page events (`advisor_port_view`,
+  `advisor_species_view`, `advisor_boat_view`, `advisor_cta`) by visit
+  source. `days` comes from the allowlist, never from caller text. Labels are
+  cleaned (a feature that is not `[\w:.-]` becomes `other`; an unknown source
+  `other`; other events are dropped). The token and account are read from the
+  Worker secrets `CF_ANALYTICS_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; without them
+  `analytics.available` is false (`not-configured`), a dataset never written
+  is `no-data`, any other failure `error` (logged with the HTTP status only);
+  the D1 part answers either way. The fetcher is injected (`adminRoutes`'s
+  `analyticsSql`, `adminFunnel`'s `sql`) so the tests run offline.
+- **Not yet.** Link clicks from texts are the `s=txt` page views (texts link to
+  pages, not to a redirect), so they are in the page table rather than a count
+  of their own; site visits and chats started from posts (SP-10) arrive with
+  TA-S7, which adds the per-post columns.
+- **Deploy.** `deploy-cloudflare.yml` passes `CF_ANALYTICS_TOKEN` from secrets;
+  `scripts/cloudflare_deploy.sh` uploads it as a Worker secret and, only with
+  it, `CLOUDFLARE_ACCOUNT_ID` (already in the job's env). Both files are
+  CODEOWNERS-protected, so the PR needs the owner's approval.
+- **View.** Tables with small inline SVG bars (a sparkline of new contacts per
+  day with a text label, and a bar per table row hidden from assistive
+  technology because the cell holds the number); no chart library.
+- **Text admin fallback.** Built in TA-E1 (`ok <code>` / `no <code>` from the
+  `ADVISOR_ADMIN_CONTACT_ID` contact) and moved onto `decideReview` in TA-W2;
+  nothing changed here.
+- **Tests.** `tests/test_advisor_admin_funnel.mjs` (a fake SQL API and a fake
+  fetch); `e2e/admin.spec.ts` opens the Funnel with axe.

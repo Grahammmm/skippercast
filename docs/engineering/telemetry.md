@@ -87,6 +87,8 @@ FROM skippercast_events WHERE index1 = 'client_error' AND timestamp > NOW() - IN
 GROUP BY build, message ORDER BY reports DESC LIMIT 20
 ```
 
+The Text Advisor admin's **Funnel** view (`GET /api/admin/funnel`, `server/advisor/admin/funnel.ts`, TA-W4) reads the advisor page events by visit source (`blob2` event, `blob5` source) for the last 7 or 30 days through the same SQL API, from the Worker with `CF_ANALYTICS_TOKEN`. It shows counts only, next to D1 counts that carry no contact, message or boat id.
+
 ## Retention
 
 Analytics Engine's default: Cloudflare stores data points for three months ([limits](https://developers.cloudflare.com/analytics/analytics-engine/limits/), checked 2026-09-29). SkipperCast sets no other retention and keeps no copy; the daily report exists only as a GitHub Actions run summary.

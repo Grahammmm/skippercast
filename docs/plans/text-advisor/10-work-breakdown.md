@@ -239,6 +239,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: OP-5, SP-10 (data), OP-1 (fallback).
 - Depends: TA-W2
 - Files: `admin/funnel.ts` (D1 queries + Analytics Engine SQL via `CF_ANALYTICS_TOKEN`), `web/admin/funnel.tsx`, `engine.ts` (admin-test `ok/no <code>` path), var `ADVISOR_ADMIN_CONTACT_ID`, tests with a fake SQL API.
+- As built: the text admin fallback and `ADVISOR_ADMIN_CONTACT_ID` were already built in TA-E1 (and share `decideReview` since TA-W2), so the task is the funnel; the deploy uploads `CF_ANALYTICS_TOKEN` and, with it, `CLOUDFLARE_ACCOUNT_ID` as Worker secrets (CODEOWNERS: owner approval). Link clicks and chats started from posts wait for TA-S7. See 08 § As built (TA-W4).
 
 ## Phase 5: social
 

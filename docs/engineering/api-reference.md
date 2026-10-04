@@ -345,6 +345,7 @@ The admin app and its API ([08 · Admin](../plans/text-advisor/08-website.md), `
 | `POST /api/admin/boats/invite` | `{"phone": "...", "boat_name"?: "...", "language"?: "en"\|"es"}` (4 KB) | `200` `{"contact_id": "...", "sends": n, "created": bool}`; the number is never returned or logged | `400` not a US number, a bad boat name; `409` a stopped or blocked contact, an existing boat owner, replies off, more than 20 invites today; `503` no `ADVISOR_PHONE_KEY` |
 | `GET /api/admin/contacts/<id>` | — | `200` `{"contact": {...}, "boats": [...], "messages": [...], "export": "/api/admin/contacts/<id>/export"}` | `404` |
 | `GET /api/admin/contacts/<id>/export` | — | `200` the contact's data (`contacts.ts` `exportContact`) as `application/json` with `Content-Disposition: attachment`, `Cache-Control: private, no-store` | `404` |
+| `GET /api/admin/funnel` | `days` (`7` default, or `30`) | `200` (below) | `400` any other `days` |
 | `POST /api/admin/contacts/<id>/block` | `{"blocked": true\|false}` | `200` `{"status": "blocked"\|"active"\|"stopped"}`; unblocking restores the status before the block | `400` not a boolean; `404` |
 
 `detail` by kind (`server/advisor/admin/queue.ts`; `null` when the referenced row is gone, and for `post` until TA-S1). Contacts appear as `{id, channel, language, display_name, role, status}` only; no number or hash leaves the server.
@@ -381,8 +382,26 @@ Texts a decision sends have deterministic ids (the review id and the decision), 
  "media_jobs":{"pending":0},"reviews":{"open":4},"meta":null}
 ```
 
+`GET /api/admin/funnel` (TA-W4, `server/advisor/admin/funnel.ts`): numbers and the bounded labels they are grouped by, never an id.
+
+```json
+{"days":7,"since":"…","generated_at":"…",
+ "contacts":{"new":4,"sources":["instagram","skipper-invite"],"by_day":[{"day":"2026-10-03","total":2,"by_source":{"instagram":2}}]},
+ "messages":{"inbound":4,"by_intent":[{"intent":"report.daily","count":2}]},
+ "replies":{"outbound":4,"contacts":2,"per_contact":2},
+ "return_rate":{"active":3,"returning":1,"rate":0.333},
+ "boats":{"verified":1,"verified_total":2,"pending":1,"reports_published":3,"boats_reporting":2,"reports_per_boat":1.5},
+ "photos":{"submitted":2,"approved":1},"consent":{"boats":3,"given":2,"rate":0.667},
+ "analytics":{"available":true,"reason":null,
+   "llm":[{"feature":"advisor:report.daily","calls":12,"input_tokens":3400,"output_tokens":900}],
+   "turns":{"count":40,"p50_ms":2310,"p95_ms":9020},
+   "pages":[{"event":"advisor_port_view","source":"txt","count":30}]}}
+```
+
+Days are UTC. `contacts.by_day` has every day of the window (first-touch `source`, `unknown` when none); `messages.by_intent` is the top 20 inbound intents (`none` for unclassified, the rest summed as `other`); replies exclude failed sends; the return rate is contacts with inbound messages on two or more days over contacts with any; reports are those published in the window; consent counts boats that are not rejected. `analytics` comes from Analytics Engine through the SQL API with the Worker secrets `CF_ANALYTICS_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`: `llm` by feature, `advisor_turn` latency, and advisor page views and CTA clicks by visit source. Without the secrets `available` is `false` with `reason` `not-configured`; `no-data` when the dataset has never been written, `error` for any other failure (the D1 part still answers).
+
 `relay` is `job_state` `advisor.relay` (`null` before the first check); `stale_queued` counts inbound messages still `queued` after 2 minutes; `vision[].down_until` is a provider's 10-minute skip; `caps` are today's UTC-day counters of the global model and vision caps; `media_jobs.pending` is `media.ts` `mediaJobPending` (TA-M1), the count the cron dispatches the advisor-media job on: images without `derived_at` that are over 4.5 MB, HEIC, stored sideways or queued, approved or posted, plus pending graphics; `meta` is `null` until TA-S0.
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait), `tests/test_advisor_admin.mjs` (admin gate, queue, decisions, media bytes, health), `tests/test_advisor_admin_skippers.mjs` (boats, edits, verification, crew, invites, contacts, block), `e2e/admin.spec.ts` (an admin approves a review in the browser), `tests/test_advisor_pages.mjs` (public pages, sitemap, robots.txt). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait), `tests/test_advisor_admin.mjs` (admin gate, queue, decisions, media bytes, health), `tests/test_advisor_admin_skippers.mjs` (boats, edits, verification, crew, invites, contacts, block), `tests/test_advisor_admin_funnel.mjs` (funnel counts, the Analytics Engine reader, deploy wiring), `e2e/admin.spec.ts` (an admin approves a review in the browser), `tests/test_advisor_pages.mjs` (public pages, sitemap, robots.txt). See [testing](testing.md).

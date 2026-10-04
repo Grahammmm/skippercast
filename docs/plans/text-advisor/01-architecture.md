@@ -218,6 +218,7 @@ secret disables the feature that needs it with a logged warning):
 | `META_PAGE_ID`, `META_PAGE_TOKEN` | Facebook Page id and non-expiring Page token |
 | `ADVISOR_PHONE_KEY` | 32-byte master key (base64); HKDF derives the phone-hash and phone-encryption subkeys (02) |
 | `CF_ANALYTICS_TOKEN` | already a GitHub secret for `ops-report.yml`; also passed to the Worker for the admin funnel's Analytics Engine SQL reads (08) |
+| `CLOUDFLARE_ACCOUNT_ID` | already a GitHub secret (the deploy's account); uploaded to the Worker with `CF_ANALYTICS_TOKEN` (TA-W4), only when that token is set, for the SQL API's URL |
 | `R2_ADVISOR_TOKEN` | GitHub secret only (never the Worker): an R2 token scoped to `skippercast-advisor-media` for the media runner job; `R2_PUBLISH_TOKEN` is scoped to the feeds bucket and is not reused |
 
 Each secret is added to `scripts/cloudflare_deploy.sh` and

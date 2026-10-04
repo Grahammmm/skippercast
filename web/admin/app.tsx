@@ -2,7 +2,7 @@
 // TA-W2), mounted by dist/admin.html, which the Worker serves to admins only.
 // Hash-routed views: #queue and #health (TA-W2), #skippers and
 // #contact/<id> (TA-W3, a contact opens by id only, from a review or a boat);
-// #rules (TA-A4), #posts (TA-S1) and #funnel (TA-W4) are placeholders until
+// #funnel (TA-W4); #rules (TA-A4) and #posts (TA-S1) are placeholders until
 // their tasks. The relay-down banner shows on every view: health is fetched on load
 // and every minute. Every string is in web/advisor/copy.ts (ADMIN_COPY).
 import {render} from 'preact';
@@ -15,6 +15,7 @@ import {Queue} from './queue.tsx';
 import {HealthView} from './health.tsx';
 import {Skippers} from './skippers.tsx';
 import {ContactView} from './contact.tsx';
+import {FunnelView} from './funnel.tsx';
 import {VIEWS, routeOf} from './route.ts';
 import type {Route} from './route.ts';
 
@@ -56,6 +57,7 @@ export function App() {
           : view === 'health' ? <HealthView health={health} failed={healthFailed} onRefresh={() => void refresh()} />
           : view === 'skippers' ? <Skippers />
           : view === 'contact' ? <ContactView id={route.arg} />
+          : view === 'funnel' ? <FunnelView />
           : (
             <section class="admin-view" aria-labelledby="placeholder-heading">
               <h1 id="placeholder-heading">{COPY.views[view]}</h1>

@@ -87,5 +87,14 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await expect(page.getByRole('heading', {level: 1, name: 'Contact'})).toBeVisible();
   await expect(page.getByRole('link', {name: 'Export this contact’s data'})).toBeVisible();
   await checkA11y(page, 'admin-contact', info.project.name);
+
+  // TA-W4: the Funnel (D1 counts; Analytics Engine is not configured in the browser tests).
+  await page.getByRole('link', {name: 'Funnel'}).click();
+  await expect(page.getByRole('heading', {level: 1, name: 'Funnel'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'New contacts by day and source'})).toBeVisible();
+  await expect(page.getByText('Analytics Engine is not connected', {exact: false})).toBeVisible();
+  await page.getByLabel('Window').selectOption('30');
+  await expect(page.getByRole('heading', {name: 'Engagement'})).toBeVisible();
+  await checkA11y(page, 'admin-funnel', info.project.name);
   expect(pageErrors).toEqual([]);
 });

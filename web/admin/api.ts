@@ -48,6 +48,22 @@ export interface ContactDetail {
   export: string;
 }
 
+// ---- TA-W4: the Funnel (server/advisor/admin/funnel.ts) ----
+export interface Funnel {
+  days: 7 | 30; since: string; generated_at: string;
+  contacts: {new: number; sources: string[]; by_day: {day: string; total: number; by_source: Record<string, number>}[]};
+  messages: {inbound: number; by_intent: {intent: string; count: number}[]};
+  replies: {outbound: number; contacts: number; per_contact: number | null};
+  return_rate: {active: number; returning: number; rate: number | null};
+  boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
+  photos: {submitted: number; approved: number};
+  consent: {boats: number; given: number; rate: number | null};
+  analytics: {available: boolean; reason: 'not-configured' | 'no-data' | 'error' | null;
+    llm: {feature: string; calls: number; input_tokens: number; output_tokens: number}[];
+    turns: {count: number; p50_ms: number | null; p95_ms: number | null};
+    pages: {event: string; source: string; count: number}[]};
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) { super(message); this.status = status; }
@@ -84,6 +100,7 @@ export const invite = (phone: string, boatName: string, language: 'en' | 'es'): 
   postJson('/api/admin/boats/invite', {phone, ...(boatName.trim() ? {boat_name: boatName.trim()} : {}), language});
 export const getContact = (id: string): Promise<ContactDetail> => call(`/api/admin/contacts/${encodeURIComponent(id)}`);
 export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
+export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
 /** The admin app's link to a contact (08: reached by id from a review or a boat only). */
 export const contactHref = (id: string): string => `#contact/${encodeURIComponent(id)}`;
 

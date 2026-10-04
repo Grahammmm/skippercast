@@ -72,6 +72,7 @@ export interface Env {
   META_PAGE_TOKEN?: string;
   ADVISOR_PHONE_KEY?: string;        // 32-byte master key (base64) for phone hashing and encryption
   CF_ANALYTICS_TOKEN?: string;       // Analytics Engine SQL reads for the admin funnel
+  CLOUDFLARE_ACCOUNT_ID?: string;    // TA-W4: the account the Analytics Engine SQL API reads (uploaded with CF_ANALYTICS_TOKEN)
 }
 
 /** Per-request values the middleware sets for the routes. */

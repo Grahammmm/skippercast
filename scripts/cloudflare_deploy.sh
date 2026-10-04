@@ -162,7 +162,12 @@ secrets = {name: os.environ[source] for name, source in [
     ('TWILIO_ACCOUNT_SID', 'TWILIO_ACCOUNT_SID'),
     ('TWILIO_AUTH_TOKEN', 'TWILIO_AUTH_TOKEN'),
     ('TWILIO_FROM', 'TWILIO_FROM'),
+    # TA-W4: the admin funnel reads Analytics Engine through the SQL API (Account Analytics: Read).
+    ('CF_ANALYTICS_TOKEN', 'CF_ANALYTICS_TOKEN'),
 ] if os.environ.get(source)}
+# The SQL API's account, only alongside the token that reads it.
+if secrets.get('CF_ANALYTICS_TOKEN') and os.environ.get('CLOUDFLARE_ACCOUNT_ID'):
+    secrets['CLOUDFLARE_ACCOUNT_ID'] = os.environ['CLOUDFLARE_ACCOUNT_ID']
 print(json.dumps(secrets))
 PY
 if [ "$(cat var/cloudflare-secrets.json)" != "{}" ]; then

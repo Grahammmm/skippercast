@@ -20,6 +20,7 @@
 //   GET  /api/admin/contacts/:id    one contact by id (no search by number), last 50 messages
 //   GET  /api/admin/contacts/:id/export   the contact's data as a JSON download (contacts.ts exportContact)
 //   POST /api/admin/contacts/:id/block    {blocked: boolean}
+//   GET  /api/admin/funnel          ?days=7|30   admin/funnel.ts (TA-W4): D1 counts and Analytics Engine SQL reads, numbers only
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -35,6 +36,9 @@ import {derivedKey} from '../advisor/media.ts';
 import {listBoats, editBoat, removeCrew, inviteSkipper, contactView, setBlocked, validId} from '../advisor/admin/skippers.ts';
 import type {AdminOutcome} from '../advisor/admin/skippers.ts';
 import {exportContact} from '../advisor/contacts.ts';
+// TA-W4: the funnel.
+import {adminFunnel, FUNNEL_DAYS} from '../advisor/admin/funnel.ts';
+import type {FunnelDays, SqlFetcher} from '../advisor/admin/funnel.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -56,8 +60,11 @@ const MEDIA_ID = /^[\w-]{1,64}$/;
 const VIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 export const thumbKey = (id: string): string => `advisor/derived/${id}/thumb.jpg`;   // 02 § R2, written by the advisor-media job (TA-M1)
 
+/** What the admin routes take besides the consumer's deps (tests): the funnel's Analytics Engine SQL reader. */
+export interface AdminDeps extends ConsumerDeps {analyticsSql?: SqlFetcher | null}
+
 /** The admin routes; `deps` lets tests pass a recording channel (production uses channels/index.ts channelFor). */
-export function adminRoutes(deps: ConsumerDeps = {}): Hono<AppEnv> {
+export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   const admin = new Hono<AppEnv>();
 
   admin.get('/admin', async c => (await adminUser(c)) ? new Response(null, {status: 302, headers: {Location: '/admin.html', 'Cache-Control': 'no-store'}}) : PAGE_NOT_FOUND());
@@ -142,6 +149,13 @@ export function adminRoutes(deps: ConsumerDeps = {}): Hono<AppEnv> {
     return new Response(JSON.stringify(data, null, 2), {status: 200, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store',
       'Content-Disposition': `attachment; filename="skippercast-contact-${id}.json"`, 'X-Content-Type-Options': 'nosniff'}});
   });
+  // ---- TA-W4: the funnel ----
+  admin.get('/api/admin/funnel', async c => {
+    const days = Number(c.req.query('days') || 7) as FunnelDays;
+    if (!FUNNEL_DAYS.includes(days)) return json({error: 'days must be 7 or 30'}, 400);
+    return json(await adminFunnel(c.env, days, {now: now(), ...(deps.analyticsSql !== undefined ? {sql: deps.analyticsSql} : {})}));
+  });
+
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);
     if (typeof input.blocked !== 'boolean') return json({error: 'blocked must be true or false'}, 400);
