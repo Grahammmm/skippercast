@@ -753,6 +753,70 @@
     "social_posted_tagged": {
       "en": "Posted: {link}. Tagged @{handle}.",
       "es": "Publicado: {link}. Etiquetamos a @{handle}."
+    },
+    "daily_post_heading": {
+      "en": "What's biting out of {place}, {date}:",
+      "es": "Qué está picando saliendo de {place}, {date}:"
+    },
+    "daily_post_title": {
+      "en": "What's biting · {place}",
+      "es": "Qué está picando · {place}"
+    },
+    "daily_post_boat": {
+      "en": "{boat}: {counts} for {anglers} anglers.",
+      "es": "{boat}: {counts} para {anglers} pescadores."
+    },
+    "daily_post_boats_label": {
+      "en": "Boats",
+      "es": "Barcos"
+    },
+    "daily_post_top_label": {
+      "en": "Top counts",
+      "es": "Más pescados"
+    },
+    "daily_post_confidence": {
+      "en": "Landing reports, last 7 days: {label}.",
+      "es": "Reportes del muelle, últimos 7 días: {label}."
+    },
+    "daily_post_confidence_short": {
+      "en": "Landing reports: {label}",
+      "es": "Reportes del muelle: {label}"
+    },
+    "roundup_heading": {
+      "en": "This week out of {place}: {photos} catches from {boats} boats.",
+      "es": "Esta semana saliendo de {place}: {photos} capturas de {boats} barcos."
+    },
+    "roundup_heading_one_boat": {
+      "en": "This week out of {place}: {photos} catches.",
+      "es": "Esta semana saliendo de {place}: {photos} capturas."
+    },
+    "roundup_title": {
+      "en": "This week · {place}",
+      "es": "Esta semana · {place}"
+    },
+    "roundup_aboard": {
+      "en": "Aboard: {boats}.",
+      "es": "A bordo: {boats}."
+    },
+    "roundup_also": {
+      "en": "Also aboard: {handles}.",
+      "es": "También a bordo: {handles}."
+    },
+    "roundup_anglers": {
+      "en": "Photos: {credits}.",
+      "es": "Fotos: {credits}."
+    },
+    "roundup_angler_anonymous": {
+      "en": "a SkipperCast angler",
+      "es": "un pescador de SkipperCast"
+    },
+    "roundup_species_other": {
+      "en": "the catch",
+      "es": "la pesca"
+    },
+    "story_conditions_title": {
+      "en": "Today out of {place}",
+      "es": "Hoy saliendo de {place}"
     }
   }
 }

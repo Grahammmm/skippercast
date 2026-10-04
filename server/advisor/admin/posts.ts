@@ -20,6 +20,12 @@
 //   schedule   approved -> scheduled_for set (or cleared: the next tick posts it)
 //   retry      partial or failed -> publish again, only the surfaces without a stored id
 // Post now and retry need ADVISOR_SOCIAL_ENABLED and the Meta secrets.
+//
+// TA-S4: a daily post, a roundup or a Story card is published from its
+// generated graphic (social/graphics.ts): it is held while the graphic is being
+// rendered or failed, a roundup's photos are held like any post's, and every
+// photo's boat (not only the post's own boat) must be verified with photo
+// consent. The card carries `graphics`, the admin preview URLs.
 import {adminMediaUrl} from './queue.ts';
 import {reviewId} from '../contacts.ts';
 import {consentActive} from '../intake/skippers.ts';
@@ -32,6 +38,9 @@ import type {PostKind, Target, UserTag} from '../social/drafts.ts';
 import {advisorSettings} from '../settings.ts';
 import {metaConfigured} from '../social/meta.ts';
 import {publish} from '../social/publish.ts';
+// TA-S4: generated graphics.
+import {adminGraphicUrl, graphicHold, graphicKeys, graphicName, usesGraphic} from '../social/graphics.ts';
+import {graphicState} from '../media.ts';
 import type {PublishDeps, PublishOutcome} from '../social/publish.ts';
 import type {Env} from '../../env.ts';
 
@@ -49,10 +58,10 @@ const parse = <T>(json: string | null, fallback: T): T => { try { const v = JSON
 export const mediaIdsOf = (post: Pick<PostRow, 'media_json'>): string[] => parse<unknown[]>(post.media_json, []).filter((m): m is string => typeof m === 'string' && /^[\w-]{1,64}$/.test(m)).slice(0, 10);
 
 interface HoldMedia {id: string; kind: string; has_person: number | null; publish_state: string; credit: string | null; r2_key: string; open_review: number;
-  derived_at: string | null; derived_error: string | null}
+  derived_at: string | null; derived_error: string | null; boat_id: string | null}
 async function mediaOf(db: D1Database, ids: string[]): Promise<HoldMedia[]> {
   if (!ids.length) return [];
-  const rows = (await db.prepare(`SELECT m.id,m.kind,m.has_person,m.publish_state,m.credit,m.r2_key,m.derived_at,m.derived_error,
+  const rows = (await db.prepare(`SELECT m.id,m.kind,m.has_person,m.publish_state,m.credit,m.r2_key,m.derived_at,m.derived_error,m.boat_id,
       (SELECT COUNT(*) FROM advisor_reviews r WHERE r.kind='media' AND r.ref_id=m.id AND r.status='open') AS open_review
       FROM advisor_media m WHERE m.id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all<HoldMedia>()).results;
   return ids.map(id => rows.find(r => r.id === id)).filter((r): r is HoldMedia => Boolean(r));
@@ -63,9 +72,15 @@ async function mediaOf(db: D1Database, ids: string[]): Promise<HoldMedia[]> {
  * `videoPendingOk`: the publisher's re-check, which waits for a video's stripped
  * copy itself (it dispatches the media job and defers) instead of failing the post.
  */
-export async function approvalHold(db: D1Database, post: Pick<PostRow, 'boat_id' | 'media_json'>, opts: {videoPendingOk?: boolean} = {}): Promise<string | null> {
+export async function approvalHold(db: D1Database, post: Pick<PostRow, 'id' | 'kind' | 'boat_id' | 'media_json'>,
+  opts: {videoPendingOk?: boolean; graphicPendingOk?: boolean} = {}): Promise<string | null> {
   const ids = mediaIdsOf(post), media = await mediaOf(db, ids);
-  if (!ids.length || media.length < ids.length) return 'a photo of this post no longer exists';
+  const graphic = usesGraphic(post);
+  if (graphic) {
+    const hold = await graphicHold(db, post.id, {pendingOk: opts.graphicPendingOk});
+    if (hold) return hold;
+  }
+  if ((!graphic && !ids.length) || media.length < ids.length) return 'a photo of this post no longer exists';
   for (const m of media) {
     if (m.publish_state === 'rejected') return 'a photo of this post was rejected';
     if (m.open_review) return 'a photo of this post is waiting for its photo review';
@@ -73,12 +88,14 @@ export async function approvalHold(db: D1Database, post: Pick<PostRow, 'boat_id'
     const video = videoHold(m);
     if (video && !(opts.videoPendingOk && !m.derived_error)) return video;
   }
-  if (post.boat_id) {
-    const boat = await db.prepare('SELECT status,consent_photos_at,consent_revoked_at FROM advisor_boats WHERE id=?').bind(post.boat_id)
-      .first<{status: string; consent_photos_at: string | null; consent_revoked_at: string | null}>();
-    if (!boat) return 'the boat no longer exists';
-    if (!consentActive(boat)) return 'the boat has not given (or has revoked) photo consent';
-    if (boat.status !== 'verified') return 'verify the boat first (Skippers view)';
+  // The post's boat and every photo's boat (a roundup credits several).
+  for (const boatId of [...new Set([post.boat_id, ...media.map(m => m.boat_id)].filter((b): b is string => Boolean(b)))]) {
+    const boat = await db.prepare('SELECT name,status,consent_photos_at,consent_revoked_at FROM advisor_boats WHERE id=?').bind(boatId)
+      .first<{name: string; status: string; consent_photos_at: string | null; consent_revoked_at: string | null}>();
+    const which = boatId === post.boat_id ? 'the boat' : `the boat ${boat?.name ?? ''}`.trim();
+    if (!boat) return `${which} no longer exists`;
+    if (!consentActive(boat)) return `${which} has not given (or has revoked) photo consent`;
+    if (boat.status !== 'verified') return `verify ${which} first (Skippers view)`;
   }
   return null;
 }
@@ -100,6 +117,8 @@ export async function postView(db: D1Database, post: PostRow): Promise<Record<st
       review_open: m.open_review > 0, thumb: m.r2_key ? adminMediaUrl(m.id) : null, original: m.r2_key ? adminMediaUrl(m.id, 'original') : null})),
     review_id: open ? review : null,
     hold: post.status === 'draft' ? await approvalHold(db, post) : null,
+    // TA-S4: the generated images (the daily card, the roundup cover and slides, a Story card), for the admin's preview.
+    graphics: usesGraphic(post) ? graphicKeys(await graphicState(db, post.id)).map(k => adminGraphicUrl(post.id, graphicName(k))) : [],
   };
 }
 

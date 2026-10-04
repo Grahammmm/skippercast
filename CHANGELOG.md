@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Draft a daily "what's biting" post from yesterday's verified boat reports and a Sunday roundup carousel of the week's catch photos for the team to approve, and schedule approved posts into a weekly posting calendar shown in the admin Posts view.
+
 - Strip text-advisor videos of their camera metadata (location included) before they can be approved, posted or served: the media runner copies each video without metadata with ffmpeg, and the public video link only ever serves that copy.
 
 - Keep text-advisor photos upright: intake still strips all EXIF but keeps the JPEG's orientation value, so derived images are turned the right way, vision is told when a photo is rotated, and a sideways original is never shown on a page.

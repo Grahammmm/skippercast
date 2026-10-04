@@ -313,7 +313,7 @@ export async function ensureMediaDraft(env: Env, mediaId: string, deps: DraftDep
 }
 
 /** Close the open `post` reviews of these posts (the post was rejected outside the queue). */
-async function closeReviews(db: D1Database, postIds: string[], at: string, note: string): Promise<void> {
+export async function closeReviews(db: D1Database, postIds: string[], at: string, note: string): Promise<void> {
   if (!postIds.length) return;
   await db.prepare(`UPDATE advisor_reviews SET status='rejected',decided_at=?,note=COALESCE(note,?) WHERE kind='post' AND status='open' AND ref_id IN (${postIds.map(() => '?').join(',')})`)
     .bind(at, note, ...postIds).run();

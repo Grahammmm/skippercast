@@ -86,7 +86,13 @@ export interface Post {
   created_at: string; updated_at: string; boat: {id: string; name: string; slug: string; status: string; instagram: string | null} | null;
   media: PostMedia[]; review_id: string | null; hold: string | null;
   ig_media_id: string | null; fb_post_id: string | null; fb_story_id: string | null; collab_status: string | null;   // TA-S2
+  graphics?: string[];   // TA-S4: admin preview URLs of a daily card, roundup slides or Story card
 }
+/** GET /api/admin/posts/calendar (TA-S4, server/advisor/social/calendar.ts calendarWeek). */
+export interface WeekPost {id: string; kind: string; region: string; status: string; at: string; scheduled_for: string | null; posted_at: string | null; boat: string | null; summary: string}
+export interface WeekSlot {slot: string; kind: string; region: string; time: string; at: string; capacity: number; posts: WeekPost[]; empty: boolean; past: boolean}
+export interface WeekDay {date: string; weekday: string; slots: WeekSlot[]; others: WeekPost[]}
+export interface CalendarWeek {tz: string; start: string; end: string; days: WeekDay[]}
 /** POST /api/admin/posts/:id/{publish,schedule,retry} (TA-S2). */
 export interface PostActionResult {post: Post; outcome?: string; error?: string}
 export interface PostsPage {posts: Post[]; next: string | null}
@@ -141,6 +147,7 @@ export const getPosts = (status: string, kind: string, cursor?: string | null): 
 export const publishPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/publish`, {});
 export const schedulePost = (id: string, scheduledFor: string | null): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/schedule`, {scheduled_for: scheduledFor});
 export const retryPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/retry`, {});
+export const getCalendar = (start: string | null): Promise<CalendarWeek> => call(`/api/admin/posts/calendar${start ? `?start=${encodeURIComponent(start)}` : ''}`);
 export function rulesPath(jurisdiction: string, status: string): string {
   const q = new URLSearchParams();
   if (jurisdiction) q.set('jurisdiction', jurisdiction);

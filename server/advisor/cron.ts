@@ -22,6 +22,8 @@
 // TA-S2: social/publish.ts publishDue also runs on every tick (not a slot): approved posts whose
 // time has come, and a video still processing on Instagram, while ADVISOR_SOCIAL_ENABLED is on.
 // TA-S3: collabTick reads the collaborator invites of recent posts, at most hourly.
+// TA-S4: the content calendar (social/calendar.ts calendarTick) runs on every tick before publishDue, giving
+// approved posts their slot's time; the daily post (06:30) and the Sunday roundup (17:00) are slots.
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
 import {RELAY_KEY, relayState} from './relay.ts';
@@ -41,6 +43,9 @@ import {watchRuleSources} from './admin/rules.ts';
 // TA-S2: publishing due posts every tick.
 import {publishDue, collabTick} from './social/publish.ts';
 import type {PublishDeps} from './social/publish.ts';
+// TA-S4: the daily post, the weekly roundup and the content calendar.
+import {draftDailyPosts, draftRoundups} from './social/daily-post.ts';
+import {calendarTick} from './social/calendar.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -66,7 +71,16 @@ export const SLOTS: readonly Slot[] = [
   {name: 'daily-answers', time: {local: '05:30', tz: DEFAULT_TZ}, run: (env, now, deps) => pregenerateDaily(env, now, deps?.daily ?? {})},
   // TA-A4 (OP-6): the daily feed's regulation checks (collected 04:17) -> changed pages put their jurisdiction's rules into review.
   {name: 'rules-watch', time: {local: '06:15', tz: DEFAULT_TZ}, run: (env, now, deps) => watchRuleSources(env, now, deps?.daily?.feeds ? {feeds: deps.daily.feeds} : {})},
+  // TA-S4 (09 § Daily post, SO-2): yesterday's verified reports of each active region -> the daily post draft and its card.
+  {name: 'daily-post', time: {local: '06:30', tz: DEFAULT_TZ}, run: (env, now, deps) => draftDailyPosts(env, now, socialDeps(deps))},
+  // TA-S4 (09 § weekly roundup, SP-5): the week's approved catch photos -> the roundup carousel draft.
+  {name: 'weekly-roundup', time: {local: '17:00', tz: DEFAULT_TZ, weekday: 'Sun'}, run: (env, now, deps) => draftRoundups(env, now, socialDeps(deps))},
 ];
+
+/** The social drafting slots' deps: the daily feeds (tests) and the media job dispatch. */
+function socialDeps(deps?: CronDeps): {feeds?: (url: string) => Promise<unknown>; dispatch?: (env: Env, file: string) => Promise<number>} {
+  return {...(deps?.daily?.feeds ? {feeds: deps.daily.feeds} : {}), ...(deps?.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})};
+}
 
 const parts = new Map<string, Intl.DateTimeFormat>();
 /** The local calendar date (YYYY-MM-DD), time (HH:MM, 00-23) and weekday of `now` in `tz`. */
@@ -185,6 +199,9 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     if (!held) partial = true;
     // TA-M1: a failed dispatch is logged by requestMediaJob; the next tick tries again.
     await mediaJobTick(env, now, deps).catch(error => { advisorLog('error', 'advisor_media_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
+    // TA-S4: the calendar gives approved posts their slot's time (48 h ahead) before publishDue looks for due ones.
+    const filled = await calendarTick(env, now).catch(error => { advisorLog('error', 'advisor_calendar_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });
+    if (!filled) partial = true;
     // TA-S2: due posts to Instagram and the Page. A failing Meta ends in each post's status; only a D1 failure lands here.
     const published = await publishDue(env, now, {consumer: deps.consumer ?? {channelFor}, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {}), ...deps.publish})
       .catch(error => { advisorLog('error', 'advisor_publish_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });

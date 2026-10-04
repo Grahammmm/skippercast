@@ -311,7 +311,10 @@ it claims the key with the same UPSERT-with-WHERE idiom as
 `scheduleTripChecks` and runs `fn`. A slot therefore runs once per local day,
 within 15 minutes of its time, and never twice. Weekly slots carry a
 `weekday`. Every local time quoted in 05–09 is a slot name defined in one
-table in `cron.ts`. As built: `daily-answers` (05:30, TA-A1) and
+table in `cron.ts`. As built: `daily-answers` (05:30, TA-A1),
 `rules-watch` (06:15, TA-A4: the CDFW change-watch on the daily feed collected
-at 04:17). Not a slot: `publishDue` (TA-S2) runs on every tick, posting due
-approved posts and continuing videos Instagram is still processing.
+at 04:17), `daily-post` (06:30, TA-S4) and `weekly-roundup` (Sundays 17:00,
+TA-S4). Not slots: `calendarTick` (TA-S4) and then `publishDue` (TA-S2) run on
+every tick, the first giving approved posts their calendar slot's time, the
+second posting due approved posts and continuing videos Instagram is still
+processing.

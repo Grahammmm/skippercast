@@ -46,6 +46,8 @@ import type {JobClaims, JobScope} from '../job-auth.ts';
 import {deployment, build} from '../config.ts';
 import {body, budget} from '../http.ts';
 import {mediaJobWork, mediaJobDone} from '../advisor/media.ts';
+// TA-S4: generated post graphics for Meta's fetch.
+import {GRAPHIC_NAME, GRAPHIC_PUBLIC_STATUSES, servableGraphic} from '../advisor/social/graphics.ts';
 // TA-W1: the public pages, their cache key and the sitemap.
 import {cacheKey, cached} from '../edge-cache.ts';
 import {pageLanguage, pageResponse} from '../advisor/pages/render.ts';
@@ -282,6 +284,24 @@ advisorPublic.get('/media/:file', async c => {
   }
   if (!object) return NOT_FOUND();
   return new Response(object.body, {status: 200, headers: {...MEDIA_HEADERS, 'Content-Type': type, 'Content-Length': String(object.size)}});
+});
+
+/**
+ * TA-S4 (09 § Media that Meta fetches): a post's generated graphic, the media
+ * job's advisor/posts/<post>/<name> (the daily card, the roundup's cover and
+ * slides, a Story card), only for an approved post or one being or already
+ * published, and only a name the graphic's done state lists. Anything else is
+ * the same 404 as a missing id.
+ */
+advisorPublic.get('/media/post/:post/:name', async c => {
+  const env = c.env, id = c.req.param('post'), name = c.req.param('name');
+  if (!/^[\w-]{1,64}$/.test(id) || !GRAPHIC_NAME.test(name) || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
+  const post = await env.DB.prepare('SELECT status FROM advisor_posts WHERE id=?').bind(id).first<{status: string}>();
+  if (!post || !GRAPHIC_PUBLIC_STATUSES.includes(post.status)) return NOT_FOUND();
+  const key = await servableGraphic(env.DB, id, name);
+  const object = key ? await env.ADVISOR_MEDIA.get(key) : null;
+  if (!object) return NOT_FOUND();
+  return new Response(object.body, {status: 200, headers: {...MEDIA_HEADERS, 'Content-Type': 'image/jpeg', 'Content-Length': String(object.size)}});
 });
 
 // ---- TA-C6: contact card, text deep link and QR ----------------------------------

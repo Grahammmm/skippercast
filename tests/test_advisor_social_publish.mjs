@@ -193,7 +193,8 @@ dbTest('a carousel: one is_carousel_item container per photo, then CAROUSEL with
 
 dbTest('a reel: REELS with the .mp4 URL, IN_PROGRESS through the first tick (stored, still publishing), FINISHED on the next tick; one container in all; the Page Reel by 3-phase upload', async () => {
   const s = setup(), fake = graphFake({status: ['container-in-progress', 'container-in-progress', 'container-in-progress', 'container-in-progress', 'container-in-progress', 'container-in-progress', 'container-finished']});
-  addMedia(s.sql, 'v1', {kind: 'video'}); addPost(s.sql, {kind: 'reel', media: ['v1']});
+  // TA-S4: the calendar gave the Reel its slot's time (an unscheduled one waits for the calendar).
+  addMedia(s.sql, 'v1', {kind: 'video'}); addPost(s.sql, {kind: 'reel', media: ['v1'], scheduled: iso(T0 - HOUR)});
   const {clock, deps: d} = deps(s, fake);
   const tick1 = await quiet(() => P.publishDue(s.env, clock.t, d));
   assert.deepEqual(tick1.value, {status: 'ran', outcomes: ['pending']});
@@ -447,7 +448,7 @@ dbTest('publishDue: publishing posts first, then due approved posts oldest first
 
 dbTest('the cron tick runs publishDue (not a daily slot)', async () => {
   const s = setup(), fake = graphFake();
-  addMedia(s.sql, 'm1'); addPost(s.sql);
+  addMedia(s.sql, 'm1'); addPost(s.sql, {scheduled: iso(T0 - HOUR)});   // TA-S4: a time from the calendar
   const {value} = await quiet(() => advisorCron(s.env, T0, {slots: [], consumer: {channelFor: () => s.channel}, publish: {fetcher: fake.fetcher, sleep: async () => {}, now: () => T0}}));
   assert.equal(value, 'ok');
   assert.equal(postRow(s.sql).status, 'posted');

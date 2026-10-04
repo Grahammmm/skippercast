@@ -382,6 +382,96 @@ public `.mp4` could carry a position (00 principle 7). Fixed:
   photos from the week, by port and species, boats tagged as collaborators
   (3 max per Meta; the rest mentioned in the caption). Same draft path.
 
+### As built (TA-S4)
+
+- **Where.** `server/advisor/social/daily-post.ts` (the daily post and the
+  roundup), `social/graphics.ts` (posts published from generated graphics),
+  `social/calendar.ts` with `catalog/advisor/calendar.json`, the `daily-post`
+  and `weekly-roundup` slots and `calendarTick` in `cron.ts`, `GET
+  /media/post/<post_id>/<name>` (`routes/advisor.ts`), `GET
+  /api/admin/posts/calendar` and `/api/admin/posts/<id>/graphics/<name>`
+  (`routes/admin.ts`), the week grid (`web/admin/posts.tsx WeekCalendar`) and
+  `tests/test_advisor_social_daily.mjs`.
+- **The daily post.** Slot `daily-post`, 06:30 Pacific, for every active region
+  (status `active` in its region.json): the reports of the previous local day
+  with `status='published'`, `verified=1` and the boat still `verified`, one per
+  boat (its latest). None: no post. Otherwise the facts: the place (the port's
+  name, or the region's name when boats of several ports reported), each boat's
+  kept counts (at most four lines; uncertain ones left out) and anglers, the top
+  five counts summed by label, today's conditions line at the port with the most
+  boats (`answers/reports.ts conditionsText` over `dailyInputs`, advisories
+  first) and the confidence word: the best ladder label (Moderate, Low, else
+  Insufficient) among the landing reports' targets with trips, never a number;
+  without the daily feed the word is left out, without the forecast the
+  conditions line too. The caption is a template (`catalog/advisor/strings.json`
+  `daily_post_*`, no model): "What's biting out of {place}, {date}:", one line
+  per boat ("Rita G: 45 vermilion, 12 lingcod for 22 anglers."), the conditions,
+  "Landing reports, last 7 days: {word}.", the call to action and the hashtags
+  (region and species). The draft's id is `sha256('daily:<region>:<date>')[:32]`
+  with the posting day's local date, `media_json` `[]`, targets Instagram and the
+  Page, its `post` review as for any draft. The card: `requestGraphic(kind:
+  'daily')` with the post's id, `out_key advisor/posts/<id>/daily.jpg`, data
+  `{title, port, date, lines: [Top counts, a line per boat (four at most)],
+  conditions, confidence}`.
+- **Reruns.** A rerun (the slot retried, or by hand) updates the same draft's
+  caption and asks for the card again only when its data changed; a post that is
+  no longer a draft is never changed. Writing a region's daily draft supersedes
+  any older daily post of the region still in draft or approved without a time
+  (`rejected`, `error='superseded'`, its review closed), so yesterday's card
+  never goes out late. The same applies to roundups.
+- **The roundup.** Slot `weekly-roundup`, Sundays 17:00: images approved or
+  posted in the last 7 days, classified `fish` (a catch), with no open photo
+  review; a boat's only while the boat is verified, in the region and has photo
+  consent, an angler's (an approved share) when their home port is in the region.
+  Grouped by (port, species from the fish ID), the largest group first and the
+  newest photo first in each, taken round robin, at most **9** (the cover card
+  makes Meta's carousel limit of 10; 09 said up to 10 photos). Caption: "This
+  week out of {place}: {n} catches from {b} boats.", a line per port with its
+  species, "Aboard: {boats}.", "Also aboard: @x." for handles past the three
+  collaborators (the boats with the most photos), "Photos: {credits}." for
+  anglers, the call to action and hashtags. `media_json` holds the photos (they
+  are held like any post's photos, and each photo's boat must be verified with
+  consent: `approvalHold` now checks every photo's boat, not only the post's),
+  `collaborators_json` up to three handles, the graphic `kind: 'roundup'` with the
+  photos, `{title, lines: [{label: port, value: "n · species"}], captions}`.
+- **Holds and publishing.** A daily post, a roundup, or a Story with no photo
+  uses its graphic (`graphics.ts usesGraphic`): approval is held while the
+  graphic is pending ("the graphic is still being made") or failed; the
+  publisher defers (dispatching the job) while it is pending. A daily post goes
+  out as one image (`image_url` and the Page's `/photos` `url` =
+  `/media/post/<id>/daily.jpg`), a roundup as a carousel of the cover and slides
+  with its collaborators on the parent and a multi-photo Page post, a Story card
+  as `STORIES` and a Page photo Story. Its photos go `posted` with it.
+- **`/media/post/<post_id>/<name>`.** Served while the post is `approved`,
+  `publishing`, `posted` or `partial` (Meta fetches during `publishing`; 10 said
+  approved or posted), and only a name the graphic's done state lists. Admins
+  preview any post's graphics at `/api/admin/posts/<id>/graphics/<name>`; the post
+  card shows them (`graphics`).
+- **The calendar.** `catalog/advisor/calendar.json`: `{lead_hours: 48, slots:
+  [{id, weekdays, time_local, kind, region, capacity}]}` (09's `{weekday, ...}`
+  became a `weekdays` list and a `capacity`): Stories 07:00 daily (10), the daily
+  post 08:00 daily (drafted at 06:30, it needs the team's approval first),
+  photos 11:00 and 17:00 on weekdays, a Reel Fridays 12:00, the roundup Sundays
+  18:30 (drafted at 17:00). `calendarTick` runs on every 15-minute tick before
+  `publishDue`: each slot instance in the next 48 h whose time fewer posts hold
+  than its capacity takes the oldest approved post of its kind and region
+  without `scheduled_for` (by `approved_at`), setting `scheduled_for` to the
+  slot's local time in the region's zone (`zonedInstant`, DST-safe). A daily post
+  or roundup fills only its own date's slot, and one approved after that slot
+  passed goes out at once the same day. Empty slot instances are returned and
+  logged (`advisor_calendar_empty`) when the set changes. **Behaviour change
+  from TA-S2:** `publishDue` no longer posts an unscheduled approved post whose
+  kind and region have calendar slots; it waits for its slot ("Post now" still
+  posts at once; "Clear time" hands it back to the calendar). A kind without
+  slots (a carousel) still goes out within 15 minutes.
+- **The week grid.** `GET /api/admin/posts/calendar?start=` returns the 7 days
+  from a Monday with each slot instance, its posts and whether it is empty or
+  past, and the day's other scheduled or posted posts. The Posts view shows it
+  above the list (7 columns, one on a narrow screen; empty slots marked, the
+  count of empty slots ahead), with previous, this and next week.
+- **Not built here.** Posting into an empty slot automatically (SO-3 tips posts
+  are Next); the owner fills one by approving or posting by hand.
+
 ## Publishing (SO-4, SO-5, SP-7)
 
 `social/publish.ts: publish(env, post)`, run by cron for `approved` posts

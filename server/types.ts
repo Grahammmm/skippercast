@@ -5,7 +5,7 @@
 export interface ForecastPoint {id: string; name?: string; latitude: number; longitude: number; offshore?: boolean; context?: string}
 export interface MarineZones {coastal: string; offshore: string; [key: string]: string}
 export interface Region {
-  id: string; status?: string; timezone: string; species: string[];
+  id: string; name?: string; status?: string; timezone: string; species: string[];
   forecast_points: ForecastPoint[]; marine_zones: MarineZones;
   contexts?: Record<string, {marine_zones?: MarineZones} | undefined>;
   intelligence_feed: string; daily_feed: string; habitat_feed?: string;

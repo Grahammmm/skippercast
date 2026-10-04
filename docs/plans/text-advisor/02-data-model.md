@@ -296,11 +296,11 @@ A social post in any state.
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `id` | text PK | random, or deterministic for daily posts: `sha256('daily:' + region + ':' + date)[:32]` |
+| `id` | text PK | random, or deterministic for daily posts: `sha256('daily:' + region + ':' + date)[:32]` (TA-S4: `date` is the local day the post goes out; its reports are the day before), roundups `sha256('roundup:' + region + ':' + date)[:32]` (the Sunday), a media item's post `sha256('post:media:' + media_id)[:32]` (TA-S1) |
 | `kind` | text | `photo`, `carousel`, `reel`, `story`, `daily`, `roundup` |
 | `region` | text | |
 | `boat_id` | text, nullable | credited boat |
-| `media_json` | text | ordered `advisor_media.id`s, or for `daily` the rendered graphic's media id |
+| `media_json` | text | ordered `advisor_media.id`s; `[]` for `daily` and a Story card (TA-S4: their picture is the media job's graphic, `job_state advisor.graphic.<post id>`, not a media row); for a `roundup` the photos its slides show (held and marked posted with it) |
 | `caption` | text | final caption (≤ 2,200, ≤ 30 hashtags, ≤ 20 mentions) |
 | `collaborators_json` | text, nullable | up to 3 IG usernames (SP-7) |
 | `user_tags_json` | text, nullable | `[{username, x, y}]` |
