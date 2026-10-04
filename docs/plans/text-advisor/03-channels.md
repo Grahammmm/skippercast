@@ -277,6 +277,28 @@ is a Twilio media URL).
   the body is `"<message> [via <source>]"` and the engine strips and stores
   the source. Instagram bio and post CTAs use `https://skippercast.com/text?s=ig`.
 
+As built (TA-C6): the card is `server/advisor/pages/contact-card.ts`: `FN`,
+`N:SkipperCast;;;;`, `ORG`, `TEL;TYPE=CELL,VOICE:<number>`, `URL:<ADVISOR_PUBLIC_BASE>`
+and the photo as `PHOTO;ENCODING=b;TYPE=PNG:` (the icon is a PNG, not the JPEG
+written above), CRLF and 75-octet folding. The icon is a committed base64
+module (`server/advisor/pages/icon.ts`, written by
+`scripts/advisor/make-contact-icon.mjs`, checked by the test), not a bundler
+import, so the Worker bundle and the Node tests read the same bytes and the
+build stays deterministic. `/contact.vcf` and `/text` answer `503` until
+`ADVISOR_NUMBER` is set. `/text` validates `s` against `^[a-z0-9:_-]{1,32}$`
+(else drops it), caps `m` at 140 characters and defaults it to "Hi
+SkipperCast". `GET /qr/text.svg` is a QR code of `<ADVISOR_PUBLIC_BASE>/text?s=qr`
+from a dependency-free encoder (`pages/qr.ts`, byte mode, level M, versions
+1-10) whose output the tests pin against the reference encoder and decode back.
+The marker is parsed by `server/advisor/intents.ts` `parseSourceMarker` only
+when it is exactly the trailing ` [via <s>]` that `/text` writes; `storeInbound`
+stores the body without it and sets `advisor_contacts.source` only on the
+contact's first inbound message while it is still null (a later marker is
+stripped but never replaces it). `[via ig:<post_id>]` records `ig`; keeping
+the post id for SP-10 is TA-S work. The marker is not invisible in the
+person's own message app; it shows as typed. The iPhone and Android manual
+check is still owed (recorded in the PR).
+
 ## Runbook: relay down and port to Twilio (OP-7)
 
 Two runbooks (task TA-C1 wrote the first, TA-C7 the second):

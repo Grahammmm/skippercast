@@ -147,7 +147,7 @@ On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signI
 
 ### `GET /api/advisor/health`
 
-Text Advisor liveness (docs/plans/text-advisor/). No authentication. Answers `404` `{"error": "Not found"}` unless the Worker var `TEXT_ADVISOR_ENABLED` is `true`, like every advisor path (`/api/advisor/*`, `/ports/*`, `/species/*`, `/boats/*`, `/media/*`, `/u/*`, `/contact.vcf`, `/text`), which are reserved and gated by `server/advisor/gate.ts` before their routes exist. When on, `Cache-Control: no-store`:
+Text Advisor liveness (docs/plans/text-advisor/). No authentication. Answers `404` `{"error": "Not found"}` unless the Worker var `TEXT_ADVISOR_ENABLED` is `true`, like every advisor path (`/api/advisor/*`, `/ports/*`, `/species/*`, `/boats/*`, `/media/*`, `/u/*`, `/contact.vcf`, `/text`, `/qr/*`), which are reserved and gated by `server/advisor/gate.ts` before their routes exist. When on, `Cache-Control: no-store`:
 
 ```json
 {"enabled":true,"channel":"bluebubbles","providers":["hermes","claude"],"relay":{"state":"up","checked_at":"2026-10-03T15:00:00.000Z"}}
@@ -198,6 +198,19 @@ The upload page's request (JavaScript, not a form: the CSP has `form-action 'non
 ### `GET /media/<id>.jpg` and `GET /media/<id>.png`
 
 Public images for the site pages and for Meta to fetch ([09 · Media that Meta fetches](../plans/text-advisor/09-social.md)). Gated like every advisor path. Served only when the media's `publish_state` is `approved` or `posted`: `advisor/derived/<id>/public.jpg` when the media job has written it (`.jpg` only), otherwise the metadata-stripped original when its stored type matches the extension. HEIC, video and audio originals are never served. `Content-Type` from the stored row (`image/jpeg` for the derived file), `Cache-Control: public, max-age=3600`, `X-Robots-Tag: noindex`. Anything else (unknown id, private, queued or rejected media, another extension) → `404` with the same body as a missing id.
+
+<!-- TA-C6: contact card, deep link and QR -->
+### `GET /contact.vcf`
+
+The advisor's contact card ([03 · Contact card and deep links](../plans/text-advisor/03-channels.md)). Gated like every advisor path. A vCard 3.0 (`server/advisor/pages/contact-card.ts`): `FN:SkipperCast`, `N:SkipperCast;;;;`, `ORG:SkipperCast`, `TEL;TYPE=CELL,VOICE:<ADVISOR_NUMBER>`, `URL:<ADVISOR_PUBLIC_BASE>`, `PHOTO;ENCODING=b;TYPE=PNG:` (the app icon, `dist/app-icon-192.png`), CRLF line endings, lines folded at 75 octets. `Content-Type: text/vcard; charset=utf-8`, `Content-Disposition: attachment; filename="SkipperCast.vcf"`, `Cache-Control: public, max-age=86400`. Without `ADVISOR_NUMBER` → `503` with a plain-text message (`no-store`).
+
+### `GET /text?s=<source>&m=<message>`
+
+The "text us" deep link for the site, Instagram and print. Gated like every advisor path. `302` to `sms:<ADVISOR_NUMBER>?&body=<body>` (`Cache-Control: no-store`), where `<body>` is `m` (control characters replaced by spaces, trimmed, at most 140 characters; default `Hi SkipperCast`) followed by ` [via <s>]` when `s` matches `^[a-z0-9:_-]{1,32}$` (any other `s` is dropped), percent-encoded. The engine strips that marker from the first message and records the source on the contact (`server/advisor/intents.ts` `parseSourceMarker`; `[via ig:<post id>]` records `ig`). Without `ADVISOR_NUMBER` → `503`.
+
+### `GET /qr/text.svg`
+
+A QR code of `<ADVISOR_PUBLIC_BASE>/text?s=qr` for print and the site, as SVG (byte mode, error correction M, a four-module quiet zone; `server/advisor/pages/qr.ts`, no dependency). Gated like every advisor path; needs no number. `Content-Type: image/svg+xml; charset=utf-8`, `Cache-Control: public, max-age=86400`.
 
 ## Scheduler
 
@@ -253,4 +266,4 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker). See [testing](testing.md).

@@ -19,9 +19,9 @@ const ORIGIN = 'https://skippercast.com';
 const get = (path, env) => worker.fetch(new Request(ORIGIN + path), {ASSETS, ...env});
 const OFF = {}, ON = {TEXT_ADVISOR_ENABLED: 'true'};
 const RESERVED = ['/api/advisor/health', '/api/advisor/inbound/bluebubbles/x', '/ports/morro-bay', '/ports/x', '/species/lingcod',
-  '/boats/some-boat', '/media/abc.jpg', '/u/token', '/contact.vcf', '/text',
+  '/boats/some-boat', '/media/abc.jpg', '/u/token', '/contact.vcf', '/text', '/qr/text.svg',
   // Hono's "/x/*" also matches "/x"; no site page lives at these bare paths.
-  '/api/advisor', '/ports', '/species', '/boats', '/media', '/u'];
+  '/api/advisor', '/ports', '/species', '/boats', '/media', '/u', '/qr'];
 
 test('with the flag off every reserved advisor path is a JSON 404, never the static site', async () => {
   for (const env of [OFF, {TEXT_ADVISOR_ENABLED: 'false'}, {TEXT_ADVISOR_ENABLED: 'yes'}]) {
@@ -50,7 +50,7 @@ test('the same app answers /api/advisor/health once the flag is on, with no secr
 
 test('advisor prefixes are exact: neighbouring site paths still reach the static site, flag on or off', async () => {
   for (const env of [OFF, ON]) {
-    for (const path of ['/', '/species.js', '/species-research.html', '/portsx', '/textx', '/text/', '/contact.vcfx', '/index.html']) {
+    for (const path of ['/', '/species.js', '/species-research.html', '/portsx', '/textx', '/text/', '/contact.vcfx', '/qrx', '/index.html']) {
       const response = await get(path, env);
       assert.equal(response.status, 299, `${path} with ${JSON.stringify(env)}`);
     }

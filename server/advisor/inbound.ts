@@ -8,6 +8,8 @@ import {channelFor} from './channels/index.ts';
 import type {InboundMessage} from './channels/index.ts';
 import {advisorLog} from './log.ts';
 import {randomId} from './ids.ts';
+// TA-C6: the deep link's source marker is stripped from the stored body.
+import {parseSourceMarker} from './intents.ts';
 import type {Env} from '../env.ts';
 
 const MEDIA_KIND = (mime: string | null): 'image' | 'video' | 'audio' => mime?.startsWith('video/') ? 'video' : mime?.startsWith('audio/') ? 'audio' : 'image';
@@ -19,6 +21,11 @@ const MEDIA_KIND = (mime: string | null): 'image' | 'video' | 'audio' => mime?.s
  * provider's reference in provider_ref until the consumer downloads it). The
  * message and its media go in one batch; a second delivery of the same
  * provider id changes nothing. Returns the new message id, or null for a duplicate.
+ *
+ * TA-C6: a trailing `[via <source>]` marker (the /text deep link's, 03 § contact
+ * card and deep links) is removed from the stored body, and its source becomes
+ * advisor_contacts.source when this is the contact's first inbound message and
+ * no source is set yet; a later marker never replaces the first value.
  */
 export async function storeInbound(env: Env, message: InboundMessage, now: Date = new Date()): Promise<string | null> {
   const db = env.DB!;
@@ -28,15 +35,21 @@ export async function storeInbound(env: Env, message: InboundMessage, now: Date 
   const contact = await findOrCreateContact(db, await deriveKeys(env.ADVISOR_PHONE_KEY), {e164: message.from, channel: message.channel}, now);
   const id = randomId(), at = now.toISOString();
   const media = message.media.map(m => ({id: randomId(), ...m}));
+  const marker = parseSourceMarker(message.text);
+  const source = marker.source;
   const statements = [
+    // TA-C6: first-touch attribution, before the message row so "first inbound" excludes this one.
+    ...(source && !contact.source ? [db.prepare(`UPDATE advisor_contacts SET source=? WHERE id=? AND source IS NULL
+      AND NOT EXISTS (SELECT 1 FROM advisor_messages WHERE contact_id=? AND direction='in')`).bind(source, contact.id, contact.id)] : []),
     db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,provider_id,body,media_json,status,created_at) VALUES(?,?,'in',?,?,?,?,'queued',?) ON CONFLICT DO NOTHING`)
-      .bind(id, contact.id, message.channel, message.providerId, message.text.slice(0, MAX_BODY) || null, media.length ? JSON.stringify(media.map(m => m.id)) : null, at),
+      .bind(id, contact.id, message.channel, message.providerId, marker.text.slice(0, MAX_BODY) || null, media.length ? JSON.stringify(media.map(m => m.id)) : null, at),
     // Only if this call's message row exists, i.e. it was not a concurrent duplicate.
     ...media.map(m => db.prepare(`INSERT INTO advisor_media(id,contact_id,message_id,boat_id,kind,mime,bytes,width,height,r2_key,sha256,publish_state,provider_ref,created_at)
       SELECT ?,?,?,?,?,?,?,?,?,'','','private',?,? WHERE EXISTS (SELECT 1 FROM advisor_messages WHERE id=?)`)
       .bind(m.id, contact.id, id, contact.boat_id, MEDIA_KIND(m.mime), m.mime ?? 'application/octet-stream', m.bytes ?? 0, m.width ?? null, m.height ?? null, m.providerRef, at, id)),
   ];
-  const [inserted] = await db.batch(statements);
+  const results = await db.batch(statements);
+  const inserted = results[statements.length - media.length - 1];
   return inserted?.meta.changes ? id : null;
 }
 

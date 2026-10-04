@@ -24,11 +24,15 @@ import {overLimit, clientIP, tooManyRequests} from '../edge-cache.ts';
 import {json} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import type {AppEnv, Env} from '../env.ts';
+// TA-C6: contact card, the text deep link and its QR code.
+import {contactCard} from '../advisor/pages/contact-card.ts';
+import {qrSvg} from '../advisor/pages/qr.ts';
+import {SOURCE_PATTERN} from '../advisor/intents.ts';
 
 export const advisorPublic = new Hono<AppEnv>();
 
-// Webhooks, web chat and APIs; public pages; media; upload links; contact card; the text deep link.
-export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u/*', '/contact.vcf', '/text'] as const;
+// Webhooks, web chat and APIs; public pages; media; upload links; contact card; the text deep link; its QR code (TA-C6).
+export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u/*', '/contact.vcf', '/text', '/qr/*'] as const;
 for (const path of ADVISOR_PATHS) advisorPublic.use(path, gate);
 
 // Liveness and configuration shape only: never a secret, the number or the relay URL.
@@ -201,3 +205,44 @@ advisorPublic.get('/media/:file', async c => {
   return new Response(object.body, {status: 200, headers: {'Content-Type': type, 'Content-Length': String(object.size), 'Cache-Control': 'public, max-age=3600',
     'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
 });
+
+// ---- TA-C6: contact card, text deep link and QR ----------------------------------
+// (03 § Contact card and deep links, FC-3, FC-5.) All three are gated; /contact.vcf
+// and /text answer 503 until ADVISOR_NUMBER is set, since there is nothing to save or text.
+
+const NO_NUMBER = (): Response => new Response('SkipperCast texting is not set up yet.\n', {status: 503,
+  headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
+export const TEXT_DEFAULT_MESSAGE = 'Hi SkipperCast';
+export const TEXT_MAX_MESSAGE = 140;
+
+advisorPublic.get('/contact.vcf', c => {
+  const settings = advisorSettings(c.env);
+  if (!settings.number) return NO_NUMBER();
+  return new Response(contactCard({number: settings.number, publicBase: settings.publicBase}), {status: 200, headers: {
+    'Content-Type': 'text/vcard; charset=utf-8', 'Content-Disposition': 'attachment; filename="SkipperCast.vcf"',
+    'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff'}});
+});
+
+/**
+ * The pre-filled text body for /text: `m` (control characters removed, trimmed,
+ * at most 140 characters; default "Hi SkipperCast") plus " [via <s>]" when `s`
+ * is a valid source (^[a-z0-9:_-]{1,32}$); any other `s` is dropped.
+ */
+export function textBody(message: string | null | undefined, source: string | null | undefined): string {
+  const clean = Array.from(String(message ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim()).slice(0, TEXT_MAX_MESSAGE).join('').trim();
+  const valid = typeof source === 'string' && SOURCE_PATTERN.test(source) ? source : null;
+  return `${clean || TEXT_DEFAULT_MESSAGE}${valid ? ` [via ${valid}]` : ''}`;
+}
+
+// The `?&body=` form is the one iOS and Android both open with the body filled in (03).
+advisorPublic.get('/text', c => {
+  const settings = advisorSettings(c.env);
+  if (!settings.number) return NO_NUMBER();
+  const body = textBody(c.req.query('m'), c.req.query('s'));
+  return new Response(null, {status: 302, headers: {Location: `sms:${settings.number}?&body=${encodeURIComponent(body)}`, 'Cache-Control': 'no-store'}});
+});
+
+// The printable QR code of <ADVISOR_PUBLIC_BASE>/text?s=qr. Needs no number: it encodes the deep link, which does.
+advisorPublic.get('/qr/text.svg', c => new Response(qrSvg(`${advisorSettings(c.env).publicBase}/text?s=qr`), {status: 200, headers: {
+  'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff'}}));
+// TA-C6 end.
