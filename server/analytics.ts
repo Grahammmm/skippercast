@@ -18,8 +18,15 @@
 //   queue_batch  blob2 queue, blob3 outcome (ok|retried|dead)
 //                double1 messages, double2 owners, double3 retried, double4 invalid, double5 checked,
 //                double6 changes, double7 delivered, double8 held, double9 in_app, double10 ms
-//   cron         blob2 cron, blob3 watchdog action, blob4 trip-check action, blob5 prune outcome
+//                (advisor queues: double5 = messages done, double7 = texts sent, double8 = held;
+//                owners, changes and in_app are 0)
+//   cron         blob2 cron, blob3 watchdog action, blob4 trip-check action, blob5 prune outcome,
+//                blob6 advisor outcome (ok|disabled|no-db|partial|error; server/advisor/cron.ts)
 //                double1 ms, double2 owners queued, double3 live feed age minutes (-1 unknown)
+//   advisor_turn blob2 intent, blob3 outcome (done|held|dropped|retried|timeout|failed)
+//                double1 ms, double2 actions, double3 sends, double4 retries (message attempts - 1)
+//                (server/advisor/analytics.ts: one per processed inbound text)
+//   publish      blob2 post kind, blob3 outcome; double1 ms (one per social publish attempt)
 //   client_event, client_error  funnel events and browser errors posted to
 //                /api/telemetry; columns in server/telemetry.ts
 import type {MiddlewareHandler} from 'hono';
@@ -58,9 +65,9 @@ export function recordQueueBatch(env: Pick<Env, 'ANALYTICS'>, queue: string, out
     num(counts.checked), num(counts.changes), num(counts.delivered), num(counts.held), num(counts.in_app), ms]});
 }
 
-export interface CronRun {cron: string; watchdog: string; trips: string; prune: string; ms: number; owners?: number; feed_age_minutes?: number | null}
+export interface CronRun {cron: string; watchdog: string; trips: string; prune: string; advisor?: string; ms: number; owners?: number; feed_age_minutes?: number | null}
 export function recordCron(env: Pick<Env, 'ANALYTICS'>, run: CronRun): void {
-  writePoint(env, 'cron', {blobs: [run.cron, run.watchdog, run.trips, run.prune],
+  writePoint(env, 'cron', {blobs: [run.cron, run.watchdog, run.trips, run.prune, run.advisor ?? ''],
     doubles: [run.ms, num(run.owners), typeof run.feed_age_minutes === 'number' ? run.feed_age_minutes : -1]});
 }
 

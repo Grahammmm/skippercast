@@ -80,6 +80,11 @@ Budget: the consumer has the Worker's wall-clock allowance, not a 10 ms CPU
 limit, so a two-turn Claude call with a vision step fits. Hard stops: 45 s
 total per message, after which the person gets "Still working on that, one
 moment" and the message is retried once with `retry({delaySeconds: 20})`.
+The handler receives an `AbortSignal` that fires at the hard stop (pass it to
+every `fetch`). If the retry also runs past 45 s the message is marked
+`failed` and the contact gets the hourly-throttled apology, as on the
+dead-letter path. Without a queue (`runInline`) nothing retries, so a failed
+or timed-out turn goes straight to that dead-letter handling.
 
 ## Request flow: web chat
 
@@ -231,7 +236,7 @@ it. Each is a few lines.
 | `server/index.ts` | In `scheduled()`: add `advisorCron(env, started)` to the `Promise.all`; its one-word outcome goes into `recordCron` as a new `advisor` field (blob6; documented in the `server/analytics.ts` header with the new `advisor_turn` and `publish` kinds). In `queue()`: branch on `batch.queue` for `ADVISOR_QUEUE_NAME` and `ADVISOR_DLQ_NAME` before the trip-check path. The generic type of the default export becomes a union of message types. |
 | `scripts/wrangler_config.mjs` | `features()` gains `advisor`; `deployConfig` appends the advisor queue consumers/producer and the R2 bucket, and copies `TEXT_ADVISOR_ENABLED` and every `ADVISOR_*` present in the environment into `vars`. `tests/test_wrangler_config.mjs` gets the matching cases. |
 | `db/schema.ts` | New tables appended (02). Existing tables untouched except `users`: one nullable column `role` (02). |
-| `drizzle/0006_advisor_core.sql` … | Generated with `pnpm db:generate -- --name advisor_core` (drizzle-kit's `--name` gives the file its name), never hand-written; journal and snapshot committed. |
+| `drizzle/0006_advisor_core.sql` … | Generated with `pnpm db:generate --name advisor_core` (drizzle-kit's `--name` gives the file its name), never hand-written; journal and snapshot committed. |
 | `scripts/cloudflare_deploy.sh`, `.github/workflows/deploy-cloudflare.yml` | Under `ENABLE_ADVISOR=true`: create the bucket and the two queues before the deploy (same idempotent `queues info`/`create` and `r2 bucket create` pattern as the trip queues); pass the advisor vars through `env`; secret pass-through lines, with the two `ADVISOR_`-prefixed secrets renamed `SECRET_ADVISOR_*` in the workflow env (see the flags table). Done in TA-F1 except the secret lines, which each later task adds as it needs them. |
 | `server/job-auth.ts`, `deployments/production.json` | `validJobClaims` pins `aud` to `/api/jobs/check` and `workflow_ref` to `scheduler.workflow` (`live-conditions.yml`). TA-M1 parameterises both: `verifyJobToken(token, policy, {audiencePath, workflows})`, and `deployments/production.json` gains `scheduler.workflows: ["live-conditions.yml", "advisor-media.yml"]` (the existing `workflow` key stays for the trip job). The media job requests its token with `audience: <public_origin>/api/advisor/jobs`. |
 | `server/watchdog.ts` | Export `dispatchWorkflow(env, file, ref = 'main')` built from the private `github()` helper, so the advisor can trigger `advisor-media.yml` without a second GitHub client. |

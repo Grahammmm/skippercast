@@ -6,6 +6,9 @@ import {scheduleTripChecks, consumeTripChecks, consumeDeadLetters, TRIP_DLQ} fro
 import type {TripCheckMessage} from './trip-queue.ts';
 import {scheduledPrune} from './trips.ts';
 import {recordCron, recordQueueBatch} from './analytics.ts';
+import {consumeAdvisor, consumeAdvisorDeadLetters, ADVISOR_QUEUE_NAME, ADVISOR_DLQ_NAME} from './advisor/consumer.ts';
+import {advisorCron} from './advisor/cron.ts';
+import type {AdvisorMessage} from './advisor/types.ts';
 import type {Env} from './env.ts';
 
 export {ClientError, RateLimited} from './errors.ts';
@@ -15,7 +18,8 @@ export {canonicalRedirect} from './middleware/canonical.ts';
 export {app};
 
 // Cron (every 15 minutes): restart a stalled live refresh, apply retention and,
-// when the trip queue is bound, queue trip checks for a new live publication.
+// when the trip queue is bound, queue trip checks for a new live publication,
+// and run the Text Advisor's hooks (a no-op unless TEXT_ADVISOR_ENABLED).
 // One `cron` analytics point per run records what each part did.
 async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
   useBucket(env);
@@ -25,8 +29,9 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
     watchdog(env, started, feed).catch(failed('watchdog')),
     scheduledPrune(env),
     scheduleTripChecks(env, started, feed).then(result => { if (result.action !== 'no-queue') console.log(JSON.stringify({event: 'trip_check_schedule', ...result})); return result; }).catch(failed('trip checks')),
-  ]).then(([dog, prune, trips]) => {
-    recordCron(env, {cron: controller?.cron || '', watchdog: dog?.action ?? 'error', trips: trips?.action ?? 'error', prune, ms: Date.now() - started,
+    advisorCron(env, started).catch(() => 'error' as const),
+  ]).then(([dog, prune, trips, advisor]) => {
+    recordCron(env, {cron: controller?.cron || '', watchdog: dog?.action ?? 'error', trips: trips?.action ?? 'error', prune, advisor, ms: Date.now() - started,
       owners: trips?.owners, feed_age_minutes: dog?.age_minutes});
     if (!dog || !trips) throw Error('cron run failed');
   });
@@ -34,13 +39,25 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
   await run;   // a failed part fails the invocation, so Cloudflare's cron-failure alerts see it
 }
 
-// Queue consumer (only when ENABLE_QUEUES added the bindings): trip checks and their dead letters.
-async function queue(batch: MessageBatch<TripCheckMessage>, env: Env): Promise<void> {
+// Queue consumer (only when ENABLE_QUEUES / ENABLE_ADVISOR added the bindings):
+// Text Advisor messages and their dead letters, then trip checks and theirs.
+async function queue(batch: MessageBatch<TripCheckMessage | AdvisorMessage>, env: Env): Promise<void> {
   useBucket(env);
   const started = Date.now();
-  if (batch.queue === TRIP_DLQ) { consumeDeadLetters(batch); recordQueueBatch(env, batch.queue, 'dead', {messages: batch.messages.length}, Date.now() - started); return; }
-  const result = await consumeTripChecks(batch, env);
+  if (batch.queue === ADVISOR_DLQ_NAME) {
+    const dead = await consumeAdvisorDeadLetters(batch as MessageBatch<AdvisorMessage>, env);
+    recordQueueBatch(env, batch.queue, 'dead', {messages: batch.messages.length, checked: dead.failed, delivered: dead.apologies}, Date.now() - started);
+    return;
+  }
+  if (batch.queue === ADVISOR_QUEUE_NAME) {
+    const r = await consumeAdvisor(batch as MessageBatch<AdvisorMessage>, env);
+    recordQueueBatch(env, batch.queue, r.retried ? 'retried' : 'ok', {messages: r.messages, retried: r.retried, invalid: r.invalid, checked: r.done, delivered: r.sends, held: r.held}, Date.now() - started);
+    return;
+  }
+  const trips = batch as MessageBatch<TripCheckMessage>;
+  if (batch.queue === TRIP_DLQ) { consumeDeadLetters(trips); recordQueueBatch(env, batch.queue, 'dead', {messages: batch.messages.length}, Date.now() - started); return; }
+  const result = await consumeTripChecks(trips, env);
   recordQueueBatch(env, batch.queue, result.retried ? 'retried' : 'ok', {messages: batch.messages.length, ...result}, Date.now() - started);
 }
 
-export default {fetch: app.fetch, scheduled, queue} satisfies ExportedHandler<Env, TripCheckMessage>;
+export default {fetch: app.fetch, scheduled, queue} satisfies ExportedHandler<Env, TripCheckMessage | AdvisorMessage>;

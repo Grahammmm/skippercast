@@ -131,8 +131,10 @@ See also the [trip-check runbook](operations/runbooks/trip-checks.md).
 | --- | --- | --- |
 | `request` | `blob2` route pattern (e.g. `/api/trips`, `/feeds/*`, `/*`), `blob3` method, `blob4` cache `hit`/`miss`/`none`, `blob5` Cloudflare colo, `blob6` first 16 hex of sha256(request id) | `double1` status, `double2` ms, `double3` weight |
 | `llm` | `blob2` feature (`boat_lookup`), `blob3` outcome, `blob4` model | `double1` input tokens, `double2` output tokens, `double3` web searches, `double4` turns |
-| `queue_batch` | `blob2` queue, `blob3` `ok`/`retried`/`dead` | `double1` messages, `double2` owners, `double3` retried, `double4` invalid, `double5` trips checked, `double6` new events, `double7` delivered, `double8` held, `double9` in-app, `double10` ms |
-| `cron` | `blob2` schedule, `blob3` watchdog action, `blob4` trip-check action, `blob5` prune outcome | `double1` ms, `double2` owners queued, `double3` live feed age in minutes (-1 unknown) |
+| `queue_batch` | `blob2` queue, `blob3` `ok`/`retried`/`dead` | `double1` messages, `double2` owners, `double3` retried, `double4` invalid, `double5` trips checked, `double6` new events, `double7` delivered, `double8` held, `double9` in-app, `double10` ms (advisor queues: `double5` messages done, `double7` texts sent, `double8` held) |
+| `cron` | `blob2` schedule, `blob3` watchdog action, `blob4` trip-check action, `blob5` prune outcome, `blob6` Text Advisor outcome (`ok`/`disabled`/`no-db`/`partial`/`error`) | `double1` ms, `double2` owners queued, `double3` live feed age in minutes (-1 unknown) |
+| `advisor_turn` | `blob2` intent, `blob3` outcome (`done`/`held`/`dropped`/`retried`/`timeout`/`failed`) | `double1` ms, `double2` actions, `double3` texts sent, `double4` retries |
+| `publish` | `blob2` social post kind, `blob3` outcome | `double1` ms |
 | `client_event` | `blob2` funnel event, `blob3` region id, `blob4` page build | `double1` 1 |
 | `client_error` | `blob2` kind, `blob3` scrubbed message, `blob4` script file name, `blob5` page build, `blob6` first 16 hex of sha256(request id) | `double1` line, `double2` column |
 
