@@ -40,8 +40,8 @@ these):
 1. Instagram: convert `@skippercast` (or the chosen handle) to a
    **Business** account (Stories publishing needs Business, not Creator).
    Bio per SP-1: the offer in one line, link `https://skippercast.com/text?s=ig`,
-   highlights "Reports", "Fish ID", "Tips" (content for the highlights is in
-   TA-S6).
+   highlights "Reports", "Fish ID", "Tips": the copy to paste is in § Instagram
+   profile below (TA-S5).
 2. Facebook: a Page "SkipperCast", link the IG account to it (Page settings
    › Linked accounts).
 3. Meta developer app "SkipperCast Publisher" (type Business), products
@@ -720,6 +720,93 @@ footer with the number is baked into `story.jpg` by the media job because
 the API cannot add stickers. Stories need no admin approval once the source
 photo's review (if any) is approved; a `has_person` hold blocks them like
 any other media.
+
+### As built (TA-S5)
+
+- **Where.** `server/advisor/social/stories.ts` (`morningStories`), the
+  `morning-stories` slot in `cron.ts` (07:00 Pacific), `tests/test_advisor_social_stories.mjs`.
+- **When.** Only while `ADVISOR_SOCIAL_ENABLED=true` and the Meta secrets are
+  set: these Stories are approved by the engine, so they are made only when they
+  can go out that morning (with the switch off nothing piles up for later).
+- **Count boards.** For each active region, each boat that is `verified` with
+  active photo consent and has a photo classified `count_board` taken during the
+  previous local day (`queued`, `approved` or `posted`; the boat's latest): the
+  photo's Story post is TA-S1's draft (`sha256('post:media:' + id)[:32]`; made
+  now through `ensureMediaDraft` when missing). While it is a draft and
+  `approvalHold` finds nothing (no open photo review, a `has_person` photo only
+  once its review approved it, the photo not rejected, consent active, the boat
+  verified), the engine approves it: `status='approved'`, `approved_by` null,
+  `approved_at`, `scheduled_for` = today's Stories slot (07:00 from the
+  calendar), the photo `queued` -> `approved` (Meta fetches its `story.jpg`, the
+  photo above the "Text SkipperCast" band, 1080 x 1920) and the open `post`
+  review closed as `approved` with the note `auto: story`. A held one stays a
+  draft for the team; a post already approved or posted is left alone.
+- **The conditions card.** One Story per region a day with no photo
+  (`media_json` `[]`), id `sha256('story:conditions:<region>:<date>')[:32]`,
+  inserted `approved` at the slot's time with no review (it is made from public
+  forecast data), and `requestGraphic(kind: 'story')` with `{title: "Today out of
+  {region name}", lines: [the conditions line with any advisory first, "Landing
+  reports: {word}"]}` (the 1080 x 1920 card with the footer band). Without a
+  forecast and without an advisory there is no card that day.
+- **Publishing.** The existing path: `calendarTick` counts them in the Stories
+  slot, `publishDue` posts them (the card once the job has rendered it:
+  `STORIES` with `/media/post/<id>/story.jpg` and the Page photo Story from the
+  same URL; a count board with `/media/<id>.story.jpg`). No caption, no
+  collaborators, no tags, as Meta's Stories require.
+- **Profile.** § Instagram profile below: the bio, the highlight covers and the
+  three highlight scripts as copy the owner pastes (TA-O4).
+
+## Instagram profile (SP-1; TA-S5)
+
+Copy for the owner to paste when setting up the account (§ Setup step 1). It
+states only what the service does today: reports come from skippers, answers
+describe reported activity with the confidence word, never odds, and rules
+come with their source.
+
+**Name field:** `SkipperCast | Fishing reports`
+
+**Bio** (Instagram allows 150 characters; this is 91):
+
+> Central Coast fishing reports from the boats. Text us what's biting, rules or a fish photo.
+
+**Link:** `https://skippercast.com/text?s=ig` (label it "Text SkipperCast"; the
+`s=ig` source tags the first message `[via ig]`, 03 § deep links).
+
+**Highlight covers.** Three covers, 1080 x 1920, made in any editor from the
+site's tokens (`dist/tokens.css`): the deep field `#082e3b`, a centred kelp
+`#54dacb` line icon about 400 px wide, no text on the cover (Instagram prints
+the highlight's name under it).
+
+| Highlight | Name under it | Icon |
+| --- | --- | --- |
+| Reports | `Reports` | a clipboard with three ticked lines (a count board) |
+| Fish ID | `Fish ID` | a rockfish outline with a magnifying glass |
+| Tips | `Tips` | a lingcod jig, or a hook and a knot |
+
+**Highlight scripts.** Each frame is one Story (1080 x 1920, text on the deep
+field, the "Text SkipperCast" band at the bottom as on every generated Story).
+Post them as Stories once, then add them to the highlight.
+
+*Reports* (4 frames)
+
+1. "Fishing reports from the boats themselves. Skippers text us their counts after each trip."
+2. "Every morning we post what the boats brought in: species, counts and anglers, boat by boat."
+3. "Text 'what's biting' any time for the latest out of your port, with today's wind and seas."
+4. "We describe what was reported, not odds. Text SkipperCast: link in bio."
+
+*Fish ID* (4 frames)
+
+1. "Not sure what you caught? Text us a photo."
+2. "We name the likely species and the look-alikes to check, with the features that tell them apart."
+3. "Size and bag limits come from our rules table with the CDFW source and the date we last checked it. Always confirm before you keep a fish."
+4. "Text a photo to SkipperCast: link in bio."
+
+*Tips* (4 frames)
+
+1. "Ask us how to rig for lingcod, rockfish or halibut out of your port."
+2. "Planning Saturday? Text the day and we'll send the forecast window and any advisory."
+3. "Looking for a trip? We list the boats that report to us, with their booking links."
+4. "Text SkipperCast: link in bio."
 
 ## Content calendar (SP-6)
 

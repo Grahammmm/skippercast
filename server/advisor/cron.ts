@@ -24,6 +24,7 @@
 // TA-S3: collabTick reads the collaborator invites of recent posts, at most hourly.
 // TA-S4: the content calendar (social/calendar.ts calendarTick) runs on every tick before publishDue, giving
 // approved posts their slot's time; the daily post (06:30) and the Sunday roundup (17:00) are slots.
+// TA-S5: the morning Stories (07:00) are a slot too.
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
 import {RELAY_KEY, relayState} from './relay.ts';
@@ -46,6 +47,8 @@ import type {PublishDeps} from './social/publish.ts';
 // TA-S4: the daily post, the weekly roundup and the content calendar.
 import {draftDailyPosts, draftRoundups} from './social/daily-post.ts';
 import {calendarTick} from './social/calendar.ts';
+// TA-S5: the morning Stories.
+import {morningStories} from './social/stories.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -75,6 +78,8 @@ export const SLOTS: readonly Slot[] = [
   {name: 'daily-post', time: {local: '06:30', tz: DEFAULT_TZ}, run: (env, now, deps) => draftDailyPosts(env, now, socialDeps(deps))},
   // TA-S4 (09 § weekly roundup, SP-5): the week's approved catch photos -> the roundup carousel draft.
   {name: 'weekly-roundup', time: {local: '17:00', tz: DEFAULT_TZ, weekday: 'Sun'}, run: (env, now, deps) => draftRoundups(env, now, socialDeps(deps))},
+  // TA-S5 (09 § Stories, SP-4): yesterday's count boards of verified, consenting boats and the conditions card, approved as Stories.
+  {name: 'morning-stories', time: {local: '07:00', tz: DEFAULT_TZ}, run: (env, now, deps) => morningStories(env, now, socialDeps(deps))},
 ];
 
 /** The social drafting slots' deps: the daily feeds (tests) and the media job dispatch. */

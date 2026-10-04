@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Post the morning Stories automatically: each verified boat's count board from the day before (once its photo has no hold) and a conditions card for the day.
+
 - Draft a daily "what's biting" post from yesterday's verified boat reports and a Sunday roundup carousel of the week's catch photos for the team to approve, and schedule approved posts into a weekly posting calendar shown in the admin Posts view.
 
 - Strip text-advisor videos of their camera metadata (location included) before they can be approved, posted or served: the media runner copies each video without metadata with ffmpeg, and the public video link only ever serves that copy.
