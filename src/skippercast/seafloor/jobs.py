@@ -75,6 +75,7 @@ def prepare(root, region=None, reach=None, max_new=3):
     s3, bucket = credentials()
     root = Path(root)
     state_cache.restore(s3, bucket, root, 'shared')
+    state_cache.restore(s3, bucket, root, 'source-review')
     reference = root/'var/seafloor/reference/cells.json'
     expected = read_json(root/'dist/data/seafloor-ledger.json')['reference_cells_sha256']
     if not reference.exists() or sha256(reference) != expected:

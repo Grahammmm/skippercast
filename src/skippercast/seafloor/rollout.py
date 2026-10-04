@@ -85,6 +85,13 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
     new = sorted([r for r in rows if r['action'] == 'compute'],
                  key=lambda r: (-r['reviewed_window_band_estimate_km2'], r['reach']))[:max_new]
     selected = [r for r in rows if r['processed']] + new
+    from .source_review import partition
+    queue = [{'id': r['id'], 'publisher': r['publisher'], 'title': r['title'],
+              'status': r['status'], 'url': r['url'], 'hold_reason': r['hold_reason']}
+             for r in manifest['surveys'] if r['status'] in ('candidate', 'hold')
+             and r['kind'] == 'bathymetry']
+    queue, deferred, review_warnings = partition(root, manifest, queue,
+                                                [r['reach'] for r in rows])
     return {'version': 1, 'scope': region or ledger['scope'], 'physical_only': physical_only,
         **({'source_scope': source_scope} if source_scope is not None else {}),
         'survey_status_counts': dict(Counter(r['status'] for r in manifest['surveys'])),
@@ -101,10 +108,9 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
             'additional_measured_km2': None,
             'notice': 'This is a scheduling result, not measured growth. Newly qualified sources can '
                       'also improve processed reaches; only before/after physical receipts establish that.'},
-        'source_review_queue': [{'id': r['id'], 'publisher': r['publisher'], 'title': r['title'],
-                                'status': r['status'], 'url': r['url'], 'hold_reason': r['hold_reason']}
-                               for r in manifest['surveys'] if r['status'] in ('candidate', 'hold')
-                               and r['kind'] == 'bathymetry'],
+        'source_review_queue': queue,
+        'deferred_source_reviews': deferred,
+        'source_review_warnings': review_warnings,
         'notice': 'Window overlap estimates schedule work only. Actual valid pixels establish coverage. '
                   'Source-review queue has no verified regional footprint; never auto-promote by title or envelope.'}
 
@@ -119,6 +125,9 @@ def report(document):
               'Next acquisition/processing action: '+document['execution']['next_action'],
               document['execution']['next_action_reason'],
               'Survey states: '+str(document['survey_status_counts']),
+              'Actionable source leads: '+str(len(document['source_review_queue'])),
+              'Unchanged, completed source reviews deferred: '+str(len(document.get('deferred_source_reviews', []))),
               'Completed privately, awaiting ledger merge: '+str(sum(r['pending_ledger_merge'] for r in document['reaches'])),
               'Qualify-source means research remains; it does not mean the seafloor is unmapped by its publisher.']
+    lines += document.get('source_review_warnings', [])
     return '\n'.join(lines)+'\n'

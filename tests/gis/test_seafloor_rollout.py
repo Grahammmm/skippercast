@@ -245,6 +245,24 @@ class RolloutTests(unittest.TestCase):
             self.assertTrue(state_cache.restore(s3, 'b', root, 'shared'))
             self.assertFalse(failure.exists())
 
+    def test_discovery_recovery_preserves_shared_inventory_and_checkpoint_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); s3 = Bucket()
+            shared = root/'var/seafloor/reference/cells.json'
+            checkpoint = root/'var/seafloor/source-review/checkpoint.json'
+            atomic_json(shared, {'cells': []})
+            atomic_json(checkpoint, {'version': 1, 'reviews': []})
+            state_cache.save(s3, 'b', root, 'shared', [shared])
+            original = s3.objects['seafloor-cache/state/shared.json']
+            state_cache.save(s3, 'b', root, 'source-review', [checkpoint])
+            digest = sha256(checkpoint)
+            checkpoint.unlink()
+            self.assertTrue(state_cache.restore(s3, 'b', root, 'source-review'))
+            self.assertEqual(sha256(checkpoint), digest)
+            self.assertEqual(s3.objects['seafloor-cache/state/shared.json'], original)
+            self.assertEqual(s3.metadata['seafloor-cache/state/source-review.json']['CacheControl'],
+                             'private, no-store')
+
 
 if __name__ == '__main__':
     unittest.main()

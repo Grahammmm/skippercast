@@ -84,6 +84,13 @@ handoffs ahead of processing. A rejected lead is revisited only for new evidence
 changed access or a materially different method. Missing data differ from
 measured smooth bottom with no suitable patch.
 
+When resuming source discovery, use `plan --region REGION_ID` and its
+`deferred_source_reviews` before reopening a historical lead. After a bounded
+completed test, save the evidence-bound discovery decision with `review-source`;
+read [source-review checkpoints](references/source-review-checkpoints.md) for
+scope, expiry and private recovery. This checkpoint is workflow memory, never
+source qualification, a publication hold override or measured progress.
+
 ## Qualify and process a bounded batch
 
 Read [source recipes](references/source-recipes.md) only for the relevant
