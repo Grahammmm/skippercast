@@ -1,0 +1,1 @@
+ALTER TABLE `advisor_media` ADD `orientation` integer;

@@ -674,11 +674,15 @@ export function chainFor(env: Env, deps: EngineDeps): VisionChain {
   return deps.vision ?? visionChain(env, {...(deps.fetcher ? {fetcher: deps.fetcher} : {}), ...(deps.clock ? {now: deps.clock} : {}), ...(deps.sleep ? {sleep: deps.sleep} : {})});
 }
 
-interface MediaRow {id: string; contact_id: string; boat_id: string | null; kind: string; mime: string; bytes: number; width: number | null; height: number | null; r2_key: string; publish_state: string}
+interface MediaRow {id: string; contact_id: string; boat_id: string | null; kind: string; mime: string; bytes: number; width: number | null; height: number | null; r2_key: string; publish_state: string; orientation?: number | null}
 
-/** The image a provider reads: the stored (metadata-stripped) original in ADVISOR_MEDIA. */
-export function imageOf(env: Env, row: Pick<MediaRow, 'id' | 'mime' | 'width' | 'height' | 'r2_key'>): ImageInput {
-  return {media_id: row.id, mime: row.mime, ...(row.width ? {width: row.width} : {}), ...(row.height ? {height: row.height} : {}),
+/**
+ * The image a provider reads: the stored (metadata-stripped) original in
+ * ADVISOR_MEDIA, with the JPEG's EXIF orientation when it was not upright.
+ */
+export function imageOf(env: Env, row: Pick<MediaRow, 'id' | 'mime' | 'width' | 'height' | 'r2_key' | 'orientation'>): ImageInput {
+  const orientation = row.orientation && row.orientation > 1 && row.orientation <= 8 ? row.orientation : null;
+  return {media_id: row.id, mime: row.mime, ...(row.width ? {width: row.width} : {}), ...(row.height ? {height: row.height} : {}), ...(orientation ? {orientation} : {}),
     bytes: async () => { const obj = await env.ADVISOR_MEDIA!.get(row.r2_key); if (!obj) throw Error('media object missing'); return obj.arrayBuffer(); }};
 }
 
@@ -710,7 +714,7 @@ async function photoActions(f: FlowContext, boat: ContactBoat, row: MediaRow, c:
  */
 async function mediaTurn(f: FlowContext, boat: ContactBoat): Promise<EngineResult | null> {
   const ids = f.media.slice(0, 10);
-  const rows = (await f.db.prepare(`SELECT id,contact_id,boat_id,kind,mime,bytes,width,height,r2_key,publish_state FROM advisor_media WHERE contact_id=? AND id IN (${ids.map(() => '?').join(',')})`)
+  const rows = (await f.db.prepare(`SELECT id,contact_id,boat_id,kind,mime,bytes,width,height,r2_key,publish_state,orientation FROM advisor_media WHERE contact_id=? AND id IN (${ids.map(() => '?').join(',')})`)
     .bind(f.contact.id, ...ids).all<MediaRow>()).results.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
   if (!rows.length) return null;
   const actions: Action[] = [];

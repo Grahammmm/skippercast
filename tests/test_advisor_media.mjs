@@ -19,7 +19,7 @@ globalThis.SHELLS = {'/': '/index.0123456789.html', '/upload.html': '/upload.012
 globalThis.BUILD_ID = 'build-test';
 const {default: worker} = await import('../server/index.ts');
 const media = await import('../server/advisor/media.ts');
-const {sniffMime, stripJpegMetadata, stripPngMetadata, ingestMedia, mintUploadToken, verifyUploadToken, MediaFetchError, Sha256, BUFFER_LIMIT, PART_BYTES, UPLOAD_TOKEN_TTL_MS} = media;
+const {sniffMime, stripJpegMetadata, stripPngMetadata, exifOrientation, ingestMedia, mintUploadToken, verifyUploadToken, MediaFetchError, Sha256, BUFFER_LIMIT, PART_BYTES, UPLOAD_TOKEN_TTL_MS} = media;
 const {deriveKeys, phoneHash} = await import('../server/advisor/contacts.ts');
 const {consumeAdvisor, ADVISOR_QUEUE_NAME, MEDIA_RETRIES} = await import('../server/advisor/consumer.ts');
 const {createBlueBubbles} = await import('../server/advisor/channels/bluebubbles.ts');
@@ -146,6 +146,76 @@ test('a truncated or malformed JPEG comes back unchanged with stripped false, ne
   assert.equal(stripJpegMetadata(png()).stripped, false, 'not a JPEG');
 });
 
+// ---- EXIF orientation (the one EXIF value kept, read before APP1 is dropped) ----------
+
+/**
+ * An APP1 EXIF segment: "Exif\0\0", a TIFF header in the given byte order and
+ * IFD0 with these [tag, type, count, value] entries (a SHORT value left-justified
+ * in its 4-byte field), followed by a GPS-looking string that must not survive.
+ */
+function exifApp1(order, entries) {
+  const le = order === 'II';
+  const u16 = v => le ? [v & 255, v >> 8] : [v >> 8, v & 255];
+  const u32 = v => le ? [v & 255, (v >> 8) & 255, (v >> 16) & 255, v >>> 24] : [v >>> 24, (v >> 16) & 255, (v >> 8) & 255, v & 255];
+  const ifd = [...u16(entries.length), ...entries.flatMap(([tag, type, count, value]) => [...u16(tag), ...u16(type), ...u32(count), ...(type === 3 ? [...u16(value), 0, 0] : u32(value))]), ...u32(0)];
+  return seg(0xe1, bytes('Exif\0\0', order, u16(42), u32(8), ifd, 'GPSLatitude=35.3658N'));
+}
+/** The test JPEG with its APP1 replaced by `app1` (any bytes, or several segments). */
+const jpegWith = (...app1) => bytes([0xff, 0xd8], seg(0xe0, bytes('JFIF\0', [1, 1, 0, 0, 1, 0, 1, 0, 0])), ...app1,
+  seg(0xdb, bytes([0], new Array(64).fill(1))), SOF0, seg(0xc4, bytes([0], new Array(16).fill(0), [])), seg(0xda, [1, 1, 0x00, 0, 63, 0]), SCAN, [0xff, 0xd9]);
+const MAKE = [0x010f, 2, 6, 0x40];         // an ASCII tag before Orientation, its value elsewhere (offset only)
+
+test('stripJpegMetadata reads EXIF Orientation 6 in both byte orders and still drops the APP1', () => {
+  for (const order of ['II', 'MM']) {
+    const input = jpegWith(exifApp1(order, [MAKE, [0x0112, 3, 1, 6]]));
+    const out = stripJpegMetadata(input);
+    assert.equal(out.stripped, true, order);
+    assert.equal(out.orientation, 6, `${order}: orientation 6`);
+    assert.deepEqual(walk(out.bytes), ['SOI', 'APP0', 'DQT', 'SOF0', 'DHT', 'SOS', 'EOI'], `${order}: APP1 removed`);
+    const text = Buffer.from(out.bytes).toString('latin1');
+    assert.ok(!text.includes('Exif') && !text.includes('GPSLatitude') && !text.includes(order + '\0*') && !text.includes(order + '*\0'), `${order}: no EXIF bytes kept`);
+  }
+  for (const value of [1, 2, 3, 4, 5, 7, 8]) assert.equal(stripJpegMetadata(jpegWith(exifApp1('MM', [[0x0112, 3, 1, value]]))).orientation, value, `value ${value}`);
+  // Only the first EXIF APP1 counts; an XMP APP1 is dropped without being read.
+  const xmp = seg(0xe1, bytes('http://ns.adobe.com/xap/1.0/\0', '<x:xmpmeta tiff:Orientation="8"/>'));
+  assert.equal(stripJpegMetadata(jpegWith(xmp, exifApp1('II', [[0x0112, 3, 1, 6]]), exifApp1('II', [[0x0112, 3, 1, 3]]))).orientation, 6);
+  assert.equal(stripJpegMetadata(jpegWith(xmp)).orientation, 1, 'XMP alone: upright');
+  assert.equal(stripJpegMetadata(jpegWith()).orientation, 1, 'no APP1: upright');
+  assert.equal(stripPngMetadata(png()).orientation, 1, 'PNG: always 1');
+});
+
+test('malformed EXIF gives orientation 1, the file is still stripped, and nothing throws', () => {
+  const app1 = payload => seg(0xe1, bytes('Exif\0\0', payload));
+  const cases = {
+    'the old fixture (no TIFF structure)': seg(0xe1, bytes('Exif\0\0', 'MM\0*GPSLatitude=35.3658N')),
+    'empty after the header': app1([]),
+    'bad byte order': app1(bytes('XX', [0, 42, 0, 0, 0, 8], [0, 0])),
+    'not 42': app1(bytes('MM', [0, 43, 0, 0, 0, 8], [0, 0])),
+    'IFD offset past the segment': app1(bytes('MM', [0, 42, 0x7f, 0xff, 0xff, 0xff])),
+    'IFD offset inside the header': app1(bytes('MM', [0, 42, 0, 0, 0, 2], [0, 1])),
+    'entry count past the segment': app1(bytes('II', [42, 0, 8, 0, 0, 0], [0xff, 0xff], [0x12, 0x01, 3, 0, 1, 0, 0, 0, 6, 0])),
+    'orientation 9': exifApp1('MM', [[0x0112, 3, 1, 9]]),
+    'orientation 0': exifApp1('II', [[0x0112, 3, 1, 0]]),
+    'orientation as a LONG': exifApp1('MM', [[0x0112, 4, 1, 6]]),
+    'orientation with count 0': exifApp1('II', [[0x0112, 3, 0, 6]]),
+    'truncated entry': app1(bytes('MM', [0, 42, 0, 0, 0, 8], [0, 1], [0x01, 0x12, 0, 3, 0, 0])),
+  };
+  for (const [name, segment] of Object.entries(cases)) {
+    const out = stripJpegMetadata(jpegWith(segment));
+    assert.equal(out.stripped, true, name); assert.equal(out.orientation, 1, name);
+    assert.deepEqual(walk(out.bytes), ['SOI', 'APP0', 'DQT', 'SOF0', 'DHT', 'SOS', 'EOI'], name);
+  }
+  assert.equal(stripJpegMetadata(jpeg()).orientation, 1, 'the full fixture');
+  // exifOrientation itself never reads outside [at, end).
+  const seg6 = exifApp1('II', [[0x0112, 3, 1, 6]]), payload = 4;
+  assert.equal(exifOrientation(seg6, payload, seg6.length), 6);
+  for (let end = payload; end < seg6.length - 'GPSLatitude=35.3658N'.length - 4; end++) assert.equal(exifOrientation(seg6, payload, end), 1, `cut at ${end}`);
+  assert.equal(exifOrientation(seg6, payload, seg6.length + 10), 1, 'end past the buffer');
+  // A truncated file with an EXIF APP1 is still unchanged, never a throw.
+  const full = jpegWith(exifApp1('MM', [[0x0112, 3, 1, 6]]));
+  for (const cut of [8, 20, 30, 50]) assert.equal(stripJpegMetadata(full.subarray(0, cut)).stripped, false, `cut at ${cut}`);
+});
+
 test('stripPngMetadata drops eXIf, tEXt, iTXt, zTXt and tIME and leaves every other chunk and CRC untouched', () => {
   const input = png(), out = stripPngMetadata(input);
   assert.equal(out.stripped, true); assert.deepEqual({width: out.width, height: out.height}, {width: 320, height: 200});
@@ -194,6 +264,23 @@ dbTest('ingestMedia strips a JPEG, stores it under advisor/media/<contact>/<medi
   const object = bucket.objects.get('advisor/media/c1/m1.jpg');
   assert.deepEqual(object.bytes, stripped, 'the stored bytes are the stripped ones'); assert.equal(object.httpMetadata.contentType, 'image/jpeg');
   assert.ok(!Buffer.from(object.bytes).includes(Buffer.from('GPSLatitude')), 'no GPS in the bucket');
+  assert.equal(row.orientation, 1, 'a JPEG without the tag is upright'); assert.deepEqual(object.customMetadata, {orientation: '1'});
+});
+
+dbTest('ingestMedia keeps a sideways JPEG\'s orientation on the row and the R2 object, not in the bytes; other formats get null', async () => {
+  const {sql, db} = setup({refs: ['a', 'b', 'c']}), bucket = memoryBucket(), env = {DB: db, ADVISOR_MEDIA: bucket};
+  const sideways = jpegWith(exifApp1('MM', [MAKE, [0x0112, 3, 1, 6]]));
+  const {value: result} = await quiet(() => ingestMedia(env, input('m1', sideways), T0));
+  assert.equal(result.orientation, 6);
+  assert.equal(mediaRow(sql, 'm1').orientation, 6);
+  const object = bucket.objects.get('advisor/media/c1/m1.jpg');
+  assert.deepEqual(object.customMetadata, {orientation: '6'});
+  assert.deepEqual(walk(object.bytes), ['SOI', 'APP0', 'DQT', 'SOF0', 'DHT', 'SOS', 'EOI'], 'no APP1 stored');
+  // The same picture tagged upright strips to the same bytes: linked, with its own orientation.
+  const {value: twin} = await quiet(() => ingestMedia(env, input('m2', jpegWith(exifApp1('II', [[0x0112, 3, 1, 1]]))), T0));
+  assert.equal(twin.status, 'linked'); assert.equal(mediaRow(sql, 'm2').orientation, 1);
+  await quiet(() => ingestMedia(env, input('m3', png(), {claimedMime: 'image/png'}), T0));
+  assert.equal(mediaRow(sql, 'm3').orientation, null); assert.deepEqual(bucket.objects.get('advisor/media/c1/m3.png').customMetadata, {});
 });
 
 dbTest('the same bytes twice from one contact link to the first object; another contact gets its own copy', async () => {

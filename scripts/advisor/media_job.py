@@ -14,7 +14,9 @@ Worker dispatches whenever media or a graphic becomes pending
 2. For each media item: download the original from the private R2 bucket
    skippercast-advisor-media over the S3 API (SigV4 in the standard library;
    credentials derived from R2_ADVISOR_TOKEN the way scripts/publish_r2.py
-   derives them), decode it (HEIC through pillow-heif), convert to sRGB and write
+   derives them), decode it (HEIC through pillow-heif), turn it upright (a JPEG
+   by the EXIF orientation the Worker read before stripping it, passed in the
+   work list; anything else by its own EXIF), convert to sRGB and write
    advisor/derived/<id>/public.jpg (at most 1440 px on the long side, quality
    88, no EXIF), thumb.jpg (320 px) and story.jpg (1080 x 1920, the photo on the
    dark field above a "Text SkipperCast" band with ADVISOR_NUMBER).
@@ -209,8 +211,30 @@ def font(spec, size):
     return ImageFont.load_default(size=size)
 
 
-def decode(data, mime):
-    """An RGB image in sRGB, upright, from the original's bytes; Unreadable when Pillow cannot decode it."""
+def orientation_transpose(orientation):
+    """The Pillow transpose that makes an image stored with this EXIF orientation upright; None for 1 or anything unknown.
+
+    The same table as ImageOps.exif_transpose, which cannot be used on a stored
+    JPEG: the Worker stripped its EXIF and passes the value separately.
+    """
+    T = _pil()[0].Transpose
+    return {2: T.FLIP_LEFT_RIGHT, 3: T.ROTATE_180, 4: T.FLIP_TOP_BOTTOM, 5: T.TRANSPOSE,
+            6: T.ROTATE_270, 7: T.TRANSVERSE, 8: T.ROTATE_90}.get(orientation)
+
+
+def upright(image, orientation):
+    """The image turned upright by a stored EXIF orientation (1-8); unchanged for 1, None or anything else."""
+    method = orientation_transpose(orientation) if isinstance(orientation, int) and not isinstance(orientation, bool) else None
+    return image.transpose(method) if method is not None else image
+
+
+def decode(data, mime, orientation=None):
+    """An RGB image in sRGB, upright, from the original's bytes; Unreadable when Pillow cannot decode it.
+
+    `orientation` is the EXIF value the Worker read before stripping a JPEG
+    (the work list's `orientation`); when it is None the file's own EXIF, if
+    any (HEIC and other originals stored as received), is applied instead.
+    """
     Image, ImageCms, _, _, ImageOps = _pil()
     if mime in HEIF:
         try:
@@ -223,8 +247,8 @@ def decode(data, mime):
         image.load()
     except (Image.DecompressionBombError, OSError, ValueError, SyntaxError) as error:
         raise Unreadable(f'decode-failed: {type(error).__name__}') from None
-    image = ImageOps.exif_transpose(image)
     icc = image.info.get('icc_profile')
+    image = ImageOps.exif_transpose(image) if orientation is None else upright(image, orientation)
     if image.mode in ('RGBA', 'LA', 'P', 'PA'):
         image = image.convert('RGBA')
         flat = Image.new('RGB', image.size, (255, 255, 255))
@@ -408,8 +432,11 @@ def _dims(meta):
 def derive_media(item, r2, spec, number, log=print):
     """Write public, thumb and story for one media item; returns the media-done payload."""
     keys, sha = item['keys'], item['sha256']
+    orientation = item.get('orientation')
+    turned = str(orientation) if type(orientation) is int and 1 <= orientation <= 8 else '1'
     metas = {name: r2.head(key) for name, key in keys.items()}
-    if all(m is not None and m.get(META) == sha for m in metas.values()) and _dims(metas['public']):
+    # Files made before orientation was recorded carry no value: they count as '1'.
+    if all(m is not None and m.get(META) == sha and m.get('orientation', '1') == turned for m in metas.values()) and _dims(metas['public']):
         width, height = _dims(metas['public'])
         source = _dims({'width': metas['public'].get('source-width'), 'height': metas['public'].get('source-height')})
         log(f'media {item["id"]}: unchanged, skipped')
@@ -418,16 +445,16 @@ def derive_media(item, r2, spec, number, log=print):
     original = r2.get(item['r2_key'])
     if original is None:
         raise Unreadable('original-missing')
-    photo = decode(original, item['mime'])
+    photo = decode(original, item['mime'], orientation)
     public = fit(photo, spec['public']['max_side'])
     thumb = fit(photo, spec['thumb']['max_side'])
     story = story_image(spec, public, number)
-    common = {META: sha, 'source-width': photo.width, 'source-height': photo.height}
+    common = {META: sha, 'orientation': turned, 'source-width': photo.width, 'source-height': photo.height}
     # public.jpg last: its metadata is what a rerun checks first for the sizes.
     r2.put(keys['thumb'], jpeg(thumb, spec['thumb']['quality']), {**common, 'width': thumb.width, 'height': thumb.height})
     r2.put(keys['story'], jpeg(story, spec['story']['quality']), {**common, 'width': story.width, 'height': story.height})
     r2.put(keys['public'], jpeg(public, spec['public']['quality']), {**common, 'width': public.width, 'height': public.height})
-    log(f'media {item["id"]}: {photo.width}x{photo.height} -> {public.width}x{public.height}')
+    log(f'media {item["id"]}: {photo.width}x{photo.height} (orientation {turned}) -> {public.width}x{public.height}')
     return {'media_id': item['id'], 'keys': keys, 'width': public.width, 'height': public.height,
             'source_width': photo.width, 'source_height': photo.height}
 
@@ -446,7 +473,7 @@ def _photo(r2, spec, source):
     data = r2.get(source['r2_key'])
     if data is None:
         raise Unreadable('original-missing')
-    return fit(decode(data, source['mime']), spec['public']['max_side'])
+    return fit(decode(data, source['mime'], source.get('orientation')), spec['public']['max_side'])
 
 
 def render_graphic(item, r2, spec, number, log=print):

@@ -99,7 +99,7 @@ interface MediaRow extends MediaInput {kind: string; bytes: number; publish_stat
 /** The contact's own stored media rows for these ids, in message order. */
 async function ownMedia(db: D1Database, contactId: string, ids: readonly string[]): Promise<MediaRow[]> {
   if (!ids.length) return [];
-  const rows = (await db.prepare(`SELECT id,kind,mime,bytes,width,height,r2_key,publish_state FROM advisor_media WHERE contact_id=? AND id IN (${ids.map(() => '?').join(',')})`)
+  const rows = (await db.prepare(`SELECT id,kind,mime,bytes,width,height,r2_key,publish_state,orientation FROM advisor_media WHERE contact_id=? AND id IN (${ids.map(() => '?').join(',')})`)
     .bind(contactId, ...ids).all<MediaRow>()).results;
   return rows.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
 }

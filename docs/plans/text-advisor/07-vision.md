@@ -257,3 +257,27 @@ keys or `catalog/advisor/species-extra.json` keys (02).
   at most 1440 px on the long side, quality 88, converted to sRGB through the
   embedded ICC profile and written without EXIF or a profile; `thumb.jpg`
   320 px; `story.jpg` 1080 x 1920.
+
+## As built (orientation)
+
+- **The one EXIF value kept.** `stripJpegMetadata` still drops every APP1
+  segment, but first reads the Orientation tag (0x0112) from IFD0 of the first
+  `Exif\0\0` APP1 (`exifOrientation`: TIFF header in either byte order, a
+  SHORT 1-8; anything missing or malformed is 1, never a throw). iPhone JPEGs
+  store the pixels unrotated and rely on that tag. The value is returned with
+  the stripped bytes and stored on the row (`advisor_media.orientation`,
+  migration `0010_advisor_media_orientation`; null for anything but a JPEG)
+  and in the R2 object's custom metadata (`orientation`). No other EXIF field
+  is read or kept, and the stored bytes carry no EXIF at all.
+- **Vision.** `imageOf` passes an orientation of 2-8 on the `ImageInput`, and
+  the Claude provider adds one sentence to the prompt: "The image may be
+  rotated; orientation tag N (...)" with what the value means
+  (`orientedPrompt`). This was chosen over sending `public.jpg`: vision runs
+  at intake and is cached per media id, and the job's upright `public.jpg`
+  for a small JPEG almost never exists by then, so waiting for it would delay
+  every iPhone photo reply by a job run. When the chain does stand in
+  `public.jpg` (over 4.5 MB, HEIC), that image is upright and carries no
+  orientation, so no sentence is added.
+- **Derived files.** A JPEG with orientation 2-8 is pending for the media job
+  even when private (09 § Derived images "As built (orientation)"), so it
+  always gets an upright `public.jpg`; the consumer does not wait for it.

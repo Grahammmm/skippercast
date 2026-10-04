@@ -153,6 +153,27 @@ dbTest('the Claude provider sends one forced-tool request per method with the im
   assert.equal(f.candidates[0].species_key, 'vermilion');
 });
 
+dbTest('a sideways image (EXIF orientation stripped at intake) gets one sentence in the prompt; an upright one does not', async () => {
+  const {env} = setup();
+  const api = fakeApi(ANSWERS), provider = createClaudeVision({fetcher: api.fetcher});
+  const bytes = png('count-board.png'), base = prompts.countBoardPrompt();
+  await quiet(() => provider.readCountBoard({...imageOf(bytes), orientation: 6}, env));
+  await quiet(() => provider.readCountBoard({...imageOf(bytes), orientation: 1}, env));
+  await quiet(() => provider.readCountBoard(imageOf(bytes), env));
+  const texts = api.calls.map(c => c.body.messages[0].content[1].text);
+  assert.equal(texts[0], `${base}\n\nThe image may be rotated; orientation tag 6 (turned 90 degrees: rotate it clockwise to view it upright).`);
+  assert.equal(texts[1], base); assert.equal(texts[2], base);
+  for (const n of [2, 3, 4, 5, 7, 8]) assert.match(claude.orientedPrompt('P', n), new RegExp(`^P\\n\\nThe image may be rotated; orientation tag ${n} \\(`));
+  for (const n of [undefined, 0, 1, 9]) assert.equal(claude.orientedPrompt('P', n), 'P');
+});
+
+dbTest('imageOf passes a stored orientation of 2-8 to the provider, and nothing for an upright or unknown one', async () => {
+  const {imageOf: stored} = await import('../server/advisor/intake/reports.ts');
+  const row = {id: 'm1', mime: 'image/jpeg', width: 4032, height: 3024, r2_key: 'k'};
+  assert.equal(stored({}, {...row, orientation: 6}).orientation, 6);
+  for (const orientation of [null, 1, 0, 9, undefined]) assert.equal('orientation' in stored({}, {...row, orientation}), false, String(orientation));
+});
+
 dbTest('usage goes to an llm analytics point with feature advisor:vision:<method>', async () => {
   const {env} = setup({ADVISOR_VISION_MODEL: 'claude-test-1'});
   const provider = createClaudeVision({fetcher: fakeApi(ANSWERS).fetcher});

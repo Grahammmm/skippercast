@@ -160,6 +160,23 @@ export function base64(buffer: ArrayBuffer): string {
   return btoa(s);
 }
 
+const ORIENTATION_MEANING: Record<number, string> = {
+  2: 'mirrored left to right', 3: 'upside down', 4: 'mirrored top to bottom', 5: 'mirrored and turned 90 degrees',
+  6: 'turned 90 degrees: rotate it clockwise to view it upright', 7: 'mirrored and turned 90 degrees', 8: 'turned 90 degrees: rotate it counter-clockwise to view it upright',
+};
+
+/**
+ * The prompt for one image: as given when its pixels are upright, else with one
+ * sentence naming the EXIF orientation (2-8) that intake stripped, so a sideways
+ * count board or fish is read the right way up. (The media job's upright
+ * public.jpg usually does not exist yet when vision runs at intake, so the hint
+ * is the reliable fix; the chain's public.jpg stand-in carries no orientation.)
+ */
+export function orientedPrompt(prompt: string, orientation: number | undefined): string {
+  if (!orientation || orientation === 1 || !ORIENTATION_MEANING[orientation]) return prompt;
+  return `${prompt}\n\nThe image may be rotated; orientation tag ${orientation} (${ORIENTATION_MEANING[orientation]}).`;
+}
+
 export function buildRequest(model: string, tool: {name: string}, prompt: string, mime: string, data: string) {
   return {model, max_tokens: MAX_TOKENS, temperature: 0, tools: [tool], tool_choice: {type: 'tool', name: tool.name},
     messages: [{role: 'user', content: [{type: 'image', source: {type: 'base64', media_type: mime, data}}, {type: 'text', text: prompt}]}]};
@@ -199,7 +216,7 @@ export function createClaudeVision(deps: ClaudeVisionDeps = {}): VisionProvider 
     const buffer = await image.bytes();
     if (buffer.byteLength > CLAUDE_IMAGE_LIMIT) throw new MediaTooLarge(buffer.byteLength, 'over the Claude per-image limit');
     await takeVisionCall(env, settings.globalDailyVision, now());
-    const body = JSON.stringify(buildRequest(settings.visionModel, tool, prompt, image.mime, base64(buffer)));
+    const body = JSON.stringify(buildRequest(settings.visionModel, tool, orientedPrompt(prompt, image.orientation), image.mime, base64(buffer)));
     const usage: LlmUsage = {model: settings.visionModel, turns: 0, input_tokens: 0, output_tokens: 0, web_search_requests: 0};
     const started = now();
     let outcome = 'error';

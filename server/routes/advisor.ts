@@ -208,18 +208,21 @@ const EXT_MIME: Record<string, string> = {jpg: 'image/jpeg', png: 'image/png'};
  * A public image: advisor/derived/<id>/public.jpg once the media job has made
  * it, else the metadata-stripped original, only for publish_state approved or
  * posted. Originals that were not stripped (HEIC, GIF, WebP, video, audio) are
- * never served. Anything else is the same 404 as a missing id.
+ * never served, nor a stripped JPEG whose EXIF orientation was 2-8 (its pixels
+ * are sideways without the tag; the media job's upright public.jpg is served
+ * once it exists). Anything else is the same 404 as a missing id.
  */
 advisorPublic.get('/media/:file', async c => {
   const env = c.env, match = MEDIA_FILE.exec(c.req.param('file'));
   if (!match || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
   const [, id, ext] = match as unknown as [string, string, string];
-  const row = await env.DB.prepare('SELECT mime,r2_key,exif_stripped,publish_state FROM advisor_media WHERE id=?').bind(id)
-    .first<{mime: string; r2_key: string; exif_stripped: number; publish_state: string}>();
+  const row = await env.DB.prepare('SELECT mime,r2_key,exif_stripped,publish_state,orientation FROM advisor_media WHERE id=?').bind(id)
+    .first<{mime: string; r2_key: string; exif_stripped: number; publish_state: string; orientation: number | null}>();
   if (!row || !PUBLIC_STATES.has(row.publish_state)) return NOT_FOUND();
   let object: R2ObjectBody | null = null, type = row.mime;
   if (ext === 'jpg') { object = await env.ADVISOR_MEDIA.get(derivedKey(id)); if (object) type = 'image/jpeg'; }
-  if (!object && row.r2_key && row.exif_stripped === 1 && row.mime === EXT_MIME[ext]) object = await env.ADVISOR_MEDIA.get(row.r2_key);
+  const upright = (row.orientation ?? 1) === 1;
+  if (!object && upright && row.r2_key && row.exif_stripped === 1 && row.mime === EXT_MIME[ext]) object = await env.ADVISOR_MEDIA.get(row.r2_key);
   if (!object) return NOT_FOUND();
   return new Response(object.body, {status: 200, headers: {'Content-Type': type, 'Content-Length': String(object.size), 'Cache-Control': 'public, max-age=3600',
     'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});

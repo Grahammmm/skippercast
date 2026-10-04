@@ -37,9 +37,9 @@ const quiet = async fn => { const saved = {log: console.log, warn: console.warn,
 function setup(rows = []) {
   const {sql, db} = advisorDatabase(), at = new Date(T0).toISOString();
   sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,status,last_seen_at,created_at,updated_at) VALUES('c1','h1','ENC','imessage','active',?,?,?)`).run(at, at, at);
-  rows.forEach((r, i) => sql.prepare(`INSERT INTO advisor_media(id,contact_id,message_id,kind,mime,bytes,width,height,r2_key,sha256,publish_state,derived_at,created_at)
-    VALUES(?,'c1',?,?,?,?,?,?,?,?,?,?,?)`).run(r.id, r.message_id ?? null, r.kind ?? 'image', r.mime ?? 'image/jpeg', r.bytes ?? 1000, r.width ?? null, r.height ?? null,
-    r.r2_key ?? `advisor/media/c1/${r.id}.jpg`, r.sha ?? `sha-${r.id}`, r.state ?? 'private', r.derived_at ?? null, new Date(T0 + i * 1000).toISOString()));
+  rows.forEach((r, i) => sql.prepare(`INSERT INTO advisor_media(id,contact_id,message_id,kind,mime,bytes,width,height,r2_key,sha256,publish_state,derived_at,orientation,created_at)
+    VALUES(?,'c1',?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.id, r.message_id ?? null, r.kind ?? 'image', r.mime ?? 'image/jpeg', r.bytes ?? 1000, r.width ?? null, r.height ?? null,
+    r.r2_key ?? `advisor/media/c1/${r.id}.jpg`, r.sha ?? `sha-${r.id}`, r.state ?? 'private', r.derived_at ?? null, r.orientation ?? null, new Date(T0 + i * 1000).toISOString()));
   return {sql, db};
 }
 const row = (sql, id) => ({...sql.prepare('SELECT * FROM advisor_media WHERE id=?').get(id)});
@@ -94,15 +94,34 @@ dbTest('GET /api/advisor/jobs/media lists images vision cannot read as stored, H
   assert.equal(await mediaJobPending(db), 7, 'five images and two graphics');
   const work = await withVerifier(accept, async () => (await call('/api/advisor/jobs/media', {...ON, DB: db}, {headers: auth()})).json());
   assert.deepEqual(work.media.map(m => m.id), ['big', 'heic', 'queued', 'approved', 'posted']);
-  assert.deepEqual(work.media[1], {id: 'heic', r2_key: 'advisor/media/c1/heic.heic', mime: 'image/heic', sha256: 'sha-heic', bytes: 1000,
+  assert.deepEqual(work.media[1], {id: 'heic', r2_key: 'advisor/media/c1/heic.heic', mime: 'image/heic', sha256: 'sha-heic', bytes: 1000, orientation: null,
     keys: {public: 'advisor/derived/heic/public.jpg', thumb: 'advisor/derived/heic/thumb.jpg', story: 'advisor/derived/heic/story.jpg'}});
   assert.deepEqual(work.graphics, [
     {id: 'g1', kind: 'daily', out_key: 'advisor/posts/p1/daily.jpg', data: {port: 'Morro Bay', lines: [{label: 'Rockfish', value: 'limits'}]}, media: []},
     {id: 'g2', kind: 'story', out_key: 'advisor/posts/p2/story.jpg', data: {title: 'Today'},
-      media: [{id: 'approved', r2_key: 'advisor/media/c1/approved.jpg', mime: 'image/jpeg', public_key: 'advisor/derived/approved/public.jpg'}]},
+      media: [{id: 'approved', r2_key: 'advisor/media/c1/approved.jpg', mime: 'image/jpeg', orientation: null, public_key: 'advisor/derived/approved/public.jpg'}]},
   ]);
   assert.deepEqual((await mediaJobWork(db, {media: 2, graphics: 1})).media.map(m => m.id), ['big', 'heic'], 'paged, oldest first');
   assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM job_state WHERE key LIKE 'advisor.graphic.%'").get().n, 2);
+});
+
+dbTest('a private JPEG stored sideways (orientation 2-8) is pending with its orientation; an upright one is not', async () => {
+  const {db} = setup([{id: 'upright', orientation: 1}, {id: 'none'}, {id: 'turned', orientation: 6}, {id: 'mirrored', orientation: 2},
+    {id: 'turned-done', orientation: 8, derived_at: new Date(T0).toISOString()}, {id: 'turned-rejected', orientation: 6, state: 'rejected'}]);
+  const work = await mediaJobWork(db);
+  assert.deepEqual(work.media.map(m => [m.id, m.orientation]), [['turned', 6], ['mirrored', 2]]);
+  assert.equal(await mediaJobPending(db), 2);
+});
+
+dbTest('/media never serves a sideways original; it serves the upright public.jpg once the job made it', async () => {
+  const {sql, db} = setup([{id: 'side', orientation: 6, state: 'approved'}, {id: 'flat', orientation: 1, state: 'approved'}]);
+  sql.prepare("UPDATE advisor_media SET exif_stripped=1").run();
+  const bucket = memoryBucket({'advisor/media/c1/side.jpg': 'SIDEWAYS', 'advisor/media/c1/flat.jpg': 'UPRIGHT-ORIGINAL'});
+  const env = {...ON, DB: db, ADVISOR_MEDIA: bucket};
+  assert.equal((await call('/media/side.jpg', env)).status, 404, 'no derived file yet: not the sideways original');
+  assert.equal(await (await call('/media/flat.jpg', env)).text(), 'UPRIGHT-ORIGINAL');
+  await bucket.put(derivedKeys('side').public, 'UPRIGHT-DERIVED');
+  assert.equal(await (await call('/media/side.jpg', env)).text(), 'UPRIGHT-DERIVED');
 });
 
 dbTest('requestGraphic validates the request shape and a rerun with the same id renders again', async () => {
@@ -230,6 +249,21 @@ dbTest('ingesting an image over 4.5 MB or a HEIC starts the job; a small JPEG do
   assert.deepEqual((await mediaJobWork(db)).media.map(m => m.id), ['h1']);
 });
 
+dbTest('ingesting a small JPEG stored sideways (EXIF orientation 6) starts the job for its upright public.jpg', async () => {
+  const {db} = setup([]), bucket = memoryBucket(), env = {DB: db, ADVISOR_MEDIA: bucket, GITHUB_TOKEN: 't'};
+  const real = globalThis.fetch, dispatched = [];
+  globalThis.fetch = async url => { dispatched.push(String(url)); return new Response(null, {status: 204}); };
+  // SOI, APP1 "Exif\0\0" + big-endian TIFF with IFD0 {Orientation SHORT 6}, SOF0 10x10, EOI.
+  const exif = [0x45, 0x78, 0x69, 0x66, 0, 0, 0x4d, 0x4d, 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0, 0, 0, 0, 0];
+  const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, 0, exif.length + 2, ...exif, 0xff, 0xc0, 0, 11, 8, 0, 10, 0, 10, 1, 1, 0x11, 0, 0xff, 0xd9]);
+  try {
+    const {value} = await quiet(() => ingestMedia(env, {mediaId: 's1', contactId: 'c1', messageId: null, boatId: null, providerRef: null, fetchBytes: async () => new Response(jpeg), claimedMime: 'image/jpeg', name: null}, T0));
+    assert.equal(value.orientation, 6);
+    assert.equal(dispatched.length, 1);
+  } finally { globalThis.fetch = real; }
+  assert.deepEqual((await mediaJobWork(db)).media.map(m => [m.id, m.orientation]), [['s1', 6]]);
+});
+
 dbTest('the cron re-dispatches while anything is pending, at most once per 15 minutes, and idles otherwise', async () => {
   assert.ok(CRON_DISPATCH_EVERY_MS > 14 * 60000 && CRON_DISPATCH_EVERY_MS < 15 * 60000, 'a tick 15 minutes later is never skipped');
   const {sql, db} = setup([{id: 'small'}]), env = {...ON, DB: db, GITHUB_TOKEN: 't'};
@@ -291,6 +325,7 @@ dbTest('no wait once public.jpg exists (or the job gave up), without GITHUB_TOKE
   };
   assert.equal((await run([{id: 'big', bytes: BIG, derived_at: new Date(T0).toISOString()}])).outcome, 'ack', 'derived');
   assert.equal((await run([{id: 'small'}])).outcome, 'ack', 'small JPEG');
+  assert.equal((await run([{id: 'side', orientation: 6}])).outcome, 'ack', 'a sideways JPEG does not wait: vision gets the orientation in its prompt');
   assert.equal((await run([{id: 'big', bytes: BIG}], {GITHUB_TOKEN: undefined})).outcome, 'ack', 'no way to start the job');
   assert.equal((await run([{id: 'v', kind: 'video', mime: 'video/mp4', bytes: BIG}])).outcome, 'ack', 'videos are never derived');
   assert.equal((await run([{id: 'h', mime: 'image/heic'}])).outcome, 'retry', 'a HEIC waits too');

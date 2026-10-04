@@ -14,14 +14,14 @@ const bytesOf = async value => {
 
 function objectBody(key, entry) {
   return {
-    key, size: entry.bytes.length, httpMetadata: {...entry.httpMetadata},
+    key, size: entry.bytes.length, httpMetadata: {...entry.httpMetadata}, customMetadata: {...entry.customMetadata},
     get body() { return new Response(entry.bytes.slice()).body; },
     arrayBuffer: async () => entry.bytes.slice().buffer,
     text: async () => new TextDecoder().decode(entry.bytes),
   };
 }
 
-/** {objects: Map<key, {bytes, httpMetadata}>, calls: {put, get, delete, multipart}} plus the R2 methods. */
+/** {objects: Map<key, {bytes, httpMetadata, customMetadata}>, calls: {put, get, delete, multipart}} plus the R2 methods. */
 export function memoryBucket(initial = {}) {
   const objects = new Map(Object.entries(initial).map(([k, v]) => [k, {bytes: typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v), httpMetadata: {}}]));
   const calls = {put: [], get: [], delete: [], multipart: []};
@@ -30,11 +30,11 @@ export function memoryBucket(initial = {}) {
     async put(key, value, options = {}) {
       const bytes = await bytesOf(value);
       calls.put.push(key);
-      objects.set(key, {bytes, httpMetadata: {...options.httpMetadata}});
+      objects.set(key, {bytes, httpMetadata: {...options.httpMetadata}, customMetadata: {...options.customMetadata}});
       return {key, size: bytes.length};
     },
     async get(key) { calls.get.push(key); const e = objects.get(key); return e ? objectBody(key, e) : null; },
-    async head(key) { const e = objects.get(key); return e ? {key, size: e.bytes.length, httpMetadata: {...e.httpMetadata}} : null; },
+    async head(key) { const e = objects.get(key); return e ? {key, size: e.bytes.length, httpMetadata: {...e.httpMetadata}, customMetadata: {...e.customMetadata}} : null; },
     async delete(keys) { for (const key of [].concat(keys)) { calls.delete.push(key); objects.delete(key); } },
     async list({prefix = ''} = {}) { return {objects: [...objects.keys()].filter(k => k.startsWith(prefix)).sort().map(key => ({key})), truncated: false}; },
     async createMultipartUpload(key, options = {}) {
