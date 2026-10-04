@@ -1,0 +1,9 @@
+{
+  "data": [
+    {"name": "views", "period": "lifetime", "values": [{"value": 412}], "id": "17890000000000401/insights/views/lifetime"},
+    {"name": "reach", "period": "lifetime", "values": [{"value": 377}], "id": "17890000000000401/insights/reach/lifetime"},
+    {"name": "replies", "period": "lifetime", "values": [{"value": 4}], "id": "17890000000000401/insights/replies/lifetime"},
+    {"name": "follows", "period": "lifetime", "values": [{"value": 1}], "id": "17890000000000401/insights/follows/lifetime"},
+    {"name": "profile_visits", "period": "lifetime", "values": [{"value": 9}], "id": "17890000000000401/insights/profile_visits/lifetime"}
+  ]
+}

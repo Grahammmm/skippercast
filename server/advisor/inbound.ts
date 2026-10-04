@@ -60,8 +60,9 @@ export async function storeInbound(env: Env, message: InboundMessage, now: Date 
   const source = marker.source ?? (web ? 'web' : message.channel === 'instagram_dm' ? 'igdm' : message.channel === 'instagram_comment' ? 'igcomment' : null);
   const statements = [
     // TA-C6: first-touch attribution, before the message row so "first inbound" excludes this one.
-    ...(source && !contact.source ? [db.prepare(`UPDATE advisor_contacts SET source=? WHERE id=? AND source IS NULL
-      AND NOT EXISTS (SELECT 1 FROM advisor_messages WHERE contact_id=? AND direction='in')`).bind(source, contact.id, contact.id)] : []),
+    // TA-S7: with the post a per-post link named (`[via ig:<post_id>]`), kept in source_post_id for the post's "chats started".
+    ...(source && !contact.source ? [db.prepare(`UPDATE advisor_contacts SET source=?,source_post_id=? WHERE id=? AND source IS NULL
+      AND NOT EXISTS (SELECT 1 FROM advisor_messages WHERE contact_id=? AND direction='in')`).bind(source, marker.postId ?? null, contact.id, contact.id)] : []),
     db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,provider_id,body,media_json,status,created_at) VALUES(?,?,'in',?,?,?,?,'queued',?) ON CONFLICT DO NOTHING`)
       .bind(id, contact.id, message.channel, message.providerId, marker.text.slice(0, MAX_BODY) || null, mediaIds.length ? JSON.stringify(mediaIds) : null, at),
     // Only if this call's message row exists, i.e. it was not a concurrent duplicate.

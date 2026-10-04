@@ -1,0 +1,13 @@
+{
+  "data": [
+    {"name": "views", "period": "lifetime", "values": [{"value": 1840}], "title": "Views", "description": "The number of times your content was played or displayed.", "id": "17890000000000202/insights/views/lifetime"},
+    {"name": "reach", "period": "lifetime", "values": [{"value": 1203}], "title": "Accounts reached", "description": "The number of unique accounts that have seen your content.", "id": "17890000000000202/insights/reach/lifetime"},
+    {"name": "likes", "period": "lifetime", "values": [{"value": 96}], "title": "Likes", "description": "The number of likes on your post.", "id": "17890000000000202/insights/likes/lifetime"},
+    {"name": "comments", "period": "lifetime", "values": [{"value": 7}], "title": "Comments", "description": "The number of comments on your post.", "id": "17890000000000202/insights/comments/lifetime"},
+    {"name": "saved", "period": "lifetime", "values": [{"value": 12}], "title": "Saved", "description": "The number of saves of your post.", "id": "17890000000000202/insights/saved/lifetime"},
+    {"name": "shares", "period": "lifetime", "values": [{"value": 5}], "title": "Shares", "description": "The number of shares of your post.", "id": "17890000000000202/insights/shares/lifetime"},
+    {"name": "follows", "period": "lifetime", "values": [{"value": 3}], "title": "Follows", "description": "The number of accounts that started following you.", "id": "17890000000000202/insights/follows/lifetime"},
+    {"name": "profile_visits", "period": "lifetime", "values": [{"value": 21}], "title": "Profile visits", "description": "The number of times your profile was visited.", "id": "17890000000000202/insights/profile_visits/lifetime"},
+    {"name": "profile_activity", "period": "lifetime", "total_value": {"value": 9}, "title": "Profile activity", "description": "The number of actions people take when they visit your profile after engaging with your post.", "id": "17890000000000202/insights/profile_activity/lifetime"}
+  ]
+}

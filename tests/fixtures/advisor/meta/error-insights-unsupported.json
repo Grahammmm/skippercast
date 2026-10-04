@@ -1,0 +1,1 @@
+{"error": {"message": "(#100) The Media Insights API does not support the profile_activity metric for this media product type.", "type": "OAuthException", "code": 100, "fbtrace_id": "APlaceholderTrace12"}}

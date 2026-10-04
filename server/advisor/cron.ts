@@ -25,6 +25,7 @@
 // TA-S4: the content calendar (social/calendar.ts calendarTick) runs on every tick before publishDue, giving
 // approved posts their slot's time; the daily post (06:30) and the Sunday roundup (17:00) are slots.
 // TA-S5: the morning Stories (07:00) are a slot too.
+// TA-S7: post insights at 03:00 (a slot), and Stories' insights hourly while they are up (every tick, throttled).
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
 import {RELAY_KEY, relayState} from './relay.ts';
@@ -49,6 +50,8 @@ import {draftDailyPosts, draftRoundups} from './social/daily-post.ts';
 import {calendarTick} from './social/calendar.ts';
 // TA-S5: the morning Stories.
 import {morningStories} from './social/stories.ts';
+// TA-S7: post insights (the 03:00 slot) and the hourly Story read.
+import {collectInsights, storyInsightsTick} from './social/insights.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -80,6 +83,8 @@ export const SLOTS: readonly Slot[] = [
   {name: 'weekly-roundup', time: {local: '17:00', tz: DEFAULT_TZ, weekday: 'Sun'}, run: (env, now, deps) => draftRoundups(env, now, socialDeps(deps))},
   // TA-S5 (09 § Stories, SP-4): yesterday's count boards of verified, consenting boats and the conditions card, approved as Stories.
   {name: 'morning-stories', time: {local: '07:00', tz: DEFAULT_TZ}, run: (env, now, deps) => morningStories(env, now, socialDeps(deps))},
+  // TA-S7 (09 § Insights, SP-10): the last 30 days' posted posts, their Instagram and Page numbers into advisor_post_stats.
+  {name: 'insights', time: {local: '03:00', tz: DEFAULT_TZ}, run: (env, now, deps) => collectInsights(env, now, {...(deps?.publish?.fetcher ? {fetcher: deps.publish.fetcher} : {}), ...(deps?.publish?.sleep ? {sleep: deps.publish.sleep} : {})})},
 ];
 
 /** The social drafting slots' deps: the daily feeds (tests) and the media job dispatch. */
@@ -214,6 +219,9 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     // TA-S3: collaborator invite answers, at most hourly.
     await collabTick(env, now, {...(deps.publish?.fetcher ? {fetcher: deps.publish.fetcher} : {}), ...(deps.publish?.sleep ? {sleep: deps.publish.sleep} : {})})
       .catch(error => { advisorLog('error', 'advisor_collab_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
+    // TA-S7: Stories' insights while they are up (24 hours), at most hourly.
+    await storyInsightsTick(env, now, {...(deps.publish?.fetcher ? {fetcher: deps.publish.fetcher} : {}), ...(deps.publish?.sleep ? {sleep: deps.publish.sleep} : {})})
+      .catch(error => { advisorLog('error', 'advisor_story_insights_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
     for (const slot of deps.slots ?? SLOTS) {
       const outcome = await runSlot(env, slot.name, slot.time, (e, n) => slot.run(e, n, deps), now);
       if (outcome === 'failed') partial = true;

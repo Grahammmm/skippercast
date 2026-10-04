@@ -44,6 +44,7 @@ export interface AdvisorContactRow {
   messages_today: number; messages_day: string | null; last_seen_at: string; last_error_notice_at: string | null;
   created_at: string; updated_at: string;
   ig_sid?: string | null;   // 0011 (TA-S0): Instagram-scoped user id of a DM contact (TA-S6)
+  source_post_id?: string | null;   // 0012 (TA-S7): the post a per-post link's first message came from
 }
 
 /** The subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */

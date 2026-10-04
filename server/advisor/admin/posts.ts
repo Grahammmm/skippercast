@@ -21,6 +21,8 @@
 //   retry      partial or failed -> publish again, only the surfaces without a stored id
 // Post now and retry need ADVISOR_SOCIAL_ENABLED and the Meta secrets.
 //
+// TA-S7: a posted post's card carries `stats` (social/insights.ts postStats).
+//
 // TA-S4: a daily post, a roundup or a Story card is published from its
 // generated graphic (social/graphics.ts): it is held while the graphic is being
 // rendered or failed, a roundup's photos are held like any post's, and every
@@ -42,6 +44,8 @@ import {publish} from '../social/publish.ts';
 import {adminGraphicUrl, graphicHold, graphicKeys, graphicName, usesGraphic} from '../social/graphics.ts';
 import {graphicState} from '../media.ts';
 import type {PublishDeps, PublishOutcome} from '../social/publish.ts';
+// TA-S7: the posted post's numbers and the chats it started.
+import {postStats} from '../social/insights.ts';
 import type {Env} from '../../env.ts';
 
 export const POSTS_PAGE = 50;
@@ -119,6 +123,8 @@ export async function postView(db: D1Database, post: PostRow): Promise<Record<st
     hold: post.status === 'draft' ? await approvalHold(db, post) : null,
     // TA-S4: the generated images (the daily card, the roundup cover and slides, a Story card), for the admin's preview.
     graphics: usesGraphic(post) ? graphicKeys(await graphicState(db, post.id)).map(k => adminGraphicUrl(post.id, graphicName(k))) : [],
+    // TA-S7: for a posted or partly posted post, the latest insights per surface and the chats its link started; null otherwise.
+    stats: post.status === 'posted' || post.status === 'partial' ? await postStats(db, post) : null,
   };
 }
 

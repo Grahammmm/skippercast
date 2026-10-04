@@ -1,0 +1,14 @@
+{
+  "data": [
+    {"name": "views", "period": "lifetime", "values": [{"value": 5210}], "id": "17890000000000301/insights/views/lifetime"},
+    {"name": "reach", "period": "lifetime", "values": [{"value": 3988}], "id": "17890000000000301/insights/reach/lifetime"},
+    {"name": "likes", "period": "lifetime", "values": [{"value": 240}], "id": "17890000000000301/insights/likes/lifetime"},
+    {"name": "comments", "period": "lifetime", "values": [{"value": 18}], "id": "17890000000000301/insights/comments/lifetime"},
+    {"name": "saved", "period": "lifetime", "values": [{"value": 44}], "id": "17890000000000301/insights/saved/lifetime"},
+    {"name": "shares", "period": "lifetime", "values": [{"value": 31}], "id": "17890000000000301/insights/shares/lifetime"},
+    {"name": "follows", "period": "lifetime", "values": [{"value": 11}], "id": "17890000000000301/insights/follows/lifetime"},
+    {"name": "profile_visits", "period": "lifetime", "values": [{"value": 63}], "id": "17890000000000301/insights/profile_visits/lifetime"},
+    {"name": "profile_activity", "period": "lifetime", "total_value": {"value": 15}, "id": "17890000000000301/insights/profile_activity/lifetime"},
+    {"name": "ig_reels_avg_watch_time", "period": "lifetime", "values": [{"value": 6840}], "id": "17890000000000301/insights/ig_reels_avg_watch_time/lifetime"}
+  ]
+}

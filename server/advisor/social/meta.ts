@@ -371,3 +371,41 @@ export async function igSubscribeApps(cfg: MetaConfig, igUserId: string): Promis
   const r = await graph<{success?: boolean}>(cfg, 'POST', `/${requireId(igUserId, 'ig user')}/subscribed_apps`, {subscribed_fields: SUBSCRIBED_FIELDS});
   return r.success === true;
 }
+
+// ---- TA-S7: insights -----------------------------------------------------------------------------
+
+/**
+ * A Graph insights body's numbers by metric name: `data[].values[0].value`, or
+ * `data[].total_value.value` (the shape Meta uses for some totals). A metric
+ * whose value is not a number is left out (the caller notes it).
+ */
+export function parseInsights(body: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const row of Array.isArray((body as {data?: unknown})?.data) ? (body as {data: unknown[]}).data : []) {
+    const r = row as {name?: unknown; values?: {value?: unknown}[]; total_value?: {value?: unknown}};
+    if (typeof r?.name !== 'string' || !/^[a-z_]{1,60}$/.test(r.name)) continue;
+    const value = Array.isArray(r.values) && r.values.length ? r.values[0]?.value : r.total_value?.value;
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) out[r.name] = value;
+  }
+  return out;
+}
+
+/** GET /<ig-media-id>/insights?metric=a,b,c (lifetime values of one published media). */
+export async function igMediaInsights(cfg: MetaConfig, mediaId: string, metrics: readonly string[]): Promise<Record<string, number>> {
+  if (!metrics.length || metrics.some(m => !/^[a-z_]{1,60}$/.test(m))) throw new TypeError('metrics are lower-case names');
+  return parseInsights(await graph(cfg, 'GET', `/${requireId(mediaId, 'media')}/insights`, {metric: metrics.join(',')}));
+}
+
+/** GET /<page-post-id>/insights?metric=post_impressions_unique: the Page post's unique reach. */
+export async function fbPostReach(cfg: MetaConfig, postId: string): Promise<number | null> {
+  const values = parseInsights(await graph(cfg, 'GET', `/${requireId(postId, 'post')}/insights`, {metric: 'post_impressions_unique'}));
+  return values.post_impressions_unique ?? null;
+}
+
+/** GET /<page-post-id>?fields=shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0): the Page post's counts. */
+export async function fbPostCounts(cfg: MetaConfig, postId: string): Promise<{reactions: number | null; comments: number | null; shares: number | null}> {
+  const r = await graph<{shares?: {count?: unknown}; reactions?: {summary?: {total_count?: unknown}}; comments?: {summary?: {total_count?: unknown}}}>(cfg, 'GET',
+    `/${requireId(postId, 'post')}`, {fields: 'shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)'});
+  // A post nobody shared has no `shares` field at all: that is 0, not unknown.
+  return {reactions: num(r.reactions?.summary?.total_count), comments: num(r.comments?.summary?.total_count), shares: r.shares ? num(r.shares.count) : 0};
+}

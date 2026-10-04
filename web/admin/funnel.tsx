@@ -2,10 +2,12 @@
 // for the last 7 or 30 days. Plain tables and small inline SVG bars (no chart
 // library); every number is also in a table cell, so the bars are decoration
 // with a text label. Counts only: the API carries no contact, message or boat id.
+// TA-S7: the social rows (posts published, their latest insights, chats started).
 import {useEffect, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {getFunnel} from './api.ts';
 import type {Funnel} from './api.ts';
+import {SOCIAL_COLUMNS} from './api.ts';
 
 const BAR_W = 6, BAR_GAP = 2, SPARK_H = 32;
 
@@ -115,6 +117,35 @@ function FunnelBody({f}: {f: Funnel}) {
           <Stat label={COPY.photosApproved} value={f.photos.approved} />
           <Stat label={COPY.consentRate} value={`${COPY.percent(f.consent.rate)} (${f.consent.given} / ${f.consent.boats})`} />
         </dl>
+      </section>
+
+      <section aria-labelledby="f-social">
+        <h2 id="f-social">{COPY.socialHeading}</h2>
+        <dl class="admin-fields">
+          <Stat label={COPY.socialPosts} value={f.social.posts} />
+          <Stat label={COPY.socialChatsFromPosts} value={f.social.chats_from_posts} />
+          <Stat label={COPY.socialChatsFromInstagram} value={f.social.chats_from_instagram} />
+        </dl>
+        <div class="admin-scroll" role="region" aria-label={COPY.socialBySurface} tabIndex={0}>
+          <table class="admin-counts">
+            <thead><tr><th scope="col">{COPY.statsSurface}</th>{SOCIAL_COLUMNS.map(c => <th key={c} scope="col">{COPY.statsColumns[c]}</th>)}</tr></thead>
+            <tbody>{(['instagram', 'facebook'] as const).map(surface => (
+              <tr key={surface}><th scope="row">{COPY.statsSurfaces[surface]}</th>{SOCIAL_COLUMNS.map(c => <td key={c}>{f.social[surface][c]}</td>)}</tr>
+            ))}</tbody>
+          </table>
+        </div>
+        <h3>{COPY.socialByKind}</h3>
+        {f.social.by_kind.length === 0 ? <p>{COPY.none}</p> : (
+          <div class="admin-scroll" role="region" aria-label={COPY.socialByKind} tabIndex={0}>
+            <table class="admin-counts">
+              <thead><tr><th scope="col">{COPY.socialKind}</th><th scope="col">{COPY.socialPosts}</th>{SOCIAL_COLUMNS.map(c => <th key={c} scope="col">{COPY.statsColumns[c]}</th>)}<th scope="col">{COPY.statsChats}</th></tr></thead>
+              <tbody>{f.social.by_kind.map(k => (
+                <tr key={k.kind}><th scope="row">{COPY.postKinds[k.kind] ?? k.kind}</th><td>{k.posts}</td>{SOCIAL_COLUMNS.map(c => <td key={c}>{k[c]}</td>)}<td>{k.chats}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+        <p class="admin-muted">{COPY.socialSiteVisits}</p>
       </section>
 
       <section aria-labelledby="f-analytics">

@@ -377,18 +377,22 @@ advisorPublic.get('/contact.vcf', c => {
  * The pre-filled text body for /text: `m` (control characters removed, trimmed,
  * at most 140 characters; default "Hi SkipperCast") plus " [via <s>]" when `s`
  * is a valid source (^[a-z0-9:_-]{1,32}$); any other `s` is dropped.
+ * TA-S7: with `s=ig` and a post id `p` (^[\w-]{1,64}$, the per-post link
+ * /text?s=ig&p=<post_id>, 09 § Insights) the marker is " [via ig:<p>]"; a bad `p` is dropped.
  */
-export function textBody(message: string | null | undefined, source: string | null | undefined): string {
+export const POST_PARAM = /^[\w-]{1,64}$/;
+export function textBody(message: string | null | undefined, source: string | null | undefined, post?: string | null): string {
   const clean = Array.from(String(message ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim()).slice(0, TEXT_MAX_MESSAGE).join('').trim();
   const valid = typeof source === 'string' && SOURCE_PATTERN.test(source) ? source : null;
-  return `${clean || TEXT_DEFAULT_MESSAGE}${valid ? ` [via ${valid}]` : ''}`;
+  const marker = valid === 'ig' && typeof post === 'string' && POST_PARAM.test(post) ? `ig:${post}` : valid;
+  return `${clean || TEXT_DEFAULT_MESSAGE}${marker ? ` [via ${marker}]` : ''}`;
 }
 
 // The `?&body=` form is the one iOS and Android both open with the body filled in (03).
 advisorPublic.get('/text', c => {
   const settings = advisorSettings(c.env);
   if (!settings.number) return NO_NUMBER();
-  const body = textBody(c.req.query('m'), c.req.query('s'));
+  const body = textBody(c.req.query('m'), c.req.query('s'), c.req.query('p'));
   return new Response(null, {status: 302, headers: {Location: `sms:${settings.number}?&body=${encodeURIComponent(body)}`, 'Cache-Control': 'no-store'}});
 });
 

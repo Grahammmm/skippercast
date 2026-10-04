@@ -968,6 +968,72 @@ per post is computed from contacts whose first message carried
 and website visits from telemetry `s=ig&p=`. The admin Posts view and the
 funnel use these.
 
+### As built (TA-S7)
+
+- **Where.** `server/advisor/social/insights.ts` (`collectInsights`,
+  `storyInsightsTick`, `postStats`), `igMediaInsights`, `fbPostReach`,
+  `fbPostCounts` and `parseInsights` in `social/meta.ts`, the `insights` slot and
+  the tick in `cron.ts`, `stats` on the post card (`admin/posts.ts`,
+  `web/admin/post-card.tsx` `PostStatsTable`), `social` in the Funnel
+  (`admin/funnel.ts`, `web/admin/funnel.tsx`), migration
+  `0012_advisor_source_post`, `tests/test_advisor_insights.mjs`. Meta's docs could
+  not be fetched from the build environment; the metric names are this plan's,
+  and the test fixtures are written in the documented response shapes.
+- **The slot.** `insights`, 03:00 Pacific, while the Meta secrets are set (no
+  other switch: it only reads): posts `posted` or `partial` with `posted_at` in the
+  last 30 days, newest first, at most 100. Instagram (`ig_media_id`):
+  `GET /<media>/insights?metric=` FEED `views,reach,likes,comments,saved,shares,
+  follows,profile_visits,profile_activity` for photos, carousels, daily posts and
+  roundups; REELS the same plus `ig_reels_avg_watch_time`; STORY
+  `views,reach,replies,follows,profile_visits`. The Page (`fb_post_id`, not for a
+  Story: a Page photo Story has no post insights): `GET /<post>/insights?metric=
+  post_impressions_unique` and `GET /<post>?fields=shares,reactions.summary(
+  total_count).limit(0),comments.summary(total_count).limit(0)` (09's "reactions,
+  comments, shares"; a post with no `shares` field has 0). `job_state`
+  `advisor.insights.last_run` holds the run's counts.
+- **Stories.** Meta keeps a Story's insights only while it is up, so every cron
+  tick, at most hourly (`job_state` `advisor.insights.stories_at`, an
+  UPSERT-with-WHERE claim), reads the Stories posted less than 24 hours ago; the
+  last read before expiry is the final count. Neither the tick nor the slot reads
+  a Story 24 hours or more after it was posted.
+- **Rows.** `advisor_post_stats` by (post, `instagram`|`facebook`, the local day of
+  the read), an UPSERT: Meta's values are lifetime totals, so the latest row is the
+  count and the rows by day its growth. Instagram fills `views`, `reach`, `likes`,
+  `comments` (a Story's `replies`), `saved`, `shares`, `follows`,
+  `profile_visits`; the Page `reach` (unique impressions), `likes` (reactions),
+  `comments`, `shares`. `link_taps` stays 0: no media metric gives it (a profile's
+  link taps are an account metric). `raw_json` is `{metrics, notes?}`: every value
+  read, `profile_activity` and `ig_reels_avg_watch_time` included.
+- **Tolerance.** Meta refuses the whole set (code 100) when one metric does not
+  apply; then each metric is asked alone, and one still refused counts 0 with the
+  note `<metric>: unavailable` (a metric missing from an answer: `not returned`).
+  Any other failure (an expired Story, a deleted post, the token, rate limits after
+  the client's retries) skips that surface of that post: nothing is written, so an
+  earlier row is never replaced by zeros, and the run counts it `failed`.
+- **Chats started.** TA-C6 parsed `[via ig:<post_id>]` but kept only the source:
+  migration `0012_advisor_source_post` adds `advisor_contacts.source_post_id`
+  (indexed), set with `source` on the contact's first inbound message. `/text`
+  takes `p`: with `s=ig` and `p` matching `^[\w-]{1,64}$` the marker is
+  `[via ig:<p>]` (`intents.ts` accepts `ig:` with up to 64 characters, so a
+  32-character post id fits). The per-post link is
+  `<ADVISOR_PUBLIC_BASE>/text?s=ig&p=<advisor_posts.id>`; a link carrying the
+  Instagram media id instead counts for the post too. Nothing writes the link into
+  captions yet (Instagram captions do not link); it is for the owner's Story link
+  stickers, the bio while a post is pinned, or Page posts.
+- **Website visits per post** are not counted: page telemetry
+  (`server/telemetry.ts`) records the visit source `s` (so `s=ig` visits are in
+  the Funnel's page table) but not a post id. Carrying `p` would change the
+  telemetry contract; left for a later task.
+- **Admin.** A posted or partly posted post's card has `stats`: the latest row per
+  surface (the columns above, `day`, `fetched_at`, `notes`) and `chats`; the card
+  shows a table with one column per metric, the chats started and the notes. The
+  Funnel's `social` (D1): posts published in the window, the latest readings of
+  those posts summed per surface and per post kind, `chats_from_posts` (contacts
+  whose first message named one of them), `chats_from_instagram` (new contacts
+  with source `ig`, `igdm` or `igcomment`) and `site_visits_per_post: null`; no
+  post id leaves the API.
+- **SC-7** (the weekly skipper text) can read these rows; it is not built here.
+
 ## Next
 
 - SO-3 tips/forecast posts: a template per weekday from `catalog`

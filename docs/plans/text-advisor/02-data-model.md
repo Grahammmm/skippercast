@@ -20,6 +20,7 @@ without the later tables:
 | `0009_advisor_media_derived` | `advisor_media.derived_at`, `derived_error` (TA-M1; not in the original plan) | 4 (media job) |
 | `0010_advisor_media_orientation` | `advisor_media.orientation` (found in the TA-M1 review; not in the original plan) | 4 (media job) |
 | `0011_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
+| `0012_advisor_source_post` | `advisor_contacts.source_post_id` and its index (TA-S7; not in the original plan) | 5 (social) |
 
 Column conventions: `*_at` ISO strings; `*_json` columns hold JSON text and
 are validated on read by a small parser in `server/advisor/types.ts`
@@ -42,6 +43,7 @@ One row per person (phone number) or web visitor.
 | `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(K_enc, e164))`, `K_enc = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'enc')`, 12-byte random iv. Decrypted only to send. |
 | `web_session` | text, unique, nullable | the `sc_adv` cookie value's sha256 for web visitors |
 | `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0011; TA-S6: also a commenter whose keyword or question comment was stored) |
+| `source_post_id` | text, nullable, indexed | TA-S7 (0012): the post a first message's per-post link named (`[via ig:<post_id>]`), set with `source`; counts the post's "chats started" |
 | `channel` | text | last channel used: `imessage`, `sms`, `web`, later `whatsapp` |
 | `role` | text | `angler` (default), `skipper`, `crew`, `admin-test` |
 | `boat_id` | text, nullable | the boat a skipper or crew member posts for |
@@ -329,6 +331,11 @@ Indexes: `post_status_time (status, scheduled_for)`, `post_boat (boat_id)`.
 
 PK `(post_id, platform, day)`.
 
+As built (TA-S7): `day` is the local (Pacific) date of the read and a read the
+same day replaces the row; a Story's `replies` go in `comments`; `link_taps` stays
+0 (no media metric gives it); `raw_json` is `{metrics, notes?}` with every metric
+read and a note per metric Meta did not give (09 § Insights, As built (TA-S7)).
+
 As built (TA-S0): migration `0011_advisor_social` creates both tables as
 above (`kind`, `region`, `media_json`, `caption`, `targets_json`, `status`
 default `draft`, `created_by` and the times not null; the stats' counters
@@ -366,6 +373,9 @@ As built (TA-S2): `advisor.publish.lock.<post id>` (the publishing lease, an ISO
 expiry) and `advisor.publish.<post id>` (progress without a column:
 `{ig_children, ig_started_at, ig_error, fb_photos, fb_error}`, deleted when the
 post is `posted`). A posted post's media move from `approved` to `posted`.
+As built (TA-S7): `advisor.insights.last_run` (`{at, posts, instagram, facebook,
+failed}` of the 03:00 slot) and `advisor.insights.stories_at` (the hourly Story
+read's claim, an ISO time).
 As built (TA-S3): `advisor.collab.checked_at` (the hourly collaborator-invite
 read's throttle, an ISO time). `advisor_posts.collab_status` is set to
 `invited` when a post goes to Instagram with collaborators and to `accepted` or

@@ -339,7 +339,9 @@ when it is exactly the trailing ` [via <s>]` that `/text` writes; `storeInbound`
 stores the body without it and sets `advisor_contacts.source` only on the
 contact's first inbound message while it is still null (a later marker is
 stripped but never replaces it). `[via ig:<post_id>]` records `ig`; keeping
-the post id for SP-10 is TA-S work. The marker is not invisible in the
+the post id for SP-10 is TA-S work. (TA-S7: kept in `advisor_contacts.source_post_id`;
+`/text?s=ig&p=<post_id>` writes that marker, and `ig:` takes up to 64 characters;
+09 § Insights, As built (TA-S7).) The marker is not invisible in the
 person's own message app; it shows as typed. The iPhone and Android manual
 check is still owed (recorded in the PR).
 
