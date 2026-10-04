@@ -159,3 +159,71 @@ the regulations page, `{{link:map:<port>}}` → the app with `?region=` set,
 `?s=txt` so the funnel dashboard can attribute site visits to the advisor
 (the existing telemetry reads the `s` parameter into `source`; TA-W1 adds
 that one line in `web/telemetry.ts` if it is not already there).
+
+## As built (TA-E2)
+
+The data tools are in `server/advisor/tools/` with their helpers in
+`server/advisor/answers/`; `answers/reports.ts`, `planning.ts` and
+`fishid.ts` (the daily answer, the planning brief and the fish-ID flow) are
+TA-A1, TA-A2 and TA-I3. Where the code differs from the text above:
+
+- **Feeds.** `answers/feeds.ts` reads the region's `daily_feed` and
+  `intelligence_feed` with `readFeed`, with the checks `routes/public.ts`
+  applies; `EngineDeps.feeds` replaces the reader in tests (the engine and tool
+  tests serve `tests/fixtures/feeds/`). A feed that fails to load is
+  `available: false` / `advisories_checked: false`, never a guess.
+- **Confidence ladder.** The Insufficient/Low/Moderate rule lives in
+  `dist/bite-evidence.js` (`reportEvidence`), not in `web/confidence.ts` (that
+  file holds the map's depth, terrain and fish badges). `answers/confidence.ts`
+  copies `reportEvidence` and the test pins it to `dist/bite-evidence.js` on the
+  `tests/test_evidence.mjs` feeds and the daily fixture. Landing reports are
+  matched to a port through `landing_names` in
+  `catalog/advisor/port-aliases.json` (the feed calls Port San Luis "Avila
+  Beach").
+- **Comfort.** `answers/comfort.ts` copies only the comfort half of
+  `web/score.ts` (`hourScores`, `limitedScores`, `verdictFor`) for the reference
+  boat; the test pins it to `web/score.ts` on the 150 golden cases in
+  `tests/fixtures/score-golden.json`. The word is `comfortable`, `bumpy`,
+  `rough` or `unknown` (never "go"), "for a mid-size center console". The
+  window's score is its roughest hour.
+- **get_port_report** `{port}` → `daily: null` (TA-A1), up to five
+  `published` skipper reports from the last 14 days, newest first (a verified
+  boat by name with a `{{link:boat:<slug>}}`, an unverified one as "a boat"),
+  and `landing`: the port's landing reports of the last seven days with the
+  ladder per region target (`label: 'reported by the landing'`),
+  `freshness`, `catch_probability: null`.
+- **get_conditions** `{port, date?, start_hour?, end_hour?}`: the forecast
+  point is the port's `forecast_point` in `catalog/home-ports.json`; wind and
+  gusts from GFS, seas as the higher of GFS-Wave and ECMWF WAM, swell from
+  GFS-Wave; `advisories` (small craft, gale, storm, hazardous seas, high surf,
+  special marine) from `sources['alerts-<zone>']` for every zone in the
+  region's `marine_zones` that overlaps the window, gale first, listed before
+  the numbers with `lead_with_advisory`. Date words: English and Spanish
+  weekdays, today/hoy, tomorrow/mañana, pasado mañana, this weekend/fin de
+  semana (two days; on a Sunday, Sunday only), `next <weekday>`, ISO. More
+  than 7 days ahead → `beyond_horizon: true` and no numbers; a past date is
+  an error.
+- **get_species** `{species_key}`: catalog claims (a sub-species gets its
+  parent group's, marked `about`), the depth note, cues and look-alikes from
+  `lookalikes.json`, the `protected.json` note. No rule.
+- **get_strategy** `{species_key, region?}` (`answers/advice.ts`): `rig`,
+  `bait_or_lure`, `line`, `weight` come only from the catalog text; the
+  catalogs have no line or weight specs, so those are usually `null` and the
+  prompt says not to fill them in. `depth_band_ft` is the span of the
+  allowlisted grounds' `general_depth_ft` (rounded charter-grounds depths;
+  nominal, datum unverified), `areas` only names in
+  `catalog/advisor/public-grounds.json` (Morro Bay: Pecho Rock, Diablo coast,
+  Morro Bay coast), each with a broad description. The region's
+  `search-plans.json` names (fetched from `ASSETS` when bound) pass through the
+  same allowlist, so `SC-AREA-*` and the habitat names never come out;
+  `publicOnly()` also drops any sentence with a coordinate-like number.
+  `first_time` is true when the contact has no earlier inbound message with
+  intent `strategy`; the prompt then ends the reply with the AD-2 line.
+- **get_trips** `{port}`: verified boats only, ordered by latest published
+  report, trip types from published reports of the last 60 days, `https`
+  booking links only, `few: true` under two boats.
+- **Names.** `answers/resolve.ts` resolves ports (ids, catalog names,
+  `port-aliases.json`; Cayucos → Morro Bay) and species (keys, names,
+  `species-synonyms.json` in English and Spanish) whole-word, accent- and
+  case-insensitively, longest phrase first; every data tool accepts either.
+

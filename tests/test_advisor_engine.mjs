@@ -75,7 +75,17 @@ function fakeApi(responses) {
 }
 const engineFixtures = readdirSync(new URL('./fixtures/advisor/engine/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
 const engineFixture = name => read(`./fixtures/advisor/engine/${name}.json`);
-const run = (env, contact, message, deps = {}) => runTurn({env, contact, message, now: T0, deps: {sleep: async () => {}, clock: () => T0, ...deps}});
+// The data tools (TA-E2) read the regional feeds; the engine tests serve the committed
+// fixtures (tests/fixtures/feeds/) offline, with the daily feed's NWS alert moved to
+// T0's day so the planning case has an advisory in its window.
+const ALERT_DAY = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date(T0));
+function fixtureFeeds() {
+  const daily = read('./fixtures/feeds/daily-latest.json'), intel = read('./fixtures/feeds/intelligence.json');
+  for (const source of Object.values(daily.sources)) for (const a of source?.data?.alerts ?? [])
+    for (const k of ['sent', 'effective', 'onset', 'expires', 'ends']) if (typeof a[k] === 'string') a[k] = ALERT_DAY + a[k].slice(10);
+  return async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? daily : Promise.reject(Error(`no fixture for ${url}`));
+}
+const run = (env, contact, message, deps = {}) => runTurn({env, contact, message, now: T0, deps: {sleep: async () => {}, clock: () => T0, feeds: fixtureFeeds(), ...deps}});
 
 // ---- stage 0 --------------------------------------------------------------------------
 
@@ -336,7 +346,7 @@ for (const file of engineFixtures) {
       if (want.tool_result_for) {
         const block = lastUser.content.find(b => b.type === 'tool_result' && b.tool_use_id === want.tool_result_for);
         assert.ok(block, want.tool_result_for);
-        if (want.tool_result_contains) assert.ok(block.content.includes(want.tool_result_contains));
+        for (const part of [].concat(want.tool_result_contains ?? [])) assert.ok(block.content.includes(part), `${part} in ${want.tool_result_for}`);
       }
     });
     const e = f.expect, sent = texts(result);
@@ -345,6 +355,8 @@ for (const file of engineFixtures) {
     const reply = sent.at(-1);
     for (const s of e.reply_contains ?? []) assert.ok(reply.includes(s), `${s} in ${reply}`);
     for (const s of e.reply_not_contains ?? []) assert.ok(!reply.includes(s), `${s} not in ${reply}`);
+    if (e.reply_starts_with) assert.ok(reply.startsWith(e.reply_starts_with), `starts with ${e.reply_starts_with}: ${reply}`);
+    for (const pattern of e.reply_not_matching ?? []) assert.doesNotMatch(reply, new RegExp(pattern));
     for (const s of e.first_text_contains ?? []) assert.ok(sent[0].includes(s), s);
     assert.ok(!/\{\{|\*\*/.test(reply), 'no placeholder or markdown survives');
     assert.ok(reply.length <= 480, 'three segments at most');

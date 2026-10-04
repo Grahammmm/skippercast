@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-04",
+  "method": "The only place names get_strategy may say (06 § rigging and area advice, AD-2, principle 7): named public grounds taken from dist/data/charter-grounds.json labels, which come from names the landings publish. Anything else, including every dist/regions/<id>/search-plans.json spot name, is dropped. general_depth_ft is the charter-grounds depth_ft rounded to 5 ft (nominal survey values, datum unverified: a broad band, not a chart depth). description is a broad direction in words; no entry carries a coordinate, radius or waypoint, and tests/test_advisor_tools.mjs fails if one does.",
+  "regions": {
+    "morro-bay": [
+      {
+        "name": "Pecho Rock",
+        "charter_ground_id": "CHARTER-PECHO",
+        "kind": "reef",
+        "species": [
+          "lingcod",
+          "rockfish"
+        ],
+        "general_depth_ft": [
+          25,
+          125
+        ],
+        "description": "Reef country around the Pecho Rock landmark south of Point Buchon; the rock itself is a landmark, not a fishing spot. Find structure on your sounder."
+      },
+      {
+        "name": "Diablo coast",
+        "charter_ground_id": "CHARTER-DIABLO",
+        "kind": "edge",
+        "species": [
+          "lingcod",
+          "rockfish"
+        ],
+        "general_depth_ft": [
+          25,
+          195
+        ],
+        "description": "Rocky coast south of Point Buchon, outside the Diablo Canyon security zone and the Point Buchon MPAs. Check the closures before you set up."
+      },
+      {
+        "name": "Morro Bay coast",
+        "charter_ground_id": "CHARTER-MORRO",
+        "kind": "reef",
+        "species": [
+          "lingcod",
+          "rockfish"
+        ],
+        "general_depth_ft": [
+          25,
+          195
+        ],
+        "description": "The inshore reefs off Morro Bay and Estero Bay. A broad area, not one reef."
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
-  "description": "Trip planning: conditions then rules (stubs); the model says it cannot check yet and links the rules.",
+  "description": "Trip planning: get_conditions (TA-E2) finds the Small Craft Advisory in the daily-feed fixture for Saturday's window and get_rules (TA-A0) has no reviewed row; the reply leads with the advisory, gives no percentage, sends the person to the rules and ends with the NWS line.",
   "message": "Is Saturday worth going for rockfish out of Port San Luis?",
   "exchanges": [
     {
@@ -43,7 +43,13 @@
     },
     {
       "request": {
-        "tool_result_for": "toolu_12"
+        "tool_result_for": "toolu_11",
+        "tool_result_contains": [
+          "Small Craft Advisory",
+          "\"lead_with_advisory\":true",
+          "\"dates\":[\"2026-10-03\"]",
+          "a mid-size center console"
+        ]
       },
       "response": {
         "status": 200,
@@ -55,7 +61,7 @@
           "content": [
             {
               "type": "text",
-              "text": "I can't check Saturday's forecast or the rules by text yet. Check the latest NWS forecast before you go, and the current rules here: {{link:rules:rockfish}}"
+              "text": "SMALL CRAFT ADVISORY posted for Sat from noon to 11 pm, so the late morning gets rough for a mid-size boat. I don't have the morning forecast in yet. I have no reviewed rockfish rule to quote, so check the current rules: {{link:rules:rockfish}} Check the latest NWS forecast before you go."
             }
           ],
           "stop_reason": "end_turn",
@@ -73,9 +79,13 @@
   "expect": {
     "intent": "conditions",
     "texts": 1,
+    "reply_starts_with": "SMALL CRAFT ADVISORY",
     "reply_contains": [
       "/species/rockfish?s=txt#rules",
-      "NWS"
+      "Check the latest NWS forecast before you go."
+    ],
+    "reply_not_matching": [
+      "\\d\\s*%"
     ]
   }
 }

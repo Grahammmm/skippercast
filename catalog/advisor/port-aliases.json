@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-04",
+  "method": "Names people text for each catalog/home-ports.json port (05 § registration, 06 § what's biting): aliases are matched whole-word and case-insensitively after the port id and catalog name; landing_names are the port names the landing-reports feed (dist/bite-evidence.js reports[].port) uses for that port. Cayucos has no catalog port of its own: it maps to Morro Bay, the nearest launch with a forecast point. No alias is shared by two ports.",
+  "ports": {
+    "morro-bay": {
+      "aliases": [
+        "MB",
+        "Morro",
+        "Morro Bay harbor",
+        "Estero Bay",
+        "Cayucos"
+      ],
+      "landing_names": [
+        "Morro Bay"
+      ]
+    },
+    "port-san-luis": {
+      "aliases": [
+        "Port San Luis",
+        "PSL",
+        "Avila",
+        "Avila Beach",
+        "Port Harford",
+        "San Luis Obispo Bay"
+      ],
+      "landing_names": [
+        "Avila Beach",
+        "Avila",
+        "Port San Luis"
+      ]
+    },
+    "santa-cruz": {
+      "aliases": [
+        "SC harbor",
+        "Santa Cruz harbor"
+      ],
+      "landing_names": [
+        "Santa Cruz"
+      ]
+    },
+    "monterey": {
+      "aliases": [
+        "Monterey harbor",
+        "Monterey wharf"
+      ],
+      "landing_names": [
+        "Monterey"
+      ]
+    },
+    "pillar-point": {
+      "aliases": [
+        "Half Moon Bay",
+        "HMB",
+        "Princeton",
+        "Pillar Point harbor"
+      ],
+      "landing_names": [
+        "Half Moon Bay",
+        "Pillar Point",
+        "Princeton"
+      ]
+    },
+    "bodega-bay": {
+      "aliases": [
+        "Bodega"
+      ],
+      "landing_names": [
+        "Bodega Bay"
+      ]
+    },
+    "noyo-harbor": {
+      "aliases": [
+        "Noyo",
+        "Fort Bragg"
+      ],
+      "landing_names": [
+        "Noyo Harbor",
+        "Fort Bragg"
+      ]
+    },
+    "shelter-cove": {
+      "aliases": [],
+      "landing_names": [
+        "Shelter Cove"
+      ]
+    },
+    "humboldt-bay": {
+      "aliases": [
+        "Eureka",
+        "Humboldt"
+      ],
+      "landing_names": [
+        "Eureka",
+        "Humboldt Bay"
+      ]
+    },
+    "crescent-city": {
+      "aliases": [
+        "CC harbor"
+      ],
+      "landing_names": [
+        "Crescent City"
+      ]
+    },
+    "santa-barbara": {
+      "aliases": [
+        "SB",
+        "Santa Barbara harbor"
+      ],
+      "landing_names": [
+        "Santa Barbara"
+      ]
+    },
+    "ventura": {
+      "aliases": [
+        "Channel Islands harbor",
+        "Oxnard",
+        "Ventura harbor"
+      ],
+      "landing_names": [
+        "Ventura",
+        "Channel Islands",
+        "Oxnard"
+      ]
+    },
+    "marina-del-rey": {
+      "aliases": [
+        "MDR",
+        "Marina del Rey"
+      ],
+      "landing_names": [
+        "Marina del Rey"
+      ]
+    },
+    "long-beach": {
+      "aliases": [
+        "San Pedro",
+        "LB"
+      ],
+      "landing_names": [
+        "Long Beach",
+        "San Pedro"
+      ]
+    },
+    "newport-beach": {
+      "aliases": [
+        "Newport"
+      ],
+      "landing_names": [
+        "Newport Beach",
+        "Newport"
+      ]
+    },
+    "dana-point": {
+      "aliases": [
+        "Dana"
+      ],
+      "landing_names": [
+        "Dana Point"
+      ]
+    },
+    "oceanside": {
+      "aliases": [],
+      "landing_names": [
+        "Oceanside"
+      ]
+    },
+    "san-diego": {
+      "aliases": [
+        "SD",
+        "Point Loma",
+        "Mission Bay"
+      ],
+      "landing_names": [
+        "San Diego",
+        "Point Loma",
+        "Mission Bay"
+      ]
+    }
+  }
+}

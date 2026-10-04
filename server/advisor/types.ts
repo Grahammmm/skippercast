@@ -109,6 +109,7 @@ export interface EngineDeps {
   random?: () => number;                                              // the web-link code; default crypto
   sleep?: (ms: number) => Promise<void>;                              // the 429/529 back-off; default setTimeout
   vision?: unknown;                                                   // TA-I2/I3: the vision chain
+  feeds?: (url: string) => Promise<unknown>;                          // TA-E2: the data tools' feed reader; default readFeed (tests pass fixtures)
 }
 
 /**

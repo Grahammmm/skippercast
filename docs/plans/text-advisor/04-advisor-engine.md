@@ -343,3 +343,19 @@ and the web chat route). Where the code differs from the text above:
 - **Eval.** `scripts/advisor/eval.mjs` runs the fixture messages against the
   live model (needs `ANTHROPIC_API_KEY`; never in CI) and prints recorded vs
   live replies with the format checks.
+
+## As built (TA-E2)
+
+- The data tools replace their stubs (06 § As built (TA-E2)); `identify_fish`
+  and the skipper tools are still stubs. `EngineDeps.feeds` (the feed reader)
+  is new, for offline tests.
+- Prompt: RULES OF EVIDENCE now tells the model to end a reply with "General
+  areas only; I don't share anyone's numbers." when `get_strategy` returns
+  `first_time: true`, to leave out any field a tool left empty, and to say
+  "the boats I work with so far" when `get_trips` returns `few: true`; the
+  three are in `REQUIRED_PHRASES`. The owner should read the two new lines.
+- The recorded `whats-biting` and `trip-planning-advisory` fixtures now run
+  the real tools on `tests/fixtures/feeds/` (the alert moved to the test day):
+  the first cites the landing's report with its Low label; the second starts
+  with "SMALL CRAFT ADVISORY" and has no percentage.
+
