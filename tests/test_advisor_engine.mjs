@@ -249,8 +249,8 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
 dbTest('stage 2 extension point: a registered flow runs before the model', async t2 => {
   const {sql, env} = setup();
   seen(sql);
-  // TA-I1's skipper flow and TA-I2's report flow are registered at import; the test flow goes after them and only it is removed.
-  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports']);
+  // TA-I1's skipper flow, TA-I2's report flow and TA-I3's angler flow are registered at import; the test flow goes after them and only it is removed.
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports', 'anglers']);
   STAGE_TWO_FLOWS.push({name: 'test', run: async f => f.text === 'y' ? {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'} : null});
   t2.after(() => { STAGE_TWO_FLOWS.splice(STAGE_TWO_FLOWS.findIndex(f => f.name === 'test'), 1); });
   assert.deepEqual(await run(env, contactRow(sql), inbound(sql, 'y')), {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'});
@@ -525,9 +525,10 @@ dbTest('consumer: send_file attaches on BlueBubbles and falls back to the link e
 // ---- golden conversations (11 § engine golden conversations 6-9) ------------------------
 
 const conversations = readdirSync(new URL('./fixtures/advisor/engine/conversations/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
-test('golden conversations 2 (en, es), 3 and 6-9 exist', () => {
+test('golden conversations 2 (en, es), 3, 4 and 6-9 exist', () => {
   // TA-I1: 2 up to the consent step, 3 the crew add and remove; TA-I2: 2 on through the count board, Y, a correction and a catch photo, 3 the crew member's board.
-  for (const n of ['02-skipper-registers', '02-skipper-registers-es', '03-crew', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
+  // TA-I3: 4, the angler's fish IDs and photo sharing.
+  for (const n of ['02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
 });
 
 for (const file of conversations) {
@@ -539,6 +540,10 @@ for (const file of conversations) {
     // TA-I1: boats that exist before the conversation (golden 3's verified boat).
     for (const b of convo.boats ?? []) sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)`)
       .run(b.id, b.slug, b.name, b.port, b.region ?? 'morro-bay', b.owner ?? null, b.status ?? 'pending', iso(T0 - 86400000), iso(T0 - 86400000));
+    // TA-I3: rules rows the conversation quotes (golden 4), jurisdiction-wide like the importer writes them.
+    for (const [i, r] of (convo.rules ?? []).entries()) sql.prepare(`INSERT INTO advisor_rules(id,region,jurisdiction,species_key,species_label,size_min_in,size_max_in,bag_limit,bag_notes,season_open,season_close,depth_limit_ft,area_notes,gear_notes,source_name,source_url,reviewed_at,review_due,status,updated_by,updated_at)
+      VALUES(?,'*','california-central',?,?,?,?,?,NULL,?,?,?,NULL,NULL,'CDFW Central Region rules','https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central',?,?,?,'test',?)`)
+      .run(`rule${i}`, r.species_key, r.species_label, r.size_min_in ?? null, r.size_max_in ?? null, r.bag_limit ?? null, r.season_open ?? null, r.season_close ?? null, r.depth_limit_ft ?? null, r.reviewed_at, r.review_due, r.status, iso(T0));
     const keys = await deriveKeys(KEY);
     const byNumber = async e164 => sql.prepare('SELECT * FROM advisor_contacts WHERE phone_hash=?').get(await phoneHash(keys, e164));
     const phoneChannel = recorder('bluebubbles'), webChannel = recorder('web');

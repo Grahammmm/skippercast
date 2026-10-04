@@ -1,12 +1,12 @@
 {
   "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
-  "description": "A photo with a question: identify_fish and get_rules are stubs; the reply asks for patience and links rules.",
+  "description": "A photo with a question goes to the model with its media_id (TA-I3). Here the media row is not stored, so identify_fish answers an error; the reply asks for the photo again and links the rules without stating one.",
   "message": "what is this",
   "media": 1,
   "exchanges": [
     {
       "request": {
-        "last_user_contains": "[photo]"
+        "last_user_contains": "[photo, media_id m-fixture]"
       },
       "response": {
         "status": 200,
@@ -47,7 +47,7 @@
           "content": [
             {
               "type": "text",
-              "text": "I can't read photos yet, so I won't guess. If you think it's a rockfish, double-check the rules before you keep it: {{link:rules:rockfish}}"
+              "text": "I couldn't open that photo. Can you send it again, side-on with the fins spread? If you think it's a rockfish, double-check the rules before you keep it: {{link:rules:rockfish}}"
             }
           ],
           "stop_reason": "end_turn",
@@ -59,6 +59,12 @@
             "cache_creation_input_tokens": 0
           }
         }
+      },
+      "request": {
+        "tool_result_for": "toolu_21",
+        "tool_result_contains": [
+          "no such photo from this person"
+        ]
       }
     }
   ],

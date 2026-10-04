@@ -111,7 +111,10 @@ export type Action =
   | {type: 'auto_publish'; boatId: string; on: boolean}                 // SC-5: advisor_boats.auto_publish (owner only)
   | {type: 'media_queue'; mediaId: string}                              // publish_state private -> queued, credited to the boat (TA-S1 adds the post draft)
   | {type: 'boat_instagram'; boatId: string; instagram: string}         // the handle asked for once after a photo (owner only)
-  | {type: 'mark_once'; key: string};                                   // job_state advisor.once.<key>: a line said once
+  | {type: 'mark_once'; key: string}                                    // job_state advisor.once.<key>: a line said once
+  // TA-I3: angler photos (06 § Angler photos, AC-1).
+  | {type: 'share_state'; state: ShareState | null}                     // job_state advisor.share.<contact_id>; null deletes it
+  | {type: 'angler_share'; mediaId: string; credit?: string | null};   // the contact's own photo: private -> queued, and the credit when given
 
 /** TA-I2: one line of a report (02 § advisor_reports.counts_json). `uncertain` marks a line shown with "?" until confirmed. */
 export interface ReportCount {species_key: string; label: string; kept: number | null; released: number | null; uncertain?: boolean}
@@ -143,6 +146,13 @@ export interface FlowState {
   asked_at: string;
   tries?: number;                   // invalid answers to the current step
 }
+
+/**
+ * TA-I3: the AC-1 share offer outstanding for a contact (job_state
+ * advisor.share.<contact_id>): 'offered' after "can we share this with
+ * credit?", 'credit' after "How should we credit you?". Both lapse after 24 h.
+ */
+export interface ShareState {step: 'offered' | 'credit'; media_id: string; asked_at: string; id_offered?: boolean}   // id_offered: "Nice shot" offered an ID too
 
 /** TA-E1: the two reply languages (02 § advisor_contacts.language). */
 export type Language = 'en' | 'es';

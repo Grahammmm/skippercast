@@ -349,6 +349,138 @@
     "report_day_held": {
       "en": "The team held back your report for {date}. Text me if something needs fixing and I'll pass it on.",
       "es": "El equipo retuvo tu reporte del {date}. Escríbeme si hay que corregir algo y lo paso."
+    },
+    "fishid_high": {
+      "en": "That's {a_label}.",
+      "es": "Es {a_label}."
+    },
+    "fishid_medium": {
+      "en": "Looks like {a_label}, could be {a_second}: check for {cue} ({label}) against {cue2} ({second}).",
+      "es": "Parece {a_label}, podría ser {a_second}: busca {cue} ({label}) frente a {cue2} ({second})."
+    },
+    "fishid_medium_plain": {
+      "en": "Looks like {a_label}, could be {a_second}. A side-on shot with the fins spread would settle it.",
+      "es": "Parece {a_label}, podría ser {a_second}. Una foto de lado con las aletas abiertas lo aclararía."
+    },
+    "fishid_medium_alone": {
+      "en": "Looks like {a_label}, but I'm not certain. A side-on shot with the fins spread would settle it.",
+      "es": "Parece {a_label}, pero no estoy seguro. Una foto de lado con las aletas abiertas lo aclararía."
+    },
+    "fishid_ask": {
+      "en": "Not sure from this one. {reason}: can you send a side-on shot with the fins spread?",
+      "es": "No estoy seguro con esta. {reason}: ¿me mandas una foto de lado con las aletas abiertas?"
+    },
+    "fishid_reason_blurry": {
+      "en": "It's blurry",
+      "es": "Está borrosa"
+    },
+    "fishid_reason_partial": {
+      "en": "Part of the fish is cut off",
+      "es": "Se ve solo parte del pez"
+    },
+    "fishid_reason_multiple": {
+      "en": "There's more than one fish in it",
+      "es": "Hay más de un pez"
+    },
+    "fishid_reason_no_fish": {
+      "en": "I can't find a fish in it",
+      "es": "No encuentro un pez en la foto"
+    },
+    "fishid_reason_too_far": {
+      "en": "The fish is too far away",
+      "es": "El pez está muy lejos"
+    },
+    "fishid_reason_unsure": {
+      "en": "I can't tell it apart from its look-alikes",
+      "es": "No lo distingo de las especies parecidas"
+    },
+    "fishid_protected": {
+      "en": "If it's a {names}, it must be released: use a descending device.",
+      "es": "Si es {names}, hay que liberarlo: usa un descendedor."
+    },
+    "rule_size_min": {
+      "en": "{n} in. minimum",
+      "es": "mínimo {n} pulg."
+    },
+    "rule_size_max": {
+      "en": "{n} in. maximum",
+      "es": "máximo {n} pulg."
+    },
+    "rule_bag": {
+      "en": "bag {n}",
+      "es": "límite {n} por persona"
+    },
+    "rule_no_take": {
+      "en": "no take",
+      "es": "no se puede quedar"
+    },
+    "rule_season": {
+      "en": "open {open} to {close}",
+      "es": "abierta del {open} al {close}"
+    },
+    "rule_year_round": {
+      "en": "open all year",
+      "es": "abierta todo el año"
+    },
+    "rule_depth": {
+      "en": "{n} ft depth limit",
+      "es": "límite de profundidad {n} pies"
+    },
+    "fishid_rules": {
+      "en": "Rules ({source}, checked {date}): {parts}.",
+      "es": "Reglas ({source}, revisadas {date}): {parts}."
+    },
+    "fishid_rules_see": {
+      "en": "Rules ({source}, checked {date}) list no size or bag for it.",
+      "es": "Las reglas ({source}, revisadas {date}) no dan talla ni límite para este."
+    },
+    "fishid_rules_stale": {
+      "en": "Rules ({source}, checked {date}): this rule is due for review, so double-check with CDFW before you keep it: {link}",
+      "es": "Reglas ({source}, revisadas {date}): esta regla está pendiente de revisión, así que confírmala con CDFW antes de quedártelo: {link}"
+    },
+    "fishid_rules_second": {
+      "en": "If it's {a_second}: {parts}.",
+      "es": "Si es {a_second}: {parts}."
+    },
+    "fishid_rules_second_stale": {
+      "en": "If it's {a_second}, its rule is due for review: double-check.",
+      "es": "Si es {a_second}, su regla está pendiente de revisión: confírmala."
+    },
+    "fishid_rules_link": {
+      "en": "Double-check before you keep it: {link}",
+      "es": "Confírmalo antes de quedártelo: {link}"
+    },
+    "fishid_rules_none": {
+      "en": "I have no reviewed rule for it, so check the current CDFW rules before you keep it: {link}",
+      "es": "No tengo una regla revisada para este, así que revisa las reglas vigentes de CDFW antes de quedártelo: {link}"
+    },
+    "fishid_unavailable": {
+      "en": "Got your photo. I can't read photos right now; try again in a bit, or text me what you caught.",
+      "es": "Recibí tu foto. Ahora mismo no puedo leer fotos; inténtalo en un rato o escríbeme qué pescaste."
+    },
+    "fishid_offer": {
+      "en": "Nice fish. Can we share this photo on SkipperCast with credit? Reply YES if so.",
+      "es": "Buen pez. ¿Podemos compartir esta foto en SkipperCast con crédito? Responde SÍ si quieres."
+    },
+    "fishid_nice_shot": {
+      "en": "Nice shot. Want me to ID a fish, or can we share this with credit?",
+      "es": "Buena foto. ¿Quieres que identifique un pez, o la compartimos con crédito?"
+    },
+    "share_credit_ask": {
+      "en": "Thanks! How should we credit you? A first name is fine, or 'anonymous'.",
+      "es": "¡Gracias! ¿Cómo te damos crédito? Basta con tu nombre, o 'anónimo'."
+    },
+    "share_queued": {
+      "en": "Thanks, {credit}. The team looks at every photo before anything is posted.",
+      "es": "Gracias, {credit}. El equipo revisa cada foto antes de publicar nada."
+    },
+    "share_queued_known": {
+      "en": "Thanks. It goes to the team for review, credited to {credit} like last time.",
+      "es": "Gracias. Pasa al equipo para revisión, con crédito a {credit} como la otra vez."
+    },
+    "share_queued_anonymous": {
+      "en": "Thanks. It goes to the team for review and, if posted, goes up without a name.",
+      "es": "Gracias. Pasa al equipo para revisión y, si se publica, sale sin nombre."
     }
   }
 }

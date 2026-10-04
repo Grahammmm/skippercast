@@ -171,8 +171,8 @@ keys or `catalog/advisor/species-extra.json` keys (02).
   `providerDownMs` (10 minutes).
 - **Protected warning.** 06 § fish ID says a yelloweye or cowcod candidate
   "at any confidence" adds the warning; the table above says `>= 0.3`. TA-V1
-  implements the table (`>= 0.3`); TA-I3 should settle which one the reply
-  uses. `protected.json` lists yelloweye, cowcod and bronzespotted with
+  implements the table (`>= 0.3`); TA-I3 settled it: the reply uses `>= 0.3`
+  (06 now says so). `protected.json` lists yelloweye, cowcod and bronzespotted with
   `must_release: true` and canary with `must_release: false` (a sub-bag
   species); all four trigger the warning, and the notes defer to the rules
   table.

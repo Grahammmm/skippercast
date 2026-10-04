@@ -375,3 +375,21 @@ and the web chat route). Where the code differs from the text above:
 - New actions: `boat_create` (05's `boat.create`), `flow_set`, `consent`,
   `post_revoke` (logs until TA-S1), `crew_add`, `crew_remove`; the contact
   brief lists the boat, ownership or crew, status and consent.
+
+## As built (TA-I3)
+
+- `STAGE_TWO_FLOWS` ends with the angler flow (`intake/anglers.ts`; 06 § As
+  built (TA-I3)): the media-only angler path (classify, then the fish ID or
+  "Nice shot…") and the AC-1 pre-router (YES within 24 h of the offer, the
+  credit reply, `id` after "Nice shot"). No model call on these paths; the
+  intents are `fishid.high|medium|ask|unavailable`, `media.nice_shot`,
+  `photo.share`, `photo.credit`.
+- A photo with a caption goes to the model with its `media_id` for every role
+  (TA-I2 did this for skippers and crew only), so `identify_fish` and
+  `share_angler_photo` can read it.
+- An `identify_fish` result with a current (not stale) rules row counts as a
+  usable rules call for the rules guard.
+- `capReply` and `REPLY_MAX` moved to `server/advisor/reply.ts` (re-exported
+  by `engine.ts`) so the fish-ID answer is capped the same way.
+- New actions: `share_state` (the offer in `job_state`) and `angler_share`.
+

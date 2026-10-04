@@ -45,6 +45,9 @@ import type {Action, AdvisorContactRow, AdvisorMessageRow, AdvisorSettings, Engi
 import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
 // TA-I2: reports (pending confirmation, count text, corrections, the media-only skipper path) and their brief lines.
 import {REPORT_FLOWS, reportBrief} from './intake/reports.ts';
+// TA-I3: an angler's photos (fish ID, the AC-1 share offer and credit).
+import {ANGLER_FLOWS} from './intake/anglers.ts';
+import {capReply} from './reply.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 700;
@@ -54,7 +57,8 @@ export const MAX_PAUSES = 3;
 export const TURN_BUDGET_MS = 30_000;
 export const HISTORY_TURNS = 12;
 export const HISTORY_MS = 48 * 3600000;
-export const REPLY_MAX = 480;                 // three SMS segments (00 principle 2)
+// REPLY_MAX and capReply live in reply.ts (TA-I3: the fish-ID answer is capped too); re-exported here.
+export {REPLY_MAX, capReply} from './reply.ts';
 export const RETRY_DELAY_MS = 2_000;          // one retry on 429/529, as the vision provider
 export const FORGET_WINDOW_MS = 24 * 3600000; // DELETE confirms a "forget me" asked within a day
 /** Intents whose reply may run past three segments: lists the person asked for (04). */
@@ -81,7 +85,7 @@ export interface FlowContext {
  * STAGE_TWO_FLOWS; they run after the built-in flows below, in order.
  */
 export interface Flow {name: string; run(ctx: FlowContext): Promise<EngineResult | null>}
-export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS, ...REPORT_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts); TA-I2: reports (intake/reports.ts)
+export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS, ...REPORT_FLOWS, ...ANGLER_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts); TA-I2: reports (intake/reports.ts); TA-I3: angler photos (intake/anglers.ts)
 
 const ADMIN = /^(ok|no)\s+([0-9a-f]{6})$/i;
 const SIX_DIGITS = /^\d{6}$/;
@@ -250,22 +254,6 @@ export function rulesGuard(text: string, language: Language): {text: string; fir
   return {text: fired ? kept.filter(p => p.trim()).join(' ') : text, fired};
 }
 
-/**
- * At most three SMS segments (480 characters) unless the reply is a list: cut
- * at sentence boundaries; a link that would be cut is kept at the end.
- */
-export function capReply(text: string, links: readonly string[], max = REPLY_MAX): string {
-  if (text.length <= max) return text;
-  const link = links[0];
-  const body = link ? text.replace(link, '').replace(/\s{2,}/g, ' ').trim() : text;
-  const room = link ? max - link.length - 1 : max;
-  const sentences = body.split(/(?<=[.!?])\s+/);
-  let out = '';
-  for (const s of sentences) { if ((out ? out.length + 1 : 0) + s.length > room) break; out = out ? `${out} ${s}` : s; }
-  if (!out) out = body.slice(0, Math.max(0, room - 1)).replace(/\s+\S*$/, '') + '…';
-  return link ? `${out} ${link}` : out;
-}
-
 // ---- the Messages API loop --------------------------------------------------------------
 
 interface ContentBlock {type: string; text?: string; id?: string; name?: string; input?: unknown}
@@ -343,6 +331,8 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
         const out = await dispatchTool(use.name!, use.input, ctx, tools);
         toolsCalled.push(use.name!);
         if (use.name === 'get_rules' && !out.isError && !(out.result as {unavailable?: unknown})?.unavailable) usableRules = true;
+        // TA-I3: identify_fish quotes the rules table too (06 § fish ID step 3); a current row counts, a stale one does not.
+        if (use.name === 'identify_fish' && !out.isError && (out.result as {rules?: {stale?: boolean} | null})?.rules?.stale === false) usableRules = true;
         if (out.actions) actions.push(...out.actions);
         results.push({type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out.result ?? null).slice(0, 4000), ...(out.isError ? {is_error: true} : {})});
       }
@@ -424,7 +414,8 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
     if (r) return {...r, actions: [...welcomeFirst(), ...languageUpdate, ...flow.carry.splice(0), ...r.actions]};
   }
   if (!text && media.length) {
-    // A skipper's or crew's media went through TA-I2's flow above; TA-I3 replaces this for anglers.
+    // A skipper's or crew's media went through TA-I2's flow above and an angler's through TA-I3's; this answers
+    // what neither could read (no stored row, a boatless skipper).
     return done([...welcomeFirst(), say('media_ack'), ...flow.carry], 'media');
   }
   if (!text) return done([...flow.carry], 'empty');
@@ -454,8 +445,9 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   const usage: LlmUsage = {model: settings.model, turns: 0, input_tokens: 0, output_tokens: 0, web_search_requests: 0};
   let turn: ModelTurn | null = null, outcome = 'error';
   try {
-    // TA-I2: a skipper's or crew's photo with a caption reaches the model; its ids let read_count_board read it.
-    const current = media.length && (contact.role === 'skipper' || contact.role === 'crew')
+    // TA-I2/I3: a photo with a caption reaches the model with its ids, so read_count_board (skippers, crew) or
+    // identify_fish and share_angler_photo (anglers) can read it.
+    const current = media.length
       ? `${String(text).trim()} [${media.length === 1 ? 'photo' : `${media.length} photos`}, media_id ${media.slice(0, 10).join(', ')}]`.trim() : inboundText(text, media.length);
     turn = await modelTurn({env, settings, system, messages: buildMessages(rows, current), tools, ctx, deps, signal, usage});
     outcome = turn.outcome;

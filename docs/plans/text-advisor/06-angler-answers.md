@@ -107,8 +107,10 @@ the last 3 days" rather than reaching further back.
    canary vs yelloweye; lingcod vs cabezon; bocaccio vs chilipepper; California
    vs Pacific halibut; white seabass vs croaker), authored once by the owner
    and the agent from CDFW's identification pages, each cue with its source.
-   A yelloweye or cowcod candidate at any confidence adds "If it's a
-   yelloweye or cowcod it must be released — use a descending device."
+   A yelloweye or cowcod candidate at confidence ≥ 0.3 (any band, the 07
+   threshold; settled in TA-I3: "any confidence" would warn on every red fish)
+   adds "If it's a yelloweye or cowcod it must be released — use a
+   descending device."
 5. The photo is kept as `publish_state='private'`; the AC-1 offer
    ("can we share this with credit?") is appended only when the ID
    confidence was ≥ 0.6 and the contact is not a skipper (their photos flow
@@ -227,3 +229,77 @@ TA-A1, TA-A2 and TA-I3. Where the code differs from the text above:
   `species-synonyms.json` in English and Spanish) whole-word, accent- and
   case-insensitively, longest phrase first; every data tool accepts either.
 
+
+
+## As built (TA-I3)
+
+The fish-ID flow is `server/advisor/answers/fishid.ts` (`identify`,
+`answerFor`, the rules lines), the angler's media path and the AC-1 replies are
+`server/advisor/intake/anglers.ts` (the Stage 2 flow `anglerFlow`, registered
+after TA-I2's in `engine.ts` `STAGE_TWO_FLOWS`), and `identify_fish` and
+`share_angler_photo` replace their stubs. Where the code differs from the text
+above:
+
+- **Who.** Any contact that is not a skipper or crew. A skipper's or crew's
+  media still go through TA-I2's `reportFlow`, which runs first; a skipper with
+  no boat gets the plain acknowledgement, never the angler path.
+- **Media-only.** The first stored image is classified (07); `kind='fish'` runs
+  `identifyFish` with the contact's region (home port, else
+  `ADVISOR_REGION_DEFAULT`). No chat model call. Anything else (a deck, a
+  sunset, a person) gets "Nice shot. Want me to ID a fish, or can we share this
+  with credit?" and records the offer; a reply of `id` / `identify it` /
+  `qué pez` then runs the fish ID on that photo. A video gets "Nice shot" too
+  (nothing to identify). Vision down: "I can't read photos right now…"; over
+  4.5 MB or a rejected file: the upload link.
+- **Reply shapes** (strings `fishid_*`, en and es). High: "That's a {name}.
+  {cue}." Medium: "Looks like a {name}, could be a {second}: check for {cue}
+  ({name}) against {cue} ({second})." The cue pair is the two species'
+  `lookalikes.json` cues that share a feature word (the jaw against the jaw),
+  else the first of each; names come from the catalog (Spanish: the first
+  Spanish synonym, "colorado"). The cues are English, so a Spanish reply leaves
+  them out until TA-A6. Ask: "Not sure from this one. {reason}: can you send a
+  side-on shot with the fins spread?" with a reason per `reason` code (blurry,
+  partial, several fish, no fish, too far; else "I can't tell it apart from its
+  look-alikes"). A top candidate under 0.6 is "ask" even without
+  `needs_better_photo`.
+- **Protected.** `decideProtected` at **≥ 0.3** (step 4 above now says so);
+  only `must_release` species (yelloweye, cowcod, bronzespotted) add the line,
+  in every band including "ask"; canary (`must_release: false`, a sub-bag
+  species) does not.
+- **Rules (ID-2).** `lookupRules` for the top candidate (its own row, else its
+  group's, so a vermilion with only a rockfish row quotes the rockfish row):
+  "Rules ({source_name}, checked {Mon D}): {size min/max}, bag {n} (or no take),
+  open {Apr 1} to {Dec 31} (or open all year), {depth limit}. Double-check
+  before you keep it: {{link:rules:<key>}}". A stale row (in review or past
+  `review_due`) is never quoted with numbers: "this rule is due for review, so
+  double-check with CDFW before you keep it: <link>". No row: "I have no
+  reviewed rule for it, so check the current CDFW rules…". A medium ID whose
+  second candidate has a different rule adds "If it's a {second}: …" (or "its
+  rule is due for review: double-check"). The ask band quotes no rule. The
+  reply is capped at 480 characters like a model reply.
+- **AC-1 offer.** "Nice fish. Can we share this photo on SkipperCast with
+  credit? Reply YES if so." as a second text, only when the top candidate is
+  ≥ 0.6 and the contact is not a skipper or crew. The offer is `job_state`
+  `advisor.share.<contact_id>` (`{step: 'offered' | 'credit', media_id,
+  asked_at, id_offered?}`, written by the consumer's `share_state` action), good
+  for 24 h. `yes`, `y`, `sure`, `ok`, `sí`, `si`, `claro`, `dale`, … within 24 h
+  share; any other message deletes the offer and goes on as usual ("else
+  ignore"). The photo stays `private` until then.
+- **Sharing.** A yes: the `angler_share` action (the contact's own photo with no
+  boat, `private` → `queued`), a `review.media` item with reason `angler_photo`
+  (which texts the admin), and the credit. The credit is asked once per contact:
+  "How should we credit you? A first name is fine, or 'anonymous'." The reply is
+  read by `parseCredit` (1–4 words of letters, ≤ 40 characters, "call me Joe",
+  "me llamo Lupe", `anonymous`/`anónimo`) and stored on `advisor_media.credit`;
+  a later shared photo reuses the contact's last credit without asking. A reply
+  that is not a name leaves the photo queued with no credit and goes on. The
+  post draft (`kind photo`, caption style `angler`) is TA-S1's.
+- **Tools.** `identify_fish {media_id}` (the contact's own image) returns the
+  band, the candidates, `must_release`, the rules summaries, `reply` (the same
+  deterministic text, which the model is told to send as it is) and, when
+  eligible, a `share_offer` note; a current rules row in its result satisfies
+  the engine's rules guard like `get_rules`. A photo with a caption now reaches
+  the model with its `media_id` for anglers too. `share_angler_photo {media_id,
+  consent}` (anglers only): false clears the offer; true runs the same share
+  actions and the system sends the credit question itself.
+- **Forget me** also deletes the contact's `advisor.share.` row.
