@@ -10,3 +10,4 @@ See [0001](0001-record-architecture-decisions.md) for the format and rules.
 | [0004](0004-licensing.md) | Licensing, copyright ownership and contributor terms | Proposed — owner decision required |
 | [0005](0005-front-end-preact-vite-maplibre.md) | Front end: Preact and Vite, with MapLibre and PMTiles for the map | Proposed — owner decision required |
 | [0006](0006-passkey-accounts-stripe-later.md) | SkipperCast accounts with passkeys now; Stripe billing later | Accepted (passkeys); Proposed (billing) |
+| [0007](0007-text-advisor-channels-and-vision.md) | Text Advisor: an owned number with a self-hosted iMessage relay, Twilio as the fallback, and a two-provider vision chain | Accepted |
