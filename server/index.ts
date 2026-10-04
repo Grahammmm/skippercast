@@ -9,6 +9,7 @@ import {recordCron, recordQueueBatch} from './analytics.ts';
 import {consumeAdvisor, consumeAdvisorDeadLetters, ADVISOR_QUEUE_NAME, ADVISOR_DLQ_NAME} from './advisor/consumer.ts';
 import {advisorCron} from './advisor/cron.ts';
 import {channelFor} from './advisor/channels/index.ts';
+import {engineHandler} from './advisor/engine.ts';
 import type {AdvisorMessage} from './advisor/types.ts';
 import type {Env} from './env.ts';
 
@@ -51,7 +52,7 @@ async function queue(batch: MessageBatch<TripCheckMessage | AdvisorMessage>, env
     return;
   }
   if (batch.queue === ADVISOR_QUEUE_NAME) {
-    const r = await consumeAdvisor(batch as MessageBatch<AdvisorMessage>, env, {channelFor});
+    const r = await consumeAdvisor(batch as MessageBatch<AdvisorMessage>, env, {channelFor, handler: engineHandler});
     recordQueueBatch(env, batch.queue, r.retried ? 'retried' : 'ok', {messages: r.messages, retried: r.retried, invalid: r.invalid, checked: r.done, delivered: r.sends, held: r.held}, Date.now() - started);
     return;
   }

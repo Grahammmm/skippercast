@@ -1,0 +1,71 @@
+{
+  "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
+  "description": "STOP, START, HELP and forget me with the DELETE confirmation. No model call.",
+  "turns": [
+    {
+      "in": "HELP",
+      "expect": {
+        "intent": "help",
+        "reply_contains": [
+          "Text STOP to stop, FORGET ME to erase your data."
+        ],
+        "actions": [
+          "send_text"
+        ]
+      }
+    },
+    {
+      "in": "STOP",
+      "expect": {
+        "intent": "stop",
+        "reply_contains": [
+          "You won't hear from me unless you text START."
+        ],
+        "status": "stopped",
+        "actions": [
+          "send_text",
+          "set_status"
+        ]
+      }
+    },
+    {
+      "in": "are the rockfish biting?",
+      "expect": {
+        "intent": "stopped",
+        "no_reply": true,
+        "actions": []
+      }
+    },
+    {
+      "in": "START",
+      "expect": {
+        "intent": "start",
+        "reply_contains": [
+          "Msg & data rates may apply. Reply HELP for help, STOP to opt out."
+        ],
+        "status": "active"
+      }
+    },
+    {
+      "in": "forget me",
+      "expect": {
+        "intent": "forget.ask",
+        "reply_contains": [
+          "Reply DELETE to erase everything"
+        ]
+      }
+    },
+    {
+      "in": "DELETE",
+      "expect": {
+        "reply_contains": [
+          "Everything I had about this number is erased."
+        ],
+        "actions": [
+          "forget"
+        ],
+        "contact_gone": true
+      }
+    }
+  ]
+}

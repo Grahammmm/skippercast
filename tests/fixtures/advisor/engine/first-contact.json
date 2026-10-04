@@ -1,0 +1,48 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "A brand-new contact says hello; no tool; the engine adds the welcome first.",
+  "message": "hey is this the fishing text thing?",
+  "contact": {
+    "new": true
+  },
+  "exchanges": [
+    {
+      "request": {
+        "last_user_contains": "fishing text thing"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "msg_fixture",
+          "type": "message",
+          "role": "assistant",
+          "model": "claude-sonnet-5",
+          "content": [
+            {
+              "type": "text",
+              "text": "Yep, SkipperCast. Ask me what's biting, the weather for a trip, the rules for a fish, or send a photo for an ID. Which port do you usually fish out of?"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 100,
+            "output_tokens": 40,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 2400
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "intent": "chat",
+    "texts": 2,
+    "reply_contains": [
+      "Which port"
+    ],
+    "first_text_contains": [
+      "Msg & data rates may apply. Reply HELP for help, STOP to opt out."
+    ]
+  }
+}

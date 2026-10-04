@@ -2,7 +2,7 @@
 // § request flow, steps 5-7, and § Idempotency and failure rules).
 //
 //   ADVISOR_QUEUE {message_id} -> load the stored inbound row -> mark processing
-//   -> handler (the engine from TA-E1; until then warmUpHandler) -> apply its
+//   -> handler (the engine, engine.ts; warmUpHandler when none is passed) -> apply its
 //   actions in order -> mark done -> ack.
 //
 // Every write is idempotent, so a re-delivered message repeats nothing it
@@ -31,11 +31,23 @@
 // message (at most MEDIA_RETRIES extra attempts); after that the handler runs
 // with that media rejected and the inbound row's error 'fetch-failed'.
 //
-// Not here yet, by design: STOP/blocked and the daily caps (the engine's
-// stage 0, TA-E1).
+// TA-E1: the engine (engine.ts) is the handler; it owns STOP/blocked and the
+// daily caps (its stage 0). The appliers for its new actions sit in the
+// "TA-E1" block of applyActions: set_status (applyStop/applyStart), forget
+// (the confirmation text, then forgetContact), export (exportContact to R2 and
+// a signed 24 h link), send_file (an attachment on BlueBubbles, the link
+// elsewhere), link_start/link_merge (the web phone link, 03 § web) and
+// admin_review (the text admin fallback, 08); review_open also texts the admin
+// contact about new skipper and media items (notifyAdmin).
 import {advisorSettings} from './settings.ts';
-import {reviewId} from './contacts.ts';
-import {outboundId} from './ids.ts';
+import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
+// TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
+import {exportKey, mintExportToken} from './exports.ts';
+import {channelFor as defaultChannelFor} from './channels/index.ts';
+import {linkKey} from './tools/offer_text_link.ts';
+import {t} from './strings.ts';
+import {localClock} from './cron.ts';
+import {outboundId, randomId} from './ids.ts';
 import {advisorLog, redact} from './log.ts';
 import {recordAdvisorTurn} from './analytics.ts';
 import {relayState} from './relay.ts';
@@ -135,10 +147,11 @@ async function recordResult(db: D1Database, deps: ConsumerDeps, id: string, resu
  *   'failed' -> sent again.
  * media_json on an outbound row holds the R2 keys it attaches, so a held row can be sent later.
  */
-async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, content: {text?: string; mediaKeys?: string[]}): Promise<boolean> {
+async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string,
+  content: {text?: string; mediaKeys?: string[]; files?: OutboundMessage['files']}, adapterOverride?: OutboundChannel | null): Promise<boolean> {
   const db = env.DB!, id = await outboundId(inId, key), at = iso(deps);
   const body = content.text == null ? null : content.text.slice(0, MAX_BODY);
-  const adapter = channelOf(env, deps, contact);
+  const adapter = adapterOverride !== undefined ? adapterOverride : channelOf(env, deps, contact);
   const existing = await db.prepare('SELECT status FROM advisor_messages WHERE id=?').bind(id).first<{status: string}>();
   if (existing) {
     if (existing.status === 'sending') { await setStatus(db, id, 'unknown', ['sending'], 'interrupted'); return false; }
@@ -150,7 +163,8 @@ async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow
     if (!r.meta.changes) return false;   // a concurrent delivery got there first
     if (held) { advisorLog('warn', 'advisor_send_held', {reason: 'relay-down'}); return false; }
   }
-  const result = await deliver(env, contact, adapter, {id, ...(content.text != null ? {text: content.text} : {}), ...(content.mediaKeys ? {mediaKeys: content.mediaKeys} : {})});
+  const result = await deliver(env, contact, adapter, {id, ...(content.text != null ? {text: content.text} : {}), ...(content.mediaKeys ? {mediaKeys: content.mediaKeys} : {}),
+    ...(content.files?.length ? {files: content.files} : {})});
   return recordResult(db, deps, id, result);
 }
 
@@ -159,13 +173,13 @@ async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow
  * chunk, in order, 300 ms apart. Chunk 0 keeps the action's key, so an
  * unsplit text has the same outbound id as before; chunk n is "<key>.<n>".
  */
-async function sendText(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, text: string): Promise<number> {
-  const adapter = channelOf(env, deps, contact);
+async function sendText(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, text: string, adapterOverride?: OutboundChannel | null): Promise<number> {
+  const adapter = adapterOverride !== undefined ? adapterOverride : channelOf(env, deps, contact);
   const chunks = adapter?.name ? splitForChannel(text, {name: adapter.name as 'bluebubbles' | 'twilio' | 'web'}, contact.channel) : [text];
   let sends = 0;
   for (const [n, chunk] of chunks.entries()) {
     if (n > 0) await sleep(deps, CHUNK_GAP_MS);
-    sends += Number(await sendOnce(env, deps, contact, inId, n === 0 ? key : `${key}.${n}`, {text: chunk}));
+    sends += Number(await sendOnce(env, deps, contact, inId, n === 0 ? key : `${key}.${n}`, {text: chunk}, adapterOverride));
   }
   return sends;
 }
@@ -206,18 +220,171 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
       }
       case 'review_open':
         if (!REVIEW_KINDS.includes(action.kind) || !ID.test(String(action.refId)) || !CODE.test(String(action.reason))) { advisorLog('warn', 'advisor_review_rejected', {kind: String(action.kind).slice(0, 20)}); break; }
+      {
+        const id = await reviewId(action.kind, action.refId, action.reason);
+        const wasOpen = await db.prepare("SELECT 1 AS x FROM advisor_reviews WHERE id=? AND status='open'").bind(id).first();
         await db.prepare(`INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,?,?,?,'open',?)
           ON CONFLICT(id) DO UPDATE SET status='open',opened_at=excluded.opened_at,decided_at=NULL,decided_by=NULL`)
-          .bind(await reviewId(action.kind, action.refId, action.reason), action.kind, action.refId, action.reason, iso(deps)).run();
+          .bind(id, action.kind, action.refId, action.reason, iso(deps)).run();
+        // TA-E1: the owner hears about a new skipper or media item by text (08 § text-based admin).
+        if (!wasOpen) sends += Number(await notifyAdmin(env, {id, kind: action.kind, reason: action.reason}, deps, message.id));
         break;
+      }
       case 'log':
         advisorLog('info', CODE.test(String(action.event)) ? action.event : 'advisor_action_log', action.fields ?? {});
+        break;
+      // ---- TA-E1: the engine's actions ----
+      case 'set_status': {
+        const changed = action.status === 'stopped' ? await applyStop(db, contact.id, new Date(clock(deps))) : action.status === 'active' ? await applyStart(db, contact.id, new Date(clock(deps))) : false;
+        if (changed) contact.status = action.status;
+        break;
+      }
+      case 'forget': {
+        // The confirmation goes out first: the send needs the number, which the delete removes (02 § forget me).
+        sends += await sendText(env, deps, contact, message.id, index, t(action.language, 'forget_done'));
+        const removed = await forgetContact(db, env.ADVISOR_MEDIA, contact.id, new Date(clock(deps)));
+        advisorLog('info', 'advisor_forget', {...removed});
+        break;
+      }
+      case 'export':
+        sends += await applyExport(env, deps, contact, message.id, index, action.language);
+        break;
+      case 'send_file':
+        sends += await applySendFile(env, deps, contact, message.id, index, action);
+        break;
+      case 'link_start':
+        sends += await applyLinkStart(env, deps, contact, message.id, index, action);
+        break;
+      case 'link_merge':
+        await applyLinkMerge(env, deps, contact, action.phoneContactId);
+        break;
+      case 'admin_review':
+        await applyAdminReview(env, deps, contact, action.reviewId, action.decision);
         break;
       default:
         advisorLog('warn', 'advisor_action_unknown', {index, type: String((action as {type?: unknown})?.type).slice(0, 40)});
     }
   }
   return sends;
+}
+
+// ---- TA-E1: appliers for the engine's actions -------------------------------------
+
+const LANGS = new Set(['en', 'es']);
+const lang = (value: string): 'en' | 'es' => LANGS.has(value) ? value as 'en' | 'es' : 'en';
+
+/** "Send me my data": the export JSON to R2 (advisor/exports/<id>/<local date>.json) and a signed 24 h link by text. */
+async function applyExport(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, index: number, language: string): Promise<number> {
+  const l = lang(language);
+  if (!env.ADVISOR_MEDIA || !env.ADVISOR_PHONE_KEY) return sendText(env, deps, contact, inId, index, t(l, 'export_unavailable'));
+  const data = await exportContact(env.DB!, contact.id);
+  if (!data) return 0;
+  const key = exportKey(contact.id, localClock(clock(deps)).date);
+  await env.ADVISOR_MEDIA.put(key, JSON.stringify({exported_at: iso(deps), ...data}, null, 2), {httpMetadata: {contentType: 'application/json'}});
+  const token = await mintExportToken(await deriveKeys(env.ADVISOR_PHONE_KEY), contact.id, key, clock(deps));
+  return sendText(env, deps, contact, inId, index, t(l, 'export_ready', {link: `${advisorSettings(env).publicBase}/api/advisor/export/${token}`}));
+}
+
+/** A file: attached on BlueBubbles (inline bytes, or an R2 object), otherwise its caption and fallback link as text. */
+async function applySendFile(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'send_file'}>): Promise<number> {
+  const adapter = channelOf(env, deps, contact);
+  const caption = typeof action.caption === 'string' ? action.caption : '';
+  if (adapter?.name === 'bluebubbles' && !await relayHold(env, adapter)) {
+    if (action.inlineBytes && /^[A-Za-z0-9+/=]{1,200000}$/.test(action.inlineBytes)) {
+      return Number(await sendOnce(env, deps, contact, inId, index, {text: caption || undefined, files: [{name: String(action.name).slice(0, 80), mime: String(action.mime).slice(0, 80), base64: action.inlineBytes}]}));
+    }
+    if (action.r2Key) return Number(await sendOnce(env, deps, contact, inId, index, {text: caption || undefined, mediaKeys: [action.r2Key]}));
+  }
+  const text = [caption, action.fallbackUrl].filter(Boolean).join(' ');
+  return text ? sendText(env, deps, contact, inId, index, text) : 0;
+}
+
+/**
+ * The web phone link, step 1 (03 § web): the phone contact found or created by
+ * hash (an existing one keeps its channel), the pending code stored as its
+ * SHA-256 in job_state advisor.link.<web contact id>, and the code texted to
+ * the number through its own channel (never the web collector). The outbound
+ * row stores the text without the code.
+ */
+async function applyLinkStart(env: Env, deps: ConsumerDeps, web: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'link_start'}>): Promise<number> {
+  const db = env.DB!, at = iso(deps);
+  if (!/^[0-9a-f]{64}$/.test(action.phoneHash) || !/^[0-9a-f]{64}$/.test(action.codeHash) || !/^\d{6}$/.test(action.codeText)) return 0;
+  // A new phone contact's last channel is 'web' (where it came from), so BlueBubbles checks iMessage availability for the code text.
+  const phone = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,language,source,last_seen_at,created_at,updated_at) VALUES(?,?,?,'web',?,'web',?,?,?)
+    ON CONFLICT(phone_hash) DO UPDATE SET updated_at=advisor_contacts.updated_at RETURNING *`)
+    .bind(randomId(), action.phoneHash, action.phoneEnc, web.language, at, at, at).first<AdvisorContactRow>();
+  if (!phone || phone.status !== 'active') return sendText(env, deps, web, inId, index, t(web.language, 'link_failed'));
+  await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(linkKey(web.id), JSON.stringify({code_hash: action.codeHash, expires_at: action.expiresAt, phone_contact_hash: action.phoneHash, phone_contact_id: phone.id}), at).run();
+  const adapter = (deps.channelFor ?? defaultChannelFor)(env, phone);
+  if (await relayHold(env, adapter)) return sendText(env, deps, web, inId, `${index}.failed`, t(web.language, 'link_failed'));
+  const id = await outboundId(inId, `${index}.code`);
+  const inserted = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,status,in_reply_to,created_at) VALUES(?,?,'out',?,?,'sending',?,?) ON CONFLICT(id) DO NOTHING`)
+    .bind(id, phone.id, phone.channel, t(phone.language, 'link_code_text', {code: '······'}), inId, at).run();
+  if (!inserted.meta.changes) return 0;
+  const result = await deliver(env, phone, adapter, {id, text: t(phone.language, 'link_code_text', {code: action.codeText})});
+  if (await recordResult(db, deps, id, result)) return 1;
+  return sendText(env, deps, web, inId, `${index}.failed`, t(web.language, 'link_failed'));
+}
+
+/**
+ * The web phone link, step 2: the web contact's messages, media and reviews
+ * move to the phone contact, its session cookie moves too (so the web chat
+ * keeps talking as the phone contact), and the web contact is deleted.
+ */
+async function applyLinkMerge(env: Env, deps: ConsumerDeps, web: AdvisorContactRow, phoneContactId: string): Promise<void> {
+  const db = env.DB!, at = iso(deps);
+  if (!ID.test(phoneContactId) || phoneContactId === web.id || web.phone_enc) return;
+  const phone = await db.prepare('SELECT id,web_session FROM advisor_contacts WHERE id=?').bind(phoneContactId).first<{id: string; web_session: string | null}>();
+  if (!phone) return;
+  await db.batch([
+    db.prepare('UPDATE advisor_messages SET contact_id=? WHERE contact_id=?').bind(phone.id, web.id),
+    db.prepare('UPDATE advisor_media SET contact_id=? WHERE contact_id=?').bind(phone.id, web.id),
+    db.prepare('UPDATE advisor_reviews SET ref_id=? WHERE ref_id=?').bind(phone.id, web.id),
+    db.prepare('UPDATE advisor_contacts SET web_session=NULL WHERE id=?').bind(web.id),
+    db.prepare('UPDATE advisor_contacts SET web_session=?,updated_at=? WHERE id=? AND web_session IS NULL').bind(web.web_session, at, phone.id),
+    db.prepare('DELETE FROM advisor_contacts WHERE id=?').bind(web.id),
+    db.prepare('DELETE FROM job_state WHERE key=?').bind(linkKey(web.id)),
+  ]);
+  advisorLog('info', 'advisor_web_linked', {count: 1});
+}
+
+/**
+ * The text admin fallback (08): the engine already checked the contact; this
+ * re-checks it and applies the decision to one open skipper or media review.
+ * skipper/new_skipper verifies (or rejects) the boat; media sets publish_state.
+ */
+async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, id: string, decision: string): Promise<void> {
+  const db = env.DB!, at = iso(deps), settings = advisorSettings(env);
+  if (contact.id !== settings.adminContactId || contact.role !== 'admin-test' || !/^[0-9a-f]{32}$/.test(id) || !['approved', 'rejected'].includes(decision)) return;
+  const review = await db.prepare("SELECT id,kind,ref_id,reason FROM advisor_reviews WHERE id=? AND status='open' AND kind IN ('skipper','media')").bind(id).first<{id: string; kind: string; ref_id: string; reason: string}>();
+  if (!review) return;
+  const ok = decision === 'approved';
+  const statements = [db.prepare("UPDATE advisor_reviews SET status=?,decided_at=?,note='text admin' WHERE id=? AND status='open'").bind(decision, at, id)];
+  if (review.kind === 'skipper' && review.reason === 'new_skipper') {
+    statements.push(ok
+      ? db.prepare("UPDATE advisor_boats SET status='verified',verified_at=?,updated_at=? WHERE id=?").bind(at, at, review.ref_id)
+      : db.prepare("UPDATE advisor_boats SET status='rejected',updated_at=? WHERE id=?").bind(at, review.ref_id));
+  }
+  if (review.kind === 'media') statements.push(db.prepare("UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN ('private','queued')").bind(ok ? 'approved' : 'rejected', review.ref_id));
+  await db.batch(statements);
+  advisorLog('info', 'advisor_text_admin', {kind: review.kind, decision});
+}
+
+/**
+ * Text the owner's admin-test contact (ADVISOR_ADMIN_CONTACT_ID) about a new
+ * skipper or media review, with the 6-character code `ok`/`no` takes (08).
+ * Returns true when a text was sent. Nothing for other kinds, without the
+ * setting, or when that contact is not an active admin-test contact.
+ */
+export async function notifyAdmin(env: Env, review: {id: string; kind: string; reason: string}, deps: ConsumerDeps = {}, inId = review.id): Promise<boolean> {
+  const settings = advisorSettings(env);
+  if (!env.DB || !settings.adminContactId || !['skipper', 'media'].includes(review.kind)) return false;
+  const admin = await env.DB.prepare("SELECT * FROM advisor_contacts WHERE id=? AND role='admin-test' AND status='active'").bind(settings.adminContactId).first<AdvisorContactRow>();
+  if (!admin) return false;
+  const code = review.id.slice(0, 6);
+  const text = t(admin.language, 'admin_notify', {kind: review.kind, reason: review.reason, code});
+  return sendOnce(env, deps, admin, inId, `notify:${review.id}`, {text}, (deps.channelFor ?? defaultChannelFor)(env, admin));
 }
 
 const TIMED_OUT = Symbol('timed out');

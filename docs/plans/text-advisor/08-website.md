@@ -98,7 +98,12 @@ each new `review.skipper` and `review.media` item with a short code), `ok
 <code>` / `no <code>` applies the decision. This covers the pilot before the
 admin app is polished and is the only engine path that performs an admin
 action; it checks `contact.role='admin-test'` and the contact id against
-`ADVISOR_ADMIN_CONTACT_ID` (a var) and nothing else can reach it.
+`ADVISOR_ADMIN_CONTACT_ID` (a var) and nothing else can reach it. As built (TA-E1):
+the code is the first 6 hex characters of the review id; it must match
+exactly one open `skipper` or `media` review. Verifying a `new_skipper`
+review sets the boat `verified` (`verified_at`, no `verified_by`: the decider
+is a contact, not a `users` row); rejecting it sets `rejected`. A `media`
+decision sets `publish_state`. The review's `note` is `text admin`.
 
 ## Telemetry
 

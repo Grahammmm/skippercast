@@ -1,0 +1,34 @@
+{
+  "_source": "Hand-written to the Messages API response shape (content blocks, stop_reason, usage); not captured from the live API. Boats, counts and conditions are made up.",
+  "description": "HTTP 529 (overloaded) twice: one retry, then the turn fails and the consumer retries the message.",
+  "message": "what's the weather tomorrow",
+  "exchanges": [
+    {
+      "response": {
+        "status": 529,
+        "body": {
+          "type": "error",
+          "error": {
+            "type": "overloaded_error",
+            "message": "Overloaded"
+          }
+        }
+      }
+    },
+    {
+      "response": {
+        "status": 529,
+        "body": {
+          "type": "error",
+          "error": {
+            "type": "overloaded_error",
+            "message": "Overloaded"
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "throws": "advisor model HTTP 529"
+  }
+}

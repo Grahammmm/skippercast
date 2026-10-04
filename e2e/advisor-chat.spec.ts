@@ -1,6 +1,6 @@
 // The Text Advisor web chat (TA-C3, docs/plans/text-advisor/08-website.md § Web chat)
-// on dist/chat.html: open the panel, send a message, see the reply the stub
-// handler gives until the engine lands (TA-E1), and run axe on the open panel.
+// on dist/chat.html: open the panel, send a message, see the reply
+// the engine gives without ANTHROPIC_API_KEY (the warm-up text, TA-E1), and run axe on the open panel.
 // e2e/serve.mjs sets TEXT_ADVISOR_ENABLED=true for these runs only.
 import {test, expect, checkA11y} from './fixtures.ts';
 
