@@ -31,3 +31,15 @@ export interface AdvisorSettings {
 
 /** The one message shape on ADVISOR_QUEUE: the stored inbound message to process. */
 export interface AdvisorMessage {message_id: string}
+
+/** An advisor_contacts row as D1 returns it (02 § advisor_contacts). phone_enc never leaves the server. */
+export interface AdvisorContactRow {
+  id: string; phone_hash: string | null; phone_enc: string | null; web_session: string | null;
+  channel: string; role: string; boat_id: string | null; display_name: string | null; language: string;
+  home_port: string | null; targets_json: string | null; source: string | null; status: 'active' | 'stopped' | 'blocked';
+  messages_today: number; messages_day: string | null; last_seen_at: string; last_error_notice_at: string | null;
+  created_at: string; updated_at: string;
+}
+
+/** The two subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */
+export interface PhoneKeys {hashKey: CryptoKey; encKey: CryptoKey}
