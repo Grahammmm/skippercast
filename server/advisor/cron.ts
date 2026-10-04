@@ -18,6 +18,10 @@
 // held rows once the relay is up again (or through Twilio once the owner has
 // set ADVISOR_CHANNEL=twilio, never automatically) and fails rows older than
 // 6 hours.
+//
+// TA-S2: social/publish.ts publishDue also runs on every tick (not a slot): approved posts whose
+// time has come, and a video still processing on Instagram, while ADVISOR_SOCIAL_ENABLED is on.
+// TA-S3: collabTick reads the collaborator invites of recent posts, at most hourly.
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
 import {RELAY_KEY, relayState} from './relay.ts';
@@ -34,6 +38,9 @@ import {pregenerateDaily} from './answers/reports.ts';
 import type {DailyDeps} from './answers/reports.ts';
 // TA-A4: the CDFW change-watch slot.
 import {watchRuleSources} from './admin/rules.ts';
+// TA-S2: publishing due posts every tick.
+import {publishDue, collabTick} from './social/publish.ts';
+import type {PublishDeps} from './social/publish.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -107,7 +114,8 @@ export async function runSlot(env: Env, name: string, time: SlotTime, fn: SlotJo
 }
 
 export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps; daily?: DailyDeps;   // daily: TA-A1's feeds and Messages API fetcher (tests)
-  dispatchWorkflow?: (env: Env, file: string) => Promise<number>}                                  // TA-M1: the media job dispatch (tests)
+  dispatchWorkflow?: (env: Env, file: string) => Promise<number>                                   // TA-M1: the media job dispatch (tests)
+  publish?: PublishDeps}                                                                            // TA-S2: the Graph fetcher, sleep, the skipper's channel (tests)
 
 /**
  * TA-M1 (09 § Derived images): on every tick, while any media or graphic is
@@ -177,6 +185,13 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     if (!held) partial = true;
     // TA-M1: a failed dispatch is logged by requestMediaJob; the next tick tries again.
     await mediaJobTick(env, now, deps).catch(error => { advisorLog('error', 'advisor_media_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
+    // TA-S2: due posts to Instagram and the Page. A failing Meta ends in each post's status; only a D1 failure lands here.
+    const published = await publishDue(env, now, {consumer: deps.consumer ?? {channelFor}, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {}), ...deps.publish})
+      .catch(error => { advisorLog('error', 'advisor_publish_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });
+    if (!published) partial = true;
+    // TA-S3: collaborator invite answers, at most hourly.
+    await collabTick(env, now, {...(deps.publish?.fetcher ? {fetcher: deps.publish.fetcher} : {}), ...(deps.publish?.sleep ? {sleep: deps.publish.sleep} : {})})
+      .catch(error => { advisorLog('error', 'advisor_collab_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
     for (const slot of deps.slots ?? SLOTS) {
       const outcome = await runSlot(env, slot.name, slot.time, (e, n) => slot.run(e, n, deps), now);
       if (outcome === 'failed') partial = true;

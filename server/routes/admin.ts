@@ -26,6 +26,9 @@
 //   POST /api/admin/rules/:id       edit or confirm: reviewed_at now, review_due, status active, updated_by
 //   POST /api/admin/rules/:id/retire
 //   GET  /api/admin/posts           ?status=draft|approved|...|all &kind= &cursor=   admin/posts.ts (TA-S1); decisions go through /api/admin/reviews/<review_id>
+//   POST /api/admin/posts/:id/publish    post an approved post now (TA-S2, social/publish.ts)
+//   POST /api/admin/posts/:id/schedule   {scheduled_for: ISO | null} for an approved post
+//   POST /api/admin/posts/:id/retry      a partial or failed post: only the surfaces that failed
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -49,6 +52,10 @@ import {listRules, createRule, editRule, retireRule} from '../advisor/admin/rule
 import type {RuleOutcome} from '../advisor/admin/rules.ts';
 // TA-S1: social posts.
 import {listPosts} from '../advisor/admin/posts.ts';
+// TA-S2: post now, schedule, retry.
+import {postNow, schedulePost, retryPost} from '../advisor/admin/posts.ts';
+import type {PostActionOutcome} from '../advisor/admin/posts.ts';
+import type {PublishDeps} from '../advisor/social/publish.ts';
 import type {Fetcher} from '../advisor/social/meta.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
@@ -57,6 +64,16 @@ import type {ConsumerDeps} from '../advisor/types.ts';
 function ruleAnswer(outcome: RuleOutcome): Response {
   switch (outcome.status) {
     case 'ok': return json({rule: outcome.rule});
+    case 'not-found': return NOT_FOUND();
+    case 'invalid': return json({error: outcome.error}, 400);
+    case 'conflict': return json({error: outcome.error}, 409);
+  }
+}
+
+/** The JSON answer for a post action (TA-S2). */
+function postAnswer(outcome: PostActionOutcome): Response {
+  switch (outcome.status) {
+    case 'ok': return json({post: outcome.post, ...(outcome.outcome ? {outcome: outcome.outcome} : {}), ...(outcome.error ? {error: outcome.error} : {})});
     case 'not-found': return NOT_FOUND();
     case 'invalid': return json({error: outcome.error}, 400);
     case 'conflict': return json({error: outcome.error}, 409);
@@ -82,7 +99,7 @@ const VIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 export const thumbKey = (id: string): string => `advisor/derived/${id}/thumb.jpg`;   // 02 § R2, written by the advisor-media job (TA-M1)
 
 /** What the admin routes take besides the consumer's deps (tests): the funnel's Analytics Engine SQL reader and the Graph API fetcher (TA-S0). */
-export interface AdminDeps extends ConsumerDeps {analyticsSql?: SqlFetcher | null; metaFetcher?: Fetcher}
+export interface AdminDeps extends ConsumerDeps {analyticsSql?: SqlFetcher | null; metaFetcher?: Fetcher; metaSleep?: (ms: number) => Promise<void>}
 
 /** The admin routes; `deps` lets tests pass a recording channel (production uses channels/index.ts channelFor). */
 export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
@@ -192,6 +209,12 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     const list = await listPosts(c.env.DB!, {status: c.req.query('status') || null, kind: c.req.query('kind') || null, cursor: c.req.query('cursor') || null});
     return 'error' in list ? json({error: list.error}, 400) : json(list);
   });
+  // ---- TA-S2: publishing ----
+  const publishDeps = (): PublishDeps => ({...(deps.now ? {now: deps.now} : {}), ...(deps.metaFetcher ? {fetcher: deps.metaFetcher} : {}),
+    ...(deps.metaSleep ? {sleep: deps.metaSleep} : {}), consumer: deps, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
+  admin.post('/api/admin/posts/:id/publish', async c => postAnswer(await postNow(c.env, c.req.param('id'), now(), publishDeps())));
+  admin.post('/api/admin/posts/:id/schedule', async c => postAnswer(await schedulePost(c.env, c.req.param('id'), await body(c.req.raw, 1024), now())));
+  admin.post('/api/admin/posts/:id/retry', async c => postAnswer(await retryPost(c.env, c.req.param('id'), publishDeps())));
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

@@ -11,8 +11,14 @@
 // Approval is refused (409) while a photo is held: a has_person (or nsfw) photo
 // whose media review is not approved, a media review still open, a rejected
 // photo, a boat that is not verified or whose photo consent is no longer
-// active (05 § Verification and § Consent). Publishing (post now, schedule
-// slots, retry) is TA-S2's.
+// active (05 § Verification and § Consent).
+//
+// TA-S2, publishing an approved post (social/publish.ts):
+//   post now   approved -> scheduled_for cleared, published in the request (one status read for a
+//              video; the cron's next tick continues one still processing)
+//   schedule   approved -> scheduled_for set (or cleared: the next tick posts it)
+//   retry      partial or failed -> publish again, only the surfaces without a stored id
+// Post now and retry need ADVISOR_SOCIAL_ENABLED and the Meta secrets.
 import {adminMediaUrl} from './queue.ts';
 import {reviewId} from '../contacts.ts';
 import {consentActive} from '../intake/skippers.ts';
@@ -21,6 +27,11 @@ import {requestMediaJob} from '../media.ts';
 import {advisorLog} from '../log.ts';
 import {COLLABORATORS_MAX, HANDLE, POST_KINDS, POST_STATUSES, REVIEW_REASON, TARGETS_FOR, USER_TAGS_MAX, captionProblem, captionStats, cleanCaption} from '../social/drafts.ts';
 import type {PostKind, Target, UserTag} from '../social/drafts.ts';
+// TA-S2: publishing.
+import {advisorSettings} from '../settings.ts';
+import {metaConfigured} from '../social/meta.ts';
+import {publish} from '../social/publish.ts';
+import type {PublishDeps, PublishOutcome} from '../social/publish.ts';
 import type {Env} from '../../env.ts';
 
 export const POSTS_PAGE = 50;
@@ -74,6 +85,7 @@ export async function postView(db: D1Database, post: PostRow): Promise<Record<st
     id: post.id, kind: post.kind, region: post.region, status: post.status, caption: post.caption, caption_stats: captionStats(post.caption),
     targets: parse<string[]>(post.targets_json, []), allowed_targets: TARGETS_FOR[post.kind] ?? [], collaborators: parse<string[]>(post.collaborators_json, []),
     user_tags: parse<UserTag[]>(post.user_tags_json, []), scheduled_for: post.scheduled_for, error: post.error, created_by: post.created_by,
+    ig_media_id: post.ig_media_id, fb_post_id: post.fb_post_id, fb_story_id: post.fb_story_id, collab_status: post.collab_status,   // TA-S2
     approved_by: post.approved_by, approved_at: post.approved_at, posted_at: post.posted_at, created_at: post.created_at, updated_at: post.updated_at,
     boat: boat ?? null,
     media: media.map(m => ({id: m.id, kind: m.kind, has_person: m.has_person === null ? null : m.has_person === 1, publish_state: m.publish_state, credit: m.credit,
@@ -218,4 +230,60 @@ export async function decidePost(env: Env, postId: string, decision: 'approve' |
     advisorLog('info', 'advisor_post_approved', {kind: post.kind, edited: Object.keys(p).filter(k => k !== 'scheduled_for').length > 0, scheduled: Boolean(p.scheduled_for ?? post.scheduled_for)});
   }
   return {status: 'ok'};
+}
+
+// ---- TA-S2: post now, schedule, retry ------------------------------------------------------------
+
+export type PostActionOutcome = {status: 'ok'; post: Record<string, unknown>; outcome?: PublishOutcome; error?: string}
+  | {status: 'not-found'} | {status: 'invalid'; error: string} | {status: 'conflict'; error: string};
+
+const loadPost = (db: D1Database, id: string): Promise<PostRow | null> =>
+  /^[\w-]{1,64}$/.test(id) ? db.prepare('SELECT * FROM advisor_posts WHERE id=?').bind(id).first<PostRow>() : Promise.resolve(null);
+
+/** Why this deploy cannot publish now, or null. */
+function cannotPublish(env: Env): string | null {
+  if (!advisorSettings(env).socialEnabled) return 'social publishing is switched off (ADVISOR_SOCIAL_ENABLED)';
+  if (!metaConfigured(env)) return 'the Meta secrets are not set';
+  return null;
+}
+
+async function afterPublish(env: Env, id: string, result: {outcome: PublishOutcome; error?: string}): Promise<PostActionOutcome> {
+  if (result.outcome === 'busy') return {status: 'conflict', error: 'the post is being published right now'};
+  const post = await loadPost(env.DB!, id);
+  if (!post) return {status: 'not-found'};
+  return {status: 'ok', post: await postView(env.DB!, post), outcome: result.outcome, ...(result.error ? {error: result.error} : {})};
+}
+
+/** POST /api/admin/posts/:id/publish: an approved post now (its schedule cleared). */
+export async function postNow(env: Env, id: string, now: number, deps: PublishDeps = {}): Promise<PostActionOutcome> {
+  const db = env.DB!, post = await loadPost(db, id);
+  if (!post) return {status: 'not-found'};
+  if (post.status !== 'approved') return {status: 'conflict', error: `the post is ${post.status}`};
+  const blocked = cannotPublish(env);
+  if (blocked) return {status: 'conflict', error: blocked};
+  await db.prepare("UPDATE advisor_posts SET scheduled_for=NULL,updated_at=? WHERE id=? AND status='approved'").bind(new Date(now).toISOString(), id).run();
+  return afterPublish(env, id, await publish(env, id, {pollTries: 1, ...deps}));
+}
+
+/** POST /api/admin/posts/:id/schedule {scheduled_for}: an approved post's time (within 60 days; null clears it, so the next tick posts it). */
+export async function schedulePost(env: Env, id: string, input: unknown, now: number): Promise<PostActionOutcome> {
+  const db = env.DB!, post = await loadPost(db, id);
+  if (!post) return {status: 'not-found'};
+  if (post.status !== 'approved') return {status: 'conflict', error: `the post is ${post.status}`};
+  const body = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : {};
+  if (!('scheduled_for' in body)) return {status: 'invalid', error: 'scheduled_for is required (null clears it)'};
+  const checked = postPatch(post.kind, {scheduled_for: body.scheduled_for}, 'approve', now);
+  if ('error' in checked) return {status: 'invalid', error: checked.error};
+  await db.prepare("UPDATE advisor_posts SET scheduled_for=?,updated_at=? WHERE id=? AND status='approved'").bind(checked.patch.scheduled_for ?? null, new Date(now).toISOString(), id).run();
+  return {status: 'ok', post: await postView(db, (await loadPost(db, id))!)};
+}
+
+/** POST /api/admin/posts/:id/retry: a partial or failed post again; only its surfaces without an id are tried. */
+export async function retryPost(env: Env, id: string, deps: PublishDeps = {}): Promise<PostActionOutcome> {
+  const post = await loadPost(env.DB!, id);
+  if (!post) return {status: 'not-found'};
+  if (post.status !== 'partial' && post.status !== 'failed') return {status: 'conflict', error: `the post is ${post.status}`};
+  const blocked = cannotPublish(env);
+  if (blocked) return {status: 'conflict', error: blocked};
+  return afterPublish(env, id, await publish(env, id, {pollTries: 1, ...deps}, {retry: true}));
 }

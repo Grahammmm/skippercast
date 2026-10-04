@@ -231,6 +231,25 @@ export async function igPermalink(cfg: MetaConfig, mediaId: string): Promise<str
   return typeof r.permalink === 'string' && /^https:\/\/(?:www\.)?instagram\.com\//.test(r.permalink) ? r.permalink : null;
 }
 
+export type InviteStatus = 'accepted' | 'pending' | 'declined';
+export interface Collaborator {id: string | null; username: string; invite_status: InviteStatus | null}
+/**
+ * GET /<ig-media-id>/collaborators?fields=id,username,invite_status (TA-S3): the
+ * collaborators invited on a published media and where each invite stands
+ * (Meta's `invite_status` is `Accepted`, `Pending` or `Declined`; only accounts
+ * that allow collaborator tagging are listed). Usernames come back lower-case.
+ */
+export async function igCollaborators(cfg: MetaConfig, mediaId: string): Promise<Collaborator[]> {
+  const r = await graph<{data?: {id?: unknown; username?: unknown; invite_status?: unknown}[]}>(cfg, 'GET', `/${requireId(mediaId, 'media')}/collaborators`,
+    {fields: 'id,username,invite_status'});
+  return (Array.isArray(r.data) ? r.data : []).flatMap(c => {
+    if (typeof c?.username !== 'string' || !/^[A-Za-z0-9._]{1,30}$/.test(c.username)) return [];
+    const status = typeof c.invite_status === 'string' ? c.invite_status.toLowerCase() : '';
+    return [{id: typeof c.id === 'string' && ID.test(c.id) ? c.id : null, username: c.username.toLowerCase(),
+      invite_status: status === 'accepted' || status === 'pending' || status === 'declined' ? status : null}];
+  });
+}
+
 // ---- Facebook Page ------------------------------------------------------------------------------
 
 /**
@@ -272,6 +291,19 @@ export async function fbVideoReel(cfg: MetaConfig, pageId: string, input: {video
   const done = await graph<{success?: boolean; post_id?: string}>(cfg, 'POST', `/${page}/video_reels`, {upload_phase: 'finish', video_id: videoId, video_state: 'PUBLISHED', description: input.description});
   if (done.success === false) throw new MetaError('video_reels', 200, null, null, null);
   return {video_id: videoId, post_id: typeof done.post_id === 'string' && ID.test(done.post_id) ? done.post_id : null};
+}
+
+/**
+ * A multi-photo Page post (TA-S2): POST /<page-id>/feed with `message` and
+ * `attached_media[i]={"media_fbid":"<photo id>"}` for photos already uploaded
+ * unpublished (fbPhoto published=false). Returns the feed post id.
+ */
+export async function fbFeed(cfg: MetaConfig, pageId: string, input: {message?: string; photo_ids: string[]}): Promise<string> {
+  if (!input.photo_ids.length || input.photo_ids.length > 10) throw new TypeError('a multi-photo post takes 1 to 10 photos');
+  const params: Params = {message: input.message};
+  input.photo_ids.forEach((id, i) => { params[`attached_media[${i}]`] = JSON.stringify({media_fbid: requireId(id, 'photo')}); });
+  const r = await graph<{id?: string}>(cfg, 'POST', `/${requireId(pageId, 'page')}/feed`, params);
+  return requireId(String(r.id ?? ''), 'post');
 }
 
 /** A Page photo Story: an unpublished photo (POST /<page-id>/photos published=false), then POST /<page-id>/photo_stories photo_id. Returns the story's post id. */

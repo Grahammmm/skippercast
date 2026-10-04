@@ -1,6 +1,7 @@
 // The post editor's form logic (TA-S1), plain TypeScript so the Node tests load
 // it: which fields changed (only those go in the edit's patch), the username
 // lists, and the datetime-local value of a scheduled time.
+import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import type {Post} from './api.ts';
 
 export interface PostForm {caption: string; targets: string[]; collaborators: string; tags: string; schedule: string}
@@ -42,4 +43,11 @@ export function postEdits(post: Pick<Post, 'caption' | 'targets' | 'collaborator
   const before = post.scheduled_for ? new Date(post.scheduled_for).toISOString() : null;
   if (scheduled !== before && !(scheduled && before && localInput(scheduled) === localInput(before))) patch.scheduled_for = scheduled;
   return patch;
+}
+
+/** The surfaces a post already went to, by name (TA-S2). */
+export function publishedTo(post: Pick<Post, 'kind' | 'ig_media_id' | 'fb_post_id' | 'fb_story_id'>): string {
+  const story = post.kind === 'story';
+  return [post.ig_media_id ? COPY.targetNames[story ? 'instagram_story' : 'instagram'] : null,
+    (story ? post.fb_story_id : post.fb_post_id) ? COPY.targetNames[story ? 'facebook_story' : 'facebook'] : null].filter(Boolean).join(', ');
 }

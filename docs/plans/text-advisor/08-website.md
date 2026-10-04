@@ -452,6 +452,12 @@ for the drafts themselves). Where the code differs from the table above:
 - **View.** Status (default Draft) and kind filters; a draft renders the queue's
   card with its decisions, any other post the card read-only. The week calendar
   and per-post stats are TA-S4 and TA-S7.
+
+As built (TA-S2): `POST /api/admin/posts/<id>/publish` (post an approved post
+now), `/schedule` (`{scheduled_for}`, or null) and `/retry` (a partly posted or
+failed post, only the surface that failed), each answering `{post, outcome?,
+error?}`; the Posts view's approved, partial and failed cards carry those
+actions (09 § Publishing "As built (TA-S2)").
 - **Skippers.** `posts` counts the boat's posts that were not rejected.
 - **Tests.** `tests/test_advisor_social_drafts.mjs`; `e2e/admin.spec.ts` opens
   the Posts view and the editor with axe.

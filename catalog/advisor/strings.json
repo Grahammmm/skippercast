@@ -745,6 +745,14 @@
     "caption_cta": {
       "en": "Text SkipperCast for today's report: {number}",
       "es": "Escríbele a SkipperCast para el reporte de hoy: {number}"
+    },
+    "social_posted": {
+      "en": "Posted: {link}",
+      "es": "Publicado: {link}"
+    },
+    "social_posted_tagged": {
+      "en": "Posted: {link}. Tagged @{handle}.",
+      "es": "Publicado: {link}. Etiquetamos a @{handle}."
     }
   }
 }

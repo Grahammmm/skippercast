@@ -16,7 +16,7 @@ import {advisorLog} from '../advisor/log.ts';
 // TA-C4: shared inbound path, media intake, upload links and media serving.
 import {storeInbound, dispatchInbound, storeUpload} from '../advisor/inbound.ts';
 import {deriveKeys} from '../advisor/contacts.ts';
-import {ingestMedia, verifyUploadToken, derivedKey, MAX_MEDIA_BYTES} from '../advisor/media.ts';
+import {ingestMedia, verifyUploadToken, derivedKey, derivedKeys, MAX_MEDIA_BYTES} from '../advisor/media.ts';
 import {firstFile} from '../advisor/multipart.ts';
 import {shellResponse} from './assets.ts';
 import {waitUntil} from './util.ts';
@@ -211,31 +211,74 @@ advisorPublic.post('/api/advisor/upload/:token', async c => {
   }
 });
 
-const MEDIA_FILE = /^([\w-]{1,64})\.(jpg|png)$/;
+const MEDIA_FILE = /^([\w-]{1,64})(\.story)?\.(jpg|png|mp4)$/;
 const EXT_MIME: Record<string, string> = {jpg: 'image/jpeg', png: 'image/png'};
+/** Video originals Meta may fetch (09: MP4 or MOV); served at <id>.mp4 with their own type. */
+const VIDEO_MIMES = new Set(['video/mp4', 'video/quicktime']);
+const MEDIA_HEADERS = {'Cache-Control': 'public, max-age=3600', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'};
+
+/**
+ * One `Range: bytes=` header against an object of `size` bytes (a single range:
+ * `a-b`, `a-` or `-n`). null when absent or not a single bytes range (served
+ * whole); 'unsatisfiable' when it starts past the end.
+ */
+export function byteRange(header: string | null | undefined, size: number): {offset: number; length: number} | 'unsatisfiable' | null {
+  const m = header ? /^bytes=(\d*)-(\d*)$/.exec(header.trim()) : null;
+  if (!m || (m[1] === '' && m[2] === '')) return null;
+  if (m[1] === '') {
+    const n = Number(m[2]);
+    if (!n) return 'unsatisfiable';
+    const length = Math.min(n, size);
+    return {offset: size - length, length};
+  }
+  const start = Number(m[1]), end = m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1);
+  if (start >= size || end < start) return 'unsatisfiable';
+  return {offset: start, length: end - start + 1};
+}
 
 /**
  * A public image: advisor/derived/<id>/public.jpg once the media job has made
  * it, else the metadata-stripped original, only for publish_state approved or
- * posted. Originals that were not stripped (HEIC, GIF, WebP, video, audio) are
+ * posted. Originals that were not stripped (HEIC, GIF, WebP, audio) are
  * never served, nor a stripped JPEG whose EXIF orientation was 2-8 (its pixels
  * are sideways without the tag; the media job's upright public.jpg is served
  * once it exists). Anything else is the same 404 as a missing id.
+ *
+ * TA-S2 (09 § Media that Meta fetches): <id>.story.jpg is the job's 1080 x 1920
+ * story.jpg (no fallback), and <id>.mp4 is an approved or posted video's
+ * original (MP4 or MOV, its own Content-Type) with single-range support
+ * (206 / 416), which Meta's video fetchers use.
  */
 advisorPublic.get('/media/:file', async c => {
   const env = c.env, match = MEDIA_FILE.exec(c.req.param('file'));
   if (!match || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
-  const [, id, ext] = match as unknown as [string, string, string];
-  const row = await env.DB.prepare('SELECT mime,r2_key,exif_stripped,publish_state,orientation FROM advisor_media WHERE id=?').bind(id)
-    .first<{mime: string; r2_key: string; exif_stripped: number; publish_state: string; orientation: number | null}>();
+  const [, id, story, ext] = match as unknown as [string, string, string | undefined, string];
+  if (story && ext !== 'jpg') return NOT_FOUND();
+  const row = await env.DB.prepare('SELECT kind,mime,r2_key,exif_stripped,publish_state,orientation FROM advisor_media WHERE id=?').bind(id)
+    .first<{kind: string; mime: string; r2_key: string; exif_stripped: number; publish_state: string; orientation: number | null}>();
   if (!row || !PUBLIC_STATES.has(row.publish_state)) return NOT_FOUND();
+  if (ext === 'mp4') {
+    if (row.kind !== 'video' || !row.r2_key || !VIDEO_MIMES.has(row.mime)) return NOT_FOUND();
+    const head = await env.ADVISOR_MEDIA.head(row.r2_key);
+    if (!head) return NOT_FOUND();
+    const range = byteRange(c.req.header('range'), head.size);
+    if (range === 'unsatisfiable') return new Response(null, {status: 416, headers: {...MEDIA_HEADERS, 'Content-Range': `bytes */${head.size}`, 'Accept-Ranges': 'bytes'}});
+    const object = await env.ADVISOR_MEDIA.get(row.r2_key, range ? {range} : {});
+    if (!object) return NOT_FOUND();
+    const headers: Record<string, string> = {...MEDIA_HEADERS, 'Content-Type': row.mime, 'Accept-Ranges': 'bytes', 'Content-Length': String(range ? range.length : head.size)};
+    if (range) headers['Content-Range'] = `bytes ${range.offset}-${range.offset + range.length - 1}/${head.size}`;
+    return new Response(object.body, {status: range ? 206 : 200, headers});
+  }
+  if (row.kind !== 'image') return NOT_FOUND();
   let object: R2ObjectBody | null = null, type = row.mime;
-  if (ext === 'jpg') { object = await env.ADVISOR_MEDIA.get(derivedKey(id)); if (object) type = 'image/jpeg'; }
-  const upright = (row.orientation ?? 1) === 1;
-  if (!object && upright && row.r2_key && row.exif_stripped === 1 && row.mime === EXT_MIME[ext]) object = await env.ADVISOR_MEDIA.get(row.r2_key);
+  if (story) { object = await env.ADVISOR_MEDIA.get(derivedKeys(id).story); if (object) type = 'image/jpeg'; }
+  else {
+    if (ext === 'jpg') { object = await env.ADVISOR_MEDIA.get(derivedKey(id)); if (object) type = 'image/jpeg'; }
+    const upright = (row.orientation ?? 1) === 1;
+    if (!object && upright && row.r2_key && row.exif_stripped === 1 && row.mime === EXT_MIME[ext]) object = await env.ADVISOR_MEDIA.get(row.r2_key);
+  }
   if (!object) return NOT_FOUND();
-  return new Response(object.body, {status: 200, headers: {'Content-Type': type, 'Content-Length': String(object.size), 'Cache-Control': 'public, max-age=3600',
-    'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
+  return new Response(object.body, {status: 200, headers: {...MEDIA_HEADERS, 'Content-Type': type, 'Content-Length': String(object.size)}});
 });
 
 // ---- TA-C6: contact card, text deep link and QR ----------------------------------

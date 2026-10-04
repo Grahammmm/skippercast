@@ -33,7 +33,16 @@ export function memoryBucket(initial = {}) {
       objects.set(key, {bytes, httpMetadata: {...options.httpMetadata}, customMetadata: {...options.customMetadata}});
       return {key, size: bytes.length};
     },
-    async get(key) { calls.get.push(key); const e = objects.get(key); return e ? objectBody(key, e) : null; },
+    async get(key, options = {}) {
+      calls.get.push(key);
+      const e = objects.get(key);
+      if (!e) return null;
+      // R2's {range: {offset, length}}: the body is the slice; size stays the whole object's.
+      const r = options.range;
+      if (!r) return objectBody(key, e);
+      const body = objectBody(key, {...e, bytes: e.bytes.slice(r.offset, r.offset + r.length)});
+      return {...body, size: e.bytes.length, range: {offset: r.offset, length: r.length}, get body() { return new Response(e.bytes.slice(r.offset, r.offset + r.length)).body; }};
+    },
     async head(key) { const e = objects.get(key); return e ? {key, size: e.bytes.length, httpMetadata: {...e.httpMetadata}, customMetadata: {...e.customMetadata}} : null; },
     async delete(keys) { for (const key of [].concat(keys)) { calls.delete.push(key); objects.delete(key); } },
     async list({prefix = ''} = {}) { return {objects: [...objects.keys()].filter(k => k.startsWith(prefix)).sort().map(key => ({key})), truncated: false}; },
