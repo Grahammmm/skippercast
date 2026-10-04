@@ -328,7 +328,7 @@ dbTest('the image bytes are read once per chain call, whatever the number of pro
 test('species-extra, lookalikes and protected reference known keys and sources', () => {
   const catalogKeys = new Set(read('../catalog/species.json').species.map(s => s.id));
   const extra = read('../catalog/advisor/species-extra.json').species;
-  const required = ['vermilion', 'canary', 'yelloweye', 'cowcod', 'copper', 'bocaccio', 'chilipepper', 'black', 'blue', 'gopher', 'cabezon', 'kelp-greenling',
+  const required = ['vermilion', 'canary', 'yelloweye', 'cowcod', 'bronzespotted', 'quillback', 'copper', 'bocaccio', 'chilipepper', 'black', 'blue', 'gopher', 'cabezon', 'kelp-greenling',
     'white-seabass', 'california-halibut', 'pacific-halibut', 'king-salmon', 'albacore', 'bluefin', 'yellowtail', 'dungeness'];
   const known = new Set([...catalogKeys, ...extra.map(e => e.key)]);
   for (const k of required) assert.ok(known.has(k), k);
@@ -345,10 +345,13 @@ test('species-extra, lookalikes and protected reference known keys and sources',
     assert.equal(v.cues_es?.length, v.cues.length, `${k} has a Spanish cue for each cue`);
     v.cues_es.forEach((c, i) => { assert.ok(c.trim().length > 3, `${k} cues_es[${i}]`); assert.notEqual(c, v.cues[i], `${k} cues_es[${i}] is translated`); });
     for (const l of v.lookalikes) assert.ok(known.has(l), `${k} -> ${l}`);
-    assert.match(v.source, /^https:\/\/(?:wildlife\.ca\.gov|www\.fisheries\.noaa\.gov)\//, k);
+    // TA-A3: CDFW (site, Marine Species Portal, document library) or NOAA Fisheries; a species page, not the ocean index.
+    assert.match(v.source, /^https:\/\/(?:wildlife\.ca\.gov|marinespecies\.wildlife\.ca\.gov|nrm\.dfg\.ca\.gov|www\.fisheries\.noaa\.gov)\//, k);
+    assert.notEqual(v.source, 'https://wildlife.ca.gov/Fishing/Ocean', k);
   }
   const prot = read('../catalog/advisor/protected.json').species;
-  assert.deepEqual(prot.map(p => p.key).sort(), ['bronzespotted', 'canary', 'cowcod', 'yelloweye']);
+  // TA-A3: quillback joined the no-retention list (CDFW groundfish summary, checked 2026-10-04).
+  assert.deepEqual(prot.map(p => p.key).sort(), ['bronzespotted', 'canary', 'cowcod', 'quillback', 'yelloweye']);
   for (const p of prot) { assert.ok(known.has(p.key)); assert.equal(p.must_release, p.key !== 'canary'); assert.match(p.note, /descending device/); assert.match(p.note, /rules table/); }
   assert.match(prot.find(p => p.key === 'canary').note, /sub-bag/);
   assert.deepEqual(species.PROTECTED.map(p => p.key).sort(), prot.map(p => p.key).sort());

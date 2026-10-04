@@ -258,7 +258,7 @@
       "expect": {
         "intent": "fishid.high",
         "reply_contains": [
-          "That's a lingcod. Long body and a huge mouth with large teeth.",
+          "That's a lingcod. Huge head and mouth with large, sharp teeth.",
           "this rule is due for review, so double-check with CDFW before you keep it: https://skippercast.com/species/lingcod?s=txt#rules",
           "Reply YES if so."
         ],

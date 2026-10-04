@@ -65,13 +65,15 @@ test('the importer maps names to catalog or species-extra keys; unknown names be
   assert.equal(importer.speciesKeyFor('vermilion'), 'vermilion');
   assert.equal(importer.speciesKeyFor('greenling'), 'kelp-greenling');
   assert.equal(importer.speciesKeyFor('pacific-halibut'), 'pacific-halibut');
-  assert.equal(importer.speciesKeyFor('quillback'), 'other');
+  // TA-A3: quillback is a species-extra key now (it joined the no-retention list), so it maps to itself.
+  assert.equal(importer.speciesKeyFor('quillback'), 'quillback');
   assert.equal(importer.speciesKeyFor('sunset'), 'other');
   const central = importer.importRows(T0).filter(r => r.jurisdiction === 'california-central');
   // The rockfish text names its sub-limits and its no-retention species: each gets a row.
-  for (const key of ['copper', 'canary', 'vermilion', 'yelloweye', 'cowcod', 'bronzespotted', 'cabezon', 'kelp-greenling']) assert.ok(central.some(r => r.species_key === key), key);
+  for (const key of ['copper', 'canary', 'vermilion', 'yelloweye', 'quillback', 'cowcod', 'bronzespotted', 'cabezon', 'kelp-greenling']) assert.ok(central.some(r => r.species_key === key), key);
   const others = central.filter(r => r.species_key === 'other').map(r => r.species_label).sort();
-  assert.deepEqual(others, ['Quillback rockfish', 'Sunset rockfish']);
+  assert.deepEqual(others, ['Sunset rockfish']);
+  assert.equal(central.find(r => r.species_key === 'quillback').bag_limit, 0, 'quillback: no retention is a 0 bag');
   assert.equal(central.find(r => r.species_key === 'yelloweye').bag_limit, 0, 'no retention is a 0 bag');
   assert.equal(central.find(r => r.species_key === 'vermilion').bag_limit, 2);
   assert.equal(importer.importRows(T0).find(r => r.jurisdiction === 'california-northern' && r.species_key === 'vermilion').bag_limit, 4, 'the northern file says 4');

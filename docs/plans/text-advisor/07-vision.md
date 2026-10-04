@@ -172,10 +172,11 @@ keys or `catalog/advisor/species-extra.json` keys (02).
 - **Protected warning.** 06 § fish ID says a yelloweye or cowcod candidate
   "at any confidence" adds the warning; the table above says `>= 0.3`. TA-V1
   implements the table (`>= 0.3`); TA-I3 settled it: the reply uses `>= 0.3`
-  (06 now says so). `protected.json` lists yelloweye, cowcod and bronzespotted with
-  `must_release: true` and canary with `must_release: false` (a sub-bag
-  species); all four trigger the warning, and the notes defer to the rules
-  table.
+  (06 now says so). `protected.json` lists yelloweye, cowcod, bronzespotted
+  and (since TA-A3) quillback with `must_release: true` and canary with
+  `must_release: false` (a sub-bag species); all five trigger the warning, and
+  the notes defer to the rules table. TA-A3 checked the list against CDFW's
+  groundfish summary (06 § As built (TA-A3)).
 - **Cache.** `classification_json` is `{classify?, count_board?, fish_id?}`,
   written with SQLite `json_set` so one method never overwrites another; a
   corrupt value is ignored and replaced. Only `classify` sets `has_person`.
@@ -213,14 +214,15 @@ keys or `catalog/advisor/species-extra.json` keys (02).
   candidates forces `needs_better_photo` with reason `no_fish`.
 - **Species keys.** `catalog/advisor/species-extra.json` adds the rockfish
   species (parent `rockfish`), cabezon and kelp greenling (no catalog parent;
-  `target: 'reef'`), bronzespotted (for `protected.json`), and
+  `target: 'reef'`), bronzespotted and quillback (for `protected.json`), and
   `california-halibut` and `king-salmon` as synonyms (`same_as_parent`) of
   `halibut` and `salmon`, which the species list canonicalises away.
   White seabass, Pacific halibut, albacore, bluefin, yellowtail, Dungeness and
   lingcod already have catalog keys and are not repeated.
   `catalog/advisor/lookalikes.json` covers those keys with 2–3 cues each
-  (and the same cues in Spanish, `cues_es`, since TA-A6); entries whose `source` is `https://wildlife.ca.gov/Fishing/Ocean` await a
-  more specific CDFW page (owner to refine).
+  (and the same cues in Spanish, `cues_es`, since TA-A6). Since TA-A3 every
+  fish key has an entry and each cites its own CDFW or NOAA Fisheries page
+  (06 § As built (TA-A3)).
 - **Fixtures.** Four synthetic PNGs, not six: `count-board.png`, `fish.png`,
   `blank.png`, `deck-person.png` (≤ 256 px, about 1 KB each), rendered by
   `scripts/advisor/make-fixture-images.mjs` from inline SVG with its own

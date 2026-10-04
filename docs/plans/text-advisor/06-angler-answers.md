@@ -509,3 +509,119 @@ The Spanish pass. Every text the advisor sends without the model comes from
   conversation 5 (`05-spanish-angler.json`) is a Spanish angler end to end: the
   welcome and the day's answer, a planning question with the advisory first,
   two fish IDs with Spanish cues, the share and credit, and AYUDA.
+
+## As built (TA-A3)
+
+Species data for fish ID and the species pages, checked 2026-10-04. Nothing in
+these files states a rule: limits, sizes and seasons stay in the rules table
+(`advisor_rules`).
+
+- **Look-alikes complete.** `catalog/advisor/lookalikes.json` has an entry for
+  every fish key in `catalog/species.json` (`halibut` and `salmon` through
+  their synonyms `california-halibut` and `king-salmon`, as `species.ts`
+  already resolved them) and every `species-extra.json` key, plus Dungeness
+  and lobster: 2–3 cues, the same cues in Spanish, the keys it is confused
+  with, and one `source`, the agency page the cues come from. New entries:
+  rockfish (the group), quillback, yellowfin, dorado, sheephead, whitefish,
+  kelp, barred and spotted sand bass, bonito, barracuda and lobster. No entry
+  cites the generic `wildlife.ca.gov/Fishing/Ocean` index any more.
+- **Cues corrected against CDFW's flyers.** Where the TA-V1 cues and CDFW's
+  identification flyers disagreed, the flyer won: Pacific halibut no longer
+  has "a gentle arch" in the lateral line (CDFW draws a high arch over the
+  pectoral fin on both halibuts; they differ by the jaw, which reaches the back
+  of the eye on the California halibut and only the middle of the lower eye on
+  the Pacific, and the tail, crescent-shaped on the Pacific); canary is told by
+  the thick grey band along the whole lateral line; yelloweye by the raspy
+  ridge above the eye; bocaccio and chilipepper by the jaw; black and blue
+  rockfish by the jaw and the anal fin; copper and gopher by the lateral-line
+  band; kelp greenling by the males' blue and the females' red-brown spots.
+  Cues that no cited page supports were dropped (yellowtail's "no finlets",
+  cabezon's eye flap, the greenling's notched fin). The vermilion and canary
+  jaw cues and the vermilion colour cue are unchanged, so the golden fish-ID
+  conversations keep their text; the lingcod cue now follows NOAA ("huge head
+  and mouth with large, sharp teeth") and golden conversation 4 says so.
+- **Cue pairs.** `contrastingCues` (`answers/fishid.ts`) pairs the cues of two
+  species that share the most feature words, so look-alikes are worded to
+  share the feature that tells them apart (jaw against jaw, spine against
+  spine, tail against tail). Barred and spotted sand bass both have a long
+  third dorsal spine; only the barred sand bass carries that cue, so the pair
+  between them is bars against spots.
+- **Protected list.** CDFW's
+  [Summary of Recreational Groundfish Fishing Regulations](https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary)
+  (updated 2026-06-23) lists four rockfishes that may not be taken or
+  possessed in California: bronzespotted, cowcod, quillback and yelloweye.
+  Canary is still a sub-bag species there, as are copper and vermilion/sunset.
+  So quillback joins `protected.json` (`must_release: true`) and becomes a
+  `species-extra.json` key (parent `rockfish`, English synonyms in
+  `species-synonyms.json`); canary stays `must_release: false`. Every entry
+  cites that page with `checked_at: 2026-10-04`; the notes still say "check
+  the rules table" and hold no number. Side effect: the rules importer now
+  files the regulation files' quillback rows under `quillback` instead of
+  `other` (`tests/test_advisor_rules.mjs` updated), so the fish-ID reply can
+  quote that row. If the import already ran against the remote D1, re-run it
+  and retire the old `other` row labelled "Quillback rockfish".
+- **Species-page data.** New `catalog/advisor/species-pages.json`, one entry
+  per key a `/species/<key>` page shows (catalog keys, then the
+  `species-extra.json` keys that are not synonyms, 34 in all): `names` (en,
+  es), `parent` (the catalog key it is filed under; itself for a catalog key,
+  null for cabezon and kelp greenling), a one-paragraph `description` (en, es)
+  built from its `sources`, and `season_note_source`
+  (`{table: 'advisor_rules', species_key}`), which tells TA-W1 to take the
+  season and rules card from the rules table, falling back to the parent's
+  group row as `get_rules` does. The page's look-alike cues come from
+  `lookalikes.json`.
+- **Tests.** `tests/test_advisor_species_data.mjs`: every fish key and
+  species-extra key has cues in both languages and `speciesCues` returns them;
+  every look-alike key resolves and is not the species itself; every source is
+  an https CDFW or NOAA Fisheries page; protected keys resolve, cite the CDFW
+  summary and have cues; species-pages entries match the page keys, have both
+  languages, a valid parent and the rules-table pointer; and no cue,
+  description or note has a digit followed by `in`, `"`, `inch` or `pulg`, a
+  percentage or "hotspot". `tests/test_advisor_vision.mjs` accepts the CDFW
+  portal and document-library hosts and expects quillback in the protected
+  list.
+
+Sources (each URL was fetched on 2026-10-04 and names the species):
+
+| Source | Used for |
+| --- | --- |
+| CDFW flyer [Yelloweye, Vermilion/Sunset and Canary Rockfish ID](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=138378&inline) | vermilion, canary, yelloweye cues; rockfish description |
+| CDFW flyer [Copper, Canary and Gopher Rockfish ID](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=197164&inline) (Aug 2025) | copper, gopher |
+| CDFW flyer [Quillback, Copper and Gopher Rockfish ID](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=222200&inline) (Apr 2024) | quillback |
+| CDFW [Nearshore Rockfish of California](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=36305&inline) (Dec 2023) | black, blue, copper |
+| CDFW [Shelf Rockfish of California](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=36552&inline) (Aug 2025) | cowcod, bronzespotted, bocaccio, chilipepper |
+| CDFW [Common Sport-Caught Flatfishes of Del Norte, Humboldt and Mendocino Counties](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=151205&inline) | California and Pacific halibut |
+| CDFW [California Ocean Fish Identification](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=59206&inline) (2025 booklet pages) | cabezon roe, bronzespotted rarity |
+| CDFG *California's Living Marine Resources*: [Cabezon](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=34243&inline), [Black Rockfish](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=34224&inline); *Status of the Fisheries*: [Kelp Greenling](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=34409&inline) | cabezon, black, kelp greenling |
+| CDFG [White Seabass Information](https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=36629&inline) | white seabass belly ridge |
+| CDFW Marine Species Portal Enhanced Status Reports, "The Species": [kelp bass](https://marinespecies.wildlife.ca.gov/kelp-bass/the-species/), [barred sand bass](https://marinespecies.wildlife.ca.gov/barred-sand-bass/the-species/), [spotted sand bass](https://marinespecies.wildlife.ca.gov/spotted-sand-bass/the-species/), [sheephead](https://marinespecies.wildlife.ca.gov/california-sheephead/the-species/), [ocean whitefish](https://marinespecies.wildlife.ca.gov/ocean-whitefish/the-species/), [white seabass](https://marinespecies.wildlife.ca.gov/white-seabass/the-species/), [yellowtail](https://marinespecies.wildlife.ca.gov/yellowtail/the-species/), [Pacific bonito](https://marinespecies.wildlife.ca.gov/pacific-bonito/the-species/), [Pacific barracuda](https://marinespecies.wildlife.ca.gov/pacific-barracuda/the-species/), [California halibut](https://marinespecies.wildlife.ca.gov/california-halibut/the-species/), [spiny lobster](https://marinespecies.wildlife.ca.gov/california-spiny-lobster/the-species/) | those species' cues and descriptions |
+| CDFW Marine Species Portal species-at-a-glance pages (`/<species>/false/`): vermilion, canary, yelloweye, cowcod, copper, gopher, quillback, black, blue, bocaccio, chilipepper, cabezon, kelp greenling, lingcod | range and habitat in the descriptions |
+| CDFW [Dungeness Crab of California and Its Close Relatives](https://wildlife.ca.gov/Fishing/Ocean/Dungeness-Crab) | Dungeness |
+| CDFW [Groundfish](https://wildlife.ca.gov/Conservation/Marine/Groundfish), [Pacific Halibut](https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut) | rockfish and Pacific halibut descriptions |
+| NOAA Fisheries species pages: [lingcod](https://www.fisheries.noaa.gov/species/lingcod), [bocaccio](https://www.fisheries.noaa.gov/species/bocaccio), [Pacific halibut](https://www.fisheries.noaa.gov/species/pacific-halibut), [Chinook salmon](https://www.fisheries.noaa.gov/species/chinook-salmon), [albacore](https://www.fisheries.noaa.gov/species/pacific-albacore-tuna), [Pacific bluefin](https://www.fisheries.noaa.gov/species/pacific-bluefin-tuna), [yellowfin](https://www.fisheries.noaa.gov/species/pacific-yellowfin-tuna), [mahimahi](https://www.fisheries.noaa.gov/species/pacific-mahimahi) | those species' cues and descriptions |
+| NOAA Fisheries [Rockfish Identification Manual](https://www.fisheries.noaa.gov/resource/document/rockfish-identification-manual) | the rockfish group cues (head spines, three anal-fin spines) |
+
+For the owner to check:
+
+- **The cues and descriptions**, as a fishing-knowledge read (10 § TA-A3).
+- **Spanish names** in `species-pages.json`. Those already in
+  `species-synonyms.json` or `strings.json` were reused (colorado, canario,
+  cobrizo, ojo amarillo, lenguado, jurel, corvina blanca, cabrillas, vieja,
+  pierna). These are proposals: rocote vaca (cowcod), rocote de manchas bronce,
+  rocote chile, rocote negro, rocote azul, rocote tuza, barracuda del
+  Pacífico, langosta espinosa de California. Quillback and kelp greenling keep
+  their English names ("rocote quillback", "kelp greenling"): no
+  established Spanish name was found.
+- **Portal pages.** `marinespecies.wildlife.ca.gov` serves an incomplete TLS
+  chain, so the build sandbox could not fetch it directly; its pages were read
+  through a text-extraction proxy (each returned the species' own heading and
+  text). CDFW's own groundfish summary links to the same portal pages. Worth
+  one click each in a browser.
+- **Rockfish group cues** come from NOAA's rockfish field guide, written for
+  Alaska; the two traits used (head spines, three anal-fin spines) hold for the
+  whole family, but a California page would be a better citation if CDFW
+  publishes one.
+- **Rules table rows.** The CDFW summary sets canary, copper and
+  vermilion/sunset sub-bag limits and the no-retention list; those numbers
+  live in the rules import, not here. Re-run `scripts/advisor/import-rules.mjs`
+  after this merges if it has been applied (see the quillback note above).
