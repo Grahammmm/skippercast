@@ -237,6 +237,21 @@ through the text channel, the visitor types it back, and the web contact's
 history is merged into the phone contact (WH-2). Linking is rate-limited to 3
 attempts per session per day.
 
+As built (TA-C3): `channels/web.ts`. The HTTP handler issues the cookie (32
+random bytes, base64url, `Path=/` added) when the request has none, stores the
+message through the shared `storeInbound` (a web message finds its contact by
+session and needs no phone key) and runs `runInline` with a per-request
+collector as `deps.channel`, so `send` pushes to the collector rather than to
+a module-level array; a send through the registered `ADAPTERS.web` outside a
+request (a retry, a held-row release) is recorded `failed` (`web-no-request`).
+`normalize` reads `{text, media_ids}` (8 KB body, 2,000-character text, at
+most 4 ids); a media id must be an unused stored image of the same session,
+attached to the message by id (`InboundMessage.mediaIds`, a field added for
+this) rather than as a placeholder to download. Capabilities: media true
+(8 MB), no splitting, no typing or read receipts; `health` is always ok.
+Linking and `offer_text_link` are TA-E1; the island only links to
+`/contact.vcf` and `/text?s=web`.
+
 ## Uploads for compressed channels (SMS skippers, big videos)
 
 `GET /u/<token>` is a page with one file input; the token is minted by the
@@ -276,6 +291,28 @@ is a Twilio media URL).
   the pre-filled body, which starts with an invisible marker:
   the body is `"<message> [via <source>]"` and the engine strips and stores
   the source. Instagram bio and post CTAs use `https://skippercast.com/text?s=ig`.
+
+As built (TA-C6): the card is `server/advisor/pages/contact-card.ts`: `FN`,
+`N:SkipperCast;;;;`, `ORG`, `TEL;TYPE=CELL,VOICE:<number>`, `URL:<ADVISOR_PUBLIC_BASE>`
+and the photo as `PHOTO;ENCODING=b;TYPE=PNG:` (the icon is a PNG, not the JPEG
+written above), CRLF and 75-octet folding. The icon is a committed base64
+module (`server/advisor/pages/icon.ts`, written by
+`scripts/advisor/make-contact-icon.mjs`, checked by the test), not a bundler
+import, so the Worker bundle and the Node tests read the same bytes and the
+build stays deterministic. `/contact.vcf` and `/text` answer `503` until
+`ADVISOR_NUMBER` is set. `/text` validates `s` against `^[a-z0-9:_-]{1,32}$`
+(else drops it), caps `m` at 140 characters and defaults it to "Hi
+SkipperCast". `GET /qr/text.svg` is a QR code of `<ADVISOR_PUBLIC_BASE>/text?s=qr`
+from a dependency-free encoder (`pages/qr.ts`, byte mode, level M, versions
+1-10) whose output the tests pin against the reference encoder and decode back.
+The marker is parsed by `server/advisor/intents.ts` `parseSourceMarker` only
+when it is exactly the trailing ` [via <s>]` that `/text` writes; `storeInbound`
+stores the body without it and sets `advisor_contacts.source` only on the
+contact's first inbound message while it is still null (a later marker is
+stripped but never replaces it). `[via ig:<post_id>]` records `ig`; keeping
+the post id for SP-10 is TA-S work. The marker is not invisible in the
+person's own message app; it shows as typed. The iPhone and Android manual
+check is still owed (recorded in the PR).
 
 ## Runbook: relay down and port to Twilio (OP-7)
 

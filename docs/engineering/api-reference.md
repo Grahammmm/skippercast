@@ -147,7 +147,7 @@ On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signI
 
 ### `GET /api/advisor/health`
 
-Text Advisor liveness (docs/plans/text-advisor/). No authentication. Answers `404` `{"error": "Not found"}` unless the Worker var `TEXT_ADVISOR_ENABLED` is `true`, like every advisor path (`/api/advisor/*`, `/ports/*`, `/species/*`, `/boats/*`, `/media/*`, `/u/*`, `/contact.vcf`, `/text`), which are reserved and gated by `server/advisor/gate.ts` before their routes exist. When on, `Cache-Control: no-store`:
+Text Advisor liveness (docs/plans/text-advisor/). No authentication. Answers `404` `{"error": "Not found"}` unless the Worker var `TEXT_ADVISOR_ENABLED` is `true`, like every advisor path (`/api/advisor/*`, `/ports/*`, `/species/*`, `/boats/*`, `/media/*`, `/u/*`, `/contact.vcf`, `/text`, `/qr/*`, and the web chat page `/chat.html`), which are reserved and gated by `server/advisor/gate.ts` before their routes exist. When on, `Cache-Control: no-store`:
 
 ```json
 {"enabled":true,"channel":"bluebubbles","providers":["hermes","claude"],"relay":{"state":"up","checked_at":"2026-10-03T15:00:00.000Z"}}
@@ -198,6 +198,37 @@ The upload page's request (JavaScript, not a form: the CSP has `form-action 'non
 ### `GET /media/<id>.jpg` and `GET /media/<id>.png`
 
 Public images for the site pages and for Meta to fetch ([09 · Media that Meta fetches](../plans/text-advisor/09-social.md)). Gated like every advisor path. Served only when the media's `publish_state` is `approved` or `posted`: `advisor/derived/<id>/public.jpg` when the media job has written it (`.jpg` only), otherwise the metadata-stripped original when its stored type matches the extension. HEIC, video and audio originals are never served. `Content-Type` from the stored row (`image/jpeg` for the derived file), `Cache-Control: public, max-age=3600`, `X-Robots-Tag: noindex`. Anything else (unknown id, private, queued or rejected media, another extension) → `404` with the same body as a missing id.
+
+<!-- TA-C3: web chat -->
+### `POST /api/advisor/web/message`
+
+The web chat ([08 · Web chat](../plans/text-advisor/08-website.md), [03 · Web adapter](../plans/text-advisor/03-channels.md)). Gated like every advisor path. First-party only: the `Origin` must be an allowed origin (`deployments/production.json` or `EXTRA_ORIGINS`), as for private mutations (`400` `{"error": "origin rejected"}`). Per-IP `PUBLIC_LIMITER` with key `advisor-web:<ip>` (`429`).
+
+- **Identity:** the `sc_adv` cookie. The first call without one (or with a malformed one) gets a new value, 32 random bytes base64url, in `Set-Cookie: sc_adv=<value>; Max-Age=7776000; Path=/; Secure; HttpOnly; SameSite=Lax`; later calls send it back. `advisor_contacts.web_session` stores its SHA-256. A new web contact's `source` is `web`, or the `[via <s>]` marker of its first message.
+- **Body:** JSON, at most 8 KB: `{"text": "...", "media_ids": ["<media id>", ...]}`. `text` at most 2,000 characters; `media_ids` at most 4, each an image this visitor uploaded through `/api/advisor/web/upload`, stored and not yet used by a message. Empty text with no media, another visitor's id, a used or rejected one → `400`.
+- **Processing:** stored through the shared inbound path, then the advisor turn runs inline (no queue) with a per-request outbound channel, so its replies come back in this response.
+- **Response:** `200` `{"replies": [{"id": "<outbound message id>", "text": "...", "links": [], "media": ["/media/<id>.jpg"]}], "contact": {"language": "en", "linked": false}}`. If the turn has not finished after 40 s: `200` `{"replies": [], "pending": true}`; the turn completes in the background and its late replies are recorded as `failed` (`web-closed`), not delivered. Until the engine lands (TA-E1) the one reply is the warm-up text. `503` without storage.
+
+### `POST /api/advisor/web/upload`
+
+A photo for the web chat. Same gate, Origin check, limiter key and cookie handling as the message route.
+
+- **Body:** `multipart/form-data`, the first file part, at most 8 MB (`413` `{"error": "That photo is too large."}`, by `Content-Length` or while streaming). Images only, by magic bytes (JPEG, PNG, GIF, WebP, HEIC/HEIF); anything else → `415` `{"error": "Send a photo: JPEG, PNG, HEIC, GIF or WebP."}`. Refused files are kept as `rejected` media rows with nothing stored.
+- **Processing:** the same intake as uploads and provider media (`ingestMedia`: JPEG/PNG metadata stripped, stored privately in `ADVISOR_MEDIA`, linked when identical to this visitor's earlier upload). No message is created; the next message references it.
+- **Response:** `200` `{"media_id": "<id>"}`; `404` for a blocked visitor; `400` without a file part; `503` without storage or the media bucket.
+
+<!-- TA-C6: contact card, deep link and QR -->
+### `GET /contact.vcf`
+
+The advisor's contact card ([03 · Contact card and deep links](../plans/text-advisor/03-channels.md)). Gated like every advisor path. A vCard 3.0 (`server/advisor/pages/contact-card.ts`): `FN:SkipperCast`, `N:SkipperCast;;;;`, `ORG:SkipperCast`, `TEL;TYPE=CELL,VOICE:<ADVISOR_NUMBER>`, `URL:<ADVISOR_PUBLIC_BASE>`, `PHOTO;ENCODING=b;TYPE=PNG:` (the app icon, `dist/app-icon-192.png`), CRLF line endings, lines folded at 75 octets. `Content-Type: text/vcard; charset=utf-8`, `Content-Disposition: attachment; filename="SkipperCast.vcf"`, `Cache-Control: public, max-age=86400`. Without `ADVISOR_NUMBER` → `503` with a plain-text message (`no-store`).
+
+### `GET /text?s=<source>&m=<message>`
+
+The "text us" deep link for the site, Instagram and print. Gated like every advisor path. `302` to `sms:<ADVISOR_NUMBER>?&body=<body>` (`Cache-Control: no-store`), where `<body>` is `m` (control characters replaced by spaces, trimmed, at most 140 characters; default `Hi SkipperCast`) followed by ` [via <s>]` when `s` matches `^[a-z0-9:_-]{1,32}$` (any other `s` is dropped), percent-encoded. The engine strips that marker from the first message and records the source on the contact (`server/advisor/intents.ts` `parseSourceMarker`; `[via ig:<post id>]` records `ig`). Without `ADVISOR_NUMBER` → `503`.
+
+### `GET /qr/text.svg`
+
+A QR code of `<ADVISOR_PUBLIC_BASE>/text?s=qr` for print and the site, as SVG (byte mode, error correction M, a four-module quiet zone; `server/advisor/pages/qr.ts`, no dependency). Gated like every advisor path; needs no number. `Content-Type: image/svg+xml; charset=utf-8`, `Cache-Control: public, max-age=86400`.
 
 ## Scheduler
 
@@ -253,4 +284,4 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter). See [testing](testing.md).

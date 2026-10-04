@@ -88,10 +88,12 @@ export interface ContactIdentity {e164?: string; webSession?: string; channel?: 
  * cannot create two rows. Sets last_seen_at, updated_at and the last channel.
  * Channel defaults to 'sms' for a number and 'web' for a session.
  */
-export async function findOrCreateContact(db: D1Database, keys: PhoneKeys, who: ContactIdentity, now: Date = new Date()): Promise<AdvisorContactRow> {
+// TA-C3: `keys` may be null for a web session, which needs no phone key.
+export async function findOrCreateContact(db: D1Database, keys: PhoneKeys | null, who: ContactIdentity, now: Date = new Date()): Promise<AdvisorContactRow> {
   const at = now.toISOString();
   if ((who.e164 == null) === (who.webSession == null)) throw Error('exactly one of e164 or webSession');
   if (who.e164 != null) {
+    if (!keys) throw Error('phone keys are required for a number');
     const number = requireE164(who.e164), channel = who.channel || 'sms';
     const row = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,last_seen_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)
       ON CONFLICT(phone_hash) DO UPDATE SET last_seen_at=excluded.last_seen_at,updated_at=excluded.updated_at,channel=excluded.channel RETURNING *`)

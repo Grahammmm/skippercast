@@ -471,7 +471,8 @@ test('BlueBubbles fetchMediaByRef downloads the attachment by guid with the pass
   await assert.rejects(bb.fetchMediaByRef('../../etc', env), /invalid attachment guid/);
   assert.equal(calls[0].url.searchParams.get('password'), 'pw'); assert.equal(calls[0].init.headers['CF-Access-Client-Id'], 'id');
   await assert.rejects(bb.fetchMediaByRef('x', {}), /not configured/);
-  await assert.rejects(ADAPTERS.web.fetchMediaByRef('x', env), /not implemented/);
+  // TA-C3: web chat media are uploaded and stored before the message, so the web adapter has nothing to fetch by reference.
+  assert.equal(ADAPTERS.web.fetchMediaByRef, undefined);
   assert.equal(adapterForMedia('imessage', 'guid').name, 'bluebubbles'); assert.equal(adapterForMedia('sms', 'guid').name, 'bluebubbles');
   assert.equal(adapterForMedia('sms', 'https://api.twilio.com/x').name, 'twilio'); assert.equal(adapterForMedia('web', 'x').name, 'web');
   await assert.rejects(fetchMediaByRef('x', 'web', env), /not implemented/);

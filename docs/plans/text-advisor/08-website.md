@@ -54,6 +54,23 @@ opens a panel. The island:
   `sc_adv` cookie carries identity.
 - Rate limit: `PUBLIC_LIMITER` 60/min per IP plus the per-contact daily cap.
 
+As built (TA-C3): `dist/chat.html` + `web/advisor/chat-page.ts` (page text)
+mount `web/advisor/chat.tsx` open; it is not embedded elsewhere yet (TA-W1).
+`/chat.html` is gated like the advisor routes (404 while `TEXT_ADVISOR_ENABLED`
+is off).
+Both routes check `Origin` like private mutations and use the limiter key
+`advisor-web:<ip>`; the per-contact daily cap is the engine's (TA-E1). The
+server waits 40 s and then answers `{replies: [], pending: true}`; the island
+shows "Thinking…", then "Still thinking" after 8 s, and gives up at 45 s.
+Replies carry an `id` (the outbound row id) besides `text`, `links` (always
+empty until TA-E1) and `media` (`/media/<id>.jpg` for derived images). The
+island uploads a photo first and sends its id with the next message. The
+footer's "Continue by text" offers `/text?s=web` and `/contact.vcf`; the
+engine's `offer_text_link` flow replaces it in TA-E1. Strings are in
+`web/advisor/copy.ts` (`CHAT_COPY`); `localStorage` holds only
+`skippercast-chat-open`. The Playwright run turns the advisor on through
+`e2e/serve.mjs` (`TEXT_ADVISOR_ENABLED=true`, test runs only).
+
 ## Admin (OP-1, OP-5, OP-6, SK-4, social approvals)
 
 `dist/admin.html` + `web/admin/app.tsx` (Preact, hash-routed views) talking

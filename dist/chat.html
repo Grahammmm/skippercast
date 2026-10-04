@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Text SkipperCast</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="advisor/chat.css" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body class="chat-page">
+    <!-- The web chat page (TA-C3, docs/plans/text-advisor/08-website.md § Web chat). web/advisor/chat.tsx renders into #advisor-chat; every string comes from web/advisor/copy.ts. TA-W1 embeds the same island on the site pages. -->
+    <main class="chat-page-main">
+      <p class="chat-page-brand"><a href="./">⌁ SkipperCast</a></p>
+      <h1 id="chat-page-title"></h1>
+      <p id="chat-page-intro" class="chat-page-intro"></p>
+    </main>
+    <div id="advisor-chat" class="chat-host" data-open></div>
+    <script type="module" src="../web/advisor/chat-page.ts"></script>
+  </body>
+</html>

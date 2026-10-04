@@ -164,15 +164,19 @@ test('splitForChannel: limits, paragraph then sentence boundaries, (n/m) prefixe
 
 // ---- channelFor -----------------------------------------------------------------
 
-test('channelFor: web for a web-only contact, else ADVISOR_CHANNEL; web is a stub until TA-C3 (TA-C2 replaced twilio)', async () => {
+test('channelFor: web for a web-only contact, else ADVISOR_CHANNEL (TA-C2 and TA-C3 replaced the stubs)', async () => {
   assert.equal(channelFor({}, {phone_enc: 'x', web_session: null}).name, 'bluebubbles');
   assert.equal(channelFor({ADVISOR_CHANNEL: 'twilio'}, {phone_enc: 'x', web_session: null}).name, 'twilio');
   assert.equal(channelFor({}, {phone_enc: null, web_session: 'h'}).name, 'web');
   assert.equal(ADAPTERS.bluebubbles.name, 'bluebubbles');
   // TA-C2: the Twilio adapter is real now; unconfigured, it fails the send instead of throwing.
   assert.deepEqual(await ADAPTERS.twilio.send({id: 'x', to: 'y'}, {}), {providerId: null, status: 'failed', error: 'not-configured'});
-  await assert.rejects(ADAPTERS.web.send({id: 'x', to: 'y'}, {}), ChannelNotImplemented);
-  await assert.rejects(ADAPTERS.web.normalize(new Request('https://x.test'), {}), /not implemented/);
+  // TA-C3: the web adapter is real; outside a request there is nobody to answer, so a send fails, and no cookie is unauthorized.
+  assert.deepEqual(await ADAPTERS.web.send({id: 'x', to: 'y'}, {}), {providerId: null, status: 'failed', error: 'web-no-request'});
+  assert.equal(await ADAPTERS.web.normalize(new Request('https://x.test'), {}), 'unauthorized');
+  // The stub factory still throws, for adapters that do not exist yet.
+  const {stubAdapter} = await import('../server/advisor/channels/index.ts');
+  await assert.rejects(stubAdapter('web').send({id: 'x', to: 'y'}, {}), ChannelNotImplemented);
 });
 
 // ---- send -----------------------------------------------------------------------
