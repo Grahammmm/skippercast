@@ -57,7 +57,7 @@ export function HealthView({health, failed, onRefresh}: {health: Health | null; 
           <section aria-labelledby="h-media">
             <h2 id="h-media">{COPY.mediaJobs}</h2>
             <dl class="admin-fields">
-              <Row label={COPY.mediaPending} value={health.media_jobs.pending ?? COPY.mediaUnknown} />
+              <Row label={COPY.mediaPending} value={health.media_jobs.pending} />
             </dl>
           </section>
           <section aria-labelledby="h-meta">

@@ -12,7 +12,8 @@
 // answers 'repeated'.
 //
 //   kind          approve                         edit                            reject
-//   media         publish_state approved          credit set, approved            publish_state rejected
+//   media         publish_state approved,         credit set, approved,           publish_state rejected
+//                 media job requested             media job requested
 //   report        published (if pending)          applyEdit: edit row, version+1  status rejected
 //   skipper       new_skipper: verified + text    -                               new_skipper: rejected + text
 //   conversation  closed; with `reply`: sent as   -                               closed
@@ -25,6 +26,7 @@ import {resolveLinks} from '../links.ts';
 import {sha256} from '../ids.ts';
 import {advisorLog} from '../log.ts';
 import {publishReport, applyEdit, bumpPagesVersion, invalidateDailyAnswer, cleanFields} from '../intake/reports.ts';
+import {requestMediaJob} from '../media.ts';
 import type {Env} from '../../env.ts';
 import type {AdvisorContactRow, ReportEditFields, ReviewKind} from '../types.ts';
 
@@ -59,6 +61,7 @@ export interface DecisionDeps {
   now: number;
   send: TeamSend;
   sendsEnabled?: boolean;              // false while ADVISOR_REPLIES_ENABLED is off: the decision applies, nothing is texted
+  dispatch?: (env: Env, file: string) => Promise<number>;   // TA-M1: the media job dispatch (tests); default watchdog.ts dispatchWorkflow
 }
 export type DecisionOutcome =
   | {status: 'applied'; review: ReviewRow; sends: number; held?: 'replies-off'}
@@ -116,7 +119,8 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
       const ok = input.decision !== 'reject';
       await db.prepare(`UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN (${ok ? "'private','queued'" : "'private','queued','approved'"})`)
         .bind(ok ? 'approved' : 'rejected', review.ref_id).run();
-      // TA-M1 (open PR) adds requestMediaJob here, so an approved photo gets its public.jpg.
+      // TA-M1: an approved photo needs its public.jpg (upright, 07 § orientation) for the pages and Meta.
+      if (ok) await requestMediaJob(env, deps.now, deps.dispatch ? {dispatch: deps.dispatch} : {});
       break;
     }
     case 'report': {

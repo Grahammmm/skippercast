@@ -466,7 +466,7 @@ async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorCo
   const settings = advisorSettings(env);
   if (contact.id !== settings.adminContactId || contact.role !== 'admin-test' || !/^[0-9a-f]{32}$/.test(id) || !['approved', 'rejected'].includes(decision)) return 0;
   const outcome = await decideReview(env, {reviewId: id, decision: decision === 'approved' ? 'approve' : 'reject', note: 'text admin', by: null, kinds: ['skipper', 'media'], inId, key: String(index)},
-    {now: clock(deps), send: teamSender(env, deps)});
+    {now: clock(deps), send: teamSender(env, deps), ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
   if (outcome.status !== 'applied') return 0;
   advisorLog('info', 'advisor_text_admin', {kind: outcome.review.kind, decision});
   return outcome.sends;

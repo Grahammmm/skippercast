@@ -319,7 +319,7 @@ The admin app and its API ([08 · Admin](../plans/text-advisor/08-website.md), `
 | `GET /admin.html` | — | `200` the admin shell (`dist/admin.html`, `Cache-Control: no-store`). The built file also exists at its hashed name like every page; it holds no data. | `404` |
 | `GET /api/admin/reviews` | `status` (`open` default, `approved`, `edited`, `rejected`, `all`), `kind` (`media`, `report`, `post`, `skipper`, `conversation`, `rule`), `cursor` (the previous page's `next`) | `200` `{"items": [...], "next": "<cursor>"\|null}`: at most 50 review items, newest `opened_at` first, each `{id, kind, ref_id, reason, status, note, opened_at, decided_at, detail}` | `400` `unknown status` / `unknown kind` |
 | `POST /api/admin/reviews/<id>` | `{"decision": "approve"\|"edit"\|"reject", "patch"?, "note"?, "reply"?}` (16 KB; `reply` alone means approve) | `200` `{"review": {...}, "sends": n}` (`"held": "replies-off"` when `ADVISOR_REPLIES_ENABLED` is off and a text was owed); a review already decided: `200` `{"review": {...}, "repeated": true}` and nothing changes | `400` a decision the kind does not take, an edit without fields; `404` unknown review; `409` the contact stopped or blocked, replies off for a reply, a report date the boat already has |
-| `GET /api/admin/media/<id>` | `v=original` (optional) | `200` the bytes from `ADVISOR_MEDIA`: `advisor/derived/<id>/thumb.jpg`, else `public.jpg`, else the stored original when it is JPEG, PNG, GIF or WebP; with `v=original`, the stored original whatever its type. `Cache-Control: private, no-store`, `Content-Disposition: inline`. | `404` |
+| `GET /api/admin/media/<id>` | `v=original` (optional) | `200` the bytes from `ADVISOR_MEDIA`: `advisor/derived/<id>/thumb.jpg`, else `public.jpg`, else the stored original when it is JPEG, PNG, GIF or WebP and was not stored sideways (`orientation` 2-8, TA-M1's orientation fix); with `v=original`, the stored original whatever its type. `Cache-Control: private, no-store`, `Content-Disposition: inline`. | `404` |
 | `GET /api/admin/health` | — | `200` (below) | — |
 
 `detail` by kind (`server/advisor/admin/queue.ts`; `null` when the referenced row is gone, and for `post` until TA-S1). Contacts appear as `{id, channel, language, display_name, role, status}` only; no number or hash leaves the server.
@@ -334,7 +334,7 @@ Decisions (`server/advisor/admin/decisions.ts`, shared with the text admin fallb
 
 | Kind | approve | edit (`patch`) | reject |
 | --- | --- | --- | --- |
-| `media` | `publish_state` `private`/`queued` → `approved` | `{credit}`: the credit set, then approved | → `rejected` (also from `approved`) |
+| `media` | `publish_state` `private`/`queued` → `approved`, and the advisor-media job requested for `public.jpg` (TA-M1) | `{credit}`: the credit set, then approved (the job requested too) | → `rejected` (also from `approved`) |
 | `report` | a `draft`/`pending_confirm` report published (`verified` frozen; not a skipper confirmation: no `confirmed_at`, no clean count) | report fields (`report_date`, `trip_type`, `anglers`, `counts`, `notes`): an `advisor_report_edits` row with no contact or message, `version + 1` | `status='rejected'`; a published one also bumps the pages version and drops the port's daily answer |
 | `skipper` | `new_skipper`: the boat `verified`, `verified_at`, `verified_by`, the pages version bumped, and 05's verification text to the owner through their channel; other reasons only close the review | `400` (TA-W3) | `new_skipper`: the boat `rejected` and 05's reject text |
 | `conversation` | closes; with `reply` (1–1,000 characters), the text goes to the contact through its channel as an outbound row with `created_by` = the admin and `in_reply_to` the flagged message | `400` | closes |
@@ -351,10 +351,10 @@ Texts a decision sends have deterministic ids (the review id and the decision), 
  "queue":{"stale_queued":0,"oldest_queued_at":null,"held_outbound":0,"failed_today":0},
  "vision":[{"name":"hermes","down_until":null},{"name":"claude","down_until":null}],
  "caps":{"day":"2026-10-04","llm":{"used":12,"limit":2000},"vision":{"used":3,"limit":400}},
- "media_jobs":{"pending":null},"reviews":{"open":4},"meta":null}
+ "media_jobs":{"pending":0},"reviews":{"open":4},"meta":null}
 ```
 
-`relay` is `job_state` `advisor.relay` (`null` before the first check); `stale_queued` counts inbound messages still `queued` after 2 minutes; `vision[].down_until` is a provider's 10-minute skip; `caps` are today's UTC-day counters of the global model and vision caps; `media_jobs.pending` counts images the advisor-media job still has to derive once its `derived_at` column exists (TA-M1), `null` before; `meta` is `null` until TA-S0.
+`relay` is `job_state` `advisor.relay` (`null` before the first check); `stale_queued` counts inbound messages still `queued` after 2 minutes; `vision[].down_until` is a provider's 10-minute skip; `caps` are today's UTC-day counters of the global model and vision caps; `media_jobs.pending` is `media.ts` `mediaJobPending` (TA-M1), the count the cron dispatches the advisor-media job on: images without `derived_at` that are over 4.5 MB, HEIC, stored sideways or queued, approved or posted, plus pending graphics; `meta` is `null` until TA-S0.
 
 ## Where the code is tested
 

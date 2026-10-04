@@ -125,13 +125,15 @@ photo back. "Reply as team" is refused (409) for a stopped or blocked contact
 and while `ADVISOR_REPLIES_ENABLED` is off; other decisions still apply then and
 say `held: 'replies-off'` instead of texting. Post decisions answer 400 until
 TA-S1; skipper edits until TA-W3. The media route serves `thumb.jpg`, then
-`public.jpg`, then a JPEG/PNG/GIF/WebP original (`?v=original` any original).
+`public.jpg`, then a JPEG/PNG/GIF/WebP original that was not stored sideways
+(`orientation` 2-8 waits for the job's upright files; `?v=original` any original).
 Health reads the relay state, inbound `queued` older than 2 minutes, held
 outbound, failures today, the vision providers' skip marks, today's global LLM
-and vision counters, open reviews and, once TA-M1's `derived_at` exists, the
-images awaiting the media job (`null` before); Meta is `null` until TA-S0.
-TA-M1 (open as this lands) adds `requestMediaJob` after a media approval in
-`decideReview`. The app: `dist/admin.html` + `web/admin/app.tsx` (hash views;
+and vision counters, open reviews and the media job's backlog (`media.ts`
+`mediaJobPending`: images without `derived_at`, including sideways ones, and
+pending graphics); Meta is `null` until TA-S0. A media approve or edit in
+`decideReview` calls `requestMediaJob`, so either admin path starts the job
+for the photo's `public.jpg`. The app: `dist/admin.html` + `web/admin/app.tsx` (hash views;
 `#skippers`, `#rules`, `#posts`, `#funnel` are placeholders), `queue.tsx`
 (kind and status filters, 50 a page with "Load more", cards by kind, inline
 report and credit editors, the reply box, a note field, `a`/`r`/`e` on a

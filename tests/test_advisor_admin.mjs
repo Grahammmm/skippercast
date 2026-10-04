@@ -234,6 +234,22 @@ dbTest('media: approve sets approved, a repeat changes nothing, reject sets reje
   assert.equal((await decide('f'.repeat(32), {decision: 'approve'})).status, 404, 'an unknown review');
 });
 
+dbTest('media: an approve (and an edit) requests the media job for public.jpg; a reject does not', async () => {
+  const {sql, env} = setup({env: {GITHUB_TOKEN: 'gh-test'}});
+  addContact(sql, {id: 'c1'});
+  for (const id of ['p1', 'p2', 'p3']) addMedia(sql, {id});
+  const dispatched = [];
+  const dispatch = async (_env, file) => { dispatched.push(file); return 204; };
+  const send = async () => 0;
+  const decide = async (ref, decision, now, extra = {}) => (await quiet(async () => decideReview(env, {reviewId: await addReview(sql, 'media', ref, 'angler_photo'), decision, by: ADMIN, inId: 'x', key: 'admin', ...extra}, {now, send, dispatch}))).value;
+  assert.equal((await decide('p1', 'reject', T0)).status, 'applied');
+  assert.deepEqual(dispatched, [], 'a rejected photo is never derived for publication');
+  assert.equal((await decide('p2', 'approve', T0)).status, 'applied');
+  assert.deepEqual(dispatched, ['advisor-media.yml']);
+  assert.equal((await decide('p3', 'edit', T0 + 2 * 60000, {patch: {credit: 'Rita G'}})).status, 'applied');
+  assert.deepEqual(dispatched, ['advisor-media.yml', 'advisor-media.yml'], 'an edit approves too (a minute later: past the throttle)');
+});
+
 dbTest('report: edit writes an edits row and bumps the version, approve publishes a pending report, reject unpublishes and bumps the pages version', async () => {
   const {sql, env, real} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
@@ -352,6 +368,13 @@ dbTest('the media route serves admins only: thumb.jpg, then public.jpg, then a v
   assert.equal((await body('/api/admin/media/p1'))[1], 'THUMB');
   assert.equal((await body('/api/admin/media/p1?v=original'))[1], 'ORIGINAL');
   assert.equal((await body('/api/admin/media/h1'))[0], 404, 'a HEIC original is not shown inline until the media job derives a JPEG');
+  addMedia(sql, {id: 'r1', r2_key: 'advisor/media/c1/r1.jpg'});
+  sql.prepare("UPDATE advisor_media SET orientation=6 WHERE id='r1'").run();
+  put('advisor/media/c1/r1.jpg', 'SIDEWAYS');
+  assert.equal((await body('/api/admin/media/r1'))[0], 404, 'nor a JPEG stored sideways (orientation 6) until the job writes its upright thumb.jpg');
+  assert.equal((await body('/api/admin/media/r1?v=original'))[1], 'SIDEWAYS', 'the original is still there on request');
+  put(thumbKey('r1'), 'UPRIGHT');
+  assert.equal((await body('/api/admin/media/r1'))[1], 'UPRIGHT');
   assert.deepEqual((await body('/api/admin/media/h1?v=original')).slice(0, 3), [200, 'HEIC', 'image/heic']);
   assert.equal((await body('/api/admin/media/gone'))[0], 404);
   assert.equal((await body('/api/admin/media/nope'))[0], 404);
@@ -370,6 +393,14 @@ dbTest('health: relay state, queued messages older than 2 minutes, held outbound
   sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,?,?)').run(`global:advisor-llm:${day}`, 17, (day + 2) * 86400);
   sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,?,?)').run(`global:vision:${day}`, 3, (day + 2) * 86400);
   await addReview(sql, 'rule', 'x', 'rule_source_changed');
+  // TA-M1 mediaJobPending: queued and sideways images without derived_at, and pending graphics, wait for the job.
+  addMedia(sql, {id: 'q1', state: 'queued'});
+  addMedia(sql, {id: 's1', state: 'private'});
+  sql.prepare("UPDATE advisor_media SET orientation=6 WHERE id='s1'").run();
+  addMedia(sql, {id: 'd1', state: 'approved'});
+  sql.prepare("UPDATE advisor_media SET derived_at=? WHERE id='d1'").run(iso(now));
+  addMedia(sql, {id: 'e1', state: 'private'});
+  sql.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?)').run('advisor.graphic.g1', JSON.stringify({kind: 'daily', data: {}, out_key: 'advisor/posts/p1/daily.jpg', status: 'pending', requested_at: iso(now)}), iso(now));
   const h = await (await get(real, {...env, ADVISOR_GLOBAL_DAILY_LLM: '100'}, '/api/admin/health', ADMIN)).json();
   assert.deepEqual(h.relay, {state: 'down', failures: 4, checked_at: iso(now - 60000), last_ok_at: iso(now - 3600000)});
   assert.equal(h.queue.stale_queued, 1, 'only the one queued over 2 minutes');
@@ -379,7 +410,7 @@ dbTest('health: relay state, queued messages older than 2 minutes, held outbound
   assert.deepEqual(h.caps.llm, {used: 17, limit: 100});
   assert.deepEqual(h.caps.vision, {used: 3, limit: 400});
   assert.equal(h.reviews.open, 1);
-  assert.ok(h.media_jobs.pending === null || Number.isInteger(h.media_jobs.pending), 'a count once TA-M1\'s derived_at exists, null before');
+  assert.equal(h.media_jobs.pending, 3, 'the queued and the sideways image and the graphic; not the derived one or a private upright one');
   assert.equal(h.meta, null);
   assert.deepEqual([h.enabled, h.replies_enabled, h.channel], [true, true, 'bluebubbles']);
 });

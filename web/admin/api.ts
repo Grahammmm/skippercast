@@ -22,7 +22,7 @@ export interface Health {
   queue: {stale_queued: number; oldest_queued_at: string | null; held_outbound: number; failed_today: number};
   vision: {name: string; down_until: string | null}[];
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
-  media_jobs: {pending: number | null};
+  media_jobs: {pending: number};
   reviews: {open: number};
   meta: null;
 }

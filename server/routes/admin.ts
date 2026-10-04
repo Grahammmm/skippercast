@@ -11,7 +11,7 @@
 //   GET  /admin.html                the admin app shell (dist/admin.html, web/admin/app.tsx)
 //   GET  /api/admin/reviews         ?status=open|approved|edited|rejected|all &kind= &cursor=   newest first, 50 a page
 //   POST /api/admin/reviews/:id     {decision: approve|edit|reject, patch?, note?, reply?}   admin/decisions.ts
-//   GET  /api/admin/media/:id       the photo's bytes from R2: thumb.jpg, public.jpg or the stripped original (?v=original: the original)
+//   GET  /api/admin/media/:id       the photo's bytes from R2: thumb.jpg, public.jpg or the stripped original if upright (?v=original: the original)
 //   GET  /api/admin/health          admin/health.ts
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
@@ -64,7 +64,7 @@ export function adminRoutes(deps: ConsumerDeps = {}): Hono<AppEnv> {
     if (!DECISIONS.includes(decision)) return json({error: 'decision must be approve, edit or reject'}, 400);
     const by = c.var.owner;
     const outcome = await decideReview(c.env, {reviewId: id, decision, patch: input.patch, note: input.note, reply: input.reply, by, inId: id, key: 'admin'},
-      {now: Date.now(), send: teamSender(c.env, deps), sendsEnabled: advisorSettings(c.env).repliesEnabled});
+      {now: Date.now(), send: teamSender(c.env, deps), sendsEnabled: advisorSettings(c.env).repliesEnabled, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
     switch (outcome.status) {
       case 'applied': return json({review: outcome.review, sends: outcome.sends, ...(outcome.held ? {held: outcome.held} : {})});
       case 'repeated': return json({review: outcome.review, repeated: true});
@@ -77,12 +77,13 @@ export function adminRoutes(deps: ConsumerDeps = {}): Hono<AppEnv> {
   admin.get('/api/admin/media/:id', async c => {
     const id = c.req.param('id'), env = c.env, original = c.req.query('v') === 'original';
     if (!MEDIA_ID.test(id) || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
-    const row = await env.DB.prepare('SELECT mime,r2_key FROM advisor_media WHERE id=?').bind(id).first<{mime: string; r2_key: string}>();
+    const row = await env.DB.prepare('SELECT mime,r2_key,orientation FROM advisor_media WHERE id=?').bind(id).first<{mime: string; r2_key: string; orientation: number | null}>();
     if (!row?.r2_key) return NOT_FOUND();
     let object: R2ObjectBody | null = null, type = row.mime;
     if (!original) {
       for (const key of [thumbKey(id), derivedKey(id)]) { object = await env.ADVISOR_MEDIA.get(key); if (object) { type = 'image/jpeg'; break; } }
-      if (!object && VIEWABLE.has(row.mime)) object = await env.ADVISOR_MEDIA.get(row.r2_key);
+      // A JPEG stored sideways (EXIF orientation 2-8, stripped at intake) waits for the job's upright files, like a HEIC.
+      if (!object && VIEWABLE.has(row.mime) && (row.orientation ?? 1) <= 1) object = await env.ADVISOR_MEDIA.get(row.r2_key);
     } else {
       object = await env.ADVISOR_MEDIA.get(row.r2_key);
     }

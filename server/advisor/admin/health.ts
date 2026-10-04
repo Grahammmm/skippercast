@@ -5,10 +5,10 @@
 import {advisorSettings} from '../settings.ts';
 import {relayState} from '../relay.ts';
 import {downKey} from '../vision/index.ts';
+import {mediaJobPending} from '../media.ts';
 import type {Env} from '../../env.ts';
 
 export const STALE_QUEUED_MS = 2 * 60000;          // 08: open `queued` messages older than 2 min
-const VISION_MAX_BYTES = 4.5 * 1024 * 1024;         // TA-M1's VISION_MAX_BYTES (media.ts once it merges)
 
 export interface AdminHealth {
   checked_at: string;
@@ -17,20 +17,12 @@ export interface AdminHealth {
   queue: {stale_queued: number; oldest_queued_at: string | null; held_outbound: number; failed_today: number};
   vision: {name: string; down_until: string | null}[];
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
-  media_jobs: {pending: number | null};
+  media_jobs: {pending: number};
   reviews: {open: number};
   meta: null;
 }
 
 const count = async (db: D1Database, sql: string, ...args: unknown[]): Promise<number> => (await db.prepare(sql).bind(...args).first<{n: number}>())?.n ?? 0;
-
-/** Images the advisor-media job still has to derive (TA-M1's mediaJobPending); null before migration 0009's derived_at exists. */
-async function mediaJobsPending(db: D1Database): Promise<number | null> {
-  try {
-    return await count(db, `SELECT COUNT(*) AS n FROM advisor_media WHERE kind='image' AND r2_key<>'' AND publish_state<>'rejected' AND derived_at IS NULL
-      AND (bytes>? OR mime IN ('image/heic','image/heif') OR publish_state IN ('queued','approved','posted'))`, VISION_MAX_BYTES);
-  } catch { return null; }
-}
 
 export async function adminHealth(env: Env, now: number = Date.now()): Promise<AdminHealth> {
   const db = env.DB!, settings = advisorSettings(env), at = new Date(now).toISOString();
@@ -55,7 +47,9 @@ export async function adminHealth(env: Env, now: number = Date.now()): Promise<A
     vision,
     // The engine's and the vision provider's UTC-day counters (engine.ts countToday, vision/claude.ts takeVisionCall).
     caps: {day: dayStart.slice(0, 10), llm: {used: await used('global:advisor-llm'), limit: settings.globalDailyLlm}, vision: {used: await used('global:vision'), limit: settings.globalDailyVision}},
-    media_jobs: {pending: await mediaJobsPending(db)},
+    // TA-M1 media.ts mediaJobPending: images without derived_at the job still has to derive (over 4.5 MB,
+    // HEIC, stored sideways, or queued/approved/posted) plus pending graphics, the same count the cron dispatches on.
+    media_jobs: {pending: await mediaJobPending(db)},
     reviews: {open: await count(db, "SELECT COUNT(*) AS n FROM advisor_reviews WHERE status='open'")},
     meta: null,   // TA-S0
   };
