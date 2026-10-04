@@ -1,10 +1,23 @@
 import test from 'node:test';
+import {SEARCH_COLOR} from '../dist/seafloor-data.js';
 import assert from 'node:assert/strict';
 import {
   manifestState, loadManifest, manifestURL, archiveURL, decodeTile, decodeRings, classifyRings,
   toLngLat, tileFeatures, dedupeById, tilesForBounds, habitatColor, habitatDetails, GRADE_STYLE, UNKNOWN_COLOR,
   HABITAT_LABEL, DEPTH_NOTE,
 } from '../dist/seafloor-data.js';
+
+test('unranked search areas have a distinct style and honest details', () => {
+  const p = {status: 'search-area', terrain_grade: 'unknown', fit_lingcod: 'unknown',
+    search_area: JSON.stringify({target_species: ['lingcod']}), depth_min_ft: 40, depth_max_ft: 50};
+  assert.equal(habitatColor(p, 'fit_lingcod'), SEARCH_COLOR);
+  assert.equal(habitatColor(p, 'terrain'), SEARCH_COLOR);
+  const d = habitatDetails(p);
+  assert.equal(d.searchArea, true);
+  assert.equal(d.grade, 'unknown');
+  assert.deepEqual(d.searchTargets, ['lingcod']);
+  assert.equal(d.fits[0].value, 'unknown');
+});
 
 // --- a tiny MVT encoder, enough to round-trip what the decoder reads -------
 const varint = (n) => { const out = []; while (n > 127) { out.push((n & 127) | 128); n = Math.floor(n / 128); } out.push(n); return out; };

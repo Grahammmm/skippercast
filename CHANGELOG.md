@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Show spatially screened measured rough-bottom patches as limited-confidence,
+  unranked search areas when surrounding data cannot support a terrain grade.
+  Keep detailed rankings, source-quality holds and precise fishing exports separate.
+
 - Inspect geographic seafloor grids with their original angular registration and explicit ground-spacing ranges. Preserve native values and masks, existing metric-adapter guards and caches; interpolated DEM pixels remain unqualified for measured habitat.
 
 - Reject acquisition-gap snapshots that omit or change surveys already used by the map. Check native source bindings before requests, preserve private physical work, and resume through unchanged measurement/rights-only refreshes without repeating source queries.

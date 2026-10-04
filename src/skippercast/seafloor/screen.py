@@ -16,6 +16,7 @@ from shapely.ops import transform, unary_union
 
 from skippercast.platform.contracts import read_json
 from .io import sha256
+from .search_areas import assessment
 
 VERSION = 'whole-polygon-screen-v1'
 LAYERS = {'cdfw-mpa', 'noaa-federal', 'security'}
@@ -112,21 +113,30 @@ def input_identity(state):
     """Include freshness state as well as bytes: unchanged snapshots still expire."""
     value = {k: v for k, v in state.items() if k != 'layers'}
     value['layers'] = [{k: v for k, v in row.items() if k != 'features'} for row in state['layers']]
+    # Search display policy invalidates screening, never expensive physics.
+    value['search_area_implementation_sha256'] = sha256(Path(__file__).with_name('search_areas.py'))
     return value
 
 
 def screen_candidates(candidates, state):
-    passed, held, counts, grades = [], [], Counter(), Counter()
+    passed, held, counts, grades, searches = [], [], Counter(), Counter(), []
     scope = polygon(state['scope']) if state['status'] == 'ready' else None
     exclusions = [(row['id'], unary_union([transform(PROJECT, exclusion_polygon(f['geometry']))
                     for f in row['features']])) for row in state['layers']] if scope else []
     for original in candidates['features']:
         feature = deepcopy(original)
         p = feature['properties']
+        # Only already extracted, explicitly ungraded rough patches qualify.
+        # No change to geometry, depth validity or the grading threshold.
+        search = assessment(p) if ('metric-support-incomplete' in p.get('hold_reasons', [])
+                                  or p.get('detail_level') == 'search-area') else None
         # Start fresh; a prior pass never exempts a feature from a changed screen.
         reasons = [r for r in p.get('hold_reasons', []) if r not in ('legal-screen-pending',)
                    and not r.startswith(('screen-', 'overlap-'))]
         reasons += state['reasons']
+        if search:
+            reasons = [r for r in reasons if r != 'metric-support-incomplete']
+            p.update(detail_level='search-area', search_area=search)
         try:
             geo = polygon(feature['geometry'])
             local = transform(PROJECT, geo)
@@ -138,9 +148,9 @@ def screen_candidates(candidates, state):
                     if local.intersects(exclusion):
                         reasons.append('overlap-'+ident)
             terrain = p.get('terrain')
-            if not isinstance(terrain, dict) or terrain.get('grade') not in ('A', 'B', 'C'):
+            if not search and (not isinstance(terrain, dict) or terrain.get('grade') not in ('A', 'B', 'C')):
                 reasons.append('metric-support-incomplete')
-            if (not p.get('fit') or any(v not in (1, 2, 3) for v in p['fit'].values())
+            if ((not search and (not p.get('fit') or any(v not in (1, 2, 3) for v in p['fit'].values())))
                     or not 0 < p['resolution_m'] <= 16
                     or not 25-1e-6 <= p['depth_min_ft'] <= p['depth_max_ft'] <= 300+1e-6
                     or local.area < 1000-0.01):
@@ -148,8 +158,9 @@ def screen_candidates(candidates, state):
         except (KeyError, ValueError, TypeError):
             reasons.append('habitat-geometry-invalid')
         reasons = sorted(set(reasons))
-        p.update(tier=1 if reasons else 2, status='held' if reasons else 'habitat',
-                 exportable=not reasons, hold_reasons=reasons)
+        p.update(tier=1 if reasons or search else 2,
+                 status='held' if reasons else 'search-area' if search else 'habitat',
+                 exportable=not reasons and not search, hold_reasons=reasons)
         p['screen'] = {'status': 'held' if reasons else 'pass',
                        'snapshot': state.get('snapshot', 'unknown'),
                        'snapshot_sha256': state.get('snapshot_sha256', 'unknown'),
@@ -158,16 +169,28 @@ def screen_candidates(candidates, state):
         label = f"Habitat candidate, unverified. Nominal depth ({p.get('vertical_datum', 'unknown')}); verify on your sounder."
         if p.get('resolution_m', 0) > 4:
             label += ' Broad area, not an individual pile.'
+        if search:
+            label = ('Measured rough-bottom search area, unranked. Limited confidence: '
+                     'surrounding measurements do not support a terrain grade. '
+                     f"Nominal depth ({p.get('vertical_datum', 'unknown')}); search with your sounder. "
+                     'No individual pile or precise fishing position established.')
         p['label'] = ('Held: '+', '.join(reasons)+'. ' if reasons else '') + label
         p['planning_notice'] = 'Planning only. Not a navigation chart. Check current CDFW regulations.'
         if reasons:
             held.append(feature); counts.update(reasons)
         else:
-            passed.append(feature); grades.update([p['terrain']['grade']])
-    area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in passed]).area/1e6
+            passed.append(feature)
+            if search:
+                searches.append(feature)
+            else:
+                grades.update([p['terrain']['grade']])
+    ranked = [f for f in passed if f['properties']['status'] == 'habitat']
+    area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in ranked]).area/1e6
+    search_area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in searches]).area/1e6
     return ({'type': 'FeatureCollection', 'features': passed},
             {'type': 'FeatureCollection', 'features': held},
-            {'tier2_km2': round(area, 9), 'habitat_count': len(passed),
+            {'tier2_km2': round(area, 9), 'habitat_count': len(ranked),
+             'search_area_count': len(searches), 'search_area_km2': round(search_area, 9),
              'held_candidate_count': len(held), 'held_by_reason': dict(sorted(counts.items())),
              'habitat_by_grade': dict(sorted(grades.items())),
              'screen': input_identity(state)})
