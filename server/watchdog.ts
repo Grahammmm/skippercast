@@ -22,6 +22,22 @@ async function github(env: WatchdogEnv, path: string, init: RequestInit & {heade
       'User-Agent': 'SkipperCast-watchdog', 'Content-Type': 'application/json', ...init.headers}});
 }
 
+const WORKFLOW_FILE = /^[\w.-]{1,100}\.ya?ml$/;
+
+/**
+ * Start a workflow_dispatch run of .github/workflows/<file> on `ref` with the
+ * watchdog's GITHUB_TOKEN (TA-M1: the advisor dispatches advisor-media.yml
+ * through this, so there is one GitHub client). Returns the HTTP status (204
+ * when GitHub accepted it), or 0 without a token; a network error throws.
+ */
+export async function dispatchWorkflow(env: WatchdogEnv, file: string, ref = 'main', inputs?: Record<string, string>): Promise<number> {
+  if (!WORKFLOW_FILE.test(file) || !/^[\w./-]{1,100}$/.test(ref)) throw Error('invalid workflow or ref');
+  if (!env.GITHUB_TOKEN) return 0;
+  const response = await github(env, `/actions/workflows/${file}/dispatches`, {method: 'POST', body: JSON.stringify(inputs ? {ref, inputs} : {ref})});
+  await response.body?.cancel().catch(() => {});
+  return response.status;
+}
+
 /** The published live feed (conditions/latest.json): R2 first, then the branch; null when unreadable. */
 export async function liveFeed(): Promise<ExternalJSON> {
   const url = RAW + 'conditions/latest.json';
@@ -43,8 +59,8 @@ export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Pro
     const runs = await github(env, `/actions/workflows/${WORKFLOW}/runs?status=${status}&per_page=1`);
     if (runs.ok && (await runs.json<{total_count: number}>()).total_count > 0) return {...result, action: `already-${status}`};
   }
-  const dispatch = await github(env, `/actions/workflows/${WORKFLOW}/dispatches`, {method: 'POST', body: JSON.stringify({ref: 'main'})});
-  const outcome = {...result, action: dispatch.status === 204 ? 'dispatched' : `dispatch-failed-${dispatch.status}`};
+  const status = await dispatchWorkflow(env, WORKFLOW);
+  const outcome = {...result, action: status === 204 ? 'dispatched' : `dispatch-failed-${status}`};
   console.log('Live feed watchdog', outcome);
   return outcome;
 }

@@ -15,7 +15,8 @@ export interface Region {
 }
 export interface Deployment {
   public_origin: string; allowed_origins: string[]; forecast_feed: string;
-  scheduler: {repository: string; repository_id: string; owner_id: string; ref: string; workflow: string};
+  // workflow: the trip check's (live-conditions.yml); workflows: every workflow allowed a job identity (TA-M1).
+  scheduler: {repository: string; repository_id: string; owner_id: string; ref: string; workflow: string; workflows?: string[]};
 }
 
 /** Published feeds and upstream APIs are external JSON, not yet schema-validated (P2-02). */

@@ -4,7 +4,8 @@
 //
 //   visionChain(env, deps).classify(image)
 //     -> advisor_media.classification_json has a `classify` result? return it (no provider call)
-//     -> the original is over 4.5 MB? throw MediaTooLarge (the consumer waits for public.jpg, TA-M1)
+//     -> the original is over 4.5 MB, or HEIC/HEIF? read the media job's public.jpg instead (TA-M1)
+//     -> still over 4.5 MB (no public.jpg yet)? throw MediaTooLarge (the consumer waited for it, TA-M1)
 //     -> for each provider in ADVISOR_VISION_PROVIDERS order:
 //          skip it while job_state advisor.vision.<name>.down_until is in the future;
 //          skip it silently when it is not configured (hermes without HERMES_VISION_URL);
@@ -26,6 +27,8 @@ import type {ProtectedSpecies} from './species.ts';
 import {createClaudeVision} from './claude.ts';
 import {MediaTooLarge, UnsupportedImage, ProviderNotConfigured, VisionCapReached, VisionUnavailable} from './errors.ts';
 import type {ClaudeVisionDeps} from './claude.ts';
+// TA-M1: the derived public.jpg an oversized or HEIC original is read through.
+import {derivedKey, HEIF_MIMES} from '../media.ts';
 
 // ---- Contract (07 § Interface) --------------------------------------------------
 
@@ -220,8 +223,17 @@ export function visionChain(env: Env, deps: VisionDeps = {}): VisionChain {
   async function run<M extends VisionMethod>(method: M, input: ImageInput, call: (p: VisionProvider, image: ImageInput) => Promise<Results[M]>): Promise<Results[M]> {
     const hit = await cached(env, input.media_id, method);
     if (hit) return hit;
-    const image = once(input);
-    const size = (await image.bytes()).byteLength;
+    let image = once(input);
+    let size = (await image.bytes()).byteLength;
+    if (size > THRESHOLDS.maxImageBytes || (HEIF_MIMES as readonly string[]).includes(input.mime)) {
+      // TA-M1: the media job's public.jpg (<= 1440 px, sRGB JPEG) stands in for the original.
+      const derived = await env.ADVISOR_MEDIA?.get(derivedKey(input.media_id)).catch(() => null);
+      if (derived) {
+        const buffer = await derived.arrayBuffer();
+        image = {media_id: input.media_id, mime: 'image/jpeg', bytes: async () => buffer};
+        size = buffer.byteLength;
+      }
+    }
     if (size > THRESHOLDS.maxImageBytes) {
       advisorLog('info', 'advisor_vision_too_large', {method, bytes: size});
       throw new MediaTooLarge(size);

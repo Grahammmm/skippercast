@@ -22,6 +22,8 @@
 // PNG over 24 MB is rejected: stripping needs the whole file.
 import {advisorLog} from './log.ts';
 import {hex, randomId} from './ids.ts';
+// TA-M1: the advisor-media job is dispatched through the watchdog's GitHub client.
+import {dispatchWorkflow} from '../watchdog.ts';
 import type {Env} from '../env.ts';
 
 export const MAX_MEDIA_BYTES = 300 * 1024 * 1024;   // 02 § R2 and 03 § uploads
@@ -374,6 +376,11 @@ export async function ingestMedia(env: Env, input: IngestInput, now: number | Da
 
 interface Measured {bytes: number; width: number | null; height: number | null; sha: string; exifStripped: boolean}
 
+/** TA-M1: an image vision cannot read as stored (over 4.5 MB, HEIC) has the media job started for its public.jpg. */
+async function deriveIfNeeded(env: Env, row: {kind: string; mime: string; bytes: number}): Promise<void> {
+  if (needsDerivedForVision(row)) await requestMediaJob(env);
+}
+
 /** Link to the contact's identical object, or put a new one; then fill the row. */
 async function store(env: Env, id: string, input: IngestInput, sniffed: Sniffed, m: Measured, put: (key: string) => Promise<void>): Promise<IngestResult> {
   const db = env.DB!;
@@ -383,12 +390,14 @@ async function store(env: Env, id: string, input: IngestInput, sniffed: Sniffed,
     const linked = {...base, r2Key: twin.r2_key, width: twin.width ?? m.width, height: twin.height ?? m.height, exifStripped: twin.exif_stripped === 1};
     await fillRow(db, id, linked);
     advisorLog('info', 'advisor_media_linked', {kind: sniffed.kind, bytes: m.bytes});
+    await deriveIfNeeded(env, {kind: sniffed.kind, mime: sniffed.mime, bytes: m.bytes});
     return {id, status: 'linked', ...linked};
   }
   const key = mediaKey(input.contactId, id, sniffed.ext);
   await put(key);
   await fillRow(db, id, {...base, r2Key: key});
   advisorLog('info', 'advisor_media_stored', {kind: sniffed.kind, bytes: m.bytes, stripped: m.exifStripped});
+  await deriveIfNeeded(env, {kind: sniffed.kind, mime: sniffed.mime, bytes: m.bytes});
   return {id, status: 'stored', ...base, r2Key: key};
 }
 
@@ -516,4 +525,221 @@ export async function verifyUploadToken(keys: {uploadKey: CryptoKey}, token: str
   if (!await crypto.subtle.verify('HMAC', keys.uploadKey, macBytes, encoder.encode(`${contactId}|${expiry}`))) return null;
   if (Number(expiry) * 1000 <= new Date(now).getTime()) return null;
   return contactId;
+}
+
+// ---- TA-M1: the advisor-media runner job (09 § Derived images and graphics) ----------
+//
+//   media becomes pending (an image over 4.5 MB or a HEIC stored, a photo
+//   queued or approved; or a graphic requested) -> requestMediaJob dispatches
+//   .github/workflows/advisor-media.yml (at most once a minute; the cron again
+//   every tick while anything is pending, at most once per 15 minutes) -> the job
+//   asks GET /api/advisor/jobs/media for mediaJobWork, writes
+//   advisor/derived/<id>/{public,thumb,story}.jpg (or a graphic's out_key) with
+//   Pillow, and POSTs /api/advisor/jobs/media-done -> mediaJobDone stamps
+//   derived_at (and derived_error when it gave up), or the graphic's state.
+//
+// The Worker never decodes an image: everything here is bookkeeping.
+
+/** The derived files of one media item (02 § R2). */
+export const derivedKeys = (mediaId: string): {public: string; thumb: string; story: string} =>
+  ({public: derivedKey(mediaId), thumb: `advisor/derived/${mediaId}/thumb.jpg`, story: `advisor/derived/${mediaId}/story.jpg`});
+export const MEDIA_JOB_WORKFLOW = 'advisor-media.yml';
+/** job_state key holding the time of the last dispatch (ISO), the throttle's claim. */
+export const MEDIA_JOB_KEY = 'advisor.media.dispatched_at';
+export const DISPATCH_EVERY_MS = 60 * 1000;            // on demand: at most once a minute
+// The cron re-dispatches at most once per 15 minutes; ticks are 15 minutes apart give or take
+// a few seconds, so the cap is a little under that or every other tick would be skipped.
+export const CRON_DISPATCH_EVERY_MS = 14.5 * 60 * 1000;
+/** Images over this are not sent to a vision provider (= vision THRESHOLDS.maxImageBytes; a test checks). */
+export const VISION_MAX_BYTES = 4.5 * 1024 * 1024;
+export const HEIF_MIMES = ['image/heic', 'image/heif'] as const;
+export const GRAPHIC_PREFIX = 'advisor.graphic.';
+export const GRAPHIC_KINDS = ['daily', 'story', 'roundup'] as const;
+export type GraphicKind = typeof GRAPHIC_KINDS[number];
+/** A graphic later tasks ask for (TA-S4 daily and roundup, TA-S5 stories): job_state advisor.graphic.<id>. */
+export interface GraphicRequest {kind: GraphicKind; media_ids?: string[]; data: Record<string, unknown>; out_key: string}
+export interface GraphicState extends GraphicRequest {
+  status: 'pending' | 'done' | 'failed'; requested_at: string;
+  done_at?: string; keys?: {public: string; slides?: string[]}; width?: number; height?: number; error?: string;
+}
+const GRAPHIC_KEY = /^advisor\/posts\/[\w-]{1,64}\/[\w-]{1,64}\.jpg$/;
+const MAX_GRAPHIC_DATA = 16 * 1024;
+const MAX_GRAPHIC_MEDIA = 10;
+export const WORK_LIMIT = {media: 25, graphics: 10};
+const HEIF_SQL = HEIF_MIMES.map(m => `'${m}'`).join(',');
+
+/**
+ * Media the job still has to derive: stored images (not rejected) without
+ * derived_at that a provider cannot take as stored (over 4.5 MB, or HEIC/HEIF)
+ * or that are headed for review or publication (queued, approved, posted:
+ * thumb.jpg for the admin queue, public.jpg for pages and Meta, story.jpg).
+ * Private everyday photos are left alone.
+ */
+const PENDING_MEDIA = `kind='image' AND r2_key<>'' AND publish_state<>'rejected' AND derived_at IS NULL
+  AND (bytes>? OR mime IN (${HEIF_SQL}) OR publish_state IN ('queued','approved','posted'))`;
+
+export interface MediaWorkItem {id: string; r2_key: string; mime: string; sha256: string; bytes: number; keys: {public: string; thumb: string; story: string}}
+export interface GraphicWorkItem {id: string; kind: GraphicKind; out_key: string; data: Record<string, unknown>; media: {id: string; r2_key: string; mime: string; public_key: string}[]}
+export interface MediaWork {media: MediaWorkItem[]; graphics: GraphicWorkItem[]}
+
+const nowMs = (now: number | Date): number => new Date(now).getTime();
+
+/** True when the job has something to do (media or graphics), for the cron. */
+export async function mediaJobPending(db: D1Database): Promise<number> {
+  const media = await db.prepare(`SELECT COUNT(*) AS n FROM advisor_media WHERE ${PENDING_MEDIA}`).bind(VISION_MAX_BYTES).first<{n: number}>();
+  const graphics = await db.prepare("SELECT COUNT(*) AS n FROM job_state WHERE key LIKE 'advisor.graphic.%' AND json_valid(value) AND json_extract(value,'$.status')='pending'").first<{n: number}>();
+  return (media?.n ?? 0) + (graphics?.n ?? 0);
+}
+
+/** One page of work for the job, oldest first: GET /api/advisor/jobs/media. */
+export async function mediaJobWork(db: D1Database, limit = WORK_LIMIT): Promise<MediaWork> {
+  const rows = (await db.prepare(`SELECT id,r2_key,mime,sha256,bytes FROM advisor_media WHERE ${PENDING_MEDIA} ORDER BY created_at,id LIMIT ?`)
+    .bind(VISION_MAX_BYTES, limit.media).all<{id: string; r2_key: string; mime: string; sha256: string; bytes: number}>()).results;
+  const media = rows.map(r => ({...r, keys: derivedKeys(r.id)}));
+  const states = (await db.prepare("SELECT key,value FROM job_state WHERE key LIKE 'advisor.graphic.%' AND json_valid(value) AND json_extract(value,'$.status')='pending' ORDER BY updated_at,key LIMIT ?")
+    .bind(limit.graphics).all<{key: string; value: string}>()).results;
+  const graphics: GraphicWorkItem[] = [];
+  for (const {key, value} of states) {
+    const id = key.slice(GRAPHIC_PREFIX.length), state = JSON.parse(value) as GraphicState;
+    const ids = (state.media_ids ?? []).filter(m => ID.test(m)).slice(0, MAX_GRAPHIC_MEDIA);
+    const found = ids.length ? (await db.prepare(`SELECT id,r2_key,mime FROM advisor_media WHERE id IN (${ids.map(() => '?').join(',')}) AND kind='image' AND r2_key<>'' AND publish_state<>'rejected'`)
+      .bind(...ids).all<{id: string; r2_key: string; mime: string}>()).results : [];
+    const byId = new Map(found.map(m => [m.id, m]));
+    graphics.push({id, kind: state.kind, out_key: state.out_key, data: state.data ?? {},
+      media: ids.flatMap(m => { const row = byId.get(m); return row ? [{...row, public_key: derivedKey(m)}] : []; })});
+  }
+  return {media, graphics};
+}
+
+export type DispatchOutcome = 'dispatched' | 'throttled' | 'no-token' | 'no-db' | `failed-${number}` | 'error';
+export interface DispatchDeps {dispatch?: (env: Env, file: string) => Promise<number>; everyMs?: number}
+
+/**
+ * Dispatch advisor-media.yml unless it was dispatched within `everyMs`
+ * (default one minute): the claim is an UPSERT-with-WHERE on job_state
+ * MEDIA_JOB_KEY, so concurrent callers dispatch once. A failed dispatch keeps
+ * the claim (no hammering GitHub); the cron tries again. Never throws.
+ */
+export async function requestMediaJob(env: Env, now: number | Date = Date.now(), deps: DispatchDeps = {}): Promise<DispatchOutcome> {
+  if (!env.GITHUB_TOKEN) return 'no-token';
+  if (!env.DB) return 'no-db';
+  try {
+    const at = nowMs(now), cutoff = new Date(at - (deps.everyMs ?? DISPATCH_EVERY_MS)).toISOString(), stamp = new Date(at).toISOString();
+    const claim = await env.DB.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at WHERE job_state.value<=?')
+      .bind(MEDIA_JOB_KEY, stamp, stamp, cutoff).run();
+    if (!claim.meta.changes) return 'throttled';
+    const status = await (deps.dispatch ?? dispatchWorkflow)(env, MEDIA_JOB_WORKFLOW);
+    if (status !== 204) { advisorLog('warn', 'advisor_media_dispatch_failed', {status}); return `failed-${status}`; }
+    advisorLog('info', 'advisor_media_dispatched', {count: 1});
+    return 'dispatched';
+  } catch (error) {
+    advisorLog('warn', 'advisor_media_dispatch_failed', {reason: String((error as Error)?.message).slice(0, 200)});
+    return 'error';
+  }
+}
+
+/** True when this media row needs public.jpg before a vision provider can read it (over 4.5 MB, or HEIC/HEIF). */
+export const needsDerivedForVision = (row: {kind: string; mime: string; bytes: number}): boolean =>
+  row.kind === 'image' && (row.bytes > VISION_MAX_BYTES || (HEIF_MIMES as readonly string[]).includes(row.mime));
+
+/**
+ * The media of one inbound message (media_json ids) still waiting for the job's
+ * public.jpg so vision can read it: stored images over 4.5 MB or HEIC/HEIF
+ * without derived_at. The consumer re-queues the message while this is > 0.
+ */
+export async function awaitingDerived(db: D1Database, mediaJson: string | null): Promise<number> {
+  let ids: string[] = [];
+  try { const parsed = mediaJson ? JSON.parse(mediaJson) : []; if (Array.isArray(parsed)) ids = parsed.filter((m): m is string => typeof m === 'string' && ID.test(m)).slice(0, 10); } catch { return 0; }
+  if (!ids.length) return 0;
+  const row = await db.prepare(`SELECT COUNT(*) AS n FROM advisor_media WHERE id IN (${ids.map(() => '?').join(',')}) AND kind='image' AND r2_key<>'' AND publish_state<>'rejected'
+    AND derived_at IS NULL AND (bytes>? OR mime IN (${HEIF_SQL}))`).bind(...ids, VISION_MAX_BYTES).first<{n: number}>();
+  return row?.n ?? 0;
+}
+
+/**
+ * Ask the job for a graphic (later tasks: the daily post, Stories, the weekly
+ * roundup). Writes job_state advisor.graphic.<id> as pending (a rerun with the
+ * same id renders again) and dispatches the job. `out_key` must be
+ * advisor/posts/<post_id>/<name>.jpg; `data` is the template's input (at most
+ * 16 KB of JSON); `media_ids` (at most 10) are photos the layout uses.
+ */
+export async function requestGraphic(env: Env, id: string, request: GraphicRequest, now: number | Date = Date.now(), deps: DispatchDeps = {}): Promise<DispatchOutcome> {
+  if (!env.DB) throw Error('storage unavailable');
+  if (!ID.test(id)) throw Error('invalid graphic id');
+  if (!(GRAPHIC_KINDS as readonly string[]).includes(request.kind)) throw Error('invalid graphic kind');
+  if (!GRAPHIC_KEY.test(request.out_key)) throw Error('invalid graphic out_key');
+  const mediaIds = request.media_ids ?? [];
+  if (!Array.isArray(mediaIds) || mediaIds.length > MAX_GRAPHIC_MEDIA || !mediaIds.every(m => typeof m === 'string' && ID.test(m))) throw Error('invalid graphic media_ids');
+  const data = JSON.stringify(request.data ?? {});
+  if (!request.data || typeof request.data !== 'object' || Array.isArray(request.data) || data.length > MAX_GRAPHIC_DATA) throw Error('invalid graphic data');
+  const at = new Date(nowMs(now)).toISOString();
+  const state: GraphicState = {kind: request.kind, ...(mediaIds.length ? {media_ids: mediaIds} : {}), data: request.data, out_key: request.out_key, status: 'pending', requested_at: at};
+  await env.DB.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(GRAPHIC_PREFIX + id, JSON.stringify(state), at).run();
+  return requestMediaJob(env, now, deps);
+}
+
+/** A graphic's state (pending, done with its keys, or failed), or null. */
+export async function graphicState(db: D1Database, id: string): Promise<GraphicState | null> {
+  if (!ID.test(id)) return null;
+  const row = await db.prepare('SELECT value FROM job_state WHERE key=?').bind(GRAPHIC_PREFIX + id).first<{value: string}>();
+  try { return row ? JSON.parse(row.value) as GraphicState : null; } catch { return null; }
+}
+
+export interface MediaDoneInput {media_id?: unknown; graphic_id?: unknown; keys?: unknown; width?: unknown; height?: unknown; source_width?: unknown; source_height?: unknown; error?: unknown}
+export type MediaDoneResult = {ok: true; kind: 'media' | 'graphic'; status: 'done' | 'failed'} | {ok: false; error: 'not-found' | 'invalid'};
+
+const dim = (v: unknown): number | null => typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 20000 ? v : null;
+const ERROR_TEXT = /^[\w .:,;()/'-]{1,200}$/;
+
+/**
+ * POST /api/advisor/jobs/media-done: the job finished one item. For media,
+ * `keys` must be exactly its derivedKeys (story optional) and width/height the
+ * public.jpg's; derived_at is stamped, and the original's width/height filled
+ * from source_width/source_height when intake could not read them (HEIC). With
+ * `error` (a short reason) the item is marked given up: derived_at and
+ * derived_error are set, so it is not pending any more and a waiting message
+ * falls back to the upload link. For a graphic, keys.public must be its out_key
+ * (roundup slides beside it); the job_state value becomes done or failed.
+ */
+export async function mediaJobDone(env: Env, input: MediaDoneInput, now: number | Date = Date.now()): Promise<MediaDoneResult> {
+  const db = env.DB!, at = new Date(nowMs(now)).toISOString();
+  const error = input.error === undefined || input.error === null ? null : typeof input.error === 'string' && ERROR_TEXT.test(input.error) ? input.error : undefined;
+  if (error === undefined) return {ok: false, error: 'invalid'};
+  const keys = input.keys && typeof input.keys === 'object' && !Array.isArray(input.keys) ? input.keys as Record<string, unknown> : null;
+  const width = dim(input.width), height = dim(input.height);
+  if (typeof input.media_id === 'string' && input.graphic_id === undefined) {
+    const id = input.media_id;
+    if (!ID.test(id)) return {ok: false, error: 'invalid'};
+    if (!error) {
+      const expected = derivedKeys(id);
+      if (!keys || keys.public !== expected.public || keys.thumb !== expected.thumb || (keys.story !== undefined && keys.story !== expected.story)
+        || Object.keys(keys).some(k => !['public', 'thumb', 'story'].includes(k)) || width === null || height === null) return {ok: false, error: 'invalid'};
+    }
+    const r = await db.prepare(`UPDATE advisor_media SET derived_at=?,derived_error=?,width=COALESCE(width,?),height=COALESCE(height,?) WHERE id=? AND kind='image'`)
+      .bind(at, error, error ? null : dim(input.source_width), error ? null : dim(input.source_height), id).run();
+    if (!r.meta.changes) return {ok: false, error: 'not-found'};
+    advisorLog(error ? 'warn' : 'info', error ? 'advisor_media_derive_failed' : 'advisor_media_derived', {count: 1, ...(error ? {reason: error} : {})});
+    return {ok: true, kind: 'media', status: error ? 'failed' : 'done'};
+  }
+  if (typeof input.graphic_id === 'string' && input.media_id === undefined) {
+    const id = input.graphic_id;
+    if (!ID.test(id)) return {ok: false, error: 'invalid'};
+    const state = await graphicState(db, id);
+    if (!state) return {ok: false, error: 'not-found'};
+    let next: GraphicState;
+    if (error) next = {...state, status: 'failed', done_at: at, error};
+    else {
+      const stem = state.out_key.slice(0, -'.jpg'.length);
+      const slides = keys?.slides;
+      const slidesOk = slides === undefined || (Array.isArray(slides) && slides.length <= MAX_GRAPHIC_MEDIA && slides.every(s => typeof s === 'string' && s.startsWith(stem + '-') && GRAPHIC_KEY.test(s)));
+      if (!keys || keys.public !== state.out_key || !slidesOk || Object.keys(keys).some(k => !['public', 'slides'].includes(k)) || width === null || height === null) return {ok: false, error: 'invalid'};
+      next = {...state, status: 'done', done_at: at, keys: {public: state.out_key, ...(Array.isArray(slides) && slides.length ? {slides: slides as string[]} : {})}, width, height};
+      delete next.error;
+    }
+    await db.prepare('UPDATE job_state SET value=?,updated_at=? WHERE key=?').bind(JSON.stringify(next), at, GRAPHIC_PREFIX + id).run();
+    advisorLog(error ? 'warn' : 'info', error ? 'advisor_graphic_failed' : 'advisor_graphic_rendered', {kind: state.kind, ...(error ? {reason: error} : {})});
+    return {ok: true, kind: 'graphic', status: error ? 'failed' : 'done'};
+  }
+  return {ok: false, error: 'invalid'};
 }

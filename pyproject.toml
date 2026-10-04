@@ -44,8 +44,11 @@ test = ["jsonschema==4.26.0", "pytest==9.1.1", "moto==5.2.3"]
 seafloor = ["skippercast[survey,publish,test]"]
 # Operating-system trust store for skippercast.http (optional; stdlib TLS otherwise).
 tls = ["truststore==0.10.4"]
+# Text Advisor media runner job (scripts/advisor/media_job.py, .github/workflows/advisor-media.yml):
+# image decoding and drawing, HEIC through pillow-heif. No requirements file: the workflow installs the extra.
+advisor = ["Pillow==12.3.0", "pillow-heif==1.8.0"]
 # Everything a contributor needs to run the full suite and every job locally.
-dev = ["skippercast[ocean,survey,publish,test,tls]", "ruff==0.16.9"]
+dev = ["skippercast[ocean,survey,publish,test,tls,advisor]", "ruff==0.16.9"]
 
 [project.scripts]
 skippercast = "skippercast.__main__:main"

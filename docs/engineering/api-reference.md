@@ -244,16 +244,33 @@ A QR code of `<ADVISOR_PUBLIC_BASE>/text?s=qr` for print and the site, as SVG (b
 
 Runs saved-trip checks for one page of 25 trips, delivers push alerts and prunes expired rows. Called by `scripts/check_saved_trips.py` from `live-conditions.yml`.
 
-- **Auth:** `Authorization: Bearer <GitHub Actions OIDC token>` with audience `<public_origin>/api/jobs/check`, verified by `server/job-auth.ts` against GitHub's fixed JWKS: RS256; issuer, subject, repository, repository id, owner id, ref, workflow and event (`schedule`, `workflow_dispatch`, `push`) must match `deployments/production.json` `scheduler`; lifetime at most 600 s. Anything else → `401` `{"error": "Unauthorized"}`.
+- **Auth:** `Authorization: Bearer <GitHub Actions OIDC token>` with audience `<public_origin>/api/jobs/check`, verified by `server/job-auth.ts` against GitHub's fixed JWKS: RS256; issuer, subject, repository, repository id, owner id, ref, workflow and event (`schedule`, `workflow_dispatch`, `push`) must match `deployments/production.json` `scheduler` (the workflow is `scheduler.workflow`, `live-conditions.yml`, only); lifetime at most 600 s. Anything else → `401` `{"error": "Unauthorized"}`.
 - **Body:** `{"cursor": "<last trip id>"}` or `{}`; cursor at most 50 characters.
 - **Limit:** 30 calls per token (`jti`) per minute.
 - **Response:** `{"checked": 25, "changes": 1, "delivered": 1, "held": 0, "in_app": 0, "next_cursor": "<id>|null"}`. The script pages until `next_cursor` is `null` (at most 100 pages).
 
 **Pending changes:** PR #28 ([P0-07]) also prunes from the Worker's cron (`scheduled`), so retention no longer depends on this call.
 
+<!-- TA-M1: the advisor-media runner job -->
+### `GET /api/advisor/jobs/media`
+
+The Text Advisor's media job asks for its work ([09 · Derived images and graphics](../plans/text-advisor/09-social.md)). Called by `scripts/advisor/media_job.py` from `advisor-media.yml`. Gated like every advisor path (`404` unless `TEXT_ADVISOR_ENABLED=true`).
+
+- **Auth:** as `POST /api/jobs/check`, but the token's audience must be `<public_origin>/api/advisor/jobs` and its workflow `advisor-media.yml`, which `deployments/production.json` `scheduler.workflows` must list (`verifyJobToken(token, policy, {audiencePath, workflows})`). A trip-check token is refused here and this token there. Anything else → `401`.
+- **Limit:** 240 calls per token (`jti`) per minute, shared with `media-done`.
+- **Response:** `200`, `no-store`: `{"media": [{"id", "r2_key", "mime", "sha256", "bytes", "keys": {"public": "advisor/derived/<id>/public.jpg", "thumb": ".../thumb.jpg", "story": ".../story.jpg"}}], "graphics": [{"id", "kind": "daily|story|roundup", "out_key": "advisor/posts/<post>/<name>.jpg", "data": {}, "media": [{"id", "r2_key", "mime", "public_key"}]}]}`, oldest first, at most 25 media and 10 graphics. Media listed: stored images, not rejected, without `derived_at`, that are over 4.5 MB, HEIC/HEIF, or `queued`/`approved`/`posted`. Graphics: `job_state` `advisor.graphic.<id>` with `status` `pending`.
+
+### `POST /api/advisor/jobs/media-done`
+
+The job reports one item. Same auth and limit.
+
+- **Body:** JSON, at most 8 KB. Media: `{"media_id", "keys": {"public", "thumb", "story"?}, "width", "height", "source_width"?, "source_height"?}` where the keys are exactly that item's `advisor/derived/<id>/` files and the sizes are `public.jpg`'s (positive integers); graphic: `{"graphic_id", "keys": {"public": <its out_key>, "slides"?: ["<out_key stem>-<n>.jpg", ...]}, "width", "height"}`. Either may instead carry `"error": "<short reason>"` (letters, digits, spaces and `.:,;()/'-`, at most 200), which gives the item up.
+- **Effect:** media: `derived_at` set (and `derived_error` with an error); `width`/`height` filled from `source_width`/`source_height` only when the row had none (HEIC). Graphic: its `job_state` value becomes `status` `done` with `keys`, `width`, `height`, `done_at`, or `failed` with `error`.
+- **Response:** `200` `{"ok": true, "kind": "media|graphic", "status": "done|failed"}`; `400` `{"error": "invalid media-done report"}` for anything malformed (other keys, a missing size, both ids); `404` for an unknown id.
+
 ### Cron (`scheduled`)
 
-Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret. ChatGPT Sites has no cron.
+Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret (`dispatchWorkflow`, which TA-M1 exported; the advisor's cron uses it to dispatch `advisor-media.yml` while media or graphics are pending, at most once per 15 minutes). ChatGPT Sites has no cron.
 
 ## Private API (signed in)
 
@@ -292,4 +309,4 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Where the code is tested
 
-`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter). See [testing](testing.md).
+`tests/test_private_api.mjs` (private routes, identity gate, owner isolation, limits), `tests/test_feeds.mjs` (feed keys, Range, R2/GitHub order, watchdog), `tests/test_model_api.mjs` (forecast service), `tests/test_job_auth.mjs` (scheduler token claims, the advisor job scope), `tests/test_boat.mjs` (boat lookup parsing), `tests/test_telemetry.mjs` (client telemetry), `tests/test_advisor_routes.mjs` (Text Advisor gate and health), `tests/test_advisor_bluebubbles.mjs` (BlueBubbles webhook and adapter), `tests/test_advisor_twilio.mjs` (Twilio webhooks and adapter), `tests/test_advisor_media.mjs` (media intake, upload link, media serving), `tests/test_advisor_contact_card.mjs` (contact card, deep link, QR, source marker), `tests/test_advisor_web_chat.mjs` (web chat routes and adapter), `tests/test_advisor_media_jobs.mjs` (media job endpoints, pending list, dispatch, the consumer's wait). See [testing](testing.md).

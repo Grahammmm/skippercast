@@ -24,6 +24,9 @@ ALLOWED_SKIPS = frozenset({
     'Original archives or fresh official snapshots unavailable locally',
     'Original bathymetry metadata not fetched in this environment',
     'Original character metadata not fetched in this environment',
+    # TA-M1: CI's survey-science job does not install the advisor extra; the stdlib half of
+    # tests/unit/test_advisor_media_job.py (SigV4, R2 client, job loop) runs everywhere.
+    'Pillow and pillow-heif are not installed (pip install -e ".[advisor]")',
     'Pinned NOAA PDFs are cached in var/review (gitignored); run the audit with --fetch locally',
     'Pinned NOAA scheme not cached',
     'Pinned original NOAA research assets are not cached',

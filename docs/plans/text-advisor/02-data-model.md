@@ -17,7 +17,8 @@ without the later tables:
 | `0006_advisor_core` | `advisor_contacts`, `advisor_boats`, `advisor_crew`, `advisor_messages`, `advisor_media`, `advisor_reports`, `advisor_report_edits`, `advisor_reviews`; `users.role` | 1 (channel + intake) |
 | `0007_advisor_media_ref` | `advisor_media.provider_ref` (TA-C1; not in the original plan) | 1 |
 | `0008_advisor_answers` | `advisor_rules`, `advisor_daily_answers` | 3 (angler answers) |
-| `0009_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
+| `0009_advisor_media_derived` | `advisor_media.derived_at`, `derived_error` (TA-M1; not in the original plan) | 4 (media job) |
+| `0010_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
 
 Column conventions: `*_at` ISO strings; `*_json` columns hold JSON text and
 are validated on read by a small parser in `server/advisor/types.ts`
@@ -39,7 +40,7 @@ One row per person (phone number) or web visitor.
 | `phone_hash` | text, unique, nullable | `HMAC-SHA256(K_hash, e164)` hex, where `K_hash = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'hash')`. Null for web-only contacts. |
 | `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(K_enc, e164))`, `K_enc = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'enc')`, 12-byte random iv. Decrypted only to send. |
 | `web_session` | text, unique, nullable | the `sc_adv` cookie value's sha256 for web visitors |
-| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0009) |
+| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0010) |
 | `channel` | text | last channel used: `imessage`, `sms`, `web`, later `whatsapp` |
 | `role` | text | `angler` (default), `skipper`, `crew`, `admin-test` |
 | `boat_id` | text, nullable | the boat a skipper or crew member posts for |
@@ -143,6 +144,7 @@ unique `message_provider (channel, provider_id)`.
 | `publish_state` | text | `private` (default), `queued` (in a review), `approved`, `posted`, `rejected` |
 | `credit` | text, nullable | the credit line to use when posted ("Capt. X / Boat Y") |
 | `provider_ref` | text, nullable | added in `0007_advisor_media_ref` (TA-C1): the channel's attachment reference (BlueBubbles attachment guid, later a Twilio media URL) |
+| `derived_at`, `derived_error` | text, nullable | added in `0009_advisor_media_derived` (TA-M1): when the `advisor-media` job wrote `advisor/derived/<id>/`, or gave up on the item (then `derived_error` holds its short reason) |
 | `created_at` | text | |
 
 The webhook (TA-C1) writes one placeholder row per attachment before anything
@@ -286,7 +288,7 @@ The "one answer per port per day" cache (FR-1).
 | `inputs_hash` | text | sha256 of the report ids, conditions snapshot and rules used; regenerate when it changes |
 | `generated_at` | text | |
 
-## `advisor_posts` (migration 0009)
+## `advisor_posts` (migration 0010; TA-M1 took 0009)
 
 A social post in any state.
 
@@ -312,7 +314,7 @@ A social post in any state.
 
 Indexes: `post_status_time (status, scheduled_for)`, `post_boat (boat_id)`.
 
-## `advisor_post_stats` (migration 0009)
+## `advisor_post_stats` (migration 0010)
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -330,6 +332,9 @@ PK `(post_id, platform, day)`.
 Advisor cron state uses the existing `job_state` table with keys prefixed
 `advisor.`: `advisor.relay` (`up`/`down`, last ping), `advisor.calendar.last_run`,
 `advisor.insights.last_run`, `advisor.rules.last_watch`. No new table.
+As built (TA-M1): `advisor.media.dispatched_at` (the media job's dispatch
+throttle, an ISO time) and `advisor.graphic.<id>` (one graphic request and its
+result as JSON, 09 § Derived images "As built").
 
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 
@@ -345,10 +350,17 @@ advisor/exports/<contact_id>/<date>.json               a "send me my data" expor
 Served only through `GET /media/<media_id>.jpg` (public derived files, when
 `publish_state` allows) and `GET /api/admin/media/<id>` (admin, originals).
 
+As built (TA-M1): the job also writes graphics to the `out_key` a request
+names (`advisor/posts/<post_id>/<name>.jpg`, roundup slides as
+`<name>-<n>.jpg`), and every object it writes carries the metadata
+`source-sha256`, `width` and `height` (derived media also `source-width` and
+`source-height`), which make a rerun idempotent. It reaches the bucket over
+the S3 API with `R2_ADVISOR_TOKEN`, a GitHub secret scoped to this bucket.
+
 As built (TA-C4): `<ext>` is the sniffed type's: `jpg`, `png`, `gif`, `webp`,
 `heic`, `heif`, `mp4`, `mov`, `m4a`, `aac`, `amr` or `caf`. The
-`advisor/derived/*` files come from the `advisor-media` runner job (TA-M1),
-which does not exist yet; until it writes `public.jpg`, `GET /media/<id>.jpg`
+`advisor/derived/*` files come from the `advisor-media` runner job (TA-M1,
+09 § Derived images "As built"); until it writes `public.jpg`, `GET /media/<id>.jpg`
 (and `.png`) falls back to the stripped original when its stored type matches
 the extension. A HEIC, GIF, WebP, video or audio original (stored as received,
 `exif_stripped=0`) is never served, so it becomes public only through its

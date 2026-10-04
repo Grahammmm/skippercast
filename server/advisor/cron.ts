@@ -26,6 +26,9 @@ import {releaseHeld} from './consumer.ts';
 import {channelFor} from './channels/index.ts';
 import type {ConsumerDeps} from './types.ts';
 import type {Env} from '../env.ts';
+// TA-M1: the advisor-media job is re-dispatched while anything is pending.
+import {mediaJobPending, requestMediaJob, CRON_DISPATCH_EVERY_MS} from './media.ts';
+import type {DispatchOutcome} from './media.ts';
 // TA-A1: the daily-answers slot.
 import {pregenerateDaily} from './answers/reports.ts';
 import type {DailyDeps} from './answers/reports.ts';
@@ -99,7 +102,19 @@ export async function runSlot(env: Env, name: string, time: SlotTime, fn: SlotJo
   }
 }
 
-export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps; daily?: DailyDeps}   // daily: TA-A1's feeds and Messages API fetcher (tests)
+export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps; daily?: DailyDeps;   // daily: TA-A1's feeds and Messages API fetcher (tests)
+  dispatchWorkflow?: (env: Env, file: string) => Promise<number>}                                  // TA-M1: the media job dispatch (tests)
+
+/**
+ * TA-M1 (09 § Derived images): on every tick, while any media or graphic is
+ * pending, dispatch advisor-media.yml again, at most once per 15 minutes (the
+ * on-demand dispatches share the claim). 'idle' when nothing is pending.
+ */
+export async function mediaJobTick(env: Env, now: number, deps: CronDeps = {}): Promise<DispatchOutcome | 'idle'> {
+  if (!env.DB || !env.GITHUB_TOKEN) return 'idle';
+  if (!await mediaJobPending(env.DB)) return 'idle';
+  return requestMediaJob(env, now, {everyMs: CRON_DISPATCH_EVERY_MS, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
+}
 export type RelayOutcome = 'not-configured' | 'up' | 'failing' | 'down' | 'no-db';
 
 /**
@@ -156,6 +171,8 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     if (relay === 'failing' || relay === 'down' || relay === 'error') partial = true;
     const held = await releaseHeld(env, deps.consumer ?? {channelFor}, now).catch(error => { advisorLog('error', 'advisor_release_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });
     if (!held) partial = true;
+    // TA-M1: a failed dispatch is logged by requestMediaJob; the next tick tries again.
+    await mediaJobTick(env, now, deps).catch(error => { advisorLog('error', 'advisor_media_tick_failed', {reason: String((error as Error)?.message).slice(0, 200)}); });
     for (const slot of deps.slots ?? SLOTS) {
       const outcome = await runSlot(env, slot.name, slot.time, (e, n) => slot.run(e, n, deps), now);
       if (outcome === 'failed') partial = true;

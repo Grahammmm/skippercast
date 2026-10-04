@@ -9,7 +9,8 @@
     "repository_id": "1379043348",
     "owner_id": "13221608",
     "ref": "refs/heads/main",
-    "workflow": ".github/workflows/live-conditions.yml"
+    "workflow": ".github/workflows/live-conditions.yml",
+    "workflows": ["live-conditions.yml", "advisor-media.yml"]
   },
   "forecast_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts",
   "source_use": "noncommercial",

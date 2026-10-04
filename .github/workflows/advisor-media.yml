@@ -1,0 +1,46 @@
+name: Advisor media
+
+# Derived images and graphics for the Text Advisor (TA-M1; docs/plans/text-advisor/09-social.md
+# § Derived images and graphics): public.jpg, thumb.jpg and story.jpg for photos, HEIC to JPEG,
+# and the daily, story and roundup graphics. The Worker dispatches this workflow
+# (server/advisor/media.ts requestMediaJob) when media or a graphic becomes pending, and its
+# cron again every 15 minutes while anything still is. No schedule: a schedule that fell back
+# to GitHub-hosted runners would burn minutes, so the job also runs only on our own runner.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+# One run at a time; a dispatch while one runs waits (GitHub keeps one pending run per group).
+concurrency:
+  group: advisor-media
+  cancel-in-progress: false
+
+jobs:
+  derive:
+    # Dark until the advisor is deployed, and never on a GitHub-hosted runner.
+    if: vars.ENABLE_ADVISOR == 'true' && vars.DATA_RUNNER != ''
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    permissions:
+      contents: read   # the checkout
+      id-token: write  # short-lived identity for /api/advisor/jobs (server/job-auth.ts pins this workflow)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install the advisor extra (Pillow, pillow-heif)
+        run: python -m pip install -e ".[advisor]"
+      - name: Derive images and render graphics
+        env:
+          # R2 object read/write on skippercast-advisor-media only (an owner step in TA-M1).
+          R2_ADVISOR_TOKEN: ${{ secrets.R2_ADVISOR_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ADVISOR_PUBLIC_BASE: ${{ vars.ADVISOR_PUBLIC_BASE || 'https://skippercast.com' }}
+          ADVISOR_NUMBER: ${{ vars.ADVISOR_NUMBER }}
+        run: python scripts/advisor/media_job.py

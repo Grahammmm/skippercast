@@ -131,6 +131,8 @@ export const advisorMedia=sqliteTable('advisor_media',{
   exifStripped:integer('exif_stripped').notNull().default(0),classificationJson:text('classification_json'),
   hasPerson:integer('has_person'),publishState:text('publish_state').notNull().default('private'),credit:text('credit'),
   providerRef:text('provider_ref'),createdAt:text('created_at').notNull(),
+  // TA-M1 (0009): when the advisor-media job wrote advisor/derived/<id>/ (or gave up, with derived_error).
+  derivedAt:text('derived_at'),derivedError:text('derived_error'),
 },t=>[index('media_contact').on(t.contactId),index('media_publish').on(t.publishState),index('media_boat').on(t.boatId)]);
 
 // A skipper's (or crew member's) fish report for one trip date. contact_id is

@@ -40,6 +40,12 @@ import type {Handler} from '../advisor/types.ts';
 // TA-E1: the engine is the inline handler, and "send me my data" links here.
 import {engineHandler} from '../advisor/engine.ts';
 import {verifyExportToken} from '../advisor/exports.ts';
+// TA-M1: the advisor-media runner job's two endpoints, behind a GitHub Actions identity.
+import {verifyJobToken} from '../job-auth.ts';
+import type {JobClaims, JobScope} from '../job-auth.ts';
+import {deployment} from '../config.ts';
+import {body, budget} from '../http.ts';
+import {mediaJobWork, mediaJobDone} from '../advisor/media.ts';
 
 export const advisorPublic = new Hono<AppEnv>();
 
@@ -389,3 +395,41 @@ advisorPublic.get('/api/advisor/export/:token', async c => {
   }
 });
 // TA-E1 end.
+
+// ---- TA-M1: the advisor-media runner job ------------------------------------------
+// (09 § Derived images and graphics.) .github/workflows/advisor-media.yml asks
+// for its work and reports each item, authorised like the trip check
+// (server/job-auth.ts) by a short-lived GitHub Actions OIDC token, here
+// requested for the audience <public_origin>/api/advisor/jobs and accepted only
+// from advisor-media.yml (deployments/production.json scheduler.workflows). The
+// gate applies: dark until TEXT_ADVISOR_ENABLED. 240 requests a minute per run.
+
+export const ADVISOR_JOB_SCOPE: JobScope = {audiencePath: '/api/advisor/jobs', workflows: ['advisor-media.yml']};
+/** Test seam: the token check (default: verifyJobToken with ADVISOR_JOB_SCOPE). */
+export const advisorJobs: {verify: (token: string | undefined) => Promise<JobClaims | false>} = {
+  verify: token => verifyJobToken(token, deployment, ADVISOR_JOB_SCOPE),
+};
+const JOB_BUDGET = 240;
+
+async function jobClaims(c: Context<AppEnv>): Promise<JobClaims | null> {
+  const token = c.req.header('Authorization')?.replace(/^Bearer /, '');
+  const claims = await advisorJobs.verify(token);
+  if (!claims) return null;
+  await budget(c.env, 'advisor-job:' + claims.jti, JOB_BUDGET);
+  return claims;
+}
+
+advisorPublic.get('/api/advisor/jobs/media', async c => {
+  if (!await jobClaims(c)) return json({error: 'Unauthorized'}, 401);
+  if (!c.env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
+  return json(await mediaJobWork(c.env.DB));
+});
+
+advisorPublic.post('/api/advisor/jobs/media-done', async c => {
+  if (!await jobClaims(c)) return json({error: 'Unauthorized'}, 401);
+  if (!c.env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
+  const result = await mediaJobDone(c.env, await body(c.req.raw));
+  if (!result.ok) return result.error === 'not-found' ? NOT_FOUND() : json({error: 'invalid media-done report'}, 400);
+  return json(result);
+});
+// TA-M1 end.

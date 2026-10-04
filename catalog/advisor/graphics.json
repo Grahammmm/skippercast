@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-04",
+  "method": "Layout spec for the advisor-media runner job (scripts/advisor/media_job.py, TA-M1; docs/plans/text-advisor/09-social.md § Derived images and graphics). Pillow draws every image from these numbers; no SVG rasteriser. Colours are RGB from dist/tokens.css (deep #082e3b, brand #0a7c72, kelp #54dacb). Boxes are [left, top, right, bottom] in pixels. Font sizes are for Pillow's built-in scalable font; set fonts.ttf to a committed .ttf path to use another face.",
+  "colors": {
+    "field": [8, 46, 59],
+    "band": [10, 124, 114],
+    "band_text": [255, 255, 255],
+    "text": [255, 255, 255],
+    "muted": [184, 208, 214],
+    "accent": [84, 218, 203]
+  },
+  "fonts": {"ttf": null, "title": 68, "heading": 52, "body": 44, "small": 34, "footer": 58, "footer_number": 46},
+  "public": {"max_side": 1440, "quality": 88},
+  "thumb": {"max_side": 320, "quality": 82},
+  "footer": {"text": "Text SkipperCast", "fallback": "skippercast.com/text"},
+  "story": {
+    "size": [1080, 1920],
+    "photo_box": [0, 0, 1080, 1680],
+    "band_box": [0, 1680, 1080, 1920],
+    "title_box": [72, 160, 1008, 420],
+    "lines_box": [72, 460, 1008, 1600],
+    "quality": 88
+  },
+  "daily": {
+    "size": [1080, 1350],
+    "title_box": [72, 72, 1008, 260],
+    "lines_box": [72, 300, 1008, 1000],
+    "note_box": [72, 1020, 1008, 1150],
+    "band_box": [0, 1170, 1080, 1350],
+    "quality": 88
+  },
+  "roundup": {
+    "size": [1080, 1350],
+    "title_box": [72, 72, 1008, 260],
+    "lines_box": [72, 300, 1008, 1150],
+    "photo_box": [0, 0, 1080, 1060],
+    "caption_box": [72, 1080, 1008, 1160],
+    "band_box": [0, 1170, 1080, 1350],
+    "max_slides": 10,
+    "quality": 88
+  }
+}
