@@ -19,7 +19,7 @@ const ORIGIN = 'https://skippercast.com';
 const get = (path, env) => worker.fetch(new Request(ORIGIN + path), {ASSETS, ...env});
 const OFF = {}, ON = {TEXT_ADVISOR_ENABLED: 'true'};
 const RESERVED = ['/api/advisor/health', '/api/advisor/inbound/bluebubbles/x', '/ports/morro-bay', '/ports/x', '/species/lingcod',
-  '/boats/some-boat', '/media/abc.jpg', '/u/token', '/contact.vcf', '/text', '/qr/text.svg',
+  '/boats/some-boat', '/media/abc.jpg', '/u/token', '/contact.vcf', '/text', '/qr/text.svg', '/chat.html',
   // Hono's "/x/*" also matches "/x"; no site page lives at these bare paths.
   '/api/advisor', '/ports', '/species', '/boats', '/media', '/u', '/qr'];
 

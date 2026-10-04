@@ -23,7 +23,10 @@ run(process.execPath, ['scripts/wrangler_config.mjs', '00000000-0000-0000-0000-0
 rmSync(state, {recursive: true, force: true});   // every run starts with empty D1, R2 and caches
 run('npx', [...WRANGLER, 'd1', 'migrations', 'apply', 'DB', '--local', '--config', config, '--persist-to', state]);
 const server = spawn('npx', [...WRANGLER, 'dev', '--config', config, '--persist-to', state, '--ip', '127.0.0.1', '--port', port,
-  '--var', `EXTRA_ORIGINS:http://localhost:${port}`, '--show-interactive-dev-session=false', '--log-level', 'warn'],
+  '--var', `EXTRA_ORIGINS:http://localhost:${port}`,
+  // TA-C3: the Text Advisor is on for the browser tests only (e2e/advisor-chat.spec.ts); deployed it stays off until the owner enables it.
+  '--var', 'TEXT_ADVISOR_ENABLED:true',
+  '--show-interactive-dev-session=false', '--log-level', 'warn'],
 {cwd: root, stdio: 'inherit', env: {...process.env, WRANGLER_SEND_METRICS: 'false'}});
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.kill(signal));
 server.on('exit', code => process.exit(code ?? 0));

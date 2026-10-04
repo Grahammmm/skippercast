@@ -1,6 +1,6 @@
 # SkipperCast Text Advisor: build plan
 
-Status: **Plan accepted by the owner, 2026-10-03. Nothing built yet.**
+Status: **Plan accepted by the owner, 2026-10-03. Being built behind `TEXT_ADVISOR_ENABLED` (off in production); the log below lists each task as it lands.**
 Source of the requirements: the owner's "SkipperCast Text Advisor: User Stories"
 doc (60 stories in 11 groups, decisions dated 3 Oct 2026). This folder is the
 engineering spec for building every MVP story from that doc inside this
@@ -62,3 +62,4 @@ Append a dated line when a phase starts or finishes; keep the older lines.
 - 2026-10-03: TA-C7 written (port-to-Twilio runbook with the 10DLC package and HELP wording; relay-down escalation rule); plan corrected in 03 § runbook (diagnosis lives in the relay-down runbook; the port adds the Messaging Service sender, the HELP auto-reply and the STOP/HELP forwarding check).
 - 2026-10-03: TA-V1 implemented (vision provider chain with result cache and 10-minute provider skip, Claude vision provider with forced-tool output, thresholds as `decide*` functions, vision prompts, `catalog/advisor/` species-extra, lookalikes and protected lists, synthetic fixture images); plan corrected in 07 § As built (four fixture images, the over-4.5 MB re-queue moves to TA-M1, the protected-warning threshold question for TA-I3).
 - 2026-10-04: TA-C6 implemented (`/contact.vcf`, `/text` deep link, `/qr/text.svg` with a dependency-free QR encoder, `[via <source>]` parsing in `intents.ts` and first-touch `source` in `storeInbound`); plan corrected in 03 § contact card (PNG photo, 503 without a number, the marker is visible, not invisible).
+- 2026-10-04: TA-C3 implemented (web chat adapter with a per-request collector, `/api/advisor/web/message` and `/web/upload`, `sc_adv` cookie, the chat island on `dist/chat.html`); plan corrected in 03 § web adapter (collector via `deps.channel`, `mediaIds`) and 08 § web chat (reply `id`, pending shape, Origin check).

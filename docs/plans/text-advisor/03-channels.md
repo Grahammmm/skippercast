@@ -237,6 +237,21 @@ through the text channel, the visitor types it back, and the web contact's
 history is merged into the phone contact (WH-2). Linking is rate-limited to 3
 attempts per session per day.
 
+As built (TA-C3): `channels/web.ts`. The HTTP handler issues the cookie (32
+random bytes, base64url, `Path=/` added) when the request has none, stores the
+message through the shared `storeInbound` (a web message finds its contact by
+session and needs no phone key) and runs `runInline` with a per-request
+collector as `deps.channel`, so `send` pushes to the collector rather than to
+a module-level array; a send through the registered `ADAPTERS.web` outside a
+request (a retry, a held-row release) is recorded `failed` (`web-no-request`).
+`normalize` reads `{text, media_ids}` (8 KB body, 2,000-character text, at
+most 4 ids); a media id must be an unused stored image of the same session,
+attached to the message by id (`InboundMessage.mediaIds`, a field added for
+this) rather than as a placeholder to download. Capabilities: media true
+(8 MB), no splitting, no typing or read receipts; `health` is always ok.
+Linking and `offer_text_link` are TA-E1; the island only links to
+`/contact.vcf` and `/text?s=web`.
+
 ## Uploads for compressed channels (SMS skippers, big videos)
 
 `GET /u/<token>` is a page with one file input; the token is minted by the

@@ -7,6 +7,8 @@ import {advisorSettings} from '../settings.ts';
 import {bluebubbles} from './bluebubbles.ts';
 // TA-C2: the Twilio adapter replaces its stub.
 import {twilio} from './twilio.ts';
+// TA-C3: the web chat adapter replaces its stub.
+import {web} from './web.ts';
 import type {Env} from '../../env.ts';
 import type {AdvisorContactRow, OutboundMessage, SendResult} from '../types.ts';
 
@@ -35,6 +37,8 @@ export interface InboundMessage {
   receivedAt: string;              // ISO
   isGroup: boolean;                // group chats are dropped by the adapter (03)
   raw?: unknown;                   // never persisted
+  // TA-C3: media already stored for this contact (the web chat uploads first), attached by id.
+  mediaIds?: string[];
 }
 
 export interface ChannelCapabilities {media: boolean; maxMediaBytes: number; typing: boolean; read: boolean; segments: number | null}
@@ -62,17 +66,17 @@ export class ChannelNotImplemented extends Error {
   constructor(name: string) { super(`${name} channel not implemented`); this.name = 'ChannelNotImplemented'; }
 }
 
-/** A placeholder adapter: every call throws ChannelNotImplemented. TA-C2 replaced twilio's; TA-C3 replaces web's. */
+/** A placeholder adapter: every call throws ChannelNotImplemented. TA-C2 and TA-C3 replaced the twilio and web stubs. */
 export function stubAdapter(name: AdapterName): ChannelAdapter {
   const fail = async (): Promise<never> => { throw new ChannelNotImplemented(name); };
   return {name, normalize: fail, send: fail, health: fail, fetchMediaByRef: fail, capabilities: {media: false, maxMediaBytes: 0, typing: false, read: false, segments: null}};
 }
 
-/** Every adapter by name. TA-C3 replaces the web stub here. */
+/** Every adapter by name. */
 export const ADAPTERS: Record<AdapterName, ChannelAdapter> = {
   bluebubbles,
   twilio,   // TA-C2
-  web: stubAdapter('web'),
+  web,      // TA-C3
 };
 
 /** Outbound adapter for a contact: web for a web-only visitor, otherwise the one ADVISOR_CHANNEL names. */

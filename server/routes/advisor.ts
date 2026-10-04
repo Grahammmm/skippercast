@@ -28,11 +28,21 @@ import type {AppEnv, Env} from '../env.ts';
 import {contactCard} from '../advisor/pages/contact-card.ts';
 import {qrSvg} from '../advisor/pages/qr.ts';
 import {SOURCE_PATTERN} from '../advisor/intents.ts';
+// TA-C3: the web chat channel and its inline turn.
+import {normalizeWeb, createWebCollector, newWebSession, webSessionOf, webSessionCookie} from '../advisor/channels/web.ts';
+import type {InboundMessage} from '../advisor/channels/index.ts';
+import {runInline} from '../advisor/consumer.ts';
+import {findOrCreateContact} from '../advisor/contacts.ts';
+import {rejectMedia, sniffMime} from '../advisor/media.ts';
+import {randomId, sha256} from '../advisor/ids.ts';
+import {requireOrigin} from '../http.ts';
+import type {Handler} from '../advisor/types.ts';
 
 export const advisorPublic = new Hono<AppEnv>();
 
 // Webhooks, web chat and APIs; public pages; media; upload links; contact card; the text deep link; its QR code (TA-C6).
-export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u/*', '/contact.vcf', '/text', '/qr/*'] as const;
+// TA-C3: the web chat page (dist/chat.html) stays dark with the rest; when on, it falls through to its page shell.
+export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u/*', '/contact.vcf', '/text', '/qr/*', '/chat.html'] as const;
 for (const path of ADVISOR_PATHS) advisorPublic.use(path, gate);
 
 // Liveness and configuration shape only: never a secret, the number or the relay URL.
@@ -246,3 +256,107 @@ advisorPublic.get('/text', c => {
 advisorPublic.get('/qr/text.svg', c => new Response(qrSvg(`${advisorSettings(c.env).publicBase}/text?s=qr`), {status: 200, headers: {
   'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff'}}));
 // TA-C6 end.
+
+// ---- TA-C3: web chat --------------------------------------------------------------
+// (03 § Web adapter, 08 § Web chat, 01 § Request flow: web chat.) First-party
+// JSON endpoints for the chat island: the same Origin check as private
+// mutations, the per-IP PUBLIC_LIMITER, and the sc_adv cookie issued on the
+// first call. The turn runs inline (no queue) with a per-request collector as
+// the outbound channel, so the replies come back in the response.
+
+/**
+ * Test seams: the handler the inline turn runs (default: the consumer's stub
+ * until TA-E1 passes the engine) and the server-side wait before answering
+ * `pending` (08: 40 s).
+ */
+export const webChat: {handler?: Handler; timeoutMs: number} = {timeoutMs: 40000};
+export const WEB_UPLOAD_BYTES = 8 * 1024 * 1024;     // 08: multipart, 8 MB, images only
+
+/** The visitor's session: the cookie's, or a new one and the Set-Cookie to send with the answer. */
+function webSession(c: Context<AppEnv>): {session: string; cookie: string | null} {
+  const existing = webSessionOf(c.req.raw);
+  if (existing) return {session: existing, cookie: null};
+  const session = newWebSession();
+  return {session, cookie: webSessionCookie(session)};
+}
+const withCookie = (response: Response, cookie: string | null): Response => { if (cookie) response.headers.append('Set-Cookie', cookie); return response; };
+/** A derived public image key (advisor/derived/<id>/public.jpg) as its /media URL; other keys are not public. */
+const mediaUrl = (key: string): string | null => { const m = /^advisor\/derived\/([\w-]{1,64})\/public\.jpg$/.exec(key); return m ? `/media/${m[1]}.jpg` : null; };
+
+advisorPublic.post('/api/advisor/web/message', async c => {
+  const env = c.env;
+  requireOrigin(c.req.raw, c.var.extraOrigins);
+  if (await overLimit(env.PUBLIC_LIMITER, 'advisor-web:' + clientIP(c.req.raw))) return tooManyRequests();
+  if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
+  const {session, cookie} = webSession(c);
+  const [message] = await normalizeWeb(c.req.raw, env, session) as InboundMessage[];
+  const id = await storeInbound(env, message!);
+  if (!id) throw Error('web message not stored');
+  const collector = createWebCollector();
+  const run = runInline(env, id, {channel: collector, ...(webChat.handler ? {handler: webChat.handler} : {})});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const outcome = await Promise.race([
+    run.then(() => 'done' as const),
+    new Promise<'pending'>(resolve => { timer = setTimeout(() => resolve('pending'), webChat.timeoutMs); }),
+  ]).finally(() => { if (timer !== undefined) clearTimeout(timer); });
+  if (outcome === 'pending') {
+    // Still running: let it finish (its replies are recorded, not delivered here) and tell the island to keep waiting.
+    collector.close();
+    const ctx = waitUntil(c), rest = run.catch(error => advisorLog('error', 'advisor_web_turn_failed', {reason: String((error as Error)?.message).slice(0, 200)}));
+    if (ctx) ctx.waitUntil(rest);
+    advisorLog('warn', 'advisor_web_pending', {count: 1});
+    return withCookie(json({replies: [], pending: true}), cookie);
+  }
+  const contact = await env.DB.prepare('SELECT language FROM advisor_contacts WHERE web_session=?').bind(await sha256(session)).first<{language: string}>();
+  const replies = collector.replies.map(r => ({id: r.id, text: r.text, links: [] as string[], media: r.mediaKeys.map(mediaUrl).filter((u): u is string => u !== null)}));
+  return withCookie(json({replies, contact: {language: contact?.language ?? 'en', linked: false}}), cookie);
+});
+
+/** The upload body as a stream that errors past `limit` bytes or when its first bytes are not an image. */
+function imageOnly(body: ReadableStream<Uint8Array>, limit: number): ReadableStream<Uint8Array> {
+  let size = 0, head = new Uint8Array(0), checked = false;
+  const check = (final: boolean): void => {
+    if (checked || (!final && head.length < 64)) return;
+    checked = true;
+    if (sniffMime(head)?.kind !== 'image') throw new UploadRefused('unsupported');
+  };
+  return body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      size += chunk.length;
+      if (size > limit) throw new UploadRefused('too-large');
+      if (!checked) { const next = new Uint8Array(head.length + chunk.length); next.set(head); next.set(chunk, head.length); head = next; }
+      check(false);
+      controller.enqueue(chunk);
+    },
+    flush() { check(true); },
+  }));
+}
+class UploadRefused extends Error {
+  readonly reason: 'too-large' | 'unsupported';
+  constructor(reason: 'too-large' | 'unsupported') { super(reason); this.reason = reason; this.name = 'UploadRefused'; }
+}
+
+advisorPublic.post('/api/advisor/web/upload', async c => {
+  const env = c.env;
+  requireOrigin(c.req.raw, c.var.extraOrigins);
+  if (await overLimit(env.PUBLIC_LIMITER, 'advisor-web:' + clientIP(c.req.raw))) return tooManyRequests();
+  if (!env.DB || !env.ADVISOR_MEDIA) return json({error: 'This service is temporarily unavailable.'}, 503);
+  if (Number(c.req.header('content-length')) > WEB_UPLOAD_BYTES + 64 * 1024) return json({error: 'That photo is too large.'}, 413);
+  const {session, cookie} = webSession(c);
+  const contact = await findOrCreateContact(env.DB, null, {webSession: session, channel: 'web'});
+  if (contact.status === 'blocked') return NOT_FOUND();
+  const file = await firstFile(c.req.raw);
+  const mediaId = randomId();
+  let result;
+  try {
+    result = await ingestMedia(env, {mediaId, contactId: contact.id, messageId: null, boatId: contact.boat_id, providerRef: null,
+      fetchBytes: async () => new Response(imageOnly(file.body, WEB_UPLOAD_BYTES)), claimedMime: file.type, name: file.name});
+  } catch (error) {
+    if (!(error instanceof UploadRefused)) throw error;
+    await rejectMedia(env.DB, mediaId, error.reason);
+    result = {status: 'rejected' as const, reason: error.reason};
+  }
+  if (result.status === 'rejected') return withCookie(result.reason === 'too-large' ? json({error: 'That photo is too large.'}, 413) : json({error: 'Send a photo: JPEG, PNG, HEIC, GIF or WebP.'}, 415), cookie);
+  return withCookie(json({media_id: mediaId}), cookie);
+});
+// TA-C3 end.
