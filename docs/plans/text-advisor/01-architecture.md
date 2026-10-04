@@ -314,7 +314,10 @@ within 15 minutes of its time, and never twice. Weekly slots carry a
 table in `cron.ts`. As built: `daily-answers` (05:30, TA-A1),
 `rules-watch` (06:15, TA-A4: the CDFW change-watch on the daily feed collected
 at 04:17), `daily-post` (06:30, TA-S4), `morning-stories` (07:00, TA-S5) and
-`weekly-roundup` (Sundays 17:00, TA-S4). Not slots: `calendarTick` (TA-S4) and then `publishDue` (TA-S2) run on
+`weekly-roundup` (Sundays 17:00, TA-S4), `insights` (03:00, TA-S7) and
+`retention` (Sundays 09:00 in the `UTC` zone, TA-P1: 02 § Retention and
+deletion; the one slot that also runs while `TEXT_ADVISOR_ENABLED` is off, when
+`ADVISOR_MEDIA` is bound). Not slots: `calendarTick` (TA-S4) and then `publishDue` (TA-S2) run on
 every tick, the first giving approved posts their calendar slot's time, the
 second posting due approved posts and continuing videos Instagram is still
 processing.

@@ -87,6 +87,8 @@ export async function approvalHold(db: D1Database, post: Pick<PostRow, 'id' | 'k
   if ((!graphic && !ids.length) || media.length < ids.length) return 'a photo of this post no longer exists';
   for (const m of media) {
     if (m.publish_state === 'rejected') return 'a photo of this post was rejected';
+    // TA-P1: the retention prune deleted an unreferenced original after 90 days (02 § Retention and deletion).
+    if (!m.r2_key) return 'a photo of this post is no longer stored';
     if (m.open_review) return 'a photo of this post is waiting for its photo review';
     if (m.has_person === 1 && m.publish_state !== 'approved') return 'a photo with a person in it needs its photo review approved first';
     const video = videoHold(m);
