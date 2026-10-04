@@ -25,6 +25,8 @@ def scope_name(name):
 
 
 def allowed(name, path):
+    if name == 'source-review':
+        return path == 'source-review/checkpoint.json'
     prefixes = ('reference/', 'screen/') if name == 'shared' else ('cache/', f'reaches/{name}/', f'private-reaches/{name}/')
     return bool(SAFE.fullmatch(path)) and path.startswith(prefixes)
 

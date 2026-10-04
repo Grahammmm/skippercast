@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Remember bounded completed seafloor discovery tests in an expiring private checkpoint. Keep changed or damaged evidence actionable, preserve separate recovery scopes, and avoid treating duplicate leads as new mapping work.
+
 - Refine Big Sur habitat outlines with the original BSS08 2 m rough/smooth terrain layer. Preserve measured depth, uncertainty, credited noncommercial terms and spatial screening; this adds no new surveyed area.
 
 - Show spatially screened measured rough-bottom patches as limited-confidence,

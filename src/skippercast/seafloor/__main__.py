@@ -14,6 +14,14 @@ def main():
     planning.add_argument('--max-new', type=int, default=3)
     planning.add_argument('--json', action='store_true')
     planning.add_argument('--physical-only', action='store_true', help='Include reviewed private sources; never grants publication')
+    review = commands.add_parser('review-source', help='Checkpoint a bounded completed discovery test; never qualifies a survey')
+    review.add_argument('--source', required=True)
+    review.add_argument('--reaches', nargs='+', required=True)
+    review.add_argument('--outcome', required=True, choices=('no-incremental-support',
+                        'no-valid-shallow-support', 'already-qualified', 'needs-original-input', 'access-failed'))
+    review.add_argument('--evidence', required=True)
+    review.add_argument('--note', required=True)
+    review.add_argument('--save-private', action='store_true', help='Save only the discovery checkpoint with existing private R2 credentials')
     commands.add_parser('refresh-screen', help='Refresh reviewed MPA, federal and security snapshots')
     adoption = commands.add_parser('adopt-private-physics', help='Transfer checked private physics after rights-only promotion; screen still required')
     adoption.add_argument('--reach', required=True)
@@ -52,6 +60,21 @@ def main():
             sub.add_argument('--json', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'review-source':
+            from datetime import datetime, timezone
+            from .source_review import record
+            from .manifest import load_manifest
+            result = record(REPO, load_manifest(REPO), args.source, args.reaches,
+                args.outcome, args.evidence, now=datetime.now(timezone.utc), note=args.note)
+            if args.save_private:
+                from .jobs import credentials
+                from .state_cache import save
+                from .source_review import RELATIVE
+                s3, bucket = credentials()
+                save(s3, bucket, REPO, 'source-review', [REPO/RELATIVE])
+                result['saved_private'] = True
+            print(json.dumps(result, indent=2))
+            return
         if args.command == 'plan':
             from .rollout import plan, report
             result = plan(region=args.region, max_new=args.max_new, physical_only=args.physical_only)
