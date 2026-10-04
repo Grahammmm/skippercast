@@ -3,7 +3,7 @@
 // reply shapes composed here from catalog/advisor/strings.json, with no model
 // call:
 //
-//   high   (>= 0.85)  "That's a {label}. {cue}."                   then the rules
+//   high   (>= 0.85)  "That's a {label}. {cue}."                   then the rules (Spanish cues: lookalikes.json cues_es, TA-A6)
 //   medium (>= 0.6)   "Looks like a {label}, could be a {second}:   then the rules, and
 //                      check for {cue} ({label}) or {cue} ({second})."  "If it's a {second}: ..." when they differ
 //   ask    (else, or needs_better_photo)
@@ -71,8 +71,8 @@ export function speciesLabel(c: {species_key: string | null; label: string}, lan
   const name = (key && speciesName(key)) || c.label;
   return /^(?:California|Pacific|King|Chinook|Dungeness)\b/.test(name) ? name : name.charAt(0).toLowerCase() + name.slice(1);
 }
-/** "a vermilion rockfish", "an albacore tuna", "un colorado". */
-export const withArticle = (label: string, language: Language): string => language === 'es' ? `un ${label}` : `${/^[aeiou]/i.test(label) ? 'an' : 'a'} ${label}`;
+/** "a vermilion rockfish", "an albacore tuna", "un colorado" (strings article_a / article_an). */
+export const withArticle = (label: string, language: Language): string => t(language, /^[aeiou]/i.test(label) ? 'article_an' : 'article_a', {label});
 const sentence = (s: string): string => { const x = s.trim().replace(/[.\s]+$/, ''); return x ? x.charAt(0).toUpperCase() + x.slice(1) + '.' : ''; };
 
 const STOP = new Set(['with', 'body', 'often', 'along', 'across', 'the', 'and', 'from', 'that', 'than', 'side', 'fins', 'young', 'fish', 'adults']);
@@ -81,18 +81,23 @@ const words = (s: string): Set<string> => new Set(s.toLowerCase().split(/[^a-z]+
 /**
  * The pair of look-alike cues that tells two species apart: the cues of each
  * (catalog/advisor/lookalikes.json, else the provider's) that share a feature
- * word ("lower jaw" against "lower jaw"), else the first cue of each.
+ * word ("lower jaw" against "lower jaw"), else the first cue of each. The
+ * match is made on the English cues; in Spanish (TA-A6) the pair is the
+ * catalog's `cues_es` at the same places, or null when either species has
+ * none (the provider's cues are English only).
  */
-export function contrastingCues(a: {species_key: string | null; cues?: string[]}, b: {species_key: string | null; cues?: string[]}): [string, string] | null {
+export function contrastingCues(a: {species_key: string | null; cues?: string[]}, b: {species_key: string | null; cues?: string[]}, language: Language = 'en'): [string, string] | null {
   const ca = speciesCues(a.species_key).length ? speciesCues(a.species_key) : (a.cues ?? []);
   const cb = speciesCues(b.species_key).length ? speciesCues(b.species_key) : (b.cues ?? []);
   if (!ca.length || !cb.length) return null;
-  let best: [string, string] = [ca[0]!, cb[0]!], score = 0;
-  for (const x of ca) for (const y of cb) {
+  let best: [number, number] = [0, 0], score = 0;
+  ca.forEach((x, i) => cb.forEach((y, j) => {
     const wy = words(y), shared = [...words(x)].filter(w => wy.has(w)).length;
-    if (shared > score) { best = [x, y]; score = shared; }
-  }
-  return best;
+    if (shared > score) { best = [i, j]; score = shared; }
+  }));
+  if (language !== 'es') return [ca[best[0]]!, cb[best[1]]!];
+  const ea = speciesCues(a.species_key, 'es'), eb = speciesCues(b.species_key, 'es');
+  return ea[best[0]] && eb[best[1]] ? [ea[best[0]]!, eb[best[1]]!] : null;
 }
 
 const REASONS: Record<string, StringKey> = {blurry: 'fishid_reason_blurry', partial: 'fishid_reason_partial', multiple_fish: 'fishid_reason_multiple', no_fish: 'fishid_reason_no_fish', too_far: 'fishid_reason_too_far'};
@@ -171,7 +176,7 @@ function protectedLine(hits: readonly ProtectedSpecies[], language: Language): s
   const release = hits.filter(p => p.must_release);
   if (!release.length) return null;
   const names = release.map(p => speciesLabel({species_key: p.key, label: p.key}, language));
-  const joined = names.length === 1 ? names[0]! : `${names.slice(0, -1).join(', ')} ${language === 'es' ? 'o' : 'or'} ${names.at(-1)}`;
+  const joined = names.length === 1 ? names[0]! : t(language, 'words_or', {a: names.slice(0, -1).join(', '), b: names.at(-1)!});
   return t(language, 'fishid_protected', {names: joined});
 }
 
@@ -202,12 +207,12 @@ export async function answerFor(id: FishId, deps: AnswerDeps): Promise<FishIdAns
   } else {
     const label = speciesLabel(c0, language);
     if (band === 'high') {
-      // The cues (lookalikes.json, the provider's) are English: a Spanish reply leaves them out until TA-A6 adds Spanish cues.
-      const cue = language === 'es' ? null : speciesCues(c0.species_key)[0] ?? c0.cues[0] ?? null;
+      // TA-A6: a Spanish reply uses the catalog's cues_es; the provider's cues are English, so without a catalog cue it leaves the cue out.
+      const cue = language === 'es' ? speciesCues(c0.species_key, 'es')[0] ?? null : speciesCues(c0.species_key)[0] ?? c0.cues[0] ?? null;
       parts.push(t(language, 'fishid_high', {a_label: withArticle(label, language)}) + (cue ? ` ${sentence(cue)}` : ''));
     } else if (c1) {
       const label2 = speciesLabel(c1, language);
-      const cues = language === 'es' ? null : contrastingCues(c0, c1);
+      const cues = contrastingCues(c0, c1, language);
       parts.push(cues ? t(language, 'fishid_medium', {a_label: withArticle(label, language), a_second: withArticle(label2, language), cue: cues[0], label, cue2: cues[1], second: label2})
         : t(language, 'fishid_medium_plain', {a_label: withArticle(label, language), a_second: withArticle(label2, language)}));
     } else {

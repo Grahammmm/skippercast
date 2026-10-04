@@ -10,6 +10,7 @@ import {resolvePort} from '../answers/resolve.ts';
 import {addDays, localDate} from '../answers/time.ts';
 // TA-I1: only verified boats are listed (05 § Verification); pending and rejected ones never are.
 import {VERIFIED} from '../intake/skippers.ts';
+import {t} from '../strings.ts';
 
 export const TRIP_TYPE_DAYS = 60, MAX_BOATS = 12;
 interface BoatRow {id: string; slug: string; name: string; landing: string | null; booking_url: string | null; last_report: string | null}
@@ -37,7 +38,8 @@ export const getTrips: AdvisorTool = {
     const few = list.length < 2;
     return {result: {
       port, port_name: portName(port), boats: list, few,
-      note: few ? 'Say "the boats I work with so far" and link the port page. Never recommend one boat over another.' : 'Listed by most recent report, not ranked. Never recommend one boat over another.',
+      // TA-A6: the few-boats phrase in the reply language.
+      note: few ? `Say "${t(ctx.language, 'trips_few')}" and link the port page. Never recommend one boat over another.` : 'Listed by most recent report, not ranked. Never recommend one boat over another.',
       link: `{{link:port:${port}}}`,
     }};
   },

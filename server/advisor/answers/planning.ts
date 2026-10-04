@@ -185,7 +185,7 @@ export async function planningBrief(env: Env, args: {port: string; date?: string
   const matches = (c: {species_key: string}) => feedKey !== null && (feedKey === 'reef' ? ['lingcod', 'rockfish'].includes(reportSpeciesKey(c.species_key)) : reportSpeciesKey(c.species_key) === feedKey);
   const skipper = inputs.skipper_reports.map(r => ({date: r.date, day: dayWord(r.date, today, language), boat: r.boat, counts: r.counts.filter(matches).map(({label: l, kept, released}) => ({label: l, kept, released}))}))
     .filter(r => r.counts.length).slice(0, 3);
-  let landing: Activity['landing'] = {available: false, label: 'reported by the landing', trips: 0, boats: 0, days: 0, window: null};
+  let landing: Activity['landing'] = {available: false, label: t(language, 'landing_label'), trips: 0, boats: 0, days: 0, window: null};
   let confidence: Confidence = 'Insufficient';
   const daily = await dailyFeed(region, read);
   if (daily && feedKey && feedKey !== 'dungeness') {
@@ -193,7 +193,7 @@ export async function planningBrief(env: Env, args: {port: string; date?: string
     const portFeed = {...daily, reports: (daily.reports as LandingReport[]).filter(r => names.has(String(r.port ?? '').toLowerCase()))};
     const ev = reportEvidence(portFeed, feedKey, opts.now, null, tz);
     confidence = ev.confidence;
-    landing = {available: true, label: 'reported by the landing', trips: ev.reports.length, boats: ev.boats, days: ev.days, window: {from: ev.start, to: ev.end}};
+    landing = {available: true, label: t(language, 'landing_label'), trips: ev.reports.length, boats: ev.boats, days: ev.days, window: {from: ev.start, to: ev.end}};
   } else if (daily) landing = {...landing, available: true};
   if (confidence === 'Insufficient' && skipper.some(r => r.counts.some(c => (c.kept ?? 0) > 0 || (c.released ?? 0) > 0))) confidence = 'Low';
   if (!CONFIDENCE_WORDS.includes(confidence)) confidence = 'Insufficient';

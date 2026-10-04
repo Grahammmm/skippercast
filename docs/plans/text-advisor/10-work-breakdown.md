@@ -199,6 +199,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: FC-6.
 - Depends: TA-A1, TA-I2
 - Files: `prompts/examples.ts` (es), `intake/*.ts` (every user-facing string through `t(language, key)` in `server/advisor/strings.ts`), `catalog/advisor/strings.json`, tests asserting every key has both languages.
+- As built: the intake flows already used `t()`; the hard-coded texts left were the consumer's three, the AD-2 line, the few-boats phrase, escalate's line and a few words in the daily and fish-ID answers. Also the TA-I3 gap (`cues_es` in `lookalikes.json`), the Spanish fish-ID few-shot, a static scan for hard-coded sentences and golden conversation 5. See 06 § As built (TA-A6).
 
 ## Phase 4: media job, public pages, admin
 

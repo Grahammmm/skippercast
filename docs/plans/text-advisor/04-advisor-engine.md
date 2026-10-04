@@ -428,3 +428,13 @@ and the web chat route). Where the code differs from the text above:
 - New engine fixtures `trip-planning-brief` (the reply leads; no backstop) and
   `trip-planning-backstop` (the reply does not lead; the line is put first and
   logged); the model-turn runner checks `expect.log` / `expect.log_not`.
+
+## As built (TA-A6)
+
+- Every user-facing text outside the model's reply is a `strings.json` key in
+  English and Spanish, the consumer's included; a static scan in
+  `tests/test_advisor_strings.mjs` fails on a hard-coded sentence at a send
+  (06 § As built (TA-A6)).
+- Few-shots: Spanish versions of the first three cases and of the fish ID
+  (`fish-id-rules-es`), so four in Spanish.
+- Golden conversation 5 (Spanish angler) is in; 1–9 now exist.

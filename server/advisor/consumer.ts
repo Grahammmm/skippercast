@@ -93,9 +93,10 @@ export const TURN_TIMEOUT_MS = 45000;          // 01 § request flow: hard stop 
 export const TIMEOUT_RETRY_SECONDS = 20;
 export const ERROR_NOTICE_MS = 60 * 60000;     // one apology per contact per hour
 export const MAX_BODY = 4000;                  // 02 § advisor_messages.body
-export const WARM_UP_TEXT = 'SkipperCast is warming up. Check back soon.';
-export const STILL_WORKING_TEXT = 'Still working on that, one moment';
-export const APOLOGY_TEXT = 'Sorry, something went wrong on my end. Please send that again.';
+// TA-A6: the consumer's own texts come from catalog/advisor/strings.json in the contact's language; these are the English ones.
+export const WARM_UP_TEXT = t('en', 'warming_up');
+export const STILL_WORKING_TEXT = t('en', 'still_working');
+export const APOLOGY_TEXT = t('en', 'apology');
 export const HOLD_MAX_MS = 6 * 3600000;        // 01: held outbound older than this becomes failed
 export const RELEASE_BATCH = 50;               // held rows sent per cron tick
 export const MEDIA_RETRIES = 2;                // TA-C4: extra attempts after a failed media download
@@ -113,7 +114,7 @@ const CONTACT_FIELDS: readonly (keyof ContactFields)[] = ['role', 'boat_id', 'di
  * 02 § Retention and deletion; the engine's stage 0/1 owns that from TA-E1 on).
  */
 export const warmUpHandler: Handler = async ({contact}) => contact?.status === 'active'
-  ? {actions: [{type: 'send_text', text: WARM_UP_TEXT}], intent: 'stub'}
+  ? {actions: [{type: 'send_text', text: t(contact.language, 'warming_up')}], intent: 'stub'}
   : {actions: [], intent: 'stub'};
 
 /** A short reason for the error column and logs: redacted, at most 200 characters, never a payload. */
@@ -679,7 +680,7 @@ async function consumeOne(message: QueueMessage, env: Env, deps: ConsumerDeps, o
     if ((message.attempts ?? 1) <= 1) {
       // First attempt over the hard stop: tell the person, retry once (01 § request flow).
       await setStatus(db, id, 'queued', ['processing'], 'timeout');
-      if (contact.status === 'active') out.sends += Number(await sendOnce(env, deps, contact, id, 'still-working', {text: STILL_WORKING_TEXT}));
+      if (contact.status === 'active') out.sends += Number(await sendOnce(env, deps, contact, id, 'still-working', {text: t(contact.language, 'still_working')}));
       advisorLog('warn', 'advisor_turn_timeout', {attempt: message.attempts});
       message.retry({delaySeconds: TIMEOUT_RETRY_SECONDS});
       out.retried++; turn(env, started, deps, message, 'timeout', 'timeout'); return;
@@ -755,7 +756,7 @@ async function apologise(env: Env, deps: ConsumerDeps, contact: AdvisorContactRo
   const claim = await env.DB!.prepare('UPDATE advisor_contacts SET last_error_notice_at=? WHERE id=? AND (last_error_notice_at IS NULL OR last_error_notice_at<=?)')
     .bind(new Date(now).toISOString(), contact.id, new Date(now - ERROR_NOTICE_MS).toISOString()).run();
   if (!claim.meta.changes) return false;
-  return sendOnce(env, deps, contact, inId, 'error', {text: APOLOGY_TEXT});
+  return sendOnce(env, deps, contact, inId, 'error', {text: t(contact.language, 'apology')});
 }
 
 /**

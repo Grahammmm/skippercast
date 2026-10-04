@@ -1,0 +1,279 @@
+{
+  "_source": "Golden conversation 5 (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model and vision responses are hand-written to the API shapes, not captured from the live API; the landing trip and the advisory come from tests/fixtures/feeds/ (the alert moved to the test day); the rules rows are made up in the shape scripts/advisor/import-rules.mjs writes.",
+  "description": "Golden 5 (TA-A6): a Spanish-speaking angler end to end. The first message gets the Spanish welcome and the day's port answer in Spanish from the pre-router; a planning question in Spanish (the second Spanish message, so the stored language becomes es) calls get_conditions with the species and gets the advisory first, the season, the one ladder phrase and the NWS closer in Spanish; a photo is identified in Spanish with the Spanish look-alike cue and the rule; SÍ shares it and asks for the credit in Spanish; 'me llamo Lupe' stores the credit; a canary that could be a vermilion gets the Spanish cue pair; AYUDA gets the Spanish help. No English sentence reaches the angler.",
+  "seen": false,
+  "contact": {
+    "home_port": "morro-bay",
+    "language": "en"
+  },
+  "rules": [
+    {
+      "species_key": "vermilion",
+      "species_label": "Vermilion rockfish",
+      "bag_limit": 2,
+      "season_open": "2026-04-01",
+      "season_close": "2026-12-31",
+      "status": "active",
+      "reviewed_at": "2026-10-01",
+      "review_due": "2026-12-31"
+    },
+    {
+      "species_key": "canary",
+      "species_label": "Canary rockfish",
+      "bag_limit": 2,
+      "season_open": "2026-04-01",
+      "season_close": "2026-12-31",
+      "status": "active",
+      "reviewed_at": "2026-10-01",
+      "review_due": "2026-12-31"
+    },
+    {
+      "species_key": "rockfish",
+      "species_label": "Rockfish",
+      "bag_limit": 10,
+      "season_open": "2026-04-01",
+      "season_close": "2026-12-31",
+      "status": "active",
+      "reviewed_at": "2026-10-01",
+      "review_due": "2026-12-31"
+    }
+  ],
+  "turns": [
+    {
+      "in": "hola, ¿qué está picando en Morro Bay?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_daily_g1",
+                "name": "record_daily_answer",
+                "input": {
+                  "en": "Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today. No skipper reports from the last three days. The landing reports Starfire last Sun with bocaccio, copper rockfish and 8 lingcod; recent reported activity: Low. Today's forecast isn't in yet. Full picture: {{link:port:morro-bay}}",
+                  "es": "Morro Bay, sáb 3 oct: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. No hay reportes de capitanes de los últimos tres días. El muelle reporta al Starfire el dom pasado con bocaccio, rocote cobrizo y 8 lingcod; actividad reciente reportada: Low. El pronóstico de hoy todavía no llega. Todo el detalle: {{link:port:morro-bay}}"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "reports.daily.model",
+        "reply_contains": [
+          "Aquí SkipperCast.",
+          "Responde AYUDA para ayuda",
+          "Morro Bay, sáb 3 oct: SMALL CRAFT ADVISORY (aviso del NWS) para hoy.",
+          "actividad reciente reportada: Low.",
+          "https://skippercast.com/ports/morro-bay?s=txt"
+        ],
+        "reply_not_contains": [
+          "SkipperCast here.",
+          "No skipper reports",
+          "Which port",
+          "%"
+        ]
+      }
+    },
+    {
+      "in": "¿Vale la pena salir hoy por rocote?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_g5_plan",
+                "name": "get_conditions",
+                "input": {
+                  "port": "morro-bay",
+                  "date": "hoy",
+                  "species": "rocote"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "text",
+                "text": "SMALL CRAFT ADVISORY (aviso del NWS) para hoy: después del mediodía se pone pesado para una lancha mediana, y el pronóstico de hoy todavía no llega. La temporada de rocote aparece abierta para ese día; tallas y límites: {{link:rules:rockfish}} El muelle reportó al Starfire con rocote el domingo pasado; actividad reciente reportada: Low. Revisa el pronóstico más reciente del NWS antes de salir."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "conditions",
+        "brief_contains": [
+          "- reply language: Spanish"
+        ],
+        "reply_contains": [
+          "SMALL CRAFT ADVISORY (aviso del NWS) para hoy",
+          "La temporada de rocote aparece abierta",
+          "https://skippercast.com/species/rockfish?s=txt#rules",
+          "actividad reciente reportada: Low.",
+          "Revisa el pronóstico más reciente del NWS antes de salir."
+        ],
+        "reply_not_contains": [
+          "%",
+          "Moderate",
+          "Insufficient",
+          "Check the latest"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT language FROM advisor_contacts WHERE id='c1'",
+            "row": {
+              "language": "es"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m1",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-vermilion-high.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.high",
+        "reply_contains": [
+          "Es un colorado. Cuerpo rojo con manchas grises u oscuras.",
+          "Reglas (CDFW Central Region rules, revisadas 1 oct): límite 2 por persona, abierta del 1 abr al 31 dic.",
+          "Confírmalo antes de quedártelo: https://skippercast.com/species/vermilion?s=txt#rules",
+          "¿Podemos compartir esta foto en SkipperCast con crédito? Responde SÍ si quieres."
+        ],
+        "reply_not_contains": [
+          "That's",
+          "Rules (",
+          "Reply YES"
+        ]
+      }
+    },
+    {
+      "in": "sí",
+      "expect": {
+        "intent": "photo.share",
+        "reply_contains": [
+          "¿Cómo te damos crédito? Basta con tu nombre, o 'anónimo'."
+        ],
+        "review": "angler_photo",
+        "rows": [
+          {
+            "sql": "SELECT publish_state FROM advisor_media WHERE id='m1'",
+            "row": {
+              "publish_state": "queued"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "me llamo Lupe",
+      "expect": {
+        "intent": "photo.credit",
+        "reply_contains": [
+          "Gracias, Lupe."
+        ],
+        "rows": [
+          {
+            "sql": "SELECT credit FROM advisor_media WHERE id='m1'",
+            "row": {
+              "credit": "Lupe"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m2",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-canary-vermilion.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.medium",
+        "reply_contains": [
+          "Parece un canario, podría ser un colorado: busca mandíbula inferior lisa (canario) frente a escamas pequeñas y ásperas debajo de la mandíbula inferior (colorado)."
+        ],
+        "reply_not_contains": [
+          "Looks like",
+          "lower jaw"
+        ]
+      }
+    },
+    {
+      "in": "ayuda",
+      "expect": {
+        "intent": "help",
+        "reply_contains": [
+          "SkipperCast: condiciones de pesca, reglas, reportes de capturas e identificación de peces por mensaje."
+        ],
+        "reply_not_contains": [
+          "fishing conditions"
+        ]
+      }
+    }
+  ]
+}

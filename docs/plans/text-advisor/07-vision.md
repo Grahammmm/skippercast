@@ -218,8 +218,8 @@ keys or `catalog/advisor/species-extra.json` keys (02).
   `halibut` and `salmon`, which the species list canonicalises away.
   White seabass, Pacific halibut, albacore, bluefin, yellowtail, Dungeness and
   lingcod already have catalog keys and are not repeated.
-  `catalog/advisor/lookalikes.json` covers those keys with 2–3 cues each;
-  entries whose `source` is `https://wildlife.ca.gov/Fishing/Ocean` await a
+  `catalog/advisor/lookalikes.json` covers those keys with 2–3 cues each
+  (and the same cues in Spanish, `cues_es`, since TA-A6); entries whose `source` is `https://wildlife.ca.gov/Fishing/Ocean` await a
   more specific CDFW page (owner to refine).
 - **Fixtures.** Four synthetic PNGs, not six: `count-board.png`, `fish.png`,
   `blank.png`, `deck-person.png` (≤ 256 px, about 1 KB each), rendered by

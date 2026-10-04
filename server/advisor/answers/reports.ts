@@ -31,6 +31,7 @@ import {lookupRules} from './rules.ts';
 import {addDays, daysBetween, localDate} from './time.ts';
 import {sha256} from '../ids.ts';
 import {t} from '../strings.ts';
+import type {StringKey} from '../strings.ts';
 import {capReply, statesRuleNumber, stripMarkdown} from '../reply.ts';
 import {DAILY_TOOL, dailyPrompt} from '../prompts/daily.ts';
 import {advisorSettings} from '../settings.ts';
@@ -159,8 +160,8 @@ const dateWords = (date: string, language: Language): string => {
 };
 const dayWord = (date: string, today: string, language: Language): string => {
   const ago = daysBetween(date, today);
-  if (ago === 0) return language === 'es' ? 'hoy' : 'today';
-  if (ago === 1) return language === 'es' ? 'ayer' : 'yesterday';
+  if (ago === 0) return t(language, 'day_today');
+  if (ago === 1) return t(language, 'day_yesterday');
   const wd = new Intl.DateTimeFormat(language === 'es' ? 'es' : 'en-US', {weekday: 'short', timeZone: 'UTC'}).format(new Date(`${date}T12:00:00Z`)).replace(/\.$/, '');
   return language === 'es' ? `el ${wd}` : wd;   // "reportó ayer", "reportó el sáb"
 };
@@ -181,7 +182,17 @@ export function conditionsText(c: DailyInputs['conditions'], language: Language)
   return out.join(' ');
 }
 
-const speciesWords = (a: DailyLanding, language: Language): string => a.target === 'reef' ? (language === 'es' ? 'rocote y lingcod' : 'rockfish and lingcod') : a.target;
+// TA-A6: the region targets' names in the reply language (strings.json); a target that is the same word in both
+// languages (halibut, barracuda, bonito, dorado) or unknown falls back to its key.
+export const TARGET_WORDS: Readonly<Record<string, StringKey>> = {
+  reef: 'species_reef', 'pacific-halibut': 'target_pacific_halibut', salmon: 'target_salmon',
+  albacore: 'target_albacore', bluefin: 'target_bluefin', yellowfin: 'target_yellowfin', yellowtail: 'target_yellowtail',
+  'white-seabass': 'target_white_seabass',
+  'kelp-bass': 'target_kelp_bass', 'sand-bass': 'target_sand_bass', 'spotted-bass': 'target_spotted_bass',
+  sheephead: 'target_sheephead', whitefish: 'target_whitefish', lobster: 'target_lobster',
+};
+export const targetWords = (target: string, language: Language): string => TARGET_WORDS[target] ? t(language, TARGET_WORDS[target]!) : target;
+const speciesWords = (a: DailyLanding, language: Language): string => targetWords(a.target, language);
 
 /**
  * The answer composed from the facts without a model (06's fallbacks; also

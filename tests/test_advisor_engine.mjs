@@ -6,7 +6,7 @@
 // the six few-shots, rules_without_tool, tool_loop, pause_turn, HTTP 529), the
 // post-processing helpers, the consumer's new appliers (STOP/START, forget,
 // export and its route, send_file, notifyAdmin) and the golden conversations
-// 1-4 and 6-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
+// 1-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
 // real migrations in node:sqlite, a memory R2, a fake fetcher.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -553,13 +553,14 @@ dbTest('consumer: send_file attaches on BlueBubbles and falls back to the link e
   assert.equal(tw.sent[0].text, "Here's my contact card. https://skippercast.com/contact.vcf"); assert.equal(tw.sent[0].files, undefined);
 });
 
-// ---- golden conversations (11 § engine golden conversations 1-4, 6-9) ------------------------
+// ---- golden conversations (11 § engine golden conversations 1-9) ------------------------
 
 const conversations = readdirSync(new URL('./fixtures/advisor/engine/conversations/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
-test('golden conversations 1, 2 (en, es), 3, 4 and 6-9 exist', () => {
+test('golden conversations 1, 2 (en, es), 3, 4, 5 and 6-9 exist', () => {
   // TA-I1: 2 up to the consent step, 3 the crew add and remove; TA-I2: 2 on through the count board, Y, a correction and a catch photo, 3 the crew member's board.
   // TA-I3: 4, the angler's fish IDs and photo sharing. TA-A1: 1, the new angler's "what's biting", home port and planning question.
-  for (const n of ['01-new-angler', '02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
+  // TA-A6: 5, a Spanish angler end to end (daily answer, planning, fish ID with Spanish cues, sharing, help).
+  for (const n of ['01-new-angler', '02-skipper-registers', '02-skipper-registers-es', '03-crew', '04-fish-id', '05-spanish-angler', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
 });
 
 for (const file of conversations) {

@@ -325,8 +325,14 @@ dbTest('Spanish: the reply shapes and the offer in Spanish, with Spanish species
   const {sql, env, bucket} = setup({contact: {language: 'es'}});
   addMedia(sql, bucket, 'm1');
   const r = await say(env, sql, null, {media: ['m1'], vision: FISH('fish-id-vermilion-high.json')});
-  assert.match(r.texts[0], /^Es un colorado\. Reglas \(CDFW Central Region rules, revisadas 1 oct\): límite 2 por persona, abierta del 1 abr al 31 dic\. Confírmalo antes de quedártelo: https:/);
+  // TA-A6: the look-alike cue in Spanish (lookalikes.json cues_es), where TA-I3 left the English cue out.
+  assert.match(r.texts[0], /^Es un colorado\. Cuerpo rojo con manchas grises u oscuras\. Reglas \(CDFW Central Region rules, revisadas 1 oct\): límite 2 por persona, abierta del 1 abr al 31 dic\. Confírmalo antes de quedártelo: https:/);
   assert.equal(r.texts[1], t('es', 'fishid_offer'));
+  addMedia(sql, bucket, 'm2');
+  const medium = await say(env, sql, null, {media: ['m2'], vision: FISH('fish-id-canary-vermilion.json')});
+  assert.match(medium.texts[0], /^Parece un canario, podría ser un colorado: busca mandíbula inferior lisa \(canario\) frente a escamas pequeñas y ásperas debajo de la mandíbula inferior \(colorado\)\./,
+    'the jaw against the jaw, as in English');
+  assert.doesNotMatch(medium.texts[0], /lower jaw|lateral line/, 'no English cue in a Spanish reply');
   const sí = await say(env, sql, 'sí');
   assert.equal(sí.intent, 'photo.share');
 });

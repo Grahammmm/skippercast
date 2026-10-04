@@ -609,6 +609,98 @@
     "planning_confidence": {
       "en": "recent reported activity: {label}",
       "es": "actividad reciente reportada: {label}"
+    },
+    "article_a": {
+      "en": "a {label}",
+      "es": "un {label}"
+    },
+    "article_an": {
+      "en": "an {label}",
+      "es": "un {label}"
+    },
+    "words_or": {
+      "en": "{a} or {b}",
+      "es": "{a} o {b}"
+    },
+    "still_working": {
+      "en": "Still working on that, one moment",
+      "es": "Sigo con eso, un momento"
+    },
+    "apology": {
+      "en": "Sorry, something went wrong on my end. Please send that again.",
+      "es": "Perdón, algo falló de mi lado. Por favor mándalo otra vez."
+    },
+    "ad2_line": {
+      "en": "General areas only; I don't share anyone's numbers.",
+      "es": "Solo zonas generales; no comparto los puntos de nadie."
+    },
+    "trips_few": {
+      "en": "the boats I work with so far",
+      "es": "los barcos con los que trabajo por ahora"
+    },
+    "day_yesterday": {
+      "en": "yesterday",
+      "es": "ayer"
+    },
+    "species_reef": {
+      "en": "rockfish and lingcod",
+      "es": "rocote y lingcod"
+    },
+    "landing_label": {
+      "en": "reported by the landing",
+      "es": "reportado por el muelle"
+    },
+    "target_pacific_halibut": {
+      "en": "Pacific halibut",
+      "es": "halibut del Pacífico"
+    },
+    "target_salmon": {
+      "en": "salmon",
+      "es": "salmón"
+    },
+    "target_albacore": {
+      "en": "albacore",
+      "es": "albacora"
+    },
+    "target_bluefin": {
+      "en": "bluefin",
+      "es": "atún aleta azul"
+    },
+    "target_yellowfin": {
+      "en": "yellowfin",
+      "es": "atún aleta amarilla"
+    },
+    "target_yellowtail": {
+      "en": "yellowtail",
+      "es": "jurel"
+    },
+    "target_white_seabass": {
+      "en": "white seabass",
+      "es": "corvina blanca"
+    },
+    "target_kelp_bass": {
+      "en": "kelp bass",
+      "es": "cabrilla sargacera"
+    },
+    "target_sand_bass": {
+      "en": "sand bass",
+      "es": "cabrilla de arena"
+    },
+    "target_spotted_bass": {
+      "en": "spotted bay bass",
+      "es": "cabrilla manchada"
+    },
+    "target_sheephead": {
+      "en": "sheephead",
+      "es": "vieja"
+    },
+    "target_whitefish": {
+      "en": "ocean whitefish",
+      "es": "pierna"
+    },
+    "target_lobster": {
+      "en": "lobster",
+      "es": "langosta"
     }
   }
 }

@@ -99,8 +99,11 @@ test('update_profile: known ports and species only; name cleaned; language en/es
 
 test('escalate: a conversation review on this message; unknown reasons become needs_human', async () => {
   const tool = TOOL_BY_NAME.get('escalate');
-  assert.deepEqual(await tool.run({reason: 'abuse'}, ctx()), {result: {flagged: true}, actions: [{type: 'review_open', kind: 'conversation', refId: 'in1', reason: 'abuse'}]});
-  assert.equal((await tool.run({reason: 'drop everything'}, ctx())).actions[0].reason, 'needs_human');
+  // TA-A6: the result carries the line to send in the reply language.
+  assert.deepEqual(await tool.run({reason: 'abuse'}, ctx()), {result: {flagged: true, reply: "I'm going to stop here."}, actions: [{type: 'review_open', kind: 'conversation', refId: 'in1', reason: 'abuse'}]});
+  const other = await tool.run({reason: 'drop everything'}, ctx());
+  assert.deepEqual([other.actions[0].reason, other.result.reply], ['needs_human', "I've flagged this for the team."]);
+  assert.equal((await tool.run({reason: 'complaint'}, ctx({language: 'es'}))).result.reply, 'Se lo pasé al equipo.');
 });
 
 test('send_upload_link: a 24 h token for this contact, as its own text; unavailable without the key', async () => {
@@ -392,6 +395,8 @@ dbTest('get_port_report: the day\'s answer (composed when none is stored, never 
   assert.deepEqual([stored.daily.source, stored.daily.text], ['stored', 'Stored en']);
   const storedEs = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, {...dataCtx({db, fetcher: noModel}), language: 'es'})).result;
   assert.equal(storedEs.daily.text, 'Stored es');
+  // TA-A6: the landing's attribution label in the reply language.
+  assert.equal(storedEs.landing.label, 'reportado por el muelle');
 });
 
 test('get_species: catalog claims with sources, look-alike cues, the group, and the release note; no rule', async () => {
@@ -410,6 +415,10 @@ test('get_species: catalog claims with sources, look-alike cues, the group, and 
   assert.ok(hal.identify, 'halibut uses california-halibut\'s cues');
   for (const r of [verm, ye, hal]) assert.doesNotMatch(JSON.stringify(r), /\b\d+\s*(?:in|inch|inches)\b|bag limit/i);
   assert.deepEqual((await tool.run({species_key: 'unicorn'})).result.error, 'unknown species');
+  // TA-A6: in Spanish the cues are lookalikes.json's cues_es.
+  const es = (await tool.run({species_key: 'colorado'}, {language: 'es'})).result;
+  assert.equal(es.identify.cues[0], 'cuerpo rojo con manchas grises u oscuras');
+  assert.equal(es.lookalikes[0].cues.at(-1), 'mandíbula inferior lisa');
 });
 
 test('public grounds: every allowlisted name is a charter-grounds label and carries no coordinate', () => {
@@ -583,6 +592,7 @@ dbTest('planning brief: beyond seven days says so with no numbers; the weekend i
   assert.deepEqual([es.planning.species_name, es.planning.confidence_phrase, es.planning.closer],
     ['rocote', 'actividad reciente reportada: Low', 'Revisa el pronóstico más reciente del NWS antes de salir.']);
   assert.equal(es.planning.season.line, 'No tengo una regla revisada para rocote, así que revisa las reglas vigentes de CDFW: {{link:rules:rockfish}}');
+  assert.equal(es.planning.recent_activity.landing.label, 'reportado por el muelle', 'TA-A6: the brief is in the reply language throughout');
   const calm = await plan({port: 'morro-bay', date: 'this weekend', species: 'rockfish'}, {db, now: Date.parse('2026-10-05T17:00:00Z')});
   assert.deepEqual([calm.lead_with_advisory, calm.advisory_line], [false, undefined]);
   for (const r of [far, weekend, es, calm]) assert.doesNotMatch(JSON.stringify(r), /\d\s*%/);
