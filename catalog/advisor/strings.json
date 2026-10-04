@@ -202,6 +202,14 @@
       "en": "The skipper",
       "es": "El capitán"
     },
+    "skipper_invite": {
+      "en": "Hi, this is SkipperCast, the fishing report line. The team would like your boat on SkipperCast: text me your count board and your reports go up on skippercast.com, credited to the boat. Reply STOP to opt out.",
+      "es": "Hola, soy SkipperCast, la línea de reportes de pesca. Al equipo le gustaría tener tu barco en SkipperCast: mándame la pizarra del día y tus reportes salen en skippercast.com, a nombre del barco. Responde STOP para salir."
+    },
+    "skipper_invite_boat": {
+      "en": "Hi, this is SkipperCast, the fishing report line. The team would like {boat} on SkipperCast: text me your count board and your reports go up on skippercast.com, credited to the boat. Reply STOP to opt out.",
+      "es": "Hola, soy SkipperCast, la línea de reportes de pesca. Al equipo le gustaría tener {boat} en SkipperCast: mándame la pizarra del día y tus reportes salen en skippercast.com, a nombre del barco. Responde STOP para salir."
+    },
     "boat_verified": {
       "en": "{name} is verified. Your page: skippercast.com/boats/{slug}",
       "es": "{name} está verificado. Tu página: skippercast.com/boats/{slug}"

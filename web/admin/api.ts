@@ -27,6 +27,27 @@ export interface Health {
   meta: null;
 }
 
+// ---- TA-W3: Skippers and Contacts (server/advisor/admin/skippers.ts) ----
+export interface ContactRef {id: string; channel: string; language: string; display_name: string | null; role: string; status: string}
+export interface Crew {contact_id: string; display_name: string | null; channel: string; status: string; added_at: string}
+export interface Boat {
+  id: string; slug: string; name: string; landing: string | null; port: string; region: string; instagram: string | null;
+  booking_url: string | null; phone_public: string | null; status: 'pending' | 'verified' | 'rejected'; verified_at: string | null; created_at: string;
+  owner: ContactRef | null; last_report_date: string | null; reports_30d: number; posts: number;
+  consent: 'given' | 'revoked' | 'not given'; consent_photos_at: string | null; consent_revoked_at: string | null;
+  consent_note: {note: string; at: string} | null; crew: Crew[]; review_open: boolean;
+}
+export type BoatFields = Partial<Record<'name' | 'port' | 'landing' | 'instagram' | 'booking_url' | 'phone_public', string | null>>;
+export interface BoatEdit {fields?: BoatFields; status?: 'verified' | 'rejected'; consent_note?: string | null}
+export interface BoatResult {boat: Boat; sends?: number; held?: string}
+export interface InviteResult {contact_id: string; sends: number; created: boolean}
+export interface ContactDetail {
+  contact: ContactRef & {source: string | null; home_port: string | null; created_at: string; last_seen_at: string; messages_today: number; blocked_from: string | null};
+  boats: {id: string; name: string; slug: string; status: string; relation: 'owner' | 'crew'}[];
+  messages: {direction: 'in' | 'out'; body: string | null; intent: string | null; status: string; created_at: string; team: boolean; media: number}[];
+  export: string;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) { super(message); this.status = status; }
@@ -51,6 +72,20 @@ export const getQueue = (status: string, kind: string, cursor?: string | null): 
 export const getHealth = (): Promise<Health> => call('/api/admin/health');
 export const decide = (id: string, body: DecisionBody): Promise<DecisionResult> =>
   call(`/api/admin/reviews/${encodeURIComponent(id)}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+
+const postJson = <T>(path: string, data: unknown): Promise<T> =>
+  call(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+
+export const getBoats = (): Promise<{boats: Boat[]}> => call('/api/admin/boats');
+export const editBoat = (id: string, edit: BoatEdit): Promise<BoatResult> => postJson(`/api/admin/boats/${encodeURIComponent(id)}`, edit);
+export const removeCrew = (boat: string, contact: string): Promise<{boat: Boat}> =>
+  postJson(`/api/admin/boats/${encodeURIComponent(boat)}/crew/${encodeURIComponent(contact)}/remove`, {});
+export const invite = (phone: string, boatName: string, language: 'en' | 'es'): Promise<InviteResult> =>
+  postJson('/api/admin/boats/invite', {phone, ...(boatName.trim() ? {boat_name: boatName.trim()} : {}), language});
+export const getContact = (id: string): Promise<ContactDetail> => call(`/api/admin/contacts/${encodeURIComponent(id)}`);
+export const setBlocked = (id: string, blocked: boolean): Promise<{status: string}> => postJson(`/api/admin/contacts/${encodeURIComponent(id)}/block`, {blocked});
+/** The admin app's link to a contact (08: reached by id from a review or a boat only). */
+export const contactHref = (id: string): string => `#contact/${encodeURIComponent(id)}`;
 
 /** A short local time for an ISO timestamp. */
 export const when = (iso: string | null | undefined): string => {

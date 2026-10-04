@@ -4,7 +4,7 @@
 // Social drafts (kind post) render generically until TA-S1 adds their editor.
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {ApiError, KINDS, STATUSES, decide, getQueue, when} from './api.ts';
+import {ApiError, KINDS, STATUSES, contactHref, decide, getQueue, when} from './api.ts';
 import type {Count, DecisionBody, DecisionResult, QueueItem} from './api.ts';
 import {decisionsFor, shortcutFor} from './keys.ts';
 
@@ -139,7 +139,12 @@ function Detail({item}: {item: QueueItem}) {
     case 'media': return <MediaDetail media={d.media} />;
     case 'report': return <ReportDetail report={d.report} />;
     case 'skipper': return <SkipperDetail detail={d} />;
-    case 'conversation': return <Messages messages={d.messages ?? []} heading={COPY.lastMessages} />;
+    case 'conversation': return (
+      <>
+        {d.contact?.id ? <p><a href={contactHref(d.contact.id)}>{COPY.openContact}</a></p> : null}
+        <Messages messages={d.messages ?? []} heading={COPY.lastMessages} />
+      </>
+    );
     case 'rule': return (
       <dl class="admin-fields">
         <Field label={COPY.rule} value={`${d.rule?.species_label ?? ''} (${d.rule?.jurisdiction ?? ''})`} />
@@ -211,6 +216,7 @@ function SkipperDetail({detail}: {detail: Record<string, any>}) {
         <Field label={COPY.language} value={c?.language} />
         <Field label={COPY.publishState} value={b.status} />
       </dl>
+      {c?.id ? <p><a href={contactHref(c.id)}>{COPY.openContact}</a> · <a href="#skippers">{COPY.views.skippers}</a></p> : null}
       {(detail.messages ?? []).length ? (
         <>
           <h3>{COPY.firstMessages}</h3>

@@ -83,6 +83,17 @@ body.admin-page {
 .admin-health { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
 .admin-health > section { padding: var(--space-4); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); }
 
+/* TA-W3: Skippers and Contact */
+a.admin-button { display: inline-flex; align-items: center; text-decoration: none; }
+.admin-button.is-small { min-height: 32px; padding: 0 var(--space-2); font-size: var(--text-14); }
+.admin-crew { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
+.admin-card.is-boat.is-pending { border-left: 4px solid var(--caution); }
+.admin-card.is-boat.is-rejected { opacity: 0.85; }
+.admin-view form.admin-card { margin-bottom: var(--space-3); }
+.admin-page input[type="tel"], .admin-page input[type="url"] {
+  font: inherit; font-size: var(--text-16); min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink);
+}
+
 @media (max-width: 600px) {
   .admin-media { grid-template-columns: 1fr; }
   .admin-messages li { max-width: 100%; }

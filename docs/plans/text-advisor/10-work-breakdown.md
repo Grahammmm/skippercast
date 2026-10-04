@@ -233,6 +233,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: SK-3, SK-4, pilot recruiting.
 - Depends: TA-W2
 - Files: `admin/skippers.ts` (list, edit, crew removal, invite), `web/admin/skippers.tsx`, `web/admin/contact.tsx`, tests.
+- As built: the invite starts the registration flow rather than creating the boat; verify and reject decide the open `new_skipper` review when there is one (`setBoatVerification` is shared with `decisions.ts`); the consent note is a `job_state` note that never changes consent; contacts open by id at `#contact/<id>` with export and block. See 08 § As built (TA-W3).
 
 ### TA-W4 · Funnel dashboard and text-based admin fallback · M · owner approval (secret `CF_ANALYTICS_TOKEN` to the Worker)
 - Stories: OP-5, SP-10 (data), OP-1 (fallback).

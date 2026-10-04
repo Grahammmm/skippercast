@@ -72,5 +72,20 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await expect(page.getByRole('heading', {level: 1, name: 'Health'})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Mac relay'})).toBeVisible();
   await checkA11y(page, 'admin-health', info.project.name);
+
+  // TA-W3: the Skippers view (a seeded pending boat owned by the contact) and that contact, opened by id.
+  const boat = `e2e-boat-${tag}`;
+  d1(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,created_at,updated_at) VALUES('${boat}','${boat}','E2E Boat ${tag}','morro-bay','morro-bay','${contact}','pending','${now}','${now}');`);
+  await page.getByRole('link', {name: 'Skippers'}).click();
+  await expect(page.getByRole('heading', {level: 1, name: 'Skippers'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Invite a skipper'})).toBeVisible();
+  const boatCard = page.getByRole('article', {name: new RegExp(`E2E Boat ${tag}`)});
+  await expect(boatCard).toBeVisible();
+  await checkA11y(page, 'admin-skippers', info.project.name);
+  await boatCard.getByRole('link', {name: 'Unnamed contact'}).click();
+  await expect(page).toHaveURL(new RegExp(`#contact/${contact}$`));
+  await expect(page.getByRole('heading', {level: 1, name: 'Contact'})).toBeVisible();
+  await expect(page.getByRole('link', {name: 'Export this contact’s data'})).toBeVisible();
+  await checkA11y(page, 'admin-contact', info.project.name);
   expect(pageErrors).toEqual([]);
 });

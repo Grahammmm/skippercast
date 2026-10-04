@@ -247,3 +247,73 @@ Public pages in `server/advisor/pages/`, routes in `server/routes/advisor.ts`
   which `e2e/serve.mjs` now loads (every `e2e/seed/*.sql`) after the migrations
   and before the Worker starts: seeding from a spec while other workers ran
   tests made page reads fail intermittently.
+
+## As built (TA-W3)
+
+The Skippers and Contact views: `server/advisor/admin/skippers.ts`, the routes
+in `server/routes/admin.ts` (`// TA-W3` block), `web/admin/skippers.tsx`,
+`web/admin/contact.tsx` and `web/admin/route.ts` (the hash routes, plain
+TypeScript so the tests load them). Where the code differs from the table above:
+
+- **Routes.** `GET /api/admin/boats`, `POST /api/admin/boats/<id>`,
+  `POST /api/admin/boats/<id>/crew/<contact id>/remove` (the crew row is in the
+  path, not the body), `POST /api/admin/boats/invite` (the invite is not tied
+  to an existing boat: the skipper registers the boat in reply), and for
+  contacts `GET /api/admin/contacts/<id>`, `GET /api/admin/contacts/<id>/export`
+  and `POST /api/admin/contacts/<id>/block`. There is no list or search of
+  contacts; the view opens at `#contact/<id>` from a boat's owner or crew, or
+  from a skipper or conversation card in the queue.
+- **List.** Every boat (up to 500), pending first, then verified, then
+  rejected, newest first: status, the owner as the queue's contact view (id,
+  channel, language, display name, role, status; never the number or its
+  hash), the last published report's date, published reports dated within 30
+  days, `posts` (0 until TA-S1 creates `advisor_posts`), photo consent
+  (`given`, `revoked`, `not given`), the admin's consent note, active crew and
+  whether the registration review is still open. Link clicks per boat are not
+  shown: telemetry has no boat dimension (the Funnel view counts page views
+  and CTA clicks by source).
+- **Edits.** `{fields?, status?, consent_note?}`. Fields go through the
+  registration's parsers (`intake/skippers.ts`): `name` 1-60, `port` a catalog
+  port, name or alias (the region follows the port), `landing` ≤ 60,
+  `instagram` a handle, `booking_url` https only, `phone_public` a phone;
+  `null` or empty clears an optional field. The slug never changes, so links
+  already texted keep working. A change bumps the pages version.
+- **Verify and reject.** `status: verified | rejected`. When the boat's
+  `new_skipper` review is still open, the Skippers view decides it through
+  `decideReview` (note `skippers view`), so the review closes and the text has
+  the queue's outbound id. Otherwise `setBoatVerification` (moved out of
+  `decisions.ts`'s skipper case, which now calls it too) applies the same
+  status, `verified_by`, pages version and 05 text, keyed
+  `admin.skipper.<status>` on the review id, so each status is texted at most
+  once. While replies are off the boat changes and the answer says
+  `held: 'replies-off'`.
+- **Consent note.** A note for the team's record (`job_state`
+  `advisor.boat-note.<boat id>`, `{note, at, by}`); it never changes photo
+  consent, which only the owner's own text sets or revokes (05 § Consent). No
+  migration was needed for it.
+- **Invite.** `{phone, boat_name?, language?}`. The number is parsed with
+  `contacts.ts` `e164`, hashed and encrypted at once, and never returned or
+  logged (the answer is `{contact_id, sends, created}`). The contact is found
+  by hash or created as an SMS contact with `source='skipper-invite'`; a
+  stopped or blocked contact, an existing boat owner, replies switched off
+  (409), a missing `ADVISOR_PHONE_KEY` (503) and more than 20 invites a day
+  (`request_limits` `admin:skipper-invite:<day>`, 409) are refused. The TA-I1
+  path: `startRegistration` writes the register flow (with the boat name when
+  given, so the reply answers "which port"), and the text is `skipper_invite`
+  (or `skipper_invite_boat`) plus the flow's first question, in the contact's
+  language, through `teamSender` with `created_by` = the admin. Its outbound id
+  is per contact and Pacific day, so a double click texts once. The flow
+  expires after 24 hours like any registration; "register my boat" still
+  works afterwards.
+- **Contact.** `{contact, boats, messages, export}`: the contact's fields
+  (source, home port, first and last seen, messages today) without number or
+  hash, its owned and crew boats, its last 50 messages oldest first (body,
+  intent, status, team, attachment count) and the export link, which answers
+  `contacts.ts` `exportContact` as a JSON download (`Content-Disposition:
+  attachment`, `private, no-store`).
+- **Block.** `{blocked: true|false}`. Blocking keeps the status the contact
+  had in `job_state` `advisor.block.<id>`; unblocking restores it, so a
+  contact that had texted STOP stays stopped. START never lifts a block
+  (`contacts.ts` `applyStart`).
+- **Tests.** `tests/test_advisor_admin_skippers.mjs`; `e2e/admin.spec.ts` opens
+  Skippers and a contact with axe.
