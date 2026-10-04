@@ -39,6 +39,8 @@ import {linkKey, takeDaily, LINK_GUESSES_PER_DAY} from './tools/offer_text_link.
 import type {PendingLink} from './tools/offer_text_link.ts';
 import {sha256} from './ids.ts';
 import type {Action, AdvisorContactRow, AdvisorMessageRow, AdvisorSettings, EngineDeps, EngineResult, Handler, Language} from './types.ts';
+// TA-I1: skipper registration, consent and crew (05), and the contact brief's boat lines.
+import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 700;
@@ -60,6 +62,13 @@ export interface EngineInput {env: Env; contact: AdvisorContactRow; message: Adv
 export interface FlowContext {
   env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: EngineDeps; signal?: AbortSignal;
   settings: AdvisorSettings; language: Language; text: string; media: string[]; db: D1Database;
+  /**
+   * TA-I1: actions a flow needs whatever answers the turn (abandoning a stale
+   * flow, the one-time "no social posts" note, a consent re-ask on a photo).
+   * They go before a flow's own result, after the languageUpdate on the model
+   * path, and after the acknowledgement of a media-only message.
+   */
+  carry: Action[];
 }
 /**
  * A deterministic Stage 2 flow (04 § stage 2): returns a result to end the
@@ -68,7 +77,7 @@ export interface FlowContext {
  * STAGE_TWO_FLOWS; they run after the built-in flows below, in order.
  */
 export interface Flow {name: string; run(ctx: FlowContext): Promise<EngineResult | null>}
-export const STAGE_TWO_FLOWS: Flow[] = [];
+export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts)
 
 const ADMIN = /^(ok|no)\s+([0-9a-f]{6})$/i;
 const SIX_DIGITS = /^\d{6}$/;
@@ -151,11 +160,17 @@ const WEEKDAYS: Record<string, string> = {Mon: 'Monday', Tue: 'Tuesday', Wed: 'W
 
 /** The contact brief and the situation brief (04 § stage 3), as one uncached system block. */
 export async function briefs(db: D1Database, contact: AdvisorContactRow, settings: AdvisorSettings, language: Language, isNew: boolean, now: number): Promise<string> {
-  let boat: {name: string; status: string} | null = null, pending = false;
-  if (contact.boat_id) {
-    boat = await db.prepare('SELECT name,status FROM advisor_boats WHERE id=?').bind(contact.boat_id).first<{name: string; status: string}>();
-    pending = Boolean(await db.prepare("SELECT 1 AS x FROM advisor_reports WHERE boat_id=? AND status='pending_confirm' LIMIT 1").bind(contact.boat_id).first());
-  }
+  let pending = false;
+  // TA-I1 (04 § stage 3): the boat's name, its verification status and the photo consent for skippers and crew.
+  const boats = contact.boat_id ? (await boatsForContact(db, contact.id)).filter(b => b.id === contact.boat_id) : [];
+  const boat = boats[0] ?? null;
+  if (contact.boat_id) pending = Boolean(await db.prepare("SELECT 1 AS x FROM advisor_reports WHERE boat_id=? AND status='pending_confirm' LIMIT 1").bind(contact.boat_id).first());
+  const flow = await readFlow(db, contact.id);
+  const registering = flow?.flow === 'register' && now - Date.parse(flow.asked_at) <= FLOW_MAX_AGE_MS ? flow.step : null;
+  const boatLines = boat ? [
+    `- boat: ${boat.name} (${boat.relation === 'owner' ? 'they own it' : 'they are crew'}); status: ${boat.status}${boat.status === 'verified' ? '' : ' (reports publish but tools show it as "a boat" until the team verifies it)'}`,
+    `- photo consent for social posts: ${consentState(boat)}`,
+  ] : [];
   let targets: string[] = [];
   try { const v = contact.targets_json ? JSON.parse(contact.targets_json) : []; if (Array.isArray(v)) targets = v.filter((x): x is string => typeof x === 'string'); } catch { targets = []; }
   const local = localClock(now, DEFAULT_TZ);
@@ -163,7 +178,9 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
   const channel = isWebOnly(contact) ? 'web chat (no SMS limits, but keep it short)' : contact.channel === 'imessage' ? 'iMessage' : 'SMS (3 segments, 480 characters)';
   return [
     'CONTACT BRIEF',
-    `- role: ${contact.role}${boat ? `; boat: ${boat.name} (${boat.status})` : ''}`,
+    `- role: ${contact.role}`,
+    ...boatLines,
+    ...(registering ? [`- boat registration in progress: the next answer is the ${registering} (the system asks; do not ask it yourself)`] : []),
     `- reply language: ${language === 'es' ? 'Spanish' : 'English'}`,
     `- display name: ${contact.display_name ?? 'not given'}`,
     `- home port: ${contact.home_port ? `${portName(contact.home_port)} (${contact.home_port})` : 'not given yet'}`,
@@ -393,20 +410,22 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   }
 
   // Stage 2: deterministic flows.
-  const flow: FlowContext = {env, contact, message, now, deps, signal, settings, language, text, media, db};
+  const flow: FlowContext = {env, contact, message, now, deps, signal, settings, language, text, media, db, carry: []};
   const admin = await adminFlow(flow);
   if (admin) return admin;
   const link = await linkCodeFlow(flow);
   if (link) return link;
   for (const f of STAGE_TWO_FLOWS) {
     const r = await f.run(flow);
-    if (r) return {...r, actions: [...welcomeFirst(), ...languageUpdate, ...r.actions]};
+    if (r) return {...r, actions: [...welcomeFirst(), ...languageUpdate, ...flow.carry.splice(0), ...r.actions]};
   }
   if (!text && media.length) {
     // TA-I2/I3 replace this with the intake and fish-ID flows.
-    return done([...welcomeFirst(), say('media_ack')], 'media');
+    return done([...welcomeFirst(), say('media_ack'), ...flow.carry], 'media');
   }
-  if (!text) return done([], 'empty');
+  if (!text) return done([...flow.carry], 'empty');
+  // TA-I1: whatever a flow carried goes out before any Stage 3 answer.
+  languageUpdate.push(...flow.carry.splice(0));
 
   // Stage 3: the model turn.
   if (!env.ANTHROPIC_API_KEY) {
@@ -446,6 +465,11 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
     // A fifth tool_use, or the 30 s budget: the last text if any, else "let me check" and a review (04).
     if (!reply) reply = t(language, 'tool_loop');
     actions.push({type: 'review_open', kind: 'conversation', refId: message.id, reason: turn.outcome === 'tool_loop' ? 'tool_loop' : 'model_timeout'});
+  }
+  // TA-I1: a tool that texted for itself (register_boat's question) needs no filler when the model added nothing.
+  if (!reply && turn.outcome === 'ok' && turn.actions.some(a => a.type === 'send_text')) {
+    actions.push(...turn.actions);
+    return done(actions, intent, {usage, model: settings.model});
   }
   if (!reply) reply = t(language, 'not_understood');
   if (!turn.usableRules) {

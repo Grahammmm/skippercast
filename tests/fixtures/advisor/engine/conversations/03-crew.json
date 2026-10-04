@@ -1,0 +1,190 @@
+{
+  "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
+  "description": "Golden 3 (TA-I1 part): the owner of a verified boat adds a deckhand by number; the tool result never echoes the number; the invite (with the STOP line) goes to the deckhand's number through the channel; the deckhand's reply is a normal turn whose brief shows them as crew on the boat; the owner removes them and they are an angler again. TA-I2 continues with the deckhand's count board.",
+  "contact": {
+    "role": "skipper",
+    "boat_id": "b-rita",
+    "display_name": "Captain Dave",
+    "home_port": "morro-bay"
+  },
+  "boats": [
+    {
+      "id": "b-rita",
+      "slug": "rita-g",
+      "name": "Rita G",
+      "port": "morro-bay",
+      "owner": "c1",
+      "status": "verified"
+    }
+  ],
+  "turns": [
+    {
+      "in": "Add my deckhand, his number is (805) 555-0142",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_c1",
+                "name": "add_crew",
+                "input": {
+                  "phone": "(805) 555-0142"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Done. I texted him an invite; anything he sends will post under the Rita G."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "skipper.crew",
+        "reply_contains": [
+          "I texted him an invite"
+        ],
+        "actions": [
+          "crew_add",
+          "send_text"
+        ],
+        "tool_results_exclude": [
+          "555",
+          "0142",
+          "+1"
+        ],
+        "texted": [
+          {
+            "to": "+18055550142",
+            "contains": [
+              "Captain Dave added you as crew on Rita G. Text me the day's count board or catch photos and they'll post under the boat. Reply STOP to opt out."
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "sql": "SELECT w.boat_id,w.added_by,w.removed_at,c.role,c.boat_id AS contact_boat,c.source FROM advisor_crew w JOIN advisor_contacts c ON c.id=w.contact_id",
+            "row": {
+              "boat_id": "b-rita",
+              "added_by": "c1",
+              "removed_at": null,
+              "role": "crew",
+              "contact_boat": "b-rita",
+              "source": "skipper-invite"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "from": "+18055550142",
+      "in": "Hey, got it. Will send the board tonight.",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Sounds good. Send it when you're in and I'll put it under the Rita G."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "chat",
+        "brief_contains": [
+          "- role: crew",
+          "- boat: Rita G (they are crew); status: verified"
+        ]
+      }
+    },
+    {
+      "in": "Take 805-555-0142 off the crew, he moved boats",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_c2",
+                "name": "remove_crew",
+                "input": {
+                  "phone": "805-555-0142"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Done, he's off the Rita G crew."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "skipper.crew",
+        "actions": [
+          "crew_remove",
+          "send_text"
+        ],
+        "tool_results_exclude": [
+          "555",
+          "0142"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT w.removed_at IS NOT NULL AS removed,c.role,c.boat_id FROM advisor_crew w JOIN advisor_contacts c ON c.id=w.contact_id",
+            "row": {
+              "removed": 1,
+              "role": "angler",
+              "boat_id": null
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

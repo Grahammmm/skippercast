@@ -39,6 +39,14 @@
 // elsewhere), link_start/link_merge (the web phone link, 03 § web) and
 // admin_review (the text admin fallback, 08); review_open also texts the admin
 // contact about new skipper and media items (notifyAdmin).
+//
+// TA-I1: skipper registration, consent and crew (05). boat_create inserts the
+// pending boat and makes the contact its skipper; flow_set writes or clears
+// job_state advisor.flow.<contact_id>; consent records consent_photos_at with
+// the message id, or consent_revoked_at; post_revoke is logged until TA-S1;
+// crew_add links (or creates) the crew contact and texts it the invite through
+// its own channel; crew_remove sets removed_at and clears the boat. Verifying
+// or rejecting a new_skipper review by text now also texts the boat's owner.
 import {advisorSettings} from './settings.ts';
 import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
 // TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
@@ -46,6 +54,7 @@ import {exportKey, mintExportToken} from './exports.ts';
 import {channelFor as defaultChannelFor} from './channels/index.ts';
 import {linkKey} from './tools/offer_text_link.ts';
 import {t} from './strings.ts';
+import {resolveLinks} from './links.ts';
 import {localClock} from './cron.ts';
 import {outboundId, randomId} from './ids.ts';
 import {advisorLog, redact} from './log.ts';
@@ -55,6 +64,8 @@ import {splitForChannel, ChannelNotImplemented, CHUNK_GAP_MS} from './channels/i
 // TA-C4: media intake before the handler.
 import {ingestInboundMedia} from './media.ts';
 import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
+// TA-I1: the skipper flow's state key and the crew invite.
+import {flowKey} from './intake/skippers.ts';
 import type {Env} from '../env.ts';
 import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
@@ -259,7 +270,27 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
         await applyLinkMerge(env, deps, contact, action.phoneContactId);
         break;
       case 'admin_review':
-        await applyAdminReview(env, deps, contact, action.reviewId, action.decision);
+        sends += await applyAdminReview(env, deps, contact, message.id, index, action.reviewId, action.decision);
+        break;
+      // ---- TA-I1: skipper registration, consent and crew ----
+      case 'boat_create':
+        await applyBoatCreate(env, deps, contact, action.boat);
+        break;
+      case 'flow_set':
+        await applyFlowSet(env, deps, contact, action.state);
+        break;
+      case 'consent':
+        await applyConsent(env, deps, contact, message, action.boatId, action.decision);
+        break;
+      case 'post_revoke':
+        // TA-S1 sets the boat's draft and approved posts to rejected; until then the revocation is the column and this line.
+        if (await ownsBoat(db, contact.id, action.boatId)) advisorLog('info', 'advisor_post_revoke', {pending: 'TA-S1'});
+        break;
+      case 'crew_add':
+        sends += await applyCrewAdd(env, deps, contact, message.id, index, action);
+        break;
+      case 'crew_remove':
+        await applyCrewRemove(env, deps, contact, action.boatId, action.contactId);
         break;
       default:
         advisorLog('warn', 'advisor_action_unknown', {index, type: String((action as {type?: unknown})?.type).slice(0, 40)});
@@ -354,11 +385,11 @@ async function applyLinkMerge(env: Env, deps: ConsumerDeps, web: AdvisorContactR
  * re-checks it and applies the decision to one open skipper or media review.
  * skipper/new_skipper verifies (or rejects) the boat; media sets publish_state.
  */
-async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, id: string, decision: string): Promise<void> {
+async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, index: number, id: string, decision: string): Promise<number> {
   const db = env.DB!, at = iso(deps), settings = advisorSettings(env);
-  if (contact.id !== settings.adminContactId || contact.role !== 'admin-test' || !/^[0-9a-f]{32}$/.test(id) || !['approved', 'rejected'].includes(decision)) return;
+  if (contact.id !== settings.adminContactId || contact.role !== 'admin-test' || !/^[0-9a-f]{32}$/.test(id) || !['approved', 'rejected'].includes(decision)) return 0;
   const review = await db.prepare("SELECT id,kind,ref_id,reason FROM advisor_reviews WHERE id=? AND status='open' AND kind IN ('skipper','media')").bind(id).first<{id: string; kind: string; ref_id: string; reason: string}>();
-  if (!review) return;
+  if (!review) return 0;
   const ok = decision === 'approved';
   const statements = [db.prepare("UPDATE advisor_reviews SET status=?,decided_at=?,note='text admin' WHERE id=? AND status='open'").bind(decision, at, id)];
   if (review.kind === 'skipper' && review.reason === 'new_skipper') {
@@ -369,6 +400,112 @@ async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorCo
   if (review.kind === 'media') statements.push(db.prepare("UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN ('private','queued')").bind(ok ? 'approved' : 'rejected', review.ref_id));
   await db.batch(statements);
   advisorLog('info', 'advisor_text_admin', {kind: review.kind, decision});
+  // TA-I1 (05 § Verification): the skipper hears the decision, through their own channel.
+  if (review.kind !== 'skipper' || review.reason !== 'new_skipper') return 0;
+  const boat = await db.prepare('SELECT name,slug,owner_contact_id FROM advisor_boats WHERE id=?').bind(review.ref_id).first<{name: string; slug: string; owner_contact_id: string | null}>();
+  const owner = boat?.owner_contact_id ? await db.prepare("SELECT * FROM advisor_contacts WHERE id=? AND status='active'").bind(boat.owner_contact_id).first<AdvisorContactRow>() : null;
+  if (!boat || !owner) return 0;
+  const text = resolveLinks(t(owner.language, ok ? 'boat_verified' : 'boat_rejected', {name: boat.name, slug: boat.slug}), settings.publicBase).text;
+  return sendText(env, deps, owner, inId, `${index}.skipper`, text, (deps.channelFor ?? defaultChannelFor)(env, owner));
+}
+
+// ---- TA-I1: skipper registration, consent and crew (05) ---------------------------------
+
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
+const ownsBoat = async (db: D1Database, contactId: string, boatId: string): Promise<boolean> =>
+  ID.test(String(boatId)) && Boolean(await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE id=? AND owner_contact_id=?').bind(boatId, contactId).first());
+
+/**
+ * boat.create (05 § Becoming a skipper): the boat row with status 'pending',
+ * the contact its owner and skipper (an admin-test contact keeps its role, so
+ * the owner can try registration from the admin phone), and the contact's home
+ * port when it has none (FC-2). Idempotent on the boat id; a slug taken in a
+ * race throws, and the retried turn picks the next free one.
+ */
+async function applyBoatCreate(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, boat: Extract<Action, {type: 'boat_create'}>['boat']): Promise<void> {
+  const db = env.DB!, at = iso(deps);
+  if (!ID.test(String(boat?.id)) || !SLUG_RE.test(String(boat.slug)) || typeof boat.name !== 'string' || !boat.name.trim() || boat.name.length > 60
+    || !ID.test(String(boat.port)) || !ID.test(String(boat.region))) { advisorLog('warn', 'advisor_boat_rejected', {}); return; }
+  if (await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE owner_contact_id=? AND id<>?').bind(contact.id, boat.id).first()) { advisorLog('warn', 'advisor_boat_duplicate_owner', {}); return; }
+  const text = (v: string | null, max: number) => typeof v === 'string' && v.length <= max ? v : null;
+  await db.batch([
+    db.prepare(`INSERT INTO advisor_boats(id,slug,name,landing,port,region,instagram,booking_url,phone_public,owner_contact_id,status,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,'pending',?,?) ON CONFLICT(id) DO NOTHING`)
+      .bind(boat.id, boat.slug, boat.name.trim(), text(boat.landing, 60), boat.port, boat.region, text(boat.instagram, 30),
+        boat.booking_url && /^https:\/\//.test(boat.booking_url) ? text(boat.booking_url, 300) : null, text(boat.phone_public, 16), contact.id, at, at),
+    // A crew member who registers a boat of their own leaves the crew (05 § Crew: one boat per contact).
+    db.prepare('UPDATE advisor_crew SET removed_at=? WHERE contact_id=? AND removed_at IS NULL').bind(at, contact.id),
+    db.prepare(`UPDATE advisor_contacts SET role=CASE WHEN role='admin-test' THEN role ELSE 'skipper' END,boat_id=?,home_port=COALESCE(home_port,?),updated_at=? WHERE id=?`)
+      .bind(boat.id, boat.port, at, contact.id),
+  ]);
+  contact.boat_id = boat.id;
+  if (contact.role !== 'admin-test') contact.role = 'skipper';
+  advisorLog('info', 'advisor_boat_created', {port: boat.port});
+}
+
+/** job_state advisor.flow.<contact_id>: the skipper flow's pending question (intake/skippers.ts), or deleted. */
+async function applyFlowSet(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, state: Extract<Action, {type: 'flow_set'}>['state']): Promise<void> {
+  const db = env.DB!;
+  if (state === null) { await db.prepare('DELETE FROM job_state WHERE key=?').bind(flowKey(contact.id)).run(); return; }
+  if (!state || !['register', 'consent'].includes(state.flow)) return;
+  const value = JSON.stringify(state);
+  if (value.length > 4000) return;
+  await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(flowKey(contact.id), value, iso(deps)).run();
+}
+
+/**
+ * Photo consent (05 § Consent, SK-2), only from the boat's owner: yes records
+ * consent_photos_at and the message that said it (and clears an earlier
+ * revocation); revoke sets consent_revoked_at and keeps the original consent
+ * for the record.
+ */
+async function applyConsent(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, message: AdvisorMessageRow, boatId: string, decision: string): Promise<void> {
+  const db = env.DB!, at = iso(deps);
+  if (!await ownsBoat(db, contact.id, boatId)) return;
+  if (decision === 'yes') await db.prepare('UPDATE advisor_boats SET consent_photos_at=?,consent_message_id=?,consent_revoked_at=NULL,updated_at=? WHERE id=?').bind(at, message.id, at, boatId).run();
+  else if (decision === 'revoke') await db.prepare('UPDATE advisor_boats SET consent_revoked_at=?,updated_at=? WHERE id=?').bind(at, at, boatId).run();
+  else return;
+  advisorLog('info', 'advisor_consent', {decision});
+}
+
+/**
+ * add_crew (05 § Crew, SK-3): the crew contact by phone hash (an existing one
+ * keeps its channel, language and history; a new one starts as an SMS contact
+ * in the skipper's language with source 'skipper-invite'), made crew on the
+ * boat (any earlier active crew link ends), the advisor_crew row with
+ * added_by, and the invite texted through the crew contact's own channel.
+ */
+async function applyCrewAdd(env: Env, deps: ConsumerDeps, skipper: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'crew_add'}>): Promise<number> {
+  const db = env.DB!, at = iso(deps);
+  if (!/^[0-9a-f]{64}$/.test(action.phoneHash) || typeof action.phoneEnc !== 'string' || !action.phoneEnc || !await ownsBoat(db, skipper.id, action.boatId)) return 0;
+  const crew = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,language,source,last_seen_at,created_at,updated_at) VALUES(?,?,?,'sms',?,'skipper-invite',?,?,?)
+    ON CONFLICT(phone_hash) DO UPDATE SET updated_at=advisor_contacts.updated_at RETURNING *`)
+    .bind(randomId(), action.phoneHash, action.phoneEnc, lang(skipper.language), at, at, at).first<AdvisorContactRow>();
+  if (!crew || crew.id === skipper.id || crew.status !== 'active') return 0;
+  if (await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE owner_contact_id=?').bind(crew.id).first()) return 0;
+  await db.batch([
+    db.prepare('UPDATE advisor_crew SET removed_at=? WHERE contact_id=? AND boat_id<>? AND removed_at IS NULL').bind(at, crew.id, action.boatId),
+    db.prepare(`INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at) VALUES(?,?,?,?)
+      ON CONFLICT(boat_id,contact_id) DO UPDATE SET added_by=excluded.added_by,added_at=excluded.added_at,removed_at=NULL`).bind(action.boatId, crew.id, skipper.id, at),
+    db.prepare(`UPDATE advisor_contacts SET role=CASE WHEN role='admin-test' THEN role ELSE 'crew' END,boat_id=?,updated_at=? WHERE id=?`).bind(action.boatId, at, crew.id),
+  ]);
+  const boat = await db.prepare('SELECT name FROM advisor_boats WHERE id=?').bind(action.boatId).first<{name: string}>();
+  const l = lang(crew.language);
+  const text = t(l, 'crew_invite', {skipper: skipper.display_name || t(l, 'crew_invite_skipper'), boat: boat?.name ?? ''});
+  advisorLog('info', 'advisor_crew_added', {count: 1});
+  return sendText(env, deps, {...crew, role: 'crew', boat_id: action.boatId}, inId, `${index}.invite`, text, (deps.channelFor ?? defaultChannelFor)(env, crew));
+}
+
+/** remove_crew (05 § Crew): removed_at on the crew row (kept for audit); the contact loses the boat and is an angler again. */
+async function applyCrewRemove(env: Env, deps: ConsumerDeps, skipper: AdvisorContactRow, boatId: string, contactId: string): Promise<void> {
+  const db = env.DB!, at = iso(deps);
+  if (!ID.test(String(contactId)) || !await ownsBoat(db, skipper.id, boatId)) return;
+  await db.batch([
+    db.prepare('UPDATE advisor_crew SET removed_at=? WHERE boat_id=? AND contact_id=? AND removed_at IS NULL').bind(at, boatId, contactId),
+    db.prepare(`UPDATE advisor_contacts SET boat_id=NULL,role=CASE WHEN role='crew' THEN 'angler' ELSE role END,updated_at=? WHERE id=? AND boat_id=?`).bind(at, contactId, boatId),
+  ]);
+  advisorLog('info', 'advisor_crew_removed', {count: 1});
 }
 
 /**

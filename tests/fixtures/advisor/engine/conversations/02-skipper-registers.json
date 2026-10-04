@@ -1,0 +1,211 @@
+{
+  "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
+  "description": "Golden 2 (TA-I1 part): a new skipper says they run a boat; the model calls register_boat with the name and port it heard; the flow asks landing, Instagram and booking one text at a time (booking skipped), creates the pending boat with the new_skipper review, sends the completion text and the consent question; YES records consent with the message id; the next model turn's brief shows the boat, its status and consent. TA-I2 continues with the count board.",
+  "turns": [
+    {
+      "in": "Hi, I run the Rita G out of Morro Bay. Can I send you my reports?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_r1",
+                "name": "register_boat",
+                "input": {
+                  "name": "Rita G",
+                  "port": "morro-bay"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Glad to have the Rita G. A couple of quick questions for your boat page."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "skipper.register",
+        "reply_contains": [
+          "Glad to have the Rita G",
+          "Which landing? (skip if none)"
+        ],
+        "actions": [
+          "send_text",
+          "flow_set"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT COUNT(*) AS n FROM advisor_boats",
+            "row": {
+              "n": 0
+            }
+          },
+          {
+            "sql": "SELECT json_extract(value,'$.step') AS step FROM job_state WHERE key='advisor.flow.c1'",
+            "row": {
+              "step": "landing"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "Morro Bay Landing",
+      "expect": {
+        "intent": "skipper.register.landing",
+        "reply_contains": [
+          "Your boat's Instagram handle, so we can tag you? (skip if none)"
+        ],
+        "actions": [
+          "send_text",
+          "flow_set"
+        ]
+      }
+    },
+    {
+      "in": "@RitaG_Sportfishing",
+      "expect": {
+        "intent": "skipper.register.instagram",
+        "reply_contains": [
+          "A booking link or phone for the boat page? (skip)"
+        ]
+      }
+    },
+    {
+      "in": "skip",
+      "expect": {
+        "intent": "skipper.register.done",
+        "reply_contains": [
+          "Got it. Rita G is set up. Your reports will show on skippercast.com/boats/rita-g once the team confirms the boat, usually same day. Text me a photo of today's count board whenever you're in.",
+          "One more thing: OK for SkipperCast to post your photos and videos on our Instagram and Facebook, always credited and tagged to Rita G? Reply YES."
+        ],
+        "actions": [
+          "boat_create",
+          "review_open",
+          "send_text",
+          "flow_set"
+        ],
+        "review": "new_skipper",
+        "rows": [
+          {
+            "sql": "SELECT slug,name,landing,port,region,instagram,booking_url,phone_public,status,owner_contact_id,consent_photos_at FROM advisor_boats",
+            "row": {
+              "slug": "rita-g",
+              "name": "Rita G",
+              "landing": "Morro Bay Landing",
+              "port": "morro-bay",
+              "region": "morro-bay",
+              "instagram": "ritag_sportfishing",
+              "booking_url": null,
+              "phone_public": null,
+              "status": "pending",
+              "owner_contact_id": "c1",
+              "consent_photos_at": null
+            }
+          },
+          {
+            "sql": "SELECT c.role, c.boat_id=b.id AS linked, c.home_port FROM advisor_contacts c, advisor_boats b WHERE c.id='c1'",
+            "row": {
+              "role": "skipper",
+              "linked": 1,
+              "home_port": "morro-bay"
+            }
+          },
+          {
+            "sql": "SELECT kind,reason,status FROM advisor_reviews",
+            "row": {
+              "kind": "skipper",
+              "reason": "new_skipper",
+              "status": "open"
+            }
+          },
+          {
+            "sql": "SELECT json_extract(value,'$.flow') AS flow, json_extract(value,'$.step') AS step FROM job_state WHERE key='advisor.flow.c1'",
+            "row": {
+              "flow": "consent",
+              "step": "asked"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "YES",
+      "expect": {
+        "intent": "consent.yes",
+        "reply_contains": [
+          "Thanks. Your photos can go on the SkipperCast feed, tagged to Rita G."
+        ],
+        "actions": [
+          "consent",
+          "flow_set",
+          "send_text"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT consent_photos_at IS NOT NULL AS given, consent_message_id=(SELECT id FROM advisor_messages WHERE body='YES' AND direction='in') AS by_message FROM advisor_boats",
+            "row": {
+              "given": 1,
+              "by_message": 1
+            }
+          },
+          {
+            "sql": "SELECT COUNT(*) AS n FROM job_state WHERE key='advisor.flow.c1'",
+            "row": {
+              "n": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "thanks, see you after the trip",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Have a good one out there. Send the count board when you're in."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "chat",
+        "brief_contains": [
+          "- role: skipper",
+          "- boat: Rita G (they own it); status: pending",
+          "- photo consent for social posts: given"
+        ]
+      }
+    }
+  ]
+}

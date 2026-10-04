@@ -359,3 +359,19 @@ and the web chat route). Where the code differs from the text above:
   the first cites the landing's report with its Low label; the second starts
   with "SMALL CRAFT ADVISORY" and has no percentage.
 
+
+## As built (TA-I1)
+
+- `STAGE_TWO_FLOWS` starts with the skipper flow (`intake/skippers.ts`;
+  05 § As built (TA-I1)). Registration in progress is tracked in `job_state`
+  `advisor.flow.<contact_id>`, not by a boat row missing a field (Stage 2's
+  second bullet above): the boat is created only when registration completes.
+- `FlowContext.carry` is new: actions a flow needs whatever answers the turn
+  (deleting a stale flow, the one-time consent decline line, a consent re-ask
+  after a photo). They go after the language update on the model path and
+  after the acknowledgement of a media-only message.
+- When a tool already texted (register_boat's next question) and the model
+  adds no text, no "not understood" filler is sent.
+- New actions: `boat_create` (05's `boat.create`), `flow_set`, `consent`,
+  `post_revoke` (logs until TA-S1), `crew_add`, `crew_remove`; the contact
+  brief lists the boat, ownership or crew, status and consent.

@@ -14,6 +14,8 @@ import {dailyFeed, feedReader} from '../answers/feeds.ts';
 import {reportEvidence, targetSpecies} from '../answers/confidence.ts';
 import type {LandingReport} from '../answers/confidence.ts';
 import {addDays, daysBetween, localDate} from '../answers/time.ts';
+// TA-I1: the verified/unverified contract (05 § Verification) is shared with get_trips.
+import {publicBoat} from '../intake/skippers.ts';
 
 export const MAX_SKIPPER_REPORTS = 5, MAX_REPORT_AGE_DAYS = 14, MAX_LANDING_REPORTS = 6;
 
@@ -51,7 +53,7 @@ export const getPortReport: AdvisorTool = {
         ORDER BY r.report_date DESC, r.published_at DESC LIMIT ?`).bind(port, since, today, MAX_SKIPPER_REPORTS).all<ReportRow>()).results;
     const skipper = rows.map(r => ({
       date: r.report_date, day: weekday(r.report_date), age: ago(today, r.report_date),
-      boat: r.verified ? r.boat_name : 'a boat', verified: Boolean(r.verified), ...(r.verified ? {boat_link: `{{link:boat:${r.boat_slug}}}`} : {}),
+      ...publicBoat({name: r.boat_name, slug: r.boat_slug, verified: Boolean(r.verified)}),
       trip_type: r.trip_type, anglers: r.anglers, counts: counts(r.counts_json),
     }));
 

@@ -117,6 +117,98 @@
     "admin_notify": {
       "en": "New {kind} review ({reason}). Reply OK {code} to approve or NO {code} to reject.",
       "es": "Nueva revisión de {kind} ({reason}). Responde OK {code} para aprobar o NO {code} para rechazar."
+    },
+    "register_intro": {
+      "en": "Let's set up your boat page.",
+      "es": "Vamos a crear la página de tu barco."
+    },
+    "register_ask_name": {
+      "en": "What's the boat's name?",
+      "es": "¿Cómo se llama el barco?"
+    },
+    "register_ask_port": {
+      "en": "Which port does she run out of?",
+      "es": "¿De qué puerto sale?"
+    },
+    "register_ask_landing": {
+      "en": "Which landing? (skip if none)",
+      "es": "¿Qué muelle o landing? (escribe saltar si no hay)"
+    },
+    "register_ask_instagram": {
+      "en": "Your boat's Instagram handle, so we can tag you? (skip if none)",
+      "es": "¿El Instagram del barco, para etiquetarte? (escribe saltar si no tiene)"
+    },
+    "register_ask_booking": {
+      "en": "A booking link or phone for the boat page? (skip)",
+      "es": "¿Un enlace o teléfono de reservas para la página del barco? (saltar)"
+    },
+    "register_bad_name": {
+      "en": "I need the boat's name, up to 60 characters.",
+      "es": "Necesito el nombre del barco, hasta 60 caracteres."
+    },
+    "register_bad_port": {
+      "en": "I don't know that port. Reply with a number: {options}. Or type the port's name.",
+      "es": "No conozco ese puerto. Responde con un número: {options}. O escribe el nombre del puerto."
+    },
+    "register_bad_landing": {
+      "en": "Keep the landing name under 60 characters, or reply skip.",
+      "es": "El nombre del muelle debe tener menos de 60 caracteres, o responde saltar."
+    },
+    "register_bad_instagram": {
+      "en": "That doesn't look like an Instagram handle (letters, numbers, dots and underscores).",
+      "es": "Eso no parece un usuario de Instagram (letras, números, puntos y guiones bajos)."
+    },
+    "register_bad_booking": {
+      "en": "Send a link starting with https:// or a US phone number.",
+      "es": "Manda un enlace que empiece con https:// o un teléfono de EE. UU."
+    },
+    "register_cancelled": {
+      "en": "OK, I've stopped setting up the boat. Text \"register my boat\" to start again.",
+      "es": "Listo, dejé de registrar el barco. Escribe \"registrar mi barco\" para empezar de nuevo."
+    },
+    "register_already": {
+      "en": "You're already set up with {name}. Text me today's count board whenever you're in.",
+      "es": "Ya estás registrado con {name}. Mándame la pizarra del día cuando llegues."
+    },
+    "register_done": {
+      "en": "Got it. {name} is set up. Your reports will show on skippercast.com/boats/{slug} once the team confirms the boat, usually same day. Text me a photo of today's count board whenever you're in.",
+      "es": "Listo. {name} está registrado. Tus reportes saldrán en skippercast.com/boats/{slug} cuando el equipo confirme el barco, normalmente el mismo día. Mándame una foto de la pizarra del día cuando llegues."
+    },
+    "consent_ask": {
+      "en": "One more thing: OK for SkipperCast to post your photos and videos on our Instagram and Facebook, always credited and tagged to {name}? Reply YES.",
+      "es": "Una cosa más: ¿podemos publicar tus fotos y videos en el Instagram y Facebook de SkipperCast, siempre con crédito y etiqueta a {name}? Responde SÍ."
+    },
+    "consent_yes": {
+      "en": "Thanks. Your photos can go on the SkipperCast feed, tagged to {name}. Text \"stop posting my photos\" anytime to change that.",
+      "es": "Gracias. Tus fotos pueden salir en SkipperCast, etiquetadas a {name}. Escribe \"no publiques\" cuando quieras para cambiarlo."
+    },
+    "consent_declined": {
+      "en": "No problem. Your photos will still go on your boat page and reports, but not on our social feeds.",
+      "es": "Sin problema. Tus fotos seguirán en la página y los reportes del barco, pero no en nuestras redes."
+    },
+    "consent_revoked": {
+      "en": "Done. I won't post your photos on social anymore. Anything already posted stays up; text \"post my photos\" to turn it back on.",
+      "es": "Listo. Ya no publicaré tus fotos en redes. Lo que ya salió se queda; escribe \"publica mis fotos\" para activarlo otra vez."
+    },
+    "owner_only": {
+      "en": "Only the boat's owner can change that.",
+      "es": "Solo el dueño del barco puede cambiar eso."
+    },
+    "crew_invite": {
+      "en": "{skipper} added you as crew on {boat}. Text me the day's count board or catch photos and they'll post under the boat. Reply STOP to opt out.",
+      "es": "{skipper} te agregó como tripulante de {boat}. Mándame la pizarra del día o fotos de la pesca y saldrán a nombre del barco. Responde STOP para salir."
+    },
+    "crew_invite_skipper": {
+      "en": "The skipper",
+      "es": "El capitán"
+    },
+    "boat_verified": {
+      "en": "{name} is verified. Your page: skippercast.com/boats/{slug}",
+      "es": "{name} está verificado. Tu página: skippercast.com/boats/{slug}"
+    },
+    "boat_rejected": {
+      "en": "We couldn't confirm {name} yet. Someone from the SkipperCast team will reach out.",
+      "es": "Todavía no pudimos confirmar {name}. Alguien del equipo de SkipperCast te contactará."
     }
   }
 }
