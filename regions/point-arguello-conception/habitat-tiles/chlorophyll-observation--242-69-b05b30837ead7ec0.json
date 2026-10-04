@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"point-arguello-conception","layer_id":"chlorophyll-observation","bounds":[-121.0,34.5,-120.5,35.0],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1790856000,"cells":[[34.51875,-120.54375,0.51314],[34.55625,-120.61875,0.48728],[34.55625,-120.58125,0.60046]],"valid_cells":3}]}

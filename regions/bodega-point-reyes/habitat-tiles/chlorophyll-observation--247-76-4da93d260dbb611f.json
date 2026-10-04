@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"bodega-point-reyes","layer_id":"chlorophyll-observation","bounds":[-123.5,38.0,-123.0,38.5],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1790856000,"cells":[[38.08125,-123.01875,0.65335],[38.30625,-123.05625,1.87958]],"valid_cells":2}]}
