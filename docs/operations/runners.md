@@ -87,8 +87,37 @@ Steps:
   GitHub storage (500 MB free on the Free plan). The research workflows upload the most;
   shorten their `retention-days` if the storage bill appears.
 - Secrets used by jobs on the box: `R2_PUBLISH_TOKEN` (or the deploy token as fallback),
-  `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the box patched and its SSH
-  key-only; `docs/legal/threat-model.md` lists it as an asset once it exists.
+  `R2_ADVISOR_TOKEN` (the advisor media job, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions
+  `GITHUB_TOKEN`. Keep the box patched and its SSH key-only; `docs/legal/threat-model.md`
+  lists it as an asset once it exists.
+
+## The advisor media job
+
+`advisor-media.yml` (TA-M1; [09 · Derived images and graphics](../plans/text-advisor/09-social.md))
+makes the Text Advisor's derived photos (`public.jpg`, `thumb.jpg`, `story.jpg` with the
+"Text SkipperCast" footer), converts HEIC to JPEG and renders the daily, story and roundup
+graphics, with Pillow and pillow-heif (`pip install -e ".[advisor]"`). It has no schedule:
+the Worker dispatches it through `dispatchWorkflow` (the watchdog's `GITHUB_TOKEN`, Actions
+read and write) when something becomes pending, at most once a minute, and its cron again
+every 15 minutes while anything still is. A run takes seconds to a few minutes and holds one
+runner instance; its concurrency group keeps it to one run at a time.
+
+It runs only on the box: the job's `if` needs `ENABLE_ADVISOR=true` and a non-empty
+`DATA_RUNNER`, so with either unset a dispatch is skipped and costs nothing. It needs:
+
+| Name | Kind | What |
+| --- | --- | --- |
+| `R2_ADVISOR_TOKEN` | secret (owner step) | Cloudflare API token with R2 object read and write on `skippercast-advisor-media` only. `R2_PUBLISH_TOKEN` (feed bucket) is not reused. The job derives its S3 keys from it as `scripts/publish_r2.py` does. |
+| `CLOUDFLARE_ACCOUNT_ID` | secret | Already set for the data jobs. |
+| `ADVISOR_NUMBER` | variable | The advisor's number for the Story footer (shown as (805) 555-0100); without it the footer reads `skippercast.com/text`. |
+| `ADVISOR_PUBLIC_BASE` | variable, optional | Where the job calls the Worker; default `https://skippercast.com`. |
+
+The job proves who it is with a GitHub OIDC token for the audience
+`https://skippercast.com/api/advisor/jobs`; `deployments/production.json`
+`scheduler.workflows` lists `advisor-media.yml`, and the Worker accepts that token only on
+`/api/advisor/jobs/*`. If it fails: the run's log names each item it skipped; items it could
+not decode are given up (the photo stays private and gets the upload link); network or R2
+errors leave items pending and the next dispatch retries them.
 
 ## CI readiness gate
 

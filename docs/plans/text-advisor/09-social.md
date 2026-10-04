@@ -112,6 +112,75 @@ when present on the runner (container, codec, duration, size) and the
 result is stored on the media row; a video that fails gets `failed` with a
 reason the admin can see.
 
+### As built (TA-M1)
+
+- **Pending work.** `server/advisor/media.ts` `mediaJobWork`: stored images
+  (not rejected) whose new `derived_at` column (migration
+  `0009_advisor_media_derived`, with `derived_error`) is null and that either
+  vision cannot take as stored (over 4.5 MB, or HEIC/HEIF) or are `queued`,
+  `approved` or `posted`. A private everyday photo is left alone. Oldest first,
+  25 media and 10 graphics per call; the job asks again until the list holds
+  only items it already tried.
+- **Graphic requests.** `requestGraphic(env, id, {kind, media_ids?, data,
+  out_key})` writes `job_state` `advisor.graphic.<id>` as
+  `{..., status: 'pending', requested_at}` and dispatches the job; a rerun with
+  the same id renders again. `kind` is `daily`, `story` or `roundup`; `out_key`
+  must be `advisor/posts/<post_id>/<name>.jpg`; `data` is at most 16 KB of
+  JSON; `media_ids` at most 10 (the job uses each one's `public.jpg`, else its
+  original). Done: `status: 'done'`, `keys: {public, slides?}` (roundup slides
+  are `<out_key stem>-<n>.jpg`), `width`, `height`, `done_at`; failed:
+  `status: 'failed'`, `error`. `graphicState(db, id)` reads it. The layouts are
+  deliberately plain: `daily` is a 1080 x 1350 card (title from `data.title` or
+  `port` + `date`, `lines: [{label, value}]`, a note from `conditions` and
+  `confidence`); `story` is 1080 x 1920 (`title`, `lines`, the first photo);
+  `roundup` is a cover card (`title`, `lines`) plus one 1080 x 1350 slide per
+  photo with `captions[i]`. Every image carries the footer band.
+- **Endpoints.** `GET /api/advisor/jobs/media` and `POST
+  /api/advisor/jobs/media-done` (`server/routes/advisor.ts`, behind the gate),
+  authorised by `verifyJobToken(token, deployment, {audiencePath:
+  '/api/advisor/jobs', workflows: ['advisor-media.yml']})`; 240 requests a
+  minute per run (`jti`). The done report for a media item must name exactly
+  its `advisor/derived/<id>/{public,thumb,story}.jpg` keys (story optional);
+  `source_width`/`source_height` fill the row's size only when intake could
+  not read it (HEIC). With `error` the item is given up (`derived_at` and
+  `derived_error` set), so it leaves the list and a waiting message falls back
+  to the upload link.
+- **Dispatch.** `requestMediaJob` claims `job_state`
+  `advisor.media.dispatched_at` with an UPSERT-with-WHERE (at most once a
+  minute) and calls `dispatchWorkflow(env, 'advisor-media.yml')`; it runs after
+  intake stores an image over 4.5 MB or a HEIC, when a photo is put in the
+  feed queue, when a media review is approved by text, from `requestGraphic`,
+  and from the consumer while a message waits. `advisorCron` calls
+  `mediaJobTick` every tick: while anything is pending it dispatches again,
+  at most once per 14.5 minutes (a tick 15 minutes later is never skipped). A
+  failed dispatch keeps the claim; the next tick retries. Without
+  `GITHUB_TOKEN` nothing is dispatched.
+- **The job.** `scripts/advisor/media_job.py` (stdlib + Pillow + pillow-heif,
+  the `advisor` extra). R2 access is the S3 API with SigV4 written in the
+  standard library (tested against AWS's published vectors), with the
+  credentials `scripts/publish_r2.py` derives from an API token (key id = token
+  id, secret = SHA-256 of the token), here `R2_ADVISOR_TOKEN`. Every object it
+  writes carries `x-amz-meta-source-sha256` (the original's sha256, or a digest
+  of the graphic request) and its size, so a rerun reports an unchanged item
+  without decoding it. The OIDC audience is `deployments/production.json`
+  `public_origin` + `/api/advisor/jobs`; requests go to `ADVISOR_PUBLIC_BASE`.
+  The token is re-requested every four minutes. Decoding failures are given up
+  (`decode-failed: ...`, `original-missing`); network and R2 errors leave the
+  item pending and make the run exit 1.
+- **Layouts.** `catalog/advisor/graphics.json` (colours from
+  `dist/tokens.css`, Pillow's built-in scalable font unless `fonts.ttf` names a
+  committed file). No `dist/advisor/story-template.svg` was made: the JSON spec
+  is the template. The footer reads "Text SkipperCast" and the number from the
+  repository variable `ADVISOR_NUMBER` as (805) 555-0100, or
+  `skippercast.com/text` without one.
+- **Video.** Not processed: no `ffprobe` probing was built, so no skip reason
+  for it was allow-listed (09 above; a later task can add it).
+- **Orientation.** Intake strips every APP1 segment, including the EXIF
+  Orientation tag, so a JPEG whose camera relied on that tag is stored (and
+  derived) sideways. The job cannot recover it; fixing it belongs to intake
+  (keep a minimal Orientation-only APP1). HEIC orientation is in the container
+  and is applied.
+
 ## Drafts (SO-1, SP-3)
 
 `social/drafts.ts: draftFromMedia(media, boat, report?, language)` creates an
@@ -204,7 +273,7 @@ the admin calendar shows them so the owner can post something by hand.
   `instagram_comment`). Subscribe the IG account with
   `POST /<ig-user-id>/subscribed_apps?subscribed_fields=messages,comments`.
 - DMs: a contact keyed by IGSID (`advisor_contacts.ig_sid`, added in
-  migration 0009, unique) runs through the same engine with
+  migration 0010, unique) runs through the same engine with
   `channel='instagram_dm'`; replies go to `POST /<ig-user-id>/messages`
   within the 24-hour window; every third reply ends with the "continue by
   text" line and the `text?s=igdm` link.

@@ -50,7 +50,7 @@ export interface Env {
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   ANTHROPIC_API_KEY?: string;
-  GITHUB_TOKEN?: string;             // cron watchdog: Actions read and write
+  GITHUB_TOKEN?: string;             // cron watchdog and the advisor-media dispatch (TA-M1): Actions read and write
   // Text Advisor secrets: declared now, uploaded by the task that first needs each
   // (01 secrets table); a missing one disables only the feature that needs it.
   ADVISOR_WEBHOOK_TOKEN?: string;    // BlueBubbles webhook path secret

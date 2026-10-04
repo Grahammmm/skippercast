@@ -56,6 +56,14 @@
 // once, mark_once records a one-time line. Each re-checks that the contact
 // posts for the boat.
 //
+// TA-M1: an image a vision provider cannot take as stored (over 4.5 MB, or
+// HEIC) waits for the advisor-media job's public.jpg: the consumer dispatches
+// the job and re-queues the message (retry, 30 s) on its first DERIVED_WAITS
+// attempts; the vision chain then reads public.jpg. On the last attempt the
+// handler runs anyway and a photo still too large gets the upload link. A
+// media review approved by text, and a photo put in the feed queue, start the
+// job too (thumb.jpg and public.jpg for the admin queue and the pages).
+//
 // TA-I3: angler photos (06 § Angler photos). share_state writes or clears the
 // AC-1 offer (job_state advisor.share.<contact_id>); angler_share queues the
 // angler's own photo for review and stores the credit they gave.
@@ -75,6 +83,8 @@ import {relayState} from './relay.ts';
 import {splitForChannel, ChannelNotImplemented, CHUNK_GAP_MS} from './channels/index.ts';
 // TA-C4: media intake before the handler.
 import {ingestInboundMedia} from './media.ts';
+// TA-M1: waiting for the media job's derived image.
+import {awaitingDerived, requestMediaJob} from './media.ts';
 import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
 // TA-I1: the skipper flow's state key and the crew invite.
 import {flowKey} from './intake/skippers.ts';
@@ -100,6 +110,10 @@ export const APOLOGY_TEXT = t('en', 'apology');
 export const HOLD_MAX_MS = 6 * 3600000;        // 01: held outbound older than this becomes failed
 export const RELEASE_BATCH = 50;               // held rows sent per cron tick
 export const MEDIA_RETRIES = 2;                // TA-C4: extra attempts after a failed media download
+// TA-M1: attempts that may wait for public.jpg. The queue's max_retries is 3 (scripts/wrangler_config.mjs
+// ADVISOR_QUEUES), so the fourth delivery is the last: it always runs the handler.
+export const DERIVED_WAITS = 3;
+export const DERIVED_RETRY_SECONDS = 30;
 
 const ID = /^[\w-]{1,64}$/;
 const CODE = /^[a-z][\w.:-]{0,47}$/i;
@@ -453,6 +467,8 @@ async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorCo
   if (review.kind === 'media') statements.push(db.prepare("UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN ('private','queued')").bind(ok ? 'approved' : 'rejected', review.ref_id));
   await db.batch(statements);
   advisorLog('info', 'advisor_text_admin', {kind: review.kind, decision});
+  // TA-M1: an approved photo needs its public.jpg for the pages and Meta.
+  if (review.kind === 'media' && ok) await requestMediaJob(env, clock(deps), deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {});
   // TA-I1 (05 § Verification): the skipper hears the decision, through their own channel.
   if (review.kind !== 'skipper' || review.reason !== 'new_skipper') return 0;
   const boat = await db.prepare('SELECT name,slug,owner_contact_id FROM advisor_boats WHERE id=?').bind(review.ref_id).first<{name: string; slug: string; owner_contact_id: string | null}>();
@@ -574,8 +590,10 @@ async function applyMediaQueue(env: Env, deps: ConsumerDeps, contact: AdvisorCon
   if (!media?.boat_id || !await postsFor(db, contact.id, media.boat_id)) return;
   const boat = await db.prepare('SELECT name,consent_photos_at,consent_revoked_at FROM advisor_boats WHERE id=?').bind(media.boat_id).first<{name: string; consent_photos_at: string | null; consent_revoked_at: string | null}>();
   if (!boat?.consent_photos_at || (boat.consent_revoked_at && boat.consent_revoked_at >= boat.consent_photos_at)) return;
-  await db.prepare("UPDATE advisor_media SET publish_state='queued',credit=? WHERE id=? AND publish_state='private'").bind(boat.name.slice(0, 80), mediaId).run();
+  const queued = await db.prepare("UPDATE advisor_media SET publish_state='queued',credit=? WHERE id=? AND publish_state='private'").bind(boat.name.slice(0, 80), mediaId).run();
   advisorLog('info', 'advisor_media_queued', {count: 1});
+  // TA-M1: thumb.jpg for the admin queue, public.jpg and story.jpg for posting.
+  if (queued.meta.changes) await requestMediaJob(env, clock(deps), deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {});
 }
 
 /**
@@ -663,6 +681,14 @@ async function consumeOne(message: QueueMessage, env: Env, deps: ConsumerDeps, o
       out.retried++; turn(env, started, deps, message, 'media', 'retried'); return;
     }
     mediaError = media.error;
+    // TA-M1: a photo vision cannot read as stored waits for the media job's public.jpg.
+    if ((message.attempts ?? 1) <= (deps.derivedWaits ?? DERIVED_WAITS) && env.GITHUB_TOKEN && await awaitingDerived(db, row.media_json)) {
+      const job = await requestMediaJob(env, clock(deps), deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {});
+      await setStatus(db, id, 'queued', ['processing'], 'media-derive');
+      advisorLog('info', 'advisor_media_wait_derived', {attempt: message.attempts ?? 1, job});
+      message.retry({delaySeconds: DERIVED_RETRY_SECONDS});
+      out.retried++; turn(env, started, deps, message, 'media', 'waiting'); return;
+    }
   }
 
   const handler = deps.handler ?? warmUpHandler;
@@ -795,7 +821,8 @@ export async function runInline(env: Env, messageId: string, deps: ConsumerDeps 
     ack() {}, retry() { retried = true; }} as unknown as QueueMessage;
   const batch = {queue: ADVISOR_QUEUE_NAME, messages: [message], ackAll() {}, retryAll() { retried = true; }} as unknown as MessageBatch<AdvisorMessage>;
   // TA-C4: nothing re-delivers an inline message, so a failed download is final at once.
-  const result = await consumeAdvisor(batch, env, {mediaRetries: 0, ...deps});
+  // TA-M1: nor can it wait for the media job's public.jpg (derivedWaits 0).
+  const result = await consumeAdvisor(batch, env, {mediaRetries: 0, derivedWaits: 0, ...deps});
   if (retried) {
     const dead = await consumeAdvisorDeadLetters({...batch, queue: ADVISOR_DLQ_NAME} as MessageBatch<AdvisorMessage>, env, deps);
     result.failed += dead.failed; result.sends += dead.apologies;

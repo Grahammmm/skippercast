@@ -571,7 +571,7 @@ dbTest('video: a Reel candidate with consent; a file the intake rejected (over 3
   const large = await say(env, sql, null, {media: [big], vision: BOARD});
   assert.equal(large.intent, 'media.upload_link');
   assert.match(large.texts[0], /^That photo is too big for me to read by text\. Send it through this link/);
-  assert.ok(large.lines.some(l => /advisor_media_too_large_wait_not_built/.test(l)), 'logged until TA-M1 builds the wait');
+  assert.ok(large.lines.some(l => /advisor_media_too_large\b/.test(l)), 'logged when no public.jpg came from the media job (TA-M1)');
   assert.deepEqual(large.visionCalls, []);
 });
 

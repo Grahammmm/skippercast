@@ -733,8 +733,8 @@ async function mediaTurn(f: FlowContext, boat: ContactBoat): Promise<EngineResul
       c = await vision.classify(imageOf(f.env, row));
     } catch (error) {
       if (error instanceof MediaTooLarge) {
-        // TA-M1 builds the wait for public.jpg; until then the upload link.
-        advisorLog('warn', 'advisor_media_too_large_wait_not_built', {bytes: error.bytes});
+        // TA-M1: the consumer already waited for the media job's public.jpg; none came, so the upload link.
+        advisorLog('warn', 'advisor_media_too_large', {bytes: error.bytes});
         actions.push(await upload('media_too_large')); intent = 'media.upload_link'; continue;
       }
       advisorLog('warn', 'advisor_vision_failed', {name: (error as Error)?.name ?? 'Error'});

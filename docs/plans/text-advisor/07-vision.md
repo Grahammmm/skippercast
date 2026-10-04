@@ -193,8 +193,8 @@ keys or `catalog/advisor/species-extra.json` keys (02).
 - **Over 4.5 MB.** The chain throws `MediaTooLarge` and logs
   `advisor_vision_too_large`; dispatching the media job and re-queueing until
   `public.jpg` exists is TA-M1's consumer path (10 lists that test under
-  TA-V1; it moves to TA-M1). The Claude provider also refuses anything over
-  its own 5 MiB limit.
+  TA-V1; it moves to TA-M1; see "As built (TA-M1)" below). The Claude provider
+  also refuses anything over its own 5 MiB limit.
 - **Claude request.** `temperature: 0`, a 60 s `AbortSignal.timeout`, one
   retry after 2 s on HTTP 429 or 529 (both attempts count as turns in the
   `llm` point). The tool schemas carry `enum`s (image kinds; for fish ID the
@@ -233,3 +233,27 @@ keys or `catalog/advisor/species-extra.json` keys (02).
   every binary file; the script updates those entries. The recorded responses
   (`classify-*.json`, `count-board.json`, `fish-id*.json`) are hand-written to
   the tool-use response shape, each with `_source` and `_image`.
+
+## As built (TA-M1)
+
+- **The wait.** The consumer does it before the handler, not after a
+  `MediaTooLarge`: once the message's media are stored, if any of them is an
+  image over 4.5 MB or a HEIC/HEIF without `derived_at`
+  (`media.ts` `awaitingDerived`) and `GITHUB_TOKEN` is set, it dispatches the
+  job (`requestMediaJob`, at most once a minute), marks the message `queued`
+  with error `media-derive` and calls `retry({delaySeconds: 30})`. It waits on
+  the first **three** deliveries, not four: the advisor queue's `max_retries`
+  is 3 (`scripts/wrangler_config.mjs`), so a fourth retry would send the
+  message to the dead-letter queue; the fourth delivery always runs the
+  handler (`DERIVED_WAITS`, tested against the queue config). An inline turn
+  (web chat, no queue) never waits.
+- **Reading `public.jpg`.** `visionChain` reads the original; when it is over
+  4.5 MB or HEIC/HEIF it reads `advisor/derived/<id>/public.jpg` instead (as
+  `image/jpeg`) when that exists. Still over the limit, `MediaTooLarge` as
+  before, and the intake answers with the upload link (log
+  `advisor_media_too_large`). A HEIC with no `public.jpg` still reaches the
+  provider as HEIC, which refuses it (`UnsupportedImage`), as before.
+- **Derived files.** As 09 § Derived images "As built (TA-M1)": `public.jpg`
+  at most 1440 px on the long side, quality 88, converted to sRGB through the
+  embedded ICC profile and written without EXIF or a profile; `thumb.jpg`
+  320 px; `story.jpg` 1080 x 1920.

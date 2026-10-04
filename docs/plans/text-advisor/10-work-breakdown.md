@@ -212,6 +212,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Build: 09 § derived images; the job is idempotent (skips keys that exist with the same source sha); Story footer and daily graphic drawn from the JSON layout; HEIC conversion; `ffprobe` validation when available (skips with the exact allow-listed reason when absent).
 - Tests: Python: resize bounds, footer text present (pixel check of the band colour), graphic renders from a fixture payload; Node: endpoints auth and payload shapes.
 - Also (moved from TA-V1): when `visionChain` throws `MediaTooLarge`, the consumer dispatches the media job and re-queues the message with `retry({delaySeconds: 30})` up to 4 times, then classifies `public.jpg` (07 § Interface); tested here.
+- As built: migration `0009_advisor_media_derived` (`advisor_media.derived_at`, `derived_error`; social moves to 0010); the consumer waits before the handler on the first three deliveries, not four (the queue's `max_retries` is 3); `runs-on` keeps the `|| 'ubuntu-latest'` form the runner-switch contract test requires, and the job-level `if` keeps it off hosted runners; no video probing, so no `ffprobe` skip reason; plain layouts from `catalog/advisor/graphics.json` (no SVG template). See 09 § Derived images "As built (TA-M1)" and 07 § As built (TA-M1).
 
 ### TA-W1 · Public pages: port, species, boat, sitemap, telemetry source · L
 - Stories: WH-4, SK-5, WH-1 (targets), FC-5 (CTA).
@@ -241,10 +242,10 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-S0 for the token script.
 - Done when: `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`, `META_PAGE_ID`, `META_PAGE_TOKEN`, `META_IG_USER_ID` are in secrets and `GET /api/admin/health` shows the publishing quota.
 
-### TA-S0 · Migration 0009, Graph client, token script, health · M
+### TA-S0 · Migration 0010, Graph client, token script, health · M
 - Stories: SO-4 (client), SP-10 (quota).
 - Depends: TA-F2, TA-W2
-- Files: `db/schema.ts`, `drizzle/0009_advisor_social.sql` (`pnpm db:generate --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
+- Files: `db/schema.ts`, `drizzle/0010_advisor_social.sql` (`pnpm db:generate --name advisor_social`: `advisor_posts`, `advisor_post_stats`, `advisor_contacts.ig_sid`), `social/meta.ts`, `scripts/advisor/meta-token.mjs`, `admin/health.ts` (quota), deploy secret lines, fixtures `tests/fixtures/advisor/meta/`, `tests/test_advisor_meta.mjs`.
 - Tests: `appsecret_proof` value for a known pair; retry on code 4/17/32; error bodies logged without tokens; quota parse.
 
 ### TA-S1 · Drafts and captions, review items, backfill · M

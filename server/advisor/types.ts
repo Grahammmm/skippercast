@@ -202,6 +202,9 @@ export interface ConsumerDeps {
   fetchMediaByRef?: (ref: string, channel: string, env: Env) => Promise<Response>; // default: the receiving adapter's fetchMediaByRef
   mediaRetries?: number;            // extra queue attempts after a failed download; default 2, runInline 0
   engine?: EngineDeps;              // TA-E1: passed through to the engine handler (tests: the fake Messages API)
+  // TA-M1: waiting for the media job's public.jpg (server/advisor/media.ts).
+  derivedWaits?: number;            // queue attempts that may wait for it; default DERIVED_WAITS (3), runInline 0
+  dispatchWorkflow?: (env: Env, file: string) => Promise<number>; // default: watchdog.ts dispatchWorkflow
 }
 
 export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}
