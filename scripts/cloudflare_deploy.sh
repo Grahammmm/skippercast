@@ -89,10 +89,31 @@ if [ "${ENABLE_QUEUES:-}" = "true" ]; then
   done
 fi
 
+# Text Advisor bindings (ENABLE_ADVISOR=true repository variable; docs/plans/text-advisor/).
+# The private media bucket and the queue pair exist before the deploy that binds
+# them; both steps are idempotent like the ones above.
+if [ "${ENABLE_ADVISOR:-}" = "true" ]; then
+  if ! out=$($WRANGLER r2 bucket create skippercast-advisor-media 2>&1); then
+    echo "$out" | grep -qi "already exist" || { echo "$out"; echo "::error::Could not create R2 bucket skippercast-advisor-media"; exit 1; }
+  else
+    echo "Created R2 bucket skippercast-advisor-media"
+  fi
+  for queue in skippercast-advisor-dlq skippercast-advisor; do
+    if $WRANGLER queues info "$queue" >/dev/null 2>&1; then continue; fi
+    if ! out=$($WRANGLER queues create "$queue" 2>&1); then
+      echo "$out" | grep -qiE "already (exist|taken)" || { echo "$out"; echo "::error::Could not create queue $queue (Queues needs the Workers plan to allow it; see docs/cloudflare.md)"; exit 1; }
+    else
+      echo "Created queue $queue"
+    fi
+  done
+fi
+
 # CUSTOM_DOMAINS (repository variable, e.g. "skippercast.com,www.skippercast.com")
 # attaches those hosts as Worker custom domains; unset means workers.dev only.
 # The zone must already be active on this Cloudflare account (docs/cloudflare.md).
-# ENABLE_QUEUES / ENABLE_ANALYTICS ("true") add the optional bindings; the script reads them from the environment.
+# ENABLE_QUEUES / ENABLE_ANALYTICS / ENABLE_ADVISOR ("true") add the optional bindings; the script reads them
+# from the environment, and with ENABLE_ADVISOR also copies TEXT_ADVISOR_ENABLED, BLUEBUBBLES_PRIVATE_API and
+# ADVISOR_* into the Worker's vars.
 node scripts/wrangler_config.mjs "$id" "$BUCKET" "$CONFIG" "${CUSTOM_DOMAINS:-}"
 
 # Before touching the schema, keep a way back. D1 Time Travel can restore to any
