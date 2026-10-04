@@ -522,9 +522,10 @@ export async function insertDraft(db: D1Database, contact: Pick<AdvisorContactRo
  * bumped and the port's daily answer invalidated. Auto-published reports are
  * not confirmations: no confirmed_at, no clean count.
  */
-export async function publishReport(db: D1Database, contact: Pick<AdvisorContactRow, 'id'>, reportId: string, now: number, opts: {auto?: boolean} = {}): Promise<boolean> {
+// TA-W2: `team` is the admin queue publishing (server/advisor/admin/decisions.ts): no posts-for-the-boat check.
+export async function publishReport(db: D1Database, contact: Pick<AdvisorContactRow, 'id'>, reportId: string, now: number, opts: {auto?: boolean; team?: boolean} = {}): Promise<boolean> {
   const row = await db.prepare('SELECT * FROM advisor_reports WHERE id=?').bind(reportId).first<ReportRow>();
-  if (!row || !['pending_confirm', 'draft'].includes(row.status) || !await postsFor(db, contact.id, row.boat_id)) return false;
+  if (!row || !['pending_confirm', 'draft'].includes(row.status) || (!opts.team && !await postsFor(db, contact.id, row.boat_id))) return false;
   const at = iso(now);
   const counts = countsOf(row.counts_json).map(({uncertain: _u, ...c}) => c);
   const r = await db.prepare(`UPDATE advisor_reports SET status='published',verified=(SELECT CASE WHEN status='verified' THEN 1 ELSE 0 END FROM advisor_boats WHERE id=?),
@@ -533,7 +534,7 @@ export async function publishReport(db: D1Database, contact: Pick<AdvisorContact
   if (!r.meta.changes) return false;
   if (!opts.auto && row.version === 1) await db.prepare('UPDATE advisor_boats SET clean_reports=clean_reports+1,updated_at=? WHERE id=?').bind(at, row.boat_id).run();
   await republish(db, row.port, now);
-  advisorLog('info', 'advisor_report_published', {auto: Boolean(opts.auto), version: row.version});
+  advisorLog('info', 'advisor_report_published', {auto: Boolean(opts.auto), team: Boolean(opts.team), version: row.version});
   return true;
 }
 
@@ -554,10 +555,11 @@ export async function withdrawReport(db: D1Database, contact: Pick<AdvisorContac
  * port's daily answer invalidated. A date that another report of the boat
  * already has (same source) is refused.
  */
+// TA-W2: `team` is an edit from the admin queue: no posts-for-the-boat check, and the edits row has no contact or message (the review id keys it).
 export async function applyEdit(db: D1Database, contact: Pick<AdvisorContactRow, 'id'>, messageId: string, key: string, reportId: string, input: ReportEditFields,
-  opts: {reopen?: boolean; publish?: boolean} = {}, now: number = Date.now()): Promise<'edited' | 'retry' | 'refused'> {
+  opts: {reopen?: boolean; publish?: boolean; team?: boolean} = {}, now: number = Date.now()): Promise<'edited' | 'retry' | 'refused'> {
   const row = await db.prepare('SELECT * FROM advisor_reports WHERE id=?').bind(reportId).first<ReportRow>();
-  if (!row || !await postsFor(db, contact.id, row.boat_id)) return 'refused';
+  if (!row || (!opts.team && !await postsFor(db, contact.id, row.boat_id))) return 'refused';
   const editId = (await sha256(`edit:${messageId}:${key}`)).slice(0, 32);
   if (await db.prepare('SELECT 1 AS x FROM advisor_report_edits WHERE id=?').bind(editId).first()) return 'retry';
   const fields = cleanFields(input);
@@ -577,7 +579,7 @@ export async function applyEdit(db: D1Database, contact: Pick<AdvisorContactRow,
   if (fields.counts !== undefined) sets.push(['counts_json', JSON.stringify(row.status === 'published' ? fields.counts.map(({uncertain: _u, ...c}) => c) : fields.counts)]);
   const statements = [
     db.prepare('INSERT INTO advisor_report_edits(id,report_id,contact_id,message_id,patch_json,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING')
-      .bind(editId, row.id, contact.id, messageId, JSON.stringify(patch), at),
+      .bind(editId, row.id, opts.team ? null : contact.id, opts.team ? null : messageId, JSON.stringify(patch), at),
     db.prepare(`UPDATE advisor_reports SET ${sets.map(([k]) => `${k}=?,`).join('')}status=?,version=version+1,${pending ? 'confirmed_at=NULL,' : ''}updated_at=? WHERE id=?`)
       .bind(...sets.map(([, v]) => v), status, at, row.id),
   ];
@@ -585,7 +587,7 @@ export async function applyEdit(db: D1Database, contact: Pick<AdvisorContactRow,
   if (pending) statements.push(db.prepare('UPDATE advisor_boats SET clean_reports=0,updated_at=? WHERE id=?').bind(at, row.boat_id));
   await db.batch(statements);
   if (row.status === 'published') await republish(db, row.port, now);
-  if (opts.publish && row.status !== 'published') await publishReport(db, contact, row.id, now, {auto: true});
+  if (opts.publish && row.status !== 'published') await publishReport(db, contact, row.id, now, {auto: true, team: opts.team});
   advisorLog('info', 'advisor_report_edited', {fields: patch.length, published: row.status === 'published'});
   return 'edited';
 }

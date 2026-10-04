@@ -226,6 +226,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: TA-I2, TA-F2
 - Files: `server/middleware/admin.ts` (`requireAdmin`), `routes/admin.ts` (also `GET /admin` → `/admin.html`), `admin/queue.ts`, `admin/skippers.ts` (verify/reject), `web/admin/app.tsx`, `web/admin/queue.tsx`, `dist/admin.html`, `dist/advisor/admin.css`, `routes/account.ts` (`is_admin` on `/api/session`), tests, `e2e/admin.spec.ts` (signs in with the passkey fixture used by `e2e/app.spec.ts`; grants the role by running, from the spec via `child_process`, `npx wrangler d1 execute skippercast --local --persist-to .wrangler/e2e-state --config <the e2e wrangler config e2e/serve.mjs writes> --command "UPDATE users SET role='admin' WHERE id=…"` after the account exists; approves a seeded review).
 - Tests: 404 for non-admins; decisions update the referenced rows (media approve → `approved`, report edit → edit row + version, skipper verify → `verified_at` and the text to the skipper via the fake adapter); keyboard shortcuts.
+- As built: the queue, decisions and health live in `server/advisor/admin/{queue,decisions,health}.ts`; `decisions.ts` is shared with the text admin fallback (which `admin/skippers.ts` was meant to hold; TA-W3 adds the Skippers view there). The admin is behind `TEXT_ADVISOR_ENABLED` too. See 08 § As built (TA-W2).
 
 ### TA-W3 · Admin skippers, contacts, invite · M
 - Stories: SK-3, SK-4, pilot recruiting.

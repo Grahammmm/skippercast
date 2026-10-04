@@ -96,6 +96,54 @@ Origin check that `requireUser` already applies.
 | **Health** | `GET /api/admin/health` | Relay up/down and last ping, queue depth proxy (open `queued` messages older than 2 min), Hermes health, Meta token expiry (if Instagram Login is ever used) and publishing quota (`content_publishing_limit`), today's caps usage. The relay-down banner shows on every admin view. |
 | **Contacts** | `GET /api/admin/contacts/<id>` (by id from a review item only; no search by number) | Conversation view for support, export, block. There is deliberately no "search by phone number" (CONTRIBUTING: no chat identifiers in casual reach); the admin finds a contact from a review item or a boat. |
 
+As built (TA-W2): `server/middleware/admin.ts` (`requireAdmin`, `isAdminUser`,
+`adminUser`), `server/routes/admin.ts` (mounted after `privacy`; `adminRoutes(deps)`
+so tests pass a recording channel), `server/advisor/admin/queue.ts` (list and
+per-kind detail), `server/advisor/admin/decisions.ts` (`decideReview`, the one
+decision path for the queue and the text admin; the consumer's
+`applyAdminReview` now calls it) and `server/advisor/admin/health.ts`. The
+admin is also behind `TEXT_ADVISOR_ENABLED`: with the advisor off every admin
+route is the 404, like the other advisor paths. `/admin.html` is served (no-store)
+only to an admin; everyone else gets the plain 404 a missing page gets. The
+built shell also exists at its hashed name (`admin.<build>.html`) like every
+page and its bundle is precached like every hashed asset; neither holds data,
+so the API's gate is the one that matters. Under `/api/admin/*` a signed-out
+caller gets the private gate's 401, as for any `/api/` path.
+Decisions (api-reference § Text Advisor admin): the kind's effect runs first,
+then the text it owes (deterministic outbound id `sha256(<review id>:admin.skipper)`
+for the verification, `sha256(<flagged message id>:team.<sha of the reply>)` for
+"reply as team"), then the review closes with `UPDATE … WHERE status='open'`;
+a repeat after that answers `repeated: true` and does nothing. An interrupted
+decision is finished by repeating it. Report approve publishes like SC-5's
+auto-publish (no `confirmed_at`, no clean count: the team publishing is not the
+skipper confirming); report edit writes an `advisor_report_edits` row with
+`contact_id` and `message_id` null; report reject sets `status='rejected'` and,
+for a published report, bumps the pages version and drops the daily answer.
+Verifying sets `verified_by` (null from the text admin) and also bumps the
+pages version (05: the page re-renders). Media reject also takes an `approved`
+photo back. "Reply as team" is refused (409) for a stopped or blocked contact
+and while `ADVISOR_REPLIES_ENABLED` is off; other decisions still apply then and
+say `held: 'replies-off'` instead of texting. Post decisions answer 400 until
+TA-S1; skipper edits until TA-W3. The media route serves `thumb.jpg`, then
+`public.jpg`, then a JPEG/PNG/GIF/WebP original that was not stored sideways
+(`orientation` 2-8 waits for the job's upright files; `?v=original` any original).
+Health reads the relay state, inbound `queued` older than 2 minutes, held
+outbound, failures today, the vision providers' skip marks, today's global LLM
+and vision counters, open reviews and the media job's backlog (`media.ts`
+`mediaJobPending`: images without `derived_at`, including sideways ones, and
+pending graphics); Meta is `null` until TA-S0. A media approve or edit in
+`decideReview` calls `requestMediaJob`, so either admin path starts the job
+for the photo's `public.jpg`. The app: `dist/admin.html` + `web/admin/app.tsx` (hash views;
+`#skippers`, `#rules`, `#posts`, `#funnel` are placeholders), `queue.tsx`
+(kind and status filters, 50 a page with "Load more", cards by kind, inline
+report and credit editors, the reply box, a note field, `a`/`r`/`e` on a
+focused card from `keys.ts`), `health.tsx`, `api.ts`, `dist/advisor/admin.css`;
+strings in `web/advisor/copy.ts` `ADMIN_COPY`. The relay-down banner reads
+the same health call (on load and every minute). `/api/session` has
+`is_admin`. Tests: `tests/test_advisor_admin.mjs`, `e2e/admin.spec.ts` (passkey
+sign-in, the role granted with `wrangler d1 execute --local`, a seeded photo
+review approved with `a`, axe on the queue and Health).
+
 Text-based admin fallback: when the owner replies to an admin notification
 text (the engine sends the owner's contact, `role='admin-test'`, a text for
 each new `review.skipper` and `review.media` item with a short code), `ok

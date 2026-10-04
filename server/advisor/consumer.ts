@@ -67,6 +67,10 @@
 // TA-I3: angler photos (06 § Angler photos). share_state writes or clears the
 // AC-1 offer (job_state advisor.share.<contact_id>); angler_share queues the
 // angler's own photo for review and stores the credit they gave.
+//
+// TA-W2: the text admin's decision runs admin/decisions.ts decideReview, the
+// same code the admin queue uses; teamSender is how either sends the texts a
+// decision owes (created_by set for the admin queue's).
 import {advisorSettings} from './settings.ts';
 import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
 // TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
@@ -74,7 +78,6 @@ import {exportKey, mintExportToken} from './exports.ts';
 import {channelFor as defaultChannelFor} from './channels/index.ts';
 import {linkKey} from './tools/offer_text_link.ts';
 import {t} from './strings.ts';
-import {resolveLinks} from './links.ts';
 import {localClock} from './cron.ts';
 import {outboundId, randomId} from './ids.ts';
 import {advisorLog, redact} from './log.ts';
@@ -92,6 +95,9 @@ import {flowKey} from './intake/skippers.ts';
 import {insertDraft, publishReport, withdrawReport, applyEdit, postsFor, ONCE_PREFIX} from './intake/reports.ts';
 // TA-I3: the AC-1 offer state and the angler's shared photo.
 import {shareKey, CREDIT_MAX} from './intake/anglers.ts';
+// TA-W2: admin decisions, shared by the text admin and the admin queue.
+import {decideReview} from './admin/decisions.ts';
+import type {TeamSend} from './admin/decisions.ts';
 import type {Env} from '../env.ts';
 import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
@@ -190,7 +196,7 @@ async function recordResult(db: D1Database, deps: ConsumerDeps, id: string, resu
  * media_json on an outbound row holds the R2 keys it attaches, so a held row can be sent later.
  */
 async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string,
-  content: {text?: string; mediaKeys?: string[]; files?: OutboundMessage['files']}, adapterOverride?: OutboundChannel | null): Promise<boolean> {
+  content: {text?: string; mediaKeys?: string[]; files?: OutboundMessage['files']; createdBy?: string | null}, adapterOverride?: OutboundChannel | null): Promise<boolean> {
   const db = env.DB!, id = await outboundId(inId, key), at = iso(deps);
   const body = content.text == null ? null : content.text.slice(0, MAX_BODY);
   const adapter = adapterOverride !== undefined ? adapterOverride : channelOf(env, deps, contact);
@@ -200,8 +206,9 @@ async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow
     if (existing.status !== 'failed' || !await setStatus(db, id, 'sending', ['failed'])) return false;
   } else {
     const held = await relayHold(env, adapter);
-    const r = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,media_json,status,error,in_reply_to,created_at) VALUES(?,?,'out',?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`)
-      .bind(id, contact.id, contact.channel, body, content.mediaKeys?.length ? JSON.stringify(content.mediaKeys) : null, held ? 'held' : 'sending', held ? 'relay-down' : null, inId, at).run();
+    // TA-W2: created_by is the admin's users.id for a text sent from the admin queue (02 § advisor_messages).
+    const r = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,media_json,status,error,in_reply_to,created_by,created_at) VALUES(?,?,'out',?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`)
+      .bind(id, contact.id, contact.channel, body, content.mediaKeys?.length ? JSON.stringify(content.mediaKeys) : null, held ? 'held' : 'sending', held ? 'relay-down' : null, inId, content.createdBy ?? null, at).run();
     if (!r.meta.changes) return false;   // a concurrent delivery got there first
     if (held) { advisorLog('warn', 'advisor_send_held', {reason: 'relay-down'}); return false; }
   }
@@ -215,13 +222,13 @@ async function sendOnce(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow
  * chunk, in order, 300 ms apart. Chunk 0 keeps the action's key, so an
  * unsplit text has the same outbound id as before; chunk n is "<key>.<n>".
  */
-async function sendText(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, text: string, adapterOverride?: OutboundChannel | null): Promise<number> {
+async function sendText(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, key: number | string, text: string, adapterOverride?: OutboundChannel | null, createdBy: string | null = null): Promise<number> {
   const adapter = adapterOverride !== undefined ? adapterOverride : channelOf(env, deps, contact);
   const chunks = adapter?.name ? splitForChannel(text, {name: adapter.name as 'bluebubbles' | 'twilio' | 'web'}, contact.channel) : [text];
   let sends = 0;
   for (const [n, chunk] of chunks.entries()) {
     if (n > 0) await sleep(deps, CHUNK_GAP_MS);
-    sends += Number(await sendOnce(env, deps, contact, inId, n === 0 ? key : `${key}.${n}`, {text: chunk}, adapterOverride));
+    sends += Number(await sendOnce(env, deps, contact, inId, n === 0 ? key : `${key}.${n}`, {text: chunk, ...(createdBy ? {createdBy} : {})}, adapterOverride));
   }
   return sends;
 }
@@ -449,33 +456,31 @@ async function applyLinkMerge(env: Env, deps: ConsumerDeps, web: AdvisorContactR
 
 /**
  * The text admin fallback (08): the engine already checked the contact; this
- * re-checks it and applies the decision to one open skipper or media review.
- * skipper/new_skipper verifies (or rejects) the boat; media sets publish_state.
+ * re-checks it and applies the decision to one open skipper or media review
+ * through the decision code the admin queue uses (admin/decisions.ts, TA-W2):
+ * skipper/new_skipper verifies (or rejects) the boat and texts its owner;
+ * media sets publish_state. The decider is a contact, so verified_by and
+ * decided_by stay null and the review's note is 'text admin'.
  */
 async function applyAdminReview(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, index: number, id: string, decision: string): Promise<number> {
-  const db = env.DB!, at = iso(deps), settings = advisorSettings(env);
+  const settings = advisorSettings(env);
   if (contact.id !== settings.adminContactId || contact.role !== 'admin-test' || !/^[0-9a-f]{32}$/.test(id) || !['approved', 'rejected'].includes(decision)) return 0;
-  const review = await db.prepare("SELECT id,kind,ref_id,reason FROM advisor_reviews WHERE id=? AND status='open' AND kind IN ('skipper','media')").bind(id).first<{id: string; kind: string; ref_id: string; reason: string}>();
-  if (!review) return 0;
-  const ok = decision === 'approved';
-  const statements = [db.prepare("UPDATE advisor_reviews SET status=?,decided_at=?,note='text admin' WHERE id=? AND status='open'").bind(decision, at, id)];
-  if (review.kind === 'skipper' && review.reason === 'new_skipper') {
-    statements.push(ok
-      ? db.prepare("UPDATE advisor_boats SET status='verified',verified_at=?,updated_at=? WHERE id=?").bind(at, at, review.ref_id)
-      : db.prepare("UPDATE advisor_boats SET status='rejected',updated_at=? WHERE id=?").bind(at, review.ref_id));
-  }
-  if (review.kind === 'media') statements.push(db.prepare("UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN ('private','queued')").bind(ok ? 'approved' : 'rejected', review.ref_id));
-  await db.batch(statements);
-  advisorLog('info', 'advisor_text_admin', {kind: review.kind, decision});
-  // TA-M1: an approved photo needs its public.jpg for the pages and Meta.
-  if (review.kind === 'media' && ok) await requestMediaJob(env, clock(deps), deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {});
-  // TA-I1 (05 § Verification): the skipper hears the decision, through their own channel.
-  if (review.kind !== 'skipper' || review.reason !== 'new_skipper') return 0;
-  const boat = await db.prepare('SELECT name,slug,owner_contact_id FROM advisor_boats WHERE id=?').bind(review.ref_id).first<{name: string; slug: string; owner_contact_id: string | null}>();
-  const owner = boat?.owner_contact_id ? await db.prepare("SELECT * FROM advisor_contacts WHERE id=? AND status='active'").bind(boat.owner_contact_id).first<AdvisorContactRow>() : null;
-  if (!boat || !owner) return 0;
-  const text = resolveLinks(t(owner.language, ok ? 'boat_verified' : 'boat_rejected', {name: boat.name, slug: boat.slug}), settings.publicBase).text;
-  return sendText(env, deps, owner, inId, `${index}.skipper`, text, (deps.channelFor ?? defaultChannelFor)(env, owner));
+  const outcome = await decideReview(env, {reviewId: id, decision: decision === 'approved' ? 'approve' : 'reject', note: 'text admin', by: null, kinds: ['skipper', 'media'], inId, key: String(index)},
+    {now: clock(deps), send: teamSender(env, deps), ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
+  if (outcome.status !== 'applied') return 0;
+  advisorLog('info', 'advisor_text_admin', {kind: outcome.review.kind, decision});
+  return outcome.sends;
+}
+
+/**
+ * TA-W2: how a decision texts someone (the skipper's verification, "reply as
+ * team"): through the contact's own channel, at most once per (inId, key),
+ * held while the relay is down, with created_by set to the admin's users.id
+ * when an admin sent it from the queue. Shared by the text admin and the
+ * admin queue (server/routes/admin.ts).
+ */
+export function teamSender(env: Env, deps: ConsumerDeps = {}): TeamSend {
+  return (contact, inId, key, text, createdBy) => sendText(env, deps, contact, inId, key, text, (deps.channelFor ?? defaultChannelFor)(env, contact), createdBy);
 }
 
 // ---- TA-I1: skipper registration, consent and crew (05) ---------------------------------
