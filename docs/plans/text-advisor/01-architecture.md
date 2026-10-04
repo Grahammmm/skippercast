@@ -80,6 +80,11 @@ Budget: the consumer has the Worker's wall-clock allowance, not a 10 ms CPU
 limit, so a two-turn Claude call with a vision step fits. Hard stops: 45 s
 total per message, after which the person gets "Still working on that, one
 moment" and the message is retried once with `retry({delaySeconds: 20})`.
+The handler receives an `AbortSignal` that fires at the hard stop (pass it to
+every `fetch`). If the retry also runs past 45 s the message is marked
+`failed` and the contact gets the hourly-throttled apology, as on the
+dead-letter path. Without a queue (`runInline`) nothing retries, so a failed
+or timed-out turn goes straight to that dead-letter handling.
 
 ## Request flow: web chat
 

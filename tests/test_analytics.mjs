@@ -106,13 +106,35 @@ test('each cron run writes one cron point; a failed part fails the invocation an
     const pending = [];
     await quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS}, {waitUntil: p => pending.push(p)}));
     const [run] = of(points, 'cron');
-    assert.deepEqual(run.blobs, ['cron', '*/15 * * * *', 'none', 'no-queue', 'no-db']);
+    assert.deepEqual(run.blobs, ['cron', '*/15 * * * *', 'none', 'no-queue', 'no-db', 'disabled'], 'blob6: the advisor hook, off by default');
     assert.equal(run.doubles[2], 5, 'feed age in minutes');
     // The trip producer throws (a broken D1): the invocation fails, the point says so.
     const broken = {prepare() { throw Error('D1 down'); }};
     await assert.rejects(quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: broken, TRIP_QUEUE: {sendBatch() {}}}, {waitUntil() {}})), /cron run failed/);
-    assert.deepEqual(of(points, 'cron')[1].blobs.slice(3), ['error', 'failed']);
+    assert.deepEqual(of(points, 'cron')[1].blobs.slice(3), ['error', 'failed', 'disabled']);
+    // With the advisor on, its outcome lands in blob6: the relay check cannot store its state in a broken D1.
+    await assert.rejects(quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: broken, TRIP_QUEUE: {sendBatch() {}}, TEXT_ADVISOR_ENABLED: 'true', BLUEBUBBLES_URL: 'https://relay.example.test'}, {waitUntil() {}})), /cron run failed/);
+    assert.equal(of(points, 'cron')[2].blobs[5], 'partial');
+    const {adapter} = database();
+    await quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: adapter, TEXT_ADVISOR_ENABLED: 'true'}, {waitUntil() {}}));
+    assert.equal(of(points, 'cron')[3].blobs[5], 'ok');
   } finally { globalThis.fetch = original; }
+});
+
+test('advisor_turn and publish points carry intents, outcomes, counts and timings, never ids or text', async () => {
+  const {recordAdvisorTurn, recordPublish} = await import('../server/advisor/analytics.ts');
+  const {points, ANALYTICS} = sink();
+  recordAdvisorTurn({ANALYTICS}, {intent: 'report.count_board', outcome: 'done', ms: 1234, actions: 3, sends: 2, retries: 1});
+  recordAdvisorTurn({ANALYTICS}, {intent: 'call me at +18055550100', outcome: 'c_0123 failed!', ms: 5, actions: 0, sends: 0, retries: 0});
+  recordPublish({ANALYTICS}, {kind: 'photo', outcome: 'posted', ms: 800});
+  recordPublish({ANALYTICS}, {kind: 'daily', outcome: 'partial', ms: Number.NaN});
+  const [turn, odd] = of(points, 'advisor_turn'), [post, partial] = of(points, 'publish');
+  assert.deepEqual(turn, {indexes: ['advisor_turn'], blobs: ['advisor_turn', 'report.count_board', 'done'], doubles: [1234, 3, 2, 1]});
+  assert.deepEqual(odd.blobs, ['advisor_turn', 'other', 'other'], 'free text is never written');
+  assert.deepEqual(post, {indexes: ['publish'], blobs: ['publish', 'photo', 'posted'], doubles: [800]});
+  assert.deepEqual(partial.doubles, [0]);
+  assert.doesNotMatch(JSON.stringify(points), /8055550100|c_0123/);
+  assert.doesNotThrow(() => recordAdvisorTurn(undefined, {intent: 'x', outcome: 'done', ms: 1, actions: 0, sends: 0, retries: 0}));
 });
 
 test('the dataset binding is added only with ENABLE_ANALYTICS, and log sampling stays within 0..1', () => {

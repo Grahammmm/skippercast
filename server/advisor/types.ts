@@ -1,7 +1,10 @@
 // Shared types of the Text Advisor (docs/plans/text-advisor/01-architecture.md).
-// TA-F1 needs only the settings shape and the queue message; later tasks add
-// InboundMessage, OutboundMessage, Action, EngineResult, Contact and the rest
-// here, next to these, so every advisor module imports its types from one file.
+// TA-F1 added the settings shape and the queue message, TA-F3 the consumer's
+// contract (actions, engine result, handler, the outbound channel); later tasks
+// add InboundMessage, ChannelAdapter and the rest here, next to these, so every
+// advisor module imports its types from one file.
+import type {Env} from '../env.ts';
+import type {LlmUsage} from '../analytics.ts';
 
 export type AdvisorChannel = 'bluebubbles' | 'twilio';
 export type VisionProviderName = 'hermes' | 'claude';
@@ -43,3 +46,73 @@ export interface AdvisorContactRow {
 
 /** The two subkeys HKDF derives from ADVISOR_PHONE_KEY (02 § advisor_contacts). Non-extractable. */
 export interface PhoneKeys {hashKey: CryptoKey; encKey: CryptoKey}
+
+/** An advisor_messages row as D1 returns it (02 § advisor_messages). */
+export interface AdvisorMessageRow {
+  id: string; contact_id: string; direction: 'in' | 'out'; channel: string; provider_id: string | null;
+  body: string | null; media_json: string | null; intent: string | null; status: string; error: string | null;
+  in_reply_to: string | null; tokens_in: number | null; tokens_out: number | null; created_by: string | null;
+  created_at: string; sent_at: string | null;
+}
+
+/** The contact columns an action may change (02 § advisor_contacts); everything else is owned by contacts.ts. */
+export interface ContactFields {
+  role?: 'angler' | 'skipper' | 'crew' | 'admin-test';
+  boat_id?: string | null;
+  display_name?: string | null;
+  language?: 'en' | 'es';
+  home_port?: string | null;
+  targets_json?: string | null;     // JSON array of species keys
+  source?: string | null;
+}
+
+/** advisor_reviews.kind (02 § advisor_reviews). */
+export type ReviewKind = 'media' | 'report' | 'post' | 'skipper' | 'conversation' | 'rule';
+
+/**
+ * What the engine asks the consumer to do, applied in order by
+ * server/advisor/consumer.ts (01 § request flow, step 5). Each is idempotent
+ * by a stable id derived from (message_id, action index), so a retried message
+ * repeats nothing it already did. Later tasks add report and social actions
+ * (report_draft, report_confirm, post_draft, ...) to this union, each with its
+ * applier in the consumer.
+ */
+export type Action =
+  | {type: 'send_text'; text: string; chunkIndex?: number}        // chunkIndex: position after splitForChannel (TA-C1)
+  | {type: 'send_media'; r2Key: string; caption?: string}          // a derived public JPEG in ADVISOR_MEDIA
+  | {type: 'contact_update'; fields: ContactFields}
+  | {type: 'review_open'; kind: ReviewKind; refId: string; reason: string}
+  | {type: 'log'; event: string; fields?: Record<string, unknown>};
+
+/** One processed turn (04): the actions, the intent recorded on the inbound row, model usage. */
+export interface EngineResult {actions: Action[]; intent: string; usage?: LlmUsage; model?: string | null}
+
+/**
+ * The outbound message a channel sends (03 § adapter interface). `to` is the
+ * contact's address as stored: the phone_enc blob for a phone contact (the
+ * adapter decrypts it inside send(), so the number never exists outside a
+ * channel, 02 § privacy invariants), the web_session hash for a web visitor.
+ */
+export interface OutboundMessage {
+  id: string;                       // advisor_messages.id, deterministic
+  to: string;
+  text?: string;
+  mediaKeys?: string[];             // R2 keys to attach (derived public JPEGs)
+  replyToProviderId?: string;       // threads the reply where the channel supports it
+}
+export interface SendResult {providerId: string | null; status: 'sent' | 'failed' | 'unknown'; error?: string}
+/** The part of 03's ChannelAdapter the consumer needs; TA-C1's adapters implement it. */
+export interface OutboundChannel {send(message: OutboundMessage, env: Env): Promise<SendResult>}
+
+/** Injectable dependencies of the consumer, so tests run offline and deterministic. */
+export interface ConsumerDeps {
+  now?: () => number;               // epoch ms; default Date.now
+  random?: () => number;            // default Math.random (for the engine)
+  channel?: OutboundChannel;        // default: none (every send is recorded as failed until TA-C1)
+  handler?: Handler;                // default: warmUpHandler; TA-E1 passes the engine
+  turnTimeoutMs?: number;           // hard stop per message; default 45 s (01 § request flow)
+}
+
+export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}
+/** One stored inbound message in, actions out. `signal` aborts when the hard stop fires. */
+export type Handler = (input: HandlerInput) => Promise<EngineResult>;
