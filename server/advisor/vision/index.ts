@@ -60,7 +60,12 @@ export interface VisionProvider {
   identifyFish(image: ImageInput, env: Env, region: string): Promise<FishId>;
   health(env: Env): Promise<{ok: boolean; detail: string}>;
 }
-export interface ImageInput {media_id: string; bytes: () => Promise<ArrayBuffer>; mime: string; width?: number; height?: number}
+/**
+ * `orientation`: the JPEG's EXIF Orientation (2-8) when the stored pixels are not
+ * upright (intake strips the tag itself, media.ts); absent when upright, and for
+ * the media job's public.jpg, which is always upright.
+ */
+export interface ImageInput {media_id: string; bytes: () => Promise<ArrayBuffer>; mime: string; width?: number; height?: number; orientation?: number}
 
 export {IMAGE_KINDS, MediaTooLarge, UnsupportedImage, ProviderNotConfigured, VisionCapReached, VisionUnavailable} from './errors.ts';
 

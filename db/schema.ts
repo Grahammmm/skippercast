@@ -133,6 +133,8 @@ export const advisorMedia=sqliteTable('advisor_media',{
   providerRef:text('provider_ref'),createdAt:text('created_at').notNull(),
   // TA-M1 (0009): when the advisor-media job wrote advisor/derived/<id>/ (or gave up, with derived_error).
   derivedAt:text('derived_at'),derivedError:text('derived_error'),
+  // 0010: the EXIF Orientation (1-8) read from a JPEG before its APP1 was stripped; null for other formats.
+  orientation:integer('orientation'),
 },t=>[index('media_contact').on(t.contactId),index('media_publish').on(t.publishState),index('media_boat').on(t.boatId)]);
 
 // A skipper's (or crew member's) fish report for one trip date. contact_id is

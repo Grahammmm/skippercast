@@ -339,6 +339,77 @@ class DerivedImageTests(unittest.TestCase):
         self.assertEqual(api.reports, [{'media_id': 'm1', 'keys': keys('m1'), 'width': 900, 'height': 600, 'source_width': 900, 'source_height': 600}])
 
 
+def stored_as(upright_image, orientation):
+    """How a camera stores `upright_image` with this EXIF orientation, from the EXIF definition of row 0 and column 0.
+
+    Written independently of Pillow's transpose table: 1 row 0 = top, column 0 = left;
+    2 top/right; 3 bottom/right; 4 bottom/left; 5 left/top; 6 right/top; 7 right/bottom; 8 left/bottom.
+    """
+    w, h = upright_image.size
+    u = lambda row, col: upright_image.getpixel((col, row))
+    source = {
+        1: lambda r, c: u(r, c), 2: lambda r, c: u(r, w - 1 - c), 3: lambda r, c: u(h - 1 - r, w - 1 - c), 4: lambda r, c: u(h - 1 - r, c),
+        5: lambda r, c: u(c, r), 6: lambda r, c: u(c, w - 1 - r), 7: lambda r, c: u(h - 1 - c, w - 1 - r), 8: lambda r, c: u(h - 1 - c, r),
+    }[orientation]
+    sw, sh = (w, h) if orientation <= 4 else (h, w)
+    stored = Image.new('RGB', (sw, sh))
+    for r in range(sh):
+        for c in range(sw):
+            stored.putpixel((c, r), source(r, c))
+    return stored
+
+
+@unittest.skipUnless(HAVE_PILLOW, NO_PILLOW)
+class OrientationTests(unittest.TestCase):
+    """The Worker strips a JPEG's EXIF and passes its Orientation in the work list; the job turns the pixels upright."""
+
+    UPRIGHT = [(10, 0, 0), (20, 0, 0), (30, 0, 0), (0, 40, 0), (0, 50, 0), (0, 60, 0)]   # 3 x 2, every pixel distinct
+
+    def upright_image(self):
+        image = Image.new('RGB', (3, 2))
+        image.putdata(self.UPRIGHT)
+        return image
+
+    def test_each_of_the_eight_orientations_comes_out_upright(self):
+        reference = self.upright_image()
+        for orientation in range(1, 9):
+            with self.subTest(orientation=orientation):
+                stored = stored_as(reference, orientation)
+                self.assertEqual(stored.size, (3, 2) if orientation <= 4 else (2, 3))
+                turned = mj.upright(stored, orientation)
+                self.assertEqual(turned.size, (3, 2))
+                self.assertEqual(list(pixels(turned)), self.UPRIGHT)
+
+    def test_an_unknown_or_missing_orientation_leaves_the_pixels_alone(self):
+        stored = stored_as(self.upright_image(), 6)
+        for value in (None, 0, 9, '6', True):
+            with self.subTest(value=value):
+                self.assertEqual(mj.upright(stored, value).tobytes(), stored.tobytes())
+
+    def test_a_stripped_sideways_jpeg_is_derived_upright_and_the_value_is_recorded(self):
+        # The original as stored by the Worker: landscape pixels, no EXIF, orientation 6 on the row.
+        portrait = Image.new('RGB', (300, 400), (200, 120, 40))
+        ImageDraw.Draw(portrait).rectangle((0, 0, 299, 49), fill=(30, 90, 160))       # a blue band along the top
+        buffer = io.BytesIO()
+        stored_as(portrait, 6).save(buffer, 'JPEG', quality=95)
+        data = buffer.getvalue()
+        r2 = FakeR2({'advisor/media/c1/m6': (data, {})})
+        item = {'id': 'm6', 'r2_key': 'advisor/media/c1/m6', 'mime': 'image/jpeg', 'sha256': 's6', 'bytes': len(data), 'orientation': 6, 'keys': keys('m6')}
+        payload = mj.derive_media(item, r2, mj.load_spec(), None, log=lambda *_: None)
+        self.assertEqual((payload['width'], payload['height'], payload['source_width'], payload['source_height']), (300, 400, 300, 400))
+        public = Image.open(io.BytesIO(r2.objects[keys('m6')['public']][0])).convert('RGB')
+        self.assertTrue(near(public.getpixel((150, 10)), (30, 90, 160), 12), 'the band is at the top again')
+        self.assertTrue(near(public.getpixel((150, 390)), (200, 120, 40), 12))
+        self.assertEqual(r2.objects[keys('m6')['public']][1]['orientation'], '6')
+        # Unchanged: skipped. The same bytes derived earlier without the value (files from before) render again.
+        mj.derive_media(item, r2, mj.load_spec(), None, log=lambda *_: None)
+        self.assertEqual(len(r2.puts), 3)
+        for key in keys('m6').values():
+            r2.objects[key][1].pop('orientation')
+        mj.derive_media(item, r2, mj.load_spec(), None, log=lambda *_: None)
+        self.assertEqual(len(r2.puts), 6)
+
+
 @unittest.skipUnless(HAVE_PILLOW, NO_PILLOW)
 class GraphicTests(unittest.TestCase):
     DAILY = {'id': 'g1', 'kind': 'daily', 'out_key': 'advisor/posts/p1/daily.jpg', 'media': [],

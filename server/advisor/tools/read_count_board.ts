@@ -17,8 +17,8 @@ export const readCountBoard: AdvisorTool = {
     const boat = await contactBoat(ctx.db, ctx.contact);
     if (!boat) return {result: {read: false, reason: 'this contact is not linked to a boat'}};
     const id = String(input.media_id ?? '');
-    const row = /^[\w-]{1,64}$/.test(id) ? await ctx.db.prepare("SELECT id,mime,width,height,r2_key,kind FROM advisor_media WHERE id=? AND contact_id=? AND publish_state<>'rejected'")
-      .bind(id, ctx.contact.id).first<{id: string; mime: string; width: number | null; height: number | null; r2_key: string; kind: string}>() : null;
+    const row = /^[\w-]{1,64}$/.test(id) ? await ctx.db.prepare("SELECT id,mime,width,height,r2_key,kind,orientation FROM advisor_media WHERE id=? AND contact_id=? AND publish_state<>'rejected'")
+      .bind(id, ctx.contact.id).first<{id: string; mime: string; width: number | null; height: number | null; r2_key: string; kind: string; orientation: number | null}>() : null;
     if (!row || row.kind !== 'image' || !row.r2_key || !ctx.env.ADVISOR_MEDIA) return {result: {read: false, reason: 'no readable photo with that id from this contact'}};
     let reading;
     try {

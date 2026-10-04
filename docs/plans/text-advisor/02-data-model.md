@@ -18,7 +18,8 @@ without the later tables:
 | `0007_advisor_media_ref` | `advisor_media.provider_ref` (TA-C1; not in the original plan) | 1 |
 | `0008_advisor_answers` | `advisor_rules`, `advisor_daily_answers` | 3 (angler answers) |
 | `0009_advisor_media_derived` | `advisor_media.derived_at`, `derived_error` (TA-M1; not in the original plan) | 4 (media job) |
-| `0010_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
+| `0010_advisor_media_orientation` | `advisor_media.orientation` (found in the TA-M1 review; not in the original plan) | 4 (media job) |
+| `0011_advisor_social` | `advisor_posts`, `advisor_post_stats`; `advisor_contacts.ig_sid` | 5 (social) |
 
 Column conventions: `*_at` ISO strings; `*_json` columns hold JSON text and
 are validated on read by a small parser in `server/advisor/types.ts`
@@ -40,7 +41,7 @@ One row per person (phone number) or web visitor.
 | `phone_hash` | text, unique, nullable | `HMAC-SHA256(K_hash, e164)` hex, where `K_hash = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'hash')`. Null for web-only contacts. |
 | `phone_enc` | text, nullable | `base64(iv ‖ AES-GCM(K_enc, e164))`, `K_enc = HKDF-SHA256(ADVISOR_PHONE_KEY, info 'enc')`, 12-byte random iv. Decrypted only to send. |
 | `web_session` | text, unique, nullable | the `sc_adv` cookie value's sha256 for web visitors |
-| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0010) |
+| `ig_sid` | text, unique, nullable | Instagram-scoped user id for DM contacts (added in 0011) |
 | `channel` | text | last channel used: `imessage`, `sms`, `web`, later `whatsapp` |
 | `role` | text | `angler` (default), `skipper`, `crew`, `admin-test` |
 | `boat_id` | text, nullable | the boat a skipper or crew member posts for |
@@ -145,6 +146,7 @@ unique `message_provider (channel, provider_id)`.
 | `credit` | text, nullable | the credit line to use when posted ("Capt. X / Boat Y") |
 | `provider_ref` | text, nullable | added in `0007_advisor_media_ref` (TA-C1): the channel's attachment reference (BlueBubbles attachment guid, later a Twilio media URL) |
 | `derived_at`, `derived_error` | text, nullable | added in `0009_advisor_media_derived` (TA-M1): when the `advisor-media` job wrote `advisor/derived/<id>/`, or gave up on the item (then `derived_error` holds its short reason) |
+| `orientation` | integer, nullable | added in `0010_advisor_media_orientation`: a JPEG's EXIF Orientation (1-8) read before intake stripped the EXIF; null for other formats. The media job applies it; 2-8 makes the item pending and keeps `/media` from serving the original |
 | `created_at` | text | |
 
 The webhook (TA-C1) writes one placeholder row per attachment before anything
@@ -288,7 +290,7 @@ The "one answer per port per day" cache (FR-1).
 | `inputs_hash` | text | sha256 of the report ids, conditions snapshot and rules used; regenerate when it changes |
 | `generated_at` | text | |
 
-## `advisor_posts` (migration 0010; TA-M1 took 0009)
+## `advisor_posts` (migration 0011; TA-M1 took 0009 and 0010)
 
 A social post in any state.
 
@@ -314,7 +316,7 @@ A social post in any state.
 
 Indexes: `post_status_time (status, scheduled_for)`, `post_boat (boat_id)`.
 
-## `advisor_post_stats` (migration 0010)
+## `advisor_post_stats` (migration 0011)
 
 | Column | Type | Notes |
 | --- | --- | --- |

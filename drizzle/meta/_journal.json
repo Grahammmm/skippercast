@@ -71,6 +71,13 @@
       "when": 1791137906991,
       "tag": "0009_advisor_media_derived",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791139625171,
+      "tag": "0010_advisor_media_orientation",
+      "breakpoints": true
     }
   ]
 }

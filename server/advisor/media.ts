@@ -20,6 +20,12 @@
 // never sits in the Worker's 128 MB of memory; its duplicate check happens
 // after the upload, and a duplicate's new object is deleted again. A JPEG or
 // PNG over 24 MB is rejected: stripping needs the whole file.
+//
+// The one EXIF value kept is a JPEG's Orientation (1-8): an iPhone stores the
+// pixels unrotated and relies on it. It is read before APP1 is dropped and kept
+// on the row (advisor_media.orientation) and the R2 object (custom metadata
+// `orientation`), never in the stored bytes; the media job applies it to
+// public.jpg, thumb.jpg and story.jpg.
 import {advisorLog} from './log.ts';
 import {hex, randomId} from './ids.ts';
 // TA-M1: the advisor-media job is dispatched through the watchdog's GitHub client.
@@ -78,7 +84,8 @@ export function sniffMime(bytes: Uint8Array): Sniffed | null {
   return null;
 }
 
-export interface Stripped {bytes: Uint8Array; stripped: boolean; width: number | null; height: number | null}
+/** `orientation`: the JPEG's EXIF Orientation (1-8) read before APP1 was dropped; 1 when absent or unreadable, and for PNG. */
+export interface Stripped {bytes: Uint8Array; stripped: boolean; width: number | null; height: number | null; orientation: number}
 
 const concat = (parts: Uint8Array[]): Uint8Array => {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
@@ -87,6 +94,37 @@ const concat = (parts: Uint8Array[]): Uint8Array => {
 };
 const ICC = 'ICC_PROFILE\0';
 const isSof = (m: number): boolean => m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc;
+const ORIENTATION_TAG = 0x0112;
+const SHORT = 3;
+
+/**
+ * The Orientation tag (0x0112) of IFD0 in one APP1 segment, `at` the first
+ * payload byte and `end` the segment's end: "Exif\0\0", a TIFF header in
+ * either byte order ("II" or "MM", 42, the IFD0 offset), then IFD0's 12-byte
+ * entries. 1-8, or 1 when the payload is not EXIF, has no tag, or is malformed
+ * anywhere (it never reads past `end` and never throws). No other field is read.
+ */
+export function exifOrientation(b: Uint8Array, at: number, end: number): number {
+  if (end > b.length || end - at < 6 + 8 || ascii(b, at, 6) !== 'Exif\0\0') return 1;
+  const tiff = at + 6, order = ascii(b, tiff, 2);
+  if (order !== 'II' && order !== 'MM') return 1;
+  const le = order === 'II';
+  const r16 = (p: number): number => le ? b[p]! | (b[p + 1]! << 8) : u16(b, p);
+  const r32 = (p: number): number => le ? (b[p]! | (b[p + 1]! << 8) | (b[p + 2]! << 16) | (b[p + 3]! << 24)) >>> 0 : u32(b, p);
+  if (r16(tiff + 2) !== 42) return 1;
+  const ifd = tiff + r32(tiff + 4);
+  if (ifd < tiff + 8 || ifd + 2 > end) return 1;
+  const entries = r16(ifd);
+  for (let k = 0; k < entries; k++) {
+    const e = ifd + 2 + 12 * k;
+    if (e + 12 > end) return 1;
+    if (r16(e) !== ORIENTATION_TAG) continue;
+    if (r16(e + 2) !== SHORT || r32(e + 4) < 1) return 1;
+    const value = r16(e + 8);                     // a SHORT sits left-justified in the 4-byte value field
+    return value >= 1 && value <= 8 ? value : 1;
+  }
+  return 1;
+}
 
 /**
  * A JPEG without metadata, by a marker walk from SOI (no decoding). Kept: SOI,
@@ -95,15 +133,18 @@ const isSof = (m: number): boolean => m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m 
  * entropy-coded data, any later tables and scans of a progressive JPEG, and
  * EOI. Dropped: every other APPn (EXIF, GPS, XMP, MPF, maker notes) and COM,
  * and anything after EOI (an iPhone's MPF secondary images sit there).
- * Width and height come from the SOF header. A file that is not a JPEG, or is
- * truncated anywhere, comes back unchanged with stripped false; it never throws.
+ * Width and height come from the SOF header. Before the first EXIF APP1 is
+ * dropped its Orientation tag is read (exifOrientation) and returned as
+ * `orientation`, so the upright view survives without keeping any EXIF.
+ * A file that is not a JPEG, or is truncated anywhere, comes back unchanged
+ * with stripped false; it never throws.
  */
 export function stripJpegMetadata(bytes: Uint8Array): Stripped {
-  const unchanged: Stripped = {bytes, stripped: false, width: null, height: null};
+  const unchanged: Stripped = {bytes, stripped: false, width: null, height: null, orientation: 1};
   const b = bytes, n = b.length;
   if (n < 4 || b[0] !== 0xff || b[1] !== 0xd8) return unchanged;
   const parts: Uint8Array[] = [b.subarray(0, 2)];
-  let i = 2, width: number | null = null, height: number | null = null;
+  let i = 2, width: number | null = null, height: number | null = null, orientation: number | null = null;
   for (;;) {
     if (i >= n || b[i] !== 0xff) return unchanged;
     while (i < n && b[i] === 0xff) i++;          // fill bytes before a marker
@@ -143,11 +184,12 @@ export function stripJpegMetadata(bytes: Uint8Array): Stripped {
     }
     if (marker === 0xe0) { parts.push(segment); continue; }
     if (marker === 0xe2 && length >= 2 + ICC.length && ascii(b, payload, ICC.length) === ICC) { parts.push(segment); continue; }
-    if ((marker >= 0xe1 && marker <= 0xef) || marker === 0xfe) continue;              // other APPn, COM
+    if (marker === 0xe1 && orientation === null && length >= 2 + 6 && ascii(b, payload, 6) === 'Exif\0\0') orientation = exifOrientation(b, payload, i);
+    if ((marker >= 0xe1 && marker <= 0xef) || marker === 0xfe) continue;              // other APPn (EXIF too, once read), COM
     parts.push(segment);                                                              // DQT, DHT, DAC, DRI, DNL, ...
   }
   if (width === null) return unchanged;           // no frame header: not an image we can vouch for
-  return {bytes: concat(parts), stripped: true, width, height};
+  return {bytes: concat(parts), stripped: true, width, height, orientation: orientation ?? 1};
 }
 
 const PNG_DROP = new Set(['eXIf', 'tEXt', 'iTXt', 'zTXt', 'tIME']);
@@ -159,7 +201,7 @@ const PNG_DROP = new Set(['eXIf', 'tEXt', 'iTXt', 'zTXt', 'tIME']);
  * with stripped false; it never throws.
  */
 export function stripPngMetadata(bytes: Uint8Array): Stripped {
-  const unchanged: Stripped = {bytes, stripped: false, width: null, height: null};
+  const unchanged: Stripped = {bytes, stripped: false, width: null, height: null, orientation: 1};
   const b = bytes, n = b.length;
   if (n < 8 || ascii(b, 0, 8) !== '\x89PNG\r\n\x1a\n') return unchanged;
   const parts: Uint8Array[] = [b.subarray(0, 8)];
@@ -174,7 +216,7 @@ export function stripPngMetadata(bytes: Uint8Array): Stripped {
     if (type === 'IEND') { ended = true; break; }
   }
   if (!ended || width === null) return unchanged;
-  return {bytes: concat(parts), stripped: true, width, height};
+  return {bytes: concat(parts), stripped: true, width, height, orientation: 1};
 }
 
 // ---- incremental SHA-256 (for streamed uploads; WebCrypto digests only whole buffers) ----
@@ -263,6 +305,8 @@ export type IngestStatus = 'stored' | 'linked' | 'rejected';
 export interface IngestResult {
   id: string; status: IngestStatus; reason?: string;
   mime: string | null; bytes: number; width: number | null; height: number | null; r2Key: string; sha256: string; exifStripped: boolean;
+  /** A JPEG's EXIF Orientation (1-8), kept on the row and the R2 object; null for any other format. */
+  orientation: number | null;
 }
 
 export const mediaKey = (contactId: string, mediaId: string, ext: string): string => `advisor/media/${contactId}/${mediaId}.${ext}`;
@@ -304,13 +348,13 @@ async function ensureRow(db: D1Database, id: string, input: IngestInput, at: str
 export async function rejectMedia(db: D1Database, mediaId: string, reason: string, bytes = 0): Promise<IngestResult> {
   await db.prepare("UPDATE advisor_media SET kind='unknown',publish_state='rejected',mime='application/octet-stream',bytes=? WHERE id=?").bind(bytes, mediaId).run();
   advisorLog('warn', 'advisor_media_rejected', {reason, bytes, count: 1});
-  return {id: mediaId, status: 'rejected', reason, mime: null, bytes, width: null, height: null, r2Key: '', sha256: '', exifStripped: false};
+  return {id: mediaId, status: 'rejected', reason, mime: null, bytes, width: null, height: null, r2Key: '', sha256: '', exifStripped: false, orientation: null};
 }
 
-interface Fill {mime: string; kind: MediaKind; bytes: number; width: number | null; height: number | null; r2Key: string; sha256: string; exifStripped: boolean}
+interface Fill {mime: string; kind: MediaKind; bytes: number; width: number | null; height: number | null; r2Key: string; sha256: string; exifStripped: boolean; orientation: number | null}
 async function fillRow(db: D1Database, mediaId: string, f: Fill): Promise<void> {
-  await db.prepare('UPDATE advisor_media SET mime=?,kind=?,bytes=?,width=COALESCE(?,width),height=COALESCE(?,height),r2_key=?,sha256=?,exif_stripped=? WHERE id=?')
-    .bind(f.mime, f.kind, f.bytes, f.width, f.height, f.r2Key, f.sha256, f.exifStripped ? 1 : 0, mediaId).run();
+  await db.prepare('UPDATE advisor_media SET mime=?,kind=?,bytes=?,width=COALESCE(?,width),height=COALESCE(?,height),r2_key=?,sha256=?,exif_stripped=?,orientation=? WHERE id=?')
+    .bind(f.mime, f.kind, f.bytes, f.width, f.height, f.r2Key, f.sha256, f.exifStripped ? 1 : 0, f.orientation, mediaId).run();
 }
 interface Twin {r2_key: string; width: number | null; height: number | null; exif_stripped: number}
 /** An already stored object of this contact with the same bytes, if any. */
@@ -358,15 +402,16 @@ export async function ingestMedia(env: Env, input: IngestInput, now: number | Da
       return await multipartToBucket(env, id, input, sniffed, reader, read.partial);
     }
     const all = read.all;
-    let stored = all, width: number | null = null, height: number | null = null, exifStripped = false;
+    let stored = all, width: number | null = null, height: number | null = null, exifStripped = false, orientation: number | null = null;
     if (strippable) {
-      const result = sniffed.mime === 'image/jpeg' ? stripJpegMetadata(all) : stripPngMetadata(all);
+      const jpeg = sniffed.mime === 'image/jpeg', result = jpeg ? stripJpegMetadata(all) : stripPngMetadata(all);
       if (!result.stripped) return rejectMedia(db, id, 'strip-failed', all.length);
       ({width, height} = result); stored = result.bytes; exifStripped = true;
+      if (jpeg) orientation = result.orientation;
     }
     const sha = hex(await crypto.subtle.digest('SHA-256', stored));
-    return await store(env, id, input, sniffed, {bytes: stored.length, width, height, sha, exifStripped},
-      key => bucket.put(key, stored, {httpMetadata: {contentType: sniffed.mime}}).then(() => {}));
+    return await store(env, id, input, sniffed, {bytes: stored.length, width, height, sha, exifStripped, orientation},
+      key => bucket.put(key, stored, {httpMetadata: {contentType: sniffed.mime}, ...(orientation !== null ? {customMetadata: {orientation: String(orientation)}} : {})}).then(() => {}));
   } catch (error) {
     await reader.cancel().catch(() => {});
     if (fetchFailure(error)) throw new MediaFetchError('fetch failed: stream');
@@ -374,30 +419,34 @@ export async function ingestMedia(env: Env, input: IngestInput, now: number | Da
   }
 }
 
-interface Measured {bytes: number; width: number | null; height: number | null; sha: string; exifStripped: boolean}
+interface Measured {bytes: number; width: number | null; height: number | null; sha: string; exifStripped: boolean; orientation: number | null}
 
-/** TA-M1: an image vision cannot read as stored (over 4.5 MB, HEIC) has the media job started for its public.jpg. */
-async function deriveIfNeeded(env: Env, row: {kind: string; mime: string; bytes: number}): Promise<void> {
-  if (needsDerivedForVision(row)) await requestMediaJob(env);
+/**
+ * TA-M1: an image vision cannot read as stored (over 4.5 MB, HEIC), or a JPEG
+ * stored sideways (orientation 2-8), has the media job started for its upright public.jpg.
+ */
+async function deriveIfNeeded(env: Env, row: {kind: string; mime: string; bytes: number; orientation: number | null}): Promise<void> {
+  if (needsDerivedForVision(row) || (row.kind === 'image' && (row.orientation ?? 1) !== 1)) await requestMediaJob(env);
 }
 
 /** Link to the contact's identical object, or put a new one; then fill the row. */
 async function store(env: Env, id: string, input: IngestInput, sniffed: Sniffed, m: Measured, put: (key: string) => Promise<void>): Promise<IngestResult> {
   const db = env.DB!;
-  const base = {mime: sniffed.mime, kind: sniffed.kind, bytes: m.bytes, width: m.width, height: m.height, sha256: m.sha, exifStripped: m.exifStripped};
+  // orientation is this row's own (two originals that differ only in EXIF strip to the same bytes).
+  const base = {mime: sniffed.mime, kind: sniffed.kind, bytes: m.bytes, width: m.width, height: m.height, sha256: m.sha, exifStripped: m.exifStripped, orientation: m.orientation};
   const twin = await duplicateOf(db, input.contactId, id, m.sha);
   if (twin) {
     const linked = {...base, r2Key: twin.r2_key, width: twin.width ?? m.width, height: twin.height ?? m.height, exifStripped: twin.exif_stripped === 1};
     await fillRow(db, id, linked);
     advisorLog('info', 'advisor_media_linked', {kind: sniffed.kind, bytes: m.bytes});
-    await deriveIfNeeded(env, {kind: sniffed.kind, mime: sniffed.mime, bytes: m.bytes});
+    await deriveIfNeeded(env, {kind: sniffed.kind, mime: sniffed.mime, bytes: m.bytes, orientation: m.orientation});
     return {id, status: 'linked', ...linked};
   }
   const key = mediaKey(input.contactId, id, sniffed.ext);
   await put(key);
   await fillRow(db, id, {...base, r2Key: key});
   advisorLog('info', 'advisor_media_stored', {kind: sniffed.kind, bytes: m.bytes, stripped: m.exifStripped});
-  await deriveIfNeeded(env, {kind: sniffed.kind, mime: sniffed.mime, bytes: m.bytes});
+  await deriveIfNeeded(env, {kind: sniffed.kind, mime: sniffed.mime, bytes: m.bytes, orientation: m.orientation});
   return {id, status: 'stored', ...base, r2Key: key};
 }
 
@@ -445,7 +494,7 @@ async function multipartToBucket(env: Env, id: string, input: IngestInput, sniff
   const sha = hash.digest();
   const twin = await duplicateOf(db, input.contactId, id, sha);
   if (twin) await bucket.delete(key);
-  return store(env, id, input, sniffed, {bytes: size, width: null, height: null, sha, exifStripped: false}, async () => {});
+  return store(env, id, input, sniffed, {bytes: size, width: null, height: null, sha, exifStripped: false, orientation: null}, async () => {});
 }
 
 // ---- the consumer's step: download every placeholder of an inbound message --------
@@ -529,8 +578,8 @@ export async function verifyUploadToken(keys: {uploadKey: CryptoKey}, token: str
 
 // ---- TA-M1: the advisor-media runner job (09 § Derived images and graphics) ----------
 //
-//   media becomes pending (an image over 4.5 MB or a HEIC stored, a photo
-//   queued or approved; or a graphic requested) -> requestMediaJob dispatches
+//   media becomes pending (an image over 4.5 MB, a HEIC or a sideways JPEG
+//   stored, a photo queued or approved; or a graphic requested) -> requestMediaJob dispatches
 //   .github/workflows/advisor-media.yml (at most once a minute; the cron again
 //   every tick while anything is pending, at most once per 15 minutes) -> the job
 //   asks GET /api/advisor/jobs/media for mediaJobWork, writes
@@ -570,16 +619,18 @@ const HEIF_SQL = HEIF_MIMES.map(m => `'${m}'`).join(',');
 
 /**
  * Media the job still has to derive: stored images (not rejected) without
- * derived_at that a provider cannot take as stored (over 4.5 MB, or HEIC/HEIF)
- * or that are headed for review or publication (queued, approved, posted:
- * thumb.jpg for the admin queue, public.jpg for pages and Meta, story.jpg).
- * Private everyday photos are left alone.
+ * derived_at that a provider cannot take as stored (over 4.5 MB, or HEIC/HEIF),
+ * that are stored sideways (a JPEG whose EXIF orientation was 2-8: only
+ * public.jpg is upright), or that are headed for review or publication (queued,
+ * approved, posted: thumb.jpg for the admin queue, public.jpg for pages and
+ * Meta, story.jpg). Other private everyday photos are left alone.
  */
 const PENDING_MEDIA = `kind='image' AND r2_key<>'' AND publish_state<>'rejected' AND derived_at IS NULL
-  AND (bytes>? OR mime IN (${HEIF_SQL}) OR publish_state IN ('queued','approved','posted'))`;
+  AND (bytes>? OR mime IN (${HEIF_SQL}) OR orientation>1 OR publish_state IN ('queued','approved','posted'))`;
 
-export interface MediaWorkItem {id: string; r2_key: string; mime: string; sha256: string; bytes: number; keys: {public: string; thumb: string; story: string}}
-export interface GraphicWorkItem {id: string; kind: GraphicKind; out_key: string; data: Record<string, unknown>; media: {id: string; r2_key: string; mime: string; public_key: string}[]}
+/** `orientation`: the EXIF value read at intake (1-8, null when not a JPEG); the job applies it, since the stored original has no EXIF. */
+export interface MediaWorkItem {id: string; r2_key: string; mime: string; sha256: string; bytes: number; orientation: number | null; keys: {public: string; thumb: string; story: string}}
+export interface GraphicWorkItem {id: string; kind: GraphicKind; out_key: string; data: Record<string, unknown>; media: {id: string; r2_key: string; mime: string; orientation: number | null; public_key: string}[]}
 export interface MediaWork {media: MediaWorkItem[]; graphics: GraphicWorkItem[]}
 
 const nowMs = (now: number | Date): number => new Date(now).getTime();
@@ -593,8 +644,8 @@ export async function mediaJobPending(db: D1Database): Promise<number> {
 
 /** One page of work for the job, oldest first: GET /api/advisor/jobs/media. */
 export async function mediaJobWork(db: D1Database, limit = WORK_LIMIT): Promise<MediaWork> {
-  const rows = (await db.prepare(`SELECT id,r2_key,mime,sha256,bytes FROM advisor_media WHERE ${PENDING_MEDIA} ORDER BY created_at,id LIMIT ?`)
-    .bind(VISION_MAX_BYTES, limit.media).all<{id: string; r2_key: string; mime: string; sha256: string; bytes: number}>()).results;
+  const rows = (await db.prepare(`SELECT id,r2_key,mime,sha256,bytes,orientation FROM advisor_media WHERE ${PENDING_MEDIA} ORDER BY created_at,id LIMIT ?`)
+    .bind(VISION_MAX_BYTES, limit.media).all<{id: string; r2_key: string; mime: string; sha256: string; bytes: number; orientation: number | null}>()).results;
   const media = rows.map(r => ({...r, keys: derivedKeys(r.id)}));
   const states = (await db.prepare("SELECT key,value FROM job_state WHERE key LIKE 'advisor.graphic.%' AND json_valid(value) AND json_extract(value,'$.status')='pending' ORDER BY updated_at,key LIMIT ?")
     .bind(limit.graphics).all<{key: string; value: string}>()).results;
@@ -602,8 +653,8 @@ export async function mediaJobWork(db: D1Database, limit = WORK_LIMIT): Promise<
   for (const {key, value} of states) {
     const id = key.slice(GRAPHIC_PREFIX.length), state = JSON.parse(value) as GraphicState;
     const ids = (state.media_ids ?? []).filter(m => ID.test(m)).slice(0, MAX_GRAPHIC_MEDIA);
-    const found = ids.length ? (await db.prepare(`SELECT id,r2_key,mime FROM advisor_media WHERE id IN (${ids.map(() => '?').join(',')}) AND kind='image' AND r2_key<>'' AND publish_state<>'rejected'`)
-      .bind(...ids).all<{id: string; r2_key: string; mime: string}>()).results : [];
+    const found = ids.length ? (await db.prepare(`SELECT id,r2_key,mime,orientation FROM advisor_media WHERE id IN (${ids.map(() => '?').join(',')}) AND kind='image' AND r2_key<>'' AND publish_state<>'rejected'`)
+      .bind(...ids).all<{id: string; r2_key: string; mime: string; orientation: number | null}>()).results : [];
     const byId = new Map(found.map(m => [m.id, m]));
     graphics.push({id, kind: state.kind, out_key: state.out_key, data: state.data ?? {},
       media: ids.flatMap(m => { const row = byId.get(m); return row ? [{...row, public_key: derivedKey(m)}] : []; })});

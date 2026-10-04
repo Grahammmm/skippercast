@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Keep text-advisor photos upright: intake still strips all EXIF but keeps the JPEG's orientation value, so derived images are turned the right way, vision is told when a photo is rotated, and a sideways original is never shown on a page.
+
 - Remember bounded completed seafloor discovery tests in an expiring private checkpoint. Keep changed or damaged evidence actionable, preserve separate recovery scopes, and avoid treating duplicate leads as new mapping work.
 
 - Refine Big Sur habitat outlines with the original BSS08 2 m rough/smooth terrain layer. Preserve measured depth, uncertainty, credited noncommercial terms and spatial screening; this adds no new surveyed area.

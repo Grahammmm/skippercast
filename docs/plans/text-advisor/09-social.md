@@ -175,11 +175,33 @@ reason the admin can see.
   `skippercast.com/text` without one.
 - **Video.** Not processed: no `ffprobe` probing was built, so no skip reason
   for it was allow-listed (09 above; a later task can add it).
-- **Orientation.** Intake strips every APP1 segment, including the EXIF
-  Orientation tag, so a JPEG whose camera relied on that tag is stored (and
-  derived) sideways. The job cannot recover it; fixing it belongs to intake
-  (keep a minimal Orientation-only APP1). HEIC orientation is in the container
-  and is applied.
+- **Orientation.** Found in review: intake stripped every APP1 segment,
+  including the EXIF Orientation tag, so a JPEG whose camera relied on that
+  tag was stored and derived sideways. Fixed as below.
+
+### As built (orientation)
+
+- **Intake.** `stripJpegMetadata` reads the Orientation tag (1-8) from the
+  first EXIF APP1 before dropping it; the value goes on the row
+  (`advisor_media.orientation`, migration `0010_advisor_media_orientation`;
+  null for anything but a JPEG) and the R2 object's custom metadata
+  `orientation`. The stored bytes still carry no EXIF.
+- **Pending work.** `mediaJobWork` also lists images with `orientation > 1`
+  (private ones too), and each work item (and each graphic's photo) carries
+  `orientation`. Intake dispatches the job when it stores such a JPEG.
+- **The job.** `decode` applies the stored value with the same transpose table
+  as `ImageOps.exif_transpose` (2 mirror, 3 180, 4 flip, 5 transpose, 6 rotate
+  270, 7 transverse, 8 rotate 90), since the stored original has no EXIF for
+  Pillow to read; without a stored value (HEIC and other originals stored as
+  received) it still applies the file's own EXIF. `public.jpg`, `thumb.jpg`,
+  `story.jpg` and a graphic's fallback to the original are upright. Each
+  derived object records `x-amz-meta-orientation`, and the unchanged-item
+  shortcut requires it to match, so files derived sideways before this change
+  are rendered again.
+- **`/media`.** Prefers `public.jpg` as before; a stripped JPEG with
+  orientation 2-8 is never served as the original (404 until `public.jpg`
+  exists), since its pixels are sideways without the tag.
+- PNG `eXIf` orientation is not read (PNG rows have a null orientation).
 
 ## Drafts (SO-1, SP-3)
 
@@ -273,7 +295,7 @@ the admin calendar shows them so the owner can post something by hand.
   `instagram_comment`). Subscribe the IG account with
   `POST /<ig-user-id>/subscribed_apps?subscribed_fields=messages,comments`.
 - DMs: a contact keyed by IGSID (`advisor_contacts.ig_sid`, added in
-  migration 0010, unique) runs through the same engine with
+  migration 0011, unique) runs through the same engine with
   `channel='instagram_dm'`; replies go to `POST /<ig-user-id>/messages`
   within the 24-hour window; every third reply ends with the "continue by
   text" line and the `text?s=igdm` link.

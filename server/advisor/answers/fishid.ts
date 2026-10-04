@@ -34,7 +34,7 @@ import type {Env} from '../../env.ts';
 import type {AdvisorContactRow, AdvisorSettings, Language} from '../types.ts';
 
 /** The stored photo a fish ID reads (an advisor_media row's columns). */
-export interface MediaInput {id: string; mime: string; width: number | null; height: number | null; r2_key: string}
+export interface MediaInput {id: string; mime: string; width: number | null; height: number | null; r2_key: string; orientation?: number | null}
 
 export type {FishBand} from '../vision/index.ts';
 

@@ -19,8 +19,8 @@ export const identifyFish: AdvisorTool = {
   intent: 'fishid',
   async run(input, ctx) {
     const mediaId = String(input.media_id ?? '');
-    const row = /^[\w-]{1,64}$/.test(mediaId) ? await ctx.db.prepare("SELECT id,kind,mime,width,height,r2_key FROM advisor_media WHERE id=? AND contact_id=? AND kind='image' AND publish_state<>'rejected'")
-      .bind(mediaId, ctx.contact.id).first<{id: string; kind: string; mime: string; width: number | null; height: number | null; r2_key: string}>() : null;
+    const row = /^[\w-]{1,64}$/.test(mediaId) ? await ctx.db.prepare("SELECT id,kind,mime,width,height,r2_key,orientation FROM advisor_media WHERE id=? AND contact_id=? AND kind='image' AND publish_state<>'rejected'")
+      .bind(mediaId, ctx.contact.id).first<{id: string; kind: string; mime: string; width: number | null; height: number | null; r2_key: string; orientation: number | null}>() : null;
     if (!row || !ctx.env.ADVISOR_MEDIA) return {result: {error: 'no such photo from this person'}};
     const out = await identify(ctx.env, row, ctx.contact, {vision: chainFor(ctx.env, ctx.deps), language: ctx.language, now: ctx.now, settings: ctx.settings});
     if (!out.ok) return {result: {unavailable: true, reason: out.error === 'too_large' ? 'photo too large: offer the upload link (send_upload_link)' : 'photo reading is unavailable right now'}};
