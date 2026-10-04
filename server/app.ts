@@ -2,7 +2,7 @@
 // order registered, and the first route that answers ends the request.
 //
 //   metrics -> request-id -> security headers (+ renewed session cookie) -> context
-//   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> /api/auth/ -> /api/session
+//   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> advisor (gated) -> /api/auth/ -> /api/session
 //   -> private gate (signed in, Origin, budget) -> private /api/ -> /api/ 404
 //   -> static assets and page shells
 //
@@ -20,6 +20,7 @@ import {om} from './routes/om.ts';
 import {publicApi} from './routes/public.ts';
 import {telemetry} from './routes/telemetry.ts';
 import {jobs} from './routes/jobs.ts';
+import {advisorPublic} from './routes/advisor.ts';
 import {auth} from './routes/auth.ts';
 import {session, privacy} from './routes/account.ts';
 import {boat} from './routes/boat.ts';
@@ -43,6 +44,8 @@ app.route('/', om);
 app.route('/', publicApi);
 app.route('/', telemetry);
 app.route('/', jobs);
+// Text Advisor: webhooks, pages, media; 404 per request unless TEXT_ADVISOR_ENABLED=true (server/advisor/gate.ts).
+app.route('/', advisorPublic);
 app.route('/', auth);
 app.route('/', session);
 // Everything below needs a signed-in user.

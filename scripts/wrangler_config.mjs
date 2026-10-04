@@ -9,6 +9,9 @@
 // in the deploy workflow), add their bindings only when set to "true":
 //   ENABLE_QUEUES     the trip-check queue and its dead-letter queue (server/trip-queue.ts)
 //   ENABLE_ANALYTICS  the Workers Analytics Engine dataset skippercast_events (server/analytics.ts)
+//   ENABLE_ADVISOR    the Text Advisor's private media bucket and queue pair (docs/plans/text-advisor/)
+// With ENABLE_ADVISOR, TEXT_ADVISOR_ENABLED and every ADVISOR_* variable set in
+// the environment are copied into the Worker's vars (never a secret).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
 // $schema path, a URL) is never mistaken for a comment.
 import {readFileSync, writeFileSync} from 'node:fs';
@@ -55,13 +58,50 @@ export const TRIP_QUEUES = {
 // Workers Analytics Engine: the dataset is created by Cloudflare on first write.
 export const ANALYTICS_DATASETS = [{binding: 'ANALYTICS', dataset: 'skippercast_events'}];
 
-/** {queues, analytics} from environment variables; "true" (any case) turns a feature on. */
-export function features(environ = {}) {
-  const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
-  return {queues: on('ENABLE_QUEUES'), analytics: on('ENABLE_ANALYTICS')};
+// Text Advisor queue (docs/plans/text-advisor/01-architecture.md): its own consumer
+// entry, not shared with trip checks. Up to 10 inbound messages a batch, at most 2
+// batches at once; 3 retries 20 s apart, then the dead-letter queue, whose
+// consumer logs, acks and sends at most one apology an hour.
+export const ADVISOR_QUEUES = {
+  producers: [{queue: 'skippercast-advisor', binding: 'ADVISOR_QUEUE'}],
+  consumers: [
+    {queue: 'skippercast-advisor', max_batch_size: 10, max_batch_timeout: 5, max_retries: 3, max_concurrency: 2,
+      retry_delay: 20, dead_letter_queue: 'skippercast-advisor-dlq'},
+    {queue: 'skippercast-advisor-dlq', max_batch_size: 25, max_batch_timeout: 30, max_retries: 0, max_concurrency: 1},
+  ],
+};
+// Private bucket for advisor media (originals with EXIF stripped, derived files).
+export const ADVISOR_BUCKET = {binding: 'ADVISOR_MEDIA', bucket_name: 'skippercast-advisor-media'};
+// Worker secrets the advisor uses (01 secrets table). A deploy variable with one of
+// these names is a mistake that would publish the secret in plain vars: refuse it.
+// Only ADVISOR_* names can reach vars, so the ADVISOR_* secrets (ADVISOR_WEBHOOK_TOKEN,
+// ADVISOR_PHONE_KEY) must reach cloudflare_deploy.sh under another source name, e.g.
+// SECRET_ADVISOR_PHONE_KEY mapped in its secrets list, like WATCHDOG_GITHUB_TOKEN -> GITHUB_TOKEN.
+export const ADVISOR_SECRETS = new Set(['ANTHROPIC_API_KEY', 'ADVISOR_WEBHOOK_TOKEN', 'BLUEBUBBLES_URL', 'BLUEBUBBLES_PASSWORD',
+  'CF_ACCESS_CLIENT_ID', 'CF_ACCESS_CLIENT_SECRET', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM',
+  'HERMES_VISION_URL', 'HERMES_VISION_TOKEN', 'META_APP_ID', 'META_APP_SECRET', 'META_VERIFY_TOKEN', 'META_IG_USER_ID',
+  'META_IG_TOKEN', 'META_PAGE_ID', 'META_PAGE_TOKEN', 'ADVISOR_PHONE_KEY', 'CF_ANALYTICS_TOKEN', 'R2_ADVISOR_TOKEN']);
+// Advisor vars that are not ADVISOR_*-prefixed but belong to it (01 runtime-vars table).
+const ADVISOR_VARS = new Set(['TEXT_ADVISOR_ENABLED', 'BLUEBUBBLES_PRIVATE_API']);
+
+/** The advisor's plain vars from an environment: TEXT_ADVISOR_ENABLED, BLUEBUBBLES_PRIVATE_API and ADVISOR_*, non-empty only. */
+export function advisorVars(environ = {}) {
+  const vars = {};
+  for (const [key, value] of Object.entries(environ).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) {
+    if (!(ADVISOR_VARS.has(key) || key.startsWith('ADVISOR_'))) continue;
+    if (ADVISOR_SECRETS.has(key)) throw Error(`${key} is a secret and must not be a deploy variable`);
+    if (typeof value === 'string' && value.trim() !== '') vars[key] = value.trim();
+  }
+  return vars;
 }
 
-export function deployConfig(text, databaseId, bucket, domains = '', {queues = false, analytics = false} = {}) {
+/** {queues, analytics, advisor} from environment variables; "true" (any case) turns a feature on. */
+export function features(environ = {}) {
+  const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
+  return {queues: on('ENABLE_QUEUES'), analytics: on('ENABLE_ANALYTICS'), advisor: on('ENABLE_ADVISOR')};
+}
+
+export function deployConfig(text, databaseId, bucket, domains = '', {queues = false, analytics = false, advisor = false, environ = {}} = {}) {
   if (!/^[0-9a-f-]{36}$/.test(databaseId)) throw Error(`not a D1 database id: ${databaseId}`);
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw Error(`not an R2 bucket name: ${bucket}`);
   const config = JSON.parse(stripJsonComments(text));
@@ -74,13 +114,21 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
   if (hosts.length) config.routes = hosts.map(pattern => ({pattern, custom_domain: true}));
   if (queues) config.queues = structuredClone(TRIP_QUEUES);
   if (analytics) config.analytics_engine_datasets = structuredClone(ANALYTICS_DATASETS);
+  if (advisor) {
+    const extra = structuredClone(ADVISOR_QUEUES);
+    config.queues = config.queues
+      ? {producers: [...config.queues.producers, ...extra.producers], consumers: [...config.queues.consumers, ...extra.consumers]}
+      : extra;
+    config.r2_buckets.push({...ADVISOR_BUCKET});
+    config.vars = {...config.vars, ...advisorVars(environ)};
+  }
   return config;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [databaseId, bucket, out = 'wrangler.deploy.jsonc'] = process.argv.slice(2);
   const enabled = features(process.env);
-  const config = deployConfig(readFileSync('wrangler.jsonc', 'utf8'), databaseId || '', bucket || '', process.argv[5] || '', enabled);
+  const config = deployConfig(readFileSync('wrangler.jsonc', 'utf8'), databaseId || '', bucket || '', process.argv[5] || '', {...enabled, environ: process.env});
   writeFileSync(out, JSON.stringify(config, null, 2) + '\n');
   const on = Object.keys(enabled).filter(k => enabled[k]);
   console.log(`Wrote ${out}${on.length ? ` (with ${on.join(', ')})` : ''}`);

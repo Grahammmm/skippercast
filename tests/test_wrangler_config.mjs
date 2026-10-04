@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains, features} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features, advisorVars, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
 
 test('comment stripping leaves // and /* inside strings alone', () => {
   const text = '{\n  // a comment\n  "url": "https://example.com/a//b", /* block */ "glob": "x/*y*/z",\n  "n": 1, // trailing\n}';
@@ -131,4 +131,97 @@ test('the deploy script takes the VAPID pair from the backup bucket, generating 
     assert.match(short.stderr, /wrong length/);
     assert.doesNotMatch(readFileSync(log, 'utf8'), /d1 export|migrations apply|deploy --config/, 'nothing deployed on a bad pair');
   } finally { rmSync(dir, {recursive: true, force: true}); }
+});
+
+const ID = '12345678-1234-1234-1234-123456789abc';
+const committed = () => readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+const ADVISOR_ENV = {TEXT_ADVISOR_ENABLED: 'true', ADVISOR_CHANNEL: 'twilio', ADVISOR_MODEL: ' claude-opus-5-5 ', ADVISOR_NUMBER: '',
+  BLUEBUBBLES_PRIVATE_API: 'true', ENABLE_ADVISOR: 'true', PATH: '/usr/bin', OTHER_ADVISOR: 'x'};
+
+test('advisor off: the deploy config is byte-identical to the config without the feature, whatever the environment holds', () => {
+  const text = committed();
+  // What deployConfig produced before ENABLE_ADVISOR existed: the committed file with the id, bucket and workers.dev filled in.
+  const before = JSON.parse(stripJsonComments(text));
+  before.d1_databases[0].database_id = ID; before.r2_buckets[0].bucket_name = 'skippercast-feeds'; before.workers_dev = true;
+  const serialize = config => JSON.stringify(config, null, 2) + '\n';
+  assert.equal(serialize(deployConfig(text, ID, 'skippercast-feeds')), serialize(before));
+  assert.equal(serialize(deployConfig(text, ID, 'skippercast-feeds', '', {advisor: false, environ: ADVISOR_ENV})), serialize(before));
+  assert.equal(serialize(deployConfig(text, ID, 'skippercast-feeds', '', {queues: true, environ: ADVISOR_ENV})),
+    serialize(deployConfig(text, ID, 'skippercast-feeds', '', {queues: true})));
+  for (const value of [undefined, '', 'false', '1', 'TRUE ']) assert.equal(features({ENABLE_ADVISOR: value}).advisor, value === 'TRUE ', String(value));
+});
+
+test('advisor on: the private media bucket, the advisor queue pair and the advisor vars are added', () => {
+  const config = deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true, environ: ADVISOR_ENV});
+  assert.deepEqual(config.r2_buckets, [{binding: 'FEEDS', bucket_name: 'skippercast-feeds'}, {binding: 'ADVISOR_MEDIA', bucket_name: 'skippercast-advisor-media'}]);
+  assert.deepEqual(config.queues.producers, [{queue: 'skippercast-advisor', binding: 'ADVISOR_QUEUE'}]);
+  assert.deepEqual(config.queues.consumers, [
+    {queue: 'skippercast-advisor', max_batch_size: 10, max_batch_timeout: 5, max_retries: 3, max_concurrency: 2, retry_delay: 20, dead_letter_queue: 'skippercast-advisor-dlq'},
+    {queue: 'skippercast-advisor-dlq', max_batch_size: 25, max_batch_timeout: 30, max_retries: 0, max_concurrency: 1},
+  ]);
+  // Existing vars stay; advisor vars are trimmed, empty ones left out, unrelated keys ignored.
+  assert.deepEqual(config.vars, {IDENTITY_PROVIDER: 'skippercast', BOAT_LOOKUP_ENABLED: 'true', BOAT_LOOKUP_GLOBAL_DAILY_LIMIT: '500',
+    ADVISOR_CHANNEL: 'twilio', ADVISOR_MODEL: 'claude-opus-5-5', BLUEBUBBLES_PRIVATE_API: 'true', TEXT_ADVISOR_ENABLED: 'true'});
+  // Without advisor vars in the environment only the bindings change.
+  assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true}).vars, JSON.parse(stripJsonComments(committed())).vars);
+  const env = readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8');
+  for (const binding of ['ADVISOR_MEDIA', 'ADVISOR_QUEUE', ...Object.keys(config.vars)]) assert.match(env, new RegExp(`^\\s+${binding}\\?:`, 'm'), `server/env.ts declares ${binding}`);
+});
+
+test('trip and advisor queues together: producers and consumers are concatenated, trip first', () => {
+  const config = deployConfig(committed(), ID, 'skippercast-feeds', '', {queues: true, advisor: true});
+  assert.deepEqual(config.queues.producers.map(p => p.binding), ['TRIP_QUEUE', 'ADVISOR_QUEUE']);
+  assert.deepEqual(config.queues.consumers.map(c => c.queue), ['skippercast-trip-checks', 'skippercast-trip-checks-dlq', 'skippercast-advisor', 'skippercast-advisor-dlq']);
+  // The exported constants are never mutated by a build.
+  assert.equal(deployConfig(committed(), ID, 'skippercast-feeds', '', {queues: true}).queues.producers.length, 1);
+});
+
+test('a secret named as a deploy variable is refused, never copied into vars', () => {
+  for (const key of ['ADVISOR_WEBHOOK_TOKEN', 'ADVISOR_PHONE_KEY'])
+    assert.throws(() => deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true, environ: {[key]: 'secret-value'}}), new RegExp(key));
+  // Non-advisor secret names are not vars candidates at all, so they are simply ignored.
+  assert.deepEqual(advisorVars({ANTHROPIC_API_KEY: 'k', TWILIO_AUTH_TOKEN: 't', META_IG_TOKEN: 'm'}), {});
+  assert.ok(ADVISOR_SECRETS.has('ADVISOR_WEBHOOK_TOKEN') && ADVISOR_SECRETS.has('ADVISOR_PHONE_KEY'));
+  // Even an empty secret-named variable is refused: its presence is the mistake.
+  assert.throws(() => advisorVars({ADVISOR_PHONE_KEY: ''}), /ADVISOR_PHONE_KEY/);
+});
+
+test('the CLI reads ENABLE_ADVISOR and the advisor vars from the environment', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wrangler-config-')), out = join(dir, 'w.json'), cwd = fileURLToPath(new URL('..', import.meta.url));
+  try {
+    const on = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
+      env: {...process.env, ENABLE_ADVISOR: 'true', ENABLE_QUEUES: '', TEXT_ADVISOR_ENABLED: 'true', ADVISOR_CHANNEL: 'twilio'}});
+    assert.equal(on.status, 0, on.stderr);
+    assert.match(on.stdout, /with advisor/);
+    const config = JSON.parse(readFileSync(out, 'utf8'));
+    assert.equal(config.vars.TEXT_ADVISOR_ENABLED, 'true'); assert.equal(config.vars.ADVISOR_CHANNEL, 'twilio');
+    assert.equal(config.queues.producers[0].binding, 'ADVISOR_QUEUE');
+    const off = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
+      env: {...process.env, ENABLE_ADVISOR: '', ENABLE_QUEUES: '', TEXT_ADVISOR_ENABLED: 'true'}});
+    assert.equal(off.status, 0, off.stderr);
+    assert.equal(JSON.parse(readFileSync(out, 'utf8')).vars.TEXT_ADVISOR_ENABLED, undefined, 'vars are copied only with ENABLE_ADVISOR');
+    const secret = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
+      env: {...process.env, ENABLE_ADVISOR: 'true', ADVISOR_WEBHOOK_TOKEN: 'leak-me'}});
+    assert.notEqual(secret.status, 0);
+    assert.match(secret.stderr, /ADVISOR_WEBHOOK_TOKEN is a secret/);
+    assert.doesNotMatch(secret.stderr + secret.stdout, /leak-me/);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('the deploy script creates the advisor bucket and queues only with ENABLE_ADVISOR, before the config that binds them', () => {
+  const script = readFileSync(new URL('../scripts/cloudflare_deploy.sh', import.meta.url), 'utf8');
+  const block = script.indexOf('if [ "${ENABLE_ADVISOR:-}" = "true" ]'), generate = script.indexOf('node scripts/wrangler_config.mjs');
+  assert.ok(block > 0 && block < generate, 'the advisor block runs before the deploy config is written');
+  const body = script.slice(block, script.indexOf('\nfi\n', block));
+  assert.match(body, /r2 bucket create skippercast-advisor-media/);
+  assert.match(body, /grep -qi "already exist"/, 'an existing bucket is success');
+  assert.match(body, /for queue in skippercast-advisor-dlq skippercast-advisor; do/, 'the dead-letter queue is created first');
+  assert.match(body, /queues info "\$queue"/);
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  for (const name of ['ENABLE_ADVISOR', 'TEXT_ADVISOR_ENABLED', 'ADVISOR_CHANNEL', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
+    'ADVISOR_NUMBER', 'ADVISOR_PUBLIC_BASE', 'ADVISOR_REGION_DEFAULT', 'ADVISOR_MODEL', 'ADVISOR_VISION_MODEL', 'ADVISOR_VISION_PROVIDERS',
+    'ADVISOR_DAILY_MESSAGES_PER_CONTACT', 'ADVISOR_DAILY_LLM_PER_CONTACT', 'ADVISOR_GLOBAL_DAILY_LLM', 'ADVISOR_GLOBAL_DAILY_VISION',
+    'ADVISOR_AUTO_PUBLISH_AFTER', 'ADVISOR_ADMIN_CONTACT_ID', 'ADVISOR_INBOX_PUBLIC_REPLIES', 'BLUEBUBBLES_PRIVATE_API'])
+    assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
+  for (const secret of ADVISOR_SECRETS) assert.doesNotMatch(workflow, new RegExp(`\\b${secret}: \\$\\{\\{ vars\\.`), `${secret} is never a variable`);
 });

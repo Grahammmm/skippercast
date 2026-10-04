@@ -80,6 +80,29 @@ jobs:
           CUSTOM_DOMAINS: ${{ vars.CUSTOM_DOMAINS }}
           # "true" adds the trip-check queues (creates them if missing); docs/cloudflare.md.
           ENABLE_QUEUES: ${{ vars.ENABLE_QUEUES }}
+          # "true" adds the Text Advisor's media bucket and queues (creates them if missing); docs/plans/text-advisor/.
+          ENABLE_ADVISOR: ${{ vars.ENABLE_ADVISOR }}
+          # Text Advisor runtime settings, copied into the Worker's vars only with ENABLE_ADVISOR;
+          # unset means the default in server/advisor/settings.ts. TEXT_ADVISOR_ENABLED=true turns the advisor on.
+          TEXT_ADVISOR_ENABLED: ${{ vars.TEXT_ADVISOR_ENABLED }}
+          ADVISOR_CHANNEL: ${{ vars.ADVISOR_CHANNEL }}
+          ADVISOR_REPLIES_ENABLED: ${{ vars.ADVISOR_REPLIES_ENABLED }}
+          ADVISOR_SOCIAL_ENABLED: ${{ vars.ADVISOR_SOCIAL_ENABLED }}
+          ADVISOR_INBOX_ENABLED: ${{ vars.ADVISOR_INBOX_ENABLED }}
+          ADVISOR_NUMBER: ${{ vars.ADVISOR_NUMBER }}
+          ADVISOR_PUBLIC_BASE: ${{ vars.ADVISOR_PUBLIC_BASE }}
+          ADVISOR_REGION_DEFAULT: ${{ vars.ADVISOR_REGION_DEFAULT }}
+          ADVISOR_MODEL: ${{ vars.ADVISOR_MODEL }}
+          ADVISOR_VISION_MODEL: ${{ vars.ADVISOR_VISION_MODEL }}
+          ADVISOR_VISION_PROVIDERS: ${{ vars.ADVISOR_VISION_PROVIDERS }}
+          ADVISOR_DAILY_MESSAGES_PER_CONTACT: ${{ vars.ADVISOR_DAILY_MESSAGES_PER_CONTACT }}
+          ADVISOR_DAILY_LLM_PER_CONTACT: ${{ vars.ADVISOR_DAILY_LLM_PER_CONTACT }}
+          ADVISOR_GLOBAL_DAILY_LLM: ${{ vars.ADVISOR_GLOBAL_DAILY_LLM }}
+          ADVISOR_GLOBAL_DAILY_VISION: ${{ vars.ADVISOR_GLOBAL_DAILY_VISION }}
+          ADVISOR_AUTO_PUBLISH_AFTER: ${{ vars.ADVISOR_AUTO_PUBLISH_AFTER }}
+          ADVISOR_ADMIN_CONTACT_ID: ${{ vars.ADVISOR_ADMIN_CONTACT_ID }}
+          ADVISOR_INBOX_PUBLIC_REPLIES: ${{ vars.ADVISOR_INBOX_PUBLIC_REPLIES }}
+          BLUEBUBBLES_PRIVATE_API: ${{ vars.BLUEBUBBLES_PRIVATE_API }}
           # "true" binds the Analytics Engine dataset skippercast_events; docs/cloudflare.md#observability.
           ENABLE_ANALYTICS: ${{ vars.ENABLE_ANALYTICS }}
         run: |
