@@ -160,6 +160,8 @@ const {resolvePort, resolveSpecies, findPort, landingNames} = await import('../s
 const advice = await import('../server/advisor/answers/advice.ts');
 const {AD2_LINE} = await import('../server/advisor/tools/get_strategy.ts');
 const {MAX_REPORT_AGE_DAYS} = await import('../server/advisor/tools/get_port_report.ts');
+const {TRIP_TYPE_DAYS} = await import('../server/advisor/tools/get_trips.ts');
+const {resolveLinks} = await import('../server/advisor/links.ts');
 
 const DAILY = () => read('./fixtures/feeds/daily-latest.json');
 const INTEL = () => read('./fixtures/feeds/intelligence.json');
@@ -633,4 +635,71 @@ dbTest('get_trips: verified boats only, by most recent report; trip types from 6
   assert.match(psl.note, /the boats I work with so far/);
   const none = (await tool.run({port: 'monterey'}, dataCtx({db}))).result;
   assert.deepEqual([none.boats, none.few, none.link], [[], true, '{{link:port:monterey}}']);
+});
+
+// ---- TA-A5: get_trips, clause by clause (06 § trips for newcomers, AD-3) ------------------------
+
+/** Boats whose name order differs from their report order, plus the statuses and reports each 06 clause turns on. */
+function seedTrips(sql, {extra = 0} = {}) {
+  const iso = '2026-07-01T00:00:00Z';
+  const boat = (id, name, status, {landing = 'Example Landing', booking = null, port = 'morro-bay'} = {}) => sql.prepare(`INSERT INTO advisor_boats(id,slug,name,landing,port,region,booking_url,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)`)
+    .run(id, `slug-${id}`, name, landing, port, 'morro-bay', booking, status, iso, iso);
+  const report = (id, boatId, date, tripType, status = 'published') => sql.prepare(`INSERT INTO advisor_reports(id,boat_id,region,port,report_date,trip_type,anglers,counts_json,source,status,verified,published_at,created_at,updated_at)
+      VALUES(?,?,'morro-bay','morro-bay',?,?,20,'[]',?,?,1,?,?,?)`).run(id, boatId, date, tripType, `text-${id}`, status, status === 'published' ? `${date}T22:00:00Z` : null, iso, iso);
+  boat('alpha', 'Alpha Example', 'verified', {booking: 'https://example.com/alpha'});
+  boat('zulu', 'Zulu Example', 'verified', {landing: 'Other Landing'});
+  boat('mike', 'Mike Example', 'verified', {landing: null});
+  boat('rej', 'Rejected Example', 'rejected');
+  boat('pend', 'Pending Example', 'pending');
+  report('a1', 'alpha', '2026-09-10', 'full-day');
+  report('a2', 'alpha', '2026-07-30', 'overnight');    // exactly 60 days before 2026-09-28: in
+  report('a3', 'alpha', '2026-07-29', 'half-day');     // 61 days: out
+  report('z1', 'zulu', '2026-09-27', 'half-day');
+  report('z2', 'zulu', '2026-09-28', 'overnight', 'draft');            // a draft is not a report
+  report('z3', 'zulu', '2026-09-26', 'full-day', 'withdrawn');
+  report('r1', 'rej', '2026-09-28', 'full-day');
+  report('p1', 'pend', '2026-09-28', 'full-day');
+  for (let i = 0; i < extra; i++) { boat(`x${i}`, `Extra ${String(i).padStart(2, '0')}`, 'verified'); report(`x${i}`, `x${i}`, '2026-09-01', 'full-day'); }
+}
+
+dbTest('get_trips (06 § trips): verified boats only, with landing, https booking link and boat page; trip types from the last 60 days; newest report first; never ranked', async () => {
+  const {sql, db} = advisorDatabase();
+  seedTrips(sql);
+  const out = (await TOOL_BY_NAME.get('get_trips').run({port: 'morro-bay'}, dataCtx({db}))).result;
+  // Verified boats only: rejected and pending boats never appear, even with the newest reports.
+  assert.deepEqual(out.boats.map(b => b.name), ['Zulu Example', 'Alpha Example', 'Mike Example'], 'by most recent published report, not by name; no report last');
+  assert.ok(!/Rejected Example|Pending Example/.test(JSON.stringify(out)));
+  const [zulu, alpha, mike] = out.boats;
+  // Landing, booking link (https only) and the boat page placeholder, which links.ts resolves to the boat page.
+  assert.deepEqual([zulu.landing, alpha.landing, mike.landing], ['Other Landing', 'Example Landing', null]);
+  assert.deepEqual([alpha.booking_url, zulu.booking_url], ['https://example.com/alpha', null]);
+  assert.equal(alpha.boat_page, '{{link:boat:slug-alpha}}');
+  assert.equal(resolveLinks(`Book or read more: ${alpha.boat_page}`, 'https://skippercast.com').text, 'Book or read more: https://skippercast.com/boats/slug-alpha?s=txt');
+  // Trip types: distinct values from published reports of the last 60 days (the 60th day counts, the 61st does not; drafts and withdrawn reports never).
+  assert.deepEqual(alpha.trip_types, ['full-day', 'overnight']);
+  assert.deepEqual(zulu.trip_types, ['half-day']);
+  assert.deepEqual(mike.trip_types, []);
+  assert.deepEqual([zulu.last_report, alpha.last_report, mike.last_report], ['2026-09-27', '2026-09-10', null], 'a draft never counts as the latest report');
+  assert.equal(TRIP_TYPE_DAYS, 60);
+  // Never ranks: no score, rating or "best" anywhere, and the note says the order is not a ranking.
+  for (const b of out.boats) assert.deepEqual(Object.keys(b).sort(), ['boat_page', 'booking_url', 'landing', 'last_report', 'name', 'trip_types']);
+  assert.doesNotMatch(JSON.stringify(out), /\b(?:rank(?!ed)|score|rating|best|top pick|recommended)\b/i);
+  assert.match(out.note, /not ranked/); assert.match(out.note, /Never recommend one boat over another/);
+  assert.deepEqual([out.few, out.link], [false, '{{link:port:morro-bay}}']);
+});
+
+dbTest('get_trips (06 § trips): under two verified boats is few with the port link; two is not; at most twelve boats', async () => {
+  const one = advisorDatabase();
+  one.sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,status,created_at,updated_at) VALUES('b1','only-one','Only Example','morro-bay','morro-bay','verified','2026-09-01','2026-09-01')`).run();
+  one.sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,status,created_at,updated_at) VALUES('b2','not-yet','Not Yet Example','morro-bay','morro-bay','pending','2026-09-01','2026-09-01')`).run();
+  const few = (await TOOL_BY_NAME.get('get_trips').run({port: 'Morro Bay'}, dataCtx({db: one.db}))).result;
+  assert.deepEqual([few.boats.map(b => b.name), few.few, few.link], [['Only Example'], true, '{{link:port:morro-bay}}'], 'a pending boat does not make two');
+  assert.match(few.note, /the boats I work with so far/); assert.match(few.note, /link the port page/);
+  one.sql.prepare("UPDATE advisor_boats SET status='verified' WHERE id='b2'").run();
+  assert.equal((await TOOL_BY_NAME.get('get_trips').run({port: 'morro-bay'}, dataCtx({db: one.db}))).result.few, false);
+  const many = advisorDatabase();
+  seedTrips(many.sql, {extra: 14});
+  const list = (await TOOL_BY_NAME.get('get_trips').run({port: 'morro-bay'}, dataCtx({db: many.db}))).result.boats;
+  assert.equal(list.length, 12);
+  assert.deepEqual(list.slice(0, 2).map(b => b.name), ['Zulu Example', 'Alpha Example']);
 });

@@ -449,3 +449,17 @@ Where the code differs from § "Is Saturday worth going" above:
   boat, `confidence_phrase` exactly once, the closer last; `horizon_line` past
   seven days); the planning few-shots (en, es) call `get_conditions` with the
   species.
+
+## As built (TA-A5)
+
+`get_trips` (TA-E2, verified-only since TA-I1) already met § Trips for
+newcomers, so TA-A5 is tests only: verified boats only (pending and rejected
+never, even with newer reports), the landing, an `https` booking link (else
+null), the `{{link:boat:<slug>}}` boat page, trip types from published reports
+of the last 60 days (the 60th day counts; drafts and withdrawn reports never),
+ordered by the latest published report rather than by name (boats with none
+last), at most twelve, no rank, score or rating field and a note that the
+order is not a ranking, `few: true` under two verified boats with the port
+link, and a `trips` reply that is not cut at 480 characters. Open question for
+the owner: `booking_url` is returned as a raw URL, while the prompt allows
+links only as placeholders, so the model can only point to the boat page.

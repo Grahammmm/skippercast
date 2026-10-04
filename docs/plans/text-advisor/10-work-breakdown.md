@@ -193,6 +193,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Stories: AD-3.
 - Depends: TA-I1, TA-E2
 - Files: `tools/get_trips.ts` (switch from stub to `advisor_boats`), tests.
+- As built: nothing was missing (TA-E2 and TA-I1 built it), so the task is the tests that prove each clause of 06 § Trips. See 06 § As built (TA-A5).
 
 ### TA-A6 · Spanish pass · S
 - Stories: FC-6.

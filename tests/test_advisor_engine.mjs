@@ -377,6 +377,32 @@ for (const file of engineFixtures) {
   });
 }
 
+// TA-A5: a list of boats is the one reply that may run past three segments (04 LIST_INTENTS).
+dbTest('trips (TA-A5): get_trips lists the verified boats and the list reply is not cut at 480 characters', async () => {
+  const {sql, env} = setup({env: {ANTHROPIC_API_KEY: 'k'}});
+  seen(sql);
+  const boat = (id, name, status) => sql.prepare(`INSERT INTO advisor_boats(id,slug,name,landing,port,region,booking_url,status,created_at,updated_at) VALUES(?,?,?,'Example Landing','morro-bay','morro-bay','https://example.com/book',?,?,?)`)
+    .run(id, `slug-${id}`, name, status, iso(T0 - 86400000), iso(T0 - 86400000));
+  boat('b1', 'Example Boat One', 'verified'); boat('b2', 'Example Boat Two', 'verified'); boat('b3', 'Example Pending Boat', 'pending');
+  const message = (content, stop) => ({status: 200, body: {id: 'msg_fixture', type: 'message', role: 'assistant', model: 'claude-sonnet-5', content, stop_reason: stop, usage: {input_tokens: 10, output_tokens: 10}}});
+  const list = ['Boats out of Morro Bay I work with, by latest report, not a ranking.',
+    'Example Boat One, Example Landing: full-day and half-day rockfish and lingcod trips, with booking on its boat page {{link:boat:slug-b1}}.',
+    'Example Boat Two, Example Landing: full-day rockfish trips, booked through the landing office by phone or at the window.',
+    'Both run out of the harbor most days in season. Call the landing for open spots, gear rental and what to bring, and ask about the cutoff for the morning boat.',
+    'Ask me about conditions for the day you pick.'].join(' ');
+  assert.ok(list.length > 480);
+  const api = fakeApi([message([{type: 'tool_use', id: 'toolu_trips', name: 'get_trips', input: {port: 'morro-bay'}}], 'tool_use'), message([{type: 'text', text: list}], 'end_turn')]);
+  const {value: result} = await quiet(() => run(env, contactRow(sql), inbound(sql, 'which boats run trips out of Morro Bay?'), {fetcher: api.fetcher}));
+  assert.equal(result.intent, 'trips');
+  const toolResult = api.requests[1].messages.at(-1).content.find(b => b.type === 'tool_result').content;
+  assert.ok(toolResult.includes('Example Boat One') && toolResult.includes('Example Boat Two') && !toolResult.includes('Example Pending Boat'));
+  assert.ok(toolResult.includes('"few":false'));
+  const [reply] = texts(result);
+  assert.ok(reply.length > 480, 'a list is not capped');
+  assert.ok(reply.endsWith('Ask me about conditions for the day you pick.'));
+  assert.ok(reply.includes('https://skippercast.com/boats/slug-b1?s=txt'), 'the boat page placeholder resolves');
+});
+
 dbTest('the tool loop executes at most four rounds', () => { assert.equal(MAX_TOOL_ROUNDS, 4); });
 
 dbTest('messages: the last 12 turns or 48 hours, alternating, images as notes, failed outbound skipped', async () => {
