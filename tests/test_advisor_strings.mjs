@@ -54,7 +54,7 @@ test('links: every placeholder kind, ?s=txt, one link at most, unknown ones drop
   assert.deepEqual(resolveLinks("Back tomorrow, or see {{link:port:atlantis}}", base), {text: 'Back tomorrow', links: []}, 'an unknown link takes its lead-in with it');
   assert.deepEqual(resolveLinks('Rules: {{link:rules}}', 'https://example.test/sub'), {text: 'Rules: https://example.test/sub/?s=txt#species-regulations', links: ['https://example.test/sub/?s=txt#species-regulations']});
   for (const [key, entry] of Object.entries(STRINGS)) for (const l of LANGUAGES) {
-    const filled = t(l, key, {target: 'home', link: 'L', code: 'C', decision: 'd', kind: 'k', reason: 'r'});
+    const filled = t(l, key, {target: 'home', link: 'L', code: 'C', decision: 'd', kind: 'k', reason: 'r', slug: 'rita-g'});   // slug: TA-I2's {{link:boat:{slug}}}
     assert.ok(!/\{\{/.test(resolveLinks(filled, base).text), `${key}.${l}: placeholders resolve`);
     void entry;
   }

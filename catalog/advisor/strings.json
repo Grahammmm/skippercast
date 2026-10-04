@@ -209,6 +209,146 @@
     "boat_rejected": {
       "en": "We couldn't confirm {name} yet. Someone from the SkipperCast team will reach out.",
       "es": "Todavía no pudimos confirmar {name}. Alguien del equipo de SkipperCast te contactará."
+    },
+    "report_confirm_ask": {
+      "en": "Reply Y to post, or tell me what to fix.",
+      "es": "Responde SÍ para publicar, o dime qué corregir."
+    },
+    "report_released": {
+      "en": "{n} released",
+      "es": "{n} liberados"
+    },
+    "report_anglers": {
+      "en": "{n} anglers",
+      "es": "{n} pescadores"
+    },
+    "report_no_counts": {
+      "en": "no counts yet",
+      "es": "sin conteos todavía"
+    },
+    "report_notes": {
+      "en": "Notes",
+      "es": "Notas"
+    },
+    "trip_half_day": {
+      "en": "half day",
+      "es": "medio día"
+    },
+    "trip_full_day": {
+      "en": "full day",
+      "es": "día completo"
+    },
+    "trip_overnight": {
+      "en": "overnight",
+      "es": "nocturno"
+    },
+    "report_posted": {
+      "en": "Posted. {{link:boat:{slug}}}",
+      "es": "Publicado. {{link:boat:{slug}}}"
+    },
+    "report_withdrawn": {
+      "en": "OK, I won't post that one. Send the board or the numbers again whenever you're ready.",
+      "es": "Listo, ese no lo publico. Mándame la pizarra o los números cuando quieras."
+    },
+    "report_updated": {
+      "en": "Updated: {changes}.",
+      "es": "Actualizado: {changes}."
+    },
+    "report_removed": {
+      "en": "{label} removed",
+      "es": "{label} quitado"
+    },
+    "report_replaced": {
+      "en": "Got it, I've updated that day's posted report:",
+      "es": "Listo, actualicé el reporte publicado de ese día:"
+    },
+    "report_date_taken": {
+      "en": "You already have a report for {date}. Fix that one, or tell me the right date.",
+      "es": "Ya tienes un reporte del {date}. Corrige ese, o dime la fecha correcta."
+    },
+    "report_board_unreadable": {
+      "en": "I couldn't read that one. Can you send a clearer shot, or just text me the numbers (e.g. '22 anglers, 45 vermilion, 12 lings')?",
+      "es": "No pude leer esa. ¿Me mandas una foto más clara, o solo los números (por ejemplo '22 pescadores, 45 colorados, 12 lingcod')?"
+    },
+    "report_auto_posted": {
+      "en": "Posted: {summary}. Text me any fix. {{link:boat:{slug}}}",
+      "es": "Publicado: {summary}. Escríbeme si hay que corregir algo. {{link:boat:{slug}}}"
+    },
+    "auto_offer": {
+      "en": "You've had {n} clean reports. Want me to post your reports without asking? Reply AUTO.",
+      "es": "Llevas {n} reportes sin correcciones. ¿Quieres que publique tus reportes sin preguntar? Responde AUTO."
+    },
+    "auto_on": {
+      "en": "Done. I'll post your reports as they come in and text you the summary. Text ASK ME to go back to confirming first.",
+      "es": "Listo. Publicaré tus reportes al recibirlos y te mandaré el resumen. Escribe PREGÚNTAME para volver a confirmar primero."
+    },
+    "auto_off": {
+      "en": "OK, I'll ask before posting each report.",
+      "es": "Listo, te preguntaré antes de publicar cada reporte."
+    },
+    "photo_queued": {
+      "en": "Nice. That's queued for the SkipperCast feed, tagged @{instagram}. Count board too?",
+      "es": "Buena. Está en la cola del feed de SkipperCast, etiquetada @{instagram}. ¿Y la pizarra de conteo?"
+    },
+    "photo_queued_ask_handle": {
+      "en": "Nice. That's queued for the SkipperCast feed. Text me the boat's Instagram handle (like @yourboat) so we can tag you. Count board too?",
+      "es": "Buena. Está en la cola del feed de SkipperCast. Mándame el Instagram del barco (como @tubarco) para etiquetarte. ¿Y la pizarra de conteo?"
+    },
+    "photo_queued_untagged": {
+      "en": "Nice. That's queued for the SkipperCast feed, credited to the boat. Count board too?",
+      "es": "Buena. Está en la cola del feed de SkipperCast, con crédito al barco. ¿Y la pizarra de conteo?"
+    },
+    "video_queued": {
+      "en": "Nice. That video is queued as a Reel for the SkipperCast feed, tagged @{instagram}.",
+      "es": "Buena. Ese video está en la cola como Reel del feed de SkipperCast, etiquetado @{instagram}."
+    },
+    "video_queued_ask_handle": {
+      "en": "Nice. That video is queued as a Reel for the SkipperCast feed. Text me the boat's Instagram handle (like @yourboat) so we can tag you.",
+      "es": "Buena. Ese video está en la cola como Reel del feed de SkipperCast. Mándame el Instagram del barco (como @tubarco) para etiquetarte."
+    },
+    "video_queued_untagged": {
+      "en": "Nice. That video is queued as a Reel for the SkipperCast feed, credited to the boat.",
+      "es": "Buena. Ese video está en la cola como Reel del feed de SkipperCast, con crédito al barco."
+    },
+    "photo_no_consent": {
+      "en": "Thanks. Your photos stay off our social feeds until the boat's owner texts \"post my photos\". Count boards still become reports.",
+      "es": "Gracias. Tus fotos no van a nuestras redes hasta que el dueño del barco escriba \"publica mis fotos\". Las pizarras igual se vuelven reportes."
+    },
+    "photo_thanks": {
+      "en": "Thanks for the photo.",
+      "es": "Gracias por la foto."
+    },
+    "video_thanks": {
+      "en": "Thanks for the video.",
+      "es": "Gracias por el video."
+    },
+    "media_use_upload": {
+      "en": "I couldn't take that file by text. Send it through this link, good for 24 hours: {link}",
+      "es": "No pude recibir ese archivo por mensaje. Mándalo por este enlace, válido 24 horas: {link}"
+    },
+    "media_too_large": {
+      "en": "That photo is too big for me to read by text. Send it through this link, good for 24 hours: {link}",
+      "es": "Esa foto es muy grande para leerla por mensaje. Mándala por este enlace, válido 24 horas: {link}"
+    },
+    "media_unavailable": {
+      "en": "Got it. I can't read photos right now; if it's a count board, text me the numbers.",
+      "es": "Recibido. Ahora mismo no puedo leer fotos; si es la pizarra, mándame los números."
+    },
+    "media_what": {
+      "en": "Got it. Is that a count board or a catch photo? If it's the board, you can also just text me the numbers.",
+      "es": "Recibido. ¿Es la pizarra de conteo o una foto de pesca? Si es la pizarra, también puedes mandarme los números."
+    },
+    "media_received": {
+      "en": "Got it, thanks.",
+      "es": "Recibido, gracias."
+    },
+    "instagram_saved": {
+      "en": "Thanks. I'll tag @{instagram} on your posts.",
+      "es": "Gracias. Etiquetaré @{instagram} en tus publicaciones."
+    },
+    "report_day_held": {
+      "en": "The team held back your report for {date}. Text me if something needs fixing and I'll pass it on.",
+      "es": "El equipo retuvo tu reporte del {date}. Escríbeme si hay que corregir algo y lo paso."
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
-  "description": "Golden 3 (TA-I1 part): the owner of a verified boat adds a deckhand by number; the tool result never echoes the number; the invite (with the STOP line) goes to the deckhand's number through the channel; the deckhand's reply is a normal turn whose brief shows them as crew on the boat; the owner removes them and they are an angler again. TA-I2 continues with the deckhand's count board.",
+  "description": "Golden 3 (TA-I1 part): the owner of a verified boat adds a deckhand by number; the tool result never echoes the number; the invite (with the STOP line) goes to the deckhand's number through the channel; the deckhand's reply is a normal turn whose brief shows them as crew on the boat; the owner removes them and they are an angler again. TA-I2: before the removal, the deckhand texts a count-board photo; it becomes the boat's report (contact_id the deckhand, boat b-rita), the board stays private (no photo consent), and the deckhand's Y publishes it with verified 1 (the boat is verified).",
   "contact": {
     "role": "skipper",
     "boat_id": "b-rita",
@@ -121,6 +121,74 @@
         "brief_contains": [
           "- role: crew",
           "- boat: Rita G (they are crew); status: verified"
+        ]
+      }
+    },
+    {
+      "from": "+18055550142",
+      "media": [
+        {
+          "id": "m-crew-board",
+          "image": "count-board.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-count-board.json"
+        },
+        {
+          "vision": "count-board.json"
+        }
+      ],
+      "expect": {
+        "intent": "report.count_board",
+        "reply_contains": [
+          "Rita G, Sat Oct 3, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix."
+        ],
+        "actions": [
+          "report_draft",
+          "send_text"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT r.boat_id, c.role AS by_role, c.source AS by_source, r.status FROM advisor_reports r JOIN advisor_contacts c ON c.id=r.contact_id",
+            "row": {
+              "boat_id": "b-rita",
+              "by_role": "crew",
+              "by_source": "skipper-invite",
+              "status": "pending_confirm"
+            }
+          },
+          {
+            "sql": "SELECT publish_state FROM advisor_media WHERE id='m-crew-board'",
+            "row": {
+              "publish_state": "private"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "from": "+18055550142",
+      "in": "y",
+      "expect": {
+        "intent": "report.confirm",
+        "reply_contains": [
+          "Posted. https://skippercast.com/boats/rita-g?s=txt"
+        ],
+        "actions": [
+          "report_publish",
+          "send_text"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT status,verified,boat_id FROM advisor_reports",
+            "row": {
+              "status": "published",
+              "verified": 1,
+              "boat_id": "b-rita"
+            }
+          }
         ]
       }
     },

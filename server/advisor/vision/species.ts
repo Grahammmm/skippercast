@@ -63,3 +63,14 @@ export function speciesForTargets(regionTargets: readonly string[] | null | unde
   }
   return keys.map(entry);
 }
+
+/**
+ * TA-I2: the catalog key a report line is filed under (05 § count board: "reds"/
+ * "vermilion" -> rockfish, the skipper's label kept): a species-extra key's
+ * catalog parent, the key itself otherwise (cabezon and kelp greenling have no
+ * catalog parent and stay as they are).
+ */
+export function reportSpeciesKey(key: string): string {
+  const k = canonicalSpecies(key);
+  return EXTRA.find(e => e.key === k && !e.same_as_parent)?.parent ?? k;
+}

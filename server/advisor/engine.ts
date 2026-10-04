@@ -8,8 +8,10 @@
 //   Stage 0  guards: replies switched off, blocked, stopped, the daily message cap
 //   Stage 1  commands (STOP, START, HELP, forget me / DELETE, send me my data) and language
 //   Stage 2  deterministic flows: the text admin fallback, the web phone-link
-//            code, the upload link, media-only messages, then the flows later
-//            tasks register in STAGE_TWO_FLOWS (TA-I1 registration, TA-I2 reports)
+//            code, the upload link, then the flows later tasks register in
+//            STAGE_TWO_FLOWS (TA-I1 registration and consent; TA-I2 report
+//            confirmation, count text, corrections and a skipper's media), then
+//            the acknowledgement of any other media-only message
 //   Stage 3  the model turn: caps, Claude with tools (at most 4 tool rounds, 30 s),
 //            then markdown stripped, the rules guard, links, the 3-segment cap
 //
@@ -41,6 +43,8 @@ import {sha256} from './ids.ts';
 import type {Action, AdvisorContactRow, AdvisorMessageRow, AdvisorSettings, EngineDeps, EngineResult, Handler, Language} from './types.ts';
 // TA-I1: skipper registration, consent and crew (05), and the contact brief's boat lines.
 import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
+// TA-I2: reports (pending confirmation, count text, corrections, the media-only skipper path) and their brief lines.
+import {REPORT_FLOWS, reportBrief} from './intake/reports.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 700;
@@ -77,7 +81,7 @@ export interface FlowContext {
  * STAGE_TWO_FLOWS; they run after the built-in flows below, in order.
  */
 export interface Flow {name: string; run(ctx: FlowContext): Promise<EngineResult | null>}
-export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts)
+export const STAGE_TWO_FLOWS: Flow[] = [...SKIPPER_FLOWS, ...REPORT_FLOWS];   // TA-I1: registration, consent (intake/skippers.ts); TA-I2: reports (intake/reports.ts)
 
 const ADMIN = /^(ok|no)\s+([0-9a-f]{6})$/i;
 const SIX_DIGITS = /^\d{6}$/;
@@ -159,12 +163,12 @@ export function buildMessages(rows: readonly HistoryRow[], current: string): Api
 const WEEKDAYS: Record<string, string> = {Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday'};
 
 /** The contact brief and the situation brief (04 § stage 3), as one uncached system block. */
-export async function briefs(db: D1Database, contact: AdvisorContactRow, settings: AdvisorSettings, language: Language, isNew: boolean, now: number): Promise<string> {
-  let pending = false;
+export async function briefs(db: D1Database, contact: AdvisorContactRow, settings: AdvisorSettings, language: Language, isNew: boolean, now: number, messageCreatedAt: string = new Date(now).toISOString()): Promise<string> {
   // TA-I1 (04 § stage 3): the boat's name, its verification status and the photo consent for skippers and crew.
   const boats = contact.boat_id ? (await boatsForContact(db, contact.id)).filter(b => b.id === contact.boat_id) : [];
   const boat = boats[0] ?? null;
-  if (contact.boat_id) pending = Boolean(await db.prepare("SELECT 1 AS x FROM advisor_reports WHERE boat_id=? AND status='pending_confirm' LIMIT 1").bind(contact.boat_id).first());
+  // TA-I2 (04 § stage 2): the pending report itself, with its id for edit_report, or the latest one.
+  const reportLines = boat ? await reportBrief(db, boat, messageCreatedAt, now) : ['- report waiting for confirmation: no'];
   const flow = await readFlow(db, contact.id);
   const registering = flow?.flow === 'register' && now - Date.parse(flow.asked_at) <= FLOW_MAX_AGE_MS ? flow.step : null;
   const boatLines = boat ? [
@@ -185,7 +189,7 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
     `- display name: ${contact.display_name ?? 'not given'}`,
     `- home port: ${contact.home_port ? `${portName(contact.home_port)} (${contact.home_port})` : 'not given yet'}`,
     `- targets: ${targets.length ? targets.join(', ') : 'not given yet'}`,
-    `- report waiting for confirmation: ${pending ? 'yes' : 'no'}`,
+    ...reportLines,
     `- new contact: ${isNew ? 'yes (this is their first message)' : 'no'}`,
     '',
     'SITUATION BRIEF',
@@ -420,7 +424,7 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
     if (r) return {...r, actions: [...welcomeFirst(), ...languageUpdate, ...flow.carry.splice(0), ...r.actions]};
   }
   if (!text && media.length) {
-    // TA-I2/I3 replace this with the intake and fish-ID flows.
+    // A skipper's or crew's media went through TA-I2's flow above; TA-I3 replaces this for anglers.
     return done([...welcomeFirst(), say('media_ack'), ...flow.carry], 'media');
   }
   if (!text) return done([...flow.carry], 'empty');
@@ -446,11 +450,14 @@ export async function runTurn(input: EngineInput): Promise<EngineResult> {
   const tools = toolsForRole(contact);
   const ctx: ToolContext = {env, contact, message, deps, db, language, settings, now};
   const system = [{type: 'text', text: systemPrompt(language), cache_control: {type: 'ephemeral'}},
-    {type: 'text', text: await briefs(db, contact, settings, language, isNew, now)}];
+    {type: 'text', text: await briefs(db, contact, settings, language, isNew, now, message.created_at)}];
   const usage: LlmUsage = {model: settings.model, turns: 0, input_tokens: 0, output_tokens: 0, web_search_requests: 0};
   let turn: ModelTurn | null = null, outcome = 'error';
   try {
-    turn = await modelTurn({env, settings, system, messages: buildMessages(rows, inboundText(text, media.length)), tools, ctx, deps, signal, usage});
+    // TA-I2: a skipper's or crew's photo with a caption reaches the model; its ids let read_count_board read it.
+    const current = media.length && (contact.role === 'skipper' || contact.role === 'crew')
+      ? `${String(text).trim()} [${media.length === 1 ? 'photo' : `${media.length} photos`}, media_id ${media.slice(0, 10).join(', ')}]`.trim() : inboundText(text, media.length);
+    turn = await modelTurn({env, settings, system, messages: buildMessages(rows, current), tools, ctx, deps, signal, usage});
     outcome = turn.outcome;
   } finally {
     const intentNow = turn ? intentOf(turn, tools) : 'chat';

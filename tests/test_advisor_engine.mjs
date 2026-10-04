@@ -6,7 +6,7 @@
 // the six few-shots, rules_without_tool, tool_loop, pause_turn, HTTP 529), the
 // post-processing helpers, the consumer's new appliers (STOP/START, forget,
 // export and its route, send_file, notifyAdmin) and the golden conversations
-// 6-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
+// 2, 3 and 6-9 of 11 (tests/fixtures/advisor/engine/conversations/*.json). Offline:
 // real migrations in node:sqlite, a memory R2, a fake fetcher.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -249,8 +249,8 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
 dbTest('stage 2 extension point: a registered flow runs before the model', async t2 => {
   const {sql, env} = setup();
   seen(sql);
-  // TA-I1's skipper flow is registered at import; the test flow goes after it and only it is removed.
-  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper']);
+  // TA-I1's skipper flow and TA-I2's report flow are registered at import; the test flow goes after them and only it is removed.
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports']);
   STAGE_TWO_FLOWS.push({name: 'test', run: async f => f.text === 'y' ? {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'} : null});
   t2.after(() => { STAGE_TWO_FLOWS.splice(STAGE_TWO_FLOWS.findIndex(f => f.name === 'test'), 1); });
   assert.deepEqual(await run(env, contactRow(sql), inbound(sql, 'y')), {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'});
@@ -526,7 +526,7 @@ dbTest('consumer: send_file attaches on BlueBubbles and falls back to the link e
 
 const conversations = readdirSync(new URL('./fixtures/advisor/engine/conversations/', import.meta.url)).filter(f => f.endsWith('.json')).sort();
 test('golden conversations 2 (en, es), 3 and 6-9 exist', () => {
-  // TA-I1: 2 up to the consent step (TA-I2 adds the count board onwards), 3 up to the crew member's first reply.
+  // TA-I1: 2 up to the consent step, 3 the crew add and remove; TA-I2: 2 on through the count board, Y, a correction and a catch photo, 3 the crew member's board.
   for (const n of ['02-skipper-registers', '02-skipper-registers-es', '03-crew', '06-stop-start-help-forget', '07-off-topic-abuse-injection', '08-caps', '09-web-phone-link']) assert.ok(conversations.includes(`${n}.json`), n);
 });
 
@@ -542,7 +542,8 @@ for (const file of conversations) {
     const keys = await deriveKeys(KEY);
     const byNumber = async e164 => sql.prepare('SELECT * FROM advisor_contacts WHERE phone_hash=?').get(await phoneHash(keys, e164));
     const phoneChannel = recorder('bluebubbles'), webChannel = recorder('web');
-    const api = fakeApi(convo.turns.flatMap(turn => turn.model ?? []));
+    // TA-I2: a model entry {"vision": "<file>"} replays a vision fixture (tests/fixtures/advisor/vision/) through the same fetcher.
+    const api = fakeApi(convo.turns.flatMap(turn => turn.model ?? []).map(r => r.vision ? {status: 200, body: read(`./fixtures/advisor/vision/${r.vision}`)} : r));
     let step = 0, randomValue = convo.random ?? 0.123456;
     for (const turn of convo.turns) {
       step++;
@@ -550,7 +551,14 @@ for (const file of conversations) {
       const who = turn.from ? await byNumber(turn.from) : contactRow(sql, contact.id ?? 'c1');
       assert.ok(who, `step ${step}: the contact exists`);
       const phoneBefore = phoneChannel.sent.length, apiBefore = api.requests.length;
-      const m = inbound(sql, turn.in, {contact: who.id, status: 'queued', ago: -(step / 60)});
+      // TA-I2: `media` is the message's stored photos ({id, image}: a PNG under tests/fixtures/advisor/vision/images/), already downloaded.
+      for (const x of turn.media ?? []) {
+        const bytes = readFileSync(new URL(`./fixtures/advisor/vision/images/${x.image}`, import.meta.url)), key = `advisor/media/${who.id}/${x.id}.png`;
+        env.ADVISOR_MEDIA.objects.set(key, {bytes: new Uint8Array(bytes), httpMetadata: {}});
+        sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,publish_state,created_at) VALUES(?,?,?,'image','image/png',?,?,'x','private',?)`)
+          .run(x.id, who.id, who.boat_id ?? null, bytes.length, key, iso(T0));
+      }
+      const m = inbound(sql, turn.in ?? null, {contact: who.id, status: 'queued', ago: -(step / 60), media: turn.media ? turn.media.map(x => x.id) : null});
       const before = {phone: phoneChannel.sent.length, web: webChannel.sent.length};
       const actions = [];
       const handler = async input => { const r = await engineHandler(input); actions.push(...r.actions); return r; };
