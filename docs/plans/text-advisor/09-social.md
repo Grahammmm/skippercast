@@ -40,8 +40,8 @@ these):
 1. Instagram: convert `@skippercast` (or the chosen handle) to a
    **Business** account (Stories publishing needs Business, not Creator).
    Bio per SP-1: the offer in one line, link `https://skippercast.com/text?s=ig`,
-   highlights "Reports", "Fish ID", "Tips" (content for the highlights is in
-   TA-S6).
+   highlights "Reports", "Fish ID", "Tips": the copy to paste is in § Instagram
+   profile below (TA-S5).
 2. Facebook: a Page "SkipperCast", link the IG account to it (Page settings
    › Linked accounts).
 3. Meta developer app "SkipperCast Publisher" (type Business), products
@@ -107,10 +107,11 @@ same place the data jobs run, in Python with Pillow:
   originals are safe before the job runs; pages show the original (stripped)
   until `public.jpg` exists.
 
-Video: no processing. Validity checks are done by the job with `ffprobe`
+Video: no transcoding. Validity checks are done by the job with `ffprobe`
 when present on the runner (container, codec, duration, size) and the
 result is stored on the media row; a video that fails gets `failed` with a
-reason the admin can see.
+reason the admin can see. (As built below: the job strips every video's
+container metadata with ffmpeg; the validity checks are still not built.)
 
 ### As built (TA-M1)
 
@@ -202,6 +203,52 @@ reason the admin can see.
   orientation 2-8 is never served as the original (404 until `public.jpg`
   exists), since its pixels are sideways without the tag.
 - PNG `eXIf` orientation is not read (PNG rows have a null orientation).
+
+### As built (video privacy)
+
+Raised with TA-S2: video originals kept the camera's container metadata, so the
+public `.mp4` could carry a position (00 principle 7). Fixed:
+
+- **The job.** `media.ts mediaJobWork` adds `videos`: every stored video that is
+  not rejected and has no `derived_at`, private ones too (so a video is clean
+  before anyone reviews it), oldest first, 5 a call; `mediaJobPending` counts
+  them. `media_job.py derive_video` streams the original from R2 to a temporary
+  file, finds its video stream with `ffprobe`, and runs `ffmpeg -i in
+  -map_metadata -1 -map_metadata:s -1 -map_chapters -1 -dn -sn -c copy
+  -fflags +bitexact -movflags +faststart -f mp4 out` (stream copy, never a
+  transcode; `-tag:v hvc1` for HEVC; data tracks such as QuickTime timed
+  metadata and subtitles dropped; no encoder tags). It then checks the result
+  twice: `location_tags` over `ffprobe -show_format -show_streams` (any
+  format or stream tag naming `location`, `xyz`, `ISO6709` or `gps`) and
+  `file_location_atoms`, a box walk of every top-level box but `mdat` that finds
+  a `©xyz` or `loci` atom and any leaf box (QuickTime `keys` included) naming
+  `com.apple.quicktime.location` or ISO 6709. Anything left gives the video up
+  (`location-left: ...`). The clean file goes to `advisor/derived/<id>/video.mp4`
+  (`video/mp4`, `x-amz-meta-source-sha256`, `x-amz-meta-stripped: 1`, its width
+  and height), and `media-done` reports `{media_id, keys: {video}, width?,
+  height?}`; a rerun on the same original copies nothing. Without `ffmpeg` or
+  `ffprobe` on the runner the video is reported `no-ffmpeg`
+  (docs/operations/runners.md lists ffmpeg as a requirement; the workflow warns
+  when it is missing). The original stays private in R2, as every original does.
+- **`/media/<id>.mp4`** serves only `video.mp4`, as `video/mp4` with the same
+  range support, for an approved or posted video with `derived_at` and no
+  `derived_error`; the original is never served, whatever its type.
+- **Holds.** `media.ts videoHold` names why a video is not ready (waiting for
+  the job; no ffmpeg; another failure). `decideReview` refuses to approve or
+  edit a media review of such a video (409 with that text, shown on the queue
+  card as "Held"); rejecting always works. `approvalHold` refuses a post with
+  such a video, so its draft card shows the same reason. The publisher waits for
+  a pending copy (dispatches the job, the post stays `approved`, outcome
+  `deferred`) and fails the post when stripping failed. The text admin's
+  "ok <code>" on such a video changes nothing.
+- **Tests.** `tests/test_advisor_video_privacy.mjs` (the work list, `media-done`,
+  the holds, the publisher, `/media/<id>.mp4` never serving an original) and
+  `tests/unit/test_advisor_media_job.py` (`location_atoms` on crafted MP4 bytes
+  with a `©xyz` atom, a QuickTime `keys` location, a `loci` atom, malformed
+  boxes; `location_tags`; the command; `no-ffmpeg`; and, with ffmpeg present, a
+  real clip carrying `©xyz` and one carrying a `keys` location stripped clean,
+  else skipped with the allow-listed reason "ffmpeg and ffprobe are not
+  installed ...").
 
 ## Drafts (SO-1, SP-3)
 
@@ -334,6 +381,96 @@ reason the admin can see.
 - Weekly roundup (SP-5): Sundays, a carousel of up to 10 approved catch
   photos from the week, by port and species, boats tagged as collaborators
   (3 max per Meta; the rest mentioned in the caption). Same draft path.
+
+### As built (TA-S4)
+
+- **Where.** `server/advisor/social/daily-post.ts` (the daily post and the
+  roundup), `social/graphics.ts` (posts published from generated graphics),
+  `social/calendar.ts` with `catalog/advisor/calendar.json`, the `daily-post`
+  and `weekly-roundup` slots and `calendarTick` in `cron.ts`, `GET
+  /media/post/<post_id>/<name>` (`routes/advisor.ts`), `GET
+  /api/admin/posts/calendar` and `/api/admin/posts/<id>/graphics/<name>`
+  (`routes/admin.ts`), the week grid (`web/admin/posts.tsx WeekCalendar`) and
+  `tests/test_advisor_social_daily.mjs`.
+- **The daily post.** Slot `daily-post`, 06:30 Pacific, for every active region
+  (status `active` in its region.json): the reports of the previous local day
+  with `status='published'`, `verified=1` and the boat still `verified`, one per
+  boat (its latest). None: no post. Otherwise the facts: the place (the port's
+  name, or the region's name when boats of several ports reported), each boat's
+  kept counts (at most four lines; uncertain ones left out) and anglers, the top
+  five counts summed by label, today's conditions line at the port with the most
+  boats (`answers/reports.ts conditionsText` over `dailyInputs`, advisories
+  first) and the confidence word: the best ladder label (Moderate, Low, else
+  Insufficient) among the landing reports' targets with trips, never a number;
+  without the daily feed the word is left out, without the forecast the
+  conditions line too. The caption is a template (`catalog/advisor/strings.json`
+  `daily_post_*`, no model): "What's biting out of {place}, {date}:", one line
+  per boat ("Rita G: 45 vermilion, 12 lingcod for 22 anglers."), the conditions,
+  "Landing reports, last 7 days: {word}.", the call to action and the hashtags
+  (region and species). The draft's id is `sha256('daily:<region>:<date>')[:32]`
+  with the posting day's local date, `media_json` `[]`, targets Instagram and the
+  Page, its `post` review as for any draft. The card: `requestGraphic(kind:
+  'daily')` with the post's id, `out_key advisor/posts/<id>/daily.jpg`, data
+  `{title, port, date, lines: [Top counts, a line per boat (four at most)],
+  conditions, confidence}`.
+- **Reruns.** A rerun (the slot retried, or by hand) updates the same draft's
+  caption and asks for the card again only when its data changed; a post that is
+  no longer a draft is never changed. Writing a region's daily draft supersedes
+  any older daily post of the region still in draft or approved without a time
+  (`rejected`, `error='superseded'`, its review closed), so yesterday's card
+  never goes out late. The same applies to roundups.
+- **The roundup.** Slot `weekly-roundup`, Sundays 17:00: images approved or
+  posted in the last 7 days, classified `fish` (a catch), with no open photo
+  review; a boat's only while the boat is verified, in the region and has photo
+  consent, an angler's (an approved share) when their home port is in the region.
+  Grouped by (port, species from the fish ID), the largest group first and the
+  newest photo first in each, taken round robin, at most **9** (the cover card
+  makes Meta's carousel limit of 10; 09 said up to 10 photos). Caption: "This
+  week out of {place}: {n} catches from {b} boats.", a line per port with its
+  species, "Aboard: {boats}.", "Also aboard: @x." for handles past the three
+  collaborators (the boats with the most photos), "Photos: {credits}." for
+  anglers, the call to action and hashtags. `media_json` holds the photos (they
+  are held like any post's photos, and each photo's boat must be verified with
+  consent: `approvalHold` now checks every photo's boat, not only the post's),
+  `collaborators_json` up to three handles, the graphic `kind: 'roundup'` with the
+  photos, `{title, lines: [{label: port, value: "n · species"}], captions}`.
+- **Holds and publishing.** A daily post, a roundup, or a Story with no photo
+  uses its graphic (`graphics.ts usesGraphic`): approval is held while the
+  graphic is pending ("the graphic is still being made") or failed; the
+  publisher defers (dispatching the job) while it is pending. A daily post goes
+  out as one image (`image_url` and the Page's `/photos` `url` =
+  `/media/post/<id>/daily.jpg`), a roundup as a carousel of the cover and slides
+  with its collaborators on the parent and a multi-photo Page post, a Story card
+  as `STORIES` and a Page photo Story. Its photos go `posted` with it.
+- **`/media/post/<post_id>/<name>`.** Served while the post is `approved`,
+  `publishing`, `posted` or `partial` (Meta fetches during `publishing`; 10 said
+  approved or posted), and only a name the graphic's done state lists. Admins
+  preview any post's graphics at `/api/admin/posts/<id>/graphics/<name>`; the post
+  card shows them (`graphics`).
+- **The calendar.** `catalog/advisor/calendar.json`: `{lead_hours: 48, slots:
+  [{id, weekdays, time_local, kind, region, capacity}]}` (09's `{weekday, ...}`
+  became a `weekdays` list and a `capacity`): Stories 07:00 daily (10), the daily
+  post 08:00 daily (drafted at 06:30, it needs the team's approval first),
+  photos 11:00 and 17:00 on weekdays, a Reel Fridays 12:00, the roundup Sundays
+  18:30 (drafted at 17:00). `calendarTick` runs on every 15-minute tick before
+  `publishDue`: each slot instance in the next 48 h whose time fewer posts hold
+  than its capacity takes the oldest approved post of its kind and region
+  without `scheduled_for` (by `approved_at`), setting `scheduled_for` to the
+  slot's local time in the region's zone (`zonedInstant`, DST-safe). A daily post
+  or roundup fills only its own date's slot, and one approved after that slot
+  passed goes out at once the same day. Empty slot instances are returned and
+  logged (`advisor_calendar_empty`) when the set changes. **Behaviour change
+  from TA-S2:** `publishDue` no longer posts an unscheduled approved post whose
+  kind and region have calendar slots; it waits for its slot ("Post now" still
+  posts at once; "Clear time" hands it back to the calendar). A kind without
+  slots (a carousel) still goes out within 15 minutes.
+- **The week grid.** `GET /api/admin/posts/calendar?start=` returns the 7 days
+  from a Monday with each slot instance, its posts and whether it is empty or
+  past, and the day's other scheduled or posted posts. The Posts view shows it
+  above the list (7 columns, one on a narrow screen; empty slots marked, the
+  count of empty slots ahead), with previous, this and next week.
+- **Not built here.** Posting into an empty slot automatically (SO-3 tips posts
+  are Next); the owner fills one by approving or posting by hand.
 
 ## Publishing (SO-4, SO-5, SP-7)
 
@@ -525,11 +662,9 @@ tests. Fixtures in `tests/fixtures/advisor/meta/`.
   `approved` with a time is the schedule), video Stories to the Page and the
   `ffprobe` checks on videos.
 - **Privacy note.** Video originals are not metadata-stripped at intake (TA-C4
-  strips JPEG and PNG only), so the public `.mp4` can carry the camera's
-  location atoms while the video is approved or posted. Media ids are random
-  128-bit values and only Meta is given the URL; stripping MP4/MOV metadata (or
-  limiting the URL to the publishing window) is an owner decision raised with
-  this task.
+  strips JPEG and PNG only), so the public `.mp4` could carry the camera's
+  location atoms. Resolved by the video privacy fix (§ Derived images, As built
+  (video privacy)): `.mp4` now serves only the job's stripped copy.
 - **Tests.** `tests/test_advisor_social_publish.mjs`: photo, carousel, a Reel
   `IN_PROGRESS` across two ticks with one container, a Story, the quota, partial
   failure and the retry of the failed surface only, idempotent reruns (a stored
@@ -585,6 +720,93 @@ footer with the number is baked into `story.jpg` by the media job because
 the API cannot add stickers. Stories need no admin approval once the source
 photo's review (if any) is approved; a `has_person` hold blocks them like
 any other media.
+
+### As built (TA-S5)
+
+- **Where.** `server/advisor/social/stories.ts` (`morningStories`), the
+  `morning-stories` slot in `cron.ts` (07:00 Pacific), `tests/test_advisor_social_stories.mjs`.
+- **When.** Only while `ADVISOR_SOCIAL_ENABLED=true` and the Meta secrets are
+  set: these Stories are approved by the engine, so they are made only when they
+  can go out that morning (with the switch off nothing piles up for later).
+- **Count boards.** For each active region, each boat that is `verified` with
+  active photo consent and has a photo classified `count_board` taken during the
+  previous local day (`queued`, `approved` or `posted`; the boat's latest): the
+  photo's Story post is TA-S1's draft (`sha256('post:media:' + id)[:32]`; made
+  now through `ensureMediaDraft` when missing). While it is a draft and
+  `approvalHold` finds nothing (no open photo review, a `has_person` photo only
+  once its review approved it, the photo not rejected, consent active, the boat
+  verified), the engine approves it: `status='approved'`, `approved_by` null,
+  `approved_at`, `scheduled_for` = today's Stories slot (07:00 from the
+  calendar), the photo `queued` -> `approved` (Meta fetches its `story.jpg`, the
+  photo above the "Text SkipperCast" band, 1080 x 1920) and the open `post`
+  review closed as `approved` with the note `auto: story`. A held one stays a
+  draft for the team; a post already approved or posted is left alone.
+- **The conditions card.** One Story per region a day with no photo
+  (`media_json` `[]`), id `sha256('story:conditions:<region>:<date>')[:32]`,
+  inserted `approved` at the slot's time with no review (it is made from public
+  forecast data), and `requestGraphic(kind: 'story')` with `{title: "Today out of
+  {region name}", lines: [the conditions line with any advisory first, "Landing
+  reports: {word}"]}` (the 1080 x 1920 card with the footer band). Without a
+  forecast and without an advisory there is no card that day.
+- **Publishing.** The existing path: `calendarTick` counts them in the Stories
+  slot, `publishDue` posts them (the card once the job has rendered it:
+  `STORIES` with `/media/post/<id>/story.jpg` and the Page photo Story from the
+  same URL; a count board with `/media/<id>.story.jpg`). No caption, no
+  collaborators, no tags, as Meta's Stories require.
+- **Profile.** § Instagram profile below: the bio, the highlight covers and the
+  three highlight scripts as copy the owner pastes (TA-O4).
+
+## Instagram profile (SP-1; TA-S5)
+
+Copy for the owner to paste when setting up the account (§ Setup step 1). It
+states only what the service does today: reports come from skippers, answers
+describe reported activity with the confidence word, never odds, and rules
+come with their source.
+
+**Name field:** `SkipperCast | Fishing reports`
+
+**Bio** (Instagram allows 150 characters; this is 91):
+
+> Central Coast fishing reports from the boats. Text us what's biting, rules or a fish photo.
+
+**Link:** `https://skippercast.com/text?s=ig` (label it "Text SkipperCast"; the
+`s=ig` source tags the first message `[via ig]`, 03 § deep links).
+
+**Highlight covers.** Three covers, 1080 x 1920, made in any editor from the
+site's tokens (`dist/tokens.css`): the deep field `#082e3b`, a centred kelp
+`#54dacb` line icon about 400 px wide, no text on the cover (Instagram prints
+the highlight's name under it).
+
+| Highlight | Name under it | Icon |
+| --- | --- | --- |
+| Reports | `Reports` | a clipboard with three ticked lines (a count board) |
+| Fish ID | `Fish ID` | a rockfish outline with a magnifying glass |
+| Tips | `Tips` | a lingcod jig, or a hook and a knot |
+
+**Highlight scripts.** Each frame is one Story (1080 x 1920, text on the deep
+field, the "Text SkipperCast" band at the bottom as on every generated Story).
+Post them as Stories once, then add them to the highlight.
+
+*Reports* (4 frames)
+
+1. "Fishing reports from the boats themselves. Skippers text us their counts after each trip."
+2. "Every morning we post what the boats brought in: species, counts and anglers, boat by boat."
+3. "Text 'what's biting' any time for the latest out of your port, with today's wind and seas."
+4. "We describe what was reported, not odds. Text SkipperCast: link in bio."
+
+*Fish ID* (4 frames)
+
+1. "Not sure what you caught? Text us a photo."
+2. "We name the likely species and the look-alikes to check, with the features that tell them apart."
+3. "Size and bag limits come from our rules table with the CDFW source and the date we last checked it. Always confirm before you keep a fish."
+4. "Text a photo to SkipperCast: link in bio."
+
+*Tips* (4 frames)
+
+1. "Ask us how to rig for lingcod, rockfish or halibut out of your port."
+2. "Planning Saturday? Text the day and we'll send the forecast window and any advisory."
+3. "Looking for a trip? We list the boats that report to us, with their booking links."
+4. "Text SkipperCast: link in bio."
 
 ## Content calendar (SP-6)
 

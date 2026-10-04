@@ -120,6 +120,22 @@ a.admin-button { display: inline-flex; align-items: center; text-decoration: non
 .admin-targets legend { font-size: var(--text-14); color: var(--ink-2); padding: 0 var(--space-1); }
 .admin-editor textarea { font: inherit; }
 
+/* TA-S4: the week calendar (posts.tsx WeekCalendar) */
+.admin-calendar { margin: var(--space-4) 0; }
+.admin-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+.admin-day { min-width: 0; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); }
+.admin-day h3 { margin: 0 0 var(--space-1); }
+.admin-day ul { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.admin-slot { display: grid; gap: 2px; padding: var(--space-1) var(--space-2); border-left: 4px solid var(--brand); background: var(--surface); font-size: var(--text-14); overflow-wrap: anywhere; }
+.admin-slot.is-empty { border-left-color: var(--caution); }
+.admin-slot.is-past { border-left-style: dotted; }
+.admin-slot.is-other { border-left-color: var(--line); }
+.admin-slot-time { font-variant-numeric: tabular-nums; font-weight: var(--weight-instrument); }
+.admin-slot-post { display: block; }
+@media (max-width: 900px) {
+  .admin-week { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 600px) {
   .admin-media { grid-template-columns: 1fr; }
   .admin-messages li { max-width: 100%; }

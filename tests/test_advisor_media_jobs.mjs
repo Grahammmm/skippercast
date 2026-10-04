@@ -91,7 +91,7 @@ dbTest('GET /api/advisor/jobs/media lists images vision cannot read as stored, H
   await quiet(() => requestGraphic(env, 'g1', {kind: 'daily', data: {port: 'Morro Bay', lines: [{label: 'Rockfish', value: 'limits'}]}, out_key: 'advisor/posts/p1/daily.jpg'}, T0, {dispatch}));
   await quiet(() => requestGraphic(env, 'g2', {kind: 'story', media_ids: ['approved', 'missing'], data: {title: 'Today'}, out_key: 'advisor/posts/p2/story.jpg'}, T0 + 1, {dispatch}));
   assert.deepEqual(calls, ['advisor-media.yml'], 'the second request is inside the minute');
-  assert.equal(await mediaJobPending(db), 7, 'five images and two graphics');
+  assert.equal(await mediaJobPending(db), 8, 'five images, two graphics and the video (stripped of its metadata)');
   const work = await withVerifier(accept, async () => (await call('/api/advisor/jobs/media', {...ON, DB: db}, {headers: auth()})).json());
   assert.deepEqual(work.media.map(m => m.id), ['big', 'heic', 'queued', 'approved', 'posted']);
   assert.deepEqual(work.media[1], {id: 'heic', r2_key: 'advisor/media/c1/heic.heic', mime: 'image/heic', sha256: 'sha-heic', bytes: 1000, orientation: null,
@@ -101,6 +101,7 @@ dbTest('GET /api/advisor/jobs/media lists images vision cannot read as stored, H
     {id: 'g2', kind: 'story', out_key: 'advisor/posts/p2/story.jpg', data: {title: 'Today'},
       media: [{id: 'approved', r2_key: 'advisor/media/c1/approved.jpg', mime: 'image/jpeg', orientation: null, public_key: 'advisor/derived/approved/public.jpg'}]},
   ]);
+  assert.deepEqual(work.videos, [{id: 'video', r2_key: 'advisor/media/c1/video.mp4', mime: 'video/mp4', sha256: 'sha-video', bytes: BIG, keys: {video: 'advisor/derived/video/video.mp4'}}]);
   assert.deepEqual((await mediaJobWork(db, {media: 2, graphics: 1})).media.map(m => m.id), ['big', 'heic'], 'paged, oldest first');
   assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM job_state WHERE key LIKE 'advisor.graphic.%'").get().n, 2);
 });

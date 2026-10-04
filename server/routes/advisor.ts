@@ -16,7 +16,7 @@ import {advisorLog} from '../advisor/log.ts';
 // TA-C4: shared inbound path, media intake, upload links and media serving.
 import {storeInbound, dispatchInbound, storeUpload} from '../advisor/inbound.ts';
 import {deriveKeys} from '../advisor/contacts.ts';
-import {ingestMedia, verifyUploadToken, derivedKey, derivedKeys, MAX_MEDIA_BYTES} from '../advisor/media.ts';
+import {ingestMedia, verifyUploadToken, derivedKey, derivedKeys, derivedVideoKey, MAX_MEDIA_BYTES} from '../advisor/media.ts';
 import {firstFile} from '../advisor/multipart.ts';
 import {shellResponse} from './assets.ts';
 import {waitUntil} from './util.ts';
@@ -46,6 +46,8 @@ import type {JobClaims, JobScope} from '../job-auth.ts';
 import {deployment, build} from '../config.ts';
 import {body, budget} from '../http.ts';
 import {mediaJobWork, mediaJobDone} from '../advisor/media.ts';
+// TA-S4: generated post graphics for Meta's fetch.
+import {GRAPHIC_NAME, GRAPHIC_PUBLIC_STATUSES, servableGraphic} from '../advisor/social/graphics.ts';
 // TA-W1: the public pages, their cache key and the sitemap.
 import {cacheKey, cached} from '../edge-cache.ts';
 import {pageLanguage, pageResponse} from '../advisor/pages/render.ts';
@@ -213,8 +215,6 @@ advisorPublic.post('/api/advisor/upload/:token', async c => {
 
 const MEDIA_FILE = /^([\w-]{1,64})(\.story)?\.(jpg|png|mp4)$/;
 const EXT_MIME: Record<string, string> = {jpg: 'image/jpeg', png: 'image/png'};
-/** Video originals Meta may fetch (09: MP4 or MOV); served at <id>.mp4 with their own type. */
-const VIDEO_MIMES = new Set(['video/mp4', 'video/quicktime']);
 const MEDIA_HEADERS = {'Cache-Control': 'public, max-age=3600', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'};
 
 /**
@@ -245,27 +245,32 @@ export function byteRange(header: string | null | undefined, size: number): {off
  * once it exists). Anything else is the same 404 as a missing id.
  *
  * TA-S2 (09 § Media that Meta fetches): <id>.story.jpg is the job's 1080 x 1920
- * story.jpg (no fallback), and <id>.mp4 is an approved or posted video's
- * original (MP4 or MOV, its own Content-Type) with single-range support
- * (206 / 416), which Meta's video fetchers use.
+ * story.jpg (no fallback), and <id>.mp4 is an approved or posted video with
+ * single-range support (206 / 416), which Meta's video fetchers use.
+ *
+ * Video privacy (00 principle 7): <id>.mp4 is only ever the media job's
+ * stripped copy, advisor/derived/<id>/video.mp4 (no container metadata, no
+ * location atoms), served as video/mp4. The original is never served: until the
+ * copy exists, or when stripping failed, the answer is the same 404.
  */
 advisorPublic.get('/media/:file', async c => {
   const env = c.env, match = MEDIA_FILE.exec(c.req.param('file'));
   if (!match || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
   const [, id, story, ext] = match as unknown as [string, string, string | undefined, string];
   if (story && ext !== 'jpg') return NOT_FOUND();
-  const row = await env.DB.prepare('SELECT kind,mime,r2_key,exif_stripped,publish_state,orientation FROM advisor_media WHERE id=?').bind(id)
-    .first<{kind: string; mime: string; r2_key: string; exif_stripped: number; publish_state: string; orientation: number | null}>();
+  const row = await env.DB.prepare('SELECT kind,mime,r2_key,exif_stripped,publish_state,orientation,derived_at,derived_error FROM advisor_media WHERE id=?').bind(id)
+    .first<{kind: string; mime: string; r2_key: string; exif_stripped: number; publish_state: string; orientation: number | null; derived_at: string | null; derived_error: string | null}>();
   if (!row || !PUBLIC_STATES.has(row.publish_state)) return NOT_FOUND();
   if (ext === 'mp4') {
-    if (row.kind !== 'video' || !row.r2_key || !VIDEO_MIMES.has(row.mime)) return NOT_FOUND();
-    const head = await env.ADVISOR_MEDIA.head(row.r2_key);
+    if (row.kind !== 'video' || !row.r2_key || !row.derived_at || row.derived_error) return NOT_FOUND();
+    const key = derivedVideoKey(id);
+    const head = await env.ADVISOR_MEDIA.head(key);
     if (!head) return NOT_FOUND();
     const range = byteRange(c.req.header('range'), head.size);
     if (range === 'unsatisfiable') return new Response(null, {status: 416, headers: {...MEDIA_HEADERS, 'Content-Range': `bytes */${head.size}`, 'Accept-Ranges': 'bytes'}});
-    const object = await env.ADVISOR_MEDIA.get(row.r2_key, range ? {range} : {});
+    const object = await env.ADVISOR_MEDIA.get(key, range ? {range} : {});
     if (!object) return NOT_FOUND();
-    const headers: Record<string, string> = {...MEDIA_HEADERS, 'Content-Type': row.mime, 'Accept-Ranges': 'bytes', 'Content-Length': String(range ? range.length : head.size)};
+    const headers: Record<string, string> = {...MEDIA_HEADERS, 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Length': String(range ? range.length : head.size)};
     if (range) headers['Content-Range'] = `bytes ${range.offset}-${range.offset + range.length - 1}/${head.size}`;
     return new Response(object.body, {status: range ? 206 : 200, headers});
   }
@@ -279,6 +284,24 @@ advisorPublic.get('/media/:file', async c => {
   }
   if (!object) return NOT_FOUND();
   return new Response(object.body, {status: 200, headers: {...MEDIA_HEADERS, 'Content-Type': type, 'Content-Length': String(object.size)}});
+});
+
+/**
+ * TA-S4 (09 § Media that Meta fetches): a post's generated graphic, the media
+ * job's advisor/posts/<post>/<name> (the daily card, the roundup's cover and
+ * slides, a Story card), only for an approved post or one being or already
+ * published, and only a name the graphic's done state lists. Anything else is
+ * the same 404 as a missing id.
+ */
+advisorPublic.get('/media/post/:post/:name', async c => {
+  const env = c.env, id = c.req.param('post'), name = c.req.param('name');
+  if (!/^[\w-]{1,64}$/.test(id) || !GRAPHIC_NAME.test(name) || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
+  const post = await env.DB.prepare('SELECT status FROM advisor_posts WHERE id=?').bind(id).first<{status: string}>();
+  if (!post || !GRAPHIC_PUBLIC_STATUSES.includes(post.status)) return NOT_FOUND();
+  const key = await servableGraphic(env.DB, id, name);
+  const object = key ? await env.ADVISOR_MEDIA.get(key) : null;
+  if (!object) return NOT_FOUND();
+  return new Response(object.body, {status: 200, headers: {...MEDIA_HEADERS, 'Content-Type': 'image/jpeg', 'Content-Length': String(object.size)}});
 });
 
 // ---- TA-C6: contact card, text deep link and QR ----------------------------------

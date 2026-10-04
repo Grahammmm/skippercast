@@ -100,7 +100,7 @@ function setup({env = {}, boat = {}} = {}) {
 }
 function addMedia(sql, id, {kind = 'image', derived = true, state = 'approved', derivedError = null} = {}) {
   sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,has_person,publish_state,derived_at,derived_error,created_at) VALUES(?,'c1','b1',?,?,1000,?,'sha',1,0,?,?,?,?)`)
-    .run(id, kind, kind === 'video' ? 'video/mp4' : 'image/jpeg', `advisor/media/c1/${id}.${kind === 'video' ? 'mp4' : 'jpg'}`, state, derived && kind === 'image' ? iso(T0 - HOUR) : null, derivedError, iso(T0 - 2 * HOUR));
+    .run(id, kind, kind === 'video' ? 'video/mp4' : 'image/jpeg', `advisor/media/c1/${id}.${kind === 'video' ? 'mp4' : 'jpg'}`, state, derived ? iso(T0 - HOUR) : null, derivedError, iso(T0 - 2 * HOUR));
 }
 function addPost(sql, {id = 'p1', kind = 'photo', media = ['m1'], status = 'approved', caption = CAPTION, targets, scheduled = null, collaborators = null, userTags = null, extra = {}} = {}) {
   const t = targets ?? (kind === 'story' ? ['instagram_story', 'facebook_story'] : ['instagram', 'facebook']);
@@ -193,7 +193,8 @@ dbTest('a carousel: one is_carousel_item container per photo, then CAROUSEL with
 
 dbTest('a reel: REELS with the .mp4 URL, IN_PROGRESS through the first tick (stored, still publishing), FINISHED on the next tick; one container in all; the Page Reel by 3-phase upload', async () => {
   const s = setup(), fake = graphFake({status: ['container-in-progress', 'container-in-progress', 'container-in-progress', 'container-in-progress', 'container-in-progress', 'container-in-progress', 'container-finished']});
-  addMedia(s.sql, 'v1', {kind: 'video'}); addPost(s.sql, {kind: 'reel', media: ['v1']});
+  // TA-S4: the calendar gave the Reel its slot's time (an unscheduled one waits for the calendar).
+  addMedia(s.sql, 'v1', {kind: 'video'}); addPost(s.sql, {kind: 'reel', media: ['v1'], scheduled: iso(T0 - HOUR)});
   const {clock, deps: d} = deps(s, fake);
   const tick1 = await quiet(() => P.publishDue(s.env, clock.t, d));
   assert.deepEqual(tick1.value, {status: 'ran', outcomes: ['pending']});
@@ -447,7 +448,7 @@ dbTest('publishDue: publishing posts first, then due approved posts oldest first
 
 dbTest('the cron tick runs publishDue (not a daily slot)', async () => {
   const s = setup(), fake = graphFake();
-  addMedia(s.sql, 'm1'); addPost(s.sql);
+  addMedia(s.sql, 'm1'); addPost(s.sql, {scheduled: iso(T0 - HOUR)});   // TA-S4: a time from the calendar
   const {value} = await quiet(() => advisorCron(s.env, T0, {slots: [], consumer: {channelFor: () => s.channel}, publish: {fetcher: fake.fetcher, sleep: async () => {}, now: () => T0}}));
   assert.equal(value, 'ok');
   assert.equal(postRow(s.sql).status, 'posted');
@@ -469,12 +470,12 @@ test('byteRange: a-b, a-, -n; past the end is unsatisfiable; anything else is se
   for (const h of [null, '', 'bytes=0-1,5-6', 'items=0-1', 'bytes=-']) assert.equal(byteRange(h, 100), null, String(h));
 });
 
-dbTest('GET /media/<id>.story.jpg serves the derived story.jpg only; /media/<id>.mp4 serves an approved video with Range support (206, 416) and 404 otherwise', async () => {
+dbTest('GET /media/<id>.story.jpg serves the derived story.jpg only; /media/<id>.mp4 serves an approved video\'s stripped copy with Range support (206, 416) and 404 otherwise', async () => {
   const s = setup();
   addMedia(s.sql, 'm1'); addMedia(s.sql, 'v1', {kind: 'video'}); addMedia(s.sql, 'v2', {kind: 'video', state: 'queued'});
   const video = new Uint8Array(Array.from({length: 100}, (_, i) => i));
-  s.bucket.objects.set('advisor/media/c1/v1.mp4', {bytes: video, httpMetadata: {}});
-  s.bucket.objects.set('advisor/media/c1/v2.mp4', {bytes: video, httpMetadata: {}});
+  s.bucket.objects.set('advisor/derived/v1/video.mp4', {bytes: video, httpMetadata: {}});
+  s.bucket.objects.set('advisor/derived/v2/video.mp4', {bytes: video, httpMetadata: {}});
   s.bucket.objects.set('advisor/media/c1/m1.jpg', {bytes: new Uint8Array([1, 2, 3]), httpMetadata: {}});
   const env = {TEXT_ADVISOR_ENABLED: 'true', DB: s.db, ADVISOR_MEDIA: s.bucket};
   assert.equal((await call('/media/m1.story.jpg', env)).status, 404, 'no fallback to the original for a story');

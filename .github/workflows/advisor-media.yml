@@ -36,6 +36,13 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install the advisor extra (Pillow, pillow-heif)
         run: python -m pip install -e ".[advisor]"
+      - name: Check ffmpeg (videos are stripped of their metadata with it)
+        run: |
+          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
+            ffmpeg -version | head -n 1
+          else
+            echo "::warning title=ffmpeg missing::Videos are reported no-ffmpeg and stay held; install ffmpeg on the runner (docs/operations/runners.md)"
+          fi
       - name: Derive images and render graphics
         env:
           # R2 object read/write on skippercast-advisor-media only (an owner step in TA-M1).

@@ -37,9 +37,10 @@ test('localClock reads the local date, 24-hour time and weekday in the zone', ()
   assert.equal(localClock(Date.parse('2026-11-01T15:00:00Z'), 'UTC').time, '15:00');
 });
 
-test('the slot table is one exported array; TA-A1 added the daily answers at 05:30 Pacific', () => {
+test('the slot table is one exported array; TA-A1 added the daily answers at 05:30 Pacific, TA-S4 the daily post and the Sunday roundup, TA-S5 the morning Stories', () => {
   assert.ok(Array.isArray(SLOTS));
-  assert.deepEqual(SLOTS.map(s => [s.name, s.time.local, s.time.tz]), [['daily-answers', '05:30', 'America/Los_Angeles'], ['rules-watch', '06:15', 'America/Los_Angeles']]);
+  assert.deepEqual(SLOTS.map(s => [s.name, s.time.local, s.time.tz, s.time.weekday ?? null]), [['daily-answers', '05:30', 'America/Los_Angeles', null], ['rules-watch', '06:15', 'America/Los_Angeles', null],
+    ['daily-post', '06:30', 'America/Los_Angeles', null], ['weekly-roundup', '17:00', 'America/Los_Angeles', 'Sun'], ['morning-stories', '07:00', 'America/Los_Angeles', null]]);
   assert.equal(new Set(SLOTS.map(s => s.name)).size, SLOTS.length, 'names are unique (they are job_state keys)');
   for (const s of SLOTS) assert.equal(typeof s.run, 'function', s.name);
 });

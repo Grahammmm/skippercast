@@ -145,7 +145,7 @@ unique `message_provider (channel, provider_id)`.
 | `publish_state` | text | `private` (default), `queued` (in a review), `approved`, `posted`, `rejected` |
 | `credit` | text, nullable | the credit line to use when posted ("Capt. X / Boat Y") |
 | `provider_ref` | text, nullable | added in `0007_advisor_media_ref` (TA-C1): the channel's attachment reference (BlueBubbles attachment guid, later a Twilio media URL) |
-| `derived_at`, `derived_error` | text, nullable | added in `0009_advisor_media_derived` (TA-M1): when the `advisor-media` job wrote `advisor/derived/<id>/`, or gave up on the item (then `derived_error` holds its short reason) |
+| `derived_at`, `derived_error` | text, nullable | added in `0009_advisor_media_derived` (TA-M1): when the `advisor-media` job wrote `advisor/derived/<id>/`, or gave up on the item (then `derived_error` holds its short reason). For a video: when it wrote the metadata-stripped `video.mp4` (`no-ffmpeg` when the runner has no ffmpeg); a video is approved, posted or served only with `derived_at` set and no `derived_error` |
 | `orientation` | integer, nullable | added in `0010_advisor_media_orientation`: a JPEG's EXIF Orientation (1-8) read before intake stripped the EXIF; null for other formats. The media job applies it; 2-8 makes the item pending and keeps `/media` from serving the original |
 | `created_at` | text | |
 
@@ -296,11 +296,11 @@ A social post in any state.
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `id` | text PK | random, or deterministic for daily posts: `sha256('daily:' + region + ':' + date)[:32]` |
+| `id` | text PK | random, or deterministic for daily posts: `sha256('daily:' + region + ':' + date)[:32]` (TA-S4: `date` is the local day the post goes out; its reports are the day before), roundups `sha256('roundup:' + region + ':' + date)[:32]` (the Sunday), a media item's post `sha256('post:media:' + media_id)[:32]` (TA-S1) |
 | `kind` | text | `photo`, `carousel`, `reel`, `story`, `daily`, `roundup` |
 | `region` | text | |
 | `boat_id` | text, nullable | credited boat |
-| `media_json` | text | ordered `advisor_media.id`s, or for `daily` the rendered graphic's media id |
+| `media_json` | text | ordered `advisor_media.id`s; `[]` for `daily` and a Story card (TA-S4: their picture is the media job's graphic, `job_state advisor.graphic.<post id>`, not a media row); for a `roundup` the photos its slides show (held and marked posted with it) |
 | `caption` | text | final caption (≤ 2,200, ≤ 30 hashtags, ≤ 20 mentions) |
 | `collaborators_json` | text, nullable | up to 3 IG usernames (SP-7) |
 | `user_tags_json` | text, nullable | `[{username, x, y}]` |
@@ -399,8 +399,10 @@ As built (TA-C4): `<ext>` is the sniffed type's: `jpg`, `png`, `gif`, `webp`,
 (and `.png`) falls back to the stripped original when its stored type matches
 the extension. A HEIC, GIF, WebP, video or audio original (stored as received,
 `exif_stripped=0`) is never served, so it becomes public only through its
-derived JPEG; `GET /media/<id>.mp4` (09) is not built yet (TA-S1 adds it with
-the Meta publishing that needs it). The JPEG walk drops everything after EOI as
+derived JPEG; `GET /media/<id>.mp4` (09, TA-S2) serves only a video's
+metadata-stripped copy `advisor/derived/<id>/video.mp4` (the video privacy fix:
+the media job copies the streams without container metadata or location atoms),
+never the original. The JPEG walk drops everything after EOI as
 well, because an iPhone's MPF secondary image sits there with its own EXIF.
 Files over 24 MB that are stored as received go to R2 as a multipart upload
 (10 MB parts) hashed on the way, so a 300 MB video never sits in the Worker's

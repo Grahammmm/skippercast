@@ -16,7 +16,8 @@ export function PostDetail({post}: {post: Post}) {
   return (
     <div class="admin-media">
       <div class="admin-post-photos">
-        {post.media.length ? post.media.map(m => (m.thumb
+        {post.graphics?.length ? post.graphics.map(src => <img key={src} src={src} alt={COPY.graphicAlt} class="admin-thumb" loading="lazy" />) : null}
+        {post.graphics?.length && !post.media.length ? null : post.media.length ? post.media.map(m => (m.thumb
           ? <img key={m.id} src={m.thumb} alt={COPY.postPhotoAlt} class="admin-thumb" loading="lazy" />
           : <p key={m.id} class="admin-muted">{COPY.noPhoto}</p>)) : <p class="admin-muted">{COPY.noPhoto}</p>}
       </div>

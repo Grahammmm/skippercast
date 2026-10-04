@@ -138,7 +138,10 @@ Instagram handle, the reply asks for it once.
 Videos (SP-3): `kind='video'` → if the container is MP4/MOV under 300 MB,
 the draft is a Reel candidate; else reply with the upload link. No
 transcoding in v1; a video Meta rejects is marked `failed` with the reason
-and the admin can download it from the queue.
+and the admin can download it from the queue. As built (video privacy, 09):
+every stored video is stripped of its container metadata (the camera's
+location atoms included) by the media job before it can be approved or
+posted; only that copy is ever public.
 
 ## Corrections (SC-4)
 

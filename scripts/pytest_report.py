@@ -27,6 +27,9 @@ ALLOWED_SKIPS = frozenset({
     # TA-M1: CI's survey-science job does not install the advisor extra; the stdlib half of
     # tests/unit/test_advisor_media_job.py (SigV4, R2 client, job loop) runs everywhere.
     'Pillow and pillow-heif are not installed (pip install -e ".[advisor]")',
+    # Video privacy: the strip itself runs ffmpeg; the atom walk and the tag check on crafted MP4 bytes
+    # in the same file run everywhere. GitHub's Ubuntu images ship ffmpeg, so CI normally runs it too.
+    'ffmpeg and ffprobe are not installed (the advisor media runner needs them; docs/operations/runners.md)',
     'Pinned NOAA PDFs are cached in var/review (gitignored); run the audit with --fetch locally',
     'Pinned NOAA scheme not cached',
     'Pinned original NOAA research assets are not cached',

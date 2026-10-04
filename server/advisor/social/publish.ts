@@ -9,9 +9,10 @@
 //
 // One run of publish:
 //   1. A lease (job_state advisor.publish.lock.<id>) so the cron and "post now" never run one post twice.
-//   2. Media: every image must be derived (public.jpg, story.jpg; derived_at set): if not, the
-//      media job is dispatched and the post waits (still `approved`). A photo given up by the job
-//      fails the post. An `approved` post is re-checked against admin/posts.ts approvalHold.
+//   2. Media: every image must be derived (public.jpg, story.jpg; derived_at set) and every video
+//      stripped of its container metadata (video.mp4, 00 principle 7): if not, the media job is
+//      dispatched and the post waits (still `approved`). A photo or video given up by the job fails
+//      the post. An `approved` post is re-checked against admin/posts.ts approvalHold.
 //   3. status -> publishing.
 //   4. Instagram (when targeted and ig_media_id is not stored): quota first
 //      (content_publishing_limit; used up -> scheduled_for = max(scheduled_for, now) + 1 h, status
@@ -35,6 +36,12 @@
 // hourly) then reads GET /<ig_media_id>/collaborators for invite_status: any still pending (or not
 // listed) -> invited, else any declined -> declined, else accepted, for 14 days after posting.
 //
+// TA-S4 (09 § Daily post and roundup): a daily post, a roundup or a Story card is published from its
+// generated graphic (social/graphics.ts): the post waits while the job renders it, and its images
+// (the card; the roundup's cover and slides as a carousel) are fetched at /media/post/<id>/<name>.
+// An approved post without a time whose kind and region have calendar slots (calendar.json) waits
+// for social/calendar.ts to give it one; any other unscheduled approved post is due at once.
+//
 // Per-post progress that has no column (carousel children, the Page's unpublished photo ids, a
 // surface's error while the other is still pending) lives in job_state advisor.publish.<id>.
 // Errors kept on the post are MetaError messages (edge, HTTP status, Meta's code and subcode):
@@ -43,7 +50,9 @@ import {advisorSettings} from '../settings.ts';
 import {advisorLog} from '../log.ts';
 import {t} from '../strings.ts';
 import {recordPublish} from '../analytics.ts';
-import {requestMediaJob} from '../media.ts';
+import {requestMediaJob, videoHold, graphicState} from '../media.ts';
+import {graphicKeys, graphicName, graphicUrl, usesGraphic} from './graphics.ts';
+import {calendarPairs} from './calendar.ts';
 import {teamSender} from '../consumer.ts';
 import {channelFor} from '../channels/index.ts';
 import {approvalHold, mediaIdsOf} from '../admin/posts.ts';
@@ -154,8 +163,16 @@ async function pollContainer(cfg: MetaConfig, id: string, startedAt: string | un
   return {status: 'pending'};
 }
 
+/** One picture of a post as Meta fetches it: a photo or video's /media URLs, or a generated graphic's. */
+interface Item {kind: 'image' | 'video'; feed: string; story: string; video: string}
+const mediaItem = (base: string, m: MediaRow): Item => ({kind: m.kind === 'video' ? 'video' : 'image', ...mediaUrls(base, m.id)});
+const graphicItem = (base: string, postId: string, key: string): Item => {
+  const url = graphicUrl(base, postId, graphicName(key));
+  return {kind: 'image', feed: url, story: url, video: ''};
+};
+
 interface Run {
-  env: Env; db: D1Database; cfg: MetaConfig; post: PostRow; media: MediaRow[]; state: PublishState; base: string;
+  env: Env; db: D1Database; cfg: MetaConfig; post: PostRow; media: MediaRow[]; items: Item[]; state: PublishState; base: string;
   clock: () => number; at: () => string; tries: number; sleep: (ms: number) => Promise<void>; deps: PublishDeps;
 }
 
@@ -171,34 +188,32 @@ export function tagsOf(post: Pick<PostRow, 'kind' | 'collaborators_json' | 'user
   return {collaborators, user_tags};
 }
 
-/** The Instagram container input of one media item for a feed post; the user tags go on the first image item. */
-const itemInput = (run: Run, m: MediaRow, tags: UserTag[]): IgContainerInput => {
-  const urls = mediaUrls(run.base, m.id);
-  return m.kind === 'video' ? {kind: 'carousel_item', video_url: urls.video} : {kind: 'carousel_item', image_url: urls.feed, ...(tags.length ? {user_tags: tags} : {})};
-};
+/** The Instagram container input of one item of a carousel; the user tags go on the first image item. */
+const itemInput = (item: Item, tags: UserTag[]): IgContainerInput =>
+  item.kind === 'video' ? {kind: 'carousel_item', video_url: item.video} : {kind: 'carousel_item', image_url: item.feed, ...(tags.length ? {user_tags: tags} : {})};
 
 /** The containers for this post (children first for a carousel); the parent's id. Stores every id the moment Meta returns it. */
 async function createContainer(run: Run): Promise<Step | {status: 'created'; id: string}> {
-  const {post, media, cfg, db, state} = run, ig = run.env.META_IG_USER_ID!;
-  const caption = post.caption || undefined, urls = mediaUrls(run.base, media[0]!.id), video = media[0]!.kind === 'video';
+  const {post, items, cfg, db, state} = run, ig = run.env.META_IG_USER_ID!;
+  const caption = post.caption || undefined, first = items[0]!, video = first.kind === 'video';
   const {collaborators, user_tags} = tagsOf(post), collab = collaborators.length ? {collaborators} : {};
   let input: IgContainerInput;
-  if (post.kind === 'story') input = video ? {kind: 'story', video_url: urls.video} : {kind: 'story', image_url: urls.story};
-  else if (post.kind === 'reel') input = {kind: 'reel', video_url: urls.video, ...(caption ? {caption} : {}), share_to_feed: true, ...collab};
-  else if (media.length === 1) {
+  if (post.kind === 'story') input = video ? {kind: 'story', video_url: first.video} : {kind: 'story', image_url: first.story};
+  else if (post.kind === 'reel') input = {kind: 'reel', video_url: first.video, ...(caption ? {caption} : {}), share_to_feed: true, ...collab};
+  else if (items.length === 1) {
     if (video) return {status: 'error', error: 'a single video goes out as a reel'};
-    input = {kind: 'image', image_url: urls.feed, ...(caption ? {caption} : {}), ...collab, ...(user_tags.length ? {user_tags} : {})};
+    input = {kind: 'image', image_url: first.feed, ...(caption ? {caption} : {}), ...collab, ...(user_tags.length ? {user_tags} : {})};
   } else {
-    const children = (state.ig_children ?? []).slice(0, media.length);
-    const tagged = media.findIndex(m => m.kind === 'image');
-    for (let i = children.length; i < media.length; i++) {
-      children.push(await igContainer(cfg, ig, itemInput(run, media[i]!, i === tagged ? user_tags : [])));
+    const children = (state.ig_children ?? []).slice(0, items.length);
+    const tagged = items.findIndex(m => m.kind === 'image');
+    for (let i = children.length; i < items.length; i++) {
+      children.push(await igContainer(cfg, ig, itemInput(items[i]!, i === tagged ? user_tags : [])));
       state.ig_children = [...children];
       state.ig_started_at ??= run.at();
       await writeState(db, post.id, state, run.at());
     }
     // A video item must finish processing before the carousel container can name it.
-    for (const [i, m] of media.entries()) {
+    for (const [i, m] of items.entries()) {
       if (m.kind !== 'video') continue;
       const step = await pollContainer(cfg, children[i]!, state.ig_started_at, run.tries, run.clock, run.sleep);
       if (step.status !== 'done') {
@@ -256,27 +271,27 @@ async function publishInstagram(run: Run): Promise<Step> {
 
 /** Facebook Page: one photo, a multi-photo post, a Reel or a photo Story. */
 async function publishFacebook(run: Run): Promise<Step> {
-  const {post, media, cfg, db, state} = run, page = run.env.META_PAGE_ID!;
-  const message = post.caption || undefined, urls = mediaUrls(run.base, media[0]!.id);
+  const {post, items, cfg, db, state} = run, page = run.env.META_PAGE_ID!;
+  const message = post.caption || undefined, first = items[0]!;
   try {
     if (post.kind === 'story') {
-      if (media[0]!.kind === 'video') return {status: 'error', error: 'a video Story to the Page is not supported yet'};
-      const story = await fbPhotoStory(cfg, page, {url: urls.story});
+      if (first.kind === 'video') return {status: 'error', error: 'a video Story to the Page is not supported yet'};
+      const story = await fbPhotoStory(cfg, page, {url: first.story});
       await db.prepare('UPDATE advisor_posts SET fb_story_id=?,updated_at=? WHERE id=?').bind(story.post_id, run.at(), post.id).run();
       post.fb_story_id = story.post_id;
     } else {
       let id: string;
       if (post.kind === 'reel') {
-        const reel = await fbVideoReel(cfg, page, {video_url: urls.video, ...(message ? {description: message} : {})});
+        const reel = await fbVideoReel(cfg, page, {video_url: first.video, ...(message ? {description: message} : {})});
         id = reel.post_id ?? reel.video_id;
-      } else if (media.length === 1) {
-        const photo = await fbPhoto(cfg, page, {url: urls.feed, ...(message ? {message} : {})});
+      } else if (items.length === 1) {
+        const photo = await fbPhoto(cfg, page, {url: first.feed, ...(message ? {message} : {})});
         id = photo.post_id ?? photo.id;
       } else {
-        if (media.some(m => m.kind === 'video')) return {status: 'error', error: 'a multi-photo Page post takes photos only'};
-        const photos = (state.fb_photos ?? []).slice(0, media.length);
-        for (let i = photos.length; i < media.length; i++) {
-          photos.push((await fbPhoto(cfg, page, {url: mediaUrls(run.base, media[i]!.id).feed, published: false})).id);
+        if (items.some(m => m.kind === 'video')) return {status: 'error', error: 'a multi-photo Page post takes photos only'};
+        const photos = (state.fb_photos ?? []).slice(0, items.length);
+        for (let i = photos.length; i < items.length; i++) {
+          photos.push((await fbPhoto(cfg, page, {url: items[i]!.feed, published: false})).id);
           state.fb_photos = [...photos];
           await writeState(db, post.id, state, run.at());
         }
@@ -320,16 +335,30 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     const rows = ids.length ? (await db.prepare(`SELECT id,kind,mime,r2_key,derived_at,derived_error,publish_state FROM advisor_media WHERE id IN (${ids.map(() => '?').join(',')})`)
       .bind(...ids).all<MediaRow>()).results : [];
     const media = ids.map(id => rows.find(r => r.id === id)).filter((m): m is MediaRow => Boolean(m));
+    const graphic = usesGraphic(post), rendered = graphic ? await graphicState(db, post.id) : null;
     if (post.status !== 'publishing') {
       // Consent, the boat's verification and the photos' reviews are checked again before anything goes out.
-      const hold = await approvalHold(db, post);
+      const hold = await approvalHold(db, post, {videoPendingOk: true, graphicPendingOk: true});
       if (hold) { await fail(db, post.id, hold, at(), [post.status]); outcome = 'held'; error = hold; return {outcome, error}; }
     }
-    if (!media.length || media.length < ids.length) { error = 'a photo of this post no longer exists'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
-    const broken = media.find(m => !m.r2_key || (m.kind === 'image' && m.derived_error) || (m.kind !== 'image' && m.kind !== 'video'));
-    if (broken) { error = 'a photo of this post could not be prepared for posting'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
-    if (media.some(m => m.kind === 'image' && !m.derived_at)) {
-      // public.jpg and story.jpg come from the media job (09 § Derived images): ask for them and wait.
+    if ((!graphic && !media.length) || media.length < ids.length) { error = 'a photo of this post no longer exists'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
+    if (rendered?.status === 'pending') {
+      // TA-S4: the daily card, the roundup slides or the Story card are still being rendered by the media job.
+      await requestMediaJob(env, clock(), deps.dispatch ? {dispatch: deps.dispatch} : {});
+      outcome = 'deferred';
+      return {outcome};
+    }
+    const base = advisorSettings(env).publicBase;
+    const items = graphic ? graphicKeys(rendered).map(k => graphicItem(base, post.id, k)) : media.map(m => mediaItem(base, m));
+    if (!items.length) { error = 'the graphic of this post could not be made'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
+    const broken = media.find(m => !m.r2_key || m.derived_error || (m.kind !== 'image' && m.kind !== 'video'));
+    if (broken) {
+      error = (broken.r2_key && videoHold(broken)) || 'a photo of this post could not be prepared for posting';
+      await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error};
+    }
+    if (media.some(m => !m.derived_at)) {
+      // public.jpg and story.jpg, and a video's stripped copy (no location metadata), come from the media job
+      // (09 § Derived images): ask for them and wait.
       await requestMediaJob(env, clock(), deps.dispatch ? {dispatch: deps.dispatch} : {});
       outcome = 'deferred';
       return {outcome};
@@ -340,7 +369,7 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     if (opts.retry) { delete state.ig_error; delete state.fb_error; }
     const claimed = await db.prepare(`UPDATE advisor_posts SET status='publishing',error=NULL,updated_at=? WHERE id=? AND status=?`).bind(at(), post.id, post.status).run();
     if (!claimed.meta.changes) return {outcome: 'skipped', error: 'the post changed'};
-    const run: Run = {env, db, cfg, post, media, state, base: advisorSettings(env).publicBase, clock, at, tries: Math.max(1, deps.pollTries ?? POLL_TRIES),
+    const run: Run = {env, db, cfg, post, media, items, state, base, clock, at, tries: Math.max(1, deps.pollTries ?? POLL_TRIES),
       sleep: deps.sleep ?? defaultSleep, deps};
 
     let igPending = false;
@@ -369,7 +398,7 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     if (igDone && fbDone) {
       await db.batch([
         db.prepare("UPDATE advisor_posts SET status='posted',posted_at=?,error=NULL,updated_at=? WHERE id=? AND status='publishing'").bind(at(), at(), post.id),
-        db.prepare(`UPDATE advisor_media SET publish_state='posted' WHERE publish_state='approved' AND id IN (${ids.map(() => '?').join(',')})`).bind(...ids),
+        ...(ids.length ? [db.prepare(`UPDATE advisor_media SET publish_state='posted' WHERE publish_state='approved' AND id IN (${ids.map(() => '?').join(',')})`).bind(...ids)] : []),
         db.prepare('DELETE FROM job_state WHERE key=?').bind(STATE_PREFIX + post.id),
       ]);
       outcome = 'posted';
@@ -399,13 +428,18 @@ export interface PublishDueResult {status: 'off' | 'ran'; outcomes: PublishOutco
  * The cron's run (every 15-minute tick, not a daily slot): nothing unless
  * ADVISOR_SOCIAL_ENABLED is on and the Meta secrets are set; then `publishing`
  * posts (a video still processing) and due `approved` posts, oldest due first,
- * at most PUBLISH_PER_TICK, one after the other.
+ * at most PUBLISH_PER_TICK, one after the other. Due: scheduled_for past, or
+ * no scheduled_for and no calendar slot for the post's kind and region (TA-S4:
+ * those wait for social/calendar.ts to give them a slot's time).
  */
 export async function publishDue(env: Env, now: number = Date.now(), deps: PublishDeps = {}): Promise<PublishDueResult> {
   if (!env.DB || !advisorSettings(env).socialEnabled || !metaConfigured(env)) return {status: 'off', outcomes: []};
-  const due = (await env.DB.prepare(`SELECT id FROM advisor_posts WHERE status='publishing' OR (status='approved' AND (scheduled_for IS NULL OR scheduled_for<=?))
+  const pairs = calendarPairs();
+  const unslotted = pairs.length ? ` AND (kind || '|' || region) NOT IN (${pairs.map(() => '?').join(',')})` : '';
+  const due = (await env.DB.prepare(`SELECT id FROM advisor_posts WHERE status='publishing'
+    OR (status='approved' AND (scheduled_for<=? OR (scheduled_for IS NULL${unslotted})))
     ORDER BY CASE status WHEN 'publishing' THEN 0 ELSE 1 END, COALESCE(scheduled_for, approved_at, updated_at), id LIMIT ?`)
-    .bind(new Date(now).toISOString(), PUBLISH_PER_TICK).all<{id: string}>()).results;
+    .bind(new Date(now).toISOString(), ...pairs, PUBLISH_PER_TICK).all<{id: string}>()).results;
   const outcomes: PublishOutcome[] = [];
   for (const {id} of due) outcomes.push((await publish(env, id, {pollTries: CRON_POLL_TRIES, ...deps})).outcome);
   return {status: 'ran', outcomes};

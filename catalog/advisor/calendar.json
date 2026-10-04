@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-04",
+  "method": "The weekly posting cadence of the Text Advisor's social accounts (docs/plans/text-advisor/09-social.md § Content calendar, SP-6; TA-S4). server/advisor/social/calendar.ts reads it: every 15 minutes it gives each slot in the next lead_hours the oldest approved post of the slot's kind and region that has no time yet (a daily post or roundup only the one made for that date), up to the slot's capacity, by setting scheduled_for to the slot's local time in the region's time zone. An approved post of a kind and region listed here waits for a slot; other kinds go out within 15 minutes of approval. Empty slots are shown on the admin's week grid. weekdays are Mon..Sun; time_local is HH:MM in the region's time zone.",
+  "lead_hours": 48,
+  "slots": [
+    {"id": "stories", "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], "time_local": "07:00", "kind": "story", "region": "morro-bay", "capacity": 10,
+      "note": "The morning Stories: each verified boat's count board from the day before and the conditions card (TA-S5), plus any approved Story without a time."},
+    {"id": "daily-post", "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], "time_local": "08:00", "kind": "daily", "region": "morro-bay", "capacity": 1,
+      "note": "The daily what's-biting post, drafted at 06:30 and approved by the team; only that day's post fills it."},
+    {"id": "photo-late-morning", "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri"], "time_local": "11:00", "kind": "photo", "region": "morro-bay", "capacity": 1},
+    {"id": "photo-evening", "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri"], "time_local": "17:00", "kind": "photo", "region": "morro-bay", "capacity": 1},
+    {"id": "reel", "weekdays": ["Fri"], "time_local": "12:00", "kind": "reel", "region": "morro-bay", "capacity": 1},
+    {"id": "roundup", "weekdays": ["Sun"], "time_local": "18:30", "kind": "roundup", "region": "morro-bay", "capacity": 1,
+      "note": "The weekly roundup carousel, drafted Sundays at 17:00; only that week's roundup fills it."}
+  ]
+}

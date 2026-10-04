@@ -7,6 +7,7 @@ import {countsOf} from '../intake/reports.ts';
 import {conversationContact} from './decisions.ts';
 import {ruleChange} from './rules.ts';
 import {postDetail} from './posts.ts';
+import {videoHold} from '../media.ts';
 import type {ReviewRow} from './decisions.ts';
 import type {ReviewKind} from '../types.ts';
 
@@ -77,15 +78,17 @@ export function visionLabels(json: string | null): Record<string, unknown> | nul
 }
 
 async function mediaDetail(db: D1Database, id: string): Promise<Record<string, unknown> | null> {
-  const m = await db.prepare(`SELECT m.id,m.contact_id,m.kind,m.mime,m.bytes,m.width,m.height,m.r2_key,m.has_person,m.publish_state,m.credit,m.classification_json,m.created_at,
+  const m = await db.prepare(`SELECT m.id,m.contact_id,m.kind,m.mime,m.bytes,m.width,m.height,m.r2_key,m.has_person,m.publish_state,m.credit,m.classification_json,m.created_at,m.derived_at,m.derived_error,
       b.id AS boat_id,b.name AS boat_name,b.slug AS boat_slug FROM advisor_media m LEFT JOIN advisor_boats b ON b.id=m.boat_id WHERE m.id=?`).bind(id)
     .first<{id: string; contact_id: string; kind: string; mime: string; bytes: number; width: number | null; height: number | null; r2_key: string; has_person: number | null;
-      publish_state: string; credit: string | null; classification_json: string | null; created_at: string; boat_id: string | null; boat_name: string | null; boat_slug: string | null}>();
+      publish_state: string; credit: string | null; classification_json: string | null; created_at: string; boat_id: string | null; boat_name: string | null; boat_slug: string | null;
+      derived_at: string | null; derived_error: string | null}>();
   if (!m) return null;
   return {media: {id: m.id, kind: m.kind, mime: m.mime, bytes: m.bytes, width: m.width, height: m.height, has_person: m.has_person === null ? null : m.has_person === 1,
     publish_state: m.publish_state, credit: m.credit, created_at: m.created_at, stored: m.r2_key !== '',
     thumb: m.r2_key ? adminMediaUrl(m.id) : null, original: m.r2_key ? adminMediaUrl(m.id, 'original') : null, labels: visionLabels(m.classification_json),
-    boat: m.boat_id ? {id: m.boat_id, name: m.boat_name, slug: m.boat_slug} : null}};
+    boat: m.boat_id ? {id: m.boat_id, name: m.boat_name, slug: m.boat_slug} : null,
+    hold: videoHold(m)}};   // a video's approval waits for its stripped copy (00 principle 7)
 }
 
 async function reportDetail(db: D1Database, id: string): Promise<Record<string, unknown> | null> {

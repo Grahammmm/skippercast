@@ -29,6 +29,8 @@
 //   POST /api/admin/posts/:id/publish    post an approved post now (TA-S2, social/publish.ts)
 //   POST /api/admin/posts/:id/schedule   {scheduled_for: ISO | null} for an approved post
 //   POST /api/admin/posts/:id/retry      a partial or failed post: only the surfaces that failed
+//   GET  /api/admin/posts/calendar       ?start=YYYY-MM-DD   the week grid (TA-S4, social/calendar.ts calendarWeek)
+//   GET  /api/admin/posts/:id/graphics/:name   a post's generated graphic (the daily card, roundup slides), any status
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -56,6 +58,9 @@ import {listPosts} from '../advisor/admin/posts.ts';
 import {postNow, schedulePost, retryPost} from '../advisor/admin/posts.ts';
 import type {PostActionOutcome} from '../advisor/admin/posts.ts';
 import type {PublishDeps} from '../advisor/social/publish.ts';
+// TA-S4: the calendar week and the graphics preview.
+import {calendarWeek} from '../advisor/social/calendar.ts';
+import {servableGraphic} from '../advisor/social/graphics.ts';
 import type {Fetcher} from '../advisor/social/meta.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
@@ -208,6 +213,20 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.get('/api/admin/posts', async c => {
     const list = await listPosts(c.env.DB!, {status: c.req.query('status') || null, kind: c.req.query('kind') || null, cursor: c.req.query('cursor') || null});
     return 'error' in list ? json({error: list.error}, 400) : json(list);
+  });
+  // ---- TA-S4: the week grid and the graphics preview (registered before /api/admin/posts/:id/...) ----
+  admin.get('/api/admin/posts/calendar', async c => {
+    const week = await calendarWeek(c.env.DB!, c.req.query('start') || null, now());
+    return 'error' in week ? json({error: week.error}, 400) : json(week);
+  });
+  admin.get('/api/admin/posts/:id/graphics/:name', async c => {
+    const env = c.env, id = c.req.param('id');
+    if (!MEDIA_ID.test(id) || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
+    const key = await servableGraphic(env.DB, id, c.req.param('name'));
+    const object = key ? await env.ADVISOR_MEDIA.get(key) : null;
+    if (!object) return NOT_FOUND();
+    return new Response(object.body, {status: 200, headers: {'Content-Type': 'image/jpeg', 'Content-Length': String(object.size), 'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
   });
   // ---- TA-S2: publishing ----
   const publishDeps = (): PublishDeps => ({...(deps.now ? {now: deps.now} : {}), ...(deps.metaFetcher ? {fetcher: deps.metaFetcher} : {}),

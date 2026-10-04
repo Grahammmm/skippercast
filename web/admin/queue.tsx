@@ -195,6 +195,7 @@ function MediaDetail({media}: {media: Record<string, any>}) {
     <div class="admin-media">
       {media.thumb ? <img src={media.thumb} alt={COPY.photoAlt} class="admin-thumb" loading="lazy" /> : <p class="admin-muted">{COPY.noPhoto}</p>}
       <div>
+        {media.hold ? <p class="admin-hold"><strong>{COPY.hold}:</strong> {media.hold}</p> : null}
         <label class="admin-check">
           <input type="checkbox" checked={media.has_person === true} disabled />
           <span>{COPY.personBox}</span>
