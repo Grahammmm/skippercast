@@ -37,8 +37,11 @@ test('localClock reads the local date, 24-hour time and weekday in the zone', ()
   assert.equal(localClock(Date.parse('2026-11-01T15:00:00Z'), 'UTC').time, '15:00');
 });
 
-test('the slot table is one exported array, empty until later tasks add theirs', () => {
-  assert.ok(Array.isArray(SLOTS)); assert.equal(SLOTS.length, 0);
+test('the slot table is one exported array; TA-A1 added the daily answers at 05:30 Pacific', () => {
+  assert.ok(Array.isArray(SLOTS));
+  assert.deepEqual(SLOTS.map(s => [s.name, s.time.local, s.time.tz]), [['daily-answers', '05:30', 'America/Los_Angeles']]);
+  assert.equal(new Set(SLOTS.map(s => s.name)).size, SLOTS.length, 'names are unique (they are job_state keys)');
+  for (const s of SLOTS) assert.equal(typeof s.run, 'function', s.name);
 });
 
 dbTest('a slot runs once per local day, at its first tick at or after the local time, across the Nov 2026 DST change', async () => {

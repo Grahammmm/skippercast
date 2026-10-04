@@ -26,6 +26,9 @@ import {releaseHeld} from './consumer.ts';
 import {channelFor} from './channels/index.ts';
 import type {ConsumerDeps} from './types.ts';
 import type {Env} from '../env.ts';
+// TA-A1: the daily-answers slot.
+import {pregenerateDaily} from './answers/reports.ts';
+import type {DailyDeps} from './answers/reports.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -37,16 +40,19 @@ export const DEFAULT_TZ = 'America/Los_Angeles';
 export type Weekday = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 export interface SlotTime {local: string; tz?: string; weekday?: Weekday}
 export type SlotOutcome = 'ran' | 'not-yet' | 'done-today' | 'not-today' | 'claimed-elsewhere' | 'failed' | 'no-db';
-export type SlotJob = (env: Env, now: number) => Promise<unknown>;
+export type SlotJob = (env: Env, now: number, deps?: CronDeps) => Promise<unknown>;
 export interface Slot {name: string; time: SlotTime; run: SlotJob}
 
 /**
- * Every local-time job of the advisor, one table (01 § Cron slots). Empty
- * until the tasks that own them add theirs (the daily answers, the social
+ * Every local-time job of the advisor, one table (01 § Cron slots). The
+ * tasks that own them add theirs (TA-A1 the daily answers; later the social
  * calendar, insights, the weekly retention prune in 02). Each name is the
  * job_state key suffix and must stay stable once deployed.
  */
-export const SLOTS: readonly Slot[] = [];
+export const SLOTS: readonly Slot[] = [
+  // TA-A1 (06 § what's biting): every active region's ports, so the first "what's biting" of the day is instant.
+  {name: 'daily-answers', time: {local: '05:30', tz: DEFAULT_TZ}, run: (env, now, deps) => pregenerateDaily(env, now, deps?.daily ?? {})},
+];
 
 const parts = new Map<string, Intl.DateTimeFormat>();
 /** The local calendar date (YYYY-MM-DD), time (HH:MM, 00-23) and weekday of `now` in `tz`. */
@@ -93,7 +99,7 @@ export async function runSlot(env: Env, name: string, time: SlotTime, fn: SlotJo
   }
 }
 
-export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps}
+export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps; daily?: DailyDeps}   // daily: TA-A1's feeds and Messages API fetcher (tests)
 export type RelayOutcome = 'not-configured' | 'up' | 'failing' | 'down' | 'no-db';
 
 /**
@@ -151,7 +157,7 @@ export async function advisorCron(env: Env, now: number = Date.now(), deps: Cron
     const held = await releaseHeld(env, deps.consumer ?? {channelFor}, now).catch(error => { advisorLog('error', 'advisor_release_failed', {reason: String((error as Error)?.message).slice(0, 200)}); return null; });
     if (!held) partial = true;
     for (const slot of deps.slots ?? SLOTS) {
-      const outcome = await runSlot(env, slot.name, slot.time, slot.run, now);
+      const outcome = await runSlot(env, slot.name, slot.time, (e, n) => slot.run(e, n, deps), now);
       if (outcome === 'failed') partial = true;
       if (outcome === 'ran') advisorLog('info', 'advisor_slot_ran', {slot: slot.name});
     }

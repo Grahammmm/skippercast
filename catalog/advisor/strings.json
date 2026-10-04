@@ -349,6 +349,218 @@
     "report_day_held": {
       "en": "The team held back your report for {date}. Text me if something needs fixing and I'll pass it on.",
       "es": "El equipo retuvo tu reporte del {date}. Escríbeme si hay que corregir algo y lo paso."
+    },
+    "fishid_high": {
+      "en": "That's {a_label}.",
+      "es": "Es {a_label}."
+    },
+    "fishid_medium": {
+      "en": "Looks like {a_label}, could be {a_second}: check for {cue} ({label}) against {cue2} ({second}).",
+      "es": "Parece {a_label}, podría ser {a_second}: busca {cue} ({label}) frente a {cue2} ({second})."
+    },
+    "fishid_medium_plain": {
+      "en": "Looks like {a_label}, could be {a_second}. A side-on shot with the fins spread would settle it.",
+      "es": "Parece {a_label}, podría ser {a_second}. Una foto de lado con las aletas abiertas lo aclararía."
+    },
+    "fishid_medium_alone": {
+      "en": "Looks like {a_label}, but I'm not certain. A side-on shot with the fins spread would settle it.",
+      "es": "Parece {a_label}, pero no estoy seguro. Una foto de lado con las aletas abiertas lo aclararía."
+    },
+    "fishid_ask": {
+      "en": "Not sure from this one. {reason}: can you send a side-on shot with the fins spread?",
+      "es": "No estoy seguro con esta. {reason}: ¿me mandas una foto de lado con las aletas abiertas?"
+    },
+    "fishid_reason_blurry": {
+      "en": "It's blurry",
+      "es": "Está borrosa"
+    },
+    "fishid_reason_partial": {
+      "en": "Part of the fish is cut off",
+      "es": "Se ve solo parte del pez"
+    },
+    "fishid_reason_multiple": {
+      "en": "There's more than one fish in it",
+      "es": "Hay más de un pez"
+    },
+    "fishid_reason_no_fish": {
+      "en": "I can't find a fish in it",
+      "es": "No encuentro un pez en la foto"
+    },
+    "fishid_reason_too_far": {
+      "en": "The fish is too far away",
+      "es": "El pez está muy lejos"
+    },
+    "fishid_reason_unsure": {
+      "en": "I can't tell it apart from its look-alikes",
+      "es": "No lo distingo de las especies parecidas"
+    },
+    "fishid_protected": {
+      "en": "If it's a {names}, it must be released: use a descending device.",
+      "es": "Si es {names}, hay que liberarlo: usa un descendedor."
+    },
+    "rule_size_min": {
+      "en": "{n} in. minimum",
+      "es": "mínimo {n} pulg."
+    },
+    "rule_size_max": {
+      "en": "{n} in. maximum",
+      "es": "máximo {n} pulg."
+    },
+    "rule_bag": {
+      "en": "bag {n}",
+      "es": "límite {n} por persona"
+    },
+    "rule_no_take": {
+      "en": "no take",
+      "es": "no se puede quedar"
+    },
+    "rule_season": {
+      "en": "open {open} to {close}",
+      "es": "abierta del {open} al {close}"
+    },
+    "rule_year_round": {
+      "en": "open all year",
+      "es": "abierta todo el año"
+    },
+    "rule_depth": {
+      "en": "{n} ft depth limit",
+      "es": "límite de profundidad {n} pies"
+    },
+    "fishid_rules": {
+      "en": "Rules ({source}, checked {date}): {parts}.",
+      "es": "Reglas ({source}, revisadas {date}): {parts}."
+    },
+    "fishid_rules_see": {
+      "en": "Rules ({source}, checked {date}) list no size or bag for it.",
+      "es": "Las reglas ({source}, revisadas {date}) no dan talla ni límite para este."
+    },
+    "fishid_rules_stale": {
+      "en": "Rules ({source}, checked {date}): this rule is due for review, so double-check with CDFW before you keep it: {link}",
+      "es": "Reglas ({source}, revisadas {date}): esta regla está pendiente de revisión, así que confírmala con CDFW antes de quedártelo: {link}"
+    },
+    "fishid_rules_second": {
+      "en": "If it's {a_second}: {parts}.",
+      "es": "Si es {a_second}: {parts}."
+    },
+    "fishid_rules_second_stale": {
+      "en": "If it's {a_second}, its rule is due for review: double-check.",
+      "es": "Si es {a_second}, su regla está pendiente de revisión: confírmala."
+    },
+    "fishid_rules_link": {
+      "en": "Double-check before you keep it: {link}",
+      "es": "Confírmalo antes de quedártelo: {link}"
+    },
+    "fishid_rules_none": {
+      "en": "I have no reviewed rule for it, so check the current CDFW rules before you keep it: {link}",
+      "es": "No tengo una regla revisada para este, así que revisa las reglas vigentes de CDFW antes de quedártelo: {link}"
+    },
+    "fishid_unavailable": {
+      "en": "Got your photo. I can't read photos right now; try again in a bit, or text me what you caught.",
+      "es": "Recibí tu foto. Ahora mismo no puedo leer fotos; inténtalo en un rato o escríbeme qué pescaste."
+    },
+    "fishid_offer": {
+      "en": "Nice fish. Can we share this photo on SkipperCast with credit? Reply YES if so.",
+      "es": "Buen pez. ¿Podemos compartir esta foto en SkipperCast con crédito? Responde SÍ si quieres."
+    },
+    "fishid_nice_shot": {
+      "en": "Nice shot. Want me to ID a fish, or can we share this with credit?",
+      "es": "Buena foto. ¿Quieres que identifique un pez, o la compartimos con crédito?"
+    },
+    "share_credit_ask": {
+      "en": "Thanks! How should we credit you? A first name is fine, or 'anonymous'.",
+      "es": "¡Gracias! ¿Cómo te damos crédito? Basta con tu nombre, o 'anónimo'."
+    },
+    "share_queued": {
+      "en": "Thanks, {credit}. The team looks at every photo before anything is posted.",
+      "es": "Gracias, {credit}. El equipo revisa cada foto antes de publicar nada."
+    },
+    "share_queued_known": {
+      "en": "Thanks. It goes to the team for review, credited to {credit} like last time.",
+      "es": "Gracias. Pasa al equipo para revisión, con crédito a {credit} como la otra vez."
+    },
+    "share_queued_anonymous": {
+      "en": "Thanks. It goes to the team for review and, if posted, goes up without a name.",
+      "es": "Gracias. Pasa al equipo para revisión y, si se publica, sale sin nombre."
+    },
+    "daily_advisory": {
+      "en": "{event} posted for today.",
+      "es": "{event} (aviso del NWS) para hoy."
+    },
+    "daily_skipper": {
+      "en": "{boat} reported {day}: {counts}.",
+      "es": "{boat} reportó {day}: {counts}."
+    },
+    "daily_unverified_boat": {
+      "en": "Another boat",
+      "es": "Otro barco"
+    },
+    "daily_no_skipper": {
+      "en": "No skipper reports from the last three days.",
+      "es": "No hay reportes de capitanes de los últimos tres días."
+    },
+    "daily_landing": {
+      "en": "The landing reports {trips} trips with {species} this week; recent reported activity: {label}.",
+      "es": "El muelle reporta {trips} viajes con {species} esta semana; actividad reciente reportada: {label}."
+    },
+    "daily_nothing": {
+      "en": "No reports from the last three days for {port} yet.",
+      "es": "Todavía no hay reportes de los últimos tres días para {port}."
+    },
+    "daily_conditions": {
+      "en": "Conditions: {parts}.",
+      "es": "Condiciones: {parts}."
+    },
+    "daily_conditions_none": {
+      "en": "Today's forecast isn't in yet.",
+      "es": "El pronóstico de hoy todavía no llega."
+    },
+    "daily_seas": {
+      "en": "seas {range} ft at {period} s",
+      "es": "mar de {range} pies a {period} s"
+    },
+    "daily_seas_no_period": {
+      "en": "seas {range} ft",
+      "es": "mar de {range} pies"
+    },
+    "daily_wind": {
+      "en": "wind {range} kt from the {from}",
+      "es": "viento de {range} nudos del {from}"
+    },
+    "daily_wind_no_dir": {
+      "en": "wind {range} kt",
+      "es": "viento de {range} nudos"
+    },
+    "daily_comfort": {
+      "en": "{word} for a mid-size center console",
+      "es": "{word} para una lancha mediana de consola central"
+    },
+    "comfort_comfortable": {
+      "en": "comfortable",
+      "es": "cómodo"
+    },
+    "comfort_bumpy": {
+      "en": "bumpy",
+      "es": "movido"
+    },
+    "comfort_rough": {
+      "en": "rough",
+      "es": "duro"
+    },
+    "daily_link": {
+      "en": "Full picture: {{link:{target}}}",
+      "es": "Todo el detalle: {{link:{target}}}"
+    },
+    "ask_home_port": {
+      "en": "Which port do you fish out of most? I'll keep my answers to it.",
+      "es": "¿De qué puerto sales más a pescar? Así te contesto para ese."
+    },
+    "daily_released": {
+      "en": "{n} {label} released",
+      "es": "{n} {label} liberados"
+    },
+    "daily_landing_one": {
+      "en": "The landing reports 1 trip with {species} this week; recent reported activity: {label}.",
+      "es": "El muelle reporta 1 viaje con {species} esta semana; actividad reciente reportada: {label}."
     }
   }
 }

@@ -55,6 +55,10 @@
 // consented photo in the feed queue, boat_instagram stores the handle asked
 // once, mark_once records a one-time line. Each re-checks that the contact
 // posts for the boat.
+//
+// TA-I3: angler photos (06 § Angler photos). share_state writes or clears the
+// AC-1 offer (job_state advisor.share.<contact_id>); angler_share queues the
+// angler's own photo for review and stores the credit they gave.
 import {advisorSettings} from './settings.ts';
 import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
 // TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
@@ -76,6 +80,8 @@ import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
 import {flowKey} from './intake/skippers.ts';
 // TA-I2: reports, the media queue and the one-time lines.
 import {insertDraft, publishReport, withdrawReport, applyEdit, postsFor, ONCE_PREFIX} from './intake/reports.ts';
+// TA-I3: the AC-1 offer state and the angler's shared photo.
+import {shareKey, CREDIT_MAX} from './intake/anglers.ts';
 import type {Env} from '../env.ts';
 import type {Action, AdvisorContactRow, AdvisorMessage, AdvisorMessageRow, ConsumerDeps, ContactFields, EngineResult, Handler, OutboundChannel, OutboundMessage, ReviewKind, SendResult} from './types.ts';
 
@@ -331,6 +337,13 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
           // A re-said line (the weekly no-consent line) moves its time; the others are only marked when not yet said.
           await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET updated_at=excluded.updated_at').bind(ONCE_PREFIX + action.key, '1', iso(deps)).run();
         break;
+      // ---- TA-I3: angler photos (AC-1) ----
+      case 'share_state':
+        await applyShareState(env, deps, contact, action.state);
+        break;
+      case 'angler_share':
+        await applyAnglerShare(env, contact, action.mediaId, action.credit);
+        break;
       default:
         advisorLog('warn', 'advisor_action_unknown', {index, type: String((action as {type?: unknown})?.type).slice(0, 40)});
     }
@@ -562,6 +575,37 @@ async function applyMediaQueue(env: Env, deps: ConsumerDeps, contact: AdvisorCon
   if (!boat?.consent_photos_at || (boat.consent_revoked_at && boat.consent_revoked_at >= boat.consent_photos_at)) return;
   await db.prepare("UPDATE advisor_media SET publish_state='queued',credit=? WHERE id=? AND publish_state='private'").bind(boat.name.slice(0, 80), mediaId).run();
   advisorLog('info', 'advisor_media_queued', {count: 1});
+}
+
+/**
+ * TA-I3 (06 § Angler photos): the AC-1 offer state, job_state
+ * advisor.share.<contact_id>; null deletes it. Only for the contact's own
+ * media.
+ */
+async function applyShareState(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, state: Extract<Action, {type: 'share_state'}>['state']): Promise<void> {
+  const db = env.DB!;
+  if (state === null) { await db.prepare('DELETE FROM job_state WHERE key=?').bind(shareKey(contact.id)).run(); return; }
+  if (!state || (state.step !== 'offered' && state.step !== 'credit') || !ID.test(String(state.media_id))) return;
+  if (!await db.prepare('SELECT 1 AS x FROM advisor_media WHERE id=? AND contact_id=?').bind(state.media_id, contact.id).first()) return;
+  const value = JSON.stringify({step: state.step, media_id: state.media_id, asked_at: String(state.asked_at), ...(state.id_offered ? {id_offered: true} : {})});
+  await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(shareKey(contact.id), value, iso(deps)).run();
+}
+
+/**
+ * TA-I3 (06 § Angler photos, AC-1): an angler's yes. Their own photo (no boat)
+ * goes from 'private' to 'queued' for the team's review; a credit (a name or
+ * 'anonymous', at most 40 characters) is stored on advisor_media.credit, also
+ * on a photo already queued (the credit reply comes a text later). The
+ * angler_photo review is a separate review_open action.
+ */
+async function applyAnglerShare(env: Env, contact: AdvisorContactRow, mediaId: string, credit: string | null | undefined): Promise<void> {
+  const db = env.DB!;
+  if (!ID.test(String(mediaId))) return;
+  const clean = typeof credit === 'string' ? credit.replace(/\s+/g, ' ').trim().slice(0, CREDIT_MAX) : '';
+  const r = await db.prepare(`UPDATE advisor_media SET publish_state=CASE WHEN publish_state='private' THEN 'queued' ELSE publish_state END${clean ? ',credit=?' : ''}
+    WHERE id=? AND contact_id=? AND boat_id IS NULL AND publish_state IN ('private','queued')`).bind(...(clean ? [clean] : []), mediaId, contact.id).run();
+  if (r.meta.changes) advisorLog('info', 'advisor_angler_photo_queued', {credit: clean ? (clean === 'anonymous' ? 'anonymous' : 'name') : 'none'});
 }
 
 /**

@@ -1,0 +1,300 @@
+{
+  "_source": "Golden conversation 4 (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Vision answers are the hand-written fixtures in tests/fixtures/advisor/vision/; the rules rows are made up in the shape scripts/advisor/import-rules.mjs writes. No chat model call is made: every turn is a Stage 2 path.",
+  "description": "Golden 4 (TA-I3): an angler sends fish photos with no text. A clear vermilion is identified at high confidence with its rule and the AC-1 offer; YES queues it with an angler_photo review and asks for the credit once; a first name is stored. A canary that could be a vermilion gets the medium shape with the look-alike cues; a blurry photo gets the ask shape and no offer; a photo where a yelloweye is a 0.35 candidate adds the release warning even though the ID itself is too unsure; a lingcod whose rule is in review is quoted only as 'double-check'. A second YES reuses the stored credit without asking again.",
+  "contact": {
+    "home_port": "morro-bay"
+  },
+  "rules": [
+    {
+      "species_key": "vermilion",
+      "species_label": "Vermilion rockfish",
+      "bag_limit": 2,
+      "season_open": "2026-04-01",
+      "season_close": "2026-12-31",
+      "status": "active",
+      "reviewed_at": "2026-10-01",
+      "review_due": "2026-12-31"
+    },
+    {
+      "species_key": "canary",
+      "species_label": "Canary rockfish",
+      "bag_limit": 2,
+      "season_open": "2026-04-01",
+      "season_close": "2026-12-31",
+      "status": "active",
+      "reviewed_at": "2026-10-01",
+      "review_due": "2026-12-31"
+    },
+    {
+      "species_key": "yelloweye",
+      "species_label": "Yelloweye rockfish",
+      "bag_limit": 0,
+      "status": "active",
+      "reviewed_at": "2026-10-01",
+      "review_due": "2026-12-31"
+    },
+    {
+      "species_key": "lingcod",
+      "species_label": "Lingcod",
+      "size_min_in": 22,
+      "bag_limit": 2,
+      "season_open": "2026-04-01",
+      "season_close": "2026-12-31",
+      "status": "review",
+      "reviewed_at": "2026-06-01",
+      "review_due": "2026-08-30"
+    }
+  ],
+  "turns": [
+    {
+      "media": [
+        {
+          "id": "m1",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-vermilion-high.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.high",
+        "reply_contains": [
+          "That's a vermilion rockfish. Red body with grey or dark mottling.",
+          "Rules (CDFW Central Region rules, checked Oct 1): bag 2, open Apr 1 to Dec 31.",
+          "Double-check before you keep it: https://skippercast.com/species/vermilion?s=txt#rules",
+          "Can we share this photo on SkipperCast with credit? Reply YES if so."
+        ],
+        "reply_not_contains": [
+          "must be released",
+          "%"
+        ],
+        "actions": [
+          "send_text",
+          "share_state"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT publish_state FROM advisor_media WHERE id='m1'",
+            "row": {
+              "publish_state": "private"
+            }
+          },
+          {
+            "sql": "SELECT json_extract(value,'$.step') AS step FROM job_state WHERE key='advisor.share.c1'",
+            "row": {
+              "step": "offered"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "yes",
+      "expect": {
+        "intent": "photo.share",
+        "reply_contains": [
+          "How should we credit you? A first name is fine, or 'anonymous'."
+        ],
+        "actions": [
+          "angler_share",
+          "review_open",
+          "share_state",
+          "send_text"
+        ],
+        "review": "angler_photo",
+        "rows": [
+          {
+            "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m1'",
+            "row": {
+              "publish_state": "queued",
+              "credit": null
+            }
+          },
+          {
+            "sql": "SELECT kind,ref_id,reason FROM advisor_reviews",
+            "row": {
+              "kind": "media",
+              "ref_id": "m1",
+              "reason": "angler_photo"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "Sam",
+      "expect": {
+        "intent": "photo.credit",
+        "reply_contains": [
+          "Thanks, Sam."
+        ],
+        "actions": [
+          "angler_share",
+          "share_state",
+          "send_text"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m1'",
+            "row": {
+              "publish_state": "queued",
+              "credit": "Sam"
+            }
+          },
+          {
+            "sql": "SELECT COUNT(*) AS n FROM job_state WHERE key='advisor.share.c1'",
+            "row": {
+              "n": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m2",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-canary-vermilion.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.medium",
+        "reply_contains": [
+          "Looks like a canary rockfish, could be a vermilion rockfish: check for smooth lower jaw (canary rockfish) against small rough scales on the underside of the lower jaw (vermilion rockfish).",
+          "Rules (CDFW Central Region rules, checked Oct 1): bag 2",
+          "Reply YES if so."
+        ],
+        "reply_not_contains": [
+          "That's a",
+          "If it's a vermilion"
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m3",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-blurry.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.ask",
+        "reply_contains": [
+          "Not sure from this one. It's blurry: can you send a side-on shot with the fins spread?"
+        ],
+        "reply_not_contains": [
+          "Rules (",
+          "Reply YES",
+          "must be released"
+        ],
+        "actions": [
+          "send_text"
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m4",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-yelloweye.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.ask",
+        "reply_contains": [
+          "Not sure from this one.",
+          "If it's a yelloweye rockfish, it must be released: use a descending device."
+        ],
+        "reply_not_contains": [
+          "Reply YES",
+          "Rules ("
+        ]
+      }
+    },
+    {
+      "media": [
+        {
+          "id": "m5",
+          "image": "fish.png"
+        }
+      ],
+      "model": [
+        {
+          "vision": "classify-fish.json"
+        },
+        {
+          "vision": "fish-id-lingcod-high.json"
+        }
+      ],
+      "expect": {
+        "intent": "fishid.high",
+        "reply_contains": [
+          "That's a lingcod. Long body and a huge mouth with large teeth.",
+          "this rule is due for review, so double-check with CDFW before you keep it: https://skippercast.com/species/lingcod?s=txt#rules",
+          "Reply YES if so."
+        ],
+        "reply_not_contains": [
+          "22 in",
+          "bag 2"
+        ]
+      }
+    },
+    {
+      "in": "sure",
+      "expect": {
+        "intent": "photo.share",
+        "reply_contains": [
+          "credited to Sam like last time"
+        ],
+        "reply_not_contains": [
+          "How should we credit you"
+        ],
+        "review": "angler_photo",
+        "rows": [
+          {
+            "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m5'",
+            "row": {
+              "publish_state": "queued",
+              "credit": "Sam"
+            }
+          },
+          {
+            "sql": "SELECT COUNT(*) AS n FROM advisor_reviews WHERE reason='angler_photo'",
+            "row": {
+              "n": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

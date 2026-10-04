@@ -112,9 +112,10 @@ test('each cron run writes one cron point; a failed part fails the invocation an
     const broken = {prepare() { throw Error('D1 down'); }};
     await assert.rejects(quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: broken, TRIP_QUEUE: {sendBatch() {}}}, {waitUntil() {}})), /cron run failed/);
     assert.deepEqual(of(points, 'cron')[1].blobs.slice(3), ['error', 'failed', 'disabled']);
-    // With the advisor on, its outcome lands in blob6: the relay check cannot store its state in a broken D1.
+    // With the advisor on, its outcome lands in blob6: the relay check cannot store its state in a broken D1, and
+    // (TA-A1) the daily-answers slot cannot claim its key there, so the hook itself reports 'error'.
     await assert.rejects(quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: broken, TRIP_QUEUE: {sendBatch() {}}, TEXT_ADVISOR_ENABLED: 'true', BLUEBUBBLES_URL: 'https://relay.example.test'}, {waitUntil() {}})), /cron run failed/);
-    assert.equal(of(points, 'cron')[2].blobs[5], 'partial');
+    assert.equal(of(points, 'cron')[2].blobs[5], 'error');
     const {adapter} = database();
     await quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: adapter, TEXT_ADVISOR_ENABLED: 'true'}, {waitUntil() {}}));
     assert.equal(of(points, 'cron')[3].blobs[5], 'ok');

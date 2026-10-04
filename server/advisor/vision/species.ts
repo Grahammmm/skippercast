@@ -74,3 +74,13 @@ export function reportSpeciesKey(key: string): string {
   const k = canonicalSpecies(key);
   return EXTRA.find(e => e.key === k && !e.same_as_parent)?.parent ?? k;
 }
+
+/** TA-I3: the display name of a species key (catalog or species-extra), or null. */
+export function speciesName(key: string | null | undefined): string | null {
+  if (!key) return null;
+  const k = canonicalSpecies(key);
+  return CATALOG.get(k) ?? EXTRA.find(e => e.key === k)?.name ?? null;
+}
+
+/** TA-I3: the look-alike cues (catalog/advisor/lookalikes.json) of a species key, [] when it has none. */
+export const speciesCues = (key: string | null | undefined): string[] => key ? [...(cuesFor(canonicalSpecies(key))?.cues ?? [])] : [];

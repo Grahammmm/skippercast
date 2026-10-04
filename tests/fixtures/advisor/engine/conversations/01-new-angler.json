@@ -1,0 +1,222 @@
+{
+  "_source": "Golden conversation 1 (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape, not captured from the live API; the landing trip and the advisory come from tests/fixtures/feeds/ (the alert moved to the test day).",
+  "description": "Golden 1 (TA-A1): a brand-new angler texts \"What's biting?\". The pre-router answers from the day's port answer (generated once with the forced record_daily_answer tool, since none is stored yet; no chat model call) after the welcome, then asks for the home port once. The angler names Port San Luis (the model saves it with update_profile, seeing the Morro Bay answer in its brief), asks a planning question and gets the Small Craft Advisory first with the NWS line and the port link at the end. A second plain \"what's biting\" for Morro Bay is the stored answer: no model call, no second home-port question.",
+  "seen": false,
+  "turns": [
+    {
+      "in": "What's biting?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_daily_g1",
+                "name": "record_daily_answer",
+                "input": {
+                  "en": "Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today. No skipper reports from the last three days. The landing reports Starfire last Sun with bocaccio, copper rockfish and 8 lingcod; recent reported activity: Low. Today's forecast isn't in yet. Full picture: {{link:port:morro-bay}}",
+                  "es": "Morro Bay, sáb 3 oct: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. No hay reportes de capitanes de los últimos tres días. El muelle reporta al Starfire el dom pasado con bocaccio, rocote cobrizo y 8 lingcod; actividad reciente reportada: Low. El pronóstico de hoy todavía no llega. Todo el detalle: {{link:port:morro-bay}}"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "reports.daily.model",
+        "reply_contains": [
+          "SkipperCast here.",
+          "Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today.",
+          "No skipper reports from the last three days.",
+          "recent reported activity: Low.",
+          "Full picture: https://skippercast.com/ports/morro-bay?s=txt",
+          "Which port do you fish out of most? I'll keep my answers to it."
+        ],
+        "reply_not_contains": [
+          "%",
+          "Want me to"
+        ],
+        "rows": [
+          {
+            "sql": "SELECT key, length(text_en) <= 480 AS en_ok, length(text_es) > 0 AS es_ok FROM advisor_daily_answers",
+            "row": {
+              "key": "morro-bay:2026-10-03",
+              "en_ok": 1,
+              "es_ok": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "Port San Luis mostly",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_g1_profile",
+                "name": "update_profile",
+                "input": {
+                  "home_port": "port-san-luis"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "text",
+                "text": "Got it, Port San Luis. Ask me what's biting there or about a trip day any time."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "profile",
+        "brief_contains": [
+          "- home port: not given yet",
+          "- today's answer for Morro Bay: Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today."
+        ],
+        "reply_contains": [
+          "Got it, Port San Luis."
+        ],
+        "rows": [
+          {
+            "sql": "SELECT home_port FROM advisor_contacts WHERE id='c1'",
+            "row": {
+              "home_port": "port-san-luis"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "in": "Is it worth going out for rockfish today?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_g1_cond",
+                "name": "get_conditions",
+                "input": {
+                  "port": "port-san-luis",
+                  "date": "today"
+                }
+              }
+            ],
+            "stop_reason": "tool_use",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "msg_fixture",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-sonnet-5",
+            "content": [
+              {
+                "type": "text",
+                "text": "SMALL CRAFT ADVISORY posted for today, so it gets rough for a mid-size boat. I don't have today's forecast numbers in yet. If you go, stay inside and keep it short. Check the latest NWS forecast before you go. {{link:port:port-san-luis}}"
+              }
+            ],
+            "stop_reason": "end_turn",
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 120,
+              "output_tokens": 40,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "conditions",
+        "brief_contains": [
+          "- home port: Port San Luis · Avila Beach (port-san-luis)"
+        ],
+        "reply_contains": [
+          "SMALL CRAFT ADVISORY posted for today",
+          "Check the latest NWS forecast before you go.",
+          "https://skippercast.com/ports/port-san-luis?s=txt"
+        ],
+        "reply_not_contains": [
+          "%"
+        ]
+      }
+    },
+    {
+      "in": "what's biting out of Morro Bay",
+      "expect": {
+        "intent": "reports.daily.cache",
+        "reply_contains": [
+          "Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today.",
+          "https://skippercast.com/ports/morro-bay?s=txt"
+        ],
+        "reply_not_contains": [
+          "Which port do you fish out of most?",
+          "SkipperCast here."
+        ]
+      }
+    }
+  ]
+}

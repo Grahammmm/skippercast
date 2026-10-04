@@ -21,8 +21,8 @@ Next). Code: `server/advisor/answers/*.ts` and the tools in 04.
   pins both to the same fixtures), the live conditions summary (wind, seas,
   advisories) for today, and the active rules with any `stale` flags.
 - Generation is one model call with a fixed template prompt
-  (`prompts/daily.ts`), output ≤ 480 chars, in both languages (two calls, or
-  one call asked for both in JSON; TA-A1 picks after testing), e.g.:
+  (`prompts/daily.ts`), output ≤ 480 chars, in both languages (TA-A1: one
+  call with a forced tool whose input is `{en, es}`), e.g.:
   ```
   Morro Bay, Sat Oct 3: 3 boats reported Fri—limits of rockfish for most
   trips (vermilion, copper), lingcod 8–14 per boat, a few cabezon. Seas 4–5 ft
@@ -35,7 +35,7 @@ Next). Code: `server/advisor/answers/*.ts` and the tools in 04.
   last three days for Morro Bay yet. Conditions: … Want me to text you when
   one comes in?" (the follow offer is Next, FR-3; in v1 the answer stops at
   the conditions).
-- Cron (`advisor-digest` slot at 05:30 local) pre-generates every active
+- Cron (`daily-answers` slot at 05:30 local) pre-generates every active
   port's answer so the first text of the day is instant; the `inputs_hash`
   check regenerates during the day when a report is published.
 
@@ -107,8 +107,10 @@ the last 3 days" rather than reaching further back.
    canary vs yelloweye; lingcod vs cabezon; bocaccio vs chilipepper; California
    vs Pacific halibut; white seabass vs croaker), authored once by the owner
    and the agent from CDFW's identification pages, each cue with its source.
-   A yelloweye or cowcod candidate at any confidence adds "If it's a
-   yelloweye or cowcod it must be released — use a descending device."
+   A yelloweye or cowcod candidate at confidence ≥ 0.3 (any band, the 07
+   threshold; settled in TA-I3: "any confidence" would warn on every red fish)
+   adds "If it's a yelloweye or cowcod it must be released — use a
+   descending device."
 5. The photo is kept as `publish_state='private'`; the AC-1 offer
    ("can we share this with credit?") is appended only when the ID
    confidence was ≥ 0.6 and the contact is not a skipper (their photos flow
@@ -226,4 +228,161 @@ TA-A1, TA-A2 and TA-I3. Where the code differs from the text above:
   `port-aliases.json`; Cayucos → Morro Bay) and species (keys, names,
   `species-synonyms.json` in English and Spanish) whole-word, accent- and
   case-insensitively, longest phrase first; every data tool accepts either.
+
+
+
+## As built (TA-I3)
+
+The fish-ID flow is `server/advisor/answers/fishid.ts` (`identify`,
+`answerFor`, the rules lines), the angler's media path and the AC-1 replies are
+`server/advisor/intake/anglers.ts` (the Stage 2 flow `anglerFlow`, registered
+after TA-I2's in `engine.ts` `STAGE_TWO_FLOWS`), and `identify_fish` and
+`share_angler_photo` replace their stubs. Where the code differs from the text
+above:
+
+- **Who.** Any contact that is not a skipper or crew. A skipper's or crew's
+  media still go through TA-I2's `reportFlow`, which runs first; a skipper with
+  no boat gets the plain acknowledgement, never the angler path.
+- **Media-only.** The first stored image is classified (07); `kind='fish'` runs
+  `identifyFish` with the contact's region (home port, else
+  `ADVISOR_REGION_DEFAULT`). No chat model call. Anything else (a deck, a
+  sunset, a person) gets "Nice shot. Want me to ID a fish, or can we share this
+  with credit?" and records the offer; a reply of `id` / `identify it` /
+  `qué pez` then runs the fish ID on that photo. A video gets "Nice shot" too
+  (nothing to identify). Vision down: "I can't read photos right now…"; over
+  4.5 MB or a rejected file: the upload link.
+- **Reply shapes** (strings `fishid_*`, en and es). High: "That's a {name}.
+  {cue}." Medium: "Looks like a {name}, could be a {second}: check for {cue}
+  ({name}) against {cue} ({second})." The cue pair is the two species'
+  `lookalikes.json` cues that share a feature word (the jaw against the jaw),
+  else the first of each; names come from the catalog (Spanish: the first
+  Spanish synonym, "colorado"). The cues are English, so a Spanish reply leaves
+  them out until TA-A6. Ask: "Not sure from this one. {reason}: can you send a
+  side-on shot with the fins spread?" with a reason per `reason` code (blurry,
+  partial, several fish, no fish, too far; else "I can't tell it apart from its
+  look-alikes"). A top candidate under 0.6 is "ask" even without
+  `needs_better_photo`.
+- **Protected.** `decideProtected` at **≥ 0.3** (step 4 above now says so);
+  only `must_release` species (yelloweye, cowcod, bronzespotted) add the line,
+  in every band including "ask"; canary (`must_release: false`, a sub-bag
+  species) does not.
+- **Rules (ID-2).** `lookupRules` for the top candidate (its own row, else its
+  group's, so a vermilion with only a rockfish row quotes the rockfish row):
+  "Rules ({source_name}, checked {Mon D}): {size min/max}, bag {n} (or no take),
+  open {Apr 1} to {Dec 31} (or open all year), {depth limit}. Double-check
+  before you keep it: {{link:rules:<key>}}". A stale row (in review or past
+  `review_due`) is never quoted with numbers: "this rule is due for review, so
+  double-check with CDFW before you keep it: <link>". No row: "I have no
+  reviewed rule for it, so check the current CDFW rules…". A medium ID whose
+  second candidate has a different rule adds "If it's a {second}: …" (or "its
+  rule is due for review: double-check"). The ask band quotes no rule. The
+  reply is capped at 480 characters like a model reply.
+- **AC-1 offer.** "Nice fish. Can we share this photo on SkipperCast with
+  credit? Reply YES if so." as a second text, only when the top candidate is
+  ≥ 0.6 and the contact is not a skipper or crew. The offer is `job_state`
+  `advisor.share.<contact_id>` (`{step: 'offered' | 'credit', media_id,
+  asked_at, id_offered?}`, written by the consumer's `share_state` action), good
+  for 24 h. `yes`, `y`, `sure`, `ok`, `sí`, `si`, `claro`, `dale`, … within 24 h
+  share; any other message deletes the offer and goes on as usual ("else
+  ignore"). The photo stays `private` until then.
+- **Sharing.** A yes: the `angler_share` action (the contact's own photo with no
+  boat, `private` → `queued`), a `review.media` item with reason `angler_photo`
+  (which texts the admin), and the credit. The credit is asked once per contact:
+  "How should we credit you? A first name is fine, or 'anonymous'." The reply is
+  read by `parseCredit` (1–4 words of letters, ≤ 40 characters, "call me Joe",
+  "me llamo Lupe", `anonymous`/`anónimo`) and stored on `advisor_media.credit`;
+  a later shared photo reuses the contact's last credit without asking. A reply
+  that is not a name leaves the photo queued with no credit and goes on. The
+  post draft (`kind photo`, caption style `angler`) is TA-S1's.
+- **Tools.** `identify_fish {media_id}` (the contact's own image) returns the
+  band, the candidates, `must_release`, the rules summaries, `reply` (the same
+  deterministic text, which the model is told to send as it is) and, when
+  eligible, a `share_offer` note; a current rules row in its result satisfies
+  the engine's rules guard like `get_rules`. A photo with a caption now reaches
+  the model with its `media_id` for anglers too. `share_angler_photo {media_id,
+  consent}` (anglers only): false clears the offer; true runs the same share
+  actions and the system sends the credit question itself.
+- **Forget me** also deletes the contact's `advisor.share.` row.
+
+## As built (TA-A1)
+
+The daily answer is `server/advisor/answers/reports.ts` (`portForQuestion`,
+`dailyInputs`, `currentInputsHash`, `dailyAnswer`, `composeDaily`, the
+`daily-answers` slot job `pregenerateDaily` and the pre-router `dailyFlow`),
+with the template in `server/advisor/prompts/daily.ts`. Where the code differs
+from the text above:
+
+- **Inputs and hash.** `dailyInputs(env, port, date)` collects, in a fixed
+  order: the port's `published` skipper reports dated from three days before
+  `date` through `date` (id, version, date, counts; a verified boat by name,
+  any other as `"a boat"`, so the name never reaches the model), the landing
+  reports the daily feed holds for the port with the ladder label per region
+  target (`answers/confidence.ts`), today's advisories and the 06:00–14:00
+  conditions (wind, seas, period, the comfort word), the region's rules for
+  its targets (`open` today, `stale`), and whether each feed loaded.
+  `currentInputsHash` is the sha256 of that JSON. A publish or an edit (new
+  version) changes it; a pending report, another port's report or one older
+  than three days does not. Publishing also deletes the port's rows (TA-I2),
+  so the next question regenerates in any case.
+- **One call, both languages.** `record_daily_answer` is forced
+  (`tool_choice`), `temperature: 0`, its input `{en, es}`; the prompt asks for
+  ≤ 420 characters each so the resolved link fits inside 480 (the cap is
+  applied after link resolution, `capReply`). The prompt is given the facts
+  as JSON plus the conditions sentence and date words already written in both
+  languages, so the model does not restate numbers on its own. The pick was
+  made on the recorded fixtures, not a live eval: `scripts/advisor/eval.mjs`
+  does not run the daily prompt yet.
+- **What is stored.** A model answer is kept only when both languages pass
+  `acceptable`: no markdown, no `%`, "percent", "probab…", "chance", "odds",
+  "por ciento", "probabilidad"; no rule number (the rules-guard pattern); no
+  follow offer ("text you when", "want me to", "te aviso", "quieres que");
+  with no skipper report, the landing's ladder label (kept in English in both
+  languages, the only confidence words) and, in English, "no skipper
+  reports". Anything else (an HTTP error, no API key, the global LLM cap, a
+  refused answer) stores `composeDaily`, the same facts in the fixed
+  `daily_*` strings (en and es). The composed answer stays for the day until
+  the hash changes; it is a correct answer, only plainer.
+- **The two fallbacks.** No skipper report but landing reports: "No skipper
+  reports from the last three days. The landing reports {n} trips with
+  {species} this week; recent reported activity: {label}." (or the model's
+  wording with the same parts). Nothing at all: "No reports from the last
+  three days for {port} yet." and the conditions, with no model call and no
+  link (the follow offer is FR-3, Next). Advisories always lead, the event in
+  capitals ("SMALL CRAFT ADVISORY posted for today.").
+- **Failed feeds.** A feed that fails to load changes the hash but is not new
+  information: when a row exists for today, it is served as it is, so a
+  passing R2 or GitHub error never replaces a good answer with "Today's
+  forecast isn't in yet". With no row, the degraded answer is made and stored,
+  and the next read with both feeds back regenerates it.
+- **Slot.** `SLOTS` has `daily-answers` at 05:30 America/Los_Angeles (01 §
+  cron slots; the name replaces `advisor-digest` above). It runs
+  `pregenerateDaily` for every port in `catalog/home-ports.json` whose region
+  (the build's `REGIONS`) has `status: active`, today Morro Bay and Port San
+  Luis, and throws when any port failed so `runSlot` releases the claim and
+  the next tick retries (ports already stored are cache hits). Slot jobs now
+  receive the cron deps (`CronDeps.daily`: feeds and fetcher, for tests).
+- **Pre-router.** `dailyFlow`, the last Stage 2 flow (after TA-I3's), answers
+  a text-only message that is exactly "what's biting", "what is biting",
+  "how's the fishing", "qué está picando" or "cómo está la pesca" (after
+  folding case, accents and punctuation; optional "hey/hola", an optional
+  port after out of/at/in/en/de…, an optional today/hoy/lately), with the port
+  from the text or `portForQuestion`. Only ports of active regions; a preview
+  region's port, a species ("for lingcod") or any other qualifier goes to the
+  model. A stored current answer costs no model call at all; a missing or
+  stale one costs the one generation call, shared by everyone asking about
+  that port today (the chat model is never called). The reply is in the
+  turn's language. A contact (role `angler`) with no home port gets "Which
+  port do you fish out of most? I'll keep my answers to it." once
+  (`mark_once` `homeport.<contact_id>`, deleted by forget me); the model's
+  `update_profile` saves the answer. Intents: `reports.daily.cache|model|composed`.
+- **Elsewhere.** `get_port_report` returns `daily: {text, source:
+  'stored'|'composed', note}`: the stored answer when current, else the
+  composed one without a second model call and without storing it. The
+  situation brief carries today's stored answer for the home port (else the
+  region default's first port) when one exists. `rulesGuard`,
+  `statesRuleNumber` and `stripMarkdown` moved to `reply.ts` (re-exported by
+  `engine.ts`).
+- **Cost note.** The hash includes the window's wind and seas, so a forecast
+  update that changes those numbers regenerates the port's answer on the
+  next question (one call per port per change).
 

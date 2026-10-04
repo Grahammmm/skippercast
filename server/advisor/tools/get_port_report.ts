@@ -1,7 +1,8 @@
 // get_port_report (docs/plans/text-advisor/04-advisor-engine.md § Tools, 06 §
 // what's biting and § freshness; FR-1 interim, FR-4): what boats reported out
-// of a port. Until TA-A1 there is no daily answer (`daily: null`). It returns
-// the latest five published skipper reports for the port from advisor_reports
+// of a port: the day's answer (TA-A1, answers/reports.ts: the stored one when
+// it is current, else composed from the same facts without a second model
+// call), the latest five published skipper reports for the port from advisor_reports
 // (at most 14 days old; a verified boat is named, an unverified one is "a
 // boat"), and the landing reports from the region's daily feed with their
 // Insufficient/Low/Moderate label (answers/confidence.ts), labelled as reported
@@ -16,6 +17,8 @@ import type {LandingReport} from '../answers/confidence.ts';
 import {addDays, daysBetween, localDate} from '../answers/time.ts';
 // TA-I1: the verified/unverified contract (05 § Verification) is shared with get_trips.
 import {publicBoat} from '../intake/skippers.ts';
+// TA-A1: the day's answer.
+import {dailyAnswer} from '../answers/reports.ts';
 
 export const MAX_SKIPPER_REPORTS = 5, MAX_REPORT_AGE_DAYS = 14, MAX_LANDING_REPORTS = 6;
 
@@ -76,9 +79,10 @@ export const getPortReport: AdvisorTool = {
       };
     }
 
+    const answer = await dailyAnswer(ctx.env.DB ? ctx.env : {...ctx.env, DB: ctx.db}, port, today, ctx.language, ctx.deps, {generate: false});
     return {result: {
       port, port_name: portName(port), region: regionId, today,
-      daily: null,
+      daily: {text: answer.text, source: answer.source === 'cache' ? 'stored' : 'composed', note: 'The answer for a plain "what\'s biting": send it as it is, or use it with the reports below for a more specific question.'},
       skipper_reports: skipper,
       skipper_reports_note: skipper.length ? `Newest first, at most ${MAX_REPORT_AGE_DAYS} days old. Name only verified boats; say "a boat" for the others. Always say the date or how many days ago.` : `No skipper reports for this port in the last ${MAX_REPORT_AGE_DAYS} days.`,
       landing,
