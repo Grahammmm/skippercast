@@ -9,12 +9,17 @@ listener's raw store. A scheduled run, in order:
    listener's ``heartbeat.json`` go to ``POST /api/fleet/jobs/heartbeat``
    (``job_state`` ``fleet.ais.<region>.heartbeat``). A missing heartbeat file is
    not sent, so the Worker's health check goes stale.
-2. **hooks** (CF-46): ``refresh_watch(ctx)`` then ``match(ctx)`` from an
-   optional ``skippercast.fleet.ais.match`` module. Without that module the run
-   goes on: there is nothing to refresh and the targets are the registry's.
+2. **hooks** (CF-46): ``refresh_watch(ctx)`` writes the listener's
+   ``watch.json`` from ``GET /api/fleet/jobs/watch``; ``match(ctx)`` matches
+   MMSIs to vessels, pushes watch rows, ``ais`` facts and ``mmsi`` reviews with
+   ``POST /api/fleet/jobs/watch``, writes ``watch.json`` again and returns the
+   watched MMSIs (``match.py``). Both come from the optional
+   ``skippercast.fleet.ais.match`` module; without it the run goes on: there is
+   nothing to refresh and the targets are the registry's.
 3. **targets**: MMSI -> ``VesselRef``. The registry's MMSIs (``GET
    /api/fleet/jobs/snapshot`` vessels with an ``mmsi``; an MMSI on two vessels
-   is skipped), overlaid by whatever ``match`` returns.
+   is skipped), plus the MMSIs ``match`` watches. A registry MMSI keeps its
+   registry vessel: ``match`` adds MMSIs, it never reassigns one.
 4. **trips**: per target, departures from ``resume`` to ``now - 10 min``,
    from positions read an hour earlier (``resume`` is the departure of the trip
    still open at the last run, else that run's end; the first run looks back
@@ -587,7 +592,8 @@ def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None 
                 table["refresh_watch"](ctx)
         targets = registry_targets(worker, region.id)
         if window is None and "match" in table:
-            targets.update(table["match"](ctx) or {})
+            for mmsi, ref in (table["match"](ctx) or {}).items():
+                targets.setdefault(mmsi, ref)   # AIS never overrides the registry's MMSI (CF-46 acceptance 3)
         if mmsis is not None:
             wanted = set(mmsis)
             targets = {m: ref for m, ref in targets.items() if m in wanted}
