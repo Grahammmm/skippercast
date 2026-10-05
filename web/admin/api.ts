@@ -187,3 +187,98 @@ export function visionLine(v: Health['vision'][number]): string {
   const state = v.down_until ? ADMIN_COPY.providerDown(when(v.down_until)) : ADMIN_COPY.providerUp;
   return `${state} · ${ADMIN_COPY.providerLastOk(when(v.last_ok_at) || ADMIN_COPY.providerNever)}`;
 }
+
+// ---- Charter fleet (/api/admin/fleet/*; charter-fleet design § 12, § 13) ----
+/** A fleet admin API path: '/api/admin/fleet/<path>' with the non-empty query values. */
+export function fleetPath(path: string, query: Record<string, string | null | undefined> = {}): string {
+  const q = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) if (value) q.set(key, value);
+  const text = q.toString();
+  return `/api/admin/fleet/${path}${text ? `?${text}` : ''}`;
+}
+export const getFleet = <T>(path: string, query?: Record<string, string | null | undefined>): Promise<T> => call(fleetPath(path, query));
+export const postFleet = <T>(path: string, data: unknown): Promise<T> => postJson(fleetPath(path), data);
+/**
+ * Whether the fleet admin is on (CF-31). Every /api/admin/fleet/* path answers 404 while
+ * FLEET_ENABLED is off (server/routes/fleet.ts), so the open-review list answering is the flag.
+ */
+export async function getFleetEnabled(): Promise<boolean> {
+  try { await getFleet('reviews', {status: 'open'}); return true; }
+  catch (e) { if (e instanceof ApiError && (e.status === 404 || e.status === 401)) return false; throw e; }
+}
+
+// ---- CF-31: fleet reviews and vessels (server/fleet/admin/reviews.ts, vessels.ts) ----
+export const FLEET_REVIEW_KINDS = ['merge', 'mmsi', 'class', 'fact-conflict', 'change', 'vanished', 'advisor-link', 'scope'] as const;
+export type FleetReviewKind = typeof FLEET_REVIEW_KINDS[number];
+export const FLEET_REVIEW_STATUSES = ['open', 'decided', 'dismissed', 'all'] as const;
+export type FleetAction = 'same-vessel' | 'new-vessel' | 'set-mmsi' | 'reject-mmsi' | 'set-class' | 'set-status' | 'confirm' | 'dismiss';
+export const VESSEL_CLASSES = ['six-pack', 'inspected-party', 'long-range'] as const;
+export const VESSEL_STATUSES = ['active', 'inactive', 'sold', 'excluded'] as const;
+export const PROFILE_STATUSES = ['listed', 'hidden'] as const;
+export const MAP_CONSENTS = ['none', 'aggregate', 'named'] as const;
+export const WATERS = ['ocean', 'bay', 'delta', 'inland'] as const;
+export interface FleetReview {
+  id: string; region: string; kind: FleetReviewKind; subject_id: string | null; subject_name?: string | null; subject_slug?: string | null;
+  candidate: unknown; proposal: unknown; decision: unknown; score: number | null; status: 'open' | 'decided' | 'dismissed';
+  decided_by: string | null; decided_at: string | null; opened_at: string; run_id: string | null; actions?: FleetAction[];
+}
+export interface FleetDecision {action: FleetAction; vessel_id?: string; mmsi?: string; vessel_class?: string; status?: string; note?: string}
+/** A vessel in the list (vessels.ts listVessels). `pinned` is ['*'] when the pin record is unreadable. */
+export interface FleetVesselRow {
+  id: string; region: string; slug: string; name: string; operator_id: string | null; port_id: string | null; landing_id: string | null;
+  vessel_class: string | null; mmsi: string | null; uscg_doc: string | null; status: string; profile_status: string;
+  completeness: number | null; last_seen_at: string | null; updated_at: string; ais_watched: boolean; open_reviews: number; pinned: string[];
+}
+/** A column's pin: who set it and when; true when pinned_json is unreadable (everything is pinned); null when unpinned. */
+export type FleetPin = {by: string; at: string; fact_id: string} | true | null;
+export interface FleetFact {
+  id: string; field: string; value: unknown; source_id: string; source_url: string; method: string; confidence: number; rights: string;
+  retrieved_at: string; first_seen_at: string; last_seen_at: string; superseded_at: string | null; superseded_by: string | null; run_id: string | null;
+}
+/** GET /api/admin/fleet/vessels/:id (vessels.ts vesselDetail). */
+export interface FleetVesselDetail {
+  vessel: Record<string, unknown> & {id: string; region: string; slug: string; name: string; status: string; profile_status: string;
+    map_display_consent: string; removal_requested_at: string | null; completeness: number | null; pinned: string[]};
+  fields: Record<string, {value: unknown; pinned: FleetPin; fact_id: string | null}>;
+  facts: FleetFact[];
+  aliases: {alias: string; alias_norm: string; kind: string; source_url: string | null; first_seen_at: string; last_seen_at: string}[];
+  offerings: (Record<string, unknown> & {id: string; name: string; trip_type: string | null; status: string; price_cents: number | null; departs_local: string | null;
+    season_from: string | null; season_to: string | null})[];
+  changes: {id: string; kind: string; before: unknown; after: unknown; detected_at: string; run_id: string | null; review_id: string | null}[];
+  watch: {region: string; mmsi: string; match_method: string; confidence: number | null; status: string; ais_name: string | null; last_seen_at: string | null; positions_30d: number | null}[];
+  trips: {id: string; mmsi: string; departed_at: string; returned_at: string | null; local_date: string; status: string; trip_type_inferred: string | null;
+    distance_nm: number | null; fishing_min: number | null}[];
+  advisor_boats: {id: string; slug: string; name: string; port: string; status: string}[];
+  open_reviews: {id: string; kind: FleetReviewKind; score: number | null; opened_at: string}[];
+  operator: {id: string; slug: string; name: string; consent_status: string; outreach_status: string} | null;
+}
+export type FleetFieldValue = string | number | string[] | null;
+export interface FleetVesselEdit {fields?: Record<string, FleetFieldValue>; unpin?: string[]; removal_requested?: true}
+export interface FleetVesselQuery {region?: string; port?: string; class?: string; status?: string; profile_status?: string; ais?: string; completeness_max?: string}
+
+export const getFleetReviews = (status: string, kind: string, region: string, cursor?: string | null): Promise<{reviews: FleetReview[]; next: string | null}> =>
+  getFleet('reviews', {status: status || 'open', kind, region, cursor});
+export const decideFleetReview = (id: string, decision: FleetDecision): Promise<{review: FleetReview; repeated?: true}> =>
+  postFleet(`reviews/${encodeURIComponent(id)}`, decision);
+export const getFleetVessels = (filters: FleetVesselQuery, cursor?: string | null): Promise<{vessels: FleetVesselRow[]; next: string | null}> =>
+  getFleet('vessels', {...filters, cursor});
+export const getFleetVessel = (id: string): Promise<FleetVesselDetail> => getFleet(`vessels/${encodeURIComponent(id)}`);
+export const editFleetVessel = (id: string, edit: FleetVesselEdit): Promise<FleetVesselDetail> => postFleet(`vessels/${encodeURIComponent(id)}`, edit);
+
+/** True when a vessel can appear on public pages (server/fleet/display.ts): active, listed and no removal request (Q15). */
+export const vesselIsPublic = (v: {status: string; profile_status: string; removal_requested_at: string | null}): boolean =>
+  v.status === 'active' && v.profile_status === 'listed' && !v.removal_requested_at;
+/** A source URL as a link target: plain https only (an admin:<id> source is never a link). */
+export function httpsUrl(url: unknown): string | null {
+  if (typeof url !== 'string' || !url.startsWith('https://')) return null;
+  try { return new URL(url).protocol === 'https:' ? url : null; } catch { return null; }
+}
+/** A JSON value as one short line for the admin's tables. */
+export function valueText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value) && value.every(v => v === null || typeof v !== 'object')) return value.map(v => String(v)).join(', ');
+  return JSON.stringify(value);
+}
+// ---- end CF-31 ----
