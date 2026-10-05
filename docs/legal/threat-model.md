@@ -1,6 +1,6 @@
 # Threat model
 
-A STRIDE review of SkipperCast as it runs on `main` (after PR #24, [P0-01]), with the fixes in open PRs noted where they change the picture. For each threat: the current mitigation with file references, the risk that remains, and the task from the engineering audit guide that addresses it. Section 9 covers the Text Advisor, reviewed separately from its own code (2026-10-04). This is an engineering document, not legal advice.
+A STRIDE review of SkipperCast as it runs on `main` (after PR #24, [P0-01]), with the fixes in open PRs noted where they change the picture. For each threat: the current mitigation with file references, the risk that remains, and the task from the engineering audit guide that addresses it. Section 9 covers the Text Advisor, reviewed separately from its own code (2026-10-04). Section 10 covers the charter fleet registry and AIS, reviewed from its plan before any code exists (2026-10-04). This is an engineering document, not legal advice.
 
 **STRIDE:** **S**poofing identity · **T**ampering with data · **R**epudiation (no record of who did what) · **I**nformation disclosure · **D**enial of service · **E**levation of privilege.
 
@@ -252,6 +252,88 @@ TA-C5 found the first seven; the hardening branch (`claude/ta-hardening`) took t
 | 8 | Upload and export tokens in request URLs, so in Workers Logs (§ 9.3) | Fixed | c6c2029b: `/u#<token>` and `/my-data#<token>`, the token sent in a header; old path links 410 for 7 days past expiry |
 | 9 | Real Central Coast boat names and handles in the tests (§ 9 fixture scan) | Fixed | 1a555b6c: fictional names throughout `tests/` (and in the `register_boat` tool's example and the eval facts), the handle rule extended to `tests/test_advisor_*.mjs` |
 
+## 10. Charter fleet registry and AIS
+
+The charter fleet registry and AIS activity map ([plan](../plans/charter-fleet/README.md), [ADR 0008](../engineering/adr/0008-charter-fleet-registry-and-ais.md)) finds the for-hire fishing boats of a region, keeps a sourced profile of each, matches boats to AIS and maps where they go. This section reviews it **from the design, before any code exists** (CF-06, 2026-10-04): the "Current mitigation" column describes what [design.md](../plans/charter-fleet/design.md) specifies and the task that builds it, not shipped code. Each building task's reviewer checks its rows against the code, and the section is reviewed again against the code before the owner turns the flags on (no task holds that review yet). Every fleet path answers `404` until `FLEET_ENABLED` (routes, admin, profile data, `/go/`) or `FLEET_MAP_ENABLED` (map layers) is on; both default off in production ([design § 16](../plans/charter-fleet/design.md#16-feature-flags-and-deploy-wiring)). Data rights for every source are in the [data-rights register](data-rights-register.md#charter-fleet-registry-and-ais).
+
+```mermaid
+flowchart LR
+    sources["Public sources: FCC ULS, PSIX,<br/>TECK.net, landings, directories,<br/>operator sites, Google Places"] --> jobs
+    ais["aisstream.io<br/>(WebSocket, API key)"] --> listener["AIS listener<br/>user systemd unit on Hermes"]
+    listener --> raw[("Raw AIS store on Hermes<br/>SQLite per day, 30 days")]
+    raw --> jobs["Hermes jobs on DATA_RUNNER:<br/>fleet-registry, fleet-osint (claude -p),<br/>fleet-ais processor"]
+    jobs -->|"GitHub OIDC, /api/fleet/jobs"| worker["Worker: server/routes/fleet.ts,<br/>server/fleet/"]
+    worker --> d1[("D1: fleet_* tables<br/>registry, outreach, clicks,<br/>derived trips and events")]
+    admin(["Owner: passkey session, role admin"]) --> worker
+    visitor(["Visitor"]) -->|"/boats/slug, /go/slug"| worker
+    worker -->|"302 to the stored https URL"| operator(["Operator booking or website"])
+    health["fleet-health.yml<br/>(GitHub-hosted)"] -->|"GitHub OIDC"| worker
+```
+
+Assets, most sensitive first: outreach records and operator contact and consent status (admin only); raw AIS positions of named boats on Hermes, which show where an operator fishes; derived trips, segments and events in D1; the integrity of public boat profiles and of the `/go/` redirect targets (people book trips through them); the secrets `AISSTREAM_API_KEY`, `GOOGLE_PLACES_API_KEY` and the owner's Claude subscription token on Hermes (`~/.config/skippercast/claude.env`); the self-hosted runner itself.
+
+### 10.1 `/go/<slug>` redirect (CF-34)
+
+`GET /go/<slug>?t=booking|website&p=profile|directory|map` ([design § 12](../plans/charter-fleet/design.md#12-worker-api)).
+
+| STRIDE | Threat | Current mitigation | Residual | Planned |
+| --- | --- | --- | --- | --- |
+| S / T | **Open redirect**: a crafted `/go/` link sends visitors from skippercast.com to a phishing page | Redirects only to the vessel's stored https URL, never to a URL or host from the request; `t` and `p` are enums; unknown slug, hidden profile or no URL → 404 | Low as designed. The stored URL itself is the trust point (next row) | CF-34 tests: a `url=`/`next=` parameter is ignored; non-https stored URLs refuse |
+| T | A wrong or hostile booking URL in the registry (a mistaken match, a compromised operator site, an agent-written fact) then served through our domain | Facts carry `source_url`, method and confidence; profiles show only facts with display-compatible rights and confidence ≥ 0.6; admin pins override; off-limits hosts can be values only when found on the operator's site, a landing page or a report site | Medium: no check that the target still belongs to the operator; a domain that lapses and is re-registered keeps redirecting | Re-verify `booking_url`/`website` on each `refresh` and open a review on a host change; admin view lists redirect targets by host |
+| I | Click logging identifies visitors | `fleet_link_clicks` holds daily counts per slug, target and placement, no IP, cookie or user id; the Analytics Engine point carries slug, target and placement only | Low | — |
+| R / D | Inflated click counts used as a sales figure for operators; a click flood | `Cache-Control: no-store`; one D1 counter increment per click. The design names no rate limit for `/go/` | Low–Medium: counts are not deduplicated, so a figure shown to an operator can be gamed | CF-34: put `/go/` behind the per-IP `PUBLIC_LIMITER` like the other public routes; label counts as raw redirects, not visitors, outside the admin view |
+
+### 10.2 Fleet job routes (`/api/fleet/jobs/*`, CF-11, CF-45, CF-46)
+
+`snapshot`, `registry`, `watch`, `activity`, `heartbeat`, `labels`, `health`, all behind GitHub OIDC (`server/job-auth.ts`) with the scope `{audiencePath: '/api/fleet/jobs', workflows: ['fleet-registry.yml', 'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml']}`.
+
+| STRIDE | Threat | Current mitigation | Residual | Planned |
+| --- | --- | --- | --- | --- |
+| S / E | A token from another workflow, branch or fork writes registry facts or activity | `verifyJobToken` with the fleet scope: issuer, audience path, repository and owner ids, `main`, the four workflow files (each also listed in `deployments/production.json` `scheduler.workflows`, CODEOWNERS owner approval), `schedule`/`workflow_dispatch` events, ≤ 10-minute tokens. No fleet workflow triggers on `pull_request` | Low as designed. Any of the four workflows can call every job route; a scope per route is not planned | Consider narrower scopes (health job: `health` only) if the routes stay one audience |
+| T | A malformed or hostile batch (from a compromised runner or a bad agent profile) overwrites good facts | Bodies ≤ 1 MB, ≤ 500 ops; each op validated (enums, https `source_url` or `admin:`, confidence 0–1); admin-pinned fields never overwritten; decided reviews never reopened; idempotent upserts; a `fleet_runs` row per call | Medium: the self-hosted runner is trusted to write any unpinned fact; a compromised runner can rewrite profiles and redirect targets | The `refresh` diff report flags large changes per run; alert on a run that changes more than a threshold of `website`/`booking_url` facts |
+| I | `snapshot` leaks the registry, including operator contacts and outreach | Behind the same OIDC scope; returns vessels, aliases, keys, pinned fields, decided reviews and offerings, not outreach rows | Low | Keep outreach out of `snapshot` (CF-11 test) |
+| I | `health` reveals operational state publicly | Behind OIDC; staleness booleans and ages only | Low | — |
+| D | Large batches exhaust D1 limits or the job budget | D1 batches chunked under statement and bound-parameter limits; the per-job request budget keyed by `jti` | Low | — |
+
+### 10.3 Admin, registry and outreach data (CF-30 to CF-35, CF-48)
+
+`/api/admin/fleet/*` and the `#fleet-*` admin views.
+
+| STRIDE | Threat | Current mitigation | Residual | Planned |
+| --- | --- | --- | --- | --- |
+| S / E | A non-admin reads operators, outreach notes, consent status or tracks | `requireAdmin` (passkey session, `users.role='admin'`); 404 unless `FLEET_ENABLED`; `adminUser` changes to "advisor or fleet enabled" with each feature keeping its own check (CF-01); Origin check on every mutation | Low | — |
+| I | Personal data collected beyond the business (home address, personal mobile, family, individual licensee names) | Adapter rules: FCC licensee only when an entity, no addresses; directories keep vessel and port only; webmail kept only when published as the business contact and flagged; the profile validator; registry data never in git, fixtures synthetic (`scripts/check_repository.py` scans `tests/fixtures/fleet/` and `docs/plans/charter-fleet/`) | Medium: the OSINT agent can still record a personal detail an operator page shows; the review queue and validator catch patterns, not meaning | Admin "remove fact" deletes the fact row, not only supersedes it; removal requests delete outreach rows (design § 17) |
+| T / R | Outreach sent without approval, or no record of who approved | Drafts never send: approve, discard or "log as sent by owner"; decisions record the admin's `users.id` | Low | — |
+| I | `hidden` or `do-not-contact` ignored by a query, exposing an operator who asked to be removed | Every query filters on them (design § 17); a removal request also deletes outreach rows | Medium until tested on every route and page | Proposed (no task yet): a contract test that lists every fleet query path and asserts the filters; CF-33 acceptance 2 covers the profile page only |
+| I | Public profiles reveal AIS data or `noaa-planning-only` facts | `/boats/<slug>` shows no AIS data and only display-compatible rights (CF-33 acceptance 3); registry-only profiles `noindex` until the operator agrees | Low as designed | — |
+
+### 10.4 Hermes: AIS listener, raw store and fleet jobs (CF-21, CF-41, CF-42, CF-45, CF-47)
+
+| STRIDE | Threat | Current mitigation | Residual | Planned |
+| --- | --- | --- | --- | --- |
+| I | **Raw positions of named boats leak** (the owner's machine, a backup, a log) and show where an operator fishes | Raw store under `~/.local/share/skippercast/fleet`, outside any checkout; only watched and discovery positions written; retention 30 days (discovery 7, statics 90); never in D1 or git; no public per-vessel display (Q8) | Medium: a home machine holds a month of tracks for every watched boat; disk encryption and backups are the owner's | Owner: full-disk encryption on Hermes and no cloud backup of the fleet directory |
+| E | **Fork or untrusted code runs on the self-hosted runner** that holds the AIS key, the Claude token and the raw store | No fleet workflow triggers on `pull_request` (CF-18 and CF-21 test it); jobs gated `vars.ENABLE_FLEET`; changes under `.github/workflows/` need the owner's review (CODEOWNERS); [Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository) | Medium: a public repository with a self-hosted runner; a workflow change merged to `main` runs there with the runner user's access | `docs/operations/runners.md` states the no-`pull_request` condition (CF-42); a separate runner user for fleet jobs |
+| T / E | **Prompt injection through operator websites** steers the OSINT agent (`claude -p`) to fetch off-limits hosts, write false facts or run commands | Tools limited to `Read, Write, Glob, Grep, WebFetch, WebSearch` and `Bash` for the validator only; working directory is the run directory; 60 minutes per batch; output must validate (schema, off-limits hosts, MMSI agreement, numbers-only reputation) before ingest; agent facts capped at confidence 0.8 for `search`/`inference` | Medium: a validated but false value (wrong phone, wrong booking URL) still enters the registry as a fact; WebFetch runs outside `fleet/net.py`, so the off-limits deny applies to its *output*, not its fetches | CF-21 pins the CLI and flags; the `refresh` diff and review queue surface changes to contact and booking fields |
+| S | Spoofed AIS (a broadcast using a watched MMSI) creates false trips or events | AIS is labelled "inferred from movement", never confirmed; registry MMSI never overwritten by AIS; disagreeing statics recorded as `ais` facts and reviewed | Low–Medium: nothing public depends on it while layers stay admin-only | — |
+| D | Listener down (aisstream outage, Hermes power, key revoked) loses data permanently (no replay) | Reconnect with backoff; a heartbeat every 60 s; `fleet-health.yml` on a GitHub-hosted runner alerts if stale over 3 hours | Medium: gaps are unrecoverable from aisstream; MarineCadastre backfill covers them months later, for internal use only | — |
+| I | Secrets on Hermes (`AISSTREAM_API_KEY`, `GOOGLE_PLACES_API_KEY`, the Claude subscription token) read by other jobs or users | Env files with mode 0600 (`fleet-ais.env`, `claude.env`); the OSINT script exits if `ANTHROPIC_API_KEY` is set, so no run can bill the API | Medium: every job on the runner runs as the same user and can read them | A separate runner user for fleet jobs (as above); rotate on any runner compromise |
+
+### 10.5 Risks the owner holds
+
+- **Third-party terms.** aisstream has no published terms, MarineCadastre data carry NOAA's planning-purpose and no-fee conditions, and TECK.net permission for paid use is pending. These are legal, not technical, risks; each is a row in the [data-rights register](data-rights-register.md#charter-fleet-registry-and-ais), **owner/counsel to confirm**.
+- **Operators' reaction.** Mapping where named charter boats fish is commercially sensitive to them even when lawful. Per-vessel display stays admin-only until the owner decides (Q8); public layers, when they come, use the aggregate module's privacy knobs.
+- **Hermes is production infrastructure.** The listener, the raw store, the runner and three secrets sit on one machine in the owner's home.
+
+### 10.6 Charter fleet: top residual risks
+
+| # | Risk | Status | What remains |
+| --- | --- | --- | --- |
+| 1 | A registry redirect target goes stale or hostile and `/go/` sends visitors there (§ 10.1) | Design | Re-verify targets on refresh; review on host change |
+| 2 | Self-hosted runner on a public repository holds the AIS key, the Claude token and a month of tracks (§ 10.4) | Design; Q13 open | Separate runner user; owner keeps workflow changes under approval |
+| 3 | Prompt injection from operator sites into the OSINT step yields validated but false facts (§ 10.4) | Design | Diff report and review queue on contact and booking fields |
+| 4 | A month of named-boat positions on a home machine (§ 10.4) | Design | Disk encryption and no cloud backup of the fleet directory |
+| 5 | `hidden`/`do-not-contact` missed by one query path (§ 10.3) | Design | Contract test over every fleet query path (no task yet) |
+
 ## Top residual risks
 
 1. Broad `CLOUDFLARE_API_TOKEN` in data workflows (section 7) — P2-06, P1-05.
@@ -261,7 +343,7 @@ TA-C5 found the first seven; the hardening branch (`claude/ta-hardening`) took t
 5. XSS surface and permissive CSP (section 1) — PR #38/#43, P4-01.
 6. Header-based identity on Sites until own accounts exist (section 2) — P3-02.
 
-The Text Advisor's list is § 9.10.
+The Text Advisor's list is § 9.10; the charter fleet's is § 10.6.
 
 ## Maintenance
 
