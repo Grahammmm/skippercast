@@ -65,7 +65,10 @@ const SEGMENTS = {
   t4: [['fishing-troll', [[-120.95, 35.42], [-121.00, 35.45]]]],
 };
 // Aggregate cells: id, cell, lat, lon, season, part, kind, vessels, events, dwell, first, last, rights.
+// c4 and c5 are whole-season cells (part null), which the aggregator writes beside the per-part ones; c5 is undated.
 const CELLS = [
+  ['c4', 'g:4', 35.00, -121.20, '2026', null, 'drift-anchor', 2, 2, 200, '2026-06-10', '2026-07-20', 'internal-only'],
+  ['c5', 'g:5', 34.80, -120.60, '2025', null, 'troll', 1, 1, 10, null, null, 'noaa-planning-only'],
   ['c1', 'g:1', 35.40, -120.95, '2026', 'summer', 'drift-anchor', 1, 1, 40, '2026-06-10', '2026-06-10', 'internal-only'],
   ['c2', 'g:2', 35.10, -120.80, '2026', 'summer', 'troll', 1, 1, 90, '2026-07-20', '2026-07-20', 'internal-only'],
   ['c3', 'g:3', 34.50, -120.50, '2025', 'fall', 'drift-anchor', 1, 1, 120, '2025-10-06', '2025-10-06', 'noaa-planning-only'],
@@ -201,19 +204,35 @@ test('acceptance 1: heat filters by kind, season, part, dates and bbox, and list
   const {sql, ids, get} = setup();
   const q = `/api/fleet/map/heat?region=${REGION}`;
   try {
-    const all = await get(q);
-    assert.deepEqual(all.features.map(f => f.id), ['c3', 'c2', 'c1'], 'most dwell first');
+    // Omitted season_part: whole-season cells only, so the default never counts a dwell twice.
+    const whole = await get(q);
+    assert.deepEqual(whole.features.map(f => f.id), ['c4', 'c5'], 'whole-season cells, most dwell first');
+    assert.deepEqual(whole.features.map(f => f.properties.season_part), [null, null]);
+    assert.deepEqual(whole.meta.ignored, []);
+    const all = await get(`${q}&season_part=all`);
+    assert.deepEqual(all.features.map(f => f.id), ['c4', 'c3', 'c2', 'c1', 'c5'], 'every part, most dwell first');
     assert.deepEqual(all.meta.ignored, []);
-    assert.deepEqual(await ids(`${q}&kind=drift-anchor`), ['c1', 'c3']);
-    assert.deepEqual(await ids(`${q}&season=2026`), ['c1', 'c2']);
+    assert.deepEqual(await ids(`${q}&season_part=summer`), ['c1', 'c2']);
     assert.deepEqual(await ids(`${q}&season_part=fall`), ['c3']);
-    assert.deepEqual(await ids(`${q}&from=2026-07-01`), ['c2']);
-    assert.deepEqual(await ids(`${q}&to=2026-06-30`), ['c1', 'c3']);
-    assert.deepEqual(await ids(`${q}&bbox=-121,35.3,-120.9,35.5`), ['c1']);
-    assert.deepEqual(await ids(`${q}&module=h3`), []);
-    const ignored = await get(`${q}&vessel=v-sea-example&class=six-pack&port=morro-bay&trip_type=half-day&source=aisstream&kind=troll`);
+    assert.deepEqual(await ids(`${q}&season=2026`), ['c4']);
+    assert.deepEqual(await ids(`${q}&season_part=all&kind=drift-anchor`), ['c1', 'c3', 'c4']);
+    assert.deepEqual(await ids(`${q}&season_part=all&season=2026`), ['c1', 'c2', 'c4']);
+    assert.deepEqual(await ids(`${q}&season_part=all&bbox=-121,35.3,-120.9,35.5`), ['c1']);
+    assert.deepEqual(await ids(`${q}&season_part=all&module=h3`), []);
+    // Dated cells must overlap the range; an undated cell is kept and the bound it escaped is reported.
+    const late = await get(`${q}&season_part=all&from=2026-07-01`);
+    assert.deepEqual(late.features.map(f => f.id).sort(), ['c2', 'c4', 'c5']);
+    assert.deepEqual(late.meta.ignored, ['from']);
+    const early = await get(`${q}&season_part=all&to=2026-06-30`);
+    assert.deepEqual(early.features.map(f => f.id).sort(), ['c1', 'c3', 'c4', 'c5']);
+    assert.deepEqual(early.meta.ignored, ['to']);
+    const dated = await get(`${q}&season_part=summer&from=2026-07-01&to=2026-07-31`);
+    assert.deepEqual([dated.features.map(f => f.id), dated.meta.ignored], [['c2'], []]);
+    const ignored = await get(`${q}&season_part=all&vessel=v-sea-example&class=six-pack&port=morro-bay&trip_type=half-day&source=aisstream&kind=troll`);
     assert.deepEqual(ignored.meta.ignored, ['vessel', 'port', 'class', 'trip_type', 'source']);
-    assert.deepEqual(ignored.features.map(f => f.id), ['c2'], 'kind still applies');
+    assert.deepEqual(ignored.features.map(f => f.id), ['c2', 'c5'], 'kind still applies');
+    // season_part=all is also accepted on the per-trip layers.
+    assert.deepEqual(await ids(`/api/fleet/map/events?region=${REGION}&season_part=all`), ['e1', 'e2', 'e3', 'e4', 'e5']);
     // A 1 km rectangle centred on the cell.
     const [ring] = all.features.find(f => f.id === 'c1').geometry.coordinates;
     assert.equal(ring.length, 5);
@@ -250,10 +269,10 @@ test('acceptance 2: caps are enforced and pages are complete and disjoint', skip
       assert.equal((await as(`/api/fleet/map/${layer}?region=${REGION}&limit=0`)).status, 400, layer);
     }
     // Small pages walk the whole fixture once.
-    for (const [layer, limit, all] of [['events', 2, ['e1', 'e2', 'e3', 'e4', 'e5']], ['tracks', 1, ['t1', 't2', 't3', 't4']], ['heat', 2, ['c1', 'c2', 'c3']]]) {
+    for (const [layer, limit, all] of [['events', 2, ['e1', 'e2', 'e3', 'e4', 'e5']], ['tracks', 1, ['t1', 't2', 't3', 't4']], ['heat', 2, ['c1', 'c2', 'c3', 'c4', 'c5']]]) {
       const seen = []; let cursor = null, pages = 0;
       do {
-        const page = await get(`/api/fleet/map/${layer}?region=${REGION}&limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`);
+        const page = await get(`/api/fleet/map/${layer}?region=${REGION}&season_part=all&limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`);
         seen.push(...new Set(page.features.map(f => layer === 'tracks' ? f.properties.trip_id : f.id)));
         cursor = page.meta.next; pages++;
       } while (cursor && pages < 10);
@@ -276,7 +295,7 @@ test('acceptance 2: caps are enforced and pages are complete and disjoint', skip
     for (let i = 0; i < CAPS.tracks; i++) { trip.run(`bulk-t${String(i).padStart(4, '0')}`, REGION, '2026-05-01T12:00:00Z', NOW); segment.run(`bulk-s${i}`, `bulk-t${String(i).padStart(4, '0')}`, NOW, NOW, line); }
     for (let i = 0; i < CAPS.heat; i++) cell.run(`bulk-c${String(i).padStart(5, '0')}`, REGION, `b:${i}`, NOW);
     sql.exec('COMMIT');
-    for (const [layer, cap, total] of [['events', CAPS.events, CAPS.events + 5], ['tracks', CAPS.tracks, CAPS.tracks + 4], ['heat', CAPS.heat, CAPS.heat + 3]]) {
+    for (const [layer, cap, total] of [['events', CAPS.events, CAPS.events + 5], ['tracks', CAPS.tracks, CAPS.tracks + 4], ['heat', CAPS.heat, CAPS.heat + 2]]) {
       const first = await get(`/api/fleet/map/${layer}?region=${REGION}`);
       const count = layer === 'tracks' ? first.meta.trips : first.features.length;
       assert.equal(count, cap, layer);
@@ -321,7 +340,32 @@ test('filters lists the values present for the region', skip, async () => {
     assert.deepEqual(filters.rights, ['internal-only', 'noaa-planning-only']);
     assert.equal(filters.planning_only_rights, 'noaa-planning-only');
     assert.deepEqual(filters.caps, {events: 2000, tracks: 300, heat: 5000});
+    assert.equal(filters.truncated, false);
     const empty = await get('/api/fleet/map/filters?region=elsewhere');
     assert.deepEqual([empty.vessels, empty.ports, empty.dates], [[], [], {min: null, max: null}]);
+  } finally { sql.close(); }
+});
+
+test('filters marks the vessel list truncated past 500', skip, async () => {
+  const {sql, get} = setup();
+  try {
+    const vessel = sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
+      VALUES(?,?,?,?,?,'active','hidden',?,?,?,?)`);
+    const trip = sql.prepare(`INSERT INTO fleet_trips(id,region,vessel_id,mmsi,departed_at,local_date,season,source,rights,classifier_version,computed_at)
+      VALUES(?,?,?,'999000009','2026-05-01T12:00:00Z','2026-05-01','2026','aisstream','internal-only','cv-test',?)`);
+    sql.exec('BEGIN');
+    for (let i = 0; i < 498; i++) {
+      const n = String(i).padStart(3, '0');
+      vessel.run(`v-bulk-${n}`, REGION, `bulk-${n}`, `Bulk ${n}`, `bulk ${n}`, NOW, NOW, NOW, NOW);
+      trip.run(`bulk-trip-${n}`, REGION, `v-bulk-${n}`, NOW);
+    }
+    sql.exec('COMMIT');
+    const over = await get(`/api/fleet/map/filters?region=${REGION}`);   // 3 fixture + 498 bulk = 501 vessels
+    assert.equal(over.vessels.length, 500);
+    assert.equal(over.truncated, true);
+    sql.prepare("DELETE FROM fleet_trips WHERE id='bulk-trip-000'").run();
+    const fits = await get(`/api/fleet/map/filters?region=${REGION}`);
+    assert.equal(fits.vessels.length, 500);
+    assert.equal(fits.truncated, false);
   } finally { sql.close(); }
 });

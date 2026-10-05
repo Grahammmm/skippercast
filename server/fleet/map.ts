@@ -4,7 +4,7 @@
 // fleetGate (routes/fleet.ts) answers 404 unless both FLEET_ENABLED and
 // FLEET_MAP_ENABLED are on. Read-only over the 0014 activity tables.
 //
-//   GET /api/fleet/map/filters?region=   the values the filter card offers, from the data
+//   GET /api/fleet/map/filters?region=   the values the filter card offers, from the data (<= 500 vessels; truncated: true past that)
 //   GET /api/fleet/map/events?...         fleet_events as Point features, newest first, <= 2,000 a page
 //   GET /api/fleet/map/tracks?...         fleet_trips' segments as LineString features, <= 300 trips a page
 //   GET /api/fleet/map/heat?...           fleet_aggregates cells as Polygon features, most dwell first, <= 5,000 a page
@@ -15,6 +15,16 @@
 // vessel, port, class, trip_type, kind and source take up to 10 comma-separated
 // values. A filter that a layer cannot apply (aggregates hold no vessel, port,
 // class, trip type or source) is listed in `meta.ignored`, never silently widened.
+// season_part=all means every part. On events and tracks an omitted season_part
+// is every part too; on heat it is the whole-season cells (season_part NULL),
+// which the aggregator always writes beside the per-part cells (§ 5), so the
+// default heat view never counts a dwell twice. A heat cell without dates is
+// kept under a date filter, and the bound it escaped is listed in `meta.ignored`.
+//
+// Tracks page by trip: `limit` and `meta.trips` count trips, `meta.count` counts
+// segment features. A bbox drops segments (and trips left with none) after the
+// page is cut, so a page can hold fewer trips than `meta.trips` shows, or none,
+// while `meta.next` is still set: clients page on `meta.next`, never on counts.
 //
 // Every feature carries `basis` (always "inferred-from-movement": segment kinds,
 // events and aggregates all come from speed and track shape, never a confirmed
@@ -153,7 +163,7 @@ export async function mapEvents(db: D1Database, q: MapQuery): Promise<MapPage> {
   w.in('e.kind', q.kind);
   w.in('e.source', q.source);
   if (q.season) w.add('e.season=?', q.season);
-  if (q.season_part) w.add('e.season_part=?', q.season_part);
+  if (q.season_part && q.season_part !== 'all') w.add('e.season_part=?', q.season_part);
   if (q.cursor) w.add('(e.started_at<? OR (e.started_at=? AND e.id<?))', q.cursor[0]!, q.cursor[0]!, q.cursor[1]!);
   const rows = (await db.prepare(`SELECT e.id, e.trip_id, e.vessel_id, e.kind, e.lat, e.lon, e.radius_m, e.started_at, e.ended_at, e.dwell_min,
       e.port_id, COALESCE(e.vessel_class, v.vessel_class) AS vessel_class, COALESCE(e.trip_type, t.trip_type_inferred) AS trip_type, e.season, e.season_part,
@@ -193,7 +203,7 @@ export async function mapTracks(db: D1Database, q: MapQuery): Promise<MapPage> {
   w.in('t.source', q.source);
   if (q.kind.length) w.add(`EXISTS (SELECT 1 FROM fleet_events k WHERE k.trip_id=t.id AND k.kind IN (${q.kind.map(() => '?').join(',')}))`, ...q.kind);
   if (q.season) w.add('t.season=?', q.season);
-  if (q.season_part) w.add('t.season_part=?', q.season_part);
+  if (q.season_part && q.season_part !== 'all') w.add('t.season_part=?', q.season_part);
   if (q.cursor) w.add('(t.departed_at<? OR (t.departed_at=? AND t.id<?))', q.cursor[0]!, q.cursor[0]!, q.cursor[1]!);
   const trips = (await db.prepare(`SELECT t.id, t.vessel_id, t.mmsi, t.depart_port_id, t.return_port_id, t.departed_at, t.returned_at, t.local_date, t.season,
       t.season_part, t.status, t.trip_type_inferred, t.distance_nm, t.max_offshore_nm, t.fishing_min, t.source, t.rights, t.classifier_version,
@@ -245,7 +255,8 @@ export async function mapHeat(db: D1Database, q: MapQuery): Promise<MapPage> {
   if (q.to) w.add('(a.first_date IS NULL OR a.first_date<=?)', q.to);
   w.in('a.kind', q.kind);
   if (q.season) w.add('a.season=?', q.season);
-  if (q.season_part) w.add('a.season_part=?', q.season_part);
+  if (!q.season_part) w.add('a.season_part IS NULL');
+  else if (q.season_part !== 'all') w.add('a.season_part=?', q.season_part);
   if (q.cursor) w.add('(a.dwell_min<? OR (a.dwell_min=? AND a.id>?))', Number(q.cursor[0]), Number(q.cursor[0]), q.cursor[1]!);
   const rows = (await db.prepare(`SELECT a.id, a.module, a.params_json, a.cell_id, a.lat, a.lon, a.season, a.season_part, a.kind, a.vessels_n, a.events_n,
       a.dwell_min, a.first_date, a.last_date, a.rights, a.computed_at
@@ -255,9 +266,11 @@ export async function mapHeat(db: D1Database, q: MapQuery): Promise<MapPage> {
     layer: 'heat', id: r.id, cell_id: r.cell_id, module: r.module, kind: r.kind, season: r.season, season_part: r.season_part,
     vessels_n: r.vessels_n, events_n: r.events_n, dwell_min: r.dwell_min, first_date: r.first_date, last_date: r.last_date, computed_at: r.computed_at,
     basis: BASIS, rights: r.rights, planning_only: planning(r.rights)}}));
-  const ignored = IGNORED_BY_HEAT.filter(name => q[name].length > 0);
+  const ignored: string[] = IGNORED_BY_HEAT.filter(name => q[name].length > 0);
+  if (q.from && shown.some(r => r.last_date === null)) ignored.push('from');
+  if (q.to && shown.some(r => r.first_date === null)) ignored.push('to');
   const last = shown.at(-1);
-  return page('heat', q, features, more && last ? encodeCursor([last.dwell_min, last.id]) : null, [...ignored]);
+  return page('heat', q, features, more && last ? encodeCursor([last.dwell_min, last.id]) : null, ignored);
 }
 
 /** The values the filter card offers for a region, read from the activity tables. */
@@ -266,14 +279,15 @@ export async function mapFilters(db: D1Database, region: string): Promise<Record
     (await db.prepare(sql).bind(...args).all<{v: string | null}>()).results.map(r => r.v).filter((v): v is string => typeof v === 'string' && v !== '');
   const vessels = (await db.prepare(`SELECT v.id, v.name, v.slug, v.vessel_class, v.port_id FROM fleet_vessels v
       WHERE v.id IN (SELECT vessel_id FROM fleet_trips WHERE region=? UNION SELECT vessel_id FROM fleet_events WHERE region=?)
-      ORDER BY v.name_norm, v.id LIMIT ?`).bind(region, region, MAX_FILTER_VESSELS)
+      ORDER BY v.name_norm, v.id LIMIT ?`).bind(region, region, MAX_FILTER_VESSELS + 1)
     .all<{id: string; name: string; slug: string; vessel_class: string | null; port_id: string | null}>()).results;
   const range = await db.prepare('SELECT MIN(local_date) AS min, MAX(local_date) AS max FROM fleet_trips WHERE region=?').bind(region).first<{min: string | null; max: string | null}>();
   const rights = await values(`SELECT rights AS v FROM fleet_events WHERE region=? UNION SELECT rights FROM fleet_trips WHERE region=?
     UNION SELECT rights FROM fleet_aggregates WHERE region=? ORDER BY 1`, region, region, region);
   return {
     region,
-    vessels: vessels.map(v => ({id: v.id, name: v.name, slug: v.slug, vessel_class: v.vessel_class, port_id: v.port_id})),
+    vessels: vessels.slice(0, MAX_FILTER_VESSELS).map(v => ({id: v.id, name: v.name, slug: v.slug, vessel_class: v.vessel_class, port_id: v.port_id})),
+    truncated: vessels.length > MAX_FILTER_VESSELS,   // the vessel list stopped at the cap
     ports: await values(`SELECT port_id AS v FROM fleet_events WHERE region=? UNION SELECT depart_port_id FROM fleet_trips WHERE region=?
       UNION SELECT return_port_id FROM fleet_trips WHERE region=? ORDER BY 1`, region, region, region),
     classes: await values(`SELECT vessel_class AS v FROM fleet_events WHERE region=? UNION SELECT v.vessel_class FROM fleet_trips t
