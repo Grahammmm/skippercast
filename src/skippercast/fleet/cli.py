@@ -6,8 +6,11 @@ counts in ``state.json``, writes one ``fleet_runs`` row through the sink
 (``run.record``, id ``<run_id>:<step>``) and updates ``report.json``. ``run``
 chains ``discover -> resolve -> enrich-code -> ingest -> refresh`` (``--steps``
 picks a subset, in that order) in one run and stops at the first failed step;
-a discovery binding that failed makes the run ``partial``. ``plan-agent`` is
-filled in by CF-20. ``validate-profile`` checks OSINT profiles
+a discovery binding that failed makes the run ``partial``. ``plan-agent
+[--mode full|refresh]`` writes the OSINT agent's batch manifests
+(``fleet.agent``); ``ingest --profiles DIR`` ingests the agent's profiles
+instead of the run's discovery output, and a refused profile makes the step
+``partial``. ``validate-profile`` checks OSINT profiles
 (``fleet.profile``) and ``coverage-status`` the regions' charter identity
 coverage (``fleet.coverage``).
 """
@@ -15,11 +18,12 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import sys
 from typing import Any, Callable, Mapping
 
 from .. import validate
-from . import coverage, enrich, profile, refresh
+from . import agent, coverage, enrich, profile, refresh
 from .adapters import RunContext
 from .config import FleetConfigError, load_region
 from .ingest import discover, ingest, resolve_step
@@ -30,13 +34,8 @@ from .sinks import SinkError, open_sink
 PIPELINE = ("discover", "resolve", "enrich-code", "ingest", "refresh")
 
 
-def _empty(ctx: RunContext, sink) -> dict:
-    """A registered step whose work lands in a later task: it opens the run and sink and does nothing."""
-    return {}
-
-
 STEPS: dict[str, Callable[..., dict]] = {
-    "discover": discover, "resolve": resolve_step, "enrich-code": enrich.enrich_code, "plan-agent": _empty,
+    "discover": discover, "resolve": resolve_step, "enrich-code": enrich.enrich_code, "plan-agent": agent.plan_agent,
     "ingest": ingest, "refresh": refresh.refresh,
 }
 
@@ -76,14 +75,15 @@ def execute(run: Run, ctx: RunContext, sink, steps, options: Mapping[str, Mappin
 
 
 def run_step(step: str, region_id: str, sink_kind: str = "staging", run_id: str | None = None,
-             steps: tuple[str, ...] | None = None, **sink_options) -> Run:
+             steps: tuple[str, ...] | None = None, options: Mapping[str, Mapping[str, Any]] | None = None,
+             **sink_options) -> Run:
     region = load_region(region_id)
     run = Run(region.id, run_id)
     sink = open_sink(sink_kind, region, run, **sink_options)
     net = FleetSession.for_region(region, cache=run.http_cache)
     ctx = RunContext(region=region, net=net, run_dir=run.dir, clock=now)
     try:
-        execute(run, ctx, sink, (steps or PIPELINE) if step == "run" else (step,))
+        execute(run, ctx, sink, (steps or PIPELINE) if step == "run" else (step,), options)
     finally:
         sink.close()
     return run
@@ -101,13 +101,22 @@ def main(argv=None) -> int:
     parser.add_argument("--sink", choices=["staging", "worker"], default="staging")
     parser.add_argument("--run-id", help="resume this run (default: a new run)")
     parser.add_argument("--steps", help=f"run only: a comma-separated subset of {','.join(PIPELINE)}")
+    parser.add_argument("--mode", choices=agent.MODES, help="plan-agent only: which vessels to select (default full)")
+    parser.add_argument("--profiles", type=Path, help="ingest only: ingest the OSINT profiles in this directory")
     args = parser.parse_args(argv)
+    if args.mode and args.step != "plan-agent":
+        parser.error("--mode is a plan-agent option")
+    if args.profiles and args.step != "ingest":
+        parser.error("--profiles is an ingest option")
+    options = {"plan-agent": {"mode": args.mode}} if args.mode else {}
+    if args.profiles:
+        options["ingest"] = {"profiles": args.profiles}
     steps = tuple(s for s in PIPELINE if s in (args.steps or "").split(",")) if args.steps else None
     if args.steps and (not steps or set(args.steps.split(",")) - set(PIPELINE)):
         parser.error(f"--steps takes a comma-separated subset of {','.join(PIPELINE)}")
     try:
-        run = run_step(args.step, args.region, args.sink, args.run_id, steps)
-    except (FleetConfigError, SinkError, ValueError, validate.MissingDependency) as error:
+        run = run_step(args.step, args.region, args.sink, args.run_id, steps, options)
+    except (FleetConfigError, SinkError, ValueError, OSError, validate.MissingDependency) as error:
         print(f"fleet {args.step}: {error}", file=sys.stderr)
         return 2
     report = json.loads((run.dir / "report.json").read_text(encoding="utf-8"))
