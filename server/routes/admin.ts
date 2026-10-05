@@ -32,6 +32,7 @@
 //   POST /api/admin/posts/:id/retry      a partial or failed post: only the surfaces that failed
 //   GET  /api/admin/posts/calendar       ?start=YYYY-MM-DD   the week grid (TA-S4, social/calendar.ts calendarWeek)
 //   GET  /api/admin/posts/:id/graphics/:name   a post's generated graphic (the daily card, roundup slides), any status
+//   GET  /api/admin/fleet/clicks    ?days=7|30|90 &region=   /go/ redirect counts (fleet/admin/clicks.ts, CF-34); FLEET_ENABLED gate in routes/fleet.ts
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -63,6 +64,8 @@ import type {PublishDeps} from '../advisor/social/publish.ts';
 import {calendarWeek} from '../advisor/social/calendar.ts';
 import {servableGraphic} from '../advisor/social/graphics.ts';
 import type {Fetcher} from '../advisor/social/meta.ts';
+// CF-34: /go/ click counts.
+import {clickQuery, clickReport} from '../fleet/admin/clicks.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -247,6 +250,13 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.post('/api/admin/posts/:id/publish', async c => postAnswer(await postNow(c.env, c.req.param('id'), now(), publishDeps())));
   admin.post('/api/admin/posts/:id/schedule', async c => postAnswer(await schedulePost(c.env, c.req.param('id'), await body(c.req.raw, 1024), now())));
   admin.post('/api/admin/posts/:id/retry', async c => postAnswer(await retryPost(c.env, c.req.param('id'), publishDeps())));
+
+  // ---- CF-34: fleet /go/ click counts (the FLEET_ENABLED gate runs first, in routes/fleet.ts) ----
+  admin.get('/api/admin/fleet/clicks', async c => {
+    const query = clickQuery(c.req.query('days'), c.req.query('region'));
+    if ('error' in query) return json({error: query.error}, 400);
+    return json(await clickReport(c.env.DB!, query.days, query.region, new Date(now())));
+  });
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

@@ -27,6 +27,9 @@
 //                double1 ms, double2 actions, double3 sends, double4 retries (message attempts - 1)
 //                (server/advisor/analytics.ts: one per processed inbound text)
 //   publish      blob2 post kind, blob3 outcome; double1 ms (one per social publish attempt)
+//   fleet_click  blob2 vessel slug, blob3 target (booking|website), blob4 placement (profile|directory|map|other)
+//                double1 1 (one per /go/<slug> redirect, server/fleet/go.ts). The slug is a listed
+//                charter boat's public profile slug (a business), not a user's boat; nothing about the visitor.
 //   client_event, client_error  funnel events and browser errors posted to
 //                /api/telemetry; columns in server/telemetry.ts
 import type {MiddlewareHandler} from 'hono';
@@ -69,6 +72,11 @@ export interface CronRun {cron: string; watchdog: string; trips: string; prune: 
 export function recordCron(env: Pick<Env, 'ANALYTICS'>, run: CronRun): void {
   writePoint(env, 'cron', {blobs: [run.cron, run.watchdog, run.trips, run.prune, run.advisor ?? ''],
     doubles: [run.ms, num(run.owners), typeof run.feed_age_minutes === 'number' ? run.feed_age_minutes : -1]});
+}
+
+/** One /go/ redirect (CF-34): slug, target and placement only. */
+export function recordFleetClick(env: Pick<Env, 'ANALYTICS'>, slug: string, target: string, placement: string): void {
+  writePoint(env, 'fleet_click', {blobs: [slug, target, placement], doubles: [1]});
 }
 
 /** The route pattern that answered, never the raw path. */
