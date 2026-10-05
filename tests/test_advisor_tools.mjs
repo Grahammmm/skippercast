@@ -403,6 +403,36 @@ dbTest('get_port_report: the day\'s answer (composed when none is stored, never 
   assert.equal(storedEs.landing.label, 'reportado por el muelle');
 });
 
+dbTest('get_port_report uses the request clock across Pacific midnight and preserves an explicit dependency clock', async t => {
+  const before = Date.parse('2026-09-29T06:59:00Z'), after = Date.parse('2026-09-29T07:00:00Z');
+  t.mock.timers.enable({apis: ['Date'], now: after});
+  const {sql, db} = advisorDatabase();
+  try {
+    sql.exec('DELETE FROM advisor_rules');
+    addRule(sql, 'rockfish', {review_due: '2026-09-28'});
+    const {currentInputsHash} = await import('../server/advisor/answers/reports.ts');
+    const beforeHash = await currentInputsHash({DB: db}, 'morro-bay', '2026-09-28', {feeds: feedsFrom()}, before);
+    const afterHash = await currentInputsHash({DB: db}, 'morro-bay', '2026-09-29', {feeds: feedsFrom()}, after);
+    const insert = sql.prepare('INSERT INTO advisor_daily_answers(key,text_en,text_es,inputs_hash,generated_at) VALUES(?,?,?,?,?)');
+    insert.run('morro-bay:2026-09-28', 'Before midnight', 'Antes', beforeHash, new Date(before).toISOString());
+    insert.run('morro-bay:2026-09-29', 'After midnight', 'Después', afterHash, new Date(after).toISOString());
+    const run = async now => (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, dataCtx({db, now}))).result;
+    const first = await run(before);
+    assert.deepEqual([first.today, first.daily.source, first.daily.text], ['2026-09-28', 'stored', 'Before midnight'], 'wall clock is already the next Pacific day');
+    t.mock.timers.setTime(before);
+    const next = await run(after);
+    assert.deepEqual([next.today, next.daily.source, next.daily.text], ['2026-09-29', 'stored', 'After midnight'], 'request clock has crossed Pacific midnight');
+    const overrideHash = await currentInputsHash({DB: db}, 'morro-bay', '2026-09-29', {feeds: feedsFrom()}, before);
+    assert.notEqual(overrideHash, afterHash, 'the rule freshness actually changes across midnight');
+    sql.prepare("UPDATE advisor_daily_answers SET text_en='Explicit clock',inputs_hash=? WHERE key='morro-bay:2026-09-29'").run(overrideHash);
+    const context = dataCtx({db, now: after}), clock = () => before;
+    context.deps.clock = clock;
+    const explicit = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, context)).result;
+    assert.deepEqual([explicit.daily.source, explicit.daily.text], ['stored', 'Explicit clock']);
+    assert.equal(context.deps.clock, clock, 'the caller dependency is preserved');
+  } finally { sql.close(); }
+});
+
 test('get_species: catalog claims with sources, look-alike cues, the group, and the release note; no rule', async () => {
   const tool = TOOL_BY_NAME.get('get_species');
   const verm = (await tool.run({species_key: 'reds'})).result;

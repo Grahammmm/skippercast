@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Use the advisor request clock when validating a stored port answer, keeping freshness consistent across Pacific midnight and preserving explicit clock overrides.
+
 - Preserve original native classified habitat boundaries while validating bounded shell/hole map representations; keep original areas and current spatial screening authoritative.
 
 - Add a separate screened, unranked publisher-interpreted rugose-rock habitat area layer. These Tier1 areas receive no terrain/species rank or precise fishing export; original source pairs require explicit reviewed opt-in.

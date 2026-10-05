@@ -98,7 +98,9 @@ test('queue batches and dead letters write a queue_batch point with counts only'
   assert.doesNotMatch(JSON.stringify(points), /alice|bob/);
 });
 
-test('each cron run writes one cron point; a failed part fails the invocation and is recorded', async () => {
+test('each cron run writes one cron point; a failed part fails the invocation and is recorded', async t => {
+  // 05:30 Pacific: the daily-answer slot is due, so a broken D1 fails its claim.
+  t.mock.timers.enable({apis: ['Date'], now: Date.parse('2026-09-28T12:30:00Z')});
   const {points, ANALYTICS} = sink(), original = globalThis.fetch;
   const at = new Date(Date.now() - 5 * 60000).toISOString();
   globalThis.fetch = async () => Response.json({completed_at: at, published_at: at, run_id: '1'});
@@ -119,6 +121,20 @@ test('each cron run writes one cron point; a failed part fails the invocation an
     const {adapter} = database();
     await quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: adapter, TEXT_ADVISOR_ENABLED: 'true'}, {waitUntil() {}}));
     assert.equal(of(points, 'cron')[3].blobs[5], 'ok');
+  } finally { globalThis.fetch = original; }
+});
+
+test('before any daily slot a broken advisor dependency records partial rather than a due-slot error', async t => {
+  t.mock.timers.enable({apis: ['Date'], now: Date.parse('2026-09-28T07:15:00Z')}); // 00:15 Pacific, before insights and daily answers
+  const {points, ANALYTICS} = sink(), original = globalThis.fetch;
+  const at = new Date(Date.now() - 5 * 60000).toISOString();
+  globalThis.fetch = async () => Response.json({completed_at: at, published_at: at, run_id: '1'});
+  try {
+    const broken = {prepare() { throw Error('D1 down'); }};
+    await assert.rejects(quietly(() => worker.scheduled({cron: '*/15 * * * *'},
+      {ANALYTICS, DB: broken, TRIP_QUEUE: {sendBatch() {}}, TEXT_ADVISOR_ENABLED: 'true', BLUEBUBBLES_URL: 'https://relay.example.test'},
+      {waitUntil() {}})), /cron run failed/);
+    assert.deepEqual(of(points, 'cron')[0].blobs.slice(3), ['error', 'failed', 'partial']);
   } finally { globalThis.fetch = original; }
 });
 
