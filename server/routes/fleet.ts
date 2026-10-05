@@ -15,6 +15,7 @@
 //   GET /go/<slug>             public outbound link, gated and per-IP limited (fleet/go.ts, CF-34)
 //   GET /api/fleet/jobs/snapshot, POST /api/fleet/jobs/registry   CF-11 (server/fleet/jobs.ts)
 //   POST /api/fleet/jobs/activity, /heartbeat, GET /health         CF-45 (server/fleet/activity.ts)
+//   GET|POST /api/fleet/jobs/watch                                  CF-46 (server/fleet/watch.ts)
 //   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 //   /api/admin/fleet/operators*, /api/admin/fleet/outreach/:id      CF-32, registered in routes/admin.ts (fleet/admin/operators.ts)
 //   GET /api/admin/fleet/coverage, GET /api/admin/fleet/ais/health   CF-35, registered in routes/admin.ts (fleet/admin/coverage.ts, ais-health.ts)
@@ -31,6 +32,7 @@ import type {AppEnv} from '../env.ts';
 import {rateLimit} from '../middleware/rate-limit.ts';
 import {fleetGo} from '../fleet/go.ts';
 import {activity, health, heartbeat} from '../fleet/activity.ts';
+import {watchList, watchUpdate} from '../fleet/watch.ts';
 
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 
@@ -103,5 +105,15 @@ fleetRouter.post('/api/fleet/jobs/heartbeat', async c => {
 fleetRouter.get('/api/fleet/jobs/health', async c => {
   if (!c.env.DB) return UNAVAILABLE();
   const result = await health(c.env.DB, c.req.query('region'));
+  return json(result.body, result.status);
+});
+fleetRouter.get('/api/fleet/jobs/watch', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await watchList(c.env.DB, c.req.query('region'), c.req.query('cursor'), c.req.query('status'));
+  return json(result.body, result.status);
+});
+fleetRouter.post('/api/fleet/jobs/watch', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await watchUpdate(c.env.DB, c.req.raw);
   return json(result.body, result.status);
 });
