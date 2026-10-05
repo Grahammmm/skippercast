@@ -928,7 +928,7 @@ to the vessel's stored https URL (never a URL from the request), appends
 keeping existing `utm_*`, increments `fleet_link_clicks`, writes an Analytics
 Engine point (slug, target, placement) when `ANALYTICS` is bound, and answers
 302 with `Cache-Control: no-store`. Unknown slug, hidden profile, a vessel that is
-not `active`, or no https URL → 404. Limited per IP by `PUBLIC_LIMITER`
+not `active` or has a removal request, or no https URL → 404. Limited per IP by `PUBLIC_LIMITER`
 (threat model § 10.1); `HEAD` is answered but not counted.
 
 ## 13. Admin UI and public profile
@@ -976,6 +976,27 @@ AIS data, and only facts with display-compatible `rights` and confidence
 "SkipperCast". A registry-only profile is `noindex` until its
 operator is `content-sharing` or `partner`. Advisor reports and photos render
 as today.
+
+As built (CF-33): the rules live in `server/fleet/display.ts`, shared with `/go/`.
+A vessel is public only while `status='active' AND profile_status='listed'` and
+`removal_requested_at` is null (so an admin unhiding a vessel after a removal
+request does not re-publish it). A fact is displayable when its `rights` are
+`public-domain`, `facts-only`, `public-record` or `api-terms`, its confidence is
+≥ 0.6, it is not superseded and its `method` is not `ais`. A resolved column
+(`vessel_class`, `length_ft`, `passengers_max`, `year_built`, `phone_business`,
+`website`, `booking_url`) renders only when a displayable fact for that field
+carries the same value; links to booking and website also need plain https
+(`displayableLink`). The page reads these fact fields: `landing` (string),
+`photos[]` (`{url, attribution}`, linked with the credit), `reputation.google_rating`
+and `reputation.google_reviews` (numbers, whose `source_url` must be the Google
+Maps place URL, used as the attribution link; the window runs from
+`retrieved_at`). An offering renders only with a displayable fact among its
+`source_fact_ids_json`; the newest one gives "as listed on <host> on <date>".
+`/go/` links use the fleet vessel's slug. A verified advisor boat linked through
+`fleet_vessel_id` gains the registry cards after its own content; the vessel's
+own slug then stays `noindex` and out of the sitemap. Advisor boats are read
+only while the advisor is on; with only `FLEET_ENABLED` on, registry pages
+render without the advisor's call to action and chat.
 
 ## 14. Map layers and filters
 

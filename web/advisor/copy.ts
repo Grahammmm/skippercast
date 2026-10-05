@@ -467,6 +467,13 @@ export interface PageCopy {
   verified: string; unverified: string; unverifiedNote: string; landing: (landing: string, port: string) => string;
   boatReportsHeading: string; boatReportsNone: string; photosHeading: string; photoAlt: (boat: string) => string; photoCredit: (credit: string) => string;
   bookHeading: string; bookingLink: string; call: (phone: string) => string; instagram: (handle: string) => string;
+  // CF-33: the charter fleet registry on the boat page (charter-fleet design § 13).
+  fleetTitle: (boat: string) => string; fleetDescription: (boat: string, port: string) => string;
+  fleetAboutHeading: string; vesselClasses: Record<string, string>; lengthFt: (n: string) => string; passengersMax: (n: number) => string; builtIn: (year: number) => string;
+  fleetTripsHeading: string; fleetTrips: Record<string, string>; hours: (n: string) => string; departs: (time: string) => string;
+  priceListed: (price: string, basis: string | null, host: string, date: string) => string; listedOn: (host: string, date: string) => string;
+  websiteLink: string; photoLinksHeading: string; googleRating: (rating: string) => string; googleReviews: (n: number) => string;
+  fleetSourcesNote: string; sourceChecked: (host: string, date: string) => string;
 }
 
 const PAGES_EN: PageCopy = {
@@ -582,6 +589,26 @@ const PAGES_EN: PageCopy = {
   bookingLink: 'Booking page',
   call: phone => `Call ${phone}`,
   instagram: handle => `Instagram: @${handle}`,
+  fleetTitle: boat => `${boat}: charter fishing boat`,
+  fleetDescription: (boat, port) => `${boat}, a charter fishing boat out of ${port}: trips, prices as listed and how to book.`,
+  fleetAboutHeading: 'About the boat',
+  vesselClasses: {'six-pack': 'Six-pack charter (up to 6 anglers)', 'inspected-party': 'Party boat', 'long-range': 'Long-range boat'},
+  lengthFt: n => `${n} ft long`,
+  passengersMax: n => `Up to ${n} passengers`,
+  builtIn: year => `Built in ${year}`,
+  fleetTripsHeading: 'Trips',
+  fleetTrips: {'half-day': 'Half day', 'three-quarter-day': 'Three-quarter day', 'full-day': 'Full day', overnight: 'Overnight', 'multi-day': 'Multi-day',
+    'private-charter': 'Private charter', other: 'Trip'},
+  hours: n => `${n} h`,
+  departs: time => `departs ${time}`,
+  priceListed: (price, basis, host, date) => `${price}${basis === 'per-person' ? ' per person' : basis === 'private' ? ' for the boat' : ''}, as listed on ${host} on ${date}`,
+  listedOn: (host, date) => `As listed on ${host} on ${date}`,
+  websiteLink: 'Boat website',
+  photoLinksHeading: 'Photos from the boat',
+  googleRating: rating => `${rating} out of 5`,
+  googleReviews: n => (n === 1 ? '1 review' : `${n} reviews`),
+  fleetSourcesNote: 'Details as published by the boat, its landing and public records. Confirm trips and prices with the boat before you book.',
+  sourceChecked: (host, date) => `${host}, checked ${date}`,
 };
 
 const PAGES_ES: PageCopy = {
@@ -697,6 +724,26 @@ const PAGES_ES: PageCopy = {
   bookingLink: 'Página de reservas',
   call: phone => `Llama al ${phone}`,
   instagram: handle => `Instagram: @${handle}`,
+  fleetTitle: boat => `${boat}: barco de pesca chárter`,
+  fleetDescription: (boat, port) => `${boat}, barco de pesca chárter de ${port}: viajes, precios publicados y cómo reservar.`,
+  fleetAboutHeading: 'Sobre el barco',
+  vesselClasses: {'six-pack': 'Chárter de seis pasajeros', 'inspected-party': 'Barco de grupo', 'long-range': 'Barco de largo alcance'},
+  lengthFt: n => `${n} pies de eslora`,
+  passengersMax: n => `Hasta ${n} pasajeros`,
+  builtIn: year => `Construido en ${year}`,
+  fleetTripsHeading: 'Viajes',
+  fleetTrips: {'half-day': 'Medio día', 'three-quarter-day': 'Tres cuartos de día', 'full-day': 'Día completo', overnight: 'Toda la noche', 'multi-day': 'Varios días',
+    'private-charter': 'Chárter privado', other: 'Viaje'},
+  hours: n => `${n} h`,
+  departs: time => `sale a las ${time}`,
+  priceListed: (price, basis, host, date) => `${price}${basis === 'per-person' ? ' por persona' : basis === 'private' ? ' por el barco' : ''}, según ${host} el ${date}`,
+  listedOn: (host, date) => `Según ${host} el ${date}`,
+  websiteLink: 'Sitio web del barco',
+  photoLinksHeading: 'Fotos del barco',
+  googleRating: rating => `${rating} de 5`,
+  googleReviews: n => (n === 1 ? '1 reseña' : `${n} reseñas`),
+  fleetSourcesNote: 'Datos tal como los publican el barco, su muelle y los registros públicos. Confirma viajes y precios con el barco antes de reservar.',
+  sourceChecked: (host, date) => `${host}, revisado el ${date}`,
 };
 
 /** Every string of the public pages, by language. */

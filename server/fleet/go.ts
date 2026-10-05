@@ -5,7 +5,8 @@
 // (`url=`, `next=`, any other parameter, a header) can choose or change the
 // target, so the route is no open redirect. `t` picks which stored URL and `p`
 // only labels the placement in the count. Unknown slug, a vessel that is not
-// `status='active'` with `profile_status='listed'`, no URL for `t`, or a stored URL
+// public (display.ts publicVesselSql: `status='active'`, `profile_status='listed'`,
+// no removal request), no URL for `t`, or a stored URL
 // that is not plain https → 404. UTM tags are appended, keeping every existing
 // parameter (and any utm_* already there) as stored.
 //
@@ -18,6 +19,7 @@ import type {Context} from 'hono';
 import {json} from '../http.ts';
 import {recordFleetClick} from '../analytics.ts';
 import {waitUntil} from '../routes/util.ts';
+import {publicVesselSql} from './display.ts';
 import type {AppEnv, Env} from '../env.ts';
 
 export const TARGETS = ['booking', 'website'] as const;
@@ -68,7 +70,7 @@ export async function fleetGo(c: Context<AppEnv>, now: () => Date = () => new Da
   const placement: Placement = p && (PLACEMENTS as readonly string[]).includes(p) ? p as Placement : 'other';
   if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
   const vessel = await env.DB.prepare(`SELECT id,region,website,booking_url FROM fleet_vessels
-    WHERE slug=? AND status='active' AND profile_status='listed'`).bind(slug).first<VesselLink>();
+    WHERE slug=? AND ${publicVesselSql()}`).bind(slug).first<VesselLink>();
   if (!vessel) return NOT_FOUND();
   const url = safeTarget(target === 'booking' ? vessel.booking_url : vessel.website);
   if (!url) return NOT_FOUND();
