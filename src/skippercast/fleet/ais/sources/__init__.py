@@ -4,11 +4,13 @@ from __future__ import annotations
 from .aisstream import AisstreamSource
 from .base import AisSource, NotConfigured, Unsupported
 from .datalastic import DatalasticSource
+from .marinecadastre import MarineCadastreSource
 
-__all__ = ["SOURCES", "get_source", "AisSource", "AisstreamSource", "DatalasticSource", "NotConfigured", "Unsupported"]
+__all__ = ["SOURCES", "get_source", "AisSource", "AisstreamSource", "DatalasticSource", "MarineCadastreSource",
+           "NotConfigured", "Unsupported"]
 
-# MarineCadastre (history only) joins in CF-47.
-SOURCES = {AisstreamSource.id: AisstreamSource, DatalasticSource.id: DatalasticSource}
+SOURCES = {AisstreamSource.id: AisstreamSource, DatalasticSource.id: DatalasticSource,
+           MarineCadastreSource.id: MarineCadastreSource}   # MarineCadastre: history only (the backfill)
 
 
 def get_source(ident: str, **options) -> AisSource:

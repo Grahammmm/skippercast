@@ -15,6 +15,11 @@ for every module, so an ``h3`` module later needs no schema or rule change:
   with fewer distinct vessels. ``resolution_m`` is the grid's cell edge.
 - **Rights** of a cell are the most restrictive of its events' rights
   (``RIGHTS_ORDER``); an unknown tag is an error rather than a guess.
+- **One source per vessel and time** (``prefer_sources``, applied by the
+  processor before ``compute``): when two AIS sources heard the same trip (the
+  live listener and the MarineCadastre backfill), only the higher-precedence
+  source's events count, so a trip is never counted twice in ``events_n`` or
+  ``dwell_min``.
 - **Ids** are ``sha256(region|module|params_hash|season|season_part|kind|cell)``
   cut to 32 hex characters (a null part hashes as the empty string), where ``params_hash`` covers the canonical
   ``params_json``, so different parameter sets never overwrite each other.
@@ -28,14 +33,14 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
-from typing import Any, Iterable, Mapping, Protocol
+from typing import Any, Iterable, Mapping, Protocol, Sequence
 from zoneinfo import ZoneInfo
 
 from ...ops import id32
 from ..events import Event, iso_utc
 
 __all__ = ["RIGHTS_ORDER", "AggregateParams", "Aggregator", "Cell", "build_cells", "compute", "module",
-           "most_restrictive", "register"]
+           "most_restrictive", "prefer_sources", "register"]
 
 # Least to most restrictive. internal-only never leaves the admin views; noaa-planning-only (MarineCadastre,
 # D9) may not be sold; api-terms carries provider caching terms; facts-only and public-record allow facts.
@@ -53,6 +58,31 @@ def most_restrictive(tags: Iterable[str]) -> str:
     if not ranks:
         raise ValueError("no rights to combine")
     return RIGHTS_ORDER[max(ranks)]
+
+
+def prefer_sources(events: Iterable[Event], precedence: Sequence[str]) -> list[Event]:
+    """Events with each vessel's time covered by one source only.
+
+    A trip's span is its events' first start to last end. Taking sources in ``precedence`` order (unlisted sources
+    last, by name), a trip whose span overlaps a span already kept for the same vessel is dropped whole, events and
+    all; otherwise it is kept. Order of the result follows the input.
+    """
+    events = list(events)
+    rank = {source: k for k, source in enumerate(precedence)}
+    trips: dict[tuple[str, str], list[Event]] = defaultdict(list)
+    for event in events:
+        trips[(event.vessel_id, event.trip_id)].append(event)
+    spans = {key: (min(e.started_at for e in members), max(e.ended_at for e in members), members[0].source)
+             for key, members in trips.items()}
+    kept: dict[str, list[tuple[int, int]]] = defaultdict(list)
+    keep: set[tuple[str, str]] = set()
+    for key in sorted(spans, key=lambda k: (rank.get(spans[k][2], len(rank)), spans[k][2], spans[k][0], k[1])):
+        start, end, _ = spans[key]
+        if any(start <= b and a <= end for a, b in kept[key[0]]):
+            continue
+        kept[key[0]].append((start, end))
+        keep.add(key)
+    return [e for e in events if (e.vessel_id, e.trip_id) in keep]
 
 
 def _optional_number(raw: Mapping[str, Any], key: str, *, integer: bool = False, minimum: float = 0):
