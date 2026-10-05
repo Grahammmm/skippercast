@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Deduplicate interpreted habitat from overlapping survey pairs in reviewed source order, preserving earlier native outlines and rejecting stale publication receipts after a priority change.
+
 - Enable reviewed, unranked Point Conception rock habitat in r08 with original NOAA/USGS attribution and fresh whole-polygon spatial holds; no new measurement, ranking or precise fishing export.
 
 - Enable reviewed, unranked Point Estero rock habitat in Cambria r02, with fresh whole-polygon spatial holds and no new measurement, ranking or precise fishing export.
