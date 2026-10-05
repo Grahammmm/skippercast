@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Enable reviewed, unranked Point Estero rock habitat in Cambria r02, with fresh whole-polygon spatial holds and no new measurement, ranking or precise fishing export.
+
 - Add opt-in whole-polygon holds against verified neighboring planning footprints for classified habitat releases; preserve original native boundaries and recheck holds before publication.
 
 - Verify current native dependencies and retain producer rights for survey footprints used by the opt-in classified habitat mode; keep original depth and rock interpretation authoritative.
