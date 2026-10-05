@@ -18,7 +18,10 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 OP_KINDS = ("operator.upsert", "vessel.upsert", "fact.upsert", "alias.upsert", "offering.upsert",
-            "departure.upsert", "review.open", "change.record", "run.record")
+            "departure.upsert", "review.open", "change.record", "run.record", "fact.purge")
+# Sources whose facts expire under their terms (design section 5, Retention): the only ones fact.purge may delete.
+PURGEABLE_SOURCES = ("google-places",)
+MAX_KEEP_FIELDS = 20
 MAX_OPS = 500
 MAX_ERRORS = 50
 MAX_SUPERSEDES = 20
@@ -312,6 +315,9 @@ SPECS: dict[str, tuple[tuple[str, ...], dict[str, Check]]] = {
         "step": text(32, _re(r"^[a-z][a-z-]*$")), "sink": one_of(ENUMS["sink"]), "started_at": iso,
         "finished_at": nullable(iso), "status": one_of(ENUMS["run_status"]), "counts_json": nullable(as_json(obj)),
         "error": nullable(text(2000))}),
+    "fact.purge": (("source_id", "keep_fields", "seen_before"), {
+        "source_id": one_of(PURGEABLE_SOURCES), "keep_fields": as_json(list_of(matches(FIELD), MAX_KEEP_FIELDS)),
+        "seen_before": iso}),
 }
 
 
@@ -371,7 +377,8 @@ def validate_op(raw: Any, index: int, region: str) -> Row:
     if "first_seen_at" in cols and cols["first_seen_at"] > cols["last_seen_at"]:
         raise OpError("first_seen_at: after last_seen_at")
     ident = {"alias.upsert": lambda: f"{cols['vessel_id']}|{cols['alias_norm']}",
-             "run.record": lambda: cols["step"]}.get(kind, lambda: cols["id"])()
+             "run.record": lambda: cols["step"],
+             "fact.purge": lambda: f"{cols['source_id']}|{cols['seen_before']}|{cols['keep_fields']}"}.get(kind, lambda: cols["id"])()
     return Row(kind, index, ident, cols, supersedes)
 
 

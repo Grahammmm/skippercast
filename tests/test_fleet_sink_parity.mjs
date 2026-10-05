@@ -48,6 +48,9 @@ const change = n => ({op: 'change.record', vessel_id: vid(n), kind: 'new', befor
 const alias = (n, extra = {}) => ({op: 'alias.upsert', vessel_id: vid(n), alias: `Test Boat ${n} II`, alias_norm: `TESTBOAT${n}2`, kind: 'former-name',
   source_url: 'https://reports.example.com/boats', first_seen_at: T0, last_seen_at: T0, ...extra});
 const run = {op: 'run.record', step: 'ingest', sink: 'staging', started_at: T0, finished_at: T0, status: 'ok', counts_json: {facts: 3}};
+const placesFact = (n, field, value, extra = {}) => ({op: 'fact.upsert', vessel_id: vid(n), field, value_json: value, source_id: 'google-places',
+  source_url: `https://www.google.com/maps/place/?q=place_id:ChIJexample000${n}`, method: 'api', confidence: 0.85, rights: 'api-terms', retrieved_at: T0, ...extra});
+const purge = {op: 'fact.purge', source_id: 'google-places', keep_fields: ['place_id'], seen_before: T0};
 
 function fullBatch() {
   const ops = [operator()];
@@ -74,6 +77,12 @@ const STEPS = [
   ]},
   {ops: [vessel(4, {slug: 'test-boat-1'}), fact(9, 'mmsi', '1'), fact(1, 'mmsi', '2', {source_url: 'admin:user-1'}),
     fact(1, 'mmsi', '3', {method: 'admin'}), {...alias(1), colour: 'red'}, review({fingerprint: undefined}), offering(2, {seen_at: undefined})]},
+  // fact.purge (CF-16): Google Places facts other than place_id, last seen before seen_before, are deleted.
+  {ops: [placesFact(1, 'place_id', 'ChIJexample0001'), placesFact(1, 'reputation.google_rating', 4.5, {retrieved_at: TM}),
+    placesFact(2, 'reputation.google_rating', 4)]},
+  {ops: [purge]},
+  {ops: [purge]},                                                               // replay: nothing left to delete
+  {ops: [{...purge, source_id: 'fcc-uls'}, {...purge, keep_fields: ['Not A Field']}, {...purge, seen_before: 'yesterday'}]},
 ];
 
 const TABLES = ['fleet_operators', 'fleet_vessels', 'fleet_vessel_facts', 'fleet_aliases', 'fleet_offerings', 'fleet_departures', 'fleet_reviews', 'fleet_changes'];
@@ -133,4 +142,9 @@ test('SqliteSink stores and refuses exactly what the Worker registry route does'
   assert.equal(v1.name, 'Test Boat 1', 'pinned name kept');
   assert.equal(worker.dump.fleet_vessels.find(v => v.id === vid(3)).profile_status, 'hidden');
   assert.equal(worker.dump.fleet_reviews[0].status, 'rejected');
+  assert.equal(worker.results[8].counts['fact.purge'].changed, 1, 'one expired Google rating deleted');
+  assert.equal(worker.results[9].changed, 0, 'a replayed purge changes nothing');
+  assert.deepEqual(worker.results[10].errors.map(e => e.index), [0, 1, 2], 'unpurgeable source, bad field, bad time refused');
+  const places = worker.dump.fleet_vessel_facts.filter(f => f.source_id === 'google-places').map(f => [f.vessel_id, f.field]).sort();
+  assert.deepEqual(places, [[vid(1), 'place_id'], [vid(2), 'reputation.google_rating']].sort(), 'place_id kept; the fresh rating not yet due');
 });

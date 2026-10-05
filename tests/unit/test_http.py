@@ -155,6 +155,20 @@ class TLSAndPinningTests(TLSFixture):
         with self.assertRaisesRegex(http.DisallowedHost, 'allowlist'):
             self.session().get(self.url('/data', 'other.test'), allowed_hosts=['source.test'])
 
+    def test_post_sends_its_body_keeps_it_on_307_and_drops_it_on_303(self):
+        self.server.routes['/api'] = [(200, b'{"ok": true}')]
+        response = self.session().post(self.url('/api'), b'{"q": 1}', headers={'Content-Type': 'application/json'})
+        self.assertEqual(response.json(), {'ok': True})
+        self.assertEqual([(r['method'], r['body']) for r in self.server.requests], [('POST', b'{"q": 1}')])
+        self.server.requests.clear()
+        self.server.routes['/moved'] = [(307, b'', {'Location': self.url('/api')})]
+        self.server.routes['/seeother'] = [(303, b'', {'Location': self.url('/api')})]
+        self.session().post(self.url('/moved'), b'x=1')
+        self.session().post(self.url('/seeother'), b'x=2')
+        self.assertEqual([(r['method'], r['path'], r['body']) for r in self.server.requests],
+                         [('POST', '/moved', b'x=1'), ('POST', '/api', b'x=1'),
+                          ('POST', '/seeother', b'x=2'), ('GET', '/api', b'')])
+
     def test_redirects_can_be_refused(self):
         self.server.routes['/hop'] = [(302, b'', {'Location': self.url('/final')})]
         with self.assertRaisesRegex(http.ContractError, 'Redirect refused'):

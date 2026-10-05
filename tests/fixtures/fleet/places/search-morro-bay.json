@@ -1,0 +1,11 @@
+{
+  "_note": "Synthetic Places API (New) places:searchText response for tests/unit/test_fleet_enrich.py; not real places.",
+  "places": [
+    {"id": "ChIJexampleSeaExample01", "displayName": {"text": "Sea Example Charters", "languageCode": "en"}, "businessStatus": "OPERATIONAL"},
+    {"id": "ChIJexampleTestBoat0001", "displayName": {"text": "Test Boat Sportfishing", "languageCode": "en"}, "businessStatus": "OPERATIONAL"},
+    {"id": "ChIJexampleTestBoat0002", "displayName": {"text": "Test Boat Too Fishing", "languageCode": "en"}, "businessStatus": "OPERATIONAL"},
+    {"id": "ChIJexampleClosedBoat01", "displayName": {"text": "Closed Example Charters", "languageCode": "en"}, "businessStatus": "CLOSED_PERMANENTLY"},
+    {"id": "ChIJexampleBaitShop0001", "displayName": {"text": "Harbor Bait and Tackle", "languageCode": "en"}, "businessStatus": "OPERATIONAL"}
+  ],
+  "nextPageToken": "page-2-token"
+}

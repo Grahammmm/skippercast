@@ -1,0 +1,6 @@
+{
+  "_note": "Synthetic second page of the places:searchText response (tests/unit/test_fleet_enrich.py).",
+  "places": [
+    {"id": "ChIJexamplePagedBoat001", "displayName": {"text": "Paged Example Sportfishing", "languageCode": "en"}, "businessStatus": "OPERATIONAL"}
+  ]
+}
