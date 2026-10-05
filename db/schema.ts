@@ -339,3 +339,92 @@ export const fleetRuns=sqliteTable('fleet_runs',{
   startedAt:text('started_at').notNull(),finishedAt:text('finished_at'),status:text('status').notNull().default('running'),
   countsJson:text('counts_json'),error:text('error'),
 },t=>[index('run_region_time').on(t.region,t.startedAt)]);
+
+// Charter fleet activity (docs/plans/charter-fleet/design.md § 5, migration 0014): what
+// the AIS processor (§ 11) derives on Hermes and pushes here. Raw positions never reach
+// D1. Rows the pipeline derives are replaced per MMSI, source and departure window;
+// labels survive reprocessing. rights carries the source's tag (noaa-planning-only for
+// MarineCadastre), so paid surfaces can filter it out in code.
+
+// MMSIs the listener watches, and candidates still being matched. vessel_id is null
+// while a candidate; match_method fcc-uls/call-sign/ais-static-name/geofence-presence/admin.
+export const fleetAisWatch=sqliteTable('fleet_ais_watch',{
+  region:text('region').notNull(),mmsi:text('mmsi').notNull(),vesselId:text('vessel_id'),
+  matchMethod:text('match_method').notNull(),confidence:real('confidence').notNull(),status:text('status').notNull().default('candidate'),
+  aisName:text('ais_name'),aisCallSign:text('ais_call_sign'),aisClass:text('ais_class'),
+  firstSeenAt:text('first_seen_at').notNull(),lastSeenAt:text('last_seen_at').notNull(),lastSeenSource:text('last_seen_source'),
+  positions30d:integer('positions_30d').notNull().default(0),updatedAt:text('updated_at').notNull(),
+},t=>[primaryKey({columns:[t.region,t.mmsi]}),index('watch_vessel').on(t.vesselId)]);
+
+// One port-to-port trip of a watched vessel. id sha256(mmsi|departed_at|source)[:32].
+// local_date is the departure date in the region timezone: the catch-log join key
+// (US-B4, fleet_trip_reports). status open/closed/truncated; ports are null when the
+// trip starts or ends outside every geofence (a truncated or backfilled trip).
+export const fleetTrips=sqliteTable('fleet_trips',{
+  id:text('id').primaryKey(),region:text('region').notNull(),vesselId:text('vessel_id').notNull(),mmsi:text('mmsi').notNull(),
+  departPortId:text('depart_port_id'),returnPortId:text('return_port_id'),departedAt:text('departed_at').notNull(),returnedAt:text('returned_at'),
+  localDate:text('local_date').notNull(),season:text('season').notNull(),seasonPart:text('season_part'),
+  status:text('status').notNull().default('open'),tripTypeInferred:text('trip_type_inferred'),
+  distanceNm:real('distance_nm'),maxOffshoreNm:real('max_offshore_nm'),fishingMin:integer('fishing_min'),
+  positionsN:integer('positions_n'),gapMin:integer('gap_min'),
+  source:text('source').notNull(),rights:text('rights').notNull(),classifierVersion:text('classifier_version').notNull(),
+  computedAt:text('computed_at').notNull(),
+},t=>[index('trip_vessel_date').on(t.vesselId,t.localDate),index('trip_region_season').on(t.region,t.season),
+  index('trip_source_time').on(t.source,t.departedAt)]);
+
+// A classified stretch of a trip (in-port, transit, fishing-drift, fishing-troll, gap).
+// id sha256(trip_id|seq)[:32]; geometry is an encoded polyline (precision 5).
+export const fleetSegments=sqliteTable('fleet_segments',{
+  id:text('id').primaryKey(),tripId:text('trip_id').notNull(),seq:integer('seq').notNull(),kind:text('kind').notNull(),
+  startedAt:text('started_at').notNull(),endedAt:text('ended_at').notNull(),geometry:text('geometry'),
+  pointsN:integer('points_n'),meanSog:real('mean_sog'),straightness:real('straightness'),headingVar:real('heading_var'),
+},t=>[index('seg_trip').on(t.tripId,t.seq)]);
+
+// One event per fishing segment (drift-anchor or troll): median point, p90 radius.
+// id sha256(trip_id|started_at|kind)[:32]. basis is always inferred-from-movement: a
+// place the boat stopped or trolled, never a catch location. species_json stays null
+// until catch-log pairing (attribution "report-paired").
+export const fleetEvents=sqliteTable('fleet_events',{
+  id:text('id').primaryKey(),tripId:text('trip_id').notNull(),segmentId:text('segment_id').notNull(),vesselId:text('vessel_id').notNull(),
+  region:text('region').notNull(),kind:text('kind').notNull(),lat:real('lat').notNull(),lon:real('lon').notNull(),radiusM:real('radius_m'),
+  startedAt:text('started_at').notNull(),endedAt:text('ended_at').notNull(),dwellMin:integer('dwell_min').notNull(),
+  portId:text('port_id'),vesselClass:text('vessel_class'),tripType:text('trip_type'),season:text('season').notNull(),seasonPart:text('season_part'),
+  basis:text('basis').notNull().default('inferred-from-movement'),source:text('source').notNull(),rights:text('rights').notNull(),
+  classifierVersion:text('classifier_version').notNull(),speciesJson:text('species_json'),
+},t=>[index('ev_region_time').on(t.region,t.startedAt),index('ev_vessel').on(t.vesselId,t.startedAt),
+  index('ev_season').on(t.region,t.season,t.kind)]);
+
+// Binned events from an aggregate module (grid, later h3).
+// id sha256(module|params_hash|season|season_part|kind|cell)[:32]; rights is the most
+// restrictive input's tag.
+export const fleetAggregates=sqliteTable('fleet_aggregates',{
+  id:text('id').primaryKey(),region:text('region').notNull(),module:text('module').notNull(),paramsJson:text('params_json').notNull(),
+  cellId:text('cell_id').notNull(),lat:real('lat').notNull(),lon:real('lon').notNull(),
+  season:text('season').notNull(),seasonPart:text('season_part'),kind:text('kind').notNull(),
+  vesselsN:integer('vessels_n').notNull().default(0),eventsN:integer('events_n').notNull().default(0),dwellMin:integer('dwell_min').notNull().default(0),
+  firstDate:text('first_date'),lastDate:text('last_date'),rights:text('rights').notNull(),computedAt:text('computed_at').notNull(),
+},t=>[index('agg_lookup').on(t.region,t.module,t.season,t.kind)]);
+
+// Validation labels on a trip's time range (§ 11). Keyed by trip id and time, so they
+// survive reprocessing. labeller is a users.id or agent:<name>.
+export const fleetSegmentLabels=sqliteTable('fleet_segment_labels',{
+  id:text('id').primaryKey(),tripId:text('trip_id').notNull(),startedAt:text('started_at').notNull(),endedAt:text('ended_at').notNull(),
+  label:text('label').notNull(),labeller:text('labeller').notNull(),basis:text('basis'),createdAt:text('created_at').notNull(),
+},t=>[index('label_trip').on(t.tripId)]);
+
+// Listener counters per region and UTC hour (AIS health, § 13).
+export const fleetAisHours=sqliteTable('fleet_ais_hours',{
+  region:text('region').notNull(),hour:text('hour').notNull(),
+  messages:integer('messages').notNull().default(0),watchedMessages:integer('watched_messages').notNull().default(0),
+  vessels:integer('vessels').notNull().default(0),reconnects:integer('reconnects').notNull().default(0),
+  maxGapS:integer('max_gap_s').notNull().default(0),dropped:integer('dropped').notNull().default(0),
+},t=>[primaryKey({columns:[t.region,t.hour]})]);
+
+// Catch-log pairing (US-B4), filled by a later task. report_kind advisor (report_ref is
+// advisor_reports.id, joined through advisor_boats.fleet_vessel_id) or landing (report_ref
+// is the landing report id in the daily feed, joined through fleet_aliases.alias_norm plus
+// port); match boat-date or alias-port-date on the trip's local_date.
+export const fleetTripReports=sqliteTable('fleet_trip_reports',{
+  tripId:text('trip_id').notNull(),reportKind:text('report_kind').notNull(),reportRef:text('report_ref').notNull(),
+  match:text('match').notNull(),confidence:real('confidence').notNull(),createdAt:text('created_at').notNull(),
+},t=>[primaryKey({columns:[t.tripId,t.reportKind,t.reportRef]})]);

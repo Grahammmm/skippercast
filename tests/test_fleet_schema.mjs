@@ -178,3 +178,156 @@ dbTest('other registry tables take their documented defaults', async () => {
   // D15: click counts carry no visitor data.
   assert.deepEqual(info(sql, 'fleet_link_clicks').map(c => c.name).sort(), ['count', 'day', 'placement', 'target', 'vessel_id']);
 });
+
+// ---- 0014 fleet_activity (CF-03) ----
+
+const ACTIVITY_TABLES = ['fleet_ais_watch', 'fleet_trips', 'fleet_segments', 'fleet_events', 'fleet_aggregates', 'fleet_segment_labels',
+  'fleet_ais_hours', 'fleet_trip_reports'];
+// Every index § 5 names for 0014, with its columns.
+const ACTIVITY_INDEX_COLUMNS = {
+  fleet_ais_watch: {watch_vessel: ['vessel_id']},
+  fleet_trips: {trip_vessel_date: ['vessel_id', 'local_date'], trip_region_season: ['region', 'season'], trip_source_time: ['source', 'departed_at']},
+  fleet_segments: {seg_trip: ['trip_id', 'seq']},
+  fleet_events: {ev_region_time: ['region', 'started_at'], ev_vessel: ['vessel_id', 'started_at'], ev_season: ['region', 'season', 'kind']},
+  fleet_aggregates: {agg_lookup: ['region', 'module', 'season', 'kind']},
+  fleet_segment_labels: {label_trip: ['trip_id']},
+};
+
+const insertRow = (sql, table, row) => {
+  const cols = Object.keys(row);
+  return sql.prepare(`INSERT INTO ${table}(${cols.join(',')}) VALUES(${cols.map(() => '?').join(',')})`).run(...cols.map(c => row[c]));
+};
+const trip = (overrides = {}) => ({id: 't1', region: 'CA', vessel_id: 'v1', mmsi: '338000001', depart_port_id: 'morro-bay',
+  return_port_id: 'morro-bay', departed_at: '2026-09-30T13:05:00Z', returned_at: '2026-09-30T22:40:00Z', local_date: '2026-09-30',
+  season: '2026', source: 'aisstream', rights: 'api-terms', classifier_version: 'cv1', computed_at: NOW, ...overrides});
+
+test('migration 0014 is fleet_activity and follows 0013', () => {
+  const entries = journal().entries, entry = entries.find(e => e.tag.startsWith('0014_'));
+  assert.equal(entry?.tag, '0014_fleet_activity');
+  assert.equal(entries[entry.idx - 1].tag, '0013_fleet_registry');
+  // Activity only: 0014 creates tables and indexes and alters nothing that exists.
+  assert.doesNotMatch(migrationSql('0014_fleet_activity'), /ALTER TABLE|DROP /);
+});
+
+dbTest('a fresh database has every 0014 activity table, index and key', async () => {
+  const sql = await upTo(14);
+  for (const t of [...REGISTRY_TABLES, ...ACTIVITY_TABLES]) assert.ok(tables(sql).includes(t), t);
+  for (const [t, byName] of Object.entries(ACTIVITY_INDEX_COLUMNS)) {
+    const have = indexList(sql, t);
+    for (const [n, cols] of Object.entries(byName)) {
+      assert.equal(have.find(r => r.name === n)?.unique, 0, `${t}.${n}`);
+      assert.deepEqual(sql.prepare(`PRAGMA index_info(${n})`).all().map(r => r.name), cols, n);
+    }
+  }
+  const pk = t => info(sql, t).filter(c => c.pk > 0).sort((a, b) => a.pk - b.pk).map(c => c.name);
+  assert.deepEqual(pk('fleet_ais_watch'), ['region', 'mmsi']);
+  assert.deepEqual(pk('fleet_ais_hours'), ['region', 'hour']);
+  assert.deepEqual(pk('fleet_trip_reports'), ['trip_id', 'report_kind', 'report_ref']);
+  for (const t of ['fleet_trips', 'fleet_segments', 'fleet_events', 'fleet_aggregates', 'fleet_segment_labels']) assert.deepEqual(pk(t), ['id'], t);
+  // US-B4: the catch-log join keys are always present on a trip.
+  for (const c of ['vessel_id', 'local_date']) assert.equal(column(sql, 'fleet_trips', c).notnull, 1, c);
+  // Raw positions never reach D1: no activity table has a per-position column.
+  for (const t of ACTIVITY_TABLES) for (const c of ['positions', 'positions_json', 'ts', 'sog', 'cog']) assert.equal(column(sql, t, c), undefined, `${t}.${c}`);
+});
+
+dbTest('the full migration chain (D1 fake) includes the activity tables', () => {
+  const {sql} = advisorDatabase();
+  for (const t of ACTIVITY_TABLES) assert.ok(tables(sql).includes(t), t);
+});
+
+dbTest('0014 applies over a 0013 database with registry rows and keeps them', async () => {
+  const sql = await upTo(13);
+  sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,first_seen_at,last_seen_at,created_at,updated_at)
+    VALUES('v1','CA','sea-example','Sea Example','sea example',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
+  sql.exec(migrationSql('0014_fleet_activity'));
+  assert.equal(sql.prepare('SELECT count(*) n FROM fleet_vessels').get().n, 1);
+  for (const t of ACTIVITY_TABLES) assert.ok(tables(sql).includes(t), t);
+});
+
+dbTest('fleet_events.basis defaults to inferred-from-movement and species_json starts null', async () => {
+  const sql = await upTo(14);
+  const basis = column(sql, 'fleet_events', 'basis');
+  assert.equal(basis.notnull, 1); assert.equal(basis.dflt_value, "'inferred-from-movement'");
+  const event = {id: 'e1', trip_id: 't1', segment_id: 's1', vessel_id: 'v1', region: 'CA', kind: 'drift-anchor', lat: 35.3, lon: -121.0,
+    radius_m: 180, started_at: '2026-09-30T15:00:00Z', ended_at: '2026-09-30T15:45:00Z', dwell_min: 45, season: '2026', source: 'aisstream',
+    rights: 'api-terms', classifier_version: 'cv1'};
+  insertRow(sql, 'fleet_events', event);
+  assert.deepEqual({...sql.prepare("SELECT basis, species_json FROM fleet_events WHERE id='e1'").get()}, {basis: 'inferred-from-movement', species_json: null});
+  assert.throws(() => insertRow(sql, 'fleet_events', {...event, id: 'e2', basis: null}), /NOT NULL constraint failed: fleet_events\.basis/);
+});
+
+dbTest('other activity tables take their documented defaults', async () => {
+  const sql = await upTo(14);
+  // A candidate MMSI has no vessel yet.
+  insertRow(sql, 'fleet_ais_watch', {region: 'CA', mmsi: '338000002', match_method: 'ais-static-name', confidence: 0.6,
+    first_seen_at: NOW, last_seen_at: NOW, updated_at: NOW});
+  assert.deepEqual({...sql.prepare('SELECT vessel_id, status, positions_30d FROM fleet_ais_watch').get()}, {vessel_id: null, status: 'candidate', positions_30d: 0});
+  insertRow(sql, 'fleet_trips', trip({returned_at: null, return_port_id: null}));
+  assert.equal(sql.prepare("SELECT status FROM fleet_trips WHERE id='t1'").get().status, 'open');
+  assert.throws(() => insertRow(sql, 'fleet_trips', trip({id: 't2', local_date: null})), /NOT NULL constraint failed: fleet_trips\.local_date/);
+  sql.prepare("INSERT INTO fleet_ais_hours(region,hour) VALUES('CA','2026-10-04T12')").run();
+  assert.deepEqual({...sql.prepare('SELECT messages, watched_messages, vessels, reconnects, max_gap_s, dropped FROM fleet_ais_hours').get()},
+    {messages: 0, watched_messages: 0, vessels: 0, reconnects: 0, max_gap_s: 0, dropped: 0});
+  insertRow(sql, 'fleet_aggregates', {id: 'a1', region: 'CA', module: 'grid', params_json: '{"resolution_m":500}', cell_id: 'c1', lat: 35.3,
+    lon: -121, season: '2026', kind: 'drift-anchor', rights: 'api-terms', computed_at: NOW});
+  assert.deepEqual({...sql.prepare('SELECT vessels_n, events_n, dwell_min FROM fleet_aggregates').get()}, {vessels_n: 0, events_n: 0, dwell_min: 0});
+  // Pairing the same trip and report twice is one row.
+  const pair = {trip_id: 't1', report_kind: 'advisor', report_ref: 'r1', match: 'boat-date', confidence: 0.9, created_at: NOW};
+  insertRow(sql, 'fleet_trip_reports', pair);
+  assert.throws(() => insertRow(sql, 'fleet_trip_reports', pair), /UNIQUE constraint failed: fleet_trip_reports/);
+});
+
+// US-B4: a skipper report and a landing report for a boat's trip date both resolve to the
+// AIS trip through the fleet_trip_reports keys, with plain SQL. Landing reports live in the
+// daily feed (id, boat, port, date), not D1; the fixture loads feed rows into a temp table
+// with the port already resolved to a region port id. Pairing code is a later task (CF-45).
+dbTest('US-B4 join fixture: advisor and landing reports resolve to the trip', async () => {
+  const sql = await upTo(14);
+  sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,port_id,mmsi,first_seen_at,last_seen_at,created_at,updated_at)
+    VALUES('v1','CA','sea-example','Sea Example','sea example','morro-bay','338000001',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
+  sql.prepare(`INSERT INTO fleet_aliases(vessel_id,alias_norm,alias,kind,first_seen_at,last_seen_at)
+    VALUES('v1','sea example ii','Sea Example II','report-name',?,?)`).run(NOW, NOW);
+  insertRow(sql, 'fleet_trips', trip({status: 'closed'}));
+  // Distractors: the same vessel the next day, and another vessel the same day.
+  insertRow(sql, 'fleet_trips', trip({id: 't-next', departed_at: '2026-10-01T13:00:00Z', local_date: '2026-10-01'}));
+  insertRow(sql, 'fleet_trips', trip({id: 't-other', vessel_id: 'v2', mmsi: '338000009'}));
+  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,status,created_at,updated_at,fleet_vessel_id)
+    VALUES('boat1','sea-example-adv','Sea Example','morro-bay','morro-bay','verified',?,?,'v1')`).run(NOW, NOW);
+  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,status,created_at,updated_at)
+    VALUES('boat2','unlinked-example','Unlinked Example','morro-bay','morro-bay','verified',?,?)`).run(NOW, NOW);
+  const report = sql.prepare(`INSERT INTO advisor_reports(id,boat_id,region,port,report_date,counts_json,source,created_at,updated_at)
+    VALUES(?,?,'morro-bay','morro-bay',?,'{}','sms',?,?)`);
+  report.run('r1', 'boat1', '2026-09-30', NOW, NOW);
+  report.run('r-unlinked', 'boat2', '2026-09-30', NOW, NOW);
+  sql.exec('CREATE TEMP TABLE landing_feed(id TEXT, boat TEXT, port TEXT, date TEXT)');
+  const landing = sql.prepare('INSERT INTO landing_feed VALUES(?,?,?,?)');
+  landing.run('land-1', 'Sea Example II', 'morro-bay', '2026-09-30');
+  landing.run('land-other-port', 'Sea Example II', 'port-san-luis', '2026-09-30');
+
+  // Advisor: advisor_reports.boat_id -> advisor_boats.fleet_vessel_id = trip vessel, report_date = local_date.
+  const advisor = sql.prepare(`SELECT r.id report_ref, t.id trip_id FROM advisor_reports r
+    JOIN advisor_boats b ON b.id = r.boat_id
+    JOIN fleet_trips t ON t.vessel_id = b.fleet_vessel_id AND t.local_date = r.report_date ORDER BY r.id`).all();
+  assert.deepEqual(advisor.map(r => ({...r})), [{report_ref: 'r1', trip_id: 't1'}]);
+  // Landing: normalised boat name -> fleet_aliases.alias_norm, plus port and date.
+  const landed = sql.prepare(`SELECT l.id report_ref, t.id trip_id FROM landing_feed l
+    JOIN fleet_aliases a ON a.alias_norm = lower(trim(l.boat))
+    JOIN fleet_trips t ON t.vessel_id = a.vessel_id AND t.local_date = l.date AND t.depart_port_id = l.port ORDER BY l.id`).all();
+  assert.deepEqual(landed.map(r => ({...r})), [{report_ref: 'land-1', trip_id: 't1'}]);
+
+  const pair = sql.prepare('INSERT INTO fleet_trip_reports(trip_id,report_kind,report_ref,match,confidence,created_at) VALUES(?,?,?,?,?,?)');
+  for (const r of advisor) pair.run(r.trip_id, 'advisor', r.report_ref, 'boat-date', 0.9, NOW);
+  for (const r of landed) pair.run(r.trip_id, 'landing', r.report_ref, 'alias-port-date', 0.8, NOW);
+  // Back from each pairing to the report its key names.
+  const paired = sql.prepare(`SELECT p.report_kind, p.match, coalesce(r.id, l.id) found, t.local_date FROM fleet_trip_reports p
+    JOIN fleet_trips t ON t.id = p.trip_id
+    LEFT JOIN advisor_reports r ON p.report_kind = 'advisor' AND r.id = p.report_ref
+    LEFT JOIN landing_feed l ON p.report_kind = 'landing' AND l.id = p.report_ref
+    WHERE p.trip_id = 't1' ORDER BY p.report_kind`).all();
+  assert.deepEqual(paired.map(r => ({...r})), [
+    {report_kind: 'advisor', match: 'boat-date', found: 'r1', local_date: '2026-09-30'},
+    {report_kind: 'landing', match: 'alias-port-date', found: 'land-1', local_date: '2026-09-30'}]);
+  // The trip_vessel_date index serves the (vessel, date) lookup.
+  const plan = sql.prepare("EXPLAIN QUERY PLAN SELECT id FROM fleet_trips WHERE vessel_id='v1' AND local_date='2026-09-30'").all().map(r => r.detail).join(' ');
+  assert.match(plan, /trip_vessel_date/);
+});
