@@ -13,9 +13,11 @@
 //
 //   GET /api/fleet/jobs/ping   job identity check: {ok: true, region}
 //   GET /go/<slug>             public outbound link, gated and per-IP limited (fleet/go.ts, CF-34)
+//   GET /api/fleet/jobs/snapshot, POST /api/fleet/jobs/registry   CF-11 (server/fleet/jobs.ts)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
 import {fleetSettings} from '../fleet/settings.ts';
+import {registry, snapshot} from '../fleet/jobs.ts';
 import {verifyJobToken} from '../job-auth.ts';
 import type {JobClaims, JobScope} from '../job-auth.ts';
 import {deployment} from '../config.ts';
@@ -71,3 +73,14 @@ fleetRouter.get('/api/fleet/jobs/ping', c => {
 });
 
 fleetRouter.get('/go/:slug', fleetGate, rateLimit('PUBLIC_LIMITER', 'fleet-go'), c => fleetGo(c));
+const UNAVAILABLE = (): Response => json({error: 'This service is temporarily unavailable.'}, 503);
+fleetRouter.get('/api/fleet/jobs/snapshot', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await snapshot(c.env.DB, c.req.query('region'), c.req.query('cursor'));
+  return json(result.body, result.status);
+});
+fleetRouter.post('/api/fleet/jobs/registry', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await registry(c.env.DB, c.req.raw);
+  return json(result.body, result.status);
+});

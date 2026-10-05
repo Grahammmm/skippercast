@@ -642,6 +642,18 @@ from a new profile changes nothing (absence is not evidence). Facts unseen for
 reopens a decided review, change ids include the after-value. Running a step
 twice produces zero row changes the second time; this is a test.
 
+**Operation contract** (CF-11, `server/fleet/registry.ts` is the reference;
+the SqliteSink implements the same): a request is `{region, run_id, batch?,
+ops}`; each op is `{op: <kind>, ...}` keyed by column name, `*_json` keys
+taking a JSON value stored as canonical JSON (`server/fleet/ids.ts`: sorted
+keys, no whitespace; integral numbers without `.0`). Omitted fields keep their
+stored value; timestamps come from the operations, never the Worker clock, and
+`last_seen_at` only moves forward. Fact, departure, review and change ids are
+derived (and checked when sent); a `fact.upsert` may list up to 20 fact ids it
+`supersedes`. `pinned_json` is an object keyed by column name; jobs never
+write it, consent, outreach or `removal_requested_at`, and never write `admin:`
+facts.
+
 **Change detection** (`refresh`, after ingest):
 
 | Kind | Rule |

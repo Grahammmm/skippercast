@@ -335,6 +335,23 @@ Identity check for the charter fleet's Hermes workflows ([charter fleet design �
 - **Limit:** 240 calls per token (`jti`) per minute, shared by every fleet job route.
 - **Response:** `200`, `no-store`: `{"ok": true, "region": "<id>"|null}`.
 
+<!-- CF-11: registry snapshot and operations -->
+### `GET /api/fleet/jobs/snapshot`
+
+What the Python resolver reads before a run ([design § 7, § 12](../plans/charter-fleet/design.md)). Same gate, auth and limit as `ping` (`server/fleet/jobs.ts` `snapshot`).
+
+- **Query:** `region` (required, as `ping`); `cursor` (optional, `<section>:<last id>`, from the previous page's `next`). Anything else → `400`.
+- **Response:** `200`, `no-store`: `{"region", "cursor", "operators": [...], "vessels": [...], "reviews": [...], "next": "<cursor>"|null}`. Each page holds one section, in order: operators (500 a page: id, slug, name and business contacts), vessels (100 a page: the resolved columns and stable keys, `waters`, `pinned` (the pinned column names, `["*"]` when unreadable), and their `aliases` and `offerings`), then decided and dismissed reviews (500 a page, with `candidate`, `proposal`, `decision`). Consent, outreach, removal requests, map consent and facts are never in the snapshot. `next` is `null` after the last page.
+
+### `POST /api/fleet/jobs/registry`
+
+Registry operations from the ingest step ([design § 9](../plans/charter-fleet/design.md#9-ingest-and-refresh); contract in `server/fleet/registry.ts`). Same gate, auth and limit as `ping`.
+
+- **Body:** JSON, at most 1 MB (`413` beyond): `{"region", "run_id", "batch"?: <int>, "ops": [...]}`, at most 500 operations (`413` beyond). Each op is `{"op": "<kind>", ...columns}` with kind `operator.upsert`, `vessel.upsert`, `fact.upsert`, `alias.upsert`, `offering.upsert`, `departure.upsert`, `review.open`, `change.record` or `run.record`; keys are column names, `*_json` keys take a JSON value. Fact, departure, review and change ids are derived when omitted and must match when given (`server/fleet/ids.ts`).
+- **Validation:** every op before any write: unknown keys, enums, formats, timestamps (ISO-8601 UTC), confidence 0–1, a fact's `source_url` https (`admin:` provenance is written only by the admin API), references (a fact's vessel must be in this region or upserted in the same request; operator, offering and slug checks). One bad op → `400` `{"error": "invalid operations", "errors": [{"index", "op", "error"}]}` (at most 50) and nothing is written.
+- **Effect:** upserts keyed on deterministic ids; an update runs only when a stored value changes, so the same batch twice changes no row. Omitted fields keep their value. Pinned vessel columns (`pinned_json`) are never overwritten; a vessel with a removal request is never re-listed; `review.open` never reopens or edits a decided or dismissed review; `fact.upsert` may name up to 20 facts it `supersedes` (same vessel and field, not newer). Statements bind at most 100 parameters and run in one D1 batch. Each call writes `fleet_runs` `<run_id>:registry.<batch>` (`ok` or `failed`).
+- **Response:** `200` `{"ok": true, "run_id", "batch", "ops", "changed", "counts": {"<kind>": {"ops", "changed"}}}`.
+
 ### Cron (`scheduled`)
 
 Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret (`dispatchWorkflow`, which TA-M1 exported; the advisor's cron uses it to dispatch `advisor-media.yml` while media or graphics are pending, at most once per 15 minutes). ChatGPT Sites has no cron.
