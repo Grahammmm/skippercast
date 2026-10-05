@@ -47,5 +47,8 @@ reviewer must decide. Author: claude. End the description with the
 attribution footer you were given. Commit messages: imperative subject
 under 72 characters, a body saying why, and the `Co-Authored-By` trailer.
 
+Do not merge the PR or approve your own work: it needs an independent
+`charter-reviewer` pass first, which the orchestrator arranges.
+
 Return: the PR URL, the task id, what you built, the exact test commands
 you ran and their results, and anything you could not verify.

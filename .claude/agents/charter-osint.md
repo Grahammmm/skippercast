@@ -52,7 +52,7 @@ lines: boats found, fields filled, AIS matches, gaps, source problems.
 - Never write research output into the repository tree outside the
   directory you were given; registry data is not committed (the repo is
   public). The output directory is usually under `var/` (gitignored) or a
-  scratchpad path.
+  scratchpad path. Never run `git add`, `git commit` or `git push`.
 
 ## Output
 
