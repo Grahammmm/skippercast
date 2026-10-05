@@ -1,0 +1,29 @@
+# SkipperCast fleet AIS listener, one instance per fleet region (design.md section 10).
+# A user unit for the data runner's user: scripts/fleet/install_listener.sh installs it as
+# ~/.config/systemd/user/skippercast-fleet-ais@.service and enables skippercast-fleet-ais@<REGION>.
+# Runbook: docs/operations/runbooks/fleet-ais-down.md.
+#
+# Each deployed revision lives in ~/.local/share/skippercast/app/<sha> with its own virtualenv
+# (.venv, the `fleet` extra's packages only); `current` points at the running one, so a rollback
+# is a symlink change and a restart. The code runs from that revision's src/ (PYTHONPATH).
+[Unit]
+Description=SkipperCast fleet AIS listener (%i)
+After=network-online.target
+# aisstream has no replay: keep restarting however often it fails.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# AISSTREAM_API_KEY, SKIPPERCAST_FLEET_VAR, SKIPPERCAST_GIT_SHA (mode 0600, written by the install).
+EnvironmentFile=%h/.config/skippercast/fleet-ais.env
+Environment=PYTHONPATH=%h/.local/share/skippercast/app/current/src
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=%h/.local/share/skippercast/app/current
+ExecStart=%h/.local/share/skippercast/app/current/.venv/bin/python -m skippercast.fleet.ais listen --region %i
+Restart=always
+RestartSec=10
+MemoryMax=512M
+UMask=0077
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,46 @@
+name: Fleet AIS listener
+
+# Install or update the always-on AIS listener (CF-42; docs/plans/charter-fleet/design.md
+# section 10) as the user systemd unit skippercast-fleet-ais@<region> on our own runner.
+# scripts/fleet/install_listener.sh copies this revision to ~/.local/share/skippercast/app/<sha>,
+# builds its virtualenv with the `fleet` extra, writes the 0600 env file with the aisstream
+# key, restarts the unit and fails unless the heartbeat shows messages within 90 seconds.
+# Dispatch only: the listener is a long-running service, not a scheduled job, and a push or
+# schedule must never restart it. Rollback and logs: docs/operations/runbooks/fleet-ais-down.md.
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: Fleet region id (regions/<id>/fleet.json)
+        required: true
+        default: CA
+        type: string
+
+permissions: {}
+
+# One install per region at a time; a second dispatch waits for the first.
+concurrency:
+  group: fleet-ais-listener-${{ inputs.region }}
+  cancel-in-progress: false
+
+jobs:
+  install:
+    # Dark until the fleet workflows are enabled, and never on a GitHub-hosted runner
+    # (a unit installed there would vanish with the machine).
+    if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    permissions:
+      contents: read   # the checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No actions/setup-python: the unit outlives this job, so its virtualenv is built on the
+      # box's own python3 (3.11 or newer), not a toolcache interpreter in the runner's work folder.
+      - name: Install and restart the listener
+        env:
+          REGION: ${{ inputs.region }}
+          # Only in this step's environment; the script never traces or prints it.
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+        run: bash scripts/fleet/install_listener.sh --region "$REGION"

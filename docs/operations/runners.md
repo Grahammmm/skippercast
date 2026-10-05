@@ -30,7 +30,7 @@ variable change, not a code change:
 
 | Variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
 | `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
@@ -87,8 +87,8 @@ Steps:
   GitHub storage (500 MB free on the Free plan). The research workflows upload the most;
   shorten their `retention-days` if the storage bill appears.
 - Secrets used by jobs on the box: `R2_PUBLISH_TOKEN` (or the deploy token as fallback),
-  `R2_ADVISOR_TOKEN` (the advisor media job, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions
-  `GITHUB_TOKEN`. Keep the box patched and its SSH key-only; `docs/legal/threat-model.md`
+  `R2_ADVISOR_TOKEN` (the advisor media job, below), `AISSTREAM_API_KEY` (the fleet AIS
+  listener, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the box patched and its SSH key-only; `docs/legal/threat-model.md`
   lists it as an asset once it exists.
 
 ## The advisor media job
@@ -120,6 +120,34 @@ The job proves who it is with a GitHub OIDC token for the audience
 `/api/advisor/jobs/*`. If it fails: the run's log names each item it skipped; items it could
 not decode are given up (the photo stays private and gets the upload link); network or R2
 errors leave items pending and the next dispatch retries them.
+
+## The fleet AIS listener
+
+The charter fleet's AIS listener (CF-41, [design.md § 10](../plans/charter-fleet/design.md#10-ais-listener))
+is not a job: aisstream has no replay, so it runs all the time as a **user** systemd unit of the
+runner user, `skippercast-fleet-ais@<REGION>` (`scripts/fleet/skippercast-fleet-ais@.service`).
+`fleet-ais-listener.yml` installs and updates it. That workflow has no schedule and no push
+trigger: the owner dispatches it (`gh workflow run fleet-ais-listener.yml -f region=CA`), it needs
+`ENABLE_FLEET=true` and a non-empty `DATA_RUNNER` (so it never runs on a GitHub-hosted runner),
+and its token can only read the repository (`contents: read`).
+
+`scripts/fleet/install_listener.sh` copies the dispatched revision to
+`~/.local/share/skippercast/app/<sha>` with its own virtualenv (the `fleet` extra, built on the
+box's `python3`, 3.11 or newer; Ubuntu 24.04 ships 3.12 and `setup.sh` installs `python3-venv`),
+points `app/current` at it, writes `~/.config/skippercast/fleet-ais.env` with mode 0600, restarts
+the unit and fails unless the heartbeat shows messages within 90 seconds. It keeps the three
+newest revisions for rollback. The raw store lives outside any checkout in
+`~/.local/share/skippercast/fleet` (`SKIPPERCAST_FLEET_VAR`), shared with the fleet jobs.
+
+| Name | Kind | What |
+| --- | --- | --- |
+| `AISSTREAM_API_KEY` | secret (owner step) | The aisstream.io API key. Passed only to the install step's environment, never traced or printed, and stored on the box only in the 0600 env file. |
+| `ENABLE_FLEET` | variable | `true` to let the fleet workflows run (design.md § 16). |
+| Linger | owner step on the box | `sudo loginctl enable-linger runner` once, so the runner user's systemd manager runs without a login and starts the unit at boot. |
+| Egress | box network | Direct outbound TCP to `stream.aisstream.io:443`; the listener's WebSocket client does not use an HTTP proxy. |
+
+The unit caps its memory at 512 MB (`MemoryMax`). Restart, logs and
+rollback: [fleet AIS listener down](runbooks/fleet-ais-down.md).
 
 ## CI readiness gate
 
