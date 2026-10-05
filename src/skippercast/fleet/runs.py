@@ -74,6 +74,13 @@ class Run:
                                          counts=dict(counts), error=error)
         _write_json(self.state_path, self.state)
 
+    def next_batch(self) -> int:
+        """The next WorkerSink batch number: unique within the run across steps (fleet_runs '<run>:registry.<n>')."""
+        number = self.state.get("next_batch", 0)
+        self.state["next_batch"] = number + 1
+        _write_json(self.state_path, self.state)
+        return number
+
     def write_jsonl(self, name: str, rows: Iterable[Mapping[str, Any]]) -> int:
         count = 0
         with (self.dir / name).open("w", encoding="utf-8") as handle:

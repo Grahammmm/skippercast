@@ -638,14 +638,21 @@ from a new profile changes nothing (absence is not evidence). Facts unseen for
   retried with backoff. Kinds: `vessel.upsert`, `operator.upsert`,
   `fact.upsert`, `alias.upsert`, `offering.upsert`, `departure.upsert`,
   `review.open`, `change.record`, `run.record`.
-  Request body: `{"region", "run_id", "step", "operations": [{"kind", "row"}]}`,
-  where `row` is keyed by the target `fleet_*` table's snake_case columns and
-  carries its deterministic id. Reply `{"changes": <rows changed>}`; a refused
-  operation answers 400 `{"error", "index"}` with `index` into that request's
-  `operations`. The OIDC audience is `<public_origin>/api/fleet/jobs`.
-- **SqliteSink**: applies the committed `drizzle/*.sql` migrations to
-  `<FLEET_VAR>/staging/<region>.sqlite` and runs the same operations. Used for
+  The OIDC audience is `<public_origin>/api/fleet/jobs`. `batch` counts up
+  across the whole run (kept in the run's `state.json`), so each call has its
+  own `fleet_runs` row. The sink runs the Worker's field checks before sending;
+  a `413` means its batching is wrong and is not retried.
+- **SqliteSink**: applies the committed migrations in `drizzle/meta/_journal.json`
+  order to `<FLEET_VAR>/staging/<region>.sqlite` and runs the same operations
+  with the same validation, ids and guards (`src/skippercast/fleet/ops.py`
+  mirrors `server/fleet/ids.ts` and the field checks;
+  `tests/test_fleet_sink_parity.mjs` runs both on the same operations). Used for
   dry runs, new regions and tests. A `dry-run` region refuses the WorkerSink.
+  Known gaps, CF-17 scope: it writes no `<run_id>:registry.<batch>` call row;
+  canonical JSON sorts keys by code point (JavaScript by UTF-16 unit, which
+  differs only for keys outside the Basic Multilingual Plane); `*_json` size is
+  counted in code points; https URLs are checked with `urlsplit`, not the
+  WHATWG URL parser.
 
 **Idempotency**: deterministic ids, upserts keyed on them, `review.open` never
 reopens a decided review, change ids include the after-value. Running a step

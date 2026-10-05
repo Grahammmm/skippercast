@@ -36,7 +36,7 @@ STEPS: dict[str, Callable[[RunContext, object], dict]] = {
 def run_step(step: str, region_id: str, sink_kind: str = "staging", run_id: str | None = None, **sink_options) -> Run:
     region = load_region(region_id)
     run = Run(region.id, run_id)
-    sink = open_sink(sink_kind, region, run, step, **sink_options)
+    sink = open_sink(sink_kind, region, run, **sink_options)
     run.step_started(step, sink.name)
     net = FleetSession.for_region(region, cache=run.http_cache)
     ctx = RunContext(region=region, net=net, run_dir=run.dir, clock=now)

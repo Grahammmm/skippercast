@@ -6,11 +6,13 @@ backoff, conditional-GET cache) and adds, for every fleet fetch:
 - an allowlist: hosts named in the region's bindings plus operator websites
   added with ``allow_host`` (stored website facts);
 - a hard deny of ``catalog/fleet/off-limits.json`` hosts, checked on the first
-  URL and on every redirect hop before a connection is made;
+  URL and on every redirect hop before a connection is made (a redirect to a
+  host off the allowlist is refused the same way);
 - robots.txt per host for the ``SkipperCast`` user agent (``urllib.robotparser``,
-  cached 24 h; unreachable or 401/403 robots.txt means disallowed);
-- at least ``interval`` seconds between requests to one host;
-- a per-run request budget per host (default 600).
+  cached 24 h; unreachable, 401/403 or 5xx robots.txt means disallowed),
+  checked for the first URL and every redirect target;
+- at least ``interval`` seconds between requests to one host and a per-run
+  request budget per host (default 600), both counted per hop, redirects included.
 
 A refused URL raises ``Skipped`` and is appended to ``skips`` so the step can
 record it in its report; adapters catch ``Skipped`` and move on.
@@ -33,6 +35,12 @@ class OffLimits(http.DisallowedHost):
     """The URL (or a redirect target) is on an off-limits host (decision D7)."""
 
 
+class _HopRefused(http.DisallowedHost):
+    def __init__(self, reason: str, detail: str):
+        super().__init__(detail)
+        self.reason = reason
+
+
 class Skipped(Exception):
     def __init__(self, url: str, reason: str, detail: str = ""):
         super().__init__(f"{reason}: {url}" + (f" ({detail})" if detail else ""))
@@ -43,17 +51,22 @@ class Skipped(Exception):
 
 
 class _DenySession(http.Session):
-    """A Session whose per-hop URL check also refuses off-limits hosts."""
+    """A Session that refuses off-limits hosts in its per-hop URL check and runs a hook before each hop."""
 
-    def __init__(self, off_limits: Iterable[str], **options: Any):
+    def __init__(self, off_limits: Iterable[str], before_hop: Callable[[str], None], **options: Any):
         super().__init__(**options)
         self.off_limits = tuple(off_limits)
+        self.before_hop = before_hop
 
     def check_url(self, url, allowlist=None, allowed_prefixes=None):
         blocked = off_limits_host(url, self.off_limits)
         if blocked:
             raise OffLimits(f"Off-limits host {blocked}: {url}")
         return super().check_url(url, allowlist, allowed_prefixes)
+
+    def _hop(self, method, url, *args, **kwargs):
+        self.before_hop(url)
+        return super()._hop(method, url, *args, **kwargs)
 
 
 def binding_hosts(region: FleetRegion) -> set[str]:
@@ -70,7 +83,8 @@ class FleetSession:
     def __init__(self, hosts: Iterable[str], off_limits: Iterable[str], *, budget: int = 600,
                  interval: float = 1.0, sleep: Callable[[float], None] = time.sleep,
                  clock: Callable[[], float] = time.monotonic, **session_options: Any):
-        self.session = _DenySession(off_limits, allowed_hosts=(), sleep=sleep, clock=clock, **session_options)
+        self.session = _DenySession(off_limits, self._before_hop, allowed_hosts=(), sleep=sleep, clock=clock,
+                                    **session_options)
         self.hosts = {h.lower() for h in hosts}
         self.budget, self.interval = budget, interval
         self.sleep, self.clock = sleep, clock
@@ -78,6 +92,7 @@ class FleetSession:
         self.skips: list[dict] = []
         self._next: dict[str, float] = {}
         self._robots: dict[str, tuple[float, RobotFileParser | None]] = {}
+        self._checked: str | None = None  # the URL whose robots.txt get() already checked
 
     @classmethod
     def for_region(cls, region: FleetRegion, **options: Any) -> "FleetSession":
@@ -98,11 +113,22 @@ class FleetSession:
             self.sleep(ready - now)
         self._next[host] = max(now, ready) + self.interval
 
+    def _before_hop(self, url: str) -> None:
+        """Every connection: robots for a redirect target, the host budget, then the host interval."""
+        parts = urlsplit(url)
+        host = (parts.hostname or "").lower()
+        if parts.path != "/robots.txt":
+            if url != self._checked and not self._robots_allows(url, host):
+                raise _HopRefused("robots", f"robots.txt disallows {url}")
+            if self.used.get(host, 0) >= self.budget:
+                raise _HopRefused("budget", f"{self.budget} requests to {host} this run")
+            self.used[host] = self.used.get(host, 0) + 1
+        self._wait(host)
+
     def _robots_allows(self, url: str, host: str) -> bool:
         cached = self._robots.get(host)
         if cached is None or self.clock() - cached[0] > ROBOTS_TTL:
             parser: RobotFileParser | None = RobotFileParser()
-            self._wait(host)
             try:
                 response = self.session.get(f"https://{host}/robots.txt", allowed_hosts=self.hosts,
                                             raise_for_status=False, max_bytes=500_000)
@@ -119,7 +145,7 @@ class FleetSession:
         return cached[1] is not None and cached[1].can_fetch(ROBOTS_AGENT, url)
 
     def get(self, url: str, **options: Any) -> http.Response:
-        """Fetch ``url`` under the fleet rules; raises Skipped for a refused URL."""
+        """Fetch ``url`` under the fleet rules; raises Skipped for a refused URL or redirect."""
         try:
             host, _port = self.session.check_url(url, http.Allowlist(self.hosts))
         except OffLimits as error:
@@ -130,9 +156,14 @@ class FleetSession:
             raise self._skip(url, "budget", f"{self.budget} requests to {host} this run")
         if not self._robots_allows(url, host):
             raise self._skip(url, "robots", host)
-        self.used[host] = self.used.get(host, 0) + 1
-        self._wait(host)
+        self._checked = url
         try:
             return self.session.get(url, allowed_hosts=self.hosts, **options)
+        except _HopRefused as error:  # on a redirect hop
+            raise self._skip(url, error.reason + "-redirect", str(error)) from None
         except OffLimits as error:  # a redirect pointed at an off-limits host; refused before connecting
             raise self._skip(url, "off-limits-redirect", str(error)) from None
+        except http.DisallowedHost as error:  # the first URL passed, so this is a redirect off the allowlist
+            raise self._skip(url, "not-allowlisted-redirect", str(error)) from None
+        finally:
+            self._checked = None

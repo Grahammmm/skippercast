@@ -24,6 +24,12 @@ class _Handler(BaseHTTPRequestHandler):
             status, body, headers = 200, ROBOTS, {}
         elif self.path == "/redirect":
             status, body, headers = 302, b"", {"Location": "https://www.fareharbor.com/embeds/book/x"}
+        elif self.path == "/away":
+            status, body, headers = 302, b"", {"Location": "https://unlisted.example.net/x"}
+        elif self.path.startswith("/hop"):
+            status, body, headers = 302, b"", {"Location": "/b"}
+        elif self.path == "/to-private":
+            status, body, headers = 302, b"", {"Location": "/private/x"}
         else:
             status, body, headers = 200, b"page " + self.path.encode(), {}
         self.send_response(status)
@@ -59,7 +65,10 @@ class FleetSessionTests(unittest.TestCase):
             self.connected.append(host)
             return HTTPConnection("127.0.0.1", self.server.server_address[1], timeout=timeout)
 
+        self.resolved = []
+
         def resolver(host, port, type=None):
+            self.resolved.append(host)
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
 
         def sleep(seconds):
@@ -76,6 +85,7 @@ class FleetSessionTests(unittest.TestCase):
             self.net.get("https://www.fareharbor.com/embeds/book/x")
         self.assertEqual(caught.exception.reason, "off-limits")
         self.assertEqual(self.connected, [])
+        self.assertEqual(self.resolved, [])  # not even a DNS lookup
         self.assertEqual(self.server.paths, [])
         self.assertEqual(self.net.skips[0]["reason"], "off-limits")
 
@@ -110,6 +120,25 @@ class FleetSessionTests(unittest.TestCase):
             self.net.get("https://reports.example.org/d")
         self.assertEqual(caught.exception.reason, "budget")
         self.assertEqual(self.net.used, {"reports.example.org": 3})
+
+    def test_redirect_off_the_allowlist_is_a_recorded_skip(self):
+        with self.assertRaises(Skipped) as caught:
+            self.net.get("https://www.example-landing.com/away")
+        self.assertEqual(caught.exception.reason, "not-allowlisted-redirect")
+        self.assertEqual(self.net.skips[-1]["reason"], "not-allowlisted-redirect")
+        self.assertNotIn("unlisted.example.net", self.connected + self.resolved)
+
+    def test_redirect_hops_count_against_interval_budget_and_robots(self):
+        self.assertEqual(self.net.get("https://reports.example.org/hop").body, b"page /b")
+        self.assertEqual(self.net.used, {"reports.example.org": 2})  # /hop and its redirect to /b
+        self.assertEqual(self.slept, [1.0, 1.0])
+        with self.assertRaises(Skipped) as caught:
+            self.net.get("https://reports.example.org/hop2")  # third request is in budget, its redirect is not
+        self.assertEqual(caught.exception.reason, "budget-redirect")
+        with self.assertRaises(Skipped) as caught:
+            self.net.get("https://www.example-landing.com/to-private")
+        self.assertEqual(caught.exception.reason, "robots-redirect")
+        self.assertNotIn("/private/x", self.server.paths)
 
     def test_region_binding_hosts_exclude_off_limits(self):
         region = load_region("CA")
