@@ -26,7 +26,8 @@
         "rights": "facts-only",
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
-    ]
+    ],
+    "record_id": null
   },
   {
     "source_id": "ggfa-list",
@@ -55,7 +56,8 @@
         "rights": "facts-only",
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
-    ]
+    ],
+    "record_id": null
   },
   {
     "source_id": "ggfa-list",
@@ -84,7 +86,8 @@
         "rights": "facts-only",
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
-    ]
+    ],
+    "record_id": null
   },
   {
     "source_id": "ggfa-list",
@@ -113,7 +116,8 @@
         "rights": "facts-only",
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
-    ]
+    ],
+    "record_id": null
   },
   {
     "source_id": "ggfa-list",
@@ -142,6 +146,7 @@
         "rights": "facts-only",
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
-    ]
+    ],
+    "record_id": null
   }
 ]

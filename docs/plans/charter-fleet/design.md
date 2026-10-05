@@ -460,8 +460,11 @@ class Adapter(Protocol):
     def enrich(self, vessel: VesselView, binding: Binding, ctx: RunContext) -> Iterable[Fact]: ...
 ```
 
-A `Candidate` carries names, port and landing hints, stable keys and `Fact`s
-with the profile schema's provenance fields. `RunContext` gives the HTTP
+A `Candidate` carries names, port and landing hints, stable keys, `Fact`s
+with the profile schema's provenance fields, and `record_id`: a stable
+per-record id within the source, usually the record's own URL (a boat's page,
+an FCC licence key). Adapters set it; `source_id|record_id` is the fingerprint
+a decided review remembers (section 7). `RunContext` gives the HTTP
 session, run directory, clock and region config. Adapters never write to a
 sink.
 
@@ -521,7 +524,9 @@ stable keys, pinned fields, decided reviews).
    first dropping a leading `THE`, `M/V` or `F/V` and turning roman numerals
    into digits; `NEW` is kept (New Seaforth is not Seaforth). Phones to E.164; URLs without tracking parameters.
 2. **Prior decisions.** A candidate fingerprint (source id + the adapter's
-   `Candidate.record_id`, else its first fact `source_url`) with a decided
+   `Candidate.record_id`; unset, `source_id|name_norm|port_hint|` the first
+   fact `source_url` without tracking parameters, so boats listed on one page
+   stay apart) with a decided
    `merge` review is assigned as decided (`same-vessel`, `new-vessel`); a
    dismissed one skips the candidate.
 3. **Stable keys** in order `uscg_doc`, `state_reg`, `hull_id`, `mmsi`,
@@ -534,7 +539,8 @@ stable keys, pinned fields, decided reviews).
    1.0 on an alias) + 0.25 × same port + 0.10 × same landing + 0.10 × length
    within 10% (unknown parts 0.5). A name similarity under 0.8 is no match at
    all (port, landing and length alone reach 0.45, so unrelated boats of one
-   port would otherwise all be reviews), and a `NEW` variant scores 0.
+   port would otherwise all be reviews), and a pair where exactly one name
+   starts with `NEW` scores 0.
    ≥ `auto_merge` → assign; ≥ `review_min` → `merge` review with the top two;
    else new vessel.
 5. Same name and port but different stable keys → two vessels (California has
@@ -546,7 +552,8 @@ stable keys, pinned fields, decided reviews).
 The resolver then computes each `fleet_vessels` column from non-superseded
 facts: highest-priority source, then highest confidence, then latest
 `retrieved_at`; pinned fields are skipped, and a winning admin fact whose value
-is null clears the column (no lower source fills it). The Worker snapshot
+is null clears the column (no lower source fills it); a null from any other
+source is no fact. The Worker snapshot
 carries no facts, so with it a column changes only when one of this run's
 facts wins it; the staging snapshot (`Snapshot.from_sqlite`) carries them. The
 Worker snapshot also carries no `advisor_boats` slugs yet; until it does, a new

@@ -60,8 +60,8 @@ def name_norm(name: str) -> str:
 
 
 def is_new_variant(a: str, b: str) -> bool:
-    """True when one normalised name is the other with ``NEW`` in front (New Seaforth vs Seaforth)."""
-    return a != b and (a == "NEW" + b or b == "NEW" + a)
+    """True when exactly one of two normalised names starts with ``NEW`` (New Seaforth vs Seaforth)."""
+    return a.startswith("NEW") != b.startswith("NEW")
 
 
 def jaro_winkler(a: str, b: str, prefix_scale: float = 0.1) -> float:
@@ -94,7 +94,7 @@ def jaro_winkler(a: str, b: str, prefix_scale: float = 0.1) -> float:
 
 
 def name_similarity(a: str, b: str) -> float:
-    """Jaro-Winkler on two normalised names; 0 for a NEW variant, which is a different boat."""
+    """Jaro-Winkler on two normalised names; 0 when only one starts with NEW, which is a different boat."""
     if is_new_variant(a, b):
         return 0.0
     return jaro_winkler(a, b)

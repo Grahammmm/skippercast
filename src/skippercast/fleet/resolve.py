@@ -47,6 +47,8 @@ pair, which every upsert needs, is sent as stored). A column no fact wins is
 left out of the upsert, so the stored value stays; the Worker snapshot carries
 no facts, so there a column changes only when this run's facts win it.
 
+Only an admin fact may be null; a null from any other source is ignored.
+
 Vessel ids are ``sha256(region:creation_key)[:32]`` with the strongest key at
 creation (``uscg:``, ``reg:``, ``hin:``, ``mmsi:``, ``cs:``, else
 ``name-port:<slug>|<port>``). Slugs are unique against every snapshot vessel
@@ -80,6 +82,7 @@ COLUMNS = {
 }
 TARGET = tuple(c for c in COLUMNS.values() if c != "name")  # completeness: the share of these filled
 CLASS_REVIEW_MIN = 0.7
+SLUG_MAX = 80
 NAME_MIN = 0.8  # below this name similarity a vessel is no fuzzy match, whatever the port says
 ALIAS_KIND = {"ais-static": "ais-name", "teck-reports": "report-name"}
 VESSEL_CHECKS = ops.SPECS["vessel.upsert"][1]
@@ -261,13 +264,14 @@ class _Vessel:
 
 
 def fingerprint(candidate: Candidate) -> str:
-    """Source id + record id, else + the first source URL, else + name and port: what a decided review remembers."""
+    """What a decided review remembers: ``source_id|record_id`` when the adapter set ``record_id``, else
+    ``source_id|name_norm|port_hint|first source URL`` (cleaned), so boats listed on one page stay apart."""
     if candidate.record_id:
         text = f"{candidate.source_id}|{candidate.record_id}"
-    elif urls := sorted(f.source_url for f in candidate.facts if isinstance(f.source_url, str)):
-        text = f"{candidate.source_id}|{urls[0]}"
     else:
-        text = f"{candidate.source_id}|name:{name_norm(candidate.name)}@{candidate.port_hint or '-'}"
+        urls = sorted(u for f in candidate.facts if (u := clean_url(f.source_url)))
+        text = "|".join((candidate.source_id, name_norm(candidate.name), candidate.port_hint or "",
+                         urls[0] if urls else ""))
     return text if len(text) <= 400 else f"{candidate.source_id}|sha256:{ops.sha256(text)[:32]}"
 
 
@@ -487,11 +491,17 @@ class _Resolver:
 
     def new_slug(self, cand: _Cand) -> str:
         base = slugify(cand.name)
-        options = [base] + ([f"{base}-{cand.port}"] if cand.port else [])
+
+        def fit(*suffix: str) -> str:  # at most SLUG_MAX characters: the base gives way to the suffix
+            tail = "".join(f"-{part}" for part in suffix)
+            return base[:SLUG_MAX - len(tail)].strip("-") + tail
+
+        options = [fit()] + ([fit(cand.port)] if cand.port else [])
         slug = next((s for s in options if s not in self.slugs), None)
         number = 2
         while slug is None:
-            slug = f"{options[-1]}-{number}" if f"{options[-1]}-{number}" not in self.slugs else None
+            trial = fit(*([cand.port] if cand.port else []), str(number))
+            slug = trial if trial not in self.slugs else None
             number += 1
         self.slugs.add(slug)
         return slug
@@ -519,6 +529,8 @@ class _Resolver:
         facts, fresh = self.facts_for(vessel)
         by_field: dict[str, list[_Fact]] = {}
         for fact in facts:
+            if fact.value is None and fact.source_id != "admin":
+                continue  # only an admin's null is "no value"; anyone else's null is no fact
             by_field.setdefault(fact.field, []).append(fact)
         pinned = vessel.pinned
         stored = vessel.stored or {}

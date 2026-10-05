@@ -75,6 +75,9 @@ class NormalizeTests(unittest.TestCase):
         self.assertTrue(is_new_variant("NEWEXAMPLESTAR", "EXAMPLESTAR"))
         self.assertEqual(name_similarity("NEWEXAMPLESTAR", "EXAMPLESTAR"), 0.0)
         self.assertGreater(name_similarity("EXAMPLESTAR", "EXAMPLESTARR"), 0.95)
+        # exactly one leading NEW is a different boat, even when the rest differs too
+        self.assertEqual(name_similarity("NEWEXAMPLESTARR", "EXAMPLESTAR"), 0.0)
+        self.assertGreater(name_similarity("NEWEXAMPLESTAR", "NEWEXAMPLESTARR"), 0.95)
 
     def test_jaro_winkler_reference_values(self):
         self.assertAlmostEqual(jaro_winkler("MARTHA", "MARHTA"), 0.9611, places=4)
@@ -262,6 +265,57 @@ class ResolveCases(unittest.TestCase):
         self.assertEqual(ops.canonical_json(first.ops), ops.canonical_json(again.ops))
         self.assertEqual(ops.canonical_json(first.ops), ops.canonical_json(third.ops))
         self.assertEqual(first.assignments, third.assignments)
+
+
+class ReviewFixes(unittest.TestCase):
+    """PR #316 review: shared-page fingerprints, the null rule and the slug cap."""
+
+    PAGE = "https://landing.example.com/fleet?utm_source=x"
+
+    def page_cand(self, name):
+        return Candidate("landing-pages", name, None, None, {}, (
+            Fact("name", name, "landing-pages", self.PAGE, "page", 0.9, "facts-only", NOW),))
+
+    def test_boats_on_one_page_keep_distinct_fingerprints_and_reviews(self):
+        sea, star = stored("Sea Example", n=1), stored("Example Star", n=2)
+        cands = [self.page_cand("Sea Exampel"), self.page_cand("Example Stra"), self.page_cand("Test Wanderer")]
+        prints = [fingerprint(c) for c in cands]
+        self.assertEqual(len(set(prints)), 3)
+        self.assertEqual(prints[0], "landing-pages|SEAEXAMPEL||https://landing.example.com/fleet")
+        first = resolve(Snapshot([sea, star]), cands, CONFIG, NOW)
+        for seed in range(5):
+            shuffled = list(cands)
+            random.Random(seed).shuffle(shuffled)
+            again = resolve(Snapshot([sea, star]), shuffled, CONFIG, NOW)
+            self.assertEqual((again.assignments, ops.canonical_json(again.ops)),
+                             (first.assignments, ops.canonical_json(first.ops)))
+        reviews = of(first, "review.open")
+        self.assertEqual(len(reviews), 2)
+        self.assertEqual(len({ops.review_id("merge", r["fingerprint"]) for r in reviews}), 2)
+        self.assertEqual({r["proposal_json"]["vessel_id"] for r in reviews}, {sea["id"], star["id"]})
+        self.assertEqual(len(first.created), 1)
+
+    def test_only_an_admin_null_clears_a_column(self):
+        sea = stored("Sea Example", n=4)
+        null = {"id": "b" * 32, "vessel_id": sea["id"], "field": "website", "value": None, "source_id": "operator",
+                "source_url": "https://boat.example.com/", "method": "operator", "confidence": 1, "retrieved_at": EARLIER}
+        candidate = cand("Sea Example", "operator-site", facts=[
+            fact("website", "https://boat.example.com/book", "operator-site"),
+            fact("booking_url", None, "landing-pages")])
+        op = vessel_op(resolve(Snapshot([sea], facts=[null]), [candidate], CONFIG, NOW), sea["id"])
+        self.assertEqual(op["website"], "https://boat.example.com/book")  # the operator's null is no fact
+        self.assertNotIn("booking_url", op)                                # nor is a landing page's
+
+    def test_slugs_are_capped_at_80(self):
+        long_name = "Example " * 20
+        taken = frozenset({slugify(long_name)[:80].strip("-")})
+        a = cand(long_name, "fcc-uls", "a", keys={"mmsi": "366000001"})
+        b = cand(long_name, "fcc-uls", "b", keys={"mmsi": "366000002"})
+        c = cand(long_name, "fcc-uls", "c", keys={"mmsi": "366000003"})
+        slugs = [op["slug"] for op in of(resolve(Snapshot(advisor_slugs=taken), [a, b, c], CONFIG, NOW), "vessel.upsert")]
+        self.assertEqual(len(set(slugs)), 3)
+        self.assertTrue(all(len(x) <= 80 and ops.SLUG.match(x) for x in slugs), slugs)
+        self.assertTrue(all(x.endswith(("-morro-bay", "-morro-bay-2", "-morro-bay-3")) for x in slugs), slugs)
 
 
 class StagingRoundTrip(unittest.TestCase):
