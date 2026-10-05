@@ -22,6 +22,10 @@
     },
     {
       "id": "usgs-offshore-monterey-2m-rugose-v1",
+      "reach_ids": [
+        "monterey-point-sur-r01",
+        "monterey-point-sur-r02"
+      ],
       "reviewed_on": "2026-10-04",
       "depth_source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
       "depth_source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
