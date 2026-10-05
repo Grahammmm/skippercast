@@ -228,13 +228,16 @@ def build_ops(snapshot: Snapshot, candidates: list[Candidate], fact_rows: list[M
 
 # ---- OSINT profiles (``ingest --profiles DIR``, design section 8, CF-20) ---------------------------
 
-def _read_profile(path: Path, region: str, vessels: Mapping[str, Mapping], off_limits) -> tuple[dict | None, list[str]]:
-    """(document, errors): schema and policy (``profile.validate_profile``), then the region and the vessel."""
+def _read_profile(path: Path, region: str, vessels: Mapping[str, Mapping], off_limits,
+                  now: str) -> tuple[dict | None, list[str]]:
+    """(document, errors): schema and policy (``profile.validate_profile``), its times (valid and not after the
+    run clock ``now``), then the region and the vessel."""
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         return None, [f"{type(error).__name__}: {error}"[:300]]
     errors = profile.validate_profile(doc, off_limits)  # raises MissingDependency without jsonschema: never unvalidated
+    errors = errors or profile.time_errors(doc, now)
     if errors:
         return None, errors
     if doc["region"] != region:
@@ -320,7 +323,7 @@ def ingest_profiles(ctx: RunContext, sink, profiles: Path | str, load: Loader = 
     refused, skipped, chosen = [], [], {}
     files = sorted(folder.glob("*.json"))
     for path in files:
-        doc, errors = _read_profile(path, ctx.region.id, vessels, hosts)
+        doc, errors = _read_profile(path, ctx.region.id, vessels, hosts, now[:19] + "Z")
         if doc is None:
             refused.append({"file": path.name, "errors": errors[:50]})
             continue

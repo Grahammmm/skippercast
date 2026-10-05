@@ -22,7 +22,9 @@ provenance object becomes one fact (`source_id` `osint`, rights `facts-only`,
 confidence capped at 0.8 for `search` and `inference`); `trip_types[]` become
 offerings; `conflicts[]` are returned for `fact-conflict` reviews. A null leaf
 gives no fact (absence is not evidence). The Google rating and review count are
-dropped: the Places terms allow storing `place_id` only (CF-16).
+dropped, and so is any `reputation.other[]` number read off a Google host: the
+Places terms allow storing `place_id` only (CF-16). `time_errors()` lists times
+ingest refuses: an impossible date or one later than the run clock.
 
 Exit status: 0 when every file is valid, 1 when any is not, 2 when the optional
 `jsonschema` package is missing (a profile is never passed unvalidated).
@@ -31,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
@@ -45,7 +48,7 @@ from .normalize import slugify
 
 __all__ = ["CONFIDENCE_CAP", "DROPPED", "KIND", "MAX_NOTES", "OFF_LIMITS_FILE", "RIGHTS", "SOURCE_ID", "WEBMAIL_DOMAINS",
            "ProfileFacts", "load_off_limits", "offering_names", "policy_errors", "profile_facts", "profiled_at", "provenance",
-           "review_flags", "validate_profile"]
+           "review_flags", "time_errors", "validate_profile"]
 
 KIND = "fleet-profile"
 MAX_NOTES = 2000
@@ -195,6 +198,8 @@ DROPPED = {
 }
 HHMM = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 SPECIES = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+# Google hosts (a host covers its subdomains, any country domain): no rating or count read there is stored.
+GOOGLE_HOST = re.compile(r"(?:^|\.)(?:google(?:apis|usercontent)?\.[a-z.]+|goo\.gl|g\.page)$")
 _RUN_TIME = re.compile(r"^(\d{4})-?(\d{2})-?(\d{2})T(\d{2}):?(\d{2}):?(\d{2})Z")
 
 
@@ -241,6 +246,32 @@ def profiled_at(doc: dict) -> str | None:
         return f"{y}-{mo}-{d}T{h}:{mi}:{s}Z"
     times = [prov["retrieved_at"] for _path, prov in provenance(doc.get("boat") or {})]
     return max(times) if times else None
+
+
+def _instant(text: Any) -> datetime | None:
+    try:
+        return datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
+def time_errors(doc: dict, now: str) -> list[str]:
+    """Times ingest cannot use, for a profile that passed ``validate_profile``: an impossible date (the schema
+    checks the shape only) or one later than ``now``, the run clock (``YYYY-MM-DDTHH:MM:SSZ``). A future
+    ``last_profiled_at`` would keep the boat out of every later manifest."""
+    limit, errors = _instant(now), []
+    if limit is None:
+        raise ValueError(f"now: {now!r} is not YYYY-MM-DDTHH:MM:SSZ")
+    checks = [(path + ".retrieved_at", prov.get("retrieved_at")) for path, prov in provenance(doc.get("boat") or {})]
+    if _RUN_TIME.match(str(doc.get("run_id") or "")):
+        checks.insert(0, ("run_id", profiled_at(doc)))
+    for path, text in checks:
+        moment = _instant(text)
+        if moment is None:
+            errors.append(f"{path}: {text!r} is not a valid UTC time")
+        elif moment > limit:
+            errors.append(f"{path}: {text} is later than the run clock {now}")
+    return errors
 
 
 def _species(values: list[dict]) -> list[str]:
@@ -317,7 +348,7 @@ def profile_facts(doc: dict) -> ProfileFacts:
     if (prov := _prov(reporting.get("frequency"))) is not None:
         out.facts.append(_fact("catch_reporting.frequency", prov))
     out.facts += [_fact("reputation.other[]", prov) for item in (boat.get("reputation") or {}).get("other") or ()
-                  if (prov := _prov(item))]
+                  if (prov := _prov(item)) and not GOOGLE_HOST.search(_host(prov["source_url"]))]
     for photo in boat.get("photos") or ():
         url, credit = _prov(photo.get("url")), _prov(photo.get("attribution"))
         if url is not None and credit is not None:

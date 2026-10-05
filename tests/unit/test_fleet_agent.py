@@ -36,7 +36,7 @@ NEEDS_JSONSCHEMA = unittest.skipUnless(
     validate.available(), "jsonschema not installed (pip install -r requirements-test.txt); the survey-science CI job runs these")
 
 
-def party(vessel_id=SEA, name="Sea Example", run_id="20261006T101700Z-a1b2c3", at="2026-10-06T10:20:00Z", **boat):
+def party(vessel_id=SEA, name="Sea Example", run_id="20261006T081700Z-a1b2c3", at="2026-10-06T08:20:00Z", **boat):
     """The synthetic party-boat fixture re-pointed at a staged vessel; ``boat`` replaces leaves (None clears one)."""
     doc = json.loads((PROFILES / "party.json").read_text(encoding="utf-8"))
     doc.update(vessel_id=vessel_id, run_id=run_id)
@@ -48,11 +48,11 @@ def party(vessel_id=SEA, name="Sea Example", run_id="20261006T101700Z-a1b2c3", a
     return doc
 
 
-def leaf(value, at="2026-10-06T10:20:00Z", method="page", confidence=0.9, url="https://kelp-test-charters.example/"):
+def leaf(value, at="2026-10-06T08:20:00Z", method="page", confidence=0.9, url="https://kelp-test-charters.example/"):
     return {"value": value, "source_url": url, "retrieved_at": at, "method": method, "confidence": confidence}
 
 
-def kelp(run_id="20261006T101700Z-a1b2c3", at="2026-10-06T10:20:00Z", **boat):
+def kelp(run_id="20261006T081700Z-a1b2c3", at="2026-10-06T08:20:00Z", **boat):
     mmsi = leaf("999000102", at)
     leaves = {"mmsi": mmsi, "call_sign": leaf("EXAMPLE2", at), "phone_business": leaf("+18055550145", at), **boat}
     doc = party(KELP, "Kelp Test", run_id, at, **leaves)
@@ -218,7 +218,7 @@ class ProfileIngestTests(unittest.TestCase):
         self.assertEqual((sea["mmsi"], sea["passengers_max"], sea["vessel_class"]), ("999000101", 40, "inspected-party"))
         self.assertEqual((sea["uscg_doc"], sea["name"]), ("1000001", "Sea Example"), "higher-priority sources keep theirs")
         self.assertEqual(sea["last_seen_at"], before["last_seen_at"], "a profile does not list the vessel")
-        self.assertEqual(sea["last_profiled_at"], "2026-10-06T10:17:00.000Z")
+        self.assertEqual(sea["last_profiled_at"], "2026-10-06T08:17:00.000Z")
         facts = [f for f in self.p.rows("fleet_vessel_facts") if f["source_id"] == "osint"]
         self.assertTrue(facts and all(f["vessel_id"] == SEA and f["rights"] == "facts-only" for f in facts))
         self.assertTrue(all(f["confidence"] <= 0.8 for f in facts if f["method"] in ("search", "inference")))
@@ -229,7 +229,7 @@ class ProfileIngestTests(unittest.TestCase):
         self.assertEqual((offering["trip_type"], offering["price_cents"], offering["departs_local"],
                           json.loads(offering["target_species_json"])), ("three-quarter-day", 12000, "06:30",
                                                                            ["rockfish", "lingcod"]))
-        self.assertEqual(offering["updated_at"], "2026-10-06T10:17:00.000Z")
+        self.assertEqual(offering["updated_at"], "2026-10-06T08:17:00.000Z")
 
     def test_reingesting_the_same_profiles_changes_nothing(self):
         for worker in (False, True):
@@ -264,8 +264,8 @@ class ProfileIngestTests(unittest.TestCase):
                 write(folder, f"{KELP}.json", kelp())
                 p.ingest(day(1), folder)
                 self.assertEqual(p.vessel("Kelp Test")["phone_business"], "+18055550145")
-                newer = kelp("20261020T101700Z-d4e5f6", "2026-10-20T10:20:00Z", phone_business=None,
-                             passengers_max=leaf(42, "2026-10-20T10:20:00Z"))
+                newer = kelp("20261020T081700Z-d4e5f6", "2026-10-20T08:20:00Z", phone_business=None,
+                             passengers_max=leaf(42, "2026-10-20T08:20:00Z"))
                 write(folder, f"{KELP}.json", newer)
                 _run, result = p.ingest(day(16), folder)
                 self.assertEqual(result["status"], "ok", result)
@@ -276,12 +276,12 @@ class ProfileIngestTests(unittest.TestCase):
                 passengers = {json.loads(f["value_json"]): f["superseded_by"] for f in p.facts(KELP, "passengers_max")}
                 self.assertIsNotNone(passengers[40], "a new value from the same source supersedes the old one")
                 self.assertIsNone(passengers[42])
-                self.assertEqual(row["last_profiled_at"], "2026-10-20T10:17:00.000Z")
+                self.assertEqual(row["last_profiled_at"], "2026-10-20T08:17:00.000Z")
 
     def test_one_profile_per_vessel_the_newest_wins(self):
-        write(self.dir, "a.json", kelp("20261006T101700Z-a1b2c3"))
-        write(self.dir, "b.json", kelp("20261008T101700Z-a1b2c3", "2026-10-08T10:20:00Z",
-                                       passengers_max=leaf(44, "2026-10-08T10:20:00Z")))
+        write(self.dir, "a.json", kelp("20261006T081700Z-a1b2c3"))
+        write(self.dir, "b.json", kelp("20261008T081700Z-a1b2c3", "2026-10-08T08:20:00Z",
+                                       passengers_max=leaf(44, "2026-10-08T08:20:00Z")))
         run, result = self.p.ingest(day(4), self.dir)
         report = json.loads((run.dir / "profiles-ingest.json").read_text())
         self.assertEqual(report["ingested"], ["b.json"])
@@ -289,8 +289,9 @@ class ProfileIngestTests(unittest.TestCase):
         self.assertEqual(self.p.vessel("Kelp Test")["passengers_max"], 44)
 
     def test_a_webmail_address_is_held_for_review(self):
-        write(self.dir, f"{KELP}.json", kelp(email_business=leaf("kelptest.example@gmail.com")))
-        _run, result = self.p.ingest(day(1), self.dir)
+        write(self.dir, f"{KELP}.json", kelp(email_business=leaf("captain@example.com")))
+        with mock.patch.object(profile, "WEBMAIL_DOMAINS", frozenset({"example.com"})):
+            _run, result = self.p.ingest(day(1), self.dir)
         self.assertEqual(result["counts"]["held"], 1)
         self.assertIsNone(self.p.vessel("Kelp Test")["email_business"])
         self.assertFalse(self.p.facts(KELP, "email_business"))
@@ -302,6 +303,31 @@ class ProfileIngestTests(unittest.TestCase):
         self.p.ingest(day(1), self.dir)
         self.assertEqual([(o["name"], o["price_cents"]) for o in self.p.rows("fleet_offerings") if o["vessel_id"] == KELP],
                          [("Full Day", 15000)])
+
+    def test_an_impossible_or_future_time_refuses_only_that_profile(self):
+        later = "2026-10-07T08:20:00Z"  # after the ingest clock, day(1)
+        cases = {"bad-run.json": party(run_id="20269999T999999Z-x"),
+                 "bad-date.json": kelp(passengers_max=leaf(44, "2026-02-30T08:20:00Z")),
+                 "future-run.json": party(run_id="20991006T081700Z-a1b2c3"),
+                 "future-leaf.json": kelp(passengers_max=leaf(44, later))}
+        for name, doc in cases.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                p, folder = Registry(tmp), Path(tmp) / "profiles"
+                p.run(DAY0, *baseline(DAY0))
+                write(folder, name, doc)
+                other = kelp() if doc["vessel_id"] == SEA else party()
+                write(folder, "valid.json", other)
+                run, result = p.ingest(day(1), folder)
+                self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                 ("partial", 1, 1))
+                report = json.loads((run.dir / "profiles-ingest.json").read_text())
+                (refused,) = report["refused"]
+                self.assertEqual(refused["file"], name)
+                self.assertTrue(any("valid UTC time" in e or "later than the run clock" in e for e in refused["errors"]),
+                                refused)
+                profiled = {v["id"]: v["last_profiled_at"] for v in p.rows("fleet_vessels")}
+                self.assertEqual(profiled[other["vessel_id"]], "2026-10-06T08:17:00.000Z")
+                self.assertIsNone(profiled[doc["vessel_id"]], "a refused profile moves nothing forward")
 
     def test_a_missing_profiles_directory_fails_the_step(self):
         with self.assertRaises(FileNotFoundError):
@@ -315,11 +341,17 @@ class ProfileFactsTests(unittest.TestCase):
         self.assertTrue({"name", "mmsi", "operator", "waters", "trip_types[]", "captains[]", "photos[]",
                          "social.instagram.handle", "ais.mmsi", "reputation.other[]"} <= fields, fields)
         self.assertFalse({"home_marina", "reputation.google_rating", "reputation.google_reviews"} & fields)
+        doc = party()
+        other = doc["boat"]["reputation"]["other"]
+        other.append(dict(other[0], value=4.7, source_url="https://www.google.com/maps/place/placeholder-example"))
+        other.append(dict(other[0], value=4.8, source_url="https://maps.googleapis.com/maps/api/place/x"))
+        values = [f.value for f in profile.profile_facts(doc).facts if f.field == "reputation.other[]"]
+        self.assertEqual(values, [4.5], "a number read off a Google host is never stored")
         self.assertTrue(all(f.source_id == "osint" and f.rights == "facts-only" for f in mapped.facts))
         (waters,) = [f for f in mapped.facts if f.field == "waters"]
         self.assertEqual((waters.value, waters.method, waters.confidence), (["ocean", "bay"], "inference", 0.6))
-        self.assertEqual(mapped.profiled_at, "2026-10-06T10:17:00Z")
-        self.assertEqual(profile.profiled_at(dict(party(), run_id="manual")), "2026-10-06T10:20:00Z")
+        self.assertEqual(mapped.profiled_at, "2026-10-06T08:17:00Z")
+        self.assertEqual(profile.profiled_at(dict(party(), run_id="manual")), "2026-10-06T08:20:00Z")
 
 
 class CliTests(unittest.TestCase):
