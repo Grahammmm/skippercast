@@ -273,13 +273,13 @@ integer booleans, short index names.
 | `region`, `slug` | text | slug unique here and across `advisor_boats.slug` (checked in code) |
 | `name`, `name_norm` | text | display and normalised (section 7) |
 | `operator_id`, `port_id`, `landing_id` | text, nullable | |
-| `vessel_class`, `waters_json` | text | D1 |
+| `vessel_class`, `waters_json` | text, nullable | D1; null on a discovery candidate until it is classified (§8 selects vessels missing `vessel_class`) |
 | `uscg_doc`, `state_reg`, `hull_id`, `call_sign`, `mmsi` | text, nullable | stable keys |
 | `year_built`, `passengers_max`, `bunks` | integer, nullable | |
 | `length_ft`, `beam_ft`, `cruise_kn` | real, nullable | |
 | `website`, `booking_url`, `booking_platform`, `phone_business`, `email_business` | text, nullable | business contact only |
 | `status` | text | `active`, `inactive`, `sold`, `excluded` |
-| `profile_status` | text | `listed` or `hidden` |
+| `profile_status` | text | `listed` or `hidden`, default `hidden` (fail closed): listing is an explicit admin or resolver action |
 | `map_display_consent` | text | `none`, `aggregate` or `named`, default `none` (US-C4): the operator's consent for this boat on any public activity layer; admin views ignore it. Changes are recorded as `admin` facts, so who and when stay in the fact history |
 | `removal_requested_at` | text, nullable | ISO UTC time the operator asked for this boat to be hidden or removed (US-C3); set by the admin action that sets `profile_status = hidden`, kept when the vessel is later unhidden by an admin so the request date is not lost |
 | `pinned_json` | text | fields an admin set; the resolver skips them |
@@ -303,7 +303,7 @@ keys are deliberately not unique: a conflict is a review, not a failed insert.
 | `rights` | text | `public-domain`, `facts-only`, `api-terms`, `public-record`, `noaa-planning-only`, `internal-only` |
 | `retrieved_at`, `first_seen_at`, `last_seen_at` | text | |
 | `superseded_at`, `superseded_by` | text, nullable | set when the same source reports a new scalar value |
-| `run_id` | text | |
+| `run_id` | text, nullable | null for admin edits, which have no run |
 
 Indexes: `fact_vessel_field (vessel_id, field, superseded_at)`,
 `fact_source (source_id, last_seen_at)`.

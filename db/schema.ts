@@ -245,17 +245,19 @@ export const fleetOperators=sqliteTable('fleet_operators',{
 // sha256(region:creation_key)[:32]; slug is also checked against advisor_boats.slug in code.
 // map_display_consent (none/aggregate/named, US-C4) gates public activity layers only;
 // removal_requested_at (US-C3) is kept when an admin later unhides the vessel.
+// profile_status starts 'hidden' (fail closed): listing is an explicit admin or resolver
+// action. vessel_class and waters_json are null on discovery candidates until classified.
 export const fleetVessels=sqliteTable('fleet_vessels',{
   id:text('id').primaryKey(),region:text('region').notNull(),slug:text('slug').notNull(),
   name:text('name').notNull(),nameNorm:text('name_norm').notNull(),
   operatorId:text('operator_id'),portId:text('port_id'),landingId:text('landing_id'),
-  vesselClass:text('vessel_class').notNull(),watersJson:text('waters_json').notNull(),
+  vesselClass:text('vessel_class'),watersJson:text('waters_json'),
   uscgDoc:text('uscg_doc'),stateReg:text('state_reg'),hullId:text('hull_id'),callSign:text('call_sign'),mmsi:text('mmsi'),
   yearBuilt:integer('year_built'),passengersMax:integer('passengers_max'),bunks:integer('bunks'),
   lengthFt:real('length_ft'),beamFt:real('beam_ft'),cruiseKn:real('cruise_kn'),
   website:text('website'),bookingUrl:text('booking_url'),bookingPlatform:text('booking_platform'),
   phoneBusiness:text('phone_business'),emailBusiness:text('email_business'),
-  status:text('status').notNull().default('active'),profileStatus:text('profile_status').notNull().default('listed'),
+  status:text('status').notNull().default('active'),profileStatus:text('profile_status').notNull().default('hidden'),
   mapDisplayConsent:text('map_display_consent').notNull().default('none'),removalRequestedAt:text('removal_requested_at'),
   pinnedJson:text('pinned_json').notNull().default('{}'),completeness:real('completeness').notNull().default(0),
   firstSeenAt:text('first_seen_at').notNull(),lastSeenAt:text('last_seen_at').notNull(),lastProfiledAt:text('last_profiled_at'),
@@ -273,7 +275,7 @@ export const fleetVesselFacts=sqliteTable('fleet_vessel_facts',{
   sourceId:text('source_id').notNull(),sourceUrl:text('source_url').notNull(),method:text('method').notNull(),
   confidence:real('confidence').notNull(),rights:text('rights').notNull(),retrievedAt:text('retrieved_at').notNull(),
   firstSeenAt:text('first_seen_at').notNull(),lastSeenAt:text('last_seen_at').notNull(),
-  supersededAt:text('superseded_at'),supersededBy:text('superseded_by'),runId:text('run_id').notNull(),
+  supersededAt:text('superseded_at'),supersededBy:text('superseded_by'),runId:text('run_id'),
 },t=>[index('fact_vessel_field').on(t.vesselId,t.field,t.supersededAt),index('fact_source').on(t.sourceId,t.lastSeenAt)]);
 
 // Other names a vessel goes by (former-name, spelling, ais-name, report-name).

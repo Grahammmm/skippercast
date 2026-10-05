@@ -154,7 +154,7 @@ CREATE TABLE `fleet_vessel_facts` (
 	`last_seen_at` text NOT NULL,
 	`superseded_at` text,
 	`superseded_by` text,
-	`run_id` text NOT NULL
+	`run_id` text
 );
 --> statement-breakpoint
 CREATE INDEX `fact_vessel_field` ON `fleet_vessel_facts` (`vessel_id`,`field`,`superseded_at`);--> statement-breakpoint
@@ -168,8 +168,8 @@ CREATE TABLE `fleet_vessels` (
 	`operator_id` text,
 	`port_id` text,
 	`landing_id` text,
-	`vessel_class` text NOT NULL,
-	`waters_json` text NOT NULL,
+	`vessel_class` text,
+	`waters_json` text,
 	`uscg_doc` text,
 	`state_reg` text,
 	`hull_id` text,
@@ -187,7 +187,7 @@ CREATE TABLE `fleet_vessels` (
 	`phone_business` text,
 	`email_business` text,
 	`status` text DEFAULT 'active' NOT NULL,
-	`profile_status` text DEFAULT 'listed' NOT NULL,
+	`profile_status` text DEFAULT 'hidden' NOT NULL,
 	`map_display_consent` text DEFAULT 'none' NOT NULL,
 	`removal_requested_at` text,
 	`pinned_json` text DEFAULT '{}' NOT NULL,

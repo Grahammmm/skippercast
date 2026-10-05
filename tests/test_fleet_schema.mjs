@@ -28,7 +28,8 @@ const INDEX_COLUMNS = {
   fv_region_port: ['region', 'port_id'], fv_name: ['region', 'name_norm'], fv_mmsi: ['mmsi'], fv_doc: ['uscg_doc'], fv_state_reg: ['state_reg'],
   fact_vessel_field: ['vessel_id', 'field', 'superseded_at'], fact_source: ['source_id', 'last_seen_at'], alias_lookup: ['alias_norm'],
   offer_vessel: ['vessel_id', 'status'], dep_vessel_date: ['vessel_id', 'date'], fr_open: ['region', 'status', 'opened_at'],
-  fc_kind: ['kind', 'detected_at'], run_region_time: ['region', 'started_at'], boat_fleet: ['fleet_vessel_id'],
+  fc_kind: ['kind', 'detected_at'], fc_vessel: ['vessel_id'], out_operator: ['operator_id'], fv_operator: ['operator_id'], fv_slug: ['slug'],
+  fo_slug: ['slug'], fo_region: ['region'], fo_outreach: ['outreach_status'], run_region_time: ['region', 'started_at'], boat_fleet: ['fleet_vessel_id'],
 };
 
 const info = (sql, t) => sql.prepare(`PRAGMA table_info(${t})`).all();
@@ -113,6 +114,9 @@ dbTest('fleet_vessel_facts requires its provenance columns', async () => {
   assert.throws(() => insertFact(sql, {source_url: null}), /NOT NULL constraint failed: fleet_vessel_facts\.source_url/);
   for (const c of ['source_id', 'retrieved_at', 'method', 'confidence', 'rights'])
     assert.throws(() => insertFact(sql, {id: `f-${c}`, [c]: undefined}), new RegExp(`NOT NULL constraint failed: fleet_vessel_facts\\.${c}`), c);
+  // Admin edits have no pipeline run.
+  assert.equal(column(sql, 'fleet_vessel_facts', 'run_id').notnull, 0);
+  insertFact(sql, {id: 'fact-admin', source_id: 'admin', source_url: 'admin:user1', method: 'admin', run_id: undefined});
   insertFact(sql);
   const row = sql.prepare("SELECT superseded_at, superseded_by FROM fleet_vessel_facts WHERE id='fact1'").get();
   assert.deepEqual({...row}, {superseded_at: null, superseded_by: null});
@@ -125,20 +129,26 @@ dbTest('fleet_vessels consent and removal columns (US-C4, US-C3) and other defau
   const removal = column(sql, 'fleet_vessels', 'removal_requested_at');
   assert.equal(removal.type.toLowerCase(), 'text'); assert.equal(removal.notnull, 0); assert.equal(removal.dflt_value, null);
   sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,vessel_class,waters_json,first_seen_at,last_seen_at,created_at,updated_at)
-    VALUES('v1','CA','sea-example','Sea Example','sea example','party','["ocean"]',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
+    VALUES('v1','CA','sea-example','Sea Example','sea example','inspected-party','["ocean"]',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
   const v = sql.prepare("SELECT * FROM fleet_vessels WHERE id='v1'").get();
   assert.equal(v.map_display_consent, 'none'); assert.equal(v.removal_requested_at, null);
-  assert.equal(v.status, 'active'); assert.equal(v.profile_status, 'listed'); assert.equal(v.pinned_json, '{}'); assert.equal(v.completeness, 0);
+  assert.equal(v.status, 'active'); assert.equal(v.profile_status, 'hidden'); assert.equal(v.pinned_json, '{}'); assert.equal(v.completeness, 0);
   for (const c of ['operator_id', 'port_id', 'landing_id', 'uscg_doc', 'state_reg', 'hull_id', 'call_sign', 'mmsi', 'year_built', 'length_ft', 'phone_business'])
     assert.equal(v[c], null, c);
-  assert.throws(() => sql.prepare("INSERT INTO fleet_vessels(id,region,slug,name,name_norm,vessel_class,waters_json,map_display_consent,first_seen_at,last_seen_at,created_at,updated_at) VALUES('v2','CA','other','O','o','party','[]',NULL,?,?,?,?)").run(NOW, NOW, NOW, NOW),
+  // A discovery candidate (FCC/PSIX) has no class or waters yet.
+  for (const c of ['vessel_class', 'waters_json']) assert.equal(column(sql, 'fleet_vessels', c).notnull, 0, c);
+  sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,first_seen_at,last_seen_at,created_at,updated_at)
+    VALUES('cand','CA','candidate-example','Candidate Example','candidate example',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
+  assert.deepEqual({...sql.prepare("SELECT vessel_class, waters_json, profile_status FROM fleet_vessels WHERE id='cand'").get()},
+    {vessel_class: null, waters_json: null, profile_status: 'hidden'});
+  assert.throws(() => sql.prepare("INSERT INTO fleet_vessels(id,region,slug,name,name_norm,vessel_class,waters_json,map_display_consent,first_seen_at,last_seen_at,created_at,updated_at) VALUES('v2','CA','other','O','o','inspected-party','[]',NULL,?,?,?,?)").run(NOW, NOW, NOW, NOW),
     /NOT NULL constraint failed: fleet_vessels\.map_display_consent/);
   // Two vessels may share an MMSI (a review, not a failed insert); slugs may not repeat.
   sql.prepare("UPDATE fleet_vessels SET mmsi='338000001' WHERE id='v1'").run();
   sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,vessel_class,waters_json,mmsi,first_seen_at,last_seen_at,created_at,updated_at)
-    VALUES('v3','CA','sea-example-2','Sea Example','sea example','party','[]','338000001',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
+    VALUES('v3','CA','sea-example-2','Sea Example','sea example','inspected-party','[]','338000001',?,?,?,?)`).run(NOW, NOW, NOW, NOW);
   assert.throws(() => sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,vessel_class,waters_json,first_seen_at,last_seen_at,created_at,updated_at)
-    VALUES('v4','CA','sea-example','X','x','party','[]',?,?,?,?)`).run(NOW, NOW, NOW, NOW), /UNIQUE constraint failed: fleet_vessels\.slug/);
+    VALUES('v4','CA','sea-example','X','x','inspected-party','[]',?,?,?,?)`).run(NOW, NOW, NOW, NOW), /UNIQUE constraint failed: fleet_vessels\.slug/);
 });
 
 dbTest('fleet_operators: user_id nullable (US-B3), consent_revoked_at nullable ISO text (US-S3), status defaults', async () => {
