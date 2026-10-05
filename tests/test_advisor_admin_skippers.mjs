@@ -273,6 +273,21 @@ dbTest('invite is refused for a bad number, a stopped or blocked contact, an own
   assert.match(JSON.parse(over.text).error, /20 invites a day/);
 });
 
+dbTest('invite passes the outbound guard: ADVISOR_GLOBAL_DAILY_COLD caps invites to new numbers, nothing is stored for a refused one, and the admin sees why', async () => {
+  const {sql, env, worker, ch} = setup({env: {ADVISOR_GLOBAL_DAILY_COLD: '1'}});
+  const keys = await deriveKeys(KEY);
+  const invite = body => call(worker, env, 'POST', '/api/admin/boats/invite', body);
+  assert.equal((await invite({phone: PHONE})).status, 200);
+  const over = await invite({phone: '+18055550143'});
+  assert.equal(over.status, 409);
+  assert.match(JSON.parse(over.text).error, /ADVISOR_GLOBAL_DAILY_COLD/);
+  assert.equal(ch.sent.length, 1, 'the refused invite texted no one');
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM advisor_contacts WHERE phone_hash=?').get(await phoneHash(keys, '+18055550143')).n, 0, 'and stored no contact');
+  // The first number's same-day repeat is still the no-op it was (one outbound row per contact and day), not a refusal.
+  assert.equal((await invite({phone: PHONE})).status, 200);
+  assert.equal(ch.sent.length, 1);
+});
+
 // ---- contacts ----------------------------------------------------------------------------
 
 dbTest('GET /api/admin/contacts/<id>: by id only, no number or hash, boats, the last 50 messages oldest first, and the export link', async () => {

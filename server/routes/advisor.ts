@@ -40,6 +40,8 @@ import type {Handler} from '../advisor/types.ts';
 // TA-E1: the engine is the inline handler, and "send me my data" links here.
 import {engineHandler} from '../advisor/engine.ts';
 import {verifyExportToken} from '../advisor/exports.ts';
+// Hardening: the hashed client address for the per-address limits.
+import {ipHash} from '../advisor/outbound-guard.ts';
 // TA-M1: the advisor-media runner job's two endpoints, behind a GitHub Actions identity.
 import {verifyJobToken} from '../job-auth.ts';
 import type {JobClaims, JobScope} from '../job-auth.ts';
@@ -436,7 +438,8 @@ advisorPublic.post('/api/advisor/web/message', async c => {
   const id = await storeInbound(env, message!);
   if (!id) throw Error('web message not stored');
   const collector = createWebCollector();
-  const run = runInline(env, id, {channel: collector, handler: webChat.handler ?? engineHandler});
+  // Hardening: the client address, hashed, keys the per-address limits (outbound guard, web model budget).
+  const run = runInline(env, id, {channel: collector, handler: webChat.handler ?? engineHandler, ipHash: await ipHash(env.ADVISOR_PHONE_KEY, clientIP(c.req.raw))});
   let timer: ReturnType<typeof setTimeout> | undefined;
   const outcome = await Promise.race([
     run.then(() => 'done' as const),

@@ -26,6 +26,7 @@ export interface AdvisorSettings {
   dailyLlmPerContact: number;       // ADVISOR_DAILY_LLM_PER_CONTACT
   globalDailyLlm: number;           // ADVISOR_GLOBAL_DAILY_LLM
   globalDailyVision: number;        // ADVISOR_GLOBAL_DAILY_VISION
+  globalDailyCold: number;           // ADVISOR_GLOBAL_DAILY_COLD: texts a day we start to numbers that never texted us
   publicBase: string;               // ADVISOR_PUBLIC_BASE: https origin (and optional path), no trailing slash
   regionDefault: string;            // ADVISOR_REGION_DEFAULT: region id for contacts with no home port
   autoPublishAfter: number;         // ADVISOR_AUTO_PUBLISH_AFTER: clean reports before auto-publish is offered
@@ -216,6 +217,8 @@ export interface ConsumerDeps {
   dispatchWorkflow?: (env: Env, file: string) => Promise<number>; // default: watchdog.ts dispatchWorkflow
   // TA-S6: the Graph API fetcher and clock of an Instagram comment's reply channel (tests).
   instagram?: {fetcher?: (url: string, init: RequestInit) => Promise<Response>; now?: () => number};
+  // Hardening: the web chat's client address, hashed (outbound-guard.ts ipHash), for the per-address limits.
+  ipHash?: string;
 }
 
 export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}

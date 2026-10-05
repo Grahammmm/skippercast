@@ -220,7 +220,7 @@ test('the deploy script creates the advisor bucket and queues only with ENABLE_A
   const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
   for (const name of ['ENABLE_ADVISOR', 'TEXT_ADVISOR_ENABLED', 'ADVISOR_CHANNEL', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
     'ADVISOR_NUMBER', 'ADVISOR_PUBLIC_BASE', 'ADVISOR_REGION_DEFAULT', 'ADVISOR_MODEL', 'ADVISOR_VISION_MODEL', 'ADVISOR_VISION_PROVIDERS',
-    'ADVISOR_DAILY_MESSAGES_PER_CONTACT', 'ADVISOR_DAILY_LLM_PER_CONTACT', 'ADVISOR_GLOBAL_DAILY_LLM', 'ADVISOR_GLOBAL_DAILY_VISION',
+    'ADVISOR_DAILY_MESSAGES_PER_CONTACT', 'ADVISOR_DAILY_LLM_PER_CONTACT', 'ADVISOR_GLOBAL_DAILY_LLM', 'ADVISOR_GLOBAL_DAILY_VISION', 'ADVISOR_GLOBAL_DAILY_COLD',
     'ADVISOR_AUTO_PUBLISH_AFTER', 'ADVISOR_ADMIN_CONTACT_ID', 'ADVISOR_INBOX_PUBLIC_REPLIES', 'BLUEBUBBLES_PRIVATE_API'])
     assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
   for (const secret of ADVISOR_SECRETS) assert.doesNotMatch(workflow, new RegExp(`\\b${secret}: \\$\\{\\{ vars\\.`), `${secret} is never a variable`);

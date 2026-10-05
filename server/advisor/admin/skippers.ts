@@ -29,6 +29,8 @@ import {localDate} from '../answers/time.ts';
 import {bumpPagesVersion} from '../intake/reports.ts';
 import {consentState, flowKey, parseBooking, parseInstagram, parseLanding, parseName, parsePort, startRegistration} from '../intake/skippers.ts';
 import {takeDaily} from '../tools/offer_text_link.ts';
+import {checkOutbound, RECIPIENT_PER_DAY, RECIPIENT_PER_WEEK, ORIGIN_PER_DAY} from '../outbound-guard.ts';
+import type {OutboundRefusal} from '../outbound-guard.ts';
 import {decideReview, reviewRow, setBoatVerification, NOTE_MAX} from './decisions.ts';
 import type {DecisionDeps, TeamSend} from './decisions.ts';
 import type {ContactView} from './queue.ts';
@@ -40,6 +42,14 @@ export const REPORT_DAYS = 30;
 export const CONTACT_MESSAGES = 50;
 export const INVITES_PER_DAY = 20;
 export const INVITE_LIMIT_KEY = 'admin:skipper-invite';
+/** Why the outbound guard refused an invite, for the admin (the admin may know; a requester on the web never does). */
+export const OUTBOUND_REFUSED: Readonly<Record<OutboundRefusal, string>> = Object.freeze({
+  stopped: 'that number has opted out or is blocked',
+  recipient: `at most ${RECIPIENT_PER_DAY} invitations or codes a day, and ${RECIPIENT_PER_WEEK} a week, go to one number`,
+  origin: `at most ${ORIGIN_PER_DAY.admin_invite} invites a day per admin`,
+  ip: 'too many requests from this address today',
+  global: 'the daily limit for texts to new numbers (ADVISOR_GLOBAL_DAILY_COLD) is reached',
+});
 export const NOTE_PREFIX = 'advisor.boat-note.';      // job_state: the admin's consent note per boat
 export const BLOCK_PREFIX = 'advisor.block.';         // job_state: the status a blocked contact had
 const ID = /^[\w-]{1,64}$/;
@@ -256,6 +266,13 @@ export async function inviteSkipper(env: Env, input: InviteInput, deps: {send: T
   const hash = await phoneHash(keys, phone), enc = await encryptPhone(keys, phone);
   const at = iso(input.now);
   const existed = await db.prepare('SELECT id FROM advisor_contacts WHERE phone_hash=?').bind(hash).first<{id: string}>();
+  // Hardening (outbound-guard.ts): the per-number, per-admin and global limits on texts we start; the owner may see why.
+  const outbound = existed && await db.prepare('SELECT 1 AS x FROM advisor_messages WHERE id=?').bind(await inviteOutboundId(existed.id, input.now)).first()
+    ? null : await checkOutbound(db, settings, {kind: 'admin_invite', recipientHash: hash, origin: input.by, now: input.now});
+  if (outbound && !outbound.ok) {
+    advisorLog('warn', 'advisor_outbound_refused', {kind: 'admin_invite', reason: outbound.reason});
+    return {status: 'conflict', error: OUTBOUND_REFUSED[outbound.reason]};
+  }
   const contact = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,language,source,last_seen_at,created_at,updated_at) VALUES(?,?,?,'sms',?,'skipper-invite',?,?,?)
     ON CONFLICT(phone_hash) DO UPDATE SET updated_at=advisor_contacts.updated_at RETURNING *`).bind(randomId(), hash, enc, language, at, at, at).first<AdvisorContactRow>();
   if (!contact) return {status: 'unavailable', error: 'the contact could not be stored'};
@@ -272,6 +289,7 @@ export async function inviteSkipper(env: Env, input: InviteInput, deps: {send: T
     .bind(flowKey(contact.id), JSON.stringify(flow.state), at).run();
   const intro = boatName ? t(l, 'skipper_invite_boat', {boat: boatName}) : t(l, 'skipper_invite');
   const text = ask?.type === 'send_text' ? `${intro} ${ask.text}` : intro;
+  if (outbound?.ok) await outbound.commit();
   const sends = await deps.send(contact, inId, 'admin.invite', text, input.by);
   advisorLog('info', 'advisor_admin_invite', {created: !existed, sends});
   return {status: 'ok', value: {contact_id: contact.id, sends, created: !existed}};

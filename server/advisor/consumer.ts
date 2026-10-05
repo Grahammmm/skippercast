@@ -109,6 +109,8 @@ import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
 import {flowKey, isVerified, crewDeclined, readCrewInvite, crewInviteKey, crewDeclineKey, CREW_INVITE_TTL_MS} from './intake/skippers.ts';
 import type {CrewInvite} from './intake/skippers.ts';
 import {MAX_CREW} from './tools/add_crew.ts';
+// Hardening: the guard on texts we start to numbers that did not text us first.
+import {checkOutbound} from './outbound-guard.ts';
 // TA-I2: reports, the media queue and the one-time lines.
 import {insertDraft, publishReport, withdrawReport, applyEdit, postsFor, ONCE_PREFIX} from './intake/reports.ts';
 // TA-I3: the AC-1 offer state and the angler's shared photo.
@@ -447,16 +449,22 @@ async function applySendFile(env: Env, deps: ConsumerDeps, contact: AdvisorConta
 async function applyLinkStart(env: Env, deps: ConsumerDeps, web: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'link_start'}>): Promise<number> {
   const db = env.DB!, at = iso(deps);
   if (!/^[0-9a-f]{64}$/.test(action.phoneHash) || !/^[0-9a-f]{64}$/.test(action.codeHash) || !/^\d{6}$/.test(action.codeText)) return 0;
+  const id = await outboundId(inId, `${index}.code`);
+  if (await db.prepare('SELECT 1 AS x FROM advisor_messages WHERE id=?').bind(id).first()) return 0;   // a retry: the code went (or was tried) already
+  // Hardening (outbound-guard.ts): a stopped number, the per-number, per-visitor, per-address and global limits. A refusal
+  // is silent: the visitor was told a code goes out if the number can take one, so nothing says whether the number is known.
+  const verdict = await checkOutbound(db, advisorSettings(env), {kind: 'link_code', recipientHash: action.phoneHash, origin: web.id, ipHash: deps.ipHash ?? null, now: clock(deps)});
+  if (!verdict.ok) { advisorLog('warn', 'advisor_outbound_refused', {kind: 'link_code', reason: verdict.reason}); return 0; }
   // A new phone contact's last channel is 'web' (where it came from), so BlueBubbles checks iMessage availability for the code text.
   const phone = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,language,source,last_seen_at,created_at,updated_at) VALUES(?,?,?,'web',?,'web',?,?,?)
     ON CONFLICT(phone_hash) DO UPDATE SET updated_at=advisor_contacts.updated_at RETURNING *`)
     .bind(randomId(), action.phoneHash, action.phoneEnc, web.language, at, at, at).first<AdvisorContactRow>();
-  if (!phone || phone.status !== 'active') return sendText(env, deps, web, inId, index, t(web.language, 'link_failed'));
+  if (!phone || phone.status !== 'active') return 0;
   await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
     .bind(linkKey(web.id), JSON.stringify({code_hash: action.codeHash, expires_at: action.expiresAt, phone_contact_hash: action.phoneHash, phone_contact_id: phone.id}), at).run();
   const adapter = (deps.channelFor ?? defaultChannelFor)(env, phone);
   if (await relayHold(env, adapter)) return sendText(env, deps, web, inId, `${index}.failed`, t(web.language, 'link_failed'));
-  const id = await outboundId(inId, `${index}.code`);
+  await verdict.commit();
   const inserted = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,status,in_reply_to,created_at) VALUES(?,?,'out',?,?,'sending',?,?) ON CONFLICT(id) DO NOTHING`)
     .bind(id, phone.id, phone.channel, t(phone.language, 'link_code_text', {code: '······'}), inId, at).run();
   if (!inserted.meta.changes) return 0;
@@ -596,14 +604,23 @@ async function applyCrewAdd(env: Env, deps: ConsumerDeps, skipper: AdvisorContac
   const invite = await outboundId(inId, `${index}.invite`);
   // A retried message finds its invitation already handled (sendOnce skips a sent row).
   const retry = Boolean(await db.prepare('SELECT 1 AS x FROM advisor_messages WHERE id=?').bind(invite).first());
+  // Every refusal is checked on the existing contact (if any) before a new one is stored, so a refused number leaves nothing behind.
+  const known = await db.prepare('SELECT id,status FROM advisor_contacts WHERE phone_hash=?').bind(action.phoneHash).first<{id: string; status: string}>();
+  if (known) {
+    if (known.id === skipper.id || known.status !== 'active') return 0;
+    if (await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE owner_contact_id=?').bind(known.id).first()) return 0;
+    if (await db.prepare('SELECT 1 AS x FROM advisor_crew WHERE boat_id=? AND contact_id=? AND removed_at IS NULL').bind(action.boatId, known.id).first()) return 0;
+    if (await crewDeclined(db, action.boatId, known.id, now)) { advisorLog('info', 'advisor_crew_invite_suppressed', {count: 1}); return 0; }
+  }
+  // Hardening (outbound-guard.ts): the per-number, per-skipper and global limits on texts we start.
+  const verdict = retry ? null : await checkOutbound(db, advisorSettings(env), {kind: 'crew_invite', recipientHash: action.phoneHash, origin: skipper.id, now});
+  if (verdict && !verdict.ok) { advisorLog('warn', 'advisor_outbound_refused', {kind: 'crew_invite', reason: verdict.reason}); return 0; }
   const crew = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,language,source,last_seen_at,created_at,updated_at) VALUES(?,?,?,'sms',?,'skipper-invite',?,?,?)
     ON CONFLICT(phone_hash) DO UPDATE SET updated_at=advisor_contacts.updated_at RETURNING *`)
     .bind(randomId(), action.phoneHash, action.phoneEnc, lang(skipper.language), at, at, at).first<AdvisorContactRow>();
   if (!crew || crew.id === skipper.id || crew.status !== 'active') return 0;
-  if (await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE owner_contact_id=?').bind(crew.id).first()) return 0;
-  if (await db.prepare('SELECT 1 AS x FROM advisor_crew WHERE boat_id=? AND contact_id=? AND removed_at IS NULL').bind(action.boatId, crew.id).first()) return 0;
-  if (await crewDeclined(db, action.boatId, crew.id, now)) { advisorLog('info', 'advisor_crew_invite_suppressed', {count: 1}); return 0; }
-  if (!retry) {
+  if (verdict?.ok) {
+    await verdict.commit();
     const pending: CrewInvite = {boat_id: action.boatId, added_by: skipper.id, invited_at: at, expires_at: now + CREW_INVITE_TTL_MS};
     await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
       .bind(crewInviteKey(crew.id), JSON.stringify(pending), at).run();

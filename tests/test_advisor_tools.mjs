@@ -20,7 +20,7 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json'), 'so
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 
 const {TOOLS, TOOL_BY_NAME, toolsForRole, claudeTools, dispatchTool, NOT_BUILT, stubTool, isWebOnly} = await import('../server/advisor/tools/index.ts');
-const {linkCode, takeDaily, LINK_CODES_PER_DAY, LINK_CODE_TTL_MS} = await import('../server/advisor/tools/offer_text_link.ts');
+const {linkCode, takeDaily, LINK_CODES_PER_DAY, LINK_CODE_TTL_MS, CODE_OFFERED} = await import('../server/advisor/tools/offer_text_link.ts');
 const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {deriveKeys, phoneHash, decryptPhone} = await import('../server/advisor/contacts.ts');
 const {verifyUploadToken} = await import('../server/advisor/media.ts');
@@ -150,6 +150,7 @@ dbTest('offer_text_link: a code action with only hashes and the encrypted number
     {type: 'link_start', phoneHash: await phoneHash(keys, '+18055550123'), codeHash: await sha256('654321'), expiresAt: T0 + LINK_CODE_TTL_MS, codeText: '654321'});
   assert.equal(await decryptPhone(keys, action.phoneEnc), '+18055550123');
   assert.ok(!JSON.stringify(out.result).includes('555'), 'the number is never echoed to the model');
+  assert.deepEqual(out.result, {...CODE_OFFERED}, 'the same answer for any valid number (the consumer\'s outbound guard decides; tests/test_advisor_outbound.mjs)');
   for (let i = 1; i < LINK_CODES_PER_DAY; i++) assert.equal((await tool.run({phone: '805-555-0123'}, c)).result.sent, true);
   assert.deepEqual((await tool.run({phone: '805-555-0123'}, c)).result, {sent: false, reason: 'too many codes today; try tomorrow'});
   assert.deepEqual((await tool.run({phone: '12345'}, ctx(web, {ADVISOR_PHONE_KEY: KEY}))).result, {sent: false, reason: 'not a US mobile number'});

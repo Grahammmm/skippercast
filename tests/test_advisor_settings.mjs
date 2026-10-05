@@ -8,7 +8,7 @@ const DEFAULTS = {
   enabled: false, repliesEnabled: true, number: null, channel: 'bluebubbles', privateApi: false,
   adminContactId: null, inboxPublicReplies: false, model: 'claude-sonnet-5', visionModel: 'claude-sonnet-5',
   visionProviders: ['hermes', 'claude'], dailyMessagesPerContact: 40, dailyLlmPerContact: 30, globalDailyLlm: 2000,
-  globalDailyVision: 400, publicBase: 'https://skippercast.com', regionDefault: 'morro-bay', autoPublishAfter: 5,
+  globalDailyVision: 400, globalDailyCold: 50, publicBase: 'https://skippercast.com', regionDefault: 'morro-bay', autoPublishAfter: 5,
   socialEnabled: false, inboxEnabled: false,
 };
 
@@ -24,13 +24,13 @@ test('every var overrides its setting', () => {
     BLUEBUBBLES_PRIVATE_API: 'true', ADVISOR_ADMIN_CONTACT_ID: 'c_0123abcd', ADVISOR_INBOX_PUBLIC_REPLIES: 'true',
     ADVISOR_MODEL: 'claude-opus-5-5', ADVISOR_VISION_MODEL: 'claude-haiku-5@2026', ADVISOR_VISION_PROVIDERS: 'claude',
     ADVISOR_DAILY_MESSAGES_PER_CONTACT: '10', ADVISOR_DAILY_LLM_PER_CONTACT: '0', ADVISOR_GLOBAL_DAILY_LLM: '50',
-    ADVISOR_GLOBAL_DAILY_VISION: '7', ADVISOR_PUBLIC_BASE: 'https://staging.skippercast.com/', ADVISOR_REGION_DEFAULT: 'port-san-luis',
+    ADVISOR_GLOBAL_DAILY_VISION: '7', ADVISOR_GLOBAL_DAILY_COLD: '9', ADVISOR_PUBLIC_BASE: 'https://staging.skippercast.com/', ADVISOR_REGION_DEFAULT: 'port-san-luis',
     ADVISOR_AUTO_PUBLISH_AFTER: '3', ADVISOR_SOCIAL_ENABLED: 'true', ADVISOR_INBOX_ENABLED: 'true',
   });
   assert.deepEqual(settings, {
     enabled: true, repliesEnabled: false, number: '+18055550123', channel: 'twilio', privateApi: true,
     adminContactId: 'c_0123abcd', inboxPublicReplies: true, model: 'claude-opus-5-5', visionModel: 'claude-haiku-5@2026',
-    visionProviders: ['claude'], dailyMessagesPerContact: 10, dailyLlmPerContact: 0, globalDailyLlm: 50, globalDailyVision: 7,
+    visionProviders: ['claude'], dailyMessagesPerContact: 10, dailyLlmPerContact: 0, globalDailyLlm: 50, globalDailyVision: 7, globalDailyCold: 9,
     publicBase: 'https://staging.skippercast.com', regionDefault: 'port-san-luis', autoPublishAfter: 3,
     socialEnabled: true, inboxEnabled: true,
   });
@@ -76,7 +76,7 @@ test('model ids follow the BOAT_AI_MODEL rule', () => {
 
 test('caps are integers of zero or more; anything else is the default', () => {
   const caps = {ADVISOR_DAILY_MESSAGES_PER_CONTACT: ['dailyMessagesPerContact', 40], ADVISOR_DAILY_LLM_PER_CONTACT: ['dailyLlmPerContact', 30],
-    ADVISOR_GLOBAL_DAILY_LLM: ['globalDailyLlm', 2000], ADVISOR_GLOBAL_DAILY_VISION: ['globalDailyVision', 400], ADVISOR_AUTO_PUBLISH_AFTER: ['autoPublishAfter', 5]};
+    ADVISOR_GLOBAL_DAILY_LLM: ['globalDailyLlm', 2000], ADVISOR_GLOBAL_DAILY_VISION: ['globalDailyVision', 400], ADVISOR_GLOBAL_DAILY_COLD: ['globalDailyCold', 50], ADVISOR_AUTO_PUBLISH_AFTER: ['autoPublishAfter', 5]};
   for (const [name, [key, fallback]] of Object.entries(caps)) {
     assert.equal(advisorSettings({[name]: '0'})[key], 0, `${name} 0`);
     assert.equal(advisorSettings({[name]: ' 12 '})[key], 12, `${name} 12`);

@@ -262,6 +262,33 @@ cookie hash to it (the chat keeps working and `/api/advisor/web/message`
 answers `linked: true`), and deletes the web contact. 04 § As built has the
 details.
 
+### As built (hardening: texts we start)
+
+Three texts go to a number someone typed rather than one that texted us: the
+web phone-link code (`offer_text_link`), a crew invitation (`add_crew`, 05 §
+As built (crew consent)) and the admin's skipper invite. Each now passes
+`server/advisor/outbound-guard.ts` `checkOutbound` just before it is sent
+(threat model § 9.3):
+
+- a stopped or blocked contact is refused;
+- one number gets at most 2 of these a day and 5 in any 7 days, whoever asks
+  (`request_limits` `advisor-out:to:<phone_hash>:<UTC day>`, kept 8 days);
+- per requester a day: 3 codes per web visitor (on top of the tool's own 3
+  requests), 10 invitations per skipper, 20 invites per admin;
+- per client address a day (web only): 5, keyed by `ipHash` (SHA-256 of the
+  address under `ADVISOR_PHONE_KEY`, 32 hex characters; the web route passes it
+  to the inline turn as `ConsumerDeps.ipHash`);
+- `ADVISOR_GLOBAL_DAILY_COLD` (default 50) a day to numbers that have never
+  texted us (no inbound message from that contact).
+
+The guard only reads; the caller commits the counts right before the send, so
+a text refused later by its own checks spends nothing, and nothing (no contact
+row, no pending link) is stored for a refused number. The web visitor and the
+skipper hear the same answer for any valid number ("a code is texted to that
+number if it can receive one"); the old "I couldn't text that number" reply
+for a stopped number is gone (it said the number was known). The admin, who
+may know, gets the reason in the 409.
+
 ## Instagram adapter (`channels/instagram.ts`; TA-S6)
 
 As built: the fourth adapter, `instagram` (`AdapterName` gained it). Inbound is
