@@ -56,6 +56,7 @@ KINDS = {
     "forecast-manifest": "forecast-manifest.schema.json",
     "forecast-tile": "forecast-tile.schema.json",
     "fleet-region": "fleet-region.schema.json",
+    "fleet-profile": "fleet-profile.schema.json",
 }
 INSTALL_HINT = "JSON Schema validation needs the optional 'jsonschema' package: pip install -r requirements-test.txt"
 SWITCH = "SKIPPERCAST_VALIDATE"

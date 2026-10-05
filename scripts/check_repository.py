@@ -27,6 +27,9 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 # Instagram handles only from catalog/advisor/fixture-handles.json.
 ADVISOR_SCOPES = ("tests/fixtures/advisor/", "docs/plans/text-advisor/")
 ADVISOR_RUNBOOK = re.compile(r"docs/operations/runbooks/advisor-[^/]+\.md")
+# The charter fleet fixtures and plan get the same scan (docs/plans/charter-fleet/design.md § 17):
+# registry data, OSINT output, positions and outreach never enter the repository.
+FLEET_SCOPES = ("tests/fixtures/fleet/", "docs/plans/charter-fleet/")
 # The advisor's test files get the handle rule too (hardening, threat model § 9.10): an @mention, or a quoted
 # value of a handle field (instagram: '...', username: "...", collaborators: ['...']), must be a listed handle.
 ADVISOR_TESTS = re.compile(r"tests/test_advisor_[^/]+\.mjs")
@@ -49,6 +52,11 @@ def advisor_scoped(relative):
     """True for a file the Text Advisor privacy scan covers (a repository-relative path)."""
     name = relative.as_posix()
     return name.startswith(ADVISOR_SCOPES) or bool(ADVISOR_RUNBOOK.fullmatch(name))
+
+
+def fleet_scoped(relative):
+    """True for a charter fleet fixture or plan file, which get the advisor privacy scan."""
+    return relative.as_posix().startswith(FLEET_SCOPES)
 
 
 def advisor_test_file(relative):
@@ -99,10 +107,14 @@ def load_fixture_handles(root=ROOT):
 
 
 def json_handles(value, key=None):
-    """Every handle-shaped string under a handle field (HANDLE_KEYS), at any depth of parsed JSON."""
+    """Every handle-shaped string under a handle field (HANDLE_KEYS), at any depth of parsed JSON.
+
+    A provenance object under a handle field (a fleet profile's {"handle": {"value": ...}}) passes
+    the field on to its value.
+    """
     if isinstance(value, dict):
         for k, v in value.items():
-            yield from json_handles(v, k)
+            yield from json_handles(v, key if k == "value" and key in HANDLE_KEYS else k)
     elif isinstance(value, list):
         for item in value:
             yield from json_handles(item, key)
@@ -160,7 +172,7 @@ def main():
         for label, pattern in PATTERNS.items():
             if pattern.search(text):
                 errors.append(f"{relative}: possible {label}")
-        if advisor_scoped(relative):
+        if advisor_scoped(relative) or fleet_scoped(relative):
             errors.extend(advisor_privacy(relative, text, handles))
         elif advisor_test_file(relative):
             errors.extend(advisor_test_handles(relative, text, handles))
@@ -176,7 +188,7 @@ def main():
         for error in errors:
             print(error, file=sys.stderr)
         return 1
-    print(f"Checked {checked} text files: local Markdown links, release privacy rules and the Text Advisor fixture scan passed.")
+    print(f"Checked {checked} text files: local Markdown links, release privacy rules and the Text Advisor and charter fleet fixture scans passed.")
     return 0
 
 
