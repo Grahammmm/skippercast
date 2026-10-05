@@ -251,7 +251,7 @@ function VesselDetail({detail, onEdit}: {detail: FleetVesselDetail; onEdit: OnEd
         rows={detail.changes.map(c => [c.kind, <JsonValue value={c.before} />, <JsonValue value={c.after} />, when(c.detected_at)])} />
       <Table id="fleet-watch" heading={COPY.watchHeading} columns={[COPY.fieldLabels.mmsi!, COPY.matchMethod, COPY.statusLabel, COPY.lastSeen, COPY.positions30]}
         rows={detail.watch.map(w => [w.mmsi, w.match_method, w.status, when(w.last_seen_at) || '—', w.positions_30d ?? '—'])} />
-      <Table id="fleet-trips" heading={COPY.tripsHeading} columns={[COPY.date, COPY.tripType, COPY.statusLabel, COPY.distance, COPY.fishingMin]}
+      <Table id="fleet-trips" heading={COPY.tripsHeading} note={COPY.tripsInferred} columns={[COPY.date, COPY.inferredTripType, COPY.statusLabel, COPY.distance, COPY.fishingMin]}
         rows={detail.trips.map(t => [t.local_date, t.trip_type_inferred ?? '—', t.status, t.distance_nm ?? '—', t.fishing_min ?? '—'])} />
       <Table id="fleet-advisor" heading={COPY.advisorBoatsHeading} columns={[ADMIN_COPY.name, COPY.port, COPY.statusLabel]}
         rows={detail.advisor_boats.map(b => [<a href={`/boats/${encodeURIComponent(b.slug)}`} target="_blank" rel="noopener noreferrer">{b.name}</a>, b.port, b.status])} />
@@ -375,8 +375,8 @@ function FieldEditor({col, value, onSave, onCancel}: {col: string; value: unknow
   );
 }
 
-/** A small read-only table under its heading, or "None recorded." */
-function Table({id, heading, columns, rows}: {id: string; heading: string; columns: string[]; rows: ComponentChildren[][]}) {
+/** A small read-only table under its heading, or "None recorded.", with an optional caption line under it. */
+function Table({id, heading, columns, rows, note}: {id: string; heading: string; columns: string[]; rows: ComponentChildren[][]; note?: string}) {
   return (
     <>
       <h2 id={`${id}-heading`}>{heading}</h2>
@@ -388,6 +388,7 @@ function Table({id, heading, columns, rows}: {id: string; heading: string; colum
           </table>
         </div>
       )}
+      {note && rows.length ? <p class="admin-hint">{note}</p> : null}
     </>
   );
 }
