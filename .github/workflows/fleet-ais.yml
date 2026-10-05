@@ -8,7 +8,10 @@ name: Fleet AIS processor
 # with `from` and `to` re-runs that window of departures only; one with `backfill_month`
 # runs the MarineCadastre backfill (CF-47, § 11 and D9) for that month instead: NOAA's
 # daily files into their own store, then the same processor, every row tagged
-# noaa-planning-only. Raw positions never leave the runner. No pull_request trigger,
+# noaa-planning-only. A scheduled run then copies labelled trips' raw positions to
+# ais/validation/ (CF-48), out of retention's reach; a dispatch with `validate` scores the
+# classifier against the hand labels and writes the aggregate report to the summary.
+# Raw positions never leave the runner. No pull_request trigger,
 # so fork code never runs on Hermes.
 on:
   schedule:
@@ -24,6 +27,11 @@ on:
       backfill_month:
         description: "MarineCadastre backfill: a region-local month (YYYY-MM); empty for a normal run"
         required: false
+      validate:
+        description: "Score the classifier against the hand labels (CF-48) instead of processing"
+        type: boolean
+        required: false
+        default: false
 
 permissions: {}
 
@@ -58,10 +66,16 @@ jobs:
           WINDOW_FROM: ${{ inputs.from }}
           WINDOW_TO: ${{ inputs.to }}
           BACKFILL_MONTH: ${{ inputs.backfill_month }}
+          VALIDATE: ${{ inputs.validate }}
         run: |
           set -o pipefail
           # The raw store and processor state live outside any checkout (design.md § 4).
           export SKIPPERCAST_FLEET_VAR="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          if [ "$VALIDATE" = "true" ]; then
+            # Sync the labels and copies, then the report: aggregates only, no MMSI, trip or labeller id.
+            python -m skippercast.fleet.ais validate --region "$REGION" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           if [ -n "$BACKFILL_MONTH" ]; then
             if [ -n "$WINDOW_FROM" ] || [ -n "$WINDOW_TO" ]; then
               echo "::error::backfill_month runs alone: leave from and to empty"; exit 2
@@ -78,3 +92,7 @@ jobs:
             args+=(--from "$WINDOW_FROM" --to "$WINDOW_TO")
           fi
           python -m skippercast.fleet.ais process "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ -z "$WINDOW_FROM" ]; then
+            # Labelled trips' raw positions to ais/validation/, kept while their labels exist (CF-48).
+            python -m skippercast.fleet.ais validate --region "$REGION" --sync-only
+          fi

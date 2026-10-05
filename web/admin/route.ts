@@ -14,11 +14,13 @@ export const FLEET_VIEWS = [
   'fleet-review', 'fleet-vessels',   // CF-31
   'fleet-operators',   // CF-32
   'fleet-coverage', 'fleet-ais',   // CF-35
+  'fleet-labels',   // CF-48
 ] as const;
 /** Fleet detail routes, #<head>/<id>: the list view the nav marks, and the id's pattern. */
 export const FLEET_DETAILS = {
   'fleet-vessel': {nav: 'fleet-vessels', id: /^[0-9a-f]{32}$/},   // CF-31
   'fleet-operator': {nav: 'fleet-operators', id: /^[A-Za-z0-9_-]{16,64}$/},   // CF-32
+  'fleet-trip': {nav: 'fleet-labels', id: /^[0-9a-f]{32}$/},   // CF-48
 } as const;
 // ---- end of the fleet views ----
 
@@ -78,3 +80,5 @@ export function shownRoute(route: Route, flags: AdminFlags): Route | null {
 export const fleetHref = (view: FleetView, region?: string | null): string => (region ? `#${view}?region=${encodeURIComponent(region)}` : `#${view}`);
 /** The admin app's link to one registry vessel. */
 export const fleetVesselHref = (id: string): string => `#fleet-vessel/${encodeURIComponent(id)}`;
+/** The admin app's link to one trip's labelling view (CF-48). */
+export const fleetTripHref = (id: string): string => `#fleet-trip/${encodeURIComponent(id)}`;

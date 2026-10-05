@@ -1,11 +1,12 @@
 """``python -m skippercast.fleet.ais <command>``: ``listen`` runs the AIS listener (design.md section 10),
-``process`` the processor job and ``backfill`` the MarineCadastre backfill (section 11).
+``process`` the processor job, ``backfill`` the MarineCadastre backfill and ``validate`` the classifier's
+validation against hand labels (section 11).
 """
 from __future__ import annotations
 
 import sys
 
-COMMANDS = ("listen", "process", "backfill")
+COMMANDS = ("listen", "process", "backfill", "validate")
 
 
 def main(argv=None) -> int:
@@ -23,6 +24,9 @@ def main(argv=None) -> int:
     if command == "backfill":
         from .backfill import main as backfill
         return backfill(rest)
+    if command == "validate":
+        from .validate import main as validate
+        return validate(rest)
     return 2   # pragma: no cover
 
 

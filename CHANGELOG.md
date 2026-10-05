@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Add the charter fleet's Labelling view to the admin behind `FLEET_ENABLED` (off): pick a trip (`#fleet-labels`), see its segments on a small track map and a speed strip, all marked inferred from movement, and label time ranges as in port, transit, fishing drift or fishing troll with a basis; each label records its labeller. `python -m skippercast.fleet.ais validate` copies labelled trips' raw positions to `validation/` (exempt from retention while labelled) and reports fishing and per-label precision and recall with a confusion table.
 - Add fleet admin Coverage (`#fleet-coverage`: boats by port and class, % with MMSI, AIS seen or not seen in 30 days, single-source boats, completeness by field group, recent runs) and AIS health (`#fleet-ais`: last message age, 24 h reconnects and drops, gaps over 10 minutes, 7- and 30-day uptime, processor and watch list) views, admin only behind `FLEET_ENABLED` (off).
 - Limit verified classified-policy updates to complete affected regions, including previous scopes and neighbors; uncertain changes retain the full-coast planner.
 - Bind every coastal region's charter identity coverage to the new charter fleet registry (`fleet-registry`, superseding `operator-identities`) and show it as registry counts only; with the registry still empty, each region now reads "missing". Add the fleet pipeline's `discover`, `resolve`, `ingest`, `refresh` and `run` steps and `coverage-status` (all dark behind `FLEET_ENABLED`).

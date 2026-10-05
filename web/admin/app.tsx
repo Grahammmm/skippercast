@@ -31,6 +31,7 @@ import {FleetOperatorsView, FleetOperatorView, OPERATORS_LABEL} from './fleet-op
 import {FLEET_COVERAGE_COPY} from './fleet-coverage-copy.ts';   // CF-35
 import {FleetCoverageView} from './fleet-coverage.tsx';
 import {FleetAisView} from './fleet-ais.tsx';
+import {FleetLabelsView, FleetTripView, LABELS_LABEL} from './fleet-trip.tsx';   // CF-48
 import {navOf, routeOf, shownRoute, visibleViews} from './route.ts';
 import type {AdminFlags, FleetDetail, FleetView, Route, RouteView} from './route.ts';
 
@@ -43,6 +44,8 @@ const FLEET_PAGES: Record<FleetView | FleetDetail, {label: string; render: (arg:
   'fleet-operator': {label: OPERATORS_LABEL, render: id => <FleetOperatorView key={id} id={id} />},   // CF-32
   'fleet-coverage': {label: FLEET_COVERAGE_COPY.views['fleet-coverage'], render: region => <FleetCoverageView region={region} />},   // CF-35
   'fleet-ais': {label: FLEET_COVERAGE_COPY.views['fleet-ais'], render: region => <FleetAisView region={region} />},   // CF-35
+  'fleet-labels': {label: LABELS_LABEL, render: region => <FleetLabelsView region={region} />},   // CF-48
+  'fleet-trip': {label: LABELS_LABEL, render: id => <FleetTripView key={id} id={id} />},   // CF-48
 };
 const fleetPage = (view: RouteView) => (Object.hasOwn(FLEET_PAGES, view) ? FLEET_PAGES[view as FleetView | FleetDetail] : undefined);
 const labelOf = (view: AdminView | FleetView): string => fleetPage(view)?.label ?? COPY.views[view as AdminView];
