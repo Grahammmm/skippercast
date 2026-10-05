@@ -48,13 +48,51 @@ reviewed classified-habitat contract, producer evidence and current whole-polygo
 screening; never pass these polygons through the rough-terrain contract by
 inventing support fractions or grades.
 
+An unknown effective precision or missing depth-dependent resolution profile is
+not by itself a blocker to a limited Tier-1 producer interpretation when the
+class-3 semantics and original source are authenticated and paired nominal-depth
+cells are valid. The interpretation may proceed through source-specific review,
+current whole-polygon screens and publication when those gates pass. Keep it
+unranked and nonexportable as a fishing location; preserve unknown datum,
+accuracy, interpolation and acquisition lineage. A delivered 2 m grid is grid
+spacing, not 2 m accuracy. Leave fit, grades, measurement credit and precision
+unknown. Do not invent a fine-to-depth limit, coarse-resolution cutoff, rank or
+measurement, and do not borrow another source pair's depth thresholds. Known-
+invalid native geometry remains held even when a projected or repaired display
+shape appears valid.
+
+## Production path
+
+The reviewed production path uses source-specific opt-ins in
+`catalog/classified-habitat-policy.json` and the separate classified-habitat
+contract. After private qualification and independent review, invoke:
+
+    PYTHONPATH=src:. python -m skippercast.seafloor.classified_habitat \
+      --root ROOT --reach REACH
+
+This CLI retains its default 25-million-pixel bound and does not accept the
+research probe's `--max-pixels` argument. The probe output is qualification
+evidence only. Follow the existing automatic workflow on current main, then
+check source rights, a fresh whole-polygon screen, and live archive/map
+readback. Use native EPSG:3310 geometry as the authoritative fidelity and area
+basis according to `docs/engineering/classified-geometry.md`; do not publish raw
+or private geometry.
+
 Within 20 active minutes, require either a positive bounded habitat delta or a
 specific reproducible processing failure that prevents it. If the probe adds
 nothing, change source/reach/method. Do not follow it with an all-reach refresh
 as the mapping deliverable. If no positive batch is ready, say so before starting
 a lengthy run and preserve the exact dependency.
 
-Report deduplicated additional habitat area/count, unranked versus ranked
-candidates, restriction/quality exclusions, verified public additions, and new
-measured coverage separately. Splitting polygons or rerating existing geometry
-does not add habitat. Keep routine daily maintenance running separately.
+Report deduplicated additional habitat area from the authoritative native union
+and feature count from unique verified native feature IDs. Also report unranked
+versus ranked candidates, restriction/quality exclusions, verified public
+additions, and new measured coverage separately. Union components can merge
+edge-touching polygons; tile fragments never count as features. IDs alone do not
+prove new physical-area expansion. Splitting polygons or rerating existing
+geometry does not add habitat. Keep routine daily maintenance running separately.
+
+If private native area and live feature-area attributes differ, preserve both
+area bases and verify the actual runner inputs before assigning a cause. If the
+runner's native union cannot be reconstructed, report attribute-based area as
+approximate and the cause as unknown. Do not sum clipped tile fragments.
