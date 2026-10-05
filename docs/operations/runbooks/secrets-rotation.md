@@ -32,7 +32,7 @@ Text Advisor secrets ([threat model § 9](../../legal/threat-model.md#9-text-adv
 | `R2_ADVISOR_TOKEN` | GitHub secret, read by `advisor-media.yml` on the self-hosted runner | `scripts/advisor/media_job.py` (S3 keys derived from it) | Reads and replaces every advisor photo and video original | Yearly, when the runner machine changes hands, on a leak ([below](#r2_advisor_token-text-advisor)) |
 | `CF_ANALYTICS_TOKEN` | GitHub secret → Worker secret (with `CLOUDFLARE_ACCOUNT_ID`) | `ops-report.yml`, the admin funnel (`server/advisor/admin/funnel.ts`) | Account Analytics: Read | Yearly, on a leak |
 | `ANTHROPIC_API_KEY` | as above | also the advisor engine and Claude vision | Spends Anthropic credit | [above](#anthropic_api_key); the advisor's soft switch `ADVISOR_REPLIES_ENABLED=false` stops model calls without touching the key |
-| `HERMES_VISION_URL`, `HERMES_VISION_TOKEN` | GitHub secrets → Worker secrets, once TA-V2 merges | the Hermes vision provider | Sends photos to the owner's Hermes host | On a leak; set the same token on the Hermes host |
+| `HERMES_VISION_URL`, `HERMES_VISION_TOKEN` | GitHub secrets → Worker secrets (TA-V2) | `server/advisor/vision/hermes.ts` | Sends photos to the owner's Hermes host | On a leak; set the same token on the Hermes host |
 
 No secret exists for: the scheduler (GitHub OIDC; the policy is the public `deployments/production.json`, see `server/job-auth.ts`), the Actions `github.token` (issued per run), D1 and R2 bindings (granted by the Worker's configuration). Repository variables `CLOUDFLARE_SITE_URL` and, after PR #30, `FEEDS_PUBLIC_BASE` are not secrets.
 

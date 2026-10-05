@@ -110,7 +110,8 @@ accounts, devices, money, approval or judgment.
 ### A. Merge
 
 - [ ] Review and merge #277 (TA-S2, TA-S3), #278 (TA-S4, TA-S5, video metadata), #279 (TA-S6, TA-S7) and the TA-P1 PR, in that order (CODEOWNERS: each needs your approval).
-- [ ] Review and merge the TA-C5 PR (the threat model section, the fixture privacy scan in `check_repository.py`, the data-rights rows, the CONTRIBUTING line; CODEOWNERS: `docs/legal/` needs your approval). Then decide each risk in [threat model § 9.10](../../legal/threat-model.md#910-text-advisor-top-residual-risks): have it fixed before launch, or accept it in writing. The relay settings are yours either way: Messages → Keep Messages 30 days on the iPhone and the Mac, whether Messages in iCloud stays on, and deleting a conversation on the relay after a FORGET ME.
+- [ ] Review and merge the TA-C5 PR (the threat model section, the fixture privacy scan in `check_repository.py`, the data-rights rows, the CONTRIBUTING line; CODEOWNERS: `docs/legal/` needs your approval).
+- [ ] Then the hardening PR (`claude/ta-hardening`, "Harden the Text Advisor against the threat-model findings"), which fixes [threat model § 9.10](../../legal/threat-model.md#910-text-advisor-top-residual-risks) items 2–5 and 7–9 and writes the runbook side of item 1. Accept item 6's residual (SMS sender ids, the webhook's path token) in writing, or ask for more; the relay settings (C) and B7 are yours.
 
 ### B. Decisions
 
@@ -119,14 +120,16 @@ accounts, devices, money, approval or judgment.
 - [ ] B3. BlueBubbles Private API (typing indicators and read receipts; needs SIP partly off on the Mac): off unless you want it (relay setup step 6.6).
 - [ ] B4. Booking links: `get_trips` returns the raw `booking_url`, but replies carry only placeholder links, so the advisor points to the boat page (06 § As built (TA-A5)). Accept, or ask for a booking-link placeholder.
 - [ ] B5. Twilio readiness (TA-O3: account, 10DLC brand and campaign): now, or only if the relay fails (relay down § When to stop fixing the relay). Not a launch blocker.
+- [ ] B7. Workers Logs: the BlueBubbles webhook token is in its URL path (BlueBubbles cannot send a header), and Workers Logs' per-request invocation record has the URL as its message. Set `WORKERS_INVOCATION_LOGS=false` (recommended once the advisor is on: our own log lines stay; you lose only the automatic one-line-per-request record for the whole site), or keep it and keep Cloudflare account membership to yourself ([threat model § 9.1](../../legal/threat-model.md#91-inbound-webhooks)).
 - [ ] B6. Posts stay approved by hand (09: auto-approval is a later decision), and `ADVISOR_INBOX_PUBLIC_REPLIES` (answers under comments) waits for App Review. No action unless you want a change.
 
 ### C. Accounts and hardware (TA-O1, TA-O4; [relay setup](../../operations/runbooks/advisor-relay-setup.md), 09 § Setup)
 
 - [ ] The number: a line on a carrier that allows port-out; the account number and port-out PIN in your password manager.
 - [ ] The dedicated Apple Account (two-factor on, you as the recovery contact).
-- [ ] The spare iPhone with the SIM, signed in, Text Message Forwarding to the Mac, on power and Wi-Fi, auto-lock off.
-- [ ] The Mac mini: a macOS that BlueBubbles supports, the same Apple Account, the BlueBubbles server with a long password, never sleeps, auto-login, BlueBubbles in Login Items, automatic macOS updates off.
+- [ ] The spare iPhone with the SIM, signed in, Text Message Forwarding to the Mac, on power and Wi-Fi, auto-lock off; **Messages in iCloud off, iCloud Backup off, Keep Messages 30 Days** (relay setup steps 3.4–3.6).
+- [ ] The Mac mini: a macOS that BlueBubbles supports, the same Apple Account, the BlueBubbles server with a long password, never sleeps, auto-login, BlueBubbles in Login Items, automatic macOS updates off; **Enable Messages in iCloud unticked, Keep messages 30 Days, no Time Machine for the relay user** (relay setup steps 4.3–4.5).
+- [ ] The relay's weekly cleanup: `scripts/advisor/relay-cleanup.sh --plist` installed as a launchd agent and run once (relay setup § 12.1); after each FORGET ME, delete that conversation on the Mac and the iPhone and empty Recently Deleted (§ 12.2); a monthly settings check (§ 12.3).
 - [ ] The named Cloudflare Tunnel `relay.skippercast.com`, its Access application and service token; `cloudflared` under launchd.
 - [ ] The BlueBubbles webhook `https://skippercast.com/api/advisor/inbound/bluebubbles/<ADVISOR_WEBHOOK_TOKEN>` (events `new-message`, `updated-message`, `message-send-error`, `new-server`).
 - [ ] `node scripts/advisor/relay-check.mjs --to <your mobile>` ends `PASS` with one blue and one green text; then once a day for three days.
@@ -135,7 +138,8 @@ accounts, devices, money, approval or judgment.
 
 ### D. Secrets (`gh secret set NAME`, the value on standard input)
 
-- [ ] `ADVISOR_PHONE_KEY`: `openssl rand -base64 32 | gh secret set ADVISOR_PHONE_KEY` (never change it once contacts exist).
+- [ ] `ADVISOR_PHONE_KEY`: `openssl rand -base64 32 | gh secret set ADVISOR_PHONE_KEY` (once contacts exist, change it only with `scripts/advisor/rekey-phones.mjs`, [secrets rotation § ADVISOR_PHONE_KEY](../../operations/runbooks/secrets-rotation.md#advisor_phone_key-text-advisor)).
+- [ ] Put the rotation dates in your calendar ([secrets rotation](../../operations/runbooks/secrets-rotation.md), the Text Advisor table): `ADVISOR_WEBHOOK_TOKEN` every 90 days and whenever someone leaves the Cloudflare account; the others yearly.
 - [ ] `ADVISOR_WEBHOOK_TOKEN` (relay setup step 8.1).
 - [ ] `BLUEBUBBLES_URL` (`https://relay.skippercast.com`), `BLUEBUBBLES_PASSWORD`, `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`.
 - [ ] `ANTHROPIC_API_KEY` is set (the boat lookup uses it): confirm the account's spend limit covers the advisor's caps.
@@ -149,7 +153,8 @@ accounts, devices, money, approval or judgment.
 
 - [ ] `ADVISOR_NUMBER` (`+1` and ten digits).
 - [ ] B2: `ADVISOR_AUTO_PUBLISH_AFTER` `0`. B1 (optional): `ADVISOR_VISION_PROVIDERS` `claude`. B3: `BLUEBUBBLES_PRIVATE_API` `true` only if you enabled it.
-- [ ] Leave the cap variables unset: the defaults are the pilot caps (item 8).
+- [ ] Leave the cap variables unset: the defaults are the pilot caps (item 8). The hardening adds three, also best left at their defaults: `ADVISOR_GLOBAL_DAILY_COLD` (50 texts a day we start to numbers that never texted us: web link codes, crew invitations, admin invites), `ADVISOR_GLOBAL_DAILY_LLM_WEB` (400 of the 2,000 daily model calls for the web chat) and `ADVISOR_DAILY_LLM_PER_IP` (30 web model calls per address a day).
+- [ ] B7: `WORKERS_INVOCATION_LOGS` `false` if you chose it.
 - [ ] `DATA_RUNNER` is set (the data jobs use it).
 - [ ] The switches only in the order of § Flip order; `ADVISOR_ADMIN_CONTACT_ID` in H.
 
@@ -176,7 +181,7 @@ accounts, devices, money, approval or judgment.
 - [ ] Rules: `node scripts/advisor/import-rules.mjs --apply`; Admin › Rules › `california-central`: open each pilot species row's source, then "Checked, no change" or edit (item 6).
 - [ ] Health shows the publishing quota (item 12); `node scripts/advisor/preflight.mjs --stage dark` fails nothing but item 11 (no skippers yet) and, until TA-C5 merges, item 16.
 - [ ] Flip step 3 (replies on).
-- [ ] From your phone: HELP, "what's biting", a planning question, a fish photo, SEND ME MY DATA (open the link), then FORGET ME and DELETE; the contact is gone.
+- [ ] From your phone: HELP, "what's biting", a planning question, a fish photo, SEND ME MY DATA (open the link: a page at `/my-data` with a Download button), then FORGET ME and DELETE; the contact is gone (and delete the conversation on the relay, C).
 - [ ] Text "hi" again (a fresh contact) and make it the admin-test contact:
 
   ```bash
@@ -187,7 +192,7 @@ accounts, devices, money, approval or judgment.
   ```
 
 - [ ] Seed one review: text "I run the Test Boat out of Morro Bay" and answer its questions; the admin-test text arrives; reject the registration in Admin › Queue (a rejected boat has no page).
-- [ ] Invite 3–5 skippers (Admin › Skippers › Invite); each finishes registration and photo consent by text; verify each boat; write the boat names in § Pilot.
+- [ ] Invite 3–5 skippers (Admin › Skippers › Invite); each finishes registration and photo consent by text; verify each boat; write the boat names in § Pilot. Crew: once a boat is verified, its owner texts "add my deckhand <number>"; the deckhand joins only by replying YES.
 - [ ] The Instagram profile live (name, bio, the link `https://skippercast.com/text?s=ig`, highlights).
 - [ ] `node scripts/advisor/preflight.mjs` (live stage) fails nothing; tag the release `v0.4.0` on the launch commit and push the tag.
 - [ ] Flip step 4 on the first day a skipper report is published; publish one test post (Admin › Posts › Post now) and delete it on Instagram and the Page by hand.

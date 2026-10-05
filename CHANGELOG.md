@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Harden the Text Advisor before launch: crew join only after replying YES (and only verified boats can invite), texts to numbers that never wrote to us are capped per number, per sender, per address and per day, the web chat has its own AI budget, unconfirmed boats' pages show no links, morning Stories trust only iMessage or upload-link photos from the owner or confirmed crew, upload and data links keep their token out of URLs and logs, the relay keeps messages at most 30 days and off iCloud, and every advisor secret has a rotation procedure (with a phone-number re-key script).
+
 - Let the Text Advisor read photos with the owner's own Hermes vision service when it is set up, falling back to Claude whenever Hermes is slow or down, with a conformance script the Hermes side runs first; admin Health shows each vision provider's setup, skips and last answer.
 
 - Get the Text Advisor ready to launch: a preflight script that checks a deployment against the launch checklist, a live prompt eval that also covers the daily answers and post captions, a runbook for unanswered messages, and the owner's launch to-do with the exact switch-on order.
