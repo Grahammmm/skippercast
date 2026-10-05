@@ -30,7 +30,7 @@ variable change, not a code change:
 
 | Variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install, fleet registry | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
 | `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
@@ -100,7 +100,7 @@ Steps:
   shorten their `retention-days` if the storage bill appears.
 - Secrets used by jobs on the box: `R2_PUBLISH_TOKEN` (or the deploy token as fallback),
   `R2_ADVISOR_TOKEN` (the advisor media job, below), `AISSTREAM_API_KEY` (the fleet AIS
-  listener, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the box patched and its SSH key-only; `docs/legal/threat-model.md`
+  listener, below), `GOOGLE_PLACES_API_KEY` (the fleet registry run, below), `CLOUDFLARE_ACCOUNT_ID` and the Actions `GITHUB_TOKEN`. Keep the box patched and its SSH key-only; `docs/legal/threat-model.md`
   lists it as an asset once it exists.
 
 ## The advisor media job
@@ -160,6 +160,19 @@ newest revisions for rollback. The raw store lives outside any checkout in
 
 The unit caps its memory at 512 MB (`MemoryMax`). Restart, logs and
 rollback: [fleet AIS listener down](runbooks/fleet-ais-down.md).
+
+## The fleet registry run
+
+`fleet-registry.yml` (CF-18, [design.md § 9](../plans/charter-fleet/design.md#9-ingest-and-refresh))
+runs the charter fleet registry pipeline (`python -m skippercast.fleet run`: discover, resolve,
+enrich-code, ingest, refresh) every Monday at 09:47 UTC and on dispatch (`region`, `sink`, `steps`,
+and `run_id` to resume a run). Like the listener install it needs `ENABLE_FLEET=true` and a
+non-empty `DATA_RUNNER`, and runs only from `main`. Its token reads the repository and requests an
+OIDC identity (`id-token: write`) for `/api/fleet/jobs/*`; the Worker answers those routes only
+while `FLEET_ENABLED` is on. Run state lives in `~/.local/share/skippercast/fleet` (staging runs:
+`fleet-staging`), never in the checkout. `GOOGLE_PLACES_API_KEY` (secret, owner step, optional)
+reaches only the pipeline step; without it the Places adapter skips. First run, reruns, staging
+runs and publishing coverage: [fleet registry run](runbooks/fleet-registry.md).
 
 ## CI readiness gate
 
