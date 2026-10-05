@@ -1,0 +1,113 @@
+name: Fleet registry
+
+# The charter fleet registry pipeline (CF-18; docs/plans/charter-fleet/design.md section 9):
+# weekly on our own runner, `python -m skippercast.fleet run` chains discover -> resolve ->
+# enrich-code -> ingest -> refresh for one region and writes the operations to the registry
+# through /api/fleet/jobs/registry with a short-lived GitHub identity (server/routes/fleet.ts
+# FLEET_JOB_SCOPE), or to the box's staging SQLite with sink=staging. Run state, the HTTP cache
+# and report.json live on the box outside any checkout; the summary gets the run's counts and
+# the charter-identity coverage statuses (counts only, never registry rows). A dispatch can
+# pick the region, sink and steps, and resume an earlier run by id. No pull_request trigger,
+# so fork code never runs on Hermes. First run, reruns and staging runs:
+# docs/operations/runbooks/fleet-registry.md.
+on:
+  schedule:
+    - cron: "47 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      region:
+        description: Fleet region id (regions/<id>/fleet.json)
+        required: true
+        default: CA
+        type: string
+      sink:
+        description: "worker writes the registry (D1); staging writes a SQLite registry on the box"
+        required: true
+        default: worker
+        type: choice
+        options:
+          - worker
+          - staging
+      steps:
+        description: "Comma-separated subset of discover,resolve,enrich-code,ingest,refresh; empty runs them all"
+        required: false
+        default: ""
+        type: string
+      run_id:
+        description: "Resume this run (YYYYMMDDTHHMMSSZ-xxxxxx, from an earlier run's summary; same sink); empty starts a new run"
+        required: false
+        default: ""
+        type: string
+
+permissions: {}
+
+# One registry run at a time; a second dispatch or the schedule waits for the first.
+concurrency:
+  group: fleet-registry
+  cancel-in-progress: false
+
+jobs:
+  run:
+    # Dark until the fleet workflows are enabled, never on a GitHub-hosted runner (run state lives
+    # on the box), and only from main, so the Places key never reaches unreviewed code (threat
+    # model section 10.4 row E; docs/operations/runners.md).
+    if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 120
+    permissions:
+      contents: read   # the checkout
+      id-token: write  # short-lived identity for /api/fleet/jobs (server/job-auth.ts pins this workflow)
+    env:
+      # The schedule has no inputs: it runs the whole pipeline for FLEET_REGION (default CA) into the registry.
+      REGION: ${{ inputs.region || vars.FLEET_REGION || 'CA' }}
+      SINK: ${{ inputs.sink || 'worker' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install the fleet extra
+        run: python -m pip install -e ".[fleet]"
+      - name: Locate the run state
+        run: |
+          set -euo pipefail
+          # Run state, the HTTP cache and staging databases live outside any checkout (design.md section 4).
+          var="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          # Staging runs keep their own run directories: refresh counts every complete discovery run
+          # under <var>/<region>/runs towards `vanished`, so a staging run there would count as a
+          # registry run that missed each registry boat.
+          if [ "$SINK" = staging ]; then var="$var-staging"; fi
+          echo "SKIPPERCAST_FLEET_VAR=$var" >> "$GITHUB_ENV"
+      - name: Run the registry pipeline
+        env:
+          STEPS: ${{ inputs.steps }}
+          RUN_ID: ${{ inputs.run_id }}
+          # Only in this step's environment; the google-places adapter skips itself without it.
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(python -c 'from skippercast.fleet.runs import new_run_id; print(new_run_id())')
+          fi
+          # Printed first, so a failed run can be resumed with run_id=<this id>.
+          echo "Fleet registry run \`$RUN_ID\`: region \`$REGION\`, sink \`$SINK\`, steps \`${STEPS:-all}\`" | tee -a "$GITHUB_STEP_SUMMARY"
+          args=(run --region "$REGION" --sink "$SINK" --run-id "$RUN_ID")
+          if [ -n "$STEPS" ]; then
+            args+=(--steps "$STEPS")
+          fi
+          # The CLI prints the run id, its directory, status and per-step counts only (no registry rows).
+          python -m skippercast.fleet "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Report charter identity coverage
+        run: |
+          set -euo pipefail
+          # Counts-only statuses per coastal region; never --apply here (region.json changes go through a PR).
+          {
+            echo '### charter-identity coverage (apply in a PR: docs/operations/runbooks/fleet-registry.md)'
+            echo '```json'
+            python -m skippercast.fleet coverage-status --region "$REGION" --sink "$SINK"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
