@@ -124,7 +124,7 @@ Repository → **Settings → Secrets and variables → Actions**. `gh secret se
 | Secret | `CF_ACCESS_CLIENT_ID` | the service token's Client ID (step 7.6) |
 | Secret | `CF_ACCESS_CLIENT_SECRET` | the service token's Client Secret (step 7.6) |
 | Secret | `ADVISOR_WEBHOOK_TOKEN` | the webhook token (step 8.1) |
-| Secret | `ADVISOR_PHONE_KEY` | if not set already: `openssl rand -base64 32` (encrypts stored numbers; never change it once contacts exist) |
+| Secret | `ADVISOR_PHONE_KEY` | if not set already: `openssl rand -base64 32` (hashes and encrypts stored numbers; once contacts exist, change it only with the re-key procedure in [secrets rotation](secrets-rotation.md#advisor_phone_key-text-advisor)) |
 | Variable | `ADVISOR_NUMBER` | the number in E.164, `+1` and ten digits |
 | Variable | `BLUEBUBBLES_PRIVATE_API` | `true` only if you enabled the Private API (step 6.6) |
 
