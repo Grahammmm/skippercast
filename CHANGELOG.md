@@ -6,6 +6,7 @@
 
 - Limit verified classified-policy updates to complete affected regions, including previous scopes and neighbors; uncertain changes retain the full-coast planner.
 - Bind every coastal region's charter identity coverage to the new charter fleet registry (`fleet-registry`, superseding `operator-identities`) and show it as registry counts only; with the registry still empty, each region now reads "missing". Add the fleet pipeline's `discover`, `resolve`, `ingest`, `refresh` and `run` steps and `coverage-status` (all dark behind `FLEET_ENABLED`).
+- Add admin-only charter fleet activity layers to the map behind `FLEET_MAP_ENABLED` (off): activity stops sized by dwell, trip tracks coloured by segment and a heat layer, with boat, port, class, trip type, activity, date and season filters; every card says the activity is inferred from movement.
 - Enable reviewed, unranked original 5 m Monterey rock habitat in r01 with prior-survey native exclusions, neighboring planning holds and fresh spatial screens; no new measurement, ranking or precise fishing export.
 
 - Deduplicate interpreted habitat from overlapping survey pairs in reviewed source order, preserving earlier native outlines and rejecting stale publication receipts after a priority change.
