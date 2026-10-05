@@ -45,8 +45,10 @@
 // job_state advisor.flow.<contact_id>; consent records consent_photos_at with
 // the message id, or consent_revoked_at; post_revoke rejects the boat's draft
 // and approved posts (TA-S1);
-// crew_add links (or creates) the crew contact and texts it the invite through
-// its own channel; crew_remove sets removed_at and clears the boat. Verifying
+// crew_add (hardening) finds or creates the contact, records a pending
+// invitation and texts it through its own channel; crew_accept (its YES within
+// 72 h) makes the link, crew_decline (NO) silences the boat for 30 days;
+// crew_remove sets removed_at and clears the boat. Verifying
 // or rejecting a new_skipper review by text now also texts the boat's owner.
 //
 // TA-I2: skipper reports (05). report_draft inserts the pending report (a
@@ -104,7 +106,9 @@ import {ingestInboundMedia} from './media.ts';
 import {awaitingDerived, requestMediaJob} from './media.ts';
 import {fetchMediaByRef as adapterFetchMediaByRef} from './channels/index.ts';
 // TA-I1: the skipper flow's state key and the crew invite.
-import {flowKey} from './intake/skippers.ts';
+import {flowKey, isVerified, crewDeclined, readCrewInvite, crewInviteKey, crewDeclineKey, CREW_INVITE_TTL_MS} from './intake/skippers.ts';
+import type {CrewInvite} from './intake/skippers.ts';
+import {MAX_CREW} from './tools/add_crew.ts';
 // TA-I2: reports, the media queue and the one-time lines.
 import {insertDraft, publishReport, withdrawReport, applyEdit, postsFor, ONCE_PREFIX} from './intake/reports.ts';
 // TA-I3: the AC-1 offer state and the angler's shared photo.
@@ -346,6 +350,12 @@ async function applyActions(env: Env, deps: ConsumerDeps, contact: AdvisorContac
       case 'crew_remove':
         await applyCrewRemove(env, deps, contact, action.boatId, action.contactId);
         break;
+      case 'crew_accept':
+        sends += await applyCrewAccept(env, deps, contact, message.id, index, action);
+        break;
+      case 'crew_decline':
+        sends += await applyCrewDecline(env, deps, contact, message.id, index, action);
+        break;
       // ---- TA-I2: reports, the media queue, auto-publish ----
       case 'report_draft':
         if (ID.test(String(action.report?.id)) && ID.test(String(action.report?.boat_id))) await insertDraft(db, contact, message.id, action.report, action.publish === true, clock(deps), String(index));
@@ -530,8 +540,9 @@ async function applyBoatCreate(env: Env, deps: ConsumerDeps, contact: AdvisorCon
       VALUES(?,?,?,?,?,?,?,?,?,?,'pending',?,?) ON CONFLICT(id) DO NOTHING`)
       .bind(boat.id, boat.slug, boat.name.trim(), text(boat.landing, 60), boat.port, boat.region, text(boat.instagram, 30),
         boat.booking_url && /^https:\/\//.test(boat.booking_url) ? text(boat.booking_url, 300) : null, text(boat.phone_public, 16), contact.id, at, at),
-    // A crew member who registers a boat of their own leaves the crew (05 § Crew: one boat per contact).
+    // A crew member who registers a boat of their own leaves the crew (05 § Crew: one boat per contact), and a pending invitation goes.
     db.prepare('UPDATE advisor_crew SET removed_at=? WHERE contact_id=? AND removed_at IS NULL').bind(at, contact.id),
+    db.prepare('DELETE FROM job_state WHERE key=?').bind(crewInviteKey(contact.id)),
     db.prepare(`UPDATE advisor_contacts SET role=CASE WHEN role='admin-test' THEN role ELSE 'skipper' END,boat_id=?,home_port=COALESCE(home_port,?),updated_at=? WHERE id=?`)
       .bind(boat.id, boat.port, at, contact.id),
   ]);
@@ -567,31 +578,89 @@ async function applyConsent(env: Env, deps: ConsumerDeps, contact: AdvisorContac
 }
 
 /**
- * add_crew (05 § Crew, SK-3): the crew contact by phone hash (an existing one
- * keeps its channel, language and history; a new one starts as an SMS contact
- * in the skipper's language with source 'skipper-invite'), made crew on the
- * boat (any earlier active crew link ends), the advisor_crew row with
- * added_by, and the invite texted through the crew contact's own channel.
+ * add_crew (05 § Crew, SK-3; hardening): an invitation, not a link. Only the
+ * owner of a verified boat. The contact by phone hash (an existing one keeps
+ * its channel, language and history; a new one starts as an SMS contact in the
+ * skipper's language with source 'skipper-invite'); nothing is invited when it
+ * is stopped or blocked, owns a boat, is already crew on this boat or said NO
+ * to this boat in the last 30 days. Otherwise the pending invitation is
+ * written (job_state advisor.crewinvite.<id>, 72 h; a newer one replaces it)
+ * and texted through the contact's own channel. Its role, boat_id and any crew
+ * link to another boat are untouched until crew_accept.
  */
 async function applyCrewAdd(env: Env, deps: ConsumerDeps, skipper: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'crew_add'}>): Promise<number> {
-  const db = env.DB!, at = iso(deps);
+  const db = env.DB!, at = iso(deps), now = clock(deps);
   if (!/^[0-9a-f]{64}$/.test(action.phoneHash) || typeof action.phoneEnc !== 'string' || !action.phoneEnc || !await ownsBoat(db, skipper.id, action.boatId)) return 0;
+  const boat = await db.prepare('SELECT name,status FROM advisor_boats WHERE id=?').bind(action.boatId).first<{name: string; status: string}>();
+  if (!boat || !isVerified(boat.status)) return 0;
+  const invite = await outboundId(inId, `${index}.invite`);
+  // A retried message finds its invitation already handled (sendOnce skips a sent row).
+  const retry = Boolean(await db.prepare('SELECT 1 AS x FROM advisor_messages WHERE id=?').bind(invite).first());
   const crew = await db.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,language,source,last_seen_at,created_at,updated_at) VALUES(?,?,?,'sms',?,'skipper-invite',?,?,?)
     ON CONFLICT(phone_hash) DO UPDATE SET updated_at=advisor_contacts.updated_at RETURNING *`)
     .bind(randomId(), action.phoneHash, action.phoneEnc, lang(skipper.language), at, at, at).first<AdvisorContactRow>();
   if (!crew || crew.id === skipper.id || crew.status !== 'active') return 0;
   if (await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE owner_contact_id=?').bind(crew.id).first()) return 0;
-  await db.batch([
-    db.prepare('UPDATE advisor_crew SET removed_at=? WHERE contact_id=? AND boat_id<>? AND removed_at IS NULL').bind(at, crew.id, action.boatId),
-    db.prepare(`INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at) VALUES(?,?,?,?)
-      ON CONFLICT(boat_id,contact_id) DO UPDATE SET added_by=excluded.added_by,added_at=excluded.added_at,removed_at=NULL`).bind(action.boatId, crew.id, skipper.id, at),
-    db.prepare(`UPDATE advisor_contacts SET role=CASE WHEN role='admin-test' THEN role ELSE 'crew' END,boat_id=?,updated_at=? WHERE id=?`).bind(action.boatId, at, crew.id),
-  ]);
-  const boat = await db.prepare('SELECT name FROM advisor_boats WHERE id=?').bind(action.boatId).first<{name: string}>();
+  if (await db.prepare('SELECT 1 AS x FROM advisor_crew WHERE boat_id=? AND contact_id=? AND removed_at IS NULL').bind(action.boatId, crew.id).first()) return 0;
+  if (await crewDeclined(db, action.boatId, crew.id, now)) { advisorLog('info', 'advisor_crew_invite_suppressed', {count: 1}); return 0; }
+  if (!retry) {
+    const pending: CrewInvite = {boat_id: action.boatId, added_by: skipper.id, invited_at: at, expires_at: now + CREW_INVITE_TTL_MS};
+    await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+      .bind(crewInviteKey(crew.id), JSON.stringify(pending), at).run();
+  }
   const l = lang(crew.language);
-  const text = t(l, 'crew_invite', {skipper: skipper.display_name || t(l, 'crew_invite_skipper'), boat: boat?.name ?? ''});
+  const text = t(l, 'crew_invite', {skipper: skipper.display_name || t(l, 'crew_invite_skipper'), boat: boat.name});
+  advisorLog('info', 'advisor_crew_invited', {count: 1});
+  return sendText(env, deps, crew, inId, `${index}.invite`, text, (deps.channelFor ?? defaultChannelFor)(env, crew));
+}
+
+/**
+ * crew_accept (the invitee's YES within 72 h): the invitation must still be
+ * pending for this boat, the boat still verified with an owner, the contact
+ * still own no boat, and the boat under MAX_CREW. Then any other crew link
+ * ends, advisor_crew is upserted with the inviter as added_by, the contact
+ * becomes crew on the boat, and the invitation goes. The outcome is texted.
+ */
+async function applyCrewAccept(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'crew_accept'}>): Promise<number> {
+  const db = env.DB!, at = iso(deps), now = clock(deps), l = lang(action.language ?? contact.language);
+  if (!ID.test(String(action.boatId))) return 0;
+  const invite = await readCrewInvite(db, contact.id);
+  const boat = await db.prepare('SELECT name,status,owner_contact_id FROM advisor_boats WHERE id=?').bind(action.boatId).first<{name: string; status: string; owner_contact_id: string | null}>();
+  const crewCount = await db.prepare('SELECT COUNT(*) AS n FROM advisor_crew WHERE boat_id=? AND removed_at IS NULL AND contact_id<>?').bind(action.boatId, contact.id).first<{n: number}>();
+  const ownsOne = await db.prepare('SELECT 1 AS x FROM advisor_boats WHERE owner_contact_id=?').bind(contact.id).first();
+  if (!invite || invite.boat_id !== action.boatId || !(invite.expires_at > now) || !boat || !isVerified(boat.status) || !boat.owner_contact_id
+    || ownsOne || (crewCount?.n ?? 0) >= MAX_CREW || contact.status !== 'active') {
+    await db.prepare('DELETE FROM job_state WHERE key=?').bind(crewInviteKey(contact.id)).run();
+    return sendText(env, deps, contact, inId, index, t(l, 'crew_invite_expired'));
+  }
+  await db.batch([
+    db.prepare('UPDATE advisor_crew SET removed_at=? WHERE contact_id=? AND boat_id<>? AND removed_at IS NULL').bind(at, contact.id, action.boatId),
+    db.prepare(`INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at) VALUES(?,?,?,?)
+      ON CONFLICT(boat_id,contact_id) DO UPDATE SET added_by=excluded.added_by,added_at=excluded.added_at,removed_at=NULL`).bind(action.boatId, contact.id, invite.added_by, at),
+    db.prepare(`UPDATE advisor_contacts SET role=CASE WHEN role='admin-test' THEN role ELSE 'crew' END,boat_id=?,updated_at=? WHERE id=?`).bind(action.boatId, at, contact.id),
+    db.prepare('DELETE FROM job_state WHERE key=? OR key=?').bind(crewInviteKey(contact.id), crewDeclineKey(action.boatId, contact.id)),
+  ]);
+  contact.boat_id = action.boatId;
+  if (contact.role !== 'admin-test') contact.role = 'crew';
   advisorLog('info', 'advisor_crew_added', {count: 1});
-  return sendText(env, deps, {...crew, role: 'crew', boat_id: action.boatId}, inId, `${index}.invite`, text, (deps.channelFor ?? defaultChannelFor)(env, crew));
+  return sendText(env, deps, contact, inId, index, t(l, 'crew_joined', {boat: boat.name}));
+}
+
+/** crew_decline: NO clears the invitation and silences that boat's invitations for 30 days; an expired one is only cleared. */
+async function applyCrewDecline(env: Env, deps: ConsumerDeps, contact: AdvisorContactRow, inId: string, index: number, action: Extract<Action, {type: 'crew_decline'}>): Promise<number> {
+  const db = env.DB!, at = iso(deps);
+  if (!ID.test(String(action.boatId))) return 0;
+  const invite = await readCrewInvite(db, contact.id);
+  if (!invite || invite.boat_id !== action.boatId) return 0;
+  if (action.expired) { await db.prepare('DELETE FROM job_state WHERE key=?').bind(crewInviteKey(contact.id)).run(); return 0; }
+  const boat = await db.prepare('SELECT name FROM advisor_boats WHERE id=?').bind(action.boatId).first<{name: string}>();
+  await db.batch([
+    db.prepare('DELETE FROM job_state WHERE key=?').bind(crewInviteKey(contact.id)),
+    db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+      .bind(crewDeclineKey(action.boatId, contact.id), '1', at),
+  ]);
+  advisorLog('info', 'advisor_crew_declined', {count: 1});
+  return sendText(env, deps, contact, inId, index, t(lang(action.language ?? contact.language), 'crew_declined', {boat: boat?.name ?? ''}));
 }
 
 /** remove_crew (05 § Crew): removed_at on the crew row (kept for audit); the contact loses the boat and is an angler again. */

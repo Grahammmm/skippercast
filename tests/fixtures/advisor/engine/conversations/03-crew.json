@@ -1,6 +1,6 @@
 {
   "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
-  "description": "Golden 3 (TA-I1 part): the owner of a verified boat adds a deckhand by number; the tool result never echoes the number; the invite (with the STOP line) goes to the deckhand's number through the channel; the deckhand's reply is a normal turn whose brief shows them as crew on the boat; the owner removes them and they are an angler again. TA-I2: before the removal, the deckhand texts a count-board photo; it becomes the boat's report (contact_id the deckhand, boat b-rita), the board stays private (no photo consent), and the deckhand's Y publishes it with verified 1 (the boat is verified).",
+  "description": "Golden 3 (TA-I1 part): the owner of a verified boat invites a deckhand by number; the tool result never echoes the number; the invitation (YES/NO and the STOP line) goes to the deckhand's number through the channel and links nothing yet; a question before answering is a normal turn whose brief says an invitation is pending; the deckhand's YES makes them crew; their next reply is a normal turn whose brief shows them as crew on the boat; the owner removes them and they are an angler again. TA-I2: before the removal, the deckhand texts a count-board photo; it becomes the boat's report (contact_id the deckhand, boat b-rita), the board stays private (no photo consent), and the deckhand's Y publishes it with verified 1 (the boat is verified).",
   "contact": {
     "role": "skipper",
     "boat_id": "b-rita",
@@ -47,7 +47,7 @@
             "content": [
               {
                 "type": "text",
-                "text": "Done. I texted him an invite; anything he sends will post under the Rita G."
+                "text": "Done. I texted him an invitation; he joins the crew once he replies YES."
               }
             ],
             "stop_reason": "end_turn",
@@ -61,7 +61,7 @@
       "expect": {
         "intent": "skipper.crew",
         "reply_contains": [
-          "I texted him an invite"
+          "I texted him an invitation"
         ],
         "actions": [
           "crew_add",
@@ -76,9 +76,62 @@
           {
             "to": "+18055550142",
             "contains": [
-              "Captain Dave added you as crew on Rita G. Text me the day's count board or catch photos and they'll post under the boat. Reply STOP to opt out."
+              "Captain Dave invited you to join Rita G as crew: your count boards and catch photos would post under the boat. Reply YES to join or NO to decline. Reply STOP to opt out."
             ]
           }
+        ],
+        "rows": [
+          {
+            "sql": "SELECT c.role, c.boat_id, c.source, (SELECT COUNT(*) FROM advisor_crew) AS crew_rows FROM advisor_contacts c WHERE c.source='skipper-invite'",
+            "row": {
+              "role": "angler",
+              "boat_id": null,
+              "source": "skipper-invite",
+              "crew_rows": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "from": "+18055550142",
+      "in": "Who is this?",
+      "model": [
+        {
+          "status": 200,
+          "body": {
+            "content": [
+              {
+                "type": "text",
+                "text": "SkipperCast, the fishing report line. Captain Dave invited you to the Rita G crew; reply YES to join or NO to decline."
+              }
+            ],
+            "stop_reason": "end_turn",
+            "usage": {
+              "input_tokens": 50,
+              "output_tokens": 20
+            }
+          }
+        }
+      ],
+      "expect": {
+        "intent": "chat",
+        "brief_contains": [
+          "- role: angler",
+          "- crew invitation pending from Rita G: they join only by replying YES"
+        ]
+      }
+    },
+    {
+      "from": "+18055550142",
+      "in": "YES",
+      "expect": {
+        "intent": "crew.accept",
+        "reply_contains": [
+          "You're on the Rita G crew. Text me the day's count board or catch photos and they'll post under the boat."
+        ],
+        "actions": [
+          "crew_accept"
         ],
         "rows": [
           {

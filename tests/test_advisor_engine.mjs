@@ -250,8 +250,8 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
 dbTest('stage 2 extension point: a registered flow runs before the model', async t2 => {
   const {sql, env} = setup();
   seen(sql);
-  // TA-I1's skipper flow, TA-I2's report flow, TA-I3's angler flow and TA-A1's daily pre-router are registered at import; the test flow goes after them and only it is removed.
-  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports', 'anglers', 'daily']);
+  // the crew invitation answer (hardening), TA-I1's skipper flow, TA-I2's report flow, TA-I3's angler flow and TA-A1's daily pre-router are registered at import; the test flow goes after them and only it is removed.
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['crew-invite', 'skipper', 'reports', 'anglers', 'daily']);
   STAGE_TWO_FLOWS.push({name: 'test', run: async f => f.text === 'y' ? {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'} : null});
   t2.after(() => { STAGE_TWO_FLOWS.splice(STAGE_TWO_FLOWS.findIndex(f => f.name === 'test'), 1); });
   assert.deepEqual(await run(env, contactRow(sql), inbound(sql, 'y')), {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'});

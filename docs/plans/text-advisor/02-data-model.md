@@ -384,6 +384,13 @@ As built (TA-S3): `advisor.collab.checked_at` (the hourly collaborator-invite
 read's throttle, an ISO time). `advisor_posts.collab_status` is set to
 `invited` when a post goes to Instagram with collaborators and to `accepted` or
 `declined` from Meta's `invite_status` (09 § As built (TA-S3)).
+As built (hardening, 05 § As built (crew consent)): `advisor.crewinvite.<contact
+id>` (a pending crew invitation, `{boat_id, added_by, invited_at, expires_at}`,
+72 hours; one per contact, a newer invitation replaces it) and
+`advisor.crewdecline.<boat id>.<contact id>` (a NO: that boat's invitations to
+that contact are dropped while `updated_at` is under 30 days old). Both age out
+with the 30-day `job_state` rule and go with "forget me"; `advisor_crew` holds
+accepted links only.
 
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 

@@ -382,5 +382,68 @@ export async function skipperFlow(f: FlowContext): Promise<EngineResult | null> 
   return null;
 }
 
-/** The flows TA-I1 registers in engine.ts STAGE_TWO_FLOWS. */
-export const SKIPPER_FLOWS: readonly Flow[] = [{name: 'skipper', run: skipperFlow}];
+// ---- crew invitations (05 § Crew, As built (hardening)) ------------------------------------
+//
+// add_crew no longer makes anyone crew. The consumer's crew_add records a
+// pending invitation in job_state advisor.crewinvite.<contact_id> (one per
+// contact: a newer invitation replaces an older one) and texts it. The contact
+// becomes crew (role, boat_id, the advisor_crew row) only when it replies YES
+// or SÍ within 72 hours (crew_accept); a crew link to another boat is untouched
+// until then. NO declines (crew_decline) and writes
+// advisor.crewdecline.<boat_id>.<contact_id>: that boat's invitations to that
+// contact are dropped for 30 days.
+
+export const CREW_INVITE_PREFIX = 'advisor.crewinvite.';
+export const CREW_DECLINE_PREFIX = 'advisor.crewdecline.';
+export const CREW_INVITE_TTL_MS = 72 * 3600000;        // the YES must come within 72 h
+export const CREW_DECLINE_MS = 30 * 24 * 3600000;      // a NO silences that boat's invitations for 30 days
+/** job_state key of a contact's pending crew invitation. */
+export const crewInviteKey = (contactId: string): string => CREW_INVITE_PREFIX + contactId;
+/** job_state key recording that a contact declined a boat's invitation. */
+export const crewDeclineKey = (boatId: string, contactId: string): string => `${CREW_DECLINE_PREFIX}${boatId}.${contactId}`;
+/** A pending crew invitation as job_state stores it (no number, no name). */
+export interface CrewInvite {boat_id: string; added_by: string; invited_at: string; expires_at: number}
+
+/** NO to a crew invitation, in either language. */
+export const NO_WORDS: ReadonlySet<string> = new Set(['no', 'n', 'nope', 'nah', 'no thanks', 'no thank you', 'decline', 'no gracias', 'no, gracias']);
+export const isNo = (text: string): boolean => NO_WORDS.has(norm(text));
+
+/** The contact's pending crew invitation (expired ones included, so the reply can say so), or null. */
+export async function readCrewInvite(db: D1Database, contactId: string): Promise<CrewInvite | null> {
+  const row = await db.prepare('SELECT value FROM job_state WHERE key=?').bind(crewInviteKey(contactId)).first<{value: string}>();
+  if (!row) return null;
+  try {
+    const v = JSON.parse(row.value);
+    return v && typeof v.boat_id === 'string' && typeof v.added_by === 'string' && typeof v.invited_at === 'string' && typeof v.expires_at === 'number' ? v as CrewInvite : null;
+  } catch { return null; }
+}
+
+/** True while a NO from this contact to this boat is less than 30 days old. */
+export async function crewDeclined(db: D1Database, boatId: string, contactId: string, now: number): Promise<boolean> {
+  const row = await db.prepare('SELECT updated_at FROM job_state WHERE key=?').bind(crewDeclineKey(boatId, contactId)).first<{updated_at: string}>();
+  return Boolean(row) && now - Date.parse(row!.updated_at) < CREW_DECLINE_MS;
+}
+
+/**
+ * The answer to a pending crew invitation (before the skipper flow, so a YES
+ * here is never read as photo consent): YES/SÍ accepts and NO declines through
+ * the consumer, which texts the outcome; an expired invitation answered YES is
+ * cleared and said so. Anything else falls through and the invitation stays.
+ */
+export async function crewInviteFlow(f: FlowContext): Promise<EngineResult | null> {
+  if (!f.text || !f.contact.phone_enc) return null;
+  const yes = isYes(f.text), no = !yes && isNo(f.text);
+  if (!yes && !no) return null;
+  const invite = await readCrewInvite(f.db, f.contact.id);
+  if (!invite) return null;
+  if (!(invite.expires_at > f.now)) {
+    if (!yes) return null;
+    return {actions: [{type: 'crew_decline', boatId: invite.boat_id, expired: true}, say(f.settings, f.language, 'crew_invite_expired')], intent: 'crew.expired'};
+  }
+  return yes
+    ? {actions: [{type: 'crew_accept', boatId: invite.boat_id, language: f.language}], intent: 'crew.accept'}
+    : {actions: [{type: 'crew_decline', boatId: invite.boat_id, language: f.language}], intent: 'crew.decline'};
+}
+
+/** The flows TA-I1 registers in engine.ts STAGE_TWO_FLOWS (the crew invitation answer first). */
+export const SKIPPER_FLOWS: readonly Flow[] = [{name: 'crew-invite', run: crewInviteFlow}, {name: 'skipper', run: skipperFlow}];

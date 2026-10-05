@@ -195,8 +195,20 @@
       "es": "Solo el dueño del barco puede cambiar eso."
     },
     "crew_invite": {
-      "en": "{skipper} added you as crew on {boat}. Text me the day's count board or catch photos and they'll post under the boat. Reply STOP to opt out.",
-      "es": "{skipper} te agregó como tripulante de {boat}. Mándame la pizarra del día o fotos de la pesca y saldrán a nombre del barco. Responde STOP para salir."
+      "en": "SkipperCast here. {skipper} invited you to join {boat} as crew: your count boards and catch photos would post under the boat. Reply YES to join or NO to decline. Reply STOP to opt out.",
+      "es": "Aquí SkipperCast. {skipper} te invitó a unirte a {boat} como tripulante: tus pizarras y fotos de la pesca saldrían a nombre del barco. Responde SÍ para unirte o NO para rechazar. Responde STOP para salir."
+    },
+    "crew_joined": {
+      "en": "You're on the {boat} crew. Text me the day's count board or catch photos and they'll post under the boat.",
+      "es": "Ya eres tripulante de {boat}. Mándame la pizarra del día o fotos de la pesca y saldrán a nombre del barco."
+    },
+    "crew_declined": {
+      "en": "OK, you won't be added to {boat}. You won't get another invitation from that boat for 30 days.",
+      "es": "Está bien, no te agregaremos a {boat}. No recibirás otra invitación de ese barco en 30 días."
+    },
+    "crew_invite_expired": {
+      "en": "That crew invitation is no longer open. Ask the skipper to send a new one.",
+      "es": "Esa invitación de tripulante ya no está abierta. Pídele al capitán que te mande otra."
     },
     "crew_invite_skipper": {
       "en": "The skipper",

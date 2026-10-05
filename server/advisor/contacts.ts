@@ -207,6 +207,9 @@ export async function forgetContact(db: D1Database, bucket: R2Bucket | undefined
     statements.push(db.prepare(`INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'skipper',?,'owner_forgotten','open',?)
       ON CONFLICT(id) DO UPDATE SET status='open',opened_at=excluded.opened_at,decided_at=NULL,decided_by=NULL`).bind(await reviewId('skipper', boat, 'owner_forgotten'), boat, at));
   }
+  // Hardening: a pending crew invitation and the record of declined ones (intake/skippers.ts crewInviteKey, crewDeclineKey).
+  statements.push(db.prepare('DELETE FROM job_state WHERE key=?').bind(`advisor.crewinvite.${id}`),
+    db.prepare("DELETE FROM job_state WHERE key LIKE 'advisor.crewdecline.%' AND substr(key, -length(?))=?").bind(`.${id}`, `.${id}`));
   const changes = (await db.batch(statements)).map(r => r.meta.changes ?? 0);
   const n = (i: number) => changes[i] ?? 0;
   return {reviews: n(0), reportEdits: n(1), crew: n(2), media: n(4), messages: n(5), reportsDetached: n(6), boatsOrphaned: n(7), contact: n(8), posts: postIds.length ? n(12) : 0, r2Objects};
@@ -231,6 +234,10 @@ export async function exportContact(db: D1Database, contactId: string) {
     reports: await all('SELECT id,boat_id,region,port,report_date,trip_type,anglers,counts_json,source,status,notes,version,confirmed_at,published_at,created_at,updated_at FROM advisor_reports WHERE contact_id=? ORDER BY report_date'),
     report_edits: await all('SELECT id,report_id,message_id,patch_json,created_at FROM advisor_report_edits WHERE contact_id=? ORDER BY created_at'),
     crew: await all('SELECT boat_id,added_at,removed_at FROM advisor_crew WHERE contact_id=?'),
+    // Hardening: a pending crew invitation (the boat and when; not who sent it).
+    crew_invitation: (await db.prepare('SELECT value FROM job_state WHERE key=?').bind(`advisor.crewinvite.${id}`).all<{value: string}>()).results
+      .map(r => { try { const v = JSON.parse(r.value); return {boat_id: String(v.boat_id), invited_at: String(v.invited_at), expires_at: new Date(Number(v.expires_at)).toISOString()}; } catch { return null; } })
+      .filter(Boolean),
     boats: await all('SELECT id,slug,name,landing,port,region,instagram,booking_url,phone_public,status,verified_at,consent_photos_at,consent_revoked_at,auto_publish,created_at,updated_at FROM advisor_boats WHERE owner_contact_id=?'),
   };
 }

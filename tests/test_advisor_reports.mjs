@@ -477,7 +477,7 @@ dbTest('anglers, web visitors and boatless contacts never reach the report flow'
   const res = await quiet(() => runTurn({env: {...env, ANTHROPIC_API_KEY: undefined}, contact: sql.prepare("SELECT * FROM advisor_contacts WHERE id='c1'").get(), message: inbound(sql, '22 anglers, 45 vermilion, 12 lings'), now: T0, deps: {}}));
   assert.equal(res.value.intent, 'unconfigured');
   assert.equal(sql.prepare('SELECT COUNT(*) n FROM advisor_reports').get().n, 0);
-  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports', 'anglers', 'daily'], 'the report flow runs before the angler and daily flows');
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['crew-invite', 'skipper', 'reports', 'anglers', 'daily'], 'the report flow runs before the angler and daily flows');
 });
 
 // ---- the media path (05 § count board, § catch and action photos, § videos) ------------------------

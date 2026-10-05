@@ -50,7 +50,7 @@ import type {PendingLink} from './tools/offer_text_link.ts';
 import {sha256} from './ids.ts';
 import type {Action, AdvisorContactRow, AdvisorMessageRow, AdvisorSettings, EngineDeps, EngineResult, Handler, Language} from './types.ts';
 // TA-I1: skipper registration, consent and crew (05), and the contact brief's boat lines.
-import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
+import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, readCrewInvite, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
 // TA-I2: reports (pending confirmation, count text, corrections, the media-only skipper path) and their brief lines.
 import {REPORT_FLOWS, reportBrief} from './intake/reports.ts';
 // TA-I3: an angler's photos (fish ID, the AC-1 share offer and credit).
@@ -197,6 +197,9 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
   // TA-I2 (04 § stage 2): the pending report itself, with its id for edit_report, or the latest one.
   const reportLines = boat ? await reportBrief(db, boat, messageCreatedAt, now) : ['- report waiting for confirmation: no'];
   const flow = await readFlow(db, contact.id);
+  // Hardening (05 § Crew): an invitation waiting for this contact's YES; until then they are not crew.
+  const invite = !boat ? await readCrewInvite(db, contact.id) : null;
+  const invitedBy = invite && invite.expires_at > now ? await db.prepare('SELECT name FROM advisor_boats WHERE id=?').bind(invite.boat_id).first<{name: string}>() : null;
   const registering = flow?.flow === 'register' && now - Date.parse(flow.asked_at) <= FLOW_MAX_AGE_MS ? flow.step : null;
   const boatLines = boat ? [
     `- boat: ${boat.name} (${boat.relation === 'owner' ? 'they own it' : 'they are crew'}); status: ${boat.status}${boat.status === 'verified' ? '' : ' (reports publish but tools show it as "a boat" until the team verifies it)'}`,
@@ -218,6 +221,7 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
     'CONTACT BRIEF',
     `- role: ${contact.role}`,
     ...boatLines,
+    ...(invitedBy ? [`- crew invitation pending from ${invitedBy.name}: they join only by replying YES (the system handles it); until then they are not crew`] : []),
     ...(registering ? [`- boat registration in progress: the next answer is the ${registering} (the system asks; do not ask it yourself)`] : []),
     `- reply language: ${language === 'es' ? 'Spanish' : 'English'}`,
     `- display name: ${contact.display_name ?? 'not given'}`,
