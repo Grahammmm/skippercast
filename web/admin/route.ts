@@ -12,10 +12,12 @@ export const VIEWS: readonly AdminView[] = ['queue', 'skippers', 'rules', 'posts
 // ---- Charter fleet views, shown only while the fleet flag is on (one line per view) ----
 export const FLEET_VIEWS = [
   'fleet-review', 'fleet-vessels',   // CF-31
+  'fleet-operators',   // CF-32
 ] as const;
 /** Fleet detail routes, #<head>/<id>: the list view the nav marks, and the id's pattern. */
 export const FLEET_DETAILS = {
   'fleet-vessel': {nav: 'fleet-vessels', id: /^[0-9a-f]{32}$/},   // CF-31
+  'fleet-operator': {nav: 'fleet-operators', id: /^[A-Za-z0-9_-]{16,64}$/},   // CF-32
 } as const;
 // ---- end of the fleet views ----
 

@@ -16,6 +16,7 @@ globalThis.SHELLS = {'/': '/index.0123456789.html', '/admin.html': '/admin.01234
 globalThis.BUILD_ID = 'build-test';
 const {default: deployed} = await import('../server/index.ts');
 const {leadScore} = await import('../server/fleet/leadscore.ts');
+const {routeOf, navOf} = await import('../web/admin/route.ts');
 const worker = withSessions(deployed);
 
 const skip = sqliteUnavailable ?? false;
@@ -198,4 +199,11 @@ test('acceptance 4: consent changes record who and when, need a note, and revoca
     assert.match(history.map(h => h.body).join('\n'), /Consent revoked \(was content-sharing\)\. Phoned to withdraw\./);
     assert.equal((await post(db, path, {unknown: 1})).status, 400);
   } finally { sql.close(); }
+});
+
+test('admin routes: #fleet-operators?region= and #fleet-operator/<id> open the operator views', () => {
+  assert.deepEqual(routeOf('#fleet-operators?region=CA'), {view: 'fleet-operators', arg: 'CA'});
+  assert.deepEqual(routeOf(`#fleet-operator/${OP_A}`), {view: 'fleet-operator', arg: OP_A});
+  assert.equal(navOf('fleet-operator'), 'fleet-operators');
+  assert.equal(routeOf('#fleet-operator/short').view, 'queue');
 });
