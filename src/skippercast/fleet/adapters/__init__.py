@@ -11,13 +11,15 @@ from typing import Mapping
 
 from .base import Adapter, Candidate, Fact, RunContext
 from .directories import Directories
+from .fcc_uls import FccUls
 from .teck_reports import TeckReports
+from .uscg_psix import UscgPsix
 
 __all__ = ["ADAPTERS", "REGISTRY", "Adapter", "Candidate", "Fact", "RunContext", "get"]
 
 REGISTRY: Mapping[str, type | None] = {
-    "fcc-uls": None,        # CF-12
-    "uscg-psix": None,      # CF-12
+    "fcc-uls": FccUls,
+    "uscg-psix": UscgPsix,
     "teck-reports": TeckReports,
     "directories": Directories,
     "landing-pages": None,  # CF-14

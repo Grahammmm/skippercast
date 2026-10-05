@@ -479,8 +479,8 @@ recorded skip.
 
 | Adapter | Gives | Access | Rights and rules |
 | --- | --- | --- | --- |
-| `fcc-uls` | call sign, MMSI, doc number, licensee entity | weekly `l_ship.zip` (~44 MB), local join, all statuses | public domain; keep a licensee only if an entity (LLC, Inc., Corp.); never addresses |
-| `uscg-psix` | official number, service, call sign, hailing port, particulars | XML service / XLSX by sector | public domain |
+| `fcc-uls` | call sign, MMSI, doc number or state registration, licence status, licensee entity | weekly `l_ship.zip` (~44 MB), local join of EN/HD/SH by licensee state, all statuses | public domain; keep a licensee only if an entity (LLC, Inc., Corp.); never addresses |
+| `uscg-psix` | official number, service, call sign, IMO, build year, gross tonnage, sector, last inspection | XLSX export by sector (`PSIXExportSearch.aspx` form POST; inspections sheet only); the XML service has no sector filter. No hailing port in the export | public domain |
 | `teck-reports` | boats, landing, "Boat Information" block, catch recency | SoCal, SanDiego, NorCal FishReports; SportfishingReport as dedupe index | facts only; no text, images or captain mobiles. **Owner**: ask TECK.net before paid use |
 | `landing-pages` | fleet, specs, captains, rates, schedules | per-landing binding, template `fr-fleet-php` or `generic` | facts only; photos as links with attribution |
 | `directories` | seed lists | GGFA, Sportfishing Association of California, harbor lists | facts only; vessel and port, no personal names or mobiles |

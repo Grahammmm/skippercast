@@ -623,7 +623,7 @@ class Session:
         return decoded, len(body)
 
     def _hop(self, method: str, url: str, headers: dict, timeout: float, limit: int | None,
-             sink: BinaryIO | None, truncate: bool = False) -> _Hop:
+             sink: BinaryIO | None, truncate: bool = False, data: bytes | None = None) -> _Hop:
         parts = urlsplit(url)
         host, port = _normal_host(parts.hostname or ""), parts.port or 443
         self._throttle(host)
@@ -631,7 +631,10 @@ class Session:
         connection = self._connection(host, port, timeout)
         try:
             try:
-                connection.request(method, target, headers=headers)
+                if data is None:
+                    connection.request(method, target, headers=headers)
+                else:
+                    connection.request(method, target, body=data, headers=headers)
                 response = connection.getresponse()
                 status = response.status
                 response_headers = Headers(response.getheaders())
@@ -659,19 +662,20 @@ class Session:
 
     def _fetch(self, method: str, url: str, headers: dict, timeout: float, limit: int | None,
                sink: BinaryIO | None, follow: bool, allowlist: Allowlist | None,
-               prefixes: tuple[str, ...] | None, truncate: bool = False) -> _Hop:
+               prefixes: tuple[str, ...] | None, truncate: bool = False, data: bytes | None = None) -> _Hop:
         current = url
         for _ in range(self.max_redirects + 1):
             self.check_url(current, allowlist, prefixes)
-            hop = self._hop(method, current, headers, timeout, limit, sink, truncate)
+            hop = self._hop(method, current, headers, timeout, limit, sink, truncate, data)
             location = hop.headers.get("Location")
             if hop.status not in REDIRECT_STATUSES or not location:
                 return hop
             if not follow:
                 raise ContractError(f"Redirect refused: {current} -> {location}")
             current = urljoin(current, location)
-            if hop.status == 303 and method != "HEAD":
-                method = "GET"
+            if (hop.status == 303 and method != "HEAD") or (hop.status in (301, 302) and method == "POST"):
+                method, data = "GET", None  # a form POST is re-requested as a GET without its body
+                headers = {k: v for k, v in headers.items() if k.lower() != "content-type"}
         raise ContractError(f"More than {self.max_redirects} redirects from {url}")
 
     # -- public API
@@ -683,8 +687,13 @@ class Session:
                 follow_redirects: bool = True, allowed_hosts: Iterable[str] | None = None,
                 allowed_prefixes: Iterable[str] | None = None, use_cache: bool = True,
                 backoff: Callable[[int], float] | None = None, sink: BinaryIO | None = None,
-                truncate: bool = False, cache: HTTPCache | None | object = ...) -> Response:
+                truncate: bool = False, cache: HTTPCache | None | object = ...,
+                data: bytes | None = None) -> Response:
         """One logical request with retries. Returns a Response or raises a SourceError.
+
+        `data` is a request body (a form POST). A request with a body is never
+        cached. A 301, 302 or 303 redirect re-requests it as a GET without the body;
+        a 307 or 308 redirect keeps the method and the body.
 
         `ok_statuses` defaults to any 2xx; with `raise_for_status=False` any final
         status is returned. `sink` streams a 2xx body to a seekable file instead of
@@ -711,6 +720,7 @@ class Session:
             base_headers = {k: v for k, v in base_headers.items() if k.lower() != name.lower()}
             base_headers[name] = value
         cacheable = (store is not None and use_cache and method == "GET" and sink is None and not truncate
+                     and data is None
                      and not any(k.lower() == "range" for k in base_headers))
         receipt = Receipt(url=url, method=method)
         started = self.clock()
@@ -745,7 +755,7 @@ class Session:
                     sink.seek(0)
                     sink.truncate()
                 hop = self._fetch(method, url, request_headers, timeout, limit, sink, follow_redirects,
-                                  allowlist, prefixes, truncate)
+                                  allowlist, prefixes, truncate, data)
                 from_cache = False
                 if hop.status == 304 and cached and store:
                     body = store.body(url, cached)
@@ -800,6 +810,9 @@ class Session:
 
     def get(self, url: str, **options: Any) -> Response:
         return self.request("GET", url, **options)
+
+    def post(self, url: str, data: bytes, **options: Any) -> Response:
+        return self.request("POST", url, data=data, **options)
 
     def head(self, url: str, **options: Any) -> Response:
         return self.request("HEAD", url, **options)

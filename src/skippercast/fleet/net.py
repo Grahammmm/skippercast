@@ -14,6 +14,8 @@ backoff, conditional-GET cache) and adds, for every fleet fetch:
 - at least ``interval`` seconds between requests to one host and a per-run
   request budget per host (default 600), both counted per hop, redirects included.
 
+``post`` sends a form body under the same rules (the PSIX export form).
+
 A refused URL raises ``Skipped`` and is appended to ``skips`` so the step can
 record it in its report; adapters catch ``Skipped`` and move on.
 """
@@ -146,6 +148,13 @@ class FleetSession:
 
     def get(self, url: str, **options: Any) -> http.Response:
         """Fetch ``url`` under the fleet rules; raises Skipped for a refused URL or redirect."""
+        return self._request("GET", url, **options)
+
+    def post(self, url: str, data: bytes, **options: Any) -> http.Response:
+        """POST a form body to ``url`` under the same rules as ``get`` (robots, budget, interval, deny)."""
+        return self._request("POST", url, data=data, **options)
+
+    def _request(self, method: str, url: str, **options: Any) -> http.Response:
         try:
             host, _port = self.session.check_url(url, http.Allowlist(self.hosts))
         except OffLimits as error:
@@ -158,7 +167,7 @@ class FleetSession:
             raise self._skip(url, "robots", host)
         self._checked = url
         try:
-            return self.session.get(url, allowed_hosts=self.hosts, **options)
+            return self.session.request(method, url, allowed_hosts=self.hosts, **options)
         except _HopRefused as error:  # on a redirect hop
             raise self._skip(url, error.reason + "-redirect", str(error)) from None
         except OffLimits as error:  # a redirect pointed at an off-limits host; refused before connecting
