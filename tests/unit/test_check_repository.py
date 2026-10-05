@@ -3,7 +3,9 @@
 docs/plans/text-advisor/02-data-model.md § Privacy invariants: over
 tests/fixtures/advisor/, docs/plans/text-advisor/ and the advisor runbooks, a
 NANP number must be in the fictional 555 series and an Instagram handle must be
-listed in catalog/advisor/fixture-handles.json. Numbers and handles that could be
+listed in catalog/advisor/fixture-handles.json. The charter fleet fixtures and
+plan (tests/fixtures/fleet/, docs/plans/charter-fleet/) get the same scan
+(charter-fleet design § 17, CF-05). Numbers and handles that could be
 real are assembled at run time, so this file never holds one either.
 """
 import importlib.util
@@ -151,6 +153,75 @@ class FixtureHandleListTests(unittest.TestCase):
     def test_a_missing_list_is_a_problem(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(check_repository.load_fixture_handles(Path(tmp)), (set(), [f'{check_repository.FIXTURE_HANDLES}: missing or not JSON']))
+
+
+class FleetScopeTests(unittest.TestCase):
+    """CF-05 (charter-fleet design § 17): the scan also covers the fleet fixtures and plan."""
+
+    PROFILE = PurePosixPath('tests/fixtures/fleet/profiles/party.json')
+
+    def test_fleet_fixtures_and_plan_are_scanned(self):
+        for name in ('tests/fixtures/fleet/profiles/party.json', 'tests/fixtures/fleet/fcc/l_ship.dat',
+                     'docs/plans/charter-fleet/design.md'):
+            with self.subTest(name):
+                self.assertTrue(check_repository.fleet_scoped(PurePosixPath(name)))
+                self.assertFalse(check_repository.advisor_scoped(PurePosixPath(name)))
+
+    def test_other_fleet_paths_are_not(self):
+        for name in ('src/skippercast/fleet/profile.py', 'tests/unit/test_fleet_profile.py', 'docs/plans/charter-fleet.md',
+                     'tests/fixtures/fleetwood/x.json', 'catalog/fleet/off-limits.json'):
+            with self.subTest(name):
+                self.assertFalse(check_repository.fleet_scoped(PurePosixPath(name)))
+
+    def test_handles_inside_provenance_objects_are_checked(self):
+        def profile(handle):
+            prov = {'value': handle, 'source_url': 'https://operator.example/', 'retrieved_at': '2026-10-04T00:00:00Z',
+                    'method': 'page', 'confidence': 0.9}
+            return json.dumps({'boat': {'social': {'instagram': {'handle': prov, 'url': None}}}})
+        self.assertEqual(scan(profile('sea.example'), self.PROFILE), [])
+        self.assertEqual(scan(profile(UNLISTED), self.PROFILE),
+                         [f'{self.PROFILE}: handle field value not in catalog/advisor/fixture-handles.json'])
+
+    def test_a_value_field_outside_a_handle_field_is_not_a_handle(self):
+        self.assertEqual(scan(json.dumps({'boat': {'name': {'value': UNLISTED}}}), self.PROFILE), [])
+
+    def test_main_fails_on_a_planted_number_and_handle_in_a_fleet_fixture(self):
+        prov = {'source_url': 'https://operator.example/', 'retrieved_at': '2026-10-04T00:00:00Z', 'method': 'page', 'confidence': 0.9}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'catalog/advisor').mkdir(parents=True)
+            (root / check_repository.FIXTURE_HANDLES).write_bytes((ROOT / check_repository.FIXTURE_HANDLES).read_bytes())
+            (root / 'tests/fixtures/fleet/profiles').mkdir(parents=True)
+            fixture = root / 'tests/fixtures/fleet/profiles/boat.json'
+            (root / 'docs/plans/charter-fleet').mkdir(parents=True)
+            plan = root / 'docs/plans/charter-fleet/notes.md'
+            fixture.write_text(json.dumps({'boat': {'phone_business': {'value': '+18055550123', **prov},
+                                                    'social': {'instagram': {'handle': {'value': 'sea.example', **prov}}}}}))
+            plan.write_text('Fixture boats are tagged @sea.example and reached at +18055550199.\n')
+            with mock.patch.object(check_repository, 'ROOT', root), mock.patch('sys.stderr') as err, mock.patch('sys.stdout'):
+                self.assertEqual(check_repository.main(), 0)
+                fixture.write_text(json.dumps({'boat': {'phone_business': {'value': REAL, **prov},
+                                                        'social': {'instagram': {'handle': {'value': UNLISTED, **prov}}}}}))
+                self.assertEqual(check_repository.main(), 1)
+                fixture.unlink()
+                plan.write_text(f'line one\nThe boat is @{UNLISTED}, call {REAL_555}.\n')
+                self.assertEqual(check_repository.main(), 1)
+            printed = ''.join(str(call.args[0]) for call in err.write.call_args_list if call.args)
+            self.assertIn('tests/fixtures/fleet/profiles/boat.json:1: phone number outside the fictional 555 series', printed)
+            self.assertIn('tests/fixtures/fleet/profiles/boat.json: handle field value not in', printed)
+            self.assertIn('docs/plans/charter-fleet/notes.md:2: phone number outside the fictional 555 series', printed)
+            self.assertIn('docs/plans/charter-fleet/notes.md:2: Instagram handle not in', printed)
+            for secret in (REAL, REAL_555, UNLISTED):
+                self.assertNotIn(secret, printed)
+
+    def test_the_committed_fleet_fixtures_and_plan_pass(self):
+        allowed, _ = check_repository.load_fixture_handles()
+        files = sorted(p for p in ROOT.rglob('*') if p.is_file() and check_repository.fleet_scoped(p.relative_to(ROOT)))
+        self.assertGreaterEqual(len(files), 6, 'the fleet fixtures and the plan are found')
+        errors = []
+        for path in files:
+            errors += check_repository.advisor_privacy(path.relative_to(ROOT), path.read_text(encoding='utf-8'), allowed)
+        self.assertEqual(errors, [])
 
 
 class RepositoryTests(unittest.TestCase):

@@ -1,0 +1,380 @@
+{
+  "schema_version": "1.0.0",
+  "region": "CA",
+  "vessel_id": "778738f72d654291c941f50728a21c05",
+  "run_id": "2026-10-04T101700Z-osint",
+  "batch_id": "batch-001",
+  "boat": {
+    "name": {
+      "value": "Sea Example",
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.95
+    },
+    "former_names": [
+      {
+        "value": "Example Star",
+        "source_url": "https://reports.example/boats/sea-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "page",
+        "confidence": 0.7
+      }
+    ],
+    "vessel_class": {
+      "value": "inspected-party",
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "inference",
+      "confidence": 0.8
+    },
+    "operator_business": {
+      "value": "Sea Example Sportfishing LLC",
+      "source_url": "https://sea-example-sportfishing.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "landing": {
+      "value": "Example Landing",
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "port": {
+      "value": "morro-bay",
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "waters": [
+      {
+        "value": "ocean",
+        "source_url": "https://landing.example/fleet/sea-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "inference",
+        "confidence": 0.8
+      },
+      {
+        "value": "bay",
+        "source_url": "https://landing.example/fleet/sea-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "inference",
+        "confidence": 0.6
+      }
+    ],
+    "home_marina": null,
+    "uscg_doc_number": {
+      "value": "EX0000101",
+      "source_url": "https://registry.example/vessels/EX0000101",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "api",
+      "confidence": 0.95
+    },
+    "state_registration": null,
+    "hull_id": null,
+    "call_sign": {
+      "value": "EXAMPLE1",
+      "source_url": "https://registry.example/vessels/EX0000101",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "api",
+      "confidence": 0.95
+    },
+    "mmsi": {
+      "value": "999000101",
+      "source_url": "https://registry.example/vessels/EX0000101",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "api",
+      "confidence": 0.95
+    },
+    "year_built": {
+      "value": 1979,
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "builder": null,
+    "length_ft": {
+      "value": 65,
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "beam_ft": {
+      "value": 20,
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "passengers_max": {
+      "value": 40,
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "bunks": {
+      "value": 12,
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "cruising_speed_kn": null,
+    "amenities": [
+      {
+        "value": "galley",
+        "source_url": "https://landing.example/fleet/sea-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "page",
+        "confidence": 0.9
+      },
+      {
+        "value": "restroom",
+        "source_url": "https://landing.example/fleet/sea-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "page",
+        "confidence": 0.9
+      }
+    ],
+    "website": {
+      "value": "https://sea-example-sportfishing.example/",
+      "source_url": "https://landing.example/fleet/sea-example",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "booking_url": {
+      "value": "https://fareharbor.com/embeds/book/placeholder-example/",
+      "source_url": "https://sea-example-sportfishing.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "booking_platform": {
+      "value": "fareharbor",
+      "source_url": "https://sea-example-sportfishing.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.85
+    },
+    "phone_business": {
+      "value": "+18055550123",
+      "source_url": "https://sea-example-sportfishing.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "email_business": {
+      "value": "bookings@sea-example-sportfishing.example",
+      "source_url": "https://sea-example-sportfishing.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "contact_form_url": null,
+    "social": {
+      "instagram": {
+        "handle": {
+          "value": "sea.example",
+          "source_url": "https://sea-example-sportfishing.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "url": {
+          "value": "https://www.instagram.com/sea.example/",
+          "source_url": "https://sea-example-sportfishing.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "followers": null,
+        "posting_frequency": null
+      },
+      "facebook": null,
+      "youtube": null,
+      "tiktok": null
+    },
+    "trip_types": [
+      {
+        "name": {
+          "value": "3/4 Day Rockfish",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "duration_h": {
+          "value": 9,
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "price_usd": {
+          "value": 120,
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "departs": {
+          "value": "06:30",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "target_species": [
+          {
+            "value": "rockfish",
+            "source_url": "https://landing.example/fleet/sea-example",
+            "retrieved_at": "2026-10-04T10:20:00Z",
+            "method": "page",
+            "confidence": 0.9
+          },
+          {
+            "value": "lingcod",
+            "source_url": "https://landing.example/fleet/sea-example",
+            "retrieved_at": "2026-10-04T10:20:00Z",
+            "method": "page",
+            "confidence": 0.9
+          }
+        ],
+        "season": {
+          "value": "April to December",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.7
+        }
+      }
+    ],
+    "fuel_surcharge": null,
+    "cancellation_policy": {
+      "value": "Full refund when the landing cancels for weather.",
+      "source_url": "https://sea-example-sportfishing.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.8
+    },
+    "captains": [
+      {
+        "name": {
+          "value": "Alex Example",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "role": {
+          "value": "captain",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        }
+      }
+    ],
+    "catch_reporting": {
+      "sources": [
+        {
+          "value": "https://reports.example/boats/sea-example",
+          "source_url": "https://reports.example/boats/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        }
+      ],
+      "frequency": {
+        "value": "daily",
+        "source_url": "https://reports.example/boats/sea-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "inference",
+        "confidence": 0.7
+      }
+    },
+    "reputation": {
+      "google_rating": {
+        "value": 4.6,
+        "source_url": "https://places.googleapis.com/v1/places/placeholder-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "api",
+        "confidence": 0.9
+      },
+      "google_reviews": {
+        "value": 120,
+        "source_url": "https://places.googleapis.com/v1/places/placeholder-example",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "api",
+        "confidence": 0.9
+      },
+      "other": [
+        {
+          "value": 4.5,
+          "source_url": "https://reports.example/boats/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "photos": [
+      {
+        "url": {
+          "value": "https://landing.example/img/sea-example.jpg",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "attribution": {
+          "value": "Example Landing",
+          "source_url": "https://landing.example/fleet/sea-example",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        }
+      }
+    ],
+    "ais": {
+      "mmsi": {
+        "value": "999000101",
+        "source_url": "https://ais.example/statics/999000101",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "api",
+        "confidence": 0.9
+      },
+      "match_method": {
+        "value": "mmsi-from-registry",
+        "source_url": "https://ais.example/statics/999000101",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "inference",
+        "confidence": 0.9
+      },
+      "confidence": {
+        "value": 0.9,
+        "source_url": "https://ais.example/statics/999000101",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "inference",
+        "confidence": 0.9
+      },
+      "last_seen_source": {
+        "value": "listener",
+        "source_url": "https://ais.example/statics/999000101",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "api",
+        "confidence": 0.9
+      },
+      "notes": null
+    }
+  },
+  "conflicts": [],
+  "notes": "Synthetic fixture: an inspected party boat with a booking link and an Instagram account read off the operator's site."
+}

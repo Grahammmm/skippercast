@@ -37,4 +37,6 @@ Do not commit credentials, account/chat identifiers, private messages, delivery 
 
 Text Advisor transcripts, photos, videos, contact data (phone numbers, Instagram ids and handles) and data exports are private records: they never enter the repository, not even as a test fixture. Fixtures are synthetic, with numbers from the fictional 555 series and handles listed in `catalog/advisor/fixture-handles.json`; `scripts/check_repository.py` enforces both ([02 § Privacy invariants](docs/plans/text-advisor/02-data-model.md#privacy-invariants-tested-in-teststest_advisor_privacymjs)).
 
+Charter fleet registry data (operator and vessel records, contacts and facts), OSINT agent output and manifests, AIS positions and outreach notes are private records too: they stay in D1 or under the fleet `var/` directory and never enter the repository. Fleet fixtures are synthetic (invented boats, 555-01XX numbers, listed handles, `999xxxxxx` MMSIs), and the same scan covers `tests/fixtures/fleet/` and `docs/plans/charter-fleet/` ([design § 17](docs/plans/charter-fleet/design.md#17-privacy-data-rights-and-repo-hygiene)).
+
 Use an issue to describe a concrete bug or proposed change. Include a minimal synthetic reproduction for bugs. Pull requests should explain the resulting behavior, evidence, and relevant tests. Record material changes in [CHANGELOG.md](CHANGELOG.md).

@@ -1,0 +1,277 @@
+{
+  "schema_version": "1.0.0",
+  "region": "CA",
+  "vessel_id": "334b4e7c48bd07c9737efb8eaab56f0a",
+  "run_id": "2026-10-04T101700Z-osint",
+  "batch_id": "batch-002",
+  "boat": {
+    "name": {
+      "value": "Test Boat",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.95
+    },
+    "former_names": [],
+    "vessel_class": {
+      "value": "six-pack",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "operator_business": {
+      "value": "Test Boat Charters",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "landing": null,
+    "port": {
+      "value": "example-harbor",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "waters": [
+      {
+        "value": "bay",
+        "source_url": "https://testboat-charters.example/",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "page",
+        "confidence": 0.9
+      },
+      {
+        "value": "delta",
+        "source_url": "https://testboat-charters.example/",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "page",
+        "confidence": 0.8
+      }
+    ],
+    "home_marina": {
+      "value": "Example Marina",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "uscg_doc_number": null,
+    "state_registration": null,
+    "hull_id": null,
+    "call_sign": null,
+    "mmsi": null,
+    "year_built": null,
+    "builder": {
+      "value": "Example Boatworks",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.8
+    },
+    "length_ft": {
+      "value": 26,
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "beam_ft": null,
+    "passengers_max": {
+      "value": 6,
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "bunks": null,
+    "cruising_speed_kn": {
+      "value": 24,
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.7
+    },
+    "amenities": [],
+    "website": {
+      "value": "https://testboat-charters.example/",
+      "source_url": "https://directory.example/members",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.85
+    },
+    "booking_url": {
+      "value": "https://testboat-charters.example/book",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "booking_platform": {
+      "value": "own-site",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "inference",
+      "confidence": 0.7
+    },
+    "phone_business": {
+      "value": "+15105550142",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "email_business": null,
+    "contact_form_url": {
+      "value": "https://testboat-charters.example/contact",
+      "source_url": "https://testboat-charters.example/",
+      "retrieved_at": "2026-10-04T10:20:00Z",
+      "method": "page",
+      "confidence": 0.9
+    },
+    "social": {
+      "instagram": null,
+      "facebook": null,
+      "youtube": null,
+      "tiktok": null
+    },
+    "trip_types": [
+      {
+        "name": {
+          "value": "Striper Half Day",
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "duration_h": {
+          "value": 5,
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "price_usd": {
+          "value": 650,
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "departs": {
+          "value": "06:00",
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "target_species": [
+          {
+            "value": "striped bass",
+            "source_url": "https://testboat-charters.example/",
+            "retrieved_at": "2026-10-04T10:20:00Z",
+            "method": "page",
+            "confidence": 0.9
+          }
+        ],
+        "season": null
+      },
+      {
+        "name": {
+          "value": "Sturgeon Full Day",
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "duration_h": {
+          "value": 8,
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "price_usd": null,
+        "departs": null,
+        "target_species": [
+          {
+            "value": "white sturgeon",
+            "source_url": "https://testboat-charters.example/",
+            "retrieved_at": "2026-10-04T10:20:00Z",
+            "method": "page",
+            "confidence": 0.9
+          }
+        ],
+        "season": {
+          "value": "winter",
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.6
+        }
+      }
+    ],
+    "fuel_surcharge": null,
+    "cancellation_policy": null,
+    "captains": [
+      {
+        "name": {
+          "value": "Sam Placeholder",
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        },
+        "role": {
+          "value": "owner-operator",
+          "source_url": "https://testboat-charters.example/",
+          "retrieved_at": "2026-10-04T10:20:00Z",
+          "method": "page",
+          "confidence": 0.9
+        }
+      }
+    ],
+    "catch_reporting": {
+      "sources": [],
+      "frequency": null
+    },
+    "reputation": {
+      "google_rating": null,
+      "google_reviews": null,
+      "other": []
+    },
+    "photos": [],
+    "ais": {
+      "mmsi": null,
+      "match_method": null,
+      "confidence": null,
+      "last_seen_source": null,
+      "notes": {
+        "value": "No MMSI found; a six-pack often carries no AIS.",
+        "source_url": "https://testboat-charters.example/",
+        "retrieved_at": "2026-10-04T10:20:00Z",
+        "method": "inference",
+        "confidence": 0.5
+      }
+    }
+  },
+  "conflicts": [
+    {
+      "field": "length_ft",
+      "values": [
+        {
+          "value": 26,
+          "source_url": "https://testboat-charters.example/"
+        },
+        {
+          "value": 28,
+          "source_url": "https://directory.example/members"
+        }
+      ],
+      "note": "The operator's site and the directory disagree; the operator's site is newer."
+    }
+  ],
+  "notes": "Synthetic fixture: a six-pack with no MMSI, no social accounts and a length conflict."
+}

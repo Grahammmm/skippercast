@@ -566,17 +566,26 @@ Manifests hold only data the pipeline already has, under `<FLEET_VAR>`.
 
 **Output contract.** The pilot schema moves to
 `schemas/fleet-profile.schema.json` (`$id`
-`https://skippercast.com/schemas/fleet-profile/1.0.json`) with these changes:
+`https://skippercast.com/schemas/fleet-profile.schema.json`, the repository
+convention `tests/contract/test_schemas.py` enforces; kind `fleet-profile` in
+`skippercast.validate`) with these changes:
 `schema_version` const `1.0.0`; `region` pattern `^[A-Z]{2}$`; new required
-`vessel_id`, `run_id`, `batch_id`; new `boat.waters` (provenance objects,
-enum D1). The provenance object (`value`, `source_url`, `retrieved_at`,
+`vessel_id` (32 hex), `run_id`, `batch_id` (`batch-NNN`); new `boat.waters`
+(provenance objects, enum D1); `boat.phone_business` in E.164 (`+18055550123`),
+so ingest gets one format and the repository phone scan sees every fixture
+number. The provenance object (`value`, `source_url`, `retrieved_at`,
 `method`, `confidence`), `conflicts[]` and `notes` are unchanged.
 
-**Validator** (`fleet/profile.py`, CLI `validate-profile`): JSON Schema plus
-policy: no `source_url` on an off-limits host; off-limits values only with an
-allowed `source_url`; `boat.mmsi` and `ais.mmsi` agree or a conflict is listed;
-`reputation.other` numbers only (never review text); notes ≤ 2,000 chars;
-webmail emails flagged for review. Ingest refuses invalid files. Each
+**Validator** (`fleet/profile.py`, CLI `validate-profile`; until CF-10's CLI
+exists, `python -m skippercast.fleet.profile <file>`): JSON Schema plus
+policy: no `source_url` on an off-limits host (provenance objects and
+`conflicts[]`); off-limits values (a URL on an off-limits host, an Instagram or
+Facebook handle or URL) only with `method` `page`, that is read off the
+operator's site, a landing page or a report site; `boat.mmsi` and `ais.mmsi`
+agree or a conflict is listed; `reputation.other` numbers only (never review
+text); `notes` and `ais.notes` ≤ 2,000 chars; webmail emails flagged for
+review (`review_flags`, not an error). The validator reads
+`catalog/fleet/off-limits.json` and falls back to the D7 list until CF-04 adds it. Ingest refuses invalid files. Each
 provenance object becomes one fact (`source_id "osint"`, confidence capped at
 0.8 for `search` and `inference`); `trip_types[]` become offerings;
 `conflicts[]` become `fact-conflict` reviews.
