@@ -30,6 +30,8 @@
 //   fleet_click  blob2 vessel slug, blob3 target (booking|website), blob4 placement (profile|directory|map|other)
 //                double1 1 (one per /go/<slug> redirect, server/fleet/go.ts). The slug is a listed
 //                charter boat's public profile slug (a business), not a user's boat; nothing about the visitor.
+//   fleet_ais    blob2 region; double1 listener heartbeat age s, double2 last AIS message age s, double3
+//                rows stored in the last 24 h (-1 unknown; one per processor heartbeat push, server/fleet/activity.ts)
 //   client_event, client_error  funnel events and browser errors posted to
 //                /api/telemetry; columns in server/telemetry.ts
 import type {MiddlewareHandler} from 'hono';
@@ -72,6 +74,12 @@ export interface CronRun {cron: string; watchdog: string; trips: string; prune: 
 export function recordCron(env: Pick<Env, 'ANALYTICS'>, run: CronRun): void {
   writePoint(env, 'cron', {blobs: [run.cron, run.watchdog, run.trips, run.prune, run.advisor ?? ''],
     doubles: [run.ms, num(run.owners), typeof run.feed_age_minutes === 'number' ? run.feed_age_minutes : -1]});
+}
+
+/** One AIS processor heartbeat push (CF-45): region, listener heartbeat and last-message ages, 24 h rows. */
+export interface FleetAisPoint {heartbeatAgeS: number; lastMessageAgeS: number; messages24h: number}
+export function recordFleetAis(env: Pick<Env, 'ANALYTICS'> | undefined, region: string, point: FleetAisPoint): void {
+  writePoint(env, 'fleet_ais', {blobs: [region], doubles: [point.heartbeatAgeS, point.lastMessageAgeS, point.messages24h]});
 }
 
 /** One /go/ redirect (CF-34): slug, target and placement only. */

@@ -70,7 +70,8 @@ if __name__ == '__main__':
 class RunnerSwitchTests(unittest.TestCase):
     """Heavy workflows read their runner from a repository variable (docs/operations/runners.md)."""
 
-    HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml'}
+    # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
+    HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml'}
 
     def test_scheduled_and_ci_jobs_run_on_the_switchable_runner(self):
         wrong = []
@@ -82,7 +83,7 @@ class RunnerSwitchTests(unittest.TestCase):
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):
                 if path.name in self.HOSTED_ONLY:
                     if line != 'ubuntu-latest':
-                        wrong.append(f'{path.name}: {line} (deploy, DCO and release stay GitHub-hosted)')
+                        wrong.append(f'{path.name}: {line} (deploy, DCO, release and fleet health stay GitHub-hosted)')
                 elif line == 'macos-latest' and path.name == 'research-substrate.yml':
                     continue  # one monthly audit job needs a macOS wheel (pylerc); about 90 billed minutes a month
                 elif line != expected:

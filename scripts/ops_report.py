@@ -5,8 +5,12 @@ Queries the dataset the Worker writes (server/analytics.ts, dataset
 `skippercast_events`) through Cloudflare's Analytics Engine SQL API for the last
 24 hours: request counts by route and status class with p95 latency, LLM usage,
 queue batches, cron runs, the client funnel and the top client errors
-(web/telemetry.ts via /api/telemetry). Prints a Markdown report and appends it to
-$GITHUB_STEP_SUMMARY when set.
+(web/telemetry.ts via /api/telemetry). When the charter fleet's AIS processor has
+pushed a heartbeat in the window (Analytics Engine `fleet_ais` points,
+server/fleet/activity.ts), one line gives the listener heartbeat age, the rows
+stored in the last 24 hours and whether a `fleet-ais-stale` issue is open (read
+from the GitHub API for $GITHUB_REPOSITORY). Prints a Markdown report and appends
+it to $GITHUB_STEP_SUMMARY when set.
 
 Needs CF_ANALYTICS_TOKEN (an API token with Account · Account Analytics · Read)
 and CLOUDFLARE_ACCOUNT_ID. Without them it prints why and exits 0, so the
@@ -17,6 +21,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -59,7 +64,14 @@ GROUP BY event ORDER BY events DESC LIMIT 20""",
   SUM(_sample_interval) AS reports
 FROM {DATASET} WHERE index1 = 'client_error' AND {WINDOW}
 GROUP BY message, source, line, kind, build ORDER BY reports DESC LIMIT 10""",
+    # The latest processor heartbeat push (one region today); a line, not a table.
+    'fleet_ais': f"""SELECT blob2 AS region, timestamp AS pushed_at, double1 AS heartbeat_age_s,
+  double2 AS last_message_age_s, double3 AS messages_24h
+FROM {DATASET} WHERE index1 = 'fleet_ais' AND {WINDOW}
+ORDER BY timestamp DESC LIMIT 1""",
 }
+FLEET_LABEL = 'fleet-ais-stale'
+LINES = frozenset({'fleet_ais'})
 
 # Funnel steps in the order a visit takes them (server/telemetry.ts FUNNEL_EVENTS).
 FUNNEL = ('port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install')
@@ -144,14 +156,60 @@ def table(rows):
     return '\n'.join(lines) + '\n'
 
 
-def report(results):
+def open_fleet_issue(repo, token=None, opener=urlopen):
+    """'#<n>' of an open fleet-ais-stale issue, '' when none, None when GitHub cannot say."""
+    request = Request(f'https://api.github.com/repos/{repo}/issues?labels={FLEET_LABEL}&state=open&per_page=1',
+                      headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'SkipperCast-ops-report/1',
+                               **({'Authorization': 'Bearer ' + token} if token else {})})
+    try:
+        with opener(request, timeout=20) as response:
+            issues = json.load(response)
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        return None
+    return f"#{int(issues[0]['number'])}" if isinstance(issues, list) and issues else ''
+
+
+def fleet_line(rows, issue, now):
+    """One line on the fleet AIS listener, or None when no heartbeat was pushed and no issue is open."""
+    if not rows and not issue:
+        return None
+    parts = []
+    if rows:
+        row = rows[0]
+        try:
+            pushed = datetime.fromisoformat(str(row.get('pushed_at')).replace(' ', 'T').replace('Z', '+00:00'))
+            since = max(0.0, (now - (pushed if pushed.tzinfo else pushed.replace(tzinfo=timezone.utc))).total_seconds())
+        except ValueError:
+            since = None
+        beat, messages = number(row.get('heartbeat_age_s')), number(row.get('messages_24h'))
+        if since is not None and isinstance(beat, float) and beat >= 0:
+            parts.append(f'listener heartbeat {(since + beat) / 3600:.1f} h old')
+        else:
+            parts.append('listener heartbeat age unknown')
+        if isinstance(messages, float) and messages >= 0:
+            parts.append(f'{messages:,.0f} AIS rows stored in 24 h')
+    else:
+        parts.append('no processor heartbeat in 24 h')
+    if issue is None:
+        parts.append(f'{FLEET_LABEL} issue unknown')
+    else:
+        parts.append(f'open {FLEET_LABEL} issue {issue}' if issue else f'no open {FLEET_LABEL} issue')
+    return 'Fleet AIS: ' + '; '.join(parts) + '.'
+
+
+def report(results, fleet_issue='', now=None):
     out = ['# SkipperCast operations report', '']
     routes = results.get('routes') or []
     total = sum(float(r.get('requests') or 0) for r in routes)
     errors = sum(float(r.get('s5xx') or 0) for r in routes)
     if routes:
         out += [f'Requests: {total:,.0f}; 5xx: {errors:,.0f} ({(errors / total * 100 if total else 0):.2f} %).', '']
+    fleet = fleet_line(results.get('fleet_ais') or [], fleet_issue, now or datetime.now(timezone.utc))
+    if fleet:
+        out += [fleet, '']
     for key in QUERIES:
+        if key in LINES:
+            continue
         rows = results.get(key) or []
         if key == 'funnel' and rows:
             rows = funnel_rows(rows)
@@ -164,7 +222,7 @@ def report(results):
     return '\n'.join(out)
 
 
-def main(argv=None, environ=None, opener=urlopen):
+def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.parse_args(argv)
     environ = os.environ if environ is None else environ
@@ -194,7 +252,9 @@ def main(argv=None, environ=None, opener=urlopen):
         except (URLError, TimeoutError, ValueError) as error:
             print(f'::error title=Ops report::Analytics Engine SQL API unavailable for {key}: {error}')
             return 1
-    text = report(results)
+    repo = environ.get('GITHUB_REPOSITORY', '').strip()
+    issue = open_fleet_issue(repo, environ.get('GITHUB_TOKEN', '').strip() or None, github_opener) if repo else ''
+    text = report(results, issue, now)
     print(text)
     if summary:
         with open(summary, 'a') as handle:

@@ -1,0 +1,84 @@
+name: Fleet AIS health
+
+# Hourly staleness check for the charter fleet's AIS listener and processor (CF-45;
+# docs/plans/charter-fleet/design.md § 18). It runs on a GitHub-hosted runner so it can
+# alert while Hermes is down: it asks the Worker's GET /api/fleet/jobs/health (staleness
+# booleans and ages only) with a short-lived GitHub identity, opens or comments on an
+# issue labelled fleet-ais-stale when the listener heartbeat, its last AIS message or
+# the last processor run is more than 3 hours old (or the Worker cannot say), and closes
+# it on recovery, as feed-freshness.yml does. No checkout: nothing from the repository
+# runs here. Runbook: docs/operations/runbooks/fleet-ais-down.md.
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # short-lived identity for /api/fleet/jobs/health (server/routes/fleet.ts FLEET_JOB_SCOPE)
+  issues: write    # open, comment on and close the fleet-ais-stale issue
+
+concurrency:
+  group: fleet-health
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: vars.ENABLE_FLEET == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # The token's audience must be deployments/production.json public_origin + /api/fleet/jobs.
+      BASE: https://skippercast.com
+      REGION: ${{ vars.FLEET_REGION || 'CA' }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Ask the Worker how old the AIS heartbeat and processor run are
+        id: health
+        run: |
+          set +e -uo pipefail  # a failed call means "unknown", which still opens the issue
+          token="$(curl -fsS --retry 3 -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$BASE/api/fleet/jobs" | jq -r .value)"
+          body="$(curl -fsS --retry 3 --max-time 30 -H "Authorization: Bearer $token" \
+            "$BASE/api/fleet/jobs/health?region=$REGION")"
+          if [ $? -ne 0 ] || ! jq -e '.checks' >/dev/null 2>&1 <<<"$body"; then
+            message="Fleet AIS health for $REGION is unknown: the Worker's health route did not answer."
+            stale=true
+          else
+            stale="$(jq -r '.stale' <<<"$body")"
+            message="$(jq -r --arg region "$REGION" '"Fleet AIS health for \($region) (stale after \(.stale_after_s / 3600) h): " +
+              ([.checks | to_entries[] | "\(.key) " + (if .value.age_s == null then "never seen" else "\((.value.age_s / 36 | floor) / 100) h old" end)
+                + (if .value.stale then " (stale)" else "" end)] | join(", ")) + "."' <<<"$body")"
+          fi
+          echo "$message"
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "message<<EOF"
+            echo "$message"
+            echo "EOF"
+            echo "stale=$stale"
+          } >> "$GITHUB_OUTPUT"
+      - name: Open or update the fleet-ais-stale issue
+        if: steps.health.outputs.stale == 'true'
+        env:
+          MESSAGE: ${{ steps.health.outputs.message }}
+        run: |
+          gh label create fleet-ais-stale --color B60205 --description "Charter fleet AIS listener or processor stopped" 2>/dev/null || true
+          existing="$(gh issue list --label fleet-ais-stale --state open --json number --jq '.[0].number')"
+          runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/fleet-ais.yml"
+          runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/fleet-ais-down.md"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$MESSAGE"
+          else
+            gh issue create --label fleet-ais-stale --title "Fleet AIS listener or processor is stale" \
+              --body "$MESSAGE"$'\n\n'"Processor runs: $runs"$'\n\n'"Runbook: $runbook"
+          fi
+          exit 1
+      - name: Close the fleet-ais-stale issue after recovery
+        if: steps.health.outputs.stale == 'false'
+        env:
+          MESSAGE: ${{ steps.health.outputs.message }}
+        run: |
+          for number in $(gh issue list --label fleet-ais-stale --state open --json number --jq '.[].number'); do
+            gh issue close "$number" --comment "Recovered. $MESSAGE"
+          done

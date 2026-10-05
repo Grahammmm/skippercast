@@ -1,0 +1,61 @@
+name: Fleet AIS processor
+
+# The charter fleet's AIS processor (CF-45; docs/plans/charter-fleet/design.md § 11):
+# every 30 minutes on our own runner, next to the listener's raw store, it pushes the
+# heartbeat and hourly counters, derives trips, segments, events and aggregates from
+# the watched vessels' positions and replaces them through /api/fleet/jobs/* with a
+# short-lived GitHub identity (server/routes/fleet.ts FLEET_JOB_SCOPE). A dispatch
+# with `from` and `to` re-runs that window of departures only. Raw positions never
+# leave the runner. No pull_request trigger, so fork code never runs on Hermes.
+on:
+  schedule:
+    - cron: "3,33 * * * *"
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Re-run window: first region-local day (YYYY-MM-DD); empty for a normal run"
+        required: false
+      to:
+        description: "Re-run window: last region-local day, inclusive (YYYY-MM-DD)"
+        required: false
+
+permissions: {}
+
+concurrency:
+  group: fleet-ais
+  cancel-in-progress: false
+
+jobs:
+  process:
+    # Dark until the fleet is switched on, and never on a GitHub-hosted runner (no raw store there).
+    if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    permissions:
+      contents: read   # the checkout
+      id-token: write  # short-lived identity for /api/fleet/jobs (server/job-auth.ts pins this workflow)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install the fleet extra
+        run: python -m pip install -e ".[fleet]"
+      - name: Process AIS positions
+        env:
+          REGION: ${{ vars.FLEET_REGION || 'CA' }}
+          WINDOW_FROM: ${{ inputs.from }}
+          WINDOW_TO: ${{ inputs.to }}
+        run: |
+          set -o pipefail
+          # The raw store and processor state live outside any checkout (design.md § 4).
+          export SKIPPERCAST_FLEET_VAR="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          args=(--region "$REGION")
+          if [ -n "$WINDOW_FROM" ] || [ -n "$WINDOW_TO" ]; then
+            args+=(--from "$WINDOW_FROM" --to "$WINDOW_TO")
+          fi
+          python -m skippercast.fleet.ais process "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
