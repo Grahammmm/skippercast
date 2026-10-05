@@ -113,7 +113,8 @@ class SelectionTests(unittest.TestCase):
                    vessel_row(5, last_profiled_at=recent, offerings=[{"name": "Half Day", "status": "retired"}]),
                    vessel_row(6, status="excluded"), vessel_row(7, status="sold"),
                    vessel_row(8, removal_requested_at="2026-09-01T00:00:00.000Z"),
-                   vessel_row(9, last_profiled_at="2026-05-01T00:00:00Z")]       # staler
+                   vessel_row(9, last_profiled_at="2026-05-01T00:00:00Z"),       # staler
+                   vessel_row(10, removal_requested=True)]                         # the Worker's flag (#346)
         full = agent.select(vessels, self.NOW, 60, "full")
         self.assertEqual([(v["id"][-1], r) for v, r in full],
                          [("4", ["new"]), ("9", ["stale"]), ("3", ["stale"]), ("2", ["missing"]), ("5", ["missing"])])
@@ -277,6 +278,26 @@ class ProfileIngestTests(unittest.TestCase):
                 self.assertIsNotNone(passengers[40], "a new value from the same source supersedes the old one")
                 self.assertIsNone(passengers[42])
                 self.assertEqual(row["last_profiled_at"], "2026-10-20T08:17:00.000Z")
+
+    def test_a_removal_requested_boat_is_neither_planned_nor_ingested_on_either_sink(self):
+        for worker in (False, True):  # the Worker snapshot carries only the removal_requested flag (#346)
+            with self.subTest(worker=worker), tempfile.TemporaryDirectory() as tmp:
+                p, folder = Registry(tmp, worker), Path(tmp) / "profiles"
+                p.run(DAY0, *baseline(DAY0))
+                db = p.db()
+                db.execute("UPDATE fleet_vessels SET removal_requested_at=? WHERE id=?", ("2026-10-02T00:00:00.000Z", KELP))
+                db.commit()
+                db.close()
+                docs, _result, _run = p.plan(day(1))
+                planned = {b["vessel_id"] for d in docs for b in d["boats"]}
+                self.assertIn(SEA, planned)
+                self.assertNotIn(KELP, planned)
+                write(folder, f"{KELP}.json", kelp())
+                run, result = p.ingest(day(1), folder)
+                self.assertEqual(result["counts"]["refused"], 1, result)
+                report = json.loads((run.dir / "profiles-ingest.json").read_text())
+                self.assertIn("asked for removal", report["refused"][0]["errors"][0])
+                self.assertFalse(p.facts(KELP, "mmsi"))
 
     def test_one_profile_per_vessel_the_newest_wins(self):
         write(self.dir, "a.json", kelp("20261006T081700Z-a1b2c3"))

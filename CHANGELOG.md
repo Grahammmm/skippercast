@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Add the charter fleet's weekly OSINT run (`fleet-osint.yml`, dark behind `ENABLE_FLEET`): batch manifests are researched by a pinned, headless Claude Code session with the `charter-osint` agent on the owner's runner, using the Claude subscription only (the run stops if an API key is set), with fetches to off-limits hosts refused, then validated and ingested; boats whose operator asked for removal are never researched or updated.
 - Add the charter fleet's Labelling view to the admin behind `FLEET_ENABLED` (off): pick a trip (`#fleet-labels`), see its segments on a small track map and a speed strip, all marked inferred from movement, and label time ranges as in port, transit, fishing drift or fishing troll with a basis; each label records its labeller. `python -m skippercast.fleet.ais validate` copies labelled trips' raw positions to `validation/` (exempt from retention while labelled) and reports fishing and per-label precision and recall with a confusion table.
 - Add fleet admin Coverage (`#fleet-coverage`: boats by port and class, % with MMSI, AIS seen or not seen in 30 days, single-source boats, completeness by field group, recent runs) and AIS health (`#fleet-ais`: last message age, 24 h reconnects and drops, gaps over 10 minutes, 7- and 30-day uptime, processor and watch list) views, admin only behind `FLEET_ENABLED` (off).
 - Limit verified classified-policy updates to complete affected regions, including previous scopes and neighbors; uncertain changes retain the full-coast planner.

@@ -13,7 +13,9 @@
 //        confidence and retrieved_at of each current (not superseded) scalar fact,
 //        without its value, so the resolver can rank a stored value it cannot see.
 //        Reviews are the decided and dismissed ones, so a re-run never re-asks.
-//        Private columns (consent, outreach, removal requests, map consent, fact
+//        `removal_requested` (boolean, not the request's time) lets plan-agent and
+//        ingest skip a boat whose operator asked for removal (#346). Private
+//        columns (consent, outreach, removal request times, map consent, fact
 //        values) are not in the snapshot.
 //   POST /api/fleet/jobs/registry   {region, run_id, batch?, ops: [...]}
 //        Body <= 1 MB, <= 500 operations (registry.ts). 200 {ok, run_id, batch,
@@ -43,12 +45,12 @@ export function pinnedNames(text: string): string[] {
   return value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value).sort() : ['*'];
 }
 
-interface VesselRow { id: string; pinned_json: string; waters_json: string | null; [k: string]: unknown }
+interface VesselRow { id: string; pinned_json: string; waters_json: string | null; removal_requested: number; [k: string]: unknown }
 interface OfferingRow { vessel_id: string; days_json: string | null; target_species_json: string | null; source_fact_ids_json: string | null; [k: string]: unknown }
 
 const VESSEL_COLUMNS = 'id,slug,name,name_norm,operator_id,port_id,landing_id,vessel_class,waters_json,uscg_doc,state_reg,hull_id,call_sign,mmsi,' +
   'year_built,passengers_max,bunks,length_ft,beam_ft,cruise_kn,website,booking_url,booking_platform,phone_business,email_business,' +
-  'status,profile_status,pinned_json,completeness,first_seen_at,last_seen_at,last_profiled_at';
+  'status,profile_status,pinned_json,completeness,first_seen_at,last_seen_at,last_profiled_at,removal_requested_at IS NOT NULL AS removal_requested';
 const OFFERING_COLUMNS = 'id,vessel_id,name,trip_type,duration_h,price_cents,price_basis,capacity,currency,departs_local,days_json,season_from,season_to,' +
   'target_species_json,booking_url,status,source_fact_ids_json,valid_from,valid_to,updated_at';
 
@@ -84,7 +86,8 @@ export async function snapshot(db: D1Database, region: string | undefined, curso
     const group = <T extends {vessel_id: string}>(list: T[]) => { const m = new Map<string, Omit<T, 'vessel_id'>[]>(); for (const {vessel_id, ...rest} of list) m.set(vessel_id, [...m.get(vessel_id) ?? [], rest]); return m; };
     const aliasesOf = group(aliases), sourcesOf = group(sources), offeringsOf = group(offerings.map(({days_json, target_species_json, source_fact_ids_json, ...o}) =>
       ({...o, days: parse(days_json), target_species: parse(target_species_json), source_fact_ids: parse(source_fact_ids_json)})));
-    out.vessels = page.map(({pinned_json, waters_json, ...v}) => ({...v, waters: parse(waters_json), pinned: pinnedNames(pinned_json),
+    out.vessels = page.map(({pinned_json, waters_json, removal_requested, ...v}) => ({...v, removal_requested: removal_requested === 1,
+      waters: parse(waters_json), pinned: pinnedNames(pinned_json),
       aliases: aliasesOf.get(v.id) ?? [], offerings: offeringsOf.get(v.id) ?? [], sources: sourcesOf.get(v.id) ?? []}));
   } else {
     const reviews = (await db.prepare(`SELECT id,kind,subject_id,candidate_json,proposal_json,score,status,decision_json,decided_at,opened_at

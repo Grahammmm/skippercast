@@ -4,8 +4,8 @@
 
 **Selection.** From the registry snapshot (the sink's: the staging database or
 the Worker's ``GET /api/fleet/jobs/snapshot``), only ``active`` vessels with no
-removal request (when the snapshot carries ``removal_requested_at``) are
-considered. A vessel is selected when it is
+removal request (``ops.removal_requested``: the Worker's ``removal_requested``
+flag or the staging ``removal_requested_at``) are considered. A vessel is selected when it is
 
 - ``new``: never profiled (``last_profiled_at`` is null);
 - ``stale``: profiled more than the region's ``thresholds.refresh.osint_stale_days`` ago; or
@@ -69,7 +69,7 @@ def select(vessels, now: str, stale_days: int, mode: str = "full") -> list[tuple
     cutoff = _time(now) - timedelta(days=stale_days)
     chosen = []
     for vessel in vessels:
-        if vessel.get("status") != "active" or vessel.get("removal_requested_at"):
+        if vessel.get("status") != "active" or ops.removal_requested(vessel):
             continue
         profiled = vessel.get("last_profiled_at")
         reasons = ["new"] if not profiled else ["stale"] if _time(profiled) < cutoff else []

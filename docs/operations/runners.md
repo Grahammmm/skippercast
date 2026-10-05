@@ -30,7 +30,7 @@ variable change, not a code change:
 
 | Variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install, fleet registry | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install, fleet registry, fleet OSINT | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
 | `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 
@@ -173,6 +173,19 @@ while `FLEET_ENABLED` is on. Run state lives in `~/.local/share/skippercast/flee
 `fleet-staging`), never in the checkout. `GOOGLE_PLACES_API_KEY` (secret, owner step, optional)
 reaches only the pipeline step; without it the Places adapter skips. First run, reruns, staging
 runs and publishing coverage: [fleet registry run](runbooks/fleet-registry.md).
+
+## The fleet OSINT run
+
+`fleet-osint.yml` (CF-21, [design.md § 8](../plans/charter-fleet/design.md#8-the-osint-agent-step))
+plans OSINT batch manifests, researches each batch as a headless `claude -p` session with the
+`charter-osint` agent (`scripts/fleet/run_osint.py`) and ingests the profiles, every Sunday at
+10:17 UTC and on dispatch (`region`, `mode`, `sink`, `max_batches`, and `run_id` to resume). It
+needs `ENABLE_FLEET=true` and a non-empty `DATA_RUNNER`, runs only from `main`, and requests an
+OIDC identity for `/api/fleet/jobs/*`. It uses the Claude subscription only: the owner saves a
+`claude setup-token` token in `~/.config/skippercast/claude.env` (mode 0600, on the box, not a
+GitHub secret), and the script exits if `ANTHROPIC_API_KEY` is set. The Claude Code version is
+pinned and installed under `~/.local/share/skippercast/claude-code/`. Setup, flags, reruns and
+failures: [fleet OSINT run](runbooks/fleet-osint.md).
 
 ## CI readiness gate
 
