@@ -817,7 +817,11 @@ geofence held for the debounce. Trips under `min_trip_minutes` or never beyond
 `min_trip_offshore_nm` are dropped. A gap at sea over `gap_unknown_min` is a
 `gap` segment; over `gap_split_hours` with the vessel next seen in port, the
 trip closes at its last position as `truncated`. An open trip older than
-`max_open_trip_hours[class]` is emitted `truncated`.
+`max_open_trip_hours[class]` is emitted `truncated`, as is a trip whose
+positions start at sea (no departure seen). The length and offshore rules drop
+only closed and truncated trips; open trips may still grow. A position with a
+suspect time (section 10) counts for containment and offshore distance but not
+for derived speed, heading or straightness.
 
 **Classification (D10).** Over a centred `window_min` (20 min) window per
 position: mean SOG (reported, else derived), straightness = net displacement /
@@ -832,7 +836,13 @@ order:
 | `transit` | everything else at sea |
 
 Runs shorter than `min_segment_minutes` merge into the longer neighbour; a
-fishing run under its minimum becomes transit. Output carries
+fishing run under its minimum becomes transit. Silences over `gap_unknown_min`
+(including one before the return fix) are `gap` segments that never merge, so a
+run between two gaps may be shorter than `min_segment_minutes`. A short dip
+into a geofence inside a fishing run merges into that run, so CF-44 must drop
+in-geofence fixes when it builds a fishing event's median and radius. The
+centred window costs O(n·w) per trip (n fixes, w fixes per window), so CF-45
+downsamples raw cadence to one fix per minute before classifying. Output carries
 `classifier_version` (a hash of the thresholds and code version).
 
 **Events, tracks, aggregates.** One event per fishing segment (median point,
