@@ -18,9 +18,10 @@ everything else in a response only in memory, to pick the place:
 - **Text Search** once per port that has vessels (``POST places:searchText``
   with ``"<query> <port name>, <region>"`` biased to a circle around the port,
   field mask ``places.id,places.displayName,places.businessStatus``). A place
-  is matched to a vessel of that port when the vessel's normalised name is in
-  the place's normalised display name and the match is one-to-one; closed
-  places and ambiguous matches are skipped and counted.
+  is matched to a vessel of that port when the vessel's normalised name occurs
+  in the place's display name on word boundaries (``name_in_label``: "Sea Wolf"
+  matches "SeaWolf Sportfishing", "Wolf" does not) and the match is one-to-one;
+  closed places and ambiguous matches are skipped and counted.
 - **Place Details** with field mask ``id`` (the IDs-only refresh Google
   recommends for stored place IDs) for a vessel that already has a
   ``place_id``: a moved ID is recorded as the new value; a ``NOT_FOUND`` is
@@ -70,6 +71,30 @@ def place_url(place_id: str) -> str:
 def norm(text: str) -> str:
     """The fleet name screen rule (design section 7): upper case, A-Z and 0-9 only."""
     return re.sub(r"[^A-Z0-9]", "", (text or "").upper())
+
+
+def name_in_label(name: str, label: str) -> bool:
+    """Whether normalised ``name`` occurs in ``label`` starting and ending on word boundaries.
+
+    The label's words are joined as ``norm`` joins them, so spacing may differ
+    ("SEAWOLF" matches "Sea Wolf Charters"), but the name may not start or end
+    inside a word ("WOLF" does not match "SeaWolf", nor "ANNA" "Savannah").
+    """
+    words = [w for w in re.split(r"[^A-Z0-9]+", re.sub(r"['\u2019]", "", (label or "").upper())) if w]
+    if not name or not words:
+        return False
+    starts, ends, offset = set(), set(), 0
+    for word in words:
+        starts.add(offset)
+        offset += len(word)
+        ends.add(offset)
+    joined = "".join(words)
+    at = joined.find(name)
+    while at != -1:
+        if at in starts and at + len(name) in ends:
+            return True
+        at = joined.find(name, at + 1)
+    return False
 
 
 def places_purge_ops(now: str) -> list[dict]:
@@ -196,14 +221,14 @@ class GooglePlaces:
         vessel_to: dict[str, set[str]] = {}
         for place in places:
             pid = place.get("id")
-            label = norm((place.get("displayName") or {}).get("text", "")) if isinstance(place.get("displayName"), dict) else ""
-            if not isinstance(pid, str) or not PLACE_ID.match(pid) or not label:
+            label = (place.get("displayName") or {}).get("text", "") if isinstance(place.get("displayName"), dict) else ""
+            if not isinstance(pid, str) or not PLACE_ID.match(pid) or not isinstance(label, str) or not norm(label):
                 continue
             if place.get("businessStatus") == "CLOSED_PERMANENTLY":
                 self.report["closed"] += 1
                 continue
             for vessel_id, name in names.items():
-                if name in label:
+                if name_in_label(name, label):
                     place_to.setdefault(pid, set()).add(vessel_id)
                     vessel_to.setdefault(vessel_id, set()).add(pid)
         matched = {}

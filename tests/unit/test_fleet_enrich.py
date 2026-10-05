@@ -23,8 +23,8 @@ from skippercast.fleet import enrich, ops
 from skippercast.fleet.adapters import REGISTRY, get
 from skippercast.fleet.adapters.base import RunContext
 from skippercast.fleet.adapters.file_import import FileImport, FileImportError, is_entity, read_rows
-from skippercast.fleet.adapters.google_places import (CACHE_DAYS, GooglePlaces, HttpPlacesTransport, place_url,
-                                                      places_purge_ops)
+from skippercast.fleet.adapters.google_places import (CACHE_DAYS, GooglePlaces, HttpPlacesTransport, name_in_label,
+                                                      place_url, places_purge_ops)
 from skippercast.fleet.adapters.operator_site import OperatorSite, WEBMAIL_FLAG, phone_e164
 from skippercast.fleet.config import load_region
 from skippercast.fleet.net import FleetSession
@@ -263,6 +263,26 @@ class GooglePlacesTests(unittest.TestCase):
         self.assertEqual(adapter.report["closed"], 1)
         self.assertEqual(adapter.report["not_found"], 1)
         self.assertEqual(adapter.report["refreshed"], 1)
+
+    def test_names_match_on_word_boundaries_not_inside_words(self):
+        for name, label in (("SEAWOLF", "Sea Wolf Charters"), ("SEAWOLF", "SeaWolf Sportfishing"),
+                            ("TESTBOAT", "Test Boat"), ("BOBSBOAT", "Bob's Boat Charters"),
+                            ("EXAMPLE", "The Example - Morro Bay")):
+            self.assertTrue(name_in_label(name, label), (name, label))
+        for name, label in (("WOLF", "SeaWolf Sportfishing"), ("ANNA", "Savannah Charters"),
+                            ("SEAWOLF", "Sea Wolfe Charters"), ("TESTBOAT", "Contest Boat"), ("EXAMPLE", "")):
+            self.assertFalse(name_in_label(name, label), (name, label))
+
+    def test_a_name_inside_a_word_is_not_matched(self):
+        class Inside(_FakePlaces):
+            def search_text(self, body, field_mask):
+                return {"places": [{"id": "ChIJexampleSavannah01", "displayName": {"text": "Savannah Example Charters"},
+                                    "businessStatus": "OPERATIONAL"}]}
+        adapter = GooglePlaces(transport=Inside())
+        vessels = [{"vessel_id": vessel_id(7), "name": "Anna", "port_id": "morro-bay"}]
+        adapter.prepare(vessels, self.binding, self.ctx)
+        self.assertEqual(adapter.enrich(vessels[0], self.binding, self.ctx), [])
+        self.assertEqual(adapter.report["matched"], 0)
 
     def test_only_place_id_is_requested_and_stored(self):
         transport = _FakePlaces(details={"ChIJexampleStoredOld01": {"id": "ChIJexampleStoredOld01"}})

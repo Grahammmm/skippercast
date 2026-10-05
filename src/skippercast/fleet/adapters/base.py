@@ -53,7 +53,8 @@ class Candidate:
 
     def as_dict(self) -> dict:
         return {"source_id": self.source_id, "name": self.name, "port_hint": self.port_hint,
-                "landing_hint": self.landing_hint, "keys": dict(self.keys), "facts": [f.as_dict() for f in self.facts]}
+                "landing_hint": self.landing_hint, "keys": dict(self.keys), "facts": [f.as_dict() for f in self.facts],
+                "record_id": self.record_id}
 
 
 @dataclass

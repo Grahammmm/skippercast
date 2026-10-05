@@ -82,7 +82,8 @@ const STEPS = [
     placesFact(2, 'reputation.google_rating', 4)]},
   {ops: [purge]},
   {ops: [purge]},                                                               // replay: nothing left to delete
-  {ops: [{...purge, source_id: 'fcc-uls'}, {...purge, keep_fields: ['Not A Field']}, {...purge, seen_before: 'yesterday'}]},
+  {ops: [{...purge, source_id: 'fcc-uls'}, {...purge, keep_fields: ['Not A Field']}, {...purge, seen_before: 'yesterday'},
+    {...purge, keep_fields: []}, {...purge, keep_fields: ['reputation.google_rating']}]},  // keep_fields must include place_id
 ];
 
 const TABLES = ['fleet_operators', 'fleet_vessels', 'fleet_vessel_facts', 'fleet_aliases', 'fleet_offerings', 'fleet_departures', 'fleet_reviews', 'fleet_changes'];
@@ -144,7 +145,9 @@ test('SqliteSink stores and refuses exactly what the Worker registry route does'
   assert.equal(worker.dump.fleet_reviews[0].status, 'rejected');
   assert.equal(worker.results[8].counts['fact.purge'].changed, 1, 'one expired Google rating deleted');
   assert.equal(worker.results[9].changed, 0, 'a replayed purge changes nothing');
-  assert.deepEqual(worker.results[10].errors.map(e => e.index), [0, 1, 2], 'unpurgeable source, bad field, bad time refused');
+  assert.deepEqual(worker.results[10].errors.map(e => e.index), [0, 1, 2, 3, 4],
+    'unpurgeable source, bad field, bad time, empty keep_fields and keep_fields without place_id refused');
+  for (const i of [3, 4]) assert.match(JSON.stringify(worker.results[10].errors[i]), /include place_id/);
   const places = worker.dump.fleet_vessel_facts.filter(f => f.source_id === 'google-places').map(f => [f.vessel_id, f.field]).sort();
   assert.deepEqual(places, [[vid(1), 'place_id'], [vid(2), 'reputation.google_rating']].sort(), 'place_id kept; the fresh rating not yet due');
 });

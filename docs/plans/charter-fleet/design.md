@@ -735,7 +735,8 @@ implementation and the SqliteSink must behave the same).
   `change.record` inserts once.
 - *Purge* (CF-16): `fact.purge` `{source_id, keep_fields, seen_before}` deletes the
   facts of that source on this region's vessels whose `last_seen_at` is before
-  `seen_before` and whose `field` is not in `keep_fields` (≤ 20 fields).
+  `seen_before` and whose `field` is not in `keep_fields` (1–20 fields, which
+  must include `place_id`; the delete never touches `place_id` facts either).
   `source_id` must be a source with a retention rule (`PURGEABLE_SOURCES`:
   `google-places`), so a job token cannot delete other sources' facts.
   `changed` counts deleted rows; a replay deletes nothing.

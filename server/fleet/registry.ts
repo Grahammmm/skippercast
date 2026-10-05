@@ -29,6 +29,8 @@
 //   - fact.purge deletes a retention-limited source's facts last seen before a time,
 //     except the fields it keeps (Google Places: everything but place_id, CF-16);
 //     only sources in PURGEABLE_SOURCES can be purged, and only in the request's region.
+//     keep_fields must be non-empty and include PURGE_KEY, and the delete never
+//     touches PURGE_KEY facts, so a purge cannot drop the identifier a source keeps.
 //   - Statements are multi-row and chunked so none binds more than D1's 100
 //     parameters; the request's statements run in one D1 batch (one transaction).
 import {canonicalJson, changeId, departureId, factId, reviewId, valueKey, vesselId} from './ids.ts';
@@ -47,6 +49,8 @@ type UpsertKind = Exclude<OpKind, 'fact.purge'>;
 /** Sources whose facts expire under their terms (design § 5 Retention): the only ones fact.purge may delete. */
 export const PURGEABLE_SOURCES = ['google-places'] as const;
 const MAX_KEEP_FIELDS = 20;
+/** The field a purge always keeps: the identifier the source lets us store indefinitely (Google's place_id). */
+export const PURGE_KEY = 'place_id';
 
 export const FLEET_ENUMS = {
   vesselClass: ['six-pack', 'inspected-party', 'long-range'],
@@ -118,7 +122,12 @@ const object = (v: unknown, name: string): void => { if (!v || typeof v !== 'obj
 const container = (v: unknown, name: string): void => { if (!v || typeof v !== 'object') fail(`${name}: not an object or array`); };
 const isString = (re: RegExp) => (v: unknown): boolean => typeof v === 'string' && re.test(v);
 /** A fact's provenance: an https URL. `admin:` is the admin API's alone (CF-30). */
-const provenance: Check = (v, name) => typeof v === 'string' && v.startsWith('admin:') ? fail(`${name}: admin provenance is written only by the admin API`) : https(v, name);
+/** fact.purge's kept fields: a non-empty list of field names that includes PURGE_KEY. */
+const keepFields = (v: unknown, name: string): void => {
+  listOf(isString(FIELD), MAX_KEEP_FIELDS)(v, name);
+  if (!(v as unknown[]).length || !(v as unknown[]).includes(PURGE_KEY)) fail(`${name}: must be non-empty and include ${PURGE_KEY}`);
+};
+const provenance: Check =(v, name) => typeof v === 'string' && v.startsWith('admin:') ? fail(`${name}: admin provenance is written only by the admin API`) : https(v, name);
 
 // ---- operation specs -----------------------------------------------------------
 // fields: the keys an operation may carry and their checks; `required` keys must be
@@ -182,7 +191,7 @@ const SPECS: Record<OpKind, Spec> = {
     status: oneOf(FLEET_ENUMS.runStatus), counts_json: nullable(json(object)), error: nullable(text(2000)),
   })},
   'fact.purge': {required: ['source_id', 'keep_fields', 'seen_before'], fields: opt({
-    source_id: oneOf(PURGEABLE_SOURCES), keep_fields: json(listOf(isString(FIELD), MAX_KEEP_FIELDS)), seen_before: iso,
+    source_id: oneOf(PURGEABLE_SOURCES), keep_fields: json(keepFields), seen_before: iso,
   })},
 };
 
@@ -486,8 +495,8 @@ export async function applyRegistry(db: D1Database, request: RegistryRequest, ro
       // Facts of this source, in this region, last seen before seen_before, except the kept fields.
       for (const r of mine) {
         statements.push(db.prepare(`DELETE FROM fleet_vessel_facts WHERE source_id=? AND last_seen_at<?
-          AND NOT EXISTS (SELECT 1 FROM json_each(?) WHERE json_each.value=fleet_vessel_facts.field)
-          AND vessel_id IN (SELECT id FROM fleet_vessels WHERE region=?)`).bind(r.cols.source_id!, r.cols.seen_before!, r.cols.keep_fields!, request.region));
+          AND field<>? AND NOT EXISTS (SELECT 1 FROM json_each(?) WHERE json_each.value=fleet_vessel_facts.field)
+          AND vessel_id IN (SELECT id FROM fleet_vessels WHERE region=?)`).bind(r.cols.source_id!, r.cols.seen_before!, PURGE_KEY, r.cols.keep_fields!, request.region));
         owners.push(kind);
       }
       continue;

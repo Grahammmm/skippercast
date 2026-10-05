@@ -30,7 +30,7 @@ from urllib.request import Request, urlopen
 
 from .. import __version__
 from ..paths import repo_root
-from .ops import MAX_ERRORS, MAX_OPS, OP_KINDS, REGION, RUN_ID, Row, iso_ms, validate_ops, wire
+from .ops import MAX_ERRORS, MAX_OPS, OP_KINDS, PURGE_KEY, REGION, RUN_ID, Row, iso_ms, validate_ops, wire
 
 MAX_BYTES = 1024 * 1024
 
@@ -268,10 +268,11 @@ class SqliteSink:
                     for row in mine:
                         before = self.db.total_changes
                         self.db.execute(
-                            "DELETE FROM fleet_vessel_facts WHERE source_id=? AND last_seen_at<? AND NOT EXISTS "
+                            "DELETE FROM fleet_vessel_facts WHERE source_id=? AND last_seen_at<? AND field<>? AND NOT EXISTS "
                             "(SELECT 1 FROM json_each(?) WHERE json_each.value=fleet_vessel_facts.field) "
                             "AND vessel_id IN (SELECT id FROM fleet_vessels WHERE region=?)",
-                            [row.cols["source_id"], row.cols["seen_before"], row.cols["keep_fields"], self.region])
+                            [row.cols["source_id"], row.cols["seen_before"], PURGE_KEY, row.cols["keep_fields"],
+                             self.region])
                         count["changed"] += self.db.total_changes - before
                     changed += count["changed"]
                     continue

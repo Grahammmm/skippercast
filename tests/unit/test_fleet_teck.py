@@ -48,7 +48,7 @@ def html(path: Path) -> str:
 
 def plain(obj):
     """A dataclass as the JSON it would be written as (tuples become lists)."""
-    return json.loads(json.dumps(asdict(obj)))
+    return json.loads(json.dumps(obj.as_dict() if hasattr(obj, "as_dict") else asdict(obj)))
 
 
 def expected(path: Path):
