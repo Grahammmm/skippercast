@@ -130,10 +130,14 @@ def process(root, reach, batch):
         checkpoint.unlink(missing_ok=True)  # never credit a previous failed attempt
         started_run = True
         receipt, unchanged = run(reach, root=root, fetch=True)
+        from .classified_habitat import stage
+        classified = stage(reach, root=root, fetch=True)
         state_cache.save(s3, bucket, root, reach, state_cache.reach_paths(root, reach))
         result.update(status='complete', unchanged=unchanged, input_hash=receipt['input_hash'],
                       physical_reused=receipt.get('physical_reused', False),
                       summary=receipt['ledger_summary'])
+        if classified is not None:
+            result['classified'] = {'input_hash': classified['input_hash'], 'summary': classified['summary']}
         for name in ('run.json', 'atlas-comparison.json'):
             s3.put_object(Bucket=bucket, Key=f'seafloor-review/{reach}/{receipt["input_hash"]}/{name}',
                 Body=(folder/name).read_bytes(), ContentType='application/json', CacheControl='private, no-store')

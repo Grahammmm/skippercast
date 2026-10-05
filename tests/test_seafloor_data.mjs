@@ -1,5 +1,5 @@
 import test from 'node:test';
-import {SEARCH_COLOR} from '../dist/seafloor-data.js';
+import {SEARCH_COLOR, CLASSIFIED_COLOR} from '../dist/seafloor-data.js';
 import assert from 'node:assert/strict';
 import {
   manifestState, loadManifest, manifestURL, archiveURL, decodeTile, decodeRings, classifyRings,
@@ -200,4 +200,20 @@ test('decodes a real tippecanoe PMTiles archive: 107 Morro Bay reef outlines aft
   for (const f of merged) for (const poly of f.geometry.coordinates) for (const [lng, lat] of poly[0]) {
     assert.ok(lng >= h.minLon - 0.02 && lng <= h.maxLon + 0.02 && lat >= h.minLat - 0.02 && lat <= h.maxLat + 0.02);
   }
+});
+
+
+test('classified areas are interpreted, unranked and use no numeric fit view', () => {
+  const p = {status: 'classified-area', terrain_grade: 'A', fit_lingcod: 3,
+    depth_min_ft: 25, depth_max_ft: 300, source_ids: '["depth","class"]'};
+  assert.equal(habitatColor(p, 'terrain'), CLASSIFIED_COLOR);
+  assert.equal(habitatColor(p, 'fit_lingcod'), CLASSIFIED_COLOR);
+  const d = habitatDetails(p);
+  assert.equal(d.classifiedArea, true);
+  assert.equal(d.searchArea, false);
+  assert.equal(d.grade, 'unknown');
+  assert.equal(d.fits[0].value, 'unknown');
+  assert.equal(d.title, 'Publisher-interpreted rugose-rock habitat area');
+  assert.equal(d.depth, 'Within nominal 25–300 ft band');
+  assert.deepEqual(d.source.ids, ['depth', 'class']);
 });

@@ -250,9 +250,11 @@ export const FIT_STYLE = {
 };
 export const UNKNOWN_COLOR = '#8a949b';
 export const SEARCH_COLOR = '#a67c28';
+export const CLASSIFIED_COLOR = '#7368a5';
 
 /** Fill colour for a habitat feature under the chosen view ('terrain' or a fit_* key). */
 export function habitatColor(properties, view = 'terrain') {
+  if (properties?.status === 'classified-area') return CLASSIFIED_COLOR;
   if (properties?.status === 'search-area') return SEARCH_COLOR;
   if (view === 'terrain') return GRADE_STYLE[properties?.terrain_grade]?.color || UNKNOWN_COLOR;
   return FIT_STYLE[properties?.[view]]?.color || UNKNOWN_COLOR;
@@ -282,6 +284,7 @@ export function sourceRightsDetails(value) {
 /** Selected habitat details; missing evidence stays unknown. */
 export function habitatDetails(properties = {}) {
   const searchArea = properties.status === 'search-area';
+  const classifiedArea = properties.status === 'classified-area';
   const search = parse(properties.search_area);
   const sources = parse(properties.source_ids);
   const screen = parse(properties.screen);
@@ -290,16 +293,17 @@ export function habitatDetails(properties = {}) {
   const fits = Object.keys(properties).filter((k) => k.startsWith('fit_')).sort().map((k) => ({
     key: k,
     name: k.slice(4).replace(/_/g, ' '),
-    value: [1, 2, 3].includes(properties[k]) ? properties[k] : 'unknown',
+    value: !classifiedArea && [1, 2, 3].includes(properties[k]) ? properties[k] : 'unknown',
   }));
   return {
     rights: sourceRightsDetails(properties.source_rights),
-    title: searchArea ? 'Measured rough-bottom search area' : HABITAT_LABEL,
+    title: classifiedArea ? 'Publisher-interpreted rugose-rock habitat area' : searchArea ? 'Measured rough-bottom search area' : HABITAT_LABEL,
+    classifiedArea,
     searchArea,
     searchTargets: searchArea && Array.isArray(search?.target_species) ? search.target_species : [],
-    depth: lo !== null && hi !== null ? `${lo}–${hi} ft nominal` : 'Depth unknown',
+    depth: classifiedArea ? 'Within nominal 25–300 ft band' : lo !== null && hi !== null ? `${lo}–${hi} ft nominal` : 'Depth unknown',
     depthNote: DEPTH_NOTE,
-    grade: GRADE_STYLE[properties.terrain_grade] ? properties.terrain_grade : 'unknown',
+    grade: !classifiedArea && GRADE_STYLE[properties.terrain_grade] ? properties.terrain_grade : 'unknown',
     fits,
     source: {
       ids: Array.isArray(sources) ? sources : sources ? [String(sources)] : [],

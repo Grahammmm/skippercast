@@ -153,3 +153,16 @@ test('transient publication recovers automatically, retries are bounded, and off
   await reader.enable();await reader.draw();await settle();
   assert.equal(reader.state(),'disposed');assert.equal(visible,0);assert.equal(timers.size,0);
 });
+
+
+test('classified area sheet separates publisher interpretation from terrain and species ranks', () => {
+  const html = detailsHTML({status: 'classified-area', terrain_grade: 'A', fit_lingcod: 3,
+    depth_min_ft: 25, depth_max_ft: 300, source_ids: '["depth","class"]'});
+  assert.match(html, /Publisher interpretation · unranked habitat area/);
+  assert.match(html, /original publisher interprets rugose rock and boulders/);
+  assert.match(html, /does not establish fish presence or a precise fishing position/);
+  assert.match(html, /Terrain grade and species fit are unknown/);
+  assert.match(html, /lingcod: unknown/);
+  assert.doesNotMatch(html, /surrounding measurements are insufficient|of 3|Terrain grade A/);
+  assert.match(legendHTML('terrain'), /Interpreted rugose-rock area · unranked/);
+});
