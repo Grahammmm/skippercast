@@ -80,16 +80,17 @@ wrong, fix this section in the same PR.
 - **Styling.** `dist/tokens.css` defines a light palette with an inactive
   dark set (`data-theme`), Inter as the font family and a legacy palette
   "kept so current screens render unchanged". The 22 stylesheets (4,289
-  lines) contain 377 distinct hex colours and 245 `var(--…)` uses. No
-  webfont is loaded; the CSP has `font-src 'self'`. Icons are unicode
-  glyphs (922 arrow, target and dot characters across `dist/*.js` and
-  `index.html`).
+  lines) contain 377 distinct hex colours and 275 `var(--` occurrences
+  (`grep -o 'var(--' dist/*.css | wc -l`). No webfont is loaded; the CSP
+  has `font-src 'self'`. Icons are unicode glyphs (`⌖`, `↓`, `×`, `↗` and
+  the like in `dist/index.html` and `dist/*.js`).
 - **Overlays.** Weather is drawn as translucent `L.circle`s
   (`dist/weather-ui.js` line 363) with "↑" characters rotated for direction
   (line 383); currents reuse the same marker style. Charts are hand-built SVG
   in `dist/meteogram-core.js` (265 lines) drawn by `meteogram-ui.js` into a
   Preact card.
-- **Preact.** `web/islands.tsx` mounts seven components (`web/components/`)
+- **Preact.** `web/islands.tsx` mounts five components (`web/components/`
+  holds seven files; two are children)
   into slots of the existing page; `web/state.ts` holds signals with the URL
   as the source of truth for `region`, `coast`, `view`, `target`, `hour`,
   and reloads the page on region change after `lockRegion()`.
@@ -157,7 +158,7 @@ wrong, fix this section in the same PR.
   wind ≥ 12 kt, profile defaults), deck sentence, lower-exposure window,
   four tiles (Wind, Nearshore, Water, Tide) with notes, subline, tide
   sparkline with events, "where to investigate" list, fleet brief, beach
-  advisory link, footer. `src/ui/icons.ts`: 31 stroke icons (the brief said 34; the file has 31 entries).
+  advisory link, footer. `src/ui/icons.ts`: 31 stroke icons.
   `src/ui/history.ts`: 45-day means over monthly p10 / median / p90 bands.
   `src/ui/catches.ts`: up to eight seven-day catch cards.
 - `src/bathymetry-proxy.ts` (128 lines): serves a PNG PMTiles archive from
@@ -218,6 +219,7 @@ web/
     LayerRail.tsx  Legend.tsx  MarkCard.tsx  views/{Coast,Conditions,History,Fleet}.tsx
   landing/
     Landing.tsx  Readout.tsx  PortInput.tsx  ProfilePills.tsx  LayerDots.tsx
+    Shoreline.tsx (static SVG, FE-07)  NightMap.tsx (live map, FE-25)
 dist/
   app.html              the v2 app shell entry (/map)
   landing.html          the v2 landing entry (/)
@@ -275,6 +277,11 @@ labels, roads at high zoom only, no points of interest. Options, best first:
    and sprites self-hosted under `dist/basemap/`. Attribution:
    "© OpenStreetMap contributors, © Protomaps" in the legend's attribution
    row (ODbL; the data is used as a map, never redistributed as data).
+   Rights: `docs/legal/data-rights-register.md` row B6 marks OpenStreetMap
+   commercial use **unknown** (the tile-service policy, not ODbL); a
+   self-hosted extract removes the tile-service question but still needs
+   its own register row (`protomaps-basemap`, ODbL, attribution yes,
+   commercial use: owner to confirm), an **Owner** ask on FE-10.
    - Size, estimated from the Protomaps planet build (about 110–120 GB at
      zoom 15 for the whole planet, concentrated on populated land): a
      California statewide bbox at zoom 15 is in the order of 1–2 GB; the
@@ -434,10 +441,13 @@ reason.
 
 ### Layout
 
-Full-viewport night map on `--bg-deep` (the basemap style's night variant:
-land `--panel`, no labels below zoom 9, coastline glow, relief tiles for the
+Full-viewport night map on `--bg-deep`. FE-07 ships it as the static
+shoreline: the region's CUSP coastline GeoJSON drawn as an inline SVG with
+the glow treatment, which is also the WebGL fallback (§ 13). FE-25 replaces
+it with the live night map (the basemap style's night variant: land
+`--panel`, no labels below zoom 9, coastline glow, relief tiles for the
 region at 0.5 opacity, animated streamlines from the latest fresh current
-frame); over it, left-aligned, DM Sans display: the headline "Know the
+frame) and keeps the SVG as the fallback. Over it, left-aligned, DM Sans display: the headline "Know the
 water before you leave the dock.", the input "Where are you launching?"
 with "Use my location", the profile pills; along the bottom the live readout
 strip (wind, swell, water, tide, fleet line, freshness) in the same tiles as
@@ -467,8 +477,8 @@ Ranked in open-questions Q2; the plan assumes:
 
 ### Port chooser and first run
 
-- The landing input lists `data/home-ports.json` (name, region, match
-  position); "Use my location" calls `navigator.geolocation` and
+- The landing input lists the ports of `catalog/home-ports.json`, served
+  as `data/home-ports.json` (name, region, match position); "Use my location" calls `navigator.geolocation` and
   `closestPort` (ported from `home-port.js`) with the 75 nm rule; both
   save `skippercast-home-port-v1` exactly as today so v1 and v2 share the
   preference.
@@ -528,20 +538,20 @@ sky), marks, selection, coastline glow.
 | Layer | Rail | Source | Rendering | Time | Basis (shape) | Task |
 | --- | --- | --- | --- | --- | --- | --- |
 | Basemap | base | Protomaps extract on R2 (§ 4) | token style; night variant on the landing | static | "OpenStreetMap data, Protomaps build <date>." | FE-10 |
-| Coastline glow | always | NOAA CUSP extract per region (GeoJSON, built by FE-10 from the same bbox) | blurred line under a crisp line, as `fish` | static | "NOAA NGS CUSP shoreline, 1994–2010 sources." | FE-11 |
-| Seafloor relief | Seafloor | PNG PMTiles of USGS grids built by `src/skippercast/seafloor/relief.py` (ported from `fish/scripts/import-bathymetry.py`), on R2 at `tiles/relief/relief-<region>.pmtiles`, served by `server/relief.ts` (ported proxy: approved-source SHA table, 16 MB and 2 MB caps, range checks) | raster with the depth ramp; transparent gaps; nearest sampling | static | "USGS survey relief, nominal 0–300 ft; gaps are unsurveyed." | FE-12 |
-| Seafloor candidates and cells | Seafloor (option) | existing `tiles/seafloor/seafloor-<region>.pmtiles` | vector fill by terrain grade or species fit (existing views) | static | existing seafloor sentence | FE-12 |
-| Currents | Currents | `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames, through `frames.ts` gates | canvas streamlines: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-13 |
-| Water temp | Water temp | `habitat-tiles/sst-analysis-*.json` (MUR) | `ImageSource` texture ≤ 1,024 px from `surfaceField`, feathered inward at gaps; 0.5 °F contours with sparse labels; click reading with analysis time and error | observed (daily analysis) | "MUR daily analysis, 0.01°, sampled at 0.02°, <age>." | FE-14 |
-| Swell | Swell | forecast matrix grid (`forecast-matrix.js` data) and nearshore model sites (§ 11) | field texture of significant height with period isolines; direction as short strokes at low density, never per-cell arrows; nearshore sites as rings sized by height | hour | "Model wave forecast on the region grid, issued <age>; nearshore sites from the CDIP MOP model." | FE-17 |
-| Habitat and marks | always (zoom ≥ 10) | existing survey habitat, geology, reef marks (GeoJSON / PMTiles) | habitat as fills at 0.25 with token hue by class; geology as hatched outline; marks as rings with a fit badge; selected mark highlighted | static | existing sentences per source | FE-15 |
-| MPAs | always | CDFW ds582 (existing) | `--mpa-fill` 0.08, dashed `--mpa-line`; name label at zoom ≥ 11 | static | "CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page." | FE-16 |
+| Coastline glow | always | NOAA CUSP extract per region (GeoJSON, § 11 row) | blurred line under a crisp line, as `fish` | static | "NOAA NGS CUSP shoreline, 1994–2010 sources." | FE-11 |
+| Seafloor relief | Seafloor | PNG PMTiles of USGS grids built by `src/skippercast/seafloor/relief.py` (ported from `fish/scripts/import-bathymetry.py`), on R2 at `tiles/relief/relief-<region>.pmtiles`, served by `server/relief.ts` (ported proxy: approved-source SHA table, 16 MB and 2 MB caps, range checks) | raster with the depth ramp; transparent gaps; nearest sampling | static | "USGS survey relief, nominal 0–300 ft; gaps are unsurveyed." | FE-13, FE-26, FE-14 |
+| Seafloor candidates and cells | Seafloor (option) | existing `tiles/seafloor/seafloor-<region>.pmtiles` | vector fill by terrain grade or species fit (existing views) | static | existing seafloor sentence | FE-14 |
+| Currents | Currents | `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames, through `frames.ts` gates | canvas streamlines: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
+| Water temp | Water temp | `habitat-tiles/sst-analysis-*.json` (MUR) | `ImageSource` texture ≤ 1,024 px from `surfaceField`, feathered inward at gaps; 0.5 °F contours with sparse labels; click reading with analysis time and error | observed (daily analysis) | "MUR daily analysis, 0.01°, sampled at 0.02°, <age>." | FE-16 |
+| Swell | Swell | forecast matrix grid (`forecast-matrix.js` data) and nearshore model sites (§ 11) | field texture of significant height with period isolines; direction as short strokes at low density, never per-cell arrows; nearshore sites as rings sized by height | hour | "Model wave forecast on the region grid, issued <age>; nearshore sites from the CDIP MOP model." | FE-17 (field), FE-27 (nearshore rings) |
+| Habitat and marks | always (zoom ≥ 10) | existing survey habitat, geology, reef marks (GeoJSON / PMTiles) | habitat as fills at 0.25 with token hue by class; geology as hatched outline; marks as rings with a fit badge; selected mark highlighted | static | existing sentences per source | FE-18 |
+| MPAs | always | CDFW ds582 (existing) | `--mpa-fill` 0.08, dashed `--mpa-line`; name label at zoom ≥ 11 | static | "CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page." | FE-19 |
 | Shore runs | with `profile=shore` | ESI runs and access points (§ 11) | run as a wide soft line in `--amber` 0.6 with priority tint; access points as pins | static | "ESI 2006 sandy-shore runs; access points from the Coastal Commission inventory, checked <date>." | FE-36 |
-| Charter grounds | Fleet | `charter-grounds.json` | hatched polygons, label on hover | static | existing sentence | FE-20 |
-| Commercial AIS 2024 | Fleet (option) | `commercial-ais-effort.geojson` | heat fill in `--amber` | static | existing sentence (`commercial-ais.html`) | FE-20 |
-| Charter fleet activity | Fleet (admin) | `/api/fleet/map/*` | events sized by dwell, tracks by segment, heat cells, all `--amber` family | static (filters) | "Inferred from movement; filters in the Fleet view." | FE-23 |
-| Clouds | Clouds | nowCOAST GOES longwave WMS, frames from the times index (§ 11) | raster 512 px tiles, monochrome contrast, loop over observed frames only, 90-minute age gate, withheld on future days | observed | "GOES infrared, observed <time>; a loop of real frames, never a forecast." | FE-21 |
-| Aerial | base | USGS NAIP ImageServer (live tiles) | raster at 0.92 opacity, desaturated | static | "USGS/USDA NAIP natural-colour mosaic, dated imagery." | FE-22 |
+| Charter grounds | Fleet | `charter-grounds.json` | hatched polygons, label on hover | static | existing sentence | FE-21 |
+| Commercial AIS 2024 | Fleet (option) | `commercial-ais-effort.geojson` | heat fill in `--amber` | static | existing sentence (`commercial-ais.html`) | FE-21 |
+| Charter fleet activity | Fleet (admin) | `/api/fleet/map/*` | events sized by dwell, tracks by segment, heat cells, all `--amber` family | static (filters) | "Inferred from movement; filters in the Fleet view." | FE-24 |
+| Clouds | Clouds | nowCOAST GOES longwave WMS, frames from the times index (§ 11) | raster 512 px tiles, monochrome contrast, loop over observed frames only, 90-minute age gate, withheld on future days | observed | "GOES infrared, observed <time>; a loop of real frames, never a forecast." | FE-22 |
+| Aerial | base | USGS NAIP ImageServer (live tiles) | raster at 0.92 opacity, desaturated | static | "USGS/USDA NAIP natural-colour mosaic, dated imagery." | FE-23 |
 | Chart | base | NOAA ENC WMS (existing) | raster, zoom ≥ 10 | static | existing sentence | FE-11 |
 
 Rules for every layer:
@@ -625,7 +635,8 @@ for v1 until FE-61.
 ### History view
 
 Station and metric pickers (46028, 46215 and the region's other stations
-once the history collector covers them), a day range (14, 45, 90), the
+once the history collector covers them), a day range (7, 14, 45, the
+ ranges FE-42 publishes), the
 recent hourly means line over the monthly p10 / median / p90 bands from
 the history feed (§ 11), with sample counts, years with data and missing
 coverage shown as text. Copy: "recorded history", never "climatology".
@@ -649,8 +660,9 @@ Rights notes are carried from `fish/NOTICE.md`.
 | NDBC standard-met annual archives, 46028 (1983–2025) and 46215 (2004–2025) | `pipeline/ndbc_history.py`: SHA-checked annual checkpoints under `var/`, monthly p10 / median / p90 per metric with counts and coverage, recent 45-day means | new `buoy-history.yml` (monthly full, weekly recent) | `data/regions/<id>/history.json` | NOAA public data; aggregations are SkipperCast's; retain counts and missing coverage | `ndbc-history` · public domain · commercial: allowed · attribution yes | FE-42 |
 | ESI 2006 Central California sandy-shore runs (NOAA ORR, ArcGIS) and California Coastal Commission access points | `scripts/import_shore_habitat.py` (reviewed import, not hourly): run geometry with source year, access points with ids and links, review dates in the asset | manual, like `import-shore-habitat.mjs` | `catalog/shore-habitat/<region>.geojson` → `dist/regions/<id>/shore-habitat.geojson` | ESI: no constraints stated beyond mapping limits, attribution encouraged; CCC: facts only, no photos or descriptions; access point is not a current-access certification; rule and access reviews are dated and expire | `noaa-esi-2006` · public · commercial: allowed · attribution yes; `ccc-access-points` · facts only · commercial: owner to confirm · attribution yes | FE-43 |
 | GOES longwave imagery (nowCOAST WMS) | `pipeline/goes_frames.py`: GetCapabilities time list only; frames are fetched live by the browser as WMS tiles pinned to listed times | `live-conditions.yml` | `conditions/goes-times.json` | NOAA public; brightness is not cloud fraction; frames pinned to acquisition times, never `current` | `noaa-goes-nowcoast` · public domain · commercial: allowed · attribution yes | FE-44 |
+| NOAA NGS CUSP shoreline (Continually Updated Shoreline Product, ArcGIS feature service) | `scripts/import_cusp_shoreline.py`: per-region bbox extract, vertices quantised for display, source dates kept per feature | manual, re-run when a region is added | `catalog/shoreline/<region>.geojson` → `dist/regions/<id>/shoreline.geojson` | NOAA public domain; source dates 1994–2010 kept, display quantisation is separate from source accuracy, some tiles unavailable; NOAA policy does not cover unreviewed outside contributors in other regions, so each new region's extract is reviewed | `noaa-cusp-shoreline` · public domain · commercial: allowed (per-region review) · attribution yes | FE-10 |
 | NAIP natural-colour mosaic (USGS ImageServer) | none (live tiles); `regions/<id>/region.json` gains `basemap.aerial: true` where coverage was checked | — | — | USGS/USDA attribution; dated land imagery, not live or underwater; only the fixed USGS service | `usgs-naip` · public domain · commercial: allowed · attribution yes | FE-45 |
-| USGS bathymetry grids as PNG PMTiles | `seafloor/relief.py` (ported `import-bathymetry.py`): approved ZIP/COG hashes, nearest sampling, transparent gaps | `seafloor.yml` dispatch | `tiles/relief/relief-<region>.pmtiles` + manifest on R2 | public domain; credit USGS, CSUMB Seafloor Mapping Lab, UC CISR; no exact-depth or navigation claim | existing USGS rows; add the credit line | FE-12 |
+| USGS bathymetry grids as PNG PMTiles | `seafloor/relief.py` (ported `import-bathymetry.py`): approved ZIP/COG hashes, nearest sampling, transparent gaps | `seafloor.yml` dispatch | `tiles/relief/relief-<region>.pmtiles` + manifest on R2 | public domain; credit USGS, CSUMB Seafloor Mapping Lab, UC CISR; no exact-depth or navigation claim | existing USGS rows; add the credit line | FE-13, FE-26 |
 
 Already in SkipperCast, so no ingest task: Port San Luis tides (`noaa-tides`),
 HFR and WCOFS currents, MUR surface temperature, MPAs, NWS forecast and
@@ -659,8 +671,8 @@ same facts-only review), Natural Earth is replaced by the basemap.
 
 CSP changes (each in the task that needs it, with
 `tests/test_security_headers.mjs` updated): `IMAGE_ORIGINS` gains
-`https://imagery.nationalmap.gov` (FE-22/45) and `https://nowcoast.noaa.gov`
-(FE-21); `CONNECT_ORIGINS` gains nothing new, because every feed is read
+`https://imagery.nationalmap.gov` (FE-23/45) and `https://nowcoast.noaa.gov`
+(FE-22); `CONNECT_ORIGINS` gains nothing new, because every feed is read
 through `/feeds/` or an existing origin.
 
 ## 12. Copy, voice and claims
@@ -800,7 +812,7 @@ GitHub, delete the Cloudflare resources, delete the repository, release the
 | Risk | Mitigation |
 | --- | --- |
 | The basemap extract is larger or slower to build than estimated | FE-10 measures first; fallback to maximum zoom 13 in preview regions, then to a hosted service (Q1 option 2) |
-| Two shells drift while both exist | Shared preference keys, shared feeds, FE-60 within two releases of FE-07; the status log records the gap |
+| Two shells drift while both exist | Shared preference keys, shared feeds, FE-60 within two releases of FE-25; the status log records the gap |
 | MapLibre memory on older phones with five fields on | Textures capped at 1,024 px; fields rebuild only on frame, camera or viewport change; default layers per profile are two |
 | Ported `fish` code carries single-county assumptions (`countyId === 'slo'`) | Every port reads region config; tests run against two region fixtures |
 | Copy regressions (claims stronger than evidence) | The wording rules at the top; review checks the basis sentences; copy lint |

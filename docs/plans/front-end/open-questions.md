@@ -26,6 +26,7 @@ ENC WMS. Numbers are estimates until FE-10 measures (§ 4).
    instrument look, outside our control, and OSM discourages heavy
    production use of its tile servers.
 
+**Owner action:** add the `protomaps-basemap` register row; B6 marks OpenStreetMap commercial use unknown for the tile service, and the self-hosted ODbL extract needs its own confirmation.
 **Plan assumes:** option 1 (D10, FE-10). The ENC chart stays as an optional
 raster base.
 **Blocks:** nothing; FE-10 reports the measured size and this file is
@@ -227,7 +228,7 @@ A preview switch could persist in a cookie or travel in the URL.
 
 ## Q13. Relief tiles for preview regions
 
-**Context.** FE-13 ports the PNG PMTiles pipeline and publishes Morro Bay
+**Context.** FE-13 and FE-26 port the PNG PMTiles pipeline and proxy and publish Morro Bay
 from the three approved USGS grids. The fourteen preview regions have
 seafloor candidates but no relief archive.
 

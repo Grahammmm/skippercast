@@ -10,8 +10,8 @@ Phases and task ids (FE-xx) follow dev-plan.md:
 | Phase | Theme | Tasks |
 | --- | --- | --- |
 | P0 | Foundations behind `UI_V2`: flag and routing, tokens and fonts, icons, state v2, desktop and mobile shells, landing, port chooser and first run | FE-01 – FE-09 |
-| P1 | Map engine and core layers: basemap, MapLibre engine and layer registry, relief, currents, water temperature, habitat and marks, MPAs, swell field, time dock and legend, charter grounds and commercial AIS, clouds, aerial, fleet activity | FE-10 – FE-23 |
-| P2 | Profiles, brief and charts: Boat / Shore / Spear, the daily brief, series charts and Conditions view, tide curve, "where to look", History view, shore runs | FE-30 – FE-36 |
+| P1 | Map engine and core layers: basemap, MapLibre engine and layer registry, relief, currents, water temperature, habitat and marks, MPAs, swell field and nearshore rings, time dock and legend, charter grounds and commercial AIS, clouds, aerial, fleet activity, relief proxy, landing night map | FE-10 – FE-27 |
+| P2 | Profiles, brief and charts: Boat / Shore / Spear, the daily brief, series charts and Conditions view, tide curve, "where to look", History view, shore runs, the brief column | FE-30 – FE-37 |
 | P3 | `fish` data sources into SkipperCast collectors: nearshore wave model, beach health, buoy history, shore runs and access points, cloud frame index, aerial source config | FE-40 – FE-45 |
 | P4 | Remaining features into the new shell: account and alerts, trip planner and offline pack, discussions and catch cards, Fleet view, species plans and regulations, advisor entry | FE-50 – FE-55 |
 | P5 | Flip the flag, delete the old shell, retire `fish` | FE-60 – FE-62 |
@@ -35,7 +35,7 @@ anything.
   age, over the night map with the shelf and streamlines. Largest
   Contentful Paint under 2.5 s on a throttled mobile profile against the
   built site (design § 13). No modal, cookie banner or sign-in gate.
-- MVP. P0 (FE-07), readings from P1 layers and P2 brief.
+- MVP. P0 (FE-07, static shoreline), P1 (FE-25, live night map); readings from the P2 brief model (FE-31).
 
 **US-V2. Say where I launch.** As a first-time visitor, I want to type my
 harbor or use my location and land on the map for that port, so that I never
@@ -75,7 +75,7 @@ to look, so that I can decide in a minute whether and where to go.
   habitat fit for the target species within the profile's depth limit, and
   one caveat. Readings older than their freshness limit show as stale, never
   as current.
-- MVP. P2 (FE-31, FE-33, FE-34).
+- MVP. P2 (FE-31, FE-37, FE-33, FE-34).
 
 **US-B2. See the seafloor as relief.** As a boat angler, I want the bottom
 drawn as shaded relief with depth colour, so that I can read structure the
@@ -84,7 +84,7 @@ way I read my sounder.
   ramp over the basemap, transparent where no survey exists, with the
   survey's name and year in the legend; seafloor candidates and reef marks
   draw above it. Panning a dense region stays responsive (design § 13 budget).
-- MVP. P1 (FE-12).
+- MVP. P1 (FE-13, FE-26, FE-14).
 
 **US-B3. See currents move.** As a boat angler, I want surface currents drawn
 as flowing streamlines for the selected hour, so that I can see where the
@@ -94,7 +94,7 @@ water is going without decoding arrows.
   selected hour, within the age gates ported from `fish`; gaps stay blank;
   the legend shows the speed range; the basis sentence states the product
   and its resolution. Motion stops under `prefers-reduced-motion`.
-- MVP. P1 (FE-13, FE-18).
+- MVP. P1 (FE-15, FE-12).
 
 **US-B4. Scrub the day.** As a boat angler, I want one time control that
 moves the map layers and the brief together, so that the picture at 7 am
@@ -102,7 +102,7 @@ and at 2 pm are the same kind of picture.
 - Acceptance: the time dock's day chips, play button and hour slider set
   `?hour=`; currents, water temperature, swell, clouds, the tiles and the
   chart cursor follow it; observations keep their own time and say so.
-- MVP. P1 (FE-18), P2 (FE-32).
+- MVP. P1 (FE-12), P2 (FE-32).
 
 **US-B5. Keep what works today.** As a returning boat angler, I want the
 trip planner, GPX export, offline pack, regulations, species search plans,
@@ -111,7 +111,7 @@ rely on disappears when the flag flips.
 - Acceptance: each feature in design § 2's inventory has a home in the
   new shell (table in design § 6) and its existing tests pass against the
   new entry points before FE-60.
-- MVP. P1 (FE-20), P4 (FE-51, FE-54).
+- MVP. P1 (FE-21), P4 (FE-51, FE-54).
 
 ## Shore angler
 
@@ -130,7 +130,7 @@ health notices on the brief, so that I do not fish a posted beach.
 - Acceptance: notices from the county feed for the selected area show on
   the brief with the county link and the fetch age; absent sample dates are
   stated as absent, never invented.
-- MVP. P3 (FE-41), shown in P2's brief (FE-31 reads the feed when present).
+- MVP. P3 (FE-41), shown in P2's brief (FE-31 reads the feed when present, FE-37 renders it).
 
 ## Spearfisher
 
@@ -140,7 +140,7 @@ so that the brief answers my question rather than a boat's.
 - Acceptance: `profile=spear` sets the 60 ft limit, the swell tile prefers
   the nearest fresh nearshore model site, the headline rules use the spear
   variants, and the caveat states that visibility is unverified.
-- MVP. P2 (FE-30, FE-31) on P3 data (FE-40).
+- MVP. P2 (FE-30, FE-31, FE-37) on P3 data (FE-40); rings on the map in FE-27.
 
 ## Returning user (any profile)
 
@@ -174,7 +174,7 @@ phone.
   active ramps; `?layers=` round-trips. Every other control from today's
   Options dialog has either a home in design § 6's table or is removed with
   a line in the PR.
-- MVP. P1 (FE-19).
+- MVP. P1 (FE-20).
 
 **US-R5. Sign in where I expect it.** As an account holder, I want sign in,
 my boat and my alerts reachable from the masthead, so that accounts work the
@@ -215,7 +215,7 @@ rebuild does not widen what the public sees.
   `/api/fleet/map/filters` answers for an admin with both fleet flags on;
   the Fleet view shows the public directory only when `FLEET_ENABLED` is
   on; copy keeps "inferred from movement".
-- MVP. P1 (FE-23), P4 (FE-53).
+- MVP. P1 (FE-24), P4 (FE-53).
 
 ## Later (designed for, not built)
 

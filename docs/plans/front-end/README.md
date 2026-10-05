@@ -117,7 +117,8 @@ reopen them in a task PR. [design.md](design.md) and
   files, ids `FE-xx`, branches `claude/fe-xx`, each with files, build,
   acceptance and owner asks.
 - **D16.** Data rights: every `fish`-only source (NAIP, CDIP, beach health,
-  NDBC history, ESI shore runs and access points, GOES) gets a row in
+  NDBC history, ESI shore runs and access points, GOES, the NOAA CUSP
+  shoreline) and the Protomaps basemap get a row in
   `docs/legal/data-rights-register.md` with the rights note carried from
   `fish`'s `NOTICE.md`; the rows are listed in design § 11 for the owner to
   add, since `docs/legal/` is owner territory.

@@ -5,7 +5,7 @@ One task = one builder = one branch `claude/fe-<id>` (for example
 lines, not counting generated files (`dist/client`, `dist/server`,
 `dist/regions/*`, migrations). Sizes: **S** under 150 lines, **M** 150–300,
 **L** 300–400. Section numbers (§) refer to [design.md](design.md); re-read
-the section before starting a task. There are 46 tasks in six phases.
+the section before starting a task. There are 50 tasks in six phases.
 
 Rules for every task:
 
@@ -23,7 +23,8 @@ Rules for every task:
 - Copy follows § 12. No word that claims fish will be there and no promise
   of a bite; basis sentences inside disclosures.
 - `.github/CODEOWNERS` gives the owner `server/`, `.github/workflows/`,
-  `deployments/`, `docs/legal/` and `wrangler.jsonc`; a PR touching them
+  `deployments/`, `docs/legal/` and `wrangler.jsonc`; `NOTICE.md` and
+  `LICENSE` are owner territory too (ADR 0004). A PR touching any of them
   waits for the **Owner**'s approval and says so with the link.
 - Material user-facing changes add a line under `## Unreleased` in
   `CHANGELOG.md` (say "behind `UI_V2`" until FE-60). Append a dated line to
@@ -43,6 +44,7 @@ Rules for every task:
 - Files: `web/tokens.css`, `web/fonts/*.woff2` + licences, `scripts/check_contrast.mjs`, `scripts/check_tokens.mjs`, `tests/test_check_tokens.mjs`, `package.json` (script), `.github/workflows/ci.yml` (one step), `NOTICE.md` (font rows).
 - Build: § 5 tokens (dark default, light set defined), type scale, `@font-face` subsets; contrast pairs; the lint over `web/**` with `web/map/palette.ts` as the only CSS-to-JS bridge.
 - Accept: 1. `check_contrast.mjs` passes for both token files and both themes. 2. `check_tokens.mjs` fails on a fixture with a hex literal and passes on `web/`. 3. No Google Fonts request; CSP unchanged. 4. Fonts load with `font-display: swap`.
+- **Owner**: approve (`NOTICE.md` font rows, `.github/workflows/ci.yml`).
 
 ### FE-03 · Icons and UI primitives · M
 - Depends: FE-02
@@ -68,11 +70,11 @@ Rules for every task:
 - Build: § 6 mobile: top strip, sheet detents (peek, half, full), hour slider at the sheet edge, four-tab nav, rail as a sheet, mark card as peek content.
 - Accept: 1. At 390 × 844 the map fills the viewport and the sheet peeks. 2. Detents work by drag and keyboard. 3. No horizontal page scroll; axe clean.
 
-### FE-07 · Landing page · L
-- Depends: FE-05, FE-11, FE-13, FE-15 (night map); FE-08
-- Files: `dist/landing.html`, `web/landing/{Landing,Readout,ProfilePills,LayerDots}.tsx`, `web/landing/landing.css`, `web/landing/main.tsx`, `e2e/v2-landing.spec.ts`, `scripts/startup-budget.json` (landing entry).
-- Build: § 7 layout; readings from the default region's feeds with source and age; night style variant; saved-port redirect; WebGL fallback (shoreline SVG and readings).
-- Accept: 1. LCP ≤ 2.5 s on the throttled mobile profile against the built site. 2. Every readout tile shows a source and age; a stale feed shows stale. 3. With a saved port and no parameters the page navigates to `/map?region=…&profile=…`. 4. Landing JavaScript before first paint ≤ 180 KB gzipped. 5. axe clean.
+### FE-07 · Landing page (static shoreline) · L
+- Depends: FE-05, FE-08
+- Files: `dist/landing.html`, `web/landing/{Landing,Readout,ProfilePills,LayerDots,Shoreline}.tsx`, `web/landing/landing.css`, `web/landing/main.tsx`, `e2e/v2-landing.spec.ts`, `scripts/startup-budget.json` (landing entry).
+- Build: § 7 layout with the static shoreline SVG (the region's `shoreline.geojson` drawn inline with the glow treatment; FE-25 adds the live map and keeps this as the fallback); readings from the default region's feeds with source and age; saved-port redirect; layer dots bound to the registry ids as links into `/map?layers=`.
+- Accept: 1. LCP ≤ 2.5 s on the throttled mobile profile against the built site. 2. Every readout tile shows a source and age; a stale feed shows stale. 3. With a saved port and no parameters the page navigates to `/map?region=…&profile=…`. 4. Landing JavaScript before first paint ≤ 180 KB gzipped; no MapLibre import. 5. axe clean.
 
 ### FE-08 · Port chooser and first-run profile · M
 - Depends: FE-04, FE-05
@@ -90,10 +92,10 @@ Rules for every task:
 
 ### FE-10 · Basemap build, publish and style · L
 - Depends: FE-02
-- Files: `scripts/basemap/build_basemap.sh`, `scripts/basemap/regions.py` (bboxes from `regions/*/region.json`), `.github/workflows/basemap.yml` (dispatch, `DATA_RUNNER`), `web/map/style.ts`, `dist/basemap/{glyphs,sprites}`, `catalog/sources.json` (`protomaps-basemap`), `docs/data-sources.md`, `tests/unit/test_basemap_regions.py`, `tests/test_map_style.mjs`.
-- Build: § 4 option 1: `pmtiles extract` per region bbox merged into `tiles/basemap/ca-coast-<date>.pmtiles`, uploaded to R2 by the workflow; a token-coloured style (day and night variants) with labels from zoom 9; CUSP coastline GeoJSON per region from the same bboxes.
-- Accept: 1. The style test asserts every colour comes from `palette.ts`. 2. The workflow has no `pull_request` trigger and pinned actions. 3. The PR records the measured archive size and build time and updates § 4. 4. Attribution renders "© OpenStreetMap contributors, © Protomaps".
-- **Owner**: dispatch the first build; confirm the R2 object.
+- Files: `scripts/basemap/build_basemap.sh`, `scripts/basemap/regions.py` (bboxes from `regions/*/region.json`), `scripts/import_cusp_shoreline.py`, `catalog/shoreline/morro-bay.geojson`, `.github/workflows/basemap.yml` (dispatch, `DATA_RUNNER`), `web/map/style.ts`, `dist/basemap/{glyphs,sprites}`, `catalog/sources.json` (`protomaps-basemap`, `noaa-cusp-shoreline`), `docs/data-sources.md`, `tests/unit/test_basemap_regions.py`, `tests/test_map_style.mjs`.
+- Build: § 4 option 1: `pmtiles extract` per region bbox merged into `tiles/basemap/ca-coast-<date>.pmtiles`, uploaded to R2 by the workflow; a token-coloured style (day and night variants) with labels from zoom 9; the CUSP shoreline import per § 11 (source dates kept, quantisation noted) with the platform build copying it to `dist/regions/<id>/shoreline.geojson`.
+- Accept: 1. The style test asserts every colour comes from `palette.ts`. 2. The workflow has no `pull_request` trigger and pinned actions. 3. The PR records the measured archive size and build time and updates § 4. 4. Attribution renders "© OpenStreetMap contributors, © Protomaps". 5. The shoreline asset keeps a source date per feature; platform build diff clean.
+- **Owner**: approve the new workflow; dispatch the first build and confirm the R2 object; add the register rows for `protomaps-basemap` (ODbL; B6 marks OpenStreetMap commercial use unknown, so confirm the self-hosted extract's status) and `noaa-cusp-shoreline`.
 
 ### FE-11 · Map engine, layer registry, coastline, chart base, mark card · L
 - Depends: FE-05, FE-10
@@ -107,15 +109,21 @@ Rules for every task:
 - Build: day chips from the forecast horizon, play (pauses when hidden), hour slider, readout with wind, swell, tide; `hour` and `day` signals drive registered `hour` and `observed` layers.
 - Accept: 1. Frame gate table tests pass (forecast ±90 min and 36 h issue; radar ≤ 6 h; clouds 90 min and withheld on future days). 2. Play steps hours and stops at the end. 3. `prefers-reduced-motion` disables auto-play.
 
-### FE-13 · Relief tiles pipeline and proxy · L
+### FE-13 · Relief tiles pipeline · L
 - Depends: —
-- Files: `src/skippercast/seafloor/relief.py`, `scripts/seafloor/publish_relief.py`, `.github/workflows/seafloor.yml` (dispatch input), `server/relief.ts`, `server/app.ts`, `tests/unit/test_relief.py`, `tests/test_relief_proxy.mjs`, `docs/seafloor.md`.
-- Build: port `fish/scripts/import-bathymetry.py` (approved ZIP/COG hashes, nearest sampling, transparent gaps, depth ramp applied at render not bake) to produce `relief-<region>.pmtiles` and a manifest; port `bathymetry-proxy.ts` as `GET /api/relief/<region>/tiles` with the SHA table, size and range caps, reading R2.
-- Accept: 1. A fixture grid produces tiles with transparent gaps (test decodes a tile). 2. The proxy refuses a manifest with an unlisted SHA, a range over 2 MB and an archive over 16 MB. 3. Range requests return 206 with correct bytes. 4. Tests are offline.
+- Files: `src/skippercast/seafloor/relief.py`, `tests/unit/test_relief.py`, `tests/fixtures/relief/*` (a tiny synthetic grid), `docs/seafloor.md`.
+- Build: port `fish/scripts/import-bathymetry.py`: approved ZIP/COG hashes, nearest sampling, transparent gaps, depth encoded as greyscale PNG with the ramp applied at render; writes `relief-<region>.pmtiles` and a manifest (`sources`, `archive_sha256`, `bytes`, `zooms`) under `var/`.
+- Accept: 1. A fixture grid produces tiles with transparent gaps (test decodes a tile). 2. An unlisted source hash is refused. 3. The manifest's SHA matches the archive. 4. Tests are offline.
+
+### FE-26 · Relief proxy and publish workflow · M
+- Depends: FE-13
+- Files: `server/relief.ts`, `server/app.ts`, `scripts/seafloor/publish_relief.py`, `.github/workflows/seafloor.yml` (dispatch input), `tests/test_relief_proxy.mjs`, `docs/engineering/api-reference.md`.
+- Build: port `fish/src/bathymetry-proxy.ts` as `GET /api/relief/<region>/tiles` reading R2 with the approved-manifest check, 16 MB archive cap, 2 MB range cap, 128 KB manifest cap and bounded 206 ranges; the publish step uploads archive and manifest to `tiles/relief/`.
+- Accept: 1. The proxy refuses a manifest with an unlisted SHA, a range over 2 MB and an archive over 16 MB. 2. Range requests return 206 with correct bytes. 3. The workflow has no `pull_request` trigger.
 - **Owner**: approve (`server/`, workflows); run the first publish for `morro-bay`.
 
 ### FE-14 · Seafloor layer: relief, candidates, cells · M
-- Depends: FE-11, FE-13
+- Depends: FE-11, FE-26
 - Files: `web/map/relief.ts`, `web/map/seafloor.ts` (wraps `dist/seafloor-data.js`), `web/app/Legend.tsx`, `tests/test_seafloor_layer.mjs`, `e2e/v2-map.spec.ts`.
 - Build: § 9 relief raster with the depth ramp from tokens; candidates and cells from the existing PMTiles with the terrain-grade and species-fit views; legend entries; basis sentences.
 - Accept: 1. Toggling Seafloor adds and removes exactly its layers. 2. The legend shows the depth ramp with survey name and year. 3. Expired seafloor publication hides candidates with the existing message.
@@ -133,10 +141,16 @@ Rules for every task:
 - Accept: 1. A rejected replacement grid hides the previous texture and contours. 2. Contours use complete quads only (test). 3. The legend range equals the rounded extrema of the accepted analysis.
 
 ### FE-17 · Swell as a field · M
-- Depends: FE-16, FE-40 (nearshore rings; the field alone can merge first)
+- Depends: FE-16
 - Files: `web/map/swell.ts`, `web/map/forecast-grid.ts` (wraps the forecast matrix reader), `tests/test_swell_layer.mjs`, `e2e/v2-map.spec.ts`.
-- Build: § 9 Swell: height texture through `field.ts`, period isolines, direction strokes at low density, nearshore site rings when the feed exists; no circles, no per-cell arrows.
-- Accept: 1. Toggling Swell adds the texture, isolines and strokes only. 2. Hour change replaces the texture within one frame. 3. Nearshore rings appear only within the site's freshness window.
+- Build: § 9 Swell: height texture through `field.ts`, period isolines, direction strokes at low density; no circles, no per-cell arrows.
+- Accept: 1. Toggling Swell adds the texture, isolines and strokes only. 2. Hour change replaces the texture within one frame.
+
+### FE-27 · Nearshore wave rings · S
+- Depends: FE-17, FE-40
+- Files: `web/map/nearshore.ts`, `web/map/swell.ts` (registers the rings as a sub-layer), `tests/test_nearshore_layer.mjs`.
+- Build: § 9 Swell: nearshore model sites as rings sized by height from `nearshore.json`, each with its site name and age in the mark card.
+- Accept: 1. Rings appear only within the site's freshness window. 2. Without the feed the Swell layer renders as before FE-27.
 
 ### FE-18 · Habitat, geology and reef marks · M
 - Depends: FE-11
@@ -182,6 +196,12 @@ Rules for every task:
 - Build: § 9 events, tracks and heat in the `--amber` family, admin gated exactly as today (`/api/fleet/map/filters` answers for an admin with both flags).
 - Accept: 1. Rail entry absent for non-admins and with the flags off. 2. Every card says "inferred from movement". 3. v1 `fleet-activity.js` untouched.
 
+### FE-25 · Landing night map · M
+- Depends: FE-07, FE-11, FE-14, FE-15
+- Files: `web/landing/NightMap.tsx`, `web/landing/main.tsx` (lazy MapLibre after first paint), `web/map/style.ts` (night variant), `e2e/v2-landing.spec.ts`.
+- Build: § 7 live night map: basemap night variant, coastline glow, relief at 0.5 opacity, streamlines from the latest fresh frame; the FE-07 shoreline SVG stays as the WebGL and load-failure fallback; the layer dots preview a layer on hover.
+- Accept: 1. LCP and the 180 KB first-paint budget hold (MapLibre loads after first paint). 2. With WebGL disabled the SVG renders and axe stays clean. 3. Motion stops under `prefers-reduced-motion`.
+
 ## Phase 2: profiles, brief and charts
 
 ### FE-30 · Profiles applied across the app · M
@@ -190,14 +210,20 @@ Rules for every task:
 - Build: § 8 applied: target list, depth limit, layer defaults, caveat text, search plans filtered by method.
 - Accept: 1. Switching to Shore hides reef marks and shows surfperch first. 2. Spear limits marks to 60 ft (fixture test). 3. `?profile=` wins over storage.
 
-### FE-31 · Daily brief and the brief column · L
+### FE-31 · Daily brief model · M
 - Depends: FE-30, FE-12
-- Files: `web/brief/daily.ts` (ported `fish/src/daily.ts`), `web/brief/{Brief,Tiles}.tsx`, `web/app/Desktop.tsx`, `web/app/Mobile.tsx`, `tests/test_daily.mjs`.
-- Build: § 10 headline rules, deck, four tiles with source and age, lower-exposure window, caveat, beach notice link (reads `beach-health.json` when present), fleet line from the landing-reports feed, footer.
-- Accept: 1. Headline table test covers every rule. 2. A tile past its limit renders stale. 3. The fleet line is absent without a report in 7 days. 4. The mobile sheet shows headline, tiles, top pick and slider at the half detent.
+- Files: `web/brief/daily.ts` (ported `fish/src/daily.ts`), `web/brief/types.ts`, `tests/test_daily.mjs`, `tests/fixtures/brief/*` (synthetic forecast, tides, buoy, notices).
+- Build: § 10 as data: headline rules, deck, the four tile models with source and age and freshness limits, lower-exposure window (`quietestHours`), the profile caveat, beach notice selection (reads `beach-health.json` when present), the fleet line from the landing-reports feed. No DOM.
+- Accept: 1. Headline table test covers every rule. 2. A tile past its limit is marked stale. 3. The fleet line is absent without a report in 7 days. 4. Each profile yields its § 8 caveat.
+
+### FE-37 · Brief column and mobile sheet · M
+- Depends: FE-31
+- Files: `web/brief/{Brief,Tiles}.tsx`, `web/app/Desktop.tsx`, `web/app/Mobile.tsx`, `e2e/v2-brief.spec.ts`.
+- Build: § 10 rendering of the FE-31 model: headline, deck, four tiles with basis popovers, lower-exposure window, caveat, notice link, fleet line, footer; the mobile sheet's peek, half and full content.
+- Accept: 1. A stale tile renders the stale state and its age. 2. The mobile sheet shows headline, tiles, top pick and slider at the half detent. 3. axe clean at both widths.
 
 ### FE-32 · Series chart and Conditions view · L
-- Depends: FE-31
+- Depends: FE-37
 - Files: `web/charts/series.tsx` (ported), `web/charts/Conditions.tsx`, `web/app/views/Conditions.tsx`, `tests/test_series.mjs`, `e2e/v2-conditions.spec.ts`.
 - Build: § 10 chart contract and Conditions view with the shared cursor.
 - Accept: 1. Gap test: a 2 h hole produces two path segments. 2. Rows keep independent scales (test reads the y mapping). 3. The cursor follows `hour` and dragging it moves the map layers. 4. Scrolls sideways at 390 px.
@@ -209,7 +235,7 @@ Rules for every task:
 - Accept: 1. Trend is Rising, Falling or Turning per the 15-minute rule. 2. Fewer than two points → "Tide series unavailable".
 
 ### FE-34 · "Where to look" ranking · M
-- Depends: FE-31, FE-18
+- Depends: FE-37, FE-18
 - Files: `web/brief/WhereToLook.tsx`, `web/ranking.ts` (wraps `spot-ranking.js`, `species-fit.js`), `tests/test_ranking.mjs`.
 - Build: § 10 top four by habitat fit within the profile limit, with distance, depth band, fit badge and reason; selection syncs with the map.
 - Accept: 1. Items outside the limit never appear. 2. Clicking selects the mark and opens the card. 3. Wording per § 12.
@@ -245,7 +271,7 @@ Rules for every task:
 ### FE-42 · NDBC history backfill and seasonal bands · L
 - Depends: —
 - Files: `src/skippercast/pipeline/ndbc_history.py`, `.github/workflows/buoy-history.yml`, `catalog/sources.json`, `tests/fixtures/ndbc-history/*`, `tests/unit/test_ndbc_history.py`, `docs/live-conditions.md`.
-- Build: § 11 row: annual checkpoints with SHA under `var/`, monthly p10 / median / p90 with counts, coverage and years; recent 45-day means; publish `history.json`.
+- Build: § 11 row: annual checkpoints with SHA under `var/`, monthly p10 / median / p90 with counts, coverage and years; recent hourly means for 7, 14 and 45 days (the ranges `fish` publishes and FE-35 offers); publish `history.json`.
 - Accept: 1. Quantiles on a fixture match hand-computed values. 2. A re-run with unchanged archives downloads nothing (conditional GET test). 3. Missing hours are counted, never filled.
 - **Owner**: approve the workflow; run the backfill once on Hermes.
 
@@ -284,7 +310,7 @@ Rules for every task:
 - Accept: 1. `e2e/ranked-export.spec.ts` logic passes against v2. 2. The offline pack size for Morro Bay stays under the documented budget. 3. GPX output is byte-identical to v1 for the same selection.
 
 ### FE-52 · Reports page · M
-- Depends: FE-31
+- Depends: FE-37
 - Files: `web/app/views/Reports.tsx`, `web/reports.ts` (wraps `recent-discussions.js`, `bite-evidence.js`, `coastal-research-context.js`), `tests/test_reports_view.mjs`.
 - Build: § 6 table: discussions, bite evidence, seven-day catch cards (facts only, eight at most), seasonal watch, charter evidence, with dates and source links.
 - Accept: 1. Catch cards keep boat, port, trip, species and the reported/retained/released labels. 2. No publisher prose or photos. 3. Reachable from the landing nav.
@@ -311,7 +337,7 @@ Rules for every task:
 ## Phase 5: flip, delete, retire
 
 ### FE-60 · Flip `UI_V2` on by default · S
-- Depends: FE-07, FE-08, FE-09, FE-20 … FE-24, FE-30 … FE-36, FE-50 … FE-55
+- Depends: FE-07, FE-08, FE-09, FE-20 … FE-27, FE-30 … FE-37, FE-50 … FE-55
 - Files: `deployments/production.json`, `.github/workflows/deploy-cloudflare.yml`, `CHANGELOG.md`, `docs/web-app.md`, `README.md` (status).
 - Build: default on; `?ui=v1` stays for one release; release notes.
 - Accept: 1. Smoke test in the deploy workflow passes on `/` and `/map`. 2. § 15 items 1–6 verified live and linked. 3. Tag `v0.4.0`.
@@ -333,27 +359,26 @@ Rules for every task:
 
 ## Parallelism
 
-- Phase 0: FE-01, FE-02, FE-04 in parallel; FE-03 after FE-02; FE-05 after FE-02, FE-03, FE-04; FE-06, FE-08, FE-09 after FE-05; FE-07 last (needs FE-11, FE-13, FE-15 for its map).
-- Phase 1: FE-10 and FE-13 can start with Phase 0 (FE-10 after FE-02); FE-11 after FE-05 and FE-10; then FE-12, FE-18, FE-19 in parallel; FE-14 after FE-13; FE-15 after FE-12; FE-16 after FE-15; FE-17 after FE-16; FE-20 after FE-14 … FE-18; FE-21, FE-22, FE-23, FE-24 after FE-20 (FE-22 also FE-44; FE-23 also FE-45).
+- Phase 0: FE-01, FE-02, FE-04 in parallel; FE-03 after FE-02; FE-05 after FE-02, FE-03, FE-04; FE-06, FE-08, FE-09 after FE-05; FE-07 after FE-08.
+- Phase 1: FE-10 and FE-13 can start with Phase 0 (FE-10 after FE-02); FE-26 after FE-13; FE-11 after FE-05 and FE-10; then FE-12, FE-18, FE-19 in parallel; FE-14 after FE-26 and FE-11; FE-15 after FE-12; FE-16 after FE-15; FE-17 after FE-16; FE-20 after FE-14 … FE-18; FE-21, FE-22, FE-23, FE-24 after FE-20 (FE-22 also FE-44; FE-23 also FE-45); FE-25 after FE-07, FE-14, FE-15; FE-27 after FE-17 and FE-40.
 - Phase 3 is independent of the shell: FE-40 … FE-45 can run any time, in parallel.
-- Phase 2: FE-30 after FE-20; FE-31 after FE-30; FE-32, FE-34 after FE-31; FE-33 after FE-32; FE-35 after FE-42; FE-36 after FE-43.
-- Phase 4: FE-50 any time after FE-05; FE-52 after FE-31; FE-51, FE-53, FE-54, FE-55 as listed.
-- Conflict hot spots: `dist/index.html` (FE-61 only; Phase 0 adds new pages instead); `vite.config.mjs` (FE-61 only); `web/islands.tsx` (untouched: v2 pages have their own `main.tsx`); `web/state.ts` (FE-04 only, later tasks add keys by appending); `server/routes/assets.ts` (FE-01, FE-61); `server/security-headers.ts` (FE-22, FE-23: rebase, one line each); `web/app/MarkCard.tsx` (FE-11, FE-18, FE-54: in that order); `web/app/Legend.tsx` (FE-14, FE-20); `catalog/sources.json` (FE-40 … FE-45: append entries, rebase); `live.py` (FE-40, FE-41, FE-44: register one collector each).
+- Phase 2: FE-30 after FE-20; FE-31 after FE-30; FE-37 after FE-31; FE-32, FE-34 after FE-37; FE-33 after FE-32; FE-35 after FE-32 and FE-42; FE-36 after FE-43.
+- Phase 4: FE-50 any time after FE-05; FE-52 after FE-37; FE-51, FE-53, FE-54, FE-55 as listed.
+- Conflict hot spots: `dist/index.html` (FE-61 only; Phase 0 adds new pages instead); `vite.config.mjs` (FE-61 only); `web/islands.tsx` (untouched: v2 pages have their own `main.tsx`); `web/state.ts` (FE-04 only, later tasks add keys by appending); `server/routes/assets.ts` (FE-01, FE-61); `server/security-headers.ts` (FE-22, FE-23: rebase, one line each); `web/app/{MarkCard,Legend,LayerRail,TimeDock}.tsx` (created by FE-05 as placeholders; then MarkCard: FE-11, FE-18, FE-54 in that order; Legend: FE-14, FE-20; LayerRail: FE-20; TimeDock: FE-12 — rebase, and keep FE-05's component boundaries); `web/app/{Desktop,Mobile}.tsx` (FE-05, FE-06, FE-37); `catalog/sources.json` (FE-40 … FE-45: append entries, rebase); `live.py` (FE-40, FE-41, FE-44: register one collector each).
 
 ## Dependency graph
 
 ```
 FE-01, FE-02, FE-04, FE-13, FE-40 … FE-45: no dependencies
-FE-02 ─► FE-03 ─► FE-05 (also FE-04) ─► FE-06, FE-08, FE-09, FE-50
+FE-02 ─► FE-03 ─► FE-05 (also FE-04) ─► FE-06, FE-08, FE-09, FE-50;  FE-05 + FE-08 ─► FE-07
 FE-02 ─► FE-10 ─► FE-11 (also FE-05) ─► FE-12, FE-18, FE-19
-FE-13 + FE-11 ─► FE-14
-FE-12 ─► FE-15 ─► FE-16 ─► FE-17 (also FE-40)
+FE-13 ─► FE-26;  FE-26 + FE-11 ─► FE-14
+FE-12 ─► FE-15 ─► FE-16 ─► FE-17;  FE-17 + FE-40 ─► FE-27
 FE-14 + FE-15 + FE-16 + FE-17 + FE-18 ─► FE-20 ─► FE-21, FE-24, FE-30
-FE-12 + FE-44 ─► FE-22;  FE-11 + FE-45 ─► FE-23
-FE-05 + FE-11 + FE-13 + FE-15 + FE-08 ─► FE-07
-FE-30 + FE-12 ─► FE-31 ─► FE-32 ─► FE-33;  FE-31 + FE-18 ─► FE-34
+FE-12 + FE-44 ─► FE-22;  FE-11 + FE-45 ─► FE-23;  FE-07 + FE-11 + FE-14 + FE-15 ─► FE-25
+FE-30 + FE-12 ─► FE-31 ─► FE-37 ─► FE-32 ─► FE-33;  FE-37 + FE-18 ─► FE-34
 FE-32 + FE-42 ─► FE-35;  FE-30 + FE-43 ─► FE-36
-FE-18 + FE-50 ─► FE-51;  FE-31 ─► FE-52;  FE-24 + FE-21 ─► FE-53;  FE-30 + FE-18 ─► FE-54;  FE-05 ─► FE-55
+FE-18 + FE-50 ─► FE-51;  FE-37 ─► FE-52;  FE-24 + FE-21 ─► FE-53;  FE-30 + FE-18 ─► FE-54;  FE-05 ─► FE-55
 Phases 0–4 ─► FE-60 ─► FE-61;  FE-60 + FE-40 … FE-45 ─► FE-62
 ```
 

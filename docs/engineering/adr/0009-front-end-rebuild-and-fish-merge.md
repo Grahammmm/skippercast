@@ -7,7 +7,7 @@
 
 - ADR 0005 proposed Vite + TypeScript + Preact with MapLibre GL and PMTiles
   and has stayed Proposed since 2026-09-29. Since then Vite builds the
-  pages, seven Preact islands exist, and MapLibre and PMTiles are vendored
+  pages, five Preact islands exist, and MapLibre and PMTiles are vendored
   but used only by a test page and the seafloor reader. The live map is
   still Leaflet over OpenStreetMap raster and the NOAA ENC WMS.
 - The app shell is `dist/index.html` (605 lines, three dialogs, 41
