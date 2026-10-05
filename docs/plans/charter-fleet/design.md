@@ -392,7 +392,7 @@ Other registry tables:
   `species_json` (null until catch-log pairing). Indexes `ev_region_time
   (region, started_at)`, `ev_vessel (vessel_id, started_at)`, `ev_season
   (region, season, kind)`.
-- **`fleet_aggregates`**: `id` `sha256(module|params_hash|season|season_part|kind|cell)[:32]`,
+- **`fleet_aggregates`**: `id` `sha256(region|module|params_hash|season|season_part|kind|cell)[:32]`,
   `region`, `module`, `params_json`, `cell_id`, `lat`, `lon`, `season`,
   `season_part`, `kind`, `vessels_n`, `events_n`, `dwell_min`, `first_date`,
   `last_date`, `rights` (most restrictive input), `computed_at`; index
