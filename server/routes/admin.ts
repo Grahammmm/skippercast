@@ -33,6 +33,12 @@
 //   GET  /api/admin/posts/calendar       ?start=YYYY-MM-DD   the week grid (TA-S4, social/calendar.ts calendarWeek)
 //   GET  /api/admin/posts/:id/graphics/:name   a post's generated graphic (the daily card, roundup slides), any status
 //   GET  /api/admin/fleet/clicks    ?days=7|30|90 &region=   /go/ redirect counts (fleet/admin/clicks.ts, CF-34); FLEET_ENABLED gate in routes/fleet.ts
+//   GET  /api/admin/fleet/reviews   ?region= &status=open|decided|dismissed|all &kind= &cursor=   fleet/admin/reviews.ts (CF-30)
+//   POST /api/admin/fleet/reviews/:id   {action, vessel_id?, mmsi?, vessel_class?, status?, note?}
+//   GET  /api/admin/fleet/vessels   ?region= &port= &class= &status= &profile_status= &ais= &completeness_max= &cursor=   fleet/admin/vessels.ts (CF-30)
+//   GET  /api/admin/fleet/vessels/:id
+//   POST /api/admin/fleet/vessels/:id   {fields?, unpin?, removal_requested?}   admin facts, pinned
+//   POST /api/admin/fleet/vessels/:id/link-advisor   {boat_id, unlink?: true}
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -66,6 +72,9 @@ import {servableGraphic} from '../advisor/social/graphics.ts';
 import type {Fetcher} from '../advisor/social/meta.ts';
 // CF-34: /go/ click counts.
 import {clickQuery, clickReport} from '../fleet/admin/clicks.ts';
+// CF-30: fleet reviews and vessels.
+import {listFleetReviews, decideFleetReview} from '../fleet/admin/reviews.ts';
+import {listVessels, vesselDetail, editVessel, linkAdvisor} from '../fleet/admin/vessels.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -257,6 +266,22 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     if ('error' in query) return json({error: query.error}, 400);
     return json(await clickReport(c.env.DB!, query.days, query.region, new Date(now())));
   });
+
+  // ---- CF-30: fleet reviews and vessels (FLEET_ENABLED gate in routes/fleet.ts) ----
+  const stamp = (): string => new Date(now()).toISOString();
+  const listed = (out: {error: string} | Record<string, unknown>): Response => 'error' in out ? json({error: out.error}, 400) : json(out);
+  admin.get('/api/admin/fleet/reviews', async c => listed(await listFleetReviews(c.env.DB!, {region: c.req.query('region'), status: c.req.query('status'),
+    kind: c.req.query('kind'), cursor: c.req.query('cursor')})));
+  admin.post('/api/admin/fleet/reviews/:id', async c => answer(await decideFleetReview(c.env.DB!, c.req.param('id'), await body(c.req.raw, 8192), c.var.owner, stamp())));
+  admin.get('/api/admin/fleet/vessels', async c => listed(await listVessels(c.env.DB!, {region: c.req.query('region'), port: c.req.query('port'),
+    class: c.req.query('class'), status: c.req.query('status'), profile_status: c.req.query('profile_status'), ais: c.req.query('ais'),
+    completeness_max: c.req.query('completeness_max'), cursor: c.req.query('cursor')})));
+  admin.get('/api/admin/fleet/vessels/:id', async c => {
+    const detail = await vesselDetail(c.env.DB!, c.req.param('id'));
+    return detail ? json(detail) : NOT_FOUND();
+  });
+  admin.post('/api/admin/fleet/vessels/:id/link-advisor', async c => answer(await linkAdvisor(c.env.DB!, c.req.param('id'), await body(c.req.raw, 1024), stamp())));
+  admin.post('/api/admin/fleet/vessels/:id', async c => answer(await editVessel(c.env.DB!, c.req.param('id'), await body(c.req.raw, 16384), c.var.owner, stamp())));
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

@@ -14,6 +14,7 @@
 //   GET /api/fleet/jobs/ping   job identity check: {ok: true, region}
 //   GET /go/<slug>             public outbound link, gated and per-IP limited (fleet/go.ts, CF-34)
 //   GET /api/fleet/jobs/snapshot, POST /api/fleet/jobs/registry   CF-11 (server/fleet/jobs.ts)
+//   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
 import {fleetSettings} from '../fleet/settings.ts';

@@ -903,7 +903,15 @@ D1's statement and bound-parameter limits.
 `GET|POST /api/admin/fleet/operators/:id/outreach`,
 `POST /api/admin/fleet/outreach/:id` (approve, discard, log as sent by owner);
 `GET /api/admin/fleet/coverage`, `/ais/health`, `/clicks`;
-`GET|POST /api/admin/fleet/labels`. Today `adminUser` in
+`GET|POST /api/admin/fleet/labels`. A review decision (CF-30,
+`server/fleet/admin/reviews.ts`) is `{action, ...}` stored canonically in
+`decision_json`: `same-vessel` (merge, advisor-link; `vessel_id`, and for
+advisor-link `boat_id`, which sets `advisor_boats.fleet_vessel_id`),
+`new-vessel` (merge), `set-mmsi`/`reject-mmsi` (`mmsi`), `set-class`,
+`set-status` (vanished, scope, change), `confirm` (change, fact-conflict) or
+`dismiss` (status `dismissed`); `set-*` actions also write the admin fact and
+pin. Admin facts carry `source_id = admin`, `source_url = admin:<users.id>`,
+`method = admin`, confidence 1, rights `facts-only` and no `run_id`. Today `adminUser` in
 `server/middleware/admin.ts` returns null while the advisor is off; CF-01
 changes it to "advisor or fleet enabled", and each feature keeps its own check.
 
