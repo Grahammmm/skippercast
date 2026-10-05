@@ -14,6 +14,7 @@ import sqlite3
 import struct
 import tempfile
 import unittest
+from unittest import mock
 
 from skippercast.fleet.ais import listener as listener_module
 from skippercast.fleet.ais import ws
@@ -175,7 +176,7 @@ class ReconnectTest(unittest.TestCase):
             self.assertEqual(bounds, [(0.0, 1), (0.0, 2), (0.0, 4), (0.0, 8)])
             self.assertEqual(delays, [0.5, 1, 2, 4])
 
-    def test_a_connection_that_delivered_resets_the_backoff(self):
+    def test_short_lived_connections_keep_backing_off(self):
         with tempfile.TemporaryDirectory() as tmp:
             delays = []
             connector = Connector(ConnectionRefusedError('down'), ConnectionRefusedError('down'),
@@ -183,13 +184,39 @@ class ReconnectTest(unittest.TestCase):
             listener = make_listener(tmp, connector, sleep=recording_sleep(4, delays))
             with self.assertRaises(Stop):
                 asyncio.run(listener.read_forever())
-            # refused, refused, then two sessions that each delivered a record before dropping
-            self.assertEqual(delays, [1, 2, 1, 1])
+            # refused, refused, then two sessions that each delivered one record and dropped at once
+            self.assertEqual(delays, [1, 2, 4, 8])
             first = json.loads(connector.sockets[0].sent[0])
             self.assertEqual(first['APIKey'], 'test-key')
             self.assertEqual(first['BoundingBoxes'], [[[34.0, -122.0], [36.0, -119.0]]])
             self.assertNotIn('FiltersShipMMSI', first)
             self.assertTrue(all(s.closed for s in connector.sockets))
+
+    def test_a_stable_connection_resets_the_backoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            delays = []
+            connector = Connector(ConnectionRefusedError('down'), ConnectionRefusedError('down'),
+                                  [envelope(), envelope(lat=35.361)], [envelope()])
+            listener = make_listener(tmp, connector, sleep=recording_sleep(4, delays),
+                                     settings=Settings(stable_records=2))
+            with self.assertRaises(Stop):
+                asyncio.run(listener.read_forever())
+            self.assertEqual(delays, [1, 2, 1, 2])   # two records proved the third connection stable
+
+    def test_a_long_lived_connection_resets_the_backoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            delays = []
+            clock = FakeClock()
+            original = FakeSocket.recv
+
+            async def slow_recv(sock):
+                clock.now += 61   # each record arrives a minute after the last
+                return await original(sock)
+            connector = Connector(ConnectionRefusedError('down'), [envelope(), envelope(lat=35.361)])
+            listener = make_listener(tmp, connector, clock=clock, sleep=recording_sleep(3, delays))
+            with mock.patch.object(FakeSocket, 'recv', slow_recv), self.assertRaises(Stop):
+                asyncio.run(listener.read_forever())
+            self.assertEqual(delays, [1, 1, 2])
 
     def test_idle_connection_is_dropped_and_reopened(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -305,6 +332,35 @@ class RoutingTest(unittest.TestCase):
             self.assertEqual(listener.counters.stale, 3)
 
 
+class FlushTest(unittest.TestCase):
+    def test_one_flush_writes_only_what_was_queued_when_it_started(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            listener = make_listener(tmp, settings=Settings(batch_rows=2))
+            for i in range(5):
+                listener.accept(position(ts=ms(NOW) - 60_000 + i * 1000))
+            real_write = listener.store.write
+            arrivals = iter(range(100))
+
+            def write_and_receive_more(*args):
+                for _ in range(3):   # the feed outpaces the writer
+                    listener.accept(position(ts=ms(NOW) - 30_000 + next(arrivals)))
+                return real_write(*args)
+            listener.store.write = write_and_receive_more
+            self.assertEqual(asyncio.run(listener.flush()), 5)
+            self.assertEqual(len(listener.queue), 9)
+
+    def test_records_expired_while_queued_are_not_written(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            clock = FakeClock()
+            listener = make_listener(tmp, clock=clock)
+            self.assertEqual(listener.accept(position(mmsi=OTHER)), 'discovery')
+            self.assertEqual(listener.accept(position()), 'positions')
+            clock.now += 8 * 86_400            # discovery keeps 7 days, positions 30
+            self.assertEqual(asyncio.run(listener.flush()), 1)
+            self.assertEqual(rows(listener.store, 'discovery'), [])
+            self.assertEqual(listener.counters.stale, 1)
+
+
 class DayFileTest(unittest.TestCase):
     def test_no_day_file_is_held_open_and_retention_runs_between_batches(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -406,6 +462,16 @@ class WatchTest(unittest.TestCase):
             write_watch(path, 'CA', [WATCHED, OTHER])
             self.assertTrue(watch.poll())
             self.assertIsNone(watch.last_error)
+            path.unlink()                      # a vanished file is not an empty list
+            self.assertFalse(watch.poll())
+            self.assertEqual(watch.current.watched, {WATCHED, OTHER})
+            self.assertEqual(watch.errors, 2)
+            self.assertIn('missing', watch.last_error)
+            self.assertFalse(watch.poll())     # counted once per disappearance
+            self.assertEqual(watch.errors, 2)
+            write_watch(path, 'CA', [OTHER])
+            self.assertTrue(watch.poll())
+            self.assertEqual(watch.current.watched, {OTHER})
 
     def test_reload_changes_routing_and_resubscribes_in_filter_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -572,6 +638,53 @@ class WebSocketTest(unittest.TestCase):
                     'HTTP/1.1 101'):
             with self.assertRaises(ws.HandshakeError):
                 check(bad)
+
+    def test_resolution_strips_scope_and_refuses_private_addresses(self):
+        def resolve(*addresses):
+            async def getaddrinfo(self, host, port, **kwargs):
+                return [(10, 1, 6, '', (a, port, 0, 0)) for a in addresses]
+            with mock.patch.object(asyncio.BaseEventLoop, 'getaddrinfo', getaddrinfo):
+                return asyncio.run(ws._resolve_public('stream.example', 443))
+        self.assertEqual(len(resolve('2606:4700::1%eth0', '2606:4700::2')), 2)
+        with self.assertRaises(ws.HandshakeError):
+            resolve('2606:4700::1', 'fe80::1%eth0')
+
+    def test_connect_tries_each_resolved_address(self):
+        infos = [(2, 1, 6, '', ('203.0.113.1', 443)), (2, 1, 6, '', ('203.0.113.2', 443))]
+        tried = []
+
+        async def resolve(host, port):
+            return infos
+
+        async def open_connection(host, port, **kwargs):
+            tried.append(host)
+            if host == '203.0.113.1':
+                raise ConnectionRefusedError('down')
+            reader = asyncio.StreamReader()
+            outer = self
+
+            class Writer(outer.Writer):
+                def write(self, chunk):
+                    super().write(chunk)
+                    text = chunk.decode('latin-1')
+                    if text.startswith('GET '):
+                        key = text.split('Sec-WebSocket-Key: ')[1].split('\r\n')[0]
+                        reader.feed_data(('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n'
+                                          'Connection: Upgrade\r\nSec-WebSocket-Accept: '
+                                          f'{ws.accept_key(key)}\r\n\r\n').encode())
+            return reader, Writer()
+
+        with mock.patch.object(ws, '_resolve_public', resolve), \
+                mock.patch.object(ws.asyncio, 'open_connection', open_connection):
+            sock = asyncio.run(ws.connect('wss://stream.example/v0/stream', ssl_context=object()))
+        self.assertIsInstance(sock, ws.WebSocket)
+        self.assertEqual(tried, ['203.0.113.1', '203.0.113.2'])
+
+        async def all_down(host, port, **kwargs):
+            raise ConnectionRefusedError(host)
+        with mock.patch.object(ws, '_resolve_public', resolve), \
+                mock.patch.object(ws.asyncio, 'open_connection', all_down), self.assertRaises(ConnectionRefusedError):
+            asyncio.run(ws.connect('wss://stream.example/v0/stream', ssl_context=object()))
 
     def test_connect_refuses_plain_ws(self):
         with self.assertRaises(ValueError):

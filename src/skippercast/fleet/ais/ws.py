@@ -180,7 +180,7 @@ async def _resolve_public(host: str, port: int) -> list[tuple]:
     if not infos:
         raise OSError(f"{host}: no addresses")
     for info in infos:
-        if not public_address(ipaddress.ip_address(info[4][0])):
+        if not public_address(ipaddress.ip_address(str(info[4][0]).split("%")[0])):   # drop an IPv6 %scope
             raise HandshakeError(f"{host} resolves to a non-public address")
     return infos
 
@@ -198,9 +198,17 @@ async def connect(url: str, *, open_timeout: float = 15.0, max_size: int = MAX_M
 
     async def opening() -> WebSocket:
         infos = await _resolve_public(host, port)
-        family, _, _, _, address = infos[0]
-        reader, writer = await asyncio.open_connection(
-            address[0], address[1], family=family, ssl=ssl_context or tls_context(), server_hostname=host)
+        context = ssl_context or tls_context()
+        failure: OSError | None = None
+        for family, _, _, _, address in infos:   # every checked address in turn, as getaddrinfo ordered them
+            try:
+                reader, writer = await asyncio.open_connection(
+                    address[0], address[1], family=family, ssl=context, server_hostname=host)
+                break
+            except OSError as error:
+                failure = error
+        else:
+            raise failure or OSError(f"{host}: no address accepted the connection")
         try:
             key = base64.b64encode(os.urandom(16)).decode("ascii")
             writer.write((f"GET {path} HTTP/1.1\r\nHost: {host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"

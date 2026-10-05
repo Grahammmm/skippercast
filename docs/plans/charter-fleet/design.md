@@ -753,8 +753,11 @@ stub raising `NotConfigured` until the **Owner** decides to pay.
 subscription without an MMSI filter is used and only watched or discovery
 positions are written. The WebSocket client is the standard library's
 (`fleet/ais/ws.py`: RFC 6455 handshake and framing, `wss` only, public-address
-and TLS checks as in `skippercast.http`), so the listener needs no extra
-package beyond the `fleet` extra's. aisstream has no replay, so the listener must be always
+and TLS checks as in `skippercast.http`, each resolved address tried in
+turn), so the listener needs no extra package beyond the `fleet` extra's. It
+has no HTTP proxy support: the data runner must reach
+`stream.aisstream.io:443` by direct egress (CF-42's runbook checks this first
+when the heartbeat shows no messages). aisstream has no replay, so the listener must be always
 on: a user systemd unit, not a scheduled job. `mmsi_filter: true` switches to
 watched-only if volume becomes a problem.
 
@@ -769,16 +772,20 @@ watched-only if volume becomes a problem.
 - An asyncio reader feeds a bounded queue (50,000); a writer commits every
   second or 1,000 rows. The reader never waits on the database: at 80% full
   it drops discovery positions, at 90% statics too; watched positions are
-  dropped only when full; drops are counted per table.
+  dropped only when full; drops are counted per table. One flush writes at
+  most the rows queued when it began (so retention is never starved), and each
+  batch is re-checked against retention with the clock at write time.
 - Reconnect with exponential backoff (1 s to 5 min, full jitter); 120 s without
-  a message forces a reconnect.
+  a message forces a reconnect. The backoff resets only after a connection has
+  been receiving for 60 s or delivered 100 records.
 - Watch list re-read every 10 minutes from `ais/watch.json`, which the
   processor job refreshes from the Worker (the listener holds no GitHub identity).
   Format (version 1, written atomically with `fleet/ais/watch.py`
   `write_watch`): `{"schema_version": 1, "region": "CA", "generated_at":
   "<ISO 8601 Z>", "watched": [<MMSI>, ...]}`, MMSIs sorted and unique. A
-  missing file is an empty list; an invalid one is rejected and the last good
-  list kept (`watch_errors` in the heartbeat). With `mmsi_filter` a changed
+  missing file at start is an empty list; a file that disappears after a good
+  read, or an invalid one, is rejected and the last good list kept and logged
+  (`watch_errors` in the heartbeat). With `mmsi_filter` a changed
   list resubscribes.
 - Heartbeat every 60 s to `ais/heartbeat.json` (atomic): last message time,
   messages and watched messages per minute, vessels, reconnects, drops, queue

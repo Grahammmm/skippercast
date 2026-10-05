@@ -11,10 +11,15 @@ systemd unit (CF-42). Four asyncio tasks share one ``Listener``:
   the queue is full. Every drop is counted by table. A dropped connection, an
   error frame or ``IDLE_SECONDS`` (120 s) without a record reconnects after a
   delay drawn with full jitter from ``[0, min(BACKOFF_MAX, BACKOFF_INITIAL *
-  2**attempt)]`` (1 s growing to 5 min); a connection that delivered a record
-  resets ``attempt``.
+  2**attempt)]`` (1 s growing to 5 min); ``attempt`` resets only once a
+  connection has been receiving for ``STABLE_SECONDS`` (60 s) or delivered
+  ``STABLE_RECORDS`` (100) records, so a server that accepts and then drops
+  every connection still backs off.
 - **writer**: commits the queue every ``BATCH_SECONDS`` (1 s) or
   ``BATCH_ROWS`` (1,000) rows through ``AisStore.write`` in a worker thread.
+  One flush writes at most the rows queued when it started, so a busy feed
+  cannot keep the writer from reaching retention; each batch is re-checked
+  against retention with the clock at write time.
   ``AisStore.write`` opens each day file for one batch and closes it, so no day
   file is held open between batches. Hourly retention (``thresholds.retention``)
   runs in the same task between batches, so a write never overlaps retention.
@@ -77,7 +82,7 @@ from .store import AisStore, RetentionLimits, day_of
 from .watch import RELOAD_SECONDS, WatchFile, atomic_write_json
 
 __all__ = ["QUEUE_MAX", "SHED_DISCOVERY", "SHED_STATICS", "BATCH_ROWS", "BATCH_SECONDS", "BACKOFF_INITIAL",
-           "BACKOFF_MAX", "IDLE_SECONDS", "HEARTBEAT_SECONDS", "RETENTION_SECONDS", "HEARTBEAT_VERSION",
+           "BACKOFF_MAX", "IDLE_SECONDS", "STABLE_SECONDS", "STABLE_RECORDS", "HEARTBEAT_SECONDS", "RETENTION_SECONDS", "HEARTBEAT_VERSION",
            "Geofence", "Router", "Settings", "Listener", "backoff_ceiling", "main"]
 
 QUEUE_MAX = 50_000
@@ -88,6 +93,8 @@ BATCH_SECONDS = 1.0
 BACKOFF_INITIAL = 1.0
 BACKOFF_MAX = 300.0
 IDLE_SECONDS = 120.0
+STABLE_SECONDS = 60.0
+STABLE_RECORDS = 100
 HEARTBEAT_SECONDS = 60.0
 RETENTION_SECONDS = 3_600.0
 HEARTBEAT_VERSION = 1
@@ -177,6 +184,8 @@ class Settings:
     backoff_initial: float = BACKOFF_INITIAL
     backoff_max: float = BACKOFF_MAX
     idle_seconds: float = IDLE_SECONDS
+    stable_seconds: float = STABLE_SECONDS
+    stable_records: int = STABLE_RECORDS
     reload_seconds: float = RELOAD_SECONDS
     heartbeat_seconds: float = HEARTBEAT_SECONDS
     retention_seconds: float = RETENTION_SECONDS
@@ -322,13 +331,18 @@ class Listener:
             self._resubscribe.clear()
             stream = self.source.stream(self.bbox, mmsis)
             reason = None
+            first_at, delivered = None, 0
             try:
                 while True:
                     record = await self._next(stream)
                     if not self.connected:
                         self.connected = True
+                        first_at = self.clock()
                         log.info("receiving AIS", extra={"region": self.region, "source_id": self.source.id})
-                    attempt = 0
+                    delivered += 1
+                    if attempt and (delivered >= self.settings.stable_records
+                                    or self.clock() - first_at >= self.settings.stable_seconds):
+                        attempt = 0   # the connection proved stable
                     self.accept(record)
             except _Resubscribe:
                 reason = None
@@ -363,21 +377,32 @@ class Listener:
 
     # ----- writer -----
 
-    def take_batch(self) -> dict[str, list[AisMessage]]:
+    def take_batch(self, limit: int | None = None) -> dict[str, list[AisMessage]]:
+        """Up to ``batch_rows`` (and ``limit``) queued records, minus any retention has expired since queueing."""
         batch = {t: [] for t in TABLES}
-        for _ in range(min(len(self.queue), self.settings.batch_rows)):
+        now_ms = int(self.clock() * 1000)
+        count = min(len(self.queue), self.settings.batch_rows, len(self.queue) if limit is None else limit)
+        for _ in range(count):
             table, record = self.queue.popleft()
+            if self.router.expired(table, record.ts, now_ms):
+                self.counters.stale += 1
+                continue
             batch[table].append(record)
         if len(self.queue) < self.settings.batch_rows:
             self._batch_ready.clear()
         return batch
 
     async def flush(self) -> int:
-        """Write everything queued now, one batch at a time; returns rows handed to the store."""
+        """Write the records queued when the flush started, a batch at a time; returns rows handed to the store."""
         handed = 0
-        while self.queue:
-            batch = self.take_batch()
+        remaining = len(self.queue)
+        while remaining > 0 and self.queue:
+            before = len(self.queue)
+            batch = self.take_batch(remaining)
+            remaining -= before - len(self.queue)
             rows = sum(len(v) for v in batch.values())
+            if not rows:
+                continue
             handed += rows
             try:
                 counts = await asyncio.to_thread(self.store.write, batch["positions"], batch["discovery"],

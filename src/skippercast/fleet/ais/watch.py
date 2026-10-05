@@ -16,9 +16,10 @@ positions inside a harbor geofence reach ``discovery`` like any unwatched
 vessel's. The file is written atomically (temporary file, then rename), so a
 reader sees the old list or the new one, never half of one.
 
-A missing file is an empty list. A file that cannot be read or does not match
-the format (wrong region, a bad MMSI) is rejected and the listener keeps the
-list it had, counting the failure in its heartbeat.
+A missing file is an empty list when the listener starts. A file that
+disappears after a good list was read, cannot be read, or does not match the
+format (wrong region, a bad MMSI) is rejected: the listener keeps the last good
+list, logs it and counts the failure in its heartbeat.
 """
 from __future__ import annotations
 
@@ -134,6 +135,7 @@ class WatchFile:
         self.errors = 0
         self.last_error: str | None = None
         self._stamp: tuple | None = None
+        self._loaded = False   # a good file has been read at least once
 
     def _signature(self):
         try:
@@ -145,7 +147,12 @@ class WatchFile:
     def poll(self) -> bool:
         """Reload if the file changed; True when the watched set changed."""
         stamp = self._signature()
-        if stamp == self._stamp and self._stamp is not None:
+        if stamp == self._stamp and (self._stamp is not None or self._loaded):
+            return False
+        if stamp is None and self._loaded:
+            self.errors += 1
+            self.last_error = f"watch.json is missing; keeping the last list of {len(self.current)}"
+            self._stamp = None
             return False
         try:
             fresh = read_watch(self.path, self.region)
@@ -155,6 +162,7 @@ class WatchFile:
             self._stamp = stamp   # do not retry the same bad file every poll
             return False
         self._stamp = stamp
+        self._loaded = self._loaded or stamp is not None
         self.last_error = None
         changed = fresh.watched != self.current.watched
         self.current = fresh
