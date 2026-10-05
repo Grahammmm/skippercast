@@ -33,6 +33,7 @@ Files on the box (`~` is the runner user's home):
 | Run directory | `~/.local/share/skippercast/fleet/<REGION>/runs/<run_id>/` (staging: `fleet-staging`) |
 | In it | `agent-plan.json`, `manifests/batch-NNN.json`, `profiles/<vessel_id>.json`, `summaries/<batch_id>.md`, `osint/<batch_id>.json` (the session's JSON result), `osint/<batch_id>.stderr.log`, `osint/agents.json`, `state.json`, `profiles-ingest.json` |
 | Agent fetch cache | `<var>/<REGION>/http-cache/agent/` (the manifest's `policy.cache_dir`) |
+| The sessions' Claude config | `<var>/osint/claude-config/` (`CLAUDE_CONFIG_DIR`; created by the runner, no settings, no login) |
 
 All of it is registry data: it stays on the box, never in git, an issue or a PR.
 
@@ -69,6 +70,8 @@ Each batch runs, with the prompt on stdin and the run directory as working direc
 | `--disallowedTools` | `WebFetch(domain:<host>)` and `WebFetch(domain:*.<host>)` for every host in `catalog/fleet/off-limits.json`, and `mcp__*` | The D7 hosts are refused at fetch time (deny wins over allow); no MCP tools. |
 | `--permission-mode` | `dontAsk` | Every call not pre-approved is denied. |
 | `--permission-prompts` | `none` | Nobody answers prompts; Claude is told not to retry a denial (2.1.259 or later). |
+| `--setting-sources` | `""` (empty: none) | Loads no user, project or local settings file, so no allow rule (say `Bash(*)` in the runner user's `~/.claude/settings.json`) merges into the rules above. Only admin-managed settings (`/etc/claude-code/managed-settings.json`) still apply: keep that file absent on Hermes, or free of `allow` rules. |
+| `CLAUDE_CONFIG_DIR` (environment) | `<fleet var>/osint/claude-config` | A config directory the runner creates (0700) for the sessions alone, never the runner user's `~/.claude`. The runner exits 2 if it holds `settings.json`, `settings.local.json` or `.credentials.json`: the token comes from `CLAUDE_CODE_OAUTH_TOKEN` in the environment only, never from a stored login. |
 | `--max-turns` | `200` | Bounds a batch (documented in the CLI reference; `--help` does not list it). |
 | `--output-format` | `json` | One result object: `subtype`, `is_error`, `num_turns`, `permission_denials`, `result`. |
 | `--add-dir` | `<repo>/schemas`, `<repo>/catalog/fleet`, the cache directory | Read access to the schema, the off-limits list and the fetch cache; only the cache is writable. |
@@ -97,6 +100,7 @@ These were checked against `claude --help` of 2.1.289 and the [CLI reference](ht
 | `... mode 0644; the token file must be 0600` | `chmod 600 ~/.config/skippercast/claude.env`. |
 | `claude auth status reports authMethod 'api_key_helper'` (or `api_key`) | A settings file on the box sets `apiKeyHelper`, or a Console login stored a key: remove it (`claude auth logout` as the runner user); the token in `claude.env` must be the one in use. |
 | `claude auth status reports authMethod 'none'` or sessions fail with an authentication error | The token expired (one year) or was revoked: repeat first-run step 2. |
+| `.../osint/claude-config holds settings.json` (or `.credentials.json`) | Something wrote a settings file or a login into the sessions' config directory. Delete the named file; never copy settings there. |
 | `Claude Code X found, 2.1.289 pinned` | The install step failed or something else is on `PATH`; read the install step's log. |
 | `... no plan-agent output` | The plan step failed (read its log), or a resume named a run id from the other sink. |
 

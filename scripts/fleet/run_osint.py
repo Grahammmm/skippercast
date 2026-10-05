@@ -30,7 +30,12 @@ with ``--agents <file> --agent charter-osint`` (its body replaces the system pro
 pre-approved; ``--allowedTools`` approves WebFetch, WebSearch, writes under ``profiles/``,
 ``summaries/`` and the manifest's cache directory, and Bash for the profile validator
 only; ``--disallowedTools`` denies WebFetch to every host in ``catalog/fleet/off-limits.json``
-and its subdomains, and every MCP tool. The session's environment is an allowlist
+and its subdomains, and every MCP tool. Those rules hold only if no settings file adds
+allow rules, so no settings file is read: ``--setting-sources ""`` loads none of the user,
+project and local files, and ``CLAUDE_CONFIG_DIR`` is a dedicated directory the runner owns
+(``<fleet var>/osint/claude-config``), never the runner user's ``~/.claude``; the runner
+refuses to start when that directory holds a ``settings.json`` or a ``.credentials.json``,
+so the token comes from the environment only. The session's environment is an allowlist
 (``PASS_ENV``), so the job's OIDC request token and ``GITHUB_TOKEN`` never reach it.
 These flags were checked against ``claude --help`` and the CLI reference for the pinned
 version (``--max-turns`` is documented but not listed by ``--help``).
@@ -85,7 +90,11 @@ PASS_ENV = ("PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "LC_CTYPE", "TZ
             "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "https_proxy", "http_proxy", "no_proxy",
             "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS", "REQUESTS_CA_BUNDLE",
             "VIRTUAL_ENV", "PYTHONPATH", "SKIPPERCAST_FLEET_VAR", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
-            "XDG_CACHE_HOME", "CLAUDE_CONFIG_DIR")
+            "XDG_CACHE_HOME")
+CONFIG_DIR = "CLAUDE_CONFIG_DIR"
+# Files that must never be in the session's config directory: user settings could add allow
+# rules, and a stored login could stand in for the token (which must come from the environment).
+CONFIG_REFUSED = ("settings.json", "settings.local.json", ".credentials.json")
 DEFAULT_AUTH_FILE = Path("~/.config/skippercast/claude.env")
 
 
@@ -135,9 +144,22 @@ def oauth_token(environ: Mapping[str, str], auth_file: Path) -> str:
     return values[TOKEN]
 
 
-def session_env(environ: Mapping[str, str], token: str) -> dict[str, str]:
+def claude_config_dir(environ: Mapping[str, str]) -> Path:
+    """The session's own ``CLAUDE_CONFIG_DIR`` (``<fleet var>/osint/claude-config``), created 0700."""
+    path = fleet_var(environ) / "osint" / "claude-config"
+    path.mkdir(parents=True, exist_ok=True)
+    path.chmod(0o700)
+    present = [name for name in CONFIG_REFUSED if (path / name).exists()]
+    if present:
+        raise Refused(f"{path} holds {', '.join(present)}: the OSINT session's config directory must have no "
+                      "settings and no stored login (the token comes from the environment); remove them")
+    return path
+
+
+def session_env(environ: Mapping[str, str], token: str, config_dir: Path) -> dict[str, str]:
     env = {name: environ[name] for name in PASS_ENV if name in environ}
     env[TOKEN] = token
+    env[CONFIG_DIR] = str(config_dir)  # never the runner user's ~/.claude and its settings
     env["DISABLE_AUTOUPDATER"] = "1"  # keep the pinned version
     return env
 
@@ -215,6 +237,7 @@ def command(claude: str, run_dir: Path, cache_dir: Path, agents_file: Path, host
             "--disallowedTools", ",".join(denied),
             "--permission-mode", "dontAsk",
             "--permission-prompts", "none",
+            "--setting-sources", "",  # no user, project or local settings file can add allow rules
             "--max-turns", str(max_turns),
             "--output-format", "json",
             "--add-dir", str(SCHEMA_DIR), str(OFF_LIMITS.parent), str(cache_dir),
@@ -346,7 +369,7 @@ def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEF
     if not (run_dir / "agent-plan.json").is_file():
         raise Refused(f"{run_dir}: no plan-agent output; run `python -m skippercast.fleet plan-agent` first")
     manifests = sorted((run_dir / "manifests").glob("batch-*.json"))
-    env = session_env(environ, oauth_token(environ, auth_file))
+    env = session_env(environ, oauth_token(environ, auth_file), claude_config_dir(environ))
     claude_path = shutil.which(claude, path=env.get("PATH")) or claude
     check_cli(claude_path, env)
     for sub in ("profiles", "summaries", "osint"):

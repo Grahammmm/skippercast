@@ -58,6 +58,7 @@ before = sum(1 for line in log.read_text().splitlines() if json.loads(line)["bat
 with log.open("a") as f:
     f.write(json.dumps({{"batch": batch, "argv": args, "cwd": os.getcwd(), "env": sorted(os.environ),
                         "token": os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), "prompt": prompt,
+                        "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(),
                         "start": time.monotonic()}}) + "\n")
 time.sleep(float(plan.get("_sleep", 0)))
 if behaviour == "hang":
@@ -242,6 +243,7 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(value("--tools"), "Read,Write,Glob,Grep,WebFetch,WebSearch,Bash")
         self.assertEqual(value("--permission-mode"), "dontAsk")
         self.assertEqual(value("--permission-prompts"), "none")
+        self.assertEqual(value("--setting-sources"), "", "no user, project or local settings file is loaded")
         self.assertEqual(value("--output-format"), "json")
         self.assertEqual(value("--max-turns"), str(run_osint.DEFAULT_MAX_TURNS))
         for flag in ("--strict-mcp-config", "--no-session-persistence", "--disable-slash-commands"):
@@ -270,7 +272,32 @@ class BatchTests(unittest.TestCase):
             self.assertNotIn(name, call["env"])
         self.assertIn("DISABLE_AUTOUPDATER", call["env"])
         self.assertTrue(set(call["env"]) <= set(run_osint.PASS_ENV) | {
-            "CLAUDE_CODE_OAUTH_TOKEN", "DISABLE_AUTOUPDATER", "PWD", "SHLVL", "_", "LC_CTYPE"}, call["env"])
+            "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "DISABLE_AUTOUPDATER", "PWD", "SHLVL", "_", "LC_CTYPE"},
+            call["env"])
+
+    def test_the_session_never_reads_the_runner_users_claude_settings(self):
+        # The runner user's own config dir (with a permissive settings file) must not reach the session.
+        home_config = Path(self._tmp.name) / "home-claude"
+        home_config.mkdir()
+        (home_config / "settings.json").write_text(json.dumps({"permissions": {"allow": ["Bash(*)"]}}))
+        self.h.environ["CLAUDE_CONFIG_DIR"] = str(home_config)
+        code, _counts = self.h.run(max_batches=1)
+        self.assertEqual(code, 0)
+        (call,) = self.h.calls()
+        dedicated = self.h.var / "osint" / "claude-config"
+        self.assertEqual(call["config_dir"], str(dedicated))
+        self.assertEqual(dedicated.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(call["token"], "test-token-not-real", "the token comes from the environment")
+        argv = call["argv"]
+        self.assertEqual(argv[argv.index("--setting-sources") + 1], "")
+        # A settings file or a stored login in the dedicated directory stops the run before any session.
+        for name in ("settings.json", ".credentials.json"):
+            with self.subTest(name=name):
+                (dedicated / name).write_text("{}")
+                with self.assertRaisesRegex(run_osint.Refused, re.escape(name)):
+                    self.h.run()
+                (dedicated / name).unlink()
+        self.assertEqual(len(self.h.calls()), 1)
 
 
 class AuthTests(unittest.TestCase):
@@ -458,7 +485,8 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn(f"`{run_osint.CLAUDE_CODE_VERSION}`", runbook)
         for flag in ("--agents", "--agent", "--tools", "--allowedTools", "--disallowedTools", "--permission-mode",
                      "--permission-prompts", "--max-turns", "--output-format", "--add-dir", "--strict-mcp-config",
-                     "--no-session-persistence", "claude setup-token", "ENABLE_FLEET",
+                     "--no-session-persistence", "--setting-sources", "CLAUDE_CONFIG_DIR", "claude setup-token",
+                     "ENABLE_FLEET",
                      "~/.config/skippercast/claude.env"):
             self.assertIn(flag, runbook)
 
