@@ -389,7 +389,7 @@ advisor/derived/<media_id>/public.jpg                  1440 px max, sRGB JPEG, f
 advisor/derived/<media_id>/story.jpg                   1080×1920 with the "Text SkipperCast" footer baked in
 advisor/derived/<media_id>/thumb.jpg                   320 px for the admin queue
 advisor/posts/<post_id>/daily.jpg                      the daily "what's biting" graphic
-advisor/exports/<contact_id>/<date>.json               a "send me my data" export, 7-day lifecycle
+advisor/exports/<contact_id>/<date>.json               a "send me my data" export, deleted after 7 days by the retention slot
 ```
 
 Served only through `GET /media/<media_id>.jpg` (public derived files, when
@@ -429,7 +429,8 @@ gets the upload link (SP-3), which accepts up to 300 MB.
 
 ## Retention and deletion
 
-Runs weekly from `advisorCron` (Sunday 09:00 UTC slot) and is idempotent.
+Runs weekly from `advisorCron` (Sunday 09:00 UTC slot) and is idempotent. The
+job_state keys and data exports have rules of their own (As built, below).
 
 | Data | Rule |
 | --- | --- |
@@ -440,6 +441,34 @@ Runs weekly from `advisorCron` (Sunday 09:00 UTC slot) and is idempotent.
 | Daily answers | deleted after 30 days |
 | Post stats | kept 2 years (matches Meta's own window) |
 | Web-only contacts | deleted after 90 days of inactivity |
+
+As built (TA-P1, `server/advisor/retention.ts`, `tests/test_advisor_retention.mjs`):
+the `retention` slot is `{local: '09:00', tz: 'UTC', weekday: 'Sun'}` and also
+runs while `TEXT_ADVISOR_ENABLED` is off as long as `ADVISOR_MEDIA` is bound
+(`ENABLE_ADVISOR`; advisorCron runs only that slot then), so stored data keeps
+these periods when the advisor is switched off but still deployed. Rules, by
+the row's own time:
+
+| Data | As built |
+| --- | --- |
+| Message bodies | `body` set to null when `created_at` is over 180 days old |
+| Media originals | when `created_at` is over 90 days old and the media is not referenced (a `published` report's `media_id`; a post in `approved`, `scheduled`, `publishing`, `posted` or `partial` whose `media_json` lists it; or the media itself `approved` or `posted`, which the public pages show): the R2 original and everything under `advisor/derived/<id>/` are deleted, then the row keeps `r2_key=''`, `derived_at` null and `derived_error='expired'`, and its `advisor.caption.<id>` line goes. A duplicate's shared object is deleted only once no other row points at it. `approvalHold` then refuses a post with that photo ("no longer stored") |
+| Reviews | deleted when `status` is not `open` and `decided_at` is over 90 days old |
+| Daily answers | deleted when `generated_at` is over 30 days old |
+| Post stats | deleted when `day` is over 730 days old |
+| Web-only contacts | no `phone_hash`, no `ig_sid`, a `web_session`, `last_seen_at` over 90 days old: `forgetContact` (its messages, media, R2 objects and reviews go with it) |
+| job_state | `advisor.flow.*`, `advisor.link.*` and `advisor.share.*` with `updated_at` over 30 days old (their own lifetimes are 24 h, 10 min and 24 h; the consent re-ask needs 7 days); `advisor.once.noconsent.*` over 30 days old (a weekly window); other once-markers over 30 days old only when their boat or contact no longer exists (a live one is what keeps its line said once); `advisor.graphic.<post id>` over 30 days old when the post is gone or `rejected`, with its files under `advisor/posts/<post id>/` |
+| Exports | `advisor/exports/*` objects uploaded over 7 days ago (the key's date when the listing has no upload time). The bucket has no lifecycle rule; this is the 7-day expiry |
+
+Each rule is bounded per run (`RETENTION_LIMITS`: 20,000 bodies, 500 media,
+5,000 reviews, daily answers and stats, 100 contacts, 2,000 job_state keys and
+exports; D1 statements of 500 rows) and the rest waits for the next Sunday.
+The rules that delete R2 objects (media, contacts, graphics, exports) run only
+with `ADVISOR_MEDIA` bound. R2 is deleted before the D1 rows that find it, so a
+failure is retried by the next run. The one log line, `advisor_retention`, has
+counts only; a rule that throws is logged by name, the others still run, and
+the job throws so the slot is released (the next tick retries) and the cron's
+`advisor` outcome is `partial`.
 
 **STOP** (FC-4): `status='stopped'`; no outbound of any kind; an inbound
 `START` reactivates. Twilio enforces STOP on SMS itself and still forwards the

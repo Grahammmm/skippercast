@@ -302,6 +302,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Depends: everything above except TA-O5, TA-S6, TA-S7 (those can follow).
 - Files: `docs/plans/text-advisor/11-testing-rollout.md` § launch checklist ticked in the PR; `docs/plans/text-advisor/README.md` status log; `CHANGELOG.md`; release tag.
 - Owner steps: rules rows for the pilot species reviewed to `active`; 3–5 skippers invited from the admin page; `ENABLE_ADVISOR=true`; `TEXT_ADVISOR_ENABLED=true`, `ADVISOR_SOCIAL_ENABLED=true`.
+- As built (engineering side; branch `claude/ta-p1`): the weekly retention prune that 02 § Retention and deletion promised (`server/advisor/retention.ts`, the `retention` slot, `tests/test_advisor_retention.mjs`; the privacy notice now states it); golden conversations 1–9 were all present and running, so none was added; `scripts/advisor/eval.mjs` gained the daily and caption prompts (`--suite`); `scripts/advisor/preflight.mjs` reads a deployment and prints each checklist item PASS, FAIL or MANUAL; `docs/operations/runbooks/advisor-queue-stuck.md` (the checklist named it; it did not exist). 11 § Launch checklist is the current list, § Owner to-do gathers every owner step and decision, § Flip order has the commands (a dark step with `ADVISOR_REPLIES_ENABLED=false` before replies go on). Not built and still open: TA-C5 and TA-V2 (11 § Launch checklist, items 16 and B1). The checklist is ticked by the owner at launch, not in this PR.
 
 ### TA-P2 · Two-week pilot review · S
 - Depends: TA-P1 + 14 days.

@@ -1,7 +1,7 @@
 // "Send me my data" (docs/plans/text-advisor/02-data-model.md § Retention and
 // deletion; TA-E1): the export JSON goes to R2 at
-// advisor/exports/<contact_id>/<date>.json (the bucket's 7-day lifecycle
-// removes it; forgetContact removes it at once) and the contact gets a
+// advisor/exports/<contact_id>/<date>.json (the weekly retention prune,
+// retention.ts, removes it after 7 days; forgetContact removes it at once) and the contact gets a
 // signed link, GET /api/advisor/export/<token>, valid 24 hours. The token is
 // base64url("<contact_id>|<key>|<expiry epoch s>|<hex HMAC-SHA256(upload key,
 // contact_id|key|expiry)>"), the same subkey and shape as upload links

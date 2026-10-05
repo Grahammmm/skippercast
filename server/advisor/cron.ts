@@ -52,6 +52,9 @@ import {calendarTick} from './social/calendar.ts';
 import {morningStories} from './social/stories.ts';
 // TA-S7: post insights (the 03:00 slot) and the hourly Story read.
 import {collectInsights, storyInsightsTick} from './social/insights.ts';
+// TA-P1 (02 § Retention and deletion): the weekly prune.
+import {runRetention} from './retention.ts';
+import type {RetentionDeps} from './retention.ts';
 
 export const SLOT_PREFIX = 'advisor.slot.';
 export {RELAY_KEY, relayState} from './relay.ts';
@@ -67,9 +70,17 @@ export type SlotJob = (env: Env, now: number, deps?: CronDeps) => Promise<unknow
 export interface Slot {name: string; time: SlotTime; run: SlotJob}
 
 /**
+ * 02 § Retention and deletion: the weekly prune, Sunday 09:00 UTC (a slot in
+ * the UTC zone, so it does not move with DST). It also runs while the advisor
+ * is switched off but deployed (advisorCron: the ADVISOR_MEDIA binding is
+ * there), so the stated retention periods keep holding.
+ */
+export const RETENTION_SLOT: Slot = {name: 'retention', time: {local: '09:00', tz: 'UTC', weekday: 'Sun'}, run: (env, now, deps) => runRetention(env, now, deps?.retention ?? {})};
+
+/**
  * Every local-time job of the advisor, one table (01 § Cron slots). The
- * tasks that own them add theirs (TA-A1 the daily answers; later the social
- * calendar, insights, the weekly retention prune in 02). Each name is the
+ * tasks that own them add theirs (TA-A1 the daily answers; the social
+ * calendar, insights; TA-P1 the weekly retention prune in 02). Each name is the
  * job_state key suffix and must stay stable once deployed.
  */
 export const SLOTS: readonly Slot[] = [
@@ -85,6 +96,7 @@ export const SLOTS: readonly Slot[] = [
   {name: 'morning-stories', time: {local: '07:00', tz: DEFAULT_TZ}, run: (env, now, deps) => morningStories(env, now, socialDeps(deps))},
   // TA-S7 (09 § Insights, SP-10): the last 30 days' posted posts, their Instagram and Page numbers into advisor_post_stats.
   {name: 'insights', time: {local: '03:00', tz: DEFAULT_TZ}, run: (env, now, deps) => collectInsights(env, now, {...(deps?.publish?.fetcher ? {fetcher: deps.publish.fetcher} : {}), ...(deps?.publish?.sleep ? {sleep: deps.publish.sleep} : {})})},
+  RETENTION_SLOT,
 ];
 
 /** The social drafting slots' deps: the daily feeds (tests) and the media job dispatch. */
@@ -139,7 +151,8 @@ export async function runSlot(env: Env, name: string, time: SlotTime, fn: SlotJo
 
 export interface CronDeps {fetcher?: typeof fetch; slots?: readonly Slot[]; consumer?: ConsumerDeps; daily?: DailyDeps;   // daily: TA-A1's feeds and Messages API fetcher (tests)
   dispatchWorkflow?: (env: Env, file: string) => Promise<number>                                   // TA-M1: the media job dispatch (tests)
-  publish?: PublishDeps}                                                                            // TA-S2: the Graph fetcher, sleep, the skipper's channel (tests)
+  publish?: PublishDeps                                                                             // TA-S2: the Graph fetcher, sleep, the skipper's channel (tests)
+  retention?: RetentionDeps}                                                                        // TA-P1: the retention limits (tests)
 
 /**
  * TA-M1 (09 § Derived images): on every tick, while any media or graphic is
@@ -192,14 +205,19 @@ export async function relayWatchdog(env: Env, deps: CronDeps = {}, now: number =
 /**
  * The advisor's part of each cron tick: the relay watchdog, then every slot
  * that is due. One word for recordCron's `advisor` field:
- *   disabled  TEXT_ADVISOR_ENABLED is off (nothing ran)
+ *   disabled  TEXT_ADVISOR_ENABLED is off (only the weekly retention slot may have run, with ADVISOR_MEDIA bound)
  *   no-db     no D1 binding
  *   ok        everything that ran succeeded (or nothing was due)
  *   partial   a slot failed or the relay is failing/down; the others ran
  *   error     the cron hook itself threw
  */
 export async function advisorCron(env: Env, now: number = Date.now(), deps: CronDeps = {}): Promise<'ok' | 'disabled' | 'no-db' | 'partial' | 'error'> {
-  if (!advisorSettings(env).enabled) return 'disabled';
+  if (!advisorSettings(env).enabled) {
+    // TA-P1: data already stored keeps its retention periods while the advisor is switched off. The
+    // bucket binding (ENABLE_ADVISOR) is the sign the advisor was deployed; without it nothing runs.
+    if (env.DB && env.ADVISOR_MEDIA) await runSlot(env, RETENTION_SLOT.name, RETENTION_SLOT.time, (e, n) => RETENTION_SLOT.run(e, n, deps), now).catch(() => 'failed');
+    return 'disabled';
+  }
   if (!env.DB) return 'no-db';
   try {
     let partial = false;
