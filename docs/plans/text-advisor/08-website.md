@@ -32,7 +32,7 @@ season and rules card always comes from the rules table.
 Edge caching uses `cached()`/`cacheKey()` with
 `build: build() + ':' + pagesVersion` (05 § boat page); the TTLs above are
 the `Cache-Control` max-age.
-| `GET /contact.vcf`, `GET /text`, `GET /u/<token>`, `GET /media/<id>.jpg` | 03. | varies |
+| `GET /contact.vcf`, `GET /text`, `GET /u` (the upload link `/u#<token>`), `GET /my-data`, `GET /media/<id>.jpg` | 03. | varies |
 
 Each page has `<title>`, description, canonical, Open Graph image (the port
 or boat's latest approved photo, else the existing preview), and JSON-LD

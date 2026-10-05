@@ -334,6 +334,28 @@ can add its own; BlueBubbles: `GET /api/v1/attachment/<guid>/download`); the
 consumer picks the adapter from the message channel and the ref (an https ref
 is a Twilio media URL).
 
+### As built (hardening: tokens out of URLs)
+
+Upload and export links no longer carry their token in the path, where it sat
+in every Workers Logs invocation record (threat model § 9.3). The upload link
+is `<ADVISOR_PUBLIC_BASE>/u#<token>`: `GET /u` serves `dist/upload.html` to
+anyone, `dist/advisor/upload.js` reads the token from `location.hash` (a
+fragment is never sent to the server, nor in a `Referer`) and posts the file to
+`POST /api/advisor/upload` with the token in the `X-Upload-Token` header. The
+"send me my data" link is `<base>/my-data#<token>`: `dist/my-data.html` and
+`dist/advisor/my-data.js` POST the token to `POST /api/advisor/export` in the
+`X-Export-Token` header and save the JSON (`skippercast-data.json`). Links
+already sent in the old form (`/u/<token>`, `POST /api/advisor/upload/<token>`,
+`GET /api/advisor/export/<token>`) answer `410 Gone` with "This … link has been
+replaced. Text … for a new one." while the token is genuine and less than 7
+days past its expiry, then the gate's `404`; they never serve the page or the
+data. The shared error log redacts any path secret (`redactPath`,
+`server/middleware/error.ts`). The BlueBubbles webhook must keep its path token
+(BlueBubbles sends no header or signature): see the rotation procedure in
+[secrets rotation](../../operations/runbooks/secrets-rotation.md#advisor_webhook_token-text-advisor)
+and the `WORKERS_INVOCATION_LOGS=false` switch, which turns off Workers Logs'
+per-request record (whose message is the URL) while keeping our own lines.
+
 ## Contact card and deep links (FC-3, FC-5)
 
 - `GET /contact.vcf` returns a vCard 3.0: `FN:SkipperCast`, `TEL;TYPE=CELL:<ADVISOR_NUMBER>`,

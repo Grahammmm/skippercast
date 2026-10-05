@@ -568,7 +568,7 @@ dbTest('video: a Reel candidate with consent; a file the intake rejected (over 3
   const bad = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mr1', kind: 'unknown', mime: 'application/octet-stream', bytes: Buffer.alloc(8), state: 'rejected'});
   const up = await say(env, sql, null, {media: [bad]});
   assert.equal(up.intent, 'media.upload_link');
-  assert.match(up.texts[0], /^I couldn't take that file by text\. Send it through this link, good for 24 hours: https:\/\/skippercast\.com\/u\/[\w-]{20,}$/);
+  assert.match(up.texts[0], /^I couldn't take that file by text\. Send it through this link, good for 24 hours: https:\/\/skippercast\.com\/u#[\w-]{20,}$/);
   const big = addMedia(sql, env.ADVISOR_MEDIA, {id: 'ml1', mime: 'image/jpeg', bytes: Buffer.alloc(5 * 1024 * 1024)});
   const large = await say(env, sql, null, {media: [big], vision: BOARD});
   assert.equal(large.intent, 'media.upload_link');

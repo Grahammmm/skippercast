@@ -562,8 +562,19 @@ export async function mintUploadToken(keys: {uploadKey: CryptoKey}, contactId: s
   return b64url(encoder.encode(`${signed}|${mac}`));
 }
 
-/** The contact id a token was minted for, or null when it is malformed, tampered with or expired. */
-export async function verifyUploadToken(keys: {uploadKey: CryptoKey}, token: string, now: number | Date = Date.now()): Promise<string | null> {
+/**
+ * Hardening (threat model § 9.3): the upload link is <base>/u#<token>. The
+ * token rides in the fragment, which browsers never send; the page reads it
+ * from location.hash and sends it in the X-Upload-Token header, so it appears in
+ * no request URL and no log. The old /u/<token> form answers 410.
+ */
+export const UPLOAD_PAGE = '/u';
+export const uploadLink = (publicBase: string, token: string): string => `${publicBase}${UPLOAD_PAGE}#${token}`;
+/** How long an old path-token link (already sent) answers 410 Gone after it expired, before it is a plain 404. */
+export const LEGACY_LINK_GONE_MS = 7 * 24 * 3600000;
+
+/** A genuine token's contact id and expiry (epoch ms), expired or not; null when malformed or tampered with. */
+export async function readUploadToken(keys: {uploadKey: CryptoKey}, token: string): Promise<{contactId: string; expiresAt: number} | null> {
   const raw = typeof token === 'string' ? fromB64url(token) : null;
   if (!raw) return null;
   const parts = decoder.decode(raw).split('|');
@@ -572,8 +583,13 @@ export async function verifyUploadToken(keys: {uploadKey: CryptoKey}, token: str
   if (!ID.test(contactId) || !/^\d{1,12}$/.test(expiry) || !/^[0-9a-f]{64}$/.test(mac)) return null;
   const macBytes = Uint8Array.from(mac.match(/../g)!, h => parseInt(h, 16));
   if (!await crypto.subtle.verify('HMAC', keys.uploadKey, macBytes, encoder.encode(`${contactId}|${expiry}`))) return null;
-  if (Number(expiry) * 1000 <= new Date(now).getTime()) return null;
-  return contactId;
+  return {contactId, expiresAt: Number(expiry) * 1000};
+}
+
+/** The contact id a token was minted for, or null when it is malformed, tampered with or expired. */
+export async function verifyUploadToken(keys: {uploadKey: CryptoKey}, token: string, now: number | Date = Date.now()): Promise<string | null> {
+  const read = await readUploadToken(keys, token);
+  return read && read.expiresAt > new Date(now).getTime() ? read.contactId : null;
 }
 
 // ---- TA-M1: the advisor-media runner job (09 § Derived images and graphics) ----------

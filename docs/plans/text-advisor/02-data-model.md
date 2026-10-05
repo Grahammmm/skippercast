@@ -505,7 +505,8 @@ text from the same number starts fresh. Reply with one confirmation text
 before deleting the contact (the send needs the number).
 
 **"send me my data"**: writes the export to R2 and texts a signed link valid
-24 hours (`GET /api/advisor/export/<token>`).
+24 hours (`/my-data#<token>`; hardening: the token is the fragment and the page
+POSTs it in a header, 03 § As built (hardening: tokens out of URLs)).
 
 ## Privacy invariants (tested in `tests/test_advisor_privacy.mjs`)
 

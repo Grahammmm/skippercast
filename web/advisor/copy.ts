@@ -19,6 +19,17 @@ export const UPLOAD_COPY = {
   noFile: 'Choose a file first.',
 } as const;
 
+/** The "send me my data" page, dist/my-data.html + dist/advisor/my-data.js, served at /my-data#<token> (hardening). */
+export const EXPORT_COPY = {
+  heading: 'Your SkipperCast data',
+  intro: 'Download everything SkipperCast keeps about your number, as one JSON file. This link works for 24 hours.',
+  download: 'Download my data',
+  working: 'Preparing the file…',
+  done: 'Downloaded. Check your downloads folder for skippercast-data.json.',
+  expired: 'This link has expired. Text SEND ME MY DATA to SkipperCast for a new one.',
+  failed: 'The download did not finish. Check your signal and try again.',
+} as const;
+
 /** Largest file the upload page accepts, in bytes (the server checks it again). */
 export const UPLOAD_MAX_BYTES = 300 * 1024 * 1024;
 

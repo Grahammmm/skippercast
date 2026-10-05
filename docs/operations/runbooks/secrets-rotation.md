@@ -79,6 +79,19 @@ Rotate only if the private key leaked: every existing push subscription is bound
 3. Old subscriptions now fail; deliveries are recorded as `failed` and alerts as `held`, which makes `scripts/check_saved_trips.py` fail the live job. Remove them in the database that holds them (`DELETE FROM subscriptions`; see [D1 restore](d1-restore.md) for running SQL) and tell users to re-enable notifications from the app. In-app assessments keep working without push.
 4. Verify: `curl -fsS https://skippercast.com/api/session` returns the new `publicKey`; enabling notifications on a test device and saving a trip produces a delivered alert on the next check.
 
+## ADVISOR_WEBHOOK_TOKEN (Text Advisor)
+
+The BlueBubbles webhook (and the Twilio ones, after a port) carries this token in its URL path, because BlueBubbles cannot send a header or sign its requests ([threat model § 9.1](../../legal/threat-model.md#91-inbound-webhooks)). Our own logs never hold it (`redactPath` in `server/middleware/error.ts`, and the advisor's routes answer their own errors), but Cloudflare's **Workers Logs invocation log** records every request URL, so anyone with log access to the account can read it until the logs age out. Keep account membership minimal; set the repository variable `WORKERS_INVOCATION_LOGS=false` to stop the invocation log entirely (our own log lines stay; `scripts/wrangler_config.mjs`). Rotate it on a schedule (every 90 days), whenever someone leaves the Cloudflare account, and at once if it may have leaked: anyone who has it can post texts as any contact (§ 9.1).
+
+Rotation drops the deliveries that arrive between the deploy and the BlueBubbles change (each answers `401`, and BlueBubbles is not known to retry), so do it at a quiet hour and keep the gap to a minute or two.
+
+1. Make the new token: `openssl rand -base64 32 | tr '+/' '-_' | tr -d '='` (URL-safe, 43 characters).
+2. Install: `gh secret set ADVISOR_WEBHOOK_TOKEN`, then upload it at once with `$W secret put ADVISOR_WEBHOOK_TOKEN --name skippercast` (a later deploy uploads the same value from the GitHub secret).
+3. Straight away, on the Mac: **BlueBubbles → API & Webhooks**, edit the webhook's URL to `https://skippercast.com/api/advisor/inbound/bluebubbles/<new token>` and save. After a Twilio port, also change the messaging and status callback URLs in the Twilio console ([port to Twilio](advisor-port-to-twilio.md)).
+4. Verify: text the advisor's number from your phone and get the reply; `$W tail skippercast --format pretty --search advisor_webhook_unauthorized` shows no new lines after step 3.
+5. Catch up: open Messages on the Mac and look for texts received between steps 2 and 3; answer them by hand from the admin queue or ask the sender to text again.
+6. The old token is now useless, including the copies in Workers Logs; nothing to revoke elsewhere.
+
 ## EXTRA_ORIGINS
 
 Not secret. Change the repository variable (`gh variable set EXTRA_ORIGINS`) and run the deploy workflow. Each entry must match `https://[a-z0-9.-]+` or the Worker ignores it.

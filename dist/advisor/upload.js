@@ -1,12 +1,17 @@
-// The upload link page (dist/upload.html, served at /u/<token>; TA-C4).
-// One file, sent with XMLHttpRequest to POST /api/advisor/upload/<token> so the
-// page can show upload progress (fetch cannot report request-body progress in
+// The upload link page (dist/upload.html, served at /u#<token>; TA-C4).
+// One file, sent with XMLHttpRequest to POST /api/advisor/upload so the page
+// can show upload progress (fetch cannot report request-body progress in
 // Safari). The CSP has form-action 'none', so there is deliberately no <form>
 // submission; connect-src 'self' allows this request.
+// Hardening (docs/legal/threat-model.md § 9.3): the token is the URL fragment,
+// which browsers never send, and goes to the server only in the X-Upload-Token
+// header, so it is in no request URL or log.
 import {UPLOAD_COPY as COPY, UPLOAD_MAX_BYTES} from '../../web/advisor/copy.ts';
 
 const $ = id => document.getElementById(id);
-const token = decodeURIComponent(location.pathname.replace(/^\/u\//, '').replace(/\/$/, ''));
+/** The token from the fragment (#<token>), or '' when the link has none. */
+export const tokenFrom = hash => { const raw = String(hash || '').replace(/^#/, ''); return /^[\w-]{1,600}$/.test(raw) ? raw : ''; };
+const token = tokenFrom(location.hash);
 const els = {
   form: $('upload-form'), file: $('upload-file'), name: $('upload-name'), send: $('upload-send'),
   progress: $('upload-progress'), bar: $('upload-bar'), percent: $('upload-percent'), status: $('upload-status'), again: $('upload-again'),
@@ -57,7 +62,8 @@ els.send.addEventListener('click', () => {
   const body = new FormData();
   body.append('file', file, file.name);
   const request = new XMLHttpRequest();
-  request.open('POST', `/api/advisor/upload/${encodeURIComponent(token)}`);
+  request.open('POST', '/api/advisor/upload');
+  request.setRequestHeader('X-Upload-Token', token);
   els.send.disabled = true;
   els.send.textContent = COPY.sending;
   els.progress.hidden = false;
@@ -90,3 +96,4 @@ els.send.addEventListener('click', () => {
 });
 
 els.again.addEventListener('click', reset);
+if (!token) { els.form.hidden = true; show(COPY.expired, 'error'); }

@@ -15,17 +15,17 @@ import {memoryBucket} from './_advisor_r2.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html', '/upload.html': '/upload.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/upload.html': '/upload.0123456789.html', '/my-data.html': '/my-data.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 const {default: worker} = await import('../server/index.ts');
 const media = await import('../server/advisor/media.ts');
-const {sniffMime, stripJpegMetadata, stripPngMetadata, exifOrientation, ingestMedia, mintUploadToken, verifyUploadToken, MediaFetchError, Sha256, BUFFER_LIMIT, PART_BYTES, UPLOAD_TOKEN_TTL_MS} = media;
+const {sniffMime, stripJpegMetadata, stripPngMetadata, exifOrientation, ingestMedia, mintUploadToken, verifyUploadToken, MediaFetchError, Sha256, BUFFER_LIMIT, PART_BYTES, UPLOAD_TOKEN_TTL_MS, uploadLink} = media;
 const {deriveKeys, phoneHash} = await import('../server/advisor/contacts.ts');
 const {consumeAdvisor, ADVISOR_QUEUE_NAME, MEDIA_RETRIES} = await import('../server/advisor/consumer.ts');
 const {createBlueBubbles} = await import('../server/advisor/channels/bluebubbles.ts');
 const {fetchMediaByRef, adapterForMedia, ADAPTERS} = await import('../server/advisor/channels/index.ts');
 const {firstFile, boundaryOf} = await import('../server/advisor/multipart.ts');
-const {UPLOAD_COPY} = await import('../web/advisor/copy.ts');
+const {UPLOAD_COPY, EXPORT_COPY} = await import('../web/advisor/copy.ts');
 
 const dbTest = (name, fn) => test(name, {skip: sqliteUnavailable || false}, fn);
 const KEY = Buffer.alloc(32, 9).toString('base64');
@@ -388,25 +388,31 @@ function uploadForm(content, name = 'IMG_0001.JPG', type = 'image/jpeg') {
   const form = new FormData(); form.append('note', 'hello'); form.append('file', new File([content], name, {type})); return form;
 }
 
-dbTest('GET /u/<token> serves the upload shell for a valid token and the gate 404 body otherwise', async () => {
+dbTest('GET /u serves the upload shell to anyone (the token is the #fragment, never in the URL); an old /u/<token> link answers 410 for 7 days past its expiry, then 404', async () => {
   const {db} = setup(), env = {...ON, DB: db};
-  const good = await call(`/u/${await token()}`, env);
+  const good = await call('/u', env);
   assert.equal(good.status, 200);
   assert.equal(good.headers.get('Cache-Control'), 'no-store'); assert.equal(good.headers.get('X-Robots-Tag'), 'noindex');
+  assert.equal(good.headers.get('Referrer-Policy'), 'strict-origin-when-cross-origin', 'and a fragment is never in a Referer anyway');
   assert.match(good.headers.get('Content-Security-Policy'), /form-action 'none'/, 'security headers apply to the page');
   const html = await good.text();
-  assert.match(html, /upload page/); assert.match(html, /<head><base href="\/">/, 'assets resolve from the site root, not /u/');
-  for (const bad of ['nope', await token('c1', Date.now() - UPLOAD_TOKEN_TTL_MS - 1000), await token('ghost')]) {
-    const response = await call(`/u/${bad}`, env);
-    assert.equal(response.status, 404, bad.slice(0, 12)); assert.deepEqual(await errorBody(response), {error: 'Not found'});
+  assert.match(html, /upload page/); assert.match(html, /<head><base href="\/">/, 'assets resolve from the site root');
+  assert.equal((await call('/u', {DB: db, ADVISOR_PHONE_KEY: KEY})).status, 404, 'dark while TEXT_ADVISOR_ENABLED is off');
+  // Links sent before the change: a genuine token gets 410 Gone (never the page), until 7 days after it expired.
+  for (const [t, status] of [[await token(), 410], [await token('c1', Date.now() - UPLOAD_TOKEN_TTL_MS - 6 * 86400000), 410],
+    [await token('c1', Date.now() - UPLOAD_TOKEN_TTL_MS - 8 * 86400000), 404], ['nope', 404], [await mintUploadToken(await deriveKeys(Buffer.alloc(32, 1).toString('base64')), 'c1', Date.now()), 404]]) {
+    const response = await call(`/u/${t}`, env);
+    assert.equal(response.status, status, t.slice(0, 12));
+    const body = await response.text();
+    assert.ok(!/upload page/.test(body), 'an old link never serves the page');
+    if (status === 410) assert.match(body, /This upload link has been replaced\. Text LINK to SkipperCast for a new one\./);
   }
-  assert.equal((await call(`/u/${await token()}`, {DB: db, ADVISOR_PHONE_KEY: KEY})).status, 404, 'dark while TEXT_ADVISOR_ENABLED is off');
 });
 
-dbTest('POST /api/advisor/upload/<token> stores the file and a synthetic inbound message, then dispatches it like a webhook', async () => {
+dbTest('POST /api/advisor/upload with the X-Upload-Token header stores the file and a synthetic inbound message, then dispatches it like a webhook', async () => {
   const {sql, db} = setup({refs: []}), bucket = memoryBucket(), q = queue(), env = {...ON, DB: db, ADVISOR_MEDIA: bucket, ADVISOR_QUEUE: q};
   const t = await token();
-  const {value: response} = await quiet(() => call(`/api/advisor/upload/${t}`, env, {method: 'POST', body: uploadForm(jpeg())}));
+  const {value: response} = await quiet(() => call('/api/advisor/upload', env, {method: 'POST', body: uploadForm(jpeg()), headers: {'X-Upload-Token': t}}));
   assert.equal(response.status, 200); assert.deepEqual(await response.json(), {ok: true});
   const rows = sql.prepare("SELECT * FROM advisor_messages WHERE direction='in' AND provider_id LIKE 'upload:%'").all();
   assert.equal(rows.length, 1);
@@ -417,18 +423,25 @@ dbTest('POST /api/advisor/upload/<token> stores the file and a synthetic inbound
   assert.deepEqual({message_id: row.message_id, boat_id: row.boat_id, r2_key: row.r2_key, exif_stripped: row.exif_stripped, width: row.width, provider_ref: row.provider_ref},
     {message_id: message.id, boat_id: 'b1', r2_key: `advisor/media/c1/${mediaId}.jpg`, exif_stripped: 1, width: 640, provider_ref: null});
   assert.deepEqual(q.sent, [{message_id: message.id}], 'enqueued exactly like a webhook message');
+  // The old path form takes nothing: 410 for a genuine token, and no file stored.
+  const old = await call(`/api/advisor/upload/${t}`, env, {method: 'POST', body: uploadForm(jpeg(9))});
+  assert.equal(old.status, 410);
+  assert.match((await errorBody(old)).error, /replaced/);
+  assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM advisor_messages WHERE direction='in' AND provider_id LIKE 'upload:%'").get().n, 1);
 });
 
 dbTest('the upload route refuses a bad token, a non-file body and an unsupported file without creating a message', async () => {
   const {sql, db} = setup({refs: []}), bucket = memoryBucket(), q = queue(), env = {...ON, DB: db, ADVISOR_MEDIA: bucket, ADVISOR_QUEUE: q};
-  const bad = await call('/api/advisor/upload/forged', env, {method: 'POST', body: uploadForm(jpeg())});
+  const bad = await call('/api/advisor/upload', env, {method: 'POST', body: uploadForm(jpeg()), headers: {'X-Upload-Token': 'forged'}});
   assert.equal(bad.status, 404); assert.deepEqual(await errorBody(bad), {error: 'Not found'});
+  const none = await call('/api/advisor/upload', env, {method: 'POST', body: uploadForm(jpeg())});
+  assert.equal(none.status, 404, 'no header, no upload');
   const t = await token();
-  const {value: html} = await quiet(() => call(`/api/advisor/upload/${t}`, env, {method: 'POST', body: uploadForm('<html><script>x</script>', 'photo.jpg')}));
+  const {value: html} = await quiet(() => call('/api/advisor/upload', env, {method: 'POST', body: uploadForm('<html><script>x</script>', 'photo.jpg'), headers: {'X-Upload-Token': t}}));
   assert.equal(html.status, 415);
-  const {value: noFile} = await quiet(() => call(`/api/advisor/upload/${t}`, env, {method: 'POST', body: JSON.stringify({a: 1}), headers: {'Content-Type': 'application/json'}}));
+  const {value: noFile} = await quiet(() => call('/api/advisor/upload', env, {method: 'POST', body: JSON.stringify({a: 1}), headers: {'Content-Type': 'application/json', 'X-Upload-Token': t}}));
   assert.equal(noFile.status, 400);
-  const {value: huge} = await quiet(() => call(`/api/advisor/upload/${t}`, env, {method: 'POST', body: 'x', headers: {'Content-Type': 'multipart/form-data; boundary=b', 'Content-Length': String(400 * 1024 * 1024)}}));
+  const {value: huge} = await quiet(() => call('/api/advisor/upload', env, {method: 'POST', body: 'x', headers: {'Content-Type': 'multipart/form-data; boundary=b', 'Content-Length': String(400 * 1024 * 1024), 'X-Upload-Token': t}}));
   assert.equal(huge.status, 413);
   assert.equal(sql.prepare("SELECT COUNT(*) n FROM advisor_messages WHERE provider_id LIKE 'upload:%'").get().n, 0);
   assert.equal(q.sent.length, 0); assert.equal(bucket.objects.size, 0);
@@ -571,6 +584,23 @@ test('upload page strings live in web/advisor/copy.ts', () => {
   assert.ok(!/<form\b/i.test(page), "no <form>: CSP form-action 'none'");
   assert.match(script, /from '\.\.\/\.\.\/web\/advisor\/copy\.ts'/);
   assert.match(page, /type="file"/);
+  // Hardening: the token comes from the fragment and goes in a header, never into a request path.
+  assert.match(script, /tokenFrom\(location\.hash\)/);
+  assert.match(script, /request\.open\('POST', '\/api\/advisor\/upload'\)/);
+  assert.match(script, /setRequestHeader\('X-Upload-Token', token\)/);
+  assert.ok(!/location\.pathname/.test(script) && !/upload\/\$\{/.test(script), 'no token in a path');
+  const data = readFileSync(new URL('../dist/my-data.html', import.meta.url), 'utf8'), dataScript = readFileSync(new URL('../dist/advisor/my-data.js', import.meta.url), 'utf8');
+  assert.ok(!/<form\b/i.test(data));
+  assert.match(dataScript, /from '\.\.\/\.\.\/web\/advisor\/copy\.ts'/);
+  assert.match(dataScript, /tokenFrom\(location\.hash\)/);
+  assert.match(dataScript, /fetch\('\/api\/advisor\/export', \{method: 'POST', headers: \{'X-Export-Token': token\}/);
+  for (const value of Object.values(EXPORT_COPY)) assert.ok(value.length > 3);
+});
+
+test('hardening: the upload link puts the token in the fragment', async () => {
+  const link = uploadLink('https://skippercast.com', 'abc-DEF_1');
+  assert.equal(link, 'https://skippercast.com/u#abc-DEF_1');
+  assert.equal(new URL(link).pathname, '/u', 'the server sees /u only');
 });
 
 test('phone hashing is unchanged by the third subkey', async () => {

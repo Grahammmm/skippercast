@@ -112,7 +112,7 @@ test('escalate: a conversation review on this message; unknown reasons become ne
 test('send_upload_link: a 24 h token for this contact, as its own text; unavailable without the key', async () => {
   const tool = TOOL_BY_NAME.get('send_upload_link');
   const out = await tool.run({}, ctx({}, {ADVISOR_PHONE_KEY: KEY}));
-  const token = /\/u\/([\w-]+)$/.exec(out.actions[0].text)[1];
+  const token = /\/u#([\w-]+)$/.exec(out.actions[0].text)[1];
   assert.equal(await verifyUploadToken(await deriveKeys(KEY), token, T0), 'c1');
   assert.deepEqual(out.result, {sent: true, note: 'the link was sent as its own message'});
   const none = await tool.run({}, ctx());

@@ -87,7 +87,7 @@
 import {advisorSettings} from './settings.ts';
 import {reviewId, applyStop, applyStart, forgetContact, exportContact, deriveKeys} from './contacts.ts';
 // TA-E1: the engine's export link, the web phone link's code channel and the admin notifications.
-import {exportKey, mintExportToken} from './exports.ts';
+import {exportKey, exportLink, mintExportToken} from './exports.ts';
 import {channelFor as defaultChannelFor} from './channels/index.ts';
 import {linkKey} from './tools/offer_text_link.ts';
 import {t} from './strings.ts';
@@ -422,7 +422,7 @@ async function applyExport(env: Env, deps: ConsumerDeps, contact: AdvisorContact
   const key = exportKey(contact.id, localClock(clock(deps)).date);
   await env.ADVISOR_MEDIA.put(key, JSON.stringify({exported_at: iso(deps), ...data}, null, 2), {httpMetadata: {contentType: 'application/json'}});
   const token = await mintExportToken(await deriveKeys(env.ADVISOR_PHONE_KEY), contact.id, key, clock(deps));
-  return sendText(env, deps, contact, inId, index, t(l, 'export_ready', {link: `${advisorSettings(env).publicBase}/api/advisor/export/${token}`}));
+  return sendText(env, deps, contact, inId, index, t(l, 'export_ready', {link: exportLink(advisorSettings(env).publicBase, token)}));
 }
 
 /** A file: attached on BlueBubbles (inline bytes, or an R2 object), otherwise its caption and fallback link as text. */

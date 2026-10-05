@@ -284,7 +284,7 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
   assert.equal(card.type, 'send_file', 'iMessage gets the contact card as a file');
   assert.equal(card.name, 'SkipperCast.vcf'); assert.equal(card.fallbackUrl, 'https://skippercast.com/contact.vcf');
   assert.match(Buffer.from(card.inlineBytes, 'base64').toString(), /^BEGIN:VCARD\r\n/);
-  assert.match(link.text, /^Send full-size photos or videos here, good for 24 hours: https:\/\/skippercast\.com\/u\/[\w-]+$/);
+  assert.match(link.text, /^Send full-size photos or videos here, good for 24 hours: https:\/\/skippercast\.com\/u#[\w-]+$/);
   const media = await run(env, contactRow(sql), inbound(sql, null, {media: ['m1']}));
   assert.deepEqual(media, {actions: [{type: 'send_text', text: t('en', 'media_ack')}], intent: 'media'}, 'only the acknowledgement; the welcome went once');
   const sms = setup({contact: {channel: 'sms'}});
@@ -565,20 +565,33 @@ dbTest('consumer: export writes the JSON to R2 and texts a signed 24 h link that
   const data = JSON.parse(new TextDecoder().decode(bucket.objects.get(key).bytes));
   assert.equal(data.contact.id, 'c1'); assert.ok(!JSON.stringify(data).includes('ENC'), 'phone_enc never exported');
   const [text] = ch.sent.map(x => x.text);
-  const url = /https:\/\/skippercast\.com(\/api\/advisor\/export\/[\w-]+)$/.exec(text);
+  // Hardening: the token is the fragment of /my-data, never a path segment.
+  const url = /https:\/\/skippercast\.com\/my-data#([\w-]+)$/.exec(text);
   assert.ok(url, text);
+  assert.ok(!text.includes('/api/advisor/export/'), 'no token in a path');
   const keys = await deriveKeys(KEY);
-  const token = url[1].split('/').pop();
+  const token = url[1];
   assert.deepEqual(await verifyExportToken(keys, token, T0), {contactId: 'c1', key});
   assert.equal(await verifyExportToken(keys, token, T0 + 24 * 3600000 + 1000), null, 'expires after 24 h');
   assert.equal(await verifyExportToken(keys, token.slice(0, -2) + (token.endsWith('A') ? 'BB' : 'AA'), T0), null, 'tampered');
   // The route (now-relative expiry, so mint a fresh token).
   const fresh = await mintExportToken(keys, 'c1', key);
-  const response = await worker.fetch(new Request(`https://skippercast.com/api/advisor/export/${fresh}`), {ASSETS: {fetch: async () => new Response('', {status: 404})}, ...env});
+  const assets = {ASSETS: {fetch: async () => new Response('', {status: 404})}, ...env};
+  const post = token => worker.fetch(new Request('https://skippercast.com/api/advisor/export', {method: 'POST', headers: {'X-Export-Token': token}}), assets);
+  const response = await post(fresh);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal(response.headers.get('Content-Disposition'), 'attachment; filename="skippercast-data.json"');
   assert.equal((await response.json()).contact.id, 'c1');
-  const bad = await worker.fetch(new Request('https://skippercast.com/api/advisor/export/nope'), {ASSETS: {fetch: async () => new Response('', {status: 404})}, ...env});
+  assert.equal((await post('nope')).status, 404);
+  assert.equal((await post('')).status, 404);
+  // Links already sent in the old form: 410 for a genuine token (until 7 days past its expiry), never the data; anything else 404.
+  const old = await worker.fetch(new Request(`https://skippercast.com/api/advisor/export/${fresh}`), assets);
+  assert.equal(old.status, 410);
+  assert.match((await old.json()).error, /replaced/);
+  const stale = await mintExportToken(keys, 'c1', key, Date.now() - 9 * 24 * 3600000);
+  assert.equal((await worker.fetch(new Request(`https://skippercast.com/api/advisor/export/${stale}`), assets)).status, 404, 'past the 7 days');
+  const bad = await worker.fetch(new Request('https://skippercast.com/api/advisor/export/nope'), assets);
   assert.equal(bad.status, 404);
   assert.throws(() => exportKey('c1', 'yesterday'));
   await assert.rejects(mintExportToken(keys, 'c2', key), /invalid export/, 'a key of another contact');

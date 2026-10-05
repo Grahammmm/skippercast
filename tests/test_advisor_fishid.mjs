@@ -348,5 +348,5 @@ dbTest('vision unavailable or too large: a plain line or the upload link, never 
   big.sql.prepare(`INSERT INTO advisor_media(id,contact_id,kind,mime,bytes,r2_key,sha256,publish_state,created_at) VALUES('m9','c1','image','image/png',?, 'advisor/media/c1/m9.png','x','private',?)`).run(5 * 1024 * 1024, iso(T0));
   const r = await say(big.env, big.sql, null, {media: ['m9']});
   assert.equal(r.intent, 'media.upload_link');
-  assert.match(r.texts[0], /^That photo is too big for me to read by text\. Send it through this link, good for 24 hours: https:\/\/skippercast\.com\/u\//);
+  assert.match(r.texts[0], /^That photo is too big for me to read by text\. Send it through this link, good for 24 hours: https:\/\/skippercast\.com\/u#[\w-]{20,}$/);
 });
