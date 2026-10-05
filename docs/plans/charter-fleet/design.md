@@ -992,7 +992,12 @@ existing `optional(...)` guard.
 One filter card, applied server-side: boat, port, vessel class, trip type,
 activity type, date range, season (year and part). Endpoints take `region,
 bbox, from, to, vessel, port, class, trip_type, kind, season, season_part,
-source`, return GeoJSON, and cap results (2,000 events; 300 trips per page).
+source`, return GeoJSON, and cap results (2,000 events; 300 trips; 5,000 heat
+cells per page), paged with a `cursor`. Dates are the trip's local departure date. Aggregate cells hold
+no vessel, port, class, trip type or source, so the heat layer lists those
+filters in `meta.ignored` instead of applying them. Every feature carries
+`basis` and `rights`; `noaa-planning-only` rows are returned tagged
+`planning_only` so a client can drop them (`server/fleet/map.ts`).
 
 ## 15. Presentation options (Part 3)
 

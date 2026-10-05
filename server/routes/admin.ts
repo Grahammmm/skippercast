@@ -43,6 +43,7 @@ import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
 import {shellResponse} from './assets.ts';
+import {fleetMap} from '../fleet/map.ts';   // CF-50
 import {advisorSettings} from '../advisor/settings.ts';
 import {listReviews, REVIEW_KINDS, REVIEW_STATUSES} from '../advisor/admin/queue.ts';
 import {decideReview, DECISIONS} from '../advisor/admin/decisions.ts';
@@ -191,6 +192,10 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     if (outcome.status === 'ok') return json({subscribed: outcome.subscribed, fields: outcome.fields});
     return json({error: outcome.error}, outcome.status === 'not-configured' ? 409 : 502);
   });
+
+  // ---- CF-50: GET /api/fleet/map/:layer (fleet/map.ts), admin only while the public layer is undecided; fleetGate (routes/fleet.ts) runs first ----
+  admin.use('/api/fleet/map/*', requireAdmin);
+  admin.get('/api/fleet/map/:layer', c => fleetMap(c));
 
   // ---- TA-W3: skippers, crew, invites, contacts ----
   const now = (): number => (deps.now ?? Date.now)();
