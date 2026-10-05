@@ -296,6 +296,30 @@ builds yet.
 **Plan assumes:** option 1; CF-31 must show the state.
 **Blocks:** CF-31's listing controls.
 
+## Q16. MarineTraffic and VesselFinder pages for the OSINT agent
+
+**Context.** The `charter-osint` agent first listed MarineTraffic and
+VesselFinder vessel pages as sources for matching a boat to its MMSI. Their
+terms were not re-checked for this use, and MarineTraffic's terms restrict
+automated access. CF-21 moved both to the agent's "Not yet cleared" list,
+and the headless runner denies WebFetch to `marinetraffic.com`,
+`vesselfinder.com` and their subdomains (`NOT_CLEARED` in
+`scripts/fleet/run_osint.py`). ITU MARS, USCG PSIX and the operators' own
+pages remain the MMSI sources.
+
+1. **Leave both out until their terms are reviewed (recommended).** Costs
+   some MMSI matches; AIS matching (CF-46) can recover some of them from
+   broadcast static names without either site.
+2. Review the terms now and clear whichever allows occasional manual-rate
+   lookups; the change moves the host back to "Sources you may fetch" and
+   out of `NOT_CLEARED` in one PR.
+3. Add both to `catalog/fleet/off-limits.json` (D7) as forbidden. Makes the
+   exclusion permanent and also refuses profiles that cite them at ingest,
+   before anyone has read the terms.
+
+**Plan assumes:** option 1.
+**Blocks:** nothing; MMSI coverage from the OSINT step is lower until decided.
+
 ## Appendix: CPRA request text
 
 Submit at <https://wildlife.ca.gov/General-Counsel/Public-Records-Requests>

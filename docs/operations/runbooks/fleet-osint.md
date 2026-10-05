@@ -67,7 +67,7 @@ Each batch runs, with the prompt on stdin and the run directory as working direc
 | `--agent` | `charter-osint` | Runs that agent as the session: its body replaces the system prompt, its `model` and `tools` apply. |
 | `--tools` | `Read,Write,Glob,Grep,WebFetch,WebSearch,Bash` | The only built-in tools available; the runner refuses an agent file whose `tools` differ. |
 | `--allowedTools` | `WebFetch`, `WebSearch`, `Bash(python -m skippercast.fleet validate-profile *)`, `Edit(//<run dir>/profiles/**)`, `Edit(//<run dir>/summaries/**)`, `Edit(//<cache dir>/**)` | Pre-approved calls. Writes are checked against `Edit` path rules. Reads need no rule inside the working directories and are denied outside them. |
-| `--disallowedTools` | `WebFetch(domain:<host>)` and `WebFetch(domain:*.<host>)` for every host in `catalog/fleet/off-limits.json`, and `mcp__*` | The D7 hosts are refused at fetch time (deny wins over allow); no MCP tools. |
+| `--disallowedTools` | `WebFetch(domain:<host>)` and `WebFetch(domain:*.<host>)` for every host in `catalog/fleet/off-limits.json` and in `NOT_CLEARED` (`marinetraffic.com`, `vesselfinder.com`; [open question Q16](../../plans/charter-fleet/open-questions.md#q16-marinetraffic-and-vesselfinder-pages-for-the-osint-agent)), and `mcp__*` | The D7 hosts and the trackers not yet cleared are refused at fetch time (deny wins over allow); no MCP tools. |
 | `--permission-mode` | `dontAsk` | Every call not pre-approved is denied. |
 | `--permission-prompts` | `none` | Nobody answers prompts; Claude is told not to retry a denial (2.1.259 or later). |
 | `--setting-sources` | `""` (empty: none) | Loads no user, project or local settings file, so no allow rule (say `Bash(*)` in the runner user's `~/.claude/settings.json`) merges into the rules above. Only admin-managed settings (`/etc/claude-code/managed-settings.json`) still apply: keep that file absent on Hermes, or free of `allow` rules. |
@@ -78,6 +78,8 @@ Each batch runs, with the prompt on stdin and the run directory as working direc
 | `--strict-mcp-config` | | No MCP servers from the box's configuration. |
 | `--no-session-persistence` | | No transcript of registry research under `~/.claude`. |
 | `--disable-slash-commands` | | No skills or custom commands. |
+
+**What the code does not enforce.** The fetch denials above are the only crawling limits the CLI enforces. robots.txt, the manifest's `policy.min_interval_s` (seconds between requests to one host) and `policy.max_requests_per_boat` are instructions to the agent in `.claude/agents/charter-osint.md`, not limits in code: nothing in the runner or the CLI checks them, and the `FLEET_OSINT_PARALLEL` sessions do not coordinate, so three sessions can each fetch from the same host at the per-session interval. Keep `FLEET_OSINT_PARALLEL` low, read the summaries' "blocked or rate-limited" lines after a run, and treat a complaint from a site as a reason to add its host to the deny rules in a PR.
 
 `--bare` is not used: bare mode never reads `CLAUDE_CODE_OAUTH_TOKEN`. The session's environment is an allowlist (`PASS_ENV` in the script): the job's OIDC request token, `GITHUB_TOKEN` and any other secret never reach it.
 

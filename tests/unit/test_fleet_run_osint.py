@@ -327,7 +327,7 @@ class BatchTests(unittest.TestCase):
         self.assertNotIn("Read", allowed, "reads stay inside the working directories")
         self.assertFalse([rule for rule in allowed if rule.startswith("Bash") and "validate-profile" not in rule])
         denied = value("--disallowedTools").split(",")
-        for host in HOSTS:
+        for host in (*HOSTS, "marinetraffic.com", "vesselfinder.com"):
             self.assertIn(f"WebFetch(domain:{host})", denied)
             self.assertIn(f"WebFetch(domain:*.{host})", denied)
         self.assertIn("mcp__*", denied)
@@ -463,8 +463,19 @@ class AgentContractTests(unittest.TestCase):
                 self.assertNotRegex(fetchable, rf"\b{re.escape(label)}\b")
                 if len(label) >= 8:
                     self.assertNotIn(label, squashed)
-        for brand in ("fish city", "fishingbooker", "fareharbor", "xola", "fishdope", "instagram", "facebook"):
+        for brand in ("fish city", "fishingbooker", "fareharbor", "xola", "fishdope", "instagram", "facebook",
+                      "marinetraffic", "vesselfinder"):
             self.assertNotIn(brand, fetchable)
+
+    def test_trackers_not_yet_cleared_are_listed_and_denied(self):
+        pending = _section(self.text, "Not yet cleared")
+        self.assertEqual(run_osint.NOT_CLEARED, ("marinetraffic.com", "vesselfinder.com"))
+        for host in run_osint.NOT_CLEARED:
+            self.assertIn(f"`{host}`", pending)
+            self.assertNotIn(host.split(".")[0], re.sub(r"[\s\-]", "", _section(self.text, "Sources you may fetch").lower()))
+        self.assertIn("open-questions.md` Q16", pending)
+        self.assertIn("## Q16. MarineTraffic and VesselFinder", (ROOT / "docs/plans/charter-fleet/open-questions.md")
+                      .read_text(encoding="utf-8"))
 
     def test_lists_every_off_limits_host_and_the_handle_rule(self):
         off = _section(self.text, "Off-limits sources (D7)")

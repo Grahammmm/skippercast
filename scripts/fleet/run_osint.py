@@ -37,7 +37,7 @@ with ``--agents <file> --agent charter-osint`` (its body replaces the system pro
 pre-approved; ``--allowedTools`` approves WebFetch, WebSearch, writes under ``profiles/``,
 ``summaries/`` and the manifest's cache directory, and Bash for the profile validator
 only; ``--disallowedTools`` denies WebFetch to every host in ``catalog/fleet/off-limits.json``
-and its subdomains, and every MCP tool. Those rules hold only if no settings file adds
+and in ``NOT_CLEARED`` and their subdomains, and every MCP tool. Those rules hold only if no settings file adds
 allow rules, so no settings file is read: ``--setting-sources ""`` loads none of the user,
 project and local files, and ``CLAUDE_CONFIG_DIR`` is a dedicated directory the runner owns
 (``<fleet var>/osint/claude-config``), never the runner user's ``~/.claude``; the runner
@@ -81,6 +81,9 @@ CLAUDE_CODE_VERSION = "2.1.289"  # npm @anthropic-ai/claude-code; flags below ve
 AGENT = "charter-osint"
 AGENT_FILE = ROOT / ".claude" / "agents" / f"{AGENT}.md"
 OFF_LIMITS = ROOT / "catalog" / "fleet" / "off-limits.json"
+# Vessel trackers whose terms were not re-checked (MarineTraffic's restrict automated access):
+# denied until the owner decides (docs/plans/charter-fleet/open-questions.md Q16).
+NOT_CLEARED = ("marinetraffic.com", "vesselfinder.com")
 SCHEMA_DIR = ROOT / "schemas"
 TOOLS = ("Read", "Write", "Glob", "Grep", "WebFetch", "WebSearch", "Bash")
 VALIDATOR = "python -m skippercast.fleet validate-profile"
@@ -241,7 +244,8 @@ def absolute(path: Path) -> str:
 def command(claude: str, run_dir: Path, cache_dir: Path, agents_file: Path, hosts, max_turns: int) -> list[str]:
     allowed = ["WebFetch", "WebSearch", f"Bash({VALIDATOR} *)"]
     allowed += [f"Edit({absolute(d)}/**)" for d in (run_dir / "profiles", run_dir / "summaries", cache_dir)]
-    denied = [rule for host in hosts for rule in (f"WebFetch(domain:{host})", f"WebFetch(domain:*.{host})")]
+    denied = [rule for host in (*hosts, *NOT_CLEARED)
+              for rule in (f"WebFetch(domain:{host})", f"WebFetch(domain:*.{host})")]
     denied.append("mcp__*")
     return [claude, "-p",
             "--agents", str(agents_file), "--agent", AGENT,

@@ -61,8 +61,19 @@ validator.
 4. Public YouTube pages, news and forums.
 5. Vessel registries: USCG NVDC and PSIX, FCC ULS, state registration, ITU
    MARS.
-6. AIS and vessel-tracking pages: MarineTraffic, VesselFinder, BoatNerd.
+6. AIS and vessel-tracking pages: BoatNerd.
 7. Photo pages on the sites above, as links with attribution.
+
+## Not yet cleared
+
+Owner decision pending (`docs/plans/charter-fleet/open-questions.md` Q16):
+their terms were not re-checked, and MarineTraffic's terms restrict
+automated access. Until the owner clears them, do not fetch or cite as
+`source_url` these hosts or their subdomains (headless runs deny WebFetch
+to them):
+
+- `marinetraffic.com` (MarineTraffic)
+- `vesselfinder.com` (VesselFinder)
 
 Booking widgets (Peek, Rezdy, fishingreservations.net) seen on an
 operator's page are a platform signal only: record the platform, never
@@ -78,8 +89,8 @@ API adapter, never from scraping Google.
    text), captains and crew as the operator publishes them, photo links
    with attribution (never download or rehost photos).
 2. MMSI is the most valuable field. Try: call sign → ITU MARS; name + port
-   on vessel trackers; the AIS static name as broadcast (often upper-case,
-   truncated to 20 characters). Record the match method and a confidence.
+   in USCG PSIX and on the allowed vessel-tracking pages; the AIS static
+   name as broadcast (often upper-case, truncated to 20 characters). Record the match method and a confidence.
 3. Every value carries provenance: `source_url`, `retrieved_at` (UTC ISO),
    `method` (page, api, search, inference), `confidence` (0–1). Unknown is
    `null`, never a guess. Note conflicting values rather than picking one.
