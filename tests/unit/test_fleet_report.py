@@ -260,10 +260,26 @@ class ReportCommandTests(unittest.TestCase):
         self.assertEqual(printed, written[".md"])
 
     def test_d1_takes_figures_only(self):
-        for value in ("see https://dash.example.com/d1", "billing@example.com", "call " + PHONE_1):
-            with self.subTest(value=value), self.assertRaises(SystemExit):
-                with redirect_stdout(io.StringIO()), mock.patch("sys.stderr", io.StringIO()):
+        refused = ("see https://dash.example.com/d1", "billing@example.com", "call " + PHONE_1,
+                   "dash.cloudflare.com/acct/d1 " + "805-" + "555-" + "0123", "805 555 0123", "8055550123 rows",
+                   "48 MB, ask the captain", "48 MB stored\n- injected line")
+        for value in refused:
+            with self.subTest(value=value):
+                self.assertFalse(report.d1_figures(value))
+                err = io.StringIO()
+                with self.assertRaises(SystemExit) as stop, redirect_stdout(io.StringIO()), mock.patch("sys.stderr", err):
                     report.main(["--region", "CA", "--d1", value])
+                self.assertEqual(stop.exception.code, 2)
+                self.assertIn("--d1 takes usage figures only", err.getvalue())
+        for value in ("48 MB stored, 1.2M rows read", "0.05 GB; 120,000 rows written", "D1 storage 48 MB"):
+            with self.subTest(value=value):
+                self.assertTrue(report.d1_figures(value))
+                for label, pattern in FORBIDDEN.items():
+                    self.assertIsNone(pattern.search(value), label)
+
+    def test_validation_carries_the_movement_caveat(self):
+        md = report.markdown(report.build("CA", vessels=[], watch=[], hours={}, runs=[], validation_doc=VALIDATION, now_ms=NOW))
+        self.assertIn("inferred from movement (speed and track shape), never confirmed fishing", md)
 
     def test_missing_local_inputs_still_report(self):
         with tempfile.TemporaryDirectory() as tmp:

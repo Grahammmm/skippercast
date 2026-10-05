@@ -194,7 +194,8 @@ def markdown(r: Mapping) -> str:
     lines.append("- No validation report on this runner." if v is None else
                  f"- {v['trips_scored']} labelled trips scored; fishing precision {_ratio(v['precision'])}, recall "
                  f"{_ratio(v['recall'])}; target {'met' if v['target_met'] else 'not met'} "
-                 f"(classifier `{v['classifier_version']}`, scored {v['computed_at']})")
+                 f"(classifier `{v['classifier_version']}`, scored {v['computed_at']}). Segment kinds are inferred "
+                 "from movement (speed and track shape), never confirmed fishing; hand labels are the reference.")
     lines += ["", "### Pipeline runs (30 days)", "",
               f"- {runs['runs']} runs: {runs['ok']} ok, {runs['partial']} partial, {runs['failed']} failed, "
               f"{runs['incomplete']} incomplete"]
@@ -297,6 +298,17 @@ def write(r: Mapping, var: Path) -> tuple[Path, Path]:
     return stem.with_suffix(".json"), stem.with_suffix(".md")
 
 
+D1_WORDS = frozenset({"b", "kb", "mb", "gb", "tb", "k", "m", "bn", "d1", "row", "rows", "read", "written", "stored",
+                      "storage", "and", "of", "total"})
+D1_PHONE = re.compile(r"\d{3}\D{0,2}\d{3}\D{0,2}\d{4}")
+
+
+def d1_figures(text: str) -> bool:
+    """True for usage figures only: digits, units and ``D1_WORDS``, no long digit run or phone-shaped number."""
+    return (bool(re.fullmatch(r"[0-9A-Za-z.,;\s]{1,80}", text)) and not re.search(r"\d{7}", text)
+            and not D1_PHONE.search(text) and all(w.lower() in D1_WORDS for w in re.findall(r"[A-Za-z][A-Za-z0-9]*", text)))
+
+
 def main(argv=None, now_ms: int | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m skippercast.fleet report", description=__doc__.splitlines()[0])
     parser.add_argument("--region", required=True, help="fleet region id, e.g. CA")
@@ -305,8 +317,9 @@ def main(argv=None, now_ms: int | None = None) -> int:
     parser.add_argument("--d1", help="D1 storage and rows this month from Cloudflare's usage data, e.g. '48 MB, 1.2M rows read'")
     parser.add_argument("--status-line", action="store_true", help="print the status-log line instead of the Markdown")
     args = parser.parse_args(argv)
-    if args.d1 and re.search(r"://|\b(?:https?|mailto|tel):|www\.|@|\+\d", args.d1, re.I):
-        parser.error("--d1 takes usage figures only: no link, address or number with a +")
+    if args.d1 is not None and not d1_figures(args.d1):
+        parser.error("--d1 takes usage figures only (numbers, units and the words "
+                     f"{', '.join(sorted(D1_WORDS))}): no link, address, phone number or other text")
     var = fleet_var()
     try:
         region = load_region(args.region)
