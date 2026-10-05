@@ -18,6 +18,9 @@ that specific positive batch and retain an independent reviewer. Pause discovery
 once two useful qualified handoffs are waiting. Do not employ more discovery
 agents to enlarge a queue that cannot yet publish.
 
+For the classified-habitat production path and release gates, follow
+[`habitat-expansion-preflight.md`](habitat-expansion-preflight.md#production-path).
+
 ## Assign bounded ownership
 
 Use the concurrency available in the current session; do not assume that a
@@ -25,12 +28,28 @@ requested increase overrides its hard limit. A useful starting arrangement is
 one coordinator, two bounded source/processing workers and one reviewer.
 Reassign an idle source slot to implementation when that is the bottleneck.
 
-- The coordinator alone integrates shared catalogs/skills, opens or reconciles
-  release PRs, dispatches public jobs and verifies releases.
+- The coordinator owns integration decisions and shared skills/state. It may
+  designate exactly one `release_operator` to own catalog activation, release
+  PRs, protected merges, dispatch and release verification/readback for a
+  recorded scope. Coordinator and operator do not submit competing operations
+  or write the same release state.
 - A worker owns an exact reach, source pair and method in an isolated worktree
-  or private output directory. It may process up to three bounded reaches.
+  or private output directory. A bounded batch may cover up to three reaches
+  that share a compatible interpretation method, including distinct
+  independently qualified source pairs. Keep each reach's source fingerprint
+  and current-stage evidence separate. Extend only after the bounded stage
+  passes and only if the batch will not delay a ready positive result.
 - The reviewer independently checks original evidence and the exact code head;
   it does not implement the change that it reviews.
+
+Before a blocking browser or other external call, checkpoint the stage, call
+intent and dispatch state. If its outcome is ambiguous, interrupt and reconcile
+whether work was submitted before retrying. A completed or idle worker may need
+`followup_task` to start its next turn; `send_message` delivers context but does
+not wake it. A delegated worker's relayed authorization may not satisfy an
+automatic review. Follow the direct trusted repository instruction through the
+same review path; never switch tools to evade a rejection. Stop the rejected
+action and report the review reason.
 
 Use the existing issue/checkpoint for claims. Before assigning a task, check
 other active chats and agents for the same source/reach/method. Never commit to
@@ -58,8 +77,10 @@ Each worker saves, in the established private progress location:
 
 No private geometry or survey originals belong in a public issue or PR. A
 missing current screen is a distinct hold, not proof of MPA intersection.
-Polygon totals from different sources/reaches must be deduplicated before they
-become a combined area or count. Invalid geometry cannot enter a public batch.
+Deduplicate area across sources/reaches with the authoritative native-geometry
+union. Count features by unique verified native feature IDs, not union components
+or tile fragments. IDs alone do not establish new physical-area expansion.
+Invalid geometry cannot enter a public batch.
 
 ## Switch work instead of repeating failure
 
@@ -77,6 +98,38 @@ Preserve failures as well as successes. A code fix counts as pipeline progress
 when a test or real receipt reproduces the old blocker and demonstrates its
 removal. It remains separate from public habitat expansion.
 
+If repository-wide CI blocks a source-only batch, reproduce the failure on
+current main and check relevant open or newly merged fixes before implementing
+another one. Adopt an equivalent reviewed fix and close a duplicate PR; retain
+useful regression evidence without making duplicate implementation a release
+dependency. Do not rerun source qualification for an unrelated test-clock fix.
+
+An unknown effective precision or depth-dependent resolution profile does not
+automatically block a limited Tier-1 producer interpretation from an
+authenticated original class-3 source paired with valid nominal depth. It may
+proceed through source-specific review, current screens and publication when
+those gates pass. Keep it unranked and nonexportable as a fishing location;
+preserve lineage and uncertainty and leave fit, grades, measurement and precision
+unknown. Do not invent depth cutoffs or borrow another source pair's thresholds.
+Known-invalid native geometry remains a hold.
+
+If an optional source fails production admission, withdraw its opt-in while it
+is investigated and advance a separately qualified source when ready. An alias
+marked `updating` means its previous features are temporarily unavailable;
+report that baseline as unavailable until readback confirms restoration. Clear
+stale inventories and confirm retained graded hashes are unchanged. Re-enable
+the opt-in for a bounded production attempt only after private corrected-path
+evidence (and retained failure inputs, when available) is independently reviewed.
+The attempt needs fresh native/source and restriction gates before any public
+change. Claim the original production blocker resolved only after a real runner
+and live readback prove it. If exact old inputs are unavailable, mark
+applicability unverified; do not treat that gap as permission to waive a guard.
+
+If metadata retrieval exits with DNS failure in a restricted environment, record
+the route and scope. That result alone does not show the publisher is down. Use
+an approved read-only fetch route or a hash-verified cache when available; do
+not work around the restriction with credentialed access.
+
 ## Checkpoint and reconcile
 
 For the owner's requested pilot, give brief updates about every three minutes
@@ -84,6 +137,10 @@ of active work and a milestone summary every 15 minutes. Summarize new evidence,
 the deliverable, remaining blocker and next action. Do not manufacture activity
 updates while an unchanged deterministic job runs. Save completed commands and
 evidence before a turn ends or a worker changes tasks.
+
+Honor the user's active-work cap. Record deterministic background wall time
+separately from active investigation. Use bounded completion checks instead of
+keeping a model turn active while deterministic work runs.
 
 At the deadline, reconcile against the immutable starting baseline:
 
@@ -105,6 +162,12 @@ Report actual usage only when a tool or provider supplies it. State its scope
 and limitations; aggregate goal tokens are not a billing statement, per-agent
 breakdown or cache statistic. Never estimate a cost as measured. Missing timing
 or usage stays unavailable.
+
+If two CI-green heads become blocked only by main moving, stop immediate
+repeated rebases. Use a bounded stable-main observer, then rebase and reaffirm
+the exact reviewed identities once main is quiet, then run required checks and
+review on the exact new head. Do not repeat scientific qualification only
+because unrelated base changes left reviewed blobs unchanged.
 
 ## Decide whether to increase the pool
 

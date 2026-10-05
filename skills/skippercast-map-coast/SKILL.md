@@ -39,10 +39,12 @@ habitat and new measurement area. A green job or diagnostic is not that release.
 ## Start from the smallest current state
 
 Fetch main, reconcile relevant PRs, latest ledger, saved physical receipts and
-active jobs. Do not read the entire research archive or conversation. One
-coordinator owns shared catalog/skill/ledger integration and public releases;
-source workers own isolated qualification tasks and independent review. Record
-ownership and exact source/gap in the established coordination issue/checkpoint.
+active jobs. Do not read the entire research archive or conversation. The
+coordinator owns shared catalog/skill/ledger integration decisions; a single
+designated release operator may own the release PR and its verification/readback
+for a recorded scope. Source workers own isolated qualification tasks and
+independent review. Record ownership and exact source/gap in the established
+coordination issue/checkpoint.
 Do not duplicate another worker's batch or wait repeatedly for an idle chat.
 
 For an authorized parallel or overnight run, use the bounded
@@ -79,6 +81,14 @@ Do not assume an exhausted native-survey queue exhausts habitat opportunities.
 2. Test reviewed classifications for additional habitat within measured coverage.
    A positive private proof needs its own reviewed release contract; never
    fabricate a terrain grade to reuse an incompatible contract.
+   Unknown effective precision or a missing depth-dependent resolution profile
+   is not by itself a blocker to a limited Tier-1 producer interpretation of an
+   authenticated original class-3 source paired with nominal valid depth. It may
+   proceed through source-specific review, current screens and publication when
+   those gates pass. Keep it unranked and nonexportable as a fishing location;
+   preserve uncertainty and lineage. Do not invent precision, depth cutoffs,
+   grades or measurement, and do not ignore known-invalid native geometry. See
+   [classified-habitat preflight](references/habitat-expansion-preflight.md).
 3. Harvest qualified cached sources not yet processed in useful native windows.
 4. Otherwise qualify a dense original producer grid against a retained native
    gap. Include gaps inside partially supported planning cells and inspect a
@@ -131,8 +141,11 @@ is not sand. Do not relax neighborhood-support thresholds to manufacture
 rankings. Coarse data support broad features; finer-looking resampling cannot
 support small piles. Rule changes require versioned science review and fixtures.
 
-Process up to three useful reaches per source batch with the bounded tiled
-runner. Estimate native pixels, memory, scratch and bytes first. Use the approved
+Process up to three useful reaches in a bounded batch when each reach has an
+independently qualified source pair, the reaches share a compatible
+interpretation method, the current stage passes for each, and batching will not
+delay a ready positive result. Keep each reach's source fingerprint separate.
+Estimate native pixels, memory, scratch and bytes first. Use the approved
 processing host when local resources are inadequate. Keep private originals and
 geometry there; aggregate receipts suffice for coordination. No routine
 `--force`, blanket cache rebuilds or unrelated downloads.
@@ -195,6 +208,9 @@ Read [execution and release](references/execution-and-release.md) for commands,
 failed-job resume, regional readback and exact validation. Before calling a
 batch live, verify its current manifest, archive access and visitor map/export
 behavior. Ledger bookkeeping alone is not publication.
+
+For the classified-habitat opt-ins, production command and release gates, follow
+the [classified-habitat production path](references/habitat-expansion-preflight.md#production-path).
 
 Reconcile installed skills after changing the canonical repository version.
 Historical baselines, resolved failures and old PR ordering are preserved in
