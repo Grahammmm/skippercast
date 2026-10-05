@@ -16,9 +16,11 @@
 //   GET /api/fleet/jobs/snapshot, POST /api/fleet/jobs/registry   CF-11 (server/fleet/jobs.ts)
 //   POST /api/fleet/jobs/activity, /heartbeat, GET /health         CF-45 (server/fleet/activity.ts)
 //   GET|POST /api/fleet/jobs/watch                                  CF-46 (server/fleet/watch.ts)
+//   GET /api/fleet/jobs/labels                                      CF-48 (server/fleet/admin/labels.ts labelledTrips)
 //   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 //   /api/admin/fleet/operators*, /api/admin/fleet/outreach/:id      CF-32, registered in routes/admin.ts (fleet/admin/operators.ts)
 //   GET /api/admin/fleet/coverage, GET /api/admin/fleet/ais/health   CF-35, registered in routes/admin.ts (fleet/admin/coverage.ts, ais-health.ts)
+//   /api/admin/fleet/trips*, /api/admin/fleet/labels/:id/delete      CF-48, registered in routes/admin.ts (fleet/admin/labels.ts)
 //   GET /api/fleet/map/:layer  registered in adminRoutes (routes/admin.ts, CF-50, server/fleet/map.ts)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
@@ -33,6 +35,7 @@ import {rateLimit} from '../middleware/rate-limit.ts';
 import {fleetGo} from '../fleet/go.ts';
 import {activity, health, heartbeat} from '../fleet/activity.ts';
 import {watchList, watchUpdate} from '../fleet/watch.ts';
+import {labelledTrips} from '../fleet/admin/labels.ts';   // CF-48
 
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 
@@ -115,5 +118,10 @@ fleetRouter.get('/api/fleet/jobs/watch', async c => {
 fleetRouter.post('/api/fleet/jobs/watch', async c => {
   if (!c.env.DB) return UNAVAILABLE();
   const result = await watchUpdate(c.env.DB, c.req.raw);
+  return json(result.body, result.status);
+});
+fleetRouter.get('/api/fleet/jobs/labels', async c => {   // CF-48
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await labelledTrips(c.env.DB, c.req.query('region'), c.req.query('cursor'));
   return json(result.body, result.status);
 });
