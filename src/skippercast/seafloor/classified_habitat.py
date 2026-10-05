@@ -263,13 +263,15 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     baseline = read_json(folder/'run.json')
     selected = [p for p in policies(root) if p['depth_source_id'] in
                 {s['id'] for s in baseline['inputs']['sources']}]
-    if not selected:
-        return None
+    receipt_path = folder/'classified-run.json'
+    if not selected and not receipt_path.exists():
+        return None  # An absent opt-in adds no artifacts to an untouched reach.
+    # An explicit rerun reconciles a withdrawn policy to empty current outputs.
+    # No-rerun publication still rejects the stale previously admitted receipt.
     # Policy changes add/remove explicit pairs without invalidating graded physics.
     contexts = [source_context(root, reach, p, fetch=fetch) for p in selected]
     physical_inputs = {'sources': [c[0] for c in contexts]}
     physical_hash = digest(physical_inputs)
-    receipt_path = folder/'classified-run.json'
     candidates_path = folder/'classified-candidates.geojson'
     previous = read_json(receipt_path) if receipt_path.exists() else None
     reuse = bool(previous and previous['physical_input_hash'] == physical_hash)

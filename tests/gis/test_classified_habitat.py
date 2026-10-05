@@ -187,6 +187,11 @@ class ClassifiedTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,'inputs changed'):ch.publication_features('fixture',root=root)
                 atomic_json(root/ch.POLICY_FILE,{'schema_version':1,'profile':ch.PROFILE,'sources':[]})
                 with self.assertRaisesRegex(ValueError,'withdrawn'):ch.publication_features('fixture',root=root)
+                before_baseline=(folder/'run.json').read_bytes()
+                withdrawn=ch.stage('fixture',root=root)
+                self.assertEqual(withdrawn['physical_summary']['candidate_count'],0)
+                self.assertEqual(ch.publication_features('fixture',root=root)[0],[])
+                self.assertEqual((folder/'run.json').read_bytes(),before_baseline)
             for name in ('classified-run.json','classified-candidates.geojson','classified-habitat.geojson','classified-held.geojson'):
                 self.assertTrue(state_cache.allowed('fixture',f'reaches/fixture/{name}'))
             self.assertFalse(state_cache.allowed('fixture','reaches/other/classified-run.json'))
