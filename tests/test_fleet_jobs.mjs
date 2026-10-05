@@ -401,7 +401,9 @@ test('snapshot: paged by section, vessels carry keys, pinned names, aliases and 
     assert.deepEqual(two.pinned, ['name']);
     assert.deepEqual(two.waters, ['ocean', 'bay']);
     assert.equal(two.mmsi, '366000002');
-    assert.equal(two.removal_requested_at, undefined);
+    assert.equal(two.removal_requested_at, undefined, 'the request time stays private');
+    assert.equal(two.removal_requested, true, 'the flag lets plan-agent and ingest skip it (#346)');
+    assert.equal(vessels.find(v => v.id === vid(1)).removal_requested, false);
     assert.equal(two.map_display_consent, undefined);
     assert.equal(two.pinned_json, undefined);
     assert.deepEqual(two.aliases.map(a => a.alias_norm), ['TESTBOAT22']);

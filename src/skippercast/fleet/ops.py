@@ -122,6 +122,12 @@ def iso_ms(moment: datetime) -> str:
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.") + f"{moment.microsecond // 1000:03d}Z"
 
 
+def removal_requested(vessel) -> bool:
+    """Whether the operator asked for removal: the Worker snapshot's ``removal_requested`` flag (#346) or the
+    staging database's ``removal_requested_at`` column."""
+    return bool(vessel.get("removal_requested") or vessel.get("removal_requested_at"))
+
+
 # ---- field checks (registry.ts SPECS): each returns the stored value or raises OpError ---------
 
 class OpError(ValueError):

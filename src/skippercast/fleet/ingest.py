@@ -245,7 +245,7 @@ def _read_profile(path: Path, region: str, vessels: Mapping[str, Mapping], off_l
     vessel = vessels.get(doc["vessel_id"])
     if vessel is None:
         return None, [f"vessel_id: no vessel {doc['vessel_id']} in the {region} registry"]
-    if vessel.get("removal_requested_at"):
+    if ops.removal_requested(vessel):
         return None, ["vessel_id: the operator asked for removal; nothing is added"]
     return doc, []
 

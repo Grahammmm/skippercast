@@ -189,7 +189,8 @@ class Snapshot:
     @classmethod
     def from_sqlite(cls, db, region: str, facts: bool = True) -> "Snapshot":
         """The same shape from a staging database (``SqliteSink.db``), with its facts; ``facts=False`` gives
-        the Worker's shape instead (no facts, each vessel's ``sources`` as ``server/fleet/jobs.ts`` selects them)."""
+        the Worker's shape instead (no facts, each vessel's ``sources`` as ``server/fleet/jobs.ts`` selects them and
+        its ``removal_requested`` flag in place of the request time)."""
         def rows(sql, *args):
             cursor = db.execute(sql, args)
             names = [d[0] for d in cursor.description]
@@ -220,6 +221,7 @@ class Snapshot:
             row["offerings"] = children["offerings"].get(row["id"], [])
             if not facts:
                 row["sources"] = children["sources"].get(row["id"], [])
+                row["removal_requested"] = row.pop("removal_requested_at") is not None  # the Worker's flag (#346)
             vessels.append(row)
         reviews = []
         for row in rows("SELECT * FROM fleet_reviews WHERE region=? AND status<>'open' ORDER BY id", region):

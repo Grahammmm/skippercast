@@ -1,0 +1,154 @@
+name: Fleet OSINT
+
+# The charter fleet's OSINT agent step (CF-21; docs/plans/charter-fleet/design.md section 8):
+# weekly on our own runner, `plan-agent` writes batch manifests of at most 20 boats from
+# registry data, scripts/fleet/run_osint.py researches each batch as one headless
+# `claude -p` session with the charter-osint agent (up to FLEET_OSINT_PARALLEL at once,
+# 60 minutes each, the pinned Claude Code version, the subscription token from
+# ~/.config/skippercast/claude.env; it exits if ANTHROPIC_API_KEY is set), and
+# `ingest --profiles` validates the profiles and writes them to the registry through
+# /api/fleet/jobs/registry with a short-lived GitHub identity. A dispatch can pick the
+# region, mode, sink and batch limit, and resume an earlier run by id. No pull_request
+# trigger, so fork code never runs on Hermes. Owner setup, reruns and failures:
+# docs/operations/runbooks/fleet-osint.md.
+on:
+  schedule:
+    - cron: "17 10 * * 0"
+  workflow_dispatch:
+    inputs:
+      region:
+        description: Fleet region id (regions/<id>/fleet.json)
+        required: true
+        default: CA
+        type: string
+      mode:
+        description: "full selects new, stale and incomplete boats; refresh only new and stale ones"
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - refresh
+      sink:
+        description: "worker reads and writes the registry (D1); staging uses the SQLite registry on the box"
+        required: true
+        default: worker
+        type: choice
+        options:
+          - worker
+          - staging
+      max_batches:
+        description: "Research at most this many batches (of 20 boats); empty for all"
+        required: false
+        default: ""
+        type: string
+      run_id:
+        description: "Resume this run (YYYYMMDDTHHMMSSZ-xxxxxx, same sink): skips done batches, keeps its manifests; empty starts a new run"
+        required: false
+        default: ""
+        type: string
+
+permissions: {}
+
+# One OSINT run at a time; a second dispatch or the schedule waits for the first.
+concurrency:
+  group: fleet-osint
+  cancel-in-progress: false
+
+jobs:
+  research:
+    # Dark until the fleet workflows are enabled, never on a GitHub-hosted runner (the token and
+    # run state live on the box), and only from main, so the subscription token never reaches
+    # unreviewed code (threat model section 10.4 row E; docs/operations/runners.md).
+    if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    # Batches run 3 at a time for up to 60 minutes each; the summary says which are left.
+    # run_osint.py stops at 300 minutes (DEFAULT_DEADLINE_MIN), so Ingest always runs inside this.
+    timeout-minutes: 360
+    permissions:
+      contents: read   # the checkout
+      id-token: write  # short-lived identity for /api/fleet/jobs (server/job-auth.ts pins this workflow)
+    env:
+      # The schedule has no inputs: a full run for FLEET_REGION (default CA) against the registry.
+      REGION: ${{ inputs.region || vars.FLEET_REGION || 'CA' }}
+      MODE: ${{ inputs.mode || 'full' }}
+      SINK: ${{ inputs.sink || 'worker' }}
+      FLEET_OSINT_PARALLEL: ${{ vars.FLEET_OSINT_PARALLEL || '3' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install the fleet extra
+        run: python -m pip install -e ".[fleet]"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Install the pinned Claude Code CLI
+        run: |
+          set -euo pipefail
+          # The one pin is CLAUDE_CODE_VERSION in scripts/fleet/run_osint.py, which also refuses any other version.
+          version=$(python scripts/fleet/run_osint.py --print-cli-version)
+          prefix="$HOME/.local/share/skippercast/claude-code/$version"
+          if [ ! -x "$prefix/node_modules/.bin/claude" ]; then
+            npm install --prefix "$prefix" --no-audit --no-fund "@anthropic-ai/claude-code@$version"
+          fi
+          echo "CLAUDE_BIN=$prefix/node_modules/.bin/claude" >> "$GITHUB_ENV"
+      - name: Locate the run state
+        run: |
+          set -euo pipefail
+          # Run state, manifests and profiles live outside any checkout (design.md section 4).
+          var="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          # Staging runs keep their own directory, as in fleet-registry.yml.
+          if [ "$SINK" = staging ]; then var="$var-staging"; fi
+          echo "SKIPPERCAST_FLEET_VAR=$var" >> "$GITHUB_ENV"
+      - name: Plan the batches
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$RUN_ID" ]; then
+            # A resumed run keeps its manifests, so a batch recorded as done stays the same boats.
+            echo "Fleet OSINT run \`$RUN_ID\` (resumed): region \`$REGION\`, sink \`$SINK\`" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            RUN_ID=$(python -c 'from skippercast.fleet.runs import new_run_id; print(new_run_id())')
+            # Printed first, so a failed run can be resumed with run_id=<this id>.
+            echo "Fleet OSINT run \`$RUN_ID\`: region \`$REGION\`, mode \`$MODE\`, sink \`$SINK\`" | tee -a "$GITHUB_STEP_SUMMARY"
+            # Counts only (selected, batches, new, stale, missing); never boat names.
+            python -m skippercast.fleet plan-agent --region "$REGION" --sink "$SINK" --run-id "$RUN_ID" --mode "$MODE" \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+      - name: Research the batches
+        id: osint
+        env:
+          MAX_BATCHES: ${{ inputs.max_batches }}
+        run: |
+          set -uo pipefail
+          args=(--region "$REGION" --run-id "$RUN_ID" --claude "$CLAUDE_BIN")
+          if [ -n "$MAX_BATCHES" ]; then
+            args+=(--max-batches "$MAX_BATCHES")
+          fi
+          # Exit 0: every batch done; 1: some failed after a retry or the run deadline left some
+          # unstarted (ingest the rest, then fail the job);
+          # 2: refused (ANTHROPIC_API_KEY set, no token, wrong CLI version) or a setup error.
+          python scripts/fleet/run_osint.py "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+          rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -ge 2 ]; then exit "$rc"; fi
+      - name: Ingest the profiles
+        run: |
+          set -euo pipefail
+          run_dir="$SKIPPERCAST_FLEET_VAR/$REGION/runs/$RUN_ID"
+          # Validates every profile, refuses and lists the invalid ones (counts in the summary).
+          python -m skippercast.fleet ingest --region "$REGION" --sink "$SINK" --run-id "$RUN_ID" \
+            --profiles "$run_dir/profiles" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Fail when a batch failed
+        if: steps.osint.outputs.rc == '1'
+        run: |
+          echo "::error::Some OSINT batches failed after a retry or did not start before the run deadline; resume with run_id=$RUN_ID (docs/operations/runbooks/fleet-osint.md)"
+          exit 1
