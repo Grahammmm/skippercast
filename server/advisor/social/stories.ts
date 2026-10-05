@@ -4,7 +4,9 @@
 //
 //   count boards   each verified boat with photo consent and a count-board photo from the previous
 //                  local day (its latest): the photo's Story post (TA-S1's draft, sha256('post:media:'
-//                  + id)[:32], made now if missing) is approved by the engine, with no admin decision:
+//                  + id)[:32], made now if missing) is approved by the engine, with no admin decision,
+//                  when the photo came from the owner or accepted crew over iMessage or the upload
+//                  link (hardening, TRUSTED_SENDER_SQL; an SMS photo stays a draft for the team):
 //                  Stories need no admin approval once the source photo is approved or has no hold
 //                  (09). admin/posts.ts approvalHold still applies, so a has_person photo whose review
 //                  is not approved, an open photo review, a rejected photo, revoked consent or an
@@ -53,12 +55,27 @@ export function storySlotAt(region: string, now: number, cal: Calendar = CALENDA
   return slot ? zonedInstant(localDate(now, tz), slot.time_local, tz) : new Date(now).toISOString();
 }
 
-interface CountBoardRow {id: string; boat_id: string; boat_status: string; consent_photos_at: string | null; consent_revoked_at: string | null; publish_state: string; created_at: string}
+interface CountBoardRow {id: string; boat_id: string; boat_status: string; consent_photos_at: string | null; consent_revoked_at: string | null; publish_state: string; created_at: string;
+  trusted: number}
+
+/**
+ * Hardening (threat model § 9.1, § 9.8): the senders whose count board may go
+ * out without an admin decision. The photo must come from the boat's owner or
+ * an accepted crew member (an active advisor_crew row; since the crew-consent
+ * change that means one who replied YES), and over iMessage (tied to an Apple
+ * Account) or through the upload link (its token was texted to the real
+ * number). An SMS sender id can be spoofed, so an SMS photo, or any other,
+ * stays a draft in the review queue.
+ */
+export const TRUSTED_SENDER_SQL = `(m.contact_id=b.owner_contact_id OR EXISTS (SELECT 1 FROM advisor_crew w WHERE w.boat_id=b.id AND w.contact_id=m.contact_id AND w.removed_at IS NULL))
+  AND EXISTS (SELECT 1 FROM advisor_messages g WHERE g.id=m.message_id AND g.contact_id=m.contact_id AND g.direction='in' AND (g.channel='imessage' OR g.provider_id LIKE 'upload:%'))`;
+export const UNTRUSTED_SENDER = 'the photo came by SMS or from someone other than the owner or confirmed crew: it waits for the team';
 
 /** Each verified, consenting boat's latest count-board photo taken during `date` (local) in the region. */
 async function countBoards(db: D1Database, region: string, date: string, tz: string): Promise<CountBoardRow[]> {
   const from = zonedInstant(date, '00:00', tz), to = zonedInstant(addDays(date, 1), '00:00', tz);
-  const rows = (await db.prepare(`SELECT m.id,m.boat_id,m.publish_state,m.created_at,b.status AS boat_status,b.consent_photos_at,b.consent_revoked_at
+  const rows = (await db.prepare(`SELECT m.id,m.boat_id,m.publish_state,m.created_at,b.status AS boat_status,b.consent_photos_at,b.consent_revoked_at,
+        CASE WHEN ${TRUSTED_SENDER_SQL} THEN 1 ELSE 0 END AS trusted
       FROM advisor_media m JOIN advisor_boats b ON b.id=m.boat_id
       WHERE b.region=? AND m.kind='image' AND m.r2_key<>'' AND m.publish_state IN ('queued','approved','posted') AND m.created_at>=? AND m.created_at<?
         AND json_valid(m.classification_json) AND json_extract(m.classification_json,'$.classify.kind')='count_board'
@@ -94,6 +111,8 @@ async function countBoardStories(env: Env, region: string, now: number, deps: So
     }
     if (!post || post.kind !== 'story') { out.push({region, kind: 'count_board', status: 'skipped', reason: 'not a story post'}); continue; }
     if (post.status !== 'draft') { out.push({region, kind: 'count_board', status: 'exists', postId: id}); continue; }
+    // Hardening: only a confirmed sender's board skips the admin; the rest stay drafts with their open post review.
+    if (!photo.trusted) { out.push({region, kind: 'count_board', status: 'held', postId: id, reason: UNTRUSTED_SENDER}); continue; }
     const hold = await approvalHold(db, post);
     if (hold) { out.push({region, kind: 'count_board', status: 'held', postId: id, reason: hold}); continue; }
     await autoApprove(env, post, at, slot, now, deps);
