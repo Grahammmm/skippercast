@@ -46,6 +46,7 @@ REFERENCE_NOTICE = ('Current measured coverage footprint only; no reference '
                     'terrain, substrate or species metrics borrowed.')
 NEIGHBOR_VERSION = 'planning-neighbor-suppression-v1'
 NEIGHBOR_BUFFER_M = 5  # Deliberately conservative exclusion, not accuracy.
+NATIVE_PAIR_DEDUP_VERSION = 'reviewed-policy-order-native-union-v1'
 
 
 def digest(value):
@@ -150,6 +151,19 @@ def additional_patches(pieces, support, existing):
     classified = unary_union(pieces).intersection(support)
     additional = classified.difference(existing)
     return [p for p in components(additional) if p.area >= 1000], classified
+
+
+def _physical_inputs(contexts):
+    """Bind multi-pair native priority semantics into stage and publish identity."""
+    physical = {'sources': [c[0] for c in contexts],
+        'geometry_representation': geometry_runtime(),
+        'geometry_implementation_sha256': sha256(Path(__file__).with_name('classified_geometry.py'))}
+    if len(contexts) > 1:
+        physical['native_pair_dedup'] = {
+            'version': NATIVE_PAIR_DEDUP_VERSION,
+            'policy_order': [c[0]['policy']['id'] for c in contexts],
+            'existing_geometry': 'graded-baseline-plus-earlier-original-native-patches'}
+    return physical
 
 
 def assessment(p):
@@ -459,9 +473,7 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     # No-rerun publication still rejects the stale previously admitted receipt.
     # Policy changes add/remove explicit pairs without invalidating graded physics.
     contexts = [source_context(root, reach, p, fetch=fetch) for p in selected]
-    physical_inputs = {'sources': [c[0] for c in contexts],
-        'geometry_representation': geometry_runtime(),
-        'geometry_implementation_sha256': sha256(Path(__file__).with_name('classified_geometry.py'))}
+    physical_inputs = _physical_inputs(contexts)
     physical_hash = digest(physical_inputs)
     candidates_path = folder/'classified-candidates.geojson'
     native_path = folder/'classified-native.geojson'
@@ -479,8 +491,11 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
         native = {'version': GEOMETRY_VERSION, 'crs': 'EPSG:3310', 'features': []}
         physical_summary = {'candidate_count': 0, 'class3_valid_depth_pixels': 0,
                             'classified_selected_area_km2': 0, 'new_measured_area_km2': 0}
+        prior_native_patches = []
         for p, (identity, row, binding, path, support, existing, _) in zip(selected, contexts):
-            patches, summary = extract(row, binding, path, support, existing,
+            pair_existing = (unary_union([existing, *prior_native_patches])
+                             if prior_native_patches else existing)
+            patches, summary = extract(row, binding, path, support, pair_existing,
                                        root=root, edge=edge, max_pixels=max_pixels)
             represented = features_for(patches, reach, p, row, binding,
                 reference_support=identity.get('reference_support'),
@@ -488,6 +503,7 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
             candidates['features'].extend(represented)
             native['features'].extend({'type': 'Feature', 'geometry': mapping(patch),
                 'properties': {'id': f['properties']['id']}} for patch, f in zip(patches, represented))
+            prior_native_patches.extend(patches)
             for key, value in summary.items():
                 physical_summary[key] += value
         physical_summary['candidate_count'] = len(candidates['features'])
@@ -522,16 +538,23 @@ def publication_features(reach, *, root=REPO):
     receipt = read_json(path)
     if receipt.get('version') != 1 or receipt.get('reach') != reach:
         raise ValueError('Classified receipt identity mismatch')
-    current = {p['id']: p for p in policies(root)}
+    current_policies = policies(root)
+    current = {p['id']: p for p in current_policies}
     contexts = []
     for saved in receipt['inputs']['physical']['sources']:
         p = saved['policy']
         if p != current.get(p['id']):
             raise ValueError('Classified opt-in changed or withdrawn')
         contexts.append(source_context(root, reach, p))
-    physical = {'sources': [c[0] for c in contexts],
-        'geometry_representation': geometry_runtime(),
-        'geometry_implementation_sha256': sha256(Path(__file__).with_name('classified_geometry.py'))}
+    baseline = read_json(folder/'run.json')
+    baseline_ids = {s['id'] for s in baseline['inputs']['sources']}
+    current_order = [p['id'] for p in current_policies
+        if p['depth_source_id'] in baseline_ids and policy_applies_to_reach(p, reach)]
+    if len(contexts) > 1 or len(current_order) > 1:
+        saved_order = [c[0]['policy']['id'] for c in contexts]
+        if saved_order != current_order:
+            raise ValueError('Classified source-pair order changed; restage required')
+    physical = _physical_inputs(contexts)
     state = load_snapshot(root, reach)
     inputs = {'physical': physical, 'screen': input_identity(state),
               'screen_implementation_sha256': sha256(Path(__file__).with_name('screen.py'))}

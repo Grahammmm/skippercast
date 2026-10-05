@@ -11,7 +11,7 @@ from unittest.mock import patch
 import numpy as np
 from affine import Affine
 import rasterio
-from shapely.geometry import box, mapping, shape
+from shapely.geometry import Point, Polygon, box, mapping, shape
 from shapely.ops import unary_union
 
 from skippercast.platform.contracts import atomic_json, read_json
@@ -79,6 +79,122 @@ def neighbor_fixture(root):
 
 
 class ClassifiedTests(unittest.TestCase):
+    def test_stage_deduplicates_later_pair_against_prior_native_union_and_versions_cache(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'var/seafloor/reaches/fixture';folder.mkdir(parents=True)
+            first=dict(policy(),id='first-pair',depth_source_id='native-a')
+            second=dict(policy(),id='second-pair',depth_source_id='native-b')
+            rows=[dict(row(),id='native-a'),dict(row(),id='native-b',sha256='d'*64)]
+            bindings=[binding(),dict(binding(),row=dict(binding()['row'],id='classes-b',sha256='e'*64),
+                binding=dict(binding()['binding'],source_id='classes-b',source_sha256='e'*64))]
+            source_shapes={'native-a':Polygon(box(0,0,100,100).exterior.coords,
+                                                [box(20,20,80,80).exterior.coords]),
+                           'native-b':box(50,0,150,100)}
+            atomic_json(folder/'run.json',{'inputs':{'sources':rows}})
+            contexts=[]
+            for p,r,b in zip((first,second),rows,bindings):
+                identity={'policy':p,'depth_source':r,'classification_binding':b}
+                contexts.append((identity,r,b,None,box(0,0,200,200),box(180,180,190,190),[]))
+            # Old stage behavior gave both pairs only the same graded baseline;
+            # this control must reproduce the positive duplicate-area failure.
+            old_later,_=ch.additional_patches([source_shapes['native-b']],
+                contexts[1][4],contexts[1][5])
+            self.assertGreater(unary_union(old_later).intersection(source_shapes['native-a']).area,0)
+            existing_seen=[]
+
+            def extract_with_native_difference(r,b,path,support,existing,**kwargs):
+                existing_seen.append(existing)
+                patches,classified=ch.additional_patches([source_shapes[r['id']]],support,existing)
+                return patches,{'class3_valid_depth_pixels':1,
+                    'classified_selected_area_km2':classified.area/1_000_000}
+
+            empty={'type':'FeatureCollection','features':[]}
+            policy_rows=[first,second]
+            def hold_every_candidate(candidates,*args,**kwargs):
+                return empty,candidates,{'held_count':len(candidates['features'])}
+            context_by_id={p['id']:c for p,c in zip((first,second),contexts)}
+            with patch.object(ch,'policies',return_value=policy_rows), \
+                 patch.object(ch,'source_context',side_effect=lambda _root,_reach,p,**kwargs:context_by_id[p['id']]), \
+                 patch.object(ch,'extract',side_effect=extract_with_native_difference) as extract_mock, \
+                 patch('skippercast.seafloor.screen.load_snapshot',return_value=state()), \
+                 patch('skippercast.seafloor.screen.input_identity',return_value={'screen':'fixture'}), \
+                 patch.object(ch,'classified_screen',side_effect=hold_every_candidate):
+                staged=ch.stage('fixture',root=root)
+                native=read_json(folder/'classified-native.geojson')['features']
+                candidates=read_json(folder/'classified-candidates.geojson')['features']
+                held=read_json(folder/'classified-held.geojson')['features']
+                self.assertEqual(staged['physical_summary']['candidate_count'],3)
+                self.assertEqual(len(held),3)  # Holds do not restore duplicate physical patches.
+                self.assertEqual(read_json(folder/'classified-habitat.geojson')['features'],[])
+                self.assertTrue(candidates[0]['properties']['id'].startswith('classified-fixture-first-pair-'))
+                self.assertTrue(all(shape(f['geometry']).area >= 1000 for f in native))
+                geometries=[shape(f['geometry']) for f in native]
+                self.assertEqual(unary_union(geometries).area,13200)
+                self.assertEqual(sum(g.area for g in geometries),13200)
+                self.assertTrue(geometries[0].interiors)  # Earlier native hole is retained.
+                self.assertEqual(geometries[1].intersection(geometries[0]).area,0)
+                self.assertEqual(geometries[2].intersection(geometries[0]).area,0)
+                self.assertEqual(len(existing_seen),2)
+                self.assertTrue(existing_seen[1].contains(Point(10,10)))
+                self.assertFalse(existing_seen[1].contains(Point(50,50)))  # Prior hole remains open.
+                dedup=staged['inputs']['physical'].get('native_pair_dedup')
+                self.assertEqual(dedup,{'version':ch.NATIVE_PAIR_DEDUP_VERSION,
+                    'policy_order':['first-pair','second-pair'],
+                    'existing_geometry':'graded-baseline-plus-earlier-original-native-patches'})
+                # The next run must reuse without calling the extractor again.
+                cached=ch.stage('fixture',root=root)
+                self.assertTrue(cached['physical_reused'])
+                self.assertEqual(extract_mock.call_count,2)
+                stable_native=(folder/'classified-native.geojson').read_bytes()
+                stable_candidates=(folder/'classified-candidates.geojson').read_bytes()
+                self.assertEqual(ch.publication_features('fixture',root=root)[0],[])
+                receipt_path=folder/'classified-run.json';receipt=read_json(receipt_path)
+                receipt['inputs']['physical'].pop('native_pair_dedup')
+                receipt['physical_input_hash']=ch.digest(receipt['inputs']['physical'])
+                receipt['input_hash']=ch.digest(receipt['inputs'])
+                atomic_json(receipt_path,receipt)
+                with self.assertRaisesRegex(ValueError,'inputs changed'):
+                    ch.publication_features('fixture',root=root)
+                rebuilt=ch.stage('fixture',root=root)
+                self.assertFalse(rebuilt['physical_reused'])
+                self.assertEqual(extract_mock.call_count,4)
+                self.assertEqual((folder/'classified-native.geojson').read_bytes(),stable_native)
+                self.assertEqual((folder/'classified-candidates.geojson').read_bytes(),stable_candidates)
+                policy_rows.reverse()
+                with self.assertRaisesRegex(ValueError,'source-pair order changed'):
+                    ch.publication_features('fixture',root=root)
+                reordered=ch.stage('fixture',root=root)
+                self.assertFalse(reordered['physical_reused'])
+                self.assertEqual(extract_mock.call_count,6)
+                self.assertEqual(reordered['inputs']['physical']['native_pair_dedup']['policy_order'],
+                                 ['second-pair','first-pair'])
+                reordered_candidates=read_json(folder/'classified-candidates.geojson')['features']
+                self.assertTrue(reordered_candidates[0]['properties']['id'].startswith(
+                    'classified-fixture-second-pair-'))
+
+    def test_single_pair_outputs_and_cache_behavior_remain_unduplicated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'var/seafloor/reaches/fixture';folder.mkdir(parents=True)
+            p=policy();r=row();b=binding();atomic_json(folder/'run.json',{'inputs':{'sources':[r]}})
+            identity={'policy':p,'depth_source':r,'classification_binding':b}
+            context=(identity,r,b,None,box(0,0,100,100),box(180,180,190,190),[])
+            empty={'type':'FeatureCollection','features':[]}
+            patch_geometry=box(0,0,50,50)
+            with patch.object(ch,'policies',return_value=[p]), \
+                 patch.object(ch,'source_context',return_value=context), \
+                 patch.object(ch,'extract',return_value=([patch_geometry],
+                    {'class3_valid_depth_pixels':625,'classified_selected_area_km2':.0025})) as extract_mock, \
+                 patch('skippercast.seafloor.screen.load_snapshot',return_value=state()), \
+                 patch('skippercast.seafloor.screen.input_identity',return_value={'screen':'fixture'}), \
+                 patch.object(ch,'classified_screen',return_value=(empty,empty,{})):
+                first=ch.stage('fixture',root=root)
+                native_before=(folder/'classified-native.geojson').read_bytes()
+                self.assertNotIn('native_pair_dedup',first['inputs']['physical'])
+                second=ch.stage('fixture',root=root)
+                self.assertTrue(second['physical_reused'])
+                self.assertEqual((folder/'classified-native.geojson').read_bytes(),native_before)
+                self.assertEqual(extract_mock.call_count,1)
+
     def test_neighbor_planning_missing_changed_or_shrunk_reference_fails_closed(self):
         self.assertEqual(ch.neighbor_planning('/nonexistent','fixture',policy()),(None,None))
         with tempfile.TemporaryDirectory() as tmp:
