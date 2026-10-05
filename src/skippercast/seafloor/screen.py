@@ -120,7 +120,11 @@ def input_identity(state):
     return value
 
 
-def screen_candidates(candidates, state, *, native_geometries=None):
+def screen_candidates(candidates, state, *, native_geometries=None, native_exclusions=None):
+    # Optional classified planning suppressions operate on original native
+    # polygons, never display rings. Ordinary legal screens are unchanged.
+    if native_exclusions is not None and native_geometries is None:
+        raise ValueError('Native exclusions require original native geometry')
     passed, held, counts, grades, searches, classified_areas = [], [], Counter(), Counter(), [], []
     scope = polygon(state['scope']) if state['status'] == 'ready' else None
     exclusions = [(row['id'], unary_union([transform(PROJECT, exclusion_polygon(f['geometry']))
@@ -150,6 +154,12 @@ def screen_candidates(candidates, state, *, native_geometries=None):
             local = (native_polygon(native_geometries[p['id']])
                      if classified and native_geometries is not None else
                      classified_operational(geo, 3310) if classified else transform(PROJECT, geo))
+            extra = (native_exclusions or {}).get(p['id'], [])
+            if extra and not classified:
+                raise ValueError('Native exclusions require classified habitat')
+            for ident, exclusion in extra:
+                if local.intersects(exclusion):
+                    reasons.append('overlap-'+ident)
             if scope is not None:
                 if not scope.covers(geo):
                     reasons.append('screen-outside-coverage')
@@ -174,7 +184,8 @@ def screen_candidates(candidates, state, *, native_geometries=None):
         p['screen'] = {'status': 'held' if reasons else 'pass',
                        'snapshot': state.get('snapshot', 'unknown'),
                        'snapshot_sha256': state.get('snapshot_sha256', 'unknown'),
-                       'version': VERSION, 'layers': [r['id'] for r in state['layers']],
+                       'version': VERSION, 'layers': [r['id'] for r in state['layers']]
+                            + [ident for ident, _ in (native_exclusions or {}).get(p['id'], [])],
                        'scope': 'Spatial planning screen; season, gear and current notices still apply.'}
         label = f"Habitat candidate, unverified. Nominal depth ({p.get('vertical_datum', 'unknown')}); verify on your sounder."
         if p.get('resolution_m', 0) > 4:

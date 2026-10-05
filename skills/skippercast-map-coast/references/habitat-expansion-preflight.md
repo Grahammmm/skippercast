@@ -78,6 +78,17 @@ readback. Use native EPSG:3310 geometry as the authoritative fidelity and area
 basis according to `docs/engineering/classified-geometry.md`; do not publish raw
 or private geometry.
 
+For a reviewed batch with unresolved neighboring native overlap, an opt-in
+`neighbor_reaches` list can suppress whole patches using the verified shared
+planning grid. Prove that the planning footprint contains every relevant
+neighbor cell and leaves a useful disjoint subset before enabling it. This is
+a conservative exclusion, not surveyed coverage or an accuracy estimate.
+The maintained stage and publisher must independently reconstruct the same
+native holds; never edit held outputs or commit private feature IDs to select
+the passing subset. Paired reference footprints also retain each contributor's
+verified dependencies, credits and use restrictions; they supply no habitat
+metrics to the original depth/classification pair.
+
 Within 20 active minutes, require either a positive bounded habitat delta or a
 specific reproducible processing failure that prevents it. If the probe adds
 nothing, change source/reach/method. Do not follow it with an all-reach refresh
