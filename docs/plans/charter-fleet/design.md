@@ -836,7 +836,8 @@ watched-only if volume becomes a problem.
   (`ts` comes from the fix second); the store keeps the earliest receipt of a
   key, and the processor (CF-43) treats such a position's time as suspect.
 
-Unit template `scripts/fleet/skippercast-fleet-ais@.service`:
+Unit template `scripts/fleet/skippercast-fleet-ais@.service` (excerpt; the file
+also sets `StartLimitIntervalSec=0` and `UMask=0077`):
 
 ```ini
 [Unit]
@@ -844,8 +845,9 @@ Description=SkipperCast fleet AIS listener (%i)
 After=network-online.target
 [Service]
 EnvironmentFile=%h/.config/skippercast/fleet-ais.env
+Environment=PYTHONPATH=%h/.local/share/skippercast/app/current/src
 WorkingDirectory=%h/.local/share/skippercast/app/current
-ExecStart=%h/.local/share/skippercast/app/venv/bin/python -m skippercast.fleet.ais listen --region %i
+ExecStart=%h/.local/share/skippercast/app/current/.venv/bin/python -m skippercast.fleet.ais listen --region %i
 Restart=always
 RestartSec=10
 MemoryMax=512M
@@ -853,9 +855,12 @@ MemoryMax=512M
 WantedBy=default.target
 ```
 
-`fleet-ais-listener.yml` (dispatch only, `DATA_RUNNER`) copies the revision to
-`~/.local/share/skippercast/app/<sha>`, builds the venv with the `fleet` extra
-(the listener's WebSocket client is standard library), repoints `current`, writes `fleet-ais.env`
+`fleet-ais-listener.yml` (dispatch only, from `main` only, `DATA_RUNNER`) runs
+`scripts/fleet/install_listener.sh`, which copies the revision to
+`~/.local/share/skippercast/app/<sha>`, builds that revision's own `.venv` with the
+`fleet` extra on the box's `python3` (the listener's WebSocket client is standard
+library; the code runs from the revision's `src/`, so a rollback is a symlink change
+and a restart), repoints `current`, writes `fleet-ais.env`
 (`AISSTREAM_API_KEY`, `SKIPPERCAST_FLEET_VAR`, `SKIPPERCAST_GIT_SHA`) with mode 0600, installs and
 restarts the unit, then fails unless the heartbeat shows messages within 90 s.
 **Owner**: create the aisstream key and add the `AISSTREAM_API_KEY` secret; run
