@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Add fleet admin Coverage (`#fleet-coverage`: boats by port and class, % with MMSI, AIS seen or not seen in 30 days, single-source boats, completeness by field group, recent runs) and AIS health (`#fleet-ais`: last message age, 24 h reconnects and drops, gaps over 10 minutes, 7- and 30-day uptime, processor and watch list) views, admin only behind `FLEET_ENABLED` (off).
 - Limit verified classified-policy updates to complete affected regions, including previous scopes and neighbors; uncertain changes retain the full-coast planner.
 - Bind every coastal region's charter identity coverage to the new charter fleet registry (`fleet-registry`, superseding `operator-identities`) and show it as registry counts only; with the registry still empty, each region now reads "missing". Add the fleet pipeline's `discover`, `resolve`, `ingest`, `refresh` and `run` steps and `coverage-status` (all dark behind `FLEET_ENABLED`).
 - Add the fleet pipeline's `plan-agent` step, which writes OSINT batch manifests of at most 20 boats from registry data only (new, stale or incomplete boats), and `ingest --profiles`, which validates each OSINT profile, refuses and lists invalid ones, and stores the rest as `osint` facts, trips and conflict reviews; a value missing from a newer profile never replaces an older one, and Google ratings are never stored.

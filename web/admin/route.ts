@@ -13,6 +13,7 @@ export const VIEWS: readonly AdminView[] = ['queue', 'skippers', 'rules', 'posts
 export const FLEET_VIEWS = [
   'fleet-review', 'fleet-vessels',   // CF-31
   'fleet-operators',   // CF-32
+  'fleet-coverage', 'fleet-ais',   // CF-35
 ] as const;
 /** Fleet detail routes, #<head>/<id>: the list view the nav marks, and the id's pattern. */
 export const FLEET_DETAILS = {

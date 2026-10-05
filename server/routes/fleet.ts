@@ -17,6 +17,7 @@
 //   POST /api/fleet/jobs/activity, /heartbeat, GET /health         CF-45 (server/fleet/activity.ts)
 //   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 //   /api/admin/fleet/operators*, /api/admin/fleet/outreach/:id      CF-32, registered in routes/admin.ts (fleet/admin/operators.ts)
+//   GET /api/admin/fleet/coverage, GET /api/admin/fleet/ais/health   CF-35, registered in routes/admin.ts (fleet/admin/coverage.ts, ais-health.ts)
 //   GET /api/fleet/map/:layer  registered in adminRoutes (routes/admin.ts, CF-50, server/fleet/map.ts)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
