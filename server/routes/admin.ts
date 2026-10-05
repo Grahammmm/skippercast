@@ -39,6 +39,8 @@
 //   GET  /api/admin/fleet/vessels/:id
 //   POST /api/admin/fleet/vessels/:id   {fields?, unpin?, removal_requested?}   admin facts, pinned
 //   POST /api/admin/fleet/vessels/:id/link-advisor   {boat_id, unlink?: true}
+//   GET  /api/admin/fleet/operators  ?region= &outreach_status= &consent_status=   fleet/admin/operators.ts (CF-32): never sends
+//   GET|POST /api/admin/fleet/operators/:id, GET|POST /api/admin/fleet/operators/:id/outreach, POST /api/admin/fleet/outreach/:id
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -76,6 +78,8 @@ import {clickQuery, clickReport} from '../fleet/admin/clicks.ts';
 // CF-30: fleet reviews and vessels.
 import {listFleetReviews, decideFleetReview} from '../fleet/admin/reviews.ts';
 import {listVessels, vesselDetail, editVessel, linkAdvisor} from '../fleet/admin/vessels.ts';
+// CF-32: fleet operators, outreach drafts (never sent) and the lead score.
+import {listOperators, operatorDetail, editOperator, listOutreach, addOutreach, decideOutreach} from '../fleet/admin/operators.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -287,6 +291,16 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   });
   admin.post('/api/admin/fleet/vessels/:id/link-advisor', async c => answer(await linkAdvisor(c.env.DB!, c.req.param('id'), await body(c.req.raw, 1024), stamp())));
   admin.post('/api/admin/fleet/vessels/:id', async c => answer(await editVessel(c.env.DB!, c.req.param('id'), await body(c.req.raw, 16384), c.var.owner, stamp())));
+
+  // ---- CF-32: fleet operators and outreach (FLEET_ENABLED gate in routes/fleet.ts) ----
+  const found = (out: unknown): Response => out ? json(out) : NOT_FOUND();
+  admin.get('/api/admin/fleet/operators', async c => listed(await listOperators(c.env.DB!, {region: c.req.query('region'),
+    outreach_status: c.req.query('outreach_status'), consent_status: c.req.query('consent_status')}, stamp())));
+  admin.get('/api/admin/fleet/operators/:id', async c => found(await operatorDetail(c.env.DB!, c.req.param('id'), stamp())));
+  admin.post('/api/admin/fleet/operators/:id', async c => answer(await editOperator(c.env.DB!, c.req.param('id'), await body(c.req.raw, 4096), c.var.owner, stamp())));
+  admin.get('/api/admin/fleet/operators/:id/outreach', async c => found(await listOutreach(c.env.DB!, c.req.param('id'))));
+  admin.post('/api/admin/fleet/operators/:id/outreach', async c => answer(await addOutreach(c.env.DB!, c.req.param('id'), await body(c.req.raw, 40960), c.var.owner, stamp())));
+  admin.post('/api/admin/fleet/outreach/:id', async c => answer(await decideOutreach(c.env.DB!, c.req.param('id'), await body(c.req.raw, 1024), c.var.owner, stamp())));
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);
