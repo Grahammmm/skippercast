@@ -12,10 +12,18 @@ Two templates, chosen per binding (``params.template``):
 - ``generic``: names and links only, from links that look like boat pages.
 
 Facts only (the binding's ``rights``): never owners, mailing addresses, trip
-comments, open spots or any free text. Photos are recorded as a link plus an
-attribution (``photos[]`` = ``{url, attribution}``); image bytes are never
-fetched. Every fetch goes through ``ctx.net`` (``FleetSession``); a refused or
-failed page is skipped and listed in ``skipped``.
+comments, open spots or any free text. Photos are recorded as an https link plus
+an attribution (``photos[]`` = ``{url, attribution}``); image bytes are never
+fetched. Every fetch goes through ``ctx.net`` (``FleetSession``), which records a
+refused URL in ``ctx.net.skips``; a failed fetch is recorded there as
+``fetch-error``. A page whose structure no longer matches its template (a fleet
+page listing no boats, a boat page without the boat-details, rates or schedule
+blocks) raises ``LayoutError`` and is recorded as a ``layout`` skip, never as an
+empty result.
+
+Each candidate's ``record_id`` is the boat's record URL: the boat page link in
+``fr-fleet-php`` mode, the list entry's link in ``generic`` mode. Links are
+de-duplicated first, so two boats never share one.
 """
 from __future__ import annotations
 
@@ -27,6 +35,7 @@ from typing import Any, Iterable, Iterator, Mapping
 from urllib.parse import urljoin, urlsplit
 
 from ... import http
+from ._html import LayoutError
 from .base import Candidate, Departure, Fact, Offering, RunContext, offering_name_norm
 
 ID = "landing-pages"
@@ -45,6 +54,16 @@ DATE = re.compile(r"\b(\d{1,2})-(\d{1,2})-(\d{2}|\d{4})\b")
 TIME = re.compile(r"\b(\d{1,2}):(\d{2})\s*([AaPp])\.?[Mm]\b")
 ALL_YEAR = re.compile(r"^(?:all\s*(?:year|seasons?)|year[\s-]*round|\d{4}\b.*)$", re.I)
 NOT_A_NAME = re.compile(r"^(?:book|more|read|view|details|info|click|schedule|home|rates?|fleet|our fleet)\b", re.I)
+CASH = re.compile(r"\bcash\b", re.I)
+CREDIT = re.compile(r"\b(?:credit|card)\b", re.I)
+PAYMENT = re.compile(r"\b(?:cash|credit|card)\b", re.I)
+CAPTAIN_WORD = re.compile(r"\bcapt(?:ain)?s?\b\.?", re.I)
+NAME_SPLIT = re.compile(r"\s*(?:&|/|,|;|:|\+|\band\b|\s[-\u2013\u2014]\s)\s*", re.I)
+PARTICLES = {"de", "del", "della", "der", "di", "da", "du", "la", "le", "van", "von", "st."}
+NOT_A_PERSON = {"tba", "tbd", "various", "rotating", "relief", "owner", "operator", "operators", "crew", "staff",
+                "call", "office", "none", "na", "see", "schedule", "the", "boat", "vessel", "licensed", "license",
+                "uscg", "master", "deckhand", "deckhands", "mate", "chef", "cook", "and", "or", "with", "our"}
+BLOCK = ("br", "p", "div", "tr", "li", "h1", "h2", "h3")
 
 
 # ---- a small DOM on the standard library parser --------------------------------------------
@@ -60,10 +79,16 @@ class Node:
         return set((self.attrs.get("class") or "").split())
 
     def iter(self) -> Iterator["Node"]:
-        for child in self.children:
-            if isinstance(child, Node):
-                yield child
-                yield from child.iter()
+        """Descendant elements in document order; iterative, so a deeply nested page cannot hit the recursion limit."""
+        stack = [iter(self.children)]
+        while stack:
+            for child in stack[-1]:
+                if isinstance(child, Node):
+                    yield child
+                    stack.append(iter(child.children))
+                    break
+            else:
+                stack.pop()
 
     def find_all(self, tag: str | None = None, cls: str | None = None) -> list["Node"]:
         return [n for n in self.iter() if (tag is None or n.tag == tag) and (cls is None or cls in n.classes)]
@@ -74,16 +99,18 @@ class Node:
     def lines(self, skip: frozenset = frozenset()) -> list[str]:
         """Text split at <br> and block ends, whitespace collapsed; subtrees with a class in ``skip`` left out."""
         parts: list[str] = []
-
-        def walk(node: Node) -> None:
-            for child in node.children:
+        stack = [iter(self.children)]  # iterative for the same reason as iter()
+        while stack:
+            for child in stack[-1]:
                 if isinstance(child, str):
                     parts.append(child)
                 elif not child.classes & skip:
-                    if child.tag in ("br", "p", "div", "tr", "li", "h1", "h2", "h3"):
+                    if child.tag in BLOCK:
                         parts.append("\n")
-                    walk(child)
-        walk(self)
+                    stack.append(iter(child.children))
+                    break
+            else:
+                stack.pop()
         return [x for x in (" ".join(line.split()) for line in "".join(parts).split("\n")) if x]
 
     def text(self, skip: frozenset = frozenset()) -> str:
@@ -142,6 +169,29 @@ def price_cents(text: str) -> int | None:
         return None
     cents = (match.group(2) or "0").ljust(2, "0")
     return int(match.group(1).replace(",", "")) * 100 + int(cents)
+
+
+def cash_cents(text: str) -> int | None:
+    """The cash (or only unlabelled) price in a cell, chosen by its label, never by its position.
+
+    "$2,400 Cash $2,484 Credit" and "Cash: $2,400 Credit: $2,484" give 240000; "$983.25 $1,017.66 Credit"
+    gives 98325. A cell holding only a credit price, or two different unlabelled prices, gives None.
+    """
+    text = text or ""
+    found = list(PRICE.finditer(text))
+    if not found:
+        return None
+    before = bool(PAYMENT.search(text[:found[0].start()]))  # "Cash: $X" labels precede; "$X Cash" labels follow
+    amounts = []
+    for i, match in enumerate(found):
+        if before:
+            label = text[found[i - 1].end() if i else 0:match.start()]
+        else:
+            label = text[match.end():found[i + 1].start() if i + 1 < len(found) else len(text)]
+        kind = "credit" if CREDIT.search(label) else "cash" if CASH.search(label) else ""
+        amounts.append((kind, price_cents(match.group(0))))
+    pick = {c for k, c in amounts if k == "cash"} or {c for k, c in amounts if k == ""}
+    return pick.pop() if len(pick) == 1 else None
 
 
 def trip_type(name: str) -> str:
@@ -206,9 +256,24 @@ def _modal(values: Iterable[Any]) -> Any:
     return min(counts, key=lambda v: (-counts[v], v)) if counts else None
 
 
+def _is_person(name: str) -> bool:
+    words = name.split()
+    if not 1 <= len(words) <= 4 or len(name) > 60:
+        return False
+    for word in words:
+        if word.lower().strip(".") in NOT_A_PERSON:
+            return False
+        if word.lower() not in PARTICLES and not (word[0].isupper()
+                                                  and all(ch.isalpha() or ch in "'\u2019.-" for ch in word)):
+            return False
+    return True
+
+
 def _names(text: str) -> list[str]:
-    parts = re.split(r"\s*(?:&|/|,|\band\b)\s*", text.replace("Captains", "").replace("Captain", ""))
-    return [p.strip(" :.") for p in parts if 2 <= len(p.strip(" :.")) <= 60]
+    """Captain names from a captains line: parentheticals, "Captain"/"Capt." and non-name tokens dropped."""
+    text = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", text or "")
+    parts = (" ".join(p.split()).strip(" .-") for p in NAME_SPLIT.split(CAPTAIN_WORD.sub(" ", text)))
+    return list(dict.fromkeys(p for p in parts if p and _is_person(p)))
 
 
 # ---- the adapter ---------------------------------------------------------------------------
@@ -217,50 +282,63 @@ class LandingPages:
     id = ID
     kind = "discover"
 
-    def __init__(self) -> None:
-        self.skipped: list[dict] = []
-
     def discover(self, binding, ctx: RunContext) -> Iterable[Candidate]:
         params = binding.params
         if params.get("template") not in TEMPLATES:
             raise ValueError(f"{binding.id}: template must be one of {', '.join(TEMPLATES)}")
         landing = next((x for x in getattr(ctx.region, "landings", ()) if x.id == params.get("landing")), None)
-        page = _Page(self, binding, ctx, landing)
+        page = _Page(binding, ctx, landing)
         fleet = page.fetch(params["url"])
         if fleet is None:
             return
         url, root = fleet
-        if params["template"] == "generic":
-            for name, link in _boat_links(root, url):
-                yield page.candidate(name, link, [page.fact("name", name, url, 0.8)])
+        try:
+            cards = fleet_entries(root, url, params["template"])
+        except LayoutError as error:
+            page.record(error.url, "layout", error.detail)
             return
-        cards = _fleet_cards(root, url) or [{"name": n, "link": link} for n, link in _boat_links(root, url)]
         for card in cards:
-            yield page.boat(card, url)
+            if params["template"] == "generic":
+                yield page.candidate(card["name"], card["link"], [page.fact("name", card["name"], url, 0.8)])
+            else:
+                yield page.boat(card, url)
 
     def enrich(self, vessel: Mapping[str, Any], binding, ctx: RunContext) -> Iterable[Fact]:
         return ()
 
 
+def fleet_entries(root: Node, url: str, template: str) -> list[dict]:
+    """The boats a fleet page lists ({name, link, ...}); ``LayoutError`` when a page that loaded lists none."""
+    if template == "generic":
+        cards = [{"name": n, "link": link} for n, link in _boat_links(root, url)]
+    else:
+        cards = _fleet_cards(root, url) or [{"name": n, "link": link} for n, link in _boat_links(root, url)]
+    if not cards:
+        raise LayoutError(url, f"no boats on the {template} fleet page")
+    return cards
+
+
 class _Page:
     """One binding's run: fetching, provenance and the parsed candidates."""
 
-    def __init__(self, adapter: LandingPages, binding, ctx: RunContext, landing):
-        self.adapter, self.binding, self.ctx = adapter, binding, ctx
+    def __init__(self, binding, ctx: RunContext, landing):
+        self.binding, self.ctx = binding, ctx
         self.landing_id = binding.params.get("landing")
         self.landing_name = landing.name if landing else None
         self.port = landing.port if landing else None
         self.times: dict[str, str] = {}  # page URL -> when it was fetched
 
+    def record(self, url: str, reason: str, detail: str = "") -> None:
+        self.ctx.net.skips.append({"url": url, "reason": reason, "detail": detail[:300]})
+
     def fetch(self, url: str) -> tuple[str, Node] | None:
         from ..net import Skipped  # net imports config, which imports the adapter registry
         try:
             response = self.ctx.net.get(url)
-        except Skipped as error:
-            self.adapter.skipped.append(error.as_dict())
-            return None
+        except Skipped:
+            return None  # FleetSession has recorded why in ctx.net.skips
         except http.SourceError as error:
-            self.adapter.skipped.append({"url": url, "reason": "error", "detail": type(error).__name__})
+            self.record(url, "fetch-error", type(error).__name__)
             return None
         final = response.final_url or url
         self.times[url] = self.times[final] = self.ctx.clock()
@@ -282,7 +360,7 @@ class _Page:
             return None
         url = urljoin(base, src.strip())
         credit = self.landing_name or urlsplit(base).hostname or ""
-        return {"url": url, "attribution": credit} if urlsplit(url).scheme in ("http", "https") and credit else None
+        return {"url": url, "attribution": credit} if urlsplit(url).scheme == "https" and credit else None
 
     def boat(self, card: dict, fleet_url: str) -> Candidate:
         facts = [self.fact("name", card["name"], fleet_url, 0.9)]
@@ -297,7 +375,11 @@ class _Page:
         if page is None:
             return self.candidate(card["name"], link, facts)
         url, root = page
-        boat = _boat_page(root, url, card["name"])
+        try:
+            boat = _boat_page(root, url, card["name"])
+        except LayoutError as error:
+            self.record(error.url, "layout", error.detail)
+            return self.candidate(card["name"], link, facts)
         name = boat["name"]
         facts[0] = self.fact("name", name, url, 0.95)
         facts += [self.fact("captains[]", {"name": c, "role": "captain"}, url) for c in boat["captains"]]
@@ -307,15 +389,21 @@ class _Page:
         photo = self.photo(boat.get("photo"), url)
         if photo:
             facts.append(self.fact("photos[]", photo, url))
-        offerings = [self._offering(row, url) for row in boat["rates"]]
-        departures: list[Departure] = []
+        # One offering per id: a later rate row or schedule trip that names the same offering is the same one.
+        offerings: dict[tuple, Offering] = {}
+        for row in boat["rates"]:
+            offering = self._offering(row, url)
+            offerings.setdefault(_offering_key(offering), offering)
+        departures: dict[tuple, Departure] = {}
         for trip, rows in boat["schedule"].items():
             offering = self._schedule_offering(trip, rows, url)
-            offerings.append(offering)
-            departures += [Departure(offering, r["date"], r["departs"], r["price_cents"], r["load"], url,
-                                     self.times[url]) for r in rows]
-        facts += [f for o in offerings for f in o.facts]
-        return self.candidate(name, url, _unique(facts), offerings=tuple(offerings), departures=tuple(departures))
+            offering = offerings.setdefault(_offering_key(offering), offering)
+            for r in rows:
+                departures.setdefault((_offering_key(offering), r["date"], r["departs"]), Departure(
+                    offering, r["date"], r["departs"], r["price_cents"], r["load"], url, self.times[url]))
+        facts += [f for o in offerings.values() for f in o.facts]
+        return self.candidate(name, link, _unique(facts), offerings=tuple(offerings.values()),
+                              departures=tuple(departures.values()))
 
     def _offering(self, row: dict, url: str) -> Offering:
         value = {k: v for k, v in row.items() if v is not None}
@@ -334,6 +422,11 @@ class _Page:
         return Offering(name, value["trip_type"], (self.fact("trip_types[]", value, url),),
                         price_cents=value.get("price_cents"), price_basis="per-person", capacity=capacity,
                         departs_local=value.get("departs_local"), duration_h=first["duration_h"])
+
+
+def _offering_key(offering: Offering) -> tuple:
+    """What ``Offering.id`` hashes besides the vessel id: two offerings with the same key share an id."""
+    return offering_name_norm(offering.name), offering.season_from, offering.season_to
 
 
 def _unique(facts: list[Fact]) -> list[Fact]:
@@ -359,7 +452,7 @@ def _fleet_cards(root: Node, base: str) -> list[dict]:
         title, link = col.find(cls="feature-title"), col.find("a")
         if not title or not link or not link.attrs.get("href") or not title.text():
             continue
-        url = urljoin(base, link.attrs["href"])
+        url = urljoin(base, link.attrs["href"]).split("#")[0]
         if url in seen:
             continue
         seen.add(url)
@@ -385,9 +478,15 @@ def _labelled(details: Node) -> dict[str, Node]:
 
 
 def _boat_page(root: Node, url: str, fallback_name: str) -> dict:
-    details = root.find(cls="pod_boat_details") or root
-    heading = details.find("h2")
-    labels = _labelled(details)
+    """A boat page's facts; ``LayoutError`` when it has none of the boat-details, rates or schedule blocks."""
+    details = root.find(cls="pod_boat_details")
+    has_rates = any(n.attrs.get("id") == "rates-container" for n in root.iter())
+    has_trips = any("data-trip-id" in n.attrs for n in root.iter())
+    if details is None and not has_rates and not has_trips:
+        raise LayoutError(url, "boat page without pod_boat_details, rates-container or data-trip-id")
+    heading = details.find("h2") if details else None
+    name = heading.text() if heading and heading.text() else fallback_name
+    labels = _labelled(details) if details else {}
     captains = _names(labels["captains"].text()) if "captains" in labels else []
     site = labels.get("boat website")
     link = site.find("a") if site else None
@@ -395,12 +494,33 @@ def _boat_page(root: Node, url: str, fallback_name: str) -> dict:
     image = image.find("img") if image else None
     text = " ".join(root.lines(frozenset({"trip-comments", "scale-group"})))
     size, capacity = SIZE.search(text), CAPACITY.search(text)
-    return {"name": heading.text() if heading and heading.text() else fallback_name, "captains": captains,
+    return {"name": name, "captains": captains,
             "website": urljoin(url, link.attrs["href"]) if link and link.attrs.get("href") else None,
             "length_ft": float(size.group(1)) if size else None, "beam_ft": float(size.group(2)) if size else None,
             "passengers_max": int(capacity.group(1)) if capacity else None,
             "photo": image.attrs.get("src") if image else None,
-            "rates": _rates(root), "schedule": _schedule(root, heading.text() if heading else fallback_name)}
+            "rates": _rates(root), "schedule": _schedule(root, name)}
+
+
+def _row_prices(columns: list[tuple[str, str]]) -> list[tuple[str, int | None]]:
+    """(day label, cents) for one rate row's price columns, chosen by header and cell label, never by position.
+
+    Day columns ("Mon - Thu", "Fri - Sun") give one price each, merged when every day has the same one; a
+    column headed Credit or Card is ignored; with payment columns ("Price", "Cash", "Credit") the cash column
+    wins, else the one non-credit price. Two different unlabelled prices are ambiguous: price unknown.
+    """
+    days = [(label, cash_cents(cell)) for label, cell in columns if day_set(label)]
+    if days:
+        priced = [(label, cents) for label, cents in days if cents is not None]
+        if len(priced) == len(days) and len({cents for _, cents in priced}) == 1:  # one price every day
+            return [("", priced[0][1])]
+        return priced
+    other = [(label, cell) for label, cell in columns if not CREDIT.search(label)]
+    other = [x for x in other if CASH.search(x[0])] or other
+    values = {cash_cents(cell) for _, cell in other} - {None}
+    if len(values) == 1:
+        return [("", values.pop())]
+    return [("", None)] if values else []
 
 
 def _rates(root: Node) -> list[dict]:
@@ -421,12 +541,7 @@ def _rates(root: Node) -> list[dict]:
         if not months and season and not ALL_YEAR.match(season):
             name = f"{name} ({season})"
         capacity = int(cells[2]) if cells[2].isdigit() else None
-        priced = [(header[i] if i < len(header) else "", price_cents(c)) for i, c in enumerate(cells[3:], start=3)]
-        priced = [(label, cents) for label, cents in priced if cents is not None]
-        if len(priced) == len(cells) - 3 and len({cents for _, cents in priced}) == 1:  # one price every day
-            priced = [("", priced[0][1])]
-        elif any(day_set(label) is None for label, _ in priced):  # cash/credit columns: the first (base) price
-            priced = priced[:1]
+        priced = _row_prices([(header[i] if i < len(header) else "", c) for i, c in enumerate(cells[3:], start=3)])
         for label, cents in priced:
             days = day_set(label) if label else None
             out.append({"name": f"{name} ({label})" if days else name, "trip_type": trip_type(cells[0]),
@@ -444,6 +559,7 @@ def _schedule(root: Node, boat: str) -> dict[str, list[dict]]:
         if trip and not node.classes & {"scale-group"}:
             cells.setdefault(trip, []).append(node)
     out: dict[str, list[dict]] = {}
+    names: dict[str, str] = {}  # normalized trip name -> the first spelling seen
     want = offering_name_norm(boat)
     for nodes in cells.values():
         def part(cls: str) -> Node | None:
@@ -451,10 +567,13 @@ def _schedule(root: Node, boat: str) -> dict[str, list[dict]]:
         info, depart, back = part("trip-info") or part("trip-name"), part("trip-depart"), part("trip-return")
         if not info or not depart:
             continue
-        strong = info.find("strong")
-        lines = [x for x in info.lines(frozenset({"charter-alert", "trip-icons"})) if not strong or x != strong.text()]
-        if strong and offering_name_norm(strong.text()) != want or not lines or not local_date(depart.text()):
+        strong = info.find("strong")  # the boat's name; a row without one cannot be attributed to this boat
+        if strong is None or offering_name_norm(strong.text()) != want:
             continue
+        lines = [x for x in info.lines(frozenset({"charter-alert", "trip-icons"})) if x != strong.text()]
+        if not lines or not offering_name_norm(lines[0]) or not local_date(depart.text()):
+            continue
+        trip = names.setdefault(offering_name_norm(lines[0]), lines[0])
         departs, returns = local_time(depart.text()), local_time(back.text()) if back else None
         duration = None
         if back and departs and returns and local_date(back.text()):
@@ -462,9 +581,9 @@ def _schedule(root: Node, boat: str) -> dict[str, list[dict]]:
             duration = round((datetime.fromisoformat(f"{local_date(back.text())}T{returns}") - start).total_seconds() / 3600, 2)
         load, price = part("trip-load"), part("trip-price")
         load_text = load.text() if load else None
-        out.setdefault(lines[0], []).append({
+        out.setdefault(trip, []).append({
             "date": local_date(depart.text()), "departs": departs, "duration_h": duration if duration and duration > 0 else None,
-            "price_cents": price_cents(price.text()) if price else None,
+            "price_cents": cash_cents(price.text()) if price else None,
             "load": load_text if load_text and load_text != "-" else None})
     return out
 

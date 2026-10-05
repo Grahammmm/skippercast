@@ -107,7 +107,9 @@
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
     ],
-    "record_id": null
+    "record_id": null,
+    "offerings": [],
+    "departures": []
   },
   {
     "source_id": "examplefishreports",
@@ -207,7 +209,9 @@
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
     ],
-    "record_id": null
+    "record_id": null,
+    "offerings": [],
+    "departures": []
   },
   {
     "source_id": "examplefishreports",
@@ -247,7 +251,9 @@
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
     ],
-    "record_id": null
+    "record_id": null,
+    "offerings": [],
+    "departures": []
   },
   {
     "source_id": "examplefishreports",
@@ -287,6 +293,8 @@
         "retrieved_at": "2026-10-05T12:00:00Z"
       }
     ],
-    "record_id": null
+    "record_id": null,
+    "offerings": [],
+    "departures": []
   }
 ]

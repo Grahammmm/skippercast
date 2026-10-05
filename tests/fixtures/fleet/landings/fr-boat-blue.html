@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- Synthetic fixture (CF-14): an fr-fleet-php boat page for a multi-day boat, in the variant layout
-     (no h2, commented-out owner, separate trip-name cell, four-digit years). Every name and link is invented. -->
+     (no h2, commented-out owner, separate trip-name cell, four-digit years, Credit before Price,
+     a repeated rate row and a repeated trip listing). Every name and link is invented. -->
 <html>
 <body>
 <div id="main" class="container">
@@ -16,13 +17,16 @@
 <div id="rates-container" class="row">
   <table class="rates-table"><tbody>
     <tr class="font_bold18">
-      <td><strong>Trip Types</strong></td><td><strong>Season</strong></td><td><strong>Anglers</strong></td><td><strong>Price</strong></td><td><strong>Credit</strong></td>
+      <td><strong>Trip Types</strong></td><td><strong>Season</strong></td><td><strong>Anglers</strong></td><td><strong>Credit</strong></td><td><strong>Price</strong></td>
     </tr>
     <tr>
-      <td class="font_default14">Overnight</td><td>2026 Charter Rates</td><td>30</td><td>$10,500 Cash</td><td>$10,867.50</td>
+      <td class="font_default14">Overnight</td><td>2026 Charter Rates</td><td>30</td><td>$10,867.50</td><td>$10,500 Cash</td>
     </tr>
     <tr>
-      <td class="font_default14">1.5 Day</td><td>Winter</td><td>26</td><td>$15560</td><td>$16104.60</td>
+      <td class="font_default14">1.5 Day</td><td>Winter</td><td>26</td><td>$16104.60</td><td>$15560</td>
+    </tr>
+    <tr>
+      <td class="font_default14">Overnight</td><td>All Year</td><td>30</td><td>$10,867.50</td><td>$9,999</td>
     </tr>
   </tbody></table>
 </div>
@@ -41,6 +45,17 @@
     </td>
   </tr>
   <tr><td class="scale-group trip-cell" data-trip-id="9101" colspan="6"><div class="trip-comments"><em>PAT EXAMPLE GROUP</em></div></td></tr>
+  <tr>
+    <td class="scale-data trip-name trip-cell" data-trip-id="9102"><strong>Blue Placeholder II</strong><br>2-Day Limited Load</td>
+    <td class="scale-data trip-cell" data-trip-id="9102">
+      <div class="row">
+        <div class="col-md-3 trip-depart">Mon. 11-2-2026 <br>10:00 AM</div>
+        <div class="col-md-3 trip-return">Wed. 11-4-2026 <br>6:00 AM</div>
+        <div class="col-md-2 trip-load">24</div>
+        <div class="col-md-2 trip-price"><b>$983.25</b><br>$1,017.66 Credit</div>
+      </div>
+    </td>
+  </tr>
 </tbody></table>
 </div>
 </body>
