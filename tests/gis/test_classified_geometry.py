@@ -53,8 +53,35 @@ class ClassifiedGeometryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Invalid classified polygon'):cg.represent(bad)
         # Even a valid result from a blanket repair is rejected if it fills the
         # native hole. Native comparison, rather than validity/area alone, gates it.
-        with patch.object(cg,'make_valid',return_value=filled):
+        # Every attempted map representation must retain the hole, even when
+        # the converter returns a valid but filled polygon on each attempt.
+        with patch.object(cg,'_geographic',return_value=filled):
             with self.assertRaisesRegex(ValueError,'fidelity bound'):cg.represent(native)
+
+    def test_bounded_collinear_edges_retain_native_shape_and_legacy_bytes(self):
+        native=touching_hole()
+        old=cg._geographic(native)
+        self.assertTrue(cg.geographic(native).equals_exact(old,0))
+        from shapely.affinity import scale
+        large=scale(native,xfact=20,yfact=20,origin=(50000,100000))
+        with self.assertRaisesRegex(ValueError,'fidelity bound'):
+            cg.fidelity(large,cg._geographic(large))
+        original_wkb=large.wkb
+        geo,report=cg.represent(large)
+        self.assertEqual(large.wkb,original_wkb)
+        self.assertTrue(all(v['symmetric_difference_m2']<=.002 for v in report.values()))
+        candidates,native_rows=inventory(large)
+        self.assertLess(cg.verify_inventory(candidates,native_rows)['union_symmetric_difference_m2'],.01)
+        self.assertTrue(geo.is_valid)
+
+    def test_edge_conversion_is_bounded_and_never_admits_invalid_native(self):
+        with patch.object(cg,'MAX_PROJECTED_VERTICES',4):
+            with self.assertRaisesRegex(ValueError,'vertex budget'):
+                cg.edge_vertex_count(touching_hole(),2)
+        with patch.object(cg,'_geographic',side_effect=ValueError('unrepresentable')) as attempt:
+            with self.assertRaisesRegex(ValueError,'unrepresentable'):
+                cg.geographic(touching_hole())
+        self.assertEqual(attempt.call_count,3)
 
     def test_pathological_hole_structure_retains_native_notch_linework_adds_area(self):
         shell=box(50000,100000,50100,100100)

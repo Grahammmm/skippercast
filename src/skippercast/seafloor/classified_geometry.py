@@ -10,7 +10,7 @@ import math
 import pyproj
 from pyproj import Transformer
 import shapely
-from shapely import make_valid
+from shapely import make_valid, segmentize
 from shapely.geometry import shape
 from shapely.ops import transform, unary_union
 
@@ -19,11 +19,15 @@ VERSION = 'native-classified-geometry-v1'
 # are neither survey accuracy nor a new measurement claim; no raster is changed.
 MAX_FEATURE_DIFFERENCE_M2 = .002
 MAX_UNION_DIFFERENCE_M2 = .01
+PROJECTION_VERSION = 'bounded-native-edge-projection-v1'
+EDGE_STEPS_M = (10, 2)
+MAX_PROJECTED_VERTICES = 1_000_000
 
 
 def runtime():
     return {'version': VERSION, 'shapely': shapely.__version__,
-            'geos': shapely.geos_version_string, 'pyproj': pyproj.__version__}
+            'geos': shapely.geos_version_string, 'pyproj': pyproj.__version__,
+            'projection_version': PROJECTION_VERSION}
 
 
 def polygon(geometry):
@@ -46,13 +50,49 @@ def project(value, source, target):
     return transform(Transformer.from_crs(source, target, always_xy=True).transform, value)
 
 
-def geographic(native):
-    native = polygon(native)
+def _geographic(native):
     geo = structure(project(native, 3310, 4326))
     w, s, e, n = geo.bounds
     if not (-180 <= w <= e <= 180 and -90 <= s <= n <= 90):
         raise ValueError('Classified representation must be WGS84')
     return geo
+
+
+def edge_vertex_count(native, step):
+    """Bound allocation before adding collinear vertices to unchanged edges."""
+    count = 0
+    for part in native.geoms if native.geom_type == 'MultiPolygon' else (native,):
+        for ring in (part.exterior, *part.interiors):
+            coords = list(ring.coords)
+            count += 1 + sum(max(1, math.ceil(math.hypot(b[0]-a[0], b[1]-a[1])/step))
+                             for a, b in zip(coords, coords[1:]))
+            if count > MAX_PROJECTED_VERTICES:
+                raise ValueError('Classified projection exceeds vertex budget')
+    return count
+
+
+def geographic(native):
+    """Keep the old faithful representation; bound nonlinear edge conversion.
+
+    Only display conversion gains collinear vertices. The original native
+    inventory, feature identity, holes, areas and legal screen stay unchanged.
+    No fidelity limit is widened and invalid native evidence is never repaired.
+    """
+    native = polygon(native)
+    failure = None
+    for step in (None, *EDGE_STEPS_M):
+        if step is None:
+            projected_native = native
+        else:
+            edge_vertex_count(native, step)
+            projected_native = segmentize(native, step)
+        try:
+            geo = _geographic(projected_native)
+            fidelity(native, geo)
+            return geo
+        except ValueError as exc:
+            failure = exc
+    raise failure
 
 
 def operational(geometry, crs):
