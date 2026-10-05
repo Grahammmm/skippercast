@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "description": "Weights of the 0-100 outreach lead score shown on admin operator pages (design section 13); each part is scored 0-1, weighted and scaled. Weights sum to 1.",
+  "scale": 100,
+  "weights": {
+    "landing_report_volume": 0.3,
+    "reporting_frequency": 0.25,
+    "social_presence": 0.25,
+    "ais_seen_30d": 0.2
+  }
+}

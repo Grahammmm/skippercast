@@ -9,7 +9,7 @@
 // logic. Offline: real migrations in node:sqlite, a fake Messages API.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, readdirSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
 import {memoryBucket} from './_advisor_r2.mjs';
 import {withSessions} from './fixtures/test-sessions.mjs';
@@ -116,7 +116,8 @@ test('hashtags: brand, region, species then parent; deduplicated, at most 12; ev
   assert.equal(D.hashtagsFor('morro-bay', [...ALL_SPECIES_KEYS]).length, 12);
   assert.equal(D.DRAFT_HASHTAGS_MAX, 12);
   const catalog = read('../catalog/advisor/hashtags.json');
-  const regions = readdirSync(new URL('../regions/', import.meta.url)).filter(r => !r.startsWith('.'));
+  // Coastal regions only: state-level fleet directories (regions/CA/) hold fleet.json, not region.json.
+  const regions = readdirSync(new URL('../regions/', import.meta.url)).filter(r => existsSync(new URL(`../regions/${r}/region.json`, import.meta.url)));
   assert.deepEqual(Object.keys(catalog.regions).sort(), regions.sort(), 'every region has tags');
   for (const key of Object.keys(catalog.species)) assert.ok(ALL_SPECIES_KEYS.has(key), key);
   for (const tag of [...catalog.brand, ...catalog.angler, ...Object.values(catalog.regions).flat(), ...Object.values(catalog.species).flat()]) assert.match(tag, /^[a-z0-9_]{2,40}$/);

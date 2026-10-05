@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "description": "Hosts whose terms forbid automated access (design section 6, decision D7). No source binding, agent fetch or fact source_url may use them; a host also covers its subdomains. A URL or handle on these hosts may be stored as a value only when its source_url is the operator's own site, a landing page or a report site.",
+  "hosts": [
+    {
+      "host": "fishingbooker.com",
+      "reason": "Terms prohibit copying or distributing site content; marketplace."
+    },
+    {
+      "host": "fareharbor.com",
+      "reason": "Terms forbid robots, spiders or scrapers for any commercial purpose without written permission."
+    },
+    {
+      "host": "xola.com",
+      "reason": "Terms forbid scraping, spidering or crawling without written consent."
+    },
+    {
+      "host": "fishdope.com",
+      "reason": "Terms limit use to personal, non-commercial transitory viewing."
+    },
+    {
+      "host": "fishcity.app",
+      "reason": "Terms forbid republishing or mirroring data and automated scraping; manual completeness benchmark at most."
+    },
+    {
+      "host": "instagram.com",
+      "reason": "Automated collection prohibited without express written permission."
+    },
+    {
+      "host": "facebook.com",
+      "reason": "Automated collection prohibited without express written permission."
+    },
+    {
+      "host": "fb.com",
+      "reason": "Meta host; same terms as facebook.com."
+    },
+    {
+      "host": "meta.com",
+      "reason": "Meta host; same terms as facebook.com."
+    },
+    {
+      "host": "threads.net",
+      "reason": "Meta host; same terms as facebook.com."
+    }
+  ]
+}
