@@ -46,9 +46,9 @@ class FakeConnection:
         self.script, self.host, self.port, self.addresses = script, host, port, addresses
         self.connected_address = addresses[0][1] if addresses else None
 
-    def request(self, method, target, headers=None):
+    def request(self, method, target, body=None, headers=None):
         self.script.requests.append({'method': method, 'host': self.host, 'target': target,
-                                     'headers': dict(headers or {}), 'addresses': self.addresses})
+                                     'headers': dict(headers or {}), 'addresses': self.addresses, 'body': body})
         self.reply = self.script.replies.pop(0)
 
     def getresponse(self):

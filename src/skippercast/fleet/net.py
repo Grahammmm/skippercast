@@ -9,10 +9,16 @@ backoff, conditional-GET cache) and adds, for every fleet fetch:
   URL and on every redirect hop before a connection is made (a redirect to a
   host off the allowlist is refused the same way);
 - robots.txt per host for the ``SkipperCast`` user agent (``urllib.robotparser``,
-  cached 24 h; unreachable, 401/403 or 5xx robots.txt means disallowed),
-  checked for the first URL and every redirect target;
+  cached 24 h), checked for the first URL and every redirect target. A transport
+  error, timeout, 401/403 or 5xx means disallowed; a 404 or other 4xx means no
+  robots.txt (allowed). Redirects are followed by hand, at most 5 hops, and only
+  to ``https`` ``/robots.txt`` on an allowlisted host; a redirect anywhere else
+  (an ``http://`` error page, another path or host) means no robots.txt, as a 4xx;
+  more than 5 hops fails closed;
 - at least ``interval`` seconds between requests to one host and a per-run
   request budget per host (default 600), both counted per hop, redirects included.
+
+``post`` sends a form body under the same rules (the PSIX export form).
 
 A refused URL raises ``Skipped`` and is appended to ``skips`` so the step can
 record it in its report; adapters catch ``Skipped`` and move on.
@@ -21,7 +27,7 @@ from __future__ import annotations
 
 import time
 from typing import Any, Callable, Iterable
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from urllib.robotparser import RobotFileParser
 
 from .. import http
@@ -29,6 +35,7 @@ from .config import FleetRegion, off_limits_host
 
 ROBOTS_AGENT = "SkipperCast"
 ROBOTS_TTL = 24 * 3600
+ROBOTS_HOPS = 5  # redirects followed for robots.txt
 
 
 class OffLimits(http.DisallowedHost):
@@ -125,27 +132,61 @@ class FleetSession:
             self.used[host] = self.used.get(host, 0) + 1
         self._wait(host)
 
+    def _robots_target(self, location: str, current: str) -> str | None:
+        """A redirect target worth following for robots.txt: https /robots.txt on an allowlisted host."""
+        target = urljoin(current, location)
+        try:
+            parts = urlsplit(target)
+            host = (parts.hostname or "").lower()
+        except ValueError:
+            return None
+        if (parts.scheme != "https" or parts.path != "/robots.txt" or not host or host not in self.hosts
+                or off_limits_host(target, self.session.off_limits)):
+            return None
+        return target
+
+    def _fetch_robots(self, host: str) -> RobotFileParser | None:
+        """The parsed robots.txt for ``host``; None means fail closed (unreachable or erroring)."""
+        parser = RobotFileParser()
+        current = f"https://{host}/robots.txt"
+        for _hop in range(ROBOTS_HOPS + 1):
+            try:
+                response = self.session.get(current, allowed_hosts=self.hosts, raise_for_status=False,
+                                            max_bytes=500_000, follow_redirects="return")
+            except (http.SourceError, OSError):
+                return None  # transport error or timeout: fail closed for this run
+            location = response.headers.get("Location")
+            if response.status in http.REDIRECT_STATUSES and location:
+                target = self._robots_target(location, current)
+                if target is None:  # redirected off robots.txt (an error page): no robots.txt, as a 4xx
+                    parser.allow_all = True
+                    return parser
+                current = target
+                continue
+            if response.status in (401, 403) or response.status >= 500:
+                parser.disallow_all = True
+            elif response.status >= 400:
+                parser.allow_all = True
+            else:
+                parser.parse((response.body or b"").decode("utf-8", "replace").splitlines())
+            return parser
+        return None  # too many redirects: fail closed
+
     def _robots_allows(self, url: str, host: str) -> bool:
         cached = self._robots.get(host)
         if cached is None or self.clock() - cached[0] > ROBOTS_TTL:
-            parser: RobotFileParser | None = RobotFileParser()
-            try:
-                response = self.session.get(f"https://{host}/robots.txt", allowed_hosts=self.hosts,
-                                            raise_for_status=False, max_bytes=500_000)
-            except (http.SourceError, OSError):
-                parser = None  # unreachable robots.txt: fail closed for this run
-            else:
-                if response.status in (401, 403) or response.status >= 500:
-                    parser.disallow_all = True
-                elif response.status >= 400:
-                    parser.allow_all = True
-                else:
-                    parser.parse((response.body or b"").decode("utf-8", "replace").splitlines())
-            cached = self._robots[host] = (self.clock(), parser)
+            cached = self._robots[host] = (self.clock(), self._fetch_robots(host))
         return cached[1] is not None and cached[1].can_fetch(ROBOTS_AGENT, url)
 
     def get(self, url: str, **options: Any) -> http.Response:
         """Fetch ``url`` under the fleet rules; raises Skipped for a refused URL or redirect."""
+        return self._request("GET", url, **options)
+
+    def post(self, url: str, data: bytes, **options: Any) -> http.Response:
+        """POST a form body to ``url`` under the same rules as ``get`` (robots, budget, interval, deny)."""
+        return self._request("POST", url, data=data, **options)
+
+    def _request(self, method: str, url: str, **options: Any) -> http.Response:
         try:
             host, _port = self.session.check_url(url, http.Allowlist(self.hosts))
         except OffLimits as error:
@@ -158,7 +199,7 @@ class FleetSession:
             raise self._skip(url, "robots", host)
         self._checked = url
         try:
-            return self.session.get(url, allowed_hosts=self.hosts, **options)
+            return self.session.request(method, url, allowed_hosts=self.hosts, **options)
         except _HopRefused as error:  # on a redirect hop
             raise self._skip(url, error.reason + "-redirect", str(error)) from None
         except OffLimits as error:  # a redirect pointed at an off-limits host; refused before connecting

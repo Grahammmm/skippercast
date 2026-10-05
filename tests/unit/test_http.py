@@ -297,6 +297,20 @@ class CacheAndLimitTests(TLSFixture):
 
 
 class PolicyUnitTests(unittest.TestCase):
+    def test_post_sends_its_body_is_not_cached_and_a_redirect_becomes_a_body_less_get(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session, script, _ = http_fixture.session(
+                (302, b'', {'Location': '/done'}), (200, b'ok', {'ETag': '"e"'}), (200, b'form', {'ETag': '"f"'}),
+                allowed_hosts=['www.example.com'], cache=tmp)
+            form = {'Content-Type': 'application/x-www-form-urlencoded'}
+            response = session.post('https://www.example.com/search', b'a=1&b=2', headers=form)
+            self.assertEqual(response.body, b'ok')
+            self.assertEqual([(r['method'], r['target'], r['body']) for r in script.requests],
+                             [('POST', '/search', b'a=1&b=2'), ('GET', '/done', None)])
+            self.assertNotIn('Content-Type', script.requests[1]['headers'])
+            session.post('https://www.example.com/form', b'x=1', headers=form)
+            self.assertEqual(list(Path(tmp).iterdir()), [])  # a request with a body is never cached
+
     def test_user_agent_names_the_version_and_site(self):
         self.assertEqual(http.USER_AGENT, f'SkipperCast/{__version__} (+https://skippercast.com)')
 

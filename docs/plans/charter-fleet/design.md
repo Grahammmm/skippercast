@@ -473,14 +473,18 @@ addresses, size caps, backoff, conditional-GET cache) and adds: an allowlist of
 hosts in `fleet.json` bindings plus operator websites already stored as facts;
 a hard deny of `catalog/fleet/off-limits.json` before every request and
 redirect; robots.txt per host for the `SkipperCast` user agent
-(`urllib.robotparser`, cached 24 h); ≥ 1.0 s between requests per host; a
+(`urllib.robotparser`, cached 24 h; a transport error, timeout, 401/403 or 5xx
+fails closed, a 404 or other 4xx means no robots.txt; redirects are followed by
+hand, at most 5 hops, only to `https` `/robots.txt` on an allowlisted host, and a
+redirect anywhere else, such as PSIX's 302 to an `http://` error page, counts as
+no robots.txt); ≥ 1.0 s between requests per host; a
 per-run budget per host (default 600). A denied or robots-blocked URL is a
 recorded skip.
 
 | Adapter | Gives | Access | Rights and rules |
 | --- | --- | --- | --- |
-| `fcc-uls` | call sign, MMSI, doc number, licensee entity | weekly `l_ship.zip` (~44 MB), local join, all statuses | public domain; keep a licensee only if an entity (LLC, Inc., Corp.); never addresses |
-| `uscg-psix` | official number, service, call sign, hailing port, particulars | XML service / XLSX by sector | public domain |
+| `fcc-uls` | call sign, MMSI, doc number or state registration, licence status, licensee entity | weekly `l_ship.zip` (~44 MB), local join of EN/HD/SH by licensee state, all statuses | public domain; keep a licensee only if an entity (LLC, Inc., Corp.); never addresses |
+| `uscg-psix` | official number, service, call sign, IMO, build year, gross tonnage, sector, last inspection | XLSX export by sector (`PSIXExportSearch.aspx` form POST; inspections sheet only); the XML service has no sector filter. No hailing port in the export | public domain |
 | `teck-reports` | boats, landing, "Boat Information" block, catch recency | SoCal, SanDiego, NorCal FishReports; SportfishingReport as dedupe index | facts only; no text, images or captain mobiles. **Owner**: ask TECK.net before paid use |
 | `landing-pages` | fleet, specs, captains, rates, schedules | per-landing binding, template `fr-fleet-php` or `generic` | facts only; photos as links with attribution |
 | `directories` | seed lists | GGFA, Sportfishing Association of California, harbor lists | facts only; vessel and port, no personal names or mobiles |
@@ -1135,7 +1139,11 @@ install → `FLEET_MAP_ENABLED`.
   registry data, OSINT output, positions and outreach as private records.
 - **People.** The boat and business only: no home addresses, personal phones,
   family details or personal accounts; no individual FCC licensee names;
-  captains only as the operator publishes them.
+  captains only as the operator publishes them. `fcc-uls` facts carry the
+  ULS licence page as `source_url`, and that page shows the licensee's name and
+  address, so those `source_url`s are never rendered on a public surface: the public
+  profile's dated sources list shows only the host (`server/advisor/pages/data.ts`),
+  never the licence link.
 - **NOAA MarineCadastre**: `noaa-planning-only`, off paid surfaces, cited. The
   repo currently labels it CC0; CF-06 records the FAQ conditions in
   `docs/legal/data-rights-register.md` and corrects the label in

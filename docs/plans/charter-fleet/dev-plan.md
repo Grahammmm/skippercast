@@ -89,7 +89,7 @@ Rules for every task:
 ### CF-12 · Adapters: FCC ULS and USCG PSIX · M
 - Depends: CF-10
 - Files: `src/skippercast/fleet/adapters/fcc_uls.py`, `uscg_psix.py`, `tests/fixtures/fleet/fcc/*`, `tests/fixtures/fleet/psix/*`, `tests/unit/test_fleet_registries.py`.
-- Build: §6 rows. FCC: download (conditional GET), parse the SH/EN records for the bound state, all statuses; emit candidates with call sign, MMSI, doc number; licensee kept only when an entity. PSIX: sector query, passenger-inspected service filter.
+- Build: §6 rows. FCC: download (conditional GET), parse the EN/HD/SH records (HD carries the licence status and dates) for the bound state, all statuses; emit candidates with call sign, MMSI, doc number; licensee kept only when an entity. PSIX: sector query through the export form (`PSIXExportSearch.aspx`, an ASP.NET form POST; the XML web service has no sector filter and is SOAP-only), passenger-inspected service filter; `skippercast.http.Session` and `FleetSession` gain a form POST for it.
 - Accept: 1. A synthetic individual licensee name never appears in output. 2. Same-name licences in different cities yield separate candidates. 3. Expired licences are included with their status.
 - Tests: tiny synthetic fixture files.
 
