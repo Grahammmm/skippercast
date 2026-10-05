@@ -50,7 +50,11 @@ understates those conditions.
 **Plan assumes:** option 1 (decision D9); CF-06 records the conditions in
 `docs/legal/data-rights-register.md` and CF-47 tags derived rows
 `noaa-planning-only`; CF-06 also corrects the CC0 label in
-`docs/data-sources.md`.
+`docs/data-sources.md`. Backfill retention (CF-47 default, owner may override):
+the backfill keeps positions and statics of target vessels only, and expires
+them like the live store (`thresholds.retention`: positions `raw_days`, statics
+`static_days`), counted from ingest because NOAA's days are already months old;
+derived trips, events and aggregates stay.
 **Blocks:** nothing.
 
 ## Q3. TECK.net report sites for a paid product

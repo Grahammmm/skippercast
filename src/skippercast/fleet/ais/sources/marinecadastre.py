@@ -16,12 +16,14 @@ Columns are found by name, ignoring case and underscores, so the older
 client (``skippercast.http``; retries rewind a temporary file next to the
 backfill store), then decompresses and parses it as a stream, so memory holds
 one row at a time plus one static record per vessel: never the file. A missing
-file (HTTP 404: not published yet) raises ``DayNotPublished``.
+file (HTTP 404: not published yet) raises ``DayNotPublished``; a download shorter
+than its ``Content-Length``, a file that ends inside a Zstandard frame, or bytes
+that are not Zstandard raise ``CorruptDay`` (a ``ValueError``) while the day is
+read, so a caller that stages the day keeps nothing of it.
 
-Rows outside ``bbox``, of other MMSIs (when ``mmsis`` is given; with
-``all_statics`` their statics are still kept, as the listener keeps statics of
-every vessel in the box), with an invalid MMSI, time or position, or whose time
-is not on ``day`` are dropped and counted.
+Rows outside ``bbox``, of other MMSIs (when ``mmsis`` is given: positions and
+statics alike), with an invalid MMSI, time or position, or whose time is not on
+``day`` are dropped and counted.
 Each kept row gives an ``AisPosition`` with ``source="marinecadastre"``,
 ``msg_type="csv"`` and ``received_at = ts`` (the file has no receipt time, so no
 position is ever "late", section 10). The static fields repeat on every row; an
@@ -53,8 +55,8 @@ from typing import IO, Iterable, Iterator, MutableMapping
 from ....http import HTTPStatusError, Session
 from .base import AisMessage, AisPosition, AisStatic, Bbox, Unsupported, valid_mmsi
 
-__all__ = ["SOURCE_ID", "RIGHTS", "BASE_URL", "HOST", "MAX_BYTES", "COUNTERS", "DayNotPublished", "MalformedFile",
-           "MarineCadastreSource", "day_url", "parse_rows", "read_zst"]
+__all__ = ["SOURCE_ID", "RIGHTS", "BASE_URL", "HOST", "MAX_BYTES", "COUNTERS", "CorruptDay", "DayNotPublished",
+           "MalformedFile", "MarineCadastreSource", "day_url", "parse_rows", "read_zst"]
 
 SOURCE_ID = "marinecadastre"
 RIGHTS = "noaa-planning-only"
@@ -63,6 +65,7 @@ BASE_URL = f"https://{HOST}/ais/csv2/"
 MAX_BYTES = 1_500_000_000            # a day file is 240-320 MB; this only stops a runaway response
 DOWNLOAD_TIMEOUT = 120.0
 READ_SIZE = 1 << 20
+CHUNK = 1 << 16                      # compressed bytes per step: about 0.5-1 MB of CSV out
 MSG_TYPE = "csv"
 # Counted per call in the ``counts`` mapping ``history`` and ``parse_rows`` fill in.
 COUNTERS = ("rows", "positions", "statics", "outside", "other_mmsi", "other_day", "malformed")
@@ -80,6 +83,10 @@ class DayNotPublished(LookupError):
     """NOAA has not published this day's file (HTTP 404)."""
 
 
+class CorruptDay(ValueError):
+    """The day's download is incomplete or not Zstandard: nothing of that day may be stored."""
+
+
 class MalformedFile(ValueError):
     """The file is not a MarineCadastre daily CSV (a required column is missing)."""
 
@@ -88,12 +95,56 @@ def day_url(day: date) -> str:
     return f"{BASE_URL}csv{day.year}/ais-{day.isoformat()}.csv.zst"
 
 
-def read_zst(binary: IO[bytes]) -> IO[str]:
-    """A text stream over a Zstandard-compressed binary stream, decompressed as it is read."""
-    import zstandard   # the fleet extra; only the backfill needs it
+class _ZstdFrames(io.RawIOBase):
+    """Decompressed bytes of a Zstandard stream (one or more frames), read a chunk at a time.
 
-    reader = zstandard.ZstdDecompressor().stream_reader(binary, read_size=READ_SIZE, read_across_frames=True)
-    return io.TextIOWrapper(io.BufferedReader(reader, READ_SIZE), encoding="utf-8", newline="")
+    ``stream_reader`` ends quietly at a cut frame; this raises ``CorruptDay`` instead: when the input ends inside
+    a frame, or the bytes are not Zstandard at all.
+    """
+
+    def __init__(self, binary: IO[bytes]):
+        import zstandard   # the fleet extra; only the backfill needs it
+        self._error = zstandard.ZstdError
+        self._source, self._decompressor = binary, zstandard.ZstdDecompressor()
+        self._frame, self._in_frame = self._decompressor.decompressobj(), False
+        self._out, self._pos, self._done = b"", 0, False
+
+    def readable(self) -> bool:
+        return True
+
+    def _feed(self, data: bytes) -> None:
+        out = []
+        try:
+            while data:
+                self._in_frame = True
+                out.append(self._frame.decompress(data))
+                if not self._frame.eof:
+                    break
+                data = self._frame.unused_data
+                self._frame, self._in_frame = self._decompressor.decompressobj(), False
+        except self._error as error:
+            raise CorruptDay(f"not a valid Zstandard file: {error}") from None
+        self._out, self._pos = b"".join(out), 0
+
+    def readinto(self, buffer) -> int:
+        while self._pos >= len(self._out) and not self._done:
+            chunk = self._source.read(CHUNK)
+            if not chunk:
+                if self._in_frame:
+                    raise CorruptDay("the Zstandard file ends inside a frame (truncated download)")
+                self._done = True
+            else:
+                self._feed(chunk)
+        n = min(len(buffer), len(self._out) - self._pos)
+        buffer[:n] = self._out[self._pos:self._pos + n]
+        self._pos += n
+        return n
+
+
+def read_zst(binary: IO[bytes]) -> IO[str]:
+    """A text stream over a Zstandard-compressed binary stream, decompressed as it is read; a cut or corrupt
+    stream raises ``CorruptDay`` while it is read."""
+    return io.TextIOWrapper(io.BufferedReader(_ZstdFrames(binary), READ_SIZE), encoding="utf-8", newline="")
 
 
 def _float(text: str, unavailable: float | None = None, low: float | None = None, high: float | None = None):
@@ -152,12 +203,8 @@ def _columns(header: list[str]) -> dict[str, int]:
 
 
 def parse_rows(text: Iterable[str], day: date, bbox: Bbox, mmsis: set[int] | None = None,
-               counts: MutableMapping[str, int] | None = None, all_statics: bool = False) -> Iterator[AisMessage]:
-    """Normalised records from the lines of one day's CSV (module docstring), as they are read.
-
-    ``mmsis`` limits positions, and statics too unless ``all_statics`` (statics of every vessel in ``bbox``, as
-    the listener keeps them for MMSI matching).
-    """
+               counts: MutableMapping[str, int] | None = None) -> Iterator[AisMessage]:
+    """Normalised records from the lines of one day's CSV (module docstring), as they are read."""
     counts = counts if counts is not None else {}
     for key in COUNTERS:
         counts.setdefault(key, 0)
@@ -208,11 +255,9 @@ def parse_rows(text: Iterable[str], day: date, bbox: Bbox, mmsis: set[int] | Non
             counts["outside"] += 1
             continue
         text_mmsi = row[i_mmsi].strip()
-        keep = wanted is None or text_mmsi in wanted
-        if not keep:
+        if wanted is not None and text_mmsi not in wanted:
             counts["other_mmsi"] += 1
-            if not all_statics:
-                continue
+            continue
         try:
             mmsi = int(text_mmsi)
         except ValueError:
@@ -223,24 +268,20 @@ def parse_rows(text: Iterable[str], day: date, bbox: Bbox, mmsis: set[int] | Non
             continue
         fields = static_fields(row)
         new_static = fields is not None and statics.get(mmsi) != fields
-        if not keep and not new_static:
-            continue
         try:
             ts = _time_ms(row[i_time])
-            if keep:
-                sog = _float(get(row, "sog"), 102.3, 0.0, 102.2)
-                cog = _float(get(row, "cog"), 360.0, 0.0, 359.9)
-                heading = _int(get(row, "heading"), 511, 359)
-                nav_status = _int(get(row, "status"), 15, 15)
+            sog = _float(get(row, "sog"), 102.3, 0.0, 102.2)
+            cog = _float(get(row, "cog"), 360.0, 0.0, 359.9)
+            heading = _int(get(row, "heading"), 511, 359)
+            nav_status = _int(get(row, "status"), 15, 15)
         except ValueError:
             counts["malformed"] += 1
             continue
         if not first <= ts < last:
             counts["other_day"] += 1
             continue
-        if keep:
-            counts["positions"] += 1
-            yield AisPosition(mmsi, ts, lat, lon, sog, cog, heading, nav_status, MSG_TYPE, SOURCE_ID, ts)
+        counts["positions"] += 1
+        yield AisPosition(mmsi, ts, lat, lon, sog, cog, heading, nav_status, MSG_TYPE, SOURCE_ID, ts)
         if new_static:
             statics[mmsi] = fields
             counts["statics"] += 1
@@ -272,19 +313,23 @@ class MarineCadastreSource:
         return day_url(day).replace(BASE_URL, self.base_url, 1)
 
     def history(self, day: date, bbox: Bbox, mmsis: set[int] | None = None,
-                counts: MutableMapping[str, int] | None = None, all_statics: bool = False) -> Iterator[AisMessage]:
+                counts: MutableMapping[str, int] | None = None) -> Iterator[AisMessage]:
         """Every record of one UTC ``day`` inside ``bbox`` (only ``mmsis`` when given; ``parse_rows``), streamed."""
         if self.workdir is not None:
             self.workdir.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryFile(dir=self.workdir, prefix=f"ais-{day.isoformat()}-") as download:
             try:
-                self.session.download(self.url(day), download, max_bytes=MAX_BYTES,
-                                      allowed_prefixes=(self.base_url,), timeout=DOWNLOAD_TIMEOUT)
+                response = self.session.download(self.url(day), download, max_bytes=MAX_BYTES,
+                                                 allowed_prefixes=(self.base_url,), timeout=DOWNLOAD_TIMEOUT)
             except HTTPStatusError as error:
                 if error.status == 404:
                     raise DayNotPublished(f"{day.isoformat()}: no MarineCadastre file yet") from None
                 raise
+            received = download.seek(0, io.SEEK_END)
+            declared = (response.headers.get("Content-Length") or "").strip()
+            if declared.isdigit() and int(declared) != received:
+                raise CorruptDay(f"{day.isoformat()}: received {received} of {declared} bytes")
             download.seek(0)
             with read_zst(download) as text:
-                yield from parse_rows(text, day, bbox, mmsis, counts, all_statics)
+                yield from parse_rows(text, day, bbox, mmsis, counts)
 

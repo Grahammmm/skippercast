@@ -16,6 +16,7 @@ import sqlite3
 import tempfile
 import tracemalloc
 import unittest
+import unittest.mock
 
 import zstandard
 
@@ -24,8 +25,11 @@ from skippercast.fleet.ais import process
 from skippercast.fleet.ais.__main__ import COMMANDS
 from skippercast.fleet.ais.sources import get_source
 from skippercast.fleet.ais.sources.base import AisPosition, AisStatic, Unsupported
-from skippercast.fleet.ais.sources.marinecadastre import (DayNotPublished, MalformedFile, MarineCadastreSource,
-                                                          day_url, parse_rows)
+from skippercast.fleet.ais import aggregate
+from skippercast.fleet.ais.events import Event
+from skippercast.fleet.ais.sources.marinecadastre import (CorruptDay, DayNotPublished, MalformedFile,
+                                                          MarineCadastreSource, day_url, parse_rows)
+from skippercast.fleet.ais.store import RetentionLimits
 from skippercast.fleet.ais.store import AisStore
 from skippercast.fleet.config import load_region
 from skippercast.http import FakeSession
@@ -36,7 +40,7 @@ UTC = timezone.utc
 DAY = date(2026, 6, 20)
 NEXT = date(2026, 6, 21)
 T0 = round(datetime(2026, 6, 20, 16, 0, tzinfo=UTC).timestamp() * 1000)   # 09:00 PDT
-OTHER = 999000777          # in the box, not watched: statics only
+OTHER = 999000777          # in the box, not watched: nothing kept
 FAR = 999000888            # outside the box
 _CA = load_region("CA")
 REGION = replace(_CA, ports=(PORT,), ais=replace(_CA.ais, south=9.0, west=-151.0, north=11.0, east=-149.0))
@@ -81,10 +85,9 @@ def dump(store, day):
 
 
 class ParseTests(unittest.TestCase):
-    def parse(self, lines, header=HEADER, mmsis=None, all_statics=False):
+    def parse(self, lines, header=HEADER, mmsis=None):
         counts = {}
-        records = list(parse_rows(io.StringIO("\n".join([header, *lines]) + "\n"), DAY, BBOX, mmsis, counts,
-                                  all_statics))
+        records = list(parse_rows(io.StringIO("\n".join([header, *lines]) + "\n"), DAY, BBOX, mmsis, counts))
         return records, counts
 
     def test_rows_become_positions_and_changed_statics(self):
@@ -120,10 +123,6 @@ class ParseTests(unittest.TestCase):
         self.assertEqual({(type(r).__name__, r.mmsi) for r in records}, {("AisPosition", MMSI), ("AisStatic", MMSI)})
         self.assertEqual((counts["rows"], counts["outside"], counts["other_mmsi"], counts["other_day"]), (8, 1, 2, 2))
         self.assertEqual(counts["malformed"], 2)
-        records, counts = self.parse(lines, mmsis={MMSI}, all_statics=True)
-        self.assertEqual({(type(r).__name__, r.mmsi) for r in records},
-                         {("AisPosition", MMSI), ("AisStatic", MMSI), ("AisStatic", OTHER)},
-                         "statics of every vessel in the box, positions of the watched ones only")
 
     def test_legacy_header_names_read_the_same(self):
         legacy = ("MMSI,BaseDateTime,LAT,LON,SOG,COG,Heading,VesselName,IMO,CallSign,VesselType,Status,Length,"
@@ -208,7 +207,7 @@ class BackfillTests(BackfillTestCase):
         rows = dump(self.store, DAY)
         self.assertEqual({r[9] for r in rows["positions"]}, {"marinecadastre"})
         self.assertEqual({r[0] for r in rows["positions"]}, {MMSI})
-        self.assertEqual({r[0] for r in rows["statics"]}, {MMSI, OTHER})
+        self.assertEqual({r[0] for r in rows["statics"]}, {MMSI}, "statics of the target vessels only")
         self.assertEqual(rows["discovery"], [])
         self.assertEqual(self.store.root, self.root / "backfill")
         manifest = json.loads((self.store.root / "days" / "2026-06-20.json").read_text())
@@ -241,8 +240,8 @@ class BackfillTests(BackfillTestCase):
         rows = dump(self.store, DAY)
 
         class Broken(MarineCadastreSource):
-            def history(self, day, bbox, mmsis=None, counts=None, all_statics=False):
-                yield from list(super().history(day, bbox, mmsis, counts, all_statics))[:3]
+            def history(self, day, bbox, mmsis=None, counts=None):
+                yield from list(super().history(day, bbox, mmsis, counts))[:3]
                 raise OSError("connection reset")
 
         with self.assertRaises(OSError):
@@ -300,6 +299,119 @@ def big_day(rows):
             size += len(data)
             writer.write(data)
     return out.getvalue(), size
+
+
+class DamagedDayTests(BackfillTestCase):
+    def test_a_truncated_download_stores_nothing_of_the_day(self):
+        whole = day_file()
+        for name, route in (("cut inside the frame", whole[:len(whole) // 2]),
+                            ("short of its Content-Length", (200, whole[:len(whole) // 2],
+                                                             {"Content-Length": str(len(whole))})),
+                            ("not Zstandard", b"this is not a zstd file at all")):
+            with self.subTest(name):
+                source = MarineCadastreSource(session=FakeSession({day_url(DAY): route}))
+                with self.assertRaises(CorruptDay):
+                    list(source.history(DAY, BBOX, {MMSI}))
+                with self.assertRaises(CorruptDay):
+                    bf.ingest_day(source, self.store, DAY, BBOX, {MMSI})
+                self.assertFalse(self.store.day_path(DAY).exists())
+                self.assertFalse((self.store.root / "days" / "2026-06-20.json").exists())
+
+    def test_one_corrupt_day_is_reported_and_the_rest_go_on(self):
+        whole = day_file()
+        worker, counts = self.run_backfill(fake=session({day_url(DAY): whole[:len(whole) // 2]}))
+        self.assertEqual([f["day"] for f in counts["failed"]], ["2026-06-20"])
+        self.assertEqual([d["day"] for d in counts["days"]], ["2026-06-21"])
+        self.assertFalse(self.store.day_path(DAY).exists())
+        _, again = self.run_backfill()
+        self.assertEqual([d.get("skipped") for d in again["days"]], [None, True],
+                         "the failed day is downloaded again; the good one is not")
+        self.assertEqual(again["failed"], [])
+
+    def test_the_command_fails_when_a_day_failed(self):
+        whole = day_file()
+        fake = session({day_url(DAY): whole[:100]})
+        original = bf.backfill
+
+        def patched(region, worker, **options):
+            return original(REGION, FakeWorker(), root=self.root, source=MarineCadastreSource(session=fake),
+                            now_ms=T0 + 200 * 86_400_000, **{k: v for k, v in options.items() if k != "mmsis"})
+        with unittest.mock.patch.object(bf, "backfill", patched), \
+                unittest.mock.patch.object(bf, "worker_base", lambda: "https://example.invalid"), \
+                unittest.mock.patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual(bf.main(["--region", "CA", "--from", "2026-06-20", "--to", "2026-06-20"]), 1)
+
+
+class RetentionTests(BackfillTestCase):
+    LIMITS = RetentionLimits(raw_days=30, discovery_days=7, static_days=90)
+
+    def test_days_expire_by_age_since_ingest(self):
+        now = T0 + 200 * 86_400_000          # ingested now, about 200 days after the data day
+        self.run_backfill()
+        self.assertEqual(bf.apply_retention(self.store, self.LIMITS, now + 30 * 86_400_000),
+                         {"deleted": [], "emptied": {}}, "day 30 after ingest: kept")
+        result = bf.apply_retention(self.store, self.LIMITS, now + 31 * 86_400_000)
+        self.assertEqual(result["emptied"], {"2026-06-20": ["positions"]})
+        rows = dump(self.store, DAY)
+        self.assertEqual(rows["positions"], [])
+        self.assertTrue(rows["statics"], "statics last static_days")
+        self.assertFalse((self.store.root / "days" / "2026-06-20.json").exists(),
+                         "positions gone: the next backfill downloads the day again")
+        result = bf.apply_retention(self.store, self.LIMITS, now + 91 * 86_400_000)
+        self.assertEqual(sorted(result["deleted"]), ["2026-06-20", "2026-06-21"])
+        self.assertEqual(list(self.store.raw_dir.iterdir()), [])
+        self.assertEqual(list((self.store.root / "days").iterdir()), [])
+
+    def test_the_scheduled_processor_run_applies_it(self):
+        now = T0 + 200 * 86_400_000
+        self.run_backfill()
+        counts = process.run(REGION, FakeWorker(), root=self.root, now_ms=now + 91 * 86_400_000, hook_table={})
+        self.assertEqual(counts["backfill_retention"], {"deleted": 2, "emptied": 0})
+        self.assertEqual(self.store.days(), [])
+
+
+def event(trip, source, start_min, end_min, vessel="v1"):
+    return Event(id=f"{trip}-e", trip_id=trip, segment_id=f"{trip}-s", vessel_id=vessel, region="CA",
+                 kind="fishing-drift", lat=10.0, lon=-150.0, radius_m=10.0, started_at=T0 + start_min * 60_000,
+                 ended_at=T0 + end_min * 60_000, dwell_min=end_min - start_min, port_id=None, vessel_class=None,
+                 trip_type=None, season="2026", season_part=None, source=source,
+                 rights=process.SOURCE_RIGHTS[source], classifier_version="test")
+
+
+class SourcePrecedenceTests(BackfillTestCase):
+    def test_prefer_sources_keeps_one_source_per_vessel_and_time(self):
+        events = [event("live-1", "aisstream", 0, 60), event("noaa-1", "marinecadastre", 30, 90),
+                  event("noaa-2", "marinecadastre", 120, 150), event("noaa-3", "marinecadastre", 30, 90, vessel="v2")]
+        kept = aggregate.prefer_sources(events, process.SOURCE_PRECEDENCE)
+        self.assertEqual([e.trip_id for e in kept], ["live-1", "noaa-2", "noaa-3"])
+        self.assertEqual(aggregate.prefer_sources(reversed(events), process.SOURCE_PRECEDENCE)[::-1], kept)
+
+    def test_a_trip_the_listener_already_heard_is_not_counted_twice(self):
+        """The processor state already holds aisstream events for the same vessel and time."""
+        AisStore(self.root).write(positions=track(t0=T0))
+        now = T0 + 200 * 86_400_000
+        live = FakeWorker()
+        process.run(REGION, live, root=self.root, now_ms=now, window=bf.window_ms(DAY, DAY, REGION.timezone),
+                    hook_table={})
+        live_cells = {c["id"]: c for b in live.posts("activity", "aggregates") for c in b["aggregates"]["cells"]}
+        self.assertTrue(live_cells)
+        self.assertEqual({c["rights"] for c in live_cells.values()}, {"internal-only"})
+        worker, _ = self.run_backfill()
+        self.assertTrue(worker.posts("activity", "replace"), "the backfill still pushes its own trips")
+        self.assertEqual(worker.posts("activity", "aggregates"), [],
+                         "the same trip from the backfill changes no aggregate cell")
+        state = process.State(self.root / "state.sqlite")
+        self.addCleanup(state.close)
+        stored = state.season_events("2026")
+        self.assertEqual({e.source for e in stored}, {"aisstream", "marinecadastre"})
+        params = aggregate.AggregateParams.from_region(REGION)
+        cells = aggregate.compute(aggregate.prefer_sources(stored, process.SOURCE_PRECEDENCE), params,
+                                  now_ms=now, tz=REGION.timezone, computed_at="x")
+        for cell in cells:
+            self.assertEqual((cell.events_n, cell.dwell_min, cell.rights),
+                             (live_cells[cell.id]["events_n"], live_cells[cell.id]["dwell_min"], "internal-only"))
+        doubled = aggregate.compute(stored, params, now_ms=now, tz=REGION.timezone, computed_at="x")
+        self.assertGreater(sum(c.events_n for c in doubled), sum(c.events_n for c in cells), "without it: twice")
 
 
 class StreamingTests(BackfillTestCase):

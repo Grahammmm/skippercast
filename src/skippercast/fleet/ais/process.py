@@ -92,6 +92,8 @@ POST_BYTES = 768 * 1024          # under the Worker's 1 MB body limit
 POST_WINDOWS = 50
 CELLS_PER_POST = 500
 SOURCE_RIGHTS = {"aisstream": "internal-only", "datalastic": "internal-only", "marinecadastre": "noaa-planning-only"}
+# A trip heard by two sources counts once in the aggregates: the live sources win; the backfill fills the rest.
+SOURCE_PRECEDENCE = ("aisstream", "datalastic", "marinecadastre")
 # Raw store per source under <FLEET_VAR>/<region>/ais: the listener's, and the backfill's (ais/backfill.py).
 STORES: dict[str, Callable[[Path], AisStore]] = {"aisstream": AisStore,
                                                  "marinecadastre": lambda root: AisStore(Path(root) / "backfill")}
@@ -543,8 +545,8 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
     params = aggregate.AggregateParams.from_region(ctx.region)
     counts = {"cells": 0, "deleted": 0, "requests": 0}
     for season in sorted(seasons):
-        cells = aggregate.compute(ctx.state.season_events(season), params, now_ms=ctx.now_ms, tz=ctx.region.timezone,
-                                  computed_at=ctx.computed_at)
+        events = aggregate.prefer_sources(ctx.state.season_events(season), SOURCE_PRECEDENCE)
+        cells = aggregate.compute(events, params, now_ms=ctx.now_ms, tz=ctx.region.timezone, computed_at=ctx.computed_at)
         known = ctx.state.cells(season)
         full = not known
         digests = {c.id: _digest(c) for c in cells}
@@ -608,6 +610,8 @@ def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None 
                 counts["retention"] = {"deleted": len(result.deleted_files), "emptied": len(result.emptied)}
             except FileNotFoundError:   # the listener's own retention removed a file first; the next run finishes
                 counts["retention"] = {"raced": True}
+            from .backfill import retention as backfill_retention   # lazy: backfill imports this module
+            counts["backfill_retention"] = backfill_retention(root, region, now)
             worker.post("activity", {"region": region.id, "processed": {"run_id": ctx.run_id, "counts": counts}})
         state.log_run(ctx.run_id, ctx.computed_at, iso_utc(round(time.time() * 1000)), counts)
         return counts
