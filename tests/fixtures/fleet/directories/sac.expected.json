@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Sample Landing",
+    "place": "Example Bay",
+    "url": "https://www.samplelanding.example.com/"
+  },
+  {
+    "name": "Fixture Sportfishing",
+    "place": null,
+    "url": "http://www.fixturesportfishing.example.com"
+  },
+  {
+    "name": "Harbor Pier Sportfishing",
+    "place": "Sample Harbor - North",
+    "url": "https://www.harborpier.example.com/"
+  }
+]

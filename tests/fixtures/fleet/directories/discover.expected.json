@@ -1,0 +1,147 @@
+[
+  {
+    "source_id": "ggfa-list",
+    "name": "Sea Example",
+    "port_hint": "example-bay",
+    "landing_hint": null,
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Sea Example",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Example Bay",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.6,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "ggfa-list",
+    "name": "Tide Sample II",
+    "port_hint": "example-bay",
+    "landing_hint": null,
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Tide Sample II",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Example Bay",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.6,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "ggfa-list",
+    "name": "Harbor Test",
+    "port_hint": "sample-harbor",
+    "landing_hint": null,
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Harbor Test",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Sample Harbor",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.6,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "ggfa-list",
+    "name": "Sea Example",
+    "port_hint": "sample-harbor",
+    "landing_hint": null,
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Sea Example",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Sample Harbor",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.6,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "ggfa-list",
+    "name": "Kelp Runner",
+    "port_hint": null,
+    "landing_hint": null,
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Kelp Runner",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Faraway Cove",
+        "source_id": "ggfa-list",
+        "source_url": "https://association.example.org/fisherman.php",
+        "method": "page",
+        "confidence": 0.6,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  }
+]

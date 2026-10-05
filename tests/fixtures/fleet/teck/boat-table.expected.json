@@ -1,0 +1,14 @@
+{
+  "url": "https://reports.example.org/charter_boats/boat-table.php",
+  "report_name": "Sea Example",
+  "name": "Sea Example",
+  "landing": "Sample Landing",
+  "city": "Example Bay",
+  "state": "CA",
+  "length_ft": 65.0,
+  "beam_ft": 20.0,
+  "year_built": 1979,
+  "passengers_max": 40,
+  "bunks": 30,
+  "last_report_date": "2026-10-02"
+}

@@ -683,7 +683,7 @@ class Session:
                 follow_redirects: bool = True, allowed_hosts: Iterable[str] | None = None,
                 allowed_prefixes: Iterable[str] | None = None, use_cache: bool = True,
                 backoff: Callable[[int], float] | None = None, sink: BinaryIO | None = None,
-                truncate: bool = False) -> Response:
+                truncate: bool = False, cache: HTTPCache | None | object = ...) -> Response:
         """One logical request with retries. Returns a Response or raises a SourceError.
 
         `ok_statuses` defaults to any 2xx; with `raise_for_status=False` any final
@@ -691,7 +691,10 @@ class Session:
         memory (no decoding, no cache; the file is rewound before each attempt).
         `truncate=True` samples: the body is cut at `max_bytes + 1` bytes instead of
         failing, is not decoded, and the receipt's `truncated` says whether it was cut.
+        `cache` replaces the session's conditional-GET cache for this request (None: no cache),
+        so one session can serve callers that keep their own cache directory.
         """
+        store = self.cache if cache is ... else cache
         limit = self.max_bytes if max_bytes is ... else max_bytes
         timeout = self.timeout if timeout is None else timeout
         attempts = self.attempts if attempts is None else max(1, attempts)
@@ -707,7 +710,7 @@ class Session:
         for name, value in (headers or {}).items():
             base_headers = {k: v for k, v in base_headers.items() if k.lower() != name.lower()}
             base_headers[name] = value
-        cacheable = (self.cache is not None and use_cache and method == "GET" and sink is None and not truncate
+        cacheable = (store is not None and use_cache and method == "GET" and sink is None and not truncate
                      and not any(k.lower() == "range" for k in base_headers))
         receipt = Receipt(url=url, method=method)
         started = self.clock()
@@ -729,7 +732,7 @@ class Session:
             receipt.history.append(row)
             receipt.attempts = attempt
             attempt_started = self.clock()
-            cached = self.cache.lookup(url) if cacheable and self.cache else None
+            cached = store.lookup(url) if cacheable and store else None
             request_headers = dict(base_headers)
             if cached:
                 if cached.get("etag"):
@@ -744,10 +747,10 @@ class Session:
                 hop = self._fetch(method, url, request_headers, timeout, limit, sink, follow_redirects,
                                   allowlist, prefixes, truncate)
                 from_cache = False
-                if hop.status == 304 and cached and self.cache:
-                    body = self.cache.body(url, cached)
+                if hop.status == 304 and cached and store:
+                    body = store.body(url, cached)
                     if body is None:  # cache damaged: refetch without validators
-                        self.cache.forget(url)
+                        store.forget(url)
                         hop = self._fetch(method, url, dict(base_headers), timeout, limit, None,
                                           follow_redirects, allowlist, prefixes)
                     else:
@@ -775,8 +778,8 @@ class Session:
                     receipt.content_type = hop.headers.get("Content-Type") or (cached or {}).get("content_type")
                     receipt.last_modified = hop.headers.get("Last-Modified") or (cached or {}).get("last_modified")
                     receipt.etag = hop.headers.get("ETag") or (cached or {}).get("etag")
-                    if cacheable and self.cache and not from_cache and hop.status == 200 and body is not None:
-                        self.cache.store(url, body, hop.headers)
+                    if cacheable and store and not from_cache and hop.status == 200 and body is not None:
+                        store.store(url, body, hop.headers)
                     receipt.elapsed_ms = int((self.clock() - started) * 1000)
                     return Response(url, hop.final_url, hop.status, hop.headers, body, receipt)
             except HTTPStatusError:

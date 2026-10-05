@@ -1,0 +1,14 @@
+{
+  "url": "https://reports.example.org/charter_boats/boat-dl.php",
+  "report_name": "Harbor Test (EB)",
+  "name": "Harbor Test",
+  "landing": "Fixture Sportfishing LLC",
+  "city": "Sample Harbor",
+  "state": "CA",
+  "length_ft": 48.0,
+  "beam_ft": 16.0,
+  "year_built": 2004,
+  "passengers_max": 24,
+  "bunks": null,
+  "last_report_date": "2026-09-27"
+}
