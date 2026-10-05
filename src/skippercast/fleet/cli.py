@@ -15,7 +15,7 @@ import sys
 from typing import Callable
 
 from .. import validate
-from . import profile
+from . import enrich, profile
 from .adapters import RunContext
 from .config import FleetConfigError, load_region
 from .net import FleetSession
@@ -31,6 +31,7 @@ def _empty(ctx: RunContext, sink) -> dict:
 STEPS: dict[str, Callable[[RunContext, object], dict]] = {
     name: _empty for name in ("discover", "resolve", "enrich-code", "plan-agent", "ingest", "refresh", "run")
 }
+STEPS["enrich-code"] = enrich.step
 
 
 def run_step(step: str, region_id: str, sink_kind: str = "staging", run_id: str | None = None, **sink_options) -> Run:

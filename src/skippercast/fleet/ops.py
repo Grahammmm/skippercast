@@ -18,7 +18,12 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 OP_KINDS = ("operator.upsert", "vessel.upsert", "fact.upsert", "alias.upsert", "offering.upsert",
-            "departure.upsert", "review.open", "change.record", "run.record")
+            "departure.upsert", "review.open", "change.record", "run.record", "fact.purge")
+# Sources whose facts expire under their terms (design section 5, Retention): the only ones fact.purge may delete.
+PURGEABLE_SOURCES = ("google-places",)
+MAX_KEEP_FIELDS = 20
+# The field a purge always keeps: the identifier the source lets us store indefinitely (Google's place_id).
+PURGE_KEY = "place_id"
 MAX_OPS = 500
 MAX_ERRORS = 50
 MAX_SUPERSEDES = 20
@@ -251,6 +256,13 @@ def matches(pattern: re.Pattern) -> Callable[[Any], bool]:
     return lambda v: isinstance(v, str) and bool(pattern.search(v))
 
 
+def keep_fields(v: Any, name: str) -> None:
+    """fact.purge's kept fields: a non-empty list of field names that includes PURGE_KEY."""
+    list_of(matches(FIELD), MAX_KEEP_FIELDS)(v, name)
+    if not v or PURGE_KEY not in v:
+        raise OpError(f"{name}: must be non-empty and include {PURGE_KEY}")
+
+
 def _not_null(v, name):
     if v is None:
         raise OpError(f"{name}: null is not a value")
@@ -312,6 +324,9 @@ SPECS: dict[str, tuple[tuple[str, ...], dict[str, Check]]] = {
         "step": text(32, _re(r"^[a-z][a-z-]*$")), "sink": one_of(ENUMS["sink"]), "started_at": iso,
         "finished_at": nullable(iso), "status": one_of(ENUMS["run_status"]), "counts_json": nullable(as_json(obj)),
         "error": nullable(text(2000))}),
+    "fact.purge": (("source_id", "keep_fields", "seen_before"), {
+        "source_id": one_of(PURGEABLE_SOURCES), "keep_fields": as_json(keep_fields),
+        "seen_before": iso}),
 }
 
 
@@ -371,7 +386,8 @@ def validate_op(raw: Any, index: int, region: str) -> Row:
     if "first_seen_at" in cols and cols["first_seen_at"] > cols["last_seen_at"]:
         raise OpError("first_seen_at: after last_seen_at")
     ident = {"alias.upsert": lambda: f"{cols['vessel_id']}|{cols['alias_norm']}",
-             "run.record": lambda: cols["step"]}.get(kind, lambda: cols["id"])()
+             "run.record": lambda: cols["step"],
+             "fact.purge": lambda: f"{cols['source_id']}|{cols['seen_before']}|{cols['keep_fields']}"}.get(kind, lambda: cols["id"])()
     return Row(kind, index, ident, cols, supersedes)
 
 

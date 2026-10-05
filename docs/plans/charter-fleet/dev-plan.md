@@ -117,7 +117,7 @@ Rules for every task:
 ### CF-16 · Enrich-code: operator sites, Google Places, CPRA file import · M
 - Depends: CF-10
 - Files: `adapters/operator_site.py`, `adapters/google_places.py`, `adapters/file_import.py`, `src/skippercast/fleet/enrich.py`, fixtures, `tests/unit/test_fleet_enrich.py`.
-- Build: §6 rows. Operator site: ≤ 6 pages, phone/email/social/booking-platform/og:image extraction, webmail flagged. Places: Text Search per port + Details for `place_id`, rating, count (key from `GOOGLE_PLACES_API_KEY`; skips cleanly without it); 30-day purge op. File import: `cdfw-cpfv-v1` CSV columns. Re-read the current Places terms and record the caching rule in the PR.
+- Build: §6 rows. Operator site: ≤ 6 pages, phone/email/social/booking-platform/og:image extraction, webmail flagged. Places: Text Search per port + IDs-only Details for `place_id` (key from `GOOGLE_PLACES_API_KEY`; skips cleanly without it); purge op (`fact.purge`). As built: the re-read terms allow storing `place_id` only (latitude/longitude 30 days), so rating and count are not stored and the purge deletes every other `google-places` fact. File import: `cdfw-cpfv-v1` CSV columns. Re-read the current Places terms and record the caching rule in the PR.
 - Accept: 1. An off-limits booking URL found on an operator page is stored as a value with the operator page as `source_url`. 2. Without a key Places is skipped and reported. 3. Individual licensee names from the CSV are dropped.
 - Tests: fixtures and a fake Places transport.
 - **Owner**: create the Places API key and add `GOOGLE_PLACES_API_KEY` (link in the PR).

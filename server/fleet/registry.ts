@@ -26,6 +26,11 @@
 //     of another region.
 //   - Facts must carry an https source_url. `admin:<users.id>` provenance is
 //     written only by the admin API, so a job token cannot forge an admin fact.
+//   - fact.purge deletes a retention-limited source's facts last seen before a time,
+//     except the fields it keeps (Google Places: everything but place_id, CF-16);
+//     only sources in PURGEABLE_SOURCES can be purged, and only in the request's region.
+//     keep_fields must be non-empty and include PURGE_KEY, and the delete never
+//     touches PURGE_KEY facts, so a purge cannot drop the identifier a source keeps.
 //   - Statements are multi-row and chunked so none binds more than D1's 100
 //     parameters; the request's statements run in one D1 batch (one transaction).
 import {canonicalJson, changeId, departureId, factId, reviewId, valueKey, vesselId} from './ids.ts';
@@ -38,8 +43,14 @@ export const MAX_SUPERSEDES = 20;
 const MAX_JSON = 16000;                    // canonical characters per *_json value
 
 export const OP_KINDS = ['operator.upsert', 'vessel.upsert', 'fact.upsert', 'alias.upsert', 'offering.upsert',
-  'departure.upsert', 'review.open', 'change.record', 'run.record'] as const;
+  'departure.upsert', 'review.open', 'change.record', 'run.record', 'fact.purge'] as const;
 export type OpKind = typeof OP_KINDS[number];
+type UpsertKind = Exclude<OpKind, 'fact.purge'>;
+/** Sources whose facts expire under their terms (design § 5 Retention): the only ones fact.purge may delete. */
+export const PURGEABLE_SOURCES = ['google-places'] as const;
+const MAX_KEEP_FIELDS = 20;
+/** The field a purge always keeps: the identifier the source lets us store indefinitely (Google's place_id). */
+export const PURGE_KEY = 'place_id';
 
 export const FLEET_ENUMS = {
   vesselClass: ['six-pack', 'inspected-party', 'long-range'],
@@ -111,7 +122,12 @@ const object = (v: unknown, name: string): void => { if (!v || typeof v !== 'obj
 const container = (v: unknown, name: string): void => { if (!v || typeof v !== 'object') fail(`${name}: not an object or array`); };
 const isString = (re: RegExp) => (v: unknown): boolean => typeof v === 'string' && re.test(v);
 /** A fact's provenance: an https URL. `admin:` is the admin API's alone (CF-30). */
-const provenance: Check = (v, name) => typeof v === 'string' && v.startsWith('admin:') ? fail(`${name}: admin provenance is written only by the admin API`) : https(v, name);
+/** fact.purge's kept fields: a non-empty list of field names that includes PURGE_KEY. */
+const keepFields = (v: unknown, name: string): void => {
+  listOf(isString(FIELD), MAX_KEEP_FIELDS)(v, name);
+  if (!(v as unknown[]).length || !(v as unknown[]).includes(PURGE_KEY)) fail(`${name}: must be non-empty and include ${PURGE_KEY}`);
+};
+const provenance: Check =(v, name) => typeof v === 'string' && v.startsWith('admin:') ? fail(`${name}: admin provenance is written only by the admin API`) : https(v, name);
 
 // ---- operation specs -----------------------------------------------------------
 // fields: the keys an operation may carry and their checks; `required` keys must be
@@ -173,6 +189,9 @@ const SPECS: Record<OpKind, Spec> = {
   'run.record': {required: ['step', 'sink', 'started_at', 'status'], fields: opt({
     step: text(32, /^[a-z][a-z-]*$/), sink: oneOf(FLEET_ENUMS.sink), started_at: iso, finished_at: nullable(iso),
     status: oneOf(FLEET_ENUMS.runStatus), counts_json: nullable(json(object)), error: nullable(text(2000)),
+  })},
+  'fact.purge': {required: ['source_id', 'keep_fields', 'seen_before'], fields: opt({
+    source_id: oneOf(PURGEABLE_SOURCES), keep_fields: json(keepFields), seen_before: iso,
   })},
 };
 
@@ -241,6 +260,9 @@ async function validateOp(raw: unknown, index: number, region: string): Promise<
     case 'run.record':
       row = {kind, index, id: s('step'), cols};
       break;
+    case 'fact.purge':
+      row = {kind, index, id: `${s('source_id')}|${s('seen_before')}|${s('keep_fields')}`, cols};
+      break;
     case 'operator.upsert': case 'offering.upsert':
       cols.updated_at = cols.seen_at!; delete cols.seen_at;   // stored as updated_at, the row's recency guard
       row = {kind, index, id: s('id'), cols};
@@ -288,7 +310,7 @@ export async function validateRegistry(db: D1Database, request: RegistryRequest)
 
   const vesselOps = of('vessel.upsert'), operatorOps = of('operator.upsert'), offeringOps = of('offering.upsert');
   const str = (r: Row, k: string) => r.cols[k] as string;
-  const referenced = kept.filter(r => r.kind !== 'operator.upsert' && r.kind !== 'review.open' && r.kind !== 'run.record')
+  const referenced = kept.filter(r => r.kind !== 'operator.upsert' && r.kind !== 'review.open' && r.kind !== 'run.record' && r.kind !== 'fact.purge')
     .map(r => r.kind === 'vessel.upsert' ? str(r, 'id') : str(r, 'vessel_id'));
   const vessels = new Map((await selectIn<{id: string; region: string; slug: string}>(db,
     m => `SELECT id,region,slug FROM fleet_vessels WHERE id IN (${m})`, referenced)).map(v => [v.id, v]));
@@ -372,7 +394,7 @@ const earliest = (t: string, col: string) => `MIN(${t}.${col},excluded.${col})`;
 const pinned = (col: string) => `(CASE WHEN NOT json_valid(fleet_vessels.pinned_json) THEN 1 WHEN json_type(fleet_vessels.pinned_json)<>'object' THEN 1 ` +
   `ELSE json_type(fleet_vessels.pinned_json,'$."${col}"') IS NOT NULL END)`;
 
-const TABLES: Record<OpKind, Table> = {
+const TABLES: Record<UpsertKind, Table> = {
   // Operators and offerings have no observation column of their own: the op's seen_at is stored as updated_at
   // and guards the row, so an older replay never overwrites a newer value.
   'operator.upsert': {name: 'fleet_operators', conflict: 'id', insertOnly: ['id', 'region'], created: true, stamp: 'seen', update: col =>
@@ -426,7 +448,7 @@ function stored(row: Row, request: RegistryRequest): Record<string, SqlValue> {
 }
 
 /** Multi-row upserts for one kind's rows with the same column set, chunked under MAX_PARAMS. */
-function upserts(db: D1Database, kind: OpKind, rows: Record<string, SqlValue>[], now: string): D1PreparedStatement[] {
+function upserts(db: D1Database, kind: UpsertKind, rows: Record<string, SqlValue>[], now: string): D1PreparedStatement[] {
   const table = TABLES[kind], statements: D1PreparedStatement[] = [];
   const groups = new Map<string, Record<string, SqlValue>[]>();
   for (const cols of rows) {
@@ -469,6 +491,16 @@ export async function applyRegistry(db: D1Database, request: RegistryRequest, ro
     const mine = rows.filter(r => r.kind === kind);
     if (!mine.length) continue;
     counts[kind] = {ops: mine.length, changed: 0};
+    if (kind === 'fact.purge') {
+      // Facts of this source, in this region, last seen before seen_before, except the kept fields.
+      for (const r of mine) {
+        statements.push(db.prepare(`DELETE FROM fleet_vessel_facts WHERE source_id=? AND last_seen_at<?
+          AND field<>? AND NOT EXISTS (SELECT 1 FROM json_each(?) WHERE json_each.value=fleet_vessel_facts.field)
+          AND vessel_id IN (SELECT id FROM fleet_vessels WHERE region=?)`).bind(r.cols.source_id!, r.cols.seen_before!, PURGE_KEY, r.cols.keep_fields!, request.region));
+        owners.push(kind);
+      }
+      continue;
+    }
     for (const s of upserts(db, kind, mine.map(r => stored(r, request)), now)) { statements.push(s); owners.push(kind); }
     if (kind !== 'fact.upsert') continue;
     // A newer value from the same source supersedes the facts it names (same vessel and field, still

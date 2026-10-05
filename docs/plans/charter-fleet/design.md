@@ -446,7 +446,7 @@ processor state (last processed time per MMSI, open trips, run log).
 | Raw positions of labelled validation trips | while the label exists |
 | Trips, segments, events, aggregates, labels, hours (D1) | permanently, by season |
 | Facts | permanently; superseded rows are history |
-| Google rating and count facts | refreshed monthly, purged after 30 days without refresh |
+| Google Places facts | `place_id` indefinitely; latitude/longitude 30 days; nothing else (CF-16 re-read the terms: rating and count may not be stored). `enrich-code` sends `fact.purge` each run |
 | Outreach | until an admin deletes it; an operator's removal request deletes it |
 | Run directories, HTTP cache (Hermes) | 90 days |
 
@@ -489,7 +489,7 @@ recorded skip.
 | `landing-pages` | fleet, specs, captains, rates, schedules | per-landing binding, template `fr-fleet-php` or `generic` | facts only; photos as links with attribution |
 | `directories` | seed lists | GGFA, Sportfishing Association of California, harbor lists | facts only; vessel and port, no personal names or mobiles |
 | `operator-site` | phone, email, website, social links, booking platform signal, og:image link | operator's own site, ≤ 6 pages | business contact only; webmail kept only when published as the business contact, then flagged for review |
-| `google-places` | `place_id`, status, rating, review count | Places API (New) | **Owner**: key. `place_id` kept; rating/count `api-terms`, 30-day purge, attribution where shown; CF-16 re-reads the current terms |
+| `google-places` | `place_id` | Places API (New): Text Search per port, IDs-only Place Details | **Owner**: key. Only `place_id` is stored (`api-terms`); other response fields are used in memory to match and dropped; `fact.purge` removes anything else stored; attribution where shown. CF-16 re-read the terms (data-rights register) |
 | `file-import` | CPRA CPFV list | owner CSV in `inputs/` | public record; entity licensees only |
 | `ais-static` | MMSI candidates | listener statics, MarineCadastre | internal (section 11) |
 
@@ -665,7 +665,7 @@ from a new profile changes nothing (absence is not evidence). Facts unseen for
   pattern in `scripts/advisor/media_job.py`), ≤ 500 operations per request,
   retried with backoff. Kinds: `vessel.upsert`, `operator.upsert`,
   `fact.upsert`, `alias.upsert`, `offering.upsert`, `departure.upsert`,
-  `review.open`, `change.record`, `run.record`.
+  `review.open`, `change.record`, `run.record`, `fact.purge` (CF-16).
   The OIDC audience is `<public_origin>/api/fleet/jobs`. `batch` counts up
   across the whole run (kept in the run's `state.json`), so each call has its
   own `fleet_runs` row. The sink runs the Worker's field checks before sending;
@@ -733,6 +733,13 @@ implementation and the SqliteSink must behave the same).
   are never overwritten, and a vessel with `removal_requested_at` is never
   re-listed. `review.open` updates only an open review of the same region.
   `change.record` inserts once.
+- *Purge* (CF-16): `fact.purge` `{source_id, keep_fields, seen_before}` deletes the
+  facts of that source on this region's vessels whose `last_seen_at` is before
+  `seen_before` and whose `field` is not in `keep_fields` (1–20 fields, which
+  must include `place_id`; the delete never touches `place_id` facts either).
+  `source_id` must be a source with a retention rule (`PURGEABLE_SOURCES`:
+  `google-places`), so a job token cannot delete other sources' facts.
+  `changed` counts deleted rows; a replay deletes nothing.
 - *Run log*: each call writes `fleet_runs` `<run_id>:registry.<batch>` (step
   `registry`, sink `worker`, `ok` or `failed`); the first `ok` is kept.
 
@@ -1028,7 +1035,9 @@ on <date>"), booking and website links through `/go/`, business phone, photo
 links with attribution (linked, not embedded) and a "Sources" list with dates.
 It shows the Google aggregate rating and review count (never review text)
 with the attribution Google's terms require ("Google" label and a link to the
-place), only while the fact is within its 30-day refresh window; it shows no
+place), only while the fact is within its 30-day refresh window (CF-16 found
+the Places terms allow storing `place_id` only, so the `google-places` adapter
+never supplies these facts; see the data-rights register); it shows no
 AIS data, and only facts with display-compatible `rights` and confidence
 ≥ 0.6. The "Sources" list never renders an `admin:<users.id>` source URL
 (no admin id or link reaches a public page): an admin fact is labelled
@@ -1149,7 +1158,7 @@ install → `FLEET_MAP_ENABLED`.
   `docs/legal/data-rights-register.md` and corrects the label in
   `docs/data-sources.md`.
 - **TECK.net**: facts only; **Owner** asks before paid use.
-- **Google Places**: `place_id` only beyond 30 days; attribution where shown.
+- **Google Places**: `place_id` only (latitude/longitude at most 30 days; rating and count never stored, CF-16); attribution where shown.
 - **aisstream.io**: no published terms; internal use only until written terms
   exist (**Owner**); no live per-vessel display.
 - **Operators' wishes**: `hidden` and `do-not-contact` are honoured by every

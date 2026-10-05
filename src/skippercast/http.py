@@ -887,5 +887,8 @@ class FakeSession:
     def head(self, url: str, **options: Any) -> Response:
         return self.request("HEAD", url, **options)
 
+    def post(self, url: str, data: bytes, **options: Any) -> Response:
+        return self.request("POST", url, data=data, **options)
+
     def download(self, url: str, sink: BinaryIO, **options: Any) -> Response:
         return self.request("GET", url, sink=sink, **options)

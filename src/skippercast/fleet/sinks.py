@@ -30,7 +30,7 @@ from urllib.request import Request, urlopen
 
 from .. import __version__
 from ..paths import repo_root
-from .ops import MAX_ERRORS, MAX_OPS, OP_KINDS, REGION, RUN_ID, Row, iso_ms, validate_ops, wire
+from .ops import MAX_ERRORS, MAX_OPS, OP_KINDS, PURGE_KEY, REGION, RUN_ID, Row, iso_ms, validate_ops, wire
 
 MAX_BYTES = 1024 * 1024
 
@@ -164,7 +164,7 @@ class SqliteSink:
         of = lambda kind: [r for r in kept if r.kind == kind]  # noqa: E731
         vessel_ops, operator_ops, offering_ops = of("vessel.upsert"), of("operator.upsert"), of("offering.upsert")
         referenced = [r.id if r.kind == "vessel.upsert" else r.cols["vessel_id"] for r in kept
-                      if r.kind not in ("operator.upsert", "review.open", "run.record")]
+                      if r.kind not in ("operator.upsert", "review.open", "run.record", "fact.purge")]
         vessels = dict(self._select("SELECT id, region FROM fleet_vessels WHERE id IN ({})", referenced))
         operator_ids = [r.id for r in operator_ops] + [r.cols["operator_id"] for r in vessel_ops
                                                        if isinstance(r.cols.get("operator_id"), str)]
@@ -264,6 +264,18 @@ class SqliteSink:
                 if not mine:
                     continue
                 count = counts[kind] = {"ops": len(mine), "changed": 0}
+                if kind == "fact.purge":
+                    for row in mine:
+                        before = self.db.total_changes
+                        self.db.execute(
+                            "DELETE FROM fleet_vessel_facts WHERE source_id=? AND last_seen_at<? AND field<>? AND NOT EXISTS "
+                            "(SELECT 1 FROM json_each(?) WHERE json_each.value=fleet_vessel_facts.field) "
+                            "AND vessel_id IN (SELECT id FROM fleet_vessels WHERE region=?)",
+                            [row.cols["source_id"], row.cols["seen_before"], PURGE_KEY, row.cols["keep_fields"],
+                             self.region])
+                        count["changed"] += self.db.total_changes - before
+                    changed += count["changed"]
+                    continue
                 for row in mine:
                     count["changed"] += self._upsert(kind, self._stored(row), now)
                 for row in mine:

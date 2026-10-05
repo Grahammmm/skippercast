@@ -124,7 +124,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.server.fixture.serve(self)
 
-    do_HEAD = do_GET
+    do_HEAD = do_POST = do_GET
 
 
 class TLSServer:
@@ -158,8 +158,10 @@ class TLSServer:
         return ssl.create_default_context(cafile=str(self.ca))
 
     def serve(self, handler):
+        length = int(handler.headers.get('Content-Length') or 0)
         self.requests.append({'method': handler.command, 'path': handler.path,
-                              'headers': {k.lower(): v for k, v in handler.headers.items()}})
+                              'headers': {k.lower(): v for k, v in handler.headers.items()},
+                              'body': handler.rfile.read(length) if length else b''})
         queue = self.routes.get(handler.path.split('?')[0])
         if not queue:
             reply = (404, b'not found')

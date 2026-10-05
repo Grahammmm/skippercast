@@ -26,6 +26,15 @@ class Fact:
     confidence: float
     rights: str
     retrieved_at: str
+    flags: tuple[str, ...] = ()  # needs a person before it may win (e.g. a webmail address); ingest opens a review
+
+    def as_dict(self) -> dict:
+        row = {"field": self.field, "value": self.value, "source_id": self.source_id, "source_url": self.source_url,
+               "method": self.method, "confidence": self.confidence, "rights": self.rights,
+               "retrieved_at": self.retrieved_at}
+        if self.flags:
+            row["flags"] = list(self.flags)
+        return row
 
 
 @dataclass(frozen=True)
@@ -41,6 +50,11 @@ class Candidate:
     # review fingerprint is source_id|record_id, so a decided merge review follows the record across runs. Unset, the
     # resolver falls back to source_id|name_norm|port_hint|first cleaned source URL.
     record_id: str | None = None
+
+    def as_dict(self) -> dict:
+        return {"source_id": self.source_id, "name": self.name, "port_hint": self.port_hint,
+                "landing_hint": self.landing_hint, "keys": dict(self.keys), "facts": [f.as_dict() for f in self.facts],
+                "record_id": self.record_id}
 
 
 @dataclass
