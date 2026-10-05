@@ -13,8 +13,8 @@ Task ids (CF-xx) and phases (P0–P6) refer to [dev-plan.md](dev-plan.md).
 
 **Context.** aisstream.io is free and supports a bounding box plus up to 200
 MMSIs per subscription, but it publishes no terms or licence: `/terms` is a
-404 and GitHub issues asking about commercial use and display (#16, #289,
-#290, #299, #303) are unanswered. The paid alternative with published
+404 and GitHub issues asking about commercial use and display (aisstream/aisstream
+issues #16, #289, #290, #299, #303) are unanswered. The paid alternative with published
 pricing is Datalastic (Experimenter €569/month, about $620; Developer Pro+
 €679/month, about $740), whose redistribution terms are also unpublished.
 
@@ -49,7 +49,7 @@ understates those conditions.
 
 **Plan assumes:** option 1 (decision D9); CF-06 records the conditions in
 `docs/legal/data-rights-register.md` and CF-47 tags derived rows
-`noaa-planning-only`; a separate docs PR corrects the CC0 label in
+`noaa-planning-only`; CF-06 also corrects the CC0 label in
 `docs/data-sources.md`.
 **Blocks:** nothing.
 

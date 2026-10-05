@@ -5,7 +5,7 @@ One task = one `charter-builder` = one branch `claude/cf-<id>` (for example
 not counting generated files (Drizzle migrations and snapshots, `dist/` build
 output). Sizes: **S** under 150 lines, **M** 150–300, **L** 300–400. The
 section numbers (§) refer to [design.md](design.md), which holds the detail;
-re-read the section before starting a task.
+re-read the section before starting a task. There are 37 tasks in seven phases.
 
 Rules for every task:
 
@@ -18,7 +18,7 @@ Rules for every task:
   `catalog/advisor/fixture-handles.json`, invented names, MMSIs `999xxxxxx`).
 - AIS-derived copy says "inferred from movement", never "confirmed".
 - `.github/CODEOWNERS` gives the owner `server/`, `.github/workflows/`,
-  `deployments/` and `wrangler.jsonc`. If branch protection requires
+  `deployments/`, `docs/legal/` and `wrangler.jsonc`. If branch protection requires
   code-owner review, the PR waits for the **Owner**'s GitHub approval; the
   builder says so in the PR body with the link.
 - Material user-facing changes add a line under `## Unreleased` in
@@ -46,8 +46,8 @@ Rules for every task:
 - Depends: CF-02 (serial: both edit `db/schema.ts` and the migration journal)
 - Files: `db/schema.ts`, `drizzle/0014_fleet_activity.sql` + meta, `tests/test_fleet_schema.mjs`.
 - Build: the 0014 tables in §5, including `fleet_trip_reports` (no code fills it yet). `fleet_events.basis` defaults to `inferred-from-movement`.
-- Accept: 1. Migration parity test passes. 2. Indexes as listed. 3. `fleet_events.basis` default asserted.
-- Tests: as CF-02.
+- Accept: 1. Migration parity test passes. 2. Indexes as listed. 3. `fleet_events.basis` default asserted. 4. US-B4 join fixture: a synthetic trip, an `advisor_reports` row on a linked `advisor_boats` row, and a landing-report row (boat alias + port + date) each resolve to the trip through the `fleet_trip_reports` keys (`vessel_id` + `local_date`; `fleet_aliases.alias_norm` + port + date) with plain SQL.
+- Tests: as CF-02, plus the join fixture.
 
 ### CF-04 · Region config schema, CA config, shared catalog, loader · M
 - Depends: —
@@ -65,15 +65,15 @@ Rules for every task:
 
 ### CF-06 · ADR, data-rights rows, threat model · S
 - Depends: —
-- Files: `docs/engineering/adr/0008-charter-fleet-registry-and-ais.md`, `docs/engineering/adr/README.md`, `docs/legal/data-rights-register.md`, `docs/legal/threat-model.md`.
-- Build: ADR for D2, D3, D6, D8 (state-level config, raw AIS off D1, headless OSINT, aisstream with adapter). Register rows: FCC ULS, PSIX, TECK.net (facts only, permission pending), landing and operator sites, Google Places, CPRA list, aisstream (no terms), MarineCadastre (FAQ conditions, not plain CC0). Threat-model section: `/go/` redirect, fleet job routes, admin and outreach data, Hermes listener.
-- Accept: 1. Each legal judgment is marked owner/counsel to confirm. 2. Every source in §6's table has a row.
+- Files: `docs/engineering/adr/0008-charter-fleet-registry-and-ais.md`, `docs/engineering/adr/README.md`, `docs/legal/data-rights-register.md`, `docs/legal/threat-model.md`, `docs/data-sources.md`.
+- Build: ADR for D2, D3, D6, D8 (state-level config, raw AIS off D1, headless OSINT, aisstream with adapter). Register rows: FCC ULS, PSIX, TECK.net (facts only, permission pending), landing and operator sites, Google Places, CPRA list, aisstream (no terms), MarineCadastre (FAQ conditions, not plain CC0). Threat-model section: `/go/` redirect, fleet job routes, admin and outreach data, Hermes listener. Correct the CC0 label for MarineCadastre in `docs/data-sources.md` to cite the NOAA FAQ (June 2026) conditions: "coastal and ocean planning purposes", citation, no fee for usage.
+- Accept: 1. Each legal judgment is marked owner/counsel to confirm. 2. Every source in §6's table has a row. 3. `docs/data-sources.md` no longer describes MarineCadastre as plain CC0 and quotes the NOAA conditions with the FAQ link.
 - **Owner**: approve (`docs/legal/`).
 
 ## Phase 1: registry pipeline
 
 ### CF-10 · Pipeline skeleton: CLI, runs, sinks, fleet HTTP session · L
-- Depends: CF-04, CF-02
+- Depends: CF-01, CF-02, CF-04 (parallel with CF-11)
 - Files: `src/skippercast/fleet/__main__.py`, `cli.py`, `runs.py`, `sinks.py`, `net.py`, `adapters/__init__.py`, `adapters/base.py`, `pyproject.toml` (`fleet` extra), `tests/unit/test_fleet_net.py`, `tests/unit/test_fleet_sinks.py`.
 - Build: `python -m skippercast.fleet <step> --region --sink --run-id` with steps registered but empty; run directories under `$SKIPPERCAST_FLEET_VAR` (§4); `SqliteSink` applying `drizzle/*.sql` in order and executing operations; `WorkerSink` with OIDC token fetch (pattern of `scripts/advisor/media_job.py`), 500-op batching, backoff; `dry-run` regions refuse `WorkerSink`. `net.py` as in §6 (allowlist, off-limits deny incl. redirects, robots, interval, per-host budget).
 - Accept: 1. Off-limits URLs and redirects to them are refused before any socket opens. 2. A robots-disallowed path is a recorded skip. 3. SqliteSink creates all `fleet_*` tables from the committed migrations. 4. Tests are offline.
@@ -95,9 +95,9 @@ Rules for every task:
 
 ### CF-13 · Adapters: TECK.net report sites and directories · M
 - Depends: CF-10
-- Files: `adapters/teck_reports.py`, `adapters/directories.py`, `tests/fixtures/fleet/teck/*.html`, `tests/fixtures/fleet/directories/*.html`, `tests/unit/test_fleet_teck.py`.
-- Build: directory paging and the "Boat Information" block parser (name, landing, dimensions, year, load, last report date); GGFA and SAC list parsers; facts only, `rights=facts-only`; no captain phone stored.
-- Accept: 1. Parser output on fixtures matches expected JSON. 2. No phone field emitted from these adapters. 3. A changed page layout raises a typed parse error, not empty output.
+- Files: `adapters/teck_reports.py`, `adapters/directories.py`, `src/skippercast/pipeline/collect.py` (expose its client factory and cache directory), `tests/fixtures/fleet/teck/*.html`, `tests/fixtures/fleet/directories/*.html`, `tests/unit/test_fleet_teck.py`.
+- Build: extends the existing TECK.net fetch in `collect.py` (design § Relationship to the existing reports pipeline): the adapter uses the same `skippercast.http.Session` setup and the same conditional-GET cache directory, not a parallel scraper. Directory paging and the "Boat Information" block parser (name, landing, dimensions, year, load, last report date); GGFA and SAC list parsers; facts only, `rights=facts-only`; no captain phone stored.
+- Accept: 1. Parser output on fixtures matches expected JSON. 2. No phone field emitted from these adapters. 3. A changed page layout raises a typed parse error, not empty output. 4. The adapter imports its session/cache from the shared code path used by `collect.py`; no second TECK.net client or cache directory exists (test asserts the cache path). 5. `parsers.charter_reports()` behaviour and the daily-data tests are unchanged.
 - Tests: synthetic HTML fixtures modelled on the page structure.
 
 ### CF-14 · Adapter: landing pages, offerings and departures · M
@@ -124,9 +124,9 @@ Rules for every task:
 
 ### CF-17 · Ingest, refresh, `run` orchestrator · L
 - Depends: CF-11, CF-15
-- Files: `src/skippercast/fleet/ingest.py`, `refresh.py`, `cli.py`, `tests/unit/test_fleet_ingest.py`, `tests/unit/test_fleet_refresh.py`.
-- Build: §9: facts and resolved rows to operations, supersede rules, change detection table, `run` chaining steps with per-step `fleet_runs` and `report.json`.
-- Accept: 1. From empty, a synthetic two-source fixture run fills vessels, facts, aliases, offerings. 2. A second identical run writes zero changes. 3. Fixture deltas produce exactly one of each: `new`, `renamed`, `sold`, `vanished` (after the configured runs and days), `price`, `schedule`. 4. Every fact row in the staging DB has a non-empty `source_url`.
+- Files: `src/skippercast/fleet/ingest.py`, `refresh.py`, `coverage.py`, `cli.py`, `catalog/sources.json`, `regions/*/region.json` (`charter-identity` binding and coverage only) + rebuilt `dist/regions/*` (generated), `tests/unit/test_fleet_ingest.py`, `tests/unit/test_fleet_refresh.py`, `tests/unit/test_fleet_coverage_status.py`.
+- Build: §9: facts and resolved rows to operations, supersede rules, change detection table, `run` chaining steps with per-step `fleet_runs` and `report.json`. Supersede `operator-identities` (design § Relationship to the existing reports pipeline): add a `fleet-registry` source entry, point each coastal region's `source_bindings.charter-identity` at it, mark `operator-identities` superseded; `coverage-status --region CA` computes each mapped coastal region's `charter-identity` status and an aggregate-only reason from the registry; apply it and rebuild with `PYTHONPATH=src python -m skippercast.platform.build`.
+- Accept: 1. From empty, a synthetic two-source fixture run fills vessels, facts, aliases, offerings. 2. A second identical run writes zero changes. 3. Fixture deltas produce exactly one of each: `new`, `renamed`, `sold`, `vanished` (after the configured runs and days), `price`, `schedule`. 4. Every fact row in the staging DB has a non-empty `source_url`. 5. `coverage-status` output on a fixture registry gives the expected status per coastal region and its reason holds counts only (no names, phones or URLs). 6. No region binds `charter-identity` to `operator-identities`; the platform build diff is clean after rebuild; `tests/contract/test_region_contract.py` passes.
 - Tests: end-to-end on the SqliteSink with synthetic adapters.
 
 ### CF-18 · Workflow `fleet-registry.yml` and runbook · S
@@ -148,8 +148,8 @@ Rules for every task:
 ### CF-21 · Headless OSINT runner, workflow, agent definition · M
 - Depends: CF-20
 - Files: `scripts/fleet/run_osint.py`, `.github/workflows/fleet-osint.yml`, `.claude/agents/charter-osint.md`, `docs/operations/runbooks/fleet-osint.md`, `tests/unit/test_fleet_run_osint.py`.
-- Build: §8 headless run: parallel batches, timeouts, resume from `state.json`, refusal when `ANTHROPIC_API_KEY` is set, tool allowlist. Pin the Claude Code CLI version and document the exact flags verified against its `--help`. Rewrite the agent's method to D7 (no off-limits sources) and add the manifest contract.
-- Accept: 1. With a fake `claude` binary, batches run, resume and retry once. 2. The runner exits non-zero if `ANTHROPIC_API_KEY` is set. 3. `charter-osint.md`'s fetchable-source list no longer includes FishingBooker, FareHarbor, Xola, FishDope, Fish City, Instagram or Facebook, and it states the D7 rule: social handles and booking-platform links are recorded only when found on the operator's own site, a landing page or a report page, never fetched from those platforms. 4. The workflow never triggers on `pull_request`.
+- Build: §8 headless run: parallel batches, timeouts, resume from `state.json`, refusal when `ANTHROPIC_API_KEY` is set, tool allowlist. Pin the Claude Code CLI version and document the exact flags verified against its `--help`. Verify `.claude/agents/charter-osint.md` still matches D7 (it was rewritten in the plan PR) and add the manifest contract to it.
+- Accept: 1. With a fake `claude` binary, batches run, resume and retry once. 2. The runner exits non-zero if `ANTHROPIC_API_KEY` is set. 3. `charter-osint.md` lists no off-limits host as a fetchable source and states the D7 handle rule (a test reads the file and checks it against `catalog/fleet/off-limits.json`). 4. The workflow never triggers on `pull_request`.
 - **Owner**: on Hermes as the runner user, run `claude setup-token` and save it per the runbook.
 
 ## Phase 3: admin, profile, outreach, links
@@ -168,7 +168,7 @@ Rules for every task:
 - Accept: 1. `pnpm typecheck && pnpm build && node scripts/check_client.mjs` pass. 2. Tabs hidden when the fleet flag is off. 3. Playwright: decide a review, edit a field, see the pinned marker.
 
 ### CF-32 · Operators, outreach, lead score · M
-- Depends: CF-30
+- Depends: CF-30, CF-03
 - Files: `server/fleet/admin/operators.ts`, `server/fleet/leadscore.ts`, `server/routes/fleet.ts`, `web/admin/fleet-operators.tsx`, `web/admin/route.ts`, `tests/test_fleet_outreach.mjs`.
 - Build: §13 operators and outreach; lead score from `catalog/fleet/lead-score.json` (bundled at build) with parts.
 - Accept: 1. No route or function sends a message (test greps the module for channel/send imports). 2. Draft → approve → "log as sent by owner" transitions only. 3. `do-not-contact` blocks new drafts. 4. Consent changes record who and when.
@@ -177,7 +177,7 @@ Rules for every task:
 - Depends: CF-11, CF-01
 - Files: `server/advisor/pages/boat.ts`, `server/advisor/pages/data.ts`, `server/advisor/pages/sitemap.ts`, `server/routes/advisor.ts`, `tests/test_fleet_profile_page.mjs`.
 - Build: §13 public profile; the `/boats/*` gate passes when either flag is on; registry-only profiles `noindex` and out of the sitemap until the operator consents.
-- Accept: 1. With `FLEET_ENABLED` off the page is byte-identical to today for advisor boats. 2. Hidden, excluded or inactive vessels 404. 3. No AIS data, rating, or `noaa-planning-only` fact renders. 4. Links go through `/go/`.
+- Accept: 1. With `FLEET_ENABLED` off the page is byte-identical to today for advisor boats. 2. Hidden, excluded or inactive vessels 404. 3. No AIS data or `noaa-planning-only` fact renders. 4. The Google aggregate rating and review count render only with the Google attribution and only while the fact is within its 30-day window; no review text renders. 5. Links go through `/go/`.
 
 ### CF-34 · `/go/<slug>` redirect and click counts · S
 - Depends: CF-01, CF-02
@@ -185,11 +185,11 @@ Rules for every task:
 - Build: §12 `/go/`, daily counters, Analytics Engine point, admin clicks endpoint.
 - Accept: 1. A `?url=` or any request-supplied target is ignored. 2. Non-https stored URLs 404. 3. UTM appended, existing params kept. 4. No IP, UA or referrer stored.
 
-### CF-35 · Coverage and AIS-status metrics page · M
+### CF-35 · Coverage page and AIS health view · M
 - Depends: CF-30, CF-03
-- Files: `server/fleet/admin/coverage.ts`, `web/admin/fleet-coverage.tsx`, `web/admin/route.ts`, `tests/test_fleet_coverage.mjs`.
-- Build: §13 coverage metrics from D1 (by port and class: boats, completeness by group, % MMSI, % seen 30 d, single-source boats, runs).
-- Accept: 1. Percentages computed on a seeded fixture match hand-computed values. 2. Boats with no AIS show as "not seen", never as non-compliant.
+- Files: `server/fleet/admin/coverage.ts`, `server/fleet/admin/ais-health.ts`, `server/routes/fleet.ts`, `web/admin/fleet-coverage.tsx`, `web/admin/fleet-ais.tsx`, `web/admin/route.ts`, `tests/test_fleet_coverage.mjs`.
+- Build: §13 coverage metrics from D1 (by port and class: boats, completeness by group, % MMSI, % seen 30 d, single-source boats, runs), and the `#fleet-ais` view with `GET /api/admin/fleet/ais/health` (§13 AIS health: last message age, messages per minute, reconnects and drops 24 h, gaps over 10 minutes, 7- and 30-day uptime from `fleet_ais_hours`, last processor run, watch list size).
+- Accept: 1. Percentages computed on a seeded fixture match hand-computed values. 2. Boats with no AIS show as "not seen", never as non-compliant. 3. On seeded `fleet_ais_hours` and `job_state` rows, `ais/health` returns the expected uptime %, gap list (> 10 min) and last-message age. 4. Both routes 404 for non-admins and with `FLEET_ENABLED` off.
 
 ## Phase 4: AIS
 
@@ -227,18 +227,18 @@ Rules for every task:
 ### CF-45 · Processor job, activity routes, health alerting · L
 - Depends: CF-44, CF-11, CF-03
 - Files: `src/skippercast/fleet/ais/process.py`, `server/fleet/activity.ts`, `server/routes/fleet.ts`, `.github/workflows/fleet-ais.yml`, `.github/workflows/fleet-health.yml`, `scripts/ops_report.py`, `tests/test_fleet_activity.mjs`, `tests/unit/test_fleet_process.py`.
-- Build: §11 run sequence; `activity`, `heartbeat`, `health` routes; replace-window delete+insert in one batch; `fleet-health.yml` on `ubuntu-latest` opening/closing the `fleet-ais-stale` issue; ops-report line.
-- Accept: 1. Reprocessing a window twice leaves identical rows. 2. Replace-window touches only the given MMSIs, source and window. 3. Health reports stale at > 3 h on a fixture clock. 4. `fleet-health.yml` runs hosted and has `issues: write` only.
+- Build: §11 run sequence except the watch-list refresh and MMSI matching (CF-46 adds those as hooks in `process.py`); `activity`, `heartbeat`, `health` routes; replace-window delete+insert in one batch; `fleet-health.yml` on `ubuntu-latest` opening/closing the `fleet-ais-stale` issue; ops-report line.
+- Accept: 1. Reprocessing a window twice leaves identical rows. 2. Replace-window touches only the given MMSIs, source and window. 3. Health reports stale at > 3 h on a fixture clock. 4. `fleet-health.yml` runs on `ubuntu-latest` with exactly `id-token: write` (for the OIDC health route) and `issues: write`, nothing wider. 5. `process.py` runs without any watch or match module present.
 - **Owner**: approve workflows.
 
 ### CF-46 · MMSI matching and watch list · M
-- Depends: CF-41, CF-11
-- Files: `src/skippercast/fleet/ais/match.py`, `server/fleet/watch.ts`, `server/routes/fleet.ts`, `tests/unit/test_fleet_match.py`, `tests/test_fleet_watch.mjs`.
-- Build: §11 three-stage matching; watch GET/POST routes; disagreeing statics recorded as `ais` facts; weak matches → `mmsi` reviews.
-- Accept: 1. A same-name pleasure boat (type 37, wrong length, never in the port geofence) stays a candidate. 2. Three distinct days in the home geofence promote to watched. 3. Registry MMSI is never overwritten by AIS.
+- Depends: CF-41, CF-11, CF-03, CF-45
+- Files: `src/skippercast/fleet/ais/match.py`, `src/skippercast/fleet/ais/process.py` (hooks: refresh `watch.json`, run matching), `server/fleet/watch.ts`, `server/routes/fleet.ts`, `tests/unit/test_fleet_match.py`, `tests/test_fleet_watch.mjs`.
+- Build: §11 three-stage matching; the processor hooks that refresh `watch.json` from the Worker and run matching each cycle; watch GET/POST routes; disagreeing statics recorded as `ais` facts; weak matches → `mmsi` reviews.
+- Accept: 1. A same-name pleasure boat (type 37, wrong length, never in the port geofence) stays a candidate. 2. Three distinct days in the home geofence promote to watched. 3. Registry MMSI is never overwritten by AIS. 4. One processor run refreshes `watch.json` and pushes match updates.
 
 ### CF-47 · MarineCadastre backfill · M
-- Depends: CF-44
+- Depends: CF-44, CF-45
 - Files: `src/skippercast/fleet/ais/sources/marinecadastre.py`, `backfill.py`, `.github/workflows/fleet-ais.yml` (dispatch input), `tests/unit/test_fleet_backfill.py`.
 - Build: §11 backfill: streaming zstd CSV, bbox and MMSI filter, separate store, same processor, `noaa-planning-only` tag.
 - Accept: 1. Every derived row carries `source=marinecadastre` and the rights tag. 2. Streaming memory stays bounded (test with a generated multi-MB file). 3. Re-running a day is idempotent.
@@ -273,7 +273,7 @@ Rules for every task:
 - Accept: 1. No file under `src/` changes. 2. The contract test passes for OR. 3. A test proves `--sink worker` is refused for `OR`. 4. The PR records boats by port and class from the staging report.
 
 ### CF-61 · Fleet report tool · M
-- Depends: CF-35, CF-45
+- Depends: CF-35, CF-45, CF-48
 - Files: `src/skippercast/fleet/report.py`, `cli.py`, `tests/unit/test_fleet_report.py`.
 - Build: `python -m skippercast.fleet report --region CA` from the snapshot and admin coverage data: boats by port and class, completeness %, MMSI and seen-30-day %, ingestion uptime (7 and 30 days, longest run of consecutive full days), validation precision/recall, run failures, and the monthly cost line (§19). Output Markdown and JSON under `<FLEET_VAR>`; aggregates only, no contact data.
 - Accept: 1. Output on a seeded fixture matches expected numbers. 2. No phone, email or URL appears in the Markdown.
@@ -282,39 +282,42 @@ Rules for every task:
 - Depends: all above
 - Files: `docs/plans/charter-fleet/README.md` (status log only).
 - Build: run the registry, OSINT and second registry pass for `CA`; work the review queue down; confirm 7+ consecutive days of ingestion; run validation; record the fleet report's aggregate numbers and link the admin map in the status log.
+- Accept: 1. The status-log line records boats by port and class, MMSI % and seen-in-30-days %. 2. Ingestion uptime shows ≥ 7 consecutive full days from `fleet_ais_hours`. 3. The validation report covers ≥ 30 labelled trips with precision and recall. 4. The open review-queue count is recorded. 5. The report and status line contain no contact data (no phones, emails, handles or operator URLs).
 - **Owner**: flip `FLEET_MAP_ENABLED`; work or approve the review queue.
 
 ## Parallelism
 
 - Phase 0: CF-01, CF-02, CF-04, CF-05, CF-06 in parallel; CF-03 after CF-02.
-- Phase 1: CF-10 and CF-11 in parallel; then CF-12, CF-13, CF-14, CF-15, CF-16 in parallel; CF-17 after CF-11 and CF-15; CF-18 after CF-17.
+- Phase 1: CF-10 and CF-11 in parallel (both after CF-01 and CF-02); then CF-12, CF-13, CF-14, CF-15, CF-16 in parallel; CF-17 after CF-11 and CF-15; CF-18 after CF-17.
 - Phase 3 can start once CF-11 merges, alongside Phase 1 adapters: CF-30, CF-33, CF-34 in parallel; CF-31, CF-32, CF-35 after CF-30.
-- Phase 4 can start once CF-04 merges: CF-40, then CF-41 and CF-43 in parallel; CF-42 after CF-41; CF-44 after CF-43; CF-45, CF-46, CF-47 after their dependencies.
+- Phase 4 can start once CF-04 merges: CF-40, then CF-41 and CF-43 in parallel; CF-42 after CF-41; CF-44 after CF-43; CF-45 after CF-44; then CF-46 and CF-47 in parallel after CF-45.
 - Phase 5 CF-50 can start after CF-03 and CF-01.
 - Conflict hot spots: `db/schema.ts` (CF-02, CF-03 only); `server/routes/fleet.ts` (many tasks: keep each hunk to route registration and rebase); `web/admin/route.ts` (CF-31, CF-32, CF-35, CF-48: merge in that order); `dist/index.html` (CF-51 only). A later task that needs a schema change generates the next free migration number after rebasing.
 
 ## Dependency graph
 
 ```
-CF-01 ─┬─────────────► CF-11 ─┬─► CF-17 ─► CF-18
-CF-02 ─┼─► CF-03       ▲      │      ▲  └─► CF-20 ─► CF-21
-       │               │      │      │       ▲
-CF-04 ─┼─► CF-10 ──────┘      │   CF-15      CF-05
-       │     ├─► CF-12, CF-13, CF-14, CF-16, CF-15
-       │     │
-       │     └─(CF-12, CF-13, CF-16, CF-17) ─► CF-60
-CF-11 ─┼─► CF-30 ─┬─► CF-31 ─┐
-       │          ├─► CF-32  │
-       │          └─► CF-35 ─┼─────────────► CF-61
-       ├─► CF-33             │                 ▲
-CF-01+02 ─► CF-34            │                 │
-CF-04 ─► CF-40 ─┬─► CF-41 ─┬─► CF-42           │
-                │          └─► CF-46 (+CF-11)  │
-                └─► CF-43 ─► CF-44 ─┬─► CF-45 (+CF-11, CF-03) ─► CF-48 (+CF-31)
-                                    └─► CF-47
-CF-01+03 ─► CF-50 ─► CF-51
+CF-01, CF-02, CF-04, CF-05, CF-06: no dependencies
+CF-02 ─► CF-03
+CF-01 + CF-02 + CF-04 ─► CF-10 ─► CF-12, CF-13, CF-14, CF-15, CF-16
+CF-01 + CF-02 ─► CF-11                      (CF-10 and CF-11 run in parallel)
+CF-11 + CF-15 ─► CF-17 ─► CF-18
+CF-17 + CF-05 ─► CF-20 ─► CF-21
+CF-11 ─► CF-30 ─► CF-31
+CF-30 + CF-03 ─► CF-32
+CF-30 + CF-03 ─► CF-35
+CF-11 + CF-01 ─► CF-33
+CF-01 + CF-02 ─► CF-34
+CF-04 ─► CF-40 ─► CF-41 ─► CF-42
+CF-40 ─► CF-43 ─► CF-44
+CF-44 + CF-11 + CF-03 ─► CF-45
+CF-41 + CF-11 + CF-03 + CF-45 ─► CF-46
+CF-44 + CF-45 ─► CF-47
+CF-45 + CF-31 ─► CF-48
+CF-01 + CF-03 ─► CF-50 ─► CF-51
+CF-17 + CF-12 + CF-13 + CF-16 ─► CF-60
+CF-35 + CF-45 + CF-48 ─► CF-61
 all ─► CF-62
-CF-06: independent
 ```
 
 ## Backlog (no task yet)

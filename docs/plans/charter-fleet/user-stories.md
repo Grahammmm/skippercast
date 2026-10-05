@@ -177,8 +177,9 @@ completeness and AIS coverage, so that I know how complete the registry is.
 stopped, so that a gap does not silently cost me a week of tracks.
 - Acceptance: the listener writes a heartbeat; the processor pushes it to
   `job_state`; the admin health page shows last message time, messages per
-  hour and gaps over 30 minutes; the existing ops-report path alerts the
-  owner when the heartbeat is older than 3 hours.
+  hour and gaps over 10 minutes; when the heartbeat or last message is older
+  than 3 hours, the GitHub-hosted `fleet-health.yml` opens a `fleet-ais-stale`
+  issue (closed on recovery) and the ops report carries a fleet line.
 - MVP. Phase P4 (CF-45; health view CF-35).
 
 **US-O4. Re-run a region.** As the owner, I want to re-run any pipeline step

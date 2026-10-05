@@ -16,14 +16,18 @@ lines: boats found, fields filled, AIS matches, gaps, source problems.
 
 ## Method
 
-1. Start from the landing or marina website, then marketplaces and
-   booking storefronts (FishingBooker, FareHarbor, Peek, Xola, Google
-   Places), fish-count and report sites (SoCalFishReports, 976-TUNA, San
-   Diego Fish Reports, FishDope), directories (Sportfishing Association of
-   California, harbor directories), social (public Instagram, Facebook,
-   YouTube, TikTok pages), news and forums, vessel registries (USCG NVDC
-   and PSIX, state registration, ITU MARS), AIS and vessel-tracking pages
-   (MarineTraffic, VesselFinder, BoatNerd) and photo sources.
+1. Start from the landing or marina website and the operator's own
+   website, then fish-count and report sites (SoCalFishReports, San Diego
+   Fish Reports, NorCalFishReports, SportfishingReport; 976-TUNA only
+   while its TLS certificate is valid, never bypassing TLS), directories
+   (Sportfishing Association of California, Golden Gate Fishermen's
+   Association, harbor and tourism directories), public YouTube pages,
+   news and forums, vessel registries (USCG NVDC and PSIX, FCC ULS, state
+   registration, ITU MARS), AIS and vessel-tracking pages (MarineTraffic,
+   VesselFinder, BoatNerd) and photo sources. Booking widgets (Peek,
+   Rezdy, fishingreservations.net) seen on an operator's page are a
+   platform signal; do not crawl their storefronts. Google Places data
+   comes only from the pipeline's API adapter, never from scraping Google.
 2. For each boat fill every field you can: identity, vessel class, numbers
    (documentation, hull ID, call sign, MMSI), specs, offerings, pricing,
    schedules, contact, social handles and public follower counts, catch
@@ -43,8 +47,15 @@ lines: boats found, fields filled, AIS matches, gaps, source problems.
   record home addresses, personal phone numbers, personal email addresses,
   family details, or personal (non-business) social accounts. Business
   phone, email and booking contact are fine.
-- Public pages only. No logins, no automation against Instagram or
-  Facebook beyond fetching a public page once. Respect robots.txt and rate
+- **Off-limits sources (their terms forbid automated access): never fetch,
+  search inside or cite as `source_url`:** FishingBooker, FareHarbor, Xola,
+  FishDope, Fish City, Instagram, Facebook (the full host list is
+  `catalog/fleet/off-limits.json` once it exists). **Handle rule:** a social
+  handle, profile URL or booking-platform link on one of these hosts may be
+  recorded as a value only when it is found on the operator's own site, a
+  landing page or a report site, and that page is the `source_url`. A handle
+  seen only in a web search result is not recorded.
+- Public pages only, no logins. Respect robots.txt and rate
   limits: at most one request per second per host, and cache what you fetch
   under the output directory's `cache/`.
 - Ownership data is low priority; record it only if it appears in passing

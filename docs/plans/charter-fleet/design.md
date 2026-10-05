@@ -288,7 +288,7 @@ keys are deliberately not unique: a conflict is a review, not a failed insert.
 | `vessel_id`, `field` | text | field is a profile path (`mmsi`, `trip_types[].price_usd`, `social.instagram.url`); operator-level facts are recorded on each of the operator's vessels |
 | `value_json`, `value_key` | text | `value_key = sha256(canonical value)[:16]` separates list items |
 | `source_id`, `source_url` | text | binding id (`fcc-uls`, `osint`, `admin`); https URL, or `admin:<users.id>` |
-| `method` | text | `page`, `api`, `search`, `inference`, `registry`, `ais`, `admin` |
+| `method` | text | `page`, `api`, `search`, `inference`, `registry`, `ais`, `operator`, `admin` (`operator`: supplied by the operator directly, e.g. in outreach) |
 | `confidence` | real | 0–1 |
 | `rights` | text | `public-domain`, `facts-only`, `api-terms`, `public-record`, `noaa-planning-only`, `internal-only` |
 | `retrieved_at`, `first_seen_at`, `last_seen_at` | text | |
@@ -308,7 +308,7 @@ Other registry tables:
   `partner`), `consent_scope_json`, `consent_recorded_at`,
   `consent_recorded_by`, `consent_revoked_at` (nullable ISO UTC, US-S3: set
   when the operator withdraws consent; reads treat a non-null value as no
-  consent from the next request), `outreach_status` (`none`, `drafted`, `contacted`,
+  consent from the next request), `outreach_status` (`none`, `drafted`, `contacted`, `declined`,
   `replied`, `partner`, `do-not-contact`), `lead_score` real, `lead_score_json`,
   `created_at`, `updated_at`. Indexes `fo_region`, `fo_outreach`.
 - **`fleet_aliases`**: PK `(vessel_id, alias_norm)`; `alias`, `kind`
@@ -317,7 +317,7 @@ Other registry tables:
 - **`fleet_offerings`**: `id` `sha256(vessel_id|name_norm|season)[:32]`,
   `vessel_id`, `name`, `trip_type` (`half-day`, `three-quarter-day`,
   `full-day`, `overnight`, `multi-day`, `private-charter`, `other`),
-  `duration_h`, `price_cents`, `price_basis` (`per-person`, `private`),
+  `duration_h`, `price_cents`, `price_basis` (`per-person`, `private`), `capacity` (nullable integer, passengers per trip),
   `currency`, `departs_local` (`HH:MM`), `days_json`, `season_from`,
   `season_to` (`MM-DD`), `target_species_json` (`catalog/species.json` keys),
   `booking_url`, `status` (`active`, `retired`), `source_fact_ids_json`,
@@ -477,14 +477,29 @@ benchmark at most. 976-TUNA stays disabled while its TLS certificate is
 invalid; TLS is never bypassed. Global Fishing Watch is not used (non-commercial
 licence).
 
+### Relationship to the existing reports pipeline
+
+The repository already fetches charter data; the fleet feature builds on it
+rather than beside it.
+
+| Existing piece | Fate | Decision |
+| --- | --- | --- |
+| `src/skippercast/pipeline/collect.py` (fetches TECK.net daily dock totals for regions with `landing_names`) | **extended** | CF-13's `teck-reports` adapter reuses its `Client`/`skippercast.http.Session` setup and the same conditional-GET cache directory, adding the boat-directory and "Boat Information" pages; there is no second TECK.net scraper and no second cache |
+| `parsers.charter_reports()` (per-trip rows with `id`, `date`, `boat`, `port`, `trip_type`, `anglers`, `catches`, `source_url`, `boat_source_url`) | **reused** | its output in the daily feed is the alias + date join source for `fleet_trip_reports`: `boat` resolves through `fleet_aliases.alias_norm`, `port` must match, `date` equals the trip's `local_date`, and the row's `id` (sha256 of date, boat, trip type and ground, 16 hex) is stored as `report_ref`; `boat_source_url` seeds `report-name` aliases |
+| `catalog/sources.json` `landing-reports` (adapter `landing-facts`) | **reused** | unchanged; it remains the catch-log feed the pairing reads |
+| `catalog/sources.json` `operator-identities` (adapter `identity-register`) | **superseded** | `fleet_vessels` becomes the identity register. CF-17 adds a `fleet-registry` source entry, points each coastal region's `source_bindings.charter-identity` at it, and marks `operator-identities` superseded (kept for history, not used) |
+| regions' `charter-identity` coverage status (`regions/<id>/region.json` `coverage`) | **extended** | computed from the registry: `python -m skippercast.fleet coverage-status --region CA` derives, per coastal region (via each port's `region`), a status and an aggregate-only reason ("N boats registered, M with an identified MMSI"); CF-17 applies it to `region.json` and rebuilds `dist/` with the platform build. Counts only, never names or contacts |
+| `dist/data/ais-evidence.json` `fleet_name_screen` | **reused** | its normalisation rule (upper-case, drop everything except A–Z and 0–9, exact comparison) is the base of `name_norm` in section 7; name matches stay leads, not identifications |
+
 ## 7. Entity resolution
 
 `resolve` assigns candidates using the Worker snapshot (vessels, aliases,
 stable keys, pinned fields, decided reviews).
 
-1. **Normalise.** Names upper-case, punctuation and leading `THE`, `M/V`,
-   `F/V` stripped, roman numerals to digits; keep `NEW` (New Seaforth is not
-   Seaforth). Phones to E.164; URLs without tracking parameters.
+1. **Normalise.** `name_norm` starts from the `fleet_name_screen` rule in
+   `dist/data/ais-evidence.json` (upper-case, keep only A–Z and 0–9), after
+   first dropping a leading `THE`, `M/V` or `F/V` and turning roman numerals
+   into digits; `NEW` is kept (New Seaforth is not Seaforth). Phones to E.164; URLs without tracking parameters.
 2. **Prior decisions.** A candidate fingerprint (source id + record id or URL)
    with a decided review is assigned as decided.
 3. **Stable keys** in order `uscg_doc`, `state_reg`, `hull_id`, `mmsi`,
@@ -576,9 +591,11 @@ on dispatch (`region`, `mode`, `max_batches`) on `DATA_RUNNER`, gated
    retries failed ones once.
 5. `ingest --profiles <run_dir>/profiles` validates and pushes.
 
-`.claude/agents/charter-osint.md` (#285) still names FishingBooker, FareHarbor,
-Xola, FishDope and Instagram/Facebook as sources; CF-21 rewrites its method to
-match D7 and adds the manifest contract. Local-model refreshes are not built:
+`.claude/agents/charter-osint.md` (rewritten in the plan PR) lists only
+allowed sources and carries the D7 off-limits list and handle rule (a handle or
+URL on an off-limits host is recorded only when found on the operator's site, a
+landing page or a report site). CF-21 verifies it still matches D7 and adds the
+manifest contract. Local-model refreshes are not built:
 deterministic adapters already refresh prices and schedules.
 
 **Re-runs.** The same field, source and value re-seen updates `last_seen_at`;
@@ -741,7 +758,7 @@ deleted. Labels are keyed by trip id and time range and survive reprocessing.
 `csv2/csv2026/ais-YYYY-MM-DD.csv.zst` (240–320 MB/day) through
 `MarineCadastreSource.history`, keeps bbox + watched MMSIs in `ais/backfill/`,
 and runs the same processor with `source=marinecadastre`,
-`rights=noaa-planning-only`. Mar–Jun 2026 is available; Jul–Sep is expected
+`rights=noaa-planning-only`. January–June 2026 is available; Jul–Sep is expected
 about mid-December 2026. NOAA's June 2026 FAQ limits use to "coastal and ocean
 planning purposes" and forbids charging a fee for the data, so map and profile
 queries for any paid surface filter this rights tag out in code. `fleet-ais.yml`
@@ -844,8 +861,11 @@ when either flag is on. Lookup: `advisor_boats` by slug (with its
 port, length, passengers, year, active offerings (price "as listed on <host>
 on <date>"), booking and website links through `/go/`, business phone, photo
 links with attribution (linked, not embedded) and a "Sources" list with dates.
-It shows no AIS data and no ratings, and only facts with display-compatible
-`rights` and confidence ≥ 0.6. A registry-only profile is `noindex` until its
+It shows the Google aggregate rating and review count (never review text)
+with the attribution Google's terms require ("Google" label and a link to the
+place), only while the fact is within its 30-day refresh window; it shows no
+AIS data, and only facts with display-compatible `rights` and confidence
+≥ 0.6. A registry-only profile is `noindex` until its
 operator is `content-sharing` or `partner`. Advisor reports and photos render
 as today.
 
@@ -920,7 +940,8 @@ install → `FLEET_MAP_ENABLED`.
   captains only as the operator publishes them.
 - **NOAA MarineCadastre**: `noaa-planning-only`, off paid surfaces, cited. The
   repo currently labels it CC0; CF-06 records the FAQ conditions in
-  `docs/legal/data-rights-register.md`.
+  `docs/legal/data-rights-register.md` and corrects the label in
+  `docs/data-sources.md`.
 - **TECK.net**: facts only; **Owner** asks before paid use.
 - **Google Places**: `place_id` only beyond 30 days; attribution where shown.
 - **aisstream.io**: no published terms; internal use only until written terms
