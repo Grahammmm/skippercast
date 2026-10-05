@@ -82,7 +82,7 @@ Rules for every task:
 ### CF-11 · Worker job API: snapshot and registry upserts · L
 - Depends: CF-01, CF-02
 - Files: `server/fleet/ids.ts`, `server/fleet/jobs.ts`, `server/fleet/registry.ts`, `server/routes/fleet.ts`, `tests/test_fleet_jobs.mjs`.
-- Build: `GET /api/fleet/jobs/snapshot` (paged) and `POST /api/fleet/jobs/registry` with the operation kinds in §9; body ≤ 1 MB, ≤ 500 ops; each op validated (enums, https `source_url` or `admin:`, confidence 0–1); D1 batches chunked under bound-parameter limits; admin-pinned fields are never overwritten; `review.open` never reopens a decided review; a `fleet_runs` row per call.
+- Build: `GET /api/fleet/jobs/snapshot` (paged) and `POST /api/fleet/jobs/registry` with the operation kinds in §9; body ≤ 1 MB, ≤ 500 ops; each op validated (enums, https `source_url`, confidence 0–1; `admin:` provenance is written only by the admin API, CF-30, so a job cannot forge an admin fact); D1 batches chunked under bound-parameter limits; admin-pinned fields are never overwritten; `review.open` never reopens a decided review; a `fleet_runs` row per call.
 - Accept: 1. Posting the same batch twice changes no row the second time. 2. A fact without provenance is rejected with the op index. 3. Pinned fields survive an upsert. 4. Snapshot returns decided reviews.
 - Tests: with the D1 fake in `tests/_advisor_d1.mjs` and a stubbed token verifier.
 

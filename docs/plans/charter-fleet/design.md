@@ -642,6 +642,56 @@ from a new profile changes nothing (absence is not evidence). Facts unseen for
 reopens a decided review, change ids include the after-value. Running a step
 twice produces zero row changes the second time; this is a test.
 
+**Operation contract** (CF-11; `server/fleet/registry.ts` is the reference
+implementation and the SqliteSink must behave the same).
+
+- *Request*: `POST /api/fleet/jobs/registry` with `{"region", "run_id",
+  "batch"?, "ops": [{"op": "<kind>", ...columns}]}`. `region` is a region id
+  (letters, digits, `-`); `run_id` is letters, digits and `._-`, at most 80;
+  `batch` is an integer 0–99999 (default 0) numbering the requests of one run.
+  Body ≤ 1 MB and ≤ 500 ops, else `413`. Unknown top-level keys → `400`.
+- *Response*: `200 {"ok": true, "run_id", "batch", "ops", "changed",
+  "counts": {"<kind>": {"ops", "changed"}}}`; `changed` counts rows inserted or
+  updated, so an identical replay answers `0`.
+- *Errors*: every op is validated before anything is written; any invalid op →
+  `400 {"error": "invalid operations", "errors": [{"index", "op", "error"}]}`
+  (at most 50, by op index) and no registry row changes.
+- *Op keys* are the table's column names, plus these non-column keys:
+  `creation_key` (`vessel.upsert`, optional: checked against
+  `id = sha256(region:creation_key)[:32]`), `seen_at` (`operator.upsert`,
+  `offering.upsert`, required: when the pipeline observed the row; stored as
+  `updated_at`), `supersedes` (`fact.upsert`, optional: up to 20 fact ids of
+  the same vessel and field, not newer, which this fact supersedes),
+  `fingerprint` (`review.open`, required: `id = sha256(kind|fingerprint)[:32]`)
+  and `step` (`run.record`, required: the row id becomes `<run_id>:<step>`).
+  Fact, departure, review and change ids are derived (`server/fleet/ids.ts`)
+  and may be omitted; when sent they must match. Vessel, operator and offering
+  ids are sent.
+- *Worker-owned columns*, which an op must not send (`400`): `region`,
+  `run_id`, a review's `status`, `value_key`, `superseded_at`,
+  `superseded_by`, `created_at`, `updated_at`, `run.record`'s `id`; and the
+  admin's `pinned_json`, `map_display_consent`, `removal_requested_at`, and an
+  operator's `user_id`, consent and outreach columns. Unknown keys → `400`.
+- *Values*: `*_json` keys take a JSON value (not a string), stored as
+  canonical JSON (sorted keys, no whitespace, non-ASCII as is; integral floats
+  written as ints: Python sends `int(x)`); `value_key` hashes that text.
+  Timestamps are ISO-8601 UTC ending in `Z` and are stored with milliseconds
+  (`2026-10-05T09:47:00.000Z`). Facts need an https `source_url`; `admin:`
+  provenance and `method: admin` are rejected on the job route (the admin API,
+  CF-30, writes them).
+- *Updates*: upserts are keyed on the ids and run only when a stored value
+  changes. Omitted fields keep their stored value; a present `null` clears it.
+  An older replay never overwrites newer values: rows are guarded by their
+  recency column (vessels and aliases `last_seen_at`, facts and departures
+  `retrieved_at`, operators and offerings `seen_at`), `last_seen_at` and
+  `retrieved_at` only move forward and `first_seen_at` only back. Pinned vessel
+  columns (`pinned_json`, an object keyed by column name; unreadable pins all)
+  are never overwritten, and a vessel with `removal_requested_at` is never
+  re-listed. `review.open` updates only an open review of the same region.
+  `change.record` inserts once.
+- *Run log*: each call writes `fleet_runs` `<run_id>:registry.<batch>` (step
+  `registry`, sink `worker`, `ok` or `failed`); the first `ok` is kept.
+
 **Change detection** (`refresh`, after ingest):
 
 | Kind | Rule |
