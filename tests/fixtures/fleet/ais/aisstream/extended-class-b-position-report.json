@@ -1,0 +1,36 @@
+{
+  "MessageType": "ExtendedClassBPositionReport",
+  "MetaData": {
+    "MMSI": 999000303,
+    "MMSI_String": 999000303,
+    "ShipName": "EXAMPLE THREE",
+    "latitude": 35.2,
+    "longitude": -121.0,
+    "time_utc": "2026-07-04 18:24:10.5 +0000 UTC"
+  },
+  "Message": {
+    "ExtendedClassBPositionReport": {
+      "MessageID": 19,
+      "RepeatIndicator": 0,
+      "UserID": 999000303,
+      "Valid": true,
+      "Spare1": 0,
+      "Sog": 102.3,
+      "PositionAccuracy": false,
+      "Longitude": -121.0,
+      "Latitude": 35.2,
+      "Cog": 95.0,
+      "TrueHeading": 96,
+      "Timestamp": 61,
+      "Spare2": 0,
+      "Name": "EXAMPLE THREE@@@@@@@",
+      "Type": 37,
+      "Dimension": {"A": 8, "B": 4, "C": 2, "D": 2},
+      "FixType": 1,
+      "Raim": false,
+      "Dte": true,
+      "AssignedMode": false,
+      "Spare3": 0
+    }
+  }
+}

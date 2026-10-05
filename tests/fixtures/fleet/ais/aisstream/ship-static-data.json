@@ -1,0 +1,31 @@
+{
+  "MessageType": "ShipStaticData",
+  "MetaData": {
+    "MMSI": 999000101,
+    "MMSI_String": 999000101,
+    "ShipName": "EXAMPLE ONE",
+    "latitude": 35.36,
+    "longitude": -120.9,
+    "time_utc": "2026-07-04 18:25:00.25 +0000 UTC"
+  },
+  "Message": {
+    "ShipStaticData": {
+      "MessageID": 5,
+      "RepeatIndicator": 0,
+      "UserID": 999000101,
+      "Valid": true,
+      "AisVersion": 2,
+      "ImoNumber": 0,
+      "CallSign": "ZZ0001 ",
+      "Name": "EXAMPLE ONE         ",
+      "Type": 30,
+      "Dimension": {"A": 12, "B": 6, "C": 3, "D": 3},
+      "FixType": 1,
+      "Eta": {"Month": 7, "Day": 4, "Hour": 24, "Minute": 60},
+      "MaximumStaticDraught": 2.1,
+      "Destination": "EXAMPLE HARBOR",
+      "Dte": false,
+      "Spare": false
+    }
+  }
+}
