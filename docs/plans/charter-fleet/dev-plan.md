@@ -254,7 +254,7 @@ Rules for every task:
 
 ### CF-50 · Map API · M
 - Depends: CF-03, CF-01
-- Files: `server/fleet/map.ts`, `server/routes/fleet.ts`, `tests/test_fleet_map.mjs`.
+- Files: `server/fleet/map.ts`, `server/routes/admin.ts` (registration: map handlers sit behind requireUser and requireAdmin; `fleetGate` in `server/routes/fleet.ts` checks both flags), `tests/test_fleet_map.mjs`.
 - Build: §14 endpoints (filters, events, tracks, heat) as GeoJSON with every filter, caps and paging; admin and `FLEET_MAP_ENABLED` only.
 - Accept: 1. Each filter narrows a seeded fixture as expected. 2. Caps enforced. 3. Every feature carries `basis` and `rights`. 4. 404 for non-admins or with the flag off.
 

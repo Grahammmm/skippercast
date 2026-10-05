@@ -397,6 +397,9 @@ Other registry tables:
   `season_part`, `kind`, `vessels_n`, `events_n`, `dwell_min`, `first_date`,
   `last_date`, `rights` (most restrictive input), `computed_at`; index
   `agg_lookup (region, module, season, kind)`.
+  The aggregator always writes whole-season cells (`season_part` null) beside
+  the per-part cells, so a reader that wants the season reads the null-part
+  rows and never sums parts (the map API's default, § 14).
 - **`fleet_segment_labels`**: `id` random, `trip_id`, `started_at`,
   `ended_at`, `label`, `labeller` (`users.id` or `agent:<name>`), `basis`,
   `created_at`; index `label_trip (trip_id)`.
@@ -992,7 +995,18 @@ existing `optional(...)` guard.
 One filter card, applied server-side: boat, port, vessel class, trip type,
 activity type, date range, season (year and part). Endpoints take `region,
 bbox, from, to, vessel, port, class, trip_type, kind, season, season_part,
-source`, return GeoJSON, and cap results (2,000 events; 300 trips per page).
+source`, return GeoJSON, and cap results (2,000 events; 300 trips; 5,000 heat
+cells per page), paged with a `cursor`. Dates are the trip's local departure date. Aggregate cells hold
+no vessel, port, class, trip type or source, so the heat layer lists those
+filters in `meta.ignored` instead of applying them. On heat an omitted
+`season_part` means the whole-season cells (`season_part` null, which the
+aggregator always writes, § 5) and `season_part=all` every part; a cell without
+dates is kept under a date filter and `from`/`to` is then listed in
+`meta.ignored`. Tracks page by trip (`meta.trips`); a bbox drops segments after
+the page is cut, so clients page on `meta.next`, never on feature counts. The
+filters endpoint caps its vessel list at 500 and sets `truncated`. Every feature carries
+`basis` and `rights`; `noaa-planning-only` rows are returned tagged
+`planning_only` so a client can drop them (`server/fleet/map.ts`).
 
 ## 15. Presentation options (Part 3)
 
