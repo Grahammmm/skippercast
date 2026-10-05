@@ -836,7 +836,13 @@ order:
 | `transit` | everything else at sea |
 
 Runs shorter than `min_segment_minutes` merge into the longer neighbour; a
-fishing run under its minimum becomes transit. Output carries
+fishing run under its minimum becomes transit. Silences over `gap_unknown_min`
+(including one before the return fix) are `gap` segments that never merge, so a
+run between two gaps may be shorter than `min_segment_minutes`. A short dip
+into a geofence inside a fishing run merges into that run, so CF-44 must drop
+in-geofence fixes when it builds a fishing event's median and radius. The
+centred window costs O(n·w) per trip (n fixes, w fixes per window), so CF-45
+downsamples raw cadence to one fix per minute before classifying. Output carries
 `classifier_version` (a hash of the thresholds and code version).
 
 **Events, tracks, aggregates.** One event per fishing segment (median point,

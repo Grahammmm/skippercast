@@ -200,12 +200,23 @@ def is_suspect(position: AisPosition) -> bool:
     return position.received_at - position.ts > LATE_MS
 
 
+def _opt(value) -> tuple[int, float]:
+    """Sort key for an optional number: None first, then by value."""
+    return (0, 0.0) if value is None else (1, float(value))
+
+
+def _order(p: AisPosition):
+    """A total order over fixes, so duplicates of one ``ts`` resolve the same way in any input order."""
+    return (p.ts, p.received_at, p.source, p.lat, p.lon, _opt(p.sog), _opt(p.cog), _opt(p.heading),
+            _opt(p.nav_status), p.msg_type)
+
+
 def prepare(positions: Iterable[AisPosition]) -> list[AisPosition]:
-    """One MMSI's positions sorted by time, one per ``ts`` (earliest receipt, then source, wins).
+    """One MMSI's positions sorted by time, one per ``ts`` (earliest receipt wins; ties break on every field).
 
     Raises ValueError when the positions belong to more than one MMSI.
     """
-    rows = sorted(positions, key=lambda p: (p.ts, p.received_at, p.source, p.lat, p.lon))
+    rows = sorted(positions, key=_order)
     if len({p.mmsi for p in rows}) > 1:
         raise ValueError("split_trips takes one MMSI's positions at a time")
     out: list[AisPosition] = []

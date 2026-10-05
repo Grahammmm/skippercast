@@ -24,8 +24,11 @@ Labels, in precedence order: ``in-port`` (inside a geofence); ``fishing-drift``
 ``troll.min_heading_variance``); ``transit`` otherwise. Consecutive equal labels
 form runs. Runs shorter than ``min_segment_minutes`` merge into the longer
 neighbour (the earlier one on a tie); then a fishing run shorter than its
-``min_minutes`` becomes transit, and short runs merge again. Silences over ``gap_unknown_min`` become ``gap``
-segments, which never merge.
+``min_minutes`` becomes transit, and short runs merge again. Silences over
+``gap_unknown_min`` become ``gap`` segments, which never merge, including a
+silence between the last fix at sea and the return fix. So a run between two
+gaps (or between a gap and the trip's start or end) has no neighbour to merge
+into and may be shorter than ``min_segment_minutes``.
 
 Segments tile the trip: each ends where the next begins, the last at the trip's
 ``returned_at``. Every segment and the result carry ``basis =
@@ -280,6 +283,9 @@ def classify_trip(trip: Trip, ports: Sequence[Geofence], thresholds: ActivityThr
             runs[-1].last = k
         else:
             runs.append(_Run(label, k, k, p.ts, p.ts))
+    # A silence between the last fix at sea and the return fix is a gap too, not part of the last run.
+    if trip.returned_at - rows[-1].ts > gap_ms:
+        runs.append(_Run("gap", len(rows) - 1, len(rows) - 1, rows[-1].ts, trip.returned_at))
     # Tile: every run ends where the next begins, the last at the trip's end.
     for here, after in zip(runs, runs[1:]):
         here.end = after.start

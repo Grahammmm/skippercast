@@ -11,7 +11,7 @@ import math
 import random
 import unittest
 
-from skippercast.fleet.ais import classify
+from skippercast.fleet.ais import classify, segment
 from skippercast.fleet.ais.classify import classifier_version, classify_trip, label_positions
 from skippercast.fleet.ais.segment import ActivityThresholds, LATE_MS, is_suspect, split_trips
 from skippercast.fleet.ais.sources.base import AisPosition
@@ -221,6 +221,22 @@ class TripSplitTest(unittest.TestCase):
         dupes = [replace(p, received_at=p.received_at + 5_000, lat=p.lat + 0.01) for p in fixes[::7]]
         self.assertEqual(split_trips(fixes + dupes, PORTS, TH), split_trips(fixes, PORTS, TH))
 
+    def test_duplicates_differing_only_in_motion_fields_resolve_in_any_order(self):
+        fixes = fishing_trip(lambda t: t.drift(30))
+        dupes = []
+        for p in fixes[::5]:
+            dupes += [replace(p, sog=None), replace(p, sog=(p.sog or 0) + 3.0), replace(p, cog=None),
+                      replace(p, heading=180), replace(p, cog=((p.cog or 0) + 90) % 360)]
+        rows = fixes + dupes
+        expected = segment.prepare(rows)
+        self.assertEqual(len(expected), len(fixes))
+        trips = classified(rows)
+        for seed in range(5):
+            shuffled = list(rows)
+            random.Random(seed).shuffle(shuffled)
+            self.assertEqual(segment.prepare(shuffled), expected)
+            self.assertEqual(classified(shuffled), trips)
+
 
 class ClassifyTest(unittest.TestCase):
     def assert_tiles(self, result):
@@ -279,6 +295,25 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(gap.points_n, 0)
         self.assertAlmostEqual(gap.minutes, 181)
         self.assertAlmostEqual(result.gap_min, 181)
+
+    def test_silence_before_return_is_a_gap(self):
+        # Drift 30 min, go dark for 3 h, next seen in port: the dark time is a gap, not more drift.
+        track = Track().stay(20).go_to(*OFFSHORE, 6.0).drift(30, sog=1.0)
+        last_at_sea = track.t
+        track.silence(180, 0, 0.0)
+        track.lat, track.lon = 10.0, -150.0
+        track.emit(0.0, None)
+        track.stay(20)
+        (trip,), (result,) = classified(track.fixes)
+        self.assertEqual(trip.status, 'closed')
+        self.assert_tiles(result)
+        self.assertEqual(kinds(result)[-2:], ['fishing-drift', 'gap'])
+        self.assertIn(kinds(result)[:-2], ([], ['transit']))
+        drift, gap = result.segments[-2:]
+        self.assertTrue(20 <= drift.minutes <= 31, drift.minutes)
+        self.assertEqual(drift.ended_at, last_at_sea)
+        self.assertAlmostEqual(gap.minutes, 180)
+        self.assertEqual(gap.points_n, 0)
 
     def test_short_silence_is_not_a_gap(self):
         track = Track().stay(20).go_to(*OFFSHORE, 6.0).silence(20, 90, 6.0).step(90, 6.0, 10)
