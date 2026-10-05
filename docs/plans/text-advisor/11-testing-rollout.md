@@ -88,13 +88,15 @@ SKIPPERCAST_SESSION=<__Host-sc_session cookie value> node scripts/advisor/prefli
 | 13 | Media job: nothing pending; the last `advisor-media` run green; a Story image rendered from a test board; ffmpeg on the runner | preflight: admin health `media_jobs.pending` 0; by hand: Actions › advisor-media | [runners](../../operations/runners.md) |
 | 14 | Runbooks present: relay setup, relay down, port to Twilio, Meta App Review, queue stuck | preflight (files in the checkout) | [runbooks](../../operations/runbooks/) |
 | 15 | Privacy: the notice states the retention; SEND ME MY DATA and FORGET ME + DELETE tested end to end from the owner's phone; `check_repository.py` green | preflight: `/privacy.html` has the retention paragraph; by hand: § Owner to-do, H; CI | 02 § Retention and deletion |
-| 16 | Threat model section merged (TA-C5) | preflight: `docs/legal/threat-model.md` has a Text Advisor section | 10 § TA-C5 |
+| 16 | TA-C5 merged: the threat model's Text Advisor section, the fixture privacy scan in `check_repository.py`, the data-rights rows; its § 9.10 risks each fixed or accepted by the owner | preflight: `docs/legal/threat-model.md` has a Text Advisor section; CI: `check_repository.py` green; by hand: § Owner to-do, A | 10 § TA-C5, [threat model § 9](../../legal/threat-model.md#9-text-advisor) |
 | 17 | Legal copy approved by the owner and counsel | by hand: § Owner to-do, F | `dist/privacy.html#text-advisor` |
 | 18 | `CHANGELOG.md` line and a release tag | by hand: tag `v0.4.0` on the launch commit | [AGENTS.md § Releases](../../../AGENTS.md#releases) |
 
-As of TA-P1 (2026-10-04), item 16 fails: TA-C5 is not built (no Text Advisor
-section in the threat model, no fixture privacy scan in `check_repository.py`,
-no data-rights rows). TA-V2 (the Hermes provider) is built since 2026-10-04 but
+As of TA-P1 (2026-10-04), item 16 failed: TA-C5 was not built. TA-C5 (branch
+`claude/ta-c5`) adds the threat model's § 9, the fixture privacy scan and the
+data-rights rows, so item 16's preflight check passes once it merges; its
+§ 9.10 lists the risks found while reviewing the code, which the owner fixes
+or accepts before launch. TA-V2 (the Hermes provider) is built since 2026-10-04 but
 optional: the vision chain skips Hermes while `HERMES_VISION_URL` is unset, so
 the pilot runs on Claude vision unless the owner switches Hermes on after it
 passes `scripts/advisor/vision-conformance.mjs` (decision B1 below).
@@ -108,7 +110,7 @@ accounts, devices, money, approval or judgment.
 ### A. Merge
 
 - [ ] Review and merge #277 (TA-S2, TA-S3), #278 (TA-S4, TA-S5, video metadata), #279 (TA-S6, TA-S7) and the TA-P1 PR, in that order (CODEOWNERS: each needs your approval).
-- [ ] Assign TA-C5 (the threat model section, the fixture privacy scan in `check_repository.py`, data-rights rows for skipper content and Meta's terms, the CONTRIBUTING line) and approve it (`docs/legal/`).
+- [ ] Review and merge the TA-C5 PR (the threat model section, the fixture privacy scan in `check_repository.py`, the data-rights rows, the CONTRIBUTING line; CODEOWNERS: `docs/legal/` needs your approval). Then decide each risk in [threat model § 9.10](../../legal/threat-model.md#910-text-advisor-top-residual-risks): have it fixed before launch, or accept it in writing. The relay settings are yours either way: Messages → Keep Messages 30 days on the iPhone and the Mac, whether Messages in iCloud stays on, and deleting a conversation on the relay after a FORGET ME.
 
 ### B. Decisions
 

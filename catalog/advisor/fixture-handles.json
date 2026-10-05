@@ -1,0 +1,19 @@
+{
+  "_source": "docs/plans/text-advisor/02-data-model.md § Privacy invariants (TA-C5). scripts/check_repository.py rejects any Instagram handle in tests/fixtures/advisor/, docs/plans/text-advisor/ or docs/operations/runbooks/advisor-*.md that is not listed here: an @mention in the text, or the value of a handle field (instagram, username, handle, ig_handle, ig_username, collaborators) in a fixture's JSON. Never add a real person's or a real boat's handle: a fixture handle must contain 'example' or 'placeholder' (the check enforces it).",
+  "own": {
+    "skippercast": "SkipperCast's own Instagram account"
+  },
+  "fictional": {
+    "angler.placeholder.one": "meta/webhook-comments.json commenter",
+    "angler.placeholder.two": "meta/webhook-comments.json commenter",
+    "angler.placeholder.three": "meta/webhook-comments.json commenter",
+    "angler.placeholder.four": "meta/webhook-comments.json commenter",
+    "deckhand.example": "meta/collaborators.json pending collaborator",
+    "lucero.example": "engine/conversations/02-skipper-registers-es.json skipper's handle",
+    "ritag.example": "engine/conversations/02-skipper-registers.json skipper's handle; meta/collaborators.json accepted collaborator"
+  },
+  "placeholders": {
+    "handle": "the word used in the plan's prose (`@handle`)",
+    "mentions": "the word used in the plan's prose (`@mentions`)"
+  }
+}

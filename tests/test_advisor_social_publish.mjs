@@ -543,7 +543,7 @@ test('igCollaborators parses the edge: lower-case usernames, invite_status mappe
   const calls = [];
   const fetcher = async (url, init) => { calls.push(url); return jsonResponse({data: [...fixture('collaborators').data, {username: 'Bad Name', invite_status: 'Accepted'}, {username: 'X.y', invite_status: 'Weird'}]}); };
   const list = await meta.igCollaborators({token: 'EAAB-PLACEHOLDER-TOKEN', appSecret: 'app-secret-PLACEHOLDER', fetcher, sleep: async () => {}}, '17890000000000202');
-  assert.deepEqual(list, [{id: '17841400000000101', username: 'ritag', invite_status: 'accepted'}, {id: '17841400000000102', username: 'deckhand.example', invite_status: 'pending'},
+  assert.deepEqual(list, [{id: '17841400000000101', username: 'ritag.example', invite_status: 'accepted'}, {id: '17841400000000102', username: 'deckhand.example', invite_status: 'pending'},
     {id: null, username: 'x.y', invite_status: null}]);
   const u = new URL(calls[0]);
   assert.equal(u.pathname, `/${meta.GRAPH_VERSION}/17890000000000202/collaborators`);
@@ -564,7 +564,7 @@ test('collabStatusOf: pending or unlisted -> invited; else declined wins over ac
 dbTest('collabTick: at most hourly, reads GET /<media>/collaborators for invited posts of the last 14 days and stores accepted or declined; a failed read changes nothing; off with the switch', async () => {
   const s = setup();
   const fake = graphFake({on: {'GET /17890000000000301/collaborators': () => jsonResponse({data: [{id: '17841400000000101', username: 'ritag', invite_status: 'Accepted'}]})}});
-  for (const [id, media, posted, collab] of [['p1', '17890000000000301', T0 - HOUR, ['ritag']], ['p2', '17890000000000302', T0 - 2 * HOUR, ['ritag', 'deckhand.example']],
+  for (const [id, media, posted, collab] of [['p1', '17890000000000301', T0 - HOUR, ['ritag']], ['p2', '17890000000000302', T0 - 2 * HOUR, ['ritag.example', 'deckhand.example']],
     ['old', '17890000000000303', T0 - 15 * 86400000, ['ritag']], ['done', '17890000000000304', T0 - HOUR, ['ritag']]]) {
     addMedia(s.sql, `m-${id}`);
     addPost(s.sql, {id, media: [`m-${id}`], collaborators: collab, status: 'posted'});
@@ -582,7 +582,7 @@ dbTest('collabTick: at most hourly, reads GET /<media>/collaborators for invited
   // An hour later p2's other collaborator declined; a failing read leaves a post as it was.
   s.sql.prepare("UPDATE advisor_posts SET collab_status='invited' WHERE id='p1'").run();
   const fake2 = graphFake({on: {'GET /17890000000000301/collaborators': () => jsonResponse(fixture('error-server'), 500),
-    'GET /17890000000000302/collaborators': () => jsonResponse({data: [{username: 'ritag', invite_status: 'Accepted'}, {username: 'deckhand.example', invite_status: 'Declined'}]})}});
+    'GET /17890000000000302/collaborators': () => jsonResponse({data: [{username: 'ritag.example', invite_status: 'Accepted'}, {username: 'deckhand.example', invite_status: 'Declined'}]})}});
   const second = await quiet(() => P.collabTick(s.env, T0 + HOUR, {fetcher: fake2.fetcher, sleep: async () => {}}));
   assert.deepEqual(second.value, {status: 'ran', read: 1, changed: 1});
   assert.ok(!second.lines.join('\n').includes('EAAB-PLACEHOLDER-TOKEN'));
@@ -595,10 +595,10 @@ dbTest('collabTick: at most hourly, reads GET /<media>/collaborators for invited
 dbTest('the cron tick reads collab status; the admin card carries collab_status', async () => {
   const s = setup(), fake = graphFake();
   addMedia(s.sql, 'm1');
-  addPost(s.sql, {media: ['m1'], collaborators: ['ritag'], status: 'posted'});
+  addPost(s.sql, {media: ['m1'], collaborators: ['ritag.example'], status: 'posted'});
   s.sql.prepare("UPDATE advisor_posts SET ig_media_id='17890000000000202',posted_at=?,collab_status='invited' WHERE id='p1'").run(iso(T0 - HOUR));
   await quiet(() => advisorCron(s.env, T0, {slots: [], consumer: {channelFor: () => s.channel}, publish: {fetcher: fake.fetcher, sleep: async () => {}, now: () => T0}}));
-  assert.equal(postRow(s.sql).collab_status, 'accepted', 'the fixture lists ritag as Accepted');
+  assert.equal(postRow(s.sql).collab_status, 'accepted', 'the fixture lists ritag.example as Accepted');
   const {get} = app(s, fake);
   const card = (await (await get('/api/admin/posts?status=posted')).json()).posts[0];
   assert.equal(card.collab_status, 'accepted');
