@@ -4,11 +4,15 @@
 // GET content_publishing_limit, at most once per META_QUOTA_TTL_MS (the banner
 // reads this every minute), cached in job_state advisor.meta.quota. The
 // Facebook-Login Page token does not expire (09 § facts), so there is no
-// token expiry to show. Hermes health comes with the Hermes vision provider.
+// token expiry to show. TA-V2: each vision provider's line says whether it is
+// configured, when it is skipped until, and when it last answered (the chain's
+// job_state keys); it does not ping Hermes (scripts/advisor/vision-conformance.mjs
+// does, with GET /v1/health).
 // TA-S6: the inbox switches, and subscribeWebhooks (the "Subscribe webhooks" action).
 import {advisorSettings} from '../settings.ts';
 import {relayState} from '../relay.ts';
-import {downKey} from '../vision/index.ts';
+import {downKey, lastOkKey} from '../vision/index.ts';
+import {hermesConfigured} from '../vision/hermes.ts';
 import {mediaJobPending} from '../media.ts';
 import {igPublishingLimit, igSubscribeApps, metaConfig, metaConfigured, MetaError, SUBSCRIBED_FIELDS} from '../social/meta.ts';
 import type {Fetcher} from '../social/meta.ts';
@@ -21,12 +25,15 @@ export const META_QUOTA_KEY = 'advisor.meta.quota';
 /** 09 § Publishing: whether the Meta secrets are set, and the Instagram publishing quota (50 API posts per 24 h). */
 export interface MetaHealth {configured: boolean; quota_usage: number | null; quota_total: number | null; checked_at: string | null; error: 'unavailable' | null}
 
+/** TA-V2: one vision provider: its secrets set, skipped until (null when not down), last answer (null when never). */
+export interface VisionHealth {name: string; configured: boolean; down_until: string | null; last_ok_at: string | null}
+
 export interface AdminHealth {
   checked_at: string;
   enabled: boolean; replies_enabled: boolean; channel: string;
   relay: {state: 'up' | 'down'; failures: number; checked_at: string; last_ok_at: string | null} | null;
   queue: {stale_queued: number; oldest_queued_at: string | null; held_outbound: number; failed_today: number};
-  vision: {name: string; down_until: string | null}[];
+  vision: VisionHealth[];
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
   media_jobs: {pending: number};
   reviews: {open: number};
@@ -71,9 +78,11 @@ export async function adminHealth(env: Env, now: number = Date.now(), deps: {met
   const relay = await relayState(env).catch(() => null);
   const oldest = await db.prepare("SELECT MIN(created_at) AS at FROM advisor_messages WHERE direction='in' AND status='queued' AND created_at<?").bind(stale).first<{at: string | null}>();
   const used = async (key: string): Promise<number> => (await db.prepare('SELECT count FROM request_limits WHERE id=?').bind(`${key}:${day}`).first<{count: number}>())?.count ?? 0;
-  const vision = await Promise.all(settings.visionProviders.map(async name => {
-    const v = (await db.prepare('SELECT value FROM job_state WHERE key=?').bind(downKey(name)).first<{value: string}>())?.value ?? null;
-    return {name, down_until: v && Date.parse(v) > now ? v : null};
+  const state = async (key: string): Promise<string | null> => (await db.prepare('SELECT value FROM job_state WHERE key=?').bind(key).first<{value: string}>())?.value ?? null;
+  const vision = await Promise.all(settings.visionProviders.map(async (name): Promise<VisionHealth> => {
+    const v = await state(downKey(name)), ok = await state(lastOkKey(name));
+    return {name, configured: name === 'hermes' ? hermesConfigured(env) : Boolean(env.ANTHROPIC_API_KEY), down_until: v && Date.parse(v) > now ? v : null,
+      last_ok_at: ok && Number.isFinite(Date.parse(ok)) ? ok : null};
   }));
   return {
     checked_at: at, enabled: settings.enabled, replies_enabled: settings.repliesEnabled, channel: settings.channel,

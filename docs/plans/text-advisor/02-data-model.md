@@ -373,6 +373,10 @@ As built (TA-S2): `advisor.publish.lock.<post id>` (the publishing lease, an ISO
 expiry) and `advisor.publish.<post id>` (progress without a column:
 `{ig_children, ig_started_at, ig_error, fb_photos, fb_error}`, deleted when the
 post is `posted`). A posted post's media move from `approved` to `posted`.
+As built (TA-V1, TA-V2): `advisor.vision.<provider>.down_until` (a vision
+provider's 10-minute skip after a failure, an ISO time, deleted when it answers
+again) and `advisor.vision.<provider>.last_ok` (when it last answered, an ISO
+time, for admin Health); one of each per provider, kept by the retention prune.
 As built (TA-S7): `advisor.insights.last_run` (`{at, posts, instagram, facebook,
 failed}` of the 03:00 slot) and `advisor.insights.stories_at` (the hourly Story
 read's claim, an ISO time).

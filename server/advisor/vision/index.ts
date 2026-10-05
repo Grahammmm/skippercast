@@ -9,8 +9,10 @@
 //     -> for each provider in ADVISOR_VISION_PROVIDERS order:
 //          skip it while job_state advisor.vision.<name>.down_until is in the future;
 //          skip it silently when it is not configured (hermes without HERMES_VISION_URL);
-//          call it; on success cache the result under its method key and return;
-//          on failure mark it down for 10 minutes and try the next
+//          call it; on success record advisor.vision.<name>.last_ok, cache the result
+//          under its method key and return;
+//          on failure (an HTTP error, a timeout, an invalid answer) mark it down for
+//          10 minutes and try the next
 //     -> every provider failed or was skipped: throw VisionUnavailable
 //
 // The cache is one JSON object per media row, {classify?, count_board?, fish_id?},
@@ -25,6 +27,7 @@ import type {VisionProviderName} from '../types.ts';
 import {PROTECTED} from './species.ts';
 import type {ProtectedSpecies} from './species.ts';
 import {createClaudeVision} from './claude.ts';
+import {createHermesVision} from './hermes.ts';
 import {MediaTooLarge, UnsupportedImage, ProviderNotConfigured, VisionCapReached, VisionUnavailable} from './errors.ts';
 import type {ClaudeVisionDeps} from './claude.ts';
 // TA-M1: the derived public.jpg an oversized or HEIC original is read through.
@@ -138,24 +141,13 @@ export function decideProtected(f: Pick<FishId, 'candidates'>, list: readonly Pr
   return out;
 }
 
-// ---- Hermes (TA-V2 builds the client; registered here as a stub) ----------------
-
-/** Placeholder until TA-V2: always reports not-configured, so the chain skips it silently. */
-export const hermesStub: VisionProvider = {
-  name: 'hermes',
-  classify: async () => { throw new ProviderNotConfigured('hermes'); },
-  readCountBoard: async () => { throw new ProviderNotConfigured('hermes'); },
-  identifyFish: async () => { throw new ProviderNotConfigured('hermes'); },
-  health: async () => ({ok: false, detail: 'not-configured'}),
-};
-
 // ---- Chain -------------------------------------------------------------------------
 
 export type VisionMethod = 'classify' | 'count_board' | 'fish_id';
 type Results = {classify: Classification; count_board: CountBoardReading; fish_id: FishId};
 
 export interface VisionDeps extends ClaudeVisionDeps {
-  /** Replace providers by name (tests; TA-V2 passes the Hermes client). */
+  /** Replace providers by name (tests); the defaults are the Hermes client (TA-V2) and the Claude provider. */
   providers?: Partial<Record<VisionProviderName, VisionProvider>>;
 }
 export interface VisionChain {
@@ -165,6 +157,8 @@ export interface VisionChain {
 }
 
 export const downKey = (name: string): string => `advisor.vision.${name}.down_until`;
+/** TA-V2: when the provider last answered (an ISO time), for the admin Health view. */
+export const lastOkKey = (name: string): string => `advisor.vision.${name}.last_ok`;
 
 const INPUT_ERRORS = (e: unknown): boolean => e instanceof MediaTooLarge || e instanceof UnsupportedImage;
 const short = (e: unknown): string => String((e as Error)?.message ?? e).slice(0, 200);
@@ -208,6 +202,11 @@ async function markDown(env: Env, name: string, now: number): Promise<void> {
 async function clearDown(env: Env, name: string): Promise<void> {
   await env.DB?.prepare('DELETE FROM job_state WHERE key=?').bind(downKey(name)).run().catch(() => {});
 }
+async function markOk(env: Env, name: string, now: number): Promise<void> {
+  const at = new Date(now).toISOString();
+  await env.DB?.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(lastOkKey(name), at, at).run().catch(() => {});
+}
 
 /** `image` with bytes() read at most once (several providers may need them; R2 is read once). */
 function once(image: ImageInput): ImageInput {
@@ -223,7 +222,7 @@ function once(image: ImageInput): ImageInput {
 export function visionChain(env: Env, deps: VisionDeps = {}): VisionChain {
   const settings = advisorSettings(env);
   const now = deps.now ?? Date.now;
-  const registry: Record<VisionProviderName, VisionProvider> = {hermes: hermesStub, claude: createClaudeVision(deps), ...deps.providers};
+  const registry: Record<VisionProviderName, VisionProvider> = {hermes: createHermesVision(deps), claude: createClaudeVision(deps), ...deps.providers};
 
   async function run<M extends VisionMethod>(method: M, input: ImageInput, call: (p: VisionProvider, image: ImageInput) => Promise<Results[M]>): Promise<Results[M]> {
     const hit = await cached(env, input.media_id, method);
@@ -254,12 +253,14 @@ export function visionChain(env: Env, deps: VisionDeps = {}): VisionChain {
       try {
         const result = await call(provider, image);
         if (until !== null) { await clearDown(env, name); advisorLog('info', 'advisor_vision_provider_up', {provider: name}); }
+        await markOk(env, name, now());
         await store(env, input.media_id, method, result);
         return result;
       } catch (error) {
         if (INPUT_ERRORS(error)) throw error;
         if (error instanceof ProviderNotConfigured) {
-          if (name !== 'hermes') advisorLog('warn', 'advisor_vision_not_configured', {provider: name});
+          // Hermes reaches here only with HERMES_VISION_URL set (a bad URL or no token): worth a line, like Claude without a key.
+          advisorLog('warn', 'advisor_vision_not_configured', {provider: name});
           reasons.push(`${name}: not-configured`); continue;
         }
         if (error instanceof VisionCapReached) { capped = error; reasons.push(`${name}: capped`); continue; }

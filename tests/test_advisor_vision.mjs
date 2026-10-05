@@ -4,7 +4,9 @@
 // advisor_media.classification_json, has_person, 10-minute skip after a failure
 // and recovery, hermes skipped while not configured), the Claude provider
 // (request shape, global daily cap, 429 retry, HEIC and size errors, the llm
-// analytics point), the catalog files and the synthetic fixture images.
+// analytics point), the Hermes client (TA-V2: multipart request, bearer token,
+// X-Vision-Model, shared validation, errors marking it down, health), the
+// catalog files and the synthetic fixture images.
 // Offline: a fake fetcher answers with the recorded responses in
 // tests/fixtures/advisor/vision/, against the real migrations.
 import test from 'node:test';
@@ -17,6 +19,8 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json'), 'so
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 const vision = await import('../server/advisor/vision/index.ts');
 const claude = await import('../server/advisor/vision/claude.ts');
+const hermesClient = await import('../server/advisor/vision/hermes.ts');
+const validate = await import('../server/advisor/vision/validate.ts');
 const species = await import('../server/advisor/vision/species.ts');
 const prompts = await import('../server/advisor/prompts/vision.ts');
 const images = await import('../scripts/advisor/make-fixture-images.mjs');
@@ -317,31 +321,189 @@ dbTest('the chain tries providers in order and falls through a failing one to th
   assert.equal(board.provider, 'claude', 'hermes skipped while down'); assert.deepEqual(order, ['hermes']);
 });
 
-dbTest('an unconfigured hermes (no HERMES_VISION_URL) is skipped silently; the stub reports not-configured', async () => {
+const downKeys = sql => sql.prepare("SELECT count(*) n FROM job_state WHERE key LIKE '%.down_until'").get().n;
+
+dbTest('an unconfigured hermes (no HERMES_VISION_URL) is skipped silently; its health reports not-configured', async () => {
   const {sql, env} = setup({ADVISOR_VISION_PROVIDERS: 'hermes,claude'});
   const api = fakeApi(ANSWERS);
   const {value, lines} = await quiet(() => visionChain(env, {fetcher: api.fetcher}).classify(imageOf(png('blank.png'))));
   assert.equal(value.provider, 'claude');
   assert.ok(!lines.some(l => l.includes('hermes')), 'nothing logged about hermes');
-  assert.equal(sql.prepare('SELECT count(*) n FROM job_state').get().n, 0);
-  assert.deepEqual(await vision.hermesStub.health(env), {ok: false, detail: 'not-configured'});
-  // Even with a URL set, the TA-V1 stub is not-configured, not a failure.
-  const withUrl = {...env, HERMES_VISION_URL: 'https://hermes.test'};
-  await quiet(() => visionChain(withUrl, {fetcher: api.fetcher}).readCountBoard(imageOf(png('blank.png'))));
-  assert.equal(sql.prepare('SELECT count(*) n FROM job_state').get().n, 0);
+  assert.equal(api.calls.length, 1, 'no request to hermes');
+  assert.equal(downKeys(sql), 0);
+  assert.deepEqual(sql.prepare('SELECT key FROM job_state').all().map(r => r.key), [vision.lastOkKey('claude')], 'only claude answered');
+  assert.deepEqual(await hermesClient.createHermesVision({fetcher: api.fetcher}).health(env), {ok: false, detail: 'not-configured'});
+  // A URL but no token (or a URL the client refuses): not configured, logged, never a failure or a request.
+  for (const bad of [{HERMES_VISION_URL: 'https://hermes.test'}, {HERMES_VISION_URL: 'http://hermes.test', HERMES_VISION_TOKEN: 't'}]) {
+    sql.prepare("UPDATE advisor_media SET classification_json=NULL WHERE id='m1'").run();
+    const before = api.calls.length;
+    const {value: board, lines: logged} = await quiet(() => visionChain({...env, ...bad}, {fetcher: api.fetcher}).readCountBoard(imageOf(png('blank.png'))));
+    assert.equal(board.provider, 'claude'); assert.equal(api.calls.length, before + 1, 'only the claude request');
+    assert.ok(logged.some(l => l.includes('advisor_vision_not_configured') && l.includes('hermes')));
+    assert.equal(downKeys(sql), 0);
+  }
   // Claude without a key: not configured, no down mark, VisionUnavailable.
   const noKey = {...env, ANTHROPIC_API_KEY: undefined, ADVISOR_VISION_PROVIDERS: 'claude'};
   sql.prepare("UPDATE advisor_media SET classification_json=NULL WHERE id='m1'").run();
   await quiet(() => assert.rejects(visionChain(noKey, {fetcher: api.fetcher}).classify(imageOf(png('blank.png'))), /claude: not-configured/));
-  assert.equal(sql.prepare('SELECT count(*) n FROM job_state').get().n, 0);
+  assert.equal(downKeys(sql), 0);
 });
 
 dbTest('the image bytes are read once per chain call, whatever the number of providers', async () => {
   const {env} = setup({ADVISOR_VISION_PROVIDERS: 'hermes,claude', HERMES_VISION_URL: 'https://h'});
-  const hermes = {...vision.hermesStub, classify: async image => { await image.bytes(); throw Error('down'); }};
+  const hermes = {name: 'hermes', classify: async image => { await image.bytes(); throw Error('down'); }};
   const image = imageOf(png('blank.png'));
   await quiet(() => visionChain(env, {fetcher: fakeApi(ANSWERS).fetcher, providers: {hermes}}).classify(image));
   assert.equal(image.reads, 1);
+});
+
+// ---- Hermes provider (TA-V2) ------------------------------------------------------------
+
+const HERMES_ENV = {HERMES_VISION_URL: 'https://hermes.test/vision/', HERMES_VISION_TOKEN: 'hv-token-PLACEHOLDER'};
+const HERMES_ANSWERS = {'/vision/v1/vision/classify': toolInput('classify-count-board.json'), '/vision/v1/vision/count-board': toolInput('count-board.json'), '/vision/v1/vision/fish-id': toolInput('fish-id.json')};
+/** A fake Hermes service: answers by path (or a function), recording each request with its parsed meta. */
+function fakeHermes(answers = HERMES_ANSWERS, headers = {'x-vision-model': 'hermes-local-1'}) {
+  const calls = [];
+  const fetcher = async (url, init) => {
+    const path = new URL(url).pathname, meta = init.body instanceof FormData ? JSON.parse(init.body.get('meta')) : null;
+    calls.push({url, path, init, meta});
+    const answer = typeof answers === 'function' ? await answers(path, calls.length) : answers[path];
+    if (answer instanceof Response) return answer;
+    return new Response(JSON.stringify(answer), {status: 200, headers: {'content-type': 'application/json', ...headers}});
+  };
+  return {fetcher, calls};
+}
+/** Hermes and Claude behind one fetcher, as in production (the chain passes one fetcher to both). */
+function bothApis(hermesAnswers) {
+  const h = fakeHermes(hermesAnswers), c = fakeApi(ANSWERS);
+  return {hermes: h, claude: c, fetcher: (url, init) => (url.startsWith('https://hermes.test/') ? h : c).fetcher(url, init)};
+}
+const ticking = (start = T0, step = 7) => { let t = start - step; return () => (t += step); };
+
+dbTest('the Hermes client posts the image and a JSON meta field with the bearer token to each endpoint and maps the answers', async () => {
+  const {env} = setup(HERMES_ENV);
+  const api = fakeHermes(), provider = hermesClient.createHermesVision({fetcher: api.fetcher, now: ticking()});
+  const bytes = png('count-board.png');
+  const {value: c} = await quiet(() => provider.classify({...imageOf(bytes), orientation: 6}, env));
+  assert.deepEqual(c, parseClassification(toolInput('classify-count-board.json'), {provider: 'hermes', model: 'hermes-local-1', ms: 7}), 'validated as the Claude provider does; model from X-Vision-Model; ms measured');
+  const [{url, init, meta}] = api.calls;
+  assert.equal(url, 'https://hermes.test/vision/v1/vision/classify', 'the URL path prefix is kept, its trailing slash dropped');
+  assert.equal(init.method, 'POST'); assert.equal(init.headers.authorization, 'Bearer hv-token-PLACEHOLDER');
+  assert.ok(init.signal instanceof AbortSignal);
+  assert.deepEqual([...init.body.keys()], ['image', 'meta']);
+  const file = init.body.get('image');
+  assert.equal(file.type, 'image/png'); assert.equal(file.name, 'image.png');
+  assert.ok(Buffer.compare(Buffer.from(await file.arrayBuffer()), bytes) === 0, 'the image bytes as stored');
+  assert.deepEqual(meta, {media_id: 'm1', region: null, orientation: 6}, 'the orientation hint travels in meta');
+  const {value: r} = await quiet(() => provider.readCountBoard(imageOf(bytes), env));
+  assert.equal(r.provider, 'hermes'); assert.equal(r.boat_name, 'Rita G'); assert.equal(r.lines.length, 4);
+  assert.deepEqual(api.calls[1].meta, {media_id: 'm1', region: null}, 'no orientation for an upright image');
+  const {value: f} = await quiet(() => provider.identifyFish(imageOf(png('fish.png')), env, 'morro-bay'));
+  assert.equal(api.calls[2].path, '/vision/v1/vision/fish-id');
+  const sent = species.speciesForTargets(read('../regions/morro-bay/region.json').species).map(s => s.key);
+  assert.deepEqual(api.calls[2].meta, {media_id: 'm1', region: 'morro-bay', species_keys: sent});
+  assert.deepEqual(f.candidates.map(x => x.species_key), ['vermilion', 'canary', 'yelloweye']);
+  assert.equal(f.provider, 'hermes');
+  // The validators are the same functions for both providers.
+  assert.equal(claude.parseFishId, validate.parseFishId); assert.equal(claude.parseCountBoard, validate.parseCountBoard); assert.equal(claude.parseClassification, validate.parseClassification);
+});
+
+dbTest('Hermes answers are clamped, and a species_key outside the keys sent becomes null with its label kept', async () => {
+  const {env} = setup(HERMES_ENV);
+  const api = fakeHermes({
+    '/vision/v1/vision/fish-id': {candidates: [{species_key: 'yellowtail', label: 'Yellowtail', confidence: 0.7, cues: ['yellow tail']}, {species_key: 'vermilion', label: 'Vermilion rockfish', confidence: 1.4, cues: ['a', 'b', 'c', 'd']}], needs_better_photo: false, reason: null},
+    '/vision/v1/vision/classify': {kind: 'selfie', kind_confidence: -2, has_person: 'yes', person_confidence: 9, has_fish: true, text_present: false, nsfw: false},
+  });
+  const provider = hermesClient.createHermesVision({fetcher: api.fetcher});
+  const {value: f} = await quiet(() => provider.identifyFish(imageOf(png('fish.png')), env, 'morro-bay'));
+  assert.ok(!api.calls[0].meta.species_keys.includes('yellowtail'), 'yellowtail is not a Morro Bay key');
+  assert.deepEqual(f.candidates, [{species_key: 'vermilion', label: 'Vermilion rockfish', confidence: 1, cues: ['a', 'b', 'c']}, {species_key: null, label: 'Yellowtail', confidence: 0.7, cues: ['yellow tail']}]);
+  const {value: c} = await quiet(() => provider.classify(imageOf(png('fish.png')), env));
+  assert.deepEqual([c.kind, c.kind_confidence, c.has_person, c.person_confidence, c.has_fish], ['unknown', 0, false, 1, true]);
+});
+
+dbTest('X-Vision-Model names the model; missing or not a plain id it is "unknown"', async () => {
+  const {env} = setup(HERMES_ENV);
+  for (const [headers, model] of [[{'x-vision-model': 'qwen2.5-vl:7b'}, 'qwen2.5-vl:7b'], [{}, 'unknown'], [{'x-vision-model': 'bad model <script>'}, 'unknown'], [{'x-vision-model': 'x'.repeat(101)}, 'unknown']]) {
+    const provider = hermesClient.createHermesVision({fetcher: fakeHermes(HERMES_ANSWERS, headers).fetcher});
+    const {value} = await quiet(() => provider.classify(imageOf(png('blank.png')), env));
+    assert.equal(value.model, model, JSON.stringify(headers));
+  }
+});
+
+dbTest('a 503, a timeout, a body that is not JSON or lacks the method\'s field is a provider error, logged without the image or media id', async () => {
+  const {env} = setup(HERMES_ENV);
+  const timeout = () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); };
+  for (const [answer, pattern, outcome] of [[new Response('busy', {status: 503}), /hermes HTTP 503/, 'error'], [timeout, /timeout/, 'timeout'],
+    [new Response('<html>', {status: 200}), /no JSON/, 'invalid'], [{}, /no kind/, 'invalid'], [[], /no kind/, 'invalid'], [new Response('nope', {status: 401}), /HTTP 401/, 'error']]) {
+    const provider = hermesClient.createHermesVision({fetcher: fakeHermes(() => typeof answer === 'function' ? answer() : answer).fetcher});
+    const {lines} = await quiet(() => assert.rejects(provider.classify(imageOf(png('blank.png')), env), pattern));
+    const log = JSON.parse(lines.find(l => l.includes('advisor_vision_call')));
+    assert.deepEqual([log.provider, log.method, log.outcome], ['hermes', 'classify', outcome]);
+    assert.ok(!lines.join('').includes('m1') && !lines.join('').includes('hv-token'), 'no media id or token in the log');
+  }
+  assert.equal(hermesClient.HERMES_TIMEOUT_MS, 20000);
+  assert.deepEqual(hermesClient.REQUIRED_FIELD, {classify: 'kind', count_board: 'lines', fish_id: 'candidates'});
+});
+
+dbTest('through the chain: Hermes failing is marked down for 10 minutes and Claude answers; Hermes answering records last_ok', async () => {
+  const {sql, env} = setup({ADVISOR_VISION_PROVIDERS: 'hermes,claude', ...HERMES_ENV});
+  let clock = T0;
+  const apis = bothApis(() => new Response('busy', {status: 503}));
+  const deps = {fetcher: apis.fetcher, now: () => clock};
+  const {value, lines} = await quiet(() => visionChain(env, deps).classify(imageOf(png('blank.png'))));
+  assert.equal(value.provider, 'claude'); assert.equal(apis.hermes.calls.length, 1); assert.equal(apis.claude.calls.length, 1);
+  assert.equal(sql.prepare('SELECT value FROM job_state WHERE key=?').get(downKey('hermes')).value, new Date(T0 + 600000).toISOString());
+  assert.ok(lines.some(l => l.includes('advisor_vision_provider_down') && l.includes('hermes')));
+  assert.equal(sql.prepare('SELECT value FROM job_state WHERE key=?').get(vision.lastOkKey('claude')).value, new Date(T0).toISOString());
+  // Inside the 10 minutes Hermes is not asked.
+  clock = T0 + 5 * 60000;
+  await quiet(() => visionChain(env, deps).readCountBoard(imageOf(png('blank.png'))));
+  assert.equal(apis.hermes.calls.length, 1); assert.equal(apis.claude.calls.length, 2);
+  // After it, Hermes is asked again; it answers, the mark is cleared and last_ok recorded; Claude is not asked.
+  clock = T0 + 11 * 60000;
+  const ok = bothApis(HERMES_ANSWERS);
+  const {value: f} = await quiet(() => visionChain(env, {fetcher: ok.fetcher, now: () => clock}).identifyFish(imageOf(png('fish.png')), 'morro-bay'));
+  assert.equal(f.provider, 'hermes'); assert.equal(f.model, 'hermes-local-1'); assert.equal(ok.claude.calls.length, 0);
+  assert.equal(sql.prepare('SELECT value FROM job_state WHERE key=?').get(downKey('hermes')), undefined);
+  assert.equal(sql.prepare('SELECT value FROM job_state WHERE key=?').get(vision.lastOkKey('hermes')).value, new Date(clock).toISOString());
+  assert.equal(JSON.parse(sql.prepare("SELECT classification_json FROM advisor_media WHERE id='m1'").get().classification_json).fish_id.provider, 'hermes', 'cached like any result');
+});
+
+dbTest('HEIC and anything over 4.5 MB never reach Hermes; through the chain neither marks it down', async () => {
+  const {sql, env} = setup({ADVISOR_VISION_PROVIDERS: 'hermes,claude', ...HERMES_ENV});
+  assert.equal(hermesClient.HERMES_IMAGE_LIMIT, THRESHOLDS.maxImageBytes);
+  const api = fakeHermes(), provider = hermesClient.createHermesVision({fetcher: api.fetcher});
+  await assert.rejects(provider.classify(imageOf(png('blank.png'), {mime: 'image/heic'}), env), UnsupportedImage);
+  await assert.rejects(provider.classify(imageOf(null, {size: THRESHOLDS.maxImageBytes + 1, mime: 'image/jpeg'}), env), MediaTooLarge);
+  assert.equal(api.calls.length, 0);
+  const apis = bothApis();
+  await assert.rejects(visionChain(env, {fetcher: apis.fetcher}).classify(imageOf(png('blank.png'), {mime: 'image/heif'})), UnsupportedImage);
+  await quiet(() => assert.rejects(visionChain(env, {fetcher: apis.fetcher}).classify(imageOf(null, {size: THRESHOLDS.maxImageBytes + 1, mime: 'image/jpeg'})), MediaTooLarge));
+  assert.equal(apis.hermes.calls.length + apis.claude.calls.length, 0);
+  assert.equal(downKeys(sql), 0);
+});
+
+dbTest('Hermes health: GET /v1/health with the token; ok with its models, else the reason', async () => {
+  const {env} = setup(HERMES_ENV);
+  const api = fakeHermes({'/vision/v1/health': {ok: true, models: {classify: 'qwen2.5-vl', fish_id: 'fishnet-3'}}});
+  assert.deepEqual(await hermesClient.createHermesVision({fetcher: api.fetcher}).health(env), {ok: true, detail: 'classify=qwen2.5-vl, fish_id=fishnet-3'});
+  assert.equal(api.calls[0].init.method, 'GET'); assert.equal(api.calls[0].init.headers.authorization, 'Bearer hv-token-PLACEHOLDER');
+  const health = answer => hermesClient.createHermesVision({fetcher: fakeHermes(() => answer).fetcher}).health(env);
+  assert.deepEqual(await health({ok: true}), {ok: true, detail: 'ok'});
+  assert.deepEqual(await health(new Response('x', {status: 503})), {ok: false, detail: 'HTTP 503'});
+  assert.deepEqual(await health({ok: false}), {ok: false, detail: 'health did not report ok'});
+  assert.deepEqual(await hermesClient.createHermesVision({fetcher: async () => { throw new TypeError('fetch failed'); }}).health(env), {ok: false, detail: 'unreachable'});
+});
+
+test('HERMES_VISION_URL must be https without credentials, query or fragment; a path prefix is kept', () => {
+  const base = url => hermesClient.hermesBase({HERMES_VISION_URL: url});
+  assert.equal(base('https://hermes.example.com'), 'https://hermes.example.com');
+  assert.equal(base(' https://hermes.example.com/vision// '), 'https://hermes.example.com/vision');
+  for (const bad of [undefined, '', 'http://hermes.example.com', 'https://u:p@hermes.example.com', 'https://hermes.example.com/?a=1', 'https://hermes.example.com/#x', 'not a url', 'ftp://h']) assert.equal(base(bad), null, String(bad));
+  assert.equal(hermesClient.hermesConfigured(HERMES_ENV), true);
+  assert.equal(hermesClient.hermesConfigured({HERMES_VISION_URL: 'https://h.example'}), false, 'no token');
+  assert.equal(hermesClient.hermesConfigured({HERMES_VISION_TOKEN: 't'}), false, 'no URL');
 });
 
 // ---- Catalog, prompts and fixtures -------------------------------------------------------

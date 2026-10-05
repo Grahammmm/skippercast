@@ -3,9 +3,10 @@
 // GET /api/admin/health. TA-S0: whether Meta is configured and the Instagram
 // publishing quota (the Page token of the Facebook-Login route does not expire).
 // TA-S6: the Instagram inbox switches and the "Subscribe webhooks" action.
+// TA-V2: each vision provider is configured or not, skipped until, last answered.
 import {useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {when, ApiError, subscribeWebhooks} from './api.ts';
+import {when, visionLine, ApiError, subscribeWebhooks} from './api.ts';
 import type {Health} from './api.ts';
 
 function Row({label, value, tone}: {label: string; value: string | number; tone?: 'go' | 'rough' | 'caution'}) {
@@ -47,7 +48,7 @@ export function HealthView({health, failed, onRefresh}: {health: Health | null; 
           <section aria-labelledby="h-vision">
             <h2 id="h-vision">{COPY.vision}</h2>
             <dl class="admin-fields">
-              {health.vision.map(v => <Row key={v.name} label={v.name} value={v.down_until ? COPY.providerDown(when(v.down_until)) : COPY.providerUp} tone={v.down_until ? 'rough' : 'go'} />)}
+              {health.vision.map(v => <Row key={v.name} label={v.name} value={visionLine(v)} tone={!v.configured ? undefined : v.down_until ? 'rough' : 'go'} />)}
             </dl>
           </section>
           <section aria-labelledby="h-caps">

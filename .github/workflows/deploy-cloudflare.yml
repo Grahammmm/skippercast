@@ -96,6 +96,9 @@ jobs:
           META_IG_USER_ID: ${{ secrets.META_IG_USER_ID }}
           META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
           META_PAGE_TOKEN: ${{ secrets.META_PAGE_TOKEN }}
+          # TA-V2: the Hermes vision provider (07-vision.md § Hand-off to Hermes); the chain skips Hermes while unset.
+          HERMES_VISION_URL: ${{ secrets.HERMES_VISION_URL }}
+          HERMES_VISION_TOKEN: ${{ secrets.HERMES_VISION_TOKEN }}
           # Web Push signing pair. Optional: when unset, the deploy keeps the pair in the private
           # backup bucket (secrets/vapid.json), generating it on the first run (runbook: secrets-rotation.md).
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
