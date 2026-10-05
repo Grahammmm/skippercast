@@ -2,5 +2,28 @@
   "schema_version": 1,
   "profile": "original-rugose-classified-area-v1",
   "method": "Original publisher interpretation of rugose rock and boulders over paired valid nominal depth. Habitat suitability evidence only; no fish presence, terrain grade, species fit, precise fishing position or new measurement credit.",
-  "sources": []
+  "sources": [
+    {
+      "id": "usgs-offshore-monterey-2m-rugose-v1",
+      "reviewed_on": "2026-10-04",
+      "depth_source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+      "depth_source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+      "classification_source_id": "seafloorcharacter-2m-offshoremonterey-zip-60dcc1edcf",
+      "classification_source_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+      "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
+      "rugose_raw_codes": [
+        3,
+        13,
+        53,
+        63,
+        103,
+        113
+      ],
+      "credit": "U.S. Geological Survey and California State University, Monterey Bay, Seafloor Mapping Lab",
+      "release_license": "public-domain-us-gov",
+      "notice": "Original USGS release (CC0/public domain); retain joint USGS/CSUMB attribution and survey limitations. USGS requests sharing derived products. Not for navigation.",
+      "review_basis": "Original FGDC VALUE encoding and release terms independently reviewed 2026-10-04. Mixed class2 excluded. Encoded depth/slope zones do not replace paired native depth. Unknown interpolation masks remain unknown. Shared survey interpretation is not independent depth or fish evidence."
+    }
+  ]
 }
