@@ -464,7 +464,10 @@ A `Candidate` carries names, port and landing hints, stable keys, `Fact`s
 with the profile schema's provenance fields, and `record_id`: a stable
 per-record id within the source, usually the record's own URL (a boat's page,
 an FCC licence key). Adapters set it; `source_id|record_id` is the fingerprint
-a decided review remembers (section 7). `RunContext` gives the HTTP
+a decided review remembers (section 7). It also carries any `Offering`s and
+`Departure`s the source lists; those become `offering.upsert` and
+`departure.upsert` operations once resolve has assigned the vessel id (CF-14).
+`RunContext` gives the HTTP
 session, run directory, clock and region config. Adapters never write to a
 sink.
 

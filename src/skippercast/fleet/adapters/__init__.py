@@ -13,20 +13,21 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Mapping
 
-from .base import Adapter, Candidate, Fact, RunContext
+from .base import Adapter, Candidate, Departure, Fact, Offering, RunContext
 from .directories import Directories
 from .fcc_uls import FccUls
+from .landing_pages import LandingPages
 from .teck_reports import TeckReports
 from .uscg_psix import UscgPsix
 
-__all__ = ["ADAPTERS", "REGISTRY", "Adapter", "Candidate", "Fact", "RunContext", "get"]
+__all__ = ["ADAPTERS", "REGISTRY", "Adapter", "Candidate", "Departure", "Fact", "Offering", "RunContext", "get"]
 
 REGISTRY: Mapping[str, type | str | None] = {
     "fcc-uls": FccUls,
     "uscg-psix": UscgPsix,
     "teck-reports": TeckReports,
     "directories": Directories,
-    "landing-pages": None,  # CF-14
+    "landing-pages": LandingPages,
     "operator-site": "operator_site:OperatorSite",
     "google-places": "google_places:GooglePlaces",
     "file-import": "file_import:FileImport",
