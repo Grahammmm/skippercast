@@ -32,16 +32,13 @@ from urllib.parse import urlsplit
 from .. import validate
 from ..platform.contracts import REPO
 
-__all__ = ["KIND", "MAX_NOTES", "OFF_LIMITS_HOSTS", "WEBMAIL_DOMAINS", "load_off_limits", "policy_errors",
+__all__ = ["KIND", "MAX_NOTES", "OFF_LIMITS_FILE", "WEBMAIL_DOMAINS", "load_off_limits", "policy_errors",
            "provenance", "review_flags", "validate_profile"]
 
 KIND = "fleet-profile"
 MAX_NOTES = 2000
+# D7 and design.md section 6: the single list of off-limits hosts, shared with the region loader.
 OFF_LIMITS_FILE = REPO / "catalog/fleet/off-limits.json"
-# D7 and design.md section 6. catalog/fleet/off-limits.json (CF-04) is the shared list;
-# until it exists this is the same list, so the validator never runs without one.
-OFF_LIMITS_HOSTS = ("fishingbooker.com", "fareharbor.com", "xola.com", "fishdope.com", "fishcity.app",
-                    "instagram.com", "facebook.com", "fb.com", "meta.com", "threads.net")
 # Social accounts whose handle and URL are values on an off-limits host.
 OFF_LIMITS_SOCIAL = ("instagram", "facebook")
 WEBMAIL_DOMAINS = frozenset({"aol.com", "att.net", "comcast.net", "gmail.com", "googlemail.com", "hotmail.com",
@@ -51,20 +48,22 @@ PROVENANCE_KEYS = frozenset({"value", "source_url", "retrieved_at", "method", "c
 MMSI_CONFLICT_FIELDS = frozenset({"mmsi", "boat.mmsi", "ais.mmsi", "boat.ais.mmsi"})
 
 
-def load_off_limits(path=OFF_LIMITS_FILE):
-    """Off-limits hosts (lower case) from the shared catalog, or the D7 list when it is absent.
+def load_off_limits(path=None):
+    """Off-limits hosts (lower case) from catalog/fleet/off-limits.json (`{"hosts": [{"host": ...}]}`).
 
-    The catalog may be a list of hosts or an object with a `hosts` list whose
-    entries are host strings or objects with a `host`.
+    There is no built-in fallback: a missing or malformed catalog raises, so a
+    profile is never validated against a stale or empty list.
     """
+    path = OFF_LIMITS_FILE if path is None else Path(path)
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return OFF_LIMITS_HOSTS
-    entries = data.get("hosts") if isinstance(data, dict) else data
-    hosts = [entry.get("host") if isinstance(entry, dict) else entry for entry in entries or ()]
+        raise FileNotFoundError(f"{path}: the off-limits catalog is missing; profiles cannot be validated "
+                                "without it (catalog/fleet/off-limits.json, design.md section 6)") from None
+    entries = data.get("hosts") if isinstance(data, dict) else None
+    hosts = [entry.get("host") if isinstance(entry, dict) else None for entry in entries or ()]
     if not hosts or not all(isinstance(host, str) and host for host in hosts):
-        raise ValueError(f"{path}: expected a list of off-limits hosts")
+        raise ValueError(f"{path}: expected {{\"hosts\": [{{\"host\": ...}}, ...]}} with at least one host")
     return tuple(host.lower() for host in hosts)
 
 
@@ -161,7 +160,8 @@ def validate_profile(doc, off_limits=None):
     Raises validate.MissingDependency when jsonschema is not installed: a
     profile is never accepted on the policy checks alone.
     """
-    return validate.errors(KIND, doc) + policy_errors(doc, off_limits)
+    policy = policy_errors(doc, off_limits)   # first, so a missing off-limits catalog fails even without jsonschema
+    return validate.errors(KIND, doc) + policy
 
 
 def main(argv=None):

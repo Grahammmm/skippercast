@@ -112,23 +112,41 @@ class PolicyTests(unittest.TestCase):
 
 
 class OffLimitsListTests(unittest.TestCase):
-    def test_the_d7_list(self):
+    def test_the_committed_catalog_is_the_source_of_truth(self):
+        catalog = json.loads((ROOT / 'catalog/fleet/off-limits.json').read_text(encoding='utf-8'))
+        hosts = profile.load_off_limits()
+        self.assertEqual(hosts, tuple(row['host'] for row in catalog['hosts']))
         self.assertTrue({'fishingbooker.com', 'fareharbor.com', 'xola.com', 'fishdope.com', 'fishcity.app',
-                         'instagram.com', 'facebook.com'} <= set(profile.OFF_LIMITS_HOSTS))
+                         'instagram.com', 'facebook.com'} <= set(hosts))
+        self.assertFalse(hasattr(profile, 'OFF_LIMITS_HOSTS'), 'no hard-coded copy of the list')
 
-    def test_the_catalog_list_is_used_when_present(self):
+    def test_a_missing_or_malformed_catalog_is_an_error(self):
         import tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'off-limits.json'
-            self.assertEqual(profile.load_off_limits(path), profile.OFF_LIMITS_HOSTS)
-            path.write_text(json.dumps({'hosts': ['Example-Booking.test', {'host': 'other.test', 'reason': 'terms'}]}))
-            self.assertEqual(profile.load_off_limits(path), ('example-booking.test', 'other.test'))
-            path.write_text(json.dumps(['one.test']))
-            self.assertEqual(profile.load_off_limits(path), ('one.test',))
-            path.write_text(json.dumps({'hosts': []}))
+            with self.assertRaisesRegex(FileNotFoundError, 'off-limits catalog is missing'):
+                profile.load_off_limits(path)
+            with mock.patch.object(profile, 'OFF_LIMITS_FILE', path), self.assertRaises(FileNotFoundError):
+                profile.policy_errors(load('party.json'))
+            path.write_text(json.dumps({'hosts': ['Example-Booking.test', {'host': 'Other.test', 'reason': 'terms'}]}))
             with self.assertRaises(ValueError):
                 profile.load_off_limits(path)
+            path.write_text(json.dumps({'hosts': [{'host': 'Other.test', 'reason': 'terms'}]}))
+            self.assertEqual(profile.load_off_limits(path), ('other.test',))
+            for bad in ({'hosts': []}, ['one.test']):
+                path.write_text(json.dumps(bad))
+                with self.assertRaises(ValueError):
+                    profile.load_off_limits(path)
+
+    def test_the_cli_reports_a_missing_catalog(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(profile, 'OFF_LIMITS_FILE', Path(tmp) / 'none.json'):
+            err = io.StringIO()
+            with redirect_stderr(err), redirect_stdout(io.StringIO()):
+                self.assertEqual(profile.main([str(PROFILES / 'party.json')]), 1)
+        self.assertIn('off-limits catalog is missing', err.getvalue())
 
     def test_a_custom_list_applies(self):
         doc = load('six-pack.json')
@@ -154,6 +172,7 @@ class SchemaTests(unittest.TestCase):
                             (('vessel_id',), 'not-hex'), (('batch_id',), 'b1'), (('run_id',), ''),
                             (('boat', 'waters', 0, 'value'), 'lake'), (('boat', 'vessel_class', 'value'), 'kayak'),
                             (('boat', 'mmsi', 'value'), '12345'), (('boat', 'phone_business', 'value'), '(805) 555-0123'),
+                            (('boat', 'phone_business', 'value'), '+447700900123'), (('boat', 'phone_business', 'value'), '+10055550123'),
                             (('boat', 'name', 'source_url'), 'ftp://x.example/'), (('boat', 'name', 'method'), 'guess'),
                             (('boat', 'name', 'confidence'), 1.5)):
             with self.subTest(path):

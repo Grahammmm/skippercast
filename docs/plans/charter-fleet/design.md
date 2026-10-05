@@ -571,9 +571,9 @@ convention `tests/contract/test_schemas.py` enforces; kind `fleet-profile` in
 `skippercast.validate`) with these changes:
 `schema_version` const `1.0.0`; `region` pattern `^[A-Z]{2}$`; new required
 `vessel_id` (32 hex), `run_id`, `batch_id` (`batch-NNN`); new `boat.waters`
-(provenance objects, enum D1); `boat.phone_business` in E.164 (`+18055550123`),
-so ingest gets one format and the repository phone scan sees every fixture
-number. The provenance object (`value`, `source_url`, `retrieved_at`,
+(provenance objects, enum D1); `boat.phone_business` a NANP number in E.164
+(`^\+1[2-9]\d{9}$`, e.g. `+18055550123`), the same form the repository phone
+scan matches, so ingest gets one format and the scan sees every fixture number. The provenance object (`value`, `source_url`, `retrieved_at`,
 `method`, `confidence`), `conflicts[]` and `notes` are unchanged.
 
 **Validator** (`fleet/profile.py`, CLI `validate-profile`; until CF-10's CLI
@@ -585,7 +585,8 @@ operator's site, a landing page or a report site; `boat.mmsi` and `ais.mmsi`
 agree or a conflict is listed; `reputation.other` numbers only (never review
 text); `notes` and `ais.notes` ≤ 2,000 chars; webmail emails flagged for
 review (`review_flags`, not an error). The validator reads
-`catalog/fleet/off-limits.json` and falls back to the D7 list until CF-04 adds it. Ingest refuses invalid files. Each
+`catalog/fleet/off-limits.json` as the only off-limits list (no copy in code);
+a missing or malformed catalog is an error, never an empty list. Ingest refuses invalid files. Each
 provenance object becomes one fact (`source_id "osint"`, confidence capped at
 0.8 for `search` and `inference`); `trip_types[]` become offerings;
 `conflicts[]` become `fact-conflict` reviews.
