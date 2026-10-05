@@ -47,6 +47,9 @@ tls = ["truststore==0.10.4"]
 # Text Advisor media runner job (scripts/advisor/media_job.py, .github/workflows/advisor-media.yml):
 # image decoding and drawing, HEIC through pillow-heif. No requirements file: the workflow installs the extra.
 advisor = ["Pillow==12.3.0", "pillow-heif==1.8.0"]
+# Charter fleet pipeline (python -m skippercast.fleet): region and profile validation.
+# No requirements file: fleet-registry.yml installs the extra.
+fleet = ["jsonschema==4.26.0"]
 # Everything a contributor needs to run the full suite and every job locally.
 dev = ["skippercast[ocean,survey,publish,test,tls,advisor]", "ruff==0.16.9"]
 
