@@ -16,6 +16,7 @@ import tempfile
 import threading
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 from urllib.parse import parse_qs
 import zipfile
 
@@ -158,20 +159,20 @@ class FccUlsTests(unittest.TestCase):
         same = [c for c in fcc_candidates() if c.name == "SEA EXAMPLE"]
         self.assertEqual(len(same), 2)
         self.assertEqual(sorted(c.port_hint for c in same), ["morro-bay", "san-diego"])
-        self.assertEqual(sorted(c.keys["call_sign"] for c in same), ["WDZ9001", "WDZ9002"])
+        self.assertEqual(sorted(c.keys["call_sign"] for c in same), ["ZZZ9001", "ZZZ9002"])
         self.assertEqual(len({f.source_url for c in same for f in c.facts}), 2)
 
     def test_expired_and_cancelled_licences_included_with_status(self):
         by_call = {c.keys["call_sign"]: facts(c, "fcc_licence")[0] for c in fcc_candidates()}
-        self.assertEqual(by_call["WDZ9001"]["status"], "active")
-        self.assertEqual(by_call["WDZ9002"], {"call_sign": "WDZ9002", "status": "expired", "status_code": "E",
+        self.assertEqual(by_call["ZZZ9001"]["status"], "active")
+        self.assertEqual(by_call["ZZZ9002"], {"call_sign": "ZZZ9002", "status": "expired", "status_code": "E",
                                               "radio_service": "SA", "grant_date": "2010-03-01",
                                               "expired_date": "2020-03-01", "category": "CHR"})
-        self.assertEqual(by_call["WDZ9003"]["status"], "cancelled")
-        self.assertEqual(by_call["WDZ9003"]["cancellation_date"], "2018-06-01")
-        self.assertEqual(by_call["WDZ9005"]["status"], "terminated")
+        self.assertEqual(by_call["ZZZ9003"]["status"], "cancelled")
+        self.assertEqual(by_call["ZZZ9003"]["cancellation_date"], "2018-06-01")
+        self.assertEqual(by_call["ZZZ9005"]["status"], "terminated")
         active = {c.keys["call_sign"] for c in fcc_candidates(all_statuses=False)}
-        self.assertEqual(active, {"WDZ9001", "WDZ9007"})
+        self.assertEqual(active, {"ZZZ9001", "ZZZ9007"})
 
     def test_state_filter_keys_and_categories(self):
         stats = {}
@@ -182,13 +183,13 @@ class FccUlsTests(unittest.TestCase):
         self.assertEqual(stats["unnamed"], 1)
         self.assertEqual(stats["candidates"], 5)
         keys = {c.keys["call_sign"]: c.keys for c in candidates}
-        self.assertEqual(keys["WDZ9001"], {"call_sign": "WDZ9001", "mmsi": "999000001", "uscg_doc": "1234567"})
-        self.assertEqual(keys["WDZ9002"], {"call_sign": "WDZ9002", "mmsi": "999000002", "state_reg": "CF1234ZZ"})
-        self.assertEqual(keys["WDZ9003"], {"call_sign": "WDZ9003"})
+        self.assertEqual(keys["ZZZ9001"], {"call_sign": "ZZZ9001", "mmsi": "999000001", "uscg_doc": "1234567"})
+        self.assertEqual(keys["ZZZ9002"], {"call_sign": "ZZZ9002", "mmsi": "999000002", "state_reg": "CF1234ZZ"})
+        self.assertEqual(keys["ZZZ9003"], {"call_sign": "ZZZ9003"})
         self.assertTrue(all(c.port_hint is None for c in candidates))  # no ports given
         charters = list(parse_ship_zip(ship_zip(), "CA", source_id="fcc-uls", rights="public-domain",
                                        retrieved_at=NOW, categories=["chr"]))
-        self.assertEqual({c.keys["call_sign"] for c in charters}, {"WDZ9001", "WDZ9002"})
+        self.assertEqual({c.keys["call_sign"] for c in charters}, {"ZZZ9001", "ZZZ9002"})
 
     def test_facts_meet_the_operation_contract(self):
         candidates = fcc_candidates()
@@ -201,7 +202,7 @@ class FccUlsTests(unittest.TestCase):
         with self.assertRaises(FccFormatError):
             list(parse_ship_zip(ship_zip(drop="SH.dat"), "CA", source_id="fcc-uls", rights="public-domain",
                                 retrieved_at=NOW))
-        narrow = b"SH|9000001|||WDZ9001|R||PL|CHR|SEA EXAMPLE|1234567\r\n"
+        narrow = b"SH|9000001|||ZZZ9001|R||PL|CHR|SEA EXAMPLE|1234567\r\n"
         with self.assertRaises(FccFormatError):
             list(parse_ship_zip(ship_zip(replace={"SH.dat": narrow}), "CA", source_id="fcc-uls",
                                 rights="public-domain", retrieved_at=NOW))
@@ -213,7 +214,16 @@ class FccUlsTests(unittest.TestCase):
                  ("I", "EXAMPLE CHARTERS LLC", "", "", False),          # an individual type is never kept
                  ("C", "PERSONA FICTA INC", "PERSONA", "FICTA", False),  # personal name fields filled
                  ("T", "SAMPLE FAMILY TRUST", "", "", False),          # no entity suffix
-                 ("P", "SMITH AND JONES", "", "", False), ("L", "", "", "", False)]
+                 ("P", "SMITH AND JONES", "", "", False), ("L", "", "", "", False),
+                 ("L", "TESTPERSON, JANE LLC", "", "", False),             # SURNAME, GIVEN before the suffix
+                 ("C", "JANE TESTPERSON DBA SEA EXAMPLE INC", "", "", False),
+                 ("C", "SEA EXAMPLE D/B/A EXAMPLE TOURS CORP", "", "", False),
+                 ("C", "SEA EXAMPLE INC C/O JANE TESTPERSON", "", "", False),
+                 ("C", "ATTN: JANE TESTPERSON, EXAMPLE CO", "", "", False),
+                 ("L", "JANE TESTPERSON TRUSTEE LLC", "", "", False),
+                 ("C", "ESTATE OF JANE TESTPERSON INC", "", "", False),
+                 ("L", "TESTPERSON ET AL LLC", "", "", False),
+                 ("L", "ACME EXAMPLE L.L.C.", "", "", True)]
         for ptype, name, first, last, expected in cases:
             self.assertEqual(is_entity(ptype, name, first, last), expected, name)
 
@@ -231,7 +241,7 @@ class PsixParseTests(unittest.TestCase):
                               fallback_url=PSIX_URL))
         first = out[0]
         self.assertEqual(first.name, "SEA EXAMPLE II")  # the name at the latest inspection
-        self.assertEqual(first.keys, {"uscg_doc": "1234567", "call_sign": "WDZ9001"})
+        self.assertEqual(first.keys, {"uscg_doc": "1234567", "call_sign": "ZZZ9001"})
         self.assertEqual(facts(first, "year_built"), [1999])
         self.assertEqual(facts(first, "gross_tons"), [45])
         self.assertEqual(facts(first, "uscg_sectors"), [["Sector Los Angeles/Long Beach", "Sector San Diego"]])
@@ -247,6 +257,9 @@ class PsixParseTests(unittest.TestCase):
             parse_inspections(psix_xlsx(drop_column="Vessel Type"))
         with self.assertRaises(PsixFormatError):
             parse_inspections(b"<html>not a workbook</html>")
+        with patch("skippercast.fleet.adapters.uscg_psix.MAX_MEMBER", 1000):  # declared size checked before reading
+            with self.assertRaisesRegex(PsixFormatError, "larger than"):
+                parse_inspections(psix_xlsx())
         form = parse_form((PSIX / "form.html").read_text())
         with self.assertRaises(PsixFormatError):
             search_fields(form, "Humboldt Bay", "Passenger (Inspected)", *_dates())

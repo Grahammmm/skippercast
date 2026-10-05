@@ -147,5 +147,97 @@ class FleetSessionTests(unittest.TestCase):
         self.assertFalse([h for h in hosts if any(h == b or h.endswith("." + b) for b in region.off_limits)])
 
 
+class _RobotsHandler(BaseHTTPRequestHandler):
+    """robots.txt behaviour per Host header."""
+
+    def do_GET(self):
+        host = (self.headers.get("Host") or "").split(":")[0]
+        self.server.paths.append((host, self.path))
+        hits = sum(1 for h, p in self.server.paths if (h, p) == (host, self.path))
+        status, body, headers = 200, b"page " + self.path.encode(), {}
+        if self.path == "/robots.txt":
+            if host == "error-page.example.gov":  # the cgmix.uscg.mil pattern
+                status, headers = 302, {"Location": "http://error-page.example.gov/ValidationError.aspx"}
+            elif host == "moved.example.gov" and hits == 1:
+                status, headers = 301, {"Location": "https://moved.example.gov/robots.txt"}
+            elif host == "moved.example.gov":
+                body = b"User-agent: *\nDisallow: /private\n"
+            elif host == "loop.example.gov":
+                status, headers = 302, {"Location": "https://loop.example.gov/robots.txt"}
+            elif host == "other-path.example.gov":
+                status, headers = 302, {"Location": "https://other-path.example.gov/robots-old.txt"}
+        self.send_response(status)
+        for name, value in headers.items():
+            self.send_header(name, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+
+class _NamedConnection(HTTPConnection):
+    """Sends the requested host name in the Host header but connects to the local server."""
+
+    def connect(self):
+        self.sock = socket.create_connection(("127.0.0.1", self.port), self.timeout)
+
+
+class RobotsRedirectTests(unittest.TestCase):
+    HOSTS = {"error-page.example.gov", "moved.example.gov", "loop.example.gov", "other-path.example.gov",
+             "down.example.gov"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _RobotsHandler)
+        cls.server.paths = []
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def setUp(self):
+        self.server.paths.clear()
+
+        def factory(host, port, addresses, context=None, timeout=None):
+            if host == "down.example.gov":
+                raise ConnectionRefusedError("down")
+            return _NamedConnection(host, self.server.server_address[1], timeout=timeout)
+
+        def resolver(host, port, type=None):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
+        self.net = FleetSession(self.HOSTS, OFF_LIMITS, sleep=lambda s: None, clock=lambda: 0.0,
+                                connection_factory=factory, resolver=resolver, attempts=1)
+
+    def test_redirect_to_an_http_error_page_means_no_robots_txt(self):
+        self.assertEqual(self.net.get("https://error-page.example.gov/XML/x.aspx").body, b"page /XML/x.aspx")
+        # the http:// target is never requested
+        self.assertEqual(self.server.paths, [("error-page.example.gov", "/robots.txt"),
+                                             ("error-page.example.gov", "/XML/x.aspx")])
+
+    def test_redirect_to_https_robots_txt_is_followed_and_parsed(self):
+        with self.assertRaises(Skipped) as caught:
+            self.net.get("https://moved.example.gov/private/a")
+        self.assertEqual(caught.exception.reason, "robots")
+        self.assertEqual(self.net.get("https://moved.example.gov/open").body, b"page /open")
+        self.assertEqual(self.server.paths.count(("moved.example.gov", "/robots.txt")), 2)
+
+    def test_redirect_to_another_path_means_no_robots_txt(self):
+        self.assertEqual(self.net.get("https://other-path.example.gov/a").body, b"page /a")
+        self.assertNotIn(("other-path.example.gov", "/robots-old.txt"), self.server.paths)
+
+    def test_transport_error_and_redirect_loop_fail_closed(self):
+        for url in ("https://down.example.gov/a", "https://loop.example.gov/a"):
+            with self.subTest(url=url):
+                with self.assertRaises(Skipped) as caught:
+                    self.net.get(url)
+                self.assertEqual(caught.exception.reason, "robots")
+        self.assertEqual(self.server.paths.count(("loop.example.gov", "/robots.txt")), 6)  # 1 + 5 hops
+
+
 if __name__ == "__main__":
     unittest.main()

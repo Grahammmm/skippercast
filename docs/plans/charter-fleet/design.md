@@ -473,7 +473,11 @@ addresses, size caps, backoff, conditional-GET cache) and adds: an allowlist of
 hosts in `fleet.json` bindings plus operator websites already stored as facts;
 a hard deny of `catalog/fleet/off-limits.json` before every request and
 redirect; robots.txt per host for the `SkipperCast` user agent
-(`urllib.robotparser`, cached 24 h); ≥ 1.0 s between requests per host; a
+(`urllib.robotparser`, cached 24 h; a transport error, timeout, 401/403 or 5xx
+fails closed, a 404 or other 4xx means no robots.txt; redirects are followed by
+hand, at most 5 hops, only to `https` `/robots.txt` on an allowlisted host, and a
+redirect anywhere else, such as PSIX's 302 to an `http://` error page, counts as
+no robots.txt); ≥ 1.0 s between requests per host; a
 per-run budget per host (default 600). A denied or robots-blocked URL is a
 recorded skip.
 
@@ -1135,7 +1139,11 @@ install → `FLEET_MAP_ENABLED`.
   registry data, OSINT output, positions and outreach as private records.
 - **People.** The boat and business only: no home addresses, personal phones,
   family details or personal accounts; no individual FCC licensee names;
-  captains only as the operator publishes them.
+  captains only as the operator publishes them. `fcc-uls` facts carry the
+  ULS licence page as `source_url`, and that page shows the licensee's name and
+  address, so those `source_url`s are never rendered on a public surface: the public
+  profile's dated sources list shows only the host (`server/advisor/pages/data.ts`),
+  never the licence link.
 - **NOAA MarineCadastre**: `noaa-planning-only`, off paid surfaces, cited. The
   repo currently labels it CC0; CF-06 records the FAQ conditions in
   `docs/legal/data-rights-register.md` and corrects the label in

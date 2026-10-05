@@ -49,6 +49,9 @@ ENTITY_SUFFIX = re.compile(
     r"(?:^|[\s,])(?:L\.?\s?L\.?\s?C|INC|INCORPORATED|CORP|CORPORATION|CO|COMPANY|LTD|LIMITED|L\.?\s?P|"
     r"L\.?\s?L\.?\s?P|P\.?\s?L\.?\s?L\.?\s?C)\.?$")
 
+# Words that put a person in an otherwise entity-looking name.
+PERSON_MARKERS = re.compile(r"(?:^|[\s,(])(?:D\s?/\s?B\s?/\s?A|DBA|C\s?/\s?O|ATTN|TRUSTEES?|ESTATE OF|ET\.? AL)(?:$|[\s.,:)])")
+
 # Minimum field counts each record type must have; a file with lines shorter than this changed layout.
 WIDTH = {"HD": 10, "EN": 24, "SH": 22}
 DOC = re.compile(r"^(?:D|ON)?\s*(\d{5,8})$")
@@ -66,10 +69,19 @@ def licence_url(usi: str) -> str:
 
 
 def is_entity(applicant_type: str, entity_name: str, first: str, last: str) -> bool:
-    """True only for an organisation licensee: not an individual type, no personal name, an entity suffix."""
-    name = entity_name.strip().upper()
-    return (applicant_type.strip().upper() not in PERSON_TYPES and not first.strip() and not last.strip()
-            and bool(name) and bool(ENTITY_SUFFIX.search(name)))
+    """True only for an organisation licensee.
+
+    All must hold: the applicant type is not an individual's, the personal-name
+    fields are empty, the name ends in an entity suffix, it carries no marker of
+    a person (DBA, D/B/A, C/O, ATTN, TRUSTEE, ESTATE OF, ET AL), and what comes
+    before the suffix has no comma (``SURNAME, GIVEN LLC``).
+    """
+    name = re.sub(r"\s+", " ", entity_name.strip().upper())
+    suffix = ENTITY_SUFFIX.search(name)
+    if (applicant_type.strip().upper() in PERSON_TYPES or first.strip() or last.strip() or not suffix
+            or PERSON_MARKERS.search(name)):
+        return False
+    return "," not in name[:suffix.start()].rstrip(", ")
 
 
 def _norm(text: str) -> str:

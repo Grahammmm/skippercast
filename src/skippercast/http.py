@@ -661,7 +661,7 @@ class Session:
                     digest.hexdigest() if digest else None, getattr(connection, "connected_address", None))
 
     def _fetch(self, method: str, url: str, headers: dict, timeout: float, limit: int | None,
-               sink: BinaryIO | None, follow: bool, allowlist: Allowlist | None,
+               sink: BinaryIO | None, follow: bool | str, allowlist: Allowlist | None,
                prefixes: tuple[str, ...] | None, truncate: bool = False, data: bytes | None = None) -> _Hop:
         current = url
         for _ in range(self.max_redirects + 1):
@@ -669,6 +669,8 @@ class Session:
             hop = self._hop(method, current, headers, timeout, limit, sink, truncate, data)
             location = hop.headers.get("Location")
             if hop.status not in REDIRECT_STATUSES or not location:
+                return hop
+            if follow == "return":  # the caller handles redirects itself
                 return hop
             if not follow:
                 raise ContractError(f"Redirect refused: {current} -> {location}")
@@ -684,7 +686,7 @@ class Session:
                 timeout: float | None = None, max_bytes: int | None | object = ...,
                 attempts: int | None = None, retry_statuses: Iterable[int] | None = None,
                 ok_statuses: Iterable[int] | None = None, raise_for_status: bool = True,
-                follow_redirects: bool = True, allowed_hosts: Iterable[str] | None = None,
+                follow_redirects: bool | str = True, allowed_hosts: Iterable[str] | None = None,
                 allowed_prefixes: Iterable[str] | None = None, use_cache: bool = True,
                 backoff: Callable[[int], float] | None = None, sink: BinaryIO | None = None,
                 truncate: bool = False, cache: HTTPCache | None | object = ...,
@@ -700,6 +702,8 @@ class Session:
         memory (no decoding, no cache; the file is rewound before each attempt).
         `truncate=True` samples: the body is cut at `max_bytes + 1` bytes instead of
         failing, is not decoded, and the receipt's `truncated` says whether it was cut.
+        `follow_redirects="return"` returns a redirect response unfollowed (with
+        `raise_for_status=False`), for a caller that checks each hop itself.
         `cache` replaces the session's conditional-GET cache for this request (None: no cache),
         so one session can serve callers that keep their own cache directory.
         """

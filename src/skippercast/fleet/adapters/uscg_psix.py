@@ -46,6 +46,7 @@ SERVICES = {"passenger": "Passenger (Inspected)"}
 SHEET = "PSIXInspections"
 US_FLAG = "UNITED STATES"
 MAX_BYTES = 50_000_000
+MAX_MEMBER = 100_000_000  # largest uncompressed workbook part read (zip bomb guard)
 FORM_TYPE = "application/x-www-form-urlencoded"
 # Columns the inspections sheet must have (the export's header names).
 COLUMNS = {"vessel_id": "MISLE Vessel Id", "name": "Vessel Name", "official": "U.S. Official Number",
@@ -166,11 +167,18 @@ def _column(ref: str) -> int:
     return number - 1
 
 
+def _read(book: zipfile.ZipFile, name: str) -> bytes:
+    """One workbook part, refused before reading when its declared size is over MAX_MEMBER."""
+    if book.getinfo(name).file_size > MAX_MEMBER:
+        raise PsixFormatError(f"PSIX workbook part {name} is larger than {MAX_MEMBER} bytes")
+    return book.read(name)
+
+
 def _sheet_rows(data: bytes, sheet: str) -> list[list[str]]:
     try:
         book = zipfile.ZipFile(io.BytesIO(data))
-        workbook = ET.fromstring(book.read("xl/workbook.xml"))
-        rels = ET.fromstring(book.read("xl/_rels/workbook.xml.rels"))
+        workbook = ET.fromstring(_read(book, "xl/workbook.xml"))
+        rels = ET.fromstring(_read(book, "xl/_rels/workbook.xml.rels"))
     except (zipfile.BadZipFile, KeyError, ET.ParseError) as error:
         raise PsixFormatError(f"PSIX export is not an XLSX workbook: {error}") from None
     rel = next((s.get(REL) for s in workbook.iter(NS + "sheet") if s.get("name") == sheet), None)
@@ -180,10 +188,14 @@ def _sheet_rows(data: bytes, sheet: str) -> list[list[str]]:
     path = target.lstrip("/") if target.startswith("/") else "xl/" + target
     shared: list[str] = []
     if "xl/sharedStrings.xml" in book.namelist():
-        root = ET.fromstring(book.read("xl/sharedStrings.xml"))
+        root = ET.fromstring(_read(book, "xl/sharedStrings.xml"))
         shared = ["".join(t.text or "" for t in si.iter(NS + "t")) for si in root.iter(NS + "si")]
     rows = []
-    for row in ET.fromstring(book.read(path)).iter(NS + "row"):
+    try:
+        sheet_xml = _read(book, path)
+    except KeyError:
+        raise PsixFormatError(f"PSIX workbook lacks {path}") from None
+    for row in ET.fromstring(sheet_xml).iter(NS + "row"):
         cells: dict[int, str] = {}
         for cell in row.iter(NS + "c"):
             cells[_column(cell.get("r", ""))] = _cell_text(cell, shared)
