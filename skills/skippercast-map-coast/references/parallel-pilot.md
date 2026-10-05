@@ -13,6 +13,10 @@ is a new, correctly labelled visitor-visible habitat outline verified in the
 published regional archive and map. A probe, merged feature or green refresh
 does not meet that acceptance on its own.
 
+Keep a ready positive release ahead of unrelated maintenance or code-only
+refreshes. Maintenance may precede it when required to pass its release gates
+or restore necessary state; record that work separately from expansion.
+
 If the publication contract is missing, assign one implementation worker to
 that specific positive batch and retain an independent reviewer. Pause discovery
 once two useful qualified handoffs are waiting. Do not employ more discovery
@@ -42,6 +46,11 @@ Reassign an idle source slot to implementation when that is the bottleneck.
 - The reviewer independently checks original evidence and the exact code head;
   it does not implement the change that it reviews.
 
+Before a resumed or reassigned worker writes, require acknowledgment of the
+latest task and exact exclusive output path. Prior task instructions do not
+authorize writing into the coordinator's or another worker's proof directory.
+If ownership is unclear, reconcile it before writing.
+
 Before a blocking browser or other external call, checkpoint the stage, call
 intent and dispatch state. If its outcome is ambiguous, interrupt and reconcile
 whether work was submitted before retrying. A completed or idle worker may need
@@ -64,6 +73,12 @@ or escalate to Astra. Give fresh workers a bounded brief and relevant paths,
 not the full conversation. Model names are choices, not measured cost savings.
 
 ## Require a handoff that can be executed
+
+Before building a normal baseline or reading depth pixels, compare the planned
+reach with authenticated original/normalized raster headers or a verified
+native footprint. A disjoint header envelope is a cheap negative; an overlapping
+envelope only schedules the bounded valid-pixel test. Record the source and
+reach identities. Do not rebuild a baseline for a source known to be disjoint.
 
 Each worker saves, in the established private progress location:
 
@@ -93,6 +108,12 @@ alone does not extend that window; checkpoint and switch to an independent task.
 If none exists, record the exact external dependency rather than run maintenance
 as expansion. Deterministic jobs run without model activity; use completion
 events or bounded checks, not repeated polling of unchanged jobs.
+
+Observe the named regional publisher's completion, then capture its live
+alias/archive readback before starting another updaterun. Waiting for the entire
+workflow or a long periodic interval can miss a short `ready` interval. If no
+completion event is available, use a bounded observer of the relevant regional
+job and save changed states only; this does not require a new service.
 
 Preserve failures as well as successes. A code fix counts as pipeline progress
 when a test or real receipt reproduces the old blocker and demonstrates its
