@@ -1,6 +1,7 @@
 // The admin app's API client and shared shapes (server/routes/admin.ts; TA-W2).
 // Same-origin fetches with the session cookie; the browser sends Origin on
 // every POST, which requireUser checks.
+import {ADMIN_COPY} from '../advisor/copy.ts';
 
 export type ReviewKind = 'media' | 'report' | 'post' | 'skipper' | 'conversation' | 'rule';
 export type ReviewStatus = 'open' | 'approved' | 'edited' | 'rejected';
@@ -20,7 +21,7 @@ export interface Health {
   checked_at: string; enabled: boolean; replies_enabled: boolean; channel: string;
   relay: {state: 'up' | 'down'; failures: number; checked_at: string; last_ok_at: string | null} | null;
   queue: {stale_queued: number; oldest_queued_at: string | null; held_outbound: number; failed_today: number};
-  vision: {name: string; down_until: string | null}[];
+  vision: {name: string; configured: boolean; down_until: string | null; last_ok_at: string | null}[];   // TA-V2: configured and last_ok_at
   caps: {day: string; llm: {used: number; limit: number}; vision: {used: number; limit: number}};
   media_jobs: {pending: number};
   reviews: {open: number};
@@ -179,3 +180,10 @@ export const when = (iso: string | null | undefined): string => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
 };
+
+/** TA-V2: a vision provider's Health line: not configured, or skipped until / available, with its last answer. */
+export function visionLine(v: Health['vision'][number]): string {
+  if (!v.configured) return ADMIN_COPY.providerNotConfigured;
+  const state = v.down_until ? ADMIN_COPY.providerDown(when(v.down_until)) : ADMIN_COPY.providerUp;
+  return `${state} · ${ADMIN_COPY.providerLastOk(when(v.last_ok_at) || ADMIN_COPY.providerNever)}`;
+}

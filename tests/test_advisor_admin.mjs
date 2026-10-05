@@ -30,7 +30,8 @@ const {reviewId} = await import('../server/advisor/contacts.ts');
 const {outboundId} = await import('../server/advisor/ids.ts');
 const {derivedKey} = await import('../server/advisor/media.ts');
 const {RELAY_KEY} = await import('../server/advisor/relay.ts');
-const {downKey} = await import('../server/advisor/vision/index.ts');
+const {downKey, lastOkKey} = await import('../server/advisor/vision/index.ts');
+const {visionLine, when} = await import('../web/admin/api.ts');
 const {PAGES_VERSION_KEY} = await import('../server/advisor/intake/reports.ts');
 const {shortcutFor, decisionsFor, typingIn} = await import('../web/admin/keys.ts');
 const {ADMIN_COPY} = await import('../web/advisor/copy.ts');
@@ -420,7 +421,7 @@ dbTest('the media route serves admins only: thumb.jpg, then public.jpg, then a v
   assert.equal((await body('/api/admin/media/p1', OTHER))[0], 404);
 });
 
-dbTest('health: relay state, queued messages older than 2 minutes, held outbound, vision skips, today\'s caps, open reviews; Meta not configured (TA-S0)', async () => {
+dbTest('health: relay state, queued messages older than 2 minutes, held outbound, vision providers (configured, skip, last answer), today\'s caps, open reviews; Meta not configured (TA-S0)', async () => {
   const {sql, env, real} = setup();
   const now = Date.now(), day = Math.floor(now / 86400000);
   addContact(sql, {id: 'c1'});
@@ -429,6 +430,7 @@ dbTest('health: relay state, queued messages older than 2 minutes, held outbound
   addMessage(sql, 'c1', 'out', 'held', now - 60000, {status: 'held'});
   sql.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?)').run(RELAY_KEY, JSON.stringify({state: 'down', failures: 4, checked_at: iso(now - 60000), last_ok_at: iso(now - 3600000)}), iso(now));
   sql.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?)').run(downKey('hermes'), iso(now + 300000), iso(now));
+  sql.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?)').run(lastOkKey('claude'), iso(now - 120000), iso(now - 120000));
   sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,?,?)').run(`global:advisor-llm:${day}`, 17, (day + 2) * 86400);
   sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,?,?)').run(`global:vision:${day}`, 3, (day + 2) * 86400);
   await addReview(sql, 'rule', 'x', 'rule_source_changed');
@@ -440,12 +442,20 @@ dbTest('health: relay state, queued messages older than 2 minutes, held outbound
   sql.prepare("UPDATE advisor_media SET derived_at=? WHERE id='d1'").run(iso(now));
   addMedia(sql, {id: 'e1', state: 'private'});
   sql.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?)').run('advisor.graphic.g1', JSON.stringify({kind: 'daily', data: {}, out_key: 'advisor/posts/p1/daily.jpg', status: 'pending', requested_at: iso(now)}), iso(now));
-  const h = await (await get(real, {...env, ADVISOR_GLOBAL_DAILY_LLM: '100'}, '/api/admin/health', ADMIN)).json();
+  const hermesSecrets = {HERMES_VISION_URL: 'https://hermes.example', HERMES_VISION_TOKEN: 'hv-PLACEHOLDER', ANTHROPIC_API_KEY: 'k'};
+  const h = await (await get(real, {...env, ...hermesSecrets, ADVISOR_GLOBAL_DAILY_LLM: '100'}, '/api/admin/health', ADMIN)).json();
   assert.deepEqual(h.relay, {state: 'down', failures: 4, checked_at: iso(now - 60000), last_ok_at: iso(now - 3600000)});
   assert.equal(h.queue.stale_queued, 1, 'only the one queued over 2 minutes');
   assert.equal(h.queue.oldest_queued_at, iso(now - 5 * 60000));
   assert.equal(h.queue.held_outbound, 1);
-  assert.deepEqual(h.vision, [{name: 'hermes', down_until: iso(now + 300000)}, {name: 'claude', down_until: null}]);
+  // TA-V2: configured (secrets set), the skip, and the last answer per provider; never a secret.
+  assert.deepEqual(h.vision, [{name: 'hermes', configured: true, down_until: iso(now + 300000), last_ok_at: null}, {name: 'claude', configured: true, down_until: null, last_ok_at: iso(now - 120000)}]);
+  assert.ok(!JSON.stringify(h).includes('hermes.example') && !JSON.stringify(h).includes('hv-PLACEHOLDER'), 'no Hermes URL or token in the answer');
+  const bare = await (await get(real, env, '/api/admin/health', ADMIN)).json();
+  assert.deepEqual(bare.vision.map(v => [v.name, v.configured]), [['hermes', false], ['claude', false]], 'no secrets: neither is configured');
+  assert.equal(visionLine(h.vision[0]), `Skipped until ${when(iso(now + 300000))} · last answer none yet`);
+  assert.equal(visionLine(h.vision[1]), `Available · last answer ${when(iso(now - 120000))}`);
+  assert.equal(visionLine(bare.vision[0]), 'Not configured');
   assert.deepEqual(h.caps.llm, {used: 17, limit: 100});
   assert.deepEqual(h.caps.vision, {used: 3, limit: 400});
   assert.equal(h.reviews.open, 1);

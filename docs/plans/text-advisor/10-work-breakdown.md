@@ -136,6 +136,7 @@ TA-P1, and `TEXT_ADVISOR_ENABLED` in production only then.
 - Files: `vision/hermes.ts`, `scripts/advisor/vision-conformance.mjs`, `docs/plans/text-advisor/07-vision.md` (status line: contract handed to Hermes on <date>), deploy secret lines (`HERMES_VISION_URL`, `HERMES_VISION_TOKEN`).
 - Tests: client maps responses and errors; chain prefers hermes then claude; conformance script passes against a local mock server in the test.
 - Owner step inside: hand the contract to the Hermes side; the chain runs Claude-only until Hermes passes conformance.
+- As built (2026-10-04): the client in `vision/hermes.ts` (multipart `image` + JSON `meta` text field, bearer token, 20 s, `X-Vision-Model`, any non-2xx, timeout or invalid body marks it down) with the Claude provider's validators moved to `vision/validate.ts` and shared; the chain records `advisor.vision.<name>.last_ok` and admin Health shows each provider's configured, skipped-until and last answer; the deploy secrets; `scripts/advisor/vision-conformance.mjs` with `--mock`, tested against the mock and a broken mock (`tests/test_advisor_vision_conformance.mjs`). Deviations: the client also accepts GIF and WebP (an input error would stop the chain before Claude), `region` is null outside fish ID. 07 § As built (TA-V2) and § Hand-off to Hermes. The owner step (handing the contract over, the secrets) is open.
 
 ### TA-I1 · Skipper registration, consent, crew, verification state, boat slug · M
 - Stories: SK-1, SK-2, SK-3, SK-4 (state), FC-2 for skippers.

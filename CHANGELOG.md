@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Let the Text Advisor read photos with the owner's own Hermes vision service when it is set up, falling back to Claude whenever Hermes is slow or down, with a conformance script the Hermes side runs first; admin Health shows each vision provider's setup, skips and last answer.
+
 - Get the Text Advisor ready to launch: a preflight script that checks a deployment against the launch checklist, a live prompt eval that also covers the daily answers and post captions, a runbook for unanswered messages, and the owner's launch to-do with the exact switch-on order.
 
 - Delete Text Advisor data on schedule, every Sunday: message text after 180 days, photos nobody approved or posted after 90 days, team review notes 90 days after the decision, unlinked web chats 90 days after their last message, and data copies after 7 days; the privacy notice now says so.

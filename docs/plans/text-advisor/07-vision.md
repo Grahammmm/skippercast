@@ -85,6 +85,13 @@ A conformance script `scripts/advisor/vision-conformance.mjs` posts the
 fixture images under `tests/fixtures/advisor/vision/` to a URL and checks
 the response shapes and thresholds, so the Hermes side can test itself.
 
+Status: built (TA-V2, 2026-10-04); the contract is ready to hand to Hermes
+(§ Hand-off to Hermes below) and has not been handed over yet (owner step).
+Until Hermes passes conformance and the two secrets are set, the chain runs
+Claude-only. As built, the `meta` field is a JSON text field, `region` is null
+for classify and count-board, `orientation` is added for a sideways JPEG, and
+the image may be JPEG, PNG, GIF or WebP (§ As built (TA-V2)).
+
 ## Claude provider (`vision/claude.ts`)
 
 Raw `fetch` to the Messages API, model `ADVISOR_VISION_MODEL`, one request
@@ -186,7 +193,7 @@ keys or `catalog/advisor/species-extra.json` keys (02).
   `MediaTooLarge`) are thrown at once and never mark a provider down; so are
   `ProviderNotConfigured` (no `ANTHROPIC_API_KEY`; Hermes without
   `HERMES_VISION_URL` is skipped before it is called, and the TA-V1 Hermes
-  entry is a stub that always reports `not-configured`) and
+  entry was a stub that always reported `not-configured`, replaced by the TA-V2 client) and
   `VisionCapReached`, which the chain rethrows when no provider answered.
   Otherwise the chain throws `VisionUnavailable`. The image bytes are read
   once per chain call, whatever the number of providers.
@@ -281,3 +288,121 @@ keys or `catalog/advisor/species-extra.json` keys (02).
 - **Derived files.** A JPEG with orientation 2-8 is pending for the media job
   even when private (09 § Derived images "As built (orientation)"), so it
   always gets an upright `public.jpg`; the consumer does not wait for it.
+
+## As built (TA-V2)
+
+- **Client.** `vision/hermes.ts` `createHermesVision(deps)` replaces the
+  TA-V1 stub in `visionChain` (same injectable `fetcher` and `now`). Each method
+  is one `POST {HERMES_VISION_URL}/v1/vision/classify|count-board|fish-id` with
+  a `multipart/form-data` body: `image` (the file, `image.<ext>`, with its
+  content type) and `meta`, a text field holding JSON
+  `{media_id, region, species_keys?, orientation?}`. `region` is null for
+  classify and count-board (the chain's interface has no region there) and the
+  region id for fish ID, which also sends `species_keys`: the region's keys
+  exactly as the Claude provider's tool enum lists them (`speciesForTargets`).
+  `orientation` (2-8) is sent when the stored JPEG is sideways, the same hint the
+  Claude prompt gets (§ As built (orientation)). Headers:
+  `Authorization: Bearer <HERMES_VISION_TOKEN>`, `Accept: application/json`;
+  `AbortSignal.timeout(20 s)`.
+- **Configuration.** `HERMES_VISION_URL` must be an https URL without
+  credentials, query or fragment (a path prefix is kept, trailing slashes
+  dropped). Unset: the chain skips Hermes silently, as before. Set but not https,
+  or without `HERMES_VISION_TOKEN`: `ProviderNotConfigured`, logged as
+  `advisor_vision_not_configured` (the chain now logs it for Hermes too), never a
+  request and never a down mark.
+- **Answers.** The response body goes through `vision/validate.ts`, the Claude
+  provider's validators moved into their own module and shared (`claude.ts`
+  re-exports them): confidences clamped, a `species_key` outside the keys sent
+  becomes null with its `label` kept, at most three candidates sorted by
+  confidence. `provider` is `'hermes'`; `model` is the `X-Vision-Model` response
+  header (a plain id up to 100 characters, else `unknown`); `ms` is measured by
+  the client.
+- **Failures.** Any non-2xx status (503 included, and 401 for a wrong token), a
+  timeout, a body that is not JSON, or a JSON body without the method's required
+  field (`kind`, `lines`, `candidates`) throws; the chain marks Hermes down for 10
+  minutes and asks Claude. A `{}` is a fault, not an "unknown" photo. Each call
+  logs `advisor_vision_call` with `provider: 'hermes'`, the method, outcome
+  (`ok`, `error`, `timeout`, `invalid`), HTTP status and milliseconds only. Hermes
+  calls are not LLM spend: no `llm` analytics point and no global vision cap.
+- **Images.** The client refuses HEIC/HEIF (`UnsupportedImage`) and anything over
+  4.5 MiB (`MediaTooLarge`) before any request, so only what the chain read
+  through `intake/reports.ts` `imageOf` (the stripped original, or the media job's
+  `public.jpg` for an oversized or HEIC original) ever reaches it. It accepts JPEG,
+  PNG, GIF and WebP, the formats the intake keeps besides HEIC, rather than the
+  JPEG and PNG this section first named: rejecting GIF or WebP as an input error
+  would stop the chain before Claude, which reads them.
+- **Health.** `health()` is `GET {url}/v1/health` with the token (10 s timeout):
+  `{ok: true, detail: 'name=model, ...'}` for `{ok: true, models: {...}}`, else
+  `{ok: false, detail}` (`HTTP <status>`, `health did not report ok`, `timeout`,
+  `unreachable`, `not-configured`).
+- **Admin Health.** Each provider in `ADVISOR_VISION_PROVIDERS` order shows
+  `configured` (Hermes: both secrets set and the URL usable; Claude:
+  `ANTHROPIC_API_KEY`), `down_until`, and `last_ok_at`, which the chain now
+  records on every answer (`job_state` `advisor.vision.<name>.last_ok`). The view
+  stays read-only: it never pings Hermes; the conformance script does.
+- **Deploy.** `HERMES_VISION_URL` and `HERMES_VISION_TOKEN` are GitHub secrets
+  passed by `deploy-cloudflare.yml` and uploaded by `scripts/cloudflare_deploy.sh`
+  only when set; `server/env.ts` and `scripts/wrangler_config.mjs` (which refuses
+  them as plain vars) already declared them (TA-F1).
+- **Conformance script.** `scripts/advisor/vision-conformance.mjs --url <base>`
+  (token from `HERMES_VISION_TOKEN` in the environment, never argv) or `--mock`
+  (a built-in mock on 127.0.0.1 that answers the recorded fixture responses by
+  image hash and requires its own token). It checks `GET /v1/health`, that a
+  request without the token gets 401 or 403, every fixture image against every
+  endpoint (HTTP 200, under 20 s, JSON, every field of the result type with the
+  right type, confidences within 0..1 without clamping, at most three candidates,
+  each `species_key` null or one of the keys sent; a missing `X-Vision-Model`,
+  more than three cues or unsorted candidates are warnings), and loose sense
+  checks as warnings (count-board.png classifies as `count_board` or
+  `text_present` and reads a line; fish.png classifies as `fish` or `has_fish`;
+  blank.png names no fish at 0.6 or above). Exit 1 on any failure, 2 on bad
+  arguments. `tests/test_advisor_vision_conformance.mjs` runs it against the mock
+  (pass) and a deliberately broken mock (fail).
+
+## Hand-off to Hermes
+
+What the Hermes side builds: a small HTTP service on the Hermes machine. It is
+not in this repository; this section and § Hermes provider are its spec.
+
+1. **Endpoints.** `POST /v1/vision/classify`, `POST /v1/vision/count-board`,
+   `POST /v1/vision/fish-id`, `GET /v1/health`, under one base URL (a path
+   prefix is fine).
+2. **Requests.** `multipart/form-data` with `image` (a file part: JPEG, PNG, GIF
+   or WebP, at most 4.5 MiB, metadata already stripped) and `meta` (a text part
+   holding JSON `{media_id, region, species_keys?, orientation?}`). `region` is
+   null except for fish ID. `orientation` (EXIF 2-8) means the pixels are stored
+   sideways: rotate before reading. Fish ID must answer each `species_key` from
+   `meta.species_keys`, or null with a free-text `label`.
+3. **Responses.** `200` with the JSON result for the method: the
+   `Classification`, `CountBoardReading` or `FishId` fields of § Interface
+   without `provider`, `model` and `ms`; plus the header `X-Vision-Model: <model
+   id>`. Confidences are honest 0..1 (the thresholds assume it); at most three
+   fish candidates, highest first. `GET /v1/health` answers
+   `{"ok": true, "models": {"classify": "<id>", ...}}`.
+4. **Auth.** Every request carries `Authorization: Bearer <token>`; refuse
+   anything else with 401. The token is a long random string the owner
+   generates and stores as the GitHub secret `HERMES_VISION_TOKEN`.
+5. **Time.** Answer within 20 s or return 503. The Worker gives up at 20 s,
+   skips Hermes for 10 minutes after any failure and asks Claude instead.
+6. **Privacy.** Never store the image, the meta or the result beyond the
+   request: no disk cache, no logs of the image, `media_id` or labels. These are
+   customer photos.
+7. **Exposure.** Put the service behind HTTPS on a public hostname without
+   opening a port: a named Cloudflare Tunnel (`cloudflared`, as the relay uses,
+   for example `hermes-vision.skippercast.com`) or a Tailscale Funnel
+   (`tailscale funnel <port>`, the `https://<machine>.<tailnet>.ts.net` name).
+   The Worker reaches only https URLs; the bearer token is the access control.
+8. **Conformance.** From a checkout of this repository on any machine with
+   Node 22.18 or later (`pnpm install` not needed):
+
+   ```bash
+   HERMES_VISION_TOKEN=<token> node scripts/advisor/vision-conformance.mjs --url https://<hermes-host>[/prefix]
+   ```
+
+   It must end `PASS` (warnings allowed). `--region <id>` checks another
+   region's species list (default `morro-bay`).
+9. **Switch on (owner).** Set the GitHub secrets `HERMES_VISION_URL` and
+   `HERMES_VISION_TOKEN` and redeploy; `ADVISOR_VISION_PROVIDERS` already defaults
+   to `hermes,claude`. Admin Health then shows Hermes configured, and its "last
+   answer" once a photo arrives. To fall back, delete `HERMES_VISION_URL` (or set
+   `ADVISOR_VISION_PROVIDERS=claude`) and redeploy.

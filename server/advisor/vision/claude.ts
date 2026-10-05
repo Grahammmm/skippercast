@@ -2,7 +2,7 @@
 // provider): one Messages API request per method, the image as a base64
 // content block, and one forced tool whose input_schema is the result schema,
 // so the answer arrives as structured tool input (no JSON-in-prose parsing).
-// Every field is validated before it leaves this file: confidences clamped to
+// Every field is validated (vision/validate.ts) before it leaves this file: confidences clamped to
 // 0..1, species keys limited to the list the prompt offered (a bad key becomes
 // null with its label kept), at most three candidates sorted by confidence.
 //
@@ -17,10 +17,12 @@ import type {LlmUsage} from '../../analytics.ts';
 import {advisorSettings} from '../settings.ts';
 import {advisorLog} from '../log.ts';
 import {classifyPrompt, countBoardPrompt, fishIdPrompt} from '../prompts/vision.ts';
-import {speciesForTargets} from './species.ts';
+import {defaultRegionTargets, speciesForTargets} from './species.ts';
 import type {VisionSpecies} from './species.ts';
 import {IMAGE_KINDS, MediaTooLarge, ProviderNotConfigured, UnsupportedImage, VisionCapReached} from './errors.ts';
-import type {Classification, CountBoardReading, FishId, ImageInput, ImageKind, VisionMethod, VisionProvider} from './index.ts';
+import {parseClassification, parseCountBoard, parseFishId} from './validate.ts';
+import type {ResultMeta} from './validate.ts';
+import type {ImageInput, VisionMethod, VisionProvider} from './index.ts';
 
 export const API = 'https://api.anthropic.com/v1/messages';
 export const MAX_TOKENS = 600;
@@ -96,60 +98,10 @@ function fishTool(keys: readonly string[]) {
   };
 }
 
-// ---- Validation -------------------------------------------------------------------
+// ---- Validation (vision/validate.ts, shared with the Hermes client since TA-V2) ---
 
-export const clamp01 = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
-const bool = (v: unknown): boolean => v === true;
-function str(v: unknown, max: number): string | null {
-  if (typeof v !== 'string') return null;
-  const s = v.replace(/\s+/g, ' ').trim();
-  return s ? s.slice(0, max) : null;
-}
-function int(v: unknown, max: number): number | null {
-  const n = typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : v;
-  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max ? n : null;
-}
-function isoDate(v: unknown): string | null {
-  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
-  const d = new Date(v + 'T00:00:00Z');
-  return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v ? v : null;
-}
-const obj = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
-const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
-
-type Meta = {provider: 'claude'; model: string; ms: number};
-
-export function parseClassification(input: unknown, meta: Meta): Classification {
-  const i = obj(input);
-  const kind = (IMAGE_KINDS as readonly unknown[]).includes(i.kind) ? i.kind as ImageKind : 'unknown';
-  return {kind, kind_confidence: clamp01(i.kind_confidence), has_person: bool(i.has_person), person_confidence: clamp01(i.person_confidence),
-    has_fish: bool(i.has_fish), text_present: bool(i.text_present), nsfw: bool(i.nsfw), ...meta};
-}
-
-export const MAX_BOARD_LINES = 40;
-export function parseCountBoard(input: unknown, meta: Meta): CountBoardReading {
-  const i = obj(input);
-  const lines = list(i.lines).flatMap(raw => {
-    const l = obj(raw), label = str(l.label, 60);
-    return label ? [{label, count: int(l.count, 100000), released: int(l.released, 100000), confidence: clamp01(l.confidence)}] : [];
-  }).slice(0, MAX_BOARD_LINES);
-  return {boat_name: str(i.boat_name, 80), date_text: str(i.date_text, 40), date_iso: isoDate(i.date_iso), date_confidence: clamp01(i.date_confidence),
-    trip_type: str(i.trip_type, 40), anglers: int(i.anglers, 1000), lines, notes: str(i.notes, 300), overall_confidence: clamp01(i.overall_confidence), ...meta};
-}
-
-const REASON = /^[a-z_]{1,24}$/;
-export function parseFishId(input: unknown, allowed: ReadonlySet<string>, meta: Meta): FishId {
-  const i = obj(input);
-  const candidates = list(i.candidates).flatMap(raw => {
-    const c = obj(raw), key = typeof c.species_key === 'string' && allowed.has(c.species_key) ? c.species_key : null;
-    const label = str(c.label, 60) ?? (typeof c.species_key === 'string' ? str(c.species_key, 60) : null);
-    if (!label) return [];
-    return [{species_key: key, label, confidence: clamp01(c.confidence), cues: list(c.cues).flatMap(q => { const s = str(q, 80); return s ? [s] : []; }).slice(0, 3)}];
-  }).sort((a, b) => b.confidence - a.confidence).slice(0, 3);
-  const needs = bool(i.needs_better_photo) || candidates.length === 0;
-  const reason = typeof i.reason === 'string' && REASON.test(i.reason) ? i.reason : needs ? (candidates.length ? 'other' : 'no_fish') : null;
-  return {candidates, needs_better_photo: needs, reason, ...meta};
-}
+export {clamp01, parseClassification, parseCountBoard, parseFishId, MAX_BOARD_LINES} from './validate.ts';
+type Meta = ResultMeta & {provider: 'claude'};
 
 // ---- Request ----------------------------------------------------------------------
 
@@ -184,12 +136,6 @@ export function buildRequest(model: string, tool: {name: string}, prompt: string
 
 const count = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
 const FEATURE: Record<VisionMethod, string> = {classify: 'advisor:vision:classify', count_board: 'advisor:vision:count_board', fish_id: 'advisor:vision:fish_id'};
-
-/** The build-injected region manifests' target list, or null (tests without REGIONS, unknown region). */
-function defaultRegionTargets(region: string): readonly string[] | null {
-  const all = typeof REGIONS === 'undefined' ? null : REGIONS;
-  return all && Object.hasOwn(all, region) ? all[region]!.species : null;
-}
 
 /** Count one Claude vision call against the global daily cap; throws VisionCapReached past it. */
 export async function takeVisionCall(env: Env, limit: number, now: number): Promise<number> {

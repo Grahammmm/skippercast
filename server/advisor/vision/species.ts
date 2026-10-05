@@ -45,6 +45,12 @@ function entry(key: string): VisionSpecies {
   return {key, name, cues: cues ? [...cues.cues] : [], lookalikes: cues ? cues.lookalikes.map(canonicalSpecies).filter(k => k !== key) : []};
 }
 
+/** The build-injected region manifests' target list, or null (tests without REGIONS, unknown region). */
+export function defaultRegionTargets(region: string): readonly string[] | null {
+  const all = typeof REGIONS === 'undefined' ? null : REGIONS;
+  return all && Object.hasOwn(all, region) ? all[region]!.species : null;
+}
+
 /**
  * The species list for a region's targets (region.json `species`), in a
  * stable order: catalog keys first, then their sub-species and groups. With no

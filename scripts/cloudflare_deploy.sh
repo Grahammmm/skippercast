@@ -173,6 +173,10 @@ secrets = {name: os.environ[source] for name, source in [
     ('META_IG_USER_ID', 'META_IG_USER_ID'),
     ('META_PAGE_ID', 'META_PAGE_ID'),
     ('META_PAGE_TOKEN', 'META_PAGE_TOKEN'),
+    # TA-V2: the Hermes vision provider (docs/plans/text-advisor/07-vision.md § Hand-off to Hermes).
+    # Optional: without HERMES_VISION_URL the vision chain runs on Claude alone.
+    ('HERMES_VISION_URL', 'HERMES_VISION_URL'),
+    ('HERMES_VISION_TOKEN', 'HERMES_VISION_TOKEN'),
 ] if os.environ.get(source)}
 # The SQL API's account, only alongside the token that reads it.
 if secrets.get('CF_ANALYTICS_TOKEN') and os.environ.get('CLOUDFLARE_ACCOUNT_ID'):

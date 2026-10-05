@@ -94,9 +94,10 @@ SKIPPERCAST_SESSION=<__Host-sc_session cookie value> node scripts/advisor/prefli
 
 As of TA-P1 (2026-10-04), item 16 fails: TA-C5 is not built (no Text Advisor
 section in the threat model, no fixture privacy scan in `check_repository.py`,
-no data-rights rows). TA-V2 (the Hermes provider) is not built either; the
-vision chain skips Hermes while `HERMES_VISION_URL` is unset, so the pilot runs
-on Claude vision (decision B1 below).
+no data-rights rows). TA-V2 (the Hermes provider) is built since 2026-10-04 but
+optional: the vision chain skips Hermes while `HERMES_VISION_URL` is unset, so
+the pilot runs on Claude vision unless the owner switches Hermes on after it
+passes `scripts/advisor/vision-conformance.mjs` (decision B1 below).
 
 ## Owner to-do
 
@@ -111,7 +112,7 @@ accounts, devices, money, approval or judgment.
 
 ### B. Decisions
 
-- [ ] B1. Vision: run the pilot on Claude vision only (recommended: TA-V2 is not built and the chain skips Hermes without `HERMES_VISION_URL`), or have TA-V2 built and hand Hermes the 07 contract first (00 D2).
+- [ ] B1. Vision: run the pilot on Claude vision only (recommended: nothing to do; the chain skips Hermes without `HERMES_VISION_URL`), or add Hermes now that TA-V2 is built (00 D2): hand the Hermes side 07 § Hand-off to Hermes, expose its service through a Cloudflare Tunnel or Tailscale Funnel, run `HERMES_VISION_TOKEN=<token> node scripts/advisor/vision-conformance.mjs --url <https url>` until it ends `PASS`, then set the GitHub secrets `HERMES_VISION_URL` and `HERMES_VISION_TOKEN` and redeploy. Claude stays the fallback either way; Health › Vision providers shows which answered last.
 - [ ] B2. SC-5 auto-publish: `ADVISOR_AUTO_PUBLISH_AFTER` defaults to 5 (the offer after five clean reports, 00 D7), while 00 D3 and 10 § TA-I2 keep SC-5 off for the MVP. Keep it off with `ADVISOR_AUTO_PUBLISH_AFTER=0` (recommended), or leave the default.
 - [ ] B3. BlueBubbles Private API (typing indicators and read receipts; needs SIP partly off on the Mac): off unless you want it (relay setup step 6.6).
 - [ ] B4. Booking links: `get_trips` returns the raw `booking_url`, but replies carry only placeholder links, so the advisor points to the boat page (06 § As built (TA-A5)). Accept, or ask for a booking-link placeholder.
