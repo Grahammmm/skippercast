@@ -980,7 +980,9 @@ as today.
 As built (CF-33): the rules live in `server/fleet/display.ts`, shared with `/go/`.
 A vessel is public only while `status='active' AND profile_status='listed'` and
 `removal_requested_at` is null (so an admin unhiding a vessel after a removal
-request does not re-publish it). A fact is displayable when its `rights` are
+request does not re-publish it). `removal_requested_at` keeps a vessel unlisted
+even if an admin sets `listed`, until the request is cleared; CF-31 must show
+that state ([open-questions.md](open-questions.md) Q15). A fact is displayable when its `rights` are
 `public-domain`, `facts-only`, `public-record` or `api-terms`, its confidence is
 ≥ 0.6, it is not superseded and its `method` is not `ais`. A resolved column
 (`vessel_class`, `length_ft`, `passengers_max`, `year_built`, `phone_business`,
@@ -990,7 +992,8 @@ carries the same value; links to booking and website also need plain https
 `photos[]` (`{url, attribution}`, linked with the credit), `reputation.google_rating`
 and `reputation.google_reviews` (numbers, whose `source_url` must be the Google
 Maps place URL, used as the attribution link; the window runs from
-`retrieved_at`). An offering renders only with a displayable fact among its
+`retrieved_at`; the count needs the same place URL). Sources list hosts and dates
+as text; an `admin:<id>` fact shows as "SkipperCast", never its id. An offering renders only with a displayable fact among its
 `source_fact_ids_json`; the newest one gives "as listed on <host> on <date>".
 `/go/` links use the fleet vessel's slug. A verified advisor boat linked through
 `fleet_vessel_id` gains the registry cards after its own content; the vessel's

@@ -69,7 +69,8 @@ dbTest('acceptance 1: with FLEET_ENABLED off an advisor boat page is byte-identi
     }
     for (const [name, path] of SNAPSHOTS) {
       const expected = readFileSync(snapshotUrl(name), 'utf8');
-      for (const env of [{...ADVISOR}, {...ADVISOR, FLEET_ENABLED: 'false'}, {...ADVISOR, FLEET_ENABLED: 'yes'}]) {
+      // Off, a typo, and on for boats with no registry link (Gray Example is pending as well).
+      for (const env of [{...ADVISOR}, {...ADVISOR, FLEET_ENABLED: 'false'}, {...ADVISOR, FLEET_ENABLED: 'yes'}, {...ADVISOR, FLEET_ENABLED: 'true'}]) {
         const response = await get(path, {...env, DB: db});
         assert.equal(response.status, 200, path);
         assert.equal(await response.text(), expected, `${path} with ${JSON.stringify(env.FLEET_ENABLED)}`);
@@ -287,6 +288,27 @@ dbTest('the sitemap lists registry profiles only with FLEET_ENABLED and operator
     assert.match(on, /\/boats\/stale-example<\/loc>\n {4}<lastmod>2026-09-18<\/lastmod>/, 'consented operator');
     for (const out of ['blue-example', 'nolink-example', 'sea-example-charters', 'removed-example', 'hidden-example'])
       assert.ok(!on.includes(`/boats/${out}<`), `${out} is not in the sitemap`);
+  } finally { sql.close(); }
+});
+
+dbTest('review fixes: prototype keys render nothing from Object, the review count needs the Google place URL, admin sources show as SkipperCast', async () => {
+  const {sql, db} = seedAll();
+  try {
+    vessel(sql, 'v-proto', 'proto-example', 'Proto Example', {vesselClass: 'constructor', operator: 'op-sharing'});
+    fact(sql, 'v-proto', 'vessel_class', 'constructor');
+    const src = fact(sql, 'v-proto', 'trip_types[].price_usd', 50, {source: 'https://landing.example.com/rates'});
+    offering(sql, 'o-proto', 'v-proto', 'Proto trip', 5000, [src], {tripType: 'constructor'});
+    fact(sql, 'v-proto', 'reputation.google_rating', 4.4, {source: PLACE, method: 'api', rights: 'api-terms', at: iso(NOW - DAY)});
+    fact(sql, 'v-proto', 'reputation.google_reviews', 77, {source: 'https://ratings.example.com/count', method: 'api', rights: 'api-terms', at: iso(NOW - DAY)});
+    fact(sql, 'v-proto', 'length_ft', 42, {source: 'admin:user-0123456789abcdef', method: 'admin', rights: 'facts-only', at: iso(NOW - 2 * DAY)});
+    const page = await (await get('/boats/proto-example', {...ADVISOR, ...FLEET, DB: db})).text(), text = visible(page);
+    assert.ok(!/function|native code|\[object/.test(text), 'no Object.prototype member is rendered');
+    assert.match(text, /Proto trip · constructor · 10 h/, 'an unknown trip type shows as stored');
+    assert.match(text, /Google : 4\.4 out of 5 Trips/, 'the count without the Google place URL is left out');
+    assert.ok(!text.includes('77 reviews') && !page.includes('ratings.example.com'));
+    assert.match(text, /42 ft long/);
+    assert.match(text, /SkipperCast, checked Sep 26, 2026/);
+    assert.ok(!page.includes('admin:') && !page.includes('user-0123456789abcdef'), 'an admin id never renders');
   } finally { sql.close(); }
 });
 

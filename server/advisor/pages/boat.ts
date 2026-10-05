@@ -149,7 +149,7 @@ export function fleetSections(p: FleetProfile, language: PageLanguage): Html {
   const copy = copyFor(language), slug = p.vessel.slug;
   const go = (t: 'booking' | 'website'): string => `/go/${slug}?t=${t}&p=profile`;
   const facts = [
-    p.vesselClass ? copy.vesselClasses[p.vesselClass] ?? null : null,
+    p.vesselClass && Object.hasOwn(copy.vesselClasses, p.vesselClass) ? copy.vesselClasses[p.vesselClass]! : null,
     p.lengthFt !== null ? copy.lengthFt(decimal(p.lengthFt)) : null,
     p.passengers !== null ? copy.passengersMax(p.passengers) : null,
     p.yearBuilt !== null ? copy.builtIn(p.yearBuilt) : null,
@@ -163,7 +163,7 @@ export function fleetSections(p: FleetProfile, language: PageLanguage): Html {
   if (p.offerings.length) out.push(html`<section class="adv-card" aria-labelledby="fleet-trips-title">
 <h2 id="fleet-trips-title">${copy.fleetTripsHeading}</h2>
 <ul class="adv-list">${p.offerings.map(o => {
-    const parts = [copy.fleetTrips[o.tripType] ?? o.tripType, o.hours !== null ? copy.hours(decimal(o.hours)) : null, o.departs ? copy.departs(o.departs) : null].filter(Boolean).join(' · ');
+    const parts = [Object.hasOwn(copy.fleetTrips, o.tripType) ? copy.fleetTrips[o.tripType]! : o.tripType, o.hours !== null ? copy.hours(decimal(o.hours)) : null, o.departs ? copy.departs(o.departs) : null].filter(Boolean).join(' · ');
     const listed = o.priceCents !== null ? copy.priceListed(price(o.priceCents, o.currency, language), o.basis, o.listedHost, longDate(o.listedOn, language)) : copy.listedOn(o.listedHost, longDate(o.listedOn, language));
     return html`<li><strong>${o.name}</strong> · ${parts}<br>${listed}</li>`;
   })}</ul>

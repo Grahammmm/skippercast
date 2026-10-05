@@ -110,6 +110,7 @@ export interface FleetProfile {
 const MAX_FACTS = 500, MAX_OFFERINGS = 20, MAX_PHOTOS = 6;
 /** The Google Maps place URL the google-places adapter records as the rating fact's source_url (the attribution link). */
 const GOOGLE_PLACE = /^https:\/\/(?:www\.google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)\//;
+const ADMIN_SOURCE = 'SkipperCast';
 const hostOf = (url: string): string | null => { try { const u = new URL(url); return u.protocol === 'https:' ? u.hostname.replace(/^www\./, '') : null; } catch { return null; } };
 const sameValue = (a: unknown, b: unknown): boolean => typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 1e-9 : a === b;
 const newestFirst = (a: FactRow, b: FactRow): number => a.retrieved_at < b.retrieved_at ? 1 : a.retrieved_at > b.retrieved_at ? -1 : 0;
@@ -172,14 +173,16 @@ export async function fleetProfile(db: D1Database, vessel: FleetVesselRow, now: 
   const ratingFact = best('reputation.google_rating'), rating = ratingFact ? factValue(ratingFact) : null;
   if (ratingFact && typeof rating === 'number' && rating >= 1 && rating <= 5 && GOOGLE_PLACE.test(ratingFact.source_url) && withinGoogleWindow(ratingFact.retrieved_at, now)) {
     const countFact = best('reputation.google_reviews'), count = countFact ? factValue(countFact) : null;
-    const countOk = Boolean(countFact && typeof count === 'number' && Number.isInteger(count) && count >= 0 && withinGoogleWindow(countFact.retrieved_at, now));
+    const countOk = Boolean(countFact && typeof count === 'number' && Number.isInteger(count) && count >= 0
+      && GOOGLE_PLACE.test(countFact.source_url) && withinGoogleWindow(countFact.retrieved_at, now));
     use(ratingFact); if (countOk) use(countFact);
     google = {rating, count: countOk ? count as number : null, placeUrl: ratingFact.source_url};
   }
 
   const sources = new Map<string, string>();
   for (const f of used.values()) {
-    const host = hostOf(f.source_url), date = f.retrieved_at.slice(0, 10);
+    // An admin fact's provenance is `admin:<users.id>`: the public list names SkipperCast, never the id.
+    const host = f.source_url.startsWith('admin:') ? ADMIN_SOURCE : hostOf(f.source_url), date = f.retrieved_at.slice(0, 10);
     if (host && (!sources.has(host) || sources.get(host)! < date)) sources.set(host, date);
   }
   return {
