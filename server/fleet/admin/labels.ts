@@ -175,25 +175,36 @@ export async function deleteLabel(db: D1Database, id: string): Promise<AdminOutc
 }
 
 export interface JobTrip {
-  id: string; mmsi: string; vessel_id: string; source: string; departed_at: string; returned_at: string | null; status: string;
-  depart_port_id: string | null; labels: Omit<LabelRow, 'trip_id'>[];
+  id: string; mmsi: string | null; vessel_id: string | null; source: string | null; departed_at: string | null; returned_at: string | null;
+  status: string | null; depart_port_id: string | null; orphan: boolean; labels: Omit<LabelRow, 'trip_id'>[];
 }
 
-/** GET /api/fleet/jobs/labels: the region's labelled trips by id, JOB_PAGE a page; `next` is the last id, null after the last page. */
+/**
+ * GET /api/fleet/jobs/labels: the region's labelled trips by id, JOB_PAGE a page; `next` is the last id, null after the
+ * last page. Labels whose trip a re-run replaced under another id (the trip row is gone, so its region is unknown) come
+ * with `orphan: true` and null trip fields on every region's pages: the runner keeps the copy it already holds for them,
+ * since raw positions stay exempt from retention while a label exists.
+ */
 export async function labelledTrips(db: D1Database, region: string | undefined, cursor: string | undefined):
   Promise<{status: number; body: Record<string, unknown>}> {
   if (!region || !REGION.test(region)) return {status: 400, body: {error: 'invalid region'}};
   const after = cursor ?? '';
   if (after !== '' && !HEX32.test(after)) return {status: 400, body: {error: 'invalid cursor'}};
-  const trips = (await db.prepare(`SELECT t.id,t.mmsi,t.vessel_id,t.source,t.departed_at,t.returned_at,t.status,t.depart_port_id FROM fleet_trips t
-    WHERE t.region=? AND t.id>? AND EXISTS(SELECT 1 FROM fleet_segment_labels l WHERE l.trip_id=t.id) ORDER BY t.id LIMIT ?`)
-    .bind(region, after, JOB_PAGE + 1).all<Omit<JobTrip, 'labels'>>()).results;
-  const page = trips.slice(0, JOB_PAGE);
-  const byTrip = new Map<string, JobTrip>(page.map(t => [t.id, {...t, labels: []}]));
+  const ids = (await db.prepare(`SELECT DISTINCT l.trip_id AS id FROM fleet_segment_labels l LEFT JOIN fleet_trips t ON t.id=l.trip_id
+    WHERE (t.region=? OR t.id IS NULL) AND l.trip_id>? ORDER BY l.trip_id LIMIT ?`).bind(region, after, JOB_PAGE + 1).all<{id: string}>()).results;
+  const page = ids.slice(0, JOB_PAGE).map(r => r.id);
+  const byTrip = new Map<string, JobTrip>(page.map(id => [id, {id, mmsi: null, vessel_id: null, source: null, departed_at: null, returned_at: null,
+    status: null, depart_port_id: null, orphan: true, labels: []}]));
   if (page.length) {
-    const labels = (await db.prepare(`SELECT id,trip_id,started_at,ended_at,label,labeller,basis,created_at FROM fleet_segment_labels
-      WHERE trip_id IN (${page.map(() => '?').join(',')}) ORDER BY trip_id,started_at,id`).bind(...page.map(t => t.id)).all<LabelRow>()).results;
-    for (const {trip_id, ...l} of labels) byTrip.get(trip_id)?.labels.push(l);
+    const marks = page.map(() => '?').join(',');
+    const [trips, labels] = await Promise.all([
+      db.prepare(`SELECT id,mmsi,vessel_id,source,departed_at,returned_at,status,depart_port_id FROM fleet_trips WHERE id IN (${marks})`)
+        .bind(...page).all<Omit<JobTrip, 'labels' | 'orphan'>>(),
+      db.prepare(`SELECT id,trip_id,started_at,ended_at,label,labeller,basis,created_at FROM fleet_segment_labels
+        WHERE trip_id IN (${marks}) ORDER BY trip_id,started_at,id`).bind(...page).all<LabelRow>(),
+    ]);
+    for (const t of trips.results) byTrip.set(t.id, {...t, orphan: false, labels: []});
+    for (const {trip_id, ...l} of labels.results) byTrip.get(trip_id)?.labels.push(l);
   }
-  return {status: 200, body: {region, trips: [...byTrip.values()], next: trips.length > JOB_PAGE ? page[page.length - 1]!.id : null}};
+  return {status: 200, body: {region, trips: [...byTrip.values()], next: ids.length > JOB_PAGE ? page[page.length - 1]! : null}};
 }

@@ -144,7 +144,7 @@ test('the trip list, progress and detail: tracks decoded, every AIS-derived valu
 });
 
 test('acceptance 3 (Worker side): the job route lists labelled trips with their labels for the runner\'s copy', {skip}, async () => {
-  const {db} = database();
+  const {sql, db} = database();
   await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'fishing-drift', basis: 'track shape'}, ADMIN, NOW);
   const saved = fleetJobs.verify;
   fleetJobs.verify = async token => token === 'good' ? {jti: 'run-48'} : false;
@@ -162,13 +162,22 @@ test('acceptance 3 (Worker side): the job route lists labelled trips with their 
     const or = await (await call({region: 'OR'})).json();
     assert.deepEqual(or.trips.map(t => [t.id, t.source, t.labels[0].labeller]), [[OREGON, 'marinecadastre', 'agent:test']]);
     assert.deepEqual((await (await call({region: 'CA', cursor: TRIP})).json()).trips, []);
+    assert.equal(or.trips[0].orphan, false);
+    // A re-run replaced the trip under another id: its labels come back as an orphan on every region's pages.
+    sql.prepare('DELETE FROM fleet_trips WHERE id=?').run(TRIP);
+    for (const region of ['CA', 'OR']) {
+      const page = await (await call({region})).json();
+      const orphan = page.trips.find(t => t.id === TRIP);
+      assert.deepEqual({...orphan, labels: orphan.labels.length}, {id: TRIP, mmsi: null, vessel_id: null, source: null, departed_at: null,
+        returned_at: null, status: null, depart_port_id: null, orphan: true, labels: 1}, region);
+    }
   } finally { fleetJobs.verify = saved; }
   // Paging across more than one page.
-  const {sql, db: many} = advisorDatabase();
-  seed(sql);
-  const trip = sql.prepare(`INSERT INTO fleet_trips(id,region,vessel_id,mmsi,departed_at,local_date,season,status,source,rights,classifier_version,computed_at)
+  const {sql: fresh, db: many} = advisorDatabase();
+  seed(fresh);
+  const trip = fresh.prepare(`INSERT INTO fleet_trips(id,region,vessel_id,mmsi,departed_at,local_date,season,status,source,rights,classifier_version,computed_at)
     VALUES(?,'CA',?,'999000481',?,'2026-10-01','2026','closed','aisstream','internal-only','c1-test',?)`);
-  const lab = sql.prepare("INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES(?,?,?,?,'transit','agent:test','x',?)");
+  const lab = fresh.prepare("INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES(?,?,?,?,'transit','agent:test','x',?)");
   for (let i = 0; i < labels.JOB_PAGE + 5; i++) {
     const id = i.toString(16).padStart(32, '0');
     trip.run(id, V1, at(-5000 + i), NOW);

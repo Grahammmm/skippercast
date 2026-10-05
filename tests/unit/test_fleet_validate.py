@@ -125,7 +125,7 @@ class SyncTests(SyncTestCase):
         worker = LabelWorker([trip_row(), other], page=1)
         counts = validate.sync(REGION, worker, self.root, now_ms=T0 + 8 * HOUR)
         self.assertEqual([p.get("cursor") for _, p in worker.calls], [None, TRIP])
-        self.assertEqual(counts, {"trips": 2, "copied": 1, "positions": len(track()), "empty": 0, "unsupported": 1, "removed": 0})
+        self.assertEqual(counts, {"trips": 2, "copied": 1, "positions": len(track()), "empty": 0, "unsupported": 1, "orphaned": 0, "removed": 0})
         self.assertEqual(validate.read_copy(self.copy), list(self.store.read_positions(0, 2**62, [MMSI])))
         stored = json.loads((self.root / "validation" / "labels.json").read_text())
         self.assertEqual([t["id"] for t in stored["trips"]], [TRIP, OTHER])
@@ -154,6 +154,16 @@ class SyncTests(SyncTestCase):
         self.assertEqual(counts["positions"], len(track()))
         after = validate.report(REGION, self.root, now_ms=T0 + 8 * HOUR)
         self.assertEqual({k: v for k, v in after.items() if k != "computed_at"}, {k: v for k, v in before.items() if k != "computed_at"})
+        # A re-run that replaces the trip under another id leaves its labels as an orphan: the copy stays and is scored.
+        orphan = {"id": TRIP, "mmsi": None, "vessel_id": None, "source": None, "departed_at": None, "returned_at": None,
+                  "status": None, "depart_port_id": None, "orphan": True, "labels": LABELS}
+        elsewhere = {**orphan, "id": OTHER}   # another region's orphan: no copy here, not counted
+        counts = validate.sync(REGION, LabelWorker([orphan, elsewhere]), self.root, now_ms=T0 + 40 * 24 * HOUR)
+        self.assertEqual((counts["orphaned"], counts["removed"], counts["copied"]), (2, 0, 0))
+        self.assertEqual(len(validate.read_copy(self.copy)), len(track()))
+        kept = validate.report(REGION, self.root, now_ms=T0 + 8 * HOUR)
+        self.assertEqual(kept["fishing"], before["fishing"])
+        self.assertEqual(kept["trips"], {"scored": 1, "missing": 0, "ports": 0})
         # Once the trip has no label left, its copy goes.
         (self.root / "validation" / f"{TRIP}.sqlite-wal").write_bytes(b"")
         (self.root / "validation" / "notes.txt").write_text("kept")

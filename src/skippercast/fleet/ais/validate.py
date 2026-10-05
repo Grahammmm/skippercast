@@ -12,6 +12,8 @@
    moves or deletes anything in ``validation/`` (``store.py``), so a labelled
    trip's positions outlive the raw store's ``raw_days``; a copy whose trip has
    no label left is deleted here ("while the label exists", design.md section 5).
+   A label whose trip a re-run replaced under another id comes as an orphan: its
+   copy is kept and still scored.
    A sync adds whatever the raw store still holds to an existing copy, so a trip
    labelled while it was open is completed on later runs. ``fleet-ais.yml`` runs
    ``--sync-only`` after every scheduled processor run.
@@ -169,22 +171,30 @@ def predict(positions: Iterable[AisPosition], ports: Sequence, thresholds: Activ
 
 @dataclass(frozen=True)
 class LabelledTrip:
+    """A labelled trip from the job route. An orphan's trip row is gone (a re-run replaced it under another id):
+    its trip fields are null, and only the copy already on disk, which holds that trip's MMSI and source, is left."""
     id: str
-    mmsi: int
-    source: str
-    departed_ms: int
+    mmsi: int | None
+    source: str | None
+    departed_ms: int | None
     returned_ms: int | None
     status: str
     depart_port_id: str | None
     labels: tuple[dict, ...]
 
+    @property
+    def orphan(self) -> bool:
+        return self.mmsi is None or self.source is None or self.departed_ms is None
+
     @classmethod
     def from_row(cls, row: Mapping) -> "LabelledTrip":
         if not TRIP_ID.match(str(row.get("id", ""))):
             raise ValueError("a labelled trip needs a 32-hex id")
-        return cls(row["id"], int(row["mmsi"]), str(row["source"]), _ms(row["departed_at"]),
-                   None if row.get("returned_at") is None else _ms(row["returned_at"]), str(row.get("status") or ""),
-                   row.get("depart_port_id"), tuple(dict(x) for x in row.get("labels") or ()))
+        orphan = bool(row.get("orphan")) or row.get("mmsi") is None
+        return cls(row["id"], None if orphan else int(row["mmsi"]), None if orphan else str(row["source"]),
+                   None if orphan else _ms(row["departed_at"]),
+                   None if orphan or row.get("returned_at") is None else _ms(row["returned_at"]),
+                   str(row.get("status") or ""), row.get("depart_port_id"), tuple(dict(x) for x in row.get("labels") or ()))
 
     def intervals(self, labeller: str = "all") -> list[Interval]:
         return [Interval(_ms(x["started_at"]), _ms(x["ended_at"]), x["label"]) for x in self.labels
@@ -254,8 +264,11 @@ def sync(region, worker, root: Path | None = None, now_ms: int | None = None) ->
     directory.mkdir(parents=True, exist_ok=True)
     _write_json(directory / LABELS_FILE, {"region": region.id, "fetched_at": iso_utc(now), "trips": rows})
     longest = int(max(region.thresholds["activity"]["max_open_trip_hours"].values()) * HOUR)
-    counts = {"trips": len(trips), "copied": 0, "positions": 0, "empty": 0, "unsupported": 0, "removed": 0}
+    counts = {"trips": len(trips), "copied": 0, "positions": 0, "empty": 0, "unsupported": 0, "orphaned": 0, "removed": 0}
     for trip in trips:
+        if trip.orphan:   # its labels remain: keep the copy as it is
+            counts["orphaned"] += 1
+            continue
         if trip.source not in STORES:   # no raw store on this runner for that source
             counts["unsupported"] += 1
             continue
@@ -292,13 +305,14 @@ def report(region, root: Path | None = None, *, thresholds: ActivityThresholds |
     for row in document.get("trips") or []:
         trip = LabelledTrip.from_row(row)
         labels = trip.intervals(labeller)
-        if not labels:
+        path = directory / f"{trip.id}.sqlite"
+        if not labels or (trip.orphan and not path.is_file()):   # an orphan without a copy here is another region's
             continue
         by_labeller.update(_labeller_kind(x.get("labeller")) for x in trip.labels
                            if labeller == "all" or _labeller_kind(x.get("labeller")) == labeller)
-        path = directory / f"{trip.id}.sqlite"
         positions = read_copy(path) if path.is_file() else []
-        positions = [p for p in positions if p.mmsi == trip.mmsi and p.source == trip.source]
+        if not trip.orphan:   # a copy holds one trip's MMSI and source; an orphan's are no longer listed
+            positions = [p for p in positions if p.mmsi == trip.mmsi and p.source == trip.source]
         if not positions:
             missing += 1
             continue
