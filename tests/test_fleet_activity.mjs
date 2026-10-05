@@ -170,17 +170,21 @@ test('aggregates upsert, delete listed cells and prune a full rebuild', {skip}, 
     const cell = (n, computed = NOW, season = '2026') => ({id: sha(`cell-${n}-${season}`), region: REGION, module: 'grid', params_json: '{"module":"grid"}',
       cell_id: `g1000:${n}:1`, lat: 35 + n / 100, lon: -121, season, season_part: null, kind: 'drift-anchor', vessels_n: 2, events_n: 3,
       dwell_min: 90, first_date: '2026-10-01', last_date: '2026-10-02', rights: 'internal-only', computed_at: computed});
-    const post = aggregates => call(db, 'activity', {region: REGION, aggregates});
+    const post = aggregates => call(db, 'activity', {region: REGION, aggregates: {module: 'grid', ...aggregates}});
     assert.equal((await post({season: '2026', cells: [cell(1), cell(2), cell(3)]})).status, 200);
     assert.equal((await post({season: '2025', cells: [cell(9, NOW, '2025')]})).status, 200);
     assert.equal((await post({season: '2026', cells: [{...cell(1), dwell_min: 120}], delete: [cell(3).id]})).status, 200);
     assert.deepEqual(sql.prepare('SELECT cell_id, dwell_min FROM fleet_aggregates WHERE season=? ORDER BY cell_id').all('2026').map(r => ({...r})),
       [{cell_id: 'g1000:1:1', dwell_min: 120}, {cell_id: 'g1000:2:1', dwell_min: 90}]);
+    sql.prepare(`INSERT INTO fleet_aggregates(id,region,module,params_json,cell_id,lat,lon,season,kind,rights,computed_at) VALUES(?,?,'h3','{}','h3:x',35,-121,'2026','troll','internal-only',?)`)
+      .run(sha('h3-cell'), REGION, NOW);
     const later = '2026-10-05T12:30:00.000Z';
     assert.equal((await post({season: '2026', cells: [cell(2, later), cell(4, later)], prune: later})).status, 200);
-    assert.deepEqual(sql.prepare('SELECT cell_id FROM fleet_aggregates WHERE season=? ORDER BY cell_id').all('2026').map(r => r.cell_id), ['g1000:2:1', 'g1000:4:1']);
+    assert.deepEqual(sql.prepare(`SELECT cell_id FROM fleet_aggregates WHERE season=? AND module='grid' ORDER BY cell_id`).all('2026').map(r => r.cell_id), ['g1000:2:1', 'g1000:4:1']);
+    assert.equal(sql.prepare(`SELECT count(*) n FROM fleet_aggregates WHERE module='h3'`).get().n, 1, 'a prune never touches another module');
     assert.equal(sql.prepare('SELECT count(*) n FROM fleet_aggregates WHERE season=?').get('2025').n, 1, 'other seasons are never pruned');
     assert.equal((await post({season: '2026', cells: [cell(5, NOW, '2025')]})).status, 400, 'a cell of another season');
+    assert.equal((await post({season: '2026', module: 'h3', cells: [cell(5)]})).status, 400, 'a cell of another module');
   } finally { sql.close(); }
 });
 

@@ -76,12 +76,13 @@ export function recordCron(env: Pick<Env, 'ANALYTICS'>, run: CronRun): void {
     doubles: [run.ms, num(run.owners), typeof run.feed_age_minutes === 'number' ? run.feed_age_minutes : -1]});
 }
 
-/** One /go/ redirect (CF-34): slug, target and placement only. */
+/** One AIS processor heartbeat push (CF-45): region, listener heartbeat and last-message ages, 24 h rows. */
 export interface FleetAisPoint {heartbeatAgeS: number; lastMessageAgeS: number; messages24h: number}
 export function recordFleetAis(env: Pick<Env, 'ANALYTICS'> | undefined, region: string, point: FleetAisPoint): void {
   writePoint(env, 'fleet_ais', {blobs: [region], doubles: [point.heartbeatAgeS, point.lastMessageAgeS, point.messages24h]});
 }
 
+/** One /go/ redirect (CF-34): slug, target and placement only. */
 export function recordFleetClick(env: Pick<Env, 'ANALYTICS'>, slug: string, target: string, placement: string): void {
   writePoint(env, 'fleet_click', {blobs: [slug, target, placement], doubles: [1]});
 }

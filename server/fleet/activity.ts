@@ -12,9 +12,9 @@
 //       fall in a window of its MMSI and carry the request's source; segments and events
 //       must belong to the request's trips; ids must be the derived ones (design § 5);
 //       trip vessels must be this region's. Labels (fleet_segment_labels) are never touched.
-//     aggregates: {season, cells, delete?, prune?}: upserts cells (by id), deletes the
-//       listed cell ids of that season, and with `prune` (a computed_at) deletes the
-//       season's cells computed at any other time (a full rebuild).
+//     aggregates: {module, season, cells, delete?, prune?}: upserts cells (by id), deletes
+//       the listed cell ids of that season, and with `prune` (a computed_at) deletes that
+//       module's cells of the season computed at any other time (a full rebuild).
 //     processed: {run_id, counts}: job_state fleet.ais.<region>.processed = {at, run_id, counts}.
 //   POST /api/fleet/jobs/heartbeat {region, heartbeat, hours, messages_24h}
 //     heartbeat (the listener's heartbeat.json, selected fields, or null): job_state
@@ -203,19 +203,20 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
 
   if (aggregates !== undefined) {
     if (!aggregates || typeof aggregates !== 'object' || Array.isArray(aggregates)) throw new Invalid('aggregates must be an object');
-    const {season, cells: c, delete: d, prune, ...more} = aggregates as Record<string, unknown>;
+    const {module, season, cells: c, delete: d, prune, ...more} = aggregates as Record<string, unknown>;
     if (Object.keys(more).length) throw new Invalid(`aggregates: unknown field ${Object.keys(more)[0]}`);
     if (!valid('season', season)) throw new Invalid('aggregates.season: invalid');
+    if (!valid('token', module)) throw new Invalid('aggregates.module: invalid');
     const cells = list(c, 'cells', LIMITS.cells).map((r, i) => check(CELL, r, `aggregates.cells[${i}]`));
-    if (cells.some(cell => cell.region !== region || cell.season !== season)) throw new Invalid('aggregates.cells: region or season differs from the request');
+    if (cells.some(cell => cell.region !== region || cell.season !== season || cell.module !== module)) throw new Invalid('aggregates.cells: region, season or module differs from the request');
     const gone = list(d, 'cells', LIMITS.cells).map(id => { if (!valid('id', id)) throw new Invalid('aggregates.delete: invalid id'); return id as string; });
     if (prune !== undefined && !valid('iso', prune)) throw new Invalid('aggregates.prune: invalid');
     add('cells', inserts(db, 'fleet_aggregates', Object.keys(CELL), cells, upsert('id', Object.keys(CELL))));
-    for (let i = 0; i < gone.length; i += MAX_PARAMS - 2) {
-      const part = gone.slice(i, i + MAX_PARAMS - 2);
-      add('deleted_cells', [db.prepare(`DELETE FROM fleet_aggregates WHERE region=? AND season=? AND id IN (${marks(part.length)})`).bind(region, season as string, ...part)]);
+    for (let i = 0; i < gone.length; i += MAX_PARAMS - 3) {
+      const part = gone.slice(i, i + MAX_PARAMS - 3);
+      add('deleted_cells', [db.prepare(`DELETE FROM fleet_aggregates WHERE region=? AND season=? AND module=? AND id IN (${marks(part.length)})`).bind(region, season as string, module as string, ...part)]);
     }
-    if (prune !== undefined) add('deleted_cells', [db.prepare('DELETE FROM fleet_aggregates WHERE region=? AND season=? AND computed_at<>?').bind(region, season as string, prune as string)]);
+    if (prune !== undefined) add('deleted_cells', [db.prepare('DELETE FROM fleet_aggregates WHERE region=? AND season=? AND module=? AND computed_at<>?').bind(region, season as string, module as string, prune as string)]);
   }
   if (processed !== undefined) {
     const {run_id: runId, counts, ...more} = (processed && typeof processed === 'object' && !Array.isArray(processed) ? processed : {bad: 1}) as Record<string, unknown>;

@@ -15,9 +15,10 @@ listener's raw store. A scheduled run, in order:
 3. **targets**: MMSI -> ``VesselRef``. The registry's MMSIs (``GET
    /api/fleet/jobs/snapshot`` vessels with an ``mmsi``; an MMSI on two vessels
    is skipped), overlaid by whatever ``match`` returns.
-4. **trips**: per target, positions from ``resume - 1 h`` to ``now - 10 min``
-   (``resume`` is the departure of the trip still open at the last run, else
-   that run's end; the first run looks back over ``raw_days``), one fix per
+4. **trips**: per target, departures from ``resume`` to ``now - 10 min``,
+   from positions read an hour earlier (``resume`` is the departure of the trip
+   still open at the last run, else that run's end; the first run looks back
+   over ``raw_days``), one fix per
    minute, then ``segment``, ``classify`` and ``events``. Each MMSI's window is
    pushed as a replace-window to ``POST /api/fleet/jobs/activity``: the Worker
    deletes that MMSI's trips, segments and events of this source departing in
@@ -26,7 +27,8 @@ listener's raw store. A scheduled run, in order:
 5. **aggregates** of every season a window touched, from the events this
    processor pushed (mirrored in ``state.sqlite``): only cells whose content
    changed are sent, and cells that vanished are deleted. A season the state has
-   never seen is sent whole and the Worker prunes that season's other cells.
+   never seen is sent whole; the Worker prunes that module's other cells of the
+   season only with ``--allow-prune`` or when the state predates the season.
 6. **retention** of the raw store (the listener also runs it hourly).
 7. **processed**: ``job_state`` ``fleet.ais.<region>.processed``.
 
@@ -464,14 +466,16 @@ def push_trips(ctx: Context, targets: Mapping[int, VesselRef], window: tuple[int
     for mmsi in sorted(targets):
         if window is None:
             resume = ctx.state.resume(mmsi, ctx.source)
-            start = max(oldest, (oldest if resume is None else resume) - LEAD_MS)
+            start = oldest if resume is None else max(oldest, resume)
             end = read_end = settled
         else:
             (start, end), read_end = window, min(window[1] + longest, settled)
         if end <= start:
             continue
-        # A re-run window reads from an hour earlier, so a departure at its start is seen leaving port.
-        positions = ctx.store.read_positions(start - (LEAD_MS if window else 0), read_end, [mmsi])
+        # Positions from an hour before the window, so a departure at its start is seen leaving port; only
+        # departures inside the window are kept and replaced. The lead's own trips (the tail of a trip the last
+        # run already closed, which starts at sea here) fall before the window and are dropped.
+        positions = ctx.store.read_positions(start - LEAD_MS, read_end, [mmsi])
         derived.append(derive(positions, mmsi, targets[mmsi], region, source=ctx.source, window_from=start,
                               window_to=end, now_ms=now, computed_at=ctx.computed_at))
     units = [u for d in derived for u in _units(d)]
@@ -517,8 +521,18 @@ def _digest(cell: aggregate.Cell) -> str:
     return hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()[:16]
 
 
-def push_aggregates(ctx: Context, seasons: Iterable[str]) -> dict:
-    """Changed cells of each touched season (a season new to the state: all of them, then prune the rest)."""
+def _may_prune(ctx: Context, season: str, allow_prune: bool) -> bool:
+    """Prune only when told to, or when the state mirrors the whole season (it existed before the season began)."""
+    if allow_prune:
+        return True
+    begins = datetime(int(season), 1, 1, tzinfo=ZoneInfo(ctx.region.timezone)).timestamp() * 1000
+    return ctx.state.get("created_ms", ctx.now_ms) <= begins
+
+
+def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = False) -> dict:
+    """Changed cells of each touched season. A season new to the state sends all its cells; the Worker prunes that
+    module's other cells of the season only when ``_may_prune`` holds, since aggregates are permanent (design § 5)
+    and a fresh or lost state mirrors only the raw store's window."""
     params = aggregate.AggregateParams.from_region(ctx.region)
     counts = {"cells": 0, "deleted": 0, "requests": 0}
     for season in sorted(seasons):
@@ -532,11 +546,15 @@ def push_aggregates(ctx: Context, seasons: Iterable[str]) -> dict:
         chunks = max(1, -(-len(changed) // CELLS_PER_POST), -(-len(deleted) // CELLS_PER_POST))
         if not full and not changed and not deleted:
             continue
+        prune = full and _may_prune(ctx, season, allow_prune)
+        if full and not prune:
+            log.warning("season %s is new to the processor state: sending its cells without pruning older ones "
+                        "(run with --allow-prune once the state holds the whole season)", season)
         for k in range(chunks):
             part = changed[k * CELLS_PER_POST:(k + 1) * CELLS_PER_POST]
             gone = deleted[k * CELLS_PER_POST:(k + 1) * CELLS_PER_POST]
-            body = {"season": season, "cells": [c.as_row() for c in part], "delete": gone}
-            if full and k == chunks - 1:
+            body = {"module": params.module, "season": season, "cells": [c.as_row() for c in part], "delete": gone}
+            if prune and k == chunks - 1:
                 body["prune"] = ctx.computed_at
             ctx.worker.post("activity", {"region": ctx.region.id, "aggregates": body})
             ctx.state.update_cells(season, {c.id: digests[c.id] for c in part}, gone, full and k == 0)
@@ -548,7 +566,7 @@ def push_aggregates(ctx: Context, seasons: Iterable[str]) -> dict:
 
 def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None = None, source: str = "aisstream",
         window: tuple[int, int] | None = None, mmsis: Iterable[int] | None = None,
-        hook_table: Mapping[str, Callable] | None = None) -> dict:
+        hook_table: Mapping[str, Callable] | None = None, allow_prune: bool = False) -> dict:
     """One processor run (module docstring); ``window`` re-runs only that departure window."""
     if source not in STORES:
         raise ValueError(f"no raw store for source {source!r} yet")
@@ -557,6 +575,8 @@ def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None 
     state = State(root / "state.sqlite")
     ctx = Context(region, worker, STORES[source](root), state, root, now, source,
                   datetime.fromtimestamp(now / 1000, timezone.utc).strftime("ais-%Y%m%dT%H%M%SZ"))
+    if state.get("created_ms") is None:
+        state.put("created_ms", now)
     state.log_run(ctx.run_id, ctx.computed_at, None, None)
     counts: dict[str, Any] = {}
     try:
@@ -572,7 +592,7 @@ def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None 
             wanted = set(mmsis)
             targets = {m: ref for m, ref in targets.items() if m in wanted}
         counts["trips"], seasons = push_trips(ctx, targets, window)
-        counts["aggregates"] = push_aggregates(ctx, seasons)
+        counts["aggregates"] = push_aggregates(ctx, seasons, allow_prune)
         if window is None:
             try:
                 result = ctx.store.apply_retention(retention_limits(region), today=datetime.fromtimestamp(
@@ -600,6 +620,8 @@ def main(argv=None) -> int:
     parser.add_argument("--to", dest="end", type=_day, help="last region-local day of a re-run window (inclusive)")
     parser.add_argument("--source", choices=sorted(STORES), default="aisstream")
     parser.add_argument("--mmsi", type=int, action="append", help="only this MMSI (repeatable)")
+    parser.add_argument("--allow-prune", action="store_true",
+                        help="let a season new to the state replace the Worker's cells for it (a full rebuild)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     if (args.start is None) != (args.end is None) or (args.start and args.end < args.start):
@@ -611,7 +633,8 @@ def main(argv=None) -> int:
             zone = ZoneInfo(region.timezone)
             window = tuple(round(datetime.combine(d, dtime(0), zone).timestamp() * 1000)
                            for d in (args.start, args.end + timedelta(days=1)))
-        counts = run(region, Worker(worker_base()), source=args.source, window=window, mmsis=args.mmsi)
+        counts = run(region, Worker(worker_base()), source=args.source, window=window, mmsis=args.mmsi,
+                     allow_prune=args.allow_prune)
     except (FleetConfigError, WorkerError, ValueError) as error:
         print(f"fleet ais process: {error}", file=sys.stderr)
         return 2

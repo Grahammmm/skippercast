@@ -82,7 +82,13 @@ class FakeWorker:
         return {"vessels": self.vessels, "next": "r:"}
 
     def post(self, path, body):
-        self.calls.append(("POST", path, json.loads(json.dumps(body))))
+        body = json.loads(json.dumps(body))
+        self.calls.append(("POST", path, body))
+        for window in body.get("replace", []):   # the Worker's replace-window over its trips
+            self.stored = {i: t for i, t in getattr(self, "stored", {}).items() if not (
+                t["mmsi"] == window["mmsi"] and t["source"] == body["source"]
+                and window["from"] <= t["departed_at"] < window["to"])}
+        self.stored = {**getattr(self, "stored", {}), **{t["id"]: t for t in body.get("trips", [])}}
         return {"ok": True}
 
     def posts(self, path, key=None):
@@ -161,9 +167,33 @@ class RunTests(ProcessTestCase):
         self.assertEqual(len(sent[0]["trips"]), 1)
         self.assertEqual(first.posts("heartbeat"), [], "a re-run window sends no heartbeat")
         self.assertEqual(first.posts("activity", "processed"), [], "nor marks the scheduled processor as run")
-        # The first run seeds the season's cells whole (with a prune); the same events again change no cell.
-        self.assertIn("prune", first.posts("activity", "aggregates")[0]["aggregates"])
+        # The first run sends the season's cells whole, but a state younger than the season never prunes
+        # the Worker's older cells (aggregates are permanent); the same events again change no cell.
+        seeded = first.posts("activity", "aggregates")[0]["aggregates"]
+        self.assertEqual(seeded["module"], "grid")
+        self.assertNotIn("prune", seeded)
         self.assertEqual(second.posts("activity", "aggregates"), [])
+
+    def test_a_full_rebuild_prunes_only_when_allowed(self):
+        self.store.write(positions=track())
+        worker = FakeWorker()
+        self.run_once(worker, T0 + 24 * HOUR, window=(T0 - HOUR, T0 + 12 * HOUR), allow_prune=True)
+        self.assertEqual(worker.posts("activity", "aggregates")[-1]["aggregates"]["prune"], iso_utc(T0 + 24 * HOUR))
+
+    def test_consecutive_scheduled_runs_across_a_return_store_exactly_one_trip(self):
+        """Every 30 minutes, at several phase offsets: the closed trip's tail is never pushed as a second trip."""
+        fixes = track()
+        for offset in range(0, 30, 5):
+            with self.subTest(offset=offset):
+                tmp = tempfile.TemporaryDirectory()
+                self.addCleanup(tmp.cleanup)
+                root = Path(tmp.name) / "CA" / "ais"
+                AisStore(root).write(positions=fixes)
+                worker = FakeWorker()
+                for k in range(16):
+                    process.run(REGION, worker, root=root, now_ms=T0 + offset * MINUTE + k * 30 * MINUTE, hook_table={})
+                trips = list(worker.stored.values())
+                self.assertEqual([t["status"] for t in trips], ["closed"], [(t["departed_at"], t["status"]) for t in trips])
 
     def test_a_scheduled_run_in_order_with_hooks_and_resume(self):
         self.store.write(positions=track(come_back=False))
@@ -202,7 +232,7 @@ class RunTests(ProcessTestCase):
         later = FakeWorker(vessels=[])
         self.run_once(later, now + 30 * MINUTE, hook_table=hook_table)
         window = later.posts("activity", "replace")[0]["replace"][0]
-        self.assertEqual(window["from"], iso_utc(process._ms(departed) - HOUR))
+        self.assertEqual(window["from"], departed, "the open trip's departure, read with an hour's lead")
         self.assertEqual(later.posts("activity", "replace")[0]["trips"][0]["id"], trips[0]["id"])
         current = {h["hour"]: h for h in later.posts("heartbeat")[0]["hours"]}[iso_utc(T0 + 2 * HOUR)]
         self.assertEqual(current["reconnects"], 3, "2 before plus 1 since")
