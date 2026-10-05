@@ -540,3 +540,13 @@ POSTs it in a header, 03 § As built (hardening: tokens out of URLs)).
   `ritag_sportfishing`, `lucero.psl`) could be real accounts, so they became
   `ritag.example` and `lucero.example`. A failure prints the file, line and
   rule, never the number or the handle.
+  As built (hardening, threat model § 9.10): the tests no longer use real
+  Central Coast boat names, slugs or handles at all. The boats and handles in
+  `tests/` (and the feed fixture's landing-report boats) are now fictional
+  ("Sea Example", `sea-example`, `seaexample`, `sea.example`, "Example Two",
+  "Test Boat", "Gray Example", "Example Star", …; the landing "Gull's"), with
+  every assertion kept. The handle rule (not the phone rule) now also covers
+  `tests/test_advisor_*.mjs`: a mention (`@` and a name), or a quoted value of a handle field
+  (`instagram: '…'`, `username: "…"`, `collaborators: ['…']`), must be in the
+  list, which gained the tests' fictional handles and the JSON-LD keyword
+  `type` as a placeholder (`advisor_test_handles`, with unit tests).

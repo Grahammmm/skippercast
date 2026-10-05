@@ -176,7 +176,7 @@ export const oneLine = (r: ReportView, language: Language): string => `${header(
 
 /**
  * The confirmation (05 § count board step 3):
- *   Rita G, Sat Oct 3, full day, 22 anglers:
+ *   Sea Example, Sat Oct 3, full day, 22 anglers:
  *   45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon
  *   Reply Y to post, or tell me what to fix.
  * Uncertain lines carry "?" (07 § thresholds); notes, when present, are shown too.
@@ -795,7 +795,7 @@ export async function reportFlow(f: FlowContext): Promise<EngineResult | null> {
     return {actions: [{type: 'auto_publish', boatId: boat.id, on}, say(f.settings, f.language, on ? 'auto_on' : 'auto_off')], intent: on ? 'report.auto.on' : 'report.auto.off'};
   }
 
-  // The Instagram handle asked once after a photo: "@ritag" (or the bare handle within a day of the ask).
+  // The Instagram handle asked once after a photo: "@seaexample" (or the bare handle within a day of the ask).
   if (words && !boat.instagram && boat.relation === 'owner') {
     const asked = await f.db.prepare('SELECT updated_at FROM job_state WHERE key=?').bind(ONCE_PREFIX + onceKey('instagram', boat.id)).first<{updated_at: string}>();
     const handle = /^@[a-z0-9._]{1,30}$/.test(words) || (asked && f.now - Date.parse(asked.updated_at) <= PENDING_MAX_AGE_MS && /^[a-z0-9._]{3,30}$/.test(words) && /[._\d]/.test(words)) ? parseInstagram(words) : null;

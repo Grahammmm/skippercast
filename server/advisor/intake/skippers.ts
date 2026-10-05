@@ -63,7 +63,7 @@ export const isYes = (text: string): boolean => YES_WORDS.has(norm(text));
 /** The pre-router's start phrases (04 § stage 2, 05 § Becoming a skipper); the Spanish ones answer in Spanish. */
 const START_EN = /\b(?:register (?:my|a|our|the) boat|i'?m the (?:captain|skipper)|i am the (?:captain|skipper))\b/i;
 const START_ES = /\b(?:registrar (?:mi|un|nuestro|el) barco|soy el capit[aá]n)\b/i;
-/** "I'm the captain of the Rita G" / "soy el capitán del Rita G": the name after of/on/del/de. */
+/** "I'm the captain of the Sea Example" / "soy el capitán del Sea Example": the name after of/on/del/de. */
 const NAME_AFTER = /\b(?:captain|skipper|capit[aá]n)\s+(?:of|on|del|de)\s+(?:the\s+|el\s+|la\s+)?(.+)$/i;
 /** Revoking consent (05 § Consent), and granting it again after declining or revoking. */
 const REVOKE = /^(?:revoke|stop posting (?:my )?(?:photos|pictures|pics|videos)|don'?t post (?:my )?(?:photos|pictures|pics)|no publiques(?: mis fotos)?|deja de publicar mis fotos)$/i;

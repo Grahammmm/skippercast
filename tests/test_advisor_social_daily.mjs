@@ -101,7 +101,7 @@ const dispatcher = () => { const calls = []; return {calls, dispatch: async (_, 
 
 dbTest('the daily post: yesterday\'s verified reports of the region -> one draft with its review, the card requested, a template caption with the ladder word and no probability', async () => {
   const s = setup({GITHUB_TOKEN: 't'});
-  boat(s.sql, 'b1', 'Rita G'); boat(s.sql, 'b2', 'Patriot', {port: 'port-san-luis'}); boat(s.sql, 'b3', 'Unverified', {status: 'pending'});
+  boat(s.sql, 'b1', 'Sea Example'); boat(s.sql, 'b2', 'Test Boat', {port: 'port-san-luis'}); boat(s.sql, 'b3', 'Unverified', {status: 'pending'});
   report(s.sql, 'r1', 'b1', '2026-09-27', VERMILION(45, [LINGS(12)]), {anglers: 22});
   report(s.sql, 'r2', 'b2', '2026-09-27', VERMILION(30, [LINGS(3)]), {port: 'port-san-luis', anglers: null});
   report(s.sql, 'r3', 'b3', '2026-09-27', VERMILION(99), {verified: 0});              // an unverified boat: never in the post
@@ -116,8 +116,8 @@ dbTest('the daily post: yesterday\'s verified reports of the region -> one draft
   assert.deepEqual([row.kind, row.region, row.boat_id, row.media_json, row.status, row.created_by, JSON.parse(row.targets_json)], ['daily', 'morro-bay', null, '[]', 'draft', 'engine', ['instagram', 'facebook']]);
   const lines = row.caption.split('\n');
   assert.equal(lines[0], "What's biting out of Morro Bay & Avila, Sun Sep 27:");
-  assert.equal(lines[1], 'Rita G: 45 vermilion, 12 lingcod for 22 anglers.');
-  assert.equal(lines[2], 'Patriot: 30 vermilion, 3 lingcod.');
+  assert.equal(lines[1], 'Sea Example: 45 vermilion, 12 lingcod for 22 anglers.');
+  assert.equal(lines[2], 'Test Boat: 30 vermilion, 3 lingcod.');
   assert.match(lines[3], /^SMALL CRAFT ADVISORY posted for today\. Conditions: seas 7 ft at 17 s, wind 15-19 kt from the NW, rough/, 'today\'s advisory and conditions line');
   assert.match(lines[4], /^Landing reports, last 7 days: (Insufficient|Low|Moderate)\.$/, 'the ladder word');
   assert.equal(lines[5], "Text SkipperCast for today's report: (805) 555-0100");
@@ -129,7 +129,7 @@ dbTest('the daily post: yesterday\'s verified reports of the region -> one draft
   assert.deepEqual([graphic.kind, graphic.status, graphic.out_key, graphic.media_ids], ['daily', 'pending', `advisor/posts/${id}/daily.jpg`, undefined]);
   assert.equal(graphic.data.title, "What's biting · Morro Bay & Avila");
   assert.equal(graphic.data.date, 'Sun Sep 27');
-  assert.deepEqual(graphic.data.lines, [{label: 'Top counts', value: '75 vermilion, 15 lingcod'}, {label: 'Rita G', value: '45 vermilion, 12 lingcod'}, {label: 'Patriot', value: '30 vermilion, 3 lingcod'}]);
+  assert.deepEqual(graphic.data.lines, [{label: 'Top counts', value: '75 vermilion, 15 lingcod'}, {label: 'Sea Example', value: '45 vermilion, 12 lingcod'}, {label: 'Test Boat', value: '30 vermilion, 3 lingcod'}]);
   assert.match(graphic.data.conditions, /Conditions: seas 7 ft/);
   assert.match(graphic.data.confidence, /^Landing reports: (Insufficient|Low|Moderate)$/);
   assert.deepEqual(calls, ['advisor-media.yml'], 'the media job is dispatched for the card');
@@ -137,7 +137,7 @@ dbTest('the daily post: yesterday\'s verified reports of the region -> one draft
 
 dbTest('a rerun the same day updates the one draft (the card again only when its data changed); no report, no post; an approved post is never changed', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G');
+  boat(s.sql, 'b1', 'Sea Example');
   const none = await quiet(() => S.draftDailyPosts(s.env, MON, {feeds: feeds()}));
   assert.deepEqual(none.value, [{region: 'morro-bay', status: 'skipped', reason: 'no published verified report yesterday'}]);
   assert.equal(s.sql.prepare('SELECT COUNT(*) AS n FROM advisor_posts').get().n, 0);
@@ -149,11 +149,11 @@ dbTest('a rerun the same day updates the one draft (the card again only when its
   assert.equal(again.value[0].status, 'updated');
   assert.equal((await graphicState(s.db, id)).requested_at, first, 'same data: the card is not rendered again');
   // A late report changes the caption and the card.
-  boat(s.sql, 'b2', 'Patriot');
+  boat(s.sql, 'b2', 'Test Boat');
   report(s.sql, 'r2', 'b2', '2026-09-27', VERMILION(10));
   await quiet(() => S.draftDailyPosts(s.env, MON + 2 * HOUR, {feeds: feeds()}));
   assert.equal(s.sql.prepare("SELECT COUNT(*) AS n FROM advisor_posts WHERE kind='daily'").get().n, 1, 'never a second draft for the day');
-  assert.match(post(s.sql, id).caption, /Patriot: 10 vermilion/);
+  assert.match(post(s.sql, id).caption, /Test Boat: 10 vermilion/);
   assert.equal((await graphicState(s.db, id)).requested_at, iso(MON + 2 * HOUR));
   assert.equal(s.sql.prepare("SELECT COUNT(*) AS n FROM advisor_reviews WHERE kind='post'").get().n, 1);
   // Approved: a rerun keeps it as it is.
@@ -165,7 +165,7 @@ dbTest('a rerun the same day updates the one draft (the card again only when its
 
 dbTest('the next day\'s draft supersedes a daily post still in draft or approved without a time; a feed that fails leaves out the conditions and the word', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G');
+  boat(s.sql, 'b1', 'Sea Example');
   report(s.sql, 'r1', 'b1', '2026-09-27', VERMILION(45));
   report(s.sql, 'r2', 'b1', '2026-09-28', VERMILION(20));
   await quiet(() => S.draftDailyPosts(s.env, MON, {feeds: feeds()}));
@@ -174,12 +174,12 @@ dbTest('the next day\'s draft supersedes a daily post still in draft or approved
   assert.deepEqual([post(s.sql, monday).status, post(s.sql, monday).error], ['rejected', 'superseded']);
   assert.equal(s.sql.prepare('SELECT status FROM advisor_reviews WHERE ref_id=?').get(monday).status, 'rejected');
   const caption = post(s.sql, tuesday).caption;
-  assert.match(caption, /^What's biting out of Morro Bay, Mon Sep 28:\nRita G: 20 vermilion for 20 anglers\.\nText SkipperCast/, 'one port: its name; no conditions or word without the feeds');
+  assert.match(caption, /^What's biting out of Morro Bay, Mon Sep 28:\nSea Example: 20 vermilion for 20 anglers\.\nText SkipperCast/, 'one port: its name; no conditions or word without the feeds');
 });
 
 dbTest('the daily card holds approval until the media job has rendered it; the card shows the graphic preview', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G');
+  boat(s.sql, 'b1', 'Sea Example');
   report(s.sql, 'r1', 'b1', '2026-09-27', VERMILION(45));
   await quiet(() => S.draftDailyPosts(s.env, MON, {feeds: feeds()}));
   const id = await C.dailyPostId('morro-bay', '2026-09-28'), review = await reviewId('post', id, 'social_draft');
@@ -200,9 +200,9 @@ dbTest('the daily card holds approval until the media job has rendered it; the c
 
 dbTest('the roundup: the week\'s approved catch photos of verified, consenting boats and anglers of the region; 3 collaborators and the rest mentioned; the carousel graphic', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G', {instagram: 'ritag'}); boat(s.sql, 'b2', 'Patriot', {port: 'port-san-luis', instagram: 'patriotslo'});
-  boat(s.sql, 'b3', 'Third Boat', {instagram: 'third.boat'}); boat(s.sql, 'b4', 'Fourth Boat', {instagram: 'fourth_boat'});
-  boat(s.sql, 'b5', 'Pending Boat', {status: 'pending', instagram: 'pending'}); boat(s.sql, 'b6', 'Revoked Boat', {consent: iso(MON - 30 * DAY), revoked: iso(MON - 3 * DAY)});
+  boat(s.sql, 'b1', 'Sea Example', {instagram: 'seaexample'}); boat(s.sql, 'b2', 'Test Boat', {port: 'port-san-luis', instagram: 'testboat.example'});
+  boat(s.sql, 'b3', 'Third Boat', {instagram: 'thirdboat.example'}); boat(s.sql, 'b4', 'Fourth Boat', {instagram: 'fourthboat_example'});
+  boat(s.sql, 'b5', 'Pending Boat', {status: 'pending', instagram: 'pendingboat.example'}); boat(s.sql, 'b6', 'Revoked Boat', {consent: iso(MON - 30 * DAY), revoked: iso(MON - 3 * DAY)});
   photo(s.sql, 'p1', {boatId: 'b1', classification: FISH('lingcod'), at: SUN - DAY});
   photo(s.sql, 'p2', {boatId: 'b1', classification: FISH('vermilion'), at: SUN - 2 * DAY});
   photo(s.sql, 'p3', {boatId: 'b1', classification: FISH('lingcod'), at: SUN - 3 * DAY});
@@ -225,11 +225,11 @@ dbTest('the roundup: the week\'s approved catch photos of verified, consenting b
   const row = post(s.sql, id), media = JSON.parse(row.media_json);
   assert.deepEqual(new Set(media), new Set(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']));
   assert.equal(row.kind, 'roundup');
-  assert.deepEqual(JSON.parse(row.collaborators_json), ['ritag', 'patriotslo', 'fourth_boat'], 'the boats with the most photos (ties by name), three at most');
+  assert.deepEqual(JSON.parse(row.collaborators_json), ['seaexample', 'testboat.example', 'fourthboat_example'], 'the boats with the most photos (ties by name), three at most');
   const lines = row.caption.split('\n');
   assert.equal(lines[0], 'This week out of Morro Bay & Avila: 8 catches from 4 boats.');
-  assert.ok(lines.includes('Aboard: Rita G, Patriot, Fourth Boat, Third Boat.'));
-  assert.ok(lines.includes('Also aboard: @third.boat.'), 'the fourth handle is mentioned');
+  assert.ok(lines.includes('Aboard: Sea Example, Test Boat, Fourth Boat, Third Boat.'));
+  assert.ok(lines.includes('Also aboard: @thirdboat.example.'), 'the fourth handle is mentioned');
   assert.ok(lines.includes('Photos: Sam.'));
   assert.match(row.caption, /#angler/);
   const graphic = await graphicState(s.db, id);
@@ -245,7 +245,7 @@ dbTest('the roundup: the week\'s approved catch photos of verified, consenting b
 dbTest('the roundup takes at most 9 photos (with the cover, Meta\'s 10), spread over ports and species; no photo, no roundup', async () => {
   const s = setup();
   assert.equal((await quiet(() => S.draftRoundups(s.env, SUN, {}))).value[0].status, 'skipped');
-  boat(s.sql, 'b1', 'Rita G'); boat(s.sql, 'b2', 'Patriot', {port: 'port-san-luis'});
+  boat(s.sql, 'b1', 'Sea Example'); boat(s.sql, 'b2', 'Test Boat', {port: 'port-san-luis'});
   for (let i = 0; i < 10; i++) photo(s.sql, `l${i}`, {boatId: 'b1', classification: FISH('lingcod'), at: SUN - DAY - i * HOUR});
   photo(s.sql, 'v1', {boatId: 'b1', classification: FISH('vermilion'), at: SUN - 5 * DAY});
   photo(s.sql, 's1', {boatId: 'b2', classification: FISH('lingcod'), at: SUN - 6 * DAY});
@@ -411,7 +411,7 @@ function graphFake() {
 
 dbTest('publishing a daily post sends its card; a roundup goes out as a carousel of the cover and slides with its collaborators; a card still rendering waits', async () => {
   const s = setup({ADVISOR_SOCIAL_ENABLED: 'true', META_APP_SECRET: 'app-secret-PLACEHOLDER', META_PAGE_TOKEN: 'EAAB-PLACEHOLDER-TOKEN', META_IG_USER_ID: IG, META_PAGE_ID: PAGE});
-  boat(s.sql, 'b1', 'Rita G', {instagram: 'ritag'});
+  boat(s.sql, 'b1', 'Sea Example', {instagram: 'seaexample'});
   approvedPost(s.sql, 'd1', {kind: 'daily', media: '[]'});
   const state = (id, kind, keys, status = 'done') => s.sql.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
     .run(`advisor.graphic.${id}`, JSON.stringify({kind, data: {}, out_key: keys.public, status, keys, width: 1080, height: 1350}), iso(MON));
@@ -427,21 +427,21 @@ dbTest('publishing a daily post sends its card; a roundup goes out as a carousel
   // The roundup: its photos are held like any post's and go posted with it; Meta gets the slides.
   photo(s.sql, 'm1', {boatId: 'b1'}); photo(s.sql, 'm2', {boatId: 'b1'});
   approvedPost(s.sql, 'w1', {kind: 'roundup', media: '["m1","m2"]'});
-  s.sql.prepare(`UPDATE advisor_posts SET collaborators_json='["ritag"]' WHERE id='w1'`).run();
+  s.sql.prepare(`UPDATE advisor_posts SET collaborators_json='["seaexample"]' WHERE id='w1'`).run();
   state('w1', 'roundup', {public: 'advisor/posts/w1/roundup.jpg', slides: ['advisor/posts/w1/roundup-1.jpg', 'advisor/posts/w1/roundup-2.jpg']});
   const before = fake.calls.length;
   assert.deepEqual((await quiet(() => P.publish(s.env, 'w1', deps))).value, {outcome: 'posted'});
   const mine = fake.calls.slice(before), containers = mine.filter(c => c.method === 'POST' && c.path === `/${IG}/media`);
   assert.deepEqual(containers.slice(0, 3).map(c => [c.params.is_carousel_item, c.params.image_url]), [['true', 'https://skippercast.com/media/post/w1/roundup.jpg'],
     ['true', 'https://skippercast.com/media/post/w1/roundup-1.jpg'], ['true', 'https://skippercast.com/media/post/w1/roundup-2.jpg']]);
-  assert.deepEqual([containers[3].params.media_type, containers[3].params.collaborators], ['CAROUSEL', '["ritag"]']);
+  assert.deepEqual([containers[3].params.media_type, containers[3].params.collaborators], ['CAROUSEL', '["seaexample"]']);
   assert.equal(mine.filter(c => c.path === `/${PAGE}/photos` && c.params.published === 'false').length, 3, 'the Page gets the same three images');
   assert.deepEqual(s.sql.prepare("SELECT publish_state FROM advisor_media WHERE id IN ('m1','m2')").all().map(r => r.publish_state), ['posted', 'posted']);
 });
 
 dbTest('the cron runs the daily post at 06:30 and the roundup on Sundays at 17:00, once each', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G');
+  boat(s.sql, 'b1', 'Sea Example');
   report(s.sql, 'r1', 'b1', '2026-09-27', VERMILION(45));
   photo(s.sql, 'm1', {boatId: 'b1', at: SUN - DAY});
   const slots = SLOTS.filter(x => x.name === 'daily-post' || x.name === 'weekly-roundup');

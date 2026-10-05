@@ -45,7 +45,7 @@ const T0 = Date.parse('2026-10-04T18:00:00Z');
 const HOUR = 3600000;
 const iso = ms => new Date(ms).toISOString();
 const PERMALINK = 'https://www.instagram.com/p/PLACEHOLDER0001/';
-const CAPTION = 'Big lings came up off the reef.\nAboard Rita G (@ritag) out of Morro Bay.\n\n#skippercast';
+const CAPTION = 'Big lings came up off the reef.\nAboard Sea Example (@seaexample) out of Morro Bay.\n\n#skippercast';
 
 /**
  * A recorded Graph API: answers each call by its method and path from the
@@ -92,8 +92,8 @@ function setup({env = {}, boat = {}} = {}) {
   sql.prepare("INSERT INTO users(id,created_at,role) VALUES(?,?,'admin')").run(ADMIN, iso(T0));
   sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,role,language,boat_id,status,last_seen_at,created_at,updated_at) VALUES('c1','h-c1','ENC-c1','imessage','skipper',?,'b1',?,?,?,?)`)
     .run(boat.language ?? 'en', boat.contactStatus ?? 'active', iso(T0), iso(T0), iso(T0));
-  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,consent_revoked_at,created_at,updated_at) VALUES('b1','rita-g','Rita G','morro-bay','morro-bay',?,'c1',?,?,?,?,?)`)
-    .run(boat.instagram === undefined ? 'ritag' : boat.instagram, boat.status ?? 'verified', iso(T0 - 2 * 86400000), boat.revoked ?? null, iso(T0), iso(T0));
+  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,consent_revoked_at,created_at,updated_at) VALUES('b1','sea-example','Sea Example','morro-bay','morro-bay',?,'c1',?,?,?,?,?)`)
+    .run(boat.instagram === undefined ? 'seaexample' : boat.instagram, boat.status ?? 'verified', iso(T0 - 2 * 86400000), boat.revoked ?? null, iso(T0), iso(T0));
   const points = analytics(), channel = recorder(), bucket = memoryBucket();
   return {sql, db, points, channel, bucket, env: {TEXT_ADVISOR_ENABLED: 'true', ADVISOR_SOCIAL_ENABLED: 'true', DB: db, ADVISOR_MEDIA: bucket, ANALYTICS: points,
     META_APP_SECRET: 'app-secret-PLACEHOLDER', META_PAGE_TOKEN: 'EAAB-PLACEHOLDER-TOKEN', META_IG_USER_ID: IG, META_PAGE_ID: PAGE, ...env}};
@@ -142,7 +142,7 @@ dbTest('a photo: one image container with the caption, media_publish, the Page p
   assert.deepEqual([row.status, row.posted_at, row.ig_container_id, row.ig_media_id, row.fb_post_id, row.error], ['posted', iso(T0), '17890000000000101', '17890000000000202', '100000000000001_100000000000302', null]);
   assert.equal(s.sql.prepare("SELECT publish_state FROM advisor_media WHERE id='m1'").get().publish_state, 'posted');
   assert.equal(s.sql.prepare("SELECT COUNT(*) n FROM job_state WHERE key LIKE 'advisor.publish.%'").get().n, 0, 'no progress state or lease left behind');
-  assert.deepEqual(outbound(s.sql).map(m => [m.contact_id, m.body, m.in_reply_to, m.status]), [['c1', `Posted: ${PERMALINK}. Tagged @ritag.`, 'p1', 'sent']]);
+  assert.deepEqual(outbound(s.sql).map(m => [m.contact_id, m.body, m.in_reply_to, m.status]), [['c1', `Posted: ${PERMALINK}. Tagged @seaexample.`, 'p1', 'sent']]);
   assert.equal(outbound(s.sql)[0].id, await outboundId('p1', 'posted'), 'a deterministic outbound id: texted once per post');
   assert.deepEqual(publishPoints(s.points), [['photo', 'posted']]);
   // A second run changes nothing and calls nothing.
@@ -154,7 +154,7 @@ dbTest('a photo: one image container with the caption, media_publish, the Page p
 
 dbTest('the skipper text: Spanish for a Spanish skipper, untagged without a handle, nothing for a stopped skipper or with replies off', async () => {
   for (const [boat, env, expected] of [
-    [{language: 'es'}, {}, `Publicado: ${PERMALINK}. Etiquetamos a @ritag.`],
+    [{language: 'es'}, {}, `Publicado: ${PERMALINK}. Etiquetamos a @seaexample.`],
     [{instagram: null}, {}, `Posted: ${PERMALINK}`],
     [{contactStatus: 'stopped'}, {}, null],
     [{}, {ADVISOR_REPLIES_ENABLED: 'false'}, null],
@@ -500,24 +500,24 @@ dbTest('GET /media/<id>.story.jpg serves the derived story.jpg only; /media/<id>
 
 // ---- TA-S3: collaborators, user tags, collab status -------------------------------------------------------------------------
 
-const TAGS = [{username: 'ritag', x: 0.5, y: 0.5}];
+const TAGS = [{username: 'seaexample', x: 0.5, y: 0.5}];
 
 dbTest('collaborators and user tags go on the containers: a photo gets both, a reel collaborators only, a carousel collaborators on the parent and tags on the first image; a story neither', async () => {
   const s = setup(), fake = graphFake();
   addMedia(s.sql, 'm1'); addMedia(s.sql, 'm2'); addMedia(s.sql, 'v1', {kind: 'video'}); addMedia(s.sql, 'm3'); addMedia(s.sql, 'm4');
-  addPost(s.sql, {id: 'photo', media: ['m1'], collaborators: ['ritag', 'deckhand.example'], userTags: TAGS, targets: ['instagram']});
-  addPost(s.sql, {id: 'reel', kind: 'reel', media: ['v1'], collaborators: ['ritag'], userTags: TAGS, targets: ['instagram']});
-  addPost(s.sql, {id: 'carousel', kind: 'carousel', media: ['m2', 'm3'], collaborators: ['ritag'], userTags: TAGS, targets: ['instagram']});
-  addPost(s.sql, {id: 'story', kind: 'story', media: ['m4'], collaborators: ['ritag'], userTags: TAGS, targets: ['instagram_story']});
+  addPost(s.sql, {id: 'photo', media: ['m1'], collaborators: ['seaexample', 'deckhand.example'], userTags: TAGS, targets: ['instagram']});
+  addPost(s.sql, {id: 'reel', kind: 'reel', media: ['v1'], collaborators: ['seaexample'], userTags: TAGS, targets: ['instagram']});
+  addPost(s.sql, {id: 'carousel', kind: 'carousel', media: ['m2', 'm3'], collaborators: ['seaexample'], userTags: TAGS, targets: ['instagram']});
+  addPost(s.sql, {id: 'story', kind: 'story', media: ['m4'], collaborators: ['seaexample'], userTags: TAGS, targets: ['instagram_story']});
   for (const id of ['photo', 'reel', 'carousel', 'story']) {
     const before = fake.calls.length;
     const {value} = await quiet(() => P.publish(s.env, id, deps(s, fake).deps));
     assert.equal(value.outcome, 'posted', id);
     const made = fake.calls.slice(before).filter(c => c.method === 'POST' && c.path === `/${IG}/media`).map(c => ({collaborators: c.params.collaborators, user_tags: c.params.user_tags}));
     const expected = {
-      photo: [{collaborators: '["ritag","deckhand.example"]', user_tags: JSON.stringify(TAGS)}],
-      reel: [{collaborators: '["ritag"]', user_tags: undefined}],
-      carousel: [{collaborators: undefined, user_tags: JSON.stringify(TAGS)}, {collaborators: undefined, user_tags: undefined}, {collaborators: '["ritag"]', user_tags: undefined}],
+      photo: [{collaborators: '["seaexample","deckhand.example"]', user_tags: JSON.stringify(TAGS)}],
+      reel: [{collaborators: '["seaexample"]', user_tags: undefined}],
+      carousel: [{collaborators: undefined, user_tags: JSON.stringify(TAGS)}, {collaborators: undefined, user_tags: undefined}, {collaborators: '["seaexample"]', user_tags: undefined}],
       story: [{collaborators: undefined, user_tags: undefined}],
     }[id];
     assert.deepEqual(made, expected, id);
@@ -534,17 +534,17 @@ dbTest('a post without collaborators, or published to the Page only, has no coll
   const s = setup(), fake = graphFake();
   addMedia(s.sql, 'm1'); addMedia(s.sql, 'm2');
   addPost(s.sql, {id: 'p1', media: ['m1']});
-  addPost(s.sql, {id: 'p2', media: ['m2'], collaborators: ['ritag'], targets: ['facebook']});
+  addPost(s.sql, {id: 'p2', media: ['m2'], collaborators: ['seaexample'], targets: ['facebook']});
   for (const id of ['p1', 'p2']) await quiet(() => P.publish(s.env, id, deps(s, fake).deps));
   assert.deepEqual([postRow(s.sql, 'p1').collab_status, postRow(s.sql, 'p2').collab_status], [null, null]);
 });
 
 test('igCollaborators parses the edge: lower-case usernames, invite_status mapped, junk dropped', async () => {
   const calls = [];
-  const fetcher = async (url, init) => { calls.push(url); return jsonResponse({data: [...fixture('collaborators').data, {username: 'Bad Name', invite_status: 'Accepted'}, {username: 'X.y', invite_status: 'Weird'}]}); };
+  const fetcher = async (url, init) => { calls.push(url); return jsonResponse({data: [...fixture('collaborators').data, {username: 'Bad Name', invite_status: 'Accepted'}, {username: 'X.Example', invite_status: 'Weird'}]}); };
   const list = await meta.igCollaborators({token: 'EAAB-PLACEHOLDER-TOKEN', appSecret: 'app-secret-PLACEHOLDER', fetcher, sleep: async () => {}}, '17890000000000202');
-  assert.deepEqual(list, [{id: '17841400000000101', username: 'ritag.example', invite_status: 'accepted'}, {id: '17841400000000102', username: 'deckhand.example', invite_status: 'pending'},
-    {id: null, username: 'x.y', invite_status: null}]);
+  assert.deepEqual(list, [{id: '17841400000000101', username: 'sea.example', invite_status: 'accepted'}, {id: '17841400000000102', username: 'deckhand.example', invite_status: 'pending'},
+    {id: null, username: 'x.example', invite_status: null}]);
   const u = new URL(calls[0]);
   assert.equal(u.pathname, `/${meta.GRAPH_VERSION}/17890000000000202/collaborators`);
   assert.equal(u.searchParams.get('fields'), 'id,username,invite_status');
@@ -552,20 +552,20 @@ test('igCollaborators parses the edge: lower-case usernames, invite_status mappe
 
 test('collabStatusOf: pending or unlisted -> invited; else declined wins over accepted; all accepted -> accepted', () => {
   const A = 'accepted', D = 'declined', W = 'pending';
-  assert.equal(P.collabStatusOf(['ritag'], [{username: 'ritag', invite_status: A}]), 'accepted');
-  assert.equal(P.collabStatusOf(['RitaG'], [{username: 'ritag', invite_status: A}]), 'accepted');
-  assert.equal(P.collabStatusOf(['ritag'], [{username: 'ritag', invite_status: D}]), 'declined');
-  assert.equal(P.collabStatusOf(['ritag', 'b'], [{username: 'ritag', invite_status: A}, {username: 'b', invite_status: W}]), 'invited');
-  assert.equal(P.collabStatusOf(['ritag', 'b'], [{username: 'ritag', invite_status: A}]), 'invited', 'not listed is still waiting');
-  assert.equal(P.collabStatusOf(['ritag', 'b'], [{username: 'ritag', invite_status: A}, {username: 'b', invite_status: D}]), 'declined');
-  assert.equal(P.collabStatusOf(['ritag'], [{username: 'ritag', invite_status: null}]), 'invited');
+  assert.equal(P.collabStatusOf(['seaexample'], [{username: 'seaexample', invite_status: A}]), 'accepted');
+  assert.equal(P.collabStatusOf(['SeaExample'], [{username: 'seaexample', invite_status: A}]), 'accepted');
+  assert.equal(P.collabStatusOf(['seaexample'], [{username: 'seaexample', invite_status: D}]), 'declined');
+  assert.equal(P.collabStatusOf(['seaexample', 'b'], [{username: 'seaexample', invite_status: A}, {username: 'b', invite_status: W}]), 'invited');
+  assert.equal(P.collabStatusOf(['seaexample', 'b'], [{username: 'seaexample', invite_status: A}]), 'invited', 'not listed is still waiting');
+  assert.equal(P.collabStatusOf(['seaexample', 'b'], [{username: 'seaexample', invite_status: A}, {username: 'b', invite_status: D}]), 'declined');
+  assert.equal(P.collabStatusOf(['seaexample'], [{username: 'seaexample', invite_status: null}]), 'invited');
 });
 
 dbTest('collabTick: at most hourly, reads GET /<media>/collaborators for invited posts of the last 14 days and stores accepted or declined; a failed read changes nothing; off with the switch', async () => {
   const s = setup();
-  const fake = graphFake({on: {'GET /17890000000000301/collaborators': () => jsonResponse({data: [{id: '17841400000000101', username: 'ritag', invite_status: 'Accepted'}]})}});
-  for (const [id, media, posted, collab] of [['p1', '17890000000000301', T0 - HOUR, ['ritag']], ['p2', '17890000000000302', T0 - 2 * HOUR, ['ritag.example', 'deckhand.example']],
-    ['old', '17890000000000303', T0 - 15 * 86400000, ['ritag']], ['done', '17890000000000304', T0 - HOUR, ['ritag']]]) {
+  const fake = graphFake({on: {'GET /17890000000000301/collaborators': () => jsonResponse({data: [{id: '17841400000000101', username: 'seaexample', invite_status: 'Accepted'}]})}});
+  for (const [id, media, posted, collab] of [['p1', '17890000000000301', T0 - HOUR, ['seaexample']], ['p2', '17890000000000302', T0 - 2 * HOUR, ['sea.example', 'deckhand.example']],
+    ['old', '17890000000000303', T0 - 15 * 86400000, ['seaexample']], ['done', '17890000000000304', T0 - HOUR, ['seaexample']]]) {
     addMedia(s.sql, `m-${id}`);
     addPost(s.sql, {id, media: [`m-${id}`], collaborators: collab, status: 'posted'});
     s.sql.prepare('UPDATE advisor_posts SET ig_media_id=?,posted_at=?,collab_status=? WHERE id=?').run(media, iso(posted), id === 'done' ? 'accepted' : 'invited', id);
@@ -582,7 +582,7 @@ dbTest('collabTick: at most hourly, reads GET /<media>/collaborators for invited
   // An hour later p2's other collaborator declined; a failing read leaves a post as it was.
   s.sql.prepare("UPDATE advisor_posts SET collab_status='invited' WHERE id='p1'").run();
   const fake2 = graphFake({on: {'GET /17890000000000301/collaborators': () => jsonResponse(fixture('error-server'), 500),
-    'GET /17890000000000302/collaborators': () => jsonResponse({data: [{username: 'ritag.example', invite_status: 'Accepted'}, {username: 'deckhand.example', invite_status: 'Declined'}]})}});
+    'GET /17890000000000302/collaborators': () => jsonResponse({data: [{username: 'sea.example', invite_status: 'Accepted'}, {username: 'deckhand.example', invite_status: 'Declined'}]})}});
   const second = await quiet(() => P.collabTick(s.env, T0 + HOUR, {fetcher: fake2.fetcher, sleep: async () => {}}));
   assert.deepEqual(second.value, {status: 'ran', read: 1, changed: 1});
   assert.ok(!second.lines.join('\n').includes('EAAB-PLACEHOLDER-TOKEN'));
@@ -595,10 +595,10 @@ dbTest('collabTick: at most hourly, reads GET /<media>/collaborators for invited
 dbTest('the cron tick reads collab status; the admin card carries collab_status', async () => {
   const s = setup(), fake = graphFake();
   addMedia(s.sql, 'm1');
-  addPost(s.sql, {media: ['m1'], collaborators: ['ritag.example'], status: 'posted'});
+  addPost(s.sql, {media: ['m1'], collaborators: ['sea.example'], status: 'posted'});
   s.sql.prepare("UPDATE advisor_posts SET ig_media_id='17890000000000202',posted_at=?,collab_status='invited' WHERE id='p1'").run(iso(T0 - HOUR));
   await quiet(() => advisorCron(s.env, T0, {slots: [], consumer: {channelFor: () => s.channel}, publish: {fetcher: fake.fetcher, sleep: async () => {}, now: () => T0}}));
-  assert.equal(postRow(s.sql).collab_status, 'accepted', 'the fixture lists ritag.example as Accepted');
+  assert.equal(postRow(s.sql).collab_status, 'accepted', 'the fixture lists sea.example as Accepted');
   const {get} = app(s, fake);
   const card = (await (await get('/api/admin/posts?status=posted')).json()).posts[0];
   assert.equal(card.collab_status, 'accepted');

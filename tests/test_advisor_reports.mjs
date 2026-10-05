@@ -176,7 +176,7 @@ test('dates: yesterday, weekdays, M/D and month names within 7 days; formatted e
 
 // ---- count board -> draft, the confirmation text --------------------------------------------
 
-const reading = (over = {}) => ({boat_name: 'Rita G', date_text: null, date_iso: null, date_confidence: 0, trip_type: 'Full Day', anglers: 22,
+const reading = (over = {}) => ({boat_name: 'Sea Example', date_text: null, date_iso: null, date_confidence: 0, trip_type: 'Full Day', anglers: 22,
   lines: [{label: 'Vermilion', count: 45, released: null, confidence: 0.93}, {label: 'Lingcod', count: 12, released: 2, confidence: 0.9},
     {label: 'Copper', count: 8, released: null, confidence: 0.88}, {label: 'Cabezon', count: 3, released: null, confidence: 0.86}],
   notes: null, overall_confidence: 0.87, provider: 'claude', model: 'm', ms: 1, ...over});
@@ -201,15 +201,15 @@ test('uncertain lines get "?" in the confirmation: low line confidence and unrea
   const d = r.draftFromBoard(reading({lines: [{label: 'Vermilion', count: 45, released: null, confidence: 0.93}, {label: 'Lingcod', count: 12, released: 2, confidence: 0.6},
     {label: 'Copper', count: null, released: null, confidence: 0.4}]}), null, BOAT, T0);
   assert.deepEqual(d.counts.map(c => Boolean(c.uncertain)), [false, true, true]);
-  assert.equal(r.confirmationText({...d, boat_name: 'Rita G'}, 'en'),
-    'Rita G, Sat Oct 3, full day, 22 anglers:\n45 vermilion, 12? lingcod (2 released), ? copper\nReply Y to post, or tell me what to fix.');
+  assert.equal(r.confirmationText({...d, boat_name: 'Sea Example'}, 'en'),
+    'Sea Example, Sat Oct 3, full day, 22 anglers:\n45 vermilion, 12? lingcod (2 released), ? copper\nReply Y to post, or tell me what to fix.');
   const full = r.draftFromBoard(reading(), null, BOAT, T0);
-  assert.equal(r.confirmationText({...full, boat_name: 'Rita G'}, 'en'),
-    'Rita G, Sat Oct 3, full day, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix.', '05 § count board step 3, word for word');
-  assert.equal(r.confirmationText({...full, boat_name: 'Rita G'}, 'es'),
-    'Rita G, sáb 3 oct, día completo, 22 pescadores:\n45 vermilion, 12 lingcod (2 liberados), 8 copper, 3 cabezon\nResponde SÍ para publicar, o dime qué corregir.');
-  assert.equal(r.confirmationText({report_date: TODAY, trip_type: null, anglers: null, counts: [], notes: 'slow day', boat_name: 'Lucero'}, 'en'),
-    'Lucero, Sat Oct 3:\nno counts yet\nNotes: slow day\nReply Y to post, or tell me what to fix.');
+  assert.equal(r.confirmationText({...full, boat_name: 'Sea Example'}, 'en'),
+    'Sea Example, Sat Oct 3, full day, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix.', '05 § count board step 3, word for word');
+  assert.equal(r.confirmationText({...full, boat_name: 'Sea Example'}, 'es'),
+    'Sea Example, sáb 3 oct, día completo, 22 pescadores:\n45 vermilion, 12 lingcod (2 liberados), 8 copper, 3 cabezon\nResponde SÍ para publicar, o dime qué corregir.');
+  assert.equal(r.confirmationText({report_date: TODAY, trip_type: null, anglers: null, counts: [], notes: 'slow day', boat_name: 'Example Two'}, 'en'),
+    'Example Two, Sat Oct 3:\nno counts yet\nNotes: slow day\nReply Y to post, or tell me what to fix.');
 });
 
 // ---- the flows through the consumer --------------------------------------------------------------
@@ -218,7 +218,7 @@ function setup({contact = {}, boat = {}, env = {}} = {}) {
   const {sql, db} = advisorDatabase();
   const c = {id: 'c1', phone_hash: 'h1', phone_enc: 'ENC', channel: 'imessage', role: 'skipper', language: 'en', boat_id: 'b1', ...contact};
   addContact(sql, c);
-  const b = {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1', status: 'pending', consent: null, instagram: null, clean: 0, auto: 0, ...boat};
+  const b = {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1', status: 'pending', consent: null, instagram: null, clean: 0, auto: 0, ...boat};
   sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,consent_photos_at,instagram,clean_reports,auto_publish,created_at,updated_at) VALUES(?,?,?,'morro-bay','morro-bay',?,?,?,?,?,?,?,?)`)
     .run(b.id, b.slug, b.name, b.owner, b.status, b.consent, b.instagram, b.clean, b.auto, iso(T0 - 30 * DAY), iso(T0 - 30 * DAY));
   const bucket = memoryBucket();
@@ -274,7 +274,7 @@ async function say(env, sql, body, {contact = 'c1', media = null, at = T0, visio
 const report = (sql, where = '1=1') => sql.prepare(`SELECT * FROM advisor_reports WHERE ${where} ORDER BY created_at DESC LIMIT 1`).get();
 const boatRow = sql => sql.prepare("SELECT * FROM advisor_boats WHERE id='b1'").get();
 const pagesVersion = sql => sql.prepare("SELECT value FROM job_state WHERE key='advisor.pages.version'").get()?.value ?? null;
-const CONFIRM_TEXT = 'Rita G, Sat Oct 3, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix.';
+const CONFIRM_TEXT = 'Sea Example, Sat Oct 3, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix.';
 
 dbTest('count text -> pending report and the confirmation; Y publishes: verified frozen, clean_reports + 1, pages version, the port\'s daily answer invalidated', async () => {
   const {sql, env} = setup({boat: {status: 'verified'}});
@@ -288,7 +288,7 @@ dbTest('count text -> pending report and the confirmation; Y publishes: verified
   assert.equal(pagesVersion(sql), null, 'nothing public yet');
   const y = await say(env, sql, 'Y', {at: T0 + 60000});
   assert.equal(y.intent, 'report.confirm');
-  assert.deepEqual(y.texts, ['Posted. https://skippercast.com/boats/rita-g?s=txt']);
+  assert.deepEqual(y.texts, ['Posted. https://skippercast.com/boats/sea-example?s=txt']);
   const pub = report(sql);
   assert.deepEqual([pub.status, pub.verified, pub.confirmed_at, pub.published_at], ['published', 1, iso(T0 + 60000), iso(T0 + 60000)]);
   assert.equal(boatRow(sql).clean_reports, 1);
@@ -297,7 +297,7 @@ dbTest('count text -> pending report and the confirmation; Y publishes: verified
   // The published report is what get_port_report serves (06), credited to the verified boat.
   const port = await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, {env, contact: sql.prepare("SELECT * FROM advisor_contacts WHERE id='c1'").get(), message: {id: 'x'}, deps: {feeds: async () => null},
     db: env.DB, language: 'en', settings: advisorSettings(env), now: T0 + 60000});
-  assert.deepEqual(port.result.skipper_reports.map(x => [x.boat, x.date, x.anglers, x.counts.length]), [['Rita G', TODAY, 22, 4]]);
+  assert.deepEqual(port.result.skipper_reports.map(x => [x.boat, x.date, x.anglers, x.counts.length]), [['Sea Example', TODAY, 22, 4]]);
   // A redelivered "Y" does nothing twice.
   sql.prepare("UPDATE advisor_messages SET status='queued' WHERE id=?").run(y.m.id);
   await quiet(() => consumeAdvisor(batchOf(y.m.id), env, {channelFor: () => recorder(), handler: engineHandler, now: () => T0 + 60000, engine: {clock: () => T0 + 60000}}));
@@ -333,7 +333,7 @@ dbTest('N withdraws; a correction edits (edits row, version, confirmed_at cleare
   const api = async (_url, init) => { requests.push(JSON.parse(init.body)); return new Response(JSON.stringify({content: [{type: 'text', text: 'Sure.'}], stop_reason: 'end_turn', usage: {}}), {status: 200}); };
   const other = await say(env, sql, 'how was the swell out there today?', {at: T0 + 2000, api});
   assert.equal(other.intent, 'chat');
-  assert.match(requests[0].system[1].text, new RegExp(`- report waiting for confirmation: yes \\(report_id ${row.id}; Rita G, Sat Oct 3, 22 anglers: 45 vermilion, 14 lings\\)`));
+  assert.match(requests[0].system[1].text, new RegExp(`- report waiting for confirmation: yes \\(report_id ${row.id}; Sea Example, Sat Oct 3, 22 anglers: 45 vermilion, 14 lings\\)`));
   const no = await say(env, sql, 'no', {at: T0 + 3000});
   assert.deepEqual([no.intent, no.texts], ['report.withdraw', [t('en', 'report_withdrawn')]]);
   assert.equal(report(sql).status, 'withdrawn');
@@ -351,13 +351,13 @@ dbTest('the unique (boat, day, source): a second board or text the same day is a
   await say(env, sql, '22 anglers, 45 vermilion, 12 lings');
   const again = await say(env, sql, '22 anglers, 50 vermilion, 12 lings, 2 cabezon', {at: T0 + 1000});
   assert.equal(again.intent, 'report.text');
-  assert.match(again.texts[0], /^Rita G, Sat Oct 3, 22 anglers:\n50 vermilion, 12 lings, 2 cabezon\nReply Y/);
+  assert.match(again.texts[0], /^Sea Example, Sat Oct 3, 22 anglers:\n50 vermilion, 12 lings, 2 cabezon\nReply Y/);
   assert.equal(sql.prepare('SELECT COUNT(*) n FROM advisor_reports').get().n, 1);
   assert.deepEqual([report(sql).version, sql.prepare('SELECT COUNT(*) n FROM advisor_report_edits').get().n], [2, 1]);
   await say(env, sql, 'y', {at: T0 + 2000});
   // After publishing, a new text for the day updates the published report in place.
   const after = await say(env, sql, '22 anglers, 52 vermilion, 12 lings, 2 cabezon', {at: T0 + 3000});
-  assert.match(after.texts[0], /^Got it, I've updated that day's posted report:\nRita G, Sat Oct 3, 22 anglers:\n52 vermilion/);
+  assert.match(after.texts[0], /^Got it, I've updated that day's posted report:\nSea Example, Sat Oct 3, 22 anglers:\n52 vermilion/);
   assert.deepEqual([report(sql).status, report(sql).version, pagesVersion(sql)], ['published', 3, '2']);
   // A count board the same day as a typed report is an edit too (one live report per boat and day).
   const board = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mb1'});
@@ -396,7 +396,7 @@ dbTest('clean_reports: + 1 per clean confirm, reset by an edit before confirm; t
   await say(env, sql, '20 anglers, 30 vermilion, 6 lings', {at: day(1)});
   const two = await say(env, sql, 'y', {at: day(1) + 1000});
   assert.equal(boatRow(sql).clean_reports, 2);
-  assert.deepEqual(two.texts, ['Posted. https://skippercast.com/boats/rita-g?s=txt', "You've had 2 clean reports. Want me to post your reports without asking? Reply AUTO."]);
+  assert.deepEqual(two.texts, ['Posted. https://skippercast.com/boats/sea-example?s=txt', "You've had 2 clean reports. Want me to post your reports without asking? Reply AUTO."]);
   // Offered once: the next clean confirm does not repeat it.
   await say(env, sql, '18 anglers, 30 vermilion, 6 lings', {at: day(2)});
   const three = await say(env, sql, 'y', {at: day(2) + 1000});
@@ -427,7 +427,7 @@ dbTest('AUTO turns auto-publish on (owner only); a report then posts at once wit
   const on = await say(env, sql, 'AUTO', {at: T0 + 1000});
   assert.deepEqual([on.intent, boatRow(sql).auto_publish, on.texts], ['report.auto.on', 1, [t('en', 'auto_on')]]);
   const posted = await say(env, sql, '22 anglers, 45 vermilion, 12 lings', {at: T0 + 2000});
-  assert.deepEqual(posted.texts, ['Posted: Rita G, Sat Oct 3, 22 anglers: 45 vermilion, 12 lings. Text me any fix. https://skippercast.com/boats/rita-g?s=txt']);
+  assert.deepEqual(posted.texts, ['Posted: Sea Example, Sat Oct 3, 22 anglers: 45 vermilion, 12 lings. Text me any fix. https://skippercast.com/boats/sea-example?s=txt']);
   const row = report(sql);
   assert.deepEqual([row.status, row.confirmed_at, row.published_at], ['published', null, iso(T0 + 2000)], 'auto-published, not confirmed');
   assert.equal(boatRow(sql).clean_reports, 0, 'not a clean confirm');
@@ -439,7 +439,7 @@ dbTest('AUTO turns auto-publish on (owner only); a report then posts at once wit
   const unsure = {...BOARD, record_count_board: {...vfixture('count-board.json'), content: [{type: 'tool_use', id: 'u', name: 'record_count_board', input: {...vfixture('count-board.json').content[0].input,
     date_iso: '2026-10-02', date_confidence: 0.9, lines: [{label: 'Vermilion', count: 40, released: null, confidence: 0.6}]}}]}};
   const b = await say(env, sql, null, {media: [board], at: T0 + 4000, vision: unsure});
-  assert.match(b.texts[0], /^Rita G, Fri Oct 2, 22 anglers:\n40\? vermilion\nReply Y to post/);
+  assert.match(b.texts[0], /^Sea Example, Fri Oct 2, 22 anglers:\n40\? vermilion\nReply Y to post/);
   assert.equal(report(sql, "report_date='2026-10-02'").status, 'pending_confirm');
   const off = await say(env, sql, 'ask me', {at: T0 + 5000});
   assert.deepEqual([off.intent, boatRow(sql).auto_publish], ['report.auto.off', 0]);
@@ -483,14 +483,14 @@ dbTest('anglers, web visitors and boatless contacts never reach the report flow'
 // ---- the media path (05 § count board, § catch and action photos, § videos) ------------------------
 
 dbTest('a count-board photo: classify -> read -> draft -> the confirmation; consent queues the board photo; a retried message re-reads nothing', async () => {
-  const {sql, env} = setup({boat: {consent: iso(T0 - DAY), instagram: 'ritag'}});
+  const {sql, env} = setup({boat: {consent: iso(T0 - DAY), instagram: 'seaexample'}});
   const id = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mb1'});
   const res = await say(env, sql, null, {media: [id], vision: BOARD});
   assert.deepEqual([res.intent, res.texts], ['report.count_board', [CONFIRM_TEXT]]);
   assert.deepEqual(res.visionCalls, ['record_classification', 'record_count_board']);
   const row = report(sql);
   assert.deepEqual([row.source, row.media_id, row.status], ['count-board', 'mb1', 'pending_confirm']);
-  assert.deepEqual({...sql.prepare("SELECT publish_state,credit FROM advisor_media WHERE id='mb1'").get()}, {publish_state: 'queued', credit: 'Rita G'}, '05 step 5: Story material, with consent');
+  assert.deepEqual({...sql.prepare("SELECT publish_state,credit FROM advisor_media WHERE id='mb1'").get()}, {publish_state: 'queued', credit: 'Sea Example'}, '05 step 5: Story material, with consent');
   const cached = JSON.parse(sql.prepare("SELECT classification_json FROM advisor_media WHERE id='mb1'").get().classification_json);
   assert.deepEqual(Object.keys(cached).sort(), ['classify', 'count_board']);
   // The same message again: the cached results, the same report.
@@ -506,7 +506,7 @@ dbTest('an unreadable board gets the 05 "couldn\'t read" text; vision down asks 
   const low = {...BOARD, record_count_board: {...vfixture('count-board.json'), content: [{type: 'tool_use', id: 'l', name: 'record_count_board', input: {...vfixture('count-board.json').content[0].input, overall_confidence: 0.3}}]}};
   const res = await say(env, sql, null, {media: [id], vision: low});
   assert.deepEqual([res.intent, res.texts], ['report.board_unreadable', ["I couldn't read that one. Can you send a clearer shot, or just text me the numbers (e.g. '22 anglers, 45 vermilion, 12 lings')?",
-    t('en', 'consent_ask', {name: 'Rita G'})]], 'no report waits for Y, so TA-I1\'s 7-day consent re-ask follows the photo reply');
+    t('en', 'consent_ask', {name: 'Sea Example'})]], 'no report waits for Y, so TA-I1\'s 7-day consent re-ask follows the photo reply');
   const id2 = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mb3'});
   const down = await say(env, sql, null, {media: [id2], vision: {}, at: T0 + 1000});
   assert.deepEqual([down.intent, down.texts[0]], ['media.unreadable', t('en', 'media_unavailable')]);
@@ -516,17 +516,17 @@ dbTest('an unreadable board gets the 05 "couldn\'t read" text; vision down asks 
 
 dbTest('a catch photo with consent is queued and tagged; without consent the no-consent line once per 7 days; has_person opens a media review', async () => {
   // Consent and a handle: queued, tagged.
-  const a = setup({boat: {consent: iso(T0 - DAY), instagram: 'ritag'}});
+  const a = setup({boat: {consent: iso(T0 - DAY), instagram: 'seaexample'}});
   const fish = addMedia(a.sql, a.env.ADVISOR_MEDIA, {id: 'mf1', bytes: png('fish.png')});
   const res = await say(a.env, a.sql, null, {media: [fish], vision: FISH});
-  assert.deepEqual([res.intent, res.texts], ['media.photo', ["Nice. That's queued for the SkipperCast feed, tagged @ritag. Count board too?"]]);
+  assert.deepEqual([res.intent, res.texts], ['media.photo', ["Nice. That's queued for the SkipperCast feed, tagged @seaexample. Count board too?"]]);
   assert.equal(a.sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mf1'").get().publish_state, 'queued');
   assert.equal(a.sql.prepare("SELECT COUNT(*) n FROM advisor_reviews WHERE kind='media'").get().n, 0, 'no person: no photo review');
   assert.deepEqual(a.sql.prepare("SELECT kind,reason,status FROM advisor_reviews WHERE kind='post'").all().map(x => ({...x})), [{kind: 'post', reason: 'social_draft', status: 'open'}], 'TA-S1: the post draft waits for its one approval');
   // A person in it: queued and a has_person review (which texts the admin, 08).
   const person = addMedia(a.sql, a.env.ADVISOR_MEDIA, {id: 'mp1', bytes: png('deck-person.png')});
   const held = await say(a.env, a.sql, null, {media: [person], vision: PERSON});
-  assert.deepEqual(held.texts, ["Nice. That's queued for the SkipperCast feed, tagged @ritag. Count board too?"]);
+  assert.deepEqual(held.texts, ["Nice. That's queued for the SkipperCast feed, tagged @seaexample. Count board too?"]);
   assert.equal(a.sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mp1'").get().publish_state, 'queued');
   assert.deepEqual({...a.sql.prepare("SELECT id,kind,ref_id,reason,status FROM advisor_reviews WHERE kind='media'").get()}, {id: await reviewId('media', 'mp1', 'has_person'), kind: 'media', ref_id: 'mp1', reason: 'has_person', status: 'open'});
   // No consent: nothing queued, the line once, then a plain thanks.
@@ -546,23 +546,23 @@ dbTest('a catch photo with consent is queued and tagged; without consent the no-
     const p4 = addMedia(b.sql, b.env.ADVISOR_MEDIA, {id: 'mn4', bytes: png('fish.png')});
     assert.equal((await say(b.env, b.sql, null, {media: [p4], vision: FISH, at: T0 + 7 * DAY + 1000})).texts[0], t('en', 'photo_thanks'));
   }
-  // Consent but no handle: the owner is asked once; "@ritag" saves it; crew are never asked.
+  // Consent but no handle: the owner is asked once; "@seaexample" saves it; crew are never asked.
   const c = setup({boat: {consent: iso(T0 - DAY)}});
   const q1 = addMedia(c.sql, c.env.ADVISOR_MEDIA, {id: 'mh1', bytes: png('fish.png')});
   const ask = await say(c.env, c.sql, null, {media: [q1], vision: FISH});
   assert.deepEqual(ask.texts, [t('en', 'photo_queued_ask_handle')]);
   const q2 = addMedia(c.sql, c.env.ADVISOR_MEDIA, {id: 'mh2', bytes: png('fish.png')});
   assert.deepEqual((await say(c.env, c.sql, null, {media: [q2], vision: FISH, at: T0 + 1000})).texts, [t('en', 'photo_queued_untagged')], 'asked once');
-  const handle = await say(c.env, c.sql, 'ritag_sportfishing', {at: T0 + 2000});
-  assert.deepEqual([handle.intent, handle.texts], ['skipper.instagram', ['Thanks. I\'ll tag @ritag_sportfishing on your posts.']]);
-  assert.equal(boatRow(c.sql).instagram, 'ritag_sportfishing');
+  const handle = await say(c.env, c.sql, 'seaexample_fishing', {at: T0 + 2000});
+  assert.deepEqual([handle.intent, handle.texts], ['skipper.instagram', ['Thanks. I\'ll tag @seaexample_fishing on your posts.']]);
+  assert.equal(boatRow(c.sql).instagram, 'seaexample_fishing');
 });
 
 dbTest('video: a Reel candidate with consent; a file the intake rejected (over 300 MB, unknown container) gets the upload link; MediaTooLarge gets the upload link and a log', async () => {
-  const {sql, env} = setup({boat: {consent: iso(T0 - DAY), instagram: 'ritag'}});
+  const {sql, env} = setup({boat: {consent: iso(T0 - DAY), instagram: 'seaexample'}});
   const vid = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mv1', kind: 'video', mime: 'video/mp4', bytes: Buffer.alloc(64)});
   const v = await say(env, sql, null, {media: [vid]});
-  assert.deepEqual([v.intent, v.texts], ['media.video', ['Nice. That video is queued as a Reel for the SkipperCast feed, tagged @ritag.']]);
+  assert.deepEqual([v.intent, v.texts], ['media.video', ['Nice. That video is queued as a Reel for the SkipperCast feed, tagged @seaexample.']]);
   assert.deepEqual([v.visionCalls, sql.prepare("SELECT publish_state FROM advisor_media WHERE id='mv1'").get().publish_state], [['record_caption_line'], 'queued'], 'no vision call for a video (TA-S1: its Reel draft asks for the caption line)');
   assert.equal(sql.prepare("SELECT kind FROM advisor_posts WHERE media_json='[\"mv1\"]'").get()?.kind, 'reel', 'TA-S1: a video is a Reel draft');
   const bad = addMedia(sql, env.ADVISOR_MEDIA, {id: 'mr1', kind: 'unknown', mime: 'application/octet-stream', bytes: Buffer.alloc(8), state: 'rejected'});
@@ -606,7 +606,7 @@ dbTest('propose_report: the model\'s structure becomes the same draft and confir
   assert.equal(out.result.proposed, true);
   assert.deepEqual(out.actions.map(a => a.type), ['report_draft', 'send_text']);
   assert.deepEqual(out.actions[0].report.counts, [{species_key: 'rockfish', label: 'reds', kept: 45, released: null}, {species_key: 'lingcod', label: 'lings', kept: 12, released: 2}], 'the model\'s species_key is not trusted');
-  assert.equal(out.actions[1].text, 'Rita G, Sat Oct 3, full day, 22 anglers:\n45 reds, 12 lings (2 released)\nNotes: slow start\nReply Y to post, or tell me what to fix.');
+  assert.equal(out.actions[1].text, 'Sea Example, Sat Oct 3, full day, 22 anglers:\n45 reds, 12 lings (2 released)\nNotes: slow start\nReply Y to post, or tell me what to fix.');
   assert.deepEqual((await TOOL_BY_NAME.get('propose_report').run({report_date: '2026-09-01', counts: [{label: 'lings', kept: 1}]}, toolCtx(env, sql))).result.proposed, false);
   assert.equal((await TOOL_BY_NAME.get('propose_report').run({counts: []}, toolCtx(env, sql))).result.proposed, false);
 });
@@ -657,9 +657,9 @@ test('every TA-I2 string has English and Spanish, and the 05 wording is exact', 
     assert.ok(STRINGS[key].en.trim() && STRINGS[key].es.trim() && STRINGS[key].en !== STRINGS[key].es, key);
   }
   assert.equal(t('en', 'report_confirm_ask'), 'Reply Y to post, or tell me what to fix.');
-  assert.equal(t('en', 'report_posted', {slug: 'rita-g'}), 'Posted. {{link:boat:rita-g}}');
+  assert.equal(t('en', 'report_posted', {slug: 'sea-example'}), 'Posted. {{link:boat:sea-example}}');
   assert.equal(t('en', 'report_board_unreadable'), "I couldn't read that one. Can you send a clearer shot, or just text me the numbers (e.g. '22 anglers, 45 vermilion, 12 lings')?");
-  assert.equal(t('en', 'photo_queued', {instagram: 'ritag'}), "Nice. That's queued for the SkipperCast feed, tagged @ritag. Count board too?");
+  assert.equal(t('en', 'photo_queued', {instagram: 'seaexample'}), "Nice. That's queued for the SkipperCast feed, tagged @seaexample. Count board too?");
   assert.equal(t('en', 'auto_offer', {n: 5}), "You've had 5 clean reports. Want me to post your reports without asking? Reply AUTO.");
   assert.equal(t('en', 'report_updated', {changes: '14 lingcod (2 released)'}), 'Updated: 14 lingcod (2 released).');
 });

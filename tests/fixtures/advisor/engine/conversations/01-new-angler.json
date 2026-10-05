@@ -19,8 +19,8 @@
                 "id": "toolu_daily_g1",
                 "name": "record_daily_answer",
                 "input": {
-                  "en": "Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today. No skipper reports from the last three days. The landing reports Starfire last Sun with bocaccio, copper rockfish and 8 lingcod; recent reported activity: Low. Today's forecast isn't in yet. Full picture: {{link:port:morro-bay}}",
-                  "es": "Morro Bay, sáb 3 oct: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. No hay reportes de capitanes de los últimos tres días. El muelle reporta al Starfire el dom pasado con bocaccio, rocote cobrizo y 8 lingcod; actividad reciente reportada: Low. El pronóstico de hoy todavía no llega. Todo el detalle: {{link:port:morro-bay}}"
+                  "en": "Morro Bay, Sat Oct 3: SMALL CRAFT ADVISORY posted for today. No skipper reports from the last three days. The landing reports Example Star last Sun with bocaccio, copper rockfish and 8 lingcod; recent reported activity: Low. Today's forecast isn't in yet. Full picture: {{link:port:morro-bay}}",
+                  "es": "Morro Bay, sáb 3 oct: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. No hay reportes de capitanes de los últimos tres días. El muelle reporta al Example Star el dom pasado con bocaccio, rocote cobrizo y 8 lingcod; actividad reciente reportada: Low. El pronóstico de hoy todavía no llega. Todo el detalle: {{link:port:morro-bay}}"
                 }
               }
             ],

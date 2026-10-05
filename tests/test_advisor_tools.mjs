@@ -382,13 +382,13 @@ dbTest('get_port_report: the day\'s answer (composed when none is stored, never 
   assert.ok(!JSON.stringify(out).includes('Example Boat Two'), 'an unverified boat is never named');
   assert.ok(!out.skipper_reports.some(r => r.date === '2026-09-25' && r.trip_type === null), 'drafts are not reports');
   assert.equal(out.landing.label, 'reported by the landing');
-  assert.deepEqual(out.landing.reports.map(r => r.boat), ['Starfire'], 'only Morro Bay\'s landing reports');
+  assert.deepEqual(out.landing.reports.map(r => r.boat), ['Example Star'], 'only Morro Bay\'s landing reports');
   assert.deepEqual(out.landing.recent_activity.find(a => a.target === 'reef'), {target: 'reef', species: ['lingcod', 'rockfish'], confidence: 'Low', trips: 1, boats: 1, days: 1});
   assert.equal(out.freshness.newest_landing_report, '2026-09-27');
   assert.equal(out.catch_probability, null);
   assert.doesNotMatch(JSON.stringify(out), /\d\s*%|probab(?!ility":null)/i);
   const psl = (await TOOL_BY_NAME.get('get_port_report').run({port: 'port-san-luis'}, dataCtx({db}))).result;
-  assert.deepEqual(psl.landing.reports.map(r => r.boat), ['Sunny Day'], 'the feed\'s "Avila Beach" is Port San Luis');
+  assert.deepEqual(psl.landing.reports.map(r => r.boat), ['Example Day'], 'the feed\'s "Avila Beach" is Port San Luis');
   const offline = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, dataCtx({db, feeds: async () => { throw Error('down'); }}))).result;
   assert.deepEqual(offline.landing, {available: false});
   // A stored answer whose inputs are current is returned as it is.

@@ -27,6 +27,12 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 # Instagram handles only from catalog/advisor/fixture-handles.json.
 ADVISOR_SCOPES = ("tests/fixtures/advisor/", "docs/plans/text-advisor/")
 ADVISOR_RUNBOOK = re.compile(r"docs/operations/runbooks/advisor-[^/]+\.md")
+# The advisor's test files get the handle rule too (hardening, threat model § 9.10): an @mention, or a quoted
+# value of a handle field (instagram: '...', username: "...", collaborators: ['...']), must be a listed handle.
+ADVISOR_TESTS = re.compile(r"tests/test_advisor_[^/]+\.mjs")
+JS_HANDLE = re.compile(r"\b(?:instagram|username|handle|ig_handle|ig_username)\s*:\s*(['\"])(@?[A-Za-z0-9._]{1,30})\1")
+JS_COLLABORATORS = re.compile(r"\bcollaborators\s*:\s*\[([^\]]*)\]")
+QUOTED = re.compile(r"(['\"])(@?[A-Za-z0-9._]{1,30})\1")
 FIXTURE_HANDLES = "catalog/advisor/fixture-handles.json"
 E164_NANP = re.compile(r"\+1\d{10}")
 # +1555XXXXXXX (no 555 area code is assigned), or +1 NPA 555-01XX (the North
@@ -43,6 +49,31 @@ def advisor_scoped(relative):
     """True for a file the Text Advisor privacy scan covers (a repository-relative path)."""
     name = relative.as_posix()
     return name.startswith(ADVISOR_SCOPES) or bool(ADVISOR_RUNBOOK.fullmatch(name))
+
+
+def advisor_test_file(relative):
+    """True for a Text Advisor test file, which the handle rule covers (a repository-relative path)."""
+    return bool(ADVISOR_TESTS.fullmatch(relative.as_posix()))
+
+
+def advisor_test_handles(relative, text, allowed):
+    """Handle-rule violations in an advisor test file as 'path:line: rule'; never the handle itself."""
+    errors = []
+
+    def line(offset):
+        return text.count("\n", 0, offset) + 1
+
+    found = [(m.start(), m.group(1).rstrip(".")) for m in MENTION.finditer(text)]
+    found += [(m.start(), m.group(2)) for m in JS_HANDLE.finditer(text)]
+    for block in JS_COLLABORATORS.finditer(text):
+        found += [(block.start(), m.group(2)) for m in QUOTED.finditer(block.group(1))]
+    seen = set()
+    for offset, handle in sorted(found):
+        value, at = handle.lstrip("@").lower(), line(offset)
+        if len(value) >= 2 and value not in allowed and (at, value) not in seen:   # one finding per handle per line
+            seen.add((at, value))
+            errors.append(f"{relative}:{at}: Instagram handle not in {FIXTURE_HANDLES}")
+    return errors
 
 
 def load_fixture_handles(root=ROOT):
@@ -131,6 +162,8 @@ def main():
                 errors.append(f"{relative}: possible {label}")
         if advisor_scoped(relative):
             errors.extend(advisor_privacy(relative, text, handles))
+        elif advisor_test_file(relative):
+            errors.extend(advisor_test_handles(relative, text, handles))
         if path.suffix == ".md":
             for raw in LINK.findall(text):
                 url = urlsplit(raw.strip("<>"))

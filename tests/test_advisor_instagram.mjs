@@ -305,7 +305,7 @@ dbTest('every third DM reply ends with the "continue by text" line and the /text
 // ---- comments -----------------------------------------------------------------------------------
 
 test('keywords: the first word in English or Spanish (after @mentions, any case, accents ignored); questions; commands are neither', () => {
-  const cases = [['RIG', 'RIG', 'en'], ['rig please', 'RIG', 'en'], ['Rig 🎣🎣', 'RIG', 'en'], ['@skippercast @boat report', 'REPORT', 'en'], ['ID?', 'ID', 'en'],
+  const cases = [['RIG', 'RIG', 'en'], ['rig please', 'RIG', 'en'], ['Rig 🎣🎣', 'RIG', 'en'], ['@skippercast @boat.example report', 'REPORT', 'en'], ['ID?', 'ID', 'en'],
     ['BOATS', 'BOATS', 'en'], ['Aparejo para halibut', 'RIG', 'es'], ['Reporte', 'REPORT', 'es'], ['IDENTIFICAR', 'ID', 'es'], ['lanchas?', 'BOATS', 'es'], ['Especíe', 'ID', 'es']];
   for (const [text, key, language] of cases) {
     const m = inbox.matchKeyword(text);

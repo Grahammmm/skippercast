@@ -117,7 +117,7 @@ test('the Worker\'s Hermes client reads the mock\'s answers (multipart body, tok
     const c = await quietly(() => provider.classify(image('count-board.png'), env));
     assert.deepEqual([c.kind, c.provider, c.model], ['count_board', 'hermes', 'mock-vision-1']);
     const r = await quietly(() => provider.readCountBoard(image('count-board.png'), env));
-    assert.equal(r.boat_name, 'Rita G');
+    assert.equal(r.boat_name, 'Sea Example');
     const f = await quietly(() => provider.identifyFish(image('fish.png'), env, 'morro-bay'));
     assert.deepEqual(f.candidates.map(x => x.species_key), ['vermilion', 'canary', 'yelloweye']);
     assert.deepEqual(await provider.health(env), {ok: true, detail: 'classify=mock-vision-1, fish_id=mock-vision-1'});

@@ -198,12 +198,12 @@ dbTest('no skipper reports: the answer says so and falls back to the landing\'s 
   const api = fakeApi([fixture('generate-landing-only')]);
   const {value: a} = await quiet(() => dailyAnswer(env, 'morro-bay', DATE, 'en', {feeds: feeds(), fetcher: api.fetcher, clock: () => NOW}));
   assert.equal(a.source, 'model');
-  assert.match(a.text_en, /No skipper reports from the last three days\. The landing reports Starfire .*recent reported activity: Low\./);
+  assert.match(a.text_en, /No skipper reports from the last three days\. The landing reports Example Star .*recent reported activity: Low\./);
   assert.match(a.text_es, /No hay reportes de capitanes .*El muelle reporta .*Low\./);
   // A model answer that drops the label or the "no skipper reports" sentence: the composed text instead.
   for (const [en, es] of [
-    ['Morro Bay, Mon Sep 28: The landing reports Starfire on Sun with bocaccio. Full picture: {{link:port:morro-bay}}', 'Morro Bay, lun 28 sept: El muelle reporta al Starfire. Todo el detalle: {{link:port:morro-bay}}'],
-    ['Morro Bay, Mon Sep 28: The landing reports Starfire on Sun; recent reported activity: Low. Full picture: {{link:port:morro-bay}}', 'Morro Bay, lun 28 sept: El muelle reporta al Starfire; actividad reciente reportada: Low. Todo el detalle: {{link:port:morro-bay}}'],
+    ['Morro Bay, Mon Sep 28: The landing reports Example Star on Sun with bocaccio. Full picture: {{link:port:morro-bay}}', 'Morro Bay, lun 28 sept: El muelle reporta al Example Star. Todo el detalle: {{link:port:morro-bay}}'],
+    ['Morro Bay, Mon Sep 28: The landing reports Example Star on Sun; recent reported activity: Low. Full picture: {{link:port:morro-bay}}', 'Morro Bay, lun 28 sept: El muelle reporta al Example Star; actividad reciente reportada: Low. Todo el detalle: {{link:port:morro-bay}}'],
   ]) {
     sql.prepare('DELETE FROM advisor_daily_answers').run();
     const bad = fakeApi([withTexts('generate-landing-only', en, es)]);
@@ -315,10 +315,10 @@ dbTest('the daily-answers slot runs once a local day at 05:30 and pre-generates 
   twoReports(sql);
   const day = '2026-09-28', slot = SLOTS.find(s => s.name === 'daily-answers');
   assert.ok(slot);
-  // Morro Bay has skipper reports (one generation); Port San Luis has the landing's Sunny Day trip (one generation).
+  // Morro Bay has skipper reports (one generation); Port San Luis has the landing's Example Day trip (one generation).
   const psl = withTexts('generate-landing-only',
-    'Port San Luis, Mon Sep 28: SMALL CRAFT ADVISORY posted for today. No skipper reports from the last three days. The landing reports Sunny Day on Sun with rockcod; recent reported activity: Low. Full picture: {{link:port:port-san-luis}}',
-    'Port San Luis, lun 28 sept: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. No hay reportes de capitanes de los últimos tres días. El muelle reporta al Sunny Day el dom con rocote; actividad reciente reportada: Low. Todo el detalle: {{link:port:port-san-luis}}');
+    'Port San Luis, Mon Sep 28: SMALL CRAFT ADVISORY posted for today. No skipper reports from the last three days. The landing reports Example Day on Sun with rockcod; recent reported activity: Low. Full picture: {{link:port:port-san-luis}}',
+    'Port San Luis, lun 28 sept: SMALL CRAFT ADVISORY (aviso del NWS) para hoy. No hay reportes de capitanes de los últimos tres días. El muelle reporta al Example Day el dom con rocote; actividad reciente reportada: Low. Todo el detalle: {{link:port:port-san-luis}}');
   const api = fakeApi([fixture('generate-skipper-reports'), psl]);
   const deps = {daily: {feeds: feeds(), fetcher: api.fetcher}};
   const ran = [];
@@ -386,14 +386,14 @@ dbTest('pre-router: a plain "what\'s biting" with a stored answer makes no model
   const {sql: s2, env: e2} = setup();
   const r2 = contact(s2, {home_port: 'port-san-luis'});
   const psl = withTexts('generate-landing-only',
-    'Port San Luis, Mon Sep 28: No skipper reports from the last three days. The landing reports Sunny Day on Sun with rockcod; recent reported activity: Low. Full picture: {{link:port:port-san-luis}}',
-    'Port San Luis, lun 28 sept: No hay reportes de capitanes de los últimos tres días. El muelle reporta al Sunny Day el dom con rocote; actividad reciente reportada: Low. Todo el detalle: {{link:port:port-san-luis}}');
+    'Port San Luis, Mon Sep 28: No skipper reports from the last three days. The landing reports Example Day on Sun with rockcod; recent reported activity: Low. Full picture: {{link:port:port-san-luis}}',
+    'Port San Luis, lun 28 sept: No hay reportes de capitanes de los últimos tres días. El muelle reporta al Example Day el dom con rocote; actividad reciente reportada: Low. Todo el detalle: {{link:port:port-san-luis}}');
   const api = fakeApi([psl]);
   const gen = await quiet(() => turn(e2, r2(), inbound(s2, "how's the fishing"), {fetcher: api.fetcher}));
   assert.equal(gen.value.intent, 'reports.daily.model');
   assert.equal(api.requests.length, 1);
   assert.equal(api.requests[0].tool_choice.name, 'record_daily_answer', 'the one call is the generation, not a chat turn');
-  assert.deepEqual(texts(gen.value), ['Port San Luis, Mon Sep 28: No skipper reports from the last three days. The landing reports Sunny Day on Sun with rockcod; recent reported activity: Low. Full picture: https://skippercast.com/ports/port-san-luis?s=txt']);
+  assert.deepEqual(texts(gen.value), ['Port San Luis, Mon Sep 28: No skipper reports from the last three days. The landing reports Example Day on Sun with rockcod; recent reported activity: Low. Full picture: https://skippercast.com/ports/port-san-luis?s=txt']);
   const cached = await turn(e2, r2(), inbound(s2, "how's the fishing"), {fetcher: noModel});
   assert.equal(cached.intent, 'reports.daily.cache');
 });

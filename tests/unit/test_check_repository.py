@@ -22,7 +22,7 @@ _spec.loader.exec_module(check_repository)
 
 FIXTURE = PurePosixPath('tests/fixtures/advisor/meta/example.json')
 PLAN = PurePosixPath('docs/plans/text-advisor/03-channels.md')
-ALLOWED = {'skippercast', 'ritag.example', 'handle'}
+ALLOWED = {'skippercast', 'sea.example', 'handle'}
 # Not in the fictional series: a 555 line outside 01XX, and an ordinary line (built, never written out).
 REAL_555 = '+1' + '805' + '555' + '12' + '34'
 REAL = '+1' + '805' + '772' + '00' + '00'
@@ -47,6 +47,34 @@ class ScopeTests(unittest.TestCase):
                 self.assertFalse(check_repository.advisor_scoped(PurePosixPath(name)))
 
 
+class AdvisorTestFileTests(unittest.TestCase):
+    """Hardening: the handle rule also covers tests/test_advisor_*.mjs (mentions and quoted handle fields)."""
+
+    def test_scope(self):
+        self.assertTrue(check_repository.advisor_test_file(PurePosixPath('tests/test_advisor_skippers.mjs')))
+        for name in ('tests/test_accounts.mjs', 'tests/fixtures/test_advisor_x.mjs', 'tests/test_advisor_x.py'):
+            with self.subTest(name):
+                self.assertFalse(check_repository.advisor_test_file(PurePosixPath(name)))
+
+    def test_listed_handles_pass(self):
+        text = "addBoat(sql, {instagram: 'sea.example'}); caption('Follow @SkipperCast and @Sea.Example.'); collaborators: ['@sea.example', 'skippercast']"
+        self.assertEqual(check_repository.advisor_test_handles(PurePosixPath('tests/test_advisor_x.mjs'), text, ALLOWED), [])
+
+    def test_unlisted_handles_fail_without_naming_them(self):
+        relative = PurePosixPath('tests/test_advisor_x.mjs')
+        for text in (f"caption('aboard @{UNLISTED}')", f"addBoat(sql, {{instagram: '{UNLISTED}'}})", f'{{username: "@{UNLISTED}"}}',
+                     f"post({{collaborators: ['sea.example', '{UNLISTED}']}})"):
+            with self.subTest(text[:20]):
+                errors = check_repository.advisor_test_handles(relative, 'first line\n' + text, ALLOWED)
+                self.assertEqual(len(errors), 1)
+                self.assertIn(f'{relative}:2: Instagram handle not in', errors[0])
+                self.assertNotIn(UNLISTED, errors[0])
+
+    def test_emails_paths_and_versions_are_not_handles(self):
+        text = "mail@example.com, import('@scope/pkg'), 'claude-haiku-5@2026', instagram: null"
+        self.assertEqual(check_repository.advisor_test_handles(PurePosixPath('tests/test_advisor_x.mjs'), text, ALLOWED), [])
+
+
 class PhoneTests(unittest.TestCase):
     def test_fictional_series_passes(self):
         self.assertEqual(scan('call +15555550123, +15559876543, +18055550100 or +18055550199'), [])
@@ -69,7 +97,7 @@ class PhoneTests(unittest.TestCase):
 
 class HandleTests(unittest.TestCase):
     def test_listed_mentions_pass_in_any_case_and_before_a_period(self):
-        self.assertEqual(scan('Follow @SkipperCast. Tagged @RitaG.Example. The boat\'s `@handle`.'), [])
+        self.assertEqual(scan('Follow @SkipperCast. Tagged @Sea.Example. The boat\'s `@handle`.'), [])
 
     def test_an_unlisted_mention_fails_without_echoing_it(self):
         (error,) = scan(f'Thanks, tagged @{UNLISTED} on your posts.')
@@ -84,17 +112,17 @@ class HandleTests(unittest.TestCase):
         self.assertEqual(scan('"Also aboard: @x." for handles past the three'), [])
 
     def test_json_handle_fields_are_checked_at_any_depth(self):
-        listed = json.dumps({'data': [{'username': 'ritag.example'}], 'boat': {'instagram': '@RitaG.Example'},
+        listed = json.dumps({'data': [{'username': 'sea.example'}], 'boat': {'instagram': '@Sea.Example'},
                              'post': {'collaborators': ['skippercast']}})
         self.assertEqual(scan(listed, FIXTURE), [])
-        for document in ({'username': UNLISTED}, {'boat': {'instagram': UNLISTED}}, {'post': {'collaborators': ['ritag.example', UNLISTED]}},
+        for document in ({'username': UNLISTED}, {'boat': {'instagram': UNLISTED}}, {'post': {'collaborators': ['sea.example', UNLISTED]}},
                          {'value': {'from': {'id': '1', 'handle': UNLISTED}}}):
             with self.subTest(document):
                 errors = scan(json.dumps(document), FIXTURE)
                 self.assertEqual(errors, [f'{FIXTURE}: handle field value not in catalog/advisor/fixture-handles.json'])
 
     def test_other_json_fields_and_non_handles_are_not_handles(self):
-        self.assertEqual(scan(json.dumps({'name': UNLISTED, 'text': 'Rita G', 'username': 'Not A Handle!', 'instagram': None}), FIXTURE), [])
+        self.assertEqual(scan(json.dumps({'name': UNLISTED, 'text': 'Sea Example', 'username': 'Not A Handle!', 'instagram': None}), FIXTURE), [])
 
     def test_handle_fields_only_count_in_json(self):
         self.assertEqual(scan(f'"username": "{UNLISTED}"', PLAN), [])
@@ -107,7 +135,7 @@ class FixtureHandleListTests(unittest.TestCase):
         data = json.loads((ROOT / check_repository.FIXTURE_HANDLES).read_text(encoding='utf-8'))
         self.assertEqual(set(data['own']), {'skippercast'})
         self.assertTrue(all('example' in h or 'placeholder' in h for h in data['fictional']))
-        self.assertTrue({'skippercast', 'ritag.example', 'deckhand.example'} <= allowed)
+        self.assertTrue({'skippercast', 'sea.example', 'deckhand.example'} <= allowed)
 
     def test_a_real_looking_fictional_entry_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:

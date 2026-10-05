@@ -75,26 +75,26 @@ const toolCtx = (env, db, contact, message = {id: 'in-tool'}) => ({env, contact,
 // ---- parsers -------------------------------------------------------------------------------
 
 test('parsers: name, landing, instagram, booking, skip and start phrases (02 column notes)', () => {
-  assert.equal(sk.parseName('  "Rita G"  '), 'Rita G');
-  assert.equal(sk.parseName('the NEW Lucero!'), 'the NEW Lucero', 'case kept, trailing ! dropped');
+  assert.equal(sk.parseName('  "Sea Example"  '), 'Sea Example');
+  assert.equal(sk.parseName('the NEW Example Two!'), 'the NEW Example Two', 'case kept, trailing ! dropped');
   assert.equal(sk.parseName('x'.repeat(61)), null);
   assert.equal(sk.parseName('skip'), null, 'the name is required');
-  assert.equal(sk.parseLanding('Virg\u0007\'s Landing'), "Virg 's Landing");
+  assert.equal(sk.parseLanding('Gull\u0007\'s Landing'), "Gull 's Landing");
   assert.equal(sk.parseLanding('y'.repeat(61)), null);
-  assert.equal(sk.parseInstagram('@RitaG_Sportfishing'), 'ritag_sportfishing', 'stored lower-case, without @');
-  assert.equal(sk.parseInstagram('lucero.psl'), 'lucero.psl');
-  for (const bad of ['rita g', '@' + 'a'.repeat(31), 'rita-g', 'https://instagram.com/ritag']) assert.equal(sk.parseInstagram(bad), null, bad);
+  assert.equal(sk.parseInstagram('@SeaExample_Fishing'), 'seaexample_fishing', 'stored lower-case, without @');
+  assert.equal(sk.parseInstagram('exampletwo.psl'), 'exampletwo.psl');
+  for (const bad of ['sea g', '@' + 'a'.repeat(31), 'sea-example', 'https://instagram.com/seaexample']) assert.equal(sk.parseInstagram(bad), null, bad);
   assert.deepEqual(sk.parseBooking('https://example.com/book?trip=1'), {booking_url: 'https://example.com/book?trip=1', phone_public: null});
   assert.deepEqual(sk.parseBooking('(805) 555-0100'), {booking_url: null, phone_public: '+18055550100'}, 'a phone is phone_public, never a contact');
   for (const bad of ['http://example.com', 'example.com', 'call me', 'https://user:pw@example.com']) assert.equal(sk.parseBooking(bad), null, bad);
   for (const w of ['skip', 'SKIP.', 'none', 'saltar', 'ninguno', 'n/a']) assert.ok(sk.isSkip(w), w);
   for (const w of ['yes', 'YES', 'ok', 'Sí', 'si', 'y']) assert.ok(sk.isYes(w), w);
   assert.ok(!sk.isYes('yes but not on facebook'));
-  assert.deepEqual(sk.startPhrase("I'm the captain of the Rita G"), {language: null, name: 'Rita G'});
+  assert.deepEqual(sk.startPhrase("I'm the captain of the Sea Example"), {language: null, name: 'Sea Example'});
   assert.deepEqual(sk.startPhrase('register my boat'), {language: null, name: null});
   assert.deepEqual(sk.startPhrase('Quiero registrar mi barco'), {language: 'es', name: null});
-  assert.deepEqual(sk.startPhrase('soy el capitán del Lucero'), {language: 'es', name: 'Lucero'});
-  for (const no of ['the captain said lings were good', 'what boat should I register for?', 'is the Rita G running?']) assert.equal(sk.startPhrase(no), null, no);
+  assert.deepEqual(sk.startPhrase('soy el capitán del Example Two'), {language: 'es', name: 'Example Two'});
+  for (const no of ['the captain said lings were good', 'what boat should I register for?', 'is the Sea Example running?']) assert.equal(sk.startPhrase(no), null, no);
 });
 
 test('ports: catalog names and the 05 aliases match; anything else gets the three nearest ports, numbered', () => {
@@ -112,16 +112,16 @@ test('ports: catalog names and the 05 aliases match; anything else gets the thre
 
 dbTest('slugs: ASCII from the name, 40 characters at most, a numeric suffix on collision', async () => {
   const {sql, db} = setup();
-  assert.equal(sk.slugify('Rita G'), 'rita-g');
-  assert.equal(sk.slugify('Señorita Pescadora II'), 'senorita-pescadora-ii');
+  assert.equal(sk.slugify('Sea Example'), 'sea-example');
+  assert.equal(sk.slugify('Señora Example II'), 'senora-example-ii');
   assert.equal(sk.slugify('***'), 'boat');
   const long = sk.slugify('The Very Long Name Of A Sportfishing Boat Out Of Morro Bay');
   assert.ok(long.length <= 40 && !long.endsWith('-'), long);
-  assert.equal(await sk.uniqueSlug(db, 'Rita G'), 'rita-g');
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G'});
-  assert.equal(await sk.uniqueSlug(db, 'Rita  G!'), 'rita-g-2');
-  addBoat(sql, {id: 'b2', slug: 'rita-g-2', name: 'Rita G'});
-  assert.equal(await sk.uniqueSlug(db, 'rita g'), 'rita-g-3');
+  assert.equal(await sk.uniqueSlug(db, 'Sea Example'), 'sea-example');
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example'});
+  assert.equal(await sk.uniqueSlug(db, 'Sea  Example!'), 'sea-example-2');
+  addBoat(sql, {id: 'b2', slug: 'sea-example-2', name: 'Sea Example'});
+  assert.equal(await sk.uniqueSlug(db, 'sea example'), 'sea-example-3');
   const longName = 'The Very Long Name Of A Sportfishing Boat Out Of Morro Bay';
   addBoat(sql, {id: 'b3', slug: sk.slugify(longName), name: longName});
   const suffixed = await sk.uniqueSlug(db, longName);
@@ -137,7 +137,7 @@ dbTest('registration: one question per text, an unknown port gets the nearest th
   assert.deepEqual(texts(start), ["Let's set up your boat page. What's the boat's name?"]);
   assert.equal(start.actions.at(-1).type, 'flow_set');
   setFlow(sql, 'c1', start.actions.at(-1).state);
-  const name = await run(env, contactRow(sql), inbound(sql, '"Rita G"'));
+  const name = await run(env, contactRow(sql), inbound(sql, '"Sea Example"'));
   assert.deepEqual([name.intent, texts(name)], ['skipper.register.name', ['Which port does she run out of?']]);
   setFlow(sql, 'c1', name.actions.at(-1).state);
   const bad = await run(env, contactRow(sql), inbound(sql, 'the harbor'));
@@ -161,50 +161,50 @@ dbTest('registration: one question per text, an unknown port gets the nearest th
 
 dbTest('registration: "never mind" cancels; a start phrase from a boat owner says they are set up', async () => {
   const {sql, env} = setup();
-  setFlow(sql, 'c1', {flow: 'register', step: 'port', draft: {name: 'Rita G', lang: 'en'}, asked_at: iso(T0 - HOUR)});
+  setFlow(sql, 'c1', {flow: 'register', step: 'port', draft: {name: 'Sea Example', lang: 'en'}, asked_at: iso(T0 - HOUR)});
   const cancel = await run(env, contactRow(sql), inbound(sql, 'never mind'));
   assert.deepEqual([cancel.intent, cancel.actions[0]], ['skipper.register.cancelled', {type: 'flow_set', state: null}]);
   const owner = setup({contact: {role: 'skipper', boat_id: 'b1'}});
-  addBoat(owner.sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
-  const again = await run(owner.env, contactRow(owner.sql), inbound(owner.sql, "I'm the captain of the Rita G"));
-  assert.deepEqual([again.intent, texts(again)], ['skipper.register.exists', ["You're already set up with Rita G. Text me today's count board whenever you're in."]]);
+  addBoat(owner.sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
+  const again = await run(owner.env, contactRow(owner.sql), inbound(owner.sql, "I'm the captain of the Sea Example"));
+  assert.deepEqual([again.intent, texts(again)], ['skipper.register.exists', ["You're already set up with Sea Example. Text me today's count board whenever you're in."]]);
 });
 
 dbTest('a register flow older than 24 h is abandoned silently: deleted, and the message goes on to the model', async () => {
   const {sql, env} = setup();
-  setFlow(sql, 'c1', {flow: 'register', step: 'landing', draft: {name: 'Rita G', port: 'morro-bay', lang: 'en'}, asked_at: iso(T0 - 25 * HOUR)});
+  setFlow(sql, 'c1', {flow: 'register', step: 'landing', draft: {name: 'Sea Example', port: 'morro-bay', lang: 'en'}, asked_at: iso(T0 - 25 * HOUR)});
   const {value: r} = await quiet(() => run(env, contactRow(sql), inbound(sql, 'Morro Bay Landing')));
   assert.equal(r.intent, 'unconfigured', 'no API key here: the model path answered');
   assert.deepEqual(r.actions[0], {type: 'flow_set', state: null}, 'the stale flow is deleted');
   assert.ok(!texts(r).some(x => /landing|Instagram/i.test(x)), 'no registration question');
   // 23 hours is still live.
-  setFlow(sql, 'c1', {flow: 'register', step: 'landing', draft: {name: 'Rita G', port: 'morro-bay', lang: 'en'}, asked_at: iso(T0 - 23 * HOUR)});
+  setFlow(sql, 'c1', {flow: 'register', step: 'landing', draft: {name: 'Sea Example', port: 'morro-bay', lang: 'en'}, asked_at: iso(T0 - 23 * HOUR)});
   assert.equal((await run(env, contactRow(sql), inbound(sql, 'Morro Bay Landing'))).intent, 'skipper.register.landing');
 });
 
 dbTest('consumer: completion creates the pending boat, makes the contact its skipper, opens new_skipper and texts the admin; a retry creates nothing twice', async () => {
   const {sql, env} = setup({env: {ADVISOR_ADMIN_CONTACT_ID: ADMIN_ID}});
   addContact(sql, {id: ADMIN_ID, phone_hash: 'ha', phone_enc: 'ENC-ADMIN', role: 'admin-test'});
-  addBoat(sql, {id: 'other', slug: 'rita-g', name: 'Rita G'});   // the slug is taken
-  setFlow(sql, 'c1', {flow: 'register', step: 'booking', draft: {name: 'Rita G', port: 'morro-bay', landing: null, instagram: 'ritag', lang: 'en'}, asked_at: iso(T0 - HOUR)});
+  addBoat(sql, {id: 'other', slug: 'sea-example', name: 'Sea Example'});   // the slug is taken
+  setFlow(sql, 'c1', {flow: 'register', step: 'booking', draft: {name: 'Sea Example', port: 'morro-bay', landing: null, instagram: 'seaexample', lang: 'en'}, asked_at: iso(T0 - HOUR)});
   const ch = recorder();
-  const {m} = await consume(env, sql, 'https://example.com/rita', {ch});
+  const {m} = await consume(env, sql, 'https://example.com/sea', {ch});
   const boat = sql.prepare("SELECT * FROM advisor_boats WHERE owner_contact_id='c1'").get();
-  assert.deepEqual([boat.slug, boat.status, boat.booking_url, boat.verified_at], ['rita-g-2', 'pending', 'https://example.com/rita', null]);
+  assert.deepEqual([boat.slug, boat.status, boat.booking_url, boat.verified_at], ['sea-example-2', 'pending', 'https://example.com/sea', null]);
   assert.deepEqual([contactRow(sql).role, contactRow(sql).boat_id, contactRow(sql).home_port], ['skipper', boat.id, 'morro-bay']);
   const code = (await reviewId('skipper', boat.id, 'new_skipper')).slice(0, 6);
   const toAdmin = ch.sent.filter(x => x.to === 'ENC-ADMIN').map(x => x.text);
   assert.deepEqual(toAdmin, [`New skipper review (new_skipper). Reply OK ${code} to approve or NO ${code} to reject.`]);
   const toSkipper = ch.sent.filter(x => x.to === 'ENC').map(x => x.text);
-  assert.match(toSkipper[0], /skippercast\.com\/boats\/rita-g-2 once the team confirms/);
+  assert.match(toSkipper[0], /skippercast\.com\/boats\/sea-example-2 once the team confirms/);
   assert.match(toSkipper[1], /^One more thing: OK for SkipperCast to post your photos/);
   // The same message again (a redelivery): no second boat, no second text.
   sql.prepare("UPDATE advisor_messages SET status='queued' WHERE id=?").run(m.id);
-  setFlow(sql, 'c1', {flow: 'register', step: 'booking', draft: {name: 'Rita G', port: 'morro-bay', landing: null, instagram: 'ritag', lang: 'en'}, asked_at: iso(T0 - HOUR)});
+  setFlow(sql, 'c1', {flow: 'register', step: 'booking', draft: {name: 'Sea Example', port: 'morro-bay', landing: null, instagram: 'seaexample', lang: 'en'}, asked_at: iso(T0 - HOUR)});
   const before = ch.sent.length;
   await quiet(() => consumeAdvisor(batchOf(m.id), env, {channelFor: () => ch, handler: engineHandler, now: () => T0, engine: {clock: () => T0}}));
   assert.equal(sql.prepare("SELECT COUNT(*) n FROM advisor_boats WHERE owner_contact_id='c1'").get().n, 1);
-  assert.equal(sql.prepare("SELECT slug FROM advisor_boats WHERE owner_contact_id='c1'").get().slug, 'rita-g-2', 'the retry keeps the slug');
+  assert.equal(sql.prepare("SELECT slug FROM advisor_boats WHERE owner_contact_id='c1'").get().slug, 'sea-example-2', 'the retry keeps the slug');
   assert.equal(ch.sent.length, before);
 });
 
@@ -212,7 +212,7 @@ dbTest('consumer: completion creates the pending boat, makes the contact its ski
 
 dbTest('consent: YES records the time and message id; any other reply declines once and goes on; revoke sets consent_revoked_at', async () => {
   const {sql, env} = setup({contact: {role: 'skipper', boat_id: 'b1'}});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   setFlow(sql, 'c1', {flow: 'consent', step: 'asked', draft: {boat_id: 'b1', lang: 'en'}, asked_at: iso(T0 - HOUR)});
   // A question instead of an answer: the decline note, then the question goes on to the model.
   const {value: q} = await quiet(() => run(env, contactRow(sql), inbound(sql, "what's the swell tomorrow?")));
@@ -228,7 +228,7 @@ dbTest('consent: YES records the time and message id; any other reply declines o
   const {m} = await consume(env, sql, 'post my photos', {ch});
   const b = sql.prepare("SELECT * FROM advisor_boats WHERE id='b1'").get();
   assert.deepEqual([b.consent_photos_at, b.consent_message_id, b.consent_revoked_at], [iso(T0), m.id, null]);
-  assert.match(ch.sent.at(-1).text, /^Thanks\. Your photos can go on the SkipperCast feed, tagged to Rita G\./);
+  assert.match(ch.sent.at(-1).text, /^Thanks\. Your photos can go on the SkipperCast feed, tagged to Sea Example\./);
   // Revoke: the column, post_revoke (TA-S1 rejects the boat's drafts; logged), the confirmation.
   const later = T0 + DAY;
   const {lines} = await quiet(async () => {
@@ -247,21 +247,21 @@ dbTest('consent: YES records the time and message id; any other reply declines o
 
 dbTest('consent: only the owner; a crew member asking to revoke is told so and nothing changes', async () => {
   const {sql, env} = setup({contact: {role: 'crew', boat_id: 'b1'}});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'owner', consent: iso(T0 - DAY)});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'owner', consent: iso(T0 - DAY)});
   const r = await run(env, contactRow(sql), inbound(sql, 'revoke'));
   assert.deepEqual([r.intent, texts(r)], ['consent.not_owner', ["Only the boat's owner can change that."]]);
 });
 
 dbTest('consent: a photo from the owner without consent re-asks, at most once per 7 days', async () => {
   const {sql, env} = setup({contact: {role: 'skipper', boat_id: 'b1'}});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1', created: iso(T0 - 30 * DAY)});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1', created: iso(T0 - 30 * DAY)});
   setFlow(sql, 'c1', {flow: 'consent', step: 'declined', draft: {boat_id: 'b1'}, asked_at: iso(T0 - 3 * DAY)});
   const soon = await run(env, contactRow(sql), inbound(sql, null, {media: ['m1']}));
   assert.deepEqual([soon.intent, texts(soon)], ['media', [t('en', 'media_ack')]], '3 days after the last ask: no re-ask');
   setFlow(sql, 'c1', {flow: 'consent', step: 'declined', draft: {boat_id: 'b1'}, asked_at: iso(T0 - 8 * DAY)});
   const later = await run(env, contactRow(sql), inbound(sql, null, {media: ['m2']}));
   assert.equal(later.intent, 'media');
-  assert.deepEqual(texts(later), [t('en', 'media_ack'), t('en', 'consent_ask', {name: 'Rita G'})]);
+  assert.deepEqual(texts(later), [t('en', 'media_ack'), t('en', 'consent_ask', {name: 'Sea Example'})]);
   assert.deepEqual({...later.actions.at(-1).state, asked_at: 'x'}, {flow: 'consent', step: 'asked', draft: {boat_id: 'b1', lang: 'en'}, asked_at: 'x'});
   setFlow(sql, 'c1', later.actions.at(-1).state);
   const yes = await run(env, contactRow(sql), inbound(sql, 'ok'));
@@ -405,8 +405,8 @@ dbTest('crew: forget me removes a pending invitation and the record of declines'
 dbTest('crew: only the boat owner can add or remove; removal keeps the row, clears the boat, and later photos are an angler\'s', async () => {
   const {sql, db, env} = setup({contact: {role: 'skipper', boat_id: 'b1'}});
   const keys = await deriveKeys(KEY), hash = await phoneHash(keys, '+18055550142');
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
-  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero', owner: 'c3'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
+  addBoat(sql, {id: 'b2', slug: 'example-two', name: 'Example Two', owner: 'c3'});
   addContact(sql, {id: 'c2', phone_hash: hash, phone_enc: 'ENC-CREW', role: 'crew', boat_id: 'b1'});
   addContact(sql, {id: 'c3', phone_hash: 'h3', phone_enc: 'ENC-3', role: 'skipper', boat_id: 'b2'});
   sql.prepare(`INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at) VALUES('b1','c2','c1',?)`).run(iso(T0));
@@ -437,19 +437,19 @@ dbTest('crew: only the boat owner can add or remove; removal keeps the row, clea
 
 dbTest('register_boat: starts the flow with what the model heard, completes at once with every field, refuses the web and existing owners', async () => {
   const {sql, db, env} = setup();
-  const partial = await TOOL_BY_NAME.get('register_boat').run({name: 'Rita G', port: 'morro-bay', instagram: 'not a handle'}, toolCtx(env, db, contactRow(sql)));
+  const partial = await TOOL_BY_NAME.get('register_boat').run({name: 'Sea Example', port: 'morro-bay', instagram: 'not a handle'}, toolCtx(env, db, contactRow(sql)));
   assert.deepEqual([partial.result.started, partial.result.registered, partial.result.ignored], [true, false, ['instagram']]);
   assert.deepEqual(partial.actions.map(a => a.type), ['send_text', 'flow_set']);
   assert.equal(partial.actions[0].text, 'Which landing? (skip if none)', 'no intro: the model already spoke');
-  assert.deepEqual(partial.actions[1].state.draft, {lang: 'en', name: 'Rita G', port: 'morro-bay'});
-  const full = await TOOL_BY_NAME.get('register_boat').run({name: 'Rita G', port: 'morro-bay', landing: 'Virg\'s', instagram: '@ritag', booking_url: 'https://example.com/rita'},
+  assert.deepEqual(partial.actions[1].state.draft, {lang: 'en', name: 'Sea Example', port: 'morro-bay'});
+  const full = await TOOL_BY_NAME.get('register_boat').run({name: 'Sea Example', port: 'morro-bay', landing: 'Gull\'s', instagram: '@seaexample', booking_url: 'https://example.com/sea'},
     toolCtx(env, db, contactRow(sql), {id: 'in-full'}));
   assert.equal(full.result.registered, true);
   assert.deepEqual(full.actions.map(a => a.type), ['boat_create', 'review_open', 'send_text', 'send_text', 'flow_set']);
   assert.deepEqual(full.actions[1], {type: 'review_open', kind: 'skipper', refId: full.actions[0].boat.id, reason: 'new_skipper'});
-  const web = await TOOL_BY_NAME.get('register_boat').run({name: 'Rita G'}, toolCtx(env, db, {...contactRow(sql), phone_enc: null, web_session: 'w'.repeat(64)}));
+  const web = await TOOL_BY_NAME.get('register_boat').run({name: 'Sea Example'}, toolCtx(env, db, {...contactRow(sql), phone_enc: null, web_session: 'w'.repeat(64)}));
   assert.equal(web.result.started, false);
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   sql.prepare("UPDATE advisor_contacts SET boat_id='b1', role='skipper'").run();
   assert.equal((await TOOL_BY_NAME.get('register_boat').run({name: 'Other'}, toolCtx(env, db, contactRow(sql)))).result.started, false);
 });
@@ -457,10 +457,10 @@ dbTest('register_boat: starts the flow with what the model heard, completes at o
 // ---- verification (05 § Verification) ------------------------------------------------------------
 
 dbTest('ok <code> from the admin-test contact verifies the boat and texts the skipper; no <code> rejects and says the team will reach out', async () => {
-  for (const [word, status, reply] of [['ok', 'verified', 'Rita G is verified. Your page: skippercast.com/boats/rita-g'], ['no', 'rejected', "We couldn't confirm Rita G yet. Someone from the SkipperCast team will reach out."]]) {
+  for (const [word, status, reply] of [['ok', 'verified', 'Sea Example is verified. Your page: skippercast.com/boats/sea-example'], ['no', 'rejected', "We couldn't confirm Sea Example yet. Someone from the SkipperCast team will reach out."]]) {
     const {sql, env} = setup({contact: {role: 'skipper', boat_id: 'b1'}, env: {ADVISOR_ADMIN_CONTACT_ID: ADMIN_ID}});
     addContact(sql, {id: ADMIN_ID, phone_hash: 'ha', phone_enc: 'ENC-ADMIN', role: 'admin-test'});
-    addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+    addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
     const review = await reviewId('skipper', 'b1', 'new_skipper');
     sql.prepare(`INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'skipper','b1','new_skipper','open',?)`).run(review, iso(T0));
     const {ch} = await consume(env, sql, `${word} ${review.slice(0, 6)}`, {contact: ADMIN_ID});
@@ -473,15 +473,15 @@ dbTest('ok <code> from the admin-test contact verifies the boat and texts the sk
 });
 
 dbTest('the unverified contract: publicBoat names only verified boats; get_trips lists only verified ones', async () => {
-  assert.deepEqual(sk.publicBoat({name: 'Rita G', slug: 'rita-g', verified: true}), {boat: 'Rita G', verified: true, boat_link: '{{link:boat:rita-g}}'});
-  assert.deepEqual(sk.publicBoat({name: 'Rita G', slug: 'rita-g', verified: false}), {boat: 'a boat', verified: false});
+  assert.deepEqual(sk.publicBoat({name: 'Sea Example', slug: 'sea-example', verified: true}), {boat: 'Sea Example', verified: true, boat_link: '{{link:boat:sea-example}}'});
+  assert.deepEqual(sk.publicBoat({name: 'Sea Example', slug: 'sea-example', verified: false}), {boat: 'a boat', verified: false});
   assert.ok(sk.isVerified('verified') && !sk.isVerified('pending') && !sk.isVerified('rejected'));
   const {sql, db, env} = setup();
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', status: 'verified'});
-  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero', status: 'pending'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', status: 'verified'});
+  addBoat(sql, {id: 'b2', slug: 'example-two', name: 'Example Two', status: 'pending'});
   addBoat(sql, {id: 'b3', slug: 'nope', name: 'Nope', status: 'rejected'});
   const trips = (await TOOL_BY_NAME.get('get_trips').run({port: 'morro-bay'}, toolCtx(env, db, contactRow(sql)))).result;
-  assert.deepEqual(trips.boats.map(b => b.name), ['Rita G']);
+  assert.deepEqual(trips.boats.map(b => b.name), ['Sea Example']);
   assert.deepEqual(sk.consentState({consent_photos_at: null, consent_revoked_at: null}), 'not given');
   assert.deepEqual(sk.consentState({consent_photos_at: iso(T0), consent_revoked_at: null}), 'given');
   assert.deepEqual(sk.consentState({consent_photos_at: iso(T0), consent_revoked_at: iso(T0 + 1)}), 'revoked');
@@ -503,9 +503,9 @@ test('every TA-I1 string has English and Spanish, and the 05 wording is exact', 
   assert.equal(t('en', 'register_ask_landing'), 'Which landing? (skip if none)');
   assert.equal(t('en', 'register_ask_instagram'), "Your boat's Instagram handle, so we can tag you? (skip if none)");
   assert.equal(t('en', 'register_ask_booking'), 'A booking link or phone for the boat page? (skip)');
-  assert.equal(t('en', 'register_done', {name: 'Rita G', slug: 'rita-g'}), "Got it. Rita G is set up. Your reports will show on skippercast.com/boats/rita-g once the team confirms the boat, usually same day. Text me a photo of today's count board whenever you're in.");
-  assert.equal(t('en', 'consent_ask', {name: 'Rita G'}), 'One more thing: OK for SkipperCast to post your photos and videos on our Instagram and Facebook, always credited and tagged to Rita G? Reply YES.');
-  assert.equal(t('en', 'crew_invite', {skipper: 'Dave', boat: 'Rita G'}), 'SkipperCast here. Dave invited you to join Rita G as crew: your count boards and catch photos would post under the boat. Reply YES to join or NO to decline. Reply STOP to opt out.');
-  assert.match(t('es', 'crew_invite', {skipper: 'Dave', boat: 'Rita G'}), /Responde SÍ para unirte o NO para rechazar\. Responde STOP para salir\.$/, 'the Spanish invite asks for SÍ and keeps the STOP line');
-  assert.equal(t('en', 'boat_verified', {name: 'Rita G', slug: 'rita-g'}), 'Rita G is verified. Your page: skippercast.com/boats/rita-g');
+  assert.equal(t('en', 'register_done', {name: 'Sea Example', slug: 'sea-example'}), "Got it. Sea Example is set up. Your reports will show on skippercast.com/boats/sea-example once the team confirms the boat, usually same day. Text me a photo of today's count board whenever you're in.");
+  assert.equal(t('en', 'consent_ask', {name: 'Sea Example'}), 'One more thing: OK for SkipperCast to post your photos and videos on our Instagram and Facebook, always credited and tagged to Sea Example? Reply YES.');
+  assert.equal(t('en', 'crew_invite', {skipper: 'Dave', boat: 'Sea Example'}), 'SkipperCast here. Dave invited you to join Sea Example as crew: your count boards and catch photos would post under the boat. Reply YES to join or NO to decline. Reply STOP to opt out.');
+  assert.match(t('es', 'crew_invite', {skipper: 'Dave', boat: 'Sea Example'}), /Responde SÍ para unirte o NO para rechazar\. Responde STOP para salir\.$/, 'the Spanish invite asks for SÍ and keeps the STOP line');
+  assert.equal(t('en', 'boat_verified', {name: 'Sea Example', slug: 'sea-example'}), 'Sea Example is verified. Your page: skippercast.com/boats/sea-example');
 });

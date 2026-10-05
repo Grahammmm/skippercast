@@ -1,19 +1,30 @@
 {
-  "_source": "docs/plans/text-advisor/02-data-model.md § Privacy invariants (TA-C5). scripts/check_repository.py rejects any Instagram handle in tests/fixtures/advisor/, docs/plans/text-advisor/ or docs/operations/runbooks/advisor-*.md that is not listed here: an @mention in the text, or the value of a handle field (instagram, username, handle, ig_handle, ig_username, collaborators) in a fixture's JSON. Never add a real person's or a real boat's handle: a fixture handle must contain 'example' or 'placeholder' (the check enforces it).",
+  "_source": "docs/plans/text-advisor/02-data-model.md § Privacy invariants (TA-C5). scripts/check_repository.py rejects any Instagram handle in tests/fixtures/advisor/, docs/plans/text-advisor/, docs/operations/runbooks/advisor-*.md or tests/test_advisor_*.mjs that is not listed here: an @mention in the text, or the value of a handle field (instagram, username, handle, ig_handle, ig_username, collaborators) in a fixture's JSON or a test's quoted value. Never add a real person's or a real boat's handle: a fixture handle must contain 'example' or 'placeholder' (the check enforces it).",
   "own": {
     "skippercast": "SkipperCast's own Instagram account"
   },
   "fictional": {
-    "angler.placeholder.one": "meta/webhook-comments.json commenter",
-    "angler.placeholder.two": "meta/webhook-comments.json commenter",
-    "angler.placeholder.three": "meta/webhook-comments.json commenter",
     "angler.placeholder.four": "meta/webhook-comments.json commenter",
+    "angler.placeholder.one": "meta/webhook-comments.json commenter",
+    "angler.placeholder.three": "meta/webhook-comments.json commenter",
+    "angler.placeholder.two": "meta/webhook-comments.json commenter",
+    "b.example": "tests/test_advisor_social_drafts.mjs: a caption mention",
+    "boat.example": "tests/test_advisor_instagram.mjs: a mention in a comment",
+    "d_example": "tests/test_advisor_social_drafts.mjs: a caption mention",
     "deckhand.example": "meta/collaborators.json pending collaborator",
-    "lucero.example": "engine/conversations/02-skipper-registers-es.json skipper's handle",
-    "ritag.example": "engine/conversations/02-skipper-registers.json skipper's handle; meta/collaborators.json accepted collaborator"
+    "fourthboat_example": "tests/test_advisor_social_daily.mjs: a fourth boat",
+    "pendingboat.example": "tests/test_advisor_social_daily.mjs: an unverified boat",
+    "sea.example": "engine/conversations/02-skipper-registers.json skipper's handle; meta/collaborators.json accepted collaborator",
+    "seaexample": "tests: the Sea Example test boat's handle",
+    "seaexample_fishing": "tests: the Sea Example test boat's long-form handle",
+    "testboat.example": "tests: a second test boat",
+    "thirdboat.example": "tests/test_advisor_social_daily.mjs: a third boat",
+    "twoboat.example": "engine/conversations/02-skipper-registers-es.json skipper's handle",
+    "x.example": "tests/test_advisor_social_publish.mjs: an unknown collaborator"
   },
   "placeholders": {
     "handle": "the word used in the plan's prose (`@handle`)",
-    "mentions": "the word used in the plan's prose (`@mentions`)"
+    "mentions": "the word used in the plan's prose (`@mentions`)",
+    "type": "the JSON-LD keyword (`\"@type\"`) the page tests match"
   }
 }
