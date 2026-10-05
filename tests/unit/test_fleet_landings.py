@@ -168,9 +168,12 @@ class LandingPagesTests(unittest.TestCase):
         self.assertEqual((am.departs_local, am.duration_h), ("06:30", 5.5))
         blue = boats["Blue Placeholder II"]
         self.assertEqual([(o.name, o.price_cents, o.price_basis, o.capacity) for o in blue.offerings], [
-            ("Private charter: Overnight", 1050000, "private", 30),
+            ("Private charter: Overnight", None, "private", 30),
             ("Private charter: 1.5 Day (Winter)", 1556000, "private", 26),
             ("2 Day Limited Load", 98325, "per-person", 24)])  # the repeated rate row and trip spelling are one each
+        # The repeated Overnight row ($10,500 cash, then $9,999) names the same offering at another price: the
+        # price is unknown, and the offering cites both rows.
+        self.assertEqual([f.value["price_cents"] for f in blue.offerings[0].facts], [1050000, 999900])
         self.assertEqual(blue.offerings[2].duration_h, 44.0)
         self.assertEqual([(d.offering.name, d.date, d.departs_local, d.price_cents) for d in blue.departures],
                          [("2 Day Limited Load", "2026-11-02", "10:00", 98325)])
@@ -178,9 +181,14 @@ class LandingPagesTests(unittest.TestCase):
                          {("length_ft", 88.0), ("beam_ft", 24.0), ("passengers_max", 26)})
         self.assertEqual({c["name"] for f in blue.facts if f.field == "captains[]" for c in [f.value]},
                          {"Casey Example", "Morgan Fixture"})
-        for o in blue.offerings + boats["Kelp Fixture"].offerings:  # each offering cites the fact it was read from
-            self.assertEqual([f.field for f in o.facts], ["trip_types[]"])
-            self.assertIn(o.facts[0], blue.facts + boats["Kelp Fixture"].facts)
+        for o in blue.offerings + boats["Kelp Fixture"].offerings:  # each offering cites the facts it was read from
+            self.assertEqual({f.field for f in o.facts}, {"trip_types[]"})
+            for fact in o.facts:
+                self.assertIn(fact, blue.facts + boats["Kelp Fixture"].facts)
+        # as_dict serialises offerings and departures (the run files and goldens use it).
+        row = json.loads(json.dumps(blue.as_dict()))
+        self.assertEqual((row["offerings"][2]["name"], row["departures"][0]["offering"]["name"],
+                          row["departures"][0]["date"]), ("2 Day Limited Load", "2 Day Limited Load", "2026-11-02"))
 
     def test_schedule_rows_become_departures_with_deterministic_ids(self):
         kelp = self.fr()["Kelp Fixture"]

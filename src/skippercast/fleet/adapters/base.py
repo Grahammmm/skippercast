@@ -74,6 +74,13 @@ class Offering:
                 "days_json": list(self.days) if self.days else None, "season_from": self.season_from,
                 "season_to": self.season_to, "status": "active", "source_fact_ids_json": facts}
 
+    def as_dict(self) -> dict:
+        return {"name": self.name, "trip_type": self.trip_type, "facts": [f.as_dict() for f in self.facts],
+                "price_cents": self.price_cents, "price_basis": self.price_basis, "currency": self.currency,
+                "duration_h": self.duration_h, "capacity": self.capacity, "departs_local": self.departs_local,
+                "days": list(self.days) if self.days is not None else None, "season_from": self.season_from,
+                "season_to": self.season_to}
+
 
 @dataclass(frozen=True)
 class Departure:
@@ -92,6 +99,11 @@ class Departure:
                 "offering_id": offering, "vessel_id": vessel_id, "date": self.date,
                 "departs_local": self.departs_local, "price_cents": self.price_cents, "load_text": self.load_text,
                 "source_url": self.source_url, "retrieved_at": self.retrieved_at}
+
+    def as_dict(self) -> dict:
+        return {"offering": self.offering.as_dict(), "date": self.date, "departs_local": self.departs_local,
+                "price_cents": self.price_cents, "load_text": self.load_text, "source_url": self.source_url,
+                "retrieved_at": self.retrieved_at}
 
 
 @dataclass(frozen=True)
@@ -116,7 +128,8 @@ class Candidate:
     def as_dict(self) -> dict:
         return {"source_id": self.source_id, "name": self.name, "port_hint": self.port_hint,
                 "landing_hint": self.landing_hint, "keys": dict(self.keys), "facts": [f.as_dict() for f in self.facts],
-                "record_id": self.record_id}
+                "record_id": self.record_id, "offerings": [o.as_dict() for o in self.offerings],
+                "departures": [d.as_dict() for d in self.departures]}
 
 
 @dataclass

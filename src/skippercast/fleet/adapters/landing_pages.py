@@ -28,6 +28,7 @@ de-duplicated first, so two boats never share one.
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import replace
 from datetime import datetime
 from html.parser import HTMLParser
 import re
@@ -392,15 +393,15 @@ class _Page:
         # One offering per id: a later rate row or schedule trip that names the same offering is the same one.
         offerings: dict[tuple, Offering] = {}
         for row in boat["rates"]:
-            offering = self._offering(row, url)
-            offerings.setdefault(_offering_key(offering), offering)
-        departures: dict[tuple, Departure] = {}
+            _merge_offering(offerings, self._offering(row, url))
+        scheduled: list[tuple[tuple, dict]] = []
         for trip, rows in boat["schedule"].items():
-            offering = self._schedule_offering(trip, rows, url)
-            offering = offerings.setdefault(_offering_key(offering), offering)
-            for r in rows:
-                departures.setdefault((_offering_key(offering), r["date"], r["departs"]), Departure(
-                    offering, r["date"], r["departs"], r["price_cents"], r["load"], url, self.times[url]))
+            key = _merge_offering(offerings, self._schedule_offering(trip, rows, url))
+            scheduled += [(key, r) for r in rows]
+        departures: dict[tuple, Departure] = {}
+        for key, r in scheduled:  # built last, so each departure carries its offering as merged
+            departures.setdefault((key, r["date"], r["departs"]), Departure(
+                offerings[key], r["date"], r["departs"], r["price_cents"], r["load"], url, self.times[url]))
         facts += [f for o in offerings.values() for f in o.facts]
         return self.candidate(name, link, _unique(facts), offerings=tuple(offerings.values()),
                               departures=tuple(departures.values()))
@@ -427,6 +428,23 @@ class _Page:
 def _offering_key(offering: Offering) -> tuple:
     """What ``Offering.id`` hashes besides the vessel id: two offerings with the same key share an id."""
     return offering_name_norm(offering.name), offering.season_from, offering.season_to
+
+
+def _merge_offering(offerings: dict[tuple, Offering], offering: Offering) -> tuple:
+    """Add ``offering`` under its key, merging with an offering already there; returns the key.
+
+    The merged offering cites both sets of facts. Two different known prices for one offering id
+    contradict each other, so its price becomes unknown (None) rather than whichever row came first.
+    """
+    key = _offering_key(offering)
+    kept = offerings.get(key)
+    if kept is None:
+        offerings[key] = offering
+        return key
+    prices = {p for p in (kept.price_cents, offering.price_cents) if p is not None}
+    offerings[key] = replace(kept, price_cents=prices.pop() if len(prices) == 1 else None,
+                             facts=tuple(_unique([*kept.facts, *offering.facts])))
+    return key
 
 
 def _unique(facts: list[Fact]) -> list[Fact]:
