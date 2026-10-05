@@ -34,7 +34,7 @@ from .normalized import verify_review
 from .resolution_profile import fine_detail_valid
 from .source_ingest import ingest
 from .substrate import resolve_bindings, verify_sources, class_reader
-from .rights import feature_rights, deployment_use
+from .rights import feature_rights, deployment_use, source_rights
 from .source_scope import scoped_manifest
 
 PROFILE = 'original-rugose-classified-area-v1'
@@ -235,10 +235,30 @@ def source_context(root, reach, policy, *, fetch=False):
         # Reference geometry comes only from current hash-verified Tier 1
         # baseline cells. extract() still applies the paired source's own
         # depth, class, nodata and resolution masks inside that footprint.
-        eligible_sources = {s['id'] for s in run['inputs']['sources']}
         support_cells = [c for c in cells if type(c.get('tier')) is int and c['tier'] == 1]
-        if any(c.get('source_id') not in eligible_sources for c in support_cells):
-            raise ValueError('Unknown source in current Tier 1 reference cells')
+        input_sources = run['inputs'].get('sources')
+        if not isinstance(input_sources, list):
+            raise ValueError('Missing classified baseline source inventory')
+        saved_sources = {s.get('id'): s for s in input_sources if isinstance(s, dict)}
+        if len(saved_sources) != len(input_sources):
+            raise ValueError('Invalid classified baseline source inventory')
+        # Paired support is valid only while every winning Tier 1 contributor
+        # remains the same usable, rights-cleared bathymetry input in the
+        # current scoped manifest. Recheck this at stage and publication, since
+        # both rebuild source_context from current catalog state.
+        reference_ids = {c.get('source_id') for c in support_cells}
+        if any(not isinstance(ident, str) or ident not in rows
+               or ident not in saved_sources for ident in reference_ids):
+            raise ValueError('Unknown or out-of-scope current Tier 1 reference source')
+        for ident in reference_ids:
+            reference = rows[ident]
+            if (reference != saved_sources[ident] or reference.get('kind') != 'bathymetry'
+                    or reference.get('status') != 'usable'
+                    or reference.get('habitat_quality_hold')
+                    or reference.get('habitat_quality_dependencies')
+                    or reference.get('terrain_support')):
+                raise ValueError('Current Tier 1 reference source changed or is unusable')
+            source_rights(reference, use=deployment_use(root))
     support = unary_union([cell_geometry(c) for c in support_cells])
     from .screen import polygon
     existing = unary_union([transform(TO_LOCAL, polygon(f['geometry']))

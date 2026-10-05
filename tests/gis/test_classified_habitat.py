@@ -178,7 +178,7 @@ class ClassifiedTests(unittest.TestCase):
             cache=root/'var/seafloor/cache'/r['sha256'];cache.mkdir(parents=True)
             cog=cache/('d'*64+'.tif');cog.write_bytes(b'synthetic normalized bytes')
             receipt={'cog_sha256':sha256(cog)};atomic_json(cog.with_suffix('.json'),receipt)
-            manifest={'surveys':[r,b['row']]}
+            manifest={'surveys':[r,b['row'],other]}
             with patch.object(ch,'load_manifest',return_value=manifest),patch.object(ch,'verify_sources'), \
                  patch.object(ch,'ingest',return_value=(receipt,None,None)),patch.object(ch,'verify_review'):
                 ident,*_,legacy_support,_,_=ch.source_context(root,'fixture',p)
@@ -207,6 +207,21 @@ class ClassifiedTests(unittest.TestCase):
                 _,*_,paired_positive,_,_=ch.source_context(root,'fixture',pair)
                 self.assertTrue(legacy_empty.is_empty)
                 self.assertTrue(paired_positive.equals(box(250,0,500,250)))
+                # Tier 1 references must still be current manifest inputs with
+                # usable bathymetry and approved rights at every identity check.
+                original_other=deepcopy(other)
+                for mutation in ('missing','withdrawn','changed_hash'):
+                    with self.subTest(reference_mutation=mutation):
+                        if mutation == 'missing':
+                            manifest['surveys']=[r,b['row']]
+                        else:
+                            altered=deepcopy(original_other)
+                            if mutation == 'withdrawn': altered['status']='withdrawn'
+                            else: altered['sha256']='e'*64
+                            manifest['surveys']=[r,b['row'],altered]
+                        with self.assertRaises(ValueError):
+                            ch.source_context(root,'fixture',pair)
+                manifest['surveys']=[r,b['row'],original_other]
                 for owner,key,value in [(r,'status','withdrawn'),(r,'habitat_quality_hold',{'held':True}),
                     (b['row'],'status','withdrawn'),(b['row'],'habitat_quality_dependencies',['held']),
                     (b['row'],'license','unknown'),(b['binding'],'metadata_sha256','e'*64),
