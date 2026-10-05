@@ -16,28 +16,31 @@ The processor (``process.py``) calls two hooks each scheduled run:
 
 1. *Registry.* A vessel's own ``mmsi`` (FCC ULS, PSIX, an admin decision) with an
    AIS name (the vessel's name or an alias) or call sign that agrees -> ``watched``
-   at 0.9 (``fcc-uls``); an admin-set MMSI (pinned, or its winning source is
-   ``admin``) -> ``watched`` at 1.0 (``admin``) whatever AIS says. Statics that
+   at 0.9 (``fcc-uls``); an admin-set MMSI (``mmsi`` pinned, as a ``set-mmsi``
+   decision or an admin edit leaves it) -> ``watched`` at 1.0 (``admin``) whatever AIS says. Statics that
    agree on neither -> ``candidate`` at 0.5 and an ``mmsi`` review. An MMSI never
-   heard on AIS gets no row; one held by two vessels is left to the resolver.
+   heard on AIS gets no row, and one with no statics left keeps its stored row; one held by two vessels is left to the resolver.
 2. *Broadcast name.* An MMSI that is no vessel's registry MMSI, broadcasting a
    vessel's name or alias (``ais-static-name``, 0.7) or its call sign (``call-sign``,
    0.8), with a ship type of 30, 37, 60 or 69 (another known type is no match) ->
-   ``candidate``. An unknown type or length costs 0.1; a length more than 20% off
-   the registry's is a contradiction (0.4) and never promotes.
+   ``candidate``. An unknown type or length costs 0.1 and blocks promotion; a
+   length more than 20% off the registry's is a contradiction (0.4).
 3. *Home port.* A stage-2 candidate seen inside its vessel's own port geofence on
    at least 3 distinct region-local days of the last 30 -> ``watched`` at
    ``thresholds.match.mmsi_auto`` or more (``geofence-presence``); once watched it
-   stays watched while the name still matches. Not when the vessel already has a
-   registry MMSI (the registry is never overridden), when two vessels match, or
-   when the length contradicts.
+   stays watched while the name still matches. Only with a known ship type of
+   30/37/60/69 *and* a known length within 20% (design § 11): never when either is
+   unknown or the length contradicts, when the vessel already has a registry MMSI
+   (the registry is never overridden), when two vessels match, or when the
+   vessel has no home port.
 
-Anything weaker that has been seen in the vessel's home port (and every
-stage-1 disagreement) becomes an ``mmsi`` review: ``fingerprint`` ``<vessel_id>|<mmsi>``,
+A candidate that cannot promote (any blocker above) once it has been seen in the
+vessel's home port, one seen there that has not promoted after 7 days, one of a
+vessel without a home port after 7 days, and every stage-1 disagreement become
+an ``mmsi`` review: ``fingerprint`` ``<vessel_id>|<mmsi>``,
 subject the vessel, ``candidate_json`` the AIS evidence, ``proposal_json``
 ``{vessel_id, mmsi}``. A decided ``reject-mmsi`` marks that pair ``rejected`` for
-good; ``set-mmsi`` makes it the vessel's admin MMSI (stage 1). A candidate seen
-in its home port that has not promoted after 7 days is reviewed too.
+good; ``set-mmsi`` makes it the vessel's admin MMSI (stage 1).
 
 **Never overriding the registry.** Matching writes watch rows, ``ais.*`` facts and
 ``mmsi`` reviews only: never a vessel column, never a ``mmsi`` or ``call_sign``
@@ -53,8 +56,9 @@ an MMSI to any vessel but the one holding it in the registry.
 each static field per MMSI, first and last seen times, position counts per MMSI
 and day, and the days each MMSI was inside each port geofence. Each run scans
 the store from the last scan to ``now - 10 min``; the first run looks back over
-the discovery retention. A lost state rebuilds from the store and the Worker's
-rows; watched rows keep their vessel meanwhile.
+the discovery retention. Statics the state lacks for an MMSI the Worker has a
+row for are re-read from the store's whole static retention (never rebuilt from
+the row, which has no type or length); with none left, the stored row stands.
 """
 from __future__ import annotations
 
@@ -152,9 +156,9 @@ class _Vessel:
         self.length_ft = float(length) if isinstance(length, (int, float)) and length > 0 else None
         self.names = {n for n in [row.get("name_norm") or name_norm(row.get("name") or "")] +
                       [a.get("alias_norm") for a in row.get("aliases") or ()] if n}
-        pinned = row.get("pinned") or ()
-        self.admin_mmsi = "mmsi" in pinned or "*" in pinned or any(
-            s.get("field") == "mmsi" and s.get("source_id") == "admin" for s in row.get("sources") or ())
+        # An admin decision (set-mmsi, or an edit) pins the column; the Worker checks the same before it lets an
+        # admin row replace a rejected one.
+        self.admin_mmsi = self.mmsi is not None and "mmsi" in (row.get("pinned") or ())
 
     def names_agree(self, static: Static | None) -> bool:
         return bool(static and static.name and name_norm(static.name) in self.names)
@@ -263,6 +267,8 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         name_ok, call_ok = v.names_agree(static), v.call_agrees(static)
         if v.admin_mmsi:
             method, confidence, status = "admin", CONFIDENCE["admin"], "watched"
+        elif static is None and mmsi in prior:
+            continue   # nothing to judge by (statics expired, or a lost state): the stored row stands
         elif static is None:
             method, confidence, status = "fcc-uls", CONFIDENCE["registry-disagrees"], "candidate"   # positions, no static yet
         elif name_ok or call_ok:
@@ -310,10 +316,14 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         confidence = CONFIDENCE[method]
         if static.ship_type is None or length == "unknown":
             confidence -= CONFIDENCE["unknown"]
-        blockers = []
+        blockers = []   # design § 11: promotion needs a type of 30/37/60/69 and a length within 20%, both known
         if length == "contradicts":
             confidence = CONFIDENCE["contradicted"]
             blockers.append("length-contradicts")
+        elif length == "unknown":
+            blockers.append("length-unknown")
+        if static.ship_type is None:
+            blockers.append("type-unknown")
         if v.mmsi is not None:
             blockers.append("vessel-has-registry-mmsi")
         if not v.port_id:
@@ -332,11 +342,15 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         if (blockers and home_days > 0) or (not v.port_id and waited) or (home_days > 0 and waited):
             review(v, mmsi, static, method, confidence, blockers[0] if blockers else "few-home-port-days", home_days)
 
-    # ---- demote watched rows nothing matched this run
+    # ---- watched rows: demoted when their statics no longer match; left as they are when there are no statics
     derived = {int(r["mmsi"]) for r in out.rows}
     for mmsi, before in sorted(prior.items()):
-        if mmsi not in derived and before.get("status") == "watched":
+        if mmsi in derived or before.get("status") != "watched":
+            continue
+        if mmsi in statics or mmsi in owners:
             out.rows.append({**{k: before.get(k) for k in WATCH_COLUMNS}, "mmsi": str(mmsi), "status": "candidate"})
+        elif before.get("vessel_id") in by_id:
+            out.targets[mmsi] = by_id[before["vessel_id"]].ref
     return out
 
 
@@ -533,12 +547,12 @@ def match(ctx) -> dict[int, VesselRef]:
     vessels, reviews = read_snapshot(ctx.worker, ctx.region.id)
     prior = {int(r["mmsi"]): r for r in read_watch_rows(ctx.worker, ctx.region.id) if str(r.get("mmsi") or "").isdigit()}
     since = _day(ctx.now_ms - WINDOW_DAYS * DAY, zone)
+    missing = sorted(set(prior) - set(mstate.statics()))
+    if missing:   # a lost or young state: the real statics from the store's whole static retention, never stand-ins
+        start = ctx.now_ms - int(ctx.region.thresholds["retention"]["static_days"]) * DAY
+        mstate.add(ctx.store.read_statics(start, ctx.now_ms - SETTLE_MS, missing), (), ctx.region.ports, zone)
     statics, seen = mstate.statics(), mstate.seen(since)
-    for mmsi, before in prior.items():   # a lost state: the Worker's row stands in until the store is heard again
-        if mmsi not in statics and before.get("ais_name"):
-            statics[mmsi] = Static(mmsi, _ms(before.get("last_seen_at")) or ctx.now_ms,
-                                   before.get("last_seen_source") or ctx.source, before.get("ais_name"),
-                                   before.get("ais_call_sign"), None, None, before.get("ais_class"))
+    for mmsi, before in prior.items():   # sightings the state lost: the Worker's row stands in
         if mmsi not in seen and before.get("first_seen_at"):
             seen[mmsi] = Seen(_ms(before["first_seen_at"]), _ms(before.get("last_seen_at")) or ctx.now_ms,
                               before.get("last_seen_source"), int(before.get("positions_30d") or 0))

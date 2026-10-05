@@ -155,15 +155,27 @@ test('AIS never overrides a registry MMSI', {skip}, async () => {
   } finally { sql.close(); }
 });
 
-test('a rejected row stays rejected unless an admin match replaces it', {skip}, async () => {
+test('a rejected row changes only for an admin match the registry pins', {skip}, async () => {
   const {sql, db} = database();
   try {
-    await post(db, {rows: [row(A, {status: 'rejected', confidence: 0})]});
-    assert.deepEqual((await post(db, {rows: [row(A, {status: 'watched', match_method: 'geofence-presence', confidence: 0.85})]})).body,
+    await post(db, {rows: [row(B, {vessel_id: HELD, match_method: 'fcc-uls', status: 'rejected', confidence: 0})]});
+    assert.deepEqual((await post(db, {rows: [row(B, {vessel_id: HELD, status: 'watched', match_method: 'fcc-uls', confidence: 0.9})]})).body,
       {ok: true, rows: 1, changed: 0});
-    assert.equal(stored(sql, A).status, 'rejected');
-    await post(db, {rows: [row(A, {status: 'watched', match_method: 'admin', confidence: 1})]});
-    assert.equal(stored(sql, A).status, 'watched');
+    assert.equal(stored(sql, B).status, 'rejected');
+    // An admin row needs the vessel to hold that MMSI with mmsi pinned: not pinned, or another MMSI, is refused.
+    const admin = extra => row(B, {vessel_id: HELD, status: 'watched', match_method: 'admin', confidence: 1, ...extra});
+    const unpinned = await post(db, {rows: [admin()]});
+    assert.equal(unpinned.status, 400);
+    assert.match(unpinned.body.error, /pinned registry MMSI/);
+    sql.prepare(`UPDATE fleet_vessels SET pinned_json=? WHERE id=?`).run(JSON.stringify({mmsi: {by: 'u1', at: NOW}}), HELD);
+    assert.equal((await post(db, {rows: [row(A, {vessel_id: HELD, match_method: 'admin', confidence: 1})]})).status, 400, 'not the pinned MMSI');
+    assert.equal((await post(db, {rows: [row(C, {vessel_id: SEA, match_method: 'admin', confidence: 1})]})).status, 400, 'nothing pinned on that vessel');
+    sql.prepare(`UPDATE fleet_vessels SET pinned_json='not json' WHERE id=?`).run(HELD);
+    assert.equal((await post(db, {rows: [admin()]})).status, 400, 'an unreadable pinned_json pins nothing here');
+    assert.equal(stored(sql, B).status, 'rejected');
+    sql.prepare(`UPDATE fleet_vessels SET pinned_json=? WHERE id=?`).run(JSON.stringify({mmsi: {by: 'u1', at: NOW}}), HELD);
+    assert.equal((await post(db, {rows: [admin()]})).status, 200);
+    assert.equal(stored(sql, B).status, 'watched');
   } finally { sql.close(); }
 });
 

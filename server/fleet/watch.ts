@@ -13,8 +13,9 @@
 //       changes, so the same request twice changes nothing. A `watched` row needs a
 //       vessel of this region and is refused when the MMSI is another vessel's
 //       registry MMSI or the vessel holds a different one: AIS never overrides the
-//       registry (fleet_vessels.mmsi). A stored `rejected` row (an admin's
-//       reject-mmsi decision) changes only for an `admin` match.
+//       registry (fleet_vessels.mmsi). An `admin` row needs its vessel to hold that
+//       MMSI with `mmsi` pinned (what a set-mmsi decision or an admin edit leaves);
+//       only such a row changes a stored `rejected` one (an admin's reject-mmsi).
 //     ops (<= 500): registry operations, limited to what matching may write:
 //       fact.upsert with method `ais`, source `ais-static` and a field under `ais.`
 //       (disagreeing statics; no resolver rule reads them and profiles never show
@@ -109,6 +110,11 @@ function checkOps(ops: unknown[]): OpFailure[] {
 }
 
 const marks = (n: number): string => Array(n).fill('?').join(',');
+/** True when a stored pinned_json is an object pinning `mmsi` (an unreadable one pins nothing here). */
+function pinsMmsi(text: string): boolean {
+  try { const v = JSON.parse(text) as unknown; return !!v && typeof v === 'object' && !Array.isArray(v) && Object.hasOwn(v, 'mmsi'); }
+  catch { return false; }
+}
 
 /** POST /api/fleet/jobs/watch. */
 export async function watchUpdate(db: D1Database, request: Request): Promise<Result> {
@@ -134,11 +140,14 @@ export async function watchUpdate(db: D1Database, request: Request): Promise<Res
 
     // References: every vessel in this region; a watched row never contradicts the registry's MMSIs.
     const vesselIds = [...new Set(rows.map(x => x.vessel_id).filter((x): x is string => typeof x === 'string'))];
-    const vessels = new Map<string, string | null>();
+    const vessels = new Map<string, string | null>(), adminMmsi = new Map<string, string>();
     for (let i = 0; i < vesselIds.length; i += MAX_PARAMS - 1) {
       const part = vesselIds.slice(i, i + MAX_PARAMS - 1);
-      for (const v of (await db.prepare(`SELECT id,mmsi FROM fleet_vessels WHERE region=? AND id IN (${marks(part.length)})`).bind(region, ...part)
-        .all<{id: string; mmsi: string | null}>()).results) vessels.set(v.id, v.mmsi);
+      for (const v of (await db.prepare(`SELECT id,mmsi,pinned_json FROM fleet_vessels WHERE region=? AND id IN (${marks(part.length)})`).bind(region, ...part)
+        .all<{id: string; mmsi: string | null; pinned_json: string}>()).results) {
+        vessels.set(v.id, v.mmsi);
+        if (v.mmsi && pinsMmsi(v.pinned_json)) adminMmsi.set(v.id, v.mmsi);
+      }
     }
     const watched = rows.filter(x => x.status === 'watched'), holders = new Map<string, string[]>();
     const mmsis = [...new Set(watched.map(x => x.mmsi as string))];
@@ -149,6 +158,7 @@ export async function watchUpdate(db: D1Database, request: Request): Promise<Res
     }
     rows.forEach((x, i) => {
       if (x.vessel_id !== null && !vessels.has(x.vessel_id as string)) throw new Invalid(`rows[${i}].vessel_id: unknown vessel in region ${region}`);
+      if (x.match_method === 'admin' && adminMmsi.get(x.vessel_id as string) !== x.mmsi) throw new Invalid(`rows[${i}]: an admin match needs the vessel's pinned registry MMSI`);
       if (x.status !== 'watched') return;
       if ((holders.get(x.mmsi as string) ?? []).some(id => id !== x.vessel_id)) throw new Invalid(`rows[${i}]: ${x.mmsi} is another vessel's registry MMSI`);
       const own = vessels.get(x.vessel_id as string);
@@ -168,7 +178,9 @@ export async function watchUpdate(db: D1Database, request: Request): Promise<Res
     const updatable = cols.filter(c => !['region', 'mmsi', 'updated_at'].includes(c));
     const expr = (c: string) => c === 'first_seen_at' ? `MIN(${t}.${c},excluded.${c})` : c === 'last_seen_at' ? `MAX(${t}.${c},excluded.${c})` : `excluded.${c}`;
     const changed = updatable.map(c => `(${expr(c)}) IS NOT ${t}.${c}`).join(' OR ');
-    const keep = `NOT (${t}.status='rejected' AND excluded.status<>'rejected' AND excluded.match_method<>'admin')`;
+    const adminHolds = `EXISTS (SELECT 1 FROM fleet_vessels v WHERE v.id=excluded.vessel_id AND v.mmsi=excluded.mmsi AND json_valid(v.pinned_json)
+      AND json_type(v.pinned_json)='object' AND json_type(v.pinned_json,'$.mmsi') IS NOT NULL)`;
+    const keep = `NOT (${t}.status='rejected' AND excluded.status<>'rejected' AND NOT (excluded.match_method='admin' AND ${adminHolds}))`;
     const tail = ` ON CONFLICT(region,mmsi) DO UPDATE SET ${updatable.map(c => `${c}=${expr(c)}`).join(',')},updated_at=excluded.updated_at WHERE ${keep} AND (${changed})`;
     const size = Math.floor(MAX_PARAMS / cols.length), statements: D1PreparedStatement[] = [];
     for (let i = 0; i < rows.length; i += size) {

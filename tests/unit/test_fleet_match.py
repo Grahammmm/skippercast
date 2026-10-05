@@ -149,11 +149,24 @@ class DecideTests(unittest.TestCase):
     def test_ship_type_and_unknown_length(self):
         cargo = full_static(OTHER, "SEA EXAMPLE", ship_type=70, length_m=18.0)
         self.assertEqual(self.decide([cargo]).rows, [], "another known type is no match")
-        unknown = full_static(OTHER, "SEA EXAMPLE")
-        row = self.rows(self.decide([unknown]))[OTHER]
-        self.assertEqual((row["status"], row["confidence"]), ("candidate", 0.6))
-        promoted = self.rows(self.decide([unknown], presence={OTHER: {"port-a": 3}}))[OTHER]
-        self.assertEqual((promoted["status"], promoted["confidence"]), ("watched", AUTO))
+        # A Class B boat sending no type or dimensions, berthed in the home harbor all month, is never watched:
+        # promotion needs a known type of 30/37/60/69 and a known length within 20% (design § 11).
+        for boat, reason in ((full_static(OTHER, "SEA EXAMPLE"), "length-unknown"),
+                             (full_static(OTHER, "SEA EXAMPLE", length_m=18.0), "type-unknown"),
+                             (full_static(OTHER, "SEA EXAMPLE", ship_type=37), "length-unknown")):
+            away = self.decide([boat])
+            self.assertEqual((self.rows(away)[OTHER]["status"], away.reviews), ("candidate", []))
+            home = self.decide([boat], presence={OTHER: {"port-a": 20}})
+            self.assertEqual(self.rows(home)[OTHER]["status"], "candidate", boat)
+            self.assertEqual(home.targets, {})
+            self.assertEqual([r["proposal_json"]["reason"] for r in home.reviews], [reason], "seen at home: a review")
+        self.assertEqual(self.rows(self.decide([full_static(OTHER, "SEA EXAMPLE")]))[OTHER]["confidence"], 0.6)
+        # A watched row whose statics now lack a type is demoted, not kept by stickiness.
+        known = full_static(OTHER, "SEA EXAMPLE", ship_type=37, length_m=18.0)
+        watched = self.rows(self.decide([known], presence={OTHER: {"port-a": 3}}))[OTHER]
+        self.assertEqual(watched["status"], "watched")
+        later = self.decide([full_static(OTHER, "SEA EXAMPLE")], prior={OTHER: watched})
+        self.assertEqual(self.rows(later)[OTHER]["status"], "candidate")
 
     def test_call_sign_and_alias_match_vessels_without_an_mmsi(self):
         by_call = self.rows(self.decide([full_static(OTHER, "NEW NAME", call_sign="WDX0001", ship_type=30, length_m=18.0)]))
@@ -217,8 +230,11 @@ class DecideTests(unittest.TestCase):
                 "status": "watched", "ais_name": "SEA EXAMPLE", "ais_call_sign": None, "ais_class": "B",
                 "first_seen_at": "2026-09-01T00:00:00.000Z", "last_seen_at": "2026-09-20T00:00:00.000Z",
                 "last_seen_source": "aisstream", "positions_30d": 0}
-        decision = self.decide([], prior={OTHER: gone})
-        self.assertEqual(decision.rows, [{**gone, "status": "candidate"}])
+        renamed = self.decide([full_static(OTHER, "NOT THE SAME", ship_type=37, length_m=18.0)], prior={OTHER: gone})
+        self.assertEqual(renamed.rows, [{**gone, "status": "candidate"}], "its statics no longer match: demoted")
+        silent = self.decide([], prior={OTHER: gone})
+        self.assertEqual(silent.rows, [], "no statics to judge by: the stored row stands")
+        self.assertEqual(silent.targets, {OTHER: VesselRef(SEA, "inspected-party", "port-a")})
 
 
 class RunTests(unittest.TestCase):
@@ -296,15 +312,31 @@ class RunTests(unittest.TestCase):
             process.derive = original
         self.assertEqual(refs, [(HELD_MMSI, VesselRef(HELD, "inspected-party", "port-b"))])
 
-    def test_a_lost_state_keeps_watched_rows(self):
+    def test_a_lost_state_keeps_watched_rows_without_statics(self):
         prior = {"mmsi": str(CANDIDATE), "vessel_id": SEA, "match_method": "geofence-presence", "confidence": 0.85,
                  "status": "watched", "ais_name": "SEA EXAMPLE", "ais_call_sign": None, "ais_class": "B",
                  "first_seen_at": "2026-09-01T00:00:00.000Z", "last_seen_at": "2026-10-01T00:00:00.000Z",
                  "last_seen_source": "aisstream", "positions_30d": 50}
         worker = FakeWorker(watch=[prior])
         self.run_once(worker)
-        self.assertEqual(worker.watch[str(CANDIDATE)]["status"], "watched")
+        self.assertEqual(worker.watch[str(CANDIDATE)], prior, "no statics to judge by: the stored row stands")
         self.assertEqual(self.watched(), [CANDIDATE])
+
+    def test_a_lost_state_rereads_the_real_statics(self):
+        """Statics older than the first scan's lookback are re-read, so a contradiction is not lost as 'unknown'."""
+        self.store.write(statics=[static(PLEASURE, T0 - 40 * DAY, "SEA EXAMPLE", ship_type=37, bow=5, stern=3)],
+                         discovery=moored(PLEASURE, [1, 2, 3]))
+        prior = {"mmsi": str(PLEASURE), "vessel_id": SEA, "match_method": "ais-static-name", "confidence": 0.4,
+                 "status": "candidate", "ais_name": "SEA EXAMPLE", "ais_call_sign": None, "ais_class": "B",
+                 "first_seen_at": "2026-08-26T00:00:00.000Z", "last_seen_at": "2026-10-04T00:00:00.000Z",
+                 "last_seen_source": "aisstream", "positions_30d": 9}
+        worker = FakeWorker(watch=[prior])
+        self.run_once(worker)
+        row = worker.watch[str(PLEASURE)]
+        self.assertEqual((row["status"], row["confidence"]), ("candidate", 0.4), "8 m against 60 ft, as stored")
+        self.assertEqual([op["proposal_json"]["reason"] for op in worker.ops if op["op"] == "review.open"],
+                         ["length-contradicts"])
+        self.assertEqual(self.watched(), [])
 
 
 if __name__ == "__main__":

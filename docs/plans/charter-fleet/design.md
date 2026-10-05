@@ -363,8 +363,9 @@ Other registry tables:
 
 ### Activity (0014)
 
-- **`fleet_ais_watch`**: PK `(region, mmsi)`; `vessel_id` (null while a
-  candidate), `match_method` (`fcc-uls`, `call-sign`, `ais-static-name`,
+- **`fleet_ais_watch`**: PK `(region, mmsi)`; `vessel_id` (a candidate carries
+  the vessel it is proposed for, null only when two vessels match; only a
+  `watched` row ties the MMSI to the vessel), `match_method` (`fcc-uls`, `call-sign`, `ais-static-name`,
   `geofence-presence`, `admin`), `confidence`, `status` (`candidate`,
   `watched`, `rejected`), `ais_name`, `ais_call_sign`, `ais_class`,
   `first_seen_at`, `last_seen_at`, `last_seen_source`, `positions_30d`,
@@ -938,12 +939,24 @@ queries for any paid surface filter this rights tag out in code. `fleet-ais.yml`
 takes a dispatch input to backfill a month.
 
 **MMSI matching** (`ais/match.py`): (1) registry MMSI (FCC/PSIX) with an
-agreeing AIS call sign or name → `watched` at 0.9; (2) a broadcast name
-matching a vessel alias with ship type 30/37/60/69 and length within 20% →
-`candidate`; (3) positions inside the vessel's own port geofence on ≥ 3
-distinct days → `watched` at ≥ `mmsi_auto`; anything weaker → `mmsi` review.
-Disagreeing AIS statics (stale call signs, odd lengths) become `method=ais`
-facts and never override registry values.
+agreeing AIS call sign or name → `watched` at 0.9 (an admin-pinned MMSI → 1.0);
+(2) a broadcast name matching a vessel name or alias (or its call sign, when the
+vessel has no MMSI) with a ship type not outside 30/37/60/69 → `candidate`;
+(3) positions inside the vessel's own port geofence on ≥ 3 distinct days of the
+last 30 → `watched` at ≥ `mmsi_auto`, only with a *known* ship type of
+30/37/60/69 and a *known* length within 20%, and never for a vessel that already
+has a registry MMSI or when two vessels match. Anything weaker → `mmsi` review,
+opened when the candidate cannot promote and has been seen in the vessel's home
+port, when it has been seen there without promoting for 7 days, after 7 days for
+a vessel without a home port, and for a registry MMSI whose statics agree on
+neither name nor call sign. Candidates never seen in the home port open no
+review. A decided `reject-mmsi` makes the pair `rejected`; only an `admin` match
+(the vessel holds that MMSI with `mmsi` pinned) changes it. Disagreeing AIS
+statics (stale call signs, other names, odd lengths) become `method=ais` facts
+in their own fields (`ais.call_sign`, `ais.name`, `ais.length_ft`, value
+`{mmsi, value}`), which no resolver rule reads, so they never override registry
+values. `GET`/`POST /api/fleet/jobs/watch` (`server/fleet/watch.ts`) read and
+write the rows; each run writes `watch.json` from the watched rows.
 
 **Validation.** Label ≥ 30 trips across classes and ports in the admin
 labelling view: time ranges marked drift, troll, transit or in-port, with a
