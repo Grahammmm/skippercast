@@ -217,3 +217,31 @@ test('classified areas are interpreted, unranked and use no numeric fit view', (
   assert.equal(d.depth, 'Within nominal 25–300 ft band');
   assert.deepEqual(d.source.ids, ['depth', 'class']);
 });
+
+test('synthetic native point-contact outline survives actual tiles as one unranked feature', async () => {
+  const fs = await import('node:fs');
+  const vm = await import('node:vm');
+  const sandbox = {TextDecoder,DecompressionStream,Response,Uint8Array,DataView,ArrayBuffer,Promise,console};
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(new URL('../dist/vendor/pmtiles-4.5.0/pmtiles.js',import.meta.url),'utf8')+';globalThis.pmtiles=pmtiles;',sandbox);
+  const buf=fs.readFileSync(new URL('./fixtures/seafloor/classified-point-contact.pmtiles',import.meta.url));
+  const archive=new sandbox.pmtiles.PMTiles({getKey:()=> 'synthetic-contact',getBytes:async(offset,length)=>({data:buf.buffer.slice(buf.byteOffset+offset,buf.byteOffset+offset+length)})});
+  const h=await archive.getHeader();
+  for(const zoom of [12,15]){
+    const parts=[];
+    for(const [z,x,y] of tilesForBounds([h.minLon,h.minLat,h.maxLon,h.maxLat],zoom)){
+      const tile=await archive.getZxy(z,x,y);
+      if(tile)parts.push(...tileFeatures(decodeTile(new Uint8Array(tile.data)),'habitat',z,x,y));
+    }
+    const features=dedupeById(parts);assert.equal(features.length,1);
+    const f=features[0];assert.equal(f.properties.id,'synthetic-point-contact');
+    assert.equal(f.properties.exportable,false);assert.equal(f.properties.tier,1);
+    assert.equal(habitatColor(f.properties),CLASSIFIED_COLOR);
+    assert.equal(habitatDetails(f.properties).grade,'unknown');
+    assert.ok(Math.abs(f.properties.area_ha-23/24)<1e-12,'native area metadata survives quantization');
+    for(const p of f.geometry.coordinates)for(const ring of p){
+      assert.ok(ring.length>=4);assert.deepEqual(ring[0],ring.at(-1));
+      for(const xy of ring)assert.ok(xy.every(Number.isFinite));
+    }
+  }
+});

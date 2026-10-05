@@ -26,6 +26,8 @@ from skippercast.platform.contracts import REPO, atomic_json, read_json, public_
 from .coverage import cell_geometry
 from .io import sha256
 from .state_cache import scope_name
+from .classified_geometry import (VERSION as GEOMETRY_VERSION, geographic,
+                                  runtime as geometry_runtime, verify_inventory)
 from .manifest import load_manifest
 from .normalized import verify_review
 from .resolution_profile import fine_detail_valid
@@ -37,7 +39,6 @@ from .source_scope import scoped_manifest
 PROFILE = 'original-rugose-classified-area-v1'
 POLICY_FILE = 'catalog/classified-habitat-policy.json'
 TO_LOCAL = Transformer.from_crs(4326, 3310, always_xy=True).transform
-TO_GEO = Transformer.from_crs(3310, 4326, always_xy=True).transform
 
 
 def digest(value):
@@ -105,6 +106,7 @@ def assessment(p):
             or p.get('terrain') != 'unknown' or p.get('fit') != {
                 'lingcod': 'unknown', 'rockfish-reef': 'unknown'}
             or p.get('detail_level') != 'classified-area'
+            or p.get('geometry_representation') != {'version': GEOMETRY_VERSION, 'native_crs': 'EPSG:3310'}
             or p.get('depth_basis') != 'nominal-band'
             or p.get('depth_min_ft') != 25 or p.get('depth_max_ft') != 300
             or not isinstance(p.get('source_ids'), list) or len(p['source_ids']) != 2
@@ -192,7 +194,8 @@ def source_context(root, reach, policy, *, fetch=False):
         'baseline_cells_sha256': sha256(folder/'cells.json'),
         'baseline_candidates_sha256': sha256(folder/'candidates.geojson'),
         'implementation': {n: sha256(Path(__file__).with_name(n)) for n in
-            ('classified_habitat.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')}}
+            ('classified_habitat.py', 'classified_geometry.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')},
+        'geometry_representation': geometry_runtime()}
     return identity, row, binding, paths[0], support, existing, rights
 
 
@@ -235,7 +238,7 @@ def features_for(patches, reach, policy, row, binding):
     from .screen import polygon
     features = []
     for index, patch in enumerate(patches):
-        geo = transform(TO_GEO, patch)
+        geo = geographic(patch)
         polygon(mapping(geo))  # No repair, buffer, simplified shells or lost holes.
         features.append({'type': 'Feature', 'geometry': mapping(geo), 'properties': {
             'id': f'classified-{reach}-{policy["id"]}-{index}', 'reach': reach,
@@ -247,6 +250,7 @@ def features_for(patches, reach, policy, row, binding):
             'status': 'held', 'hold_reasons': ['legal-screen-pending'], 'area_ha': patch.area/10000,
             'substrate': {'source_id': binding['row']['id'], 'normalized_code': 3,
                 'same_survey_as_depth': True, 'independent_confirmation': False},
+            'geometry_representation': {'version': GEOMETRY_VERSION, 'native_crs': 'EPSG:3310'},
             'classified_area': {'profile': PROFILE, 'policy_id': policy['id'],
                 'metadata_sha256': policy['metadata_sha256'], 'independent_confirmation': False,
                 'new_measured_area_km2': 0, 'interpolation_mask': 'unknown',
@@ -270,39 +274,51 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     # No-rerun publication still rejects the stale previously admitted receipt.
     # Policy changes add/remove explicit pairs without invalidating graded physics.
     contexts = [source_context(root, reach, p, fetch=fetch) for p in selected]
-    physical_inputs = {'sources': [c[0] for c in contexts]}
+    physical_inputs = {'sources': [c[0] for c in contexts],
+        'geometry_representation': geometry_runtime(),
+        'geometry_implementation_sha256': sha256(Path(__file__).with_name('classified_geometry.py'))}
     physical_hash = digest(physical_inputs)
     candidates_path = folder/'classified-candidates.geojson'
+    native_path = folder/'classified-native.geojson'
     previous = read_json(receipt_path) if receipt_path.exists() else None
     reuse = bool(previous and previous['physical_input_hash'] == physical_hash)
     if reuse:
-        if sha256(candidates_path) != previous['outputs']['classified-candidates.geojson']:
+        if (sha256(candidates_path) != previous['outputs']['classified-candidates.geojson']
+                or sha256(native_path) != previous['outputs']['classified-native.geojson']):
             raise ValueError('Classified candidates failed hash verification')
         candidates = read_json(candidates_path)
+        native = read_json(native_path)
         physical_summary = previous['physical_summary']
     else:
         candidates = {'type': 'FeatureCollection', 'features': []}
+        native = {'version': GEOMETRY_VERSION, 'crs': 'EPSG:3310', 'features': []}
         physical_summary = {'candidate_count': 0, 'class3_valid_depth_pixels': 0,
                             'classified_selected_area_km2': 0, 'new_measured_area_km2': 0}
         for p, (_, row, binding, path, support, existing, _) in zip(selected, contexts):
             patches, summary = extract(row, binding, path, support, existing,
                                        root=root, edge=edge, max_pixels=max_pixels)
-            candidates['features'].extend(features_for(patches, reach, p, row, binding)['features'])
+            represented = features_for(patches, reach, p, row, binding)['features']
+            candidates['features'].extend(represented)
+            native['features'].extend({'type': 'Feature', 'geometry': mapping(patch),
+                'properties': {'id': f['properties']['id']}} for patch, f in zip(patches, represented))
             for key, value in summary.items():
                 physical_summary[key] += value
         physical_summary['candidate_count'] = len(candidates['features'])
         atomic_json(candidates_path, candidates)
+        atomic_json(native_path, native)
     state = load_snapshot(root, reach)
-    habitat, held, summary = screen_candidates(candidates, state)
+    representation = verify_inventory(candidates, native)
+    native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
+    habitat, held, summary = screen_candidates(candidates, state, native_geometries=native_geometries)
     inputs = {'physical': physical_inputs, 'screen': input_identity(state),
               'screen_implementation_sha256': sha256(Path(__file__).with_name('screen.py'))}
     atomic_json(folder/'classified-habitat.geojson', habitat)
     atomic_json(folder/'classified-held.geojson', held)
     receipt = {'version': 1, 'reach': reach, 'input_hash': digest(inputs), 'inputs': inputs,
         'physical_input_hash': physical_hash, 'physical_reused': reuse,
-        'physical_summary': physical_summary, 'summary': summary,
+        'physical_summary': physical_summary, 'summary': summary, 'representation': representation,
         'outputs': {name: sha256(folder/name) for name in
-            ('classified-candidates.geojson', 'classified-habitat.geojson', 'classified-held.geojson')}}
+            ('classified-candidates.geojson', 'classified-native.geojson', 'classified-habitat.geojson', 'classified-held.geojson')}}
     atomic_json(receipt_path, receipt, indent=2)
     return receipt
 
@@ -326,20 +342,26 @@ def publication_features(reach, *, root=REPO):
         if p != current.get(p['id']):
             raise ValueError('Classified opt-in changed or withdrawn')
         contexts.append(source_context(root, reach, p))
-    physical = {'sources': [c[0] for c in contexts]}
+    physical = {'sources': [c[0] for c in contexts],
+        'geometry_representation': geometry_runtime(),
+        'geometry_implementation_sha256': sha256(Path(__file__).with_name('classified_geometry.py'))}
     state = load_snapshot(root, reach)
     inputs = {'physical': physical, 'screen': input_identity(state),
               'screen_implementation_sha256': sha256(Path(__file__).with_name('screen.py'))}
     if (receipt['inputs'] != inputs or receipt['input_hash'] != digest(inputs)
             or receipt['physical_input_hash'] != digest(physical)):
         raise ValueError('Classified inputs changed; restage required')
-    expected_names = {'classified-candidates.geojson', 'classified-habitat.geojson', 'classified-held.geojson'}
+    expected_names = {'classified-candidates.geojson', 'classified-native.geojson', 'classified-habitat.geojson', 'classified-held.geojson'}
     if set(receipt['outputs']) != expected_names or any(
             sha256(folder/name) != expected for name, expected in receipt['outputs'].items()):
         raise ValueError('Classified output hash mismatch')
     candidates = read_json(folder/'classified-candidates.geojson')
-    habitat, held, summary = screen_candidates(candidates, state)
-    if (habitat != read_json(folder/'classified-habitat.geojson')
+    native = read_json(folder/'classified-native.geojson')
+    representation = verify_inventory(candidates, native)
+    native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
+    habitat, held, summary = screen_candidates(candidates, state, native_geometries=native_geometries)
+    if (representation != receipt.get('representation')
+            or habitat != read_json(folder/'classified-habitat.geojson')
             or held != read_json(folder/'classified-held.geojson') or summary != receipt['summary']):
         raise ValueError('Classified whole-polygon screen changed')
     rights = {c[0]['policy']['id']: c[-1] for c in contexts}
