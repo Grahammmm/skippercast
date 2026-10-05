@@ -99,8 +99,12 @@ test('queue batches and dead letters write a queue_batch point with counts only'
 });
 
 test('each cron run writes one cron point; a failed part fails the invocation and is recorded', async () => {
-  const {points, ANALYTICS} = sink(), original = globalThis.fetch;
-  const at = new Date(Date.now() - 5 * 60000).toISOString();
+  const {points, ANALYTICS} = sink(), original = globalThis.fetch, realNow = Date.now;
+  // The cron reads the wall clock: freeze it at a time when the advisor's daily slots are due (Mon 12:00 in
+  // Morro Bay), so the broken-D1 run reaches a slot claim whatever the hour the suite runs.
+  const fixed = Date.parse('2026-10-05T19:00:00Z');
+  Date.now = () => fixed;
+  const at = new Date(fixed - 5 * 60000).toISOString();
   globalThis.fetch = async () => Response.json({completed_at: at, published_at: at, run_id: '1'});
   try {
     const pending = [];
@@ -119,7 +123,7 @@ test('each cron run writes one cron point; a failed part fails the invocation an
     const {adapter} = database();
     await quietly(() => worker.scheduled({cron: '*/15 * * * *'}, {ANALYTICS, DB: adapter, TEXT_ADVISOR_ENABLED: 'true'}, {waitUntil() {}}));
     assert.equal(of(points, 'cron')[3].blobs[5], 'ok');
-  } finally { globalThis.fetch = original; }
+  } finally { globalThis.fetch = original; Date.now = realNow; }
 });
 
 test('advisor_turn and publish points carry intents, outcomes, counts and timings, never ids or text', async () => {

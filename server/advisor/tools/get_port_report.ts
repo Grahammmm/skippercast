@@ -80,7 +80,7 @@ export const getPortReport: AdvisorTool = {
       };
     }
 
-    const answer = await dailyAnswer(ctx.env.DB ? ctx.env : {...ctx.env, DB: ctx.db}, port, today, ctx.language, ctx.deps, {generate: false});
+    const answer = await dailyAnswer(ctx.env.DB ? ctx.env : {...ctx.env, DB: ctx.db}, port, today, ctx.language, {...ctx.deps, clock: ctx.deps.clock ?? (() => ctx.now)}, {generate: false});
     return {result: {
       port, port_name: portName(port), region: regionId, today,
       daily: {text: answer.text, source: answer.source === 'cache' ? 'stored' : 'composed', note: 'The answer for a plain "what\'s biting": send it as it is, or use it with the reports below for a more specific question.'},
