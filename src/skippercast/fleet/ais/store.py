@@ -9,9 +9,13 @@ Each day file holds three tables:
 
 - ``positions`` for watched MMSIs and ``discovery`` for unwatched vessels the
   listener keeps (inside a geofence, or a static name matching an alias), both
-  keyed ``(mmsi, ts, source)`` ``WITHOUT ROWID``. A repeated key is ignored, so
-  the same report heard twice, or a batch written twice, is stored once.
-- ``statics`` for every vessel in the box, keyed the same way.
+  keyed ``(mmsi, ts, source)`` ``WITHOUT ROWID``. A repeated key is stored
+  once: the row with the earliest ``received_at`` wins, whichever arrives first,
+  so the same report heard twice, or a batch written twice, gives one row. A
+  position with ``received_at - ts`` over ``aisstream.LATE_MS`` may sit in the
+  wrong minute; the processor (CF-43) treats its time as suspect.
+- ``statics`` for every vessel in the box, keyed the same way; a repeated key is
+  ignored.
 
 A record goes to the file of the UTC day of its ``ts``. Which vessels are
 written is the listener's decision; the store only stores.
@@ -23,7 +27,10 @@ more than ``raw_days`` days have passed since it (day ``D`` goes on day
 deleted once all three are past their limit; before that, a table past its
 limit is emptied in place. Retention only ever touches ``raw/YYYY-MM-DD.sqlite``
 files (and their ``-wal``/``-shm`` siblings) that really live in ``raw/``:
-``validation/`` and anything else is never read, moved or deleted.
+``validation/`` and anything else is never read, moved or deleted. A day file
+with more than one hard link (for example one also linked into ``validation/``)
+is never emptied in place, only unlinked from ``raw/`` when it expires. The
+listener and processor must not hold expired day files open across retention.
 
 Standard library only (``sqlite3``).
 """
@@ -64,6 +71,17 @@ _STATIC_DDL = """CREATE TABLE IF NOT EXISTS statics (
   dim_bow INTEGER, dim_stern INTEGER, dim_port INTEGER, dim_starboard INTEGER, ais_class TEXT NOT NULL,
   source TEXT NOT NULL,
   PRIMARY KEY (mmsi, ts, source)) WITHOUT ROWID"""
+
+
+def _insert_sql(table: str) -> str:
+    """Statics ignore a repeated key; positions keep the earliest receipt, whatever order rows arrive in."""
+    columns = _STATIC_COLUMNS if table == "statics" else _POSITION_COLUMNS
+    sql = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))}) "
+    if table == "statics":
+        return sql + "ON CONFLICT (mmsi, ts, source) DO NOTHING"
+    updates = ", ".join(f"{c} = excluded.{c}" for c in _POSITION_COLUMNS[2:])
+    return sql + (f"ON CONFLICT (mmsi, ts, source) DO UPDATE SET {updates} "
+                  f"WHERE excluded.received_at < {table}.received_at")
 
 
 def fleet_var(environ: Mapping[str, str] | None = None) -> Path:
@@ -112,7 +130,7 @@ def retention_limits(region) -> RetentionLimits:
 
 @dataclass
 class WriteCounts:
-    """Rows actually inserted per table (duplicates are not counted)."""
+    """Rows inserted per table, plus position rows replaced by an earlier receipt; plain duplicates are not counted."""
     positions: int = 0
     discovery: int = 0
     statics: int = 0
@@ -126,6 +144,7 @@ class WriteCounts:
 class RetentionResult:
     deleted_files: list[str] = field(default_factory=list)              # day file names, e.g. 2026-08-01.sqlite
     emptied: dict[str, list[str]] = field(default_factory=dict)         # day file name -> tables emptied
+    skipped: list[str] = field(default_factory=list)                    # hard-linked files left as they are
 
 
 class AisStore:
@@ -190,10 +209,8 @@ class AisStore:
         for day in sorted(by_day):
             with closing(self.connect(day)) as conn, conn:
                 for table, rows in by_day[day].items():
-                    columns = _STATIC_COLUMNS if table == "statics" else _POSITION_COLUMNS
                     before = conn.total_changes
-                    conn.executemany(f"INSERT OR IGNORE INTO {table} ({', '.join(columns)}) "
-                                     f"VALUES ({', '.join('?' * len(columns))})", rows)
+                    conn.executemany(_insert_sql(table), rows)
                     setattr(counts, table, getattr(counts, table) + conn.total_changes - before)
         return counts
 
@@ -258,6 +275,9 @@ class AisStore:
                         extra.unlink()
                 entry.unlink()
                 result.deleted_files.append(entry.name)
+                continue
+            if entry.stat().st_nlink > 1:   # shared with another path: emptying would change that copy too
+                result.skipped.append(entry.name)
                 continue
             with closing(self.connect(day)) as conn:
                 emptied = []

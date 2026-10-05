@@ -20,11 +20,14 @@ report also carries ``Timestamp``, the UTC second the transponder took its fix
 minute of receipt, moved back a minute when it would lie more than
 ``FUTURE_SLACK_MS`` after receipt; so the same report heard by two stations gets
 the same ``(mmsi, ts, source)`` key and the store keeps it once. Otherwise, and
-for static records, ``ts`` is the receipt time.
+for static records, ``ts`` is the receipt time. A report that reaches aisstream
+more than about 55 s after its fix lands in the wrong minute; such a position has
+``received_at - ts > LATE_MS`` and the processor (CF-43) must treat its time as
+suspect. The store keeps the earliest receipt of a key (``store.py``).
 
 "Not available" values (SOG 102.3, COG 360, heading 511, latitude 91,
-longitude 181, zero dimensions, ship type 0, IMO 0) become ``None``; a position
-without a usable latitude and longitude is dropped. Names and call signs lose
+longitude 181, navigational status 15, zero dimensions, ship type 0, IMO 0)
+become ``None``; a position without a usable latitude and longitude is dropped. Names and call signs lose
 AIS ``@`` padding and surrounding spaces.
 """
 from __future__ import annotations
@@ -37,8 +40,8 @@ from typing import Any, Callable, Iterable, Iterator
 from .base import AisMessage, AisPosition, AisStatic, Bbox, NotConfigured, Unsupported, valid_mmsi
 
 __all__ = ["SOURCE_ID", "URL", "MESSAGE_TYPES", "POSITION_TYPES", "STATIC_TYPES", "MAX_MMSI_FILTER",
-           "FUTURE_SLACK_MS", "AisstreamError", "MalformedMessage", "AisstreamSource", "subscription_message",
-           "normalise", "parse_time_utc"]
+           "FUTURE_SLACK_MS", "LATE_MS", "SUBSCRIBE_MMSI_MIN", "AisstreamError", "MalformedMessage",
+           "AisstreamSource", "subscription_message", "normalise", "parse_time_utc"]
 
 SOURCE_ID = "aisstream"
 URL = "wss://stream.aisstream.io/v0/stream"
@@ -47,7 +50,11 @@ STATIC_TYPES = ("ShipStaticData", "StaticDataReport")
 # Every type this module normalises; the region's ais.message_types must be a subset.
 MESSAGE_TYPES = POSITION_TYPES + STATIC_TYPES
 MAX_MMSI_FILTER = 200          # aisstream's limit on FiltersShipMMSI
+SUBSCRIBE_MMSI_MIN = 100_000_000   # a filter names ship stations: 9 digits, no leading zero
 FUTURE_SLACK_MS = 5_000        # receipt-clock skew tolerated before a fix second is read as last minute
+# A position with received_at - ts above this may sit in the wrong minute (module docstring);
+# CF-43 treats its time as suspect.
+LATE_MS = 55_000
 
 _CLASS = {"PositionReport": "A", "ShipStaticData": "A",
           "StandardClassBPositionReport": "B", "ExtendedClassBPositionReport": "B", "StaticDataReport": "B"}
@@ -99,11 +106,11 @@ def subscription_message(api_key: str, bbox: Bbox, mmsis: Iterable[int] | None =
         wanted = sorted(set(mmsis))
         if not wanted:
             raise ValueError("an MMSI filter must name at least one MMSI (pass None for every vessel)")
-        if any(not valid_mmsi(m) for m in wanted):
-            raise ValueError("MMSIs must be integers in 1..999999999")
+        if any(not valid_mmsi(m) or m < SUBSCRIBE_MMSI_MIN for m in wanted):
+            raise ValueError("filter MMSIs must be 9-digit integers (100000000..999999999)")
         if len(wanted) > MAX_MMSI_FILTER:
             raise ValueError(f"aisstream accepts at most {MAX_MMSI_FILTER} MMSIs per subscription")
-        message["FiltersShipMMSI"] = [str(m) for m in wanted]
+        message["FiltersShipMMSI"] = [f"{m:09d}" for m in wanted]
     if message_types is not None:
         types = list(dict.fromkeys(message_types))
         unknown = [t for t in types if t not in MESSAGE_TYPES]
@@ -214,7 +221,7 @@ def normalise(raw, received_at: int | None = None, clock: Callable[[], datetime]
                 sog=_number(body.get("Sog"), unavailable=102.3, low=0),
                 cog=_number(body.get("Cog"), unavailable=360, low=0),
                 heading=_number(body.get("TrueHeading"), unavailable=360, low=0),
-                nav_status=nav if isinstance(nav, int) and not isinstance(nav, bool) and 0 <= nav <= 15 else None,
+                nav_status=nav if isinstance(nav, int) and not isinstance(nav, bool) and 0 <= nav <= 14 else None,
                 msg_type=kind, source=source, received_at=received))
     if kind in ("ShipStaticData", "ExtendedClassBPositionReport"):
         bow, stern, port, starboard = _dimensions(body.get("Dimension"))

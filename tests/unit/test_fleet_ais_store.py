@@ -46,7 +46,7 @@ def position(mmsi=999000101, ts=None, source='aisstream', lat=35.36, lon=-120.9)
 
 def static(mmsi=999000101, ts=None, name='EXAMPLE ONE'):
     ts = ms(2026, 7, 4, 18, 25) if ts is None else ts
-    return AisStatic(mmsi=mmsi, ts=ts, name=name, call_sign='XX0001', imo=None, ship_type=30, dim_bow=12,
+    return AisStatic(mmsi=mmsi, ts=ts, name=name, call_sign='ZZ0001', imo=None, ship_type=30, dim_bow=12,
                      dim_stern=6, dim_port=3, dim_starboard=3, ais_class='A', source='aisstream')
 
 
@@ -77,7 +77,7 @@ class NormaliseTest(unittest.TestCase):
     def test_ship_static_data(self):
         [info] = normalise(fixture('ship-static-data'))
         self.assertEqual(info, AisStatic(mmsi=999000101, ts=ms(2026, 7, 4, 18, 25, 0, 250000), name='EXAMPLE ONE',
-                                         call_sign='XX0001', imo=None, ship_type=30, dim_bow=12, dim_stern=6,
+                                         call_sign='ZZ0001', imo=None, ship_type=30, dim_bow=12, dim_stern=6,
                                          dim_port=3, dim_starboard=3, ais_class='A', source='aisstream'))
 
     def test_static_data_report_parts(self):
@@ -86,7 +86,7 @@ class NormaliseTest(unittest.TestCase):
         self.assertEqual((part_a.name, part_a.call_sign, part_a.ship_type, part_a.dim_bow, part_a.ais_class),
                          ('EXAMPLE TWO', None, None, None, 'B'))
         self.assertEqual((part_b.name, part_b.call_sign, part_b.ship_type, part_b.dim_bow, part_b.dim_starboard),
-                         (None, 'XX0002', 37, 7, 1))
+                         (None, 'ZZ0002', 37, 7, 1))
 
     def test_every_listed_message_type_has_a_fixture_that_normalises(self):
         seen = set()
@@ -115,6 +115,9 @@ class NormaliseTest(unittest.TestCase):
         no_fix = fixture('position-report')
         no_fix['Message']['PositionReport'].update(Latitude=91, Longitude=181)
         self.assertEqual(normalise(no_fix), [])
+        undefined_status = fixture('position-report')
+        undefined_status['Message']['PositionReport']['NavigationalStatus'] = 15
+        self.assertIsNone(normalise(undefined_status)[0].nav_status)
         bad_mmsi = fixture('position-report')
         bad_mmsi['Message']['PositionReport']['UserID'] = 0
         self.assertEqual(normalise(bad_mmsi), [])
@@ -160,12 +163,14 @@ class SubscriptionTest(unittest.TestCase):
                                    'FiltersShipMMSI': ['999000101', '999000202'],
                                    'FilterMessageTypes': ['PositionReport', 'ShipStaticData']})
         self.assertEqual(set(subscription_message('k', BBOX)), {'APIKey', 'BoundingBoxes'})
+        self.assertEqual(subscription_message('k', BBOX, {100_000_000})['FiltersShipMMSI'], ['100000000'])
 
     def test_limits(self):
         with self.assertRaises(ValueError):
             subscription_message('k', BBOX, range(999000000, 999000201))
         subscription_message('k', BBOX, range(999000000, 999000200))
-        for bad in ({'mmsis': set()}, {'mmsis': {0}}, {'message_types': ['SafetyBroadcastMessage']},
+        for bad in ({'mmsis': set()}, {'mmsis': {0}}, {'mmsis': {99_999_999}}, {'mmsis': {True}},
+                    {'message_types': ['SafetyBroadcastMessage']},
                     {'message_types': []}):
             with self.assertRaises(ValueError, msg=bad):
                 subscription_message('k', BBOX, **bad)
@@ -246,6 +251,20 @@ class StoreTest(unittest.TestCase):
                          [(999000101, record.ts, 'aisstream', 35.36), (999000101, record.ts, 'marinecadastre', 35.36)])
         self.assertEqual(self.store.write(statics=[static(), static()]).statics, 1)
         self.assertEqual(self.store.write(discovery=[record, record]).discovery, 1)
+
+    def test_earliest_receipt_wins_in_either_order(self):
+        early = position()
+        late = AisPosition(**{**early.__dict__, 'lat': 35.0, 'received_at': early.received_at + 70_000})
+        for order, table in (([early, late], 'positions'), ([late, early], 'positions'),
+                             ([early, late], 'discovery'), ([late, early], 'discovery')):
+            with self.subTest(order=[r.received_at for r in order], table=table):
+                store = AisStore(self.var / f'{table}-{order[0].received_at}')
+                for record in order:
+                    store.write(**{table: [record]})
+                self.assertEqual(list(store.read_positions(0, ms(2027, 1, 1, 0, 0), table=table)), [early])
+        store = AisStore(self.var / 'one-batch')
+        self.assertEqual(store.write(positions=[late, early, late]).positions, 2)   # insert, then one replacement
+        self.assertEqual(list(store.read_positions(0, ms(2027, 1, 1, 0, 0))), [early])
 
     def test_records_go_to_their_utc_day_and_read_back_in_order(self):
         late = position(mmsi=999000202, ts=ms(2026, 7, 4, 23, 59, 59))
@@ -358,11 +377,31 @@ class RetentionTest(unittest.TestCase):
         clock = lambda: datetime(2026, 10, 4, 23, 0, tzinfo=timezone.utc)   # noqa: E731
         self.assertEqual(self.store.apply_retention(self.LIMITS, clock=clock).deleted_files, [old.name])
 
-    def test_raw_inside_validation_is_refused(self):
+    def test_raw_symlink_is_skipped(self):
         trap = AisStore(Path(self.tmp.name) / 'trap')
         (trap.validation_dir).mkdir(parents=True)
         trap.raw_dir.symlink_to(trap.validation_dir)
         self.assertEqual(trap.apply_retention(self.LIMITS, today=self.TODAY).deleted_files, [])
+
+    def test_validation_resolving_around_raw_is_refused(self):
+        old = self.fill(100)
+        self.store.validation_dir.symlink_to(self.store.root)   # validation/ now contains raw/
+        with self.assertRaises(RuntimeError):
+            self.store.apply_retention(self.LIMITS, today=self.TODAY)
+        self.assertTrue(old.exists())
+
+    def test_hard_linked_day_file_is_not_emptied(self):
+        path = self.fill(31)
+        self.store.validation_dir.mkdir(parents=True)
+        shared = self.store.validation_dir / path.name
+        os.link(path, shared)
+        result = self.store.apply_retention(self.LIMITS, today=self.TODAY)
+        self.assertEqual((result.skipped, result.emptied), ([path.name], {}))
+        self.assertEqual(self.counts(shared), (1, 1, 1))
+        expired = self.store.apply_retention(self.LIMITS, today=self.TODAY + timedelta(days=60))
+        self.assertEqual(expired.deleted_files, [path.name])
+        self.assertFalse(path.exists())
+        self.assertEqual(self.counts(shared), (1, 1, 1))
 
     def test_limits_from_region_thresholds(self):
         region = SimpleNamespace(thresholds={'retention': {'raw_days': 30, 'discovery_days': 7, 'static_days': 90}})

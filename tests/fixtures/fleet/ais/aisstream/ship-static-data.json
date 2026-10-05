@@ -16,7 +16,7 @@
       "Valid": true,
       "AisVersion": 2,
       "ImoNumber": 0,
-      "CallSign": "XX0001 ",
+      "CallSign": "ZZ0001 ",
       "Name": "EXAMPLE ONE         ",
       "Type": 30,
       "Dimension": {"A": 12, "B": 6, "C": 3, "D": 3},

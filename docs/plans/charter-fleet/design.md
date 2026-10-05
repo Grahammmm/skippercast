@@ -752,7 +752,13 @@ watched-only if volume becomes a problem.
 - Heartbeat every 60 s to `ais/heartbeat.json` (atomic): last message time,
   messages and watched messages per minute, vessels, reconnects, drops, queue
   depth, watch size, start time, git sha.
-- Hourly retention by `thresholds.retention`.
+- Hourly retention by `thresholds.retention`. The listener and the processor
+  must not hold expired day files open across retention: open a day file per
+  write batch or read window, and close it after. Retention never empties a
+  hard-linked day file in place.
+- A position whose `received_at - ts` exceeds 55 s may sit in the wrong minute
+  (`ts` comes from the fix second); the store keeps the earliest receipt of a
+  key, and the processor (CF-43) treats such a position's time as suspect.
 
 Unit template `scripts/fleet/skippercast-fleet-ais@.service`:
 

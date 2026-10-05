@@ -23,7 +23,7 @@
         "VendorIDName": "EXMPL",
         "VenderIDModel": 1,
         "VenderIDSerial": 4242,
-        "CallSign": "XX0002",
+        "CallSign": "ZZ0002",
         "Dimension": {"A": 7, "B": 3, "C": 2, "D": 1},
         "FixType": 1,
         "Spare": 0
