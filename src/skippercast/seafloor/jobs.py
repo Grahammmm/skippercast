@@ -4,6 +4,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import traceback
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +21,206 @@ from .rollout import plan, report
 
 WORKER_GROUP_SIZE = 3
 REACH_TIMEOUT_SECONDS = 60 * 60
+CLASSIFIED_POLICY_PATH = 'catalog/classified-habitat-policy.json'
+CLASSIFIED_POLICY_PROFILE = 'original-rugose-classified-area-v1'
+CLASSIFIED_POLICY_CHANGELOG = 'CHANGELOG.md'
+
+
+def scoped_policy_change(old, new, changed_paths, reach_rows):
+    """Scope policy plus optional changelog deltas; reject every other cochange."""
+    if (CLASSIFIED_POLICY_PATH not in changed_paths
+            or not set(changed_paths).issubset({CLASSIFIED_POLICY_PATH,
+                                                CLASSIFIED_POLICY_CHANGELOG})):
+        return None
+
+    def rows(document):
+        if (not isinstance(document, dict) or document.get('schema_version') != 1
+                or document.get('profile') != CLASSIFIED_POLICY_PROFILE
+                or not isinstance(document.get('sources'), list)):
+            return None
+        result, order = {}, []
+        for row in document['sources']:
+            if not isinstance(row, dict) or not isinstance(row.get('id'), str):
+                return None
+            if row['id'] in result:
+                return None
+            result[row['id']] = row
+            order.append(row['id'])
+        return result, order
+
+    old_parsed, new_parsed = rows(old), rows(new)
+    if old_parsed is None or new_parsed is None:
+        return None
+    if ({key: value for key, value in old.items() if key != 'sources'}
+            != {key: value for key, value in new.items() if key != 'sources'}):
+        return None
+    old_rows, old_order = old_parsed
+    new_rows, new_order = new_parsed
+    changed = {ident for ident in old_rows.keys() | new_rows.keys()
+               if old_rows.get(ident) != new_rows.get(ident)}
+    old_common = [ident for ident in old_order if ident in new_rows]
+    new_common = [ident for ident in new_order if ident in old_rows]
+    new_position = {ident: index for index, ident in enumerate(new_common)}
+    for index, left in enumerate(old_common):
+        for right in old_common[index+1:]:
+            if new_position[left] > new_position[right]:
+                # Only participants in an actual inversion changed relative
+                # priority. An unchanged unscoped row elsewhere is irrelevant.
+                changed.update((left, right))
+
+    affected = set()
+    for ident in changed:
+        for row in (old_rows.get(ident), new_rows.get(ident)):
+            if row is None:
+                continue
+            reach_ids = row.get('reach_ids')
+            if (not isinstance(reach_ids, list) or not reach_ids
+                    or any(not isinstance(value, str) or not value for value in reach_ids)
+                    or len(reach_ids) != len(set(reach_ids))):
+                return None
+            neighbors = row.get('neighbor_reaches', [])
+            if (not isinstance(neighbors, list)
+                    or ('neighbor_reaches' in row and not neighbors)
+                    or any(not isinstance(value, str) or not value for value in neighbors)
+                    or len(neighbors) != len(set(neighbors))):
+                return None
+            affected.update(reach_ids)
+            affected.update(neighbors)
+
+    if not affected:
+        return None
+    reach_map = {}
+    for row in reach_rows:
+        if (not isinstance(row, dict) or not isinstance(row.get('id'), str)
+                or not isinstance(row.get('region'), str) or row['id'] in reach_map):
+            return None
+        reach_map[row['id']] = row
+    if any(ident not in reach_map or reach_map[ident].get('status') == 'unassessed'
+           for ident in affected):
+        return None
+    return {'reach_ids': sorted(affected),
+            'regions': sorted({reach_map[ident]['region'] for ident in affected}),
+            'changed_policy_ids': sorted(changed)}
+
+
+def _policy_snapshot_valid(document, reach_rows):
+    """Apply the production policy validator to an immutable snapshot offline."""
+    try:
+        from .classified_habitat import policies
+        with tempfile.TemporaryDirectory(prefix='skippercast-policy-check-') as tmp:
+            catalog = Path(tmp)/'catalog'
+            catalog.mkdir()
+            (catalog/'classified-habitat-policy.json').write_text(
+                json.dumps(document, sort_keys=True))
+            (catalog/'reaches.json').write_text(json.dumps({'reaches': [
+                {'id': row['id']} for row in reach_rows]}))
+            policies(tmp)
+        return True
+    except Exception:
+        # A snapshot that the exact production validator cannot accept is not
+        # eligible for regional narrowing.
+        return False
+
+
+def _scoped_policy_plan(root, scope, progress):
+    """Plan full processed reach closure, but only for policy-affected regions."""
+    documents = [plan(root, region, 0, progress=progress) for region in scope['regions']]
+
+    def unique_rows(key):
+        seen, result = set(), []
+        for document in documents:
+            for row in document[key]:
+                identity = json.dumps(row, sort_keys=True)
+                if identity not in seen:
+                    seen.add(identity)
+                    result.append(row)
+        return result
+
+    combined = dict(documents[0])
+    combined['scope'] = 'classified-policy-only:'+','.join(scope['regions'])
+    combined['policy_scope'] = scope
+    combined['reaches'] = [row for document in documents for row in document['reaches']]
+    combined['selected'] = [row for document in documents for row in document['selected']]
+    combined['new_reaches'] = []
+    combined['execution'] = {
+        'new_reach_batch_selected': False,
+        'refresh_reaches': [row['reach'] for row in combined['selected']],
+        'next_action': 'restage-scoped-classified-policy',
+        'next_action_reason': 'Restage changed source interpretations and republish each affected complete region; no new reach is selected.',
+        'additional_measured_km2': None,
+        'notice': 'This source-policy-only scope is not measured growth; full affected-region publication remains required.'}
+    combined['source_review_queue'] = unique_rows('source_review_queue')
+    combined['deferred_source_reviews'] = unique_rows('deferred_source_reviews')
+    combined['source_review_warnings'] = list(dict.fromkeys(
+        warning for document in documents for warning in document['source_review_warnings']))
+    combined['notice'] = ('Source-policy-only scoped plan for regions '
+                          + ', '.join(scope['regions']) + '. Every processed reach in each affected region '
+                          'remains selected so the complete regional archive can be rebuilt and verified.')
+    return combined
+
+
+def regional_batch_rows(all_rows, selected, progress):
+    """Keep complete processed-region closure for coherent publication."""
+    regions = {row['region'] for row in selected}
+    selected_ids = {row.get('reach', row.get('id')) for row in selected}
+    return [row for row in all_rows if row['region'] in regions and
+            (row['status'] != 'unassessed' or row['id'] in selected_ids or row['id'] in progress)]
+
+
+def _push_policy_scope(root):
+    """Inspect a push's exact Git delta; uncertainty returns global fallback."""
+    if os.environ.get('GITHUB_EVENT_NAME') != 'push':
+        return None
+    try:
+        event = read_json(Path(os.environ['GITHUB_EVENT_PATH']))
+        before, after = event['before'], event['after']
+        if (not re.fullmatch(r'[0-9a-f]{40,64}', before or '')
+                or not re.fullmatch(r'[0-9a-f]{40,64}', after or '')
+                or set(before) == {'0'}):
+            return {'mode': 'global-fallback', 'reason': 'push base/target identity unavailable'}
+        def git(*args, check=True):
+            return subprocess.run(['git', *args], cwd=Path(root), stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL, check=check, timeout=30).stdout
+        head = git('rev-parse', 'HEAD').decode().strip()
+        if head != after:
+            return {'mode': 'global-fallback', 'reason': 'checkout does not match push target'}
+        def is_ancestor():
+            return subprocess.run(['git', 'merge-base', '--is-ancestor', before, after],
+                cwd=Path(root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=30).returncode == 0
+        if not is_ancestor():
+            shallow = git('rev-parse', '--is-shallow-repository').decode().strip() == 'true'
+            if shallow:
+                # Deepen from the exact checked-out target. Fetching the base
+                # at depth one alone leaves both commits as shallow boundaries,
+                # so merge-base cannot prove their relationship.
+                subprocess.run(['git', 'fetch', '--no-tags', '--deepen=64', 'origin', after],
+                    cwd=Path(root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    check=True, timeout=60)
+        if subprocess.run(['git', 'cat-file', '-e', before+'^{commit}'],
+                cwd=Path(root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=30).returncode != 0 or not is_ancestor():
+            return {'mode': 'global-fallback', 'reason': 'push base is not an ancestor'}
+        changed_paths = git('diff', '--name-only', '-z', before, after).decode().split('\0')
+        changed_paths = sorted(path for path in changed_paths if path)
+        old_raw = git('show', f'{before}:{CLASSIFIED_POLICY_PATH}')
+        target_raw = git('show', f'{after}:{CLASSIFIED_POLICY_PATH}')
+        working_raw = (Path(root)/CLASSIFIED_POLICY_PATH).read_bytes()
+        if target_raw != working_raw:
+            return {'mode': 'global-fallback', 'reason': 'policy file differs from push target'}
+        old, new = json.loads(old_raw), json.loads(target_raw)
+        reach_rows = read_json(Path(root)/'dist/data/seafloor-ledger.json')['reaches']
+        if (not _policy_snapshot_valid(old, reach_rows)
+                or not _policy_snapshot_valid(new, reach_rows)):
+            return {'mode': 'global-fallback', 'reason': 'policy snapshot failed production validation'}
+        scope = scoped_policy_change(old, new, changed_paths, reach_rows)
+        if scope is None:
+            return {'mode': 'global-fallback',
+                    'reason': 'policy delta is cochanged, unscoped, or unresolved'}
+        return {'mode': 'scoped', **scope}
+    except (KeyError, OSError, ValueError, TypeError, json.JSONDecodeError,
+            subprocess.SubprocessError):
+        return {'mode': 'global-fallback', 'reason': 'push policy comparison failed'}
 
 
 def worker_groups(matrix):
@@ -81,16 +282,23 @@ def prepare(root, region=None, reach=None, max_new=3):
     if not reference.exists() or sha256(reference) != expected:
         restore_reference(root=root, fetch=True)
     all_rows = read_json(root/'dist/data/seafloor-ledger.json')['reaches']
-    progress = read_progress(s3, bucket, [r['id'] for r in all_rows])
-    rollout = plan(root, region, max_new, progress=progress)
+    policy_change = _push_policy_scope(root) if region is None and reach is None else None
+    if policy_change and policy_change['mode'] == 'scoped':
+        affected_regions = set(policy_change['regions'])
+        progress_ids = [r['id'] for r in all_rows if r['region'] in affected_regions]
+        progress = read_progress(s3, bucket, progress_ids)
+        rollout = _scoped_policy_plan(root, policy_change, progress)
+    else:
+        progress = read_progress(s3, bucket, [r['id'] for r in all_rows])
+        rollout = plan(root, region, max_new, progress=progress)
+        if policy_change and policy_change['mode'] == 'global-fallback':
+            rollout['policy_scope_fallback'] = policy_change['reason']
+            rollout['notice'] += ' Policy-only scope fell back to the global planner: '+policy_change['reason']+'.'
     atomic_json(root/'var/seafloor/rollout-plan.json', rollout, indent=2)
     (root/'var/seafloor/rollout-plan.md').write_text(report(rollout))
     selected = select(root, region, reach) if reach else rollout['selected']
     regions = sorted({r['region'] for r in selected})
-    all_rows = read_json(root/'dist/data/seafloor-ledger.json')['reaches']
-    new_ids = {r.get('reach', r.get('id')) for r in selected}
-    rows = [r for r in all_rows if r['region'] in regions and
-            (r['status'] != 'unassessed' or r['id'] in new_ids or r['id'] in progress)]
+    rows = regional_batch_rows(all_rows, selected, progress)
     # Fail closed during this update, but do not let refresh failure stop the
     # physical mapping workers. Their new candidates will remain private/held.
     for name in regions:

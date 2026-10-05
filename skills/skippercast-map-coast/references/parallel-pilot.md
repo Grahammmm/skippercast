@@ -119,6 +119,23 @@ Preserve failures as well as successes. A code fix counts as pipeline progress
 when a test or real receipt reproduces the old blocker and demonstrates its
 removal. It remains separate from public habitat expansion.
 
+The automatic push planner may narrow a verified classified-policy change, with
+only an optional `CHANGELOG.md` co-change, to affected regions. Both policy
+snapshots must pass the production validator. Include old and new scopes and
+explicit neighbors, then retain every processed reach and full archive checks
+within each affected region. Changed unscoped policies, unresolved dependencies,
+other changed inputs, or unavailable trusted Git ancestry use the global plan.
+Schedules and explicit region/reach commands retain their existing behavior.
+Use the saved rollout plan to verify selection; fewer selected regions is a
+tested planning improvement, not a measured runtime speedup or new habitat.
+
+Save revised handoff artifacts under content-hash filenames before replacement.
+Do not overwrite an earlier patch and continue citing its previous hash. During
+release comparison, check geometry associations as well as IDs and counts:
+ordinal component IDs can exchange shapes while the geographic set is unchanged.
+Record such revisions separately; public display geometry is not native survey
+geometry or an accuracy measurement.
+
 If repository-wide CI blocks a source-only batch, reproduce the failure on
 current main and check relevant open or newly merged fixes before implementing
 another one. Adopt an equivalent reviewed fix and close a duplicate PR; retain
