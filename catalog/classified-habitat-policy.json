@@ -19,6 +19,45 @@
       "release_license": "public-domain-us-gov",
       "notice": "Original USGS public-domain release; retain original metadata, joint USGS/CSUMB/UC attribution and survey limitations. Not for navigation.",
       "review_basis": "Original bathymetry and classification FGDC retrieved HTTP200 and exact reviewed hashes verified2026-10-05. VALUE3 hard/rugose boulder, megaclast and bedrock; VALUE2 mixed coarse sediment/rock remains excluded. Actual2m raster spacing does not resolve metadata10m spacing or quantitative accuracy. Existing paired depth resolution profile excludes >=80m display-resampled support from fine extraction; valid nominal depth filtering never becomes datum/accuracy qualification. Sonar2008/video2012, same survey depth/backscatter interpretation, not independent measurement or fish-presence evidence."
+    },
+    {
+      "id": "usgs-offshore-monterey-2m-rugose-v1",
+      "reviewed_on": "2026-10-04",
+      "depth_source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+      "depth_source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+      "classification_source_id": "seafloorcharacter-2m-offshoremonterey-zip-60dcc1edcf",
+      "classification_source_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
+      "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
+      "rugose_raw_codes": [
+        3,
+        13,
+        53,
+        63,
+        103,
+        113
+      ],
+      "credit": "U.S. Geological Survey and California State University, Monterey Bay, Seafloor Mapping Lab",
+      "release_license": "public-domain-us-gov",
+      "notice": "Original USGS release (CC0/public domain); retain joint USGS/CSUMB attribution and survey limitations. USGS requests sharing derived products. Not for navigation.",
+      "review_basis": "Original FGDC VALUE encoding and release terms independently reviewed 2026-10-04. Mixed class2 excluded. Encoded depth/slope zones do not replace paired native depth. Unknown interpolation masks remain unknown. Shared survey interpretation is not independent depth or fish evidence."
+    },
+    {
+      "id": "usgs-offshore-morro-bay-2m-rugose-v1",
+      "reviewed_on": "2026-10-04",
+      "depth_source_id": "bathymetry-offshoremorrobay-zip-fad659557e",
+      "depth_source_sha256": "1f215612bbd0bac0eed8b7738cfc608a8403ebdcb8d1705123e864fd81f24aed",
+      "classification_source_id": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+      "classification_source_sha256": "0092b70907c2a1709e4c6f081c55dca44e496758a30ace86c2733edcb8b22ea5",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/99111880d0194352899672cd4d7690ac/SeafloorCharacter_OffshoreMorroBay_metadata.xml",
+      "metadata_sha256": "bd00fc4eea26028b46d2c4f5794bcdb36eacf1cfbc3aa84458c48569ddfef7c3",
+      "rugose_raw_codes": [
+        3
+      ],
+      "credit": "U.S. Geological Survey; California State University Monterey Bay Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
+      "release_license": "public-domain-us-gov",
+      "notice": "USGS Offshore of Morro Bay source pair. Preserve original metadata, all three producer credits, and the stated non-navigation limitation. The character raster is an interpreted class grid, not individual boulder measurement or fish-presence evidence.",
+      "review_basis": "Original depth and classification XMLs retrieved HTTP200 and hash-matched2026-10-05 UTC; source-specific interpretation and rights independently reviewed. VALUE3 hard/rugose boulder, megaclast and bedrock only; VALUE2 mixed coarse sediment/rock excluded. Delivered2m grid and metadata10m spatial-reference resolution do not establish uniform precision or a depth-dependent fine/coarse support profile; both cutoffs remain unknown. Retain unknown vertical datum, interpolation and final accuracy. Bathymetry/backscatter2008, supervised video2012 and processing2021 are shared survey lineage, not independent measurement or fish evidence. Classified geometry must pass native fidelity and current whole-polygon screening; no terrain grade, species fit, precise exports, Tier2 or new-measurement credit."
     }
   ]
 }
