@@ -310,3 +310,63 @@ test('link-advisor links and unlinks one advisor boat per vessel', {skip}, async
     assert.equal(row(sql, 'SELECT fleet_vessel_id FROM advisor_boats WHERE id=?', 'boat-a1').fleet_vessel_id, null);
   } finally { sql.close(); }
 });
+
+test('two different decisions by the same admin at the same instant: only the stored one applies its writes', {skip}, async () => {
+  const {decideFleetReview} = await import('../server/fleet/admin/reviews.ts');
+  const {sql, db, R} = setup();
+  try {
+    // Hold both batches until both decisions have read the open review, then run them in arrival order.
+    // D1 runs one batch at a time, so the held batches run one after the other.
+    const pending = [];
+    let release, queue = Promise.resolve();
+    const both = new Promise(resolve => { release = resolve; });
+    const racing = {prepare: q => db.prepare(q), async batch(statements) {
+      pending.push(statements); if (pending.length === 2) release();
+      await both;
+      const run = queue.then(() => db.batch(statements)); queue = run.catch(() => {}); return run;
+    }};
+    const at = '2026-10-05T12:00:00.000Z';
+    const [reject, set] = await Promise.all([
+      decideFleetReview(racing, R.mmsi, {action: 'reject-mmsi'}, ADMIN, at),
+      decideFleetReview(racing, R.mmsi, {action: 'set-mmsi'}, ADMIN, at),
+    ]);
+    assert.equal(pending.length, 2, 'both decisions reached the write');
+    assert.equal(reject.status, 'ok');
+    assert.equal(set.status, 'conflict');
+    const stored = row(sql, 'SELECT decision_json FROM fleet_reviews WHERE id=?', R.mmsi);
+    assert.deepEqual(JSON.parse(stored.decision_json), {action: 'reject-mmsi', vessel_id: vid(2), mmsi: '366000002'});
+    assert.equal(row(sql, 'SELECT mmsi FROM fleet_vessels WHERE id=?', vid(2)).mmsi, null, 'the losing set-mmsi wrote nothing');
+    assert.equal(row(sql, "SELECT COUNT(*) AS n FROM fleet_vessel_facts WHERE source_id='admin'").n, 0);
+    assert.deepEqual(pins(sql, vid(2)), {});
+  } finally { sql.close(); }
+});
+
+test('a decision that writes facts is refused (409) on an unreadable pinned_json; one that writes none still decides', {skip}, async () => {
+  const {sql, db, R} = setup();
+  try {
+    sql.prepare("UPDATE fleet_vessels SET pinned_json='[1]' WHERE id=?").run(vid(2));
+    assert.equal((await post(db, `/api/admin/fleet/reviews/${R.cls}`, {action: 'set-class'})).status, 409);
+    assert.equal(row(sql, 'SELECT status FROM fleet_reviews WHERE id=?', R.cls).status, 'open');
+    assert.equal(row(sql, "SELECT COUNT(*) AS n FROM fleet_vessel_facts WHERE source_id='admin'").n, 0);
+    assert.equal((await post(db, `/api/admin/fleet/reviews/${R.mmsi}`, {action: 'reject-mmsi'})).status, 200);
+  } finally { sql.close(); }
+});
+
+test('the link statement is one-to-one by itself: a link that lost a race writes nothing and answers 409', {skip}, async () => {
+  const {linkStatements, linkAdvisor} = await import('../server/fleet/admin/vessels.ts');
+  const {sql, db} = setup();
+  try {
+    // The checks pass, then boat-a2 is linked to the vessel before the write runs.
+    const first = await linkStatements(db, vid(1), 'boat-a1', false, T1);
+    sql.prepare('UPDATE advisor_boats SET fleet_vessel_id=? WHERE id=?').run(vid(1), 'boat-a2');
+    const [result] = await db.batch(first.statements);
+    assert.equal(result.meta.changes, 0);
+    assert.equal(row(sql, 'SELECT fleet_vessel_id FROM advisor_boats WHERE id=?', 'boat-a1').fleet_vessel_id, null);
+    // Through the route: a write that changed nothing because of the race is a conflict.
+    sql.prepare('UPDATE advisor_boats SET fleet_vessel_id=NULL WHERE id=?').run('boat-a2');
+    const racing = {prepare: q => db.prepare(q), async batch(statements) {
+      sql.prepare('UPDATE advisor_boats SET fleet_vessel_id=? WHERE id=?').run(vid(1), 'boat-a2'); return db.batch(statements); }};
+    assert.equal((await linkAdvisor(racing, vid(1), {boat_id: 'boat-a1'}, T1)).status, 'conflict');
+    assert.equal(row(sql, 'SELECT fleet_vessel_id FROM advisor_boats WHERE id=?', 'boat-a1').fleet_vessel_id, null);
+  } finally { sql.close(); }
+});

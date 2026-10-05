@@ -968,7 +968,9 @@ It shows the Google aggregate rating and review count (never review text)
 with the attribution Google's terms require ("Google" label and a link to the
 place), only while the fact is within its 30-day refresh window; it shows no
 AIS data, and only facts with display-compatible `rights` and confidence
-≥ 0.6. A registry-only profile is `noindex` until its
+≥ 0.6. The "Sources" list never renders an `admin:<users.id>` source URL
+(no admin id or link reaches a public page): an admin fact is labelled
+"SkipperCast". A registry-only profile is `noindex` until its
 operator is `content-sharing` or `partner`. Advisor reports and photos render
 as today.
 

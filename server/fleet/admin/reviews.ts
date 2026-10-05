@@ -33,7 +33,7 @@ import {canonicalJson} from '../ids.ts';
 import type {JsonValue} from '../ids.ts';
 import {FLEET_ENUMS} from '../registry.ts';
 import type {AdminOutcome} from '../../advisor/admin/skippers.ts';
-import {editStatements, linkStatements, vesselRow} from './vessels.ts';
+import {adminFactId, editStatements, linkStatements, readablePins, vesselRow} from './vessels.ts';
 import type {Guard} from './vessels.ts';
 
 type SqlValue = string | number | null;
@@ -113,13 +113,13 @@ export async function decideFleetReview(db: D1Database, id: string, input: Decis
   const candidate = parse(review.candidate_json), proposal = parse(review.proposal_json);
   const decision: Record<string, JsonValue> = {action};
   const needsVessel = ['same-vessel', 'set-mmsi', 'set-class', 'set-status'].includes(action) || (action === 'reject-mmsi' && review.subject_id !== null);
-  let vesselId: string | null = null;
+  let vesselId: string | null = null, vesselPins: string | null = null;
   if (needsVessel) {
     const given = input.vessel_id ?? field(proposal, 'vessel_id') ?? (review.kind !== 'advisor-link' ? review.subject_id : undefined);
     if (typeof given !== 'string' || !HEX32.test(given)) return {status: 'invalid', error: 'vessel_id: missing or invalid'};
     const vessel = await vesselRow(db, given);
     if (!vessel || vessel.region !== review.region) return {status: 'invalid', error: 'vessel_id: unknown vessel in this region'};
-    vesselId = given; decision.vessel_id = given;
+    vesselId = given; vesselPins = vessel.pinned_json; decision.vessel_id = given;
   } else if (input.vessel_id !== undefined) return {status: 'invalid', error: `vessel_id: not used by ${action}`};
 
   const cols: Record<string, SqlValue> = {};
@@ -149,14 +149,16 @@ export async function decideFleetReview(db: D1Database, id: string, input: Decis
     return {status: 'conflict', error: `review already ${review.status}`};
   }
 
-  // Every write after the review update runs only if this decision is the stored one.
-  const guard: Guard = {sql: 'EXISTS (SELECT 1 FROM fleet_reviews WHERE id=? AND decided_by=? AND decided_at=?)', args: [id, by, now]};
+  if (Object.keys(cols).length && !readablePins(vesselPins!)) return {status: 'conflict', error: 'pinned_json is unreadable; repair it before deciding'};
+  // Every write after the review update runs only if this exact decision is the stored one (same admin, time and
+  // decision_json), so two different decisions made at the same instant cannot both apply. The fact ids are
+  // deterministic, so the decision names them before anything is written.
+  if (Object.keys(cols).length)
+    decision.fact_ids = await Promise.all(Object.keys(cols).map(col => adminFactId(vesselId!, col, cols[col] as JsonValue, by)));
+  const decisionJson = canonicalJson(decision);
+  const guard: Guard = {sql: 'EXISTS (SELECT 1 FROM fleet_reviews WHERE id=? AND decided_by=? AND decided_at=? AND decision_json=?)', args: [id, by, now, decisionJson]};
   const writes: D1PreparedStatement[] = [];
-  if (Object.keys(cols).length) {
-    const edit = await editStatements(db, vesselId!, cols, cols as Record<string, JsonValue>, by, now, guard);
-    writes.push(...edit.statements);
-    decision.fact_ids = Object.values(edit.facts);
-  }
+  if (Object.keys(cols).length) writes.push(...(await editStatements(db, vesselId!, cols, cols as Record<string, JsonValue>, by, now, guard)).statements);
   if (boatId !== null) {
     const link = await linkStatements(db, vesselId!, boatId, false, now, guard);
     if ('status' in link) return link.status === 'not-found' ? {status: 'not-found'} : {status: link.status, error: link.error};
@@ -165,7 +167,7 @@ export async function decideFleetReview(db: D1Database, id: string, input: Decis
   const status = action === 'dismiss' ? 'dismissed' : 'decided';
   const results = await db.batch([
     db.prepare(`UPDATE fleet_reviews SET status=?,decision_json=?,decided_by=?,decided_at=? WHERE id=? AND status='open'`)
-      .bind(status, canonicalJson(decision), by, now, id),
+      .bind(status, decisionJson, by, now, id),
     ...writes,
   ]);
   if (!(results[0]?.meta.changes)) {

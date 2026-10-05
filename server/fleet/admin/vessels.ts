@@ -23,6 +23,7 @@
 import {canonicalJson, factId, valueKey} from '../ids.ts';
 import type {JsonValue} from '../ids.ts';
 import {checkVesselColumn} from '../registry.ts';
+import {pinnedNames} from '../jobs.ts';
 import type {AdminOutcome} from '../../advisor/admin/skippers.ts';
 import {validId} from '../../advisor/admin/skippers.ts';
 
@@ -69,6 +70,10 @@ export function validateEdit(fields: unknown): {cols: Record<string, SqlValue>; 
   return {cols, values};
 }
 
+/** The id of the admin fact an edit of `col` to `value` by `by` writes (deterministic, so a decision can name it before writing). */
+export const adminFactId = async (vessel: string, col: string, value: JsonValue, by: string): Promise<string> =>
+  factId(vessel, factField(col), 'admin', adminSource(by), await valueKey(value));
+
 /** A guard appended to each write so it runs only if `sql` (an EXISTS condition) holds, e.g. the review this decision closed. */
 export interface Guard {sql: string; args: SqlValue[]}
 
@@ -83,7 +88,7 @@ export async function editStatements(db: D1Database, vessel: string, cols: Recor
   const cond = guard ? ` AND ${guard.sql}` : '', gargs = guard?.args ?? [];
   for (const col of Object.keys(cols)) {
     const field = factField(col), value = values[col]!, key = await valueKey(value);
-    const id = await factId(vessel, field, 'admin', source, key);
+    const id = await adminFactId(vessel, col, value, by);
     facts[col] = id;
     statements.push(db.prepare(`INSERT INTO fleet_vessel_facts(id,vessel_id,field,value_json,value_key,source_id,source_url,method,confidence,rights,
         retrieved_at,first_seen_at,last_seen_at,superseded_at,superseded_by,run_id)
@@ -106,7 +111,7 @@ export async function editStatements(db: D1Database, vessel: string, cols: Recor
 }
 
 /** True when a stored pinned_json is an object (the only shape an admin edit may merge into). */
-const readablePins = (text: string): boolean => { try { const v = JSON.parse(text); return !!v && typeof v === 'object' && !Array.isArray(v); } catch { return false; } };
+export const readablePins = (text: string): boolean => { try { const v = JSON.parse(text); return !!v && typeof v === 'object' && !Array.isArray(v); } catch { return false; } };
 const parse = (text: string | null): unknown => { if (text === null) return null; try { return JSON.parse(text); } catch { return null; } };
 
 interface VesselRow {id: string; region: string; pinned_json: string; profile_status: string; removal_requested_at: string | null; [k: string]: unknown}
@@ -170,11 +175,6 @@ export async function listVessels(db: D1Database, q: VesselQuery): Promise<{vess
   };
 }
 
-/** The pinned column names ('*' when pinned_json is unreadable: every column is pinned). */
-export function pinnedNames(text: string): string[] {
-  const value = parse(text);
-  return value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value).sort() : ['*'];
-}
 
 // ---- detail -----------------------------------------------------------------------
 interface FactRow {id: string; field: string; value_json: string; source_id: string; source_url: string; method: string; confidence: number;
@@ -281,10 +281,13 @@ export async function linkStatements(db: D1Database, vesselId: string, boatId: u
     return {statements: [db.prepare(`UPDATE advisor_boats SET fleet_vessel_id=NULL,updated_at=? WHERE id=? AND fleet_vessel_id=?${cond}`).bind(now, boatId, vesselId, ...gargs)]};
   }
   if (boat.fleet_vessel_id && boat.fleet_vessel_id !== vesselId) return {status: 'conflict', error: 'the boat is linked to another vessel'};
+  if (boat.fleet_vessel_id === vesselId) return {statements: []};   // already linked: nothing to write
   const other = await db.prepare('SELECT id FROM advisor_boats WHERE fleet_vessel_id=? AND id<>?').bind(vesselId, boatId).first<{id: string}>();
   if (other) return {status: 'conflict', error: 'another advisor boat is linked to this vessel'};
-  return {statements: [db.prepare(`UPDATE advisor_boats SET fleet_vessel_id=?,updated_at=? WHERE id=? AND (fleet_vessel_id IS NULL OR fleet_vessel_id<>?)${cond}`)
-    .bind(vesselId, now, boatId, vesselId, ...gargs)]};
+  // One-to-one in the statement itself: a concurrent link of another boat to this vessel, or of this boat elsewhere, makes it a no-op.
+  return {statements: [db.prepare(`UPDATE advisor_boats SET fleet_vessel_id=?,updated_at=? WHERE id=? AND fleet_vessel_id IS NULL
+      AND NOT EXISTS (SELECT 1 FROM advisor_boats b WHERE b.fleet_vessel_id=? AND b.id<>?)${cond}`)
+    .bind(vesselId, now, boatId, vesselId, boatId, ...gargs)]};
 }
 
 /** POST /api/admin/fleet/vessels/:id/link-advisor {boat_id, unlink?: true}. */
@@ -294,7 +297,14 @@ export async function linkAdvisor(db: D1Database, id: string, input: Record<stri
   if (input.unlink !== undefined && input.unlink !== true) return {status: 'invalid', error: 'unlink must be true'};
   const out = await linkStatements(db, id, input.boat_id, input.unlink === true, now);
   if ('status' in out) return out;
-  await db.batch(out.statements);
+  if (out.statements.length) {
+    const [result] = await db.batch(out.statements);
+    if (!result?.meta.changes) {
+      const current = await db.prepare('SELECT fleet_vessel_id FROM advisor_boats WHERE id=?').bind(input.boat_id as string).first<{fleet_vessel_id: string | null}>();
+      const linked = current?.fleet_vessel_id === (input.unlink === true ? null : id);
+      if (!linked) return {status: 'conflict', error: 'the link changed while saving; reload and retry'};
+    }
+  }
   const boats = (await db.prepare('SELECT id,slug,name,port,status FROM advisor_boats WHERE fleet_vessel_id=? ORDER BY slug').bind(id).all()).results;
   return {status: 'ok', value: {vessel_id: id, advisor_boats: boats}};
 }
