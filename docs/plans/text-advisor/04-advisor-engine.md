@@ -200,6 +200,18 @@ first three.
   inbound messages.
 - Global per day: `ADVISOR_GLOBAL_DAILY_LLM`; vision separately
   (`ADVISOR_GLOBAL_DAILY_VISION`, Claude provider only).
+- As built (hardening, threat model § 9.3): the web chat has its own budget,
+  because a new cookie is a new contact and its caps start over. A turn that
+  arrives on the web channel also counts, per client address (hashed;
+  `ConsumerDeps.ipHash` from the web route, `EngineInput.ipHash`), against the
+  daily message cap (`advisor-msg-ip:<hash>`) and
+  `ADVISOR_DAILY_LLM_PER_IP` (default 30, `advisor-llm-ip:<hash>`), each with
+  one "limit" line; then against `ADVISOR_GLOBAL_DAILY_LLM_WEB` (default 400,
+  `global:advisor-llm-web`), which answers the "swamped" line; and then against
+  the global cap like any turn. Web turns count against both, so the text and
+  Instagram channels always keep `ADVISOR_GLOBAL_DAILY_LLM` minus the web
+  share. Vision calls from web photos stay under the shared
+  `ADVISOR_GLOBAL_DAILY_VISION` (bounded by the per-address model cap).
 - Prompt caching: the system prompt and tool definitions are marked
   `cache_control: {type: 'ephemeral'}` so repeated turns pay the cached rate.
 - Daily answers (FR-1) are generated once per port per day by cron and

@@ -87,7 +87,8 @@ const NO_NUDGE: ReadonlySet<string> = new Set(['stop', 'start', 'help', 'forget'
 /** TA-S6: a contact known only by its Instagram id (a DM or a comment), with no number to text. */
 export const isInstagramOnly = (contact: Pick<AdvisorContactRow, 'phone_enc' | 'web_session' | 'ig_sid'>): boolean => !contact.phone_enc && !contact.web_session && Boolean(contact.ig_sid);
 
-export interface EngineInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps?: EngineDeps; signal?: AbortSignal}
+/** ipHash (hardening): the web chat's hashed client address, for the per-address caps (web turns only). */
+export interface EngineInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps?: EngineDeps; signal?: AbortSignal; ipHash?: string}
 
 /** The pieces a Stage 2 flow sees. */
 export interface FlowContext {
@@ -441,6 +442,15 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
     const target = contact.home_port ? `port:${contact.home_port}` : 'home';
     return done(sent === settings.dailyMessagesPerContact + 1 && !comment ? [say('capped', {target})] : [], 'capped');
   }
+  // Hardening (threat model § 9.3): on the web a new cookie is a new contact, so the message cap also holds per client address.
+  const web = message.channel === 'web';
+  if (web && input.ipHash) {
+    const fromIp = await countToday(db, `advisor-msg-ip:${input.ipHash}`, now);
+    if (fromIp > settings.dailyMessagesPerContact) {
+      const target = contact.home_port ? `port:${contact.home_port}` : 'home';
+      return done(fromIp === settings.dailyMessagesPerContact + 1 ? [say('capped', {target})] : [], 'capped');
+    }
+  }
 
   // Stage 2: the upload-link request (04 § stage 2).
   if (command === 'upload_link' && !comment) {
@@ -479,6 +489,20 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
     const n = await countToday(db, `advisor-llm-capped:${contact.id}`, now);
     const target = contact.home_port ? `port:${contact.home_port}` : 'home';
     return done(n === 1 && !comment ? [say('capped', {target})] : [], 'capped');
+  }
+  // Hardening (threat model § 9.3): web chat turns have their own budget. Per client address (new cookies do not reset it),
+  // and ADVISOR_GLOBAL_DAILY_LLM_WEB, carved out of the global cap: a web turn counts against both, so however busy the
+  // web chat gets, the text channels keep ADVISOR_GLOBAL_DAILY_LLM minus the web share.
+  if (web) {
+    if (input.ipHash && await countToday(db, `advisor-llm-ip:${input.ipHash}`, now) > settings.dailyLlmPerIp) {
+      const n = await countToday(db, `advisor-llm-ip-capped:${input.ipHash}`, now);
+      const target = contact.home_port ? `port:${contact.home_port}` : 'home';
+      return done(n === 1 ? [say('capped', {target})] : [], 'capped');
+    }
+    if (await countToday(db, 'global:advisor-llm-web', now) > settings.globalDailyLlmWeb) {
+      advisorLog('warn', 'advisor_global_cap', {limit: settings.globalDailyLlmWeb, channel: 'web'});
+      return done([say('global_cap')], 'global_cap');
+    }
   }
   if (await countToday(db, 'global:advisor-llm', now) > settings.globalDailyLlm) {
     advisorLog('warn', 'advisor_global_cap', {limit: settings.globalDailyLlm});
@@ -627,4 +651,4 @@ async function linkCodeFlow(f: FlowContext): Promise<EngineResult | null> {
 }
 
 /** The consumer's handler (server/index.ts, inbound.ts, the web chat route): the engine with deps.engine. */
-export const engineHandler: Handler = async ({env, contact, message, now, deps, signal}) => runTurn({env, contact, message, now, deps: deps.engine ?? {}, signal});
+export const engineHandler: Handler = async ({env, contact, message, now, deps, signal}) => runTurn({env, contact, message, now, deps: deps.engine ?? {}, signal, ...(deps.ipHash ? {ipHash: deps.ipHash} : {})});

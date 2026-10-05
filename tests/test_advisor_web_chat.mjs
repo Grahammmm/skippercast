@@ -196,6 +196,22 @@ dbTest('the turn runs past 40 s: the answer is {replies: [], pending: true} and 
 
 test('the timeout default is 40 s', () => { assert.equal(webChat.timeoutMs, 40000); assert.equal(webChat.handler, undefined); });
 
+dbTest('hardening: the turn gets the client address hashed (ConsumerDeps.ipHash), the same for one address whatever the cookie, never the address itself', async t => {
+  const {env} = setup();
+  const seen = [];
+  webChat.handler = async input => { seen.push(input.deps.ipHash); return warmUpHandler(input); };
+  t.after(() => { delete webChat.handler; });
+  const key = {...env, ADVISOR_PHONE_KEY: Buffer.alloc(32, 7).toString('base64')};
+  await message(key, {text: 'one'}, null);
+  await message(key, {text: 'two'}, null);
+  await message(key, {text: 'three'}, null, {'cf-connecting-ip': '198.51.100.4'});
+  assert.equal(seen.length, 3);
+  assert.ok(seen.every(h => /^[0-9a-f]{32}$/.test(h)), 'hashed');
+  assert.equal(seen[0], seen[1], 'two fresh cookies, one address, one key');
+  assert.notEqual(seen[0], seen[2]);
+  assert.ok(!seen.some(h => h.includes('203') || h.includes('198')));
+});
+
 dbTest('Origin, rate limit, dark switch and storage', async () => {
   const {env} = setup();
   const foreign = await message(env, {text: 'hi'}, null, {Origin: 'https://evil.example'});

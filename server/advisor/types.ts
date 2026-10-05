@@ -26,6 +26,8 @@ export interface AdvisorSettings {
   dailyLlmPerContact: number;       // ADVISOR_DAILY_LLM_PER_CONTACT
   globalDailyLlm: number;           // ADVISOR_GLOBAL_DAILY_LLM
   globalDailyVision: number;        // ADVISOR_GLOBAL_DAILY_VISION
+  dailyLlmPerIp: number;             // ADVISOR_DAILY_LLM_PER_IP: web chat model calls a day per client address
+  globalDailyLlmWeb: number;         // ADVISOR_GLOBAL_DAILY_LLM_WEB: web chat model calls a day, part of ADVISOR_GLOBAL_DAILY_LLM
   globalDailyCold: number;           // ADVISOR_GLOBAL_DAILY_COLD: texts a day we start to numbers that never texted us
   publicBase: string;               // ADVISOR_PUBLIC_BASE: https origin (and optional path), no trailing slash
   regionDefault: string;            // ADVISOR_REGION_DEFAULT: region id for contacts with no home port

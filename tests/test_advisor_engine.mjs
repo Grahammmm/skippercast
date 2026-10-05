@@ -22,6 +22,7 @@ globalThis.BUILD_ID = 'build-test';
 const engine = await import('../server/advisor/engine.ts');
 const {runTurn, engineHandler, rulesGuard, statesRuleNumber, stripMarkdown, capReply, buildMessages, STAGE_TWO_FLOWS, MAX_TOOL_ROUNDS, MAX_TOKENS, TEMPERATURE} = engine;
 const {detectLanguage, chooseLanguage, parseCommand, COMMANDS} = await import('../server/advisor/intents.ts');
+const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {consumeAdvisor, runInline, notifyAdmin, ADVISOR_QUEUE_NAME} = await import('../server/advisor/consumer.ts');
 const {t} = await import('../server/advisor/strings.ts');
 const {deriveKeys, phoneHash, encryptPhone, reviewId} = await import('../server/advisor/contacts.ts');
@@ -135,6 +136,50 @@ dbTest('stage 3 caps: per-contact LLM cap answers once; the global cap answers "
   assert.equal(api.requests.length, 0);
   const counter = all.sql.prepare("SELECT count FROM request_limits WHERE id LIKE 'global:advisor-llm:%'").get();
   assert.equal(counter.count, 1, 'the request_limits UPSERT counted the attempt');
+});
+
+// Hardening (threat model § 9.3): the web chat's own budget.
+const okTurn = () => ({status: 200, body: {content: [{type: 'text', text: 'Lingcod are on the reefs.'}], stop_reason: 'end_turn', usage: {input_tokens: 1, output_tokens: 1}}});
+let webSeq = 0;
+/** A brand-new web visitor (a fresh cookie, so a fresh contact) and its first message. */
+function webVisitor(sql) {
+  const id = `web${++webSeq}`;
+  sql.prepare(`INSERT INTO advisor_contacts(id,web_session,channel,role,language,status,last_seen_at,created_at,updated_at) VALUES(?,?,'web','angler','en','active',?,?,?)`).run(id, `s${id}`.padEnd(64, '0'), iso(T0), iso(T0), iso(T0));
+  return {contact: contactRow(sql, id), message: inbound(sql, 'any lingcod around the rock?', {contact: id})};
+}
+const webTurn = (env, sql, api, ipHash) => { const v = webVisitor(sql); return quiet(() => runTurn({env, ...v, now: T0, ipHash, deps: {sleep: async () => {}, clock: () => T0, feeds: fixtureFeeds(), fetcher: api.fetcher}})).then(r => r.value); };
+
+dbTest('web budget: fresh cookies from one address stop at ADVISOR_DAILY_LLM_PER_IP model turns; another address is unaffected', async () => {
+  const api = fakeApi(Array.from({length: 3}, okTurn));
+  const {sql, env} = setup({env: {ANTHROPIC_API_KEY: 'k', ADVISOR_DAILY_LLM_PER_IP: '2'}});
+  const intents = [];
+  for (let i = 0; i < 4; i++) intents.push((await webTurn(env, sql, api, 'ip-one')).intent);
+  assert.deepEqual(intents, ['chat', 'chat', 'capped', 'capped'], 'a new cookie does not reset the cap');
+  assert.equal(api.requests.length, 2, 'no model call past the cap');
+  assert.equal((await webTurn(env, sql, api, 'ip-two')).intent, 'chat');
+  assert.equal(advisorSettings({}).dailyLlmPerIp, 30);
+});
+
+dbTest('web budget: the daily message cap also holds per address on the web', async () => {
+  const {sql, env} = setup({env: {ADVISOR_DAILY_MESSAGES_PER_CONTACT: '2'}});
+  const intents = [];
+  for (let i = 0; i < 4; i++) { const r = await webTurn(env, sql, fakeApi([]), 'ip-msgs'); intents.push([r.intent, texts(r).length]); }
+  assert.deepEqual(intents, [['unconfigured', 1], ['unconfigured', 1], ['capped', 1], ['capped', 0]], 'one "limit" line, then silence');
+});
+
+dbTest('web budget: ADVISOR_GLOBAL_DAILY_LLM_WEB stops web turns while texts keep their share of the global cap', async () => {
+  const api = fakeApi(Array.from({length: 4}, okTurn));
+  const {sql, env} = setup({env: {ANTHROPIC_API_KEY: 'k', ADVISOR_GLOBAL_DAILY_LLM_WEB: '2', ADVISOR_GLOBAL_DAILY_LLM: '4'}});
+  seen(sql);
+  const web = [];
+  for (let i = 0; i < 4; i++) web.push((await webTurn(env, sql, api, `ip-${i}`)).intent);
+  assert.deepEqual(web, ['chat', 'chat', 'global_cap', 'global_cap'], 'the web share runs out, from any address');
+  // The text channel still has ADVISOR_GLOBAL_DAILY_LLM minus the web share.
+  const text = [];
+  for (let i = 0; i < 3; i++) text.push((await quiet(() => run(env, contactRow(sql), inbound(sql, `any lingcod near the rock ${i}?`), {fetcher: api.fetcher}))).value.intent);
+  assert.deepEqual(text, ['chat', 'chat', 'global_cap']);
+  assert.equal(api.requests.length, 4);
+  assert.equal(advisorSettings({}).globalDailyLlmWeb, 400);
 });
 
 // ---- stage 1 ----------------------------------------------------------------------------

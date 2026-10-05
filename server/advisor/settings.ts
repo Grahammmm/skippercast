@@ -9,7 +9,7 @@ import type {AdvisorChannel, AdvisorSettings, VisionProviderName} from './types.
 export type AdvisorVars = Pick<Env, 'TEXT_ADVISOR_ENABLED' | 'ADVISOR_REPLIES_ENABLED' | 'ADVISOR_NUMBER' | 'ADVISOR_CHANNEL' |
   'BLUEBUBBLES_PRIVATE_API' | 'ADVISOR_ADMIN_CONTACT_ID' | 'ADVISOR_INBOX_PUBLIC_REPLIES' | 'ADVISOR_MODEL' | 'ADVISOR_VISION_MODEL' |
   'ADVISOR_VISION_PROVIDERS' | 'ADVISOR_DAILY_MESSAGES_PER_CONTACT' | 'ADVISOR_DAILY_LLM_PER_CONTACT' | 'ADVISOR_GLOBAL_DAILY_LLM' |
-  'ADVISOR_GLOBAL_DAILY_VISION' | 'ADVISOR_GLOBAL_DAILY_COLD' | 'ADVISOR_PUBLIC_BASE' | 'ADVISOR_REGION_DEFAULT' | 'ADVISOR_AUTO_PUBLISH_AFTER' |
+  'ADVISOR_GLOBAL_DAILY_VISION' | 'ADVISOR_DAILY_LLM_PER_IP' | 'ADVISOR_GLOBAL_DAILY_LLM_WEB' | 'ADVISOR_GLOBAL_DAILY_COLD' | 'ADVISOR_PUBLIC_BASE' | 'ADVISOR_REGION_DEFAULT' | 'ADVISOR_AUTO_PUBLISH_AFTER' |
   'ADVISOR_SOCIAL_ENABLED' | 'ADVISOR_INBOX_ENABLED'>;
 
 // Defaults, one place (01 runtime-vars table).
@@ -17,7 +17,7 @@ export const ADVISOR_DEFAULTS: Readonly<AdvisorSettings> = Object.freeze({
   enabled: false, repliesEnabled: true, number: null, channel: 'bluebubbles', privateApi: false,
   adminContactId: null, inboxPublicReplies: false, model: 'claude-sonnet-5', visionModel: 'claude-sonnet-5',
   visionProviders: Object.freeze(['hermes', 'claude']) as VisionProviderName[],
-  dailyMessagesPerContact: 40, dailyLlmPerContact: 30, globalDailyLlm: 2000, globalDailyVision: 400, globalDailyCold: 50,
+  dailyMessagesPerContact: 40, dailyLlmPerContact: 30, globalDailyLlm: 2000, globalDailyVision: 400, dailyLlmPerIp: 30, globalDailyLlmWeb: 400, globalDailyCold: 50,
   publicBase: 'https://skippercast.com', regionDefault: 'morro-bay', autoPublishAfter: 5,
   socialEnabled: false, inboxEnabled: false,
 });
@@ -74,6 +74,8 @@ export function advisorSettings(env: AdvisorVars = {}): AdvisorSettings {
     dailyLlmPerContact: count(env.ADVISOR_DAILY_LLM_PER_CONTACT, d.dailyLlmPerContact),
     globalDailyLlm: count(env.ADVISOR_GLOBAL_DAILY_LLM, d.globalDailyLlm),
     globalDailyVision: count(env.ADVISOR_GLOBAL_DAILY_VISION, d.globalDailyVision),
+    dailyLlmPerIp: count(env.ADVISOR_DAILY_LLM_PER_IP, d.dailyLlmPerIp),
+    globalDailyLlmWeb: count(env.ADVISOR_GLOBAL_DAILY_LLM_WEB, d.globalDailyLlmWeb),
     globalDailyCold: count(env.ADVISOR_GLOBAL_DAILY_COLD, d.globalDailyCold),
     publicBase: publicBase(env.ADVISOR_PUBLIC_BASE),
     regionDefault: matching(env.ADVISOR_REGION_DEFAULT, SLUG) ?? d.regionDefault,
