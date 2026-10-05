@@ -92,7 +92,9 @@ POST_BYTES = 768 * 1024          # under the Worker's 1 MB body limit
 POST_WINDOWS = 50
 CELLS_PER_POST = 500
 SOURCE_RIGHTS = {"aisstream": "internal-only", "datalastic": "internal-only", "marinecadastre": "noaa-planning-only"}
-STORES: dict[str, Callable[[Path], AisStore]] = {"aisstream": AisStore}   # CF-47 adds the backfill store
+# Raw store per source under <FLEET_VAR>/<region>/ais: the listener's, and the backfill's (ais/backfill.py).
+STORES: dict[str, Callable[[Path], AisStore]] = {"aisstream": AisStore,
+                                                 "marinecadastre": lambda root: AisStore(Path(root) / "backfill")}
 HOOKS = ("refresh_watch", "match")
 HEARTBEAT_FIELDS = ("source", "written_at", "started_at", "last_message_at", "connected", "messages_per_min",
                     "watched_messages_per_min", "vessels", "reconnects", "queue_depth", "watch_size", "git_sha")

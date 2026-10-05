@@ -192,13 +192,13 @@ class SubscriptionTest(unittest.TestCase):
 
 class SourceInterfaceTest(unittest.TestCase):
     def test_registry_and_protocol(self):
-        self.assertEqual(set(SOURCES), {'aisstream', 'datalastic'})
+        self.assertEqual(set(SOURCES), {'aisstream', 'datalastic', 'marinecadastre'})
         for ident in SOURCES:
             source = get_source(ident)
             self.assertIsInstance(source, AisSource)
             self.assertEqual(source.id, ident)
         with self.assertRaises(KeyError):
-            get_source('marinecadastre')
+            get_source('no-such-source')
 
     def test_aisstream_has_no_history(self):
         with self.assertRaises(Unsupported):
