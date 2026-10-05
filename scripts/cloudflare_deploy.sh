@@ -113,7 +113,7 @@ fi
 # The zone must already be active on this Cloudflare account (docs/cloudflare.md).
 # ENABLE_QUEUES / ENABLE_ANALYTICS / ENABLE_ADVISOR ("true") add the optional bindings; the script reads them
 # from the environment, and with ENABLE_ADVISOR also copies TEXT_ADVISOR_ENABLED, BLUEBUBBLES_PRIVATE_API and
-# ADVISOR_* into the Worker's vars. FLEET_* variables (charter fleet switches, no bindings) are copied whenever set.
+# ADVISOR_* into the Worker's vars. FLEET_ENABLED and FLEET_MAP_ENABLED (charter fleet switches, no bindings) are copied whenever set.
 node scripts/wrangler_config.mjs "$id" "$BUCKET" "$CONFIG" "${CUSTOM_DOMAINS:-}"
 
 # Before touching the schema, keep a way back. D1 Time Travel can restore to any

@@ -17,7 +17,7 @@
 //                     errors and exceptions are still kept.
 // With ENABLE_ADVISOR, TEXT_ADVISOR_ENABLED and every ADVISOR_* variable set in
 // the environment are copied into the Worker's vars (never a secret). The charter
-// fleet has no bindings, so its FLEET_* variables are copied whenever set
+// fleet has no bindings, so its FLEET_VARS (FLEET_ENABLED, FLEET_MAP_ENABLED) are copied whenever set
 // (docs/plans/charter-fleet/design.md § 16).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
 // $schema path, a URL) is never mistaken for a comment.
@@ -102,11 +102,17 @@ export function advisorVars(environ = {}) {
   return vars;
 }
 
-/** The charter fleet's plain vars from an environment: FLEET_*, non-empty only (server/fleet/settings.ts). */
+// The charter fleet's plain vars, by name: an allowlist, not a prefix, so a future
+// FLEET_* secret can never be published as a plain var.
+export const FLEET_VARS = ['FLEET_ENABLED', 'FLEET_MAP_ENABLED'];
+
+/** The charter fleet's plain vars from an environment: FLEET_VARS only, non-empty only (server/fleet/settings.ts). */
 export function fleetVars(environ = {}) {
   const vars = {};
-  for (const [key, value] of Object.entries(environ).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))
-    if (key.startsWith('FLEET_') && typeof value === 'string' && value.trim() !== '') vars[key] = value.trim();
+  for (const key of FLEET_VARS) {
+    const value = environ[key];
+    if (typeof value === 'string' && value.trim() !== '') vars[key] = value.trim();
+  }
   return vars;
 }
 

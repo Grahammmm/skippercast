@@ -6,6 +6,11 @@
 // The prefixes are reserved here, ahead of their routes, so later tasks inherit
 // the gate.
 //
+// fleetRouter only gates /api/admin/fleet/* and /api/fleet/map/*: it is mounted
+// before the private gate, so it must never register handlers there. Those
+// handlers belong in adminRoutes (routes/admin.ts), behind requireUser and
+// requireAdmin; only the job routes (/api/fleet/jobs/*, requireFleetJob) live here.
+//
 //   GET /api/fleet/jobs/ping   job identity check: {ok: true, region}
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
