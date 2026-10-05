@@ -414,6 +414,27 @@ test('snapshot: paged by section, vessels carry keys, pinned names, aliases and 
   } finally { Object.assign(PAGE, saved); sql.close(); }
 });
 
+test('snapshot: the first page carries advisor_slugs; vessels carry the winning-source record without values (CF-17)', {skip}, async () => {
+  const {sql, db} = database();
+  try {
+    for (const slug of ['test-boat-9', 'example-skipper'])
+      sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,created_at,updated_at) VALUES(?,?,?,'morro-bay','morro-bay',?,?)`).run('b-' + slug, slug, slug, T0, T0);
+    const ops = [operator, vessel(1), fact(1, 'mmsi', '366000001'), fact(1, 'name', 'Test Boat 1'),
+      fact(1, 'trip_types[]', {name: 'Half Day'}), fact(1, 'name', 'Test Boat One', {source_url: 'https://registry.example.gov/v/1b', retrieved_at: T1})];
+    assert.equal((await post(db, batch(ops))).status, 200);
+    const old = sha([vid(1), 'name', 'fcc-uls', 'https://registry.example.gov/vessel/1', sha('"Test Boat 1"').slice(0, 16)].join('|')).slice(0, 32);
+    sql.prepare('UPDATE fleet_vessel_facts SET superseded_at=? WHERE id=?').run(T1, old);
+    const first = await get(db, `?region=${REGION}`);
+    assert.deepEqual(first.body.advisor_slugs, ['example-skipper', 'test-boat-9']);
+    const page = await get(db, `?region=${REGION}&cursor=v:`);
+    assert.equal(page.body.advisor_slugs, undefined, 'only the first page');
+    const sources = page.body.vessels[0].sources;
+    assert.deepEqual(sources.map(s => s.field).sort(), ['mmsi', 'name'], 'current scalar facts only: no list fields, no superseded fact');
+    assert.deepEqual(Object.keys(sources[0]).sort(), ['confidence', 'field', 'id', 'retrieved_at', 'source_id']);
+    assert.equal(sources.find(s => s.field === 'name').retrieved_at, T1);
+  } finally { sql.close(); }
+});
+
 test('an admin or user session without a fleet bearer token gets 401 on both job routes', {skip}, async () => {
   const {sql, db} = database(), sessions = withSessions(worker);
   sql.prepare("INSERT INTO users(id,created_at,role) VALUES('admin-1',?,'admin')").run(T0);

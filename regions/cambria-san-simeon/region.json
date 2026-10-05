@@ -229,7 +229,7 @@
       "landing-reports"
     ],
     "charter-identity": [
-      "operator-identities"
+      "fleet-registry"
     ],
     "ais-history": [
       "noaa-ais",
@@ -327,8 +327,8 @@
       "reason": "No local catch publisher is bound; Morro Bay landings cannot be assigned to these waters."
     },
     "charter-identity": {
-      "status": "partial",
-      "reason": "No locally verified charter identity register is bound to this expansion."
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
     },
     "ais-history": {
       "status": "partial",

@@ -202,7 +202,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -298,8 +300,8 @@
       "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "Bodega\u2013Point Reyes draft: regional source footprint, legal access and navigation review are pending; no qualified fishing target is published."
+      "status": "missing",
+      "reason": "0 boats registered in the charter fleet registry, 0 with an identified MMSI; registry identities are not operator-confirmed."
     },
     "ais-history": {
       "status": "research",

@@ -224,7 +224,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -320,8 +322,8 @@
       "reason": "This Humboldt\u2013Cape source role has not yet passed a complete local coverage and update review; a source binding does not imply data availability."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "This Humboldt\u2013Cape source role has not yet passed a complete local coverage and update review; a source binding does not imply data availability."
+      "status": "missing",
+      "reason": "0 boats registered in the charter fleet registry, 0 with an identified MMSI; registry identities are not operator-confirmed."
     },
     "ais-history": {
       "status": "research",

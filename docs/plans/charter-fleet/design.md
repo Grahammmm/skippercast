@@ -561,11 +561,13 @@ facts: highest-priority source, then highest confidence, then latest
 `retrieved_at`; pinned fields are skipped, and a winning admin fact whose value
 is null clears the column (no lower source fills it); a null from any other
 source is no fact. The Worker snapshot
-carries no facts, so with it a column changes only when one of this run's
-facts wins it; the staging snapshot (`Snapshot.from_sqlite`) carries them. The
-Worker snapshot also carries no `advisor_boats` slugs yet; until it does, a new
-vessel's slug can collide with an advisor boat's and the Worker rejects the
-batch (`slug: already taken`). The Python resolver is the only
+carries no fact values but each vessel's `sources`, the winning-source record
+(id, field, source and confidence of every current scalar fact): a stored fact
+ranks like any other, and when it wins, the column keeps its stored value, so a
+lower-priority source never overwrites a higher one's (CF-17). The staging
+snapshot (`Snapshot.from_sqlite`) carries the facts themselves. The Worker
+snapshot's first page carries every `advisor_boats` slug (`advisor_slugs`), so
+a new vessel's slug never collides with an advisor boat's. The Python resolver is the only
 implementation; the Worker stores what it is sent and applies only "admin
 facts pin the field".
 

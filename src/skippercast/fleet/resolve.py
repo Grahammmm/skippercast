@@ -44,8 +44,19 @@ of the same field and source): the first source in the field's priority
 winning admin fact whose value is null means "no value": the column is
 cleared and no lower source fills it. Pinned columns are never sent (the name
 pair, which every upsert needs, is sent as stored). A column no fact wins is
-left out of the upsert, so the stored value stays; the Worker snapshot carries
-no facts, so there a column changes only when this run's facts win it.
+left out of the upsert, so the stored value stays. The Worker snapshot carries
+no fact values, but each vessel's ``sources`` (the id, field, source and
+confidence of its current scalar facts) is the winning-source record: a stored
+fact known only from it ranks like any other, and when it wins, the column is
+left as stored. So a lower-priority source reporting a new value never
+overwrites what a higher-priority source set.
+
+The ``operator`` field's winning value (an entity name) becomes ``operator_id``:
+the snapshot operator of the same normalised name, else a new operator whose id
+is ``sha256(region|operator|name_norm)[:32]``, sent as ``operator.upsert``.
+
+``extra_facts`` (vessel id -> facts, the enrich-code step's) join the facts of
+a vessel this run's candidates were assigned to.
 
 Only an admin fact may be null; a null from any other source is ignored.
 
@@ -55,8 +66,8 @@ creation (``uscg:``, ``reg:``, ``hin:``, ``mmsi:``, ``cs:``, else
 slug, every advisor boat slug and the slugs created in this run.
 
 ``fact.upsert`` operations carry no ``supersedes``; superseding is ingest's
-(design section 9). The fact ``scope`` and the operator, offering and change
-kinds other than ``renamed`` are the ingest and refresh steps' too.
+(design section 9). Offerings, departures and the change kinds other than
+``renamed`` are the ingest and refresh steps'.
 """
 from __future__ import annotations
 
@@ -68,7 +79,8 @@ from . import ops
 from .adapters.base import Candidate, Fact
 from .normalize import clean_url, name_norm, name_similarity, phone_e164, slugify
 
-__all__ = ["COLUMNS", "KEY_ORDER", "Resolution", "ResolverConfig", "Snapshot", "fingerprint", "resolve", "winner"]
+__all__ = ["COLUMNS", "KEY_ORDER", "STORED", "Resolution", "ResolverConfig", "Snapshot", "fingerprint", "op_sort_key", "resolve",
+           "winner"]
 
 KEY_ORDER = ("uscg_doc", "state_reg", "hull_id", "mmsi", "call_sign")
 KEY_PREFIX = {"uscg_doc": "uscg", "state_reg": "reg", "hull_id": "hin", "mmsi": "mmsi", "call_sign": "cs"}
@@ -86,6 +98,7 @@ SLUG_MAX = 80
 NAME_MIN = 0.8  # below this name similarity a vessel is no fuzzy match, whatever the port says
 ALIAS_KIND = {"ais-static": "ais-name", "teck-reports": "report-name"}
 VESSEL_CHECKS = ops.SPECS["vessel.upsert"][1]
+STORED = type("Stored", (), {"__repr__": lambda self: "STORED"})()  # a Worker-stored fact's value: known to exist, not sent
 
 
 # ---- configuration and snapshot ---------------------------------------------------------
@@ -145,9 +158,11 @@ class Snapshot:
     """The registry as resolve sees it (the Worker's ``GET /api/fleet/jobs/snapshot`` shape).
 
     ``vessels`` carry their columns, ``waters`` (parsed), ``pinned`` (column
-    names, ``*`` for all) and ``aliases``; ``reviews`` are the decided and
-    dismissed ones with ``decision`` parsed. ``advisor_slugs`` are the
-    ``advisor_boats`` slugs a vessel slug must not take. ``facts`` are the
+    names, ``*`` for all), ``aliases``, ``offerings`` and, from the Worker,
+    ``sources`` (the winning-source record: ``{id, field, source_id, confidence,
+    retrieved_at}`` of each current scalar fact, no values); ``reviews`` are the
+    decided and dismissed ones with ``decision`` parsed. ``advisor_slugs`` are
+    the ``advisor_boats`` slugs a vessel slug must not take. ``facts`` are the
     non-superseded facts of the region's vessels (``value`` parsed), or None
     when the source carries none (the Worker snapshot).
     """
@@ -172,8 +187,9 @@ class Snapshot:
         return out
 
     @classmethod
-    def from_sqlite(cls, db, region: str) -> "Snapshot":
-        """The same shape from a staging database (``SqliteSink.db``), with its facts."""
+    def from_sqlite(cls, db, region: str, facts: bool = True) -> "Snapshot":
+        """The same shape from a staging database (``SqliteSink.db``), with its facts; ``facts=False`` gives
+        the Worker's shape instead (no facts, each vessel's ``sources`` as ``server/fleet/jobs.ts`` selects them)."""
         def rows(sql, *args):
             cursor = db.execute(sql, args)
             names = [d[0] for d in cursor.description]
@@ -186,24 +202,38 @@ class Snapshot:
         for row in rows("SELECT a.* FROM fleet_aliases a JOIN fleet_vessels v ON v.id=a.vessel_id WHERE v.region=? "
                         "ORDER BY a.vessel_id, a.alias_norm", region):
             aliases.setdefault(row.pop("vessel_id"), []).append(row)
+        children: dict[str, dict[str, list]] = {"offerings": {}, "sources": {}}
+        for row in rows("SELECT o.* FROM fleet_offerings o JOIN fleet_vessels v ON v.id=o.vessel_id WHERE v.region=? "
+                        "ORDER BY o.vessel_id, o.id", region):
+            for col in ("days", "target_species", "source_fact_ids"):
+                row[col] = parsed(row.pop(f"{col}_json"))
+            children["offerings"].setdefault(row.pop("vessel_id"), []).append(row)
+        if not facts:
+            for row in rows("SELECT f.vessel_id, f.id, f.field, f.source_id, f.confidence, f.retrieved_at "
+                            "FROM fleet_vessel_facts f JOIN fleet_vessels v ON v.id=f.vessel_id WHERE v.region=? "
+                            "AND f.superseded_at IS NULL AND instr(f.field, '[]')=0 ORDER BY f.vessel_id, f.id", region):
+                children["sources"].setdefault(row.pop("vessel_id"), []).append(row)
         vessels = []
         for row in rows("SELECT * FROM fleet_vessels WHERE region=? ORDER BY id", region):
             row["waters"], row["pinned"] = parsed(row.pop("waters_json")), sorted(_pinned(row.pop("pinned_json")))
             row["aliases"] = aliases.get(row["id"], [])
+            row["offerings"] = children["offerings"].get(row["id"], [])
+            if not facts:
+                row["sources"] = children["sources"].get(row["id"], [])
             vessels.append(row)
         reviews = []
         for row in rows("SELECT * FROM fleet_reviews WHERE region=? AND status<>'open' ORDER BY id", region):
             for col in ("candidate", "proposal", "decision"):
                 row[col] = parsed(row.pop(f"{col}_json"))
             reviews.append(row)
-        facts = []
+        stored = []
         for row in rows("SELECT f.* FROM fleet_vessel_facts f JOIN fleet_vessels v ON v.id=f.vessel_id "
-                        "WHERE v.region=? AND f.superseded_at IS NULL ORDER BY f.id", region):
+                        "WHERE v.region=? AND f.superseded_at IS NULL ORDER BY f.id", region) if facts else ():
             row["value"] = parsed(row.pop("value_json"))
-            facts.append(row)
+            stored.append(row)
         operators = rows("SELECT id, slug, name FROM fleet_operators WHERE region=? ORDER BY id", region)
         slugs = frozenset(s for (s,) in db.execute("SELECT slug FROM advisor_boats"))
-        return cls(vessels, reviews, operators, slugs, facts)
+        return cls(vessels, reviews, operators, slugs, stored if facts else None)
 
 
 @dataclass
@@ -261,6 +291,7 @@ class _Vessel:
     stored: dict | None                           # the snapshot row; None when created in this run
     creation_key: str | None = None
     cands: list = field(default_factory=list)     # (candidate, score)
+    extra: list = field(default_factory=list)     # enrich-code facts (resolve's extra_facts)
 
 
 def fingerprint(candidate: Candidate) -> str:
@@ -353,6 +384,13 @@ class _Resolver:
                 row["id"], row["field"], row.get("value"), row["source_id"], row["source_url"], row.get("method", ""),
                 float(row["confidence"]), row.get("rights", ""), row["retrieved_at"],
                 row.get("value_key") or ops.value_key(row.get("value"))))
+        if snapshot.facts is None:  # the Worker's winning-source record: a stored fact ranks, its value stays stored
+            for row in snapshot.vessels:
+                self.stored_facts[row["id"]] = [
+                    _Fact(s["id"], s["field"], STORED, s["source_id"], "", "", float(s["confidence"]), "",
+                          s["retrieved_at"], "") for s in row.get("sources") or ()]
+        self.operators = {name_norm(o["name"]): o["id"] for o in sorted(snapshot.operators, key=lambda o: o["id"])}
+        self.operator_slugs = {o["slug"] for o in snapshot.operators}
 
     # -- index
 
@@ -511,11 +549,11 @@ class _Resolver:
     def facts_for(self, vessel: _Vessel) -> tuple[list[_Fact], list[_Fact]]:
         """(every current fact, this run's facts) for a vessel; this run's replace a source's stored ones per field."""
         fresh: dict[str, _Fact] = {}
-        for cand, _score in vessel.cands:
-            for fact in cand.facts:
+        for facts, fp in [(c.facts, c.fp) for c, _score in vessel.cands] + [(vessel.extra, vessel.id)]:
+            for fact in facts:
                 key = ops.value_key(fact.value) if _json_ok(fact.value) else None
                 if key is None:
-                    self.skipped.append({"fingerprint": cand.fp, "reason": f"fact {fact.field}: not JSON"})
+                    self.skipped.append({"fingerprint": fp, "reason": f"fact {fact.field}: not JSON"})
                     continue
                 ident = ops.fact_id(vessel.id, fact.field, fact.source_id, fact.source_url, key)
                 fresh[ident] = _Fact(ident, fact.field, fact.value, fact.source_id, fact.source_url, fact.method,
@@ -539,11 +577,16 @@ class _Resolver:
         for field_, col in COLUMNS.items():
             rule = self.config.rules.get(field_)
             best = winner(by_field.get(field_, ()), rule) if rule else None
-            if best is None:
-                continue
+            if best is None or best.value is STORED:
+                continue  # no fact, or the stored winner keeps the stored value
             ok, value = _column_value(col, best.value)
             if ok:
                 cols[col], winners[col] = value, best
+        rule = self.config.rules.get("operator")
+        best = winner(by_field.get("operator", ()), rule) if rule else None
+        if (best is not None and isinstance(best.value, str) and name_norm(best.value)
+                and not {"*", "operator_id"} & vessel.pinned):
+            cols["operator_id"] = self.operator(best.value.strip()[:120].strip())
         if vessel.stored is None:  # a new vessel: candidate hints fill what no fact gave
             for kind in KEY_ORDER:
                 if kind not in cols and kind in vessel.keys and _column_value(kind, vessel.keys[kind])[0]:
@@ -593,6 +636,19 @@ class _Resolver:
         self.class_review(vessel, by_field.get("vessel_class", ()), winners.get("vessel_class"))
         for fact in fresh:
             self.fact(vessel, fact)
+
+    def operator(self, name: str) -> str:
+        """The operator id for an entity name: the stored one of that normalised name, else a new one (sent)."""
+        norm = name_norm(name)
+        if norm not in self.operators:
+            ident = ops.id32(self.config.region, "operator", norm)
+            slug, number = slugify(name) or "operator", 2
+            while slug in self.operator_slugs:
+                slug, number = f"{slugify(name) or 'operator'}-{number}", number + 1
+            self.operators[norm] = ident
+            self.operator_slugs.add(slug)
+            self.ops.append({"op": "operator.upsert", "id": ident, "slug": slug, "name": name, "seen_at": self.now})
+        return self.operators[norm]
 
     def best_name(self, vessel: _Vessel) -> str:
         rule = self.config.rules.get("name")
@@ -654,25 +710,34 @@ def _json_ok(value: Any) -> bool:
 ORDER = {kind: i for i, kind in enumerate(ops.OP_KINDS)}
 
 
-def _sort_key(op: dict) -> tuple:
+def op_sort_key(op: dict) -> tuple:
+    """The order a sink gets operations in: by kind (operators before vessels, offerings before departures), then id."""
     kind = op["op"]
     ident = op.get("id") or op.get("vessel_id", "")
     return ORDER[kind], ident, op.get("field", ""), op.get("source_id", ""), op.get("source_url", ""), \
         op.get("alias_norm", ""), op.get("fingerprint", ""), op.get("kind", ""), ops.canonical_json(op)
 
 
-def resolve(snapshot: Snapshot, candidates: Iterable[Candidate], config: ResolverConfig, now: str) -> Resolution:
+def resolve(snapshot: Snapshot, candidates: Iterable[Candidate], config: ResolverConfig, now: str,
+            extra_facts: Mapping[str, Iterable[Fact]] | None = None) -> Resolution:
     """Resolve ``candidates`` against ``snapshot``; the operations for a sink and what was decided per candidate."""
     resolver = _Resolver(snapshot, config, now)
     prepared = [c for raw in candidates if (c := resolver.prepare(raw)) is not None]
     for cand in sorted(prepared, key=_Resolver.order):
         resolver.run(cand)
+    for vid, facts in sorted((extra_facts or {}).items()):
+        vessel = resolver.vessels.get(vid)
+        if vessel is None or not vessel.cands:  # only a vessel listed in this run is upserted
+            resolver.skipped.append({"fingerprint": vid, "reason": "extra facts: vessel not listed in this run"})
+            continue
+        vessel.extra = [Fact(f.field, _normal_value(f.field, f.value, config), f.source_id, f.source_url, f.method,
+                             f.confidence, f.rights, f.retrieved_at) for f in facts]
     for vid in sorted(resolver.vessels):
         if resolver.vessels[vid].cands:
             resolver.emit(resolver.vessels[vid])
     unique: dict[str, dict] = {}
     for op in resolver.ops:
         unique.setdefault(ops.canonical_json(op), op)
-    return Resolution(sorted(unique.values(), key=_sort_key), dict(sorted(resolver.assignments.items())),
+    return Resolution(sorted(unique.values(), key=op_sort_key), dict(sorted(resolver.assignments.items())),
                       dict(sorted(resolver.scores.items())),
                       sorted(resolver.created), sorted(set(resolver.review_ids)), resolver.skipped)

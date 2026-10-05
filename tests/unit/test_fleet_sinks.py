@@ -221,7 +221,9 @@ class RegistryAndCliTests(unittest.TestCase):
             open_sink("staging", region, run).close()
 
     def test_registered_steps_record_state_under_fleet_var(self):
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict("os.environ", {"SKIPPERCAST_FLEET_VAR": tmp}):
+        offline = {step: (lambda ctx, sink: {}) for step in ("discover", "resolve")}  # the real steps fetch sources
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict("os.environ", {"SKIPPERCAST_FLEET_VAR": tmp}), \
+                mock.patch.dict(cli.STEPS, offline):
             run = cli.run_step("discover", "CA", "staging")
             state = json.loads((run.dir / "state.json").read_text())
             self.assertEqual(run.dir, Path(tmp) / "CA" / "runs" / run.id)
@@ -229,8 +231,9 @@ class RegistryAndCliTests(unittest.TestCase):
             self.assertTrue((Path(tmp) / "staging" / "CA.sqlite").exists())
             again = cli.run_step("resolve", "CA", "staging", run.id)
             self.assertEqual(set(again.state["steps"]), {"discover", "resolve"})
-        for step in ("discover", "resolve", "enrich-code", "plan-agent", "ingest", "refresh", "run"):
+        for step in ("discover", "resolve", "enrich-code", "plan-agent", "ingest", "refresh"):
             self.assertIn(step, cli.STEPS)
+        self.assertEqual(cli.PIPELINE, ("discover", "resolve", "enrich-code", "ingest", "refresh"))
         with mock.patch.object(cli.profile, "main", return_value=0) as validate:
             self.assertEqual(cli.main(["validate-profile", "a.json"]), 0)
         validate.assert_called_once_with(["a.json"])
