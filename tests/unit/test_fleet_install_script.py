@@ -84,11 +84,13 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn('permissions: {}', self.header)
         grants = re.findall(r'^\s+([a-z-]+): (read|write)\b', self.text.split('\njobs:', 1)[1], re.M)
         self.assertEqual(grants, [('contents', 'read')])
-        self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''", self.text)
+        self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'",
+                      self.text, 'only main: the key never reaches unreviewed code')
         self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M),
                          ["${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"])
         self.assertIn('persist-credentials: false', self.text)
         self.assertIn('cancel-in-progress: false', self.header)
+        self.assertIn('  group: fleet-ais-listener\n', self.header)
 
     def test_secret_only_in_the_step_environment(self):
         self.assertEqual(self.text.count('secrets.'), 1)
@@ -98,6 +100,29 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotIn('${{ inputs.region }}', run[0], 'inputs reach the shell through env, not interpolation')
 
 
+class SelfHostedTriggerTests(unittest.TestCase):
+    """docs/operations/runners.md: no pull request reaches a workflow that can run on our runners."""
+
+    def test_no_pull_request_trigger_on_runner_workflows(self):
+        checked, wrong = [], []
+        for path in sorted((ROOT / '.github' / 'workflows').glob('*.y*ml')):
+            text = path.read_text(encoding='utf-8')
+            if not re.search(r'vars\.(DATA_RUNNER|SEAFLOOR_RUNNER)', text):
+                continue
+            checked.append(path.name)
+            header = '\n'.join(line for line in text.split('\njobs:', 1)[0].splitlines()
+                                if not line.lstrip().startswith('#'))
+            on = re.search(r'\non:\n((?:[ \t].*\n?)*)', header + '\n')
+            triggers = re.findall(r'^  ([a-z_]+):', on.group(1), re.M) if on else ['<unparsed>']
+            for trigger in triggers:
+                if trigger not in ('schedule', 'workflow_dispatch', 'workflow_run', 'push'):
+                    wrong.append(f'{path.name}: {trigger}')
+            if 'push' in triggers and not re.search(r'^  push:\n    branches: \[main\]\n', on.group(1), re.M):
+                wrong.append(f'{path.name}: push not limited to main')
+        self.assertIn('fleet-ais-listener.yml', checked)
+        self.assertEqual(wrong, [])
+
+
 class RunbookTests(unittest.TestCase):
     def test_covers_restart_logs_rollback_and_owner_steps(self):
         text = RUNBOOK.read_text(encoding='utf-8')
@@ -105,6 +130,7 @@ class RunbookTests(unittest.TestCase):
                        '--rollback', 'loginctl enable-linger', 'AISSTREAM_API_KEY', 'stream.aisstream.io',
                        'heartbeat.json'):
             self.assertIn(needle, text)
+        self.assertNotRegex(text, r'gh workflow run[^\n`]*--ref', 'the workflow runs only from main')
 
 
 STUB_SYSTEMCTL = r'''#!/usr/bin/env bash
@@ -135,6 +161,9 @@ from skippercast.paths import repo_root
 
 
 def load_region(ident):
+    import os
+    if "AISSTREAM_API_KEY" in os.environ:
+        raise SystemExit("the build step saw the aisstream key")
     if not (repo_root() / "regions" / ident / "fleet.json").is_file():
         raise SystemExit(f"no fleet.json for {ident}")
 '''
@@ -275,9 +304,13 @@ class InstallScriptRunTests(unittest.TestCase):
         self.assertEqual(self.env_values()['AISSTREAM_API_KEY'], KEY)
         self.assertEqual(stat.S_IMODE(self.env_file.stat().st_mode), 0o600)
 
-        result = self.run_script('--region', 'CA', '--rollback', self.shas[1], key=None)
+        store = self.env_values()['SKIPPERCAST_FLEET_VAR']
+        result = self.run_script('--region', 'CA', '--rollback', self.shas[1], key=None,
+                                 SKIPPERCAST_FLEET_VAR=str(self.tmp / 'some-other-store'))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(os.readlink(self.app / 'current'), self.shas[1])
+        self.assertEqual(self.env_values()['SKIPPERCAST_FLEET_VAR'], store, 'a rollback keeps the running store')
+        self.assertFalse((self.tmp / 'some-other-store').exists())
         missing = 'f' * 40
         result = self.run_script('--region', 'CA', '--rollback', missing, key=None)
         self.assertNotEqual(result.returncode, 0)

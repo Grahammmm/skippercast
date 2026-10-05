@@ -41,6 +41,17 @@ would rather not hand to a long-lived box.
 Self-hosted runners must be used only while the repository is **private**. On a public
 repository anyone's pull request could run code on the box.
 
+**Rule for every workflow that can run on `DATA_RUNNER` or `SEAFLOOR_RUNNER`:** no
+`pull_request` or `pull_request_target` trigger. Such a workflow runs on `schedule` (which
+runs `main`), `workflow_dispatch`, `workflow_run`, or `push` limited to `branches: [main]`,
+so only reviewed code reaches the box. Workflows that hold fleet secrets go further: their
+jobs also require `github.ref == 'refs/heads/main'`, so a dispatch from another branch is
+skipped (charter fleet [Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository),
+[threat model § 10.4](../legal/threat-model.md) row E). `tests/unit/test_fleet_install_script.py`
+checks the trigger rule for every workflow that names either variable. `ci.yml` is the one
+`pull_request` workflow with a self-hosted switch (`CI_RUNNER`); keep `CI_SELF_HOSTED_READY`
+unset while the repository is public.
+
 ## Setting up the box
 
 One Ubuntu 24.04 machine with 4 vCPU, 8 GB memory and 80 GB disk is enough for four
@@ -129,7 +140,7 @@ runner user, `skippercast-fleet-ais@<REGION>` (`scripts/fleet/skippercast-fleet-
 `fleet-ais-listener.yml` installs and updates it. That workflow has no schedule and no push
 trigger: the owner dispatches it (`gh workflow run fleet-ais-listener.yml -f region=CA`), it needs
 `ENABLE_FLEET=true` and a non-empty `DATA_RUNNER` (so it never runs on a GitHub-hosted runner),
-and its token can only read the repository (`contents: read`).
+runs only from `main`, and its token can only read the repository (`contents: read`).
 
 `scripts/fleet/install_listener.sh` copies the dispatched revision to
 `~/.local/share/skippercast/app/<sha>` with its own virtualenv (the `fleet` extra, built on the

@@ -65,6 +65,11 @@ UNIT_DIR="$HOME/.config/systemd/user"
 UNIT_TEMPLATE=skippercast-fleet-ais@.service
 UNIT="skippercast-fleet-ais@$REGION.service"
 FLEET_VAR=${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}
+if [ "$MODE" = rollback ] && [ -f "$ENV_FILE" ]; then
+  # A rollback keeps the store the unit already uses, whatever the caller's shell says.
+  KEPT_VAR=$(sed -n 's/^SKIPPERCAST_FLEET_VAR=//p' "$ENV_FILE" | tail -n 1)
+  FLEET_VAR=${KEPT_VAR:-$FLEET_VAR}
+fi
 HEARTBEAT="$FLEET_VAR/$REGION/ais/heartbeat.json"
 ARCHIVE_PATHS=(pyproject.toml src regions catalog schemas jurisdictions scripts/fleet)
 
@@ -297,7 +302,9 @@ if [ "$MODE" = install ]; then
   SOURCE=${SKIPPERCAST_SOURCE:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}
   SHA=$(git -C "$SOURCE" rev-parse HEAD)
   [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || die "cannot read the checkout's commit"
-  build_revision "$SOURCE" "$SHA"
+  # The build (git, pip, the revision's own code) runs without the key in its environment:
+  # same effect as `env -u AISSTREAM_API_KEY`, which cannot wrap a shell function.
+  (unset AISSTREAM_API_KEY; build_revision "$SOURCE" "$SHA")
 else
   if [ -n "$ROLLBACK_SHA" ]; then
     SHA=$ROLLBACK_SHA

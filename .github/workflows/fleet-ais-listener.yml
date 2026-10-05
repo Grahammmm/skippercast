@@ -18,16 +18,17 @@ on:
 
 permissions: {}
 
-# One install per region at a time; a second dispatch waits for the first.
+# One install at a time; a second dispatch waits for the first.
 concurrency:
-  group: fleet-ais-listener-${{ inputs.region }}
+  group: fleet-ais-listener
   cancel-in-progress: false
 
 jobs:
   install:
-    # Dark until the fleet workflows are enabled, and never on a GitHub-hosted runner
-    # (a unit installed there would vanish with the machine).
-    if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''
+    # Dark until the fleet workflows are enabled, never on a GitHub-hosted runner (a unit
+    # installed there would vanish with the machine), and only from main, so the aisstream key
+    # never reaches unreviewed code (threat model § 10.4 row E; docs/operations/runners.md).
+    if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'
     runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     permissions:

@@ -79,7 +79,7 @@ sed -i "s/^SKIPPERCAST_GIT_SHA=.*/SKIPPERCAST_GIT_SHA=<sha>/" ~/.config/skipperc
 systemctl --user restart skippercast-fleet-ais@CA
 ```
 
-A revision older than the three kept ones is gone from the box: push a branch or tag at it and dispatch the workflow there (`gh workflow run fleet-ais-listener.yml --ref <branch> -f region=CA`). Either way, the next dispatch from `main` moves forward again, so land the fix first.
+The workflow runs only from `main` (its job is skipped for any other ref, so the key never reaches unreviewed code), and there is no `--ref <branch>` dispatch. A revision older than the three kept ones is gone from the box: revert the bad change on `main` through a PR and dispatch the workflow again. Either way, the next dispatch from `main` deploys whatever `main` holds, so land the fix or the revert first.
 
 ## Remove the listener
 
