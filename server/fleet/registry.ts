@@ -176,6 +176,14 @@ const SPECS: Record<OpKind, Spec> = {
   })},
 };
 
+/** The vessel.upsert check for one column (the admin API's edits, CF-30): the stored value, or an error. */
+export function checkVesselColumn(col: string, value: unknown): {value: SqlValue} | {error: string} {
+  const check = Object.hasOwn(SPECS['vessel.upsert'].fields, col) ? SPECS['vessel.upsert'].fields[col]! : null;
+  if (!check) return {error: `${col}: not a vessel column`};
+  try { return {value: check(value, col)}; }
+  catch (error) { if (error instanceof OpError) return {error: error.message}; throw error; }
+}
+
 /** A validated operation: its kind, its stored columns, and its index in the request. */
 export interface Row { kind: OpKind; index: number; id: string; cols: Record<string, SqlValue>; supersedes?: string[] }
 export interface OpFailure { index: number; op: string | null; error: string }

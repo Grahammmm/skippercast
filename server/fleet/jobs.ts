@@ -33,7 +33,7 @@ type Result = {status: number; body: Record<string, unknown>};
 const parse = (text: string | null): unknown => { if (text === null) return null; try { return JSON.parse(text); } catch { return null; } };
 
 /** The names of the pinned columns in a stored pinned_json (all of them unreadable: '*'). */
-function pinnedNames(text: string): string[] {
+export function pinnedNames(text: string): string[] {
   const value = parse(text);
   return value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value).sort() : ['*'];
 }
