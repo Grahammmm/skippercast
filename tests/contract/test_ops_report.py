@@ -123,6 +123,32 @@ class OpsReportTests(unittest.TestCase):
         denied = {'request': error(403, 'Authentication error')}
         self.assertEqual(run([], dict(ENV), opener_for(denied, [])), 1)
 
+    def test_fleet_ais_line_gives_heartbeat_age_messages_and_the_open_issue(self):
+        from datetime import datetime, timezone
+        answers = {'fleet_ais': [{'region': 'CA', 'pushed_at': '2026-10-05 09:00:00', 'heartbeat_age_s': '1800',
+                                  'last_message_age_s': 1790, 'messages_24h': '512000'}]}
+        issues = []
+
+        def github(request, timeout):
+            issues.append(request.full_url)
+            return FakeResponse(json.dumps([{'number': 41, 'title': 'Fleet AIS listener or processor is stale'}]).encode())
+
+        seen, now = [], datetime(2026, 10, 5, 10, 0, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            summary = Path(tmp) / 'summary.md'
+            env = dict(ENV, GITHUB_STEP_SUMMARY=str(summary), GITHUB_REPOSITORY='example/skippercast')
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(ops_report.main([], env, opener=opener_for(answers, seen), github_opener=github, now=now), 0)
+            text = summary.read_text()
+        self.assertIn('Fleet AIS: listener heartbeat 1.5 h old; 512,000 AIS rows stored in 24 h; '
+                      'open fleet-ais-stale issue #41.', text)
+        self.assertEqual(issues, ['https://api.github.com/repos/example/skippercast/issues?labels=fleet-ais-stale&state=open&per_page=1'])
+        self.assertNotIn('fleet_ais', text, 'a line, not a table')
+        # Without fleet data or an open issue there is no line at all (the fleet is off).
+        self.assertIsNone(ops_report.fleet_line([], '', now))
+        self.assertEqual(ops_report.fleet_line([], None, now), None)
+        self.assertEqual(ops_report.fleet_line([], '#7', now), 'Fleet AIS: no processor heartbeat in 24 h; open fleet-ais-stale issue #7.')
+
     def test_workflow_is_daily_pinned_and_passes_the_optional_token(self):
         text = (ROOT / '.github' / 'workflows' / 'ops-report.yml').read_text()
         self.assertIn('schedule:', text)

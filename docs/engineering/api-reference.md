@@ -352,6 +352,30 @@ Registry operations from the ingest step ([design § 9](../plans/charter-fleet/d
 - **Effect:** upserts keyed on deterministic ids; an update runs only when a stored value changes, so the same batch twice changes no row. Omitted fields keep their value; an older replay never overwrites newer values (each row's recency column). Pinned vessel columns (`pinned_json`) are never overwritten; a vessel with a removal request is never re-listed; `review.open` never reopens or edits a decided or dismissed review, or one of another region; `fact.upsert` may name up to 20 facts it `supersedes` (same vessel and field, not newer). Statements bind at most 100 parameters and run in one D1 batch. Each call writes `fleet_runs` `<run_id>:registry.<batch>` (`ok` or `failed`; the first `ok` is kept).
 - **Response:** `200` `{"ok": true, "run_id", "batch", "ops", "changed", "counts": {"<kind>": {"ops", "changed"}}}`.
 
+### `POST /api/fleet/jobs/activity`
+
+What the AIS processor (`fleet-ais.yml`, `src/skippercast/fleet/ais/process.py`) derives ([design § 11](../plans/charter-fleet/design.md#11-ais-processor); contract in `server/fleet/activity.ts`). Same gate, auth and limit as `ping`.
+
+- **Body:** JSON, at most 1 MB (`413` beyond): `{"region", "source"?, "replace"?: [{"mmsi", "from", "to"}], "trips"?, "segments"?, "events"?, "aggregates"?: {"season", "cells", "delete"?, "prune"?}, "processed"?: {"run_id", "counts"}}`; at most 50 windows, 200 trips, 4,000 segments, 2,000 events and 1,000 cells. Rows carry exactly the `fleet_trips`, `fleet_segments`, `fleet_events` and `fleet_aggregates` columns, times as `YYYY-MM-DDTHH:MM:SS.mmmZ`.
+- **Validation:** every row before any write: fields, enums, ids derived as design § 5 says, each trip inside a window of its MMSI with the request's source, segments and events of the request's trips, events `basis` `inferred-from-movement`, trip vessels in this region. Anything wrong → `400` `{"error"}` and nothing is written.
+- **Effect:** one D1 batch: for each window, this region's and source's trips of that MMSI departing in `[from, to)` are deleted with their segments and events, then the new rows are inserted, so the same request twice leaves the same rows; labels are never touched. `aggregates` upserts cells by id, deletes the listed ids of that season and, with `prune` (a `computed_at`), the season's cells computed at any other time. `processed` sets `job_state` `fleet.ais.<region>.processed` to `{"at", "run_id", "counts"}`.
+- **Response:** `200` `{"ok": true, "windows", "changes": {"deleted_trips", "trips", ...}}` (rows changed per statement kind).
+
+### `POST /api/fleet/jobs/heartbeat`
+
+The listener's heartbeat and hourly counters, pushed by the processor. Same gate, auth and limit as `ping`.
+
+- **Body:** `{"region", "heartbeat": {...} | null, "hours": [...], "messages_24h"?}`. `heartbeat` takes only the listener's `source`, `written_at`, `started_at`, `last_message_at`, `connected`, `messages_per_min`, `watched_messages_per_min`, `vessels`, `reconnects`, `dropped`, `queue_depth`, `watch_size` and `git_sha`; at most 72 `hours` rows (`hour` an ISO UTC hour start, `messages`, `watched_messages`, `vessels`, `reconnects`, `max_gap_s`, `dropped`).
+- **Effect:** upserts `fleet_ais_hours` by (region, hour); a non-null heartbeat replaces `job_state` `fleet.ais.<region>.heartbeat` (with `received_at` and `messages_24h`); writes an Analytics Engine `fleet_ais` point (heartbeat age, last-message age, 24-hour rows) that `scripts/ops_report.py` reads.
+- **Response:** `200` `{"ok": true, "hours", "heartbeat": true|false}`; `400` on any invalid field.
+
+### `GET /api/fleet/jobs/health`
+
+What `fleet-health.yml` (hosted, hourly) reads to open or close the `fleet-ais-stale` issue. Same gate, auth and limit as `ping`.
+
+- **Query:** `region` (required).
+- **Response:** `200` `{"region", "checked_at", "stale_after_s": 10800, "stale", "checks": {"heartbeat", "last_message", "processed": {"age_s": <int>|null, "stale"}}}`: ages and booleans only, no counters or listener state. A check is stale when its time is unknown or more than 3 hours old.
+
 ### Cron (`scheduled`)
 
 Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret (`dispatchWorkflow`, which TA-M1 exported; the advisor's cron uses it to dispatch `advisor-media.yml` while media or graphics are pending, at most once per 15 minutes). ChatGPT Sites has no cron.

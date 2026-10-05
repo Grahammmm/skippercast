@@ -14,6 +14,7 @@
 //   GET /api/fleet/jobs/ping   job identity check: {ok: true, region}
 //   GET /go/<slug>             public outbound link, gated and per-IP limited (fleet/go.ts, CF-34)
 //   GET /api/fleet/jobs/snapshot, POST /api/fleet/jobs/registry   CF-11 (server/fleet/jobs.ts)
+//   POST /api/fleet/jobs/activity, /heartbeat, GET /health         CF-45 (server/fleet/activity.ts)
 //   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 //   GET /api/fleet/map/:layer  registered in adminRoutes (routes/admin.ts, CF-50, server/fleet/map.ts)
 import {Hono} from 'hono';
@@ -27,6 +28,7 @@ import {json, budget} from '../http.ts';
 import type {AppEnv} from '../env.ts';
 import {rateLimit} from '../middleware/rate-limit.ts';
 import {fleetGo} from '../fleet/go.ts';
+import {activity, health, heartbeat} from '../fleet/activity.ts';
 
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 
@@ -84,5 +86,20 @@ fleetRouter.get('/api/fleet/jobs/snapshot', async c => {
 fleetRouter.post('/api/fleet/jobs/registry', async c => {
   if (!c.env.DB) return UNAVAILABLE();
   const result = await registry(c.env.DB, c.req.raw);
+  return json(result.body, result.status);
+});
+fleetRouter.post('/api/fleet/jobs/activity', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await activity(c.env.DB, c.req.raw);
+  return json(result.body, result.status);
+});
+fleetRouter.post('/api/fleet/jobs/heartbeat', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await heartbeat(c.env.DB, c.req.raw, c.env);
+  return json(result.body, result.status);
+});
+fleetRouter.get('/api/fleet/jobs/health', async c => {
+  if (!c.env.DB) return UNAVAILABLE();
+  const result = await health(c.env.DB, c.req.query('region'));
   return json(result.body, result.status);
 });

@@ -36,7 +36,8 @@ variable change, not a code change:
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
 are short (about 1–3 minutes each) and the deploy holds the Cloudflare token, which we
-would rather not hand to a long-lived box.
+would rather not hand to a long-lived box. `fleet-health.yml` (under a minute, hourly) stays
+hosted too, so it can raise the `fleet-ais-stale` issue while the data runner is down.
 
 Self-hosted runners must be used only while the repository is **private**. On a public
 repository anyone's pull request could run code on the box.

@@ -9,8 +9,9 @@ its retention. ``segment`` splits one vessel's positions into trips and
 geometry; ``aggregate`` bins events into map cells through pluggable modules.
 ``listener`` is the always-on service (``python -m skippercast.fleet.ais listen
 --region CA``) with its ``watch`` list and standard-library WebSocket client
-``ws``; the processor and backfill build on these in later tasks. Raw positions
-never enter D1 or git.
+``ws``; ``process`` is the scheduled processor job that pushes derived rows to
+the Worker; the backfill builds on these in a later task. Raw positions never
+enter D1 or git.
 """
 from .sources.base import AisMessage, AisPosition, AisSource, AisStatic, NotConfigured, Unsupported
 from .store import AisStore, RetentionLimits, fleet_var, retention_limits
