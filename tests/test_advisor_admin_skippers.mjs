@@ -87,7 +87,7 @@ const version = sql => Number(sql.prepare('SELECT value FROM job_state WHERE key
 dbTest('every TA-W3 route is a 404 for a non-admin and while the advisor is off, and a 401 signed out', async () => {
   const {sql, env, real} = setup();
   addContact(sql, {id: 'c1'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   const routes = [['GET', '/api/admin/boats'], ['POST', '/api/admin/boats/b1'], ['POST', '/api/admin/boats/invite'], ['POST', '/api/admin/boats/b1/crew/c1/remove'],
     ['GET', '/api/admin/contacts/c1'], ['GET', '/api/admin/contacts/c1/export'], ['POST', '/api/admin/contacts/c1/block']];
   const hit = (method, path, owner, e = env) => quiet(() => (method === 'GET' ? get(real, e, path, owner) : post(real, e, path, {blocked: true, phone: TYPED, status: 'verified'}, owner))).then(x => x.value);
@@ -108,11 +108,11 @@ dbTest('every TA-W3 route is a 404 for a non-admin and while the advisor is off,
 
 dbTest('GET /api/admin/boats: pending first, with owner, last report, 30-day reports, posts, consent, crew and the note; no number or hash', async () => {
   const {sql, env, worker} = setup();
-  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1', display_name: 'Rita', phone_hash: 'HASH-SECRET', phone_enc: 'ENC-SECRET'});
+  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1', display_name: 'Dana', phone_hash: 'HASH-SECRET', phone_enc: 'ENC-SECRET'});
   addContact(sql, {id: 'c2', role: 'crew', boat_id: 'b1', display_name: 'Deckhand Lu', channel: 'sms'});
   addContact(sql, {id: 'c3', role: 'crew', boat_id: null});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1', status: 'verified', consent: iso(T0 - 9e6), created: iso(T0 - 9e6)});
-  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero', status: 'pending', created: iso(T0 - 1e6)});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1', status: 'verified', consent: iso(T0 - 9e6), created: iso(T0 - 9e6)});
+  addBoat(sql, {id: 'b2', slug: 'example-two', name: 'Example Two', status: 'pending', created: iso(T0 - 1e6)});
   addBoat(sql, {id: 'b3', slug: 'old-salt', name: 'Old Salt', status: 'rejected', consent: iso(T0 - 9e6), revoked: iso(T0 - 1e6), created: iso(T0)});
   sql.prepare("INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at) VALUES('b1','c2','c1',?)").run(iso(T0));
   sql.prepare("INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at,removed_at) VALUES('b1','c3','c1',?,?)").run(iso(T0), iso(T0));
@@ -127,11 +127,11 @@ dbTest('GET /api/admin/boats: pending first, with owner, last report, 30-day rep
   assert.doesNotMatch(text, /SECRET/, 'no phone_enc or phone_hash leaves the server');
   const {boats} = JSON.parse(text);
   assert.deepEqual(boats.map(b => b.id), ['b2', 'b1', 'b3'], 'pending, verified, rejected');
-  const rita = boats[1];
-  assert.deepEqual(rita.owner, {id: 'c1', channel: 'imessage', language: 'en', display_name: 'Rita', role: 'skipper', status: 'active'});
-  assert.deepEqual([rita.last_report_date, rita.reports_30d, rita.posts, rita.consent], ['2026-10-03', 2, 0, 'given'], 'published reports only; the 30 days count back from today');
-  assert.deepEqual(rita.crew.map(c => [c.contact_id, c.display_name, c.channel]), [['c2', 'Deckhand Lu', 'sms']], 'active crew only');
-  assert.equal(rita.consent_note.note, 'said yes on the dock');
+  const sea = boats[1];
+  assert.deepEqual(sea.owner, {id: 'c1', channel: 'imessage', language: 'en', display_name: 'Dana', role: 'skipper', status: 'active'});
+  assert.deepEqual([sea.last_report_date, sea.reports_30d, sea.posts, sea.consent], ['2026-10-03', 2, 0, 'given'], 'published reports only; the 30 days count back from today');
+  assert.deepEqual(sea.crew.map(c => [c.contact_id, c.display_name, c.channel]), [['c2', 'Deckhand Lu', 'sms']], 'active crew only');
+  assert.equal(sea.consent_note.note, 'said yes on the dock');
   assert.deepEqual([boats[0].owner, boats[0].last_report_date, boats[0].reports_30d, boats[0].consent, boats[0].review_open], [null, null, 0, 'not given', true]);
   assert.equal(boats[2].consent, 'revoked');
 });
@@ -139,8 +139,8 @@ dbTest('GET /api/admin/boats: pending first, with owner, last report, 30-day rep
 // ---- edits -------------------------------------------------------------------------------
 
 test('boatPatch uses the registration parsers: catalog ports, handles, https links and phones; null clears an optional field', () => {
-  assert.deepEqual(boatPatch({name: ' "Rita G II" ', port: 'Morro', instagram: '@Rita.G', booking_url: 'https://ritag.example/book', landing: null, phone_public: TYPED}).fields,
-    {name: 'Rita G II', port: 'morro-bay', region: 'morro-bay', instagram: 'rita.g', booking_url: 'https://ritag.example/book', landing: null, phone_public: PHONE});
+  assert.deepEqual(boatPatch({name: ' "Sea Example II" ', port: 'Morro', instagram: '@Sea.Example', booking_url: 'https://sea.example/book', landing: null, phone_public: TYPED}).fields,
+    {name: 'Sea Example II', port: 'morro-bay', region: 'morro-bay', instagram: 'sea.example', booking_url: 'https://sea.example/book', landing: null, phone_public: PHONE});
   for (const bad of [{port: 'Atlantis'}, {instagram: 'no spaces allowed'}, {booking_url: 'http://insecure.example'}, {phone_public: '12'}, {name: ''}, {name: 'x'.repeat(61)},
     {slug: 'new-slug'}, {status: 'verified'}, {owner_contact_id: 'c9'}, {name: 7}])
     assert.ok('error' in boatPatch(bad), JSON.stringify(bad));
@@ -150,23 +150,23 @@ test('boatPatch uses the registration parsers: catalog ports, handles, https lin
 dbTest('POST /api/admin/boats/<id>: fields validated like registration, the slug kept, the pages version bumped; the consent note is a note only', async () => {
   const {sql, env, worker} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   const v0 = version(sql);
   const bad = await call(worker, env, 'POST', '/api/admin/boats/b1', {fields: {instagram: 'not a handle!'}});
   assert.equal(bad.status, 400);
   assert.match(JSON.parse(bad.text).error, /instagram/);
   assert.equal((await call(worker, env, 'POST', '/api/admin/boats/b1', {status: 'pending'})).status, 400);
   assert.equal(version(sql), v0, 'a refused edit changes nothing');
-  const ok = await call(worker, env, 'POST', '/api/admin/boats/b1', {fields: {name: 'Rita G II', landing: "Virg's", instagram: '@ritag', port: 'Avila'}});
+  const ok = await call(worker, env, 'POST', '/api/admin/boats/b1', {fields: {name: 'Sea Example II', landing: "Gull's", instagram: '@seaexample', port: 'Avila'}});
   assert.equal(ok.status, 200, ok.text);
   const row = boatOf(sql, 'b1');
-  assert.deepEqual([row.name, row.slug, row.landing, row.instagram, row.port, row.region], ['Rita G II', 'rita-g', "Virg's", 'ritag', 'port-san-luis', 'morro-bay'],
+  assert.deepEqual([row.name, row.slug, row.landing, row.instagram, row.port, row.region], ['Sea Example II', 'sea-example', "Gull's", 'seaexample', 'port-san-luis', 'morro-bay'],
     'the slug stays (links already texted keep working); "Avila" is the catalog alias of Port San Luis');
   assert.equal(boatOf(sql, 'b1').region, 'morro-bay');
   const moved = await call(worker, env, 'POST', '/api/admin/boats/b1', {fields: {port: 'Santa Barbara'}});
   assert.deepEqual([JSON.parse(moved.text).boat.port, boatOf(sql, 'b1').region], ['santa-barbara', 'southern-california'], 'the region follows the port');
   assert.ok(version(sql) > v0, 'the boat page re-renders');
-  assert.equal(JSON.parse(ok.text).boat.name, 'Rita G II');
+  assert.equal(JSON.parse(ok.text).boat.name, 'Sea Example II');
 
   const noted = await call(worker, env, 'POST', '/api/admin/boats/b1', {consent_note: '  said yes on the dock  '});
   assert.equal(JSON.parse(noted.text).boat.consent_note.note, 'said yes on the dock');
@@ -180,8 +180,8 @@ dbTest('verify and reject: the open new_skipper review is decided with the text;
   const {sql, env, worker, ch} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
   addContact(sql, {id: 'c2', role: 'skipper', boat_id: 'b2', language: 'es'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
-  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero', owner: 'c2'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
+  addBoat(sql, {id: 'b2', slug: 'example-two', name: 'Example Two', owner: 'c2'});
   const review = await reviewId('skipper', 'b1', 'new_skipper');
   sql.prepare("INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES(?,'skipper','b1','new_skipper','open',?)").run(review, iso(T0));
   const verified = await call(worker, env, 'POST', '/api/admin/boats/b1', {status: 'verified'});
@@ -190,7 +190,7 @@ dbTest('verify and reject: the open new_skipper review is decided with the text;
   assert.deepEqual([boatOf(sql, 'b1').status, boatOf(sql, 'b1').verified_by], ['verified', ADMIN]);
   const r = sql.prepare('SELECT status,decided_by,note FROM advisor_reviews WHERE id=?').get(review);
   assert.deepEqual({...r}, {status: 'approved', decided_by: ADMIN, note: 'skippers view'}, 'the registration review is closed by the same decision');
-  assert.deepEqual(ch.sent.map(m => [m.to, m.text]), [['ENC-c1', 'Rita G is verified. Your page: skippercast.com/boats/rita-g']]);
+  assert.deepEqual(ch.sent.map(m => [m.to, m.text]), [['ENC-c1', 'Sea Example is verified. Your page: skippercast.com/boats/sea-example']]);
   assert.equal(sql.prepare("SELECT id FROM advisor_messages WHERE direction='out'").get().id, await outboundId(review, 'admin.skipper'), 'the queue’s outbound id: never texted twice across views');
   const repeat = await call(worker, env, 'POST', '/api/admin/boats/b1', {status: 'verified'});
   assert.deepEqual([repeat.status, JSON.parse(repeat.text).sends, ch.sent.length], [200, 0, 1], 'verifying a verified boat (the review closed) texts nothing more');
@@ -199,7 +199,7 @@ dbTest('verify and reject: the open new_skipper review is decided with the text;
   for (let i = 0; i < 2; i++) assert.equal((await call(worker, env, 'POST', '/api/admin/boats/b2', {status: 'rejected'})).status, 200);
   assert.equal(boatOf(sql, 'b2').status, 'rejected');
   assert.equal(ch.sent.length, 2);
-  assert.equal(ch.sent[1].text, t('es', 'boat_rejected', {name: 'Lucero', slug: 'lucero'}));
+  assert.equal(ch.sent[1].text, t('es', 'boat_rejected', {name: 'Example Two', slug: 'example-two'}));
   const rejected = await outboundId(await reviewId('skipper', 'b2', 'new_skipper'), 'admin.skipper.rejected');
   assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM advisor_messages WHERE direction='out' AND id=?").get(rejected).n, 1);
   // Replies off: the boat still changes, nothing is texted.
@@ -212,7 +212,7 @@ dbTest('crew removal ends the link (kept for audit) and makes the contact an ang
   const {sql, env, worker} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
   addContact(sql, {id: 'c2', role: 'crew', boat_id: 'b1'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   sql.prepare("INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at) VALUES('b1','c2','c1',?)").run(iso(T0));
   const removed = await call(worker, env, 'POST', '/api/admin/boats/b1/crew/c2/remove', {});
   assert.equal(removed.status, 200);
@@ -227,7 +227,7 @@ dbTest('crew removal ends the link (kept for audit) and makes the contact an ang
 
 dbTest('invite: the number is hashed on receipt and never echoed or logged; the contact is created and the registration starts with the invite text', async () => {
   const {sql, env, worker, ch} = setup();
-  const res = await call(worker, env, 'POST', '/api/admin/boats/invite', {phone: TYPED, boat_name: 'Sea Wolf'});
+  const res = await call(worker, env, 'POST', '/api/admin/boats/invite', {phone: TYPED, boat_name: 'Gray Example'});
   assert.equal(res.status, 200, res.text);
   const body = JSON.parse(res.text);
   assert.deepEqual([body.sends, body.created], [1, true]);
@@ -236,9 +236,9 @@ dbTest('invite: the number is hashed on receipt and never echoed or logged; the 
   const contact = sql.prepare('SELECT * FROM advisor_contacts WHERE id=?').get(body.contact_id);
   assert.deepEqual([contact.phone_hash, contact.source, contact.channel, contact.role, contact.status], [await phoneHash(keys, PHONE), 'skipper-invite', 'sms', 'angler', 'active']);
   assert.equal(await decryptPhone(keys, ch.sent[0].to), PHONE, 'sent to the typed number, which the channel decrypts');
-  assert.equal(ch.sent[0].text, `${t('en', 'skipper_invite_boat', {boat: 'Sea Wolf'})} ${t('en', 'register_intro')} ${t('en', 'register_ask_port')}`, 'the name is known, so the port is asked');
+  assert.equal(ch.sent[0].text, `${t('en', 'skipper_invite_boat', {boat: 'Gray Example'})} ${t('en', 'register_intro')} ${t('en', 'register_ask_port')}`, 'the name is known, so the port is asked');
   const flow = await readFlow(env.DB, body.contact_id);
-  assert.deepEqual([flow.flow, flow.step, flow.draft.name], ['register', 'port', 'Sea Wolf'], 'the reply answers the registration (TA-I1)');
+  assert.deepEqual([flow.flow, flow.step, flow.draft.name], ['register', 'port', 'Gray Example'], 'the reply answers the registration (TA-I1)');
   const out = sql.prepare("SELECT id,created_by FROM advisor_messages WHERE direction='out'").get();
   assert.deepEqual([out.id, out.created_by], [await inviteOutboundId(body.contact_id, T0), ADMIN]);
   // The same day again: the same contact, no second text.
@@ -256,7 +256,7 @@ dbTest('invite is refused for a bad number, a stopped or blocked contact, an own
   addContact(sql, {id: 'stopped', status: 'stopped', phone_hash: await phoneHash(keys, '+18055550150')});
   addContact(sql, {id: 'blocked', status: 'blocked', phone_hash: await phoneHash(keys, '+18055550151')});
   addContact(sql, {id: 'owner', role: 'skipper', boat_id: 'b1', phone_hash: await phoneHash(keys, '+18055550152')});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'owner'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'owner'});
   const invite = async (body, e = env) => call(worker, e, 'POST', '/api/admin/boats/invite', body);
   assert.equal((await invite({phone: '555'})).status, 400);
   assert.equal((await invite({phone: TYPED, boat_name: 'x'.repeat(61)})).status, 400);
@@ -273,20 +273,35 @@ dbTest('invite is refused for a bad number, a stopped or blocked contact, an own
   assert.match(JSON.parse(over.text).error, /20 invites a day/);
 });
 
+dbTest('invite passes the outbound guard: ADVISOR_GLOBAL_DAILY_COLD caps invites to new numbers, nothing is stored for a refused one, and the admin sees why', async () => {
+  const {sql, env, worker, ch} = setup({env: {ADVISOR_GLOBAL_DAILY_COLD: '1'}});
+  const keys = await deriveKeys(KEY);
+  const invite = body => call(worker, env, 'POST', '/api/admin/boats/invite', body);
+  assert.equal((await invite({phone: PHONE})).status, 200);
+  const over = await invite({phone: '+18055550143'});
+  assert.equal(over.status, 409);
+  assert.match(JSON.parse(over.text).error, /ADVISOR_GLOBAL_DAILY_COLD/);
+  assert.equal(ch.sent.length, 1, 'the refused invite texted no one');
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM advisor_contacts WHERE phone_hash=?').get(await phoneHash(keys, '+18055550143')).n, 0, 'and stored no contact');
+  // The first number's same-day repeat is still the no-op it was (one outbound row per contact and day), not a refusal.
+  assert.equal((await invite({phone: PHONE})).status, 200);
+  assert.equal(ch.sent.length, 1);
+});
+
 // ---- contacts ----------------------------------------------------------------------------
 
 dbTest('GET /api/admin/contacts/<id>: by id only, no number or hash, boats, the last 50 messages oldest first, and the export link', async () => {
   const {sql, env, worker} = setup();
-  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1', display_name: 'Rita', source: 'skipper-invite', phone_hash: 'HASH-SECRET', phone_enc: 'ENC-SECRET'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1', display_name: 'Dana', source: 'skipper-invite', phone_hash: 'HASH-SECRET', phone_enc: 'ENC-SECRET'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   for (let i = 1; i <= 55; i++) sql.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,intent,status,media_json,created_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)`)
     .run(`m${i}`, 'c1', i % 2 ? 'in' : 'out', 'imessage', `message ${i}`, i % 2 ? 'advice' : null, i % 2 ? 'done' : 'sent', i === 55 ? '["p1","p2"]' : null, iso(T0 + i * 1000), i === 54 ? ADMIN : null);
   const {status, text} = await call(worker, env, 'GET', '/api/admin/contacts/c1');
   assert.equal(status, 200);
   assert.doesNotMatch(text, /SECRET/);
   const d = JSON.parse(text);
-  assert.deepEqual([d.contact.display_name, d.contact.source, d.contact.status, d.contact.role], ['Rita', 'skipper-invite', 'active', 'skipper']);
-  assert.deepEqual(d.boats, [{id: 'b1', name: 'Rita G', slug: 'rita-g', status: 'pending', relation: 'owner'}]);
+  assert.deepEqual([d.contact.display_name, d.contact.source, d.contact.status, d.contact.role], ['Dana', 'skipper-invite', 'active', 'skipper']);
+  assert.deepEqual(d.boats, [{id: 'b1', name: 'Sea Example', slug: 'sea-example', status: 'pending', relation: 'owner'}]);
   assert.equal(d.messages.length, 50);
   assert.deepEqual([d.messages[0].body, d.messages.at(-1).body, d.messages.at(-1).media, d.messages.at(-2).team], ['message 6', 'message 55', 2, true]);
   assert.equal(d.export, '/api/admin/contacts/c1/export');

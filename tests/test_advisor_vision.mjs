@@ -67,7 +67,7 @@ test('forced-tool output parses into a Classification, a CountBoardReading and a
   const c = parseClassification(toolInput('classify-count-board.json'), META);
   assert.deepEqual(c, {kind: 'count_board', kind_confidence: 0.94, has_person: false, person_confidence: 0.02, has_fish: false, text_present: true, nsfw: false, ...META});
   const r = parseCountBoard(toolInput('count-board.json'), META);
-  assert.equal(r.boat_name, 'Rita G'); assert.equal(r.date_text, '10/03'); assert.equal(r.date_iso, null); assert.equal(r.anglers, 22);
+  assert.equal(r.boat_name, 'Sea Example'); assert.equal(r.date_text, '10/03'); assert.equal(r.date_iso, null); assert.equal(r.anglers, 22);
   assert.deepEqual(r.lines[1], {label: 'Lingcod', count: 12, released: 2, confidence: 0.9});
   assert.equal(r.lines.length, 4); assert.equal(r.overall_confidence, 0.87); assert.equal(r.provider, 'claude');
   const f = parseFishId(toolInput('fish-id.json'), new Set(['vermilion', 'canary', 'yelloweye']), META);
@@ -267,7 +267,7 @@ dbTest('the chain caches each method in classification_json and sets has_person;
   await quiet(() => chain.readCountBoard(image)); await quiet(() => chain.identifyFish(image, 'morro-bay'));
   row = sql.prepare("SELECT classification_json FROM advisor_media WHERE id='m1'").get();
   assert.deepEqual(Object.keys(JSON.parse(row.classification_json)).sort(), ['classify', 'count_board', 'fish_id'], 'keyed by method, earlier results kept');
-  assert.equal(JSON.parse(row.classification_json).count_board.boat_name, 'Rita G');
+  assert.equal(JSON.parse(row.classification_json).count_board.boat_name, 'Sea Example');
   assert.equal(api.calls.length, 3);
   await quiet(() => chain.readCountBoard(image)); assert.equal(api.calls.length, 3);
   // A corrupt cache value is ignored and replaced.
@@ -396,7 +396,7 @@ dbTest('the Hermes client posts the image and a JSON meta field with the bearer 
   assert.ok(Buffer.compare(Buffer.from(await file.arrayBuffer()), bytes) === 0, 'the image bytes as stored');
   assert.deepEqual(meta, {media_id: 'm1', region: null, orientation: 6}, 'the orientation hint travels in meta');
   const {value: r} = await quiet(() => provider.readCountBoard(imageOf(bytes), env));
-  assert.equal(r.provider, 'hermes'); assert.equal(r.boat_name, 'Rita G'); assert.equal(r.lines.length, 4);
+  assert.equal(r.provider, 'hermes'); assert.equal(r.boat_name, 'Sea Example'); assert.equal(r.lines.length, 4);
   assert.deepEqual(api.calls[1].meta, {media_id: 'm1', region: null}, 'no orientation for an upright image');
   const {value: f} = await quiet(() => provider.identifyFish(imageOf(png('fish.png')), env, 'morro-bay'));
   assert.equal(api.calls[2].path, '/vision/v1/vision/fish-id');

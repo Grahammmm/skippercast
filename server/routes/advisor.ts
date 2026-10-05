@@ -16,7 +16,7 @@ import {advisorLog} from '../advisor/log.ts';
 // TA-C4: shared inbound path, media intake, upload links and media serving.
 import {storeInbound, dispatchInbound, storeUpload} from '../advisor/inbound.ts';
 import {deriveKeys} from '../advisor/contacts.ts';
-import {ingestMedia, verifyUploadToken, derivedKey, derivedKeys, derivedVideoKey, MAX_MEDIA_BYTES} from '../advisor/media.ts';
+import {ingestMedia, verifyUploadToken, readUploadToken, derivedKey, derivedKeys, derivedVideoKey, MAX_MEDIA_BYTES, LEGACY_LINK_GONE_MS} from '../advisor/media.ts';
 import {firstFile} from '../advisor/multipart.ts';
 import {shellResponse} from './assets.ts';
 import {waitUntil} from './util.ts';
@@ -39,7 +39,9 @@ import {requireOrigin} from '../http.ts';
 import type {Handler} from '../advisor/types.ts';
 // TA-E1: the engine is the inline handler, and "send me my data" links here.
 import {engineHandler} from '../advisor/engine.ts';
-import {verifyExportToken} from '../advisor/exports.ts';
+import {verifyExportToken, readExportToken, EXPORT_PAGE} from '../advisor/exports.ts';
+// Hardening: the hashed client address for the per-address limits.
+import {ipHash} from '../advisor/outbound-guard.ts';
 // TA-M1: the advisor-media runner job's two endpoints, behind a GitHub Actions identity.
 import {verifyJobToken} from '../job-auth.ts';
 import type {JobClaims, JobScope} from '../job-auth.ts';
@@ -66,7 +68,8 @@ export const advisorPublic = new Hono<AppEnv>();
 
 // Webhooks, web chat and APIs; public pages; media; upload links; contact card; the text deep link; its QR code (TA-C6).
 // TA-C3: the web chat page (dist/chat.html) stays dark with the rest; when on, it falls through to its page shell.
-export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u/*', '/contact.vcf', '/text', '/qr/*', '/chat.html'] as const;
+// Hardening: '/u' and '/my-data' are the upload and export pages (the token in the fragment).
+export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u', '/u/*', '/my-data', '/contact.vcf', '/text', '/qr/*', '/chat.html'] as const;
 for (const path of ADVISOR_PATHS) advisorPublic.use(path, gate);
 
 // Liveness and configuration shape only: never a secret, the number or the relay URL.
@@ -223,31 +226,67 @@ async function uploadContact(env: Env, token: string, now = Date.now()): Promise
   return env.DB.prepare('SELECT id,channel,boat_id,status FROM advisor_contacts WHERE id=?').bind(contactId).first();
 }
 
-// The upload page: the dist/upload.html shell for a valid token, the gate's 404 otherwise.
-advisorPublic.get('/u/:token', async c => {
+// Hardening (threat model § 9.3): the token never travels in a URL. The link is /u#<token>: the page is the same for
+// everyone, reads the token from location.hash (never sent to the server) and sends it in the X-Upload-Token header.
+const UPLOAD_TOKEN_HEADER = 'X-Upload-Token';
+const pageHeaders = {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex'};
+
+/** A page shell (dist/<page>) at another path, with no token check (the token is in the fragment). */
+async function tokenPage(c: Context<AppEnv>, page: string, failure: string): Promise<Response> {
   if (await overLimit(c.env.PUBLIC_LIMITER, 'advisor-upload:' + clientIP(c.req.raw))) return tooManyRequests();
   try {
-    const contact = await uploadContact(c.env, c.req.param('token'));
-    if (!contact || contact.status === 'blocked') return NOT_FOUND();
-    const shell = await shellResponse(c, '/upload.html');
+    const shell = await shellResponse(c, page);
     if (!shell.ok) return NOT_FOUND();
-    // The page lives at /u/<token>; its hashed assets are linked relative to the site root.
+    // Its hashed assets are linked relative to the site root.
     const html = (await shell.text()).replace(/<head>/i, '<head><base href="/">');
-    return new Response(html, {status: 200, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex'}});
+    return new Response(html, {status: 200, headers: pageHeaders});
   } catch (error) {
-    // Logged without the path: it carries the token.
-    advisorLog('error', 'advisor_upload_page_failed', {reason: String((error as Error)?.message).slice(0, 200)});
+    advisorLog('error', failure, {reason: String((error as Error)?.message).slice(0, 200)});
     return json({error: 'This service is temporarily unavailable.'}, 503);
   }
+}
+
+// The upload page: the dist/upload.html shell.
+advisorPublic.get('/u', c => tokenPage(c, '/upload.html', 'advisor_upload_page_failed'));
+
+/** What an old-form link says (410). */
+export const LEGACY_GONE = Object.freeze({
+  upload: 'This upload link has been replaced. Text LINK to SkipperCast for a new one.',
+  export: 'This data link has been replaced. Text SEND ME MY DATA to SkipperCast for a new one.',
 });
 
+/**
+ * Links already sent in the old form (/u/<token>, /api/advisor/upload/<token>,
+ * /api/advisor/export/<token>) answer 410 Gone, without serving anything, for 7
+ * days after their token expired (so for about 8 days after they were sent);
+ * anything else, or later, is the gate's 404. Answered here, never logged with the path.
+ */
+async function legacyTokenRoute(c: Context<AppEnv>, kind: 'upload' | 'export', page: boolean): Promise<Response> {
+  const env = c.env;
+  if (await overLimit(env.PUBLIC_LIMITER, `advisor-${kind}:` + clientIP(c.req.raw))) return tooManyRequests();
+  try {
+    if (!env.ADVISOR_PHONE_KEY) return NOT_FOUND();
+    const keys = await deriveKeys(env.ADVISOR_PHONE_KEY), token = c.req.param('token') ?? '';
+    const read = kind === 'upload' ? await readUploadToken(keys, token) : await readExportToken(keys, token);
+    if (!read || read.expiresAt + LEGACY_LINK_GONE_MS <= Date.now()) return NOT_FOUND();
+    const text = LEGACY_GONE[kind];
+    return page ? new Response(`${text}\n`, {status: 410, headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}})
+      : json({error: text}, 410);
+  } catch (error) {
+    advisorLog('error', 'advisor_legacy_link_failed', {kind, reason: String((error as Error)?.message).slice(0, 200)});
+    return json({error: 'This service is temporarily unavailable.'}, 503);
+  }
+}
+advisorPublic.get('/u/:token', c => legacyTokenRoute(c, 'upload', true));
+advisorPublic.post('/api/advisor/upload/:token', c => legacyTokenRoute(c, 'upload', false));
+
 // One file (multipart, at most 300 MB) through ingestMedia, then a synthetic inbound message dispatched like a webhook's.
-advisorPublic.post('/api/advisor/upload/:token', async c => {
+advisorPublic.post('/api/advisor/upload', async c => {
   const env = c.env;
   if (await overLimit(env.PUBLIC_LIMITER, 'advisor-upload:' + clientIP(c.req.raw))) return tooManyRequests();
-  // Errors are answered here, not by the shared onError: its log line carries the path, and the path carries the token.
+  // Errors are answered here, not by the shared onError, so no log line ever sits next to the request.
   try {
-    const contact = await uploadContact(env, c.req.param('token'));
+    const contact = await uploadContact(env, c.req.header(UPLOAD_TOKEN_HEADER) ?? '');
     if (!contact || contact.status === 'blocked') return NOT_FOUND();
     if (!env.DB || !env.ADVISOR_MEDIA) return json({error: 'This service is temporarily unavailable.'}, 503);
     if (Number(c.req.header('content-length')) > MAX_MEDIA_BYTES + 64 * 1024) return json({error: 'That file is too large.'}, 413);
@@ -436,7 +475,8 @@ advisorPublic.post('/api/advisor/web/message', async c => {
   const id = await storeInbound(env, message!);
   if (!id) throw Error('web message not stored');
   const collector = createWebCollector();
-  const run = runInline(env, id, {channel: collector, handler: webChat.handler ?? engineHandler});
+  // Hardening: the client address, hashed, keys the per-address limits (outbound guard, web model budget).
+  const run = runInline(env, id, {channel: collector, handler: webChat.handler ?? engineHandler, ipHash: await ipHash(env.ADVISOR_PHONE_KEY, clientIP(c.req.raw))});
   let timer: ReturnType<typeof setTimeout> | undefined;
   const outcome = await Promise.race([
     run.then(() => 'done' as const),
@@ -509,14 +549,17 @@ advisorPublic.post('/api/advisor/web/upload', async c => {
 // (02 § Retention and deletion.) The export the engine wrote to
 // advisor/exports/<contact_id>/<date>.json, behind a signed 24-hour token
 // (server/advisor/exports.ts). A bad, tampered or expired token, a deleted
-// contact or a missing object is the gate's 404. Errors are answered here: the
-// path carries the token.
-advisorPublic.get('/api/advisor/export/:token', async c => {
+// contact or a missing object is the gate's 404. Errors are answered here.
+// Hardening: the link is /my-data#<token>; the page POSTs the token in the
+// X-Export-Token header, so it is in no request URL (and no Workers Logs line).
+advisorPublic.get(EXPORT_PAGE, c => tokenPage(c, '/my-data.html', 'advisor_export_page_failed'));
+advisorPublic.get('/api/advisor/export/:token', c => legacyTokenRoute(c, 'export', false));
+advisorPublic.post('/api/advisor/export', async c => {
   const env = c.env;
   if (await overLimit(env.PUBLIC_LIMITER, 'advisor-export:' + clientIP(c.req.raw))) return tooManyRequests();
   try {
     if (!env.ADVISOR_PHONE_KEY || !env.DB || !env.ADVISOR_MEDIA) return NOT_FOUND();
-    const valid = await verifyExportToken(await deriveKeys(env.ADVISOR_PHONE_KEY), c.req.param('token'));
+    const valid = await verifyExportToken(await deriveKeys(env.ADVISOR_PHONE_KEY), c.req.header('X-Export-Token') ?? '');
     if (!valid) return NOT_FOUND();
     const contact = await env.DB.prepare('SELECT id FROM advisor_contacts WHERE id=?').bind(valid.contactId).first<{id: string}>();
     if (!contact) return NOT_FOUND();

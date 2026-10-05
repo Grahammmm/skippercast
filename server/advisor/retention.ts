@@ -14,7 +14,8 @@
 //   web-only contacts    no phone and no Instagram id, last_seen_at more than 90 days ago: deleted
 //                        through forgetContact (R2 first, then the one D1 batch)
 //   job_state            the advisor's short-lived keys more than 30 days old (updated_at): flows,
-//                        web phone link codes and share offers; graphic requests whose post is gone
+//                        web phone link codes, share offers, crew invitations and declines (a NO
+//                        silences a boat for 30 days, the same age); graphic requests whose post is gone
 //                        or rejected (with the graphic files under advisor/posts/<id>/); once-markers
 //                        whose window has passed (the weekly no-consent line) or whose boat or
 //                        contact no longer exists. A once-marker of a live boat or contact stays:
@@ -46,7 +47,7 @@ export const RETENTION_CHUNK = 500;
 /** Post statuses whose media stay (02: an approved or posted post; scheduled, publishing and partial are on the way or half posted). */
 export const KEEP_POST_STATUSES = ['approved', 'scheduled', 'publishing', 'posted', 'partial'] as const;
 /** job_state prefixes the age rule clears (02 § Reusing job_state). */
-export const AGED_KEY_PREFIXES = ['advisor.flow.', 'advisor.link.', 'advisor.share.'] as const;
+export const AGED_KEY_PREFIXES = ['advisor.flow.', 'advisor.link.', 'advisor.share.', 'advisor.crewinvite.', 'advisor.crewdecline.'] as const;
 
 export type RetentionRule = keyof typeof RETENTION_LIMITS;
 export interface RetentionResult {

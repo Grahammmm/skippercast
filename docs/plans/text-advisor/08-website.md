@@ -32,7 +32,7 @@ season and rules card always comes from the rules table.
 Edge caching uses `cached()`/`cacheKey()` with
 `build: build() + ':' + pagesVersion` (05 § boat page); the TTLs above are
 the `Cache-Control` max-age.
-| `GET /contact.vcf`, `GET /text`, `GET /u/<token>`, `GET /media/<id>.jpg` | 03. | varies |
+| `GET /contact.vcf`, `GET /text`, `GET /u` (the upload link `/u#<token>`), `GET /my-data`, `GET /media/<id>.jpg` | 03. | varies |
 
 Each page has `<title>`, description, canonical, Open Graph image (the port
 or boat's latest approved photo, else the existing preview), and JSON-LD
@@ -477,3 +477,20 @@ actions (09 § Publishing "As built (TA-S2)").
 - **Skippers.** `posts` counts the boat's posts that were not rejected.
 - **Tests.** `tests/test_advisor_social_drafts.mjs`; `e2e/admin.spec.ts` opens
   the Posts view and the editor with axe.
+
+## As built (hardening: unverified boat pages)
+
+The threat model ([§ 9.6](../../legal/threat-model.md#96-the-model-prompt-injection-misuse-and-spend))
+found that `/boats/<slug>` rendered a `pending` boat's self-entered booking
+link, public phone and Instagram handle, so anyone who texted the number could
+host a link (a phishing page, say) under `skippercast.com/boats/…` until the
+admin rejected the boat. A pending boat's page (`server/advisor/pages/boat.ts`)
+now shows only its name, its port (linked to the port page), the "Not verified
+yet" badge and the note "This boat hasn't been confirmed yet. Its reports,
+photos and booking details show here once the SkipperCast team confirms it."
+(Spanish: "Este barco aún no ha sido confirmado. …"). No landing, reports,
+photos, share image, booking link, phone or Instagram link until it is
+`verified`; it stays `noindex` and out of `/sitemap-advisor.xml`; a rejected
+boat is still a 404. Its published reports still count on the port pages as
+"a boat" (05 § Verification). Tests: `tests/test_advisor_pages.mjs`.
+

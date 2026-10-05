@@ -203,13 +203,17 @@ Instagram DMs and comments from Meta (TA-S6, `server/advisor/social/inbox.ts`). 
 - **Response:** `200` `{}` in every accepted case; `503` when storage fails, so Meta retries.
 
 <!-- TA-C4: upload link and media serving -->
-### `GET /u/<token>`
+### `GET /u`
 
-The upload page a skipper gets by text when a photo or video is too big for the channel ([03 · Uploads for compressed channels](../plans/text-advisor/03-channels.md)). Gated like every advisor path. `<token>` is `base64url(contact_id|expiry|HMAC-SHA256(upload key, contact_id|expiry))`, valid 24 hours, verified statelessly (`server/advisor/media.ts` `verifyUploadToken`; the key is the `upload` HKDF subkey of `ADVISOR_PHONE_KEY`). A valid token for an existing, not blocked contact → `200` with the `dist/upload.html` page (`Cache-Control: no-store`, `X-Robots-Tag: noindex`); a bad, tampered or expired token → `404` `{"error": "Not found"}`, the gate's body. Per-IP `PUBLIC_LIMITER` when bound (`429`).
+The upload page a skipper gets by text when a photo or video is too big for the channel ([03 · Uploads for compressed channels](../plans/text-advisor/03-channels.md)). Gated like every advisor path. The link is `/u#<token>`: the token is the URL fragment, which the browser never sends, so this route serves `dist/upload.html` to anyone (`200`, `Cache-Control: no-store`, `X-Robots-Tag: noindex`) and checks nothing; the page sends the token with the file. `<token>` is `base64url(contact_id|expiry|HMAC-SHA256(upload key, contact_id|expiry))`, valid 24 hours, verified statelessly (`server/advisor/media.ts` `verifyUploadToken`; the key is the `upload` HKDF subkey of `ADVISOR_PHONE_KEY`). Per-IP `PUBLIC_LIMITER` when bound (`429`).
 
-### `POST /api/advisor/upload/<token>`
+### `GET /u/<token>` and `POST /api/advisor/upload/<token>` (retired)
 
-The upload page's request (JavaScript, not a form: the CSP has `form-action 'none'`). Same token and `404` rules as `GET /u/<token>`.
+Links sent before the token moved to the fragment ([threat model § 9.3](../legal/threat-model.md#93-web-chat-upload-links-and-data-exports)). A genuine token (expired or not) less than 7 days past its expiry → `410` ("This upload link has been replaced. Text LINK to SkipperCast for a new one.", plain text for the page, `{"error": ...}` for the POST); anything else → `404`. Neither serves the page nor takes a file.
+
+### `POST /api/advisor/upload`
+
+The upload page's request (JavaScript, not a form: the CSP has `form-action 'none'`). The token comes in the `X-Upload-Token` header, never in the URL. A missing, bad, tampered or expired token, an unknown or blocked contact → `404` `{"error": "Not found"}`, the gate's body.
 
 - **Body:** `multipart/form-data`; the first part with a filename is read as a stream, at most 300 MB (`413` `{"error": "That file is too large."}`).
 - **Processing:** the file is sniffed by its magic bytes (JPEG, PNG, GIF, WebP, HEIC/HEIF, MP4/MOV, M4A/AAC/AMR/CAF; anything else → `415` `{"error": "That file type is not supported."}`, the media row kept as `rejected`), JPEG/PNG metadata is stripped, and the file is stored privately in `ADVISOR_MEDIA` (an identical file from the same contact is linked, not stored twice). Then a synthetic inbound message (`body` empty, `media_json` the new media id, the contact's channel, `provider_id` `upload:<media id>`) is queued exactly like a webhook message, so the reply comes by text.
@@ -238,12 +242,13 @@ The web chat ([08 · Web chat](../plans/text-advisor/08-website.md), [03 · Web 
 - **Response:** `200` `{"replies": [{"id": "<outbound message id>", "text": "...", "links": [], "media": ["/media/<id>.jpg"]}], "contact": {"language": "en", "linked": false}}`. If the turn has not finished after 40 s: `200` `{"replies": [], "pending": true}`; the turn completes in the background and its late replies are recorded as `failed` (`web-closed`), not delivered. The replies are the engine's (TA-E1; without `ANTHROPIC_API_KEY`, the warm-up text). `contact.linked` is `true` once this session belongs to a phone contact (the web phone link, [03 · Web adapter](../plans/text-advisor/03-channels.md)). `503` without storage.
 
 <!-- TA-E1: send me my data -->
-### `GET /api/advisor/export/<token>`
+### `GET /my-data` and `POST /api/advisor/export`
 
-The download a contact gets by text after "send me my data" ([02 · Retention and deletion](../plans/text-advisor/02-data-model.md)). Gated like every advisor path. `<token>` (redacted here) is `base64url(contact_id|key|expiry|HMAC-SHA256(upload key, contact_id|key|expiry))`, where `key` is the export object `advisor/exports/<contact_id>/<YYYY-MM-DD>.json` in `ADVISOR_MEDIA` and `expiry` is 24 hours after the export (`server/advisor/exports.ts`; the `upload` HKDF subkey of `ADVISOR_PHONE_KEY`, as for upload links). Per-IP `PUBLIC_LIMITER` (`advisor-export:<ip>`, `429`).
+The download a contact gets by text after "send me my data" ([02 · Retention and deletion](../plans/text-advisor/02-data-model.md)). Gated like every advisor path. The link is `/my-data#<token>`: `GET /my-data` serves `dist/my-data.html` to anyone (`no-store`, `noindex`), and its button sends `POST /api/advisor/export` with the token in the `X-Export-Token` header, so the token is in no request URL. `<token>` (redacted here) is `base64url(contact_id|key|expiry|HMAC-SHA256(upload key, contact_id|key|expiry))`, where `key` is the export object `advisor/exports/<contact_id>/<YYYY-MM-DD>.json` in `ADVISOR_MEDIA` and `expiry` is 24 hours after the export (`server/advisor/exports.ts`; the `upload` HKDF subkey of `ADVISOR_PHONE_KEY`, as for upload links). Per-IP `PUBLIC_LIMITER` (`advisor-export:<ip>`, `429`).
 
-- **Response:** `200` with the JSON export (`exportContact`: the contact without its number or session, its messages, media rows, reports, report edits, crew rows and boats), `Content-Type: application/json; charset=utf-8`, `Content-Disposition: attachment; filename="skippercast-data.json"`, `Cache-Control: no-store`, `X-Robots-Tag: noindex`.
-- **Errors:** a bad, tampered or expired token, a key that is not the contact's, a contact that has since been forgotten, or a missing object → `404` `{"error": "Not found"}` (the gate's body). `503` on a storage failure; the path, which carries the token, is never logged.
+- **Response:** `200` with the JSON export (`exportContact`: the contact without its number or session, its messages, media rows, reports, report edits, crew rows, a pending crew invitation and boats), `Content-Type: application/json; charset=utf-8`, `Content-Disposition: attachment; filename="skippercast-data.json"`, `Cache-Control: no-store`, `X-Robots-Tag: noindex`.
+- **Errors:** a missing, bad, tampered or expired token, a key that is not the contact's, a contact that has since been forgotten, or a missing object → `404` `{"error": "Not found"}` (the gate's body). `503` on a storage failure.
+- **Retired:** `GET /api/advisor/export/<token>` (links sent before the change) answers `410` `{"error": "This data link has been replaced. Text SEND ME MY DATA to SkipperCast for a new one."}` for a genuine token less than 7 days past its expiry, `404` otherwise; it never serves the data.
 
 ### `POST /api/advisor/web/upload`
 

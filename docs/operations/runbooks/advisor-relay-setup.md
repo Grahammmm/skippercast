@@ -34,8 +34,10 @@ Keep a note as you go (in your password manager, never in the repository) of: th
 1. Erase it or start fresh, and sign in with the dedicated Apple Account (Settings → Sign in).
 2. **Settings → Apps → Messages** (on iOS 17 and earlier: **Settings → Messages**): turn **iMessage** on. Wait until **Send & Receive** shows the phone number ticked (activation can take a few minutes; up to 24 hours on a new line).
 3. In **Send & Receive**, under **Start New Conversations From**, choose the phone number, not the email address.
-4. **Settings → [account name] → iCloud → Messages in iCloud** (on some versions under **Show All**): turn on.
-5. Leave it plugged in, on Wi-Fi, near the Mac. **Settings → Display & Brightness → Auto-Lock → Never.** Turn off automatic iOS updates that restart the phone overnight if you prefer to update by hand (**Settings → General → Software Update → Automatic Updates**).
+4. **Settings → [account name] → iCloud → Messages in iCloud** (on some versions under **Show All**): make sure it is **off**. The relay does not need it: Apple's [Forward text messages from your iPhone to other devices](https://support.apple.com/en-us/102545) (formerly HT208386) says to "set up either Messages in iCloud or Text Message Forwarding", and Text Message Forwarding is set up on its own in step 5. With it off, no conversation is copied to Apple's servers.
+5. **Settings → [account name] → iCloud → iCloud Backup**: turn **off** (with Messages in iCloud off, an iCloud backup would carry the message history to Apple instead).
+6. **Settings → Apps → Messages → Keep Messages** (below Message History): choose **30 Days**. Apple: "If you choose an option other than Forever, your conversations (including all attachments) are automatically removed after the specified time period elapses" ([Delete messages and attachments on iPhone](https://support.apple.com/guide/iphone/delete-messages-and-attachments-iph2c9c4bfcb/ios)).
+7. Leave it plugged in, on Wi-Fi, near the Mac. **Settings → Display & Brightness → Auto-Lock → Never.** Turn off automatic iOS updates that restart the phone overnight if you prefer to update by hand (**Settings → General → Software Update → Automatic Updates**).
 
 Text Message Forwarding is switched on in step 5, once the Mac is signed in.
 
@@ -45,14 +47,16 @@ Text Message Forwarding is switched on in step 5, once the Mac is signed in.
 2. Create one macOS user for the relay. Sign in to **iCloud** with the dedicated Apple Account (System Settings → Sign in).
 3. Open **Messages → Settings → iMessage**:
    - sign in with the same Apple Account if it is not already;
-   - tick **Enable Messages in iCloud**;
+   - leave **Enable Messages in iCloud** **unticked** (Text Message Forwarding in step 5 does not need it; see step 3.4);
    - under **You can be reached for messages at**, tick the **phone number**;
    - under **Start new conversations from**, choose the phone number.
    If the number does not appear, wait for the iPhone's activation to finish (step 3.2) and sign out and in again on the Mac.
+4. **Messages → Settings → General → Keep messages:** choose **30 Days**. Apple: "If you choose an option other than Forever, your conversations (including all attachments) are automatically removed after the specified time period elapses" ([Delete messages and conversations in Messages on Mac](https://support.apple.com/guide/messages/delete-messages-and-conversations-icht1035/mac)).
+5. Keep the relay user out of backups that would outlive that: no **Time Machine** for this Mac (or exclude `~/Library/Messages` and `~/Library/Application Support/bluebubbles-server`), and no iCloud Drive "Desktop & Documents" sync for the relay user.
 
 ## 5. Turn on Text Message Forwarding
 
-1. On the iPhone: **Settings → Apps → Messages → Text Message Forwarding** (iOS 17 and earlier: **Settings → Messages → Text Message Forwarding**).
+1. On the iPhone: **Settings → Apps → Messages → Text Message Forwarding** (iOS 17 and earlier: **Settings → Messages → Text Message Forwarding**). It works with Messages in iCloud off: the Mac only has to be signed in to iMessage with the same Apple Account (Apple, [Forward text messages](https://support.apple.com/en-us/102545): "If you don't see one or more of your other devices … make sure that the Apple Account shown in this window is the same as on your iPhone").
 2. Turn on the Mac mini. If a code appears on the Mac, type it on the iPhone.
 3. Check it: from your own phone, send an SMS to the number from a non-iPhone if you have one (or with iMessage turned off on your phone for a minute). It must appear in Messages on the Mac. Reply from the Mac; it must arrive green.
 
@@ -120,7 +124,7 @@ Repository → **Settings → Secrets and variables → Actions**. `gh secret se
 | Secret | `CF_ACCESS_CLIENT_ID` | the service token's Client ID (step 7.6) |
 | Secret | `CF_ACCESS_CLIENT_SECRET` | the service token's Client Secret (step 7.6) |
 | Secret | `ADVISOR_WEBHOOK_TOKEN` | the webhook token (step 8.1) |
-| Secret | `ADVISOR_PHONE_KEY` | if not set already: `openssl rand -base64 32` (encrypts stored numbers; never change it once contacts exist) |
+| Secret | `ADVISOR_PHONE_KEY` | if not set already: `openssl rand -base64 32` (hashes and encrypts stored numbers; once contacts exist, change it only with the re-key procedure in [secrets rotation](secrets-rotation.md#advisor_phone_key-text-advisor)) |
 | Variable | `ADVISOR_NUMBER` | the number in E.164, `+1` and ten digits |
 | Variable | `BLUEBUBBLES_PRIVATE_API` | `true` only if you enabled the Private API (step 6.6) |
 
@@ -140,3 +144,22 @@ node scripts/advisor/relay-check.mjs --to <your own mobile number>
 It pings the relay through the tunnel with the service token, prints the BlueBubbles and macOS versions and whether the Private API is loaded, checks whether your number is on iMessage, and sends one iMessage and one SMS test text to your phone. It prints no secret. Done when it ends `PASS` and both texts arrived (one blue, one green). Paste its output in the TA-O1 note or PR.
 
 Then, once the advisor is deployed with `TEXT_ADVISOR_ENABLED=true`: text the number from your phone; the stub reply ("SkipperCast is warming up…") arrives within a few seconds, and `GET https://skippercast.com/api/advisor/health` shows `"relay":{"state":"up",…}` after the next cron tick.
+
+## 12. Keep the relay's copies short
+
+The iPhone and the Mac hold every conversation and every photo as it arrived (location metadata included), outside SkipperCast's own retention and FORGET ME ([threat model § 9.2](../../legal/threat-model.md#92-the-mac-relay-bluebubbles-cloudflare-tunnel-and-access)). Steps 3.4–3.6 and 4.3–4.5 keep them off Apple's servers and remove them after 30 days. Three more things:
+
+1. **BlueBubbles' own copies.** BlueBubbles keeps copies of the attachments it handles in its own folders, which Keep Messages does not reach. Install the weekly cleanup, which deletes those copies after 7 days (more than 7 full days old):
+   ```bash
+   # On the Mac, as the relay user, in a checkout of the repository (or copy the one script to ~/bin):
+   bash scripts/advisor/relay-cleanup.sh --dry-run          # lists what it would delete
+   mkdir -p ~/Library/LaunchAgents
+   bash scripts/advisor/relay-cleanup.sh --plist > ~/Library/LaunchAgents/com.skippercast.relay-cleanup.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.skippercast.relay-cleanup.plist
+   launchctl kickstart gui/$(id -u)/com.skippercast.relay-cleanup   # run once now
+   cat ~/Library/Logs/com.skippercast.relay-cleanup.log
+   ```
+   It runs every Sunday at 04:30 and touches only `~/Library/Application Support/bluebubbles-server/Attachments` (with `Cached/`), `…/bluebubbles-server/Convert` and `~/Library/Messages/Attachments/BlueBubbles`, the folders the BlueBubbles server source names for attachment copies (`FileSystem` in `packages/server/src/server/fileSystem/index.ts`, read 2026-10-04; BlueBubbles' user documentation does not list them). Never Messages' own attachments or `chat.db`, which Keep Messages manages. If the log shows `Operation not permitted` for `~/Library/Messages/Attachments/BlueBubbles`, give `/bin/bash` **Full Disk Access** (System Settings → Privacy & Security), or run the script by hand in Terminal once a week. If a BlueBubbles update moves these folders, the log shows `0 file(s)` week after week: check the folders by hand (`du -sh ~/Library/Application\ Support/bluebubbles-server/*`) and update the script.
+2. **FORGET ME.** When the admin queue or the `advisor_forget` log line shows a contact erased their data, delete that conversation on the Mac (Messages → right-click the conversation → **Delete**) and on the iPhone, then empty **Recently Deleted** on both (Mac: **View → Recently Deleted**; iPhone: **Messages → Edit → Show Recently Deleted**), since deleted conversations otherwise stay there for up to 30 days. SkipperCast's copy is already gone; this removes the relay's.
+3. **Monthly check.** Confirm Keep Messages still says 30 Days on both devices and Messages in iCloud is still off (an iOS or macOS update can reset settings), and that the cleanup log has a line for each Sunday.
+

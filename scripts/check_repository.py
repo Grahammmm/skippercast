@@ -22,9 +22,124 @@ PATTERNS = {
 }
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
+# Text Advisor fixtures, plan and runbooks (docs/plans/text-advisor/02-data-model.md
+# § Privacy invariants): phone numbers only from the fictional 555 series, and
+# Instagram handles only from catalog/advisor/fixture-handles.json.
+ADVISOR_SCOPES = ("tests/fixtures/advisor/", "docs/plans/text-advisor/")
+ADVISOR_RUNBOOK = re.compile(r"docs/operations/runbooks/advisor-[^/]+\.md")
+# The advisor's test files get the handle rule too (hardening, threat model § 9.10): an @mention, or a quoted
+# value of a handle field (instagram: '...', username: "...", collaborators: ['...']), must be a listed handle.
+ADVISOR_TESTS = re.compile(r"tests/test_advisor_[^/]+\.mjs")
+JS_HANDLE = re.compile(r"\b(?:instagram|username|handle|ig_handle|ig_username)\s*:\s*(['\"])(@?[A-Za-z0-9._]{1,30})\1")
+JS_COLLABORATORS = re.compile(r"\bcollaborators\s*:\s*\[([^\]]*)\]")
+QUOTED = re.compile(r"(['\"])(@?[A-Za-z0-9._]{1,30})\1")
+FIXTURE_HANDLES = "catalog/advisor/fixture-handles.json"
+E164_NANP = re.compile(r"\+1\d{10}")
+# +1555XXXXXXX (no 555 area code is assigned), or +1 NPA 555-01XX (the North
+# American Numbering Plan's fictional range; other 555 lines can be real).
+FICTIONAL_PHONE = re.compile(r"\+1(?:555\d{7}|\d{3}55501\d{2})")
+# An @mention: not part of an email address or a path, not an npm scope (@scope/pkg, @scope-name).
+MENTION = re.compile(r"(?<![\w.@/+-])@([A-Za-z0-9._]{2,30})(?![\w/-])")
+HANDLE_KEYS = {"instagram", "username", "handle", "ig_handle", "ig_username", "collaborators"}
+HANDLE_VALUE = re.compile(r"@?[A-Za-z0-9._]{1,30}")
+FICTIONAL_HANDLE = re.compile(r"example|placeholder")
+
+
+def advisor_scoped(relative):
+    """True for a file the Text Advisor privacy scan covers (a repository-relative path)."""
+    name = relative.as_posix()
+    return name.startswith(ADVISOR_SCOPES) or bool(ADVISOR_RUNBOOK.fullmatch(name))
+
+
+def advisor_test_file(relative):
+    """True for a Text Advisor test file, which the handle rule covers (a repository-relative path)."""
+    return bool(ADVISOR_TESTS.fullmatch(relative.as_posix()))
+
+
+def advisor_test_handles(relative, text, allowed):
+    """Handle-rule violations in an advisor test file as 'path:line: rule'; never the handle itself."""
+    errors = []
+
+    def line(offset):
+        return text.count("\n", 0, offset) + 1
+
+    found = [(m.start(), m.group(1).rstrip(".")) for m in MENTION.finditer(text)]
+    found += [(m.start(), m.group(2)) for m in JS_HANDLE.finditer(text)]
+    for block in JS_COLLABORATORS.finditer(text):
+        found += [(block.start(), m.group(2)) for m in QUOTED.finditer(block.group(1))]
+    seen = set()
+    for offset, handle in sorted(found):
+        value, at = handle.lstrip("@").lower(), line(offset)
+        if len(value) >= 2 and value not in allowed and (at, value) not in seen:   # one finding per handle per line
+            seen.add((at, value))
+            errors.append(f"{relative}:{at}: Instagram handle not in {FIXTURE_HANDLES}")
+    return errors
+
+
+def load_fixture_handles(root=ROOT):
+    """The allowed handles (lower case), and any problems with the list itself."""
+    try:
+        data = json.loads((root / FIXTURE_HANDLES).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set(), [f"{FIXTURE_HANDLES}: missing or not JSON"]
+    allowed, problems = set(), []
+    for group in ("own", "fictional", "placeholders"):
+        entries = data.get(group) if isinstance(data, dict) else None
+        if not isinstance(entries, dict):
+            problems.append(f"{FIXTURE_HANDLES}: '{group}' must be an object of handle -> reason")
+            continue
+        for handle in entries:
+            if not re.fullmatch(r"[a-z0-9._]{1,30}", handle):
+                problems.append(f"{FIXTURE_HANDLES}: '{group}' has an entry that is not a lower-case handle")
+            elif group == "fictional" and not FICTIONAL_HANDLE.search(handle):
+                problems.append(f"{FIXTURE_HANDLES}: a fictional handle must contain 'example' or 'placeholder'")
+            else:
+                allowed.add(handle)
+    return allowed, problems
+
+
+def json_handles(value, key=None):
+    """Every handle-shaped string under a handle field (HANDLE_KEYS), at any depth of parsed JSON."""
+    if isinstance(value, dict):
+        for k, v in value.items():
+            yield from json_handles(v, k)
+    elif isinstance(value, list):
+        for item in value:
+            yield from json_handles(item, key)
+    elif isinstance(value, str) and key in HANDLE_KEYS and HANDLE_VALUE.fullmatch(value):
+        yield value
+
+
+def advisor_privacy(relative, text, allowed):
+    """Violations in one scanned file as 'path:line: rule'; never the matched number or handle."""
+    errors = []
+
+    def line(offset):
+        return text.count("\n", 0, offset) + 1
+
+    for match in E164_NANP.finditer(text):
+        if not FICTIONAL_PHONE.fullmatch(match.group()):
+            errors.append(f"{relative}:{line(match.start())}: phone number outside the fictional 555 series "
+                          "(+1555XXXXXXX or +1NPA55501XX)")
+    for match in MENTION.finditer(text):
+        handle = match.group(1).rstrip(".").lower()   # a handle never ends with a period; a sentence can
+        if len(handle) >= 2 and handle not in allowed:
+            errors.append(f"{relative}:{line(match.start())}: Instagram handle not in {FIXTURE_HANDLES}")
+    if relative.suffix == ".json":
+        try:
+            document = json.loads(text)
+        except ValueError:
+            document = None
+        for value in json_handles(document):
+            if value.lstrip("@").lower() not in allowed:
+                errors.append(f"{relative}: handle field value not in {FIXTURE_HANDLES}")
+    return errors
+
 
 def main():
     errors, checked = [], 0
+    handles, problems = load_fixture_handles(ROOT)
+    errors.extend(problems)
     manifest = ROOT / "scripts/web-vendor-sha256.json"
     vendor_hashes = json.loads(manifest.read_text()) if manifest.exists() else {}
     for path in sorted(ROOT.rglob("*")):
@@ -45,6 +160,10 @@ def main():
         for label, pattern in PATTERNS.items():
             if pattern.search(text):
                 errors.append(f"{relative}: possible {label}")
+        if advisor_scoped(relative):
+            errors.extend(advisor_privacy(relative, text, handles))
+        elif advisor_test_file(relative):
+            errors.extend(advisor_test_handles(relative, text, handles))
         if path.suffix == ".md":
             for raw in LINK.findall(text):
                 url = urlsplit(raw.strip("<>"))
@@ -57,7 +176,7 @@ def main():
         for error in errors:
             print(error, file=sys.stderr)
         return 1
-    print(f"Checked {checked} text files: local Markdown links and release privacy rules passed.")
+    print(f"Checked {checked} text files: local Markdown links, release privacy rules and the Text Advisor fixture scan passed.")
     return 0
 
 

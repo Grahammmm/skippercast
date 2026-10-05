@@ -2,14 +2,14 @@
 // its own text so the model never handles the URL.
 import type {AdvisorTool, ToolContext, ToolOutput} from './tool.ts';
 import {deriveKeys} from '../contacts.ts';
-import {mintUploadToken} from '../media.ts';
+import {mintUploadToken, uploadLink} from '../media.ts';
 import {t} from '../strings.ts';
 
 /** The upload link text for this contact, or the "can't right now" text without ADVISOR_PHONE_KEY. */
 export async function uploadLinkText(ctx: Pick<ToolContext, 'env' | 'contact' | 'language' | 'settings' | 'now'>): Promise<{text: string; ok: boolean}> {
   if (!ctx.env.ADVISOR_PHONE_KEY) return {text: t(ctx.language, 'upload_unavailable'), ok: false};
   const token = await mintUploadToken(await deriveKeys(ctx.env.ADVISOR_PHONE_KEY), ctx.contact.id, ctx.now);
-  return {text: t(ctx.language, 'upload_link', {link: `${ctx.settings.publicBase}/u/${token}`}), ok: true};
+  return {text: t(ctx.language, 'upload_link', {link: uploadLink(ctx.settings.publicBase, token)}), ok: true};
 }
 
 export const sendUploadLink: AdvisorTool = {

@@ -20,7 +20,7 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json'), 'so
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 
 const {TOOLS, TOOL_BY_NAME, toolsForRole, claudeTools, dispatchTool, NOT_BUILT, stubTool, isWebOnly} = await import('../server/advisor/tools/index.ts');
-const {linkCode, takeDaily, LINK_CODES_PER_DAY, LINK_CODE_TTL_MS} = await import('../server/advisor/tools/offer_text_link.ts');
+const {linkCode, takeDaily, LINK_CODES_PER_DAY, LINK_CODE_TTL_MS, CODE_OFFERED} = await import('../server/advisor/tools/offer_text_link.ts');
 const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {deriveKeys, phoneHash, decryptPhone} = await import('../server/advisor/contacts.ts');
 const {verifyUploadToken} = await import('../server/advisor/media.ts');
@@ -112,7 +112,7 @@ test('escalate: a conversation review on this message; unknown reasons become ne
 test('send_upload_link: a 24 h token for this contact, as its own text; unavailable without the key', async () => {
   const tool = TOOL_BY_NAME.get('send_upload_link');
   const out = await tool.run({}, ctx({}, {ADVISOR_PHONE_KEY: KEY}));
-  const token = /\/u\/([\w-]+)$/.exec(out.actions[0].text)[1];
+  const token = /\/u#([\w-]+)$/.exec(out.actions[0].text)[1];
   assert.equal(await verifyUploadToken(await deriveKeys(KEY), token, T0), 'c1');
   assert.deepEqual(out.result, {sent: true, note: 'the link was sent as its own message'});
   const none = await tool.run({}, ctx());
@@ -150,6 +150,7 @@ dbTest('offer_text_link: a code action with only hashes and the encrypted number
     {type: 'link_start', phoneHash: await phoneHash(keys, '+18055550123'), codeHash: await sha256('654321'), expiresAt: T0 + LINK_CODE_TTL_MS, codeText: '654321'});
   assert.equal(await decryptPhone(keys, action.phoneEnc), '+18055550123');
   assert.ok(!JSON.stringify(out.result).includes('555'), 'the number is never echoed to the model');
+  assert.deepEqual(out.result, {...CODE_OFFERED}, 'the same answer for any valid number (the consumer\'s outbound guard decides; tests/test_advisor_outbound.mjs)');
   for (let i = 1; i < LINK_CODES_PER_DAY; i++) assert.equal((await tool.run({phone: '805-555-0123'}, c)).result.sent, true);
   assert.deepEqual((await tool.run({phone: '805-555-0123'}, c)).result, {sent: false, reason: 'too many codes today; try tomorrow'});
   assert.deepEqual((await tool.run({phone: '12345'}, ctx(web, {ADVISOR_PHONE_KEY: KEY}))).result, {sent: false, reason: 'not a US mobile number'});
@@ -381,13 +382,13 @@ dbTest('get_port_report: the day\'s answer (composed when none is stored, never 
   assert.ok(!JSON.stringify(out).includes('Example Boat Two'), 'an unverified boat is never named');
   assert.ok(!out.skipper_reports.some(r => r.date === '2026-09-25' && r.trip_type === null), 'drafts are not reports');
   assert.equal(out.landing.label, 'reported by the landing');
-  assert.deepEqual(out.landing.reports.map(r => r.boat), ['Starfire'], 'only Morro Bay\'s landing reports');
+  assert.deepEqual(out.landing.reports.map(r => r.boat), ['Example Star'], 'only Morro Bay\'s landing reports');
   assert.deepEqual(out.landing.recent_activity.find(a => a.target === 'reef'), {target: 'reef', species: ['lingcod', 'rockfish'], confidence: 'Low', trips: 1, boats: 1, days: 1});
   assert.equal(out.freshness.newest_landing_report, '2026-09-27');
   assert.equal(out.catch_probability, null);
   assert.doesNotMatch(JSON.stringify(out), /\d\s*%|probab(?!ility":null)/i);
   const psl = (await TOOL_BY_NAME.get('get_port_report').run({port: 'port-san-luis'}, dataCtx({db}))).result;
-  assert.deepEqual(psl.landing.reports.map(r => r.boat), ['Sunny Day'], 'the feed\'s "Avila Beach" is Port San Luis');
+  assert.deepEqual(psl.landing.reports.map(r => r.boat), ['Example Day'], 'the feed\'s "Avila Beach" is Port San Luis');
   const offline = (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, dataCtx({db, feeds: async () => { throw Error('down'); }}))).result;
   assert.deepEqual(offline.landing, {available: false});
   // A stored answer whose inputs are current is returned as it is.

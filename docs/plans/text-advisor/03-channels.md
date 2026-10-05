@@ -33,7 +33,10 @@ same account running BlueBubbles. Nothing else on that account.
    port-out (any major carrier does). Record account number and PIN in the
    owner's password manager, not in the repo.
 2. Create the Apple Account; sign in on the iPhone; Settings › Messages › Send
-   & Receive shows the number ticked. Enable Messages in iCloud.
+   & Receive shows the number ticked. Messages in iCloud stays **off**, and
+   Keep Messages is 30 days on the iPhone and the Mac (hardening; the
+   [relay setup](../../operations/runbooks/advisor-relay-setup.md) steps 3–5
+   and § 12, with the weekly `scripts/advisor/relay-cleanup.sh` job).
 3. Mac mini: a macOS version BlueBubbles' current release notes list as
    supported (the runbook says where to check); same Apple Account;
    Messages › iMessage shows the number;
@@ -262,6 +265,33 @@ cookie hash to it (the chat keeps working and `/api/advisor/web/message`
 answers `linked: true`), and deletes the web contact. 04 § As built has the
 details.
 
+### As built (hardening: texts we start)
+
+Three texts go to a number someone typed rather than one that texted us: the
+web phone-link code (`offer_text_link`), a crew invitation (`add_crew`, 05 §
+As built (crew consent)) and the admin's skipper invite. Each now passes
+`server/advisor/outbound-guard.ts` `checkOutbound` just before it is sent
+(threat model § 9.3):
+
+- a stopped or blocked contact is refused;
+- one number gets at most 2 of these a day and 5 in any 7 days, whoever asks
+  (`request_limits` `advisor-out:to:<phone_hash>:<UTC day>`, kept 8 days);
+- per requester a day: 3 codes per web visitor (on top of the tool's own 3
+  requests), 10 invitations per skipper, 20 invites per admin;
+- per client address a day (web only): 5, keyed by `ipHash` (SHA-256 of the
+  address under `ADVISOR_PHONE_KEY`, 32 hex characters; the web route passes it
+  to the inline turn as `ConsumerDeps.ipHash`);
+- `ADVISOR_GLOBAL_DAILY_COLD` (default 50) a day to numbers that have never
+  texted us (no inbound message from that contact).
+
+The guard only reads; the caller commits the counts right before the send, so
+a text refused later by its own checks spends nothing, and nothing (no contact
+row, no pending link) is stored for a refused number. The web visitor and the
+skipper hear the same answer for any valid number ("a code is texted to that
+number if it can receive one"); the old "I couldn't text that number" reply
+for a stopped number is gone (it said the number was known). The admin, who
+may know, gets the reason in the 409.
+
 ## Instagram adapter (`channels/instagram.ts`; TA-S6)
 
 As built: the fourth adapter, `instagram` (`AdapterName` gained it). Inbound is
@@ -306,6 +336,28 @@ with `request.formData()`, which would buffer 300 MB. Each adapter gains
 can add its own; BlueBubbles: `GET /api/v1/attachment/<guid>/download`); the
 consumer picks the adapter from the message channel and the ref (an https ref
 is a Twilio media URL).
+
+### As built (hardening: tokens out of URLs)
+
+Upload and export links no longer carry their token in the path, where it sat
+in every Workers Logs invocation record (threat model § 9.3). The upload link
+is `<ADVISOR_PUBLIC_BASE>/u#<token>`: `GET /u` serves `dist/upload.html` to
+anyone, `dist/advisor/upload.js` reads the token from `location.hash` (a
+fragment is never sent to the server, nor in a `Referer`) and posts the file to
+`POST /api/advisor/upload` with the token in the `X-Upload-Token` header. The
+"send me my data" link is `<base>/my-data#<token>`: `dist/my-data.html` and
+`dist/advisor/my-data.js` POST the token to `POST /api/advisor/export` in the
+`X-Export-Token` header and save the JSON (`skippercast-data.json`). Links
+already sent in the old form (`/u/<token>`, `POST /api/advisor/upload/<token>`,
+`GET /api/advisor/export/<token>`) answer `410 Gone` with "This … link has been
+replaced. Text … for a new one." while the token is genuine and less than 7
+days past its expiry, then the gate's `404`; they never serve the page or the
+data. The shared error log redacts any path secret (`redactPath`,
+`server/middleware/error.ts`). The BlueBubbles webhook must keep its path token
+(BlueBubbles sends no header or signature): see the rotation procedure in
+[secrets rotation](../../operations/runbooks/secrets-rotation.md#advisor_webhook_token-text-advisor)
+and the `WORKERS_INVOCATION_LOGS=false` switch, which turns off Workers Logs'
+per-request record (whose message is the URL) while keeping our own lines.
 
 ## Contact card and deep links (FC-3, FC-5)
 

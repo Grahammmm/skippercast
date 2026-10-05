@@ -26,6 +26,9 @@ export interface AdvisorSettings {
   dailyLlmPerContact: number;       // ADVISOR_DAILY_LLM_PER_CONTACT
   globalDailyLlm: number;           // ADVISOR_GLOBAL_DAILY_LLM
   globalDailyVision: number;        // ADVISOR_GLOBAL_DAILY_VISION
+  dailyLlmPerIp: number;             // ADVISOR_DAILY_LLM_PER_IP: web chat model calls a day per client address
+  globalDailyLlmWeb: number;         // ADVISOR_GLOBAL_DAILY_LLM_WEB: web chat model calls a day, part of ADVISOR_GLOBAL_DAILY_LLM
+  globalDailyCold: number;           // ADVISOR_GLOBAL_DAILY_COLD: texts a day we start to numbers that never texted us
   publicBase: string;               // ADVISOR_PUBLIC_BASE: https origin (and optional path), no trailing slash
   regionDefault: string;            // ADVISOR_REGION_DEFAULT: region id for contacts with no home port
   autoPublishAfter: number;         // ADVISOR_AUTO_PUBLISH_AFTER: clean reports before auto-publish is offered
@@ -103,7 +106,9 @@ export type Action =
   | {type: 'flow_set'; state: FlowState | null}                         // job_state advisor.flow.<contact_id>; null deletes it
   | {type: 'consent'; boatId: string; decision: 'yes' | 'revoke'}      // consent_photos_at + consent_message_id, or consent_revoked_at
   | {type: 'post_revoke'; boatId: string}                               // TA-S1: the boat's draft and approved posts rejected (social/drafts.ts revokeBoatPosts)
-  | {type: 'crew_add'; boatId: string; phoneHash: string; phoneEnc: string}   // find-or-create the crew contact, link it, text the invite
+  | {type: 'crew_add'; boatId: string; phoneHash: string; phoneEnc: string}   // find-or-create the contact, record a pending invitation, text it (crew only after YES)
+  | {type: 'crew_accept'; boatId: string; language: Language}          // the invitee's YES within 72 h: the crew link, role and boat_id
+  | {type: 'crew_decline'; boatId: string; language?: Language; expired?: boolean}   // NO: the invitation cleared, that boat silenced 30 days (expired: cleared only)
   | {type: 'crew_remove'; boatId: string; contactId: string}           // removed_at, the contact's boat_id cleared
   // TA-I2: skipper reports and the media path (05 § count board, § plain text, § catch photos, § corrections, § auto-publish).
   | {type: 'report_draft'; report: NewReport; publish?: boolean}       // insert as pending_confirm (a unique collision becomes an edit); publish: auto_publish
@@ -214,6 +219,8 @@ export interface ConsumerDeps {
   dispatchWorkflow?: (env: Env, file: string) => Promise<number>; // default: watchdog.ts dispatchWorkflow
   // TA-S6: the Graph API fetcher and clock of an Instagram comment's reply channel (tests).
   instagram?: {fetcher?: (url: string, init: RequestInit) => Promise<Response>; now?: () => number};
+  // Hardening: the web chat's client address, hashed (outbound-guard.ts ipHash), for the per-address limits.
+  ipHash?: string;
 }
 
 export interface HandlerInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps: ConsumerDeps; signal: AbortSignal}

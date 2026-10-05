@@ -50,7 +50,7 @@ import type {PendingLink} from './tools/offer_text_link.ts';
 import {sha256} from './ids.ts';
 import type {Action, AdvisorContactRow, AdvisorMessageRow, AdvisorSettings, EngineDeps, EngineResult, Handler, Language} from './types.ts';
 // TA-I1: skipper registration, consent and crew (05), and the contact brief's boat lines.
-import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
+import {SKIPPER_FLOWS, boatsForContact, consentState, readFlow, readCrewInvite, FLOW_MAX_AGE_MS} from './intake/skippers.ts';
 // TA-I2: reports (pending confirmation, count text, corrections, the media-only skipper path) and their brief lines.
 import {REPORT_FLOWS, reportBrief} from './intake/reports.ts';
 // TA-I3: an angler's photos (fish ID, the AC-1 share offer and credit).
@@ -87,7 +87,8 @@ const NO_NUDGE: ReadonlySet<string> = new Set(['stop', 'start', 'help', 'forget'
 /** TA-S6: a contact known only by its Instagram id (a DM or a comment), with no number to text. */
 export const isInstagramOnly = (contact: Pick<AdvisorContactRow, 'phone_enc' | 'web_session' | 'ig_sid'>): boolean => !contact.phone_enc && !contact.web_session && Boolean(contact.ig_sid);
 
-export interface EngineInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps?: EngineDeps; signal?: AbortSignal}
+/** ipHash (hardening): the web chat's hashed client address, for the per-address caps (web turns only). */
+export interface EngineInput {env: Env; contact: AdvisorContactRow; message: AdvisorMessageRow; now: number; deps?: EngineDeps; signal?: AbortSignal; ipHash?: string}
 
 /** The pieces a Stage 2 flow sees. */
 export interface FlowContext {
@@ -197,6 +198,9 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
   // TA-I2 (04 § stage 2): the pending report itself, with its id for edit_report, or the latest one.
   const reportLines = boat ? await reportBrief(db, boat, messageCreatedAt, now) : ['- report waiting for confirmation: no'];
   const flow = await readFlow(db, contact.id);
+  // Hardening (05 § Crew): an invitation waiting for this contact's YES; until then they are not crew.
+  const invite = !boat ? await readCrewInvite(db, contact.id) : null;
+  const invitedBy = invite && invite.expires_at > now ? await db.prepare('SELECT name FROM advisor_boats WHERE id=?').bind(invite.boat_id).first<{name: string}>() : null;
   const registering = flow?.flow === 'register' && now - Date.parse(flow.asked_at) <= FLOW_MAX_AGE_MS ? flow.step : null;
   const boatLines = boat ? [
     `- boat: ${boat.name} (${boat.relation === 'owner' ? 'they own it' : 'they are crew'}); status: ${boat.status}${boat.status === 'verified' ? '' : ' (reports publish but tools show it as "a boat" until the team verifies it)'}`,
@@ -218,6 +222,7 @@ export async function briefs(db: D1Database, contact: AdvisorContactRow, setting
     'CONTACT BRIEF',
     `- role: ${contact.role}`,
     ...boatLines,
+    ...(invitedBy ? [`- crew invitation pending from ${invitedBy.name}: they join only by replying YES (the system handles it); until then they are not crew`] : []),
     ...(registering ? [`- boat registration in progress: the next answer is the ${registering} (the system asks; do not ask it yourself)`] : []),
     `- reply language: ${language === 'es' ? 'Spanish' : 'English'}`,
     `- display name: ${contact.display_name ?? 'not given'}`,
@@ -437,6 +442,15 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
     const target = contact.home_port ? `port:${contact.home_port}` : 'home';
     return done(sent === settings.dailyMessagesPerContact + 1 && !comment ? [say('capped', {target})] : [], 'capped');
   }
+  // Hardening (threat model § 9.3): on the web a new cookie is a new contact, so the message cap also holds per client address.
+  const web = message.channel === 'web';
+  if (web && input.ipHash) {
+    const fromIp = await countToday(db, `advisor-msg-ip:${input.ipHash}`, now);
+    if (fromIp > settings.dailyMessagesPerContact) {
+      const target = contact.home_port ? `port:${contact.home_port}` : 'home';
+      return done(fromIp === settings.dailyMessagesPerContact + 1 ? [say('capped', {target})] : [], 'capped');
+    }
+  }
 
   // Stage 2: the upload-link request (04 § stage 2).
   if (command === 'upload_link' && !comment) {
@@ -475,6 +489,20 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
     const n = await countToday(db, `advisor-llm-capped:${contact.id}`, now);
     const target = contact.home_port ? `port:${contact.home_port}` : 'home';
     return done(n === 1 && !comment ? [say('capped', {target})] : [], 'capped');
+  }
+  // Hardening (threat model § 9.3): web chat turns have their own budget. Per client address (new cookies do not reset it),
+  // and ADVISOR_GLOBAL_DAILY_LLM_WEB, carved out of the global cap: a web turn counts against both, so however busy the
+  // web chat gets, the text channels keep ADVISOR_GLOBAL_DAILY_LLM minus the web share.
+  if (web) {
+    if (input.ipHash && await countToday(db, `advisor-llm-ip:${input.ipHash}`, now) > settings.dailyLlmPerIp) {
+      const n = await countToday(db, `advisor-llm-ip-capped:${input.ipHash}`, now);
+      const target = contact.home_port ? `port:${contact.home_port}` : 'home';
+      return done(n === 1 ? [say('capped', {target})] : [], 'capped');
+    }
+    if (await countToday(db, 'global:advisor-llm-web', now) > settings.globalDailyLlmWeb) {
+      advisorLog('warn', 'advisor_global_cap', {limit: settings.globalDailyLlmWeb, channel: 'web'});
+      return done([say('global_cap')], 'global_cap');
+    }
   }
   if (await countToday(db, 'global:advisor-llm', now) > settings.globalDailyLlm) {
     advisorLog('warn', 'advisor_global_cap', {limit: settings.globalDailyLlm});
@@ -623,4 +651,4 @@ async function linkCodeFlow(f: FlowContext): Promise<EngineResult | null> {
 }
 
 /** The consumer's handler (server/index.ts, inbound.ts, the web chat route): the engine with deps.engine. */
-export const engineHandler: Handler = async ({env, contact, message, now, deps, signal}) => runTurn({env, contact, message, now, deps: deps.engine ?? {}, signal});
+export const engineHandler: Handler = async ({env, contact, message, now, deps, signal}) => runTurn({env, contact, message, now, deps: deps.engine ?? {}, signal, ...(deps.ipHash ? {ipHash: deps.ipHash} : {})});

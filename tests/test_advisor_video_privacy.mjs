@@ -37,7 +37,7 @@ function setup() {
   sql.prepare("INSERT INTO users(id,created_at,role) VALUES(?,?,'admin')").run(ADMIN, iso(T0));
   sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,role,language,boat_id,status,last_seen_at,created_at,updated_at) VALUES('c1','h-c1','ENC-c1','imessage','skipper','en','b1','active',?,?,?)`)
     .run(iso(T0), iso(T0), iso(T0));
-  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,created_at,updated_at) VALUES('b1','rita-g','Rita G','morro-bay','morro-bay','ritag','c1','verified',?,?,?)`)
+  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,created_at,updated_at) VALUES('b1','sea-example','Sea Example','morro-bay','morro-bay','seaexample','c1','verified',?,?,?)`)
     .run(iso(T0 - 48 * HOUR), iso(T0), iso(T0));
   const bucket = memoryBucket();
   return {sql, db, bucket, env: {TEXT_ADVISOR_ENABLED: 'true', DB: db, ADVISOR_MEDIA: bucket}};
@@ -102,7 +102,7 @@ dbTest('a media review of a video cannot be approved (or edited) until its strip
   const waiting = await decide(env, r1);
   assert.equal(waiting.status, 'conflict');
   assert.match(waiting.error, /waiting for the media job to remove its location metadata/);
-  const edit = await decideReview(env, {reviewId: r1, decision: 'edit', patch: {credit: 'Rita G'}, by: ADMIN, inId: r1, key: 'admin'}, {now: T0, send: async () => 0, dispatch: async () => 204});
+  const edit = await decideReview(env, {reviewId: r1, decision: 'edit', patch: {credit: 'Sea Example'}, by: ADMIN, inId: r1, key: 'admin'}, {now: T0, send: async () => 0, dispatch: async () => 204});
   assert.equal(edit.status, 'conflict');
   assert.deepEqual([media(sql, 'v1').publish_state, media(sql, 'v1').credit], ['private', null], 'nothing applied');
   const card = (await listReviews(db, {status: 'open', kind: 'media'})).items.find(i => i.id === r1);

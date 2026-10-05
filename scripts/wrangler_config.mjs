@@ -10,6 +10,11 @@
 //   ENABLE_QUEUES     the trip-check queue and its dead-letter queue (server/trip-queue.ts)
 //   ENABLE_ANALYTICS  the Workers Analytics Engine dataset skippercast_events (server/analytics.ts)
 //   ENABLE_ADVISOR    the Text Advisor's private media bucket and queue pair (docs/plans/text-advisor/)
+// and one switched off the same way:
+//   WORKERS_INVOCATION_LOGS  "false" turns off Workers Logs' per-request invocation log (its
+//                     message is the request URL, so a path secret such as the BlueBubbles webhook
+//                     token would sit in it; docs/legal/threat-model.md § 9.1). Our own log lines,
+//                     errors and exceptions are still kept.
 // With ENABLE_ADVISOR, TEXT_ADVISOR_ENABLED and every ADVISOR_* variable set in
 // the environment are copied into the Worker's vars (never a secret).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
@@ -98,10 +103,11 @@ export function advisorVars(environ = {}) {
 /** {queues, analytics, advisor} from environment variables; "true" (any case) turns a feature on. */
 export function features(environ = {}) {
   const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
-  return {queues: on('ENABLE_QUEUES'), analytics: on('ENABLE_ANALYTICS'), advisor: on('ENABLE_ADVISOR')};
+  const off = name => String(environ[name] ?? '').trim().toLowerCase() === 'false';
+  return {queues: on('ENABLE_QUEUES'), analytics: on('ENABLE_ANALYTICS'), advisor: on('ENABLE_ADVISOR'), invocationLogs: !off('WORKERS_INVOCATION_LOGS')};
 }
 
-export function deployConfig(text, databaseId, bucket, domains = '', {queues = false, analytics = false, advisor = false, environ = {}} = {}) {
+export function deployConfig(text, databaseId, bucket, domains = '', {queues = false, analytics = false, advisor = false, invocationLogs = true, environ = {}} = {}) {
   if (!/^[0-9a-f-]{36}$/.test(databaseId)) throw Error(`not a D1 database id: ${databaseId}`);
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket)) throw Error(`not an R2 bucket name: ${bucket}`);
   const config = JSON.parse(stripJsonComments(text));
@@ -114,6 +120,8 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
   if (hosts.length) config.routes = hosts.map(pattern => ({pattern, custom_domain: true}));
   if (queues) config.queues = structuredClone(TRIP_QUEUES);
   if (analytics) config.analytics_engine_datasets = structuredClone(ANALYTICS_DATASETS);
+  // Workers Logs keeps our own lines; only the automatic per-request record (with the URL) goes.
+  if (!invocationLogs) config.observability = {...config.observability, logs: {...config.observability?.logs, invocation_logs: false}};
   if (advisor) {
     const extra = structuredClone(ADVISOR_QUEUES);
     config.queues = config.queues

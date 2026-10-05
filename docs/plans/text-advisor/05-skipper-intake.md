@@ -357,3 +357,57 @@ differs from the text above:
   anglers, trip_type, report_date, notes) rather than 04's untyped object. All
   three produce the same actions and texts as the deterministic path, and the
   system sends the draft or the corrected lines itself.
+
+## As built (crew consent)
+
+The threat model ([§ 9.6](../../legal/threat-model.md#96-the-model-prompt-injection-misuse-and-spend))
+found that `add_crew` made a contact crew at once: any boat owner, an
+unreviewed one included, could pull a deckhand off another boat or credit
+someone's photos to their boat without a word from them. Crew now need the
+member's consent:
+
+- **Who may invite.** Only the owner of a `verified` boat. `add_crew` answers a
+  pending boat "crew can be added once the SkipperCast team has verified the
+  boat", and the consumer re-checks ownership and verification.
+- **The invitation.** `crew_add` finds or creates the contact (as before) and
+  writes a pending invitation, `job_state` `advisor.crewinvite.<contact_id>`
+  `{boat_id, added_by, invited_at, expires_at}` (72 hours; one per contact, a
+  newer invitation replaces an older one), then texts: "SkipperCast here.
+  {skipper} invited you to join {boat} as crew: your count boards and catch
+  photos would post under the boat. Reply YES to join or NO to decline. Reply
+  STOP to opt out." (Spanish: "… Responde SÍ para unirte o NO para rechazar.
+  Responde STOP para salir."). Nothing else changes: the contact's `role`,
+  `boat_id` and any crew link to another boat stay as they were, and its photos
+  are its own until it accepts.
+- **Nothing is said about the number.** The tool's result is the same for any
+  valid number (`{invited: true, note}`); the consumer quietly sends nothing to
+  a stopped or blocked contact, another boat's owner, a contact already on this
+  crew, or one that declined this boat in the last 30 days.
+- **YES.** `yes`, `y`, `ok`, `sí`, `si`, `claro`, … (the consent words) within
+  72 hours: the Stage 2 flow `crew-invite` (first in `STAGE_TWO_FLOWS`, so the
+  word never reaches the consent or report flows) emits `crew_accept`. The
+  applier re-checks the invitation, that the boat is still verified with an
+  owner, that the contact owns no boat and that the boat has fewer than 20
+  crew; then it ends any other crew link, upserts `advisor_crew` with the
+  inviter as `added_by`, sets `role='crew'` and `boat_id`, clears the
+  invitation and texts "You're on the {boat} crew. Text me the day's count board
+  or catch photos and they'll post under the boat." A YES after 72 hours (or a
+  forged `crew_accept`) changes nothing: "That crew invitation is no longer
+  open. Ask the skipper to send a new one."
+- **NO.** `no`, `n`, `nope`, `no thanks`, `no gracias`, … clears the invitation,
+  writes `advisor.crewdecline.<boat_id>.<contact_id>` and texts "OK, you won't
+  be added to {boat}. You won't get another invitation from that boat for 30
+  days." That boat's invitations to that contact are dropped for 30 days; other
+  boats are unaffected. Any other reply is an ordinary turn and the invitation
+  stays; the contact brief tells the model an invitation is pending and that
+  the contact is not crew until YES.
+- **Retention.** Both keys are in the 30-day `job_state` rule (`retention.ts`
+  `AGED_KEY_PREFIXES`) and are deleted by "forget me"; "send me my data" lists a
+  pending invitation (boat and times, not who sent it). Registering a boat of
+  one's own clears a pending invitation.
+- **Tests.** `tests/test_advisor_skippers.mjs` (crew only after YES; a photo
+  before YES is not the boat's; a pending boat cannot invite; another boat's
+  deckhand untouched until YES; NO silences the boat for 30 days; a late YES or
+  a forged accept does nothing; a stopped number gets nothing and the skipper
+  hears the same; forget me), golden conversation 3 (invitation, a question
+  while pending, YES, then the deckhand's board).

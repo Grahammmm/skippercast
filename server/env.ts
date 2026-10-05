@@ -41,6 +41,9 @@ export interface Env {
   ADVISOR_DAILY_LLM_PER_CONTACT?: string;
   ADVISOR_GLOBAL_DAILY_LLM?: string;
   ADVISOR_GLOBAL_DAILY_VISION?: string;
+  ADVISOR_DAILY_LLM_PER_IP?: string; // web chat model calls a day per client address
+  ADVISOR_GLOBAL_DAILY_LLM_WEB?: string; // web chat model calls a day, part of ADVISOR_GLOBAL_DAILY_LLM
+  ADVISOR_GLOBAL_DAILY_COLD?: string; // texts a day we start to numbers that never texted us
   ADVISOR_PUBLIC_BASE?: string;      // https base for links in replies and Meta-fetchable media
   ADVISOR_REGION_DEFAULT?: string;   // region id for contacts with no home port
   ADVISOR_AUTO_PUBLISH_AFTER?: string; // clean reports before auto-publish is offered

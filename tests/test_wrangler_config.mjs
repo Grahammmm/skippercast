@@ -56,6 +56,18 @@ test('the CLI passes the fourth argument through as custom domains', () => {
   } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 
+test('hardening: WORKERS_INVOCATION_LOGS="false" turns off only the invocation log (its message is the URL, with any path token); our own logs stay', () => {
+  const text = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8'), id = '12345678-1234-1234-1234-123456789abc';
+  for (const value of [undefined, '', 'true', '0', 'no']) assert.equal(features({WORKERS_INVOCATION_LOGS: value}).invocationLogs, true, String(value));
+  for (const value of ['false', ' FALSE ']) assert.equal(features({WORKERS_INVOCATION_LOGS: value}).invocationLogs, false, value);
+  const committed = JSON.parse(stripJsonComments(text)).observability;
+  assert.deepEqual(deployConfig(text, id, 'skippercast-feeds').observability, committed, 'unchanged by default');
+  assert.deepEqual(deployConfig(text, id, 'skippercast-feeds', '', {invocationLogs: false}).observability, {...committed, logs: {invocation_logs: false}});
+  assert.equal(deployConfig(text, id, 'skippercast-feeds', '', {invocationLogs: false}).observability.enabled, true, 'Workers Logs stays on');
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /^ {10}WORKERS_INVOCATION_LOGS: \$\{\{ vars\.WORKERS_INVOCATION_LOGS \}\}$/m);
+});
+
 test('queues are added only when ENABLE_QUEUES is "true" (any case), and their binding is typed in Env', () => {
   const text = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8'), id = '12345678-1234-1234-1234-123456789abc';
   for (const value of [undefined, '', 'false', '1', 'yes', 'TRUE ']) assert.equal(features({ENABLE_QUEUES: value}).queues, value === 'TRUE ', String(value));
@@ -220,7 +232,7 @@ test('the deploy script creates the advisor bucket and queues only with ENABLE_A
   const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
   for (const name of ['ENABLE_ADVISOR', 'TEXT_ADVISOR_ENABLED', 'ADVISOR_CHANNEL', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
     'ADVISOR_NUMBER', 'ADVISOR_PUBLIC_BASE', 'ADVISOR_REGION_DEFAULT', 'ADVISOR_MODEL', 'ADVISOR_VISION_MODEL', 'ADVISOR_VISION_PROVIDERS',
-    'ADVISOR_DAILY_MESSAGES_PER_CONTACT', 'ADVISOR_DAILY_LLM_PER_CONTACT', 'ADVISOR_GLOBAL_DAILY_LLM', 'ADVISOR_GLOBAL_DAILY_VISION',
+    'ADVISOR_DAILY_MESSAGES_PER_CONTACT', 'ADVISOR_DAILY_LLM_PER_CONTACT', 'ADVISOR_GLOBAL_DAILY_LLM', 'ADVISOR_GLOBAL_DAILY_VISION', 'ADVISOR_DAILY_LLM_PER_IP', 'ADVISOR_GLOBAL_DAILY_LLM_WEB', 'ADVISOR_GLOBAL_DAILY_COLD',
     'ADVISOR_AUTO_PUBLISH_AFTER', 'ADVISOR_ADMIN_CONTACT_ID', 'ADVISOR_INBOX_PUBLIC_REPLIES', 'BLUEBUBBLES_PRIVATE_API'])
     assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
   for (const secret of ADVISOR_SECRETS) assert.doesNotMatch(workflow, new RegExp(`\\b${secret}: \\$\\{\\{ vars\\.`), `${secret} is never a variable`);

@@ -1,5 +1,5 @@
 // register_boat (04 § Tools, 05 § Becoming a skipper, SK-1): the model heard
-// someone say they run a boat ("I run the Rita G") and passes whatever fields
+// someone say they run a boat ("I run the Sea Example") and passes whatever fields
 // it already has. This starts the deterministic registration flow
 // (intake/skippers.ts): the system texts the next missing question itself and
 // every later answer is parsed by the flow, not the model. With every field
@@ -13,7 +13,7 @@ import type {FlowState} from '../types.ts';
 
 export const registerBoat: AdvisorTool = {
   name: 'register_boat',
-  description: "Start setting up a boat page for a person who says they run a charter or party boat (\"I'm the captain of the Rita G\", \"I run a six-pack out of Morro\"). Pass only what they already told you; leave the rest out. The system then texts them the remaining questions one at a time and the photo-consent question, so after calling it reply with one short line at most and do not ask those questions yourself.",
+  description: "Start setting up a boat page for a person who says they run a charter or party boat (\"I'm the captain of the Sea Example\", \"I run a six-pack out of Morro\"). Pass only what they already told you; leave the rest out. The system then texts them the remaining questions one at a time and the photo-consent question, so after calling it reply with one short line at most and do not ask those questions yourself.",
   input_schema: {type: 'object', additionalProperties: false, properties: {
     name: {type: 'string', maxLength: 60, description: 'The boat name as they wrote it'},
     port: {type: 'string', enum: [...PORT_IDS], description: 'Home port id'},

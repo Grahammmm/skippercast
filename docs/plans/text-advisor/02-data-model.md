@@ -384,6 +384,13 @@ As built (TA-S3): `advisor.collab.checked_at` (the hourly collaborator-invite
 read's throttle, an ISO time). `advisor_posts.collab_status` is set to
 `invited` when a post goes to Instagram with collaborators and to `accepted` or
 `declined` from Meta's `invite_status` (09 § As built (TA-S3)).
+As built (hardening, 05 § As built (crew consent)): `advisor.crewinvite.<contact
+id>` (a pending crew invitation, `{boat_id, added_by, invited_at, expires_at}`,
+72 hours; one per contact, a newer invitation replaces it) and
+`advisor.crewdecline.<boat id>.<contact id>` (a NO: that boat's invitations to
+that contact are dropped while `updated_at` is under 30 days old). Both age out
+with the 30-day `job_state` rule and go with "forget me"; `advisor_crew` holds
+accepted links only.
 
 ## R2: `ADVISOR_MEDIA` (bucket `skippercast-advisor-media`, private)
 
@@ -498,7 +505,8 @@ text from the same number starts fresh. Reply with one confirmation text
 before deleting the contact (the send needs the number).
 
 **"send me my data"**: writes the export to R2 and texts a signed link valid
-24 hours (`GET /api/advisor/export/<token>`).
+24 hours (`/my-data#<token>`; hardening: the token is the fragment and the page
+POSTs it in a header, 03 § As built (hardening: tokens out of URLs)).
 
 ## Privacy invariants (tested in `tests/test_advisor_privacy.mjs`)
 
@@ -517,3 +525,28 @@ before deleting the contact (the send needs the number).
   (`\+1555\d{7}` and `+1\d{3}555\d{4}`), and any Instagram handle not in
   `catalog/advisor/fixture-handles.json`. No bare 10-digit rule (it would hit
   repository ids and timestamps).
+  As built (TA-C5, `scripts/check_repository.py`, `tests/unit/test_check_repository.py`):
+  the scan also covers `docs/operations/runbooks/advisor-*.md`. The NPA form is
+  narrowed to the North American Numbering Plan's fictional lines,
+  `\+1\d{3}55501\d{2}` (555-0100 to 555-0199; other 555 lines can be real), and
+  `tests/test_advisor_privacy.mjs` uses the same rule. A handle is a mention (`@` and
+  a name) that is not part of an email address, a path or an npm scope (one-character
+  mentions such as `@x` are ignored), or the value of a handle field
+  (`instagram`, `username`, `handle`, `ig_handle`, `ig_username`,
+  `collaborators`) in a fixture's JSON, compared in lower case. The list has
+  three groups: `own` (`skippercast`), `fictional` (each must contain `example`
+  or `placeholder`; the check refuses anything else) and `placeholders` (words
+  the plan uses, `@handle`). The fixtures' earlier handles (`ritag`,
+  `ritag_sportfishing`, `lucero.psl`) could be real accounts, so they became
+  `ritag.example` and `lucero.example`. A failure prints the file, line and
+  rule, never the number or the handle.
+  As built (hardening, threat model § 9.10): the tests no longer use real
+  Central Coast boat names, slugs or handles at all. The boats and handles in
+  `tests/` (and the feed fixture's landing-report boats) are now fictional
+  ("Sea Example", `sea-example`, `seaexample`, `sea.example`, "Example Two",
+  "Test Boat", "Gray Example", "Example Star", …; the landing "Gull's"), with
+  every assertion kept. The handle rule (not the phone rule) now also covers
+  `tests/test_advisor_*.mjs`: a mention (`@` and a name), or a quoted value of a handle field
+  (`instagram: '…'`, `username: "…"`, `collaborators: ['…']`), must be in the
+  list, which gained the tests' fictional handles and the JSON-LD keyword
+  `type` as a placeholder (`advisor_test_handles`, with unit tests).

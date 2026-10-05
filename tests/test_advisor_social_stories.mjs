@@ -63,19 +63,22 @@ function setup(env = META) {
   return {sql, db, env: {TEXT_ADVISOR_ENABLED: 'true', DB: db, ADVISOR_MEDIA: memoryBucket(), ADVISOR_NUMBER: '+18055550100', ...env}};
 }
 function boat(sql, id, name, {status = 'verified', consent = iso(NOW - 30 * DAY), revoked = null, region = 'morro-bay'} = {}) {
-  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,consent_revoked_at,created_at,updated_at) VALUES(?,?,?,'morro-bay',?,'ritag','c1',?,?,?,?,?)`)
+  sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,instagram,owner_contact_id,status,consent_photos_at,consent_revoked_at,created_at,updated_at) VALUES(?,?,?,'morro-bay',?,'seaexample','c1',?,?,?,?,?)`)
     .run(id, id, name, region, status, consent, revoked, iso(NOW - 60 * DAY), iso(NOW - 60 * DAY));
 }
-function board(sql, id, boatId, {at = YESTERDAY, state = 'queued', hasPerson = 0, classification = BOARD} = {}) {
-  sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,classification_json,has_person,publish_state,derived_at,created_at)
-    VALUES(?,'c1',?,'image','image/jpeg',1000,?,'sha',1,?,?,?,?,?)`).run(id, boatId, `advisor/media/c1/${id}.jpg`, classification, hasPerson, state, iso(at), iso(at));
+/** A count-board photo and (hardening) the inbound message it came in: `via` is its channel, 'upload' the upload link. */
+function board(sql, id, boatId, {at = YESTERDAY, state = 'queued', hasPerson = 0, classification = BOARD, contact = 'c1', via = 'imessage'} = {}) {
+  sql.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,provider_id,body,media_json,status,created_at) VALUES(?,?,'in',?,?,'',?,'done',?)`)
+    .run(`msg-${id}`, contact, via === 'upload' ? 'sms' : via, via === 'upload' ? `upload:${id}` : `p-${id}`, JSON.stringify([id]), iso(at));
+  sql.prepare(`INSERT INTO advisor_media(id,contact_id,message_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,classification_json,has_person,publish_state,derived_at,created_at)
+    VALUES(?,?,?,?,'image','image/jpeg',1000,?,'sha',1,?,?,?,?,?)`).run(id, contact, `msg-${id}`, boatId, `advisor/media/${contact}/${id}.jpg`, classification, hasPerson, state, iso(at), iso(at));
 }
 const post = (sql, id) => sql.prepare('SELECT * FROM advisor_posts WHERE id=?').get(id);
 const media = (sql, id) => sql.prepare('SELECT * FROM advisor_media WHERE id=?').get(id);
 
 dbTest('each verified, consenting boat\'s count board from yesterday becomes an approved Story with no admin decision, at the 07:00 slot; its review is closed as auto', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G'); boat(s.sql, 'b2', 'Patriot'); boat(s.sql, 'b3', 'Pending', {status: 'pending'}); boat(s.sql, 'b4', 'Revoked', {revoked: iso(NOW - DAY)});
+  boat(s.sql, 'b1', 'Sea Example'); boat(s.sql, 'b2', 'Test Boat'); boat(s.sql, 'b3', 'Pending', {status: 'pending'}); boat(s.sql, 'b4', 'Revoked', {revoked: iso(NOW - DAY)});
   board(s.sql, 'm-old', 'b1', {at: YESTERDAY - 3 * HOUR}); board(s.sql, 'm1', 'b1');          // the boat's latest board wins
   board(s.sql, 'm2', 'b2', {state: 'approved'});
   board(s.sql, 'm3', 'b3'); board(s.sql, 'm4', 'b4');                                        // never: unverified, consent revoked
@@ -99,9 +102,37 @@ dbTest('each verified, consenting boat\'s count board from yesterday becomes an 
   assert.deepEqual(again.value.map(o => o.status), ['exists', 'exists', 'exists']);
 });
 
+dbTest('hardening: only the owner or accepted crew over iMessage or the upload link skip the admin; an SMS board (spoofable) or anyone else\'s waits in the review queue', async () => {
+  const s = setup();
+  for (const [id, channel] of [['c2', 'sms'], ['c3', 'imessage'], ['c4', 'imessage']])
+    s.sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,role,language,status,last_seen_at,created_at,updated_at) VALUES(?,?,?,?,'crew','en','active',?,?,?)`).run(id, `h-${id}`, `ENC-${id}`, channel, iso(NOW), iso(NOW), iso(NOW));
+  boat(s.sql, 'b1', 'Sea Example'); boat(s.sql, 'b2', 'Test Boat'); boat(s.sql, 'b3', 'Example Two'); boat(s.sql, 'b4', 'Example Three'); boat(s.sql, 'b5', 'Example Four');
+  // c3 is accepted crew on b3; c4 was crew on b4 and was removed.
+  s.sql.prepare(`INSERT INTO advisor_crew(boat_id,contact_id,added_by,added_at,removed_at) VALUES('b3','c3','c1',?,NULL),('b4','c4','c1',?,?)`).run(iso(NOW - 9 * DAY), iso(NOW - 9 * DAY), iso(NOW - 2 * DAY));
+  board(s.sql, 'sms-owner', 'b1', {via: 'sms'});                    // the owner's number over SMS: could be spoofed
+  board(s.sql, 'upload-owner', 'b2', {via: 'upload'});              // the owner through the upload link (token texted to the real number)
+  board(s.sql, 'crew-imsg', 'b3', {contact: 'c3'});                 // accepted crew over iMessage
+  board(s.sql, 'ex-crew', 'b4', {contact: 'c4'});                   // no longer crew
+  board(s.sql, 'sms-crew', 'b5', {contact: 'c2', via: 'sms'});      // not crew of b5, and SMS
+  const {value} = await quiet(() => ST.morningStories(s.env, NOW, {feeds: feeds({fail: true})}));
+  const status = {};
+  for (const m of ['sms-owner', 'upload-owner', 'crew-imsg', 'ex-crew', 'sms-crew']) {
+    const id = await postIdForMedia(m), outcome = value.find(o => o.postId === id);
+    status[m] = [outcome?.status, post(s.sql, id)?.status, media(s.sql, m).publish_state];
+    if (outcome?.status === 'held') {
+      assert.equal(outcome.reason, ST.UNTRUSTED_SENDER, m);
+      assert.equal(s.sql.prepare("SELECT status FROM advisor_reviews WHERE kind='post' AND ref_id=?").get(id)?.status, 'open', `${m}: in the review queue`);
+    }
+  }
+  assert.deepEqual(status, {
+    'sms-owner': ['held', 'draft', 'queued'], 'upload-owner': ['approved', 'approved', 'approved'], 'crew-imsg': ['approved', 'approved', 'approved'],
+    'ex-crew': ['held', 'draft', 'queued'], 'sms-crew': ['held', 'draft', 'queued'],
+  });
+});
+
 dbTest('a has_person count board waits for its photo review; once approved it goes; an open review holds it as a draft', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G'); boat(s.sql, 'b2', 'Patriot');
+  boat(s.sql, 'b1', 'Sea Example'); boat(s.sql, 'b2', 'Test Boat');
   board(s.sql, 'p1', 'b1', {hasPerson: 1});
   board(s.sql, 'p2', 'b2', {hasPerson: 1, state: 'approved'});
   s.sql.prepare("INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','media','p1','has_person','open',?)").run(iso(NOW - HOUR));
@@ -139,7 +170,7 @@ dbTest('the conditions card: an approved Story with no photo and its story graph
 dbTest('nothing while social publishing is off or Meta is not configured', async () => {
   for (const env of [{}, {ADVISOR_SOCIAL_ENABLED: 'true'}, {...META, ADVISOR_SOCIAL_ENABLED: 'false'}]) {
     const s = setup(env);
-    boat(s.sql, 'b1', 'Rita G'); board(s.sql, 'm1', 'b1');
+    boat(s.sql, 'b1', 'Sea Example'); board(s.sql, 'm1', 'b1');
     assert.deepEqual(await ST.morningStories(s.env, NOW, {feeds: feeds()}), []);
     assert.equal(s.sql.prepare('SELECT COUNT(*) AS n FROM advisor_posts').get().n, 0);
   }
@@ -168,7 +199,7 @@ function graphFake() {
 
 dbTest('the cron makes them at 07:00 and the next ticks publish them through the publisher: the count board\'s story.jpg, the card once rendered', async () => {
   const s = setup();
-  boat(s.sql, 'b1', 'Rita G'); board(s.sql, 'm1', 'b1');
+  boat(s.sql, 'b1', 'Sea Example'); board(s.sql, 'm1', 'b1');
   const fake = graphFake();
   const slots = SLOTS.filter(x => x.name === 'morning-stories');
   const deps = {slots, daily: {feeds: feeds()}, consumer: {channelFor: () => ({name: 'test', send: async () => ({providerId: 'x', status: 'sent'})})},

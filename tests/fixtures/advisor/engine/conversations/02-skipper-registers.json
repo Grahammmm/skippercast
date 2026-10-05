@@ -3,7 +3,7 @@
   "description": "Golden 2 (TA-I1 part): a new skipper says they run a boat; the model calls register_boat with the name and port it heard; the flow asks landing, Instagram and booking one text at a time (booking skipped), creates the pending boat with the new_skipper review, sends the completion text and the consent question; YES records consent with the message id; the next model turn's brief shows the boat, its status and consent. TA-I2: a media-only count-board photo is classified and read (vision fixtures), drafted and confirmed in the 05 shape, the board photo queued (consent given); Y publishes (verified frozen at 0 for the pending boat, clean_reports 1, pages version); 'lings were 14' corrects the published report; a catch photo with a person in it is queued, tagged and held for a has_person review.",
   "turns": [
     {
-      "in": "Hi, I run the Rita G out of Morro Bay. Can I send you my reports?",
+      "in": "Hi, I run the Sea Example out of Morro Bay. Can I send you my reports?",
       "model": [
         {
           "status": 200,
@@ -14,7 +14,7 @@
                 "id": "toolu_r1",
                 "name": "register_boat",
                 "input": {
-                  "name": "Rita G",
+                  "name": "Sea Example",
                   "port": "morro-bay"
                 }
               }
@@ -32,7 +32,7 @@
             "content": [
               {
                 "type": "text",
-                "text": "Glad to have the Rita G. A couple of quick questions for your boat page."
+                "text": "Glad to have the Sea Example. A couple of quick questions for your boat page."
               }
             ],
             "stop_reason": "end_turn",
@@ -46,7 +46,7 @@
       "expect": {
         "intent": "skipper.register",
         "reply_contains": [
-          "Glad to have the Rita G",
+          "Glad to have the Sea Example",
           "Which landing? (skip if none)"
         ],
         "actions": [
@@ -83,7 +83,7 @@
       }
     },
     {
-      "in": "@RitaG_Sportfishing",
+      "in": "@Sea.Example",
       "expect": {
         "intent": "skipper.register.instagram",
         "reply_contains": [
@@ -96,8 +96,8 @@
       "expect": {
         "intent": "skipper.register.done",
         "reply_contains": [
-          "Got it. Rita G is set up. Your reports will show on skippercast.com/boats/rita-g once the team confirms the boat, usually same day. Text me a photo of today's count board whenever you're in.",
-          "One more thing: OK for SkipperCast to post your photos and videos on our Instagram and Facebook, always credited and tagged to Rita G? Reply YES."
+          "Got it. Sea Example is set up. Your reports will show on skippercast.com/boats/sea-example once the team confirms the boat, usually same day. Text me a photo of today's count board whenever you're in.",
+          "One more thing: OK for SkipperCast to post your photos and videos on our Instagram and Facebook, always credited and tagged to Sea Example? Reply YES."
         ],
         "actions": [
           "boat_create",
@@ -110,12 +110,12 @@
           {
             "sql": "SELECT slug,name,landing,port,region,instagram,booking_url,phone_public,status,owner_contact_id,consent_photos_at FROM advisor_boats",
             "row": {
-              "slug": "rita-g",
-              "name": "Rita G",
+              "slug": "sea-example",
+              "name": "Sea Example",
               "landing": "Morro Bay Landing",
               "port": "morro-bay",
               "region": "morro-bay",
-              "instagram": "ritag_sportfishing",
+              "instagram": "sea.example",
               "booking_url": null,
               "phone_public": null,
               "status": "pending",
@@ -154,7 +154,7 @@
       "expect": {
         "intent": "consent.yes",
         "reply_contains": [
-          "Thanks. Your photos can go on the SkipperCast feed, tagged to Rita G."
+          "Thanks. Your photos can go on the SkipperCast feed, tagged to Sea Example."
         ],
         "actions": [
           "consent",
@@ -202,7 +202,7 @@
         "intent": "chat",
         "brief_contains": [
           "- role: skipper",
-          "- boat: Rita G (they own it); status: pending",
+          "- boat: Sea Example (they own it); status: pending",
           "- photo consent for social posts: given"
         ]
       }
@@ -225,7 +225,7 @@
       "expect": {
         "intent": "report.count_board",
         "reply_contains": [
-          "Rita G, Sat Oct 3, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix."
+          "Sea Example, Sat Oct 3, 22 anglers:\n45 vermilion, 12 lingcod (2 released), 8 copper, 3 cabezon\nReply Y to post, or tell me what to fix."
         ],
         "actions": [
           "report_draft",
@@ -248,7 +248,7 @@
             "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m-board'",
             "row": {
               "publish_state": "queued",
-              "credit": "Rita G"
+              "credit": "Sea Example"
             }
           }
         ]
@@ -259,7 +259,7 @@
       "expect": {
         "intent": "report.confirm",
         "reply_contains": [
-          "Posted. https://skippercast.com/boats/rita-g?s=txt"
+          "Posted. https://skippercast.com/boats/sea-example?s=txt"
         ],
         "actions": [
           "report_publish",
@@ -349,7 +349,7 @@
       "expect": {
         "intent": "media.photo",
         "reply_contains": [
-          "Nice. That's queued for the SkipperCast feed, tagged @ritag_sportfishing. Count board too?"
+          "Nice. That's queued for the SkipperCast feed, tagged @sea.example. Count board too?"
         ],
         "actions": [
           "media_queue",
@@ -362,7 +362,7 @@
             "sql": "SELECT publish_state,credit FROM advisor_media WHERE id='m-catch'",
             "row": {
               "publish_state": "queued",
-              "credit": "Rita G"
+              "credit": "Sea Example"
             }
           },
           {

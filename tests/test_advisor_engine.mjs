@@ -22,6 +22,7 @@ globalThis.BUILD_ID = 'build-test';
 const engine = await import('../server/advisor/engine.ts');
 const {runTurn, engineHandler, rulesGuard, statesRuleNumber, stripMarkdown, capReply, buildMessages, STAGE_TWO_FLOWS, MAX_TOOL_ROUNDS, MAX_TOKENS, TEMPERATURE} = engine;
 const {detectLanguage, chooseLanguage, parseCommand, COMMANDS} = await import('../server/advisor/intents.ts');
+const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {consumeAdvisor, runInline, notifyAdmin, ADVISOR_QUEUE_NAME} = await import('../server/advisor/consumer.ts');
 const {t} = await import('../server/advisor/strings.ts');
 const {deriveKeys, phoneHash, encryptPhone, reviewId} = await import('../server/advisor/contacts.ts');
@@ -137,6 +138,50 @@ dbTest('stage 3 caps: per-contact LLM cap answers once; the global cap answers "
   assert.equal(counter.count, 1, 'the request_limits UPSERT counted the attempt');
 });
 
+// Hardening (threat model § 9.3): the web chat's own budget.
+const okTurn = () => ({status: 200, body: {content: [{type: 'text', text: 'Lingcod are on the reefs.'}], stop_reason: 'end_turn', usage: {input_tokens: 1, output_tokens: 1}}});
+let webSeq = 0;
+/** A brand-new web visitor (a fresh cookie, so a fresh contact) and its first message. */
+function webVisitor(sql) {
+  const id = `web${++webSeq}`;
+  sql.prepare(`INSERT INTO advisor_contacts(id,web_session,channel,role,language,status,last_seen_at,created_at,updated_at) VALUES(?,?,'web','angler','en','active',?,?,?)`).run(id, `s${id}`.padEnd(64, '0'), iso(T0), iso(T0), iso(T0));
+  return {contact: contactRow(sql, id), message: inbound(sql, 'any lingcod around the rock?', {contact: id})};
+}
+const webTurn = (env, sql, api, ipHash) => { const v = webVisitor(sql); return quiet(() => runTurn({env, ...v, now: T0, ipHash, deps: {sleep: async () => {}, clock: () => T0, feeds: fixtureFeeds(), fetcher: api.fetcher}})).then(r => r.value); };
+
+dbTest('web budget: fresh cookies from one address stop at ADVISOR_DAILY_LLM_PER_IP model turns; another address is unaffected', async () => {
+  const api = fakeApi(Array.from({length: 3}, okTurn));
+  const {sql, env} = setup({env: {ANTHROPIC_API_KEY: 'k', ADVISOR_DAILY_LLM_PER_IP: '2'}});
+  const intents = [];
+  for (let i = 0; i < 4; i++) intents.push((await webTurn(env, sql, api, 'ip-one')).intent);
+  assert.deepEqual(intents, ['chat', 'chat', 'capped', 'capped'], 'a new cookie does not reset the cap');
+  assert.equal(api.requests.length, 2, 'no model call past the cap');
+  assert.equal((await webTurn(env, sql, api, 'ip-two')).intent, 'chat');
+  assert.equal(advisorSettings({}).dailyLlmPerIp, 30);
+});
+
+dbTest('web budget: the daily message cap also holds per address on the web', async () => {
+  const {sql, env} = setup({env: {ADVISOR_DAILY_MESSAGES_PER_CONTACT: '2'}});
+  const intents = [];
+  for (let i = 0; i < 4; i++) { const r = await webTurn(env, sql, fakeApi([]), 'ip-msgs'); intents.push([r.intent, texts(r).length]); }
+  assert.deepEqual(intents, [['unconfigured', 1], ['unconfigured', 1], ['capped', 1], ['capped', 0]], 'one "limit" line, then silence');
+});
+
+dbTest('web budget: ADVISOR_GLOBAL_DAILY_LLM_WEB stops web turns while texts keep their share of the global cap', async () => {
+  const api = fakeApi(Array.from({length: 4}, okTurn));
+  const {sql, env} = setup({env: {ANTHROPIC_API_KEY: 'k', ADVISOR_GLOBAL_DAILY_LLM_WEB: '2', ADVISOR_GLOBAL_DAILY_LLM: '4'}});
+  seen(sql);
+  const web = [];
+  for (let i = 0; i < 4; i++) web.push((await webTurn(env, sql, api, `ip-${i}`)).intent);
+  assert.deepEqual(web, ['chat', 'chat', 'global_cap', 'global_cap'], 'the web share runs out, from any address');
+  // The text channel still has ADVISOR_GLOBAL_DAILY_LLM minus the web share.
+  const text = [];
+  for (let i = 0; i < 3; i++) text.push((await quiet(() => run(env, contactRow(sql), inbound(sql, `any lingcod near the rock ${i}?`), {fetcher: api.fetcher}))).value.intent);
+  assert.deepEqual(text, ['chat', 'chat', 'global_cap']);
+  assert.equal(api.requests.length, 4);
+  assert.equal(advisorSettings({}).globalDailyLlmWeb, 400);
+});
+
 // ---- stage 1 ----------------------------------------------------------------------------
 
 test('commands table: every 04 word in en and es, exact match after trim and lower-case', () => {
@@ -239,7 +284,7 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
   assert.equal(card.type, 'send_file', 'iMessage gets the contact card as a file');
   assert.equal(card.name, 'SkipperCast.vcf'); assert.equal(card.fallbackUrl, 'https://skippercast.com/contact.vcf');
   assert.match(Buffer.from(card.inlineBytes, 'base64').toString(), /^BEGIN:VCARD\r\n/);
-  assert.match(link.text, /^Send full-size photos or videos here, good for 24 hours: https:\/\/skippercast\.com\/u\/[\w-]+$/);
+  assert.match(link.text, /^Send full-size photos or videos here, good for 24 hours: https:\/\/skippercast\.com\/u#[\w-]+$/);
   const media = await run(env, contactRow(sql), inbound(sql, null, {media: ['m1']}));
   assert.deepEqual(media, {actions: [{type: 'send_text', text: t('en', 'media_ack')}], intent: 'media'}, 'only the acknowledgement; the welcome went once');
   const sms = setup({contact: {channel: 'sms'}});
@@ -250,8 +295,8 @@ dbTest('stage 2: the upload link, media-only messages, and the welcome for a new
 dbTest('stage 2 extension point: a registered flow runs before the model', async t2 => {
   const {sql, env} = setup();
   seen(sql);
-  // TA-I1's skipper flow, TA-I2's report flow, TA-I3's angler flow and TA-A1's daily pre-router are registered at import; the test flow goes after them and only it is removed.
-  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['skipper', 'reports', 'anglers', 'daily']);
+  // the crew invitation answer (hardening), TA-I1's skipper flow, TA-I2's report flow, TA-I3's angler flow and TA-A1's daily pre-router are registered at import; the test flow goes after them and only it is removed.
+  assert.deepEqual(STAGE_TWO_FLOWS.map(f => f.name), ['crew-invite', 'skipper', 'reports', 'anglers', 'daily']);
   STAGE_TWO_FLOWS.push({name: 'test', run: async f => f.text === 'y' ? {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'} : null});
   t2.after(() => { STAGE_TWO_FLOWS.splice(STAGE_TWO_FLOWS.findIndex(f => f.name === 'test'), 1); });
   assert.deepEqual(await run(env, contactRow(sql), inbound(sql, 'y')), {actions: [{type: 'send_text', text: 'published'}], intent: 'report.confirm'});
@@ -520,20 +565,33 @@ dbTest('consumer: export writes the JSON to R2 and texts a signed 24 h link that
   const data = JSON.parse(new TextDecoder().decode(bucket.objects.get(key).bytes));
   assert.equal(data.contact.id, 'c1'); assert.ok(!JSON.stringify(data).includes('ENC'), 'phone_enc never exported');
   const [text] = ch.sent.map(x => x.text);
-  const url = /https:\/\/skippercast\.com(\/api\/advisor\/export\/[\w-]+)$/.exec(text);
+  // Hardening: the token is the fragment of /my-data, never a path segment.
+  const url = /https:\/\/skippercast\.com\/my-data#([\w-]+)$/.exec(text);
   assert.ok(url, text);
+  assert.ok(!text.includes('/api/advisor/export/'), 'no token in a path');
   const keys = await deriveKeys(KEY);
-  const token = url[1].split('/').pop();
+  const token = url[1];
   assert.deepEqual(await verifyExportToken(keys, token, T0), {contactId: 'c1', key});
   assert.equal(await verifyExportToken(keys, token, T0 + 24 * 3600000 + 1000), null, 'expires after 24 h');
   assert.equal(await verifyExportToken(keys, token.slice(0, -2) + (token.endsWith('A') ? 'BB' : 'AA'), T0), null, 'tampered');
   // The route (now-relative expiry, so mint a fresh token).
   const fresh = await mintExportToken(keys, 'c1', key);
-  const response = await worker.fetch(new Request(`https://skippercast.com/api/advisor/export/${fresh}`), {ASSETS: {fetch: async () => new Response('', {status: 404})}, ...env});
+  const assets = {ASSETS: {fetch: async () => new Response('', {status: 404})}, ...env};
+  const post = token => worker.fetch(new Request('https://skippercast.com/api/advisor/export', {method: 'POST', headers: {'X-Export-Token': token}}), assets);
+  const response = await post(fresh);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal(response.headers.get('Content-Disposition'), 'attachment; filename="skippercast-data.json"');
   assert.equal((await response.json()).contact.id, 'c1');
-  const bad = await worker.fetch(new Request('https://skippercast.com/api/advisor/export/nope'), {ASSETS: {fetch: async () => new Response('', {status: 404})}, ...env});
+  assert.equal((await post('nope')).status, 404);
+  assert.equal((await post('')).status, 404);
+  // Links already sent in the old form: 410 for a genuine token (until 7 days past its expiry), never the data; anything else 404.
+  const old = await worker.fetch(new Request(`https://skippercast.com/api/advisor/export/${fresh}`), assets);
+  assert.equal(old.status, 410);
+  assert.match((await old.json()).error, /replaced/);
+  const stale = await mintExportToken(keys, 'c1', key, Date.now() - 9 * 24 * 3600000);
+  assert.equal((await worker.fetch(new Request(`https://skippercast.com/api/advisor/export/${stale}`), assets)).status, 404, 'past the 7 days');
+  const bad = await worker.fetch(new Request('https://skippercast.com/api/advisor/export/nope'), assets);
   assert.equal(bad.status, 404);
   assert.throws(() => exportKey('c1', 'yesterday'));
   await assert.rejects(mintExportToken(keys, 'c2', key), /invalid export/, 'a key of another contact');

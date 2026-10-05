@@ -102,10 +102,12 @@ function seed() {
   run("INSERT INTO advisor_post_stats(post_id,platform,day,raw_json,fetched_at) VALUES('p-posted','instagram',?,'{}',?)", ago(RETENTION_DAYS.stats + 1).slice(0, 10), ago(RETENTION_DAYS.stats + 1));
   run("INSERT INTO advisor_post_stats(post_id,platform,day,raw_json,fetched_at) VALUES('p-posted','facebook',?,'{}',?)", ago(RETENTION_DAYS.stats - 1).slice(0, 10), ago(RETENTION_DAYS.stats - 1));
 
-  // job_state: 30 days for flows, link codes and share offers; once-markers and graphics by their rules.
+  // job_state: 30 days for flows, link codes, share offers and crew invitations; once-markers and graphics by their rules.
   const old = ago(RETENTION_DAYS.jobState, MIN), recent = ago(1);
   state('advisor.flow.angler', old); state('advisor.flow.skipper', recent);
   state('advisor.link.web-new', old); state('advisor.share.angler', old); state('advisor.share.skipper', recent);
+  // Hardening: crew invitations (72 h) and declines (30 days of silence) age out with the rest.
+  state('advisor.crewinvite.angler', old); state('advisor.crewdecline.boat-1.angler', old); state('advisor.crewdecline.boat-1.skipper', recent);
   state('advisor.once.noconsent.boat-1', old);
   state('advisor.once.instagram.boat-1', old); state('advisor.once.autopub.boat-gone', old);
   state('advisor.once.homeport.angler', old); state('advisor.once.homeport.contact-gone', old);
@@ -182,7 +184,7 @@ dbTest('every rule in 02 § Retention and deletion, on both sides of its boundar
 
   // job_state: the advisor's expired keys.
   const keys = sql.prepare("SELECT key FROM job_state WHERE key NOT LIKE 'advisor.caption.%' ORDER BY key").all().map(r => r.key);
-  assert.deepEqual(keys, ['advisor.flow.skipper', 'advisor.graphic.p-gone-recent', 'advisor.graphic.p-graphic-posted', 'advisor.once.homeport.angler',
+  assert.deepEqual(keys, ['advisor.crewdecline.boat-1.skipper', 'advisor.flow.skipper', 'advisor.graphic.p-gone-recent', 'advisor.graphic.p-graphic-posted', 'advisor.once.homeport.angler',
     'advisor.once.instagram.boat-1', 'advisor.relay', 'advisor.share.skipper', 'advisor.slot.daily-answers']);
   assert.ok(!r2.objects.has('advisor/posts/p-graphic-rejected/daily.jpg') && !r2.objects.has('advisor/posts/p-gone/daily.jpg'), 'graphic files of a rejected or deleted post go');
   assert.ok(r2.objects.has('advisor/posts/p-graphic-posted/daily.jpg'), 'a posted post keeps its graphic');

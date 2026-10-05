@@ -756,6 +756,25 @@ any other media.
 - **Profile.** § Instagram profile below: the bio, the highlight covers and the
   three highlight scripts as copy the owner pastes (TA-O4).
 
+### As built (hardening: spoofed senders)
+
+The threat model (§ 9.1, § 9.8) found that a count-board photo from a verified
+boat's number became the next morning's Story without an admin decision, and
+over SMS the sender id can be spoofed: anyone who knows a skipper's number
+could put a picture on SkipperCast's Instagram and Facebook Stories. The
+morning Stories now auto-approve a count board only when the photo came from
+the boat's owner or an accepted crew member (an active `advisor_crew` row; since
+05 § As built (crew consent) that means one who replied YES) **and** arrived
+over iMessage (tied to an Apple Account) or through the upload link (its token
+was texted to the real number, and a spoofer never sees the reply). The check
+is `TRUSTED_SENDER_SQL` in `server/advisor/social/stories.ts`, on the photo's
+inbound message (`advisor_media.message_id`: `channel='imessage'` or
+`provider_id` `upload:<media id>`). Any other count board (SMS from the owner's
+number, a former or never-accepted crew member, no message on record) is held:
+its Story stays a draft with its open `post` review in the admin queue, and the
+outcome's reason says why. The boat must still be `verified` with photo consent,
+and `approvalHold` still applies. Tests: `tests/test_advisor_social_stories.mjs`.
+
 ## Instagram profile (SP-1; TA-S5)
 
 Copy for the owner to paste when setting up the account (§ Setup step 1). It

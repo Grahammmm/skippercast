@@ -19,6 +19,17 @@ export const UPLOAD_COPY = {
   noFile: 'Choose a file first.',
 } as const;
 
+/** The "send me my data" page, dist/my-data.html + dist/advisor/my-data.js, served at /my-data#<token> (hardening). */
+export const EXPORT_COPY = {
+  heading: 'Your SkipperCast data',
+  intro: 'Download everything SkipperCast keeps about your number, as one JSON file. This link works for 24 hours.',
+  download: 'Download my data',
+  working: 'Preparing the file…',
+  done: 'Downloaded. Check your downloads folder for skippercast-data.json.',
+  expired: 'This link has expired. Text SEND ME MY DATA to SkipperCast for a new one.',
+  failed: 'The download did not finish. Check your signal and try again.',
+} as const;
+
 /** Largest file the upload page accepts, in bytes (the server checks it again). */
 export const UPLOAD_MAX_BYTES = 300 * 1024 * 1024;
 
@@ -560,7 +571,7 @@ const PAGES_EN: PageCopy = {
   boatDescription: (boat, port) => `Fish counts and photos from ${boat} out of ${port}, as the boat reports them to SkipperCast.`,
   verified: 'Verified boat',
   unverified: 'Not verified yet',
-  unverifiedNote: 'The SkipperCast team has yet to confirm this boat. Its reports show here meanwhile.',
+  unverifiedNote: "This boat hasn't been confirmed yet. Its reports, photos and booking details show here once the SkipperCast team confirms it.",
   landing: (landing, port) => `${landing}, ${port}`,
   boatReportsHeading: 'Reports, last 30 days',
   boatReportsNone: 'No reports in the last 30 days.',
@@ -675,7 +686,7 @@ const PAGES_ES: PageCopy = {
   boatDescription: (boat, port) => `Conteos y fotos de ${boat}, de ${port}, tal como el barco los reporta a SkipperCast.`,
   verified: 'Barco verificado',
   unverified: 'Aún sin verificar',
-  unverifiedNote: 'El equipo de SkipperCast aún no confirma este barco. Mientras tanto, sus reportes aparecen aquí.',
+  unverifiedNote: 'Este barco aún no ha sido confirmado. Sus reportes, fotos y datos de reserva aparecen aquí cuando el equipo de SkipperCast lo confirme.',
   landing: (landing, port) => `${landing}, ${port}`,
   boatReportsHeading: 'Reportes, últimos 30 días',
   boatReportsNone: 'Sin reportes en los últimos 30 días.',

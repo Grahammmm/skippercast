@@ -56,7 +56,7 @@
           "content": [
             {
               "type": "text",
-              "text": "Rockfish have been around: the landing had Starfire with rockfish last Sun; recent reported activity: Low. Keep an eye on the afternoon wind. Check the latest NWS forecast before you go."
+              "text": "Rockfish have been around: the landing had Example Star with rockfish last Sun; recent reported activity: Low. Keep an eye on the afternoon wind. Check the latest NWS forecast before you go."
             }
           ],
           "stop_reason": "end_turn",

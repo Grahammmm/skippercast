@@ -57,7 +57,7 @@ function setup({contact = {}, rules = ['vermilion', 'canary', 'yelloweye', 'ling
   sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,role,language,boat_id,home_port,status,last_seen_at,created_at,updated_at) VALUES(?,'h1','ENC','imessage',?,?,?,?,'active',?,?,?)`)
     .run(c.id, c.role, c.language, c.boat_id, c.home_port, iso(T0), iso(T0), iso(T0));
   sql.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,status,created_at) VALUES('seen','c1','in','imessage','earlier','done',?)`).run(iso(T0 - 30 * 24 * HOUR));
-  if (boat) sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,consent_photos_at,created_at,updated_at) VALUES('b1','rita-g','Rita G','morro-bay','morro-bay','c1','pending',?,?,?)`)
+  if (boat) sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,consent_photos_at,created_at,updated_at) VALUES('b1','sea-example','Sea Example','morro-bay','morro-bay','c1','pending',?,?,?)`)
     .run(boat.consent ?? null, iso(T0 - 30 * 24 * HOUR), iso(T0 - 30 * 24 * HOUR));
   for (const k of rules) addRule(sql, k);
   const bucket = memoryBucket();
@@ -284,7 +284,7 @@ dbTest('a skipper\'s fish photo still goes through TA-I2 intake (queued to the b
   assert.deepEqual(r.calls, ['record_classification', 'record_caption_line'], 'TA-S1: the queued photo\'s post draft asks for its caption line; no fish ID');
   assert.equal(sql.prepare("SELECT COUNT(*) n FROM advisor_posts WHERE boat_id='b1' AND status='draft'").get().n, 1);
   assert.ok(!r.texts.some(x => /That's a|Reply YES/.test(x)));
-  assert.deepEqual(media(sql, 'm1'), {publish_state: 'queued', credit: 'Rita G'});
+  assert.deepEqual(media(sql, 'm1'), {publish_state: 'queued', credit: 'Sea Example'});
   // A skipper without a boat (or crew whose link ended) gets the plain acknowledgement, not the angler path.
   const lone = setup({contact: {role: 'skipper'}});
   addMedia(lone.sql, lone.bucket, 'm1');
@@ -348,5 +348,5 @@ dbTest('vision unavailable or too large: a plain line or the upload link, never 
   big.sql.prepare(`INSERT INTO advisor_media(id,contact_id,kind,mime,bytes,r2_key,sha256,publish_state,created_at) VALUES('m9','c1','image','image/png',?, 'advisor/media/c1/m9.png','x','private',?)`).run(5 * 1024 * 1024, iso(T0));
   const r = await say(big.env, big.sql, null, {media: ['m9']});
   assert.equal(r.intent, 'media.upload_link');
-  assert.match(r.texts[0], /^That photo is too big for me to read by text\. Send it through this link, good for 24 hours: https:\/\/skippercast\.com\/u\//);
+  assert.match(r.texts[0], /^That photo is too big for me to read by text\. Send it through this link, good for 24 hours: https:\/\/skippercast\.com\/u#[\w-]{20,}$/);
 });

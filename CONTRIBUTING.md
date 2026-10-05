@@ -35,4 +35,6 @@ When changing atlas data, document the source, date, rights, datum, method, excl
 
 Do not commit credentials, account/chat identifiers, private messages, delivery records, personal trip logs, large downloaded surveys, or third-party content with unresolved reuse terms. `.gitignore` is a convenience, not a guarantee; inspect the staged diff before publishing.
 
+Text Advisor transcripts, photos, videos, contact data (phone numbers, Instagram ids and handles) and data exports are private records: they never enter the repository, not even as a test fixture. Fixtures are synthetic, with numbers from the fictional 555 series and handles listed in `catalog/advisor/fixture-handles.json`; `scripts/check_repository.py` enforces both ([02 § Privacy invariants](docs/plans/text-advisor/02-data-model.md#privacy-invariants-tested-in-teststest_advisor_privacymjs)).
+
 Use an issue to describe a concrete bug or proposed change. Include a minimal synthetic reproduction for bugs. Pull requests should explain the resulting behavior, evidence, and relevant tests. Record material changes in [CHANGELOG.md](CHANGELOG.md).

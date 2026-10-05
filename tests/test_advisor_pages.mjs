@@ -69,18 +69,18 @@ function seed() {
   const {sql, db} = advisorDatabase();
   const at = iso(NOW - 86400000);
   const boat = (id, slug, name, status, extra = {}) => sql.prepare(`INSERT INTO advisor_boats(id,slug,name,landing,port,region,instagram,booking_url,phone_public,status,verified_at,created_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, slug, name, extra.landing ?? 'Virg\'s Landing', extra.port ?? 'morro-bay', 'morro-bay', extra.instagram ?? null,
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, slug, name, extra.landing ?? 'Gull\'s Landing', extra.port ?? 'morro-bay', 'morro-bay', extra.instagram ?? null,
     extra.booking ?? null, extra.phone ?? null, status, status === 'verified' ? at : null, at, at);
-  boat('b-rita', 'rita-g', 'Rita G', 'verified', {instagram: 'ritag_sportfishing', booking: 'https://example.com/book', phone: '+18055550188'});
+  boat('b-sea', 'sea-example', 'Sea Example', 'verified', {instagram: 'seaexample_fishing', booking: 'https://example.com/book', phone: '+18055550188'});
   boat('b-evil', 'script-boat', EVIL, 'verified');
-  boat('b-wolf', 'sea-wolf', 'Sea Wolf', 'pending');
+  boat('b-gray', 'gray-example', 'Gray Example', 'pending');
   boat('b-gone', 'gone-boat', 'Gone Boat', 'rejected');
   const report = (id, boatId, date, counts, verified, version = 1, port = 'morro-bay') => sql.prepare(`INSERT INTO advisor_reports(id,boat_id,region,port,report_date,trip_type,anglers,counts_json,source,status,verified,version,published_at,created_at,updated_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, boatId, 'morro-bay', port, date, 'full-day', 22, JSON.stringify(counts), 'count-text', 'published', verified, version, at, at, at);
-  report('r1', 'b-rita', '2026-09-27', [{label: 'vermilion', species_key: 'rockfish', kept: 45, released: null}, {label: 'lingcod', species_key: 'lingcod', kept: 12, released: 2}], 1, 2);
+  report('r1', 'b-sea', '2026-09-27', [{label: 'vermilion', species_key: 'rockfish', kept: 45, released: null}, {label: 'lingcod', species_key: 'lingcod', kept: 12, released: 2}], 1, 2);
   report('r2', 'b-evil', '2026-09-26', [{label: 'lingcod', species_key: 'lingcod', kept: 3, released: null}], 1);
-  report('r3', 'b-wolf', '2026-09-25', [{label: 'lings', species_key: 'lingcod', kept: 7, released: null}], 0);
-  report('r-old', 'b-rita', '2026-08-01', [{label: 'lingcod', species_key: 'lingcod', kept: 99, released: null}], 1);
+  report('r3', 'b-gray', '2026-09-25', [{label: 'lings', species_key: 'lingcod', kept: 7, released: null}], 0);
+  report('r-old', 'b-sea', '2026-08-01', [{label: 'lingcod', species_key: 'lingcod', kept: 99, released: null}], 1);
   const rule = (id, key, label, status, due, extra = {}) => sql.prepare(`INSERT INTO advisor_rules(id,region,jurisdiction,species_key,species_label,size_min_in,bag_limit,bag_notes,season_open,season_close,source_name,source_url,reviewed_at,review_due,status,updated_by,updated_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id, '*', 'california-central', key, label, extra.size ?? null, extra.bag ?? null, extra.notes ?? null, extra.open ?? null, extra.close ?? null,
     'CDFW Ocean Sport Fishing Regulations', 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', '2026-06-01', due, status, 'test', at);
@@ -88,9 +88,9 @@ function seed() {
   rule('rule-rock', 'rockfish', 'Rockfish (RCG complex)', 'review', '2027-06-01', {bag: 10, notes: 'Sub-bag limits apply', open: '04-01', close: '12-31'});
   rule('rule-hal', 'halibut', 'California halibut', 'active', '2026-01-01', {size: 22, bag: 2});   // past review_due: stale
   sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,publish_state,credit,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run('m-ok', 'c1', 'b-rita', 'image', 'image/jpeg', 100, 'advisor/media/c1/m-ok.jpg', 'x', 1, 'approved', 'Rita G', at);
+    .run('m-ok', 'c1', 'b-sea', 'image', 'image/jpeg', 100, 'advisor/media/c1/m-ok.jpg', 'x', 1, 'approved', 'Sea Example', at);
   sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,publish_state,credit,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run('m-private', 'c1', 'b-rita', 'image', 'image/jpeg', 100, 'advisor/media/c1/m-private.jpg', 'y', 1, 'private', 'Rita G', at);
+    .run('m-private', 'c1', 'b-sea', 'image', 'image/jpeg', 100, 'advisor/media/c1/m-private.jpg', 'y', 1, 'private', 'Sea Example', at);
   return {sql, db};
 }
 const get = (path, env, headers = {}) => worker.fetch(new Request(ORIGIN + path, {headers}), {ASSETS, ...env});
@@ -160,9 +160,9 @@ dbTest('the port page: today, reports (verified linked, the <script> boat inert,
   // Escaping: the boat's name is text, never markup.
   assert.ok(!page.includes(EVIL) && !page.includes('<script>alert'), 'no raw <script> from data');
   assert.ok(page.includes('&lt;script&gt;alert(&quot;boat&quot;)&lt;/script&gt;'), 'the name is escaped');
-  assert.match(page, /<a href="\/boats\/rita-g">Rita G<\/a>/);
+  assert.match(page, /<a href="\/boats\/sea-example">Sea Example<\/a>/);
   assert.match(page, /<a href="\/boats\/script-boat">&lt;script&gt;/);
-  assert.ok(!text.includes('Sea Wolf'), 'an unverified boat is not named on the port page');
+  assert.ok(!text.includes('Gray Example'), 'an unverified boat is not named on the port page');
   assert.match(text, /Another boat/);
   assert.match(text, /45 vermilion, 12 lingcod \(2 released\)/);
   assert.match(text, /Sun, Sep 27 edited/, 'version > 1 is marked edited');
@@ -172,7 +172,7 @@ dbTest('the port page: today, reports (verified linked, the <script> boat inert,
   assert.ok(!page.includes('ports/morro-bay?s=txt'), 'no link back to itself');
   assert.match(text, /Seas 7 ft at 17 s/);
   assert.match(text, /Ride Rough for a mid-size center console/);
-  assert.match(text, /Boats out of Morro Bay <script>alert\("boat"\)<\/script> Virg's Landing Rita G Virg's Landing Species/, 'verified boats only, by name');
+  assert.match(text, /Boats out of Morro Bay <script>alert\("boat"\)<\/script> Gull's Landing Sea Example Gull's Landing Species/, 'verified boats only, by name');
   // Seasons from the rules table: lingcod open, rockfish in review, halibut past due.
   assert.match(page, /href="\/species\/lingcod#rules">Lingcod<\/a> <span class="adv-state adv-state-open">Open today/);
   assert.match(page, /href="\/species\/rockfish#rules">Rockfish<\/a> <span class="adv-state adv-state-review">Under review/);
@@ -186,21 +186,50 @@ dbTest('the port page: today, reports (verified linked, the <script> boat inert,
   assert.deepEqual(portSpeciesKeys('morro-bay'), ['lingcod', 'rockfish', 'halibut', 'salmon', 'dungeness', 'albacore', 'bluefin']);
 });
 
+dbTest('hardening: a pending boat page shows only its name, port, the unverified badge and the note; no booking link, phone, Instagram, landing, reports or photos until verified', async () => {
+  noCache();
+  const {sql, db} = seed();
+  sql.prepare("UPDATE advisor_boats SET booking_url='https://phish.example/login',phone_public='+18055550177',instagram='fake_boat_handle',landing='Sketchy Landing' WHERE id='b-gray'").run();
+  sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,publish_state,credit,created_at) VALUES('m-wolf','c9','b-gray','image','image/jpeg',100,'advisor/media/c9/m-wolf.jpg','z',1,'approved','Gray Example',?)`).run(iso(NOW - 86400000));
+  const response = await get('/boats/gray-example', {...ON, DB: db});
+  assert.equal(response.status, 200);
+  const page = await response.text(), text = visible(page);
+  for (const hidden of ['phish.example', 'tel:', '555-0177', 'fake_boat_handle', 'instagram.com', 'Sketchy Landing', 'm-wolf', 'lings', 'Booking page'])
+    assert.ok(!page.includes(hidden) && !text.includes(hidden), `${hidden} is not on a pending boat's page`);
+  assert.match(page, /<h1>Gray Example<\/h1>/);
+  assert.match(page, /<a href="\/ports\/morro-bay">Morro Bay/);
+  assert.match(page, /<span class="adv-badge adv-badge-pending">Not verified yet<\/span>/);
+  assert.match(text, /This boat hasn't been confirmed yet\./);
+  assert.match(page, /<meta name="robots" content="noindex">/);
+  assert.ok(!/og:image/.test(page) || !page.includes('/media/m-wolf'), 'no photo as the share image either');
+  const es = await (await get('/boats/gray-example?lang=es', {...ON, DB: db})).text();
+  assert.match(visible(es), /Este barco aún no ha sido confirmado\./);
+  assert.ok(!es.includes('phish.example'));
+  // Never in the sitemap while pending.
+  const sitemap = await (await get('/sitemap-advisor.xml', {...ON, DB: db})).text();
+  assert.ok(sitemap.includes('/boats/sea-example') && !sitemap.includes('/boats/gray-example'));
+  // Once verified, the details show.
+  sql.prepare("UPDATE advisor_boats SET status='verified',verified_at=? WHERE id='b-gray'").run(iso(NOW));
+  const verified = await (await get('/boats/gray-example', {...ON, DB: db})).text();
+  assert.match(verified, /<a href="https:\/\/phish.example\/login" rel="noopener nofollow">Booking page<\/a>/);
+  assert.match(verified, /fake_boat_handle/);
+});
+
 dbTest('the boat page: verified badge, 30 days of reports, approved photos credited, booking, phone and Instagram; pending is unverified and noindex; rejected is 404', async () => {
   noCache();
   const {db} = seed();
-  const rita = await (await get('/boats/rita-g', {...ON, DB: db})).text(), text = visible(rita);
-  assert.match(text, /Rita G Virg's Landing, Morro Bay/);
-  assert.match(rita, /<span class="adv-badge adv-badge-verified">Verified boat<\/span>/);
-  assert.ok(!rita.includes('name="robots"'), 'a verified boat is indexable');
+  const sea = await (await get('/boats/sea-example', {...ON, DB: db})).text(), text = visible(sea);
+  assert.match(text, /Sea Example Gull's Landing, Morro Bay/);
+  assert.match(sea, /<span class="adv-badge adv-badge-verified">Verified boat<\/span>/);
+  assert.ok(!sea.includes('name="robots"'), 'a verified boat is indexable');
   assert.match(text, /Sun, Sep 27 edited Full day 22 45 vermilion, 12 lingcod \(2 released\)/);
   assert.ok(!text.includes('99 lingcod'), 'reports older than 30 days are left out');
-  assert.match(rita, /<img src="\/media\/m-ok.jpg" alt="Photo from Rita G" loading="lazy"><figcaption>Photo: Rita G<\/figcaption>/);
-  assert.ok(!rita.includes('m-private'), 'a private photo is never shown');
-  assert.match(rita, /<a href="https:\/\/example.com\/book" rel="noopener nofollow">Booking page<\/a>/);
-  assert.match(rita, /<a href="tel:\+18055550188">Call \(805\) 555-0188<\/a>/);
-  assert.match(rita, /<a href="https:\/\/www.instagram.com\/ritag_sportfishing\/" rel="noopener nofollow">Instagram: @ritag_sportfishing<\/a>/);
-  assert.match(rita, /data-advisor-page="boat" data-region="morro-bay"/);
+  assert.match(sea, /<img src="\/media\/m-ok.jpg" alt="Photo from Sea Example" loading="lazy"><figcaption>Photo: Sea Example<\/figcaption>/);
+  assert.ok(!sea.includes('m-private'), 'a private photo is never shown');
+  assert.match(sea, /<a href="https:\/\/example.com\/book" rel="noopener nofollow">Booking page<\/a>/);
+  assert.match(sea, /<a href="tel:\+18055550188">Call \(805\) 555-0188<\/a>/);
+  assert.match(sea, /<a href="https:\/\/www.instagram.com\/seaexample_fishing\/" rel="noopener nofollow">Instagram: @seaexample_fishing<\/a>/);
+  assert.match(sea, /data-advisor-page="boat" data-region="morro-bay"/);
 
   const evil = await (await get('/boats/script-boat', {...ON, DB: db})).text();
   assert.ok(!evil.includes(EVIL) && !evil.includes('<script>alert'), 'the <script> name renders inert');
@@ -208,10 +237,10 @@ dbTest('the boat page: verified badge, 30 days of reports, approved photos credi
   assert.match(evil, /<title>&lt;script&gt;alert\(&quot;boat&quot;\)&lt;\/script&gt;: fish reports · SkipperCast<\/title>/);
   assert.ok(evil.includes('"name":"\\u003cscript\\u003ealert(\\"boat\\")\\u003c/script\\u003e"'), 'JSON-LD escapes it too');
 
-  const wolf = await (await get('/boats/sea-wolf', {...ON, DB: db})).text();
+  const wolf = await (await get('/boats/gray-example', {...ON, DB: db})).text();
   assert.match(wolf, /<span class="adv-badge adv-badge-pending">Not verified yet<\/span>/);
   assert.match(wolf, /<meta name="robots" content="noindex">/);
-  assert.match(visible(wolf), /lings/);
+  assert.ok(!/lings/.test(visible(wolf)), 'hardening: a pending boat shows no reports until verified');
 
   for (const path of ['/boats/gone-boat', '/boats/no-such-boat', '/boats/Bad_Slug!', '/ports/atlantis', '/species/unicorn']) {
     const response = await get(path, {...ON, DB: db});
@@ -234,7 +263,7 @@ dbTest('the species page: names, cues and look-alikes, the rules card at #rules 
   assert.match(text, /Lingcod Minimum size 22 in Daily bag 2 per angler Season Apr 1 to Dec 31 Source CDFW Ocean Sport Fishing Regulations Reviewed Jun 1, 2026/);
   assert.match(ling, /<a href="https:\/\/wildlife.ca.gov\/Fishing\/Ocean\/Regulations" rel="noopener">/);
   assert.ok(!ling.includes('Under review'), 'an active, current rule is not under review');
-  // Recent catches by date and port, verified boats only: Rita G 12 + the <script> boat 3; Sea Wolf (unverified) and the old report are left out.
+  // Recent catches by date and port, verified boats only: Sea Example 12 + the <script> boat 3; Gray Example (unverified) and the old report are left out.
   assert.match(text, /Sun, Sep 27 Morro Bay 12 2 1/);
   assert.match(text, /Sat, Sep 26 Morro Bay 3 0 1/);
   assert.ok(!/Fri, Sep 25/.test(text), 'unverified boats do not count');
@@ -280,7 +309,7 @@ dbTest('Spanish by ?lang=es or Accept-Language, with its own cache entry', async
     assert.match(species, /cabeza y boca enormes con dientes grandes y filosos/);
     assert.match(species, /Talla mínima 22 pulg/);
     assert.match(species, /Las notas de pesca están en inglés\./);
-    const boat = visible(await (await get('/boats/rita-g?lang=es', {...ON, DB: db})).text());
+    const boat = visible(await (await get('/boats/sea-example?lang=es', {...ON, DB: db})).text());
     assert.match(boat, /Barco verificado/);
     assert.match(boat, /dom 27 de sep editado Día completo 22 45 vermilion, 12 lingcod \(2 liberados\)/);
   } finally { noCache(); }
@@ -290,19 +319,19 @@ dbTest('the cache key carries the build, the pages version and the language; a b
   const store = fakeCache();
   try {
     const {sql, db} = seed();
-    const url = new URL(`${ORIGIN}/boats/rita-g?s=txt&utm=x`);
-    assert.equal(pageCacheKey(url, 'en', '0').url, `${ORIGIN}/boats/rita-g?lang=en&sc-build=0123456789%3A0`);
-    assert.equal(pageCacheKey(url, 'es', '7').url, `${ORIGIN}/boats/rita-g?lang=es&sc-build=0123456789%3A7`);
-    const first = await get('/boats/rita-g?s=txt', {...ON, DB: db});
+    const url = new URL(`${ORIGIN}/boats/sea-example?s=txt&utm=x`);
+    assert.equal(pageCacheKey(url, 'en', '0').url, `${ORIGIN}/boats/sea-example?lang=en&sc-build=0123456789%3A0`);
+    assert.equal(pageCacheKey(url, 'es', '7').url, `${ORIGIN}/boats/sea-example?lang=es&sc-build=0123456789%3A7`);
+    const first = await get('/boats/sea-example?s=txt', {...ON, DB: db});
     assert.equal(first.headers.get('X-SC-Cache'), 'miss');
-    const again = await get('/boats/rita-g?s=ig', {...ON, DB: db});
+    const again = await get('/boats/sea-example?s=ig', {...ON, DB: db});
     assert.equal(again.headers.get('X-SC-Cache'), 'hit', 'the source parameter is not part of the key');
-    sql.prepare("UPDATE advisor_boats SET name='Rita G II' WHERE id='b-rita'").run();
-    assert.match(await (await get('/boats/rita-g', {...ON, DB: db})).text(), /<h1>Rita G<\/h1>/, 'cached until the version moves');
+    sql.prepare("UPDATE advisor_boats SET name='Sea Example II' WHERE id='b-sea'").run();
+    assert.match(await (await get('/boats/sea-example', {...ON, DB: db})).text(), /<h1>Sea Example<\/h1>/, 'cached until the version moves');
     await bumpPagesVersion(db, NOW);
-    const fresh = await get('/boats/rita-g', {...ON, DB: db});
+    const fresh = await get('/boats/sea-example', {...ON, DB: db});
     assert.equal(fresh.headers.get('X-SC-Cache'), 'miss');
-    assert.match(await fresh.text(), /<h1>Rita G II<\/h1>/);
+    assert.match(await fresh.text(), /<h1>Sea Example II<\/h1>/);
     assert.ok([...store.keys()].some(k => k.endsWith('sc-build=0123456789%3A1')), 'stored under the new version');
     const missing = await get('/boats/nope', {...ON, DB: db});
     assert.equal(missing.status, 404);
@@ -313,7 +342,7 @@ dbTest('the cache key carries the build, the pages version and the language; a b
 dbTest('no page says a percentage or "hotspot": every species page, the ports and the boats', async () => {
   noCache();
   const {db} = seed();
-  const paths = [...SPECIES_PAGE_KEYS.map(k => `/species/${k}`), '/ports/morro-bay', '/ports/port-san-luis', '/boats/rita-g', '/boats/sea-wolf'];
+  const paths = [...SPECIES_PAGE_KEYS.map(k => `/species/${k}`), '/ports/morro-bay', '/ports/port-san-luis', '/boats/sea-example', '/boats/gray-example'];
   for (const path of paths) for (const q of ['', '?lang=es']) {
     const response = await get(path + q, {...ON, DB: db});
     assert.equal(response.status, 200, path + q);
@@ -334,15 +363,15 @@ dbTest('the sitemap lists active ports, every species and verified boats only; r
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].replace(ORIGIN, ''));
   assert.deepEqual(locs.filter(l => l.startsWith('/ports/')), ['/ports/morro-bay', '/ports/port-san-luis'], 'active regions only');
   assert.equal(locs.filter(l => l.startsWith('/species/')).length, SPECIES_PAGE_KEYS.length);
-  assert.deepEqual(locs.filter(l => l.startsWith('/boats/')), ['/boats/rita-g', '/boats/script-boat'], 'verified boats only');
-  assert.match(xml, /<loc>https:\/\/skippercast.com\/boats\/rita-g<\/loc>\n    <lastmod>2026-09-27<\/lastmod>/);
+  assert.deepEqual(locs.filter(l => l.startsWith('/boats/')), ['/boats/script-boat', '/boats/sea-example'], 'verified boats only');
+  assert.match(xml, /<loc>https:\/\/skippercast.com\/boats\/sea-example<\/loc>\n    <lastmod>2026-09-27<\/lastmod>/);
   assert.match(xml, /hreflang="es" href="https:\/\/skippercast.com\/species\/lingcod\?lang=es"/);
 
   const robots = await get('/robots.txt', {...ON, DB: db});
   assert.equal(robots.status, 200);
   assert.equal(await robots.text(), 'User-agent: *\nAllow: /\n\nSitemap: https://skippercast.com/sitemap-advisor.xml\n');
   assert.equal((await get('/robots.txt', {DB: db})).status, 299, 'dark: robots.txt is the static site\'s, as before');
-  for (const path of ['/sitemap-advisor.xml', '/ports/morro-bay', '/species/lingcod', '/boats/rita-g']) assert.equal((await get(path, {DB: db})).status, 404, `${path} is gated`);
+  for (const path of ['/sitemap-advisor.xml', '/ports/morro-bay', '/species/lingcod', '/boats/sea-example']) assert.equal((await get(path, {DB: db})).status, 404, `${path} is gated`);
   assert.equal((await get('/ports/morro-bay', ON)).status, 503, 'no D1');
 });
 

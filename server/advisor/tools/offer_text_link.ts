@@ -4,6 +4,9 @@
 // (engine.ts linkCodeFlow, consumer.ts link_merge). Web only. At most 3 codes
 // per web visitor per day (request_limits); the code is stored only as its
 // SHA-256 in job_state advisor.link.<web contact id>, valid 10 minutes.
+// Hardening: the consumer sends the code only past outbound-guard.ts (a stopped
+// number, 2 a day and 5 a week per number, 5 a day per client address, the
+// global ADVISOR_GLOBAL_DAILY_COLD), and the answer never depends on the number.
 import type {AdvisorTool, ToolContext, ToolOutput} from './tool.ts';
 import {deriveKeys, e164, encryptPhone, phoneHash} from '../contacts.ts';
 import {sha256} from '../ids.ts';
@@ -12,6 +15,8 @@ export const LINK_KEY_PREFIX = 'advisor.link.';
 export const LINK_CODE_TTL_MS = 10 * 60000;
 export const LINK_CODES_PER_DAY = 3;
 export const LINK_GUESSES_PER_DAY = 5;
+/** What the model hears for any valid number, whether or not the code can go out. */
+export const CODE_OFFERED = Object.freeze({sent: true, note: 'A code is texted to that number if it can receive one; ask them to type it here. If nothing arrives, they can text us instead.'});
 
 /** The job_state key holding a web contact's pending code. */
 export const linkKey = (webContactId: string): string => LINK_KEY_PREFIX + webContactId;
@@ -47,10 +52,10 @@ export const offerTextLink: AdvisorTool = {
     if (!await takeDaily(ctx.db, `advisor-link:${ctx.contact.id}`, LINK_CODES_PER_DAY, ctx.now)) return {result: {sent: false, reason: 'too many codes today; try tomorrow'}};
     const keys = await deriveKeys(ctx.env.ADVISOR_PHONE_KEY);
     const hash = await phoneHash(keys, number);
-    const existing = await ctx.db.prepare('SELECT status FROM advisor_contacts WHERE phone_hash=?').bind(hash).first<{status: string}>();
-    if (existing && existing.status !== 'active') return {result: {sent: false, reason: 'that number cannot be texted'}};
+    // Hardening: the consumer's outbound guard decides whether the code goes out (a stopped number, the per-number,
+    // per-address and global limits); the answer here is the same either way, so it never says whether a number is known.
     const code = linkCode(ctx.deps.random);
-    return {result: {sent: true, note: 'a code was texted; ask them to type it here'}, actions: [{type: 'link_start', phoneHash: hash, phoneEnc: await encryptPhone(keys, number),
+    return {result: {...CODE_OFFERED}, actions: [{type: 'link_start', phoneHash: hash, phoneEnc: await encryptPhone(keys, number),
       codeHash: await sha256(code), expiresAt: ctx.now + LINK_CODE_TTL_MS, codeText: code}]};
   },
 };

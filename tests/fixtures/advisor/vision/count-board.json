@@ -11,7 +11,7 @@
       "id": "toolu_nt_board",
       "name": "record_count_board",
       "input": {
-        "boat_name": "Rita G",
+        "boat_name": "Sea Example",
         "date_text": "10/03",
         "date_iso": null,
         "date_confidence": 0.55,

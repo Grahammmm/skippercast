@@ -126,12 +126,18 @@ jobs:
           ADVISOR_DAILY_LLM_PER_CONTACT: ${{ vars.ADVISOR_DAILY_LLM_PER_CONTACT }}
           ADVISOR_GLOBAL_DAILY_LLM: ${{ vars.ADVISOR_GLOBAL_DAILY_LLM }}
           ADVISOR_GLOBAL_DAILY_VISION: ${{ vars.ADVISOR_GLOBAL_DAILY_VISION }}
+          ADVISOR_DAILY_LLM_PER_IP: ${{ vars.ADVISOR_DAILY_LLM_PER_IP }}
+          ADVISOR_GLOBAL_DAILY_LLM_WEB: ${{ vars.ADVISOR_GLOBAL_DAILY_LLM_WEB }}
+          ADVISOR_GLOBAL_DAILY_COLD: ${{ vars.ADVISOR_GLOBAL_DAILY_COLD }}
           ADVISOR_AUTO_PUBLISH_AFTER: ${{ vars.ADVISOR_AUTO_PUBLISH_AFTER }}
           ADVISOR_ADMIN_CONTACT_ID: ${{ vars.ADVISOR_ADMIN_CONTACT_ID }}
           ADVISOR_INBOX_PUBLIC_REPLIES: ${{ vars.ADVISOR_INBOX_PUBLIC_REPLIES }}
           BLUEBUBBLES_PRIVATE_API: ${{ vars.BLUEBUBBLES_PRIVATE_API }}
           # "true" binds the Analytics Engine dataset skippercast_events; docs/cloudflare.md#observability.
           ENABLE_ANALYTICS: ${{ vars.ENABLE_ANALYTICS }}
+          # "false" turns off Workers Logs' per-request invocation log, whose message is the request URL
+          # (the BlueBubbles webhook token is in its path); docs/legal/threat-model.md § 9.1.
+          WORKERS_INVOCATION_LOGS: ${{ vars.WORKERS_INVOCATION_LOGS }}
         run: |
           mkdir -p var
           bash scripts/cloudflare_deploy.sh

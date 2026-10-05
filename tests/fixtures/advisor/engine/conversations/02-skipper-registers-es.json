@@ -1,9 +1,9 @@
 {
   "_source": "Golden conversation (docs/plans/text-advisor/11-testing-rollout.md § Engine golden conversations). Model responses are hand-written to the Messages API shape; numbers are fictional (555 series).",
-  "description": "Golden 2 in Spanish (TA-I1 part): \"soy el capitán del Lucero\" starts registration without a model call; the port answer \"Avila\" is an alias of Port San Luis; landing skipped, Instagram and a booking link given; the completion and consent texts are Spanish and the contact's stored language becomes es; SÍ records consent.",
+  "description": "Golden 2 in Spanish (TA-I1 part): \"soy el capitán del Example Two\" starts registration without a model call; the port answer \"Avila\" is an alias of Port San Luis; landing skipped, Instagram and a booking link given; the completion and consent texts are Spanish and the contact's stored language becomes es; SÍ records consent.",
   "turns": [
     {
-      "in": "Hola, soy el capitán del Lucero",
+      "in": "Hola, soy el capitán del Example Two",
       "expect": {
         "intent": "skipper.register.start",
         "reply_contains": [
@@ -34,7 +34,7 @@
       }
     },
     {
-      "in": "lucero.psl",
+      "in": "twoboat.example",
       "expect": {
         "intent": "skipper.register.instagram",
         "reply_contains": [
@@ -43,23 +43,23 @@
       }
     },
     {
-      "in": "https://example.com/lucero",
+      "in": "https://example.com/example-two",
       "expect": {
         "intent": "skipper.register.done",
         "review": "new_skipper",
         "reply_contains": [
-          "Listo. Lucero está registrado. Tus reportes saldrán en skippercast.com/boats/lucero",
-          "Una cosa más: ¿podemos publicar tus fotos y videos en el Instagram y Facebook de SkipperCast, siempre con crédito y etiqueta a Lucero? Responde SÍ."
+          "Listo. Example Two está registrado. Tus reportes saldrán en skippercast.com/boats/example-two",
+          "Una cosa más: ¿podemos publicar tus fotos y videos en el Instagram y Facebook de SkipperCast, siempre con crédito y etiqueta a Example Two? Responde SÍ."
         ],
         "rows": [
           {
             "sql": "SELECT slug,port,landing,instagram,booking_url,status FROM advisor_boats",
             "row": {
-              "slug": "lucero",
+              "slug": "example-two",
               "port": "port-san-luis",
               "landing": null,
-              "instagram": "lucero.psl",
-              "booking_url": "https://example.com/lucero",
+              "instagram": "twoboat.example",
+              "booking_url": "https://example.com/example-two",
               "status": "pending"
             }
           },
@@ -78,7 +78,7 @@
       "expect": {
         "intent": "consent.yes",
         "reply_contains": [
-          "Gracias. Tus fotos pueden salir en SkipperCast, etiquetadas a Lucero."
+          "Gracias. Tus fotos pueden salir en SkipperCast, etiquetadas a Example Two."
         ],
         "rows": [
           {

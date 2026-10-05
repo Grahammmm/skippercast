@@ -195,6 +195,9 @@ Runtime vars (all optional, read only through `advisorSettings()`):
 | `ADVISOR_DAILY_LLM_PER_CONTACT` | `30` | OP-3 cap on model calls per contact per day. |
 | `ADVISOR_GLOBAL_DAILY_LLM` | `2000` | Global model-call ceiling per day. |
 | `ADVISOR_GLOBAL_DAILY_VISION` | `400` | Global vision-call ceiling per day (Claude provider only; Hermes is local). |
+| `ADVISOR_DAILY_LLM_PER_IP` | `30` | Web chat model calls a day per client address (hashed), so new cookies do not reset the per-contact cap; the daily message cap is also applied per address on the web. |
+| `ADVISOR_GLOBAL_DAILY_LLM_WEB` | `400` | Web chat model calls a day, carved out of `ADVISOR_GLOBAL_DAILY_LLM`: web turns count against both, so the text channels always keep the rest (threat model § 9.3). |
+| `ADVISOR_GLOBAL_DAILY_COLD` | `50` | Texts a day we start (web phone-link codes, crew invitations, admin skipper invites) to numbers that have never texted us (`server/advisor/outbound-guard.ts`; threat model § 9.3). |
 | `ADVISOR_PUBLIC_BASE` | `https://skippercast.com` | Base for links in replies and for Meta-fetchable media URLs. |
 | `ADVISOR_REGION_DEFAULT` | `morro-bay` | Region assumed when a contact has no home port yet. |
 | `ADVISOR_AUTO_PUBLISH_AFTER` | `5` | SC-5: clean reports before auto-publish is offered. |
@@ -300,6 +303,15 @@ Nothing under `src/`, `regions/`, `research/`, `atlas/`, `catalog/*.json`
   does not stop Meta fetching it. The upload page therefore submits with a
   JavaScript `fetch` (`connect-src 'self'` allows it), not a `<form>`
   (`form-action 'none'`).
+
+As built (TA-C5; the full review is [threat model § 9](../../legal/threat-model.md#9-text-advisor)):
+there is no Tunnel origin allowlist on the BlueBubbles webhook. The Mac calls
+the public Worker URL, and `ADVISOR_WEBHOOK_TOKEN` in the path (constant-time
+`sameSecret`) is its only check; the Tunnel and Access guard the other
+direction, Worker to relay. The Meta webhook body cap is 256 KB, not 64 KB.
+Not every write is admin-only: the engine approves the morning count-board and
+conditions Stories itself (TA-S5), and a skipper's confirmed report publishes
+without review (labelled unverified until the boat is verified).
 
 ## Cron slots
 

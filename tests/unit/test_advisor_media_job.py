@@ -595,14 +595,14 @@ class GraphicTests(unittest.TestCase):
         self.assertEqual((story['width'], story['height']), (1080, 1920))
         roundup = mj.render_graphic({'id': 'r1', 'kind': 'roundup', 'out_key': 'advisor/posts/w1/roundup.jpg', 'media': [source, source],
                                      'data': {'title': 'This week', 'lines': [{'label': 'Morro Bay', 'value': 'limits'}],
-                                              'captions': ['Aboard Rita G']}}, r2, self.spec, None, log=lambda *_: None)
+                                              'captions': ['Aboard Sea Example']}}, r2, self.spec, None, log=lambda *_: None)
         self.assertEqual(roundup['keys'], {'public': 'advisor/posts/w1/roundup.jpg',
                                            'slides': ['advisor/posts/w1/roundup-1.jpg', 'advisor/posts/w1/roundup-2.jpg']})
         for key in ('advisor/posts/w1/roundup.jpg', *roundup['keys']['slides']):
             self.assertEqual(Image.open(io.BytesIO(r2.objects[key][0])).size, (1080, 1350), key)
         again = mj.render_graphic({'id': 'r1', 'kind': 'roundup', 'out_key': 'advisor/posts/w1/roundup.jpg', 'media': [source, source],
                                    'data': {'title': 'This week', 'lines': [{'label': 'Morro Bay', 'value': 'limits'}],
-                                            'captions': ['Aboard Rita G']}}, r2, self.spec, None, log=lambda *_: None)
+                                            'captions': ['Aboard Sea Example']}}, r2, self.spec, None, log=lambda *_: None)
         self.assertEqual(again, roundup, 'a rerun reports the same keys without rendering')
 
 

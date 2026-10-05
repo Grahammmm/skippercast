@@ -168,11 +168,11 @@ dbTest('the queue lists newest first, 50 a page with a cursor, filters by kind a
 
 dbTest('each kind carries what its card needs, and no phone number or hash reaches the browser', async () => {
   const {sql, env, real} = setup();
-  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1', display_name: 'Rita', phone_hash: 'HASH-SECRET', phone_enc: 'ENC-SECRET'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', landing: "Virg's", instagram: 'ritag', owner: 'c1'});
+  addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1', display_name: 'Dana', phone_hash: 'HASH-SECRET', phone_enc: 'ENC-SECRET'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', landing: "Gull's", instagram: 'seaexample', owner: 'c1'});
   for (let i = 1; i <= 8; i++) addMessage(sql, 'c1', i % 2 ? 'in' : 'out', `message ${i}`, T0 + i * 1000, i === 8 ? {created_by: ADMIN} : {});
   const flagged = addMessage(sql, 'c1', 'in', 'is it legal to keep a cowcod', T0 + 9000, {id: 'flagged-1'});
-  addMedia(sql, {id: 'p1', boat: 'b1', has_person: 1, credit: 'Rita G', classification: JSON.stringify({classify: {kind: 'fish', kind_confidence: 0.91, has_person: true, person_confidence: 0.88, nsfw: false, provider: 'claude', model: 'x', ms: 3}})});
+  addMedia(sql, {id: 'p1', boat: 'b1', has_person: 1, credit: 'Sea Example', classification: JSON.stringify({classify: {kind: 'fish', kind_confidence: 0.91, has_person: true, person_confidence: 0.88, nsfw: false, provider: 'claude', model: 'x', ms: 3}})});
   addReport(sql, {id: 'r1', boat: 'b1', counts: [{species_key: 'lingcod', label: 'lings', kept: 12, released: 2}, {species_key: 'other', label: 'reds', kept: 40, released: null, uncertain: true}]});
   const ids = {
     media: await addReview(sql, 'media', 'p1', 'has_person', T0 + 1),
@@ -189,12 +189,12 @@ dbTest('each kind carries what its card needs, and no phone number or hash reach
   assert.equal(m.thumb, '/api/admin/media/p1');
   assert.equal(m.has_person, true);
   assert.deepEqual(m.labels, {kind: 'fish', kind_confidence: 0.91, has_person: true, person_confidence: 0.88, nsfw: false, provider: 'claude'});
-  assert.deepEqual(m.boat, {id: 'b1', name: 'Rita G', slug: 'rita-g'});
+  assert.deepEqual(m.boat, {id: 'b1', name: 'Sea Example', slug: 'sea-example'});
   const r = by.report.detail.report;
   assert.deepEqual(r.counts.map(c => [c.label, c.kept, c.released]), [['lings', 12, 2], ['reds', 40, null]]);
-  assert.deepEqual([r.anglers, r.status, r.version, r.boat.name, r.boat.status], [20, 'pending_confirm', 1, 'Rita G', 'pending']);
+  assert.deepEqual([r.anglers, r.status, r.version, r.boat.name, r.boat.status], [20, 'pending_confirm', 1, 'Sea Example', 'pending']);
   const s = by.skipper.detail;
-  assert.deepEqual([s.boat.name, s.boat.landing, s.boat.instagram, s.contact.channel, s.contact.display_name], ['Rita G', "Virg's", 'ritag', 'imessage', 'Rita']);
+  assert.deepEqual([s.boat.name, s.boat.landing, s.boat.instagram, s.contact.channel, s.contact.display_name], ['Sea Example', "Gull's", 'seaexample', 'imessage', 'Dana']);
   assert.deepEqual(s.messages, ['message 1', 'message 3', 'message 5'], 'the first three inbound messages, bodies only');
   const c = by.conversation.detail;
   assert.equal(c.messages.length, 6);
@@ -226,8 +226,8 @@ dbTest('media: approve sets approved, a repeat changes nothing, reject sets reje
   assert.equal((await decide(b, {decision: 'reject'})).status, 200);
   assert.equal(sql.prepare("SELECT publish_state FROM advisor_media WHERE id='p2'").get().publish_state, 'rejected');
   assert.equal((await decide(c, {decision: 'edit', patch: {}})).status, 400, 'an edit without a credit is refused');
-  assert.equal((await decide(c, {decision: 'edit', patch: {credit: 'Capt. Lu / Lucero'}})).status, 200);
-  assert.deepEqual({...sql.prepare("SELECT publish_state,credit FROM advisor_media WHERE id='p3'").get()}, {publish_state: 'approved', credit: 'Capt. Lu / Lucero'});
+  assert.equal((await decide(c, {decision: 'edit', patch: {credit: 'Capt. Lu / Example Two'}})).status, 200);
+  assert.deepEqual({...sql.prepare("SELECT publish_state,credit FROM advisor_media WHERE id='p3'").get()}, {publish_state: 'approved', credit: 'Capt. Lu / Example Two'});
   assert.equal(reviewOf(sql, c).status, 'edited');
   const fresh = await addReview(sql, 'media', 'p4', 'has_person');
   for (const bad of [{decision: 'publish'}, {}, {decision: 'approve', reply: 'hi'}]) assert.equal((await decide(fresh, bad)).status, 400, JSON.stringify(bad));
@@ -247,14 +247,14 @@ dbTest('media: an approve (and an edit) requests the media job for public.jpg; a
   assert.deepEqual(dispatched, [], 'a rejected photo is never derived for publication');
   assert.equal((await decide('p2', 'approve', T0)).status, 'applied');
   assert.deepEqual(dispatched, ['advisor-media.yml']);
-  assert.equal((await decide('p3', 'edit', T0 + 2 * 60000, {patch: {credit: 'Rita G'}})).status, 'applied');
+  assert.equal((await decide('p3', 'edit', T0 + 2 * 60000, {patch: {credit: 'Sea Example'}})).status, 'applied');
   assert.deepEqual(dispatched, ['advisor-media.yml', 'advisor-media.yml'], 'an edit approves too (a minute later: past the throttle)');
 });
 
 dbTest('report: edit writes an edits row and bumps the version, approve publishes a pending report, reject unpublishes and bumps the pages version', async () => {
   const {sql, env, real} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
   addReport(sql, {id: 'r1', boat: 'b1'});
   addReport(sql, {id: 'r2', boat: 'b1', date: '2026-10-03'});
   addReport(sql, {id: 'r3', boat: 'b1', date: '2026-10-02', status: 'published'});
@@ -286,8 +286,8 @@ dbTest('report: edit writes an edits row and bumps the version, approve publishe
 dbTest('pages version: every admin-app decision that changes a public page bumps advisor.pages.version (TA-W1); one that changes nothing does not', async () => {
   const {sql, env, withChannel} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
-  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
+  addBoat(sql, {id: 'b2', slug: 'example-two', name: 'Example Two'});
   for (const id of ['p1', 'p2', 'p3']) addMedia(sql, {id, boat: 'b1'});
   addReport(sql, {id: 'r1', boat: 'b1', date: '2026-10-03'});
   addReport(sql, {id: 'r2', boat: 'b1', date: '2026-10-02', status: 'published'});
@@ -324,8 +324,8 @@ dbTest('skipper: verify sets verified, verified_at and verified_by and texts the
   const {sql, env, ch, withChannel} = setup();
   addContact(sql, {id: 'c1', role: 'skipper', boat_id: 'b1'});
   addContact(sql, {id: 'c2', role: 'skipper', boat_id: 'b2', language: 'es'});
-  addBoat(sql, {id: 'b1', slug: 'rita-g', name: 'Rita G', owner: 'c1'});
-  addBoat(sql, {id: 'b2', slug: 'lucero', name: 'Lucero', owner: 'c2'});
+  addBoat(sql, {id: 'b1', slug: 'sea-example', name: 'Sea Example', owner: 'c1'});
+  addBoat(sql, {id: 'b2', slug: 'example-two', name: 'Example Two', owner: 'c2'});
   const [v, r] = [await addReview(sql, 'skipper', 'b1', 'new_skipper'), await addReview(sql, 'skipper', 'b2', 'new_skipper')];
   const decide = (id, body) => quiet(() => post(withChannel, env, `/api/admin/reviews/${id}`, ADMIN, body)).then(x => x.value);
   assert.equal((await decide(v, {decision: 'edit', patch: {name: 'x'}})).status, 400, 'boat fields are edited in the Skippers view (TA-W3)');
@@ -334,7 +334,7 @@ dbTest('skipper: verify sets verified, verified_at and verified_by and texts the
   const boat = sql.prepare("SELECT status,verified_at,verified_by FROM advisor_boats WHERE id='b1'").get();
   assert.deepEqual([boat.status, boat.verified_by], ['verified', ADMIN]);
   assert.ok(boat.verified_at);
-  assert.deepEqual(ch.sent.map(m => [m.to, m.text]), [['ENC-c1', 'Rita G is verified. Your page: skippercast.com/boats/rita-g']]);
+  assert.deepEqual(ch.sent.map(m => [m.to, m.text]), [['ENC-c1', 'Sea Example is verified. Your page: skippercast.com/boats/sea-example']]);
   const out = sql.prepare("SELECT * FROM advisor_messages WHERE direction='out' AND contact_id='c1'").get();
   assert.deepEqual([out.status, out.created_by, out.in_reply_to, out.id], ['sent', ADMIN, v, await outboundId(v, 'admin.skipper')]);
   assert.equal((await (await decide(v, {decision: 'approve'})).json()).repeated, true);
@@ -342,7 +342,7 @@ dbTest('skipper: verify sets verified, verified_at and verified_by and texts the
   assert.equal((await decide(r, {decision: 'reject'})).status, 200);
   assert.equal(sql.prepare("SELECT status FROM advisor_boats WHERE id='b2'").get().status, 'rejected');
   assert.equal(ch.sent.at(-1).to, 'ENC-c2');
-  assert.equal(ch.sent.at(-1).text, t('es', 'boat_rejected', {name: 'Lucero', slug: 'lucero'}), "05's reject line, in the skipper's language");
+  assert.equal(ch.sent.at(-1).text, t('es', 'boat_rejected', {name: 'Example Two', slug: 'example-two'}), "05's reject line, in the skipper's language");
   // owner_forgotten has no boat change: approve only records that someone looked.
   const forgotten = await addReview(sql, 'skipper', 'b1', 'owner_forgotten');
   assert.equal((await decide(forgotten, {decision: 'approve'})).status, 200);
