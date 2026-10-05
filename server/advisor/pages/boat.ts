@@ -1,7 +1,7 @@
 // GET /boats/<slug> (docs/plans/text-advisor/05-skipper-intake.md § The boat
 // page, 08 § Public pages; SK-5, TA-W1): name, landing, port, the verified
-// badge (a pending boat renders "Not verified yet" and is kept out of search
-// and the sitemap; a rejected boat has no page), the last 30 days of published
+// badge (a pending boat renders only its name, port, "Not verified yet" and the
+// note, and is kept out of search and the sitemap; a rejected boat has no page), the last 30 days of published
 // reports with an "edited" marker when version > 1, the last 12 approved or
 // posted photos through /media/<id>.jpg with their credit, the booking link or
 // phone, the Instagram link and the call to action.
@@ -38,21 +38,33 @@ export async function boatPage(env: Env, slug: string, language: PageLanguage, s
     .bind(slug).first<BoatRow>();
   if (!boat) return null;
   const verified = boat.status === 'verified';
+  const port = portName(boat.port) ?? boat.port, lang = language === 'es' ? '?lang=es' : '';
+  // Hardening (threat model § 9.6): a pending boat's details are self-entered and unreviewed, so its page shows only
+  // the name, the port, the badge and the note: no landing, reports, photos, booking link, phone or Instagram until
+  // the team verifies it (anyone who texts the number could otherwise host a link under skippercast.com/boats/).
+  if (!verified) {
+    const body = html`<header class="adv-title">
+<h1>${boat.name}</h1>
+<p class="adv-sub"><a href="/ports/${boat.port}${lang}">${copy.portTitle(port)}</a></p>
+<p><span class="adv-badge adv-badge-pending">${copy.unverified}</span></p>
+<p class="adv-note">${copy.unverifiedNote}</p>
+</header>`;
+    return layout({language, kind: 'boat', path: `/boats/${boat.slug}`, title: `${copy.boatTitle(boat.name)} · SkipperCast`, description: copy.boatDescription(boat.name, port),
+      image: null, crumbs: [{name: copy.boats, path: null}, {name: boat.name, path: `/boats/${boat.slug}`}], region: boat.region, noindex: true, body}, settings);
+  }
   const today = localDate(now, regionConfig(boat.region)?.timezone ?? 'America/Los_Angeles');
   const [reports, photos] = await Promise.all([
     db.prepare(`SELECT id,report_date,trip_type,anglers,counts_json,verified,version FROM advisor_reports WHERE boat_id=? AND status='published' AND report_date>=? AND report_date<=?
         ORDER BY report_date DESC, published_at DESC, id LIMIT 60`).bind(boat.id, addDays(today, -(BOAT_REPORT_DAYS - 1)), today).all<ReportRow>().then(r => r.results),
     publicPhotos(env, 'm.boat_id=?', [boat.id], BOAT_PHOTOS),
   ]);
-  const port = portName(boat.port) ?? boat.port, lang = language === 'es' ? '?lang=es' : '';
   const booking = httpsUrl(boat.booking_url), phone = boat.phone_public && /^\+\d{8,15}$/.test(boat.phone_public) ? boat.phone_public : null;
   const instagram = boat.instagram && /^[a-z0-9._]{1,30}$/.test(boat.instagram) ? boat.instagram : null;
 
   const body = html`<header class="adv-title">
 <h1>${boat.name}</h1>
 <p class="adv-sub">${boat.landing ? copy.landing(boat.landing, port) : port} · <a href="/ports/${boat.port}${lang}">${copy.portTitle(port)}</a></p>
-<p>${verified ? html`<span class="adv-badge adv-badge-verified">${copy.verified}</span>` : html`<span class="adv-badge adv-badge-pending">${copy.unverified}</span>`}</p>
-${verified ? '' : html`<p class="adv-note">${copy.unverifiedNote}</p>`}
+<p><span class="adv-badge adv-badge-verified">${copy.verified}</span></p>
 </header>
 <section class="adv-card" aria-labelledby="reports-title">
 <h2 id="reports-title">${copy.boatReportsHeading}</h2>
@@ -72,5 +84,5 @@ ${instagram ? html`<li><a href="https://www.instagram.com/${instagram}/" rel="no
 </section>` : ''}`;
   return layout({language, kind: 'boat', path: `/boats/${boat.slug}`, title: `${copy.boatTitle(boat.name)} · SkipperCast`, description: copy.boatDescription(boat.name, port),
     image: photos[0]?.url ?? null, crumbs: [{name: copy.boats, path: null}, {name: boat.name, path: `/boats/${boat.slug}`}], region: boat.region,
-    noindex: !verified, body}, settings);
+    noindex: false, body}, settings);
 }

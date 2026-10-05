@@ -186,6 +186,35 @@ dbTest('the port page: today, reports (verified linked, the <script> boat inert,
   assert.deepEqual(portSpeciesKeys('morro-bay'), ['lingcod', 'rockfish', 'halibut', 'salmon', 'dungeness', 'albacore', 'bluefin']);
 });
 
+dbTest('hardening: a pending boat page shows only its name, port, the unverified badge and the note; no booking link, phone, Instagram, landing, reports or photos until verified', async () => {
+  noCache();
+  const {sql, db} = seed();
+  sql.prepare("UPDATE advisor_boats SET booking_url='https://phish.example/login',phone_public='+18055550177',instagram='fake_boat_handle',landing='Sketchy Landing' WHERE id='b-wolf'").run();
+  sql.prepare(`INSERT INTO advisor_media(id,contact_id,boat_id,kind,mime,bytes,r2_key,sha256,exif_stripped,publish_state,credit,created_at) VALUES('m-wolf','c9','b-wolf','image','image/jpeg',100,'advisor/media/c9/m-wolf.jpg','z',1,'approved','Sea Wolf',?)`).run(iso(NOW - 86400000));
+  const response = await get('/boats/sea-wolf', {...ON, DB: db});
+  assert.equal(response.status, 200);
+  const page = await response.text(), text = visible(page);
+  for (const hidden of ['phish.example', 'tel:', '555-0177', 'fake_boat_handle', 'instagram.com', 'Sketchy Landing', 'm-wolf', 'lings', 'Booking page'])
+    assert.ok(!page.includes(hidden) && !text.includes(hidden), `${hidden} is not on a pending boat's page`);
+  assert.match(page, /<h1>Sea Wolf<\/h1>/);
+  assert.match(page, /<a href="\/ports\/morro-bay">Morro Bay/);
+  assert.match(page, /<span class="adv-badge adv-badge-pending">Not verified yet<\/span>/);
+  assert.match(text, /This boat hasn't been confirmed yet\./);
+  assert.match(page, /<meta name="robots" content="noindex">/);
+  assert.ok(!/og:image/.test(page) || !page.includes('/media/m-wolf'), 'no photo as the share image either');
+  const es = await (await get('/boats/sea-wolf?lang=es', {...ON, DB: db})).text();
+  assert.match(visible(es), /Este barco aún no ha sido confirmado\./);
+  assert.ok(!es.includes('phish.example'));
+  // Never in the sitemap while pending.
+  const sitemap = await (await get('/sitemap-advisor.xml', {...ON, DB: db})).text();
+  assert.ok(sitemap.includes('/boats/rita-g') && !sitemap.includes('/boats/sea-wolf'));
+  // Once verified, the details show.
+  sql.prepare("UPDATE advisor_boats SET status='verified',verified_at=? WHERE id='b-wolf'").run(iso(NOW));
+  const verified = await (await get('/boats/sea-wolf', {...ON, DB: db})).text();
+  assert.match(verified, /<a href="https:\/\/phish.example\/login" rel="noopener nofollow">Booking page<\/a>/);
+  assert.match(verified, /fake_boat_handle/);
+});
+
 dbTest('the boat page: verified badge, 30 days of reports, approved photos credited, booking, phone and Instagram; pending is unverified and noindex; rejected is 404', async () => {
   noCache();
   const {db} = seed();
@@ -211,7 +240,7 @@ dbTest('the boat page: verified badge, 30 days of reports, approved photos credi
   const wolf = await (await get('/boats/sea-wolf', {...ON, DB: db})).text();
   assert.match(wolf, /<span class="adv-badge adv-badge-pending">Not verified yet<\/span>/);
   assert.match(wolf, /<meta name="robots" content="noindex">/);
-  assert.match(visible(wolf), /lings/);
+  assert.ok(!/lings/.test(visible(wolf)), 'hardening: a pending boat shows no reports until verified');
 
   for (const path of ['/boats/gone-boat', '/boats/no-such-boat', '/boats/Bad_Slug!', '/ports/atlantis', '/species/unicorn']) {
     const response = await get(path, {...ON, DB: db});
