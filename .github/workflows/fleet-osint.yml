@@ -63,6 +63,7 @@ jobs:
     if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != '' && github.ref == 'refs/heads/main'
     runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     # Batches run 3 at a time for up to 60 minutes each; the summary says which are left.
+    # run_osint.py stops at 300 minutes (DEFAULT_DEADLINE_MIN), so Ingest always runs inside this.
     timeout-minutes: 360
     permissions:
       contents: read   # the checkout
@@ -132,7 +133,8 @@ jobs:
           if [ -n "$MAX_BATCHES" ]; then
             args+=(--max-batches "$MAX_BATCHES")
           fi
-          # Exit 0: every batch done; 1: some failed after a retry (ingest the rest, then fail the job);
+          # Exit 0: every batch done; 1: some failed after a retry or the run deadline left some
+          # unstarted (ingest the rest, then fail the job);
           # 2: refused (ANTHROPIC_API_KEY set, no token, wrong CLI version) or a setup error.
           python scripts/fleet/run_osint.py "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
           rc=${PIPESTATUS[0]}
@@ -148,5 +150,5 @@ jobs:
       - name: Fail when a batch failed
         if: steps.osint.outputs.rc == '1'
         run: |
-          echo "::error::Some OSINT batches failed after a retry; resume with run_id=$RUN_ID (docs/operations/runbooks/fleet-osint.md)"
+          echo "::error::Some OSINT batches failed after a retry or did not start before the run deadline; resume with run_id=$RUN_ID (docs/operations/runbooks/fleet-osint.md)"
           exit 1

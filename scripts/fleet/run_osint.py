@@ -2,7 +2,7 @@
 """Headless OSINT runner: the ``enrich-agent`` step (charter fleet design section 8, CF-21).
 
     python scripts/fleet/run_osint.py --region CA --run-id <run id> [--claude PATH]
-        [--parallel N] [--max-batches N] [--timeout-min 60] [--max-turns 200]
+        [--parallel N] [--max-batches N] [--timeout-min 60] [--max-turns 200] [--deadline-min 300]
 
 Runs each batch manifest that ``plan-agent`` wrote (``<run_dir>/manifests/batch-NNN.json``)
 as one ``claude -p`` session with the ``charter-osint`` agent, up to ``--parallel``
@@ -14,6 +14,13 @@ session works in the run directory, writes ``profiles/<vessel_id>.json`` and
 **Resume.** Each batch's status is recorded under ``osint`` in the run's ``state.json``.
 A re-run with the same run id skips ``done`` batches; a batch that fails is retried once
 in the same invocation, and a re-run tries the still-failed ones again.
+
+**Run deadline.** ``--deadline-min`` (300, below ``fleet-osint.yml``'s 360-minute job
+timeout) bounds the whole invocation, so the workflow's Ingest step always runs: no batch
+starts with less than ``MIN_SESSION_S`` left, a running session is cut at the deadline,
+and the batches left over stay pending for a resume. On SIGTERM or SIGINT (a cancelled
+job) every live session's process group gets SIGTERM, then SIGKILL after
+``CANCEL_GRACE_S``, and no further batch starts, so no ``claude`` process outlives the job.
 
 **Subscription auth only.** The runner exits 2 when ``ANTHROPIC_API_KEY`` (or
 ``ANTHROPIC_AUTH_TOKEN``, or a cloud-provider switch) is in its environment, so a run can
@@ -40,14 +47,16 @@ so the token comes from the environment only. The session's environment is an al
 These flags were checked against ``claude --help`` and the CLI reference for the pinned
 version (``--max-turns`` is documented but not listed by ``--help``).
 
-Exit status: 0 when every batch attempted is done, 1 when any failed after its retry
-(the done ones' profiles can still be ingested), 2 on a refusal or setup error. Prints
+Exit status: 0 when every batch attempted is done, 1 when any failed after its retry or
+the deadline or a signal stopped the run early (the done ones' profiles can still be
+ingested), 2 on a refusal or setup error. Prints
 counts only (no boat names, no agent output): workflow logs are public.
 """
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -59,6 +68,7 @@ import stat
 import subprocess
 import sys
 import threading
+import time
 from typing import Any, Callable, Mapping
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -77,6 +87,9 @@ VALIDATOR = "python -m skippercast.fleet validate-profile"
 DEFAULT_PARALLEL = 3
 DEFAULT_TIMEOUT_MIN = 60
 DEFAULT_MAX_TURNS = 200
+DEFAULT_DEADLINE_MIN = 300  # fleet-osint.yml's job timeout is 360: leave an hour for Ingest
+MIN_SESSION_S = 300  # do not start a batch with less than this left before the deadline
+CANCEL_GRACE_S = 5  # SIGTERM to SIGKILL on cancel; Actions escalates within about 10 s
 ATTEMPTS_PER_RUN = 2  # the first try and one retry
 KILL_GRACE_S = 30
 MANIFEST_VERSION = 1
@@ -293,37 +306,101 @@ class State:
             tmp.replace(self.path)
 
 
+class Live:
+    """The running sessions' process groups, and the stop switch a signal or the deadline throws."""
+
+    def __init__(self):
+        self.lock, self.pids, self.stop = threading.Lock(), set(), threading.Event()
+        self.reason: str | None = None
+
+    def add(self, pid: int) -> None:
+        with self.lock:
+            self.pids.add(pid)
+            stopping = self.stop.is_set()
+        if stopping:  # started while a cancel was under way
+            self._signal([pid], signal.SIGTERM)
+
+    def discard(self, pid: int) -> None:
+        with self.lock:
+            self.pids.discard(pid)
+
+    def cancel(self, reason: str, grace_s: float) -> None:
+        """No further batch starts; live sessions get SIGTERM now and SIGKILL after ``grace_s``."""
+        with self.lock:
+            if self.stop.is_set():
+                return
+            self.reason = reason
+            self.stop.set()
+            pids = list(self.pids)
+        self._signal(pids, signal.SIGTERM)
+        timer = threading.Timer(grace_s, self._kill_rest)
+        timer.daemon = True
+        timer.start()
+
+    def _kill_rest(self) -> None:
+        with self.lock:
+            pids = list(self.pids)
+        self._signal(pids, signal.SIGKILL)
+
+    @staticmethod
+    def _signal(pids, sig) -> None:
+        for pid in pids:
+            try:
+                os.killpg(pid, sig)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+
 def run_session(cmd: list[str], text: str, cwd: Path, env: Mapping[str, str], out: Path, err: Path,
-                timeout_s: float) -> tuple[int | None, bool]:
+                timeout_s: float, live: Live | None = None) -> tuple[int | None, bool]:
     """(exit code, timed out). The prompt goes on stdin; on timeout the session's process group gets
-    SIGTERM, then SIGKILL after ``KILL_GRACE_S``."""
+    SIGTERM, then SIGKILL after ``KILL_GRACE_S``. ``live`` tracks the group so a cancel can stop it."""
+    live = live or Live()
     with out.open("wb") as stdout, err.open("wb") as stderr:
         proc = subprocess.Popen(cmd, cwd=cwd, env=dict(env), stdin=subprocess.PIPE, stdout=stdout, stderr=stderr,
                                 start_new_session=True)
+        live.add(proc.pid)
         try:
-            proc.stdin.write(text.encode("utf-8"))
-            proc.stdin.close()
-        except BrokenPipeError:
-            pass
-        try:
-            return proc.wait(timeout=timeout_s), False
-        except subprocess.TimeoutExpired:
-            for sig, grace in ((signal.SIGTERM, KILL_GRACE_S), (signal.SIGKILL, None)):
-                try:
-                    os.killpg(proc.pid, sig)
-                except ProcessLookupError:
-                    break
-                try:
-                    proc.wait(timeout=grace)
-                    break
-                except subprocess.TimeoutExpired:
-                    continue
-            proc.wait()
-            return proc.returncode, True
+            return _wait(proc, text, timeout_s)
+        finally:
+            live.discard(proc.pid)
+            # Whatever the session started in its group (a tool's child) goes with it.
+            Live._signal([proc.pid], signal.SIGKILL)
 
 
-def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool:
-    batch, run_dir = doc["batch_id"], ctx["run_dir"]
+def _wait(proc: subprocess.Popen, text: str, timeout_s: float) -> tuple[int | None, bool]:
+    try:
+        proc.stdin.write(text.encode("utf-8"))
+        proc.stdin.close()
+    except BrokenPipeError:
+        pass
+    try:
+        return proc.wait(timeout=timeout_s), False
+    except subprocess.TimeoutExpired:
+        for sig, grace in ((signal.SIGTERM, KILL_GRACE_S), (signal.SIGKILL, None)):
+            try:
+                os.killpg(proc.pid, sig)
+            except ProcessLookupError:
+                break
+            try:
+                proc.wait(timeout=grace)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        proc.wait()
+        return proc.returncode, True
+
+
+def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool | None:
+    """True when done, False when failed, None when not started (stopped, or too close to the deadline)."""
+    batch, run_dir, live = doc["batch_id"], ctx["run_dir"], ctx["live"]
+    remaining = ctx["deadline"] - time.monotonic()
+    if live.stop.is_set():
+        return None
+    if remaining < MIN_SESSION_S:
+        ctx["deadline_hit"].set()
+        return None
+    timeout_s = min(ctx["timeout_s"], remaining)
     attempts = state.batches.get(batch, {}).get("attempts", 0) + 1
     state.update(batch, status="running", attempts=attempts, started_at=now(), finished_at=None, error=None)
     cache_dir = Path(doc["policy"]["cache_dir"])
@@ -331,14 +408,20 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool:
     summary = run_dir / "summaries" / f"{batch}.md"
     out, err = run_dir / "osint" / f"{batch}.json", run_dir / "osint" / f"{batch}.stderr.log"
     cmd = command(ctx["claude"], run_dir, cache_dir, ctx["agents_file"], ctx["hosts"], ctx["max_turns"])
-    code, timed_out = ctx["session"](cmd, prompt(path, doc, summary), run_dir, ctx["env"], out, err, ctx["timeout_s"])
+    code, timed_out = ctx["session"](cmd, prompt(path, doc, summary), run_dir, ctx["env"], out, err, timeout_s,
+                                     live=live)
     try:
         result = json.loads(out.read_text(encoding="utf-8") or "{}")
     except (OSError, ValueError):
         result = {}
     boats = [b["vessel_id"] for b in doc["boats"]]
     written = [v for v in boats if (run_dir / "profiles" / f"{v}.json").is_file()]
-    if timed_out:
+    if live.stop.is_set() and (timed_out or code != 0):
+        error = f"stopped by {live.reason}"
+    elif timed_out and timeout_s < ctx["timeout_s"]:
+        ctx["deadline_hit"].set()
+        error = f"stopped at the run deadline ({ctx['deadline_min']:g} min)"
+    elif timed_out:
         error = f"timed out after {ctx['timeout_s'] / 60:g} min"
     elif code != 0:
         error = f"claude exited {code}"
@@ -357,14 +440,17 @@ def run_batch(path: Path, doc: dict, ctx: dict, state: State) -> bool:
 
 def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEFAULT_PARALLEL,
         max_batches: int | None = None, timeout_min: float = DEFAULT_TIMEOUT_MIN, max_turns: int = DEFAULT_MAX_TURNS,
-        auth_file: Path = DEFAULT_AUTH_FILE, environ: Mapping[str, str] | None = None,
-        session: Callable = run_session) -> tuple[int, dict]:
+        deadline_min: float = DEFAULT_DEADLINE_MIN, auth_file: Path = DEFAULT_AUTH_FILE,
+        environ: Mapping[str, str] | None = None, session: Callable = run_session) -> tuple[int, dict]:
+    started = time.monotonic()
     environ = os.environ if environ is None else environ
     refuse_billing_env(environ)
     if not RUN_ID.match(run_id):
         raise Refused(f"run id {run_id!r} does not match YYYYMMDDTHHMMSSZ-xxxxxx")
     if not 1 <= parallel <= 8:
         raise Refused("--parallel takes 1-8")
+    if not deadline_min > 0:
+        raise Refused("--deadline-min takes a positive number")
     run_dir = fleet_var(environ) / region / "runs" / run_id
     if not (run_dir / "agent-plan.json").is_file():
         raise Refused(f"{run_dir}: no plan-agent output; run `python -m skippercast.fleet plan-agent` first")
@@ -377,7 +463,9 @@ def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEF
     agents_file = run_dir / "osint" / "agents.json"
     agents_file.write_text(json.dumps(agent_definition(), indent=2) + "\n", encoding="utf-8")
     ctx = {"run_dir": run_dir, "claude": claude_path, "agents_file": agents_file, "hosts": off_limits_hosts(),
-           "max_turns": max_turns, "timeout_s": timeout_min * 60, "env": env, "session": session}
+           "max_turns": max_turns, "timeout_s": timeout_min * 60, "env": env, "session": session,
+           "live": Live(), "deadline": started + deadline_min * 60, "deadline_min": deadline_min,
+           "deadline_hit": threading.Event()}
     state = State(run_dir / "state.json")
     todo, skipped = [], 0
     for path in manifests:
@@ -390,18 +478,47 @@ def run(region: str, run_id: str, *, claude: str = "claude", parallel: int = DEF
             state.update(path.stem, status="failed", error=f"invalid manifest: {error}"[:300], finished_at=now())
     pending = todo[max_batches:] if max_batches is not None else []
     todo = todo[:max_batches] if max_batches is not None else todo
-    for _attempt in range(ATTEMPTS_PER_RUN):
-        if not todo:
-            break
-        with ThreadPoolExecutor(max_workers=parallel) as pool:
-            ok = list(pool.map(lambda item: run_batch(item[0], item[1], ctx, state), todo))
-        todo = [item for item, good in zip(todo, ok) if not good]
-    statuses = [state.batches.get(p.stem, {}).get("status") for p in manifests]
+    unstarted: set[str] = set()
+    with cancel_on_signals(ctx["live"]):
+        for _attempt in range(ATTEMPTS_PER_RUN):
+            if not todo or ctx["live"].stop.is_set():
+                break
+            with ThreadPoolExecutor(max_workers=parallel) as pool:
+                futures = [pool.submit(run_batch, path, doc, ctx, state) for path, doc in todo]
+                # Wake every second: a signal that lands on a worker thread runs its Python handler
+                # only when the main thread executes bytecode.
+                while wait(futures, timeout=1).not_done:
+                    pass
+                results = [future.result() for future in futures]
+            unstarted |= {item[0].stem for item, result in zip(todo, results) if result is None}
+            todo = [item for item, result in zip(todo, results) if result is False]
+    statuses = {p.stem: state.batches.get(p.stem, {}).get("status") for p in manifests}
+    values = list(statuses.values())
+    stopped = ctx["live"].reason or ("deadline" if ctx["deadline_hit"].is_set() else None)
     counts = {"run_id": run_id, "batches": len(manifests), "skipped_done": skipped,
-              "done": statuses.count("done"), "failed": statuses.count("failed"),
-              "not_run": len(pending),
+              "done": values.count("done"), "failed": values.count("failed"),
+              "not_run": len(pending) + sum(1 for b in unstarted if statuses[b] not in ("done", "failed")),
+              "stopped": stopped,
               "profiles": len(list((run_dir / "profiles").glob("*.json")))}
-    return (1 if counts["failed"] else 0), counts
+    return (1 if counts["failed"] or stopped else 0), counts
+
+
+@contextmanager
+def cancel_on_signals(live: Live):
+    """While batches run, SIGTERM and SIGINT (a cancelled job) stop every live session."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def handler(signum, _frame):
+        live.cancel(signal.Signals(signum).name, CANCEL_GRACE_S)
+
+    previous = {sig: signal.signal(sig, handler) for sig in (signal.SIGTERM, signal.SIGINT)}
+    try:
+        yield
+    finally:
+        for sig, old in previous.items():
+            signal.signal(sig, old)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -414,6 +531,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-batches", type=int, default=None, help="research at most this many pending batches")
     parser.add_argument("--timeout-min", type=float, default=DEFAULT_TIMEOUT_MIN, help="minutes per batch (60)")
     parser.add_argument("--max-turns", type=int, default=DEFAULT_MAX_TURNS, help="agentic turns per batch (200)")
+    parser.add_argument("--deadline-min", type=float, default=DEFAULT_DEADLINE_MIN,
+                        help=f"minutes for the whole run ({DEFAULT_DEADLINE_MIN}); later batches stay pending")
     parser.add_argument("--auth-file", type=Path, default=DEFAULT_AUTH_FILE,
                         help="0600 env file with CLAUDE_CODE_OAUTH_TOKEN (default ~/.config/skippercast/claude.env)")
     parser.add_argument("--print-cli-version", action="store_true", help="print the pinned Claude Code version")
@@ -429,7 +548,7 @@ def main(argv: list[str] | None = None) -> int:
         parallel = args.parallel or int(os.environ.get("FLEET_OSINT_PARALLEL") or DEFAULT_PARALLEL)
         code, counts = run(args.region, args.run_id, claude=args.claude, parallel=parallel,
                            max_batches=args.max_batches, timeout_min=args.timeout_min, max_turns=args.max_turns,
-                           auth_file=args.auth_file)
+                           deadline_min=args.deadline_min, auth_file=args.auth_file)
     except (Refused, ValueError, OSError) as error:
         print(f"run_osint: {error}", file=sys.stderr)
         return 2

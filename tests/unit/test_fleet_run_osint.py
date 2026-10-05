@@ -14,8 +14,10 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
@@ -61,6 +63,13 @@ with log.open("a") as f:
                         "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(),
                         "start": time.monotonic()}}) + "\n")
 time.sleep(float(plan.get("_sleep", 0)))
+if behaviour == "hang-tree":
+    import subprocess
+    # A tool's child that ignores SIGTERM; it records itself once the handler is in place.
+    subprocess.Popen([sys.executable, "-c", "import os, signal, sys, time; signal.signal(signal.SIGTERM, "
+                      "signal.SIG_IGN); open(sys.argv[1], 'a').write(str(os.getpid()) + '\\n'); time.sleep(60)",
+                      str(here / "children.txt")])
+    time.sleep(60)
 if behaviour == "hang":
     time.sleep(60)
 if behaviour == "fail" or (behaviour == "fail-once" and before == 0):
@@ -77,6 +86,21 @@ with (here / "ends.jsonl").open("a") as f:
 print(json.dumps({{"type": "result", "subtype": "success", "is_error": False, "num_turns": 7, "result": "done",
                   "permission_denials": []}}))
 '''
+
+
+def _alive(pid):
+    """A process that exists and is not a zombie (an orphan's parent may not have reaped it yet)."""
+    try:
+        state = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0]
+    except FileNotFoundError:
+        return False
+    except OSError:  # no /proc (macOS): existence only
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        return True
+    return state not in ("Z", "X")
 
 
 def vessel(i):
@@ -201,6 +225,53 @@ class BatchTests(unittest.TestCase):
         one = self.h.state()["osint"]["batches"]["batch-001"]
         self.assertEqual((one["status"], one["attempts"]), ("failed", 2))
         self.assertTrue(one["error"].startswith("timed out"), one["error"])
+
+    def test_the_run_deadline_stops_the_run_and_leaves_the_rest_pending(self):
+        self.h.plan(**{"batch-001": "hang"})
+        started = time.monotonic()
+        with mock.patch.object(run_osint, "KILL_GRACE_S", 2), mock.patch.object(run_osint, "MIN_SESSION_S", 1):
+            code, counts = self.h.run(parallel=1, deadline_min=0.04)  # 2.4 s
+        self.assertLess(time.monotonic() - started, 30)
+        self.assertEqual(code, 1, "a run the deadline cut short is red, so it gets resumed")
+        self.assertEqual((counts["stopped"], counts["failed"], counts["not_run"], counts["done"]), ("deadline", 1, 2, 0))
+        self.assertEqual([c["batch"] for c in self.h.calls()], ["batch-001"], "no batch starts too close to the deadline")
+        batches = self.h.state()["osint"]["batches"]
+        self.assertEqual((batches["batch-001"]["status"], batches["batch-001"]["attempts"]), ("failed", 1))
+        self.assertIn("run deadline", batches["batch-001"]["error"])
+        self.assertEqual(set(batches), {"batch-001"}, "the batches not started stay pending for a resume")
+
+    def test_sigterm_stops_every_session_and_what_it_started(self):
+        h = self.h
+        h.plan(**{"batch-001": "hang-tree", "batch-002": "hang-tree", "batch-003": "hang-tree"})
+        children = h.bin / "children.txt"
+
+        def cancel_when_both_started():
+            give_up = time.monotonic() + 20
+            while time.monotonic() < give_up:
+                if children.exists() and len(children.read_text().split()) >= 2:
+                    os.kill(os.getpid(), signal.SIGTERM)  # as the Actions runner does on cancel
+                    return
+                time.sleep(0.05)
+
+        previous = signal.getsignal(signal.SIGTERM)
+        threading.Thread(target=cancel_when_both_started, daemon=True).start()
+        started = time.monotonic()
+        with mock.patch.object(run_osint, "CANCEL_GRACE_S", 1):
+            code, counts = h.run(parallel=2)
+        self.assertLess(time.monotonic() - started, 20)
+        self.assertEqual(signal.getsignal(signal.SIGTERM), previous, "the handler is removed after the run")
+        self.assertEqual((code, counts["stopped"], counts["not_run"]), (1, "SIGTERM", 1))
+        self.assertEqual(sorted(c["batch"] for c in h.calls()), ["batch-001", "batch-002"],
+                         "no batch starts after the signal, and nothing is retried")
+        batches = h.state()["osint"]["batches"]
+        self.assertEqual({b: batches[b]["error"] for b in batches},
+                         {"batch-001": "stopped by SIGTERM", "batch-002": "stopped by SIGTERM"})
+        # The sessions and the children they started (which ignore SIGTERM) are all gone.
+        pids = [c["pid"] for c in h.calls()] + [int(p) for p in children.read_text().split()]
+        give_up = time.monotonic() + 10
+        while any(_alive(p) for p in pids) and time.monotonic() < give_up:
+            time.sleep(0.1)
+        self.assertEqual([p for p in pids if _alive(p)], [], "no orphaned session processes")
 
     def test_a_session_without_profiles_or_with_an_error_result_fails(self):
         self.h.plan(**{"batch-001": "no-profiles", "batch-002": "error-result"})
@@ -479,6 +550,11 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn('--profiles "$run_dir/profiles"', self.text)
         self.assertIn("FLEET_OSINT_PARALLEL: ${{ vars.FLEET_OSINT_PARALLEL || '3' }}", self.text)
         self.assertNotIn("GITHUB_WORKSPACE", self.text)
+
+    def test_the_run_deadline_leaves_the_job_time_to_ingest(self):
+        (job,) = [int(m) for m in re.findall(r"^    timeout-minutes: (\d+)$", self.text, re.M)]
+        # The deadline, one cut session's grace, and at least half an hour for setup and Ingest.
+        self.assertLessEqual(run_osint.DEFAULT_DEADLINE_MIN + run_osint.KILL_GRACE_S / 60 + 30, job)
 
     def test_the_pin_is_documented_with_its_flags(self):
         runbook = RUNBOOK.read_text(encoding="utf-8")

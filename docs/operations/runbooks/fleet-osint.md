@@ -10,9 +10,9 @@
 `fleet-osint.yml` runs every Sunday at 10:17 UTC and on dispatch, on `vars.DATA_RUNNER` (Hermes), only from `main`, only while `ENABLE_FLEET` is `true`. It never triggers on `pull_request`. One job, four steps:
 
 1. **Plan.** `python -m skippercast.fleet plan-agent --region CA --sink worker --run-id <id> --mode full` reads the registry snapshot and writes batch manifests of at most 20 boats (new, stale or incomplete; removal-requested boats are never selected) to `<run dir>/manifests/batch-NNN.json`. A resumed run skips this step and keeps its manifests.
-2. **Research.** `python scripts/fleet/run_osint.py --region CA --run-id <id> --claude <pinned CLI>` runs each pending batch as one headless `claude -p` session with the `charter-osint` agent (`.claude/agents/charter-osint.md`), `FLEET_OSINT_PARALLEL` (default 3) at a time, 60 minutes each. Each session writes `profiles/<vessel_id>.json` and `summaries/<batch_id>.md` in the run directory. A failed batch is retried once; each batch's status goes to `state.json` under `osint`.
+2. **Research.** `python scripts/fleet/run_osint.py --region CA --run-id <id> --claude <pinned CLI>` runs each pending batch as one headless `claude -p` session with the `charter-osint` agent (`.claude/agents/charter-osint.md`), `FLEET_OSINT_PARALLEL` (default 3) at a time, 60 minutes each. Each session writes `profiles/<vessel_id>.json` and `summaries/<batch_id>.md` in the run directory. A failed batch is retried once; each batch's status goes to `state.json` under `osint`. The whole step stops at 300 minutes (`--deadline-min`, below the job's 360-minute timeout) so Ingest always runs: no batch starts with less than 5 minutes left, a session still running at the deadline is stopped, and the rest stay pending for a resume. A cancelled job (SIGTERM or SIGINT) stops every live session's process group, SIGTERM then SIGKILL after 5 seconds, and starts nothing more, so no `claude` process outlives the job.
 3. **Ingest.** `python -m skippercast.fleet ingest --region CA --sink worker --run-id <id> --profiles <run dir>/profiles` validates every profile (schema, off-limits hosts, MMSI agreement), refuses and lists invalid ones, and writes the rest to the registry as `osint` facts through `/api/fleet/jobs/registry` with a GitHub OIDC token.
-4. **Fail when a batch failed**, after ingesting the batches that finished, so the job is red and the run can be resumed.
+4. **Fail when a batch failed** or the deadline left batches unstarted, after ingesting the batches that finished, so the job is red and the run can be resumed.
 
 | Dispatch input | Default (and the schedule's value) | What |
 | --- | --- | --- |
@@ -22,7 +22,7 @@
 | `max_batches` | empty: all | Research at most this many pending batches; the rest stay pending for a resume. |
 | `run_id` | empty: a new run | Resume this run (same sink): done batches are skipped, failed and pending ones run. |
 
-The summary prints the run id first, then counts only (`plan-agent` counts, `{"batches", "done", "failed", "not_run", "skipped_done", "profiles"}`, ingest counts). Never boat names, contacts or agent output: workflow logs are readable by anyone who can read the repository.
+The summary prints the run id first, then counts only (`plan-agent` counts, `{"batches", "done", "failed", "not_run", "skipped_done", "stopped", "profiles"}` (`stopped`: `deadline`, `SIGTERM`, `SIGINT` or null), ingest counts). Never boat names, contacts or agent output: workflow logs are readable by anyone who can read the repository.
 
 Files on the box (`~` is the runner user's home):
 
@@ -89,6 +89,7 @@ These were checked against `claude --help` of 2.1.289 and the [CLI reference](ht
 
 - **Some batches failed** (the job is red, `failed` > 0): the batches that finished were ingested. Resume: `gh workflow run fleet-osint.yml --repo Grahammmm/skippercast -f region=CA -f sink=worker -f run_id=<id>`. Done batches are skipped; each failed one gets another try and one retry. Profiles written by a failed attempt that pass validation are ingested too.
 - **A batch that fails every time:** on the box, `jq '.osint.batches["batch-NNN"]' <run dir>/state.json` (status, attempts, exit code, error, profiles written, turns, denials) and `jq '{subtype, is_error, num_turns, permission_denials}' <run dir>/osint/batch-NNN.json`. `timed out after 60 min` or `error_max_turns`: the batch is too slow; lower `max_requests_per_boat` or the batch size in a PR. Many `permission_denials`: the agent keeps calling something the session denies (an off-limits host, a write outside `profiles/`); read `summaries/batch-NNN.md` and fix the agent file in a PR.
+- **`stopped` is `deadline`** (`not_run` > 0, a batch error `stopped at the run deadline`): the run had more batches than five hours hold. Resume it as above; if it happens every week, raise `FLEET_OSINT_PARALLEL` within the subscription's usage limits.
 - **A new run instead of a resume** plans again from the registry: boats a failed batch held are selected again (they are still unprofiled), so either works; a resume keeps the done batches' work and costs less.
 
 ## Failures before any batch (exit 2)
