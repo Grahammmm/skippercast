@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Enable reviewed, unranked Point Conception rock habitat in r08 with original NOAA/USGS attribution and fresh whole-polygon spatial holds; no new measurement, ranking or precise fishing export.
+
 - Enable reviewed, unranked Point Estero rock habitat in Cambria r02, with fresh whole-polygon spatial holds and no new measurement, ranking or precise fishing export.
 
 - Bound nonlinear map-coordinate conversion with collinear native-edge vertices when needed; preserve measured boundaries, original legal screens and existing fidelity limits.

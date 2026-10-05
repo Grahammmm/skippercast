@@ -87,6 +87,34 @@
         "morro-bay-r01",
         "morro-bay-r02"
       ]
+    },
+    {
+      "id": "usgs-offshore-point-conception-h11952-2m-rugose-v1",
+      "depth_source_id": "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+      "depth_source_sha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "classification_source_id": "seafloorcharacter-offshorepointconception-zip-794d9e3e8d",
+      "classification_source_sha256": "c5faa08e5162cf09401fa07976333487626a0e2d8732b4e112255b3a8c5733fb",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshorePointConception/metadata/SeafloorCharacter_OffshorePointConception_metadata.xml",
+      "metadata_sha256": "22cfba0b4beaed3cc0f7185c3a814530dce98d71d4556d90d7367a8f9be68ea2",
+      "rugose_raw_codes": [
+        3,
+        13,
+        23,
+        63,
+        73
+      ],
+      "release_license": "public-domain-us-gov",
+      "credit": "Original interpreted seafloor character: USGS. Original H11952 bathymetry: NOAA.",
+      "notice": "Retain original source metadata and limitations. Not for navigation.",
+      "review_basis": "Original raw class3 rock/boulders rugose only. Class2 mixed/flat, class4 coarse sediment and class5 anthropogenic material excluded. Shared derivative survey lineage; exact H11952 line attribution unresolved, no independent confirmation. Nominal MLLW depth25–300ft; H11952 delivered2m depth tier18–40m. Delivered character2m grid has no verified effective precision/quantitative raster error or per-cell confidence; interpolation unknown. No fish presence, roughness measurement, rank, terrain or fit asserted.",
+      "reviewed_on": "2026-10-04",
+      "support_mode": "selected-source-v1",
+      "reach_ids": [
+        "point-arguello-conception-r08"
+      ],
+      "neighbor_reaches": [
+        "point-arguello-conception-r07"
+      ]
     }
   ]
 }
