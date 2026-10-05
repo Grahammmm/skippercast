@@ -1427,3 +1427,16 @@ th {
 .survey-region .region-note { display:none; }
 #regional-explore select { width:100%; min-height:44px; border:1px solid #cbdade; border-radius:10px; padding:8px; background:#fff; color:#123945; }
 #regional-explore p { margin:8px 0; }
+
+/* CF-51: admin fleet activity layers (fleet-activity.js). */
+.fleet-layers { margin: 0.75rem 0; }
+.fleet-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; margin: 0.5rem 0; }
+.fleet-filters label { display: grid; gap: 2px; font-size: 0.8125rem; color: var(--ink-2); min-width: 0; }
+.fleet-filters select, .fleet-filters input[type="date"] { width: 100%; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: var(--card); color: var(--ink); }
+.fleet-filters .fleet-check { display: flex; align-items: center; gap: 6px; grid-column: 1 / -1; }
+.fleet-filters #fleet-vessels-note, .fleet-actions { grid-column: 1 / -1; }
+.fleet-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.fleet-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 0.75rem; margin: 0 0 1rem; font-size: 0.875rem; }
+.fleet-facts dt { color: var(--ink-2); }
+.fleet-facts dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 420px) { .fleet-filters { grid-template-columns: minmax(0, 1fr); } }

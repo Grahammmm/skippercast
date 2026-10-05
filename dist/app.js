@@ -31,6 +31,7 @@ import { initCharterGrounds } from "./charter-grounds.js";
 import { initProtectedAreas } from "./protected-areas.js";
 import { initDriftGuides } from "./drift-guides.js";
 import { initCommercialAIS } from "./commercial-ais.js";
+import { initFleetActivity } from "./fleet-activity.js";
 const $ = (id) => document.getElementById(id);
 const escapeHTML = (value) =>
   String(value ?? "").replace(
@@ -676,6 +677,8 @@ try {
     toast,
   }));
   const commercialStart=optional("Commercial AIS",()=>initCommercialAIS(map,{protectedAreas,onSelect:(html,area)=>showAreaDetails(html,area,"commercial-weather"),showMap:()=>navigation.showView("map")}));
+  // CF-51: admin-only fleet activity layers; removed from the page for everyone else.
+  void optional("Fleet activity",()=>initFleetActivity(map,{onSelect:(html,area)=>showAreaDetails(html,area,"fleet-weather"),showMap:()=>navigation.showView("map")}));
   [speciesUI, charterUI, commercialUI] = await Promise.all([speciesStart, charterStart, commercialStart]);
   filterTargets();
   map.on("zoomend", () => {

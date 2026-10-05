@@ -411,6 +411,37 @@
           <p class="small">Pink boundaries: MPAs, always shown. Fishing targets are excluded from every MPA. Habitat footprints appear at close zoom.</p>
           <div id="drift-options"></div>
         </details>
+        <!-- CF-51: admin only; fleet-activity.js removes this unless the map API answers for an admin. -->
+        <details id="fleet-layers" class="fleet-layers" hidden>
+          <summary>Fleet activity · admin</summary>
+          <div class="layer-options">
+            <label><input id="layer-fleet-events" type="checkbox" /> Activity stops · sized by dwell</label>
+            <label><input id="layer-fleet-tracks" type="checkbox" /> Trip tracks · coloured by segment</label>
+            <label><input id="layer-fleet-heat" type="checkbox" /> Activity heat · aggregate cells</label>
+          </div>
+          <form id="fleet-filters" class="fleet-filters">
+            <label>Boat<select name="vessel"></select></label>
+            <p id="fleet-vessels-note" class="small" hidden>The boat list shows the first 500 boats by name.</p>
+            <label>Port<select name="port"></select></label>
+            <label>Vessel class<select name="class"></select></label>
+            <label>Trip type<select name="trip_type"></select></label>
+            <label>Activity type<select name="kind"></select></label>
+            <label>From<input name="from" type="date" /></label>
+            <label>To<input name="to" type="date" /></label>
+            <label>Season<select name="season"></select></label>
+            <label>Season part<select name="season_part"></select></label>
+            <label class="fleet-check"><input id="fleet-hide-planning" type="checkbox" /> Leave out NOAA planning-only rows</label>
+            <div class="fleet-actions">
+              <button type="submit" class="secondary">Apply filters</button>
+              <button type="button" id="fleet-show" class="primary">Show on map</button>
+            </div>
+          </form>
+          <p id="fleet-activity-status" class="small" role="status"></p>
+          <details class="detail-section">
+            <summary>How fleet activity is inferred</summary>
+            <p>Stops and segment kinds come from AIS speed and track shape. Drift or anchor stops are filled circles; troll stops are rings. Dates are each trip's local departure date. Heat cells hold no boat, port, class, trip type or source.</p>
+          </details>
+        </details>
         <button id="show-commercial-ais" class="secondary">Show commercial AIS areas</button>
         <p id="commercial-ais-status" class="small">Loading historical coverage…</p>
         <button id="charter-status" class="charter-status">
