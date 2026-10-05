@@ -33,7 +33,10 @@ same account running BlueBubbles. Nothing else on that account.
    port-out (any major carrier does). Record account number and PIN in the
    owner's password manager, not in the repo.
 2. Create the Apple Account; sign in on the iPhone; Settings › Messages › Send
-   & Receive shows the number ticked. Enable Messages in iCloud.
+   & Receive shows the number ticked. Messages in iCloud stays **off**, and
+   Keep Messages is 30 days on the iPhone and the Mac (hardening; the
+   [relay setup](../../operations/runbooks/advisor-relay-setup.md) steps 3–5
+   and § 12, with the weekly `scripts/advisor/relay-cleanup.sh` job).
 3. Mac mini: a macOS version BlueBubbles' current release notes list as
    supported (the runbook says where to check); same Apple Account;
    Messages › iMessage shows the number;
