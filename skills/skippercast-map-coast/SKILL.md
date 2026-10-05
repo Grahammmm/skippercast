@@ -59,14 +59,26 @@ may still gain a new source; scheduling output never proves geographic growth.
 
 ## Choose the next executable task
 
-1. Harvest qualified, cached sources not yet processed in useful native windows.
-2. Otherwise qualify a dense original producer grid that intersects a retained
-   native-mask gap. Include gaps inside partially supported planning cells.
-3. Inspect bounded original BAG/native-grid windows before large acquisition.
-4. Use raw sonar only when a small test establishes useful shallow gap support
+The goal is additional usable habitat, not necessarily additional sonar coverage.
+Before another maintenance or infrastructure batch, apply
+[habitat expansion preflight](references/habitat-expansion-preflight.md).
+A processed reach may contain reviewed classified habitat that the rough-terrain
+extractor did not outline. Test a bounded positive delta and preserve the
+distinction between an interpreted habitat area and a ranked terrain patch.
+Do not assume an exhausted native-survey queue exhausts habitat opportunities.
+
+
+1. Release already supported, rights-qualified private candidates with current
+   spatial screening. Apply the appropriate ranked or unranked contract.
+2. Test reviewed classifications for additional habitat within measured coverage.
+   A positive private proof needs its own reviewed release contract; never
+   fabricate a terrain grade to reuse an incompatible contract.
+3. Harvest qualified cached sources not yet processed in useful native windows.
+4. Otherwise qualify a dense original producer grid against a retained native
+   gap. Include gaps inside partially supported planning cells and inspect a
+   bounded window before large acquisition.
+5. Use raw sonar only when a small test establishes useful shallow gap support
    and a realistic path to sufficient terrain measurements.
-5. Release already ranked, rights-qualified private physics with current spatial
-   screening while source discovery continues elsewhere.
 
 Prioritize additional valid shallow support and supported habitat rankings,
 then effective resolution, access/rights readiness and processing resources.
