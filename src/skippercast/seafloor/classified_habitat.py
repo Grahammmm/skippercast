@@ -1,8 +1,9 @@
 """Original publisher rugose-rock areas, separate from graded terrain physics.
 
 A narrow reviewed opt-in pairs an original categorical grid with valid native
-nominal depth and selected-source support. Unknown masks remain unknown. This
-stage adds interpreted habitat outlines, never measurement, ranks or exports.
+nominal depth and current Tier 1 reference support. The versioned paired mode
+is opt-in; absent mode keeps selected-source support. Unknown masks remain
+unknown. This stage adds interpreted outlines, never measurement, ranks or exports.
 """
 from copy import deepcopy
 from datetime import date
@@ -39,10 +40,40 @@ from .source_scope import scoped_manifest
 PROFILE = 'original-rugose-classified-area-v1'
 POLICY_FILE = 'catalog/classified-habitat-policy.json'
 TO_LOCAL = Transformer.from_crs(4326, 3310, always_xy=True).transform
+SELECTED_SOURCE_SUPPORT = 'selected-source-v1'
+PAIRED_REFERENCE_SUPPORT = 'paired-reference-footprint-v1'
 
 
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def support_mode(policy):
+    """Resolve the opt-in support contract without changing legacy policy bytes."""
+    mode = policy.get('support_mode', SELECTED_SOURCE_SUPPORT)
+    if (not isinstance(mode, str)
+            or mode not in {SELECTED_SOURCE_SUPPORT, PAIRED_REFERENCE_SUPPORT}):
+        raise ValueError('Unknown classified habitat support mode')
+    return mode
+
+
+def policy_applies_to_reach(policy, reach):
+    reach_ids = policy.get('reach_ids')
+    return reach_ids is None or reach in reach_ids
+
+
+def _known_reaches(root):
+    path = Path(root)/'catalog/reaches.json'
+    if not path.exists():
+        return None
+    rows = read_json(path).get('reaches')
+    if not isinstance(rows, list):
+        raise ValueError('Invalid classified habitat reach inventory')
+    ids = [row.get('id') for row in rows if isinstance(row, dict)]
+    if (len(ids) != len(rows) or any(not isinstance(ident, str) for ident in ids)
+            or len(ids) != len(set(ids))):
+        raise ValueError('Invalid classified habitat reach inventory')
+    return set(ids)
 
 
 def policies(root):
@@ -56,7 +87,19 @@ def policies(root):
     if (not isinstance(rows, list) or len({p['depth_source_id'] for p in rows}) != len(rows)
             or len({p['id'] for p in rows}) != len(rows)):
         raise ValueError('Ambiguous classified habitat opt-in')
+    known_reaches = (_known_reaches(root) if any(
+        isinstance(p, dict) and p.get('reach_ids') is not None for p in rows) else None)
     for p in rows:
+        mode = support_mode(p)
+        reach_ids = p.get('reach_ids')
+        if mode == PAIRED_REFERENCE_SUPPORT and reach_ids is None:
+            raise ValueError('Paired-reference support requires reviewed reach_ids')
+        if reach_ids is not None:
+            if (not isinstance(reach_ids, list) or not reach_ids
+                    or any(not isinstance(r, str) for r in reach_ids)
+                    or len(reach_ids) != len(set(reach_ids)) or known_reaches is None
+                    or any(r not in known_reaches for r in reach_ids)):
+                raise ValueError('Invalid classified habitat reach scope')
         public_url(p['metadata_url'])
         if (not re.fullmatch('[a-z0-9-]+', p['id'])
                 or date.fromisoformat(p['reviewed_on']) > date.today()
@@ -133,6 +176,9 @@ def source_context(root, reach, policy, *, fetch=False):
     """Bind current baseline physics, reviewed source pair and normalized bytes."""
     root = Path(root)
     scope_name(reach)
+    support_mode(policy)
+    if not policy_applies_to_reach(policy, reach):
+        raise ValueError('Classified policy does not include requested reach')
     folder = root/'var/seafloor/reaches'/reach
     run = read_json(folder/'run.json')
     physical = read_json(folder/'physical.json')
@@ -181,12 +227,24 @@ def source_context(root, reach, policy, *, fetch=False):
         raise ValueError('Classified depth normalized bytes changed')
     verify_review(receipt, row['adapter_review'], paths[0])
     cells = read_json(folder/'cells.json')['cells']
-    support = unary_union([cell_geometry(c) for c in cells
-                          if c['tier'] == 1 and c['source_id'] == row['id']])
+    mode = support_mode(policy)
+    if mode == SELECTED_SOURCE_SUPPORT:
+        support_cells = [c for c in cells
+                         if c['tier'] == 1 and c['source_id'] == row['id']]
+    else:
+        # Reference geometry comes only from current hash-verified Tier 1
+        # baseline cells. extract() still applies the paired source's own
+        # depth, class, nodata and resolution masks inside that footprint.
+        eligible_sources = {s['id'] for s in run['inputs']['sources']}
+        support_cells = [c for c in cells if type(c.get('tier')) is int and c['tier'] == 1]
+        if any(c.get('source_id') not in eligible_sources for c in support_cells):
+            raise ValueError('Unknown source in current Tier 1 reference cells')
+    support = unary_union([cell_geometry(c) for c in support_cells])
     from .screen import polygon
     existing = unary_union([transform(TO_LOCAL, polygon(f['geometry']))
                 for f in read_json(folder/'candidates.geojson')['features']])
     identity = {'profile': PROFILE, 'reach': reach, 'policy': policy,
+        'support_mode': mode,
         'depth_source': row, 'classification_binding': binding, 'normalized_receipt': receipt,
         'normalized_sha256': receipt['cog_sha256'], 'source_scope': source_scope,
         'baseline_physical_input_hash': physical['input_hash'],
@@ -266,7 +324,8 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     folder = root/'var/seafloor/reaches'/reach
     baseline = read_json(folder/'run.json')
     selected = [p for p in policies(root) if p['depth_source_id'] in
-                {s['id'] for s in baseline['inputs']['sources']}]
+                {s['id'] for s in baseline['inputs']['sources']}
+                and policy_applies_to_reach(p, reach)]
     receipt_path = folder/'classified-run.json'
     if not selected and not receipt_path.exists():
         return None  # An absent opt-in adds no artifacts to an untouched reach.
