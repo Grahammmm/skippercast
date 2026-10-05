@@ -87,7 +87,7 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await checkA11y(page, 'admin-posts', info.project.name);
   await draft.getByRole('button', {name: 'Cancel'}).click();
 
-  await page.getByRole('link', {name: 'Health'}).click();
+  await page.getByRole('link', {name: 'Health', exact: true}).click();
   await expect(page.getByRole('heading', {level: 1, name: 'Health'})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Mac relay'})).toBeVisible();
   await checkA11y(page, 'admin-health', info.project.name);

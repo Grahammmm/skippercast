@@ -41,6 +41,8 @@
 //   POST /api/admin/fleet/vessels/:id/link-advisor   {boat_id, unlink?: true}
 //   GET  /api/admin/fleet/operators  ?region= &outreach_status= &consent_status=   fleet/admin/operators.ts (CF-32): never sends
 //   GET|POST /api/admin/fleet/operators/:id, GET|POST /api/admin/fleet/operators/:id/outreach, POST /api/admin/fleet/outreach/:id
+//   GET  /api/admin/fleet/coverage     ?region=   fleet/admin/coverage.ts (CF-35)
+//   GET  /api/admin/fleet/ais/health   ?region=   fleet/admin/ais-health.ts (CF-35)
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -80,6 +82,9 @@ import {listFleetReviews, decideFleetReview} from '../fleet/admin/reviews.ts';
 import {listVessels, vesselDetail, editVessel, linkAdvisor} from '../fleet/admin/vessels.ts';
 // CF-32: fleet operators, outreach drafts (never sent) and the lead score.
 import {listOperators, operatorDetail, editOperator, listOutreach, addOutreach, decideOutreach} from '../fleet/admin/operators.ts';
+// CF-35: coverage and AIS health.
+import {coverageQuery, coverageReport} from '../fleet/admin/coverage.ts';
+import {healthQuery, aisHealth} from '../fleet/admin/ais-health.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -301,6 +306,16 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.get('/api/admin/fleet/operators/:id/outreach', async c => found(await listOutreach(c.env.DB!, c.req.param('id'))));
   admin.post('/api/admin/fleet/operators/:id/outreach', async c => answer(await addOutreach(c.env.DB!, c.req.param('id'), await body(c.req.raw, 40960), c.var.owner, stamp())));
   admin.post('/api/admin/fleet/outreach/:id', async c => answer(await decideOutreach(c.env.DB!, c.req.param('id'), await body(c.req.raw, 1024), c.var.owner, stamp())));
+
+  // ---- CF-35: fleet coverage and AIS health (FLEET_ENABLED gate in routes/fleet.ts) ----
+  admin.get('/api/admin/fleet/coverage', async c => {
+    const query = coverageQuery(c.req.query('region'));
+    return 'error' in query ? json({error: query.error}, 400) : json(await coverageReport(c.env.DB!, query.region, new Date(now())));
+  });
+  admin.get('/api/admin/fleet/ais/health', async c => {
+    const query = healthQuery(c.req.query('region'));
+    return 'error' in query ? json({error: query.error}, 400) : json(await aisHealth(c.env.DB!, query.region, new Date(now())));
+  });
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

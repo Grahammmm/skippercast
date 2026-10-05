@@ -28,6 +28,9 @@ import {FLEET_COPY} from './fleet-copy.ts';
 import {FleetReviewView} from './fleet-review.tsx';
 import {FleetVessels, FleetVesselView} from './fleet-vessels.tsx';
 import {FleetOperatorsView, FleetOperatorView, OPERATORS_LABEL} from './fleet-operators.tsx';   // CF-32
+import {FLEET_COVERAGE_COPY} from './fleet-coverage-copy.ts';   // CF-35
+import {FleetCoverageView} from './fleet-coverage.tsx';
+import {FleetAisView} from './fleet-ais.tsx';
 import {navOf, routeOf, shownRoute, visibleViews} from './route.ts';
 import type {AdminFlags, FleetDetail, FleetView, Route, RouteView} from './route.ts';
 
@@ -38,6 +41,8 @@ const FLEET_PAGES: Record<FleetView | FleetDetail, {label: string; render: (arg:
   'fleet-vessel': {label: FLEET_COPY.views['fleet-vessels'], render: id => <FleetVesselView key={id} id={id} />},   // CF-31
   'fleet-operators': {label: OPERATORS_LABEL, render: region => <FleetOperatorsView region={region} />},   // CF-32
   'fleet-operator': {label: OPERATORS_LABEL, render: id => <FleetOperatorView key={id} id={id} />},   // CF-32
+  'fleet-coverage': {label: FLEET_COVERAGE_COPY.views['fleet-coverage'], render: region => <FleetCoverageView region={region} />},   // CF-35
+  'fleet-ais': {label: FLEET_COVERAGE_COPY.views['fleet-ais'], render: region => <FleetAisView region={region} />},   // CF-35
 };
 const fleetPage = (view: RouteView) => (Object.hasOwn(FLEET_PAGES, view) ? FLEET_PAGES[view as FleetView | FleetDetail] : undefined);
 const labelOf = (view: AdminView | FleetView): string => fleetPage(view)?.label ?? COPY.views[view as AdminView];
