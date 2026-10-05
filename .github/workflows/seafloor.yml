@@ -21,6 +21,7 @@ on:
     paths:
       - catalog/surveys.json
       - catalog/habitat-rules.json
+      - catalog/classified-habitat-policy.json
       - catalog/seafloor-screen.json
       - catalog/reaches.json
       - src/skippercast/seafloor/**
