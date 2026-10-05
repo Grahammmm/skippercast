@@ -368,7 +368,7 @@ Other registry tables:
   `geofence-presence`, `admin`), `confidence`, `status` (`candidate`,
   `watched`, `rejected`), `ais_name`, `ais_call_sign`, `ais_class`,
   `first_seen_at`, `last_seen_at`, `last_seen_source`, `positions_30d`,
-  `updated_at`; index `watch_vessel`.
+  `updated_at`; index `watch_vessel (vessel_id)`.
 - **`fleet_trips`**: `id` `sha256(mmsi|departed_at|source)[:32]`, `region`,
   `vessel_id`, `mmsi`, `depart_port_id`, `return_port_id`, `departed_at`,
   `returned_at`, `local_date` (departure date in the region timezone; the
@@ -376,20 +376,22 @@ Other registry tables:
   `closed`, `truncated`), `trip_type_inferred`, `distance_nm`,
   `max_offshore_nm`, `fishing_min`, `positions_n`, `gap_min`, `source`
   (`aisstream`, `marinecadastre`, `datalastic`), `rights`,
-  `classifier_version`, `computed_at`. Indexes `trip_vessel_date`,
-  `trip_region_season`, `trip_source_time (source, departed_at)`.
+  `classifier_version`, `computed_at`. Indexes `trip_vessel_date (vessel_id,
+  local_date)`, `trip_region_season (region, season)`, `trip_source_time
+  (source, departed_at)`.
 - **`fleet_segments`**: `id` `sha256(trip_id|seq)[:32]`, `trip_id`, `seq`,
   `kind` (`in-port`, `transit`, `fishing-drift`, `fishing-troll`, `gap`),
   `started_at`, `ended_at`, `geometry` (encoded polyline, precision 5),
-  `points_n`, `mean_sog`, `straightness`, `heading_var`; index `seg_trip`.
+  `points_n`, `mean_sog`, `straightness`, `heading_var`; index `seg_trip (trip_id, seq)`.
 - **`fleet_events`**: one per fishing segment. `id`
   `sha256(trip_id|started_at|kind)[:32]`, `trip_id`, `segment_id`,
   `vessel_id`, `region`, `kind` (`drift-anchor`, `troll`), `lat`, `lon`
   (median), `radius_m` (p90 distance), `started_at`, `ended_at`, `dwell_min`,
   `port_id`, `vessel_class`, `trip_type`, `season`, `season_part`, `basis`
   (always `inferred-from-movement`), `source`, `rights`, `classifier_version`,
-  `species_json` (null until catch-log pairing). Indexes `ev_region_time`,
-  `ev_vessel`, `ev_season (region, season, kind)`.
+  `species_json` (null until catch-log pairing). Indexes `ev_region_time
+  (region, started_at)`, `ev_vessel (vessel_id, started_at)`, `ev_season
+  (region, season, kind)`.
 - **`fleet_aggregates`**: `id` `sha256(module|params_hash|season|season_part|kind|cell)[:32]`,
   `region`, `module`, `params_json`, `cell_id`, `lat`, `lon`, `season`,
   `season_part`, `kind`, `vessels_n`, `events_n`, `dwell_min`, `first_date`,
@@ -397,7 +399,7 @@ Other registry tables:
   `agg_lookup (region, module, season, kind)`.
 - **`fleet_segment_labels`**: `id` random, `trip_id`, `started_at`,
   `ended_at`, `label`, `labeller` (`users.id` or `agent:<name>`), `basis`,
-  `created_at`; index `label_trip`.
+  `created_at`; index `label_trip (trip_id)`.
 - **`fleet_ais_hours`**: PK `(region, hour)`; `messages`,
   `watched_messages`, `vessels`, `reconnects`, `max_gap_s`, `dropped`.
 - **`fleet_trip_reports`** (catch-log pairing, filled later): PK
