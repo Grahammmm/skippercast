@@ -215,6 +215,13 @@ class FccUlsTests(unittest.TestCase):
                  ("C", "PERSONA FICTA INC", "PERSONA", "FICTA", False),  # personal name fields filled
                  ("T", "SAMPLE FAMILY TRUST", "", "", False),          # no entity suffix
                  ("P", "SMITH AND JONES", "", "", False), ("L", "", "", "", False),
+                 ("C", "JOHN SMITH D.B.A. SEA LLC", "", "", False),      # dotted DBA
+                 ("C", "JOHN SMITH D B A SEA LLC", "", "", False),       # spaced DBA
+                 ("C", "JOHN SMITH DOING BUSINESS AS SEA LLC", "", "", False),
+                 ("C", "JOHN SMITH IN CARE OF SEA LLC", "", "", False),
+                 ("C", "JOHN SMITH TTEE SEA LLC", "", "", False),        # trustee abbreviation
+                 ("C", "JANE TESTPERSON C/O SEA EXAMPLE LLC", "", "", False),
+                 ("C", "COAST CO LLC", "", "", True),                   # a bare CO is not C/O
                  ("L", "TESTPERSON, JANE LLC", "", "", False),             # SURNAME, GIVEN before the suffix
                  ("C", "JANE TESTPERSON DBA SEA EXAMPLE INC", "", "", False),
                  ("C", "SEA EXAMPLE D/B/A EXAMPLE TOURS CORP", "", "", False),

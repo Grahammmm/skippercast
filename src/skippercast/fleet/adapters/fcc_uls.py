@@ -50,7 +50,9 @@ ENTITY_SUFFIX = re.compile(
     r"L\.?\s?L\.?\s?P|P\.?\s?L\.?\s?L\.?\s?C)\.?$")
 
 # Words that put a person in an otherwise entity-looking name.
-PERSON_MARKERS = re.compile(r"(?:^|[\s,(])(?:D\s?/\s?B\s?/\s?A|DBA|C\s?/\s?O|ATTN|TRUSTEES?|ESTATE OF|ET\.? AL)(?:$|[\s.,:)])")
+PERSON_MARKERS = re.compile(
+    r"(?:^|[\s,(])(?:D[\s./]*B[\s./]*A\.?|DOING BUSINESS AS|C\s?/\s?O|C\.\s?O\.|IN CARE OF|ATTN|TRUSTEES?|TTEES?"
+    r"|ESTATE OF|ET\.? AL\.?)(?:$|[\s.,:)])")
 
 # Minimum field counts each record type must have; a file with lines shorter than this changed layout.
 WIDTH = {"HD": 10, "EN": 24, "SH": 22}
