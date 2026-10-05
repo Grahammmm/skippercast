@@ -19,6 +19,11 @@
   ``ingest-ops.jsonl`` and ``ingest-snapshot.json`` (the registry before the
   write) for ``refresh``. On the staging sink every stored fact must have a
   ``source_url``, or the step fails.
+- ``ingest --profiles DIR`` (CF-20) ingests the OSINT agent's profiles instead:
+  each file is validated (``profile.validate_profile``: schema and policy) and
+  must name a vessel of this region; invalid files are refused and listed in
+  ``profiles-ingest.json``, valid ones become ``osint`` facts, offerings and
+  ``fact-conflict`` reviews (``profile_ops``).
 
 The snapshot comes from the sink: ``Snapshot.from_sqlite`` for the staging
 sink, ``GET /api/fleet/jobs/snapshot`` (paged, OIDC) for the Worker.
@@ -32,8 +37,9 @@ from typing import Any, Callable, Iterable, Mapping
 from urllib.parse import urlencode
 from urllib.request import Request
 
-from . import ops
+from . import ops, profile
 from .adapters import Candidate, Departure, Fact, Offering, RunContext, get
+from .adapters.base import offering_name_norm
 from .enrich import ENRICHERS, IMPORTERS
 from .resolve import ORDER, ResolverConfig, Snapshot, fingerprint, op_sort_key, resolve
 from .sinks import SinkError
@@ -220,7 +226,129 @@ def build_ops(snapshot: Snapshot, candidates: list[Candidate], fact_rows: list[M
     return out, {"held": held, "skipped": skipped, "created": result.created}
 
 
-def ingest(ctx: RunContext, sink, load: Loader = load_snapshot) -> dict:
+# ---- OSINT profiles (``ingest --profiles DIR``, design section 8, CF-20) ---------------------------
+
+def _read_profile(path: Path, region: str, vessels: Mapping[str, Mapping], off_limits) -> tuple[dict | None, list[str]]:
+    """(document, errors): schema and policy (``profile.validate_profile``), then the region and the vessel."""
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return None, [f"{type(error).__name__}: {error}"[:300]]
+    errors = profile.validate_profile(doc, off_limits)  # raises MissingDependency without jsonschema: never unvalidated
+    if errors:
+        return None, errors
+    if doc["region"] != region:
+        return None, [f"region: {doc['region']} is not this run's region {region}"]
+    vessel = vessels.get(doc["vessel_id"])
+    if vessel is None:
+        return None, [f"vessel_id: no vessel {doc['vessel_id']} in the {region} registry"]
+    if vessel.get("removal_requested_at"):
+        return None, ["vessel_id: the operator asked for removal; nothing is added"]
+    return doc, []
+
+
+def profile_ops(snapshot: Snapshot, docs: list[dict], config: ResolverConfig, now: str) -> tuple[list[dict], dict]:
+    """The registry operations for valid profiles of known vessels, and what was left out.
+
+    Each profile is an ``osint`` candidate assigned to the vessel it names (a decided ``same-vessel`` merge for
+    its fingerprint ``osint|<vessel_id>`` is added to a copy of the snapshot, so resolve never matches it
+    elsewhere), so the facts rank under the resolver rules like any other source's and ``build_ops`` applies the
+    supersede rule: a missing value supersedes nothing. A profile does not list a vessel: each vessel upsert keeps
+    the stored ``last_seen_at`` (``refresh`` counts it towards ``vanished``) and moves ``last_profiled_at``
+    forward. Trips become offerings only when the vessel has no offering of that name (deterministic sources own
+    prices and schedules; an osint trip never overwrites or duplicates theirs), seen at the profile's time.
+    Conflicts open ``fact-conflict`` reviews.
+    """
+    stored = {v["id"]: v for v in snapshot.vessels}
+    mapped = [profile.profile_facts(doc) for doc in docs]
+    decisions = [{"id": ops.review_id("merge", f"{profile.SOURCE_ID}|{p.vessel_id}"), "status": "decided",
+                  "decision": {"action": "same-vessel", "vessel_id": p.vessel_id}} for p in mapped]
+    assigned = Snapshot(snapshot.vessels, list(snapshot.reviews) + decisions, snapshot.operators,
+                        snapshot.advisor_slugs, snapshot.facts)
+    candidates = [Candidate(profile.SOURCE_ID, stored[p.vessel_id]["name"], facts=tuple(p.facts), record_id=p.vessel_id)
+                  for p in mapped]
+    flagged = [{"vessel_id": p.vessel_id, **f.as_dict()} for p in mapped for f in p.flagged]
+    out, info = build_ops(assigned, candidates, flagged, config, now)
+    at = {p.vessel_id: ops.iso(p.profiled_at or now, "profiled_at") for p in mapped}
+    for op in out:
+        if op["op"] == "vessel.upsert" and op["id"] in at:
+            old = stored[op["id"]]
+            op["last_seen_at"] = ops.iso(old["last_seen_at"], "last_seen_at")
+            previous = old.get("last_profiled_at")
+            op["last_profiled_at"] = max(at[op["id"]], ops.iso(previous, "last_profiled_at") if previous else "")
+    extra: list[dict] = []
+    for p in mapped:
+        names = profile.offering_names(stored[p.vessel_id].get("offerings"))
+        for offering, species in p.offerings:
+            key = offering.id(p.vessel_id)
+            if offering_name_norm(offering.name) in names:
+                info["skipped"].append({"fingerprint": key, "reason": "offering: the vessel already has this trip"})
+                continue
+            names.add(offering_name_norm(offering.name))
+            op = {**offering.op(p.vessel_id, at[p.vessel_id]), **({"target_species_json": species} if species else {})}
+            extra.append(op)
+        for conflict in p.conflicts:
+            values = conflict.get("values") or []
+            print_ = f"{p.vessel_id}|{conflict.get('field')}|{profile.SOURCE_ID}|{ops.value_key(values)}"
+            extra.append({"op": "review.open", "kind": "fact-conflict", "fingerprint": print_, "subject_id": p.vessel_id,
+                          "candidate_json": {"field": conflict.get("field"), "values": values,
+                                             "note": str(conflict.get("note") or "")[:500], "source_id": profile.SOURCE_ID},
+                          "proposal_json": {"vessel_id": p.vessel_id}, "score": None, "opened_at": now})
+    for op in extra:
+        try:
+            ops.validate_op(op, 0, config.region)
+        except ops.OpError as error:
+            info["skipped"].append({"fingerprint": op.get("id") or op.get("fingerprint"), "reason": f"{op['op']}: {error}"})
+            continue
+        out.append(op)
+    return sorted(out, key=op_sort_key), info
+
+
+def ingest_profiles(ctx: RunContext, sink, profiles: Path | str, load: Loader = load_snapshot, off_limits=None) -> dict:
+    """Validate every ``*.json`` in ``profiles``, refuse and list the invalid ones, and ingest the rest.
+
+    One profile per vessel is ingested: when a directory holds several for one vessel, the latest
+    (``profile.profiled_at``, then file name) wins and the others are listed as skipped. Writes
+    ``profiles-ingest.json`` (files ingested, refused with their errors, skipped) and ``profiles-ops.jsonl``.
+    """
+    folder = Path(profiles)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"{folder}: no profiles directory")
+    snapshot, now = load(sink, ctx.region.id), ops.iso(ctx.clock(), "now")
+    hosts = profile.load_off_limits() if off_limits is None else tuple(off_limits)
+    vessels = {v["id"]: v for v in snapshot.vessels}
+    refused, skipped, chosen = [], [], {}
+    files = sorted(folder.glob("*.json"))
+    for path in files:
+        doc, errors = _read_profile(path, ctx.region.id, vessels, hosts)
+        if doc is None:
+            refused.append({"file": path.name, "errors": errors[:50]})
+            continue
+        key = (profile.profiled_at(doc) or "", path.name)
+        kept = chosen.get(doc["vessel_id"])
+        if kept is not None:
+            older, newer = sorted([kept, (key, path.name, doc)], key=lambda k: k[0])
+            skipped.append({"file": older[1], "reason": f"a newer profile of the same vessel: {newer[1]}"})
+            chosen[doc["vessel_id"]] = newer
+        else:
+            chosen[doc["vessel_id"]] = (key, path.name, doc)
+    docs = [entry[2] for _vid, entry in sorted(chosen.items())]
+    out, info = profile_ops(snapshot, docs, ResolverConfig.from_region(ctx.region), now) if docs else ([], {"held": 0, "skipped": []})
+    write_jsonl(ctx.run_dir / "profiles-ops.jsonl", out)
+    result = sink.apply(out) if out else {"ops": 0, "changed": 0, "counts": {}}
+    report = {"at": now, "dir": str(folder), "files": len(files), "ingested": sorted(e[1] for e in chosen.values()),
+              "refused": refused, "skipped": skipped, "ops_skipped": info["skipped"], "held": info["held"]}
+    (ctx.run_dir / "profiles-ingest.json").write_text(json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                                                      encoding="utf-8")
+    kinds = {kind: sum(op["op"] == kind for op in out) for kind in ORDER}
+    return {"files": len(files), "ingested": len(chosen), "refused": len(refused), "failed": len(refused),
+            "skipped": len(skipped) + len(info["skipped"]), "held": info["held"], "ops": len(out),
+            "changed": result["changed"], **{kind.replace(".", "_"): n for kind, n in kinds.items() if n}}
+
+
+def ingest(ctx: RunContext, sink, load: Loader = load_snapshot, profiles: Path | str | None = None) -> dict:
+    if profiles is not None:
+        return ingest_profiles(ctx, sink, profiles, load)
     snapshot, now = load(sink, ctx.region.id), ops.iso(ctx.clock(), "now")
     out, info = build_ops(snapshot, run_candidates(ctx.run_dir), _jsonl(ctx.run_dir / "facts.jsonl"),
                           ResolverConfig.from_region(ctx.region), now)
@@ -238,5 +366,5 @@ def ingest(ctx: RunContext, sink, load: Loader = load_snapshot) -> dict:
             **{kind.replace(".", "_"): n for kind, n in kinds.items() if n}}
 
 
-__all__ = ["build_ops", "candidate_from_dict", "discover", "fact_from_dict", "ingest", "load_snapshot",
-           "resolve_step", "run_candidates", "snapshot_from_dict", "snapshot_to_dict", "write_jsonl"]
+__all__ = ["build_ops", "candidate_from_dict", "discover", "fact_from_dict", "ingest", "ingest_profiles", "load_snapshot",
+           "profile_ops", "resolve_step", "run_candidates", "snapshot_from_dict", "snapshot_to_dict", "write_jsonl"]
