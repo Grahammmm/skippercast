@@ -320,7 +320,7 @@ Other registry tables:
   when the operator withdraws consent; reads treat a non-null value as no
   consent from the next request), `outreach_status` (`none`, `drafted`, `contacted`, `declined`,
   `replied`, `partner`, `do-not-contact`), `lead_score` real, `lead_score_json`,
-  `created_at`, `updated_at`. Indexes `fo_region`, `fo_outreach`.
+  `created_at`, `updated_at`. Indexes unique `fo_slug`, `fo_region`, `fo_outreach`.
 - **`fleet_aliases`**: PK `(vessel_id, alias_norm)`; `alias`, `kind`
   (`former-name`, `spelling`, `ais-name`, `report-name`), `source_url`,
   `first_seen_at`, `last_seen_at`; index `alias_lookup (alias_norm)`.
