@@ -17,6 +17,7 @@ from shapely.ops import transform, unary_union
 from skippercast.platform.contracts import read_json
 from .io import sha256
 from .search_areas import assessment
+from .classified_habitat import assessment as classified_assessment
 
 VERSION = 'whole-polygon-screen-v1'
 LAYERS = {'cdfw-mpa', 'noaa-federal', 'security'}
@@ -119,7 +120,7 @@ def input_identity(state):
 
 
 def screen_candidates(candidates, state):
-    passed, held, counts, grades, searches = [], [], Counter(), Counter(), []
+    passed, held, counts, grades, searches, classified_areas = [], [], Counter(), Counter(), [], []
     scope = polygon(state['scope']) if state['status'] == 'ready' else None
     exclusions = [(row['id'], unary_union([transform(PROJECT, exclusion_polygon(f['geometry']))
                     for f in row['features']])) for row in state['layers']] if scope else []
@@ -128,12 +129,16 @@ def screen_candidates(candidates, state):
         p = feature['properties']
         # Only already extracted, explicitly ungraded rough patches qualify.
         # No change to geometry, depth validity or the grading threshold.
-        search = assessment(p) if ('metric-support-incomplete' in p.get('hold_reasons', [])
+        classified_requested = p.get('detail_level') == 'classified-area' or 'classified_area' in p
+        search = assessment(p) if not classified_requested and ('metric-support-incomplete' in p.get('hold_reasons', [])
                                   or p.get('detail_level') == 'search-area') else None
+        classified = classified_assessment(p) if classified_requested else None
         # Start fresh; a prior pass never exempts a feature from a changed screen.
         reasons = [r for r in p.get('hold_reasons', []) if r not in ('legal-screen-pending',)
                    and not r.startswith(('screen-', 'overlap-'))]
         reasons += state['reasons']
+        if classified_requested and not classified:
+            reasons.append('classified-contract-incomplete')
         if search:
             reasons = [r for r in reasons if r != 'metric-support-incomplete']
             p.update(detail_level='search-area', search_area=search)
@@ -148,9 +153,9 @@ def screen_candidates(candidates, state):
                     if local.intersects(exclusion):
                         reasons.append('overlap-'+ident)
             terrain = p.get('terrain')
-            if not search and (not isinstance(terrain, dict) or terrain.get('grade') not in ('A', 'B', 'C')):
+            if not search and not classified and (not isinstance(terrain, dict) or terrain.get('grade') not in ('A', 'B', 'C')):
                 reasons.append('metric-support-incomplete')
-            if ((not search and (not p.get('fit') or any(v not in (1, 2, 3) for v in p['fit'].values())))
+            if ((not search and not classified and (not p.get('fit') or any(v not in (1, 2, 3) for v in p['fit'].values())))
                     or not 0 < p['resolution_m'] <= 16
                     or not 25-1e-6 <= p['depth_min_ft'] <= p['depth_max_ft'] <= 300+1e-6
                     or local.area < 1000-0.01):
@@ -158,9 +163,9 @@ def screen_candidates(candidates, state):
         except (KeyError, ValueError, TypeError):
             reasons.append('habitat-geometry-invalid')
         reasons = sorted(set(reasons))
-        p.update(tier=1 if reasons or search else 2,
-                 status='held' if reasons else 'search-area' if search else 'habitat',
-                 exportable=not reasons and not search, hold_reasons=reasons)
+        p.update(tier=1 if reasons or search or classified else 2,
+                 status='held' if reasons else 'classified-area' if classified else 'search-area' if search else 'habitat',
+                 exportable=not reasons and not search and not classified, hold_reasons=reasons)
         p['screen'] = {'status': 'held' if reasons else 'pass',
                        'snapshot': state.get('snapshot', 'unknown'),
                        'snapshot_sha256': state.get('snapshot_sha256', 'unknown'),
@@ -174,22 +179,30 @@ def screen_candidates(candidates, state):
                      'surrounding measurements do not support a terrain grade. '
                      f"Nominal depth ({p.get('vertical_datum', 'unknown')}); search with your sounder. "
                      'No individual pile or precise fishing position established.')
+        if classified:
+            label = ('Publisher-interpreted rugose-rock habitat area, unranked. '
+                     'Within the nominal 25–300 ft depth band; paired survey depth is not a navigation claim. '
+                     'Terrain grade and species fit are unknown. Fish presence and precise fishing positions are unverified.')
         p['label'] = ('Held: '+', '.join(reasons)+'. ' if reasons else '') + label
         p['planning_notice'] = 'Planning only. Not a navigation chart. Check current CDFW regulations.'
         if reasons:
             held.append(feature); counts.update(reasons)
         else:
             passed.append(feature)
-            if search:
+            if classified:
+                classified_areas.append(feature)
+            elif search:
                 searches.append(feature)
             else:
                 grades.update([p['terrain']['grade']])
     ranked = [f for f in passed if f['properties']['status'] == 'habitat']
     area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in ranked]).area/1e6
     search_area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in searches]).area/1e6
+    classified_area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in classified_areas]).area/1e6
     return ({'type': 'FeatureCollection', 'features': passed},
             {'type': 'FeatureCollection', 'features': held},
             {'tier2_km2': round(area, 9), 'habitat_count': len(ranked),
+             'classified_area_count': len(classified_areas), 'classified_area_km2': round(classified_area, 9),
              'search_area_count': len(searches), 'search_area_km2': round(search_area, 9),
              'held_candidate_count': len(held), 'held_by_reason': dict(sorted(counts.items())),
              'habitat_by_grade': dict(sorted(grades.items())),

@@ -20,6 +20,7 @@ from .run import run
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 from .search_areas import published_contract
+from .classified_habitat import stage as classified_stage, publication_features
 from .source_scope import (GOVERNMENT, processing_scope, scoped_manifest,
                            validate_dependencies, validate_receipt)
 
@@ -111,13 +112,17 @@ def region_layers(root, region, *, rerun=True, now=None):
         screen = load_snapshot(root, ident)
         if receipt['inputs']['screen'] != input_identity(screen):
             raise ValueError('Reach screen is no longer current; rerun required')
+        if rerun:
+            classified_stage(ident, root=root)
+        classified, classified_receipt = publication_features(ident, root=root)
         selected = read_json(folder/'habitat.geojson')['features']
         if selected and screen['status'] != 'ready':
             raise ValueError('Held reach cannot publish habitat')
         calibration_checked = False
         for f in selected:
             p = f['properties']
-            if ((not published_contract(p) and (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']))
+            if ('classified_area' in p or p.get('detail_level') == 'classified-area'
+                    or (not published_contract(p) and (p['tier'] != 2 or p['status'] != 'habitat' or not p['exportable']))
                     or p['screen']['status'] != 'pass' or p.get('hold_reasons')
                     or p.get('habitat_quality_hold') or p.get('habitat_quality_dependencies')):
                 raise ValueError('Unqualified feature in publication input')
@@ -178,6 +183,8 @@ def region_layers(root, region, *, rerun=True, now=None):
             public_properties = dict(p, source_rights=feature_rights(contributors, sources,
                 use=deployment_use(root)))
             habitat.append({'type': 'Feature', 'geometry': f['geometry'], 'properties': flat_properties(public_properties)})
+        habitat.extend({'type': 'Feature', 'geometry': f['geometry'],
+                        'properties': flat_properties(f['properties'])} for f in classified)
         reach_cells = read_json(folder/'cells.json')['cells']
         if source_scope is not None:
             validate_dependencies(sorted({c['source_id'] for c in reach_cells
@@ -187,7 +194,9 @@ def region_layers(root, region, *, rerun=True, now=None):
                           'summary': receipt['ledger_summary']}
         if source_scope is not None:
             receipts[ident]['calibration_source_ids'] = calibration_ids
-        if selected:
+        if classified_receipt is not None:
+            receipts[ident]['classified'] = classified_receipt
+        if selected or classified:
             dates.extend([screen['snapshot']] + [s['checked_at'] for s in screen['layers']])
             dates.extend(s['evidence']['up_to_date_as_of']+'T00:00:00+00:00'
                          for s in screen['layers'] if s['id'] == 'security')
@@ -230,7 +239,7 @@ def build(region, *, root=REPO, tool=None, now=None):
     for f in layers['habitat']:
         p = dict(f['properties'])
         # A broad search outline is displayed, never exported as a precise spot.
-        if p.get('status') == 'search-area':
+        if p.get('exportable') is False or p.get('status') in {'search-area', 'classified-area'}:
             continue
         for key in ('terrain', 'fit', 'substrate', 'screen', 'source_ids', 'independent_evidence', 'source_rights'):
             if isinstance(p.get(key), str):
@@ -261,6 +270,8 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'expires_at': expires.isoformat(), 'built_at': now.isoformat(),
                 'archive': archive.name, 'archive_sha256': sha256(archive), 'archive_bytes': archive.stat().st_size,
                 'layers': {name: len(features) for name, features in layers.items()},
+                'habitat_counts': {status: sum(f['properties'].get('status') == status for f in layers['habitat'])
+                    for status in ('habitat', 'search-area', 'classified-area')},
                 'ledger_sha256': sha256(folder/'ledger.json'),
                 'export_file': export.name,
                 'export_sha256': sha256(export),
@@ -269,6 +280,8 @@ def build(region, *, root=REPO, tool=None, now=None):
                 'source_attribution': credits,
                 'source_use_notice': 'Retain source-specific terms and credits; mixed data do not become public-domain.',
                 'reach_inputs': {key: value['input_hash'] for key, value in receipts.items()},
+                'classified_inputs': {key: value['classified']['input_hash'] for key, value in receipts.items()
+                    if 'classified' in value},
                 'planning_notice': NOTICE, 'depth_basis': 'nominal',
                 'tile_geometry': 'Display geometry quantized to MVT grid; not a navigable or export boundary.'}
     atomic_json(folder/'manifest.json', manifest, indent=2)

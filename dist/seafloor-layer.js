@@ -9,7 +9,7 @@ import { getRegion } from './region.js';
 import { esc } from './marine-charts.js';
 import {
   loadManifest, archiveURL, decodeTile, tileFeatures, dedupeById, tilesForBounds,
-  habitatColor, habitatDetails, GRADE_STYLE, FIT_STYLE, UNKNOWN_COLOR, SEARCH_COLOR,
+  habitatColor, habitatDetails, GRADE_STYLE, FIT_STYLE, UNKNOWN_COLOR, SEARCH_COLOR, CLASSIFIED_COLOR,
 } from './seafloor-data.js';
 
 export const TILE_ZOOM = 12;       // one fixed data zoom: full detail for Morro Bay reaches, few requests
@@ -30,6 +30,7 @@ export function legendHTML(view) {
     : Object.values(FIT_STYLE).map((s) => [s.color, s.label]);
   rows.push([UNKNOWN_COLOR, 'Unknown']);
   rows.push([SEARCH_COLOR, 'Rough-bottom search area · unranked']);
+  rows.push([CLASSIFIED_COLOR, 'Interpreted rugose-rock area · unranked']);
   const title = view === 'terrain' ? 'Terrain grade' : 'Physical habitat fit, not catch probability';
   return `<strong>${esc(title)}</strong>${rows.map(([c, t]) => `<span><i style="background:${c}"></i>${esc(t)}</span>`).join('')}`;
 }
@@ -41,10 +42,14 @@ export function detailsHTML(properties, view = 'terrain') {
     ? d.fits.map((f) => `<li>${esc(f.name)}: ${f.value === 'unknown' ? 'unknown' : `${f.value} of 3`}</li>`).join('')
     : '<li>No species fit published</li>';
   const sources = d.source.ids.length ? d.source.ids.map(esc).join(', ') : 'unknown';
-  const assessment = d.searchArea
+  const assessment = d.classifiedArea
+    ? 'Publisher interpretation · unranked habitat area'
+    : d.searchArea
     ? 'Limited confidence · unranked search area'
     : `Terrain grade ${esc(d.grade)}${view !== 'terrain' ? ' · colored by species fit' : ''}`;
-  const explanation = d.searchArea
+  const explanation = d.classifiedArea
+    ? 'The original publisher interprets rugose rock and boulders within this outline. Paired native survey depth supports the nominal band. Terrain grade and species fit are unknown; this interpretation does not establish fish presence or a precise fishing position. Explore with your sounder.'
+    : d.searchArea
     ? 'The survey identifies a rough-bottom patch, but surrounding measurements are insufficient for a terrain grade. Explore this outline with your sounder; it does not identify an individual pile or precise fishing position.'
     : 'Terrain grade describes seafloor relief from the original survey. Species fit (1–3) is a separate physical-habitat assessment, not a catch probability.';
   const targets = d.searchArea
@@ -165,17 +170,20 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch,
     for (const f of habitat) {
       const color = habitatColor(f.properties, viewSelect.value);
       const search = f.properties.status === 'search-area';
-      L.geoJSON(f, { renderer, style: { color, weight: search ? 1.5 : 1, dashArray: search ? '5 4' : null, fillColor: color, fillOpacity: search ? 0.15 : 0.45 } })
-        .bindTooltip(search ? 'Rough-bottom search area · unranked' : 'Habitat candidate, unverified')
+      const classified = f.properties.status === 'classified-area';
+      const unranked = search || classified;
+      L.geoJSON(f, { renderer, style: { color, weight: unranked ? 1.5 : 1, dashArray: unranked ? '5 4' : null, fillColor: color, fillOpacity: unranked ? 0.15 : 0.45 } })
+        .bindTooltip(classified ? 'Interpreted rugose-rock area · unranked' : search ? 'Rough-bottom search area · unranked' : 'Habitat candidate, unverified')
         .on('click', () => {
           const c = centroid(f.geometry) || {};
-          onSelect(detailsHTML(f.properties, viewSelect.value), { id: f.properties.id, name: search ? 'Rough-bottom search area' : 'Seafloor habitat candidate', ...c, geometry: f.geometry });
+          onSelect(detailsHTML(f.properties, viewSelect.value), { id: f.properties.id, name: classified ? 'Interpreted rugose-rock area' : search ? 'Rough-bottom search area' : 'Seafloor habitat candidate', ...c, geometry: f.geometry });
         })
         .addTo(habitatLayer);
     }
     const searches = habitat.filter(f => f.properties.status === 'search-area').length;
-    const ranked = habitat.length - searches;
-    setStatus(`${ranked} habitat candidate${ranked === 1 ? '' : 's'} in view${searches ? ` · ${searches} unranked search areas` : ''} · unverified; nominal depth · ${publishedReachCount(manifest)} published reach inputs in this region`);
+    const classified = habitat.filter(f => f.properties.status === 'classified-area').length;
+    const ranked = habitat.length - searches - classified;
+    setStatus(`${ranked} habitat candidate${ranked === 1 ? '' : 's'} in view${searches ? ` · ${searches} unranked search areas` : ''}${classified ? ` · ${classified} unranked interpreted areas` : ''} · unverified; nominal depth · ${publishedReachCount(manifest)} published reach inputs in this region`);
   }
 
   async function enable({ retry = false } = {}) {
