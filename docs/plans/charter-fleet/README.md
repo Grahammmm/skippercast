@@ -1,8 +1,10 @@
 # Charter fleet registry and AIS activity map
 
-Status: **Plan written; no code yet** (2026-10-04). Everything ships behind
+Status: **Built and dark** (2026-10-05). The registry pipeline, admin views,
+AIS listener and processor, and map layers are merged; everything ships behind
 `FLEET_ENABLED` and `FLEET_MAP_ENABLED`, both off in production, until the
-owner turns them on.
+owner turns them on. Oregon is configured as a `dry-run` region; the full
+California run (CF-62) is next.
 
 This folder is the engineering plan for a re-runnable system that finds every
 for-hire fishing boat operating out of a region (California first, from
@@ -167,3 +169,17 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   `open-questions.md`) land in a following PR.
 - 2026-10-04: plan written (Claude Fable 5.1) after the source inventory,
   AIS evaluation and 21-boat pilot spikes; no code yet.
+- 2026-10-04: merged CF-01, CF-02, CF-03, CF-04, CF-05, CF-06 (Phase 0:
+  settings and flags, registry and activity schemas, region config and
+  loader, profile schema, ADR and data rights), CF-11 (Worker job API),
+  CF-34 (`/go/` redirect) and CF-40 (AIS raw store).
+- 2026-10-05: merged CF-10, CF-12 to CF-18 (pipeline, registry, report-site,
+  directory and landing-page adapters, resolution, enrich-code, ingest and
+  refresh, registry workflow), CF-20 (OSINT manifests and profile ingest),
+  CF-30 to CF-33 and CF-35 (admin API, review queue, operators and outreach,
+  public profile, coverage page), CF-41 to CF-47 (AIS listener, deployment,
+  segmentation, events and aggregates, processor, MMSI matching, backfill),
+  CF-50 and CF-51 (map API and client layers). All dark behind the flags.
+- 2026-10-05: in progress CF-21, CF-48; CF-60 adds `regions/OR/fleet.json`
+  (`dry-run`) and its staging dry run. Pending CF-61 (fleet report) and CF-62
+  (full California run).
