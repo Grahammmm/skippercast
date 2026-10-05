@@ -638,6 +638,11 @@ from a new profile changes nothing (absence is not evidence). Facts unseen for
   retried with backoff. Kinds: `vessel.upsert`, `operator.upsert`,
   `fact.upsert`, `alias.upsert`, `offering.upsert`, `departure.upsert`,
   `review.open`, `change.record`, `run.record`.
+  Request body: `{"region", "run_id", "step", "operations": [{"kind", "row"}]}`,
+  where `row` is keyed by the target `fleet_*` table's snake_case columns and
+  carries its deterministic id. Reply `{"changes": <rows changed>}`; a refused
+  operation answers 400 `{"error", "index"}` with `index` into that request's
+  `operations`. The OIDC audience is `<public_origin>/api/fleet/jobs`.
 - **SqliteSink**: applies the committed `drizzle/*.sql` migrations to
   `<FLEET_VAR>/staging/<region>.sqlite` and runs the same operations. Used for
   dry runs, new regions and tests. A `dry-run` region refuses the WorkerSink.

@@ -33,6 +33,7 @@ from urllib.parse import urlsplit
 from .. import validate
 from ..paths import repo_root
 from ..platform.contracts import read_json
+from .adapters import ADAPTERS  # adapter ids a binding may name: the registry in fleet.adapters
 
 __all__ = ["ADAPTERS", "SPECIAL_SOURCES", "FleetConfigError", "FleetRegion", "Port", "Landing", "Ais",
            "Agency", "Binding", "ResolverRule", "check_document", "load_region", "region_ids", "off_limits_host",
@@ -41,10 +42,6 @@ __all__ = ["ADAPTERS", "SPECIAL_SOURCES", "FleetConfigError", "FleetRegion", "Po
 STATE_ID = re.compile(r"^[A-Z]{2}$")
 SCHEMA_KIND = "fleet-region"
 
-# Adapter ids a binding may name (design section 6). CF-10 moves the registry to
-# skippercast.fleet.adapters; this set must stay equal to it.
-ADAPTERS = frozenset({"fcc-uls", "uscg-psix", "teck-reports", "landing-pages", "directories",
-                      "operator-site", "google-places", "file-import", "ais-static"})
 # Fact sources that are not adapters but can win a field in the resolver.
 SPECIAL_SOURCES = frozenset({"admin", "operator", "osint"})
 
