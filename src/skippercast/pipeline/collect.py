@@ -21,6 +21,8 @@ UA = http.USER_AGENT
 # 5xx and 429 are retried (with backoff and Retry-After); other 4xx fail at once.
 RETRY_STATUSES = frozenset(range(500, 600)) | {429}
 ERDDAP = "https://coastwatch.pfeg.noaa.gov/erddap"
+# TECK.net daily dock totals; the fleet teck-reports adapter reads the same sites' boat pages.
+TECK_DOCK_TOTALS = "https://www.socalfishreports.com/dock_totals/boats.php?date="
 BOUNDS = {"latitude": [34.95, 35.7], "longitude": [-121.95, -120.7]}
 DATASETS = {
     "sst": ("jplMURSST41", ["analysed_sst", "analysis_error", "mask"], 5, 72),
@@ -62,10 +64,11 @@ class Client:
     (what is retried, byte limits, content checks) and its receipt shape.
     """
 
-    def __init__(self, now, session=None):
+    def __init__(self, now, session=None, cache=...):
         self.now = now
         self.requests = []
         self.session = session if session is not None else http.default_session()
+        self.cache = cache  # ... keeps the session's own conditional-GET cache
 
     def _record(self, url, receipt, error=None):
         """Append one receipt row per attempt; returns the last row."""
@@ -106,10 +109,11 @@ class Client:
         limit = 35_000_000 if as_pdf else 5_000_000
         # Server errors and throttling are retried; CoastWatch also answers bursts with 403.
         retry = RETRY_STATUSES | ({403} if coastwatch else set())
+        options = {} if self.cache is ... else {"cache": self.cache}
         try:
             response = self.session.get(
                 url, headers={"Accept": "application/json" if as_json else "*/*", "Accept-Encoding": "gzip"},
-                timeout=25, max_bytes=limit, attempts=3 if coastwatch else 2, retry_statuses=retry)
+                timeout=25, max_bytes=limit, attempts=3 if coastwatch else 2, retry_statuses=retry, **options)
         except http.SourceError as error:
             self._record(url, error.receipt or http.Receipt(url=url), error)
             raise
@@ -135,6 +139,29 @@ class Client:
             record["error"] = f"{type(error).__name__}: {str(error)[:220]}"
             raise
         return result
+
+
+def http_cache():
+    """The conditional-GET cache the collector reads through: the process-wide session's
+    (``SKIPPERCAST_HTTP_CACHE``; None when caching is off).
+
+    TECK.net pages are fetched by the daily dock-totals jobs below and by the fleet
+    ``teck-reports`` adapter; both go through this one cache, so there is one TECK.net
+    cache directory (design section 6, "Relationship to the existing reports pipeline").
+    """
+    return http.default_session().cache
+
+
+def client_factory(session=None, cache=...):
+    """Build ``Client``s the way ``source`` does, optionally over another session.
+
+    ``session`` is anything with ``skippercast.http.Session.get``'s signature (the fleet
+    passes its ``FleetSession``, which adds the allowlist, robots.txt and off-limits
+    rules on top of a ``Session``); ``cache`` replaces that session's cache for each
+    request (pass ``http_cache()`` to share the collector's). With no arguments this
+    is ``Client`` over the default session.
+    """
+    return lambda now: Client(now, session=session, cache=cache)
 
 
 def source(ident, name, kind, url, max_age, loader, now, previous=None, client_factory=Client):
@@ -299,7 +326,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
         if offset > 7 and old and old.get("status") == "ok" and old.get("data"):
             sources[ident] = {**old, "reused": True}
             continue
-        url = "https://www.socalfishreports.com/dock_totals/boats.php?date=" + day
+        url = TECK_DOCK_TOTALS + day
         report_jobs.append((ident, "Landing reports " + day, "charter-reports", url, 36,
                             lambda c, u=url, d=day: parsers.charter_reports(c.get(u), d, u, ports=config["report_ports"])))
     with ThreadPoolExecutor(max_workers=2) as pool:

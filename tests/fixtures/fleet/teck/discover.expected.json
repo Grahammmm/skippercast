@@ -1,0 +1,288 @@
+[
+  {
+    "source_id": "examplefishreports",
+    "name": "Sea Example",
+    "port_hint": "example-bay",
+    "landing_hint": "sample-landing",
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Sea Example",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "catch_reporting.report_name",
+        "value": "Sea Example",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "landing",
+        "value": "Sample Landing",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.8,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Example Bay",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "length_ft",
+        "value": 65.0,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "beam_ft",
+        "value": 20.0,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "year_built",
+        "value": 1979,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "passengers_max",
+        "value": 40,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "bunks",
+        "value": 30,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.6,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "catch_reporting.last_report_date",
+        "value": "2026-10-02",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/seaexample.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "examplefishreports",
+    "name": "Harbor Test",
+    "port_hint": "sample-harbor",
+    "landing_hint": "fixture-sportfishing",
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Harbor Test",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "catch_reporting.report_name",
+        "value": "Harbor Test (EB)",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "landing",
+        "value": "Fixture Sportfishing LLC",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.8,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "port",
+        "value": "Sample Harbor",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "length_ft",
+        "value": 48.0,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "beam_ft",
+        "value": 16.0,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "year_built",
+        "value": 2004,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "passengers_max",
+        "value": 24,
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "catch_reporting.last_report_date",
+        "value": "2026-09-27",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "examplefishreports",
+    "name": "Kelp Runner",
+    "port_hint": null,
+    "landing_hint": null,
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Kelp Runner",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/kelprunner.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "catch_reporting.report_name",
+        "value": "Kelp Runner",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/kelprunner.php",
+        "method": "page",
+        "confidence": 0.9,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "landing",
+        "value": "Kelp Runner Charters",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/kelprunner.php",
+        "method": "page",
+        "confidence": 0.8,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  },
+  {
+    "source_id": "examplefishreports",
+    "name": "Blue Fixture",
+    "port_hint": "example-bay",
+    "landing_hint": "sample-landing",
+    "keys": {},
+    "facts": [
+      {
+        "field": "name",
+        "value": "Blue Fixture",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/bluefixture.php",
+        "method": "page",
+        "confidence": 0.8,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "catch_reporting.report_name",
+        "value": "Blue Fixture",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/bluefixture.php",
+        "method": "page",
+        "confidence": 0.8,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      },
+      {
+        "field": "landing",
+        "value": "Sample Landing",
+        "source_id": "examplefishreports",
+        "source_url": "https://reports.example.org/charter_boats/bluefixture.php",
+        "method": "page",
+        "confidence": 0.7,
+        "rights": "facts-only",
+        "retrieved_at": "2026-10-05T12:00:00Z"
+      }
+    ]
+  }
+]

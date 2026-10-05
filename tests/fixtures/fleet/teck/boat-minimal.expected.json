@@ -1,0 +1,14 @@
+{
+  "url": "https://reports.example.org/charter_boats/boat-minimal.php",
+  "report_name": "Kelp Runner",
+  "name": "Kelp Runner",
+  "landing": "Kelp Runner Charters",
+  "city": null,
+  "state": "CA",
+  "length_ft": null,
+  "beam_ft": null,
+  "year_built": null,
+  "passengers_max": null,
+  "bunks": null,
+  "last_report_date": null
+}

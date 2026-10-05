@@ -1,0 +1,13 @@
+{
+  "url": "https://reports.example.org/charter_boats/index.php?page=2",
+  "entries": [
+    {
+      "name": "Blue Fixture",
+      "url": "https://reports.example.org/charter_boats/bluefixture.php",
+      "landing": "Sample Landing"
+    }
+  ],
+  "page": 2,
+  "pages": 2,
+  "next_url": null
+}

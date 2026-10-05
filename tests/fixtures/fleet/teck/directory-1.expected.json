@@ -1,0 +1,23 @@
+{
+  "url": "https://reports.example.org/charter_boats/index.php",
+  "entries": [
+    {
+      "name": "Sea Example",
+      "url": "https://reports.example.org/charter_boats/seaexample.php",
+      "landing": "Sample Landing"
+    },
+    {
+      "name": "Harbor Test (EB)",
+      "url": "https://reports.example.org/charter_boats/harbortest-eb.php",
+      "landing": "Fixture Sportfishing LLC"
+    },
+    {
+      "name": "Kelp Runner",
+      "url": "https://reports.example.org/charter_boats/kelprunner.php",
+      "landing": null
+    }
+  ],
+  "page": 1,
+  "pages": 2,
+  "next_url": "https://reports.example.org/charter_boats/index.php?page=2"
+}

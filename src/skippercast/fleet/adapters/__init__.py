@@ -10,14 +10,16 @@ from __future__ import annotations
 from typing import Mapping
 
 from .base import Adapter, Candidate, Fact, RunContext
+from .directories import Directories
+from .teck_reports import TeckReports
 
 __all__ = ["ADAPTERS", "REGISTRY", "Adapter", "Candidate", "Fact", "RunContext", "get"]
 
 REGISTRY: Mapping[str, type | None] = {
     "fcc-uls": None,        # CF-12
     "uscg-psix": None,      # CF-12
-    "teck-reports": None,   # CF-13
-    "directories": None,    # CF-13
+    "teck-reports": TeckReports,
+    "directories": Directories,
     "landing-pages": None,  # CF-14
     "operator-site": None,  # CF-16
     "google-places": None,  # CF-16
