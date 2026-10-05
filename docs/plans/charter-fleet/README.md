@@ -1,12 +1,169 @@
 # Charter fleet registry and AIS activity map
 
-Plan for the feature that finds every for-hire fishing boat operating out of
-a region (California first), profiles each one from public sources, matches
-it to AIS, and maps where those boats go and fish.
+Status: **Plan written; no code yet** (2026-10-04). Everything ships behind
+`FLEET_ENABLED` and `FLEET_MAP_ENABLED`, both off in production, until the
+owner turns them on.
 
-Status log (append a dated line when a phase starts or finishes):
+This folder is the engineering plan for a re-runnable system that finds every
+for-hire fishing boat operating out of a region (California first, from
+six-packs up to San Diego long range), builds a sourced public profile of each
+boat from lawful public sources, matches each boat to AIS, and maps where
+those boats go and fish. It serves two uses: sending anglers to operators
+(directory, profiles, tracked booking links) while building the contact list
+for recruiting captains to the Text Advisor, and learning season by season
+where the charter fleet fishes. Regions are configuration: a new state needs a
+`regions/<id>/fleet.json` and any state-specific source adapters, nothing else.
+The plan is written for an implementing agent that has not seen the
+conversation that produced it.
+
+| Document | What it specifies |
+| --- | --- |
+| [user-stories.md](user-stories.md) | Who the feature serves (angler, captain, owner as admin and as sales, future booking), numbered stories with acceptance notes, MVP or Later, and the story-to-phase map |
+| [design.md](design.md) | Decisions, research findings, architecture, data model, region config, source adapters, the OSINT contract and re-run design, the AIS pipeline, activity classification, map layers, retention, monthly cost estimate and risks |
+| [dev-plan.md](dev-plan.md) | Phases P0–P6 and PR-sized tasks with ids, dependencies, files touched and acceptance criteria |
+| [open-questions.md](open-questions.md) | Decisions waiting on the owner, with ranked options, the pick the plan assumes meanwhile, and the CPRA request text |
+
+## How to use this plan
+
+1. Work through [dev-plan.md](dev-plan.md) in phase order. Each task is one
+   PR on its own branch, `claude/cf-<task-id>`, sized for one
+   `charter-builder` subagent and reviewed by `charter-reviewer`, as
+   [AGENTS.md](../../../AGENTS.md) requires.
+2. Before each task, re-read the [design.md](design.md) section it cites; the
+   dev plan is terse and the design holds the detail.
+3. Everything ships behind `FLEET_ENABLED` (routes, admin views, profile
+   data) and `FLEET_MAP_ENABLED` (map layers), runtime Worker variables set
+   through `scripts/wrangler_config.mjs` and the deploy workflow, default off.
+   Merging to `main` never changes the live site until the owner flips them.
+4. When a document and the code disagree, fix the document in the same PR,
+   so the plan stays true.
+5. Steps marked **Owner** (credentials, paid services, terms requests, the
+   CPRA request) need the owner. Do the engineering around them, stop at the
+   owner step, and report exactly what is needed with the link. Open owner
+   decisions are in [open-questions.md](open-questions.md); build on the
+   recommended option until the owner says otherwise.
+6. Registry data never enters the repository: no operator contacts, OSINT
+   output, AIS positions or outreach notes. Fixtures are synthetic. See
+   [CONTRIBUTING.md](../../../CONTRIBUTING.md).
+
+Research provenance: three spikes dated 2026-10-04 (a California source
+inventory with access, terms and cost; an AIS source evaluation with a
+statewide MarineCadastre sample; and a 21-boat OSINT and AIS-matching pilot
+across Morro Bay/Avila, San Diego, the East Bay and the Delta). Raw research
+output stayed outside the repository; the findings are summarised in
+[design.md](design.md) § 1. Overview and goals.
+
+## Decisions already made (D1–D17)
+
+Recorded from the owner-approved plan brief (2026-10-04). These are settled;
+do not reopen them in a task PR. [design.md](design.md) and
+[dev-plan.md](dev-plan.md) cite them by number.
+
+- **D1.** Scope: for-hire fishing vessels on salt/tidal water, six-pack up.
+  Field `vessel_class` ∈ {six-pack, inspected-party, long-range}; `waters` ∈
+  {ocean, bay, delta, inland} with inland reserved for later.
+- **D2.** Region-agnostic: new `regions/<id>/fleet.json` (validated by
+  `schemas/fleet-region.schema.json`) holds ports, landings, harbor geofences
+  (polygons), AIS bounding box, state agencies, source adapter bindings and
+  thresholds. Nothing CA-specific in src/. Region `CA` is a *state-level* fleet
+  region that spans the existing coastal regions; map fleet ports onto existing
+  region ids where they exist (morro-bay etc.).
+- **D3.** Storage. Registry (vessels, operators, offerings, facts with
+  provenance, aliases, review queue, outreach, link clicks, AIS watch list,
+  trips, labelled track segments, activity events, hot-spot aggregates) lives
+  in D1 with a `fleet_` table prefix, schema in db/schema.ts, migration
+  generated by drizzle-kit (next is 0013). Raw AIS positions never go to D1:
+  they stay on Hermes in a local SQLite/Parquet store under var/ (gitignored)
+  with a short retention (propose 30 days). Only derived
+  trips/segments/events/aggregates are pushed to the Worker.
+- **D4.** Provenance: every registry fact is a row in `fleet_vessel_facts`
+  (vessel_id, field, value_json, source_url, retrieved_at, method, confidence,
+  superseded_at) so change history is free; `fleet_vessels` holds the current
+  resolved value per column for fast reads. Resolver rules (which source wins)
+  live in config, not code.
+- **D5.** Identity link to Text Advisor: `advisor_boats` gets a nullable
+  `fleet_vessel_id`; a skipper-registered boat maps onto a registry vessel via
+  the review queue. Public page `/boats/<slug>` is extended to render registry
+  data; do not build a second boat page. Catch logs join through
+  `advisor_reports.boat_id` → advisor_boats → fleet_vessel_id, and through the
+  landing-reports pipeline by (boat name alias, port, date).
+- **D6.** Pipeline shape (Python, src/skippercast/fleet/): `discover` (source
+  adapters emit candidate vessels), `resolve` (entity resolution on stable keys
+  then fuzzy name+port; low confidence → review queue), `enrich-code`
+  (deterministic: FCC ship-licence file, PSIX, fish-report sites, landing
+  pages, Google Places), `enrich-agent` (the OSINT subagent step: reads a batch
+  manifest, writes JSON matching the pilot schema; run via a scheduled headless
+  Claude Code job on Hermes using subscription auth — `claude -p` with the
+  charter-osint definition; no API key), `ingest` (validates JSON against
+  schemas/fleet-profile.schema.json and upserts facts via the Worker's job
+  API), `refresh` (scheduled; diffs and flags new/renamed/sold/vanished boats
+  and price/schedule changes). Every step is idempotent and re-runnable for a
+  region id.
+- **D7.** Off-limits sources (terms forbid automated access): FishingBooker,
+  FareHarbor, Xola, FishDope, Fish City, Instagram, Facebook. Record
+  handles/URLs only when found on the operator's own site, a landing page or a
+  report site. TECK.net report sites: facts-only use, and an **Owner** step to
+  ask the publisher before paid use. Google Places: via API only, store
+  place_id + rating/count with the API's caching rules.
+- **D8.** AIS: real-time via aisstream.io (free, bbox + MMSI filter) as the
+  primary source, internal use only until written terms exist (**Owner** open
+  question); adapter interface so Datalastic can be swapped in. Listener is a
+  long-running Python service on Hermes (user systemd unit, installed/updated
+  by a `workflow_dispatch` job on the self-hosted runner), writing raw
+  positions to the local store. Processor is a scheduled GitHub Actions job
+  (`fleet-ais.yml`, every 30 min on `vars.DATA_RUNNER`) that segments trips,
+  classifies segments, emits events, updates aggregates and pushes derived rows
+  to the Worker through the OIDC job route (extend server/job-auth.ts scopes).
+  Health: heartbeat row in job_state; alert to owner via the existing
+  ops-report path if stale > 3 h.
+- **D9.** Backfill: NOAA MarineCadastre daily CSVs for 2026 (free, 80–150 day
+  lag; Jul–Oct expected mid-Dec) through the same processor. NOAA's terms
+  ("planning purposes only", no fee for usage) mean MarineCadastre-derived
+  output is for verification and internal backfill; it must be tagged by source
+  so it can be excluded from any paid surface. Paid history (Datalastic
+  ~$215/month-of-data) is an **Owner** decision.
+- **D10.** Classification: segments = in-port (inside harbor geofence),
+  transit, fishing-drift/anchor (SOG ≤ 2 kn, ≥ 15 min, outside geofence),
+  fishing-troll (SOG 4–9 kn, high heading variance / low straightness over a
+  20-min window). Thresholds in fleet.json. Output labelled "inferred from
+  movement", never "confirmed fishing". Validation: a hand-labelled sample of ≥
+  30 trips with precision/recall reported.
+- **D11.** Map (now): three layers behind `FLEET_MAP_ENABLED` (admin-only while
+  off for the public): activity events (points sized by dwell, styled by type),
+  trip tracks (lines coloured by segment type), heat map. Filters: boat, port,
+  vessel class, trip type, activity type, date range, season. No aggregation
+  thresholds yet; the aggregate step (H3 or 1-km cells) is a pluggable module
+  with the privacy knobs (min distinct vessels, delay, resolution) present in
+  config but set to "off" for admin views. Served from Worker API endpoints
+  over D1, following the dist/commercial-ais.js layer pattern (toggle in
+  index.html, card).
+- **D12.** Flags: `FLEET_ENABLED` (routes, admin views, profile data),
+  `FLEET_MAP_ENABLED` (layers), both runtime Worker vars through
+  scripts/wrangler_config.mjs + deploy-cloudflare.yml, default off.
+- **D13.** Privacy/repo: registry data (contacts, OSINT output, positions,
+  outreach notes) never enters the repo; fixtures synthetic (555-01XX phones,
+  handles from catalog/advisor/fixture-handles.json). Extend
+  scripts/check_repository.py scope to tests/fixtures/fleet/ and
+  docs/plans/charter-fleet/. Update CONTRIBUTING.md.
+- **D14.** Outreach: admin-only; drafts never sent automatically; consent
+  status recorded on fleet_operators.
+- **D15.** Monetization: `/go/<vessel-slug>` redirect with UTM tags; clicks
+  logged (no PII) to fleet_link_clicks and Analytics Engine when enabled.
+- **D16.** Costs: target $0/month beyond existing Cloudflare/Hermes; list every
+  paid option as Owner decisions with monthly cost.
+- **D17.** Subagents: charter-osint / charter-builder / charter-reviewer in
+  .claude/agents (merged in #285). Dev-plan tasks are sized for one
+  charter-builder each (≤ ~400 changed lines excluding generated files), branch
+  `claude/cf-<id>`, with dependencies and acceptance criteria that a reviewer
+  can check from the diff.
+
+## Status log
+
+Append a dated line when a phase starts or finishes; keep the older lines.
 
 - 2026-10-04: setup. Subagent definitions added in `.claude/agents/`
   (`charter-osint`, `charter-builder`, `charter-reviewer`). Research spikes
   next; the plan documents (`user-stories.md`, `design.md`, `dev-plan.md`,
   `open-questions.md`) land in a following PR.
+- 2026-10-04: plan written (Claude Fable 5.1) after the source inventory,
+  AIS evaluation and 21-boat pilot spikes; no code yet.
