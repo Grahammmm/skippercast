@@ -11,8 +11,9 @@ a discovery binding that failed makes the run ``partial``. ``plan-agent
 (``fleet.agent``); ``ingest --profiles DIR`` ingests the agent's profiles
 instead of the run's discovery output, and a refused profile makes the step
 ``partial``. ``validate-profile`` checks OSINT profiles
-(``fleet.profile``) and ``coverage-status`` the regions' charter identity
-coverage (``fleet.coverage``).
+(``fleet.profile``), ``coverage-status`` the regions' charter identity
+coverage (``fleet.coverage``) and ``report`` writes the fleet report
+(``fleet.report``).
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from typing import Any, Callable, Mapping
 
 from .. import validate
 from . import agent, coverage, enrich, profile, refresh
+from . import report as fleet_report
 from .adapters import RunContext
 from .config import FleetConfigError, load_region
 from .ingest import discover, ingest, resolve_step
@@ -95,8 +97,10 @@ def main(argv=None) -> int:
         return profile.main(argv[1:])
     if argv and argv[0] == "coverage-status":
         return coverage.main(argv[1:])
+    if argv and argv[0] == "report":
+        return fleet_report.main(argv[1:])
     parser = argparse.ArgumentParser(prog="python -m skippercast.fleet", description=__doc__.splitlines()[0])
-    parser.add_argument("step", choices=[*STEPS, "run", "validate-profile", "coverage-status"])
+    parser.add_argument("step", choices=[*STEPS, "run", "validate-profile", "coverage-status", "report"])
     parser.add_argument("--region", required=True, help="fleet region id, e.g. CA")
     parser.add_argument("--sink", choices=["staging", "worker"], default="staging")
     parser.add_argument("--run-id", help="resume this run (default: a new run)")
