@@ -62,6 +62,31 @@
       "release_license": "public-domain-us-gov",
       "notice": "USGS Offshore of Morro Bay source pair. Preserve original metadata, all three producer credits, and the stated non-navigation limitation. The character raster is an interpreted class grid, not individual boulder measurement or fish-presence evidence.",
       "review_basis": "Original depth and classification XMLs retrieved HTTP200 and hash-matched2026-10-05 UTC; source-specific interpretation and rights independently reviewed. VALUE3 hard/rugose boulder, megaclast and bedrock only; VALUE2 mixed coarse sediment/rock excluded. Delivered2m grid and metadata10m spatial-reference resolution do not establish uniform precision or a depth-dependent fine/coarse support profile; both cutoffs remain unknown. Retain unknown vertical datum, interpolation and final accuracy. Bathymetry/backscatter2008, supervised video2012 and processing2021 are shared survey lineage, not independent measurement or fish evidence. Classified geometry must pass native fidelity and current whole-polygon screening; no terrain grade, species fit, precise exports, Tier2 or new-measurement credit."
+    },
+    {
+      "id": "usgs-offshore-point-estero-2m-rugose-v1",
+      "reviewed_on": "2026-10-05",
+      "depth_source_id": "bathymetry-offshorepointestero-zip-7e3be5eb12",
+      "depth_source_sha256": "43244d9ca2e61f6c4154bd50c9ec05286b1d01772e1354fc247f905176e8d37a",
+      "classification_source_id": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+      "classification_source_sha256": "1deb5eb5130e2d0aaf39d0b73bbb2841b4aaff50f0b85b7a2a4b22d7fe9ece3c",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/0f75d175cc2046f38c45b6ac26a9be92/SeafloorCharacter_OffshorePointEstero_metadata.xml",
+      "metadata_sha256": "1110921a69d3bdd8d8603d7768ece981a08acb2a85417c6d860dc3b39df37708",
+      "rugose_raw_codes": [
+        3
+      ],
+      "credit": "U.S. Geological Survey; California State University Monterey Bay Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
+      "release_license": "public-domain-us-gov",
+      "notice": "Original USGS public-domain release; retain original metadata, joint USGS/CSUMB/UC attribution and survey limitations. Not for navigation.",
+      "review_basis": "Private proposal based on checksum-pinned Point Estero source review. Include raw code 3 rugose boulder/bedrock only; exclude code 2 mixed coarse sediment/rock. Pair with valid nominal 25–300 ft (7.62–91.44 m) depth; do not admit 0–25 ft through this release entry. The depth product mosaics 2 m native cells shallower than 80 m and 5 m source cells deeper than 80 m into a delivered 2 m grid. Deeper upsampled cells are Tier 1 only. Datum, uncertainty, interpolation mask, per-cell class confidence and acquisition identity are unknown. Existing review reports conflicting acquisition dates and reused validation observations; no independent source or fish-presence claim. Retained 0–91.44 m overlaps are historical source qualification only, not release eligibility. Preserve shallow-water knowledge separately; this entry does not delete shallow data or widen code behavior. Class3-by-reach area, current restrictions, native production geometry and live readback must be separately verified before publication. No rank, precision, or new measurement credit.",
+      "support_mode": "paired-reference-footprint-v1",
+      "reach_ids": [
+        "cambria-san-simeon-r02"
+      ],
+      "neighbor_reaches": [
+        "morro-bay-r01",
+        "morro-bay-r02"
+      ]
     }
   ]
 }
