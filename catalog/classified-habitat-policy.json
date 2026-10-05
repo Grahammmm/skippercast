@@ -115,6 +115,35 @@
       "neighbor_reaches": [
         "point-arguello-conception-r07"
       ]
+    },
+    {
+      "id": "usgs-offshore-monterey-5m-rugose-v1",
+      "reviewed_on": "2026-10-05",
+      "depth_source_id": "bathymetry-5m-offshoremonterey-zip-3b9b38476a",
+      "depth_source_sha256": "1429fe797ed6668187475701903822b2c9ec9d38ea21a1a1fa9b9c1b0b4af3d6",
+      "classification_source_id": "seafloorcharacter-5m-offshoremonterey-zip-7dc533c24f",
+      "classification_source_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_5m_OffshoreMonterey_metadata.xml",
+      "metadata_sha256": "54965696356bf1261fbbcc68b3290443ed3efe0ba23742d49b964a508961a803",
+      "rugose_raw_codes": [
+        13,
+        63,
+        73,
+        83,
+        123,
+        133
+      ],
+      "reach_ids": [
+        "monterey-point-sur-r01"
+      ],
+      "support_mode": "paired-reference-footprint-v1",
+      "credit": "U.S. Geological Survey; California State University Monterey Bay Seafloor Mapping Lab",
+      "release_license": "public-domain-us-gov",
+      "notice": "Both original5m products explicitly mark CC0/public domain. Retain joint USGS/CSUMB credits and original metadata. USGS requests sharing derived products (advisory). Not for navigation; combined resolution limited by coarsest source.",
+      "review_basis": "Own original5m archive/embeddedXML + currentpublisherXML HTTP200 verified2026-10-05. OriginalVAT/histogram22codes; VALUE offsets10depth/50slope normalize rugose13/63/73/83/123/133 only; mixedclass2 andclass4 sediment excluded. Keep actual123/133 despite metadata narrative stating steep slopes absent. 5m MBARI depth1998–2012 and bathymetry/backscatter/video-supervised hand-edited class1998–2014 share lineage, not independent confirmation/fish evidence. Deliverednative5m; no depth-dependent fine-detail profile or80m cutoff borrowed. DepthNAVD88 nominal7.62–91.44m only, no verifiedMLLW conversion/per-cell uncertainty. ClassTIFFWGS84 versusXMLNAD83 conflict disclosed; retain TIFFCRS with separate source datums; alternative interpretation changes0 candidatepixels, selecteddatum transform4m accuracy is not productprecision. Unknown effective precision/interpolation impacts remain unknown. Tier1 interpreted, fit/terrain unknown, unranked, nonexportable; no new measured habitat. Currentprivate coherent paired-reference directextract with alloriginalprivate2m native pluscurrentproductiongraded exclusions demonstrated positive2026-10-05. Activationrequires separatelyreviewed versionedordered crosspairnative dedup enforcement and independentcurrentpublic retention/neighborcontainment. Conservative whole-patch neighborplanning holds apply; referenceproducer rights retained. Noactualpublic count established.",
+      "neighbor_reaches": [
+        "monterey-point-sur-r02"
+      ]
     }
   ]
 }
