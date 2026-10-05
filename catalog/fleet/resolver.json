@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Which source wins per fleet_vessels field (design section 7, decision D4): non-superseded facts are ranked by the first matching entry in priority (adapter ids plus admin, operator and osint; a source not listed never wins), then confidence, then retrieved_at; facts below min_confidence never win. Admin facts also pin the field. A region may override a field in its fleet.json resolver_overrides.",
+  "description": "Which source wins per fleet_vessels field (design section 7, decision D4): non-superseded facts are ranked by the first matching entry in priority (adapter ids plus admin, operator and osint; a source not listed never wins), then confidence, then retrieved_at; facts below min_confidence never win. Admin facts also pin the field. The scope field sets status 'excluded' when a winning fact is {\"in_scope\": false}. A region may override a field in its fleet.json resolver_overrides.",
   "fields": {
     "name": {
       "priority": [
@@ -248,6 +248,19 @@
         "google-places"
       ],
       "min_confidence": 0.8
+    },
+    "scope": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "operator-site",
+        "teck-reports",
+        "directories",
+        "file-import",
+        "osint"
+      ],
+      "min_confidence": 0.6
     }
   }
 }

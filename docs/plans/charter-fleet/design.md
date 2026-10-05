@@ -269,7 +269,7 @@ integer booleans, short index names.
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `id` | text PK | `sha256(region:creation_key)[:32]`; `creation_key` is the strongest key at creation (`uscg:1234567`, `cf:…`, `mmsi:…`, else `name-port:sea-example|morro-bay`), so a rebuild from empty yields the same ids |
+| `id` | text PK | `sha256(region:creation_key)[:32]`; `creation_key` is the strongest key at creation (`uscg:1234567`, then `reg:` state registration, `hin:` hull id, `mmsi:`, `cs:` call sign, else `name-port:sea-example|morro-bay`; a key whose id is already taken gets `~` and 8 hex of the candidate fingerprint), so a rebuild from empty yields the same ids |
 | `region`, `slug` | text | slug unique here and across `advisor_boats.slug` (checked in code) |
 | `name`, `name_norm` | text | display and normalised (section 7) |
 | `operator_id`, `port_id`, `landing_id` | text, nullable | |
@@ -520,25 +520,38 @@ stable keys, pinned fields, decided reviews).
    `dist/data/ais-evidence.json` (upper-case, keep only A–Z and 0–9), after
    first dropping a leading `THE`, `M/V` or `F/V` and turning roman numerals
    into digits; `NEW` is kept (New Seaforth is not Seaforth). Phones to E.164; URLs without tracking parameters.
-2. **Prior decisions.** A candidate fingerprint (source id + record id or URL)
-   with a decided review is assigned as decided.
+2. **Prior decisions.** A candidate fingerprint (source id + the adapter's
+   `Candidate.record_id`, else its first fact `source_url`) with a decided
+   `merge` review is assigned as decided (`same-vessel`, `new-vessel`); a
+   dismissed one skips the candidate.
 3. **Stable keys** in order `uscg_doc`, `state_reg`, `hull_id`, `mmsi`,
    `call_sign`. One vessel matched → assign (1.0; 0.9 for call sign alone,
-   since call signs are reissued). Different vessels matched by different keys →
+   since call signs are reissued; a call sign whose vessel holds a different
+   value of another key the candidate has is no match). Different vessels matched by different keys →
    `merge` review. Key match with a new name → assign, add an alias, record
    `renamed`.
 4. **Fuzzy fallback**: 0.55 × name similarity (Jaro-Winkler on `name_norm`,
    1.0 on an alias) + 0.25 × same port + 0.10 × same landing + 0.10 × length
-   within 10% (unknown parts 0.5). ≥ `auto_merge` → assign; ≥ `review_min` →
-   `merge` review with the top two; else new vessel.
+   within 10% (unknown parts 0.5). A name similarity under 0.8 is no match at
+   all (port, landing and length alone reach 0.45, so unrelated boats of one
+   port would otherwise all be reviews), and a `NEW` variant scores 0.
+   ≥ `auto_merge` → assign; ≥ `review_min` → `merge` review with the top two;
+   else new vessel.
 5. Same name and port but different stable keys → two vessels (California has
    five FCC licences named Endeavor).
 6. Class disagreement between two sources at confidence ≥ 0.7 → `class` review.
-7. Out of scope → `excluded` with a `scope` fact.
+7. Out of scope → `excluded` with a `scope` fact (value `{"in_scope": false,
+   "reason": …}`, ranked by the `scope` rule in `catalog/fleet/resolver.json`).
 
 The resolver then computes each `fleet_vessels` column from non-superseded
 facts: highest-priority source, then highest confidence, then latest
-`retrieved_at`; pinned fields are skipped. The Python resolver is the only
+`retrieved_at`; pinned fields are skipped, and a winning admin fact whose value
+is null clears the column (no lower source fills it). The Worker snapshot
+carries no facts, so with it a column changes only when one of this run's
+facts wins it; the staging snapshot (`Snapshot.from_sqlite`) carries them. The
+Worker snapshot also carries no `advisor_boats` slugs yet; until it does, a new
+vessel's slug can collide with an advisor boat's and the Worker rejects the
+batch (`slug: already taken`). The Python resolver is the only
 implementation; the Worker stores what it is sent and applies only "admin
 facts pin the field".
 

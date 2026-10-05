@@ -109,7 +109,7 @@ Rules for every task:
 
 ### CF-15 · Entity resolution · L
 - Depends: CF-10
-- Files: `src/skippercast/fleet/normalize.py`, `resolve.py`, `tests/unit/test_fleet_resolve.py`.
+- Files: `src/skippercast/fleet/normalize.py`, `resolve.py`, `tests/unit/test_fleet_resolve.py`; as built also `adapters/base.py` (`Candidate.record_id`, the fingerprint's record id) and `catalog/fleet/resolver.json` (the `scope` rule for step 7).
 - Build: §7 steps 1–7 and the resolver over `catalog/fleet/resolver.json` with region overrides; deterministic vessel ids and slugs (unique against snapshot slugs, including advisor slugs).
 - Accept: 1. Synthetic cases: rename by doc number (alias + `renamed`), two vessels same name same port with different MMSIs, New-X vs X kept apart, call-sign-only match at 0.9, 0.6–0.9 score opens one `merge` review, decided review honoured. 2. Running resolve twice on the same input gives identical output. 3. Pinned fields untouched.
 - Tests: table-driven cases.

@@ -37,6 +37,7 @@ class Candidate:
     landing_hint: str | None = None
     keys: Mapping[str, str] = field(default_factory=dict)  # uscg_doc, call_sign, mmsi, state_reg, hull_id
     facts: tuple[Fact, ...] = ()
+    record_id: str | None = None  # the source's own id for this listing; with source_id, the resolver's fingerprint
 
 
 @dataclass
