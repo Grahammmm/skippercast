@@ -348,6 +348,109 @@
       },
       "same_survey_as_depth": true,
       "lineage_note": "Conservatively treated as shared sonar lineage for confidence, not independent depth or fish confirmation: character is supervised interpretation of 2008 Fugro multibeam/bathymetry-backscatter through the NOAA TopoBathy/USGS map compilation, with 2009–2010 lidar in the parent depth layer. H11952/H11953 belong to the same regional 2008 survey family; exact per-pixel line correspondence is unresolved."
+    },
+    {
+      "source_id": "seafloorcharacter-5m-offshoremonterey-zip-7dc533c24f",
+      "source_sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
+      "depth_source_ids": [
+        "bathymetry-5m-offshoremonterey-zip-3b9b38476a"
+      ],
+      "review_status": "reviewed",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_5m_OffshoreMonterey_metadata.xml",
+      "metadata_sha256": "54965696356bf1261fbbcc68b3290443ed3efe0ba23742d49b964a508961a803",
+      "review_basis": "Own original5m archive/embeddedXML + currentpublisherXML HTTP200 verified2026-10-05. OriginalVAT/histogram22codes; VALUE offsets10depth/50slope normalize rugose13/63/73/83/123/133 only; mixedclass2 andclass4 sediment excluded. Keep actual123/133 despite metadata narrative stating steep slopes absent. 5m MBARI depth1998–2012 and bathymetry/backscatter/video-supervised hand-edited class1998–2014 share lineage, not independent confirmation/fish evidence. Deliverednative5m; no depth-dependent fine-detail profile or80m cutoff borrowed. DepthNAVD88 nominal7.62–91.44m only, no verifiedMLLW conversion/per-cell uncertainty. ClassTIFFWGS84 versusXMLNAD83 conflict disclosed; retain TIFFCRS with separate source datums; alternative interpretation changes0 candidatepixels, selecteddatum transform4m accuracy is not productprecision. Unknown effective precision/interpolation impacts remain unknown. Tier1 interpreted, fit/terrain unknown, unranked, nonexportable; no new measured habitat.",
+      "same_survey_as_depth": true,
+      "lineage_note": "SharedMBARI5mdepth/backscatter derived interpretation; not independent confirmation.",
+      "classes": {
+        "11": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE11"
+        },
+        "12": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE12"
+        },
+        "13": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original5m depth/slope coded VALUE13"
+        },
+        "14": {
+          "normalized_code": 1,
+          "description": "Medium-to-coarse sediment; excluded; original5m depth/slope coded VALUE14"
+        },
+        "21": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE21"
+        },
+        "22": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE22"
+        },
+        "24": {
+          "normalized_code": 1,
+          "description": "Medium-to-coarse sediment; excluded; original5m depth/slope coded VALUE24"
+        },
+        "61": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE61"
+        },
+        "62": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE62"
+        },
+        "63": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original5m depth/slope coded VALUE63"
+        },
+        "71": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE71"
+        },
+        "72": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE72"
+        },
+        "73": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original5m depth/slope coded VALUE73"
+        },
+        "81": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE81"
+        },
+        "82": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE82"
+        },
+        "83": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original5m depth/slope coded VALUE83"
+        },
+        "121": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE121"
+        },
+        "122": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE122"
+        },
+        "123": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original5m depth/slope coded VALUE123"
+        },
+        "131": {
+          "normalized_code": 1,
+          "description": "Fine-to-medium smooth sediment; original5m depth/slope coded VALUE131"
+        },
+        "132": {
+          "normalized_code": 2,
+          "description": "Mixed smooth sediment and rock; excluded; original5m depth/slope coded VALUE132"
+        },
+        "133": {
+          "normalized_code": 3,
+          "description": "Rugose rock and boulder; original5m depth/slope coded VALUE133"
+        }
+      }
     }
   ]
 }

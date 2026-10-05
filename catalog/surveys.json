@@ -1399,17 +1399,17 @@
       "format": "usgs-geotiff",
       "kind": "bathymetry",
       "year": "unknown",
-      "resolution_m": 5,
-      "horizontal_crs": "unknown",
-      "vertical_datum": "unknown",
-      "license": "unknown",
+      "resolution_m": 5.0,
+      "horizontal_crs": "EPSG:26910",
+      "vertical_datum": "NAVD88",
+      "license": "public-domain-us-gov",
       "sha256": "1429fe797ed6668187475701903822b2c9ec9d38ea21a1a1fa9b9c1b0b4af3d6",
-      "bytes": "unknown",
+      "bytes": 31371318,
       "derived_from": [],
-      "status": "candidate",
+      "status": "usable",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Original5m source-only review retains NAD83/NAVD88,5m producergrid, unknown effectiveprecision/per-celluncertainty/interpolation. No80m fineprofile cutoff borrowed. OriginalUSGS+CSUMB credits/shareadvisory/nonnav apply.",
+      "archive_member": "Bathymetry_5m_OffshoreMonterey/Bathymetry_5m_OffshoreMonterey.tif",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/37/archive_url",
         "dist/data/usgs-depth-datum-ledger.json#/sources/2",
@@ -1422,7 +1422,32 @@
         "resolution_m": "dist/data/usgs-depth-datum-ledger.json#/sources/2/native_resolution_m"
       },
       "inspection_level": "native",
-      "lineage_status": "unknown"
+      "lineage_status": "unknown",
+      "adapter_review": {
+        "adapter_version": "original-native-adapters-v1",
+        "source_sha256": "1429fe797ed6668187475701903822b2c9ec9d38ea21a1a1fa9b9c1b0b4af3d6",
+        "cog_sha256": "daeacc9c53d64879346f8d7b090fdb7223e9d3617a4ce5c9853ed67a25a664d9",
+        "requested_bounds_wgs84": [
+          -122.06486025598274,
+          36.53163896186485,
+          -121.81173468909381,
+          36.69278176633689
+        ],
+        "valid_pixels_in_requested_bounds": 6298254,
+        "nominal_0_300ft_pixels_in_requested_bounds": 812137,
+        "native_resolution_m": [
+          5.0,
+          5.0
+        ],
+        "vertical_datum": "NAVD88",
+        "uncertainty_type": "unknown",
+        "interpolation_mask": "unknown",
+        "rights_source_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_5m_OffshoreMonterey_metadata.xml",
+        "raster_identity": {
+          "version": "normalized-raster-content-v1",
+          "sha256": "34288cc61b0819931753ee3dbd96923a6bbbbd07652c90b695758d0678fe232d"
+        }
+      }
     },
     {
       "id": "seafloorcharacter-2m-offshoremonterey-zip-60dcc1edcf",
@@ -1471,17 +1496,17 @@
       "format": "usgs-geotiff",
       "kind": "substrate",
       "year": "unknown",
-      "resolution_m": "unknown",
-      "horizontal_crs": "unknown",
-      "vertical_datum": "unknown",
-      "license": "unknown",
-      "sha256": "unknown",
+      "resolution_m": 5,
+      "horizontal_crs": "EPSG:32610",
+      "vertical_datum": "NAVD88",
+      "license": "public-domain-us-gov",
+      "sha256": "938fa8b67b7fd770af08d517efedee4697f3fd4cee8c98c088b43b571d047a6e",
       "bytes": 901050,
       "derived_from": [],
       "status": "candidate",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
+      "notes": "Original publisher interpreted 5 m seafloor character. Own metadata and VALUE table reviewed; raw rugose13/63/73/83/123/133 only, mixed2 excluded. Header WGS84 conflicts with XML NAD83: preserve header; datum operation uncertainty retained. Shared MBARI bathymetry/backscatter/video lineage, not independent measurement or fish presence. USGS+CSUMB credit and advisory share request retained; not for navigation. Effective resolution/precision unknown; no borrowed80m fine-depth cutoff.",
+      "archive_member": "SeafloorCharacter_5m_OffshoreMonterey/SeafloorCharacter_5m_OffshoreMonterey.tif",
       "evidence": [
         "catalog/usgs-ds781-metadata-review.json#/records/39/archive_url",
         "dist/data/nbs-hard-footprint-usgs-class-fetch.json#/archives/2/source_url",
