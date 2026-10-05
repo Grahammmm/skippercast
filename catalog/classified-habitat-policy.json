@@ -4,26 +4,21 @@
   "method": "Original publisher interpretation of rugose rock and boulders over paired valid nominal depth. Habitat suitability evidence only; no fish presence, terrain grade, species fit, precise fishing position or new measurement credit.",
   "sources": [
     {
-      "id": "usgs-offshore-monterey-2m-rugose-v1",
+      "id": "usgs-offshore-point-buchon-2m-rugose-v1",
       "reviewed_on": "2026-10-04",
-      "depth_source_id": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
-      "depth_source_sha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
-      "classification_source_id": "seafloorcharacter-2m-offshoremonterey-zip-60dcc1edcf",
-      "classification_source_sha256": "8ca813f1fbfd7afb231914d7a9ebdb5667559bf0172a2024f3d45e9180d94e08",
-      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/SeafloorCharacter_2m_OffshoreMonterey_metadata.xml",
-      "metadata_sha256": "3ed18fdaac9509ed23dac4fb976da9cd77c0d1509e4a6d28a090ce2b65e341db",
+      "depth_source_id": "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+      "depth_source_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+      "classification_source_id": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+      "classification_source_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/ac4288bd38594e1fa6e89e139995ab73/SeafloorCharacter_OffshorePointBuchon_metadata.xml",
+      "metadata_sha256": "5df595ce78430c89fad4d244337bf8187bd7ccbbee343e85f19082d3d2ec7214",
       "rugose_raw_codes": [
-        3,
-        13,
-        53,
-        63,
-        103,
-        113
+        3
       ],
-      "credit": "U.S. Geological Survey and California State University, Monterey Bay, Seafloor Mapping Lab",
+      "credit": "U.S. Geological Survey; California State University Monterey Bay Seafloor Mapping Lab; University of California Center for Integrated Spatial Research",
       "release_license": "public-domain-us-gov",
-      "notice": "Original USGS release (CC0/public domain); retain joint USGS/CSUMB attribution and survey limitations. USGS requests sharing derived products. Not for navigation.",
-      "review_basis": "Original FGDC VALUE encoding and release terms independently reviewed 2026-10-04. Mixed class2 excluded. Encoded depth/slope zones do not replace paired native depth. Unknown interpolation masks remain unknown. Shared survey interpretation is not independent depth or fish evidence."
+      "notice": "Original USGS public-domain release; retain original metadata, joint USGS/CSUMB/UC attribution and survey limitations. Not for navigation.",
+      "review_basis": "Original bathymetry and classification FGDC retrieved HTTP200 and exact reviewed hashes verified2026-10-05. VALUE3 hard/rugose boulder, megaclast and bedrock; VALUE2 mixed coarse sediment/rock remains excluded. Actual2m raster spacing does not resolve metadata10m spacing or quantitative accuracy. Existing paired depth resolution profile excludes >=80m display-resampled support from fine extraction; valid nominal depth filtering never becomes datum/accuracy qualification. Sonar2008/video2012, same survey depth/backscatter interpretation, not independent measurement or fish-presence evidence."
     }
   ]
 }
