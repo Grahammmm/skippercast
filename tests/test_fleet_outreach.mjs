@@ -49,6 +49,8 @@ function setup() {
   }
   trip.run('trip-old', vid(1), ago(400), ago(400).slice(0, 10), ago(400));
   pair.run('trip-old', 'landing', 'report-old', ago(400));
+  // Advisor reports count toward frequency only: 83 days ago is week 11 (the 12th), 84 days ago is outside the 12 weeks.
+  for (const d of [83, 84]) { trip.run(`trip-d${d}`, vid(2), ago(d), ago(d).slice(0, 10), ago(d)); pair.run(`trip-d${d}`, 'advisor', `advisor-${d}`, ago(d)); }
   const fact = sql.prepare(`INSERT INTO fleet_vessel_facts(id,vessel_id,field,value_json,value_key,source_id,source_url,method,confidence,rights,retrieved_at,first_seen_at,last_seen_at)
     VALUES(?,?,?,?,?,?,?,'page',0.8,'facts-only',?,?,?)`);
   fact.run('a'.repeat(32), vid(1), 'social.instagram.url', '"https://www.instagram.com/boat.example/"', 'k1', 'operator-site', 'https://boat1.example.com/', T0, T0, T0);
@@ -110,10 +112,10 @@ test('GET operators: 404 unless admin and FLEET_ENABLED; ranked by lead score co
     assert.equal(list.status, 200);
     assert.deepEqual(list.body.operators.map(o => o.id), [OP_A, OP_B]);
     const [a, b] = list.body.operators;
-    // A: 25 trips of 100 (7.5), weeks 0-3 of 12 (4/12 * 25 = 8.3), social (25), AIS seen (20) = 60.8 -> 61.
+    // A: 25 landing trips of 100 (7.5), weeks 0-3 and 11 of 12 (5/12 * 25 = 10.4), social (25), AIS seen (20) = 62.9 -> 63.
     assert.deepEqual(a.lead_score.parts.map(p => [p.part, p.raw, p.points]),
-      [['landing_report_volume', 25, 7.5], ['reporting_frequency', 4, 8.3], ['social_presence', 1, 25], ['ais_seen_30d', 1, 20]]);
-    assert.equal(a.lead_score.score, 61); assert.equal(a.vessels, 2);
+      [['landing_report_volume', 25, 7.5], ['reporting_frequency', 5, 10.4], ['social_presence', 1, 25], ['ais_seen_30d', 1, 20]]);
+    assert.equal(a.lead_score.score, 63); assert.equal(a.vessels, 2);
     // B: its site was read but had no social link (0, not missing); no reports or AIS (missing).
     assert.equal(b.lead_score.score, 0);
     assert.deepEqual(b.lead_score.missing, ['landing_report_volume', 'reporting_frequency', 'ais_seen_30d']);
@@ -121,7 +123,7 @@ test('GET operators: 404 unless admin and FLEET_ENABLED; ranked by lead score co
     const detail = await get(db, `/api/admin/fleet/operators/${OP_A}`);
     assert.equal(detail.status, 200);
     assert.deepEqual(detail.body.vessels.map(v => v.id), [vid(1), vid(2)]);
-    assert.equal(detail.body.lead_score.score, 61);
+    assert.equal(detail.body.lead_score.score, 63);
     assert.equal((await get(db, '/api/admin/fleet/operators/op-missing-000000000')).status, 404);
   } finally { sql.close(); }
 });
@@ -145,6 +147,8 @@ test('acceptance 2: draft -> approve -> log as sent by owner, and no other trans
     assert.equal(logged.status, 200);
     assert.deepEqual([logged.body.outreach.kind, logged.body.outreach.status], ['sent-by-owner', 'logged']);
     assert.equal(row(sql, 'SELECT outreach_status FROM fleet_operators WHERE id=?', OP_A).outreach_status, 'contacted');
+    const sent = row(sql, "SELECT created_by,created_at FROM fleet_outreach WHERE kind='note' AND body=?", `Logged as sent by the owner: draft ${id}.`);
+    assert.equal(sent.created_by, ADMIN); assert.ok(Math.abs(Date.parse(sent.created_at) - Date.now()) < 60e3);
     for (const again of ['approve', 'discard', 'log-sent']) assert.equal((await act(again)).status, 409, again);
 
     const other = (await post(db, `/api/admin/fleet/operators/${OP_A}/outreach`, {kind: 'draft', body: 'Second draft.'})).body.outreach.id;
@@ -154,7 +158,7 @@ test('acceptance 2: draft -> approve -> log as sent by owner, and no other trans
     const noteId = (await post(db, `/api/admin/fleet/operators/${OP_A}/outreach`, {kind: 'reply', channel: 'phone', body: 'Called back.'})).body.outreach.id;
     assert.equal((await post(db, `/api/admin/fleet/outreach/${noteId}`, {action: 'approve'})).status, 404);
     assert.equal((await post(db, `/api/admin/fleet/operators/${OP_A}/outreach`, {kind: 'sent-by-owner', body: 'x'})).status, 400);
-    assert.equal((await get(db, `/api/admin/fleet/operators/${OP_A}/outreach`)).body.outreach.length, 3);
+    assert.equal((await get(db, `/api/admin/fleet/operators/${OP_A}/outreach`)).body.outreach.length, 4);   // draft, discarded draft, reply, log-sent note
   } finally { sql.close(); }
 });
 
@@ -162,7 +166,14 @@ test('acceptance 3: do-not-contact blocks new drafts and approving or logging ol
   const {sql, db} = setup();
   try {
     const old = (await post(db, `/api/admin/fleet/operators/${OP_B}/outreach`, {kind: 'draft', body: 'Draft before the request.'})).body.outreach.id;
-    assert.equal((await post(db, `/api/admin/fleet/operators/${OP_B}`, {outreach_status: 'do-not-contact'})).status, 200);
+    assert.equal((await post(db, `/api/admin/fleet/operators/${OP_B}`, {outreach_status: 'do-not-contact', outreach_note: 'Asked by phone.'})).status, 200);
+    const logged = row(sql, "SELECT body,created_by,created_at FROM fleet_outreach WHERE operator_id=? AND kind='note'", OP_B);
+    assert.equal(logged.body, 'Outreach status drafted -> do-not-contact. Asked by phone.'); assert.equal(logged.created_by, ADMIN);
+    assert.ok(Math.abs(Date.parse(logged.created_at) - Date.now()) < 60e3);
+    // do-not-contact operators rank last whatever their score (A outscores B).
+    sql.prepare("UPDATE fleet_operators SET outreach_status=CASE id WHEN ? THEN 'do-not-contact' ELSE 'none' END").run(OP_A);
+    assert.deepEqual((await get(db, '/api/admin/fleet/operators')).body.operators.map(o => o.id), [OP_B, OP_A]);
+    sql.prepare("UPDATE fleet_operators SET outreach_status=CASE id WHEN ? THEN 'do-not-contact' ELSE 'none' END").run(OP_B);
     const refused = await post(db, `/api/admin/fleet/operators/${OP_B}/outreach`, {kind: 'draft', body: 'Should not exist.'});
     assert.equal(refused.status, 409);
     assert.equal(row(sql, "SELECT COUNT(*) AS n FROM fleet_outreach WHERE operator_id=? AND body='Should not exist.'", OP_B).n, 0);

@@ -19,7 +19,7 @@ const COPY = {
   partNames: {landing_report_volume: 'Landing-report trips (365 days)', reporting_frequency: 'Weeks with a report (of 12)',
     social_presence: 'Social link on own site', ais_seen_30d: 'AIS seen in 30 days'} as Record<string, string>,
   contact: 'Contact', website: 'Website', phone: 'Business phone', email: 'Business email', recorded: (by: string, at: string) => `recorded by ${by}, ${at}`,
-  scope: 'Scope', consentNote: 'How consent was given or withdrawn', saveConsent: 'Record consent', revoke: 'Revoke consent', saveStatus: 'Set status',
+  scope: 'Scope', consentNote: 'How consent was given or withdrawn', saveConsent: 'Record consent', revoke: 'Revoke consent', saveStatus: 'Set status', statusNote: 'Why (optional)',
   log: 'Notes and drafts', logNone: 'Nothing logged yet.', kind: 'Kind', channel: 'Channel', body: 'Text', add: 'Add',
   neverSent: 'Drafts are never sent from here. Send it yourself, then log it as sent.', dnc: 'Do not contact: no new drafts.',
   approve: 'Approve', discard: 'Discard', logSent: 'Log as sent by owner', by: (by: string, at: string) => `${by}, ${at}`,
@@ -104,7 +104,7 @@ export function FleetOperatorView({id}: {id: string}) {
           {op.consent_recorded_by ? ` · ${COPY.recorded(op.consent_recorded_by, when(op.consent_recorded_at))}` : ''}</dd>
       </dl>
       <ConsentForm key={op.consent_recorded_at} op={op} busy={busy} onSave={body => run(base, body)} />
-      <StatusForm key={op.outreach_status} current={op.outreach_status} busy={busy} onSave={status => run(base, {outreach_status: status})} />
+      <StatusForm key={op.outreach_status} current={op.outreach_status} busy={busy} onSave={(status, note) => run(base, {outreach_status: status, ...(note ? {outreach_note: note} : {})})} />
       <h2>{COPY.log}</h2>
       <p class="admin-muted">{op.outreach_status === 'do-not-contact' ? COPY.dnc : COPY.neverSent}</p>
       <NewEntry busy={busy} onAdd={body => run(`${base}/outreach`, body)} />
@@ -124,13 +124,15 @@ export function FleetOperatorView({id}: {id: string}) {
   );
 }
 
-function StatusForm({current, busy, onSave}: {current: string; busy: boolean; onSave: (status: string) => Promise<boolean>}) {
+function StatusForm({current, busy, onSave}: {current: string; busy: boolean; onSave: (status: string, note: string) => Promise<boolean>}) {
   const [status, setStatus] = useState(current);
+  const [note, setNote] = useState('');
   return (
-    <form class="admin-editor" onSubmit={e => { e.preventDefault(); void onSave(status); }}>
+    <form class="admin-editor" onSubmit={e => { e.preventDefault(); void onSave(status, note.trim()); }}>
       <div class="admin-editor-row">
         <label for="fleet-operator-status">{COPY.outreach}<select id="fleet-operator-status" value={status} onChange={e => setStatus(value(e))}>
           {OUTREACH.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+        <label for="fleet-operator-status-note">{COPY.statusNote}<input id="fleet-operator-status-note" type="text" maxLength={2000} value={note} onInput={e => setNote(value(e))} /></label>
       </div>
       <div class="admin-actions"><button type="submit" class="admin-button" disabled={busy || status === current}>{COPY.saveStatus}</button></div>
     </form>

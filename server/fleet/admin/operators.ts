@@ -4,7 +4,7 @@
 //
 //   GET  /api/admin/fleet/operators              ?region= &outreach_status= &consent_status=   by lead score, 500 at most
 //   GET  /api/admin/fleet/operators/:id          operator, vessels, lead score with parts, outreach log
-//   POST /api/admin/fleet/operators/:id          {outreach_status?, consent_status?, consent_scope?, consent_note?, revoke_consent?: true}
+//   POST /api/admin/fleet/operators/:id          {outreach_status?, outreach_note?, consent_status?, consent_scope?, consent_note?, revoke_consent?: true}
 //   GET  /api/admin/fleet/operators/:id/outreach the outreach log, newest first
 //   POST /api/admin/fleet/operators/:id/outreach {kind: note|draft|reply, channel?, body}
 //   POST /api/admin/fleet/outreach/:id           {action: approve|discard|log-sent}
@@ -16,7 +16,9 @@
 // and no approval or log of an old one. A consent change records who and when on
 // fleet_operators (consent_recorded_by, consent_recorded_at; consent_revoked_at on
 // withdrawal, read as no consent from the next request) and a logged note with the
-// before, after and how it was given, so the history survives the next change.
+// before, after and how it was given, so the history survives the next change. An
+// outreach status set by hand (do-not-contact included) and a draft logged as sent each
+// add a logged note too: its created_by and created_at say who and when.
 import {leadInputs, leadScore} from '../leadscore.ts';
 import type {AdminOutcome} from '../../advisor/admin/skippers.ts';
 
@@ -62,11 +64,12 @@ export async function listOperators(db: D1Database, q: {region?: string; outreac
         (SELECT COUNT(*) FROM fleet_vessels v WHERE v.operator_id=o.id) AS vessels,
         (SELECT MAX(created_at) FROM fleet_outreach x WHERE x.operator_id=o.id AND x.status<>'discarded') AS last_touch,
         (SELECT COUNT(*) FROM fleet_outreach x WHERE x.operator_id=o.id AND x.status IN ('draft','approved')) AS open_drafts
-      FROM fleet_operators o WHERE ${cond} ORDER BY o.name,o.id LIMIT ?`).bind(...args, OPERATOR_LIMIT + 1).all<{id: string; name: string}>(),
+      FROM fleet_operators o WHERE ${cond} ORDER BY o.name,o.id LIMIT ?`).bind(...args, OPERATOR_LIMIT + 1).all<{id: string; name: string; outreach_status: string}>(),
     leadInputs(db, {sql: cond, args}, now),
   ]);
   const operators = rows.results.slice(0, OPERATOR_LIMIT).map(o => ({...o, lead_score: leadScore(inputs.get(o.id)!)}))
-    .sort((a, b) => b.lead_score.score - a.lead_score.score || a.name.localeCompare(b.name));
+    .sort((a, b) => Number(a.outreach_status === DNC) - Number(b.outreach_status === DNC)   // do-not-contact last
+      || b.lead_score.score - a.lead_score.score || a.name.localeCompare(b.name));
   return {operators, truncated: rows.results.length > OPERATOR_LIMIT};
 }
 
@@ -102,12 +105,17 @@ export async function editOperator(db: D1Database, id: string, input: Record<str
   const row = await operatorRow(db, id);
   if (!row) return {status: 'not-found'};
   for (const key of Object.keys(input))
-    if (!['outreach_status', 'consent_status', 'consent_scope', 'consent_note', 'revoke_consent'].includes(key)) return {status: 'invalid', error: `unknown field: ${key}`};
+    if (!['outreach_status', 'outreach_note', 'consent_status', 'consent_scope', 'consent_note', 'revoke_consent'].includes(key)) return {status: 'invalid', error: `unknown field: ${key}`};
   const sets: string[] = [], args: SqlValue[] = [], statements: D1PreparedStatement[] = [];
   if (input.outreach_status !== undefined) {
     if (!oneOf(OUTREACH_STATUSES, input.outreach_status)) return {status: 'invalid', error: `outreach_status: not one of ${OUTREACH_STATUSES.join(', ')}`};
-    sets.push('outreach_status=?'); args.push(input.outreach_status);
-  }
+    const why = typeof input.outreach_note === 'string' ? input.outreach_note.trim() : '';
+    if (input.outreach_note !== undefined && (typeof input.outreach_note !== 'string' || why.length > MAX_NOTE)) return {status: 'invalid', error: `outreach_note: at most ${MAX_NOTE} characters`};
+    if (input.outreach_status !== row.outreach_status) {
+      sets.push('outreach_status=?'); args.push(input.outreach_status);
+      statements.push(note(db, id, `Outreach status ${row.outreach_status} -> ${input.outreach_status}.${why ? ' ' + why : ''}`, by, now));
+    }
+  } else if (input.outreach_note !== undefined) return {status: 'invalid', error: 'outreach_note goes with an outreach_status'};
   const grant = input.consent_status !== undefined || input.consent_scope !== undefined, revoke = input.revoke_consent !== undefined;
   if (revoke && input.revoke_consent !== true) return {status: 'invalid', error: 'revoke_consent must be true'};
   if (grant && revoke) return {status: 'invalid', error: 'record consent or revoke it, not both'};
@@ -176,8 +184,16 @@ export async function decideOutreach(db: D1Database, id: string, input: Record<s
     ? db.prepare(`UPDATE fleet_outreach SET kind='sent-by-owner',status='logged' WHERE ${cond}`).bind(...where)
     : db.prepare(`UPDATE fleet_outreach SET status=?${input.action === 'approve' ? ',approved_by=?,approved_at=?' : ''} WHERE ${cond}`)
       .bind(move.to, ...(input.action === 'approve' ? [by, now] : []), ...where)];
-  if (input.action === 'log-sent') statements.push(db.prepare(`UPDATE fleet_operators SET outreach_status='contacted',updated_at=? WHERE id=? AND outreach_status IN ('none','drafted')`)
-    .bind(now, entry.operator_id));
+  if (input.action === 'log-sent') {
+    // Who logged it and when: a note, written only if this request made the transition (never twice for one draft).
+    const text = `Logged as sent by the owner: draft ${id}.`;
+    statements.push(db.prepare(`INSERT INTO fleet_outreach(id,operator_id,kind,channel,body,status,created_by,created_at)
+      SELECT ?,?,'note',NULL,?,'logged',?,? WHERE EXISTS (SELECT 1 FROM fleet_outreach WHERE id=? AND status='logged')
+        AND NOT EXISTS (SELECT 1 FROM fleet_outreach WHERE operator_id=? AND kind='note' AND body=?)`)
+      .bind(newId(), entry.operator_id, text, by, now, id, entry.operator_id, text));
+    statements.push(db.prepare(`UPDATE fleet_operators SET outreach_status='contacted',updated_at=? WHERE id=? AND outreach_status IN ('none','drafted')
+      AND EXISTS (SELECT 1 FROM fleet_outreach WHERE id=? AND status='logged')`).bind(now, entry.operator_id, id));
+  }
   const [result] = await db.batch(statements);
   if (!result?.meta.changes) return {status: 'conflict', error: 'the draft changed while saving; reload and retry'};
   return {status: 'ok', value: {outreach: await db.prepare('SELECT * FROM fleet_outreach WHERE id=?').bind(id).first()}};

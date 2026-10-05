@@ -6,7 +6,8 @@
 //
 //   landing_report_volume  trips of the operator's vessels paired with a landing report
 //                          in the last 365 days (fleet_trip_reports), full marks at 100
-//   reporting_frequency    weeks of the last 12 with a paired report of any kind, of 12
+//   reporting_frequency    weeks of the last 12 with a paired report of any kind, of 12 (days 0-83 before
+//                          today, so the buckets are 0-11)
 //   social_presence        a current social.* fact from the operator's own site (operator-site)
 //   ais_seen_30d           a watched MMSI of the operator's vessels seen in the last 30 days
 //
@@ -60,7 +61,7 @@ export async function leadInputs(db: D1Database, scope: {sql: string; args: (str
   const [reports, social, ais, ids] = await Promise.all([
     db.prepare(`SELECT v.operator_id AS op,
         COUNT(DISTINCT CASE WHEN r.report_kind='landing' AND t.local_date>=? THEN t.id END) AS volume,
-        COUNT(DISTINCT CASE WHEN t.local_date>=? THEN CAST((julianday(?)-julianday(t.local_date))/7 AS INTEGER) END) AS weeks
+        COUNT(DISTINCT CASE WHEN t.local_date>? THEN CAST((julianday(?)-julianday(t.local_date))/7 AS INTEGER) END) AS weeks
       FROM fleet_trip_reports r JOIN fleet_trips t ON t.id=r.trip_id JOIN fleet_vessels v ON v.id=t.vessel_id
       WHERE v.operator_id IN (${ops}) GROUP BY v.operator_id`).bind(volumeFrom, weeksFrom, today, ...scope.args).all<{op: string; volume: number; weeks: number}>(),
     db.prepare(`SELECT v.operator_id AS op, MAX(f.field LIKE 'social.%') AS social FROM fleet_vessel_facts f JOIN fleet_vessels v ON v.id=f.vessel_id
