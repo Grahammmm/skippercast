@@ -172,6 +172,38 @@ class ClassifiedTests(unittest.TestCase):
                 self.assertTrue(reordered_candidates[0]['properties']['id'].startswith(
                     'classified-fixture-second-pair-'))
 
+                # Even a coherently rehashed receipt cannot restore duplicate
+                # area. Include held native patches and keep the current marker.
+                forged_candidates={'type':'FeatureCollection','features':[]}
+                forged_native={'version':ch.GEOMETRY_VERSION,'crs':'EPSG:3310','features':[]}
+                for p,r,b in zip((first,second),rows,bindings):
+                    g=source_shapes[r['id']]
+                    f=ch.features_for([g],'fixture',p,r,b)['features'][0]
+                    forged_candidates['features'].append(f)
+                    forged_native['features'].append({'type':'Feature',
+                        'properties':{'id':f['properties']['id']},'geometry':mapping(g)})
+                for name,obj in [('classified-candidates.geojson',forged_candidates),
+                                 ('classified-native.geojson',forged_native),
+                                 ('classified-habitat.geojson',empty),
+                                 ('classified-held.geojson',forged_candidates)]:
+                    atomic_json(folder/name,obj)
+                receipt=read_json(receipt_path)
+                receipt['representation']=ch.verify_inventory(forged_candidates,forged_native)
+                receipt['summary']={'held_count':2}
+                receipt['physical_summary']['candidate_count']=2
+                receipt['outputs']={name:ch.sha256(folder/name) for name in receipt['outputs']}
+                atomic_json(receipt_path,receipt)
+                with self.assertRaisesRegex(ValueError,'native habitat overlap'):
+                    ch.publication_features('fixture',root=root)
+                with self.assertRaisesRegex(ValueError,'native habitat overlap'):
+                    ch.stage('fixture',root=root)
+                self.assertEqual(extract_mock.call_count,6)  # Reject cached geometry, no pixels.
+
+                unknown=deepcopy(forged_candidates)
+                unknown['features'][0]['properties']['classified_area']['policy_id']='unknown'
+                with self.assertRaisesRegex(ValueError,'Unreviewed classified native'):
+                    ch.verify_pair_disjointness(unknown,forged_native,contexts)
+
     def test_single_pair_outputs_and_cache_behavior_remain_unduplicated(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);folder=root/'var/seafloor/reaches/fixture';folder.mkdir(parents=True)

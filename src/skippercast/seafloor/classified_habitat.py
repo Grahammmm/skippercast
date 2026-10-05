@@ -166,6 +166,27 @@ def _physical_inputs(contexts):
     return physical
 
 
+def verify_pair_disjointness(candidates, native, contexts):
+    """Reject duplicate native area, including held patches and cache hits."""
+    if len(contexts) <= 1:
+        return  # Preserve the existing single-pair contract.
+    groups = {c[0]['policy']['id']: [] for c in contexts}
+    policy_by_id = {f['properties']['id']:
+        f['properties'].get('classified_area', {}).get('policy_id')
+        for f in candidates['features']}
+    for feature in native['features']:
+        policy_id = policy_by_id.get(feature['properties']['id'])
+        if policy_id not in groups:
+            raise ValueError('Unreviewed classified native source-pair group')
+        groups[policy_id].append(shape(feature['geometry']))
+    prior = None
+    for patches in groups.values():
+        current = unary_union(patches)
+        if prior is not None and current.intersection(prior).area > 0:
+            raise ValueError('Classified native habitat overlap across source pairs')
+        prior = current if prior is None else unary_union([prior, current])
+
+
 def assessment(p):
     """Distinct unranked interpreted-area contract; never a terrain shortcut."""
     area = p.get('classified_area')
@@ -511,6 +532,7 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
         atomic_json(native_path, native)
     state = load_snapshot(root, reach)
     representation = verify_inventory(candidates, native)
+    verify_pair_disjointness(candidates, native, contexts)
     native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
     habitat, held, summary = classified_screen(candidates, state, native_geometries, contexts, root, reach)
     inputs = {'physical': physical_inputs, 'screen': input_identity(state),
@@ -568,6 +590,7 @@ def publication_features(reach, *, root=REPO):
     candidates = read_json(folder/'classified-candidates.geojson')
     native = read_json(folder/'classified-native.geojson')
     representation = verify_inventory(candidates, native)
+    verify_pair_disjointness(candidates, native, contexts)
     native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
     habitat, held, summary = classified_screen(candidates, state, native_geometries, contexts, root, reach)
     if (representation != receipt.get('representation')
