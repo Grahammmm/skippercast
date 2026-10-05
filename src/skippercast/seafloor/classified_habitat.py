@@ -42,6 +42,8 @@ POLICY_FILE = 'catalog/classified-habitat-policy.json'
 TO_LOCAL = Transformer.from_crs(4326, 3310, always_xy=True).transform
 SELECTED_SOURCE_SUPPORT = 'selected-source-v1'
 PAIRED_REFERENCE_SUPPORT = 'paired-reference-footprint-v1'
+REFERENCE_NOTICE = ('Current measured coverage footprint only; no reference '
+                    'terrain, substrate or species metrics borrowed.')
 
 
 def digest(value):
@@ -172,6 +174,19 @@ def published_contract(p):
         and p.get('screen', {}).get('status') == 'pass' and not p.get('hold_reasons'))
 
 
+def normalized_depth(row, root, *, fetch=False):
+    """Recheck existing native bytes and their reviewed normalized dependency."""
+    receipt, _, _ = ingest(row, row['adapter_review']['requested_bounds_wgs84'],
+                           root=root, fetch=fetch)
+    cache = Path(root)/'var/seafloor/cache'/row['sha256']
+    paths = sorted(p.with_suffix('.tif') for p in cache.glob('*.json')
+        if read_json(p).get('cog_sha256') == receipt['cog_sha256'] and p.with_suffix('.tif').exists())
+    if not paths or sha256(paths[0]) != receipt['cog_sha256']:
+        raise ValueError('Classified depth normalized bytes changed')
+    verify_review(receipt, row['adapter_review'], paths[0])
+    return receipt, paths[0]
+
+
 def source_context(root, reach, policy, *, fetch=False):
     """Bind current baseline physics, reviewed source pair and normalized bytes."""
     root = Path(root)
@@ -219,15 +234,10 @@ def source_context(root, reach, policy, *, fetch=False):
     rights = [dict(r, attribution=policy['credit'], notice=policy['notice'],
                    policy_url=policy['metadata_url']) for r in rights]
     verify_sources({row['id']: binding}, root=root, fetch=fetch)
-    receipt, _, _ = ingest(row, row['adapter_review']['requested_bounds_wgs84'], root=root, fetch=fetch)
-    cache = root/'var/seafloor/cache'/row['sha256']
-    paths = sorted(p.with_suffix('.tif') for p in cache.glob('*.json')
-        if read_json(p).get('cog_sha256') == receipt['cog_sha256'] and p.with_suffix('.tif').exists())
-    if not paths or sha256(paths[0]) != receipt['cog_sha256']:
-        raise ValueError('Classified depth normalized bytes changed')
-    verify_review(receipt, row['adapter_review'], paths[0])
+    receipt, path = normalized_depth(row, root, fetch=fetch)
     cells = read_json(folder/'cells.json')['cells']
     mode = support_mode(policy)
+    reference_support = None
     if mode == SELECTED_SOURCE_SUPPORT:
         support_cells = [c for c in cells
                          if c['tier'] == 1 and c['source_id'] == row['id']]
@@ -250,21 +260,40 @@ def source_context(root, reach, policy, *, fetch=False):
         if any(not isinstance(ident, str) or ident not in rows
                or ident not in saved_sources for ident in reference_ids):
             raise ValueError('Unknown or out-of-scope current Tier 1 reference source')
-        for ident in reference_ids:
+        reference_dependencies, reference_rights = [], []
+        from . import terrain_support
+        for ident in sorted(reference_ids):
             reference = rows[ident]
             if (reference != saved_sources[ident] or reference.get('kind') != 'bathymetry'
                     or reference.get('status') != 'usable'
                     or reference.get('habitat_quality_hold')
-                    or reference.get('habitat_quality_dependencies')
-                    or reference.get('terrain_support')):
+                    or reference.get('habitat_quality_dependencies')):
                 raise ValueError('Current Tier 1 reference source changed or is unusable')
-            source_rights(reference, use=deployment_use(root))
+            reference_rights.append(source_rights(reference, use=deployment_use(root)))
+            terrain_support.validate_binding(reference)
+            ref_receipt, ref_path = ((receipt, path) if ident == row['id']
+                                    else normalized_depth(reference, root, fetch=fetch))
+            terrain_support.verify_sources(
+                [{'row': reference, 'path': ref_path, 'receipt': ref_receipt}], root=root)
+            reference_dependencies.append({'source_id': ident, 'source_sha256': reference['sha256'],
+                'normalized_sha256': ref_receipt['cog_sha256'],
+                'terrain_binding_sha256': (terrain_support.binding_digest(reference)
+                                          if reference.get('terrain_support') else None)})
+        reference_support = {'version': PAIRED_REFERENCE_SUPPORT,
+            'source_ids': sorted(reference_ids), 'sources': reference_dependencies,
+            'meaning': REFERENCE_NOTICE}
+        # The original scientific pair stays distinct. Footprint derivatives
+        # nevertheless retain every reference producer's terms and credits.
+        rights_by_id = {r['source_id']: r for r in reference_rights}
+        rights_by_id.update({r['source_id']: r for r in rights})
+        rights = [rights_by_id[ident] for ident in sorted(rights_by_id)]
     support = unary_union([cell_geometry(c) for c in support_cells])
     from .screen import polygon
     existing = unary_union([transform(TO_LOCAL, polygon(f['geometry']))
                 for f in read_json(folder/'candidates.geojson')['features']])
     identity = {'profile': PROFILE, 'reach': reach, 'policy': policy,
         'support_mode': mode,
+        'reference_support': reference_support,
         'depth_source': row, 'classification_binding': binding, 'normalized_receipt': receipt,
         'normalized_sha256': receipt['cog_sha256'], 'source_scope': source_scope,
         'baseline_physical_input_hash': physical['input_hash'],
@@ -274,7 +303,7 @@ def source_context(root, reach, policy, *, fetch=False):
         'implementation': {n: sha256(Path(__file__).with_name(n)) for n in
             ('classified_habitat.py', 'classified_geometry.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')},
         'geometry_representation': geometry_runtime()}
-    return identity, row, binding, paths[0], support, existing, rights
+    return identity, row, binding, path, support, existing, rights
 
 
 def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels=25_000_000):
@@ -312,7 +341,7 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
                      'classified_selected_area_km2': classified.area/1e6}
 
 
-def features_for(patches, reach, policy, row, binding):
+def features_for(patches, reach, policy, row, binding, *, reference_support=None):
     from .screen import polygon
     features = []
     for index, patch in enumerate(patches):
@@ -333,6 +362,9 @@ def features_for(patches, reach, policy, row, binding):
                 'metadata_sha256': policy['metadata_sha256'], 'independent_confirmation': False,
                 'new_measured_area_km2': 0, 'interpolation_mask': 'unknown',
                 'basis': 'Original publisher interpreted rugose rock and boulders; no fish presence inferred.'}}})
+    if reference_support is not None:
+        for feature in features:
+            feature['properties']['reference_support'] = deepcopy(reference_support)
     return {'type': 'FeatureCollection', 'features': features}
 
 
@@ -373,10 +405,11 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
         native = {'version': GEOMETRY_VERSION, 'crs': 'EPSG:3310', 'features': []}
         physical_summary = {'candidate_count': 0, 'class3_valid_depth_pixels': 0,
                             'classified_selected_area_km2': 0, 'new_measured_area_km2': 0}
-        for p, (_, row, binding, path, support, existing, _) in zip(selected, contexts):
+        for p, (identity, row, binding, path, support, existing, _) in zip(selected, contexts):
             patches, summary = extract(row, binding, path, support, existing,
                                        root=root, edge=edge, max_pixels=max_pixels)
-            represented = features_for(patches, reach, p, row, binding)['features']
+            represented = features_for(patches, reach, p, row, binding,
+                reference_support=identity.get('reference_support'))['features']
             candidates['features'].extend(represented)
             native['features'].extend({'type': 'Feature', 'geometry': mapping(patch),
                 'properties': {'id': f['properties']['id']}} for patch, f in zip(patches, represented))
@@ -449,6 +482,7 @@ def publication_features(reach, *, root=REPO):
         saved = next((c[0] for c in contexts if c[0]['policy']['id'] ==
                       p.get('classified_area', {}).get('policy_id')), None)
         if (not published_contract(p) or saved is None
+                or p.get('reference_support') != saved.get('reference_support')
                 or p['source_ids'] != [saved['depth_source']['id'], saved['classification_binding']['row']['id']]
                 or p['substrate']['source_id'] != saved['classification_binding']['row']['id']
                 or p['classified_area']['metadata_sha256'] != saved['policy']['metadata_sha256']):
