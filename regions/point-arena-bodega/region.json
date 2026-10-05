@@ -199,7 +199,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -295,8 +297,8 @@
       "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "Point Arena\u2013Bodega original source footprint, local conditions and legal access require review; this preview has no qualified fishing target."
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
     },
     "ais-history": {
       "status": "research",

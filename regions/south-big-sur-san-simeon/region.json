@@ -183,7 +183,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -279,8 +281,8 @@
       "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "South Big Sur\u2013San Simeon is a draft source-discovery package. Original grids, local coverage, legal access and exact routes are not qualified for fishing targets."
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
     },
     "ais-history": {
       "status": "research",

@@ -175,7 +175,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -271,8 +273,8 @@
       "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "Fort Bragg–Point Arena source footprint, currency and legal applicability remain in draft review; neighboring-region coverage does not qualify this area."
+      "status": "missing",
+      "reason": "0 boats registered in the charter fleet registry, 0 with an identified MMSI; registry identities are not operator-confirmed."
     },
     "ais-history": {
       "status": "research",

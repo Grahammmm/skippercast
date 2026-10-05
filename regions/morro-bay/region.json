@@ -319,7 +319,7 @@
       "landing-reports"
     ],
     "charter-identity": [
-      "operator-identities"
+      "fleet-registry"
     ],
     "ais-history": [
       "noaa-ais",
@@ -417,8 +417,8 @@
       "reason": "Landing reports lack complete effort, zero catches and catch positions; no calibrated catch model."
     },
     "charter-identity": {
-      "status": "partial",
-      "reason": "Fleet names researched, but no operator-confirmed local charter MMSI is published."
+      "status": "missing",
+      "reason": "0 boats registered in the charter fleet registry, 0 with an identified MMSI; registry identities are not operator-confirmed."
     },
     "ais-history": {
       "status": "partial",

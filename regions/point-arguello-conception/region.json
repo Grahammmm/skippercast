@@ -225,7 +225,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -321,8 +323,8 @@
       "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "Regional source coverage, rights, precision, and freshness need review before this role can qualify a fishing recommendation."
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
     },
     "ais-history": {
       "status": "research",

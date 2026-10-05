@@ -181,7 +181,9 @@
       "noaa-survey-catches",
       "recfin"
     ],
-    "charter-identity": [],
+    "charter-identity": [
+      "fleet-registry"
+    ],
     "ais-history": [
       "noaa-ais"
     ],
@@ -277,8 +279,8 @@
       "reason": "Big Sur local coverage and source quality require a dedicated regional rehearsal and original source review. This binding supplies no fishing target or trip clearance."
     },
     "charter-identity": {
-      "status": "research",
-      "reason": "Big Sur local coverage and source quality require a dedicated regional rehearsal and original source review. This binding supplies no fishing target or trip clearance."
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
     },
     "ais-history": {
       "status": "research",

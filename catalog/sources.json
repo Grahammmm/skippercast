@@ -1133,7 +1133,7 @@
         "basis": "Primary publisher or official dataset documentation",
         "transport": "HTTPS; exact provider hosts only"
       },
-      "coverage_note": "Operator-specific vessel lists; match MMSI through independent evidence.",
+      "coverage_note": "Superseded on 2026-10-05 by fleet-registry (charter fleet CF-17); kept for the history of the assets built from it, and no region binds it. Operator-specific vessel lists; match MMSI through independent evidence.",
       "limitations": [
         "Operator name listing alone does not verify an MMSI.",
         "Track dates of ownership, vessel rename and fishing role."
@@ -1142,7 +1142,9 @@
         "www.morrobaylanding.com",
         "www.virgs.com",
         "www.patriotsportfishing.com"
-      ]
+      ],
+      "superseded_by": "fleet-registry",
+      "superseded_at": "2026-10-05"
     },
     {
       "id": "noaa-ais",
@@ -2047,6 +2049,36 @@
       "allowed_hosts": [
         "dbw.parks.ca.gov"
       ]
+    },
+    {
+      "id": "fleet-registry",
+      "name": "SkipperCast charter fleet registry",
+      "provider": "SkipperCast, compiled from FCC ULS, USCG PSIX, landing pages, report sites and operator sites",
+      "needs": [
+        "charter-identity"
+      ],
+      "documentation_url": "https://github.com/Grahammmm/skippercast/blob/main/docs/plans/charter-fleet/design.md",
+      "adapter": "fleet-registry",
+      "review_status": "approved",
+      "reviewed_at": "2026-10-05",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "FCC ULS; USCG PSIX; the landing, report and operator pages each fact cites",
+        "terms_url": "https://github.com/Grahammmm/skippercast/blob/main/docs/legal/data-rights-register.md#charter-fleet-registry-and-ais",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "A registry of facts, each with its source URL; the per-source terms are in the data-rights register's charter fleet rows (TECK.net permission for paid use is pending). Only aggregate counts reach region coverage; no registry row is committed or shipped."
+      },
+      "authenticity": {
+        "basis": "Each registry fact keeps its source URL, method, confidence and retrieval time (fleet_vessel_facts)",
+        "transport": "Worker D1 registry written by the fleet-registry job over GitHub OIDC"
+      },
+      "coverage_note": "Replaces operator-identities as the charter identity register. coverage-status derives each coastal region's charter-identity status from registry counts.",
+      "limitations": [
+        "A registry MMSI comes from FCC licences, PSIX records or AIS matching; it is not an operator-confirmed identity.",
+        "Name and port matches stay leads until a stable key or an admin decision confirms them."
+      ],
+      "allowed_hosts": []
     }
   ]
 }

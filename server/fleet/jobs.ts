@@ -6,10 +6,15 @@
 //   GET  /api/fleet/jobs/snapshot?region=<id>&cursor=<c>
 //        One page from one section, in order: operators, vessels (each with its
 //        aliases and offerings), decided reviews. `next` is the cursor of the
-//        following page, null after the last. Vessels carry their stable keys and
-//        `pinned` (the pinned column names); reviews are the decided and dismissed
-//        ones, so a re-run never re-asks. Private columns (consent, outreach,
-//        removal requests, map consent, facts) are not in the snapshot.
+//        following page, null after the last. The first page also carries
+//        `advisor_slugs` (every advisor_boats.slug), which a new vessel slug must
+//        not take. Vessels carry their stable keys, `pinned` (the pinned column
+//        names) and `sources`, the winning-source record: id, field, source_id,
+//        confidence and retrieved_at of each current (not superseded) scalar fact,
+//        without its value, so the resolver can rank a stored value it cannot see.
+//        Reviews are the decided and dismissed ones, so a re-run never re-asks.
+//        Private columns (consent, outreach, removal requests, map consent, fact
+//        values) are not in the snapshot.
 //   POST /api/fleet/jobs/registry   {region, run_id, batch?, ops: [...]}
 //        Body <= 1 MB, <= 500 operations (registry.ts). 200 {ok, run_id, batch,
 //        ops, changed, counts}; 400 {error, errors: [{index, op, error}]} with
@@ -54,6 +59,9 @@ export async function snapshot(db: D1Database, region: string | undefined, curso
   if (!match) return {status: 400, body: {error: 'invalid cursor'}};
   const section = match[1] as typeof SECTIONS[number], after = match[2]!;
   const out: Record<string, unknown> = {region, cursor: `${section}:${after}`, operators: [], vessels: [], reviews: []};
+  if (section === 'o' && after === '') {
+    out.advisor_slugs = (await db.prepare('SELECT slug FROM advisor_boats ORDER BY slug').all<{slug: string}>()).results.map(r => r.slug);
+  }
   let rows: {id: string}[];
   if (section === 'o') {
     rows = (await db.prepare(`SELECT id,slug,name,website,phone_business,email_business,booking_platform FROM fleet_operators
@@ -70,11 +78,14 @@ export async function snapshot(db: D1Database, region: string | undefined, curso
       .bind(region, after, PAGE.vessels).all<{vessel_id: string}>()).results;
     const offerings = (await db.prepare(`SELECT ${OFFERING_COLUMNS} FROM fleet_offerings WHERE ${range} ORDER BY vessel_id,id`)
       .bind(region, after, PAGE.vessels).all<OfferingRow>()).results;
+    const sources = (await db.prepare(`SELECT vessel_id,id,field,source_id,confidence,retrieved_at FROM fleet_vessel_facts
+      WHERE ${range} AND superseded_at IS NULL AND instr(field,'[]')=0 ORDER BY vessel_id,id`)
+      .bind(region, after, PAGE.vessels).all<{vessel_id: string}>()).results;
     const group = <T extends {vessel_id: string}>(list: T[]) => { const m = new Map<string, Omit<T, 'vessel_id'>[]>(); for (const {vessel_id, ...rest} of list) m.set(vessel_id, [...m.get(vessel_id) ?? [], rest]); return m; };
-    const aliasesOf = group(aliases), offeringsOf = group(offerings.map(({days_json, target_species_json, source_fact_ids_json, ...o}) =>
+    const aliasesOf = group(aliases), sourcesOf = group(sources), offeringsOf = group(offerings.map(({days_json, target_species_json, source_fact_ids_json, ...o}) =>
       ({...o, days: parse(days_json), target_species: parse(target_species_json), source_fact_ids: parse(source_fact_ids_json)})));
     out.vessels = page.map(({pinned_json, waters_json, ...v}) => ({...v, waters: parse(waters_json), pinned: pinnedNames(pinned_json),
-      aliases: aliasesOf.get(v.id) ?? [], offerings: offeringsOf.get(v.id) ?? []}));
+      aliases: aliasesOf.get(v.id) ?? [], offerings: offeringsOf.get(v.id) ?? [], sources: sourcesOf.get(v.id) ?? []}));
   } else {
     const reviews = (await db.prepare(`SELECT id,kind,subject_id,candidate_json,proposal_json,score,status,decision_json,decided_at,opened_at
       FROM fleet_reviews WHERE region=? AND status<>'open' AND id>? ORDER BY id LIMIT ?`).bind(region, after, PAGE.reviews + 1)
