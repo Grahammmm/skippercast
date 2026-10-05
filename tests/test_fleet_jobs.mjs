@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
+import {withSessions} from './fixtures/test-sessions.mjs';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
@@ -76,10 +77,10 @@ const vessel = (n, extra = {}) => ({op: 'vessel.upsert', id: vid(n), creation_ke
 const fact = (n, field, value, extra = {}) => ({op: 'fact.upsert', vessel_id: vid(n), field, value_json: value, source_id: 'fcc-uls',
   source_url: `https://registry.example.gov/vessel/${n}`, method: 'registry', confidence: 0.9, rights: 'public-domain', retrieved_at: T0, ...extra});
 const operator = {op: 'operator.upsert', id: OPERATOR, slug: 'test-landing', name: 'Test Landing Sportfishing', website: 'https://landing.example.com/',
-  phone_business: '+18055550101', booking_platform: 'fareharbor'};
+  phone_business: '+18055550101', booking_platform: 'fareharbor', seen_at: T0};
 const offering = n => ({op: 'offering.upsert', id: sha(`${vid(n)}|HALFDAY|`).slice(0, 32), vessel_id: vid(n), name: 'Half Day', trip_type: 'half-day',
   duration_h: 5, price_cents: 9500, price_basis: 'per-person', capacity: 30, currency: 'USD', departs_local: '06:30', days_json: ['sat', 'sun'],
-  season_from: '04-01', season_to: '10-31', target_species_json: ['rockfish', 'lingcod'], booking_url: 'https://landing.example.com/book', status: 'active'});
+  season_from: '04-01', season_to: '10-31', target_species_json: ['rockfish', 'lingcod'], booking_url: 'https://landing.example.com/book', status: 'active', seen_at: T0});
 const departure = n => ({op: 'departure.upsert', offering_id: offering(n).id, vessel_id: vid(n), date: '2026-10-10', departs_local: '06:30',
   price_cents: 9500, load_text: '12 of 30', source_url: 'https://landing.example.com/schedule', retrieved_at: T0});
 const review = {op: 'review.open', kind: 'merge', fingerprint: 'fcc-uls:WDZ0000', subject_id: vid(1), candidate_json: {name: 'TEST BOAT 1', source: 'fcc-uls'},
@@ -137,7 +138,9 @@ test('posting the same batch twice changes no row the second time', {skip}, asyn
     assert.equal(count(sql, 'fleet_vessel_facts'), 6);
     assert.equal(count(sql, 'fleet_reviews'), 1);
     const before = dump(sql);
+    jobsDeps.now = () => new Date('2026-10-05T11:30:00.000Z');   // a later call: Worker-clock stamps must not move either
     const second = await post(db, batch(ops));
+    jobsDeps.now = () => new Date('2026-10-05T10:00:00.000Z');
     assert.equal(second.status, 200);
     assert.equal(second.body.changed, 0, JSON.stringify(second.body.counts));
     for (const kind of Object.keys(second.body.counts)) assert.equal(second.body.counts[kind].changed, 0, kind);
@@ -337,6 +340,7 @@ test('review.open never reopens or edits a decided review; snapshot returns deci
     assert.equal(reviews[0].status, 'decided');
     assert.deepEqual(reviews[0].decision, {action: 'same-vessel', vessel_id: vid(1)});
     assert.deepEqual(reviews[0].candidate, {name: 'TEST BOAT 1', source: 'fcc-uls'});
+    assert.equal(reviews[0].decided_by, undefined, 'who decided stays out of the snapshot');
     // Dismissed reviews are not reopened either.
     sql.prepare("UPDATE fleet_reviews SET status='dismissed' WHERE id=?").run(id);
     assert.equal((await post(db, batch([review]))).body.changed, 0);
@@ -408,4 +412,77 @@ test('snapshot: paged by section, vessels carry keys, pinned names, aliases and 
     assert.equal(vessels.find(v => v.id === vid(1)).pinned.length, 0);
     for (const bad of ['?region=../x', '', `?region=${REGION}&cursor=z:1`, `?region=${REGION}&cursor=v:%27%3B`]) assert.equal((await get(db, bad)).status, 400, bad);
   } finally { Object.assign(PAGE, saved); sql.close(); }
+});
+
+test('an admin or user session without a fleet bearer token gets 401 on both job routes', {skip}, async () => {
+  const {sql, db} = database(), sessions = withSessions(worker);
+  sql.prepare("INSERT INTO users(id,created_at,role) VALUES('admin-1',?,'admin')").run(T0);
+  try {
+    for (const owner of ['admin-1', 'someone']) {
+      const snap = await sessions.fetch(new Request(ORIGIN + '/api/fleet/jobs/snapshot?region=CA', {headers: {'x-test-owner': owner}}), env(db));
+      assert.equal(snap.status, 401, `snapshot as ${owner}`);
+      const reg = await sessions.fetch(new Request(ORIGIN + '/api/fleet/jobs/registry', {method: 'POST',
+        headers: {'x-test-owner': owner, 'Content-Type': 'application/json', Origin: ORIGIN}, body: JSON.stringify(batch([operator]))}), env(db));
+      assert.equal(reg.status, 401, `registry as ${owner}`);
+    }
+    assert.equal(count(sql, 'fleet_operators'), 0);
+    assert.equal(count(sql, 'fleet_runs'), 0);
+  } finally { sql.close(); }
+});
+
+test('an older replay never overwrites newer vessel, operator or offering values', {skip}, async () => {
+  const {sql, db} = database();
+  try {
+    const newer = [{...operator, name: 'Newer Landing', seen_at: T1}, vessel(1, {name: 'Newer Name', mmsi: '366222222', last_seen_at: T1}),
+      {...offering(1), price_cents: 11000, seen_at: T1}];
+    const older = [{...operator, name: 'Older Landing'}, vessel(1, {name: 'Older Name', mmsi: '366333333'}), {...offering(1), price_cents: 8000}];
+    assert.equal((await post(db, batch(newer))).status, 200);
+    const replay = await post(db, batch(older));
+    assert.equal(replay.status, 200);
+    assert.equal(replay.body.changed, 0, JSON.stringify(replay.body.counts));
+    const v = sql.prepare('SELECT * FROM fleet_vessels WHERE id=?').get(vid(1));
+    assert.equal(v.name, 'Newer Name');
+    assert.equal(v.mmsi, '366222222');
+    assert.equal(v.last_seen_at, T1);
+    assert.equal(v.first_seen_at, T0, 'first_seen_at may still move back');
+    assert.equal(sql.prepare('SELECT name FROM fleet_operators').get().name, 'Newer Landing');
+    assert.equal(sql.prepare('SELECT updated_at FROM fleet_operators').get().updated_at, T1);
+    const o = sql.prepare('SELECT price_cents, updated_at FROM fleet_offerings').get();
+    assert.equal(o.price_cents, 11000);
+    assert.equal(o.updated_at, T1);
+    // A newer one still lands.
+    const T2 = '2026-10-19T09:47:00.000Z';
+    const next = await post(db, batch([{...operator, name: 'Next Landing', seen_at: T2}, vessel(1, {name: 'Next Name', last_seen_at: T2}), {...offering(1), price_cents: 12000, seen_at: T2}]));
+    assert.equal(next.body.changed, 3);
+    assert.equal(sql.prepare('SELECT price_cents FROM fleet_offerings').get().price_cents, 12000);
+    // operator.upsert and offering.upsert need seen_at; updated_at itself is the Worker's.
+    const {seen_at: _, ...unseen} = operator;
+    assert.match((await post(db, batch([unseen]))).body.errors[0].error, /seen_at: missing/);
+    assert.match((await post(db, batch([{...operator, updated_at: T1}]))).body.errors[0].error, /updated_at: not a field/);
+  } finally { sql.close(); }
+});
+
+test('fleet_runs: a failed call never downgrades an ok row; review.open is scoped to its region', {skip}, async () => {
+  const {sql, db} = database();
+  try {
+    assert.equal((await post(db, batch([operator, vessel(1)]))).status, 200);
+    const okRow = sql.prepare("SELECT * FROM fleet_runs WHERE id='run-20261005:registry.0'").get();
+    assert.equal(okRow.status, 'ok');
+    assert.equal((await post(db, batch([{op: 'nope'}]))).status, 400);
+    assert.equal((await post(db, batch([operator]))).status, 200);
+    assert.deepEqual(sql.prepare("SELECT * FROM fleet_runs WHERE id='run-20261005:registry.0'").get(), okRow, 'the first ok stays');
+    // A failed call may be retried into ok.
+    assert.equal((await post(db, batch([{op: 'nope'}], {batch: 1}))).status, 400);
+    assert.equal(sql.prepare("SELECT status FROM fleet_runs WHERE id='run-20261005:registry.1'").get().status, 'failed');
+    assert.equal((await post(db, batch([operator], {batch: 1}))).status, 200);
+    assert.equal(sql.prepare("SELECT status FROM fleet_runs WHERE id='run-20261005:registry.1'").get().status, 'ok');
+    // The same review id held by another region is not touched from this one.
+    const id = sha('merge|fcc-uls:WDZ0000').slice(0, 32);
+    sql.prepare("INSERT INTO fleet_reviews(id,region,kind,status,score,opened_at) VALUES(?,'OR','merge','open',0.1,?)").run(id, T0);
+    const r = await post(db, batch([{...review, subject_id: null}]));
+    assert.equal(r.status, 200);
+    assert.equal(r.body.changed, 0);
+    const stored = sql.prepare('SELECT region, score FROM fleet_reviews WHERE id=?').get(id);
+    assert.deepEqual({...stored}, {region: 'OR', score: 0.1});
+  } finally { sql.close(); }
 });

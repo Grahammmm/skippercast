@@ -9,7 +9,11 @@
 //   - Upserts are keyed on deterministic ids (ids.ts), and an update runs only
 //     when a stored value would change, so posting the same batch twice changes
 //     no row the second time. Timestamps come from the operations, never the
-//     Worker clock, except created_at/updated_at, which move only with a change.
+//     Worker clock, except created_at (and a vessel's updated_at, which moves
+//     only with a change). An older replay never overwrites a newer value: each
+//     row is guarded by its recency column (vessels and aliases last_seen_at,
+//     facts and departures retrieved_at, operators and offerings the op's
+//     seen_at, stored as updated_at).
 //   - Fields omitted from an upsert keep their stored value (an insert takes the
 //     column default); a field present with null clears it.
 //   - Pinned vessel fields are never overwritten: fleet_vessels.pinned_json is an
@@ -18,7 +22,8 @@
 //     A vessel whose operator asked for removal (removal_requested_at) is never
 //     re-listed by a job. Jobs never write pinned_json, map_display_consent,
 //     removal_requested_at, or an operator's consent, outreach or user_id.
-//   - review.open never reopens or edits a decided or dismissed review.
+//   - review.open never reopens or edits a decided or dismissed review, nor one
+//     of another region.
 //   - Facts must carry an https source_url. `admin:<users.id>` provenance is
 //     written only by the admin API, so a job token cannot forge an admin fact.
 //   - Statements are multi-row and chunked so none binds more than D1's 100
@@ -114,8 +119,8 @@ const provenance: Check = (v, name) => typeof v === 'string' && v.startsWith('ad
 interface Spec { fields: Record<string, Check>; required: string[] }
 const opt = (spec: Record<string, Check>) => spec;
 const SPECS: Record<OpKind, Spec> = {
-  'operator.upsert': {required: ['id', 'slug', 'name'], fields: opt({
-    id: text(64, OPERATOR_ID), slug: text(80, SLUG), name: text(120),
+  'operator.upsert': {required: ['id', 'slug', 'name', 'seen_at'], fields: opt({
+    id: text(64, OPERATOR_ID), seen_at: iso, slug: text(80, SLUG), name: text(120),
     website: nullable(https), phone_business: nullable(text(16, E164)), email_business: nullable(text(254, EMAIL)),
     booking_platform: nullable(text(64, KEY)), lead_score: nullable(real(0, 100)), lead_score_json: nullable(json(object)),
   })},
@@ -142,8 +147,8 @@ const SPECS: Record<OpKind, Spec> = {
     vessel_id: text(32, HEX32), alias: text(120), alias_norm: text(120, NORM), kind: oneOf(FLEET_ENUMS.aliasKind),
     source_url: https, first_seen_at: iso, last_seen_at: iso,
   })},
-  'offering.upsert': {required: ['id', 'vessel_id', 'name', 'trip_type'], fields: opt({
-    id: text(32, HEX32), vessel_id: text(32, HEX32), name: text(120), trip_type: oneOf(FLEET_ENUMS.tripType),
+  'offering.upsert': {required: ['id', 'vessel_id', 'name', 'trip_type', 'seen_at'], fields: opt({
+    id: text(32, HEX32), seen_at: iso, vessel_id: text(32, HEX32), name: text(120), trip_type: oneOf(FLEET_ENUMS.tripType),
     duration_h: nullable(real(0, 720)), price_cents: nullable(int(0, 10_000_000)), price_basis: nullable(oneOf(FLEET_ENUMS.priceBasis)),
     capacity: nullable(int(1, 2000)), currency: text(3, /^[A-Z]{3}$/), departs_local: nullable(text(5, HHMM)),
     days_json: nullable(json(listOf(v => (FLEET_ENUMS.days as readonly unknown[]).includes(v), 7))),
@@ -227,6 +232,10 @@ async function validateOp(raw: unknown, index: number, region: string): Promise<
       break;
     case 'run.record':
       row = {kind, index, id: s('step'), cols};
+      break;
+    case 'operator.upsert': case 'offering.upsert':
+      cols.updated_at = cols.seen_at!; delete cols.seen_at;   // stored as updated_at, the row's recency guard
+      row = {kind, index, id: s('id'), cols};
       break;
     default:
       row = {kind, index, id: s('id'), cols};
@@ -344,7 +353,8 @@ interface Table {
   update?: (col: string) => string;                  // SET expression for a column (default excluded.col)
   where?: string;                                    // an extra condition for the update to run
   nothing?: boolean;                                 // ON CONFLICT DO NOTHING
-  touch?: 'created' | 'updated';                     // Worker-set stamps: created_at and updated_at, or updated_at only
+  created?: boolean;                                 // created_at from the Worker clock, on insert only
+  stamp?: 'clock' | 'seen';                          // updated_at: the Worker clock on a change, or the op's seen_at (moves forward only)
 }
 
 const newer = (t: string, at: string, col: string) => `CASE WHEN excluded.${at}>=${t}.${at} THEN excluded.${col} ELSE ${t}.${col} END`;
@@ -355,13 +365,18 @@ const pinned = (col: string) => `(CASE WHEN NOT json_valid(fleet_vessels.pinned_
   `ELSE json_type(fleet_vessels.pinned_json,'$."${col}"') IS NOT NULL END)`;
 
 const TABLES: Record<OpKind, Table> = {
-  'operator.upsert': {name: 'fleet_operators', conflict: 'id', insertOnly: ['id', 'region'], touch: 'created'},
-  'vessel.upsert': {name: 'fleet_vessels', conflict: 'id', insertOnly: ['id', 'region'], touch: 'created', update: col => {
+  // Operators and offerings have no observation column of their own: the op's seen_at is stored as updated_at
+  // and guards the row, so an older replay never overwrites a newer value.
+  'operator.upsert': {name: 'fleet_operators', conflict: 'id', insertOnly: ['id', 'region'], created: true, stamp: 'seen', update: col =>
+    col === 'updated_at' ? latest('fleet_operators', col) : newer('fleet_operators', 'updated_at', col)},
+  'vessel.upsert': {name: 'fleet_vessels', conflict: 'id', insertOnly: ['id', 'region'], created: true, stamp: 'clock', update: col => {
     const t = 'fleet_vessels';
     if (col === 'first_seen_at') return earliest(t, col);
     if (col === 'last_seen_at') return latest(t, col);
-    if (col === 'profile_status') return `CASE WHEN ${pinned(col)} THEN ${t}.${col} WHEN ${t}.removal_requested_at IS NOT NULL AND excluded.${col}='listed' THEN ${t}.${col} ELSE excluded.${col} END`;
-    return `CASE WHEN ${pinned(col)} THEN ${t}.${col} ELSE excluded.${col} END`;
+    // A pinned column keeps its value; so does every column when the op was seen before the stored row (an older replay).
+    const keep = `${pinned(col)} OR excluded.last_seen_at<${t}.last_seen_at`;
+    if (col === 'profile_status') return `CASE WHEN ${keep} THEN ${t}.${col} WHEN ${t}.removal_requested_at IS NOT NULL AND excluded.${col}='listed' THEN ${t}.${col} ELSE excluded.${col} END`;
+    return `CASE WHEN ${keep} THEN ${t}.${col} ELSE excluded.${col} END`;
   }},
   'fact.upsert': {name: 'fleet_vessel_facts', conflict: 'id', insertOnly: ['id', 'vessel_id', 'field', 'value_json', 'value_key', 'source_id', 'source_url'], update: col => {
     const t = 'fleet_vessel_facts';
@@ -377,10 +392,11 @@ const TABLES: Record<OpKind, Table> = {
     if (col === 'first_seen_at') return earliest(t, col);
     return newer(t, 'last_seen_at', col);
   }},
-  'offering.upsert': {name: 'fleet_offerings', conflict: 'id', insertOnly: ['id', 'vessel_id'], touch: 'updated'},
+  'offering.upsert': {name: 'fleet_offerings', conflict: 'id', insertOnly: ['id', 'vessel_id'], stamp: 'seen', update: col =>
+    col === 'updated_at' ? latest('fleet_offerings', col) : newer('fleet_offerings', 'updated_at', col)},
   'departure.upsert': {name: 'fleet_departures', conflict: 'id', insertOnly: ['id', 'offering_id', 'vessel_id', 'date'], update: col =>
     col === 'retrieved_at' ? latest('fleet_departures', col) : newer('fleet_departures', 'retrieved_at', col)},
-  'review.open': {name: 'fleet_reviews', conflict: 'id', insertOnly: ['id', 'region', 'kind', 'opened_at', 'run_id', 'status'], where: "fleet_reviews.status='open'"},
+  'review.open': {name: 'fleet_reviews', conflict: 'id', insertOnly: ['id', 'region', 'kind', 'opened_at', 'run_id', 'status'], where: "fleet_reviews.status='open' AND fleet_reviews.region=excluded.region"},
   'change.record': {name: 'fleet_changes', conflict: 'id', insertOnly: [], nothing: true},
   'run.record': {name: 'fleet_runs', conflict: 'id', insertOnly: ['id', 'region'], update: col =>
     col === 'started_at' ? earliest('fleet_runs', col) : `excluded.${col}`},
@@ -406,21 +422,21 @@ function upserts(db: D1Database, kind: OpKind, rows: Record<string, SqlValue>[],
   const table = TABLES[kind], statements: D1PreparedStatement[] = [];
   const groups = new Map<string, Record<string, SqlValue>[]>();
   for (const cols of rows) {
-    const full = table.touch === 'created' ? {...cols, created_at: now, updated_at: now} : table.touch ? {...cols, updated_at: now} : cols;
+    const full = {...cols, ...table.created ? {created_at: now} : {}, ...table.stamp === 'clock' ? {updated_at: now} : {}};
     const key = Object.keys(full).sort().join(',');
     groups.set(key, [...groups.get(key) ?? [], full]);
   }
   for (const [key, group] of groups) {
     const columns = key.split(','), perRow = columns.length, size = Math.max(1, Math.floor(MAX_PARAMS / perRow));
     if (perRow > MAX_PARAMS) throw Error(`${kind}: ${perRow} columns exceed the parameter limit`);
-    const updatable = columns.filter(c => !table.insertOnly.includes(c) && c !== 'created_at' && c !== 'updated_at');
+    const updatable = columns.filter(c => !table.insertOnly.includes(c) && c !== 'created_at' && !(c === 'updated_at' && table.stamp === 'clock'));
     const sets = updatable.map(c => [c, table.update ? table.update(c) : `excluded.${c}`] as const);
     const changed = sets.map(([c, expr]) => `(${expr}) IS NOT ${table.name}.${c}`);
     let tail: string;
     if (table.nothing || !sets.length) tail = ' ON CONFLICT DO NOTHING';
     else {
       const assignments = sets.map(([c, expr]) => `${c}=${expr}`);
-      if (table.touch) assignments.push('updated_at=excluded.updated_at');
+      if (table.stamp === 'clock') assignments.push('updated_at=excluded.updated_at');
       const conditions = [table.where, `(${changed.join(' OR ')})`].filter(Boolean).join(' AND ');
       tail = ` ON CONFLICT(${table.conflict}) DO UPDATE SET ${assignments.join(',')} WHERE ${conditions}`;
     }

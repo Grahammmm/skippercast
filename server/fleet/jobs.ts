@@ -14,7 +14,8 @@
 //        Body <= 1 MB, <= 500 operations (registry.ts). 200 {ok, run_id, batch,
 //        ops, changed, counts}; 400 {error, errors: [{index, op, error}]} with
 //        nothing written. Each call records a fleet_runs row
-//        '<run_id>:registry.<batch>' (step 'registry', sink 'worker').
+//        '<run_id>:registry.<batch>' (step 'registry', sink 'worker'); the first
+//        'ok' for that id is kept.
 import {body} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import {applyRegistry, MAX_OPS, REGION, RUN_ID, validateRegistry} from './registry.ts';
@@ -75,7 +76,7 @@ export async function snapshot(db: D1Database, region: string | undefined, curso
     out.vessels = page.map(({pinned_json, waters_json, ...v}) => ({...v, waters: parse(waters_json), pinned: pinnedNames(pinned_json),
       aliases: aliasesOf.get(v.id) ?? [], offerings: offeringsOf.get(v.id) ?? []}));
   } else {
-    const reviews = (await db.prepare(`SELECT id,kind,subject_id,candidate_json,proposal_json,score,status,decision_json,decided_by,decided_at,opened_at
+    const reviews = (await db.prepare(`SELECT id,kind,subject_id,candidate_json,proposal_json,score,status,decision_json,decided_at,opened_at
       FROM fleet_reviews WHERE region=? AND status<>'open' AND id>? ORDER BY id LIMIT ?`).bind(region, after, PAGE.reviews + 1)
       .all<{id: string; candidate_json: string | null; proposal_json: string | null; decision_json: string | null}>()).results;
     rows = reviews;
@@ -88,10 +89,11 @@ export async function snapshot(db: D1Database, region: string | undefined, curso
   return {status: 200, body: out};
 }
 
-/** Record this call in fleet_runs (best effort for a failure: the response is what matters). */
+/** Record this call in fleet_runs. The first `ok` for a call id stays: a replay or a later failure never overwrites it. */
 async function recordCall(db: D1Database, id: string, region: string, startedAt: string, status: 'ok' | 'failed', counts: unknown, error: string | null): Promise<void> {
   await db.prepare(`INSERT INTO fleet_runs(id,region,step,sink,started_at,finished_at,status,counts_json,error) VALUES(?,?,'registry','worker',?,?,?,?,?)
-    ON CONFLICT(id) DO UPDATE SET region=excluded.region,started_at=excluded.started_at,finished_at=excluded.finished_at,status=excluded.status,counts_json=excluded.counts_json,error=excluded.error`)
+    ON CONFLICT(id) DO UPDATE SET region=excluded.region,started_at=excluded.started_at,finished_at=excluded.finished_at,status=excluded.status,counts_json=excluded.counts_json,error=excluded.error
+    WHERE fleet_runs.status<>'ok'`)
     .bind(id, region, startedAt, jobsDeps.now().toISOString(), status, counts === null ? null : JSON.stringify(counts), error).run();
 }
 
