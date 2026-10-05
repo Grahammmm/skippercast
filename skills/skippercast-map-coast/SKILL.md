@@ -45,6 +45,12 @@ source workers own isolated qualification tasks and independent review. Record
 ownership and exact source/gap in the established coordination issue/checkpoint.
 Do not duplicate another worker's batch or wait repeatedly for an idle chat.
 
+For an authorized parallel or overnight run, use the bounded
+[parallel pilot procedure](references/parallel-pilot.md). It assigns isolated
+work, limits work waiting for integration, and measures verified map additions
+before deciding whether more agents would help. Use the existing coordination
+issue and private checkpoint; this is not another source catalog or scheduler.
+
 Use the pinned runtime and existing verified reference/cache:
 
 ```bash
