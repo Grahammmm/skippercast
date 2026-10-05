@@ -12,6 +12,7 @@
 // requireAdmin; only the job routes (/api/fleet/jobs/*, requireFleetJob) live here.
 //
 //   GET /api/fleet/jobs/ping   job identity check: {ok: true, region}
+//   GET /go/<slug>             public outbound link, gated and per-IP limited (fleet/go.ts, CF-34)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
 import {fleetSettings} from '../fleet/settings.ts';
@@ -20,6 +21,8 @@ import type {JobClaims, JobScope} from '../job-auth.ts';
 import {deployment} from '../config.ts';
 import {json, budget} from '../http.ts';
 import type {AppEnv} from '../env.ts';
+import {rateLimit} from '../middleware/rate-limit.ts';
+import {fleetGo} from '../fleet/go.ts';
 
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 
@@ -66,3 +69,5 @@ fleetRouter.get('/api/fleet/jobs/ping', c => {
   if (region !== null && !REGION.test(region)) return json({error: 'invalid region'}, 400);
   return json({ok: true, region});
 });
+
+fleetRouter.get('/go/:slug', fleetGate, rateLimit('PUBLIC_LIMITER', 'fleet-go'), c => fleetGo(c));

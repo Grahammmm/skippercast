@@ -844,8 +844,9 @@ to the vessel's stored https URL (never a URL from the request), appends
 `utm_source=skippercast&utm_medium=referral&utm_campaign=fleet-<region>&utm_content=<p>`
 keeping existing `utm_*`, increments `fleet_link_clicks`, writes an Analytics
 Engine point (slug, target, placement) when `ANALYTICS` is bound, and answers
-302 with `Cache-Control: no-store`. Unknown slug, hidden profile or no URL →
-404.
+302 with `Cache-Control: no-store`. Unknown slug, hidden profile, a vessel that is
+not `active`, or no https URL → 404. Limited per IP by `PUBLIC_LIMITER`
+(threat model § 10.1); `HEAD` is answered but not counted.
 
 ## 13. Admin UI and public profile
 
