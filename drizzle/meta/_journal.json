@@ -92,6 +92,13 @@
       "when": 1791155115899,
       "tag": "0012_advisor_source_post",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1791177318203,
+      "tag": "0013_fleet_registry",
+      "breakpoints": true
     }
   ]
 }

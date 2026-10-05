@@ -104,7 +104,11 @@ export const advisorBoats=sqliteTable('advisor_boats',{
   // SC-5: auto-publish once enough reports were confirmed without an edit.
   autoPublish:integer('auto_publish').notNull().default(0),cleanReports:integer('clean_reports').notNull().default(0),
   createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
-},t=>[uniqueIndex('boat_slug').on(t.slug),index('boat_port').on(t.port),index('boat_owner').on(t.ownerContactId)]);
+  // 0013 (CF-02, charter-fleet D5): the registry vessel this boat is, set only by an admin
+  // deciding an advisor-link review (docs/plans/charter-fleet/design.md § 5); null otherwise.
+  fleetVesselId:text('fleet_vessel_id'),
+},t=>[uniqueIndex('boat_slug').on(t.slug),index('boat_port').on(t.port),index('boat_owner').on(t.ownerContactId),
+  index('boat_fleet').on(t.fleetVesselId)]);
 
 // Crew who post for a boat (SK-3). Removal sets removed_at and keeps the row for audit.
 export const advisorCrew=sqliteTable('advisor_crew',{
@@ -217,3 +221,121 @@ export const advisorPostStats=sqliteTable('advisor_post_stats',{
   follows:integer('follows').notNull().default(0),profileVisits:integer('profile_visits').notNull().default(0),linkTaps:integer('link_taps').notNull().default(0),
   rawJson:text('raw_json').notNull(),fetchedAt:text('fetched_at').notNull(),
 },t=>[primaryKey({columns:[t.postId,t.platform,t.day]})]);
+
+// Charter fleet registry (docs/plans/charter-fleet/design.md § 5, migration 0013).
+// Registry data (operator contacts, OSINT output, outreach) lives only here, never
+// in git. Ids are text: sha256(...)[:32] hex where a re-run must hit the same row,
+// random otherwise. Enumerated values are checked in code, not by the database.
+// Stable keys (MMSI, USCG doc, state registration) are indexed but not unique: a
+// conflict opens a review instead of failing an insert.
+
+// An operator (business) running one or more vessels. user_id is a future operator
+// account (US-B3); consent_revoked_at non-null means no consent from the next request (US-S3).
+export const fleetOperators=sqliteTable('fleet_operators',{
+  id:text('id').primaryKey(),region:text('region').notNull(),slug:text('slug').notNull(),name:text('name').notNull(),
+  userId:text('user_id'),website:text('website'),phoneBusiness:text('phone_business'),emailBusiness:text('email_business'),
+  bookingPlatform:text('booking_platform'),consentStatus:text('consent_status').notNull().default('unknown'),
+  consentScopeJson:text('consent_scope_json'),consentRecordedAt:text('consent_recorded_at'),consentRecordedBy:text('consent_recorded_by'),
+  consentRevokedAt:text('consent_revoked_at'),outreachStatus:text('outreach_status').notNull().default('none'),
+  leadScore:real('lead_score'),leadScoreJson:text('lead_score_json'),
+  createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
+},t=>[uniqueIndex('fo_slug').on(t.slug),index('fo_region').on(t.region),index('fo_outreach').on(t.outreachStatus)]);
+
+// One row per vessel with the current resolved value of each field (D4). id is
+// sha256(region:creation_key)[:32]; slug is also checked against advisor_boats.slug in code.
+// map_display_consent (none/aggregate/named, US-C4) gates public activity layers only;
+// removal_requested_at (US-C3) is kept when an admin later unhides the vessel.
+// profile_status starts 'hidden' (fail closed): listing is an explicit admin or resolver
+// action. vessel_class and waters_json are null on discovery candidates until classified.
+export const fleetVessels=sqliteTable('fleet_vessels',{
+  id:text('id').primaryKey(),region:text('region').notNull(),slug:text('slug').notNull(),
+  name:text('name').notNull(),nameNorm:text('name_norm').notNull(),
+  operatorId:text('operator_id'),portId:text('port_id'),landingId:text('landing_id'),
+  vesselClass:text('vessel_class'),watersJson:text('waters_json'),
+  uscgDoc:text('uscg_doc'),stateReg:text('state_reg'),hullId:text('hull_id'),callSign:text('call_sign'),mmsi:text('mmsi'),
+  yearBuilt:integer('year_built'),passengersMax:integer('passengers_max'),bunks:integer('bunks'),
+  lengthFt:real('length_ft'),beamFt:real('beam_ft'),cruiseKn:real('cruise_kn'),
+  website:text('website'),bookingUrl:text('booking_url'),bookingPlatform:text('booking_platform'),
+  phoneBusiness:text('phone_business'),emailBusiness:text('email_business'),
+  status:text('status').notNull().default('active'),profileStatus:text('profile_status').notNull().default('hidden'),
+  mapDisplayConsent:text('map_display_consent').notNull().default('none'),removalRequestedAt:text('removal_requested_at'),
+  pinnedJson:text('pinned_json').notNull().default('{}'),completeness:real('completeness').notNull().default(0),
+  firstSeenAt:text('first_seen_at').notNull(),lastSeenAt:text('last_seen_at').notNull(),lastProfiledAt:text('last_profiled_at'),
+  createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
+},t=>[uniqueIndex('fv_slug').on(t.slug),index('fv_region_port').on(t.region,t.portId),index('fv_mmsi').on(t.mmsi),
+  index('fv_doc').on(t.uscgDoc),index('fv_state_reg').on(t.stateReg),index('fv_name').on(t.region,t.nameNorm),
+  index('fv_operator').on(t.operatorId)]);
+
+// One row per observed value, with its provenance (all required). id is
+// sha256(vessel_id|field|source_id|source_url|value_key)[:32], so re-seeing a fact
+// touches it; a new scalar value from the same source sets superseded_at/by on the old row.
+export const fleetVesselFacts=sqliteTable('fleet_vessel_facts',{
+  id:text('id').primaryKey(),vesselId:text('vessel_id').notNull(),field:text('field').notNull(),
+  valueJson:text('value_json').notNull(),valueKey:text('value_key').notNull(),
+  sourceId:text('source_id').notNull(),sourceUrl:text('source_url').notNull(),method:text('method').notNull(),
+  confidence:real('confidence').notNull(),rights:text('rights').notNull(),retrievedAt:text('retrieved_at').notNull(),
+  firstSeenAt:text('first_seen_at').notNull(),lastSeenAt:text('last_seen_at').notNull(),
+  supersededAt:text('superseded_at'),supersededBy:text('superseded_by'),runId:text('run_id'),
+},t=>[index('fact_vessel_field').on(t.vesselId,t.field,t.supersededAt),index('fact_source').on(t.sourceId,t.lastSeenAt)]);
+
+// Other names a vessel goes by (former-name, spelling, ais-name, report-name).
+export const fleetAliases=sqliteTable('fleet_aliases',{
+  vesselId:text('vessel_id').notNull(),aliasNorm:text('alias_norm').notNull(),alias:text('alias').notNull(),
+  kind:text('kind').notNull(),sourceUrl:text('source_url'),firstSeenAt:text('first_seen_at').notNull(),lastSeenAt:text('last_seen_at').notNull(),
+},t=>[primaryKey({columns:[t.vesselId,t.aliasNorm]}),index('alias_lookup').on(t.aliasNorm)]);
+
+// A trip a vessel sells. id sha256(vessel_id|name_norm|season)[:32]; price in cents with
+// its basis; season_from/to MM-DD; target_species_json holds catalog/species.json keys.
+export const fleetOfferings=sqliteTable('fleet_offerings',{
+  id:text('id').primaryKey(),vesselId:text('vessel_id').notNull(),name:text('name').notNull(),tripType:text('trip_type').notNull(),
+  durationH:real('duration_h'),priceCents:integer('price_cents'),priceBasis:text('price_basis'),capacity:integer('capacity'),
+  currency:text('currency').notNull().default('USD'),departsLocal:text('departs_local'),daysJson:text('days_json'),
+  seasonFrom:text('season_from'),seasonTo:text('season_to'),targetSpeciesJson:text('target_species_json'),
+  bookingUrl:text('booking_url'),status:text('status').notNull().default('active'),sourceFactIdsJson:text('source_fact_ids_json'),
+  validFrom:text('valid_from'),validTo:text('valid_to'),updatedAt:text('updated_at').notNull(),
+},t=>[index('offer_vessel').on(t.vesselId,t.status)]);
+
+// Dated trips where a schedule is published. id sha256(offering_id|date|departs)[:32].
+export const fleetDepartures=sqliteTable('fleet_departures',{
+  id:text('id').primaryKey(),offeringId:text('offering_id').notNull(),vesselId:text('vessel_id').notNull(),date:text('date').notNull(),
+  departsLocal:text('departs_local'),priceCents:integer('price_cents'),loadText:text('load_text'),
+  sourceUrl:text('source_url').notNull(),retrievedAt:text('retrieved_at').notNull(),
+},t=>[index('dep_vessel_date').on(t.vesselId,t.date)]);
+
+// The fleet review queue. id sha256(kind|fingerprint)[:32]: a repeat updates, never
+// duplicates; decided rows come back in the snapshot so re-runs never re-ask.
+export const fleetReviews=sqliteTable('fleet_reviews',{
+  id:text('id').primaryKey(),region:text('region').notNull(),kind:text('kind').notNull(),subjectId:text('subject_id'),
+  candidateJson:text('candidate_json'),proposalJson:text('proposal_json'),score:real('score'),
+  status:text('status').notNull().default('open'),decisionJson:text('decision_json'),decidedBy:text('decided_by'),decidedAt:text('decided_at'),
+  openedAt:text('opened_at').notNull(),runId:text('run_id'),
+},t=>[index('fr_open').on(t.region,t.status,t.openedAt)]);
+
+// Detected changes (new, renamed, sold, moved, ...). id sha256(vessel_id|kind|after_json)[:32].
+export const fleetChanges=sqliteTable('fleet_changes',{
+  id:text('id').primaryKey(),vesselId:text('vessel_id').notNull(),kind:text('kind').notNull(),
+  beforeJson:text('before_json'),afterJson:text('after_json'),detectedAt:text('detected_at').notNull(),
+  runId:text('run_id'),reviewId:text('review_id'),
+},t=>[index('fc_vessel').on(t.vesselId),index('fc_kind').on(t.kind,t.detectedAt)]);
+
+// Private outreach notes and drafts (D14); body at most 8,000 characters (checked in
+// code). No code path sends anything; an operator's removal request deletes these rows.
+export const fleetOutreach=sqliteTable('fleet_outreach',{
+  id:text('id').primaryKey(),operatorId:text('operator_id').notNull(),kind:text('kind').notNull(),channel:text('channel'),
+  body:text('body').notNull(),status:text('status').notNull().default('draft'),
+  createdBy:text('created_by').notNull(),createdAt:text('created_at').notNull(),approvedBy:text('approved_by'),approvedAt:text('approved_at'),
+},t=>[index('out_operator').on(t.operatorId)]);
+
+// Outbound link clicks per vessel, target, placement and day (D15). Counts only: no
+// IP, user agent, user id or referrer.
+export const fleetLinkClicks=sqliteTable('fleet_link_clicks',{
+  vesselId:text('vessel_id').notNull(),target:text('target').notNull(),placement:text('placement').notNull(),day:text('day').notNull(),
+  count:integer('count').notNull().default(0),
+},t=>[primaryKey({columns:[t.vesselId,t.target,t.placement,t.day]})]);
+
+// One row per pipeline step run or job call. id is '<run_id>:<step>'.
+export const fleetRuns=sqliteTable('fleet_runs',{
+  id:text('id').primaryKey(),region:text('region').notNull(),step:text('step').notNull(),sink:text('sink').notNull(),
+  startedAt:text('started_at').notNull(),finishedAt:text('finished_at'),status:text('status').notNull().default('running'),
+  countsJson:text('counts_json'),error:text('error'),
+},t=>[index('run_region_time').on(t.region,t.startedAt)]);
