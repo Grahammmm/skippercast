@@ -6,12 +6,16 @@ must accept every region. The fleet package must stay state-agnostic, and the
 state-level directories must stay invisible to the coastal-region enumeration
 (regions/*/region.json) used by the platform build and the region contract.
 """
+import contextlib
+import io
 import json
 import re
+import tempfile
 import unittest
+from unittest import mock
 
 from skippercast import validate
-from skippercast.fleet import config
+from skippercast.fleet import cli, config, sinks
 from tests._support import ROOT
 
 NEEDS_JSONSCHEMA = 'jsonschema not installed (pip install -r requirements-test.txt); the survey-science CI job runs these'
@@ -109,6 +113,35 @@ class FleetRegionFiles(unittest.TestCase):
             region = config.load_region(ident, ROOT)
             self.assertEqual(region.id, ident)
 
+
+class DryRunRegions(unittest.TestCase):
+    """CF-60 acceptance 3: a dry-run region (OR) never reaches the WorkerSink, from the CLI or open_sink."""
+
+    def test_oregon_is_committed_as_a_dry_run_region(self):
+        self.assertEqual(load(ROOT / 'regions/OR/fleet.json')['status'], 'dry-run')
+
+    @unittest.skipUnless(validate.available(), NEEDS_JSONSCHEMA)
+    def test_sink_worker_is_refused_for_every_dry_run_region(self):
+        dry = [ident for ident in config.region_ids(ROOT) if config.load_region(ident, ROOT).status == 'dry-run']
+        self.assertIn('OR', dry)
+
+        def never(*args, **kwargs):
+            raise AssertionError('a dry-run region reached a pipeline step or the WorkerSink')
+
+        for ident in dry:
+            with self.subTest(region=ident), tempfile.TemporaryDirectory() as tmp, \
+                    mock.patch.dict('os.environ', {'SKIPPERCAST_FLEET_VAR': tmp}), \
+                    mock.patch.dict(cli.STEPS, {step: never for step in cli.STEPS}), \
+                    mock.patch.object(sinks, 'WorkerSink', never), mock.patch.object(cli, 'FleetSession') as session:
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr):
+                    code = cli.main(['run', '--region', ident, '--sink', 'worker'])
+                self.assertEqual(code, 2)
+                self.assertIn(f'region {ident} is dry-run: only the staging sink is allowed', stderr.getvalue())
+                session.for_region.assert_not_called()
+                with self.assertRaises(sinks.SinkRefused):
+                    sinks.open_sink('worker', config.load_region(ident, ROOT), cli.Run(ident),
+                                    base='https://skippercast.com')
 
 class StateAgnosticCode(unittest.TestCase):
     def test_no_state_port_or_landing_literal_in_the_fleet_package(self):

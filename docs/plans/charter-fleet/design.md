@@ -1255,9 +1255,11 @@ Oregon needs only:
    Depoe Bay, Garibaldi, Warrenton) with geofences; AIS bbox (about
    41.9–46.3°N, 125.5–123.7°W); agencies (ODFW charter licensing, USCG sectors
    Columbia River and North Bend, FCC state `OR`); bindings to the generic
-   adapters (`fcc-uls` `state: OR`, `uscg-psix`, `teck-reports` on
-   SportfishingReport's Oregon pages if present, `google-places`,
-   `landing-pages` where a fleet page parses).
+   adapters (`fcc-uls` `state: OR`, `uscg-psix`, `teck-reports` on Oregon
+   Fish Reports, TECK.net's Oregon site, `google-places`, `operator-site`,
+   `landing-pages` where a fleet page parses: none did at CF-60, so its one
+   binding is disabled). CF-60 also added Hammond, Astoria and the Oregon
+   State Marine Board (charter vessel licences) to this list.
 2. A state-specific adapter only for a source with its own format (an ODFW
    licence list, if one is obtainable).
 3. A staging-only dry run: `python -m skippercast.fleet run --region OR --sink

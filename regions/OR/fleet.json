@@ -1,0 +1,432 @@
+{
+  "schema_version": 1,
+  "id": "OR",
+  "name": "Oregon",
+  "timezone": "America/Los_Angeles",
+  "status": "dry-run",
+  "ports": [
+    {
+      "id": "hammond",
+      "name": "Hammond",
+      "point": [46.2033, -123.9502],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-123.957, 46.199], [-123.943, 46.199], [-123.943, 46.207], [-123.957, 46.207], [-123.957, 46.199]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "warrenton",
+      "name": "Warrenton",
+      "point": [46.1661, -123.9175],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-123.925, 46.161], [-123.91, 46.161], [-123.91, 46.171], [-123.925, 46.171], [-123.925, 46.161]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "astoria",
+      "name": "Astoria",
+      "point": [46.1895, -123.8552],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-123.861, 46.186], [-123.849, 46.186], [-123.849, 46.193], [-123.861, 46.193], [-123.861, 46.186]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "garibaldi",
+      "name": "Garibaldi",
+      "point": [45.556, -123.9132],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-123.921, 45.551], [-123.905, 45.551], [-123.905, 45.561], [-123.921, 45.561], [-123.921, 45.551]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "depoe-bay",
+      "name": "Depoe Bay",
+      "point": [44.8097, -124.0605],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.0645, 44.8075], [-124.057, 44.8075], [-124.057, 44.8118], [-124.0645, 44.8118], [-124.0645, 44.8075]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "newport",
+      "name": "Newport · South Beach",
+      "point": [44.625, -124.053],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.0625, 44.6185], [-124.039, 44.6185], [-124.039, 44.6308], [-124.0625, 44.6308], [-124.0625, 44.6185]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "florence",
+      "name": "Florence",
+      "point": [43.968, -124.1017],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.108, 43.965], [-124.096, 43.965], [-124.096, 43.971], [-124.108, 43.971], [-124.108, 43.965]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "winchester-bay",
+      "name": "Winchester Bay · Salmon Harbor",
+      "point": [43.6789, -124.1756],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.188, 43.674], [-124.166, 43.674], [-124.166, 43.685], [-124.188, 43.685], [-124.188, 43.674]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "charleston",
+      "name": "Charleston · Coos Bay",
+      "point": [43.3457, -124.325],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.333, 43.34], [-124.316, 43.34], [-124.316, 43.35], [-124.333, 43.35], [-124.333, 43.34]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "bandon",
+      "name": "Bandon",
+      "point": [43.121, -124.4165],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.427, 43.1165], [-124.405, 43.1165], [-124.405, 43.1255], [-124.427, 43.1255], [-124.427, 43.1165]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "port-orford",
+      "name": "Port Orford",
+      "point": [42.7393, -124.4983],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.504, 42.735], [-124.492, 42.735], [-124.492, 42.744], [-124.504, 42.744], [-124.504, 42.735]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "gold-beach",
+      "name": "Gold Beach",
+      "point": [42.422, -124.418],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.425, 42.416], [-124.41, 42.416], [-124.41, 42.428], [-124.425, 42.428], [-124.425, 42.416]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "brookings",
+      "name": "Brookings · Harbor",
+      "point": [42.049, -124.268],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.275, 42.041], [-124.26, 42.041], [-124.26, 42.055], [-124.275, 42.055], [-124.275, 42.041]]]
+      },
+      "geofence_source": "drawn"
+    }
+  ],
+  "landings": [
+    {
+      "id": "garibaldi-charters",
+      "name": "Garibaldi Charters",
+      "port": "garibaldi",
+      "point": [45.5575, -123.914],
+      "website": "https://garibaldicharters.com/"
+    },
+    {
+      "id": "dockside-charters",
+      "name": "Dockside Charters",
+      "port": "depoe-bay",
+      "point": [44.8095, -124.0598],
+      "website": "https://www.docksidedepoebay.com/"
+    },
+    {
+      "id": "tradewinds-charters",
+      "name": "Tradewinds Charters",
+      "port": "depoe-bay",
+      "point": [44.8102, -124.0612],
+      "website": "https://www.tradewindscharters.com/"
+    },
+    {
+      "id": "newport-tradewinds",
+      "name": "Newport Tradewinds",
+      "port": "newport",
+      "point": [44.6268, -124.0585],
+      "website": "https://www.newporttradewinds.com/"
+    },
+    {
+      "id": "yaquina-bay-charters",
+      "name": "Yaquina Bay Charters",
+      "port": "newport",
+      "point": [44.622, -124.0515],
+      "website": "https://yaquinabaycharters.com/"
+    },
+    {
+      "id": "sharkys-charter-fishing",
+      "name": "Sharky's Charter Fishing",
+      "port": "charleston",
+      "point": [43.3462, -124.3235],
+      "website": "https://sharkyscharterfishing.com/"
+    },
+    {
+      "id": "prowler-charters",
+      "name": "Prowler Charters",
+      "port": "bandon",
+      "point": [43.12, -124.411],
+      "website": "https://prowlercharters.com/"
+    },
+    {
+      "id": "five-star-charters",
+      "name": "Five Star Charters",
+      "port": "gold-beach",
+      "point": [42.4215, -124.4175],
+      "website": null
+    },
+    {
+      "id": "brookings-fishing-charters",
+      "name": "Brookings Fishing Charters",
+      "port": "brookings",
+      "point": [42.05, -124.269],
+      "website": "https://brookingsfishing.com/"
+    },
+    {
+      "id": "tidewind-sportfishing",
+      "name": "Tidewind Sportfishing",
+      "port": "brookings",
+      "point": [42.0475, -124.2665],
+      "website": "https://tidewindsportfishing.com/"
+    }
+  ],
+  "ais": {
+    "source": "aisstream",
+    "bbox": [[41.9, -125.5], [46.3, -123.7]],
+    "message_types": ["PositionReport", "StandardClassBPositionReport", "ExtendedClassBPositionReport", "ShipStaticData", "StaticDataReport"],
+    "mmsi_filter": false
+  },
+  "agencies": [
+    {
+      "id": "osmb",
+      "name": "Oregon State Marine Board",
+      "kind": "licensing",
+      "notes": "Charter vessel licence for USCG-inspected vessels carrying 7+ passengers for hire (ORS 830.430-830.465, OAR 250-015); outfitter and guide registration covers smaller for-hire boats. No list is held yet; obtaining one needs a public records request.",
+      "records_request_url": "https://www.oregon.gov/osmb/info/Pages/Public-Records-Requests.aspx"
+    },
+    {
+      "id": "odfw",
+      "name": "Oregon Department of Fish and Wildlife",
+      "kind": "licensing",
+      "notes": "Ocean sport-fishing regulator; its Ocean Recreational Boat Survey samples charter landings. Any charter vessel list would come through a public records request; none is held.",
+      "records_request_url": "https://www.dfw.state.or.us/agency/public_record/"
+    },
+    {
+      "id": "uscg",
+      "name": "US Coast Guard",
+      "kind": "vessel-registry",
+      "notes": "PSIX sectors Columbia River (north coast) and North Bend (central and south coast); six-packs are state-numbered, not documented.",
+      "records_request_url": null
+    },
+    {
+      "id": "fcc",
+      "name": "Federal Communications Commission",
+      "kind": "radio-licence",
+      "notes": "ULS ship station licences (MMSI, call sign); weekly bulk file.",
+      "records_request_url": null
+    }
+  ],
+  "sources": [
+    {
+      "id": "fcc-uls",
+      "adapter": "fcc-uls",
+      "enabled": true,
+      "rights": "public-domain",
+      "params": {
+        "state": "OR",
+        "all_statuses": true,
+        "url": "https://data.fcc.gov/download/pub/uls/complete/l_ship.zip"
+      }
+    },
+    {
+      "id": "uscg-psix",
+      "adapter": "uscg-psix",
+      "enabled": true,
+      "rights": "public-domain",
+      "params": {
+        "sectors": ["Columbia River", "North Bend"],
+        "service": "passenger",
+        "url": "https://cgmix.uscg.mil/XML/PSIXExportSearch.aspx"
+      }
+    },
+    {
+      "id": "oregonfishreports",
+      "adapter": "teck-reports",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "base": "https://www.oregonfishreports.com",
+        "directory": "/charter_boats/index.php"
+      },
+      "note": "TECK.net Oregon site; same boat directory and boat pages as the California report sites."
+    },
+    {
+      "id": "dockside-charters",
+      "adapter": "landing-pages",
+      "enabled": false,
+      "rights": "facts-only",
+      "params": {
+        "landing": "dockside-charters",
+        "template": "generic",
+        "url": "https://www.docksidedepoebay.com/fleet.php"
+      },
+      "note": "Boat pages sit at the site root (no /boats/ or /fleet/ path), which neither template reads; enable once a template does."
+    },
+    {
+      "id": "operator-site",
+      "adapter": "operator-site",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "max_pages": 6
+      }
+    },
+    {
+      "id": "google-places",
+      "adapter": "google-places",
+      "enabled": true,
+      "rights": "api-terms",
+      "params": {
+        "query": "fishing charter",
+        "per_port": true
+      }
+    },
+    {
+      "id": "ais-static",
+      "adapter": "ais-static",
+      "enabled": true,
+      "rights": "internal-only",
+      "params": {
+        "sources": ["aisstream", "marinecadastre"]
+      }
+    }
+  ],
+  "thresholds": {
+    "activity": {
+      "in_port_debounce_min": 3,
+      "min_trip_minutes": 20,
+      "min_trip_offshore_nm": 0.5,
+      "gap_unknown_min": 30,
+      "gap_split_hours": 12,
+      "max_open_trip_hours": {
+        "six-pack": 18,
+        "inspected-party": 40,
+        "long-range": 480
+      },
+      "window_min": 20,
+      "min_segment_minutes": 5,
+      "simplify_tolerance_m": 25,
+      "drift": {
+        "max_sog_kn": 2.0,
+        "min_minutes": 15
+      },
+      "troll": {
+        "min_sog_kn": 4.0,
+        "max_sog_kn": 9.0,
+        "max_straightness": 0.6,
+        "min_heading_variance": 0.35,
+        "min_minutes": 15
+      }
+    },
+    "match": {
+      "auto_merge": 0.9,
+      "review_min": 0.6,
+      "mmsi_auto": 0.85
+    },
+    "refresh": {
+      "vanished_after_runs": 3,
+      "vanished_after_days": 45,
+      "osint_stale_days": 60,
+      "fact_stale_days": 120
+    },
+    "retention": {
+      "raw_days": 30,
+      "discovery_days": 7,
+      "static_days": 90
+    },
+    "aggregate": {
+      "module": "grid",
+      "resolution_m": 1000,
+      "min_distinct_vessels": null,
+      "delay_hours": null
+    }
+  },
+  "seasons": {
+    "parts": [
+      {
+        "id": "winter",
+        "months": [12, 1, 2]
+      },
+      {
+        "id": "spring",
+        "months": [3, 4, 5]
+      },
+      {
+        "id": "summer",
+        "months": [6, 7, 8]
+      },
+      {
+        "id": "fall",
+        "months": [9, 10, 11]
+      }
+    ]
+  },
+  "resolver_overrides": {}
+}
