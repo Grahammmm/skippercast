@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains, features, advisorVars, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
 
 test('comment stripping leaves // and /* inside strings alone', () => {
   const text = '{\n  // a comment\n  "url": "https://example.com/a//b", /* block */ "glob": "x/*y*/z",\n  "n": 1, // trailing\n}';
@@ -236,4 +236,32 @@ test('the deploy script creates the advisor bucket and queues only with ENABLE_A
     'ADVISOR_AUTO_PUBLISH_AFTER', 'ADVISOR_ADMIN_CONTACT_ID', 'ADVISOR_INBOX_PUBLIC_REPLIES', 'BLUEBUBBLES_PRIVATE_API'])
     assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
   for (const secret of ADVISOR_SECRETS) assert.doesNotMatch(workflow, new RegExp(`\\b${secret}: \\$\\{\\{ vars\\.`), `${secret} is never a variable`);
+});
+
+// CF-01: the charter fleet's switches have no bindings, so FLEET_* vars are copied whenever set.
+test('fleet vars: FLEET_* are copied (trimmed, non-empty) with or without ENABLE_ADVISOR; without them the config is unchanged', () => {
+  const base = deployConfig(committed(), ID, 'skippercast-feeds');
+  assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {PATH: '/usr/bin', FLEET_ENABLED: '', FLEET_MAP_ENABLED: '  '}}), base);
+  const on = deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {FLEET_ENABLED: ' true ', FLEET_MAP_ENABLED: 'false', OTHER_FLEET: 'x'}});
+  assert.deepEqual(on.vars, {...base.vars, FLEET_ENABLED: 'true', FLEET_MAP_ENABLED: 'false'});
+  assert.deepEqual({...on, vars: base.vars}, base, 'only vars change: no bindings');
+  const both = deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true, environ: {...ADVISOR_ENV, FLEET_ENABLED: 'true'}});
+  assert.equal(both.vars.FLEET_ENABLED, 'true'); assert.equal(both.vars.TEXT_ADVISOR_ENABLED, 'true');
+  assert.deepEqual(fleetVars({FLEET_ENABLED: 'true', ADVISOR_MODEL: 'm', GOOGLE_PLACES_API_KEY: 'k', AISSTREAM_API_KEY: 'k'}), {FLEET_ENABLED: 'true'});
+  const env = readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8');
+  for (const name of ['FLEET_ENABLED', 'FLEET_MAP_ENABLED']) assert.match(env, new RegExp(`^\\s+${name}\\?:`, 'm'), `server/env.ts declares ${name}`);
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  for (const name of ['FLEET_ENABLED', 'FLEET_MAP_ENABLED']) assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
+});
+
+test('the CLI copies FLEET_* from the environment without ENABLE_ADVISOR', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wrangler-config-')), out = join(dir, 'w.json'), cwd = fileURLToPath(new URL('..', import.meta.url));
+  try {
+    const run = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
+      env: {...process.env, ENABLE_ADVISOR: '', ENABLE_QUEUES: '', FLEET_ENABLED: 'true', FLEET_MAP_ENABLED: ''}});
+    assert.equal(run.status, 0, run.stderr);
+    const config = JSON.parse(readFileSync(out, 'utf8'));
+    assert.equal(config.vars.FLEET_ENABLED, 'true'); assert.equal(config.vars.FLEET_MAP_ENABLED, undefined);
+    assert.equal(config.queues, undefined);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
 });

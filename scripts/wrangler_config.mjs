@@ -16,7 +16,9 @@
 //                     token would sit in it; docs/legal/threat-model.md § 9.1). Our own log lines,
 //                     errors and exceptions are still kept.
 // With ENABLE_ADVISOR, TEXT_ADVISOR_ENABLED and every ADVISOR_* variable set in
-// the environment are copied into the Worker's vars (never a secret).
+// the environment are copied into the Worker's vars (never a secret). The charter
+// fleet has no bindings, so its FLEET_* variables are copied whenever set
+// (docs/plans/charter-fleet/design.md § 16).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
 // $schema path, a URL) is never mistaken for a comment.
 import {readFileSync, writeFileSync} from 'node:fs';
@@ -100,6 +102,14 @@ export function advisorVars(environ = {}) {
   return vars;
 }
 
+/** The charter fleet's plain vars from an environment: FLEET_*, non-empty only (server/fleet/settings.ts). */
+export function fleetVars(environ = {}) {
+  const vars = {};
+  for (const [key, value] of Object.entries(environ).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))
+    if (key.startsWith('FLEET_') && typeof value === 'string' && value.trim() !== '') vars[key] = value.trim();
+  return vars;
+}
+
 /** {queues, analytics, advisor} from environment variables; "true" (any case) turns a feature on. */
 export function features(environ = {}) {
   const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
@@ -130,6 +140,8 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
     config.r2_buckets.push({...ADVISOR_BUCKET});
     config.vars = {...config.vars, ...advisorVars(environ)};
   }
+  const fleet = fleetVars(environ);
+  if (Object.keys(fleet).length) config.vars = {...config.vars, ...fleet};
   return config;
 }
 

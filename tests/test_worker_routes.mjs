@@ -65,6 +65,9 @@ test('every method and path reaches the same handler as before the Hono router',
       ['POST', '/api/nope', 'alice', true, 404],
       ['PUT', '/api/trips', 'alice', true, 404], ['GET', '/api/trips', 'alice', false, 200],
       ['GET', '/api/comfort', 'alice', false, 200], ['GET', '/api/privacy', 'alice', false, 200],
+      // CF-01: the charter fleet is dark (404) without FLEET_ENABLED, signed in or not.
+      ['GET', '/api/fleet/jobs/ping', null, false, 404], ['POST', '/api/fleet/jobs/registry', null, false, 404],
+      ['GET', '/api/fleet/map/filters', 'alice', false, 404], ['GET', '/api/admin/fleet/reviews', 'alice', false, 404],
     ];
     for (const [method, path, owner, origin, status] of cases) {
       const response = await call(path, {method, owner, origin: origin ? ORIGIN : undefined, env});

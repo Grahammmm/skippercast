@@ -321,6 +321,16 @@ The job reports one item. Same auth and limit.
 - **Effect:** media and video: `derived_at` set (and `derived_error` with an error; a video given up stays held, never approved or served); `width`/`height` filled from `source_width`/`source_height` only when the row had none (HEIC). Graphic: its `job_state` value becomes `status` `done` with `keys`, `width`, `height`, `done_at`, or `failed` with `error`.
 - **Response:** `200` `{"ok": true, "kind": "media|graphic", "status": "done|failed"}`; `400` `{"error": "invalid media-done report"}` for anything malformed (other keys, a missing size, both ids); `404` for an unknown id.
 
+<!-- CF-01: the charter fleet jobs -->
+### `GET /api/fleet/jobs/ping`
+
+Identity check for the charter fleet's Hermes workflows ([charter fleet design § 12](../plans/charter-fleet/design.md)); later tasks add the other `/api/fleet/jobs/*` routes under the same rules. Every `/api/fleet/*` and `/api/admin/fleet/*` path answers `404` `{"error": "Not found"}` unless the Worker var `FLEET_ENABLED` is `true` (`server/routes/fleet.ts` `fleetGate`); `/api/fleet/map/*` also needs `FLEET_MAP_ENABLED=true`.
+
+- **Auth:** as `POST /api/jobs/check`, but the token's audience must be `<public_origin>/api/fleet/jobs` and its workflow one of `fleet-registry.yml`, `fleet-osint.yml`, `fleet-ais.yml`, `fleet-health.yml`, which `deployments/production.json` `scheduler.workflows` lists (`FLEET_JOB_SCOPE`, `requireFleetJob`). Trip-check and advisor-media tokens are refused here, and fleet tokens there. Anything else → `401`.
+- **Query:** `region` (optional): a region id, letters, digits and `-`, at most 64; anything else → `400` `{"error": "invalid region"}`.
+- **Limit:** 240 calls per token (`jti`) per minute, shared by every fleet job route.
+- **Response:** `200`, `no-store`: `{"ok": true, "region": "<id>"|null}`.
+
 ### Cron (`scheduled`)
 
 Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret (`dispatchWorkflow`, which TA-M1 exported; the advisor's cron uses it to dispatch `advisor-media.yml` while media or graphics are pending, at most once per 15 minutes). ChatGPT Sites has no cron.
@@ -362,7 +372,7 @@ The boat lookup sends the query to Anthropic's Messages API with web search (`se
 
 ## Text Advisor admin (signed in, admin role)
 
-The admin app and its API ([08 · Admin](../plans/text-advisor/08-website.md), `server/routes/admin.ts`, mounted after the private routes). Every route needs a passkey session **and** `users.role='admin'` (`server/middleware/admin.ts` `requireAdmin`), and the Text Advisor switched on (`TEXT_ADVISOR_ENABLED=true`). A signed-in caller without the role, or anyone while the advisor is off, gets the same `404` as a path that does not exist (`{"error": "Not found"}` under `/api/`, a plain-text `Not found` for the page paths), so the admin's existence is not confirmed. Under `/api/` a signed-out caller gets the private gate's `401` like any unknown `/api/` path. `POST`s need an allowed `Origin` and count against the 30-a-minute budget (requireUser).
+The admin app and its API ([08 · Admin](../plans/text-advisor/08-website.md), `server/routes/admin.ts`, mounted after the private routes). Every route needs a passkey session **and** `users.role='admin'` (`server/middleware/admin.ts` `requireAdmin`), and its feature switched on. The page paths (`/admin`, `/admin.html`) open when either the Text Advisor or the charter fleet (`FLEET_ENABLED=true`) is on; the advisor's `/api/admin/*` routes below still need `TEXT_ADVISOR_ENABLED`, and `/api/admin/fleet/*` needs `FLEET_ENABLED`. A signed-in caller without the role, or anyone while the feature is off, gets the same `404` as a path that does not exist (`{"error": "Not found"}` under `/api/`, a plain-text `Not found` for the page paths), so the admin's existence is not confirmed. Under `/api/` a signed-out caller gets the private gate's `401` like any unknown `/api/` path. `POST`s need an allowed `Origin` and count against the 30-a-minute budget (requireUser).
 
 | Method and path | Body / query | Success | Errors |
 | --- | --- | --- | --- |

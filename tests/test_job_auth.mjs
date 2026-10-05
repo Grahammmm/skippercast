@@ -28,9 +28,9 @@ test('job token requires a valid RS256 signature from the fixed GitHub JWKS endp
 // TA-M1: the advisor-media job's identity (audience /api/advisor/jobs, workflow advisor-media.yml).
 const advisorScope={audiencePath:'/api/advisor/jobs',workflows:['advisor-media.yml']};
 const media={...claims,aud:policy.public_origin+'/api/advisor/jobs',workflow_ref:s.repository+'/.github/workflows/advisor-media.yml@'+s.ref,event_name:'workflow_dispatch'};
-test('deployments/production.json allows the trip check and the advisor-media job, and keeps the trip check workflow',()=>{
+test('deployments/production.json allows the trip check, the advisor-media job and the fleet jobs, and keeps the trip check workflow',()=>{
   assert.equal(s.workflow,'.github/workflows/live-conditions.yml');
-  assert.deepEqual(s.workflows,['live-conditions.yml','advisor-media.yml']);
+  assert.deepEqual(s.workflows,['live-conditions.yml','advisor-media.yml','fleet-registry.yml','fleet-osint.yml','fleet-ais.yml','fleet-health.yml']);
 });
 test('an advisor scope accepts the advisor-media job for its own audience only',()=>{
   assert.equal(validJobClaims(media,policy,now,advisorScope),true);
@@ -63,4 +63,17 @@ test('verifyJobToken takes a scope before the fetcher; the signature check is th
   assert.equal(await verifyJobToken(tripToken,policy,advisorScope,fetcher,now),false,'the advisor scope refuses the trip check');
   const tampered=advisorToken.split('.');tampered[1]=b64({...media,jti:'changed'});
   assert.equal(await verifyJobToken(tampered.join('.'),policy,advisorScope,fetcher,now),false);
+});
+
+// CF-01: the charter fleet jobs (audience /api/fleet/jobs, the four fleet workflows).
+const fleetScope={audiencePath:'/api/fleet/jobs',workflows:['fleet-registry.yml','fleet-osint.yml','fleet-ais.yml','fleet-health.yml']};
+const fleet=w=>({...claims,aud:policy.public_origin+'/api/fleet/jobs',workflow_ref:s.repository+'/.github/workflows/'+w+'@'+s.ref});
+test('a fleet scope accepts the fleet workflows for the fleet audience only, and no other scope accepts them',()=>{
+  for(const w of fleetScope.workflows)assert.equal(validJobClaims(fleet(w),policy,now,fleetScope),true,w);
+  assert.equal(validJobClaims({...media,aud:policy.public_origin+'/api/fleet/jobs'},policy,now,fleetScope),false,'advisor-media.yml is not a fleet job');
+  assert.equal(validJobClaims({...claims,aud:policy.public_origin+'/api/fleet/jobs'},policy,now,fleetScope),false,'the trip workflow is not a fleet job');
+  assert.equal(validJobClaims({...fleet('fleet-ais.yml'),aud:policy.public_origin+'/api/advisor/jobs'},policy,now,fleetScope),false,'an advisor audience is refused');
+  assert.equal(validJobClaims({...fleet('fleet-ais.yml'),aud:policy.public_origin+'/api/advisor/jobs'},policy,now,advisorScope),false,'a fleet job is no advisor job');
+  assert.equal(validJobClaims({...fleet('fleet-ais.yml'),aud:claims.aud},policy,now),false,'nor a trip check');
+  for(const [key,value] of [['repository_id','1'],['ref','refs/heads/other'],['event_name','pull_request'],['exp',now-1]])assert.equal(validJobClaims({...fleet('fleet-ais.yml'),[key]:value},policy,now,fleetScope),false,key);
 });

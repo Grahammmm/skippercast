@@ -133,6 +133,10 @@ jobs:
           ADVISOR_ADMIN_CONTACT_ID: ${{ vars.ADVISOR_ADMIN_CONTACT_ID }}
           ADVISOR_INBOX_PUBLIC_REPLIES: ${{ vars.ADVISOR_INBOX_PUBLIC_REPLIES }}
           BLUEBUBBLES_PRIVATE_API: ${{ vars.BLUEBUBBLES_PRIVATE_API }}
+          # Charter fleet runtime switches, copied into the Worker's vars whenever set (no bindings);
+          # unset means off (server/fleet/settings.ts). docs/plans/charter-fleet/design.md § 16.
+          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
+          FLEET_MAP_ENABLED: ${{ vars.FLEET_MAP_ENABLED }}
           # "true" binds the Analytics Engine dataset skippercast_events; docs/cloudflare.md#observability.
           ENABLE_ANALYTICS: ${{ vars.ENABLE_ANALYTICS }}
           # "false" turns off Workers Logs' per-request invocation log, whose message is the request URL

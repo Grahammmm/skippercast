@@ -121,6 +121,12 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   });
 
   admin.use('/api/admin/*', requireAdmin);
+  // The Text Advisor's admin API stays dark while the advisor is off, even when
+  // the fleet opened the admin (CF-01); /api/admin/fleet/* has its own gate (routes/fleet.ts).
+  admin.use('/api/admin/*', async (c, next) => {
+    if (!c.var.path.startsWith('/api/admin/fleet/') && !advisorSettings(c.env).enabled) return NOT_FOUND();
+    await next();
+  });
 
   admin.get('/api/admin/reviews', async c => {
     const status = c.req.query('status') || 'open', kind = c.req.query('kind') || null, cursor = c.req.query('cursor') || null;
