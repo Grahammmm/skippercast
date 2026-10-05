@@ -60,7 +60,104 @@ def candidate():
     return f
 
 
+def neighbor_fixture(root):
+    """Synthetic shared reference grid, pinned by a normal baseline identity."""
+    root=Path(root);reference=root/'var/seafloor/reference';reference.mkdir(parents=True)
+    catalog={'input_hash':'planning-v1','reaches':[{'id':'fixture'},{'id':'neighbor'}]}
+    atomic_json(root/'catalog/reaches.json',catalog)
+    grid={'input_hash':'planning-v1','cells':[{'id':'3310:0:0','reach':'fixture'},
+                                           {'id':'3310:1:0','reach':'neighbor'}]}
+    atomic_json(reference/'cells.json',grid)
+    atomic_json(reference/'run.json',{'input_hash':'planning-v1',
+        'output_hashes':{'cells.json':sha256(reference/'cells.json')}})
+    inputs={'reach_id':'fixture','sources':[row()],
+            'reference_cells_sha256':sha256(reference/'cells.json'),
+            'reaches_sha256':sha256(root/'catalog/reaches.json')}
+    baseline={'inputs':inputs,'physical_input_hash':ch.digest(inputs)}
+    atomic_json(root/'var/seafloor/reaches/fixture/run.json',baseline)
+    return baseline
+
+
 class ClassifiedTests(unittest.TestCase):
+    def test_neighbor_planning_missing_changed_or_shrunk_reference_fails_closed(self):
+        self.assertEqual(ch.neighbor_planning('/nonexistent','fixture',policy()),(None,None))
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);baseline=neighbor_fixture(root)
+            p=dict(policy(),reach_ids=['fixture'],neighbor_reaches=['neighbor'])
+            atomic_json(root/ch.POLICY_FILE,{'schema_version':1,'profile':ch.PROFILE,'sources':[p]})
+            self.assertEqual(ch.policies(root)[0],p)
+            meta,mask=ch.neighbor_planning(root,'fixture',p)
+            self.assertEqual(meta['planning_cell_count'],1)
+            self.assertTrue(mask.intersects(box(245,0,250,50)))
+            self.assertFalse(mask.intersects(box(0,0,50,50)))
+            for neighbors in ([],['unknown'],['fixture'],['neighbor','neighbor'],'neighbor'):
+                with self.subTest(neighbors=neighbors),self.assertRaises(ValueError):
+                    ch.neighbor_planning(root,'fixture',dict(p,neighbor_reaches=neighbors))
+                atomic_json(root/ch.POLICY_FILE,{'schema_version':1,'profile':ch.PROFILE,
+                    'sources':[dict(p,neighbor_reaches=neighbors)]})
+                with self.assertRaises(ValueError):ch.policies(root)
+            grid=root/'var/seafloor/reference/cells.json';original=grid.read_bytes();grid.unlink()
+            with self.assertRaises(FileNotFoundError):ch.neighbor_planning(root,'fixture',p)
+            grid.write_bytes(original)
+            # Rehashing a smaller reference receipt cannot override the pinned
+            # normal baseline's original grid or physical input identity.
+            data=read_json(grid);data['cells']=data['cells'][:1];atomic_json(grid,data)
+            receipt=root/'var/seafloor/reference/run.json';saved=receipt.read_bytes()
+            changed=read_json(receipt);changed['output_hashes']['cells.json']=sha256(grid);atomic_json(receipt,changed)
+            with self.assertRaisesRegex(ValueError,'reference identity'):ch.neighbor_planning(root,'fixture',p)
+            baseline['inputs']['reference_cells_sha256']=sha256(grid)
+            atomic_json(root/'var/seafloor/reaches/fixture/run.json',baseline)
+            with self.assertRaisesRegex(ValueError,'physical identity'):ch.neighbor_planning(root,'fixture',p)
+            baseline['physical_input_hash']=ch.digest(baseline['inputs'])
+            atomic_json(root/'var/seafloor/reaches/fixture/run.json',baseline)
+            with self.assertRaisesRegex(ValueError,'missing or duplicated'):ch.neighbor_planning(root,'fixture',p)
+            grid.write_bytes(original);receipt.write_bytes(saved)
+            neighbor_fixture_baseline={'inputs':dict(baseline['inputs'],reference_cells_sha256=sha256(grid))}
+            neighbor_fixture_baseline['physical_input_hash']=ch.digest(neighbor_fixture_baseline['inputs'])
+            atomic_json(root/'var/seafloor/reaches/fixture/run.json',neighbor_fixture_baseline)
+            catalog=read_json(root/'catalog/reaches.json');catalog['input_hash']='stale-planning'
+            atomic_json(root/'catalog/reaches.json',catalog)
+            with self.assertRaisesRegex(ValueError,'reference identity'):ch.neighbor_planning(root,'fixture',p)
+
+    def test_neighbor_native_hold_is_whole_patch_and_rechecked_after_forged_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);neighbor_fixture(root);folder=root/'var/seafloor/reaches/fixture'
+            p=dict(policy(),reach_ids=['fixture'],neighbor_reaches=['neighbor'])
+            metadata,_=ch.neighbor_planning(root,'fixture',p)
+            context=({'policy':p,'depth_source':row(),'classification_binding':binding(),
+                      'neighbor_planning':metadata},row(),binding(),None,box(0,0,500,250),
+                     box(600,600,700,700),[])
+            atomic_json(root/ch.POLICY_FILE,{'schema_version':1,'profile':ch.PROFILE,'sources':[p]})
+            patches=[box(0,0,50,50),box(245,0,295,50)]
+            with patch.object(ch,'source_context',return_value=context), \
+                 patch.object(ch,'extract',return_value=(patches,{'class3_valid_depth_pixels':1250,
+                     'classified_selected_area_km2':.005})), \
+                 patch('skippercast.seafloor.screen.load_snapshot',return_value=state()):
+                first=ch.stage('fixture',root=root)
+                self.assertEqual(first['physical_summary']['candidate_count'],2)
+                self.assertEqual(first['summary']['classified_area_count'],1)
+                self.assertEqual(first['summary']['held_by_reason'],{'overlap-neighbor-planning':1})
+                native=read_json(folder/'classified-native.geojson')
+                held=read_json(folder/'classified-held.geojson')['features'][0]
+                self.assertEqual(shape(native['features'][1]['geometry']).area,2500)
+                self.assertEqual(held['properties']['area_ha'],.25)
+                self.assertFalse(held['properties']['exportable'])
+                self.assertEqual(len(ch.publication_features('fixture',root=root)[0]),1)
+                candidates=read_json(folder/'classified-candidates.geojson')
+                geometries={f['properties']['id']:f['geometry'] for f in native['features']}
+                # Forge coherent screen outputs and hashes by omitting the
+                # native planning mask. Admission must reconstruct the hold.
+                habitat,omitted_held,summary=screen_candidates(candidates,state(),native_geometries=geometries)
+                atomic_json(folder/'classified-habitat.geojson',habitat)
+                atomic_json(folder/'classified-held.geojson',omitted_held)
+                receipt=read_json(folder/'classified-run.json');receipt['summary']=summary
+                receipt['outputs']={n:sha256(folder/n) for n in receipt['outputs']}
+                atomic_json(folder/'classified-run.json',receipt)
+                with self.assertRaisesRegex(ValueError,'whole-polygon screen changed'):
+                    ch.publication_features('fixture',root=root)
+            with self.assertRaisesRegex(ValueError,'original native geometry'):
+                screen_candidates({'features':[]},state(),native_exclusions={})
+
     def test_policy_support_modes_are_versioned_and_reach_scoped(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'catalog').mkdir()

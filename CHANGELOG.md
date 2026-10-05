@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Add opt-in whole-polygon holds against verified neighboring planning footprints for classified habitat releases; preserve original native boundaries and recheck holds before publication.
+
 - Verify current native dependencies and retain producer rights for survey footprints used by the opt-in classified habitat mode; keep original depth and rock interpretation authoritative.
 
 - Scope classified habitat processing to reviewed reaches and add an opt-in paired-survey footprint mode, preserving original depth/class masks, existing rankings and publication checks.

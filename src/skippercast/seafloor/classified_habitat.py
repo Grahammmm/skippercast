@@ -44,6 +44,8 @@ SELECTED_SOURCE_SUPPORT = 'selected-source-v1'
 PAIRED_REFERENCE_SUPPORT = 'paired-reference-footprint-v1'
 REFERENCE_NOTICE = ('Current measured coverage footprint only; no reference '
                     'terrain, substrate or species metrics borrowed.')
+NEIGHBOR_VERSION = 'planning-neighbor-suppression-v1'
+NEIGHBOR_BUFFER_M = 5  # Deliberately conservative exclusion, not accuracy.
 
 
 def digest(value):
@@ -90,7 +92,8 @@ def policies(root):
             or len({p['id'] for p in rows}) != len(rows)):
         raise ValueError('Ambiguous classified habitat opt-in')
     known_reaches = (_known_reaches(root) if any(
-        isinstance(p, dict) and p.get('reach_ids') is not None for p in rows) else None)
+        isinstance(p, dict) and (p.get('reach_ids') is not None or 'neighbor_reaches' in p)
+        for p in rows) else None)
     for p in rows:
         mode = support_mode(p)
         reach_ids = p.get('reach_ids')
@@ -102,6 +105,14 @@ def policies(root):
                     or len(reach_ids) != len(set(reach_ids)) or known_reaches is None
                     or any(r not in known_reaches for r in reach_ids)):
                 raise ValueError('Invalid classified habitat reach scope')
+        if 'neighbor_reaches' in p:
+            neighbors = p['neighbor_reaches']
+            if (reach_ids is None or not isinstance(neighbors, list) or not neighbors
+                    or any(not isinstance(r, str) for r in neighbors)
+                    or len(neighbors) != len(set(neighbors))
+                    or any(r not in known_reaches for r in neighbors)
+                    or set(neighbors).intersection(reach_ids)):
+                raise ValueError('Invalid classified neighbor reach scope')
         public_url(p['metadata_url'])
         if (not re.fullmatch('[a-z0-9-]+', p['id'])
                 or date.fromisoformat(p['reviewed_on']) > date.today()
@@ -185,6 +196,63 @@ def normalized_depth(row, root, *, fetch=False):
         raise ValueError('Classified depth normalized bytes changed')
     verify_review(receipt, row['adapter_review'], paths[0])
     return receipt, paths[0]
+
+
+def neighbor_planning(root, reach, policy, *, baseline=None):
+    """Conservative whole-patch exclusion; planning is never measurement."""
+    if 'neighbor_reaches' not in policy:
+        return None, None
+    root = Path(root)
+    neighbors = policy['neighbor_reaches']
+    known = _known_reaches(root)
+    if (not isinstance(neighbors, list) or not neighbors or known is None
+            or any(not isinstance(r, str) or r not in known for r in neighbors)
+            or len(neighbors) != len(set(neighbors)) or reach in neighbors):
+        raise ValueError('Invalid classified neighbor reach scope')
+    baseline = baseline or read_json(root/'var/seafloor/reaches'/reach/'run.json')
+    physics = {k: v for k, v in baseline['inputs'].items()
+               if k not in {'screen', 'screen_implementation_sha256'}}
+    if digest(physics) != baseline['physical_input_hash']:
+        raise ValueError('Neighbor planning baseline physical identity changed')
+    folder = root/'var/seafloor/reference'
+    grid = read_json(folder/'cells.json')
+    receipt = read_json(folder/'run.json')
+    catalog = read_json(root/'catalog/reaches.json')
+    grid_sha, catalog_sha = sha256(folder/'cells.json'), sha256(root/'catalog/reaches.json')
+    if (grid['input_hash'] != catalog['input_hash'] or receipt['input_hash'] != catalog['input_hash']
+            or receipt['output_hashes']['cells.json'] != grid_sha
+            or baseline['inputs']['reference_cells_sha256'] != grid_sha
+            or baseline['inputs']['reaches_sha256'] != catalog_sha):
+        raise ValueError('Neighbor planning reference identity changed')
+    cells = [c for c in grid['cells'] if c.get('reach') in neighbors]
+    keys = [(c['reach'], c['id']) for c in cells]
+    if (len(keys) != len(set(keys)) or {c['reach'] for c in cells} != set(neighbors)):
+        raise ValueError('Neighbor planning cells missing or duplicated')
+    mask = unary_union([cell_geometry(c) for c in cells]).buffer(NEIGHBOR_BUFFER_M)
+    metadata = {'version': NEIGHBOR_VERSION, 'neighbor_reaches': sorted(neighbors),
+        'reference_input_hash': grid['input_hash'], 'reference_cells_sha256': grid_sha,
+        'reference_run_sha256': sha256(folder/'run.json'), 'reaches_sha256': catalog_sha,
+        'planning_cell_count': len(cells), 'buffer_m': NEIGHBOR_BUFFER_M,
+        'basis': 'Conservative neighboring planning footprint; no measured coverage or accuracy inferred.'}
+    return metadata, mask
+
+
+def classified_screen(candidates, state, native_geometries, contexts, root, reach):
+    """Reconstruct per-policy native holds at stage and independent admission."""
+    from .screen import screen_candidates
+    exclusions = {}
+    for context in contexts:
+        identity = context[0]
+        policy = identity['policy']
+        metadata, mask = neighbor_planning(root, reach, policy)
+        if metadata != identity.get('neighbor_planning'):
+            raise ValueError('Classified neighbor planning context changed')
+        if metadata is not None:
+            for f in candidates['features']:
+                if f['properties'].get('classified_area', {}).get('policy_id') == policy['id']:
+                    exclusions[f['properties']['id']] = [('neighbor-planning', mask)]
+    return screen_candidates(candidates, state, native_geometries=native_geometries,
+                             native_exclusions=exclusions or None)
 
 
 def source_context(root, reach, policy, *, fetch=False):
@@ -303,6 +371,9 @@ def source_context(root, reach, policy, *, fetch=False):
         'implementation': {n: sha256(Path(__file__).with_name(n)) for n in
             ('classified_habitat.py', 'classified_geometry.py', 'substrate.py', 'resolution_profile.py', 'normalized.py')},
         'geometry_representation': geometry_runtime()}
+    neighbor, _ = neighbor_planning(root, reach, policy, baseline=run)
+    if neighbor is not None:
+        identity['neighbor_planning'] = neighbor
     return identity, row, binding, path, support, existing, rights
 
 
@@ -341,7 +412,7 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
                      'classified_selected_area_km2': classified.area/1e6}
 
 
-def features_for(patches, reach, policy, row, binding, *, reference_support=None):
+def features_for(patches, reach, policy, row, binding, *, reference_support=None, neighbor_planning=None):
     from .screen import polygon
     features = []
     for index, patch in enumerate(patches):
@@ -365,12 +436,15 @@ def features_for(patches, reach, policy, row, binding, *, reference_support=None
     if reference_support is not None:
         for feature in features:
             feature['properties']['reference_support'] = deepcopy(reference_support)
+    if neighbor_planning is not None:
+        for feature in features:
+            feature['properties']['neighbor_planning'] = deepcopy(neighbor_planning)
     return {'type': 'FeatureCollection', 'features': features}
 
 
 def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     """Refresh only opt-in classified physics/screens; never edit the graded run."""
-    from .screen import load_snapshot, input_identity, screen_candidates
+    from .screen import load_snapshot, input_identity
     root = Path(root)
     scope_name(reach)
     folder = root/'var/seafloor/reaches'/reach
@@ -409,7 +483,8 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
             patches, summary = extract(row, binding, path, support, existing,
                                        root=root, edge=edge, max_pixels=max_pixels)
             represented = features_for(patches, reach, p, row, binding,
-                reference_support=identity.get('reference_support'))['features']
+                reference_support=identity.get('reference_support'),
+                neighbor_planning=identity.get('neighbor_planning'))['features']
             candidates['features'].extend(represented)
             native['features'].extend({'type': 'Feature', 'geometry': mapping(patch),
                 'properties': {'id': f['properties']['id']}} for patch, f in zip(patches, represented))
@@ -421,7 +496,7 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     state = load_snapshot(root, reach)
     representation = verify_inventory(candidates, native)
     native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
-    habitat, held, summary = screen_candidates(candidates, state, native_geometries=native_geometries)
+    habitat, held, summary = classified_screen(candidates, state, native_geometries, contexts, root, reach)
     inputs = {'physical': physical_inputs, 'screen': input_identity(state),
               'screen_implementation_sha256': sha256(Path(__file__).with_name('screen.py'))}
     atomic_json(folder/'classified-habitat.geojson', habitat)
@@ -437,7 +512,7 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
 
 def publication_features(reach, *, root=REPO):
     """Rehash current pair/physics, rights, artifacts and whole-polygon screen."""
-    from .screen import load_snapshot, input_identity, screen_candidates
+    from .screen import load_snapshot, input_identity
     root = Path(root)
     scope_name(reach)
     folder = root/'var/seafloor/reaches'/reach
@@ -471,7 +546,7 @@ def publication_features(reach, *, root=REPO):
     native = read_json(folder/'classified-native.geojson')
     representation = verify_inventory(candidates, native)
     native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
-    habitat, held, summary = screen_candidates(candidates, state, native_geometries=native_geometries)
+    habitat, held, summary = classified_screen(candidates, state, native_geometries, contexts, root, reach)
     if (representation != receipt.get('representation')
             or habitat != read_json(folder/'classified-habitat.geojson')
             or held != read_json(folder/'classified-held.geojson') or summary != receipt['summary']):
@@ -483,6 +558,7 @@ def publication_features(reach, *, root=REPO):
                       p.get('classified_area', {}).get('policy_id')), None)
         if (not published_contract(p) or saved is None
                 or p.get('reference_support') != saved.get('reference_support')
+                or p.get('neighbor_planning') != saved.get('neighbor_planning')
                 or p['source_ids'] != [saved['depth_source']['id'], saved['classification_binding']['row']['id']]
                 or p['substrate']['source_id'] != saved['classification_binding']['row']['id']
                 or p['classified_area']['metadata_sha256'] != saved['policy']['metadata_sha256']):
