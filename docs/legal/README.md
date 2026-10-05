@@ -4,9 +4,10 @@ Working documents for making SkipperCast legally launchable as a paid product. N
 
 | Document | What it answers | Status |
 | --- | --- | --- |
-| [data-rights-register.md](data-rights-register.md) | May a paid SkipperCast use each dataset and runtime service? Licence, attribution, commercial use, where it is used, action and owner. | First pass 2026-09-28; six launch blockers open |
+| [data-rights-register.md](data-rights-register.md) | May a paid SkipperCast use each dataset and runtime service? Licence, attribution, commercial use, where it is used, action and owner. | First pass 2026-09-28; six launch blockers open; Text Advisor rows 2026-10-04, owner/counsel to confirm |
+| [threat-model.md](threat-model.md) | What can go wrong in each component (STRIDE), what mitigates it, what risk remains. | App and pipeline from the audit; Text Advisor section 2026-10-04 (TA-C5) |
 
-Planned here (guide §8): `disclaimers.md` (the canonical user-facing caveats), `privacy-and-retention.md`, `threat-model.md`, and a link to the licensing ADR.
+Planned here (guide §8): `disclaimers.md` (the canonical user-facing caveats), `privacy-and-retention.md` and a link to the licensing ADR.
 
 Related:
 

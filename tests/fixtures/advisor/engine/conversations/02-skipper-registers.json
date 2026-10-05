@@ -83,7 +83,7 @@
       }
     },
     {
-      "in": "@RitaG_Sportfishing",
+      "in": "@RitaG.Example",
       "expect": {
         "intent": "skipper.register.instagram",
         "reply_contains": [
@@ -115,7 +115,7 @@
               "landing": "Morro Bay Landing",
               "port": "morro-bay",
               "region": "morro-bay",
-              "instagram": "ritag_sportfishing",
+              "instagram": "ritag.example",
               "booking_url": null,
               "phone_public": null,
               "status": "pending",
@@ -349,7 +349,7 @@
       "expect": {
         "intent": "media.photo",
         "reply_contains": [
-          "Nice. That's queued for the SkipperCast feed, tagged @ritag_sportfishing. Count board too?"
+          "Nice. That's queued for the SkipperCast feed, tagged @ritag.example. Count board too?"
         ],
         "actions": [
           "media_queue",

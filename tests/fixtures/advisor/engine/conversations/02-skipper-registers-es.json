@@ -34,7 +34,7 @@
       }
     },
     {
-      "in": "lucero.psl",
+      "in": "lucero.example",
       "expect": {
         "intent": "skipper.register.instagram",
         "reply_contains": [
@@ -58,7 +58,7 @@
               "slug": "lucero",
               "port": "port-san-luis",
               "landing": null,
-              "instagram": "lucero.psl",
+              "instagram": "lucero.example",
               "booking_url": "https://example.com/lucero",
               "status": "pending"
             }

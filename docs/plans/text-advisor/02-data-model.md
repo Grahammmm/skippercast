@@ -513,3 +513,18 @@ before deleting the contact (the send needs the number).
   (`\+1555\d{7}` and `+1\d{3}555\d{4}`), and any Instagram handle not in
   `catalog/advisor/fixture-handles.json`. No bare 10-digit rule (it would hit
   repository ids and timestamps).
+  As built (TA-C5, `scripts/check_repository.py`, `tests/unit/test_check_repository.py`):
+  the scan also covers `docs/operations/runbooks/advisor-*.md`. The NPA form is
+  narrowed to the North American Numbering Plan's fictional lines,
+  `\+1\d{3}55501\d{2}` (555-0100 to 555-0199; other 555 lines can be real), and
+  `tests/test_advisor_privacy.mjs` uses the same rule. A handle is a mention (`@` and
+  a name) that is not part of an email address, a path or an npm scope (one-character
+  mentions such as `@x` are ignored), or the value of a handle field
+  (`instagram`, `username`, `handle`, `ig_handle`, `ig_username`,
+  `collaborators`) in a fixture's JSON, compared in lower case. The list has
+  three groups: `own` (`skippercast`), `fictional` (each must contain `example`
+  or `placeholder`; the check refuses anything else) and `placeholders` (words
+  the plan uses, `@handle`). The fixtures' earlier handles (`ritag`,
+  `ritag_sportfishing`, `lucero.psl`) could be real accounts, so they became
+  `ritag.example` and `lucero.example`. A failure prints the file, line and
+  rule, never the number or the handle.

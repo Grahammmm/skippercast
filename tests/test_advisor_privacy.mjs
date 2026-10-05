@@ -55,8 +55,9 @@ test('redact covers the patterns in 02: \\+?1?\\d{10} and \\+\\d{10,15}', () => 
   assert.doesNotThrow(() => JSON.stringify(redact(deep)));
 });
 
-// The fictional series the repository allows (02 § privacy invariants): +1555XXXXXXX and +1NPA555XXXX.
-const E164 = /\+1\d{10}/g, FICTIONAL = /^\+1(?:555\d{7}|\d{3}555\d{4})$/;
+// The fictional series the repository allows (02 § privacy invariants): +1555XXXXXXX and +1NPA55501XX
+// (NANP's fictional 555-0100 to 555-0199; scripts/check_repository.py applies the same rule).
+const E164 = /\+1\d{10}/g, FICTIONAL = /^\+1(?:555\d{7}|\d{3}55501\d{2})$/;
 test('advisor fixtures and the plan contain no E.164 number outside the fictional 555 series', () => {
   const scanned = [...files('tests/fixtures/advisor'), ...files('docs/plans/text-advisor'), join(root, 'tests', 'test_advisor_contacts.mjs'), join(root, 'tests', 'test_advisor_privacy.mjs')];
   assert.ok(scanned.length >= 13, 'the plan documents are scanned');

@@ -301,6 +301,15 @@ Nothing under `src/`, `regions/`, `research/`, `atlas/`, `catalog/*.json`
   JavaScript `fetch` (`connect-src 'self'` allows it), not a `<form>`
   (`form-action 'none'`).
 
+As built (TA-C5; the full review is [threat model § 9](../../legal/threat-model.md#9-text-advisor)):
+there is no Tunnel origin allowlist on the BlueBubbles webhook. The Mac calls
+the public Worker URL, and `ADVISOR_WEBHOOK_TOKEN` in the path (constant-time
+`sameSecret`) is its only check; the Tunnel and Access guard the other
+direction, Worker to relay. The Meta webhook body cap is 256 KB, not 64 KB.
+Not every write is admin-only: the engine approves the morning count-board and
+conditions Stories itself (TA-S5), and a skipper's confirmed report publishes
+without review (labelled unverified until the boat is verified).
+
 ## Cron slots
 
 The only trigger is the existing `*/15 * * * *` (UTC). `cron.ts` defines
