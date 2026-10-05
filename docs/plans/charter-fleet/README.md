@@ -180,6 +180,14 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   public profile, coverage page), CF-41 to CF-47 (AIS listener, deployment,
   segmentation, events and aggregates, processor, MMSI matching, backfill),
   CF-50 and CF-51 (map API and client layers). All dark behind the flags.
-- 2026-10-05: in progress CF-21, CF-48; CF-60 adds `regions/OR/fleet.json`
-  (`dry-run`) and its staging dry run. Pending CF-61 (fleet report) and CF-62
-  (full California run).
+- 2026-10-05: merged CF-48 (labelling view and validation, #348), CF-60
+  (`regions/OR/fleet.json` as `dry-run` plus its staging dry run, #350), CF-21
+  (headless OSINT runner, #349: the first review failed on settings isolation;
+  fixed with `--setting-sources ""` and a dedicated `CLAUDE_CONFIG_DIR` before
+  the re-review passed) and CF-61 (fleet report tool, #351). Every planned task
+  is now on `main`, dark behind the flags. Open: Q16 (MarineTraffic and
+  VesselFinder stay not-cleared until their terms are reviewed). Pending CF-62,
+  which starts with the owner steps in the registry, OSINT and listener
+  runbooks (`FLEET_ENABLED`, `ENABLE_FLEET`, `AISSTREAM_API_KEY`, the
+  subscription token on Hermes, linger), then the staging run, the first
+  registry run, the listener install and the first OSINT run.
