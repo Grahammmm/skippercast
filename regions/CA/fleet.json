@@ -1,0 +1,1129 @@
+{
+  "schema_version": 1,
+  "id": "CA",
+  "name": "California",
+  "timezone": "America/Los_Angeles",
+  "status": "active",
+  "ports": [
+    {
+      "id": "crescent-city",
+      "name": "Crescent City",
+      "point": [41.7445, -124.184],
+      "home_port": "crescent-city",
+      "region": "crescent-city",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.2, 41.732], [-124.172, 41.732], [-124.172, 41.756], [-124.2, 41.756], [-124.2, 41.732]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "trinidad",
+      "name": "Trinidad",
+      "point": [41.0565, -124.144],
+      "home_port": null,
+      "region": null,
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.158, 41.048], [-124.136, 41.048], [-124.136, 41.064], [-124.158, 41.064], [-124.158, 41.048]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "eureka",
+      "name": "Eureka · Humboldt Bay",
+      "point": [40.806, -124.166],
+      "home_port": "humboldt-bay",
+      "region": "humboldt-bay-cape-mendocino",
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.245, 40.76], [-124.225, 40.755], [-124.15, 40.795], [-124.15, 40.818], [-124.175, 40.82], [-124.245, 40.78], [-124.245, 40.76]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "shelter-cove",
+      "name": "Shelter Cove",
+      "point": [40.0255, -124.0715],
+      "home_port": "shelter-cove",
+      "region": "shelter-cove-north-mendocino",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-124.085, 40.015], [-124.06, 40.015], [-124.06, 40.035], [-124.085, 40.035], [-124.085, 40.015]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "noyo-harbor",
+      "name": "Noyo Harbor · Fort Bragg",
+      "point": [39.426, -123.805],
+      "home_port": "noyo-harbor",
+      "region": "fort-bragg-point-arena",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-123.822, 39.42], [-123.795, 39.42], [-123.795, 39.432], [-123.822, 39.432], [-123.822, 39.42]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "bodega-bay",
+      "name": "Bodega Bay",
+      "point": [38.325, -123.055],
+      "home_port": "bodega-bay",
+      "region": "bodega-point-reyes",
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-123.07, 38.295], [-123.04, 38.295], [-123.04, 38.335], [-123.07, 38.335], [-123.07, 38.295]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "sausalito",
+      "name": "Sausalito · Fort Baker",
+      "point": [37.859, -122.479],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay", "ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.495, 37.828], [-122.465, 37.828], [-122.465, 37.872], [-122.495, 37.872], [-122.495, 37.828]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "san-francisco",
+      "name": "San Francisco · Fisherman's Wharf",
+      "point": [37.8095, -122.4185],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay", "ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.432, 37.802], [-122.405, 37.802], [-122.405, 37.815], [-122.432, 37.815], [-122.432, 37.802]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "richmond",
+      "name": "Richmond",
+      "point": [37.9135, -122.3495],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.365, 37.903], [-122.335, 37.903], [-122.335, 37.922], [-122.365, 37.922], [-122.365, 37.903]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "berkeley",
+      "name": "Berkeley",
+      "point": [37.8665, -122.315],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay", "ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.33, 37.856], [-122.305, 37.856], [-122.305, 37.876], [-122.33, 37.876], [-122.33, 37.856]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "emeryville",
+      "name": "Emeryville",
+      "point": [37.841, -122.312],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay", "ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.325, 37.832], [-122.3, 37.832], [-122.3, 37.852], [-122.325, 37.852], [-122.325, 37.832]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "alameda",
+      "name": "Alameda",
+      "point": [37.767, -122.288],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.3, 37.758], [-122.276, 37.758], [-122.276, 37.776], [-122.3, 37.776], [-122.3, 37.758]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "benicia",
+      "name": "Benicia",
+      "point": [38.044, -122.1575],
+      "home_port": null,
+      "region": null,
+      "waters": ["bay", "delta"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.17, 38.036], [-122.145, 38.036], [-122.145, 38.052], [-122.17, 38.052], [-122.17, 38.036]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "pittsburg",
+      "name": "Pittsburg",
+      "point": [38.0405, -121.8865],
+      "home_port": null,
+      "region": null,
+      "waters": ["delta"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.9, 38.032], [-121.873, 38.032], [-121.873, 38.05], [-121.9, 38.05], [-121.9, 38.032]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "antioch",
+      "name": "Antioch",
+      "point": [38.019, -121.8225],
+      "home_port": null,
+      "region": null,
+      "waters": ["delta"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.835, 38.01], [-121.81, 38.01], [-121.81, 38.028], [-121.835, 38.028], [-121.835, 38.01]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "rio-vista",
+      "name": "Rio Vista",
+      "point": [38.1555, -121.6915],
+      "home_port": null,
+      "region": null,
+      "waters": ["delta"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.705, 38.145], [-121.68, 38.145], [-121.68, 38.167], [-121.705, 38.167], [-121.705, 38.145]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "bethel-island",
+      "name": "Bethel Island",
+      "point": [38.0235, -121.638],
+      "home_port": null,
+      "region": null,
+      "waters": ["delta"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.655, 38.01], [-121.62, 38.01], [-121.62, 38.04], [-121.655, 38.04], [-121.655, 38.01]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "stockton",
+      "name": "Stockton",
+      "point": [37.9545, -121.295],
+      "home_port": null,
+      "region": null,
+      "waters": ["delta"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.315, 37.945], [-121.28, 37.945], [-121.28, 37.965], [-121.315, 37.965], [-121.315, 37.945]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "pillar-point",
+      "name": "Pillar Point · Half Moon Bay",
+      "point": [37.5025, -122.482],
+      "home_port": "pillar-point",
+      "region": "point-reyes-pigeon",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.5, 37.488], [-122.465, 37.488], [-122.465, 37.51], [-122.5, 37.51], [-122.5, 37.488]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "santa-cruz",
+      "name": "Santa Cruz",
+      "point": [36.964, -122.002],
+      "home_port": "santa-cruz",
+      "region": "santa-cruz-monterey-bay",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-122.012, 36.956], [-121.992, 36.956], [-121.992, 36.978], [-122.012, 36.978], [-122.012, 36.956]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "moss-landing",
+      "name": "Moss Landing",
+      "point": [36.8055, -121.787],
+      "home_port": null,
+      "region": "santa-cruz-monterey-bay",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.8, 36.795], [-121.775, 36.795], [-121.775, 36.82], [-121.8, 36.82], [-121.8, 36.795]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "monterey",
+      "name": "Monterey",
+      "point": [36.604, -121.893],
+      "home_port": "monterey",
+      "region": "monterey-point-sur",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-121.905, 36.595], [-121.88, 36.595], [-121.88, 36.615], [-121.905, 36.615], [-121.905, 36.595]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "morro-bay",
+      "name": "Morro Bay",
+      "point": [35.3667, -120.868],
+      "home_port": "morro-bay",
+      "region": "morro-bay",
+      "waters": ["ocean", "bay"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-120.88, 35.352], [-120.845, 35.352], [-120.845, 35.385], [-120.88, 35.385], [-120.88, 35.352]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "port-san-luis",
+      "name": "Port San Luis · Avila Beach",
+      "point": [35.172, -120.756],
+      "home_port": "port-san-luis",
+      "region": "morro-bay",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-120.775, 35.16], [-120.735, 35.16], [-120.735, 35.185], [-120.775, 35.185], [-120.775, 35.16]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "santa-barbara",
+      "name": "Santa Barbara",
+      "point": [34.404, -119.6915],
+      "home_port": "santa-barbara",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-119.705, 34.396], [-119.68, 34.396], [-119.68, 34.412], [-119.705, 34.412], [-119.705, 34.396]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "ventura",
+      "name": "Ventura Harbor",
+      "point": [34.245, -119.264],
+      "home_port": "ventura",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-119.278, 34.23], [-119.252, 34.23], [-119.252, 34.258], [-119.278, 34.258], [-119.278, 34.23]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "oxnard",
+      "name": "Oxnard · Channel Islands Harbor",
+      "point": [34.164, -119.225],
+      "home_port": "ventura",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-119.24, 34.15], [-119.215, 34.15], [-119.215, 34.18], [-119.24, 34.18], [-119.24, 34.15]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "marina-del-rey",
+      "name": "Marina del Rey",
+      "point": [33.975, -118.448],
+      "home_port": "marina-del-rey",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-118.465, 33.958], [-118.435, 33.958], [-118.435, 33.99], [-118.465, 33.99], [-118.465, 33.958]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "redondo-beach",
+      "name": "Redondo Beach · King Harbor",
+      "point": [33.8455, -118.3975],
+      "home_port": null,
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-118.41, 33.836], [-118.388, 33.836], [-118.388, 33.855], [-118.41, 33.855], [-118.41, 33.836]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "san-pedro",
+      "name": "San Pedro",
+      "point": [33.73, -118.278],
+      "home_port": "long-beach",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-118.292, 33.705], [-118.245, 33.705], [-118.245, 33.745], [-118.292, 33.745], [-118.292, 33.705]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "long-beach",
+      "name": "Long Beach",
+      "point": [33.763, -118.205],
+      "home_port": "long-beach",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-118.225, 33.75], [-118.18, 33.75], [-118.18, 33.775], [-118.225, 33.775], [-118.225, 33.75]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "newport-beach",
+      "name": "Newport Beach",
+      "point": [33.6012, -117.8995],
+      "home_port": "newport-beach",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-117.91, 33.588], [-117.875, 33.588], [-117.875, 33.61], [-117.91, 33.61], [-117.91, 33.588]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "dana-point",
+      "name": "Dana Point",
+      "point": [33.46, -117.696],
+      "home_port": "dana-point",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-117.71, 33.452], [-117.685, 33.452], [-117.685, 33.467], [-117.71, 33.467], [-117.71, 33.452]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "oceanside",
+      "name": "Oceanside",
+      "point": [33.2085, -117.3935],
+      "home_port": "oceanside",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-117.405, 33.2], [-117.385, 33.2], [-117.385, 33.216], [-117.405, 33.216], [-117.405, 33.2]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "mission-bay",
+      "name": "San Diego · Mission Bay",
+      "point": [32.764, -117.236],
+      "home_port": "san-diego",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-117.258, 32.75], [-117.225, 32.75], [-117.225, 32.775], [-117.258, 32.775], [-117.258, 32.75]]]
+      },
+      "geofence_source": "drawn"
+    },
+    {
+      "id": "san-diego",
+      "name": "San Diego · Point Loma",
+      "point": [32.722, -117.23],
+      "home_port": "san-diego",
+      "region": "southern-california",
+      "waters": ["ocean"],
+      "geofence": {
+        "type": "Polygon",
+        "coordinates": [[[-117.245, 32.69], [-117.212, 32.69], [-117.212, 32.735], [-117.245, 32.735], [-117.245, 32.69]]]
+      },
+      "geofence_source": "drawn"
+    }
+  ],
+  "landings": [
+    {
+      "id": "point-loma-sportfishing",
+      "name": "Point Loma Sportfishing",
+      "port": "san-diego",
+      "point": [32.7225, -117.2325],
+      "website": "https://www.pointlomasportfishing.com/"
+    },
+    {
+      "id": "hm-landing",
+      "name": "H&M Landing",
+      "port": "san-diego",
+      "point": [32.7215, -117.229],
+      "website": "https://www.hmlanding.com/"
+    },
+    {
+      "id": "fishermans-landing",
+      "name": "Fisherman's Landing",
+      "port": "san-diego",
+      "point": [32.722, -117.2285],
+      "website": "https://www.fishermanslanding.com/"
+    },
+    {
+      "id": "seaforth-sportfishing",
+      "name": "Seaforth Sportfishing",
+      "port": "mission-bay",
+      "point": [32.763, -117.2355],
+      "website": "https://www.seaforthlanding.com/"
+    },
+    {
+      "id": "oceanside-sea-center",
+      "name": "Oceanside Sea Center",
+      "port": "oceanside",
+      "point": [33.2075, -117.394],
+      "website": "https://www.oceansideseacenter.com/"
+    },
+    {
+      "id": "dana-wharf-sportfishing",
+      "name": "Dana Wharf Sportfishing",
+      "port": "dana-point",
+      "point": [33.4595, -117.695],
+      "website": "https://danawharf.com/"
+    },
+    {
+      "id": "newport-landing",
+      "name": "Newport Landing",
+      "port": "newport-beach",
+      "point": [33.601, -117.8995],
+      "website": "https://www.newportlanding.com/"
+    },
+    {
+      "id": "daveys-locker",
+      "name": "Davey's Locker",
+      "port": "newport-beach",
+      "point": [33.6015, -117.8985],
+      "website": "https://daveyslocker.com/"
+    },
+    {
+      "id": "pierpoint-landing",
+      "name": "Pierpoint Landing",
+      "port": "long-beach",
+      "point": [33.7615, -118.1955],
+      "website": "https://www.pierpoint.net/"
+    },
+    {
+      "id": "long-beach-sportfishing",
+      "name": "Long Beach Sportfishing",
+      "port": "long-beach",
+      "point": [33.765, -118.2145],
+      "website": "https://www.longbeachsportfishing.com/"
+    },
+    {
+      "id": "twenty-second-street-landing",
+      "name": "22nd Street Landing",
+      "port": "san-pedro",
+      "point": [33.724, -118.279],
+      "website": "https://www.22ndstreet.com/"
+    },
+    {
+      "id": "la-waterfront-sportfishing",
+      "name": "LA Waterfront Cruises and Sportfishing",
+      "port": "san-pedro",
+      "point": [33.738, -118.278],
+      "website": null
+    },
+    {
+      "id": "redondo-beach-sportfishing",
+      "name": "Redondo Beach Sportfishing",
+      "port": "redondo-beach",
+      "point": [33.846, -118.3975],
+      "website": "https://www.redondosportfishing.com/"
+    },
+    {
+      "id": "marina-del-rey-sportfishing",
+      "name": "Marina Del Rey Sportfishing",
+      "port": "marina-del-rey",
+      "point": [33.974, -118.446],
+      "website": "https://marinadelreysportfishing.com/"
+    },
+    {
+      "id": "channel-islands-sportfishing",
+      "name": "Channel Islands Sportfishing",
+      "port": "oxnard",
+      "point": [34.162, -119.2245],
+      "website": "https://www.channelislandssportfishing.com/"
+    },
+    {
+      "id": "hooks-landing",
+      "name": "Hooks Landing",
+      "port": "oxnard",
+      "point": [34.169, -119.2265],
+      "website": null
+    },
+    {
+      "id": "ventura-harbor-sportfishing",
+      "name": "Ventura Harbor Sportfishing",
+      "port": "ventura",
+      "point": [34.2445, -119.264],
+      "website": "https://venturasportfishing.com/"
+    },
+    {
+      "id": "santa-barbara-landing",
+      "name": "Santa Barbara Landing",
+      "port": "santa-barbara",
+      "point": [34.404, -119.692],
+      "website": "https://www.sblanding.com/"
+    },
+    {
+      "id": "patriot-sportfishing",
+      "name": "Patriot Sportfishing",
+      "port": "port-san-luis",
+      "point": [35.17, -120.7545],
+      "website": "https://www.patriotsportfishing.com/"
+    },
+    {
+      "id": "morro-bay-landing",
+      "name": "Morro Bay Landing",
+      "port": "morro-bay",
+      "point": [35.372, -120.858],
+      "website": "https://morrobaylanding.com/"
+    },
+    {
+      "id": "virgs-landing",
+      "name": "Virg's Landing",
+      "port": "morro-bay",
+      "point": [35.37, -120.8565],
+      "website": "https://www.virgslanding.com/"
+    },
+    {
+      "id": "black-pearl-sportfishing",
+      "name": "Black Pearl Sportfishing",
+      "port": "morro-bay",
+      "point": [35.369, -120.8575],
+      "website": null
+    },
+    {
+      "id": "chris-fishing-trips",
+      "name": "Chris' Fishing Trips",
+      "port": "monterey",
+      "point": [36.6035, -121.8925],
+      "website": "https://www.chrissfishing.com/"
+    },
+    {
+      "id": "randys-fishing-trips",
+      "name": "Randy's Fishing Trips",
+      "port": "monterey",
+      "point": [36.604, -121.893],
+      "website": "https://www.randysfishingtrips.com/"
+    },
+    {
+      "id": "kahuna-sportfishing",
+      "name": "Kahuna Sportfishing",
+      "port": "moss-landing",
+      "point": [36.8035, -121.7875],
+      "website": "https://www.kahunasportfishing.com/"
+    },
+    {
+      "id": "toms-sportfishing",
+      "name": "Tom's Sportfishing",
+      "port": "moss-landing",
+      "point": [36.806, -121.787],
+      "website": null
+    },
+    {
+      "id": "half-moon-bay-sportfishing",
+      "name": "Half Moon Bay Sportfishing",
+      "port": "pillar-point",
+      "point": [37.5025, -122.482],
+      "website": "https://www.fishingboat.com/"
+    },
+    {
+      "id": "fish-emeryville",
+      "name": "Fish Emeryville",
+      "port": "emeryville",
+      "point": [37.84, -122.3125],
+      "website": "https://www.emeryvillesportfishing.com/"
+    },
+    {
+      "id": "berkeley-charter-boats",
+      "name": "Berkeley Charter Boats",
+      "port": "berkeley",
+      "point": [37.8665, -122.315],
+      "website": "https://www.berkeleycharterboats.com/"
+    },
+    {
+      "id": "bodega-bay-sportfishing-center",
+      "name": "Bodega Bay Sportfishing Center",
+      "port": "bodega-bay",
+      "point": [38.318, -123.048],
+      "website": null
+    }
+  ],
+  "ais": {
+    "source": "aisstream",
+    "bbox": [[27.5, -126.5], [42.1, -114.5]],
+    "message_types": [
+      "PositionReport",
+      "StandardClassBPositionReport",
+      "ExtendedClassBPositionReport",
+      "ShipStaticData",
+      "StaticDataReport"
+    ],
+    "mmsi_filter": false
+  },
+  "agencies": [
+    {
+      "id": "cdfw",
+      "name": "California Department of Fish and Wildlife",
+      "kind": "licensing",
+      "notes": "CPFV licence (FGC 7920); licence numbers, names and vessel registration numbers are public under FGC 8022(b)(2); logbooks are confidential.",
+      "records_request_url": "https://wildlife.ca.gov/General-Counsel/Public-Records-Requests"
+    },
+    {
+      "id": "uscg",
+      "name": "US Coast Guard",
+      "kind": "vessel-registry",
+      "notes": "PSIX sectors San Diego, Los Angeles - Long Beach, San Francisco, Humboldt Bay; small six-packs are state-numbered, not documented.",
+      "records_request_url": null
+    },
+    {
+      "id": "fcc",
+      "name": "Federal Communications Commission",
+      "kind": "radio-licence",
+      "notes": "ULS ship station licences (MMSI, call sign); weekly bulk file.",
+      "records_request_url": null
+    }
+  ],
+  "sources": [
+    {
+      "id": "fcc-uls",
+      "adapter": "fcc-uls",
+      "enabled": true,
+      "rights": "public-domain",
+      "params": {
+        "state": "CA",
+        "all_statuses": true,
+        "url": "https://data.fcc.gov/download/pub/uls/complete/l_ship.zip"
+      }
+    },
+    {
+      "id": "uscg-psix",
+      "adapter": "uscg-psix",
+      "enabled": true,
+      "rights": "public-domain",
+      "params": {
+        "sectors": ["San Diego", "Los Angeles - Long Beach", "San Francisco", "Humboldt Bay"],
+        "service": "passenger",
+        "url": "https://cgmix.uscg.mil/XML/PSIXExportSearch.aspx"
+      }
+    },
+    {
+      "id": "socalfishreports",
+      "adapter": "teck-reports",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "base": "https://www.socalfishreports.com",
+        "directory": "/charter_boats/index.php"
+      }
+    },
+    {
+      "id": "sandiegofishreports",
+      "adapter": "teck-reports",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "base": "https://www.sandiegofishreports.com",
+        "directory": "/charter_boats/index.php"
+      }
+    },
+    {
+      "id": "norcalfishreports",
+      "adapter": "teck-reports",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "base": "https://www.norcalfishreports.com",
+        "directory": "/charter_boats/index.php"
+      }
+    },
+    {
+      "id": "sportfishingreport",
+      "adapter": "teck-reports",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "base": "https://www.sportfishingreport.com",
+        "directory": "/landings/",
+        "role": "dedupe-index"
+      },
+      "note": "Cross-site dedupe index; out-of-state landings are dropped."
+    },
+    {
+      "id": "fishermans-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "fishermans-landing",
+        "template": "fr-fleet-php",
+        "url": "https://www.fishermanslanding.com/fleet.php"
+      }
+    },
+    {
+      "id": "seaforth-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "seaforth-sportfishing",
+        "template": "fr-fleet-php",
+        "url": "https://www.seaforthlanding.com/fleet.php"
+      }
+    },
+    {
+      "id": "oceanside-sea-center",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "oceanside-sea-center",
+        "template": "fr-fleet-php",
+        "url": "https://www.oceansideseacenter.com/fleet.php"
+      }
+    },
+    {
+      "id": "pierpoint-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "pierpoint-landing",
+        "template": "fr-fleet-php",
+        "url": "https://www.pierpoint.net/fleet.php"
+      }
+    },
+    {
+      "id": "twenty-second-street-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "twenty-second-street-landing",
+        "template": "fr-fleet-php",
+        "url": "https://www.22ndstreet.com/fleet.php"
+      }
+    },
+    {
+      "id": "redondo-beach-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "redondo-beach-sportfishing",
+        "template": "fr-fleet-php",
+        "url": "https://www.redondosportfishing.com/fleet.php"
+      }
+    },
+    {
+      "id": "ventura-harbor-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "ventura-harbor-sportfishing",
+        "template": "fr-fleet-php",
+        "url": "https://venturasportfishing.com/fleet.php"
+      }
+    },
+    {
+      "id": "fish-emeryville",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "fish-emeryville",
+        "template": "fr-fleet-php",
+        "url": "https://www.emeryvillesportfishing.com/fleet.php"
+      }
+    },
+    {
+      "id": "point-loma-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "point-loma-sportfishing",
+        "template": "generic",
+        "url": "https://www.pointlomasportfishing.com/"
+      }
+    },
+    {
+      "id": "hm-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "hm-landing",
+        "template": "generic",
+        "url": "https://www.hmlanding.com/charter-fleet/"
+      }
+    },
+    {
+      "id": "dana-wharf-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "dana-wharf-sportfishing",
+        "template": "generic",
+        "url": "https://danawharf.com/our-boats/"
+      }
+    },
+    {
+      "id": "newport-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "newport-landing",
+        "template": "generic",
+        "url": "https://www.newportlanding.com/charter.html"
+      }
+    },
+    {
+      "id": "daveys-locker",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "daveys-locker",
+        "template": "generic",
+        "url": "https://daveyslocker.com/fishing-charters-boat-rentals/"
+      }
+    },
+    {
+      "id": "channel-islands-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "channel-islands-sportfishing",
+        "template": "generic",
+        "url": "https://www.channelislandssportfishing.com/charter-boats/"
+      }
+    },
+    {
+      "id": "patriot-sportfishing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "patriot-sportfishing",
+        "template": "generic",
+        "url": "https://patriotsportfishing.com/our-fleet/"
+      }
+    },
+    {
+      "id": "morro-bay-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "morro-bay-landing",
+        "template": "generic",
+        "url": "https://morrobaylanding.com/our-fleet"
+      }
+    },
+    {
+      "id": "virgs-landing",
+      "adapter": "landing-pages",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "landing": "virgs-landing",
+        "template": "generic",
+        "url": "https://www.virgslanding.com/charters.php"
+      }
+    },
+    {
+      "id": "long-range-fleet",
+      "adapter": "directories",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "list": "long-range-portal",
+        "url": "https://www.longrangesportfishing.net/"
+      },
+      "note": "Cross-landing San Diego long-range fleet portal."
+    },
+    {
+      "id": "ggfa",
+      "adapter": "directories",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "list": "ggfa",
+        "url": "https://www.ggfa.net/fisherman.php"
+      },
+      "note": "Vessel and port only; skipper names and mobiles are never stored."
+    },
+    {
+      "id": "sac",
+      "adapter": "directories",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "list": "sac",
+        "url": "https://www.californiasportfishing.org/sportfishing"
+      }
+    },
+    {
+      "id": "visit-half-moon-bay",
+      "adapter": "directories",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "list": "harbor",
+        "url": "https://www.visithalfmoonbay.org/discover/sportfishing-whalewatching-charters/"
+      }
+    },
+    {
+      "id": "operator-site",
+      "adapter": "operator-site",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "max_pages": 6
+      }
+    },
+    {
+      "id": "google-places",
+      "adapter": "google-places",
+      "enabled": true,
+      "rights": "api-terms",
+      "params": {
+        "query": "fishing charter",
+        "per_port": true
+      }
+    },
+    {
+      "id": "cpra-cpfv",
+      "adapter": "file-import",
+      "enabled": false,
+      "rights": "public-record",
+      "params": {
+        "path": "inputs/cpra-cpfv.csv",
+        "columns": "cdfw-cpfv-v1"
+      },
+      "note": "Enabled once the owner receives the CDFW CPFV list under the Public Records Act."
+    },
+    {
+      "id": "ais-static",
+      "adapter": "ais-static",
+      "enabled": true,
+      "rights": "internal-only",
+      "params": {
+        "sources": ["aisstream", "marinecadastre"]
+      }
+    }
+  ],
+  "thresholds": {
+    "activity": {
+      "in_port_debounce_min": 3,
+      "min_trip_minutes": 20,
+      "min_trip_offshore_nm": 0.5,
+      "gap_unknown_min": 30,
+      "gap_split_hours": 12,
+      "max_open_trip_hours": {
+        "six-pack": 18,
+        "inspected-party": 40,
+        "long-range": 480
+      },
+      "window_min": 20,
+      "min_segment_minutes": 5,
+      "simplify_tolerance_m": 25,
+      "drift": {
+        "max_sog_kn": 2.0,
+        "min_minutes": 15
+      },
+      "troll": {
+        "min_sog_kn": 4.0,
+        "max_sog_kn": 9.0,
+        "max_straightness": 0.6,
+        "min_heading_variance": 0.35,
+        "min_minutes": 15
+      }
+    },
+    "match": {
+      "auto_merge": 0.9,
+      "review_min": 0.6,
+      "mmsi_auto": 0.85
+    },
+    "refresh": {
+      "vanished_after_runs": 3,
+      "vanished_after_days": 45,
+      "osint_stale_days": 60,
+      "fact_stale_days": 120
+    },
+    "retention": {
+      "raw_days": 30,
+      "discovery_days": 7,
+      "static_days": 90
+    },
+    "aggregate": {
+      "module": "grid",
+      "resolution_m": 1000,
+      "min_distinct_vessels": null,
+      "delay_hours": null
+    }
+  },
+  "seasons": {
+    "parts": [
+      {
+        "id": "winter",
+        "months": [12, 1, 2]
+      },
+      {
+        "id": "spring",
+        "months": [3, 4, 5]
+      },
+      {
+        "id": "summer",
+        "months": [6, 7, 8]
+      },
+      {
+        "id": "fall",
+        "months": [9, 10, 11]
+      }
+    ]
+  },
+  "resolver_overrides": {}
+}

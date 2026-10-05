@@ -69,7 +69,8 @@ A fleet region is **state-level** with an upper-case postal id (`CA`, `OR`);
 the pattern `^[A-Z]{2}$` keeps it distinct from the lower-case coastal region
 ids (`morro-bay`, `southern-california`). `regions/CA/` holds only
 `fleet.json`; the platform build and region contract test enumerate
-`regions/*/region.json`, so they ignore it. Validated by
+`regions/*/region.json`, so they ignore it, and `scripts/build-worker.mjs`
+skips directories without a `region.json` (CF-04). Validated by
 `schemas/fleet-region.schema.json` (draft 2020-12, no additional properties),
 loaded by `src/skippercast/fleet/config.py`. Nothing state-specific lives in
 `src/`.
@@ -78,11 +79,11 @@ loaded by `src/skippercast/fleet/config.py`. Nothing state-specific lives in
 | --- | --- |
 | `id`, `name`, `timezone`, `schema_version` | `CA`, `California`, `America/Los_Angeles`, `1` |
 | `status` | `active`, or `dry-run` (staging sink only) |
-| `ports[]` | `id`, `name`, `point` `[lat, lon]`, `home_port` (a `catalog/home-ports.json` id or null), `region` (coastal region id or null), `waters[]`, `geofence` (GeoJSON Polygon, lon/lat WGS84) |
-| `landings[]` | `id`, `name`, `port`, `point`, `website` |
+| `ports[]` | `id`, `name`, `point` `[lat, lon]`, `home_port` (a `catalog/home-ports.json` id or null), `region` (coastal region id or null), `waters[]`, `geofence` (GeoJSON Polygon, lon/lat WGS84), `geofence_source` (`drawn` or `chart`) |
+| `landings[]` | `id`, `name`, `port`, `point`, `website` (https or null) |
 | `ais` | `source`, `bbox` `[[lat_s, lon_w], [lat_n, lon_e]]`, `message_types[]`, `mmsi_filter` |
 | `agencies[]` | `id`, `name`, `kind` (`licensing`, `vessel-registry`, `radio-licence`), `notes`, `records_request_url` |
-| `sources[]` | adapter bindings: `id`, `adapter`, `enabled`, `params`, `rights` |
+| `sources[]` | adapter bindings: `id`, `adapter`, `enabled`, `params`, `rights`, optional `note` |
 | `thresholds` | `activity`, `match`, `refresh`, `retention`, `aggregate` |
 | `seasons.parts[]` | `{id, months[]}` for the season filter |
 | `resolver_overrides` | per-field overrides of `catalog/fleet/resolver.json` |
@@ -90,12 +91,18 @@ loaded by `src/skippercast/fleet/config.py`. Nothing state-specific lives in
 Region-independent config in `catalog/fleet/`: `resolver.json` (per field,
 ordered source priority and minimum confidence, e.g. `mmsi`: `admin`,
 `fcc-uls`, `ais-static`, `osint`), `off-limits.json` (section 6) and
-`lead-score.json` (section 13).
+`lead-score.json` (section 13). Their shapes are `$defs` in
+`schemas/fleet-region.schema.json`, so one schema covers the region file and
+its catalogs.
 
 ### CA example excerpt
 
-Geofences here are illustrative; CF-04 draws real polygons from NOAA charts,
-each closing across its harbor entrance.
+Geofences here are illustrative. CF-04 committed generous hand-drawn polygons
+(about 1–5 km; Humboldt Bay 8 km to reach its entrance) around each harbor basin and entrance, marked
+`"geofence_source": "drawn"`; they are config and can be refined from charts
+later (then `chart`). Bay Area and Delta ports have `region: null`, as here,
+and San Diego is split into `san-diego` (Point Loma landings) and
+`mission-bay` (Seaforth), each with its own geofence.
 
 ```json
 {
@@ -170,7 +177,10 @@ each closing across its harbor entrance.
 schema valid; each geofence is a closed simple polygon containing its port and
 landing points; `home_port` and `region` ids exist; every adapter id is
 registered; no binding names an off-limits host; the AIS bbox contains every
-port.
+port. `load_region` also rejects a port point inside another port's geofence,
+a port outside its coastal region's bounds, non-https binding URLs, seasons
+that do not cover each month once, inverted thresholds and resolver overrides
+of unknown fields.
 
 ## 4. Architecture
 

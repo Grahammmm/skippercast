@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "description": "Which source wins per fleet_vessels field (design section 7, decision D4): non-superseded facts are ranked by the first matching entry in priority (adapter ids plus admin, operator and osint; a source not listed never wins), then confidence, then retrieved_at; facts below min_confidence never win. Admin facts also pin the field. A region may override a field in its fleet.json resolver_overrides.",
+  "fields": {
+    "name": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "operator-site",
+        "teck-reports",
+        "uscg-psix",
+        "fcc-uls",
+        "file-import",
+        "directories",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "vessel_class": {
+      "priority": [
+        "admin",
+        "operator",
+        "uscg-psix",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "waters": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "directories",
+        "osint"
+      ],
+      "min_confidence": 0.5
+    },
+    "operator": {
+      "priority": [
+        "admin",
+        "operator",
+        "file-import",
+        "operator-site",
+        "landing-pages",
+        "fcc-uls",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "port": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "teck-reports",
+        "file-import",
+        "directories",
+        "uscg-psix",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "landing": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "teck-reports",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "uscg_doc": {
+      "priority": [
+        "admin",
+        "uscg-psix",
+        "file-import",
+        "fcc-uls",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "state_reg": {
+      "priority": [
+        "admin",
+        "file-import",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "hull_id": {
+      "priority": [
+        "admin",
+        "uscg-psix",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "call_sign": {
+      "priority": [
+        "admin",
+        "fcc-uls",
+        "uscg-psix",
+        "ais-static",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "mmsi": {
+      "priority": [
+        "admin",
+        "fcc-uls",
+        "ais-static",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "year_built": {
+      "priority": [
+        "admin",
+        "uscg-psix",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "passengers_max": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "uscg-psix",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "bunks": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "length_ft": {
+      "priority": [
+        "admin",
+        "uscg-psix",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "beam_ft": {
+      "priority": [
+        "admin",
+        "uscg-psix",
+        "landing-pages",
+        "teck-reports",
+        "operator-site",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "cruise_kn": {
+      "priority": [
+        "admin",
+        "operator",
+        "landing-pages",
+        "operator-site",
+        "teck-reports",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "website": {
+      "priority": [
+        "admin",
+        "operator",
+        "operator-site",
+        "landing-pages",
+        "google-places",
+        "teck-reports",
+        "directories",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "booking_url": {
+      "priority": [
+        "admin",
+        "operator",
+        "operator-site",
+        "landing-pages",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "booking_platform": {
+      "priority": [
+        "admin",
+        "operator",
+        "operator-site",
+        "landing-pages",
+        "osint"
+      ],
+      "min_confidence": 0.6
+    },
+    "phone_business": {
+      "priority": [
+        "admin",
+        "operator",
+        "operator-site",
+        "landing-pages",
+        "google-places",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "email_business": {
+      "priority": [
+        "admin",
+        "operator",
+        "operator-site",
+        "landing-pages",
+        "osint"
+      ],
+      "min_confidence": 0.7
+    },
+    "place_id": {
+      "priority": [
+        "admin",
+        "google-places"
+      ],
+      "min_confidence": 0.8
+    }
+  }
+}

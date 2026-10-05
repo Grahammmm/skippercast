@@ -1,10 +1,12 @@
 import {build} from 'esbuild';
+import {existsSync} from 'node:fs';
 import {readdir,readFile,rm} from 'node:fs/promises';
 import {headersFile} from '../server/security-headers.ts';
 import {buildClient,advisorAssetPaths} from './client-build.mjs';
 
 const regions={};const draftRegions=[];
-for(const id of await readdir('regions')){const region=JSON.parse(await readFile(`regions/${id}/region.json`,'utf8'));if(region.status==='draft')draftRegions.push(region);else regions[id]=region;}
+// Coastal regions only: state-level fleet directories (regions/CA/fleet.json) hold no region.json.
+for(const id of await readdir('regions')){if(!existsSync(`regions/${id}/region.json`))continue;const region=JSON.parse(await readFile(`regions/${id}/region.json`,'utf8'));if(region.status==='draft')draftRegions.push(region);else regions[id]=region;}
 const deployment=JSON.parse(await readFile('deployments/production.json','utf8'));
 // Content-addressed front end (P4-01a): Vite bundles the pages, modules and
 // stylesheets into hashed assets; scripts/client-build.mjs copies the static
