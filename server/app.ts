@@ -2,7 +2,7 @@
 // order registered, and the first route that answers ends the request.
 //
 //   metrics -> request-id -> security headers (+ renewed session cookie) -> context
-//   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> advisor (gated) -> /api/auth/ -> /api/session
+//   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> advisor (gated) -> fleet (gated) -> /api/auth/ -> /api/session
 //   -> private gate (signed in, Origin, budget) -> private /api/ -> admin (role-gated) -> /api/ 404
 //   -> static assets and page shells
 //
@@ -21,6 +21,7 @@ import {publicApi} from './routes/public.ts';
 import {telemetry} from './routes/telemetry.ts';
 import {jobs} from './routes/jobs.ts';
 import {advisorPublic} from './routes/advisor.ts';
+import {fleetRouter} from './routes/fleet.ts';
 import {auth} from './routes/auth.ts';
 import {session, privacy} from './routes/account.ts';
 import {boat} from './routes/boat.ts';
@@ -48,6 +49,8 @@ app.route('/', telemetry);
 app.route('/', jobs);
 // Text Advisor: webhooks, pages, media; 404 per request unless TEXT_ADVISOR_ENABLED=true (server/advisor/gate.ts).
 app.route('/', advisorPublic);
+// Charter fleet: job routes now, admin and map later; 404 per request unless FLEET_ENABLED=true (routes/fleet.ts).
+app.route('/', fleetRouter);
 app.route('/', auth);
 app.route('/', session);
 // Everything below needs a signed-in user.

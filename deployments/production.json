@@ -10,7 +10,7 @@
     "owner_id": "13221608",
     "ref": "refs/heads/main",
     "workflow": ".github/workflows/live-conditions.yml",
-    "workflows": ["live-conditions.yml", "advisor-media.yml"]
+    "workflows": ["live-conditions.yml", "advisor-media.yml", "fleet-registry.yml", "fleet-osint.yml", "fleet-ais.yml", "fleet-health.yml"]
   },
   "forecast_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts",
   "source_use": "noncommercial",

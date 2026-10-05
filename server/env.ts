@@ -5,6 +5,7 @@
 import type {SessionUser} from './auth.ts';
 import type {TripCheckMessage} from './trip-queue.ts';
 import type {AdvisorMessage} from './advisor/types.ts';
+import type {JobClaims} from './job-auth.ts';
 
 export interface Env {
   // Bindings (wrangler.jsonc)
@@ -49,6 +50,10 @@ export interface Env {
   ADVISOR_AUTO_PUBLISH_AFTER?: string; // clean reports before auto-publish is offered
   ADVISOR_SOCIAL_ENABLED?: string;   // "true": publish to Meta; otherwise drafts queue only
   ADVISOR_INBOX_ENABLED?: string;    // "true": Instagram DM and comment handling
+  // Charter fleet vars (repository variables copied by scripts/wrangler_config.mjs);
+  // read only through fleetSettings() in server/fleet/settings.ts (docs/plans/charter-fleet/design.md § 16).
+  FLEET_ENABLED?: string;            // "true" turns the fleet on; anything else: every /api/fleet/* route 404s
+  FLEET_MAP_ENABLED?: string;        // "true" (with FLEET_ENABLED): the admin map routes /api/fleet/map/*
   // Secrets (wrangler secret put)
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
@@ -87,6 +92,7 @@ export interface Variables {
   identify: () => Promise<SessionUser | null>;
   user: SessionUser | null | undefined; // set once identify() has run
   owner: string;                      // the signed-in user id on private routes
+  fleetJob: JobClaims;                // the verified job identity on /api/fleet/jobs/* (routes/fleet.ts requireFleetJob)
 }
 
 export type AppEnv = {Bindings: Env; Variables: Variables};
