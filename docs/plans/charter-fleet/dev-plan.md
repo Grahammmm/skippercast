@@ -201,7 +201,7 @@ Rules for every task:
 
 ### CF-41 · Listener service · M
 - Depends: CF-40
-- Files: `src/skippercast/fleet/ais/listener.py`, `watch.py`, `tests/unit/test_fleet_listener.py`.
+- Files: `src/skippercast/fleet/ais/listener.py`, `watch.py`, `ws.py` (standard-library WebSocket client), `__main__.py` (`listen`), `sources/aisstream.py` (`stream`), `tests/unit/test_fleet_listener.py`.
 - Build: §10 service: queue, writer, drop order, reconnect with jitter, idle reconnect, watch reload, heartbeat file, discovery buffer rules.
 - Accept: 1. With a fake socket, a disconnect reconnects with growing delay. 2. Under a full queue watched positions are kept over discovery. 3. Unwatched positions outside geofences are never written. 4. Heartbeat updates every interval.
 

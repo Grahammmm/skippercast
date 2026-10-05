@@ -424,8 +424,9 @@ WAL) so retention deletes files:
 - `positions(mmsi, ts /* epoch ms */, lat, lon, sog, cog, heading, nav_status,
   msg_type, source, received_at, PRIMARY KEY (mmsi, ts, source)) WITHOUT ROWID`
   for watched MMSIs;
-- `discovery` (same columns) for unwatched vessels inside a geofence or whose
-  static name matches a registry alias;
+- `discovery` (same columns) for unwatched vessels' positions inside the
+  region bbox and a harbor geofence (name matching needs only statics, so
+  positions at sea of a name-matched vessel are not kept until it is watched);
 - `statics(mmsi, ts, name, call_sign, imo, ship_type, dim_bow, dim_stern,
   dim_port, dim_starboard, ais_class, source)` for every vessel in the bbox,
   deduplicated in memory, keyed `(mmsi, ts, source)` like the position tables.
@@ -750,23 +751,40 @@ stub raising `NotConfigured` until the **Owner** decides to pay.
 **Why this shape.** Discovery needs the statics of every vessel in the box
 (that is how six-pack MMSIs missing from FCC ULS are found), so one bbox
 subscription without an MMSI filter is used and only watched or discovery
-positions are written. aisstream has no replay, so the listener must be always
+positions are written. The WebSocket client is the standard library's
+(`fleet/ais/ws.py`: RFC 6455 handshake and framing, `wss` only, public-address
+and TLS checks as in `skippercast.http`), so the listener needs no extra
+package beyond the `fleet` extra's. aisstream has no replay, so the listener must be always
 on: a user systemd unit, not a scheduled job. `mmsi_filter: true` switches to
 watched-only if volume becomes a problem.
 
 **Service** (`fleet/ais/listener.py`):
 
+- Routing: a watched MMSI's position goes to `positions`; any other position
+  goes to `discovery` only inside the region bbox **and** a harbor geofence,
+  else it is never written; statics go to `statics` for every vessel,
+  de-duplicated in memory (queued again only when the content changes or on a
+  new UTC day). A record for a day its table's retention already expired, or
+  more than 5 s in the future, is not queued.
 - An asyncio reader feeds a bounded queue (50,000); a writer commits every
-  second or 1,000 rows. The reader never waits on the database: over 80% full
-  it drops discovery positions, then statics; watched positions are dropped
-  only when full; drops are counted.
+  second or 1,000 rows. The reader never waits on the database: at 80% full
+  it drops discovery positions, at 90% statics too; watched positions are
+  dropped only when full; drops are counted per table.
 - Reconnect with exponential backoff (1 s to 5 min, full jitter); 120 s without
   a message forces a reconnect.
 - Watch list re-read every 10 minutes from `ais/watch.json`, which the
   processor job refreshes from the Worker (the listener holds no GitHub identity).
+  Format (version 1, written atomically with `fleet/ais/watch.py`
+  `write_watch`): `{"schema_version": 1, "region": "CA", "generated_at":
+  "<ISO 8601 Z>", "watched": [<MMSI>, ...]}`, MMSIs sorted and unique. A
+  missing file is an empty list; an invalid one is rejected and the last good
+  list kept (`watch_errors` in the heartbeat). With `mmsi_filter` a changed
+  list resubscribes.
 - Heartbeat every 60 s to `ais/heartbeat.json` (atomic): last message time,
   messages and watched messages per minute, vessels, reconnects, drops, queue
-  depth, watch size, start time, git sha.
+  depth, watch size, start time, revision (`$SKIPPERCAST_GIT_SHA`, set by the
+  deploy). The full version-1 format is in the `fleet/ais/listener.py`
+  docstring.
 - Hourly retention by `thresholds.retention`. The listener and the processor
   must not hold expired day files open across retention: open a day file per
   write batch or read window, and close it after. Retention never empties a
@@ -794,8 +812,8 @@ WantedBy=default.target
 
 `fleet-ais-listener.yml` (dispatch only, `DATA_RUNNER`) copies the revision to
 `~/.local/share/skippercast/app/<sha>`, builds the venv with the `fleet` extra
-(`websockets`), repoints `current`, writes `fleet-ais.env`
-(`AISSTREAM_API_KEY`, `SKIPPERCAST_FLEET_VAR`) with mode 0600, installs and
+(the listener's WebSocket client is standard library), repoints `current`, writes `fleet-ais.env`
+(`AISSTREAM_API_KEY`, `SKIPPERCAST_FLEET_VAR`, `SKIPPERCAST_GIT_SHA`) with mode 0600, installs and
 restarts the unit, then fails unless the heartbeat shows messages within 90 s.
 **Owner**: create the aisstream key and add the `AISSTREAM_API_KEY` secret; run
 `sudo loginctl enable-linger <runner-user>` once.

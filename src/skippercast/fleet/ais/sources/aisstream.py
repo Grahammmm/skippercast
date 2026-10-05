@@ -11,8 +11,11 @@ seconds; the server then streams JSON envelopes::
 Field names follow aisstream's published models
 (https://aisstream.io/documentation, github.com/aisstream/ais-message-models).
 ``normalise`` turns one envelope into zero or more ``AisPosition`` and
-``AisStatic`` records; the WebSocket client that calls it is the listener's
-job (CF-41). aisstream keeps no history, so ``history`` is ``Unsupported``.
+``AisStatic`` records. ``AisstreamSource.stream`` opens the WebSocket
+(``fleet/ais/ws.py``, standard library), sends the subscription and yields
+normalised records until the connection drops; reconnecting is the listener's
+job (``fleet/ais/listener.py``). aisstream keeps no history, so ``history`` is
+``Unsupported``.
 
 Times. ``MetaData.time_utc`` is when aisstream received the message. A position
 report also carries ``Timestamp``, the UTC second the transponder took its fix
@@ -35,7 +38,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import re
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any, AsyncIterator, Awaitable, Callable, Iterable, Iterator
 
 from .base import AisMessage, AisPosition, AisStatic, Bbox, NotConfigured, Unsupported, valid_mmsi
 
@@ -256,15 +259,24 @@ def _static_report(body: dict, mmsi: int, received: int, source: str) -> AisStat
 
 
 class AisstreamSource:
-    """The aisstream ``AisSource``. ``stream`` arrives with the listener's WebSocket client (CF-41)."""
+    """The aisstream ``AisSource``.
+
+    ``connect`` (``async (url) -> socket`` with ``send``, ``recv`` and ``close``)
+    defaults to ``ws.connect``; tests pass a fake. ``on_malformed`` is called
+    with the exception for each frame that is not an envelope (it is skipped).
+    """
 
     id = SOURCE_ID
     realtime = True
     url = URL
 
-    def __init__(self, api_key: str | None = None, message_types: Iterable[str] = MESSAGE_TYPES):
+    def __init__(self, api_key: str | None = None, message_types: Iterable[str] = MESSAGE_TYPES,
+                 connect: Callable[[str], Awaitable[Any]] | None = None,
+                 on_malformed: Callable[[Exception], None] | None = None):
         self._api_key = api_key
         self.message_types = tuple(message_types)
+        self._connect = connect
+        self.on_malformed = on_malformed
         subscription_message("placeholder", ((0, 0), (1, 1)), None, self.message_types)   # validate the types now
 
     def __repr__(self):   # never shows the key
@@ -278,9 +290,34 @@ class AisstreamSource:
     def normalise(self, raw, received_at: int | None = None, clock=None) -> list[AisMessage]:
         return normalise(raw, received_at=received_at, clock=clock, source=self.id)
 
-    async def stream(self, bbox: Bbox, mmsis: set[int] | None = None):
-        raise NotImplementedError("the aisstream WebSocket client is the listener's (CF-41)")
-        yield  # pragma: no cover  (makes this an async generator)
+    async def stream(self, bbox: Bbox, mmsis: set[int] | None = None) -> AsyncIterator[AisMessage]:
+        """Connect, subscribe and yield records until the connection ends.
+
+        Ends by raising: ``ws.ConnectionClosed`` (or another ``OSError``) when the
+        connection drops, ``AisstreamError`` on an error frame (a rejected key).
+        A malformed frame is reported to ``on_malformed`` and skipped.
+        """
+        subscription = json.dumps(self.subscription(bbox, mmsis))
+        if self._connect is None:
+            from .. import ws
+            connect = ws.connect
+        else:
+            connect = self._connect
+        socket = await connect(self.url)
+        try:
+            await socket.send(subscription)
+            while True:
+                raw = await socket.recv()
+                try:
+                    records = self.normalise(raw)
+                except MalformedMessage as error:
+                    if self.on_malformed is not None:
+                        self.on_malformed(error)
+                    continue
+                for record in records:
+                    yield record
+        finally:
+            await socket.close()
 
     def history(self, day, bbox: Bbox, mmsis: set[int] | None = None) -> Iterator[AisMessage]:
         raise Unsupported("aisstream has no replay; use the marinecadastre source for history")
