@@ -178,9 +178,15 @@ class ClassifiedTests(unittest.TestCase):
             cache=root/'var/seafloor/cache'/r['sha256'];cache.mkdir(parents=True)
             cog=cache/('d'*64+'.tif');cog.write_bytes(b'synthetic normalized bytes')
             receipt={'cog_sha256':sha256(cog)};atomic_json(cog.with_suffix('.json'),receipt)
+            other_cache=root/'var/seafloor/cache'/other['sha256'];other_cache.mkdir()
+            other_cog=other_cache/('e'*64+'.tif');other_cog.write_bytes(b'other synthetic normalized bytes')
+            other_receipt={'cog_sha256':sha256(other_cog)}
+            atomic_json(other_cog.with_suffix('.json'),other_receipt)
             manifest={'surveys':[r,b['row'],other]}
             with patch.object(ch,'load_manifest',return_value=manifest),patch.object(ch,'verify_sources'), \
-                 patch.object(ch,'ingest',return_value=(receipt,None,None)),patch.object(ch,'verify_review'):
+                 patch.object(ch,'ingest',side_effect=lambda source,*a,**kw:
+                     (other_receipt if source['id']=='other' else receipt,None,None)), \
+                 patch.object(ch,'verify_review'):
                 ident,*_,legacy_support,_,_=ch.source_context(root,'fixture',p)
                 self.assertEqual(ident['normalized_sha256'],sha256(cog))
                 self.assertEqual(ch.support_mode(p),ch.SELECTED_SOURCE_SUPPORT)
@@ -233,6 +239,133 @@ class ClassifiedTests(unittest.TestCase):
                     atomic_json(root/'catalog/habitat-rules.json',{'substrate_bindings':[b['binding']]})
                 cog.write_bytes(b'tampered')
                 with self.assertRaisesRegex(ValueError,'normalized bytes'):ch.source_context(root,'fixture',p)
+
+    def test_terrain_reference_checks_native_dependencies_rights_and_role_provenance(self):
+        from shutil import copyfile
+        from skippercast.seafloor import rights
+        from skippercast.seafloor.normalized import raster_identity
+        from tests.gis.test_seafloor_terrain_support import native_fixture
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'var/seafloor/reaches/fixture';folder.mkdir(parents=True)
+            with native_fixture(root) as (reference_source,_,_):
+                ref=reference_source['row'];ref.update(id='reference',sha256='f'*64,status='usable',
+                    license=rights.CSUMB_LICENSE,publisher='CSUMB SFML',
+                    url='https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/fixture.tar.gz')
+                ref['terrain_support'].update(depth_source_id=ref['id'],source_sha256=ref['sha256'])
+                ref['adapter_review'].update(source_sha256=ref['sha256'],
+                    requested_bounds_wgs84=[-122,35,-121,36],native_resolution_m=[2,2],
+                    vertical_datum='unknown',valid_pixels_in_requested_bounds=160000,
+                    nominal_0_300ft_pixels_in_requested_bounds=160000,
+                    raster_identity=raster_identity(reference_source['path']))
+                ref['rights_review']={'policy_url':rights.CSUMB_POLICY,'source_sha256':ref['sha256'],
+                    'producer':'CSUMB SFML','allowed_use':'noncommercial','attribution':rights.CSUMB_CREDIT,
+                    'navigation_use':False,'for_profit_permission':'required-not-obtained','reviewed_on':'2026-01-01'}
+                r=row();b=binding();p=dict(policy(),support_mode=ch.PAIRED_REFERENCE_SUPPORT,reach_ids=['fixture'])
+                atomic_json(root/'deployments/production.json',{'source_use':'noncommercial','monetization':'none'})
+                atomic_json(root/'catalog/habitat-rules.json',{'substrate_bindings':[b['binding']]})
+                atomic_json(root/'catalog/reaches.json',{'reaches':[{'id':'fixture'}]})
+                atomic_json(folder/'cells.json',{'cells':[{'id':'3310:0:0','tier':1,'source_id':ref['id']}]})
+                atomic_json(folder/'candidates.geojson',{'features':[]})
+                physical={'input_hash':'baseline','outputs':{n:sha256(folder/n) for n in ('cells.json','candidates.geojson')}}
+                atomic_json(folder/'physical.json',physical)
+                run={'physical_input_hash':'baseline','inputs':{'reach_id':'fixture','sources':[r,deepcopy(ref)],
+                    'substrate_bindings':{'native':b}},'outputs':{n:sha256(folder/n) for n in
+                    ('cells.json','candidates.geojson','physical.json')}}
+                atomic_json(folder/'run.json',run)
+                paths={};receipts={}
+                for source in (r,ref):
+                    cache=root/'var/seafloor/cache'/source['sha256'];cache.mkdir(parents=True)
+                    path=cache/('d'*64+'.tif')
+                    if source is ref:copyfile(reference_source['path'],path)
+                    else:path.write_bytes(b'synthetic original pair normalized bytes')
+                    rec=dict(source['adapter_review'],cog_sha256=sha256(path));atomic_json(path.with_suffix('.json'),rec)
+                    paths[source['id']]=path;receipts[source['id']]=rec
+                manifest={'surveys':[r,b['row'],ref]}
+                with patch.object(ch,'load_manifest',return_value=manifest),patch.object(ch,'verify_sources'), \
+                     patch.object(ch,'ingest',side_effect=lambda source,*a,**kw:(receipts[source['id']],None,None)), \
+                     patch.object(ch,'verify_review'):
+                    context=ch.source_context(root,'fixture',p);ident=context[0]
+                    self.assertTrue(context[4].equals(box(0,0,250,250)))
+                    evidence=ident['reference_support']
+                    self.assertEqual(evidence['source_ids'],['reference'])
+                    self.assertEqual(evidence['sources'][0]['normalized_sha256'],sha256(paths['reference']))
+                    self.assertIsNotNone(evidence['sources'][0]['terrain_binding_sha256'])
+                    declared={right['source_id']:right for right in context[-1]}
+                    self.assertEqual(declared['reference']['license'],rights.CSUMB_LICENSE)
+                    self.assertEqual(declared['reference']['attribution'],rights.CSUMB_CREDIT)
+                    self.assertEqual(declared['reference']['commercial_use'],'permission-required')
+                    feature=ch.features_for([box(0,0,50,50)],'fixture',p,r,b,
+                        reference_support=evidence)['features'][0]
+                    self.assertEqual(feature['properties']['source_ids'],['native','classes'])
+                    self.assertEqual(json.loads(publish.flat_properties(feature['properties'])['reference_support']),evidence)
+                    self.assertEqual(feature['properties']['classified_area']['new_measured_area_km2'],0)
+                    # Cache-hit normalized bytes and original embedded metadata
+                    # are actual dependencies, even though no roughness pixels
+                    # are used as habitat evidence from this reference source.
+                    metadata=root/'original-class/metadata.xml';original=metadata.read_bytes()
+                    metadata.write_bytes(b'changed original reference metadata')
+                    with self.assertRaisesRegex(ValueError,'metadata checksum'):ch.source_context(root,'fixture',p)
+                    metadata.write_bytes(original)
+                    normalized=paths['reference'];original=normalized.read_bytes();normalized.write_bytes(b'changed reference cache')
+                    with self.assertRaisesRegex(ValueError,'normalized bytes'):ch.source_context(root,'fixture',p)
+                    normalized.write_bytes(original)
+                    receipt_path=normalized.with_suffix('.json');saved_receipt=receipt_path.read_bytes()
+                    receipt_path.unlink()
+                    with self.assertRaisesRegex(ValueError,'normalized bytes'):ch.source_context(root,'fixture',p)
+                    receipt_path.write_bytes(saved_receipt)
+                    profile=root/'deployments/production.json'
+                    for setting in ({'source_use':'for-profit','monetization':'paid'},None):
+                        if setting is None:profile.unlink()
+                        else:atomic_json(profile,setting)
+                        with self.assertRaisesRegex(ValueError,'For-profit'):ch.source_context(root,'fixture',p)
+                    atomic_json(profile,{'source_use':'noncommercial','monetization':'none'})
+                    old=deepcopy(ref['rights_review']);ref['rights_review']['source_sha256']='e'*64
+                    # Preserve saved-row equality: the producer-rights gate must
+                    # still reject a matching but unqualified input inventory.
+                    run['inputs']['sources'][1]=deepcopy(ref);atomic_json(folder/'run.json',run)
+                    with self.assertRaisesRegex(ValueError,'publication rights'):ch.source_context(root,'fixture',p)
+                    ref['rights_review']=old;run['inputs']['sources'][1]=deepcopy(ref);atomic_json(folder/'run.json',run)
+                    saved_binding=deepcopy(ref['terrain_support']);ref['terrain_support']['source_sha256']='e'*64
+                    run['inputs']['sources'][1]=deepcopy(ref);atomic_json(folder/'run.json',run)
+                    with self.assertRaisesRegex(ValueError,'exact reviewed native depth'):ch.source_context(root,'fixture',p)
+                    ref['terrain_support']=saved_binding
+
+    def test_publisher_rejects_forged_reference_role_even_with_rehashed_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'var/seafloor/reaches/fixture';folder.mkdir(parents=True)
+            p=dict(policy(),support_mode=ch.PAIRED_REFERENCE_SUPPORT,reach_ids=['fixture'])
+            reference={'version':ch.PAIRED_REFERENCE_SUPPORT,'source_ids':['reference'],
+                'sources':[{'source_id':'reference','source_sha256':'f'*64,
+                    'normalized_sha256':'e'*64,'terrain_binding_sha256':'a'*64}],
+                'meaning':ch.REFERENCE_NOTICE}
+            context=({'policy':p,'depth_source':row(),'classification_binding':binding(),
+                      'reference_support':reference},row(),binding(),None,box(0,0,250,250),
+                box(300,300,400,400),[{'source_id':'reference','license':'noncommercial',
+                    'attribution':'Synthetic footprint producer'}])
+            atomic_json(folder/'run.json',{'inputs':{'sources':[row()]}})
+            atomic_json(root/'catalog/reaches.json',{'reaches':[{'id':'fixture'}]})
+            atomic_json(root/ch.POLICY_FILE,{'schema_version':1,'profile':ch.PROFILE,'sources':[p]})
+            with patch.object(ch,'source_context',return_value=context), \
+                 patch.object(ch,'extract',return_value=([box(0,0,50,50)],
+                    {'class3_valid_depth_pixels':625,'classified_selected_area_km2':.0025})), \
+                 patch('skippercast.seafloor.screen.load_snapshot',return_value=state()):
+                ch.stage('fixture',root=root)
+                selected,_=ch.publication_features('fixture',root=root)
+                self.assertEqual(selected[0]['properties']['reference_support'],reference)
+                self.assertEqual(selected[0]['properties']['source_rights'],context[-1])
+                for replacement in (None,dict(reference,source_ids=['forged'])):
+                    ch.stage('fixture',root=root)
+                    for name in ('classified-candidates.geojson','classified-habitat.geojson'):
+                        output=read_json(folder/name)
+                        output['features'][0]['properties']['reference_support']=replacement
+                        atomic_json(folder/name,output)
+                    receipt=read_json(folder/'classified-run.json')
+                    receipt['outputs']={name:sha256(folder/name) for name in receipt['outputs']}
+                    atomic_json(folder/'classified-run.json',receipt)
+                    with self.assertRaisesRegex(ValueError,'Unqualified classified feature'):
+                        ch.publication_features('fixture',root=root)
+                    # Force a fresh physical fixture for the next independent forgery.
+                    (folder/'classified-run.json').unlink()
 
     def test_stage_and_publisher_reject_tampering_replay_policy_and_current_screen(self):
         with tempfile.TemporaryDirectory() as tmp:

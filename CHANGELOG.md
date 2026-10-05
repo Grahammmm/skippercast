@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Verify current native dependencies and retain producer rights for survey footprints used by the opt-in classified habitat mode; keep original depth and rock interpretation authoritative.
+
 - Scope classified habitat processing to reviewed reaches and add an opt-in paired-survey footprint mode, preserving original depth/class masks, existing rankings and publication checks.
 
 - Show charter fleet boats on `/boats/<slug>` behind `FLEET_ENABLED` (off): class, landing, size, trips with prices as listed and the date, booking and website links through `/go/`, the business phone, photo links with credit, the Google rating with its link while under 30 days old, and dated sources; nothing from AIS, NOAA planning data or low-confidence facts, and out of search until the operator agrees. Advisor boat pages are unchanged while the flag is off.
