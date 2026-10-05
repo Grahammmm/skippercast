@@ -175,7 +175,7 @@ Rules for every task:
 
 ### CF-33 · Public boat profile and advisor link · M
 - Depends: CF-11, CF-01
-- Files: `server/advisor/pages/boat.ts`, `server/advisor/pages/data.ts`, `server/advisor/pages/sitemap.ts`, `server/routes/advisor.ts`, `tests/test_fleet_profile_page.mjs`.
+- Files: `server/advisor/pages/boat.ts`, `server/advisor/pages/data.ts`, `server/advisor/pages/sitemap.ts`, `server/routes/advisor.ts`, `tests/test_fleet_profile_page.mjs`; as built also `server/fleet/display.ts` (the shared display rules, adopted by `server/fleet/go.ts` for the public-vessel condition), `server/advisor/gate.ts` (`boatsGate`), `server/advisor/pages/render.ts` (no advisor call to action when the advisor is off), `web/advisor/copy.ts` (page strings) and `tests/fixtures/boat-page-snapshots/` (acceptance 1).
 - Build: §13 public profile; the `/boats/*` gate passes when either flag is on; registry-only profiles `noindex` and out of the sitemap until the operator consents.
 - Accept: 1. With `FLEET_ENABLED` off the page is byte-identical to today for advisor boats. 2. Hidden, excluded or inactive vessels 404. 3. No AIS data or `noaa-planning-only` fact renders. 4. The Google aggregate rating and review count render only with the Google attribution and only while the fact is within its 30-day window; no review text renders. 5. Links go through `/go/`.
 

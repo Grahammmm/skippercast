@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Show charter fleet boats on `/boats/<slug>` behind `FLEET_ENABLED` (off): class, landing, size, trips with prices as listed and the date, booking and website links through `/go/`, the business phone, photo links with credit, the Google rating with its link while under 30 days old, and dated sources; nothing from AIS, NOAA planning data or low-confidence facts, and out of search until the operator agrees. Advisor boat pages are unchanged while the flag is off.
+
 - Preserve original native classified habitat boundaries while validating bounded shell/hole map representations; keep original areas and current spatial screening authoritative.
 
 - Add a separate screened, unranked publisher-interpreted rugose-rock habitat area layer. These Tier1 areas receive no terrain/species rank or precise fishing export; original source pairs require explicit reviewed opt-in.

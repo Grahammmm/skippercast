@@ -272,6 +272,26 @@ would change that, and several sources carry conditions on paid use
 **Plan assumes:** option 1; no task changes the flags.
 **Blocks:** any sponsorship, ad or booking task (none is in the plan).
 
+## Q15. A removal request is permanent until cleared
+
+**Context.** When an operator asks for a boat to be hidden or removed (US-C3),
+`fleet_vessels.removal_requested_at` is set. Every public read (the profile,
+`/go/`, the sitemap; `publicVesselSql` in `server/fleet/display.ts`) treats a
+non-null value as unlisted, even if an admin later sets `profile_status` to
+`listed`. Re-publishing therefore needs the timestamp cleared, which no task
+builds yet.
+
+1. **Keep it permanent until an admin clears it with a recorded reason
+   (recommended).** The operator's wish wins over a stray "listed" click; CF-31
+   shows the state ("removal requested on <date>: not public") beside the
+   listing control and offers "clear removal request" as its own audited admin
+   fact.
+2. Let "listed" override the request. Simpler, but one click re-publishes a boat
+   whose operator asked to be removed.
+
+**Plan assumes:** option 1; CF-31 must show the state.
+**Blocks:** CF-31's listing controls.
+
 ## Appendix: CPRA request text
 
 Submit at <https://wildlife.ca.gov/General-Counsel/Public-Records-Requests>

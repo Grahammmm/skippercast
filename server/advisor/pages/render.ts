@@ -92,6 +92,8 @@ export interface PageOptions {
   noindex?: boolean;
   /** The prefilled text of the call to action (the default greeting when omitted). */
   ctaMessage?: string;
+  /** false: the Text Advisor is off (a charter fleet page, CF-33), so no call to action and no chat island. Default true. */
+  advisor?: boolean;
   body: Html;
 }
 export interface SiteSettings {publicBase: string; number: string | null}
@@ -129,7 +131,7 @@ export function layout(page: PageOptions, settings: SiteSettings): string {
   const canonical = canonicalUrl(base, page.path, page.language);
   const other: PageLanguage = page.language === 'es' ? 'en' : 'es';
   const image = absolute(base, page.image || PREVIEW_IMAGE);
-  const css = assetPath('advisor/pages.css'), js = assetPath('advisor/chat.js');
+  const css = assetPath('advisor/pages.css'), js = assetPath('advisor/chat.js'), advisor = page.advisor !== false;
   const crumbs: Crumb[] = [{name: copy.home, path: '/'}, ...page.crumbs];
   const ld = [
     {'@context': 'https://schema.org', '@type': 'Organization', name: 'SkipperCast', url: `${base}/`, logo: `${base}/app-icon-512.png`},
@@ -171,14 +173,14 @@ ${css ? html`<link rel="stylesheet" href="${css}">` : ''}
     : html`<li>${c.path ? html`<a href="${c.path}${page.language === 'es' && c.path !== '/' ? '?lang=es' : ''}">${c.name}</a>` : c.name}</li>`)}</ol></nav>
 <main id="main" class="adv-main">
 ${page.body}
-${cta(copy, settings, page.ctaMessage)}
+${advisor ? cta(copy, settings, page.ctaMessage) : ''}
 </main>
 <footer class="adv-footer">
   <p>${copy.disclaimer}</p>
   <p><a href="/">${copy.openMap}</a> · <a href="/terms.html">${copy.terms}</a> · <a href="/privacy.html">${copy.privacy}</a></p>
 </footer>
-<div id="advisor-chat" class="chat-host"></div>
-${js ? html`<script type="module" src="${js}"></script>` : ''}
+${advisor ? raw('<div id="advisor-chat" class="chat-host"></div>') : ''}
+${advisor && js ? html`<script type="module" src="${js}"></script>` : ''}
 </body>
 </html>
 `;

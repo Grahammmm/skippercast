@@ -5,7 +5,8 @@
 // path such as /ports/x never falls through to the static site while dark.
 import {Hono} from 'hono';
 import type {Context} from 'hono';
-import {gate} from '../advisor/gate.ts';
+import {gate, boatsGate} from '../advisor/gate.ts';
+import {fleetSettings} from '../fleet/settings.ts';
 import {advisorSettings} from '../advisor/settings.ts';
 import {relayState} from '../advisor/relay.ts';
 import {ADAPTERS} from '../advisor/channels/index.ts';
@@ -69,8 +70,10 @@ export const advisorPublic = new Hono<AppEnv>();
 // Webhooks, web chat and APIs; public pages; media; upload links; contact card; the text deep link; its QR code (TA-C6).
 // TA-C3: the web chat page (dist/chat.html) stays dark with the rest; when on, it falls through to its page shell.
 // Hardening: '/u' and '/my-data' are the upload and export pages (the token in the fragment).
-export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/boats/*', '/media/*', '/u', '/u/*', '/my-data', '/contact.vcf', '/text', '/qr/*', '/chat.html'] as const;
+// CF-33: '/boats/*' passes when either the advisor or the charter fleet is on (boatsGate).
+export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/media/*', '/u', '/u/*', '/my-data', '/contact.vcf', '/text', '/qr/*', '/chat.html'] as const;
 for (const path of ADVISOR_PATHS) advisorPublic.use(path, gate);
+advisorPublic.use('/boats/*', boatsGate);
 
 // Liveness and configuration shape only: never a secret, the number or the relay URL.
 advisorPublic.get('/api/advisor/health', async c => {
@@ -629,16 +632,24 @@ type Render = (env: Env, language: PageLanguage, settings: ReturnType<typeof adv
 export const pageCacheKey = (url: URL, language: PageLanguage, version: string): Request =>
   cacheKey(`${url.origin}${url.pathname}?lang=${language}`, {params: ['lang'], build: `${build()}:${version}`});
 
+/**
+ * CF-33: the pages version with the flags that change a page's content, so flipping
+ * FLEET_ENABLED (or the advisor while the fleet is on) is a cache miss. Unchanged while the
+ * fleet is off, so the advisor's keys stay as they were.
+ */
+export const flagsVersion = (env: Env, version: string): string =>
+  fleetSettings(env).enabled ? `${version}:fleet${advisorSettings(env).enabled ? '' : '-solo'}` : version;
+
 async function servePage(c: Context<AppEnv>, maxAge: number, render: Render): Promise<Response> {
   const env = c.env, url = new URL(c.req.url);
   const language = pageLanguage(url, c.req.header('accept-language'));
   const settings = advisorSettings(env);
   try {
     if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
-    const key = pageCacheKey(url, language, await pagesVersion(env.DB));
+    const key = pageCacheKey(url, language, flagsVersion(env, await pagesVersion(env.DB)));
     return await cached(key, waitUntil(c), async () => {
       const body = await render(env, language, settings);
-      return {response: body === null ? pageResponse(notFoundPage(language, settings, url.pathname), {status: 404, language}) : pageResponse(body, {maxAge, language})};
+      return {response: body === null ? pageResponse(notFoundPage(language, settings, url.pathname, settings.enabled), {status: 404, language}) : pageResponse(body, {maxAge, language})};
     }, async () => await overLimit(env.PUBLIC_LIMITER, 'advisor-page:' + clientIP(c.req.raw)) ? tooManyRequests() : null);
   } catch (error) {
     advisorLog('error', 'advisor_page_failed', {reason: String((error as Error)?.message).slice(0, 200)});
@@ -660,8 +671,8 @@ advisorPublic.get('/boats/:slug', c => servePage(c, BOAT_MAX_AGE, (env, language
 advisorPublic.get(SITEMAP_PATH, async c => {
   const env = c.env;
   if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
-  const key = cacheKey(new URL(SITEMAP_PATH, c.req.url), {params: [], build: `${build()}:${await pagesVersion(env.DB)}`});
-  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase), {status: 200, headers: {
+  const key = cacheKey(new URL(SITEMAP_PATH, c.req.url), {params: [], build: `${build()}:${flagsVersion(env, await pagesVersion(env.DB))}`});
+  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase, {fleet: fleetSettings(env).enabled}), {status: 200, headers: {
     'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': `public, max-age=${SITEMAP_MAX_AGE}`, 'X-Content-Type-Options': 'nosniff'}})}));
 });
 
