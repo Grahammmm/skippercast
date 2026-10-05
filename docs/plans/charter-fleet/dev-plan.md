@@ -102,7 +102,7 @@ Rules for every task:
 
 ### CF-14 · Adapter: landing pages, offerings and departures · M
 - Depends: CF-10
-- Files: `adapters/landing_pages.py`, `tests/fixtures/fleet/landings/*.html`, `tests/unit/test_fleet_landings.py`.
+- Files: `adapters/landing_pages.py`, `adapters/base.py` (`Offering`, `Departure`; the boat's record URL goes in CF-15's `Candidate.record_id`), `tests/fixtures/fleet/landings/*.html`, `tests/unit/test_fleet_landings.py`.
 - Build: `fr-fleet-php` template (fleet list, boat page specs, captains, rate table, schedule rows → departures with time, price, load) and a `generic` template (names and links only); photos as link + attribution facts.
 - Accept: 1. Schedule rows become departures with deterministic ids. 2. Prices parse to cents with basis. 3. No image bytes fetched.
 - Tests: synthetic fixtures for both templates.

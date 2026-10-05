@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Synthetic fixture (CF-14): an fr-fleet-php boat page for a multi-day boat, in the variant layout
+     (no h2, commented-out owner, separate trip-name cell, four-digit years, Credit before Price,
+     a repeated rate row and a repeated trip listing). Every name and link is invented. -->
+<html>
+<body>
+<div id="main" class="container">
+<div class="pod_boat_details">
+  <!--<span class="font_bold18">Owner: </span><br>
+  <span class="font_default14">Blue Placeholder Holdings</span><br><br>-->
+  <span class="font_bold18">Captains: </span><br>
+  <span class="font_default14">Casey Example/Morgan Fixture</span><br>
+  <span class="font_bold18">Boat Details:</span><span class="font_default14"><br>
+  Full Galley Service<br>Boat Capacity 26<br></span>
+</div>
+<span class="font_default">88 ft. x 24 ft.</span>
+<div id="rates-container" class="row">
+  <table class="rates-table"><tbody>
+    <tr class="font_bold18">
+      <td><strong>Trip Types</strong></td><td><strong>Season</strong></td><td><strong>Anglers</strong></td><td><strong>Credit</strong></td><td><strong>Price</strong></td>
+    </tr>
+    <tr>
+      <td class="font_default14">Overnight</td><td>2026 Charter Rates</td><td>30</td><td>$10,867.50</td><td>$10,500 Cash</td>
+    </tr>
+    <tr>
+      <td class="font_default14">1.5 Day</td><td>Winter</td><td>26</td><td>$16104.60</td><td>$15560</td>
+    </tr>
+    <tr>
+      <td class="font_default14">Overnight</td><td>All Year</td><td>30</td><td>$10,867.50</td><td>$9,999</td>
+    </tr>
+  </tbody></table>
+</div>
+<table class="scale-table"><tbody>
+  <tr>
+    <td rowspan="2" class="scale-data trip-cell" data-trip-id="9101"><a href="#" class="myButton_lite"></a></td>
+    <td class="scale-data trip-name trip-cell" data-trip-id="9101"><strong>Blue Placeholder II</strong><br>2 Day Limited Load</td>
+    <td class="scale-data trip-cell" data-trip-id="9101">
+      <div class="row">
+        <div class="col-md-3 trip-depart">Mon. 11-2-2026 <br>10:00 AM</div>
+        <div class="col-md-3 trip-return">Wed. 11-4-2026 <br>6:00 AM</div>
+        <div class="col-md-2 trip-load">24</div>
+        <div class="col-md-2 trip-price"><br><b>$983.25</b><br>$1,017.66 Credit</div>
+        <div class="col-md-2 trip-spots"><span class="font_green13">&#57;</span></div>
+      </div>
+    </td>
+  </tr>
+  <tr><td class="scale-group trip-cell" data-trip-id="9101" colspan="6"><div class="trip-comments"><em>PAT EXAMPLE GROUP</em></div></td></tr>
+  <tr>
+    <td class="scale-data trip-name trip-cell" data-trip-id="9102"><strong>Blue Placeholder II</strong><br>2-Day Limited Load</td>
+    <td class="scale-data trip-cell" data-trip-id="9102">
+      <div class="row">
+        <div class="col-md-3 trip-depart">Mon. 11-2-2026 <br>10:00 AM</div>
+        <div class="col-md-3 trip-return">Wed. 11-4-2026 <br>6:00 AM</div>
+        <div class="col-md-2 trip-load">24</div>
+        <div class="col-md-2 trip-price"><b>$983.25</b><br>$1,017.66 Credit</div>
+      </div>
+    </td>
+  </tr>
+</tbody></table>
+</div>
+</body>
+</html>
