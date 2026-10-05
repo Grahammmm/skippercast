@@ -425,7 +425,11 @@ WAL) so retention deletes files:
   static name matches a registry alias;
 - `statics(mmsi, ts, name, call_sign, imo, ship_type, dim_bow, dim_stern,
   dim_port, dim_starboard, ais_class, source)` for every vessel in the bbox,
-  deduplicated in memory.
+  deduplicated in memory, keyed `(mmsi, ts, source)` like the position tables.
+
+All three ignore a repeated key. A position's `ts` is the transponder's fix
+second within the minute of receipt, so one report heard by two stations is
+stored once (`fleet/ais/sources/aisstream.py`).
 
 Positions of other vessels are never written. `ais/state.sqlite` holds
 processor state (last processed time per MMSI, open trips, run log).
@@ -434,7 +438,7 @@ processor state (last processed time per MMSI, open trips, run log).
 
 | Data | Kept |
 | --- | --- |
-| Raw positions (Hermes) | 30 days; discovery 7; statics 90 |
+| Raw positions (Hermes) | 30 days; discovery 7; statics 90 (a day's table goes once more than that many whole days have passed; the day file goes when all three have) |
 | Raw positions of labelled validation trips | while the label exists |
 | Trips, segments, events, aggregates, labels, hours (D1) | permanently, by season |
 | Facts | permanently; superseded rows are history |

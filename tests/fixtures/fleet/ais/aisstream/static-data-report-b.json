@@ -1,0 +1,33 @@
+{
+  "MessageType": "StaticDataReport",
+  "MetaData": {
+    "MMSI": 999000202,
+    "MMSI_String": 999000202,
+    "ShipName": "EXAMPLE TWO",
+    "latitude": 35.31,
+    "longitude": -120.95,
+    "time_utc": "2026-07-04 18:26:01 +0000 UTC"
+  },
+  "Message": {
+    "StaticDataReport": {
+      "MessageID": 24,
+      "RepeatIndicator": 0,
+      "UserID": 999000202,
+      "Valid": true,
+      "Reserved": 0,
+      "PartNumber": true,
+      "ReportA": {"Valid": false, "Name": ""},
+      "ReportB": {
+        "Valid": true,
+        "ShipType": 37,
+        "VendorIDName": "EXMPL",
+        "VenderIDModel": 1,
+        "VenderIDSerial": 4242,
+        "CallSign": "XX0002",
+        "Dimension": {"A": 7, "B": 3, "C": 2, "D": 1},
+        "FixType": 1,
+        "Spare": 0
+      }
+    }
+  }
+}

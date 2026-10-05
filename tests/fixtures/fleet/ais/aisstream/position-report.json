@@ -1,0 +1,32 @@
+{
+  "MessageType": "PositionReport",
+  "MetaData": {
+    "MMSI": 999000101,
+    "MMSI_String": 999000101,
+    "ShipName": "EXAMPLE ONE",
+    "latitude": 35.36,
+    "longitude": -120.9,
+    "time_utc": "2026-07-04 18:22:32.318353912 +0000 UTC"
+  },
+  "Message": {
+    "PositionReport": {
+      "MessageID": 1,
+      "RepeatIndicator": 0,
+      "UserID": 999000101,
+      "Valid": true,
+      "NavigationalStatus": 7,
+      "RateOfTurn": 0,
+      "Sog": 1.4,
+      "PositionAccuracy": true,
+      "Longitude": -120.9,
+      "Latitude": 35.36,
+      "Cog": 212.5,
+      "TrueHeading": 210,
+      "Timestamp": 30,
+      "SpecialManoeuvreIndicator": 0,
+      "Spare": 0,
+      "Raim": false,
+      "CommunicationState": 2049
+    }
+  }
+}
