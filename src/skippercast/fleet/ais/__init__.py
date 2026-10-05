@@ -4,8 +4,11 @@
 and ``AisStatic`` records and the provider adapters (aisstream; Datalastic as a
 stub). ``store`` is the raw day-file store under ``$SKIPPERCAST_FLEET_VAR`` with
 its retention. ``segment`` splits one vessel's positions into trips and
-``classify`` labels each trip's segments (pure functions over positions). The
-listener, processor and backfill build on these in later tasks. Raw positions never enter D1 or git.
+``classify`` labels each trip's segments (pure functions over positions).
+``listener`` is the always-on service (``python -m skippercast.fleet.ais listen
+--region CA``) with its ``watch`` list and standard-library WebSocket client
+``ws``; the processor and backfill build on these in later tasks. Raw positions
+never enter D1 or git.
 """
 from .sources.base import AisMessage, AisPosition, AisSource, AisStatic, NotConfigured, Unsupported
 from .store import AisStore, RetentionLimits, fleet_var, retention_limits

@@ -8,7 +8,7 @@ Layout under ``$SKIPPERCAST_FLEET_VAR`` (default ``<repo>/var/fleet``, gitignore
 Each day file holds three tables:
 
 - ``positions`` for watched MMSIs and ``discovery`` for unwatched vessels the
-  listener keeps (inside a geofence, or a static name matching an alias), both
+  listener keeps (inside the region bbox and a harbor geofence), both
   keyed ``(mmsi, ts, source)`` ``WITHOUT ROWID``. A repeated key is stored
   once: the row with the earliest ``received_at`` wins, whichever arrives first,
   so the same report heard twice, or a batch written twice, gives one row. A
