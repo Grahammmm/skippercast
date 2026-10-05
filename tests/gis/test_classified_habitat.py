@@ -120,9 +120,9 @@ class ClassifiedTests(unittest.TestCase):
         twice=screen_candidates({'features':[c,c]},state())[2]
         self.assertEqual(twice['classified_area_km2'],summary['classified_area_km2'])
 
-    def test_invalid_wgs84_polygon_rejected_without_repair(self):
+    def test_invalid_native_polygon_rejected_without_repair(self):
         from shapely.geometry import Polygon
-        with self.assertRaisesRegex(ValueError,'Invalid screen polygon'):
+        with self.assertRaisesRegex(ValueError,'Invalid classified polygon'):
             ch.features_for([Polygon([(0,0),(50,50),(0,50),(50,0),(0,0)])],
                             'fixture',policy(),row(),binding())
 
@@ -176,10 +176,19 @@ class ClassifiedTests(unittest.TestCase):
                 self.assertEqual(len(selected),1);self.assertEqual(receipt['summary']['classified_area_count'],1)
                 self.assertEqual(selected[0]['properties']['source_rights'][0]['attribution'],p['credit'])
                 self.assertTrue(ch.stage('fixture',root=root)['physical_reused'])
-                for name in ('classified-candidates.geojson','classified-habitat.geojson','classified-held.geojson'):
+                for name in ('classified-candidates.geojson','classified-native.geojson','classified-habitat.geojson','classified-held.geojson'):
                     path=folder/name;saved=path.read_bytes();path.write_bytes(b'{}')
                     with self.assertRaisesRegex(ValueError,'output hash'):ch.publication_features('fixture',root=root)
                     path.write_bytes(saved)
+                native_path=folder/'classified-native.geojson'
+                saved_native=native_path.read_bytes();native_path.unlink()
+                with self.assertRaises(FileNotFoundError):ch.publication_features('fixture',root=root)
+                native_path.write_bytes(saved_native)
+                # An older representation receipt must restage its classified
+                # inventory, while the graded baseline stays unchanged.
+                path=folder/'classified-run.json';r=read_json(path)
+                r['physical_input_hash']='older-representation';atomic_json(path,r)
+                self.assertFalse(ch.stage('fixture',root=root)['physical_reused'])
                 path=folder/'classified-run.json';saved=path.read_bytes();r=read_json(path);r['reach']='other';atomic_json(path,r)
                 with self.assertRaisesRegex(ValueError,'identity'):ch.publication_features('fixture',root=root)
                 path.write_bytes(saved)
@@ -192,7 +201,7 @@ class ClassifiedTests(unittest.TestCase):
                 self.assertEqual(withdrawn['physical_summary']['candidate_count'],0)
                 self.assertEqual(ch.publication_features('fixture',root=root)[0],[])
                 self.assertEqual((folder/'run.json').read_bytes(),before_baseline)
-            for name in ('classified-run.json','classified-candidates.geojson','classified-habitat.geojson','classified-held.geojson'):
+            for name in ('classified-run.json','classified-candidates.geojson','classified-native.geojson','classified-habitat.geojson','classified-held.geojson'):
                 self.assertTrue(state_cache.allowed('fixture',f'reaches/fixture/{name}'))
             self.assertFalse(state_cache.allowed('fixture','reaches/other/classified-run.json'))
 

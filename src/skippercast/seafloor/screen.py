@@ -18,6 +18,7 @@ from skippercast.platform.contracts import read_json
 from .io import sha256
 from .search_areas import assessment
 from .classified_habitat import assessment as classified_assessment
+from .classified_geometry import operational as classified_operational, polygon as native_polygon
 
 VERSION = 'whole-polygon-screen-v1'
 LAYERS = {'cdfw-mpa', 'noaa-federal', 'security'}
@@ -119,7 +120,7 @@ def input_identity(state):
     return value
 
 
-def screen_candidates(candidates, state):
+def screen_candidates(candidates, state, *, native_geometries=None):
     passed, held, counts, grades, searches, classified_areas = [], [], Counter(), Counter(), [], []
     scope = polygon(state['scope']) if state['status'] == 'ready' else None
     exclusions = [(row['id'], unary_union([transform(PROJECT, exclusion_polygon(f['geometry']))
@@ -144,7 +145,11 @@ def screen_candidates(candidates, state):
             p.update(detail_level='search-area', search_area=search)
         try:
             geo = polygon(feature['geometry'])
-            local = transform(PROJECT, geo)
+            # Production classified screens use the unchanged native boundary.
+            # The optional operational path also supports isolated display tests.
+            local = (native_polygon(native_geometries[p['id']])
+                     if classified and native_geometries is not None else
+                     classified_operational(geo, 3310) if classified else transform(PROJECT, geo))
             if scope is not None:
                 if not scope.covers(geo):
                     reasons.append('screen-outside-coverage')
@@ -198,7 +203,9 @@ def screen_candidates(candidates, state):
     ranked = [f for f in passed if f['properties']['status'] == 'habitat']
     area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in ranked]).area/1e6
     search_area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in searches]).area/1e6
-    classified_area = unary_union([transform(PROJECT, shape(f['geometry'])) for f in classified_areas]).area/1e6
+    classified_area = unary_union([native_polygon(native_geometries[f['properties']['id']])
+        if native_geometries is not None else classified_operational(f['geometry'], 3310)
+        for f in classified_areas]).area/1e6
     return ({'type': 'FeatureCollection', 'features': passed},
             {'type': 'FeatureCollection', 'features': held},
             {'tier2_km2': round(area, 9), 'habitat_count': len(ranked),

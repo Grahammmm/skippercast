@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Preserve original native classified habitat boundaries while validating bounded shell/hole map representations; keep original areas and current spatial screening authoritative.
+
 - Add a separate screened, unranked publisher-interpreted rugose-rock habitat area layer. These Tier1 areas receive no terrain/species rank or precise fishing export; original source pairs require explicit reviewed opt-in.
 
 - Add a bounded private probe for reviewed rugose-rock habitat beyond existing terrain outlines; distinguish habitat expansion from new survey coverage in the coastal mapping skill.

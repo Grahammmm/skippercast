@@ -11,7 +11,7 @@ import re
 from .fetch import restore_private, upload_private
 from .io import sha256
 
-SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|tgz|tar\.gz|json)|[a-f0-9]{64}\.(?:tif|json))|(?:reaches|private-reaches)/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run|classified-run|classified-candidates|classified-habitat|classified-held)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
+SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|tgz|tar\.gz|json)|[a-f0-9]{64}\.(?:tif|json))|(?:reaches|private-reaches)/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run|classified-run|classified-candidates|classified-habitat|classified-held|classified-native)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
 
 
 def missing(error):
