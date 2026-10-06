@@ -1,5 +1,7 @@
 # Changelog
 
+- Extend the reviewed San Simeon bedrock outlines across the remaining eligible native SCC03 footprint, retaining uncertain terrain and nonexportable area labels.
+
 - Separate measured reef trip exports from research-coordinate references with explicit session opt-in and per-point evidence labels; preserve saved selections and all spatial/publication checks.
 
 ## Unreleased
