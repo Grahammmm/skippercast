@@ -144,6 +144,65 @@
       "neighbor_reaches": [
         "monterey-point-sur-r02"
       ]
+    },
+    {
+      "id": "usgs-sim3327-sansimeon-bedrock-v1",
+      "interpretation_method": "original-interpreted-bedrock-v1",
+      "profile": "original-interpreted-bedrock-area-v1",
+      "reach_ids": [
+        "cambria-san-simeon-r01"
+      ],
+      "reviewed_on": "2026-10-06",
+      "depth_source_id": "csumb-scc-block03-2m-native",
+      "depth_source_sha256": "ff77601a8c38dabf17fb985adc164e52bef824c888f78f00bc77a62fefb30583",
+      "classification_source_id": "geology-sansimeon-zip-9387f22e02",
+      "classification_source_sha256": "6309074b299845769735d291e78a9a58a8d226a746c5e80ee7cbfa95f9633ad6",
+      "metadata_sha256": "e330211c7b5b2512f37083bcc5d96e5f921bc5bd8a035387360dd61da3efc688",
+      "metadata_url": "https://pubs.usgs.gov/sim/3327/",
+      "credit": "U.S. Geological Survey, California State Waters Map Series, SIM3327 (2015). Paired original bathymetry: California State University Monterey Bay Seafloor Mapping Lab.",
+      "notice": "Original USGS geologic interpretation; retain source attribution, source-resolution limitations and the metadata request to share derived products with USGS. Not for navigation. Paired CSUMB depth is authorized for public noncommercial use only; express producer permission is required for for-profit use. Unknown depth datum conversion, accuracy, interpolation and rugosity remain unknown. Processing-window boundaries are not established reef edges.",
+      "review_basis": "Original USGS archive and raw metadata hashes independently verified;625originalpolygonrecords, exposedbedrockunits only, invalidrecord123excluded withoutrepair, sediment-over-rock units excluded, lithology questionmarks retained. Valid original CSUMB SCC03 positive-down2m nominaldepth25–300ft in two nonoverlapping reviewed512windows; exactcurrent canonicalgraded habitat excluded; current selected-source Tier1 support. Same underlying depth/backscatter lineage supplies interpretation; not independent confirmation, fish presence or numerical habitat grade. Independentcachedextractor/fidelity checks passed; finalpublicationrequirescurrentrightsandwholepolygon restrictions.",
+      "release_license": "public-domain-us-gov",
+      "vector_review": {
+        "original_crs": "EPSG:32610",
+        "unit_field": "MapUnitAbb",
+        "member_stem": "Geology_SanSimeon",
+        "metadata_member": "Geology_SanSimeon_metadata.txt",
+        "expected_polygon_count": 625,
+        "bedrock_units": [
+          "Tus",
+          "Tm",
+          "KJug",
+          "KJug?",
+          "KJf",
+          "Ksl",
+          "Jo",
+          "Jo?"
+        ],
+        "excluded_units": [
+          "Qms/Tus",
+          "Qms/KJf",
+          "Qms/KJug",
+          "Qms/KJug?"
+        ],
+        "invalid_original_records": [
+          123
+        ],
+        "native_windows": [
+          [
+            5707,
+            1182,
+            512,
+            512
+          ],
+          [
+            4683,
+            1182,
+            512,
+            512
+          ]
+        ]
+      }
     }
   ]
 }

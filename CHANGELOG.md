@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Enable reviewed original San Simeon exposed-bedrock habitat from two disjoint native depth windows, retaining source units, current habitat exclusions and whole-polygon spatial screens. These areas are unranked and receive no new measurement or precise fishing export.
+
 - Add explicit reviewed original-geology admission for unranked bedrock habitat, using bounded native depth windows, current canonical habitat exclusions, retained source units and separate producer rights. Preserve legacy rugose-rock outputs; bedrock map details keep rugosity, boulder size and species fit unknown. No source is enabled by this code change.
 
 - Add the v2 port chooser and first run behind `UI_V2` (`web/ports.ts`, `web/landing/PortInput.tsx`, `web/app/FirstRun.tsx`): the command bar's area group gains a port button and "Use my location", which open the chooser as a dialog (search over the home ports by name, the featured ports first, Enter for the top match, the 75 nm nearest-port rule with v1's privacy line, "Explore the coast"); a choice saves the port under the key v1 reads and swaps the region without a reload; `/map` with no area opens the saved port or the landing. First run is now the Boat / Shore / Spear choice only, shown once over the map (never modal, never when the link names a profile); the home-port modal does not return in v2. Nothing changes without the flag or `?ui=v2`.
