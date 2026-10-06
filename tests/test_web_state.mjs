@@ -15,9 +15,10 @@ import {parseView, viewParam} from '../dist/location-context.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
-test('the URL is read and written for region, coast, view, target and hour only', () => {
+test('the URL is read and written for the store keys only', () => {
   const href = 'https://skippercast.com/?region=morro-bay&view=35.36000,-120.94000,10&target=halibut&hour=2026-09-30T15:00Z&spot=r12&utm_source=x#forecast';
-  assert.deepEqual(readURL(href), {region: 'morro-bay', coast: null, view: '35.36000,-120.94000,10', target: 'halibut', hour: '2026-09-30T15:00Z', selection: 'r12'});
+  assert.deepEqual(readURL(href), {region: 'morro-bay', coast: null, view: '35.36000,-120.94000,10', target: 'halibut', hour: '2026-09-30T15:00Z', selection: 'r12',
+    profile: null, day: null, layers: null, area: null, base: null});
   const next = new URL(withParams(href, {hour: null, target: 'reef', region: undefined}));
   assert.equal(next.searchParams.get('hour'), null);
   assert.equal(next.searchParams.get('target'), 'reef');
