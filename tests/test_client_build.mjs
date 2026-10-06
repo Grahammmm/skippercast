@@ -132,6 +132,20 @@ test('check_client passes a good build and fails on missing chunks, raw sources,
   await assert.rejects(run(process.execPath, [CHECK, out, root]), /\(missing\)/);
 });
 
+test('check_client fails a v2 page over its gzipped JavaScript or CSS budget (FE-09)', async () => {
+  const root = await site();
+  await writeFile(join(root, 'app.html'), '<!doctype html><html><head><link rel="stylesheet" href="styles.css"><script type="module" src="shell.js"></script></head><body>v2</body></html>');
+  await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nexport const pad = ${JSON.stringify(Array.from({length: 400}, (_, i) => `${i}-${Math.sin(i)}`))};\nhelper(pad);`);
+  const out = join(root, 'client');
+  await buildClient({root, out, headers: '/*\n'});
+  const budget = join(root, 'budget.json'), check = b => { return writeFile(budget, JSON.stringify({bundles: {'app.html': b}})).then(() => run(process.execPath, [CHECK, out, root, budget])); };
+  const {stdout} = await check({js_gzip_max: 100000, css_gzip_max: 1000});
+  assert.match(stdout, /Budgets: app\.html js \d+ B, css \d+ B gzipped/);
+  await assert.rejects(check({js_gzip_max: 500}), /app\.html: initial JavaScript \d+ B gzipped exceeds its budget of 500 B/);
+  await assert.rejects(check({css_gzip_max: 1}), /app\.html: initial CSS \d+ B gzipped exceeds its budget of 1 B/);
+  await rm(root, {recursive: true, force: true});
+});
+
 test('the real site builds and passes the client check (static data directories skipped)', async () => {
   const out = await mkdtemp(join(tmpdir(), 'client-real-'));
   const keep = name => !['data', 'regions', 'downloads', 'tiles'].includes(name);
