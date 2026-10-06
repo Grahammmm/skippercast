@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Fix the fleet OSINT run (`fleet-osint.yml`) so that when some batches fail, the finished batches' profiles are still ingested before the job fails; previously the research step aborted on the runner's exit 1 and skipped Ingest, leaving finished profiles out of the registry.
 - Start the front-end rebuild behind `UI_V2` (off; [plan](docs/plans/front-end/README.md), ADR 0009 and ADR 0005 accepted): with the Worker variable on or `?ui=v2` on the request, `/` serves the new landing page (or the new app when the link names an area) and `/map` the new app, both placeholders for now; `?ui=v1` forces the current shell. With the flag off and no switch nothing changes: `/` is the current site and `/map` is 404.
 - Add the v2 icon set and UI primitives (`web/ui/`: 40 stroke icons, 31 ported from `fish`; Button, Chip and Segmented, Tile, Popover, Rail, Dock with Range, and the three-detent Sheet), styled from tokens only with 44 px targets and keyboard operation. Nothing visible changes until a v2 page uses them behind `UI_V2`.
 - Add the v2 design tokens (`web/tokens.css`: dark default, light set, DM Sans and JetBrains Mono self-hosted under `web/fonts/`), extend the contrast check to both token files and add `scripts/check_tokens.mjs`, which fails CI on colour or font literals under `web/`. Nothing visible changes until a v2 page loads the tokens behind `UI_V2`.
