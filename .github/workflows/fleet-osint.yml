@@ -136,8 +136,12 @@ jobs:
           # Exit 0: every batch done; 1: some failed after a retry or the run deadline left some
           # unstarted (ingest the rest, then fail the job);
           # 2: refused (ANTHROPIC_API_KEY set, no token, wrong CLI version) or a setup error.
+          # The step runs under `bash -e`, which with pipefail would abort on exit 1 before rc is
+          # read, skipping Ingest; so errexit is off for the pipeline only and rc decides below.
+          set +e
           python scripts/fleet/run_osint.py "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
           rc=${PIPESTATUS[0]}
+          set -e
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           if [ "$rc" -ge 2 ]; then exit "$rc"; fi
       - name: Ingest the profiles

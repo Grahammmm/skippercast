@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import subprocess
 import sys
 import tempfile
 import threading
@@ -561,6 +562,38 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn('--profiles "$run_dir/profiles"', self.text)
         self.assertIn("FLEET_OSINT_PARALLEL: ${{ vars.FLEET_OSINT_PARALLEL || '3' }}", self.text)
         self.assertNotIn("GITHUB_WORKSPACE", self.text)
+
+    def research_step(self):
+        """The `run:` script of the Research step, as GitHub hands it to `bash -e {0}`."""
+        step = re.search(r"- name: Research the batches\n(?:        .*\n)*?        run: \|\n((?:          .*\n)+)", self.text)
+        return "".join(line[10:] for line in step.group(1).splitlines(keepends=True))
+
+    def run_research_step(self, tmp, runner_rc):
+        """Run the step's script with a fake run_osint.py that prints counts and exits ``runner_rc``."""
+        fake_bin = Path(tmp) / "bin"
+        fake_bin.mkdir(exist_ok=True)
+        fake = fake_bin / "python"
+        fake.write_text(f"#!/bin/sh\necho '{{\"batches\": 2, \"done\": 1, \"failed\": 1}}'\nexit {runner_rc}\n")
+        fake.chmod(0o755)
+        summary, outputs = Path(tmp) / "summary.md", Path(tmp) / "outputs.txt"
+        summary.write_text("")
+        outputs.write_text("")
+        env = {"PATH": f"{fake_bin}:{os.environ['PATH']}", "REGION": "CA", "RUN_ID": RUN_ID, "CLAUDE_BIN": "/nonexistent",
+               "MAX_BATCHES": "", "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs)}
+        proc = subprocess.run(["bash", "-e", "-c", self.research_step()], env=env, capture_output=True, text=True,
+                              cwd=tmp, timeout=30)
+        return proc, summary.read_text(), outputs.read_text()
+
+    def test_the_research_step_continues_to_ingest_when_some_batches_failed(self):
+        # The job's Ingest step runs on exit 0 and 1 (then `Fail when a batch failed` reads rc); only 2 stops it.
+        with tempfile.TemporaryDirectory() as tmp:
+            for runner_rc, step_rc in ((0, 0), (1, 0), (2, 2)):
+                with self.subTest(runner_rc=runner_rc):
+                    proc, summary, outputs = self.run_research_step(tmp, runner_rc)
+                    self.assertEqual(proc.returncode, step_rc, proc.stderr)
+                    self.assertIn('"done": 1', summary, "the counts reach the step summary")
+                    self.assertIn(f"rc={runner_rc}\n", outputs, "the fail step reads the runner's status")
+        self.assertIn("if: steps.osint.outputs.rc == '1'", self.text)
 
     def test_the_run_deadline_leaves_the_job_time_to_ingest(self):
         (job,) = [int(m) for m in re.findall(r"^    timeout-minutes: (\d+)$", self.text, re.M)]
