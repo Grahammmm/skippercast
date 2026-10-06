@@ -126,8 +126,18 @@ test.describe('phone', () => {
       await expect(page.locator('.ui-sheet h1')).toBeInViewport();
       await expect(page.locator('.app-top .app-brand')).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-      // Drag the handle (wherever the detent put it) by `dy` in four steps.
+      // Drag the handle (wherever the detent put it, once its transition has settled) by `dy` in four steps.
+      const settled = async () => {
+        let before = JSON.stringify(await handle.boundingBox());
+        for (let i = 0; i < 20; i++) {
+          await page.waitForTimeout(100);
+          const after = JSON.stringify(await handle.boundingBox());
+          if (after === before) return;
+          before = after;
+        }
+      };
       const drag = async (dy: number) => {
+        await settled();
         const grip = (await handle.boundingBox())!;
         const cx = grip.x + grip.width / 2, cy = grip.y + grip.height / 2;
         await page.mouse.move(cx, cy);
