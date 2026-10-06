@@ -1,0 +1,5 @@
+{
+ "note": "Literals that predate the token lint (scripts/check_tokens.mjs). This list only shrinks: replace the literal with a var(--…) token, then run `node scripts/check_tokens.mjs --update`. Never add entries.",
+ "entries": [
+ ]
+}

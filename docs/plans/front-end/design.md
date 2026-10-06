@@ -334,10 +334,12 @@ one and the switch is a backlog task (open-questions Q3).
 | `--depth-0 … --depth-3` | `#7fd9c8`, `#2b9c9c`, `#1f5f8f`, `#1d2f6e` | depth ramp shallow → deep |
 | `--sst-0 … --sst-5` | `#244f9d`, `#188eb5`, `#39c6c2`, `#a6dda0`, `#efd477`, `#f18a65` | surface temperature ramp |
 | `--flow` / `--flow-fast` | `#dffcf6` / `#fff0bf` | streamlines |
-| `--mpa-fill` / `--mpa-line` | `#e8a877` at 0.08 / `#e8b584` dashed | protected areas |
+| `--mpa-fill` / `--mpa-fill-opacity` / `--mpa-line` | `#e8a877` / 0.08 / `#e8b584` dashed | protected areas |
 | `--fleet` | `--amber` | fleet events, tracks, heat |
 | `--focus` | `--mint` | focus ring (2 px outside) |
 
+The light set keeps the cartography tokens and redefines the UI colours
+(`#f4f8f9` ground, white panels, `#0b2530` text) so that the same pairs pass.
 Text pairs checked at 4.5:1 by `scripts/check_contrast.mjs` (extended to
 read `web/tokens.css` and the new pairs): `--text` and `--muted` on `--bg`,
 `--bg-deep`, `--panel` and `--panel-2`; `--mint`, `--blue`, `--coral` and
@@ -367,9 +369,11 @@ map 0, chrome 10, dock 20, sheet 30, modal 40, toast 50; `--touch-min` 44 px.
   `hsl(` or named colour literal in `web/**/*.{css,ts,tsx}` outside
   `web/tokens.css`, and on `font-family` outside the tokens file. Map
   style and canvas code read tokens with `getComputedStyle` through
-  `web/map/palette.ts`, which is the one allowed bridge from CSS to JS.
-  A baseline file lists nothing: `web/` has few literals today and FE-02
-  removes them.
+  `web/map/palette.ts`, which is the one allowed bridge from CSS to JS
+  (named colours are checked in CSS only: "black rockfish" is copy).
+  The baseline (`scripts/token-lint-baseline.json`) lists nothing, since
+  `web/` had no literals when the lint landed; like the copy lint's, it can
+  only shrink (`--base` compares it with the base branch in CI).
 - `scripts/check_contrast.mjs` covers both token files until FE-61.
 - `node scripts/check_copy.mjs` already lints `web/`.
 
