@@ -13403,29 +13403,33 @@
       "landing_page": "https://pubs.usgs.gov/sim/3327/",
       "format": "vector",
       "kind": "substrate",
-      "year": "unknown",
+      "year": 2015,
       "resolution_m": "unknown",
       "horizontal_crs": "EPSG:32610",
       "vertical_datum": "unknown",
-      "license": "unknown",
+      "license": "public-domain-us-gov",
       "sha256": "6309074b299845769735d291e78a9a58a8d226a746c5e80ee7cbfa95f9633ad6",
       "bytes": 753951,
       "derived_from": [],
       "status": "candidate",
       "hold_reason": "unknown",
-      "notes": "Candidate inventory only; reopen through a shared adapter before usable status. No mapped area credited. Producer reuse terms unresolved. Acquisition independence unresolved; do not count as independent corroboration.",
-      "archive_member": "unknown",
+      "notes": "Hash-verified original USGS SIM3327 interpreted exposed-bedrock vectors in WGS84 UTM10. Candidate for ordinary raster processing; only explicitly reviewed source-specific vector habitat policies may admit these interpretations. No depth measurement, rugosity, boulder inventory, numerical habitat rank or independent fish confirmation. Paired CSUMB depth retains separate noncommercial terms. Invalid original exposed-bedrock record123 remains excluded without repair.",
+      "archive_member": "Geology_SanSimeon.shp",
       "evidence": [
         "catalog/candidates/usgs-sansimeon-geology.json#/access_url",
         "catalog/usgs-sansimeon-geology.json#/archive_url",
-        "dist/data/csumb-sansimeon-bedrock-overlap-review.json#/geology_source/url"
+        "dist/data/csumb-sansimeon-bedrock-overlap-review.json#/geology_source/url",
+        "catalog/usgs-sansimeon-geology.json#/interpretation_review",
+        "catalog/usgs-sansimeon-geology.json#/rights"
       ],
       "field_evidence": {
-        "sha256": "catalog/candidates/usgs-sansimeon-geology.json#/access_url",
-        "horizontal_crs": "catalog/candidates/usgs-sansimeon-geology.json#/access_url",
-        "bytes": "catalog/usgs-sansimeon-geology.json#/archive_url"
+        "sha256": "catalog/usgs-sansimeon-geology.json#/archive_sha256",
+        "horizontal_crs": "catalog/usgs-sansimeon-geology.json#/shapefile_crs",
+        "bytes": "catalog/usgs-sansimeon-geology.json#/archive_bytes",
+        "year": "catalog/usgs-sansimeon-geology.json#/publication_year",
+        "license": "catalog/usgs-sansimeon-geology.json#/rights"
       },
-      "inspection_level": "catalog",
+      "inspection_level": "metadata",
       "lineage_status": "unknown"
     },
     {
@@ -20744,7 +20748,7 @@
       "bytes": 322166166,
       "hold_reason": "unknown",
       "id": "csumb-monastery-cypress-2m-native",
-      "title": "Monastery Beach to Cypress Point 2000\u20132006 original 2 m sonar-derived bathymetry",
+      "title": "Monastery Beach to Cypress Point 2000–2006 original 2 m sonar-derived bathymetry",
       "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/macginitie/MonasteryBeach/multibeam/data/version2/products/Monastery_additional_products.tar.gz",
       "format": "arcgrid",
       "kind": "bathymetry",
@@ -20766,7 +20770,7 @@
       },
       "inspection_level": "native",
       "lineage_status": "unknown",
-      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Mixed 2000\u20132006 original producer gridded soundings; no independent corroboration of USGS compilation parents. Bathymetry metadata describes predicted-tide MLLW, with conservative unknown normalized datum pending companion reconciliation. Approximate \u00b12m horizontal and \u00b10.2m vertical statements vary with depth and provide no stated confidence/per-cell uncertainty. Interpolation mask unknown; no gap filling or resampling here. Noncommercial credited use only; not navigation.",
+      "notes": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Mixed 2000–2006 original producer gridded soundings; no independent corroboration of USGS compilation parents. Bathymetry metadata describes predicted-tide MLLW, with conservative unknown normalized datum pending companion reconciliation. Approximate ±2m horizontal and ±0.2m vertical statements vary with depth and provide no stated confidence/per-cell uncertainty. Interpolation mask unknown; no gap filling or resampling here. Noncommercial credited use only; not navigation.",
       "rights_review": {
         "producer": "CSUMB SFML",
         "policy_url": "https://csumb.edu/undersea/sfml-data-library/",

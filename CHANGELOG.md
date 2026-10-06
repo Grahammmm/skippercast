@@ -1,8 +1,12 @@
 # Changelog
 
+- Extend the reviewed San Simeon bedrock outlines across the remaining eligible native SCC03 footprint, retaining uncertain terrain and nonexportable area labels.
+
 - Separate measured reef trip exports from research-coordinate references with explicit session opt-in and per-point evidence labels; preserve saved selections and all spatial/publication checks.
 
 ## Unreleased
+
+- Enable reviewed original San Simeon exposed-bedrock habitat from two disjoint native depth windows, retaining source units, current habitat exclusions and whole-polygon spatial screens. These areas are unranked and receive no new measurement or precise fishing export.
 
 - Add explicit reviewed original-geology admission for unranked bedrock habitat, using bounded native depth windows, current canonical habitat exclusions, retained source units and separate producer rights. Preserve legacy rugose-rock outputs; bedrock map details keep rugosity, boulder size and species fit unknown. No source is enabled by this code change.
 
