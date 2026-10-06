@@ -96,6 +96,9 @@ def policies(root):
         isinstance(p, dict) and (p.get('reach_ids') is not None or 'neighbor_reaches' in p)
         for p in rows) else None)
     for p in rows:
+        from . import bedrock_habitat
+        if p.get('interpretation_method') is not None:
+            bedrock_habitat.validate_policy(p)
         mode = support_mode(p)
         reach_ids = p.get('reach_ids')
         if mode == PAIRED_REFERENCE_SUPPORT and reach_ids is None:
@@ -115,6 +118,8 @@ def policies(root):
                     or set(neighbors).intersection(reach_ids)):
                 raise ValueError('Invalid classified neighbor reach scope')
         public_url(p['metadata_url'])
+        if bedrock_habitat.selected(p):
+            continue
         if (not re.fullmatch('[a-z0-9-]+', p['id'])
                 or date.fromisoformat(p['reviewed_on']) > date.today()
                 or any(not re.fullmatch('[a-f0-9]{64}', p[k]) for k in
@@ -190,6 +195,9 @@ def verify_pair_disjointness(candidates, native, contexts):
 def assessment(p):
     """Distinct unranked interpreted-area contract; never a terrain shortcut."""
     area = p.get('classified_area')
+    from . import bedrock_habitat
+    if isinstance(area, dict) and area.get('profile') == bedrock_habitat.PROFILE:
+        return bedrock_habitat.assessment(p)
     if (not isinstance(area, dict) or area.get('profile') != PROFILE
             or not isinstance(area.get('policy_id'), str) or not area['policy_id']
             or area.get('independent_confirmation') is not False
@@ -292,6 +300,9 @@ def classified_screen(candidates, state, native_geometries, contexts, root, reac
 
 def source_context(root, reach, policy, *, fetch=False):
     """Bind current baseline physics, reviewed source pair and normalized bytes."""
+    from . import bedrock_habitat
+    if bedrock_habitat.selected(policy):
+        return bedrock_habitat.source_context(root, reach, policy, fetch=fetch)
     root = Path(root)
     scope_name(reach)
     support_mode(policy)
@@ -413,6 +424,9 @@ def source_context(root, reach, policy, *, fetch=False):
 
 
 def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels=25_000_000):
+    from . import bedrock_habitat
+    if bedrock_habitat.selected(binding.get('policy', {})):
+        return bedrock_habitat.extract(row, binding, path, support, existing, root=root, edge=edge, max_pixels=max_pixels)
     if not 16 <= edge <= 1024 or not 1 <= max_pixels <= 25_000_000:
         raise ValueError('Invalid bounded classified processing limit')
     if support.is_empty:
@@ -448,6 +462,10 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
 
 
 def features_for(patches, reach, policy, row, binding, *, reference_support=None, neighbor_planning=None):
+    from . import bedrock_habitat
+    if bedrock_habitat.selected(policy):
+        return bedrock_habitat.features_for(patches, reach, policy, row, binding,
+            reference_support=reference_support, neighbor_planning=neighbor_planning)
     from .screen import polygon
     features = []
     for index, patch in enumerate(patches):
@@ -495,6 +513,9 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     # Policy changes add/remove explicit pairs without invalidating graded physics.
     contexts = [source_context(root, reach, p, fetch=fetch) for p in selected]
     physical_inputs = _physical_inputs(contexts)
+    from . import bedrock_habitat
+    if any(bedrock_habitat.selected(c[0]['policy']) for c in contexts):
+        physical_inputs['bedrock_processing'] = {'edge':edge, 'max_pixels':max_pixels}
     physical_hash = digest(physical_inputs)
     candidates_path = folder/'classified-candidates.geojson'
     native_path = folder/'classified-native.geojson'
@@ -522,11 +543,13 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
                 reference_support=identity.get('reference_support'),
                 neighbor_planning=identity.get('neighbor_planning'))['features']
             candidates['features'].extend(represented)
+            from . import bedrock_habitat
+            native_patches = [patch.geometry if isinstance(patch, bedrock_habitat.Patch) else patch for patch in patches]
             native['features'].extend({'type': 'Feature', 'geometry': mapping(patch),
-                'properties': {'id': f['properties']['id']}} for patch, f in zip(patches, represented))
-            prior_native_patches.extend(patches)
+                'properties': {'id': f['properties']['id']}} for patch, f in zip(native_patches, represented))
+            prior_native_patches.extend(native_patches)
             for key, value in summary.items():
-                physical_summary[key] += value
+                physical_summary[key] = physical_summary.get(key, 0) + value
         physical_summary['candidate_count'] = len(candidates['features'])
         atomic_json(candidates_path, candidates)
         atomic_json(native_path, native)
@@ -577,6 +600,12 @@ def publication_features(reach, *, root=REPO):
         if saved_order != current_order:
             raise ValueError('Classified source-pair order changed; restage required')
     physical = _physical_inputs(contexts)
+    from . import bedrock_habitat
+    if any(bedrock_habitat.selected(c[0]['policy']) for c in contexts):
+        physical['bedrock_processing'] = receipt['inputs']['physical'].get('bedrock_processing')
+        processing = physical['bedrock_processing']
+        if not isinstance(processing, dict) or set(processing) != {'edge','max_pixels'}:
+            raise ValueError('Bedrock processing receipt missing')
     state = load_snapshot(root, reach)
     inputs = {'physical': physical, 'screen': input_identity(state),
               'screen_implementation_sha256': sha256(Path(__file__).with_name('screen.py'))}
@@ -591,6 +620,21 @@ def publication_features(reach, *, root=REPO):
     native = read_json(folder/'classified-native.geojson')
     representation = verify_inventory(candidates, native)
     verify_pair_disjointness(candidates, native, contexts)
+    if any(bedrock_habitat.selected(c[0]['policy']) for c in contexts):
+        prior = []
+        for identity,row,binding,source_path,support,existing,_ in contexts:
+            policy = identity['policy']
+            saved_features = [f for f in candidates['features'] if f['properties']['classified_area']['policy_id'] == policy['id']]
+            saved_ids = {f['properties']['id'] for f in saved_features}
+            saved_native = [shape(f['geometry']) for f in native['features'] if f['properties']['id'] in saved_ids]
+            if bedrock_habitat.selected(policy):
+                patches,_ = extract(row,binding,source_path,support,unary_union([existing,*prior]) if prior else existing,root=root,**processing)
+                expected = features_for(patches,reach,policy,row,binding,
+                    reference_support=identity.get('reference_support'),neighbor_planning=identity.get('neighbor_planning'))['features']
+                if (digest(expected) != digest(saved_features) or len(patches) != len(saved_native)
+                        or any(not p.geometry.equals_exact(g,0) for p,g in zip(patches,saved_native))):
+                    raise ValueError('Original bedrock production reconstruction changed')
+            prior.extend(saved_native)
     native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
     habitat, held, summary = classified_screen(candidates, state, native_geometries, contexts, root, reach)
     if (representation != receipt.get('representation')

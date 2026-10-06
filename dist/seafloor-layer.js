@@ -30,7 +30,7 @@ export function legendHTML(view) {
     : Object.values(FIT_STYLE).map((s) => [s.color, s.label]);
   rows.push([UNKNOWN_COLOR, 'Unknown']);
   rows.push([SEARCH_COLOR, 'Rough-bottom search area · unranked']);
-  rows.push([CLASSIFIED_COLOR, 'Interpreted rugose-rock area · unranked']);
+  rows.push([CLASSIFIED_COLOR, 'Interpreted rock habitat · unranked']);
   const title = view === 'terrain' ? 'Terrain grade' : 'Physical habitat fit, not catch probability';
   return `<strong>${esc(title)}</strong>${rows.map(([c, t]) => `<span><i style="background:${c}"></i>${esc(t)}</span>`).join('')}`;
 }
@@ -47,7 +47,9 @@ export function detailsHTML(properties, view = 'terrain') {
     : d.searchArea
     ? 'Limited confidence · unranked search area'
     : `Terrain grade ${esc(d.grade)}${view !== 'terrain' ? ' · colored by species fit' : ''}`;
-  const explanation = d.classifiedArea
+  const explanation = d.classifiedBedrock
+    ? 'The original publisher interprets exposed bedrock within this outline. Rugosity, boulder size, terrain grade and species fit are unknown. The outline follows interpreted geology and a nominal depth mask; its edges can reflect the processed survey window rather than a reef edge. It does not establish fish presence or a precise fishing position. Explore with your sounder.'
+    : d.classifiedArea
     ? 'The original publisher interprets rugose rock and boulders within this outline. Paired native survey depth supports the nominal band. Terrain grade and species fit are unknown; this interpretation does not establish fish presence or a precise fishing position. Explore with your sounder.'
     : d.searchArea
     ? 'The survey identifies a rough-bottom patch, but surrounding measurements are insufficient for a terrain grade. Explore this outline with your sounder; it does not identify an individual pile or precise fishing position.'

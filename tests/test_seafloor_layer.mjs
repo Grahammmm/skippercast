@@ -2,6 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { legendHTML, detailsHTML, VIEWS } from '../dist/seafloor-layer.js';
 
+test('bedrock sheet explains original geology without claiming rugose boulders', () => {
+  const html = detailsHTML({status: 'classified-area', classified_area: JSON.stringify({
+    profile: 'original-interpreted-bedrock-area-v1',
+    interpretation_method: 'original-interpreted-bedrock-v1',
+  }), fit_lingcod: 'unknown'});
+  assert.match(html, /exposed-bedrock habitat area/);
+  assert.match(html, /Rugosity, boulder size, terrain grade and species fit are unknown/);
+  assert.match(html, /processed survey window rather than a reef edge/);
+  assert.doesNotMatch(html, /interprets rugose rock and boulders/);
+  assert.match(legendHTML('terrain'), /Interpreted rock habitat · unranked/);
+});
+
 test('search area sheet explains limited evidence without inventing a grade', () => {
   const html = detailsHTML({status: 'search-area', terrain_grade: 'unknown', fit_lingcod: 'unknown',
     search_area: JSON.stringify({target_species: ['lingcod']}), depth_min_ft: 40, depth_max_ft: 50});
@@ -164,5 +176,5 @@ test('classified area sheet separates publisher interpretation from terrain and 
   assert.match(html, /Terrain grade and species fit are unknown/);
   assert.match(html, /lingcod: unknown/);
   assert.doesNotMatch(html, /surrounding measurements are insufficient|of 3|Terrain grade A/);
-  assert.match(legendHTML('terrain'), /Interpreted rugose-rock area · unranked/);
+  assert.match(legendHTML('terrain'), /Interpreted rock habitat · unranked/);
 });

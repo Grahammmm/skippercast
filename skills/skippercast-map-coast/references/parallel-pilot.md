@@ -97,6 +97,21 @@ union. Count features by unique verified native feature IDs, not union component
 or tile fragments. IDs alone do not establish new physical-area expansion.
 Invalid geometry cannot enter a public batch.
 
+For original geologic bedrock polygons, the private
+`skippercast.seafloor.bedrock_vectors` kernel can intersect an already qualified
+native depth window. Qualify exposed units and retain lithology uncertainty;
+exclude sediment-covered units and hold invalid original records without repair.
+Require the normalized `depth_m_positive_down` band, a matching projected metre
+CRS and windows no larger than 512 by 512 pixels. Keep shallow knowledge separate.
+Assemble adjacent window fragments by original record before subtracting a
+qualified native baseline and applying the connected-component area rule. A
+source record may contain several disconnected components; its total area is
+not their individual acceptance. Source attribution, datum, coverage and rights
+validation belong to the caller. This private kernel does not implement vector
+source admission, current spatial screens, ranking, map output or exports.
+Never relabel a geologic bedrock unit as a raster rugose class or count a private
+window result as additional habitat before baseline comparison and publication.
+
 ## Switch work instead of repeating failure
 
 Keep physical mapping independent of final publication holds. A held source can
@@ -220,3 +235,7 @@ Do not promise a linear speedup or double a pool automatically. If concurrency
 is capped, explain that limit and propose a separately authorized configuration
 or subsequent trial. Preserve the next ready batch and unresolved dependencies
 in the same checkpoint so the next session resumes instead of re-auditing.
+
+## Original geologic bedrock batch
+
+The reviewed SIM3327 method uses an explicit `original-interpreted-bedrock-v1` policy with authenticated original vectors, pure bedrock units, invalid-record holds and nonoverlapping `native_windows`. It is a separate interpretation from rugose raster class3. The normal classified stage reconstructs current canonical graded exclusions and earlier original classified geometry; no manual runner baseline artifact is required. Default selected-source support uses only the paired source's winning Tier1 cells. Broader footprint support requires the explicit paired-reference mode, verified dependencies and all producer terms. Before growing a window set, test positive additional native habitat and preserve prior geometry identities. Processing-window edges do not establish reef edges. Source activation, current screens and complete public map/export readback remain separate gates.
