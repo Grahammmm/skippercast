@@ -27,7 +27,7 @@
 .ui-button--quiet { color: var(--muted); }
 .ui-button--quiet:not(:disabled):hover { color: var(--text); background: var(--panel-2); }
 .ui-button[aria-pressed="true"] { border-color: var(--mint); background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); color: var(--text); }
-.ui-button--sm { min-height: 36px; padding: var(--space-1) var(--space-3); }
+.ui-button--sm { padding: var(--space-1) var(--space-3); }
 .ui-icon-button { padding: var(--space-2); }
 
 /* Chips and the segmented switch */
@@ -62,7 +62,7 @@
 .ui-tile-unit, .ui-tile-detail, .ui-tile-source { color: var(--muted); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
 .ui-tile-source { display: flex; gap: var(--space-2); align-items: baseline; }
 .ui-tile-stale { color: var(--amber); }
-.ui-tile .ui-popover-summary { min-height: 28px; padding: 0; }
+.ui-tile .ui-popover-summary { padding: 0; }
 
 /* Layer rail and time dock: map chrome over the map */
 .ui-rail, .ui-dock { border: 1px solid var(--line); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
@@ -70,7 +70,7 @@
 .ui-rail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .ui-rail-item { display: flex; align-items: center; gap: var(--space-1); }
 .ui-rail-toggle { flex: 1; justify-content: flex-start; border-color: transparent; background: transparent; text-align: left; }
-.ui-rail-text { display: flex; flex-direction: column; gap: 2px; }
+.ui-rail-text { display: flex; flex-direction: column; gap: var(--space-1); }
 .ui-rail-note, .ui-rail-item[data-on="false"] .ui-rail-label { color: var(--muted); }
 .ui-dock { z-index: var(--z-dock); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
 .ui-dock-range { flex: 1; min-width: 120px; }
@@ -79,22 +79,24 @@
 /* Range: the native slider restyled, track and thumb from tokens */
 .ui-range { appearance: none; height: var(--touch-min); margin: 0; background: transparent; cursor: pointer; }
 .ui-range:disabled { cursor: not-allowed; opacity: 0.5; }
-.ui-range::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-pill); background: var(--line); }
-.ui-range::-moz-range-track { height: 4px; border-radius: var(--radius-pill); background: var(--line); }
+.ui-range::-webkit-slider-runnable-track { height: var(--space-1); border-radius: var(--radius-pill); background: var(--line); }
+.ui-range::-moz-range-track { height: var(--space-1); border-radius: var(--radius-pill); background: var(--line); }
 .ui-range::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; margin-top: -7px; border: 2px solid var(--bg); border-radius: var(--radius-pill); background: var(--mint); box-shadow: var(--elev-1); }
 .ui-range::-moz-range-thumb { width: 18px; height: 18px; border: 2px solid var(--bg); border-radius: var(--radius-pill); background: var(--mint); box-shadow: var(--elev-1); }
 
-/* Bottom sheet: moved by data-detent; the detent sizes are § 6's */
+/* Bottom sheet: moved by data-detent; the detent sizes are § 6's (peek 96 px,
+   half 50 %, full 92 % of the viewport); each vh line is the fallback for the
+   dvh line after it where dvh is unsupported */
 .ui-sheet {
-  --sheet-peek: 96px; --sheet-half: 50dvh; --sheet-full: 92dvh;
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet); display: flex; flex-direction: column; height: var(--sheet-full);
+  --sheet-peek: 96px;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet); display: flex; flex-direction: column; height: 92vh; height: 92dvh;
   border-top: 1px solid var(--line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--panel); box-shadow: var(--elev-3); color: var(--text);
-  transform: translateY(calc(var(--sheet-full) - var(--sheet-peek))); transition: transform var(--motion-sheet);
+  transform: translateY(calc(92vh - var(--sheet-peek))); transform: translateY(calc(92dvh - var(--sheet-peek))); transition: transform var(--motion-sheet);
 }
-.ui-sheet[data-detent="half"] { transform: translateY(calc(var(--sheet-full) - var(--sheet-half))); }
+.ui-sheet[data-detent="half"] { transform: translateY(42vh); transform: translateY(42dvh); }
 .ui-sheet[data-detent="full"] { transform: translateY(0); }
 .ui-sheet-edge { display: flex; flex-direction: column; flex: none; }
-.ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; cursor: grab; }
-.ui-sheet-grip { width: 40px; height: 4px; border-radius: var(--radius-pill); background: var(--muted); }
+.ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; }
+.ui-sheet-grip { width: 40px; height: var(--space-1); border-radius: var(--radius-pill); background: var(--muted); }
 .ui-sheet-body { flex: 1; overflow: auto; padding: 0 var(--space-4) var(--space-5); }
 .ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; }

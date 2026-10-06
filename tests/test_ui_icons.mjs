@@ -12,7 +12,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {lintFile} from '../scripts/check_tokens.mjs';
+import {lintFile, stripComments as stripped} from '../scripts/check_tokens.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const SNAPSHOTS = join(ROOT, 'tests/fixtures/ui-snapshots.json');
@@ -74,9 +74,17 @@ test('the primitives carry no colour or font literal, no emoji, and resolve ever
     assert.ok(name in dark, `${name} is a dark token`);
     assert.ok(name in light, `${name} resolves in the light theme`);
   }
-  assert.match(css, /\.ui-button \{[^}]*min-height: var\(--touch-min\)/, 'buttons are 44 px targets');
-  assert.match(css, /\.ui-sheet-handle \{[^}]*min-height: var\(--touch-min\)/);
-  assert.match(css, /\.ui-range \{[^}]*height: var\(--touch-min\)/);
+  // Every interactive class is a 44 px target, and no rule on one (base, variant, modifier or
+  // descendant; pseudo-elements like the slider track are parts, not targets) shrinks it.
+  const INTERACTIVE = /\.ui-(?:button|icon-button|chip|popover-summary|range|sheet-handle|rail-toggle)\b/;
+  const rules = [...stripped(css).matchAll(/([^{}]+)\{([^}]*)\}/g)].map(m => ({selector: m[1].trim(), body: m[2]}));
+  for (const name of ['ui-button', 'ui-popover-summary', 'ui-range', 'ui-sheet-handle']) {
+    assert.ok(rules.some(r => r.selector === `.${name}` && /(?:min-)?height: var\(--touch-min\)/.test(r.body)), `${name} is a 44 px target`);
+  }
+  for (const {selector, body} of rules) {
+    if (!INTERACTIVE.test(selector) || /::/.test(selector)) continue;
+    for (const [, prop, value] of body.matchAll(/(?:^|;)\s*((?:min-)?height):\s*([^;]+)/g)) assert.equal(value.trim(), 'var(--touch-min)', `${selector} ${prop}`);
+  }
   assert.match(css, /:focus-visible \{ outline: 2px solid var\(--focus\)/);
 });
 
@@ -121,7 +129,7 @@ test('the primitives are accessible as drawn: real buttons, names, pressed state
   assert.equal((out.Segmented.match(/<button /g) || []).length, 3);
   assert.match(out.Tile, /<details class="ui-popover"[^>]*><summary [^>]*>basis<\/summary><div class="ui-popover-body">NWS point forecast/);
   assert.match(out.TileStale, /data-state="stale"[\s\S]*>stale<\/span>/);
-  assert.match(out.Rail, /^<nav class="ui-rail" aria-label="Layers"><ul class="ui-rail-list"><li class="ui-rail-item" data-on="true"><button [^>]*aria-pressed="true"/);
+  assert.match(out.Rail, /^<div class="ui-rail" role="group" aria-label="Layers"><ul class="ui-rail-list"><li class="ui-rail-item" data-on="true"><button [^>]*aria-pressed="true"/);
   assert.match(out.Rail, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Currents basis"><svg/);
   assert.match(out.Sheet, /<section class="ui-sheet" data-detent="half" aria-label="Brief">/);
   assert.match(out.Sheet, /<button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="true"/);
