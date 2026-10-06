@@ -5,5 +5,10 @@
     "measured_on": "2026-09-29",
     "max_bytes": 2795531,
     "target_bytes": 409600
+  },
+  "bundles": {
+    "comment": "v2 page budgets (FE-09; docs/plans/front-end/design.md § 13), checked by scripts/check_client.mjs after the Vite build: gzipped bytes of each page's initial JavaScript (its entry and every static import; dynamic imports load after first paint) and of its stylesheets. The JavaScript numbers are the design's (landing 180 KB, app 350 KB); the CSS numbers are this task's choice.",
+    "app.html": {"js_gzip_max": 358400, "css_gzip_max": 49152},
+    "landing.html": {"js_gzip_max": 184320, "css_gzip_max": 24576}
   }
 }

@@ -31,6 +31,8 @@ const server = spawn('npx', [...WRANGLER, 'dev', '--config', config, '--persist-
   '--var', 'TEXT_ADVISOR_ENABLED:true',
   // CF-31: the charter fleet's admin is on for the browser tests only (e2e/fleet-admin.spec.ts); deployed it stays off until the owner enables it.
   '--var', 'FLEET_ENABLED:true',
+  // FE-09: the v2 shell is off by default so `/` stays the v1 app for its specs; the v2 specs open the landing and app with `?ui=v2` (e2e/fixtures.ts `v2`).
+  '--var', 'UI_V2:false',
   '--show-interactive-dev-session=false', '--log-level', 'warn'],
 {cwd: root, stdio: 'inherit', env: {...process.env, WRANGLER_SEND_METRICS: 'false'}});
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.kill(signal));

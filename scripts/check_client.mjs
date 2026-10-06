@@ -11,14 +11,19 @@
 // - index.html modulepreloads the boot chain (scripts/vite-preload.mjs).
 // - sw.js stays at /sw.js, unhashed, and carries the build id; precache.json
 //   lists exactly this build's hashed scripts and styles.
+// - The v2 pages stay within their gzipped JavaScript and CSS budgets
+//   (scripts/startup-budget.json "bundles"; FE-09, front-end design § 13).
+//   Usage: node scripts/check_client.mjs [client-dir] [source-dir] [budget-file]
 import {readdir, readFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
+import {gzipSync} from 'node:zlib';
 import {MANIFEST, STABLE} from './client-build.mjs';
 import {FINGERPRINTED} from './precache.mjs';
 import {bootPreloadRoots} from './vite-preload.mjs';
 
 const dir = process.argv[2] || 'dist/client';
 const source = process.argv[3] || join(dir, '..');
+const budgetFile = process.argv[4] || new URL('./startup-budget.json', import.meta.url).pathname;
 const problems = [];
 const exists = path => readFile(join(dir, path)).then(() => true, () => false);
 const HASHED = /^assets\/[\w.-]+\.[0-9a-f]{10}\.[a-z0-9]+$/;
@@ -116,8 +121,33 @@ if (precache) {
 }
 if (!(await readFile(join(dir, '.assetsignore'), 'utf8').catch(() => '')).includes('.vite')) problems.push('.assetsignore must keep .vite/ unpublished');
 
+// 7. v2 page budgets: the entry plus its static imports (what runs before first
+// paint) and its stylesheets, gzipped; a page absent from this build is skipped.
+const budgets = JSON.parse(await readFile(budgetFile, 'utf8')).bundles || {};
+const gzipped = async file => gzipSync(await readFile(join(dir, file)), {level: 9}).length;
+const measured = [];
+for (const [page, budget] of Object.entries(budgets)) {
+  if (page === 'comment' || !manifest[page]) continue;
+  const js = new Set(), css = new Set();
+  const walk = key => {
+    const e = manifest[key];
+    if (!e || js.has(e.file) || css.has(e.file)) return;
+    (e.file.endsWith('.css') ? css : js).add(e.file);
+    for (const file of e.css || []) css.add(file);
+    (e.imports || []).forEach(walk);
+  };
+  walk(page);
+  const total = async files => { let n = 0; for (const f of files) n += await exists(f) ? await gzipped(f) : 0; return n; };
+  const size = {js: await total(js), css: await total(css)};
+  measured.push(`${page} js ${size.js} B, css ${size.css} B gzipped`);
+  for (const kind of ['js', 'css']) {
+    const max = budget[`${kind}_gzip_max`];
+    if (Number.isFinite(max) && size[kind] > max) problems.push(`${page}: initial ${kind === 'js' ? 'JavaScript' : 'CSS'} ${size[kind]} B gzipped exceeds its budget of ${max} B (${budgetFile})`);
+  }
+}
+
 if (problems.length) {
   console.error(`Client check failed:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Client check passed: ${assets.length} hashed assets, ${pages.length} pages, ${references} page references and ${imports} script references resolve, ${precache.assets.length + precache.shells.length + precache.static.length} precached for build ${precache.build}.`);
+console.log(`Client check passed: ${assets.length} hashed assets, ${pages.length} pages, ${references} page references and ${imports} script references resolve, ${precache.assets.length + precache.shells.length + precache.static.length} precached for build ${precache.build}.${measured.length ? ` Budgets: ${measured.join('; ')}.` : ''}`);
