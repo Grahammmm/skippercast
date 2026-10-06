@@ -27,7 +27,7 @@ jobs:
           --output var/review/nos-seabed-monterey-gap-audit.json
       - name: Upload aggregate review without sample coordinates
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nos-seabed-monterey-gap-audit
           path: var/review/nos-seabed-monterey-gap-audit.json
@@ -56,7 +56,7 @@ jobs:
           --verify research/receipts/central-dataone-rov-300ft-spot-precision.json
       - name: Upload aggregate review without observation coordinates
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: central-dataone-rov-spot-precision
           path: var/review/central-dataone-rov-300ft-spot-precision.json
@@ -154,7 +154,7 @@ jobs:
           cmp research/receipts/estero-2012-vdatum-spatial-diagnostic.json var/review/estero-2012-vdatum-spatial-diagnostic.json
       - name: Upload research-only source audit
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: estero-original-200-300ft-research
           path: |
@@ -288,7 +288,7 @@ jobs:
         run: python research/scripts/check_point_buchon_rov_access_change.py --current var/review/point-buchon-rov-access-triage.json
       - name: Upload unpublished original-pair review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: point-buchon-original-paired-review
           path: |
@@ -342,7 +342,7 @@ jobs:
         run: python -m unittest research.tests.gis.test_monterey_rov_research_overlap -v
       - name: Upload research-only ROV summary
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: central-rov-200-300ft-evidence
           path: |
@@ -367,7 +367,7 @@ jobs:
         run: cmp research/receipts/central-ccfrp-area-evidence.json var/review/central-ccfrp-area-evidence.json
       - name: Upload review-only area evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ccfrp-open-reference-area-evidence
           path: var/review/central-ccfrp-area-evidence.json
@@ -390,7 +390,7 @@ jobs:
         run: cmp research/receipts/monterey-300-native-research-queue.json var/review/monterey-300-native-research-queue.json
       - name: Upload research-only depth-band review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: monterey-300-native-research-priority
           path: var/review/monterey-300-native-research-queue.json
@@ -414,7 +414,7 @@ jobs:
           --output var/review/noaa-vdatum-offshore-monterey-samples.json
       - name: Upload unpublished datum-service review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: noaa-vdatum-monterey-coverage-review
           path: var/review/noaa-vdatum-offshore-monterey-samples.json
@@ -435,7 +435,7 @@ jobs:
           --output var/review/cdfw-crfs-rcgl-2004-2024.json
       - name: Upload unpublished CDFW survey review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cdfw-crfs-rcgl-review
           path: var/review/cdfw-crfs-rcgl-2004-2024.json
@@ -456,7 +456,7 @@ jobs:
           --output var/review/cdfw-crfs-all-2004-2024.json
       - name: Upload unpublished survey-coverage review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cdfw-crfs-all-species-review
           path: var/review/cdfw-crfs-all-2004-2024.json
@@ -477,7 +477,7 @@ jobs:
           --output var/review/noaa-dismap-groundfish-2023-2025.json
       - name: Upload unpublished source review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: noaa-dismap-groundfish-review
           path: var/review/noaa-dismap-groundfish-2023-2025.json
