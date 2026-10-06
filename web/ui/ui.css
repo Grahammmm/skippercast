@@ -1,0 +1,100 @@
+/* UI primitives (FE-03, docs/plans/front-end/design.md § 5, § 6). Loaded
+   after web/tokens.css by every v2 page; every colour, font, radius and
+   spacing is a token (scripts/check_tokens.mjs). Fonts are set with the
+   `font` shorthand because the lint keeps font-family in the tokens file.
+   Targets are at least --touch-min (44 px) on the touch axis; the focus
+   ring is --focus, 2 px outside, on :focus-visible only. */
+
+.icon { display: inline-block; flex: none; vertical-align: -0.2em; }
+.ui-mono { font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.ui-reading { font: var(--weight-medium) var(--text-18) / var(--leading-heading) var(--font-mono); font-variant-numeric: tabular-nums; }
+.ui-eyebrow { color: var(--muted); font: var(--weight-medium) var(--text-11) / var(--leading-body) var(--font-sans); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; }
+
+/* Buttons */
+.ui-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: var(--touch-min); min-width: var(--touch-min); padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--text);
+  font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans); cursor: pointer;
+  transition: background var(--motion-state), border-color var(--motion-state), color var(--motion-state);
+}
+.ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ui-button:disabled { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
+.ui-button--primary { background: var(--mint); border-color: var(--mint); color: var(--bg); }
+.ui-button--primary:not(:disabled):hover { background: color-mix(in srgb, var(--mint) 88%, var(--text)); }
+.ui-button--ghost { border-color: var(--line); background: var(--panel-2); }
+.ui-button--ghost:not(:disabled):hover { border-color: var(--muted); }
+.ui-button--quiet { color: var(--muted); }
+.ui-button--quiet:not(:disabled):hover { color: var(--text); background: var(--panel-2); }
+.ui-button[aria-pressed="true"] { border-color: var(--mint); background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); color: var(--text); }
+.ui-button--sm { min-height: 36px; padding: var(--space-1) var(--space-3); }
+.ui-icon-button { padding: var(--space-2); }
+
+/* Chips and the segmented switch */
+.ui-chip { border-radius: var(--radius-pill); }
+.ui-segmented { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--panel); }
+.ui-segmented .ui-chip { border-color: transparent; background: transparent; }
+.ui-segmented .ui-chip[aria-pressed="true"] { background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); }
+
+/* Basis popover: a <details> that opens over the content */
+.ui-popover { position: relative; display: inline-block; }
+.ui-popover-summary { list-style: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--touch-min); padding: 0 var(--space-2); border-radius: var(--radius-sm); cursor: pointer; }
+.ui-popover-summary::-webkit-details-marker { display: none; }
+.ui-popover-summary:hover, .ui-popover[open] > .ui-popover-summary { color: var(--text); }
+.ui-popover--icon .ui-popover-summary { min-width: var(--touch-min); justify-content: center; padding: 0; }
+.ui-popover-body {
+  position: absolute; top: 100%; left: 0; z-index: var(--z-modal); width: max-content; max-width: min(320px, 80vw);
+  margin-top: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel); box-shadow: var(--elev-2); color: var(--text);
+  font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); letter-spacing: 0; text-transform: none;
+}
+.ui-popover[data-align="end"] .ui-popover-body { left: auto; right: 0; }
+
+/* Stat tile */
+.ui-tile { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); }
+.ui-tile-label { display: flex; align-items: center; gap: var(--space-1); }
+.ui-tile-reading { display: flex; align-items: baseline; gap: var(--space-1); }
+.ui-tile[data-hue="mint"] .ui-reading { color: var(--mint); }
+.ui-tile[data-hue="blue"] .ui-reading { color: var(--blue); }
+.ui-tile[data-hue="coral"] .ui-reading { color: var(--coral); }
+.ui-tile[data-hue="amber"] .ui-reading { color: var(--amber); }
+.ui-tile[data-state="stale"] .ui-reading { color: var(--muted); }
+.ui-tile-unit, .ui-tile-detail, .ui-tile-source { color: var(--muted); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
+.ui-tile-source { display: flex; gap: var(--space-2); align-items: baseline; }
+.ui-tile-stale { color: var(--amber); }
+.ui-tile .ui-popover-summary { min-height: 28px; padding: 0; }
+
+/* Layer rail and time dock: map chrome over the map */
+.ui-rail, .ui-dock { border: 1px solid var(--line); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
+.ui-rail { z-index: var(--z-map-chrome); padding: var(--space-1); }
+.ui-rail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.ui-rail-item { display: flex; align-items: center; gap: var(--space-1); }
+.ui-rail-toggle { flex: 1; justify-content: flex-start; border-color: transparent; background: transparent; text-align: left; }
+.ui-rail-text { display: flex; flex-direction: column; gap: 2px; }
+.ui-rail-note, .ui-rail-item[data-on="false"] .ui-rail-label { color: var(--muted); }
+.ui-dock { z-index: var(--z-dock); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+.ui-dock-range { flex: 1; min-width: 120px; }
+.ui-dock-readout { min-width: 5ch; text-align: right; color: var(--text); font-size: var(--text-13); }
+
+/* Range: the native slider restyled, track and thumb from tokens */
+.ui-range { appearance: none; height: var(--touch-min); margin: 0; background: transparent; cursor: pointer; }
+.ui-range:disabled { cursor: not-allowed; opacity: 0.5; }
+.ui-range::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-pill); background: var(--line); }
+.ui-range::-moz-range-track { height: 4px; border-radius: var(--radius-pill); background: var(--line); }
+.ui-range::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; margin-top: -7px; border: 2px solid var(--bg); border-radius: var(--radius-pill); background: var(--mint); box-shadow: var(--elev-1); }
+.ui-range::-moz-range-thumb { width: 18px; height: 18px; border: 2px solid var(--bg); border-radius: var(--radius-pill); background: var(--mint); box-shadow: var(--elev-1); }
+
+/* Bottom sheet: moved by data-detent; the detent sizes are § 6's */
+.ui-sheet {
+  --sheet-peek: 96px; --sheet-half: 50dvh; --sheet-full: 92dvh;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet); display: flex; flex-direction: column; height: var(--sheet-full);
+  border-top: 1px solid var(--line); border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--panel); box-shadow: var(--elev-3); color: var(--text);
+  transform: translateY(calc(var(--sheet-full) - var(--sheet-peek))); transition: transform var(--motion-sheet);
+}
+.ui-sheet[data-detent="half"] { transform: translateY(calc(var(--sheet-full) - var(--sheet-half))); }
+.ui-sheet[data-detent="full"] { transform: translateY(0); }
+.ui-sheet-edge { display: flex; flex-direction: column; flex: none; }
+.ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; cursor: grab; }
+.ui-sheet-grip { width: 40px; height: 4px; border-radius: var(--radius-pill); background: var(--muted); }
+.ui-sheet-body { flex: 1; overflow: auto; padding: 0 var(--space-4) var(--space-5); }
+.ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; }
