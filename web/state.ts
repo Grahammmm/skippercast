@@ -11,13 +11,28 @@
 // region, a map view, a target, an hour), navigate() updates the URL with the
 // History API and the signals, and nothing reloads. That decision lives here
 // only: when a module learns to follow region changes, lift it here.
+//
+// State v2 (FE-04, design § 8) adds profile, day, layers, area and base. The
+// URL still wins; profile, layers and base also persist in localStorage and
+// restore when the URL omits them. The v2 shell swaps region-bound sources
+// itself, so configureStore({v2: true}) makes lockRegion() a no-op.
 import {batch, signal} from '@preact/signals';
+import {DEFAULT_PROFILE, isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
 
 /** URL parameters the store owns. `target` is the species/target id. */
-export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour'] as const;
+export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base'] as const;
 export type UrlKey = typeof URL_KEYS[number];
 export type UrlState = Record<UrlKey, string | null> & {selection: string | null};
 export type Units = 'nautical';
+
+/** Masthead views (v2). `?view=` is shared with v1's map position "lat,lng,zoom". */
+export const APP_VIEWS = ['coast', 'conditions', 'history', 'fleet', 'reports'] as const;
+export type AppView = typeof APP_VIEWS[number];
+export const BASES = ['night', 'chart', 'aerial'] as const;
+export type Base = typeof BASES[number];
+/** `?layers=none` writes an empty rail; an absent key means stored or profile defaults. */
+export const NO_LAYERS = 'none';
+export const STORAGE_KEYS = {profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1'} as const;
 
 export const region = signal<string | null>(null);
 export const coast = signal<string | null>(null);
@@ -30,8 +45,35 @@ export const hour = signal<string | null>(null);
 export const selection = signal<string | null>(null);
 /** Knots, feet and nautical miles: the app's only unit system today. */
 export const units = signal<Units>('nautical');
+export const profile = signal<Profile>(DEFAULT_PROFILE);
+/** The masthead view when ?view= names one; v1 map positions leave it at coast. */
+export const appView = signal<AppView>('coast');
+/** Time dock day "YYYY-MM-DD"; null means today. */
+export const day = signal<string | null>(null);
+/** Rail ids switched on; resolved from the URL, then storage, then the profile. */
+export const layers = signal<readonly string[]>(PROFILE_TABLE[DEFAULT_PROFILE].defaultLayers);
+/** Coast or focus id for the command bar (?area=, else ?focus=). */
+export const area = signal<string | null>(null);
+export const base = signal<Base>('night');
 
 let locked: {region: string | null; coast: string | null} | null = null;
+
+/** The storage the store persists to; null disables persistence. */
+export interface StoreStorage {getItem(key: string): string | null; setItem(key: string, value: string): void}
+const options: {v2: boolean; storage: StoreStorage | null | undefined} = {v2: false, storage: undefined};
+
+/** v2 never reloads on a region change; `storage` replaces localStorage (tests pass a Map-backed one). */
+export function configureStore(patch: {v2?: boolean; storage?: StoreStorage | null}): void {
+  if (patch.v2 !== undefined) options.v2 = patch.v2;
+  if (patch.storage !== undefined) options.storage = patch.storage;
+}
+
+function storage(): StoreStorage | null {
+  if (options.storage !== undefined) return options.storage;
+  try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
+}
+function stored(key: string): string | null { try { return storage()?.getItem(key) ?? null; } catch { return null; } }
+function store(key: string, value: string): void { try { storage()?.setItem(key, value); } catch { /* the URL still carries it */ } }
 
 /** The store's parameters in `href`. */
 export function readURL(href: string): UrlState {
@@ -39,8 +81,38 @@ export function readURL(href: string): UrlState {
   return {
     region: params.get('region'), coast: params.get('coast'), view: params.get('view'),
     target: params.get('target'), hour: params.get('hour'),
+    profile: params.get('profile'), day: params.get('day'), layers: params.get('layers'),
+    area: params.get('area') || params.get('focus'), base: params.get('base'),
     selection: params.get('spot') || params.get('focus'),
   };
+}
+
+export const isAppView = (value: unknown): value is AppView => typeof value === 'string' && (APP_VIEWS as readonly string[]).includes(value);
+export const isBase = (value: unknown): value is Base => typeof value === 'string' && (BASES as readonly string[]).includes(value);
+
+/** "YYYY-MM-DD" when it is a real calendar date; null otherwise. */
+export function parseDay(value: string | null): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const ms = Date.parse(value + 'T00:00:00Z');
+  return Number.isFinite(ms) && new Date(ms).toISOString().startsWith(value) ? value : null;
+}
+
+/** Rail ids in a ?layers= value ("none" is an empty rail); null when the value names no id. */
+export function parseLayers(value: string | null): string[] | null {
+  if (value === NO_LAYERS) return [];
+  const ids = (value ?? '').split(',').map(s => s.trim()).filter(s => /^[a-z][a-z0-9-]*$/.test(s));
+  return ids.length ? ids.filter((id, i) => ids.indexOf(id) === i) : null;
+}
+/** The ?layers= value for `ids`. */
+export const layersParam = (ids: readonly string[]): string => ids.length ? ids.join(',') : NO_LAYERS;
+
+/** The profile, layers and base `href` resolves to: URL, then storage, then the profile's defaults. */
+export function resolveStored(state: UrlState): {profile: Profile; layers: readonly string[]; base: Base} {
+  const first = <T extends string>(is: (v: unknown) => v is T, fallback: T, ...values: (string | null)[]): T => values.find(is) ?? fallback;
+  const p = first(isProfile, DEFAULT_PROFILE, state.profile, stored(STORAGE_KEYS.profile));
+  const l = parseLayers(state.layers) ?? parseLayers(stored(STORAGE_KEYS.layers)) ?? PROFILE_TABLE[p].defaultLayers;
+  const b = first(isBase, 'night', state.base, stored(STORAGE_KEYS.base));
+  return {profile: p, layers: l, base: b};
 }
 
 /** `href` with `patch` applied: a string sets a parameter, null removes it. */
@@ -57,15 +129,24 @@ export function withParams(href: string, patch: Partial<Record<UrlKey, string | 
 /** Set the signals from `href` (default: the current address). */
 export function syncFromURL(href: string = location.href): UrlState {
   const state = readURL(href);
+  const kept = resolveStored(state);
+  // A key the URL names is the user's latest choice: remember it for links that omit it.
+  if (isProfile(state.profile)) store(STORAGE_KEYS.profile, kept.profile);
+  if (parseLayers(state.layers)) store(STORAGE_KEYS.layers, layersParam(kept.layers));
+  if (isBase(state.base)) store(STORAGE_KEYS.base, kept.base);
   batch(() => {
     region.value = state.region; coast.value = state.coast; view.value = state.view;
     species.value = state.target; hour.value = state.hour; selection.value = state.selection;
+    profile.value = kept.profile; layers.value = kept.layers; base.value = kept.base;
+    appView.value = isAppView(state.view) ? state.view : 'coast';
+    day.value = parseDay(state.day); area.value = state.area;
   });
   return state;
 }
 
-/** Called by boot.js once region-bound modules load; region changes reload after this. */
+/** Called by boot.js once region-bound modules load; region changes reload after this. A v2 store ignores it. */
 export function lockRegion(href: string = location.href): void {
+  if (options.v2) return;
   const {region: r, coast: c} = readURL(href);
   locked = {region: r, coast: c};
 }
@@ -73,9 +154,11 @@ export const regionLocked = (): boolean => locked !== null;
 
 /** Whether moving from `from` to `to` needs a full page load. */
 export function needsReload(from: string, to: string, lock = locked): boolean {
-  if (!lock) return false;
   const a = new URL(from), b = new URL(to);
-  if (a.origin !== b.origin || a.pathname !== b.pathname) return true;
+  const otherPage = a.origin !== b.origin || a.pathname !== b.pathname;
+  if (options.v2) return otherPage;
+  if (!lock) return false;
+  if (otherPage) return true;
   const next = readURL(to);
   return next.region !== lock.region || next.coast !== lock.coast;
 }

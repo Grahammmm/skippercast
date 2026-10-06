@@ -501,9 +501,18 @@ Ranked in open-questions Q2; the plan assumes:
 | `area` | coast or focus id | no | replaces `focus` for the command bar; `focus` still read |
 | `base` | `night`, `chart`, `aerial` | yes | aerial only where NAIP is configured |
 
-Region change no longer reloads: `lockRegion()` is removed for v2 (ADR
-0005 item 3); the engine swaps region-bound sources and the brief rebuilds
-from the new region's feeds. v1 keeps the reload until FE-61.
+`?view=` is shared with v1, which writes the map position as
+`lat,lng,zoom`. The store keeps the raw value in `view` for v1 and sets
+`appView` only when the value names a masthead view (otherwise `coast`), so
+one parameter serves both shells; FE-11 picks the v2 key for the map
+position. `?layers=none` is an empty rail; an absent key restores the stored
+list, then the profile's defaults. A key the URL names is persisted, so a
+link that omits it next time restores the last choice (FE-04).
+
+Region change no longer reloads: `lockRegion()` is a no-op under
+`configureStore({v2: true})` (ADR 0005 item 3); the engine swaps
+region-bound sources and the brief rebuilds from the new region's feeds. v1
+keeps the reload until FE-61.
 
 ### Profile semantics (ported from `fish` `experience.ts`, `daily.ts`, `opportunity.ts`)
 
