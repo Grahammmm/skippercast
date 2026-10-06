@@ -1,6 +1,7 @@
 // Masthead (FE-05, design § 6): brand, the location in mono (port name and
 // centre from the region), the four views as ?view= links that navigate in
-// place, the freshness dot with the oldest age, and sign in.
+// place, the freshness dot with the oldest age, and sign in (v1's #account
+// passkey dialog, dist/account.js, until the account menu moves into v2).
 import {Icon} from '../ui/icons.tsx';
 import {APP_VIEWS, appView, region, setParams, withParams, type AppView} from '../state.ts';
 import {freshness, regionInfo} from './App.tsx';
@@ -46,7 +47,7 @@ export function Masthead({href}: {href?: string} = {}) {
         <span class="app-fresh-dot" aria-hidden="true"></span>
         <span class="ui-mono">{fresh.age ?? '—'}</span>
       </span>
-      <a class="ui-button ui-button--quiet" href="my-data.html"><Icon name="user" size={18} />Sign in</a>
+      <a class="ui-button ui-button--quiet" href="/#account"><Icon name="user" size={18} />Sign in</a>
     </header>
   );
 }

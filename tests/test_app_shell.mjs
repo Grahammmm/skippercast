@@ -63,7 +63,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<main class="app-main"><aside/);
   assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet']);
   assert.match(html, /class="app-fresh" role="status" data-state="unknown" aria-label="Freshness: No readings yet"/);
-  assert.match(html, /href="my-data.html">.*Sign in<\/a>/);
+  assert.match(html, /href="\/#account">.*Sign in<\/a>/);
   assert.match(html, /role="group" aria-label="Profile"/);
   assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
   assert.equal(count(html, /<label>Target<select/g), 1);

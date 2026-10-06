@@ -19,7 +19,12 @@ export function localParts(date: Date, tz: string): {day: string; hour: number; 
   return {day: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) % 24, weekday: p.weekday ?? ''};
 }
 
-/** The ?hour= value for local `hourOfDay` on calendar `dayValue` in `tz`. */
+/**
+ * The ?hour= value for local `hourOfDay` on calendar `dayValue` in `tz`. The
+ * offset is read once at the guessed instant, so on a DST change day the hours
+ * around the switch can land one hour off; FE-12 replaces this with the
+ * forecast's own frame times and drops the conversion.
+ */
 export function utcHour(dayValue: string, hourOfDay: number, tz: string): string | null {
   const guess = Date.parse(`${dayValue}T${pad(hourOfDay)}:00:00Z`);
   if (!Number.isFinite(guess)) return null;
