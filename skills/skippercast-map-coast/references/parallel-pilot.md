@@ -235,3 +235,7 @@ Do not promise a linear speedup or double a pool automatically. If concurrency
 is capped, explain that limit and propose a separately authorized configuration
 or subsequent trial. Preserve the next ready batch and unresolved dependencies
 in the same checkpoint so the next session resumes instead of re-auditing.
+
+## Original geologic bedrock batch
+
+The reviewed SIM3327 method uses an explicit `original-interpreted-bedrock-v1` policy with authenticated original vectors, pure bedrock units, invalid-record holds and nonoverlapping `native_windows`. It is a separate interpretation from rugose raster class3. The normal classified stage reconstructs current canonical graded exclusions and earlier original classified geometry; no manual runner baseline artifact is required. Default selected-source support uses only the paired source's winning Tier1 cells. Broader footprint support requires the explicit paired-reference mode, verified dependencies and all producer terms. Before growing a window set, test positive additional native habitat and preserve prior geometry identities. Processing-window edges do not establish reef edges. Source activation, current screens and complete public map/export readback remain separate gates.

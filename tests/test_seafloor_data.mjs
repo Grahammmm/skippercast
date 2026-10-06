@@ -7,6 +7,20 @@ import {
   HABITAT_LABEL, DEPTH_NOTE,
 } from '../dist/seafloor-data.js';
 
+test('geologic bedrock interpretation keeps rugosity and species fit unknown', () => {
+  const p = {status: 'classified-area', fit_lingcod: 3, classified_area: JSON.stringify({
+    profile: 'original-interpreted-bedrock-area-v1',
+    interpretation_method: 'original-interpreted-bedrock-v1',
+  })};
+  const d = habitatDetails(p);
+  assert.equal(d.classifiedBedrock, true);
+  assert.match(d.title, /exposed-bedrock/);
+  assert.equal(d.grade, 'unknown');
+  assert.equal(d.fits[0].value, 'unknown');
+  assert.equal(habitatColor(p), CLASSIFIED_COLOR);
+  assert.match(habitatDetails({status: 'classified-area'}).title, /rugose-rock/);
+});
+
 test('unranked search areas have a distinct style and honest details', () => {
   const p = {status: 'search-area', terrain_grade: 'unknown', fit_lingcod: 'unknown',
     search_area: JSON.stringify({target_species: ['lingcod']}), depth_min_ft: 40, depth_max_ft: 50};
