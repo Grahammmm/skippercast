@@ -96,7 +96,7 @@
 .ui-sheet[data-detent="half"] { transform: translateY(42vh); transform: translateY(42dvh); }
 .ui-sheet[data-detent="full"] { transform: translateY(0); }
 .ui-sheet-edge { display: flex; flex-direction: column; flex: none; }
-.ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; }
+.ui-sheet-handle { display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--touch-min); padding: 0; border: 0; background: transparent; touch-action: none; cursor: grab; }
 .ui-sheet-grip { width: 40px; height: var(--space-1); border-radius: var(--radius-pill); background: var(--muted); }
 .ui-sheet-body { flex: 1; overflow: auto; padding: 0 var(--space-4) var(--space-5); }
 .ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; }

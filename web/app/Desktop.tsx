@@ -2,6 +2,9 @@
 // stage with its chrome. The brief here is the shell's empty state, bound to
 // the profile: tiles show "—" with their source line and basis until FE-30
 // wires web/brief/daily.ts; the map is a token-coloured stage until FE-11.
+// The brief's pieces are exported so Mobile.tsx (FE-06) composes them into
+// the sheet in its own order.
+import type {ComponentChildren} from 'preact';
 import {Tile, type TileProps} from '../ui/Tile.tsx';
 import {PROFILE_TABLE} from '../profile.ts';
 import {profile} from '../state.ts';
@@ -26,14 +29,18 @@ export function emptyTiles(nearshore: boolean): TileProps[] {
 
 export const DISCLAIMER = 'Forecasts, observations and habitat carry separate clocks; check the rules before you fish.';
 
-export function Brief({picks = []}: {picks?: readonly Pick[]} = {}) {
+export const Headline = () => <h1>Waiting for readings.</h1>;
+
+export function Tiles() {
   const p = PROFILE_TABLE[profile.value];
+  return <div class="app-tiles">{emptyTiles(p.swellTile === 'nearshore').map(tile => <Tile key={tile.label} {...tile} />)}</div>;
+}
+
+export const TideSpark = () => <figure class="app-spark" aria-label="Tide curve"><span>—</span></figure>;
+
+export function Picks({picks = []}: {picks?: readonly Pick[]} = {}) {
   return (
-    <aside class="app-brief" aria-label="Brief">
-      <span class="ui-eyebrow">Today's brief</span>
-      <h1>Waiting for readings.</h1>
-      <div class="app-tiles">{emptyTiles(p.swellTile === 'nearshore').map(tile => <Tile key={tile.label} {...tile} />)}</div>
-      <figure class="app-spark" aria-label="Tide curve"><span>—</span></figure>
+    <>
       <h2 class="ui-eyebrow">Where to look</h2>
       {picks.length ? (
         <ol class="app-picks">
@@ -47,23 +54,50 @@ export function Brief({picks = []}: {picks?: readonly Pick[]} = {}) {
           ))}
         </ol>
       ) : <p class="app-empty">No ranked places yet.</p>}
-      <p class="app-caveat">{p.caveat}</p>
-      <footer class="app-brief-footer">{DISCLAIMER} <a href="sources.html">Sources</a></footer>
+    </>
+  );
+}
+
+export const Caveat = () => <p class="app-caveat">{PROFILE_TABLE[profile.value].caveat}</p>;
+
+/** The one disclaimer line per page with the sources link; `children` adds links after it. */
+export const BriefFooter = ({children}: {children?: ComponentChildren} = {}) =>
+  <footer class="app-brief-footer">{DISCLAIMER} <a href="sources.html">Sources</a>{children}</footer>;
+
+export function Brief({picks = []}: {picks?: readonly Pick[]} = {}) {
+  return (
+    <aside class="app-brief" aria-label="Brief">
+      <span class="ui-eyebrow">Today's brief</span>
+      <Headline />
+      <Tiles />
+      <TideSpark />
+      <Picks picks={picks} />
+      <Caveat />
+      <BriefFooter />
     </aside>
   );
 }
 
-export function Desktop() {
+/** The map stage: the engine's host (FE-11) with whatever chrome the layout puts over it. */
+export function MapStage({children}: {children?: ComponentChildren} = {}) {
+  return (
+    <section class="app-stage" aria-label="Map">
+      <div class="app-map"><span>Map unavailable.</span></div>
+      {children}
+    </section>
+  );
+}
+
+export function Desktop({now = new Date()}: {now?: Date} = {}) {
   return (
     <main class="app-main">
       <Brief />
-      <section class="app-stage" aria-label="Map">
-        <div class="app-map"><span>Map unavailable.</span></div>
+      <MapStage>
         <MarkCard />
         <LayerRail />
         <Legend />
-        <TimeDock />
-      </section>
+        <TimeDock now={now} />
+      </MapStage>
     </main>
   );
 }

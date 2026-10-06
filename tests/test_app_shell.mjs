@@ -1,4 +1,4 @@
-// The v2 desktop app shell (FE-05, docs/plans/front-end/dev-plan.md): the
+// The v2 app shell (FE-05 desktop, FE-06 mobile; docs/plans/front-end/dev-plan.md): the
 // web/app modules are bundled with esbuild and rendered to strings against a
 // store read from a test address. Checks the shell's structure (masthead,
 // command bar, brief, map chrome), that every control reflects the URL state
@@ -18,6 +18,8 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const APP_FILES = readdirSync(join(ROOT, 'web/app')).map(name => `web/app/${name}`);
 const ORIGIN = 'https://s.test/map';
 const TZ = 'America/Los_Angeles';
+/** The shell's clock in every render: Monday 2026-10-05, 1 pm Pacific, so chips and windows read the same whatever day the tests run. */
+const NOW = new Date('2026-10-05T20:00:00Z');
 
 let shell;
 async function load() {
@@ -32,6 +34,8 @@ async function load() {
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {clearSelection, placeholderMark} from './web/app/MarkCard.tsx';
       export {dayOptions, dockState, hourText, localParts, utcHour, zoneName, DAY_COUNT} from './web/app/TimeDock.tsx';
+      export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
+      export {dragDetent, DRAG_MIN} from './web/ui/Sheet.tsx';
       export * as state from './web/state.ts';
       export {PROFILE_TABLE, RAIL_IDS} from './web/profile.ts';
       export {render} from 'preact-render-to-string';
@@ -45,13 +49,15 @@ const memory = () => { const m = new Map(); return {getItem: k => m.get(k) ?? nu
 const count = (html, re) => (html.match(re) || []).length;
 const attrs = (html, re) => [...html.matchAll(re)].map(m => m[1]);
 
-/** Render the whole shell for `href` with a fresh store. */
-async function renderShell(href) {
+/** Render the whole shell for `href` with a fresh store at the fixed clock `now`. */
+async function renderShell(href, now = NOW) {
   const {App, render, h, state} = await load();
   state.configureStore({v2: true, storage: memory()});
   state.syncFromURL(href);
-  return render(h(App, {}));
+  return render(h(App, {now}));
 }
+/** The day chips of the group labelled Day in `html`, as [label, on]. */
+const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1].matchAll(/aria-pressed="(true|false)"[^>]*>(?:<svg.*?<\/svg>)?([^<]+)<\/button>/gs)].map(m => [m[2], m[1] === 'true']);
 
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);
@@ -68,7 +74,8 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
   assert.equal(count(html, /<label>Target<select/g), 1);
   assert.equal(count(html, /<label>Area<select/g), 1);
-  assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · \d{1,2} [ap]m<\/output>/);
+  assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
+  assert.deepEqual(dayChips(html), [['Today', true], ['Tue', false], ['Wed', false]], 'no ?day= means today, at the fixed clock');
   assert.match(html, /<aside class="app-brief" aria-label="Brief">/);
   assert.match(html, /class="ui-eyebrow">Today's brief</);
   assert.match(html, /<h1>[A-Z][^<]*\.<\/h1>/, 'the headline is one sentence with a full stop');
@@ -129,8 +136,8 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   const rail = Object.fromEntries([...html.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
   assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
   assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['water-temp', 'swell']);
-  // Dock: the day chip for 2026-10-06 is on and the slider sits at 2 pm local.
-  assert.match(html, /aria-pressed="true"[^>]*>(?:<svg.*?<\/svg>)?(?:Tue|10-06)<\/button>/s);
+  // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
+  assert.deepEqual(dayChips(html), [['Today', false], ['Tue', true], ['Wed', false]]);
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
   assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">2 pm<\/output>/);
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
@@ -173,6 +180,75 @@ test('the helpers behind the controls round-trip through the store keys', async 
   assert.equal(coordinates([35.34, -120.965]), '35.34N 120.97W');
   assert.equal(titleCase('cabezon-shallow-reef'), 'Cabezon Shallow Reef');
   assert.equal(clearSelection(`${ORIGIN}?region=morro-bay&spot=r12&focus=r13&view=fleet`), `${ORIGIN}?region=morro-bay&view=fleet`);
+});
+
+/** Render the shell for `href` as the mobile layout (what main.tsx does under 1,024 px). */
+async function renderMobile(href) {
+  const {narrow} = await load();
+  narrow.value = true;
+  try { return await renderShell(href); } finally { narrow.value = false; }
+}
+
+test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
+  const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
+  assert.match(html, /^<div class="app-mobile"><section class="app-stage" aria-label="Map">/, 'the map stage comes first and fills the viewport');
+  assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
+  // Top strip: the brand and location card, the layers button, then the full-width profile switch.
+  assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
+  assert.match(html, /role="group" aria-label="Profile" class="ui-segmented app-profile"/);
+  assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
+  // One sheet at peek with the hour slider at its edge, then the brief in sheet order.
+  assert.equal(count(html, /class="ui-sheet /g), 1);
+  assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
+  assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">1 pm<\/output><\/div><\/div>/);
+  const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
+  const order = ['class="ui-eyebrow">Today · 1 pm</span>','class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<figure class="app-spark"',
+    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<p class="app-caveat">', '<footer class="app-brief-footer">', 'href="/#account">Sign in</a>'];
+  const at = order.map(s => body.indexOf(s));
+  assert.ok(at.every(i => i >= 0), `every piece renders: ${JSON.stringify(order.filter((_, i) => at[i] < 0))}`);
+  assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: eyebrow, freshness, headline, tiles, picks, tide, menus, caveat, footer');
+  assert.equal(count(body, /class="ui-tile"/g), 4);
+  assert.equal(count(html, /<h1>/g), 1);
+  assert.equal(count(html, /separate clocks/g), 1, 'one disclaimer line per page');
+  assert.doesNotMatch(html, /ui-rail-item|app-legend/, 'the rail and legend wait for the layers button');
+  // Tabs: the four views with icons, after the sheet.
+  assert.match(html, /<nav aria-label="Views" class="app-tabs"><ul class="app-views">/);
+  assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet']);
+  assert.equal(count(html, /data-view="[a-z]+"><svg/g), 4, 'each tab has its icon');
+  assert.match(html, /aria-current="page" data-view="coast"/);
+});
+
+test('the mobile sheet reflects the address: the mark card stands in at peek, the hour and day follow the dock', async () => {
+  const {utcHour, render, h, LayersPanel, state, afterDetent, toggleLayers, dragDetent, DRAG_MIN} = await load();
+  const hour = utcHour('2026-10-06', 14, TZ);
+  const html = await renderMobile(`${ORIGIN}?region=morro-bay&profile=spear&spot=r12&day=2026-10-06&hour=${encodeURIComponent(hour)}&layers=clouds`);
+  assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" aria-label="Brief">/);
+  assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2>r12<\/h2>/);
+  assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
+  assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
+  assert.deepEqual(dayChips(html), [['Today', false], ['Tue', true], ['Wed', false]], 'the sheet\'s day menu runs from the fixed clock');
+  assert.match(html, /Nearshore site —/);
+  assert.match(html, /In-water visibility is unverified/);
+  // The layers panel: the rail with the legend of what is on, and a Done button.
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=clouds`);
+  const panel = render(h(LayersPanel, {onClose: () => {}}));
+  assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
+  assert.equal(count(panel, /class="ui-rail-item"/g), 6);
+  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['clouds']);
+  // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
+  assert.deepEqual(toggleLayers('brief', 'peek'), {panel: 'layers', detent: 'half'});
+  assert.deepEqual(toggleLayers('brief', 'full'), {panel: 'layers', detent: 'full'});
+  assert.deepEqual(toggleLayers('layers', 'half'), {panel: 'brief', detent: 'half'});
+  assert.deepEqual(afterDetent('layers', 'peek'), {panel: 'brief', detent: 'peek'});
+  assert.deepEqual(afterDetent('layers', 'full'), {panel: 'layers', detent: 'full'});
+  // Drag: short drags snap back, a drag past the minimum steps once, a far drag goes to the end.
+  assert.equal(dragDetent('peek', -(DRAG_MIN - 1), 700), 'peek');
+  assert.equal(dragDetent('peek', -DRAG_MIN, 700), 'half');
+  assert.equal(dragDetent('peek', -400, 700), 'full');
+  assert.equal(dragDetent('half', 60, 700), 'peek');
+  assert.equal(dragDetent('full', 400, 700), 'peek');
+  assert.equal(dragDetent('full', -100, 700), 'full');
 });
 
 test('loadRegion fills the masthead from regions/<id>/region.json and leaves placeholders on failure', async () => {
