@@ -1,0 +1,89 @@
+/* The v2 app shell (FE-05, docs/plans/front-end/design.md § 6, concept A ·
+   Bridge). Loaded after web/tokens.css and web/ui/ui.css by dist/app.html.
+   Desktop (≥ 1,024 px): masthead, command bar, a 332 px brief column beside
+   the map stage with its chrome (rail, legend, dock, mark card). Narrower
+   screens stack the brief under the map with no horizontal scroll; FE-06
+   brings the sheet and tab layout. Every value is a token. */
+
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--bg); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
+.app { display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; min-height: 100dvh; }
+.app a { color: var(--blue); }
+.app select {
+  min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
+}
+.app select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Masthead */
+.app-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
+.app-brand { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none; }
+.app-brand .icon { color: var(--mint); }
+.app-location { color: var(--muted); text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); }
+.app-views { display: flex; gap: var(--space-1); margin: 0 auto; padding: 0; list-style: none; }
+.app-views a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--muted); font-weight: var(--weight-medium); text-decoration: none; }
+.app-views a:hover { color: var(--text); background: var(--panel-2); }
+.app-views a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--mint); }
+.app-views a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fresh { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); }
+.app-fresh-dot { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--muted); }
+.app-fresh[data-state="ok"] .app-fresh-dot { background: var(--mint); }
+.app-fresh[data-state="stale"] .app-fresh-dot { background: var(--amber); }
+
+/* Command bar */
+.app-command { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--bg); }
+.app-command label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
+.app-window { margin-left: auto; color: var(--text); font-size: var(--text-13); }
+
+/* Brief beside the map stage */
+.app-main { display: grid; grid-template-columns: 332px minmax(0, 1fr); min-height: 0; }
+.app-brief { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
+.app-brief h1 { margin: 0; font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
+.app-brief h2 { margin: 0; }
+.app-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.app-spark { display: grid; place-items: center; min-height: 72px; margin: 0; border: 1px dashed var(--line); border-radius: var(--radius-md); color: var(--muted); font-size: var(--text-13); }
+.app-picks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+.app-pick { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-1) var(--space-3); align-items: baseline; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); }
+.app-pick-rank { color: var(--muted); }
+.app-pick-reason { grid-column: 2 / 4; color: var(--muted); font-size: var(--text-13); }
+.app-fit { padding: 0 var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); color: var(--mint); }
+.app-empty, .app-caveat { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
+
+/* Map stage and its chrome */
+.app-stage { position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
+.app-map { position: absolute; inset: 0; z-index: var(--z-map); display: grid; place-items: center; color: var(--muted); }
+.app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
+.app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
+.app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
+.app-legend li { display: flex; align-items: center; gap: var(--space-2); }
+.app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
+.app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
+.app-swatch[data-layer="currents"] { background: var(--flow); }
+.app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-5)); }
+.app-swatch[data-layer="swell"] { background: var(--blue); }
+.app-swatch[data-layer="fleet"] { background: var(--fleet); }
+.app-swatch[data-layer="clouds"] { background: var(--text); }
+.app-dock { position: absolute; left: var(--space-4); right: var(--space-4); bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
+.app-dock .ui-dock { flex: 1; min-width: 0; flex-wrap: wrap; }
+.app-dock-zone { color: var(--muted); }
+.app-mark { position: absolute; left: var(--space-4); top: var(--space-4); z-index: var(--z-map-chrome); width: min(320px, calc(100% - var(--space-6))); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); }
+.app-mark-head { display: flex; align-items: flex-start; gap: var(--space-2); }
+.app-mark h2 { flex: 1; margin: 0; font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
+.app-mark-kind, .app-mark-source { color: var(--muted); font-size: var(--text-13); }
+.app-mark-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2); }
+
+@media (min-width: 1024px) {
+  /* The brief scrolls inside its column; the page itself stays put. */
+  .app { height: 100vh; height: 100dvh; }
+}
+
+@media (max-width: 1023px) {
+  .app-main { grid-template-columns: minmax(0, 1fr); }
+  .app-brief { order: 2; border-right: 0; border-top: 1px solid var(--line); }
+  .app-stage { min-height: 60vh; min-height: 60dvh; }
+  .app-brief h1 { font-size: var(--text-22); }
+  .app-views { margin: 0; flex-wrap: wrap; }
+  .app-window { margin-left: 0; }
+  .app-legend { display: none; }
+}

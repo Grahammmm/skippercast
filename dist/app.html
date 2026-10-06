@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
     <title>SkipperCast · Map</title>
-    <link rel="stylesheet" href="tokens.css" />
+    <!-- FE-05: the v2 shell loads the v2 tokens (web/tokens.css), the primitives and its own sheet, in this order; web/app/main.tsx renders into #app. -->
+    <link rel="stylesheet" href="../web/tokens.css" />
+    <link rel="stylesheet" href="../web/ui/ui.css" />
+    <link rel="stylesheet" href="../web/app/app.css" />
   </head>
   <body>
-    <main>
-      <h1>SkipperCast</h1>
-      <p>The new SkipperCast app shell is being built here.</p>
-    </main>
+    <div id="app">
+      <main>
+        <h1>SkipperCast</h1>
+        <p>Loading the map shell.</p>
+      </main>
+    </div>
+    <script type="module" src="../web/app/main.tsx"></script>
   </body>
 </html>
