@@ -191,6 +191,17 @@ jobs:
             echo "::notice title=Copy lint::base commit $BASE_SHA is not fetchable (force-push); skipped the growth check"
             node scripts/check_copy.mjs
           fi
+      # Design § 5: web/ reads colour and type from web/tokens.css; the baseline
+      # (scripts/token-lint-baseline.json) may only shrink relative to the base.
+      - name: Token lint (baseline only shrinks)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ] && git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
+            node scripts/check_tokens.mjs --base FETCH_HEAD
+          else
+            node scripts/check_tokens.mjs
+          fi
       - name: Website assets and data consistency
         run: python scripts/check_web.py
       - name: Build Worker and public assets

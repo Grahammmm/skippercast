@@ -131,3 +131,5 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   claims in design § 2 were checked against the files they cite. No code yet.
 - 2026-10-05: Phase 0 started (FE-01: `UI_V2` flag, shell routing, placeholder
   pages, ADR 0005 and 0009 Accepted).
+- 2026-10-05: FE-02 added the tokens, fonts, contrast extension and token
+  lint.
