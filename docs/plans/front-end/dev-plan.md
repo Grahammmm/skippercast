@@ -79,7 +79,7 @@ Rules for every task:
 ### FE-08 · Port chooser and first-run profile · M
 - Depends: FE-04, FE-05
 - Files: `web/landing/PortInput.tsx`, `web/ports.ts` (ported `closestPort`, `portURL`, storage key shared with `dist/home-port.js`), `web/app/FirstRun.tsx`, `tests/test_ports.mjs`, `e2e/v2-landing.spec.ts`.
-- Build: § 7 chooser and location flow; first run is the profile choice once; the command bar's area menu holds port and locate.
+- Build: § 7 chooser and location flow; first run is the profile choice once; the command bar's area group holds the port and locate controls, which open the chooser as a dialog.
 - Accept: 1. Typing matches ports by name; Enter navigates. 2. Location refused → message and the input focused. 3. v1 reads the port v2 saved (shared key). 4. First run shows once and never when `?profile=` is in the URL.
 
 ### FE-09 · v2 test harness and budgets · S
