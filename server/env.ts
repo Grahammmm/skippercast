@@ -54,6 +54,9 @@ export interface Env {
   // read only through fleetSettings() in server/fleet/settings.ts (docs/plans/charter-fleet/design.md § 16).
   FLEET_ENABLED?: string;            // "true" turns the fleet on; anything else: every /api/fleet/* route 404s
   FLEET_MAP_ENABLED?: string;        // "true" (with FLEET_ENABLED): the admin map routes /api/fleet/map/*
+  // Front-end rebuild switch (repository variable copied by scripts/wrangler_config.mjs; docs/plans/front-end/design.md § 14);
+  // read only through uiV2() in server/routes/assets.ts, which holds the default.
+  UI_V2?: string;                    // "true": / serves landing.html and /map serves app.html; "false": the v1 shell; unset: deployments/production.json ui_v2
   // Secrets (wrangler secret put)
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;

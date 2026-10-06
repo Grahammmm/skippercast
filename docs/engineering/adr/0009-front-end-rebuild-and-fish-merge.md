@@ -1,6 +1,6 @@
 # 0009. Front end: rebuild the shell on ADR 0005's stack behind a flag, self-host the basemap, and merge `fish`
 
-- **Status:** Proposed — owner decision required (the owner accepts by approving the front-end plan PR; FE-01 then records Accepted here and in ADR 0005)
+- **Status:** Accepted (2026-10-05; the owner accepted by approving the front-end plan, PR #353, and FE-01 records it here and in ADR 0005)
 - **Date:** 2026-10-05
 
 ## Context

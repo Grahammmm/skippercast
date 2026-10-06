@@ -14,6 +14,10 @@ const deployment=JSON.parse(await readFile('deployments/production.json','utf8')
 // sw.js, _headers and .assetsignore. Pages are served by the Worker (no-store)
 // from their stable paths via SHELLS.
 const {buildId,shells,manifest}=await buildClient({root:'dist',out:'dist/client',headers:headersFile()});
+// FE-01: the front-end rebuild's shells (dist/landing.html at /, dist/app.html at /map) are
+// served only behind UI_V2 (server/routes/assets.ts); a build without them would answer the
+// switch with a bare 404, so their absence fails the build here.
+for(const page of ['/landing.html','/app.html'])if(!shells[page])throw Error(`dist${page} is missing from the built pages (SHELLS)`);
 // TA-W1: the server-rendered advisor pages link dist/chat.html's hashed stylesheet set (tokens, the chat
 // island's and advisor/pages.css) and its entry script (the chat island and the pages' telemetry).
 const advisorAssets=advisorAssetPaths(manifest);

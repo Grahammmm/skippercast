@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, uiVars, UI_VARS, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
 
 test('comment stripping leaves // and /* inside strings alone', () => {
   const text = '{\n  // a comment\n  "url": "https://example.com/a//b", /* block */ "glob": "x/*y*/z",\n  "n": 1, // trailing\n}';
@@ -258,14 +258,32 @@ test('fleet vars: FLEET_ENABLED and FLEET_MAP_ENABLED only are copied (trimmed, 
   for (const name of ['FLEET_ENABLED', 'FLEET_MAP_ENABLED']) assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
 });
 
+// FE-01: the front-end rebuild's switch has no bindings either; UI_V2 alone is copied whenever set (docs/plans/front-end/design.md § 14).
+test('ui vars: UI_V2 only is copied (trimmed, non-empty), beside the fleet vars; the Worker declares it and the deploy workflow passes it', () => {
+  const base = deployConfig(committed(), ID, 'skippercast-feeds');
+  assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {UI_V2: '', UI_V3: 'true', UI_V2_TOKEN: 'secret'}}), base);
+  const on = deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {UI_V2: ' true ', FLEET_ENABLED: 'true'}});
+  assert.deepEqual(on.vars, {...base.vars, FLEET_ENABLED: 'true', UI_V2: 'true'});
+  assert.deepEqual({...on, vars: base.vars}, base, 'only vars change: no bindings');
+  assert.equal(deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {UI_V2: 'false'}}).vars.UI_V2, 'false', 'an explicit off is copied too');
+  assert.deepEqual(UI_VARS, ['UI_V2']);
+  assert.deepEqual(uiVars({UI_V2: 'true', UI_V2_TOKEN: 'secret', FLEET_ENABLED: 'true'}), {UI_V2: 'true'});
+  const env = readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8');
+  assert.match(env, /^\s+UI_V2\?:/m, 'server/env.ts declares UI_V2');
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /^ {10}UI_V2: \$\{\{ vars\.UI_V2 \}\}$/m, 'deploy-cloudflare.yml passes UI_V2');
+  const deployment = JSON.parse(readFileSync(new URL('../deployments/production.json', import.meta.url), 'utf8'));
+  assert.equal(deployment.ui_v2, false, 'the v2 shell stays off by default until FE-60');
+});
+
 test('the CLI copies the fleet vars from the environment without ENABLE_ADVISOR', () => {
   const dir = mkdtempSync(join(tmpdir(), 'wrangler-config-')), out = join(dir, 'w.json'), cwd = fileURLToPath(new URL('..', import.meta.url));
   try {
     const run = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
-      env: {...process.env, ENABLE_ADVISOR: '', ENABLE_QUEUES: '', FLEET_ENABLED: 'true', FLEET_MAP_ENABLED: '', FLEET_X_TOKEN: 'leak-me'}});
+      env: {...process.env, ENABLE_ADVISOR: '', ENABLE_QUEUES: '', FLEET_ENABLED: 'true', FLEET_MAP_ENABLED: '', FLEET_X_TOKEN: 'leak-me', UI_V2: 'true'}});
     assert.equal(run.status, 0, run.stderr);
     const config = JSON.parse(readFileSync(out, 'utf8'));
-    assert.equal(config.vars.FLEET_ENABLED, 'true'); assert.equal(config.vars.FLEET_MAP_ENABLED, undefined);
+    assert.equal(config.vars.FLEET_ENABLED, 'true'); assert.equal(config.vars.FLEET_MAP_ENABLED, undefined); assert.equal(config.vars.UI_V2, 'true');
     assert.doesNotMatch(readFileSync(out, 'utf8'), /leak-me/);
     assert.equal(config.queues, undefined);
   } finally { rmSync(dir, {recursive: true, force: true}); }

@@ -17,6 +17,8 @@ export interface Deployment {
   public_origin: string; allowed_origins: string[]; forecast_feed: string;
   // workflow: the trip check's (live-conditions.yml); workflows: every workflow allowed a job identity (TA-M1).
   scheduler: {repository: string; repository_id: string; owner_id: string; ref: string; workflow: string; workflows?: string[]};
+  /** FE-01: the default of the front-end rebuild switch when the UI_V2 var is unset (server/routes/assets.ts uiV2); FE-60 flips it. */
+  ui_v2?: boolean;
 }
 
 /** Published feeds and upstream APIs are external JSON, not yet schema-validated (P2-02). */
