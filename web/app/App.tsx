@@ -1,13 +1,19 @@
 // The v2 app shell (FE-05, design § 6, concept A · Bridge): masthead, command
-// bar and the desktop layout, all bound to web/state.ts so that every control
-// writes the URL. The map is a placeholder stage until FE-11 brings MapLibre;
-// the brief shows its empty state until FE-30 brings the readings. FirstRun
-// (FE-08) asks for the profile once, over the map, never blocking it.
+// bar and the desktop layout, or under 1,024 px the mobile layout (FE-06),
+// all bound to web/state.ts so that every control writes the URL. The map is
+// a placeholder stage until FE-11 brings MapLibre; the brief shows its empty
+// state until FE-30 brings the readings. FirstRun (FE-08) asks for the
+// profile once, over the map, never blocking it.
 import {signal} from '@preact/signals';
 import {CommandBar} from './CommandBar.tsx';
 import {Desktop} from './Desktop.tsx';
 import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
+import {Mobile} from './Mobile.tsx';
+
+/** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
+export const NARROW_QUERY = '(max-width: 1023px)';
+export const narrow = signal(false);
 
 /** What the masthead knows about the region: name, centre and zone from regions/<id>/region.json. */
 export interface RegionInfo {readonly id: string; readonly name: string; readonly center: readonly [number, number]; readonly timezone: string}
@@ -35,6 +41,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = fetch): Pro
 }
 
 export function App() {
+  if (narrow.value) return <><Mobile /><FirstRun /></>;
   return (
     <div class="app">
       <Masthead />

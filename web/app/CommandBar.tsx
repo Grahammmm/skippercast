@@ -6,6 +6,7 @@
 // The area group also holds the port (FE-08, § 7): a button that opens the
 // port chooser with search, "Use my location" and "Explore the coast"; a
 // choice saves the port for v1 and v2 and navigates in place.
+// The switch and the menus are exported for the mobile shell (FE-06).
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -31,6 +32,33 @@ export function windowText(now: Date, tz: string): string {
   const state = dockState(now, tz);
   const label = dayOptions(now, tz, state.day).find(o => o.value === state.day)?.label ?? state.day;
   return `${label} · ${hourText(state.hour)}`;
+}
+
+export function ProfileSwitch({class: cls}: {class?: string} = {}) {
+  return <Segmented label="Profile" options={PROFILE_OPTIONS} value={profile.value} onChange={next => setParams({profile: next, target: null})} class={cls} />;
+}
+
+export function TargetSelect() {
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
+  return (
+    <label>Target
+      <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
+        {targetOptions(p, species.value).map(id => <option key={id} value={id}>{titleCase(id)}</option>)}
+      </select>
+    </label>
+  );
+}
+
+export function AreaSelect() {
+  const a = area.value;
+  return (
+    <label>Area
+      <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>
+        <option value="">Whole region</option>
+        {a ? <option value={a}>{titleCase(a)}</option> : null}
+      </select>
+    </label>
+  );
 }
 
 /** Save `port` and open the app there, keeping the profile; the v2 store swaps the region without a reload. */
@@ -59,22 +87,12 @@ export function PortControl() {
 }
 
 export function CommandBar({now = new Date()}: {now?: Date} = {}) {
-  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, a = area.value;
   return (
     <section class="app-command" aria-label="Command bar">
-      <Segmented label="Profile" options={PROFILE_OPTIONS} value={p} onChange={next => setParams({profile: next, target: null})} />
-      <label>Target
-        <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
-          {targetOptions(p, species.value).map(id => <option key={id} value={id}>{titleCase(id)}</option>)}
-        </select>
-      </label>
+      <ProfileSwitch />
+      <TargetSelect />
       <div class="app-area" role="group" aria-label="Area and port">
-        <label>Area
-          <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>
-            <option value="">Whole region</option>
-            {a ? <option value={a}>{titleCase(a)}</option> : null}
-          </select>
-        </label>
+        <AreaSelect />
         <PortControl />
       </div>
       <output class="app-window ui-mono" aria-label="Time window">{windowText(now, zone())}</output>

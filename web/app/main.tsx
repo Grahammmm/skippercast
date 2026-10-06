@@ -1,13 +1,14 @@
 // Entry of dist/app.html (FE-05): a v2 store (region changes never reload),
-// the address read once and followed on Back/Forward, the shell rendered
-// into #app, then the region's name and zone for the masthead and the dock.
+// the address read once and followed on Back/Forward, the width followed for
+// the mobile layout (FE-06), the shell rendered into #app, then the region's
+// name and zone for the masthead and the dock.
 // /map with no region or coast (FE-08, § 7) opens the saved port, else the
 // landing; the chooser itself never opens on its own.
 import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {configureStore, coast, region, startURLSync} from '../state.ts';
 import {landingURL, loadPorts, portURL, savedPortId} from '../ports.ts';
-import {App, freshness, loadRegion, regionInfo} from './App.tsx';
+import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 
 configureStore({v2: true});
 startURLSync();
@@ -18,6 +19,9 @@ export async function openSavedPort(href: string = location.href): Promise<strin
   return port ? portURL(href, port) : landingURL(href);
 }
 if (!region.peek() && !coast.peek()) void openSavedPort().then(next => location.replace(next));
+const width = matchMedia(NARROW_QUERY);
+narrow.value = width.matches;
+width.addEventListener('change', event => { narrow.value = event.matches; });
 const host = document.getElementById('app');
 if (host) { host.replaceChildren(); render(<App />, host); }
 

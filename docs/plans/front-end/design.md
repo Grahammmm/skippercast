@@ -421,10 +421,14 @@ map 0, chrome 10, dock 20, sheet 30, modal 40, toast 50; `--touch-min` 44 px.
 The map fills the viewport; a top strip holds the brand and the profile
 switch; a bottom sheet (`Sheet` in `web/ui`) with three detents (peek: the
 headline and freshness; half: the four tiles and the top pick; full: the
-whole brief) and the hour slider pinned at the sheet's top edge; a four-tab
+whole brief, with the day, target and area menus at its end and sign in in
+its footer) and the hour slider pinned at the sheet's top edge; a four-tab
 nav (Coast, Conditions, History, Fleet) under the sheet. The layer rail
-collapses to a single button that opens the rail as a sheet. The mark card
-replaces the sheet's peek content while a mark is selected.
+collapses to a single button in the top strip that swaps the sheet's content
+for the rail with the legend under it. The mark card replaces the sheet's
+peek content while a mark is selected. The sheet moves by drag on its
+handle and by keyboard (FE-03's keys); focus entering the sheet's body at
+peek lifts it to half.
 
 ### Where today's features live in the shell
 

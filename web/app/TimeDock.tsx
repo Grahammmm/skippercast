@@ -56,11 +56,16 @@ export function dockState(now: Date, tz: string): {day: string; today: string; h
   return {day: day.value ?? current.day, today: current.day, hour: at === null ? current.hour : localParts(new Date(at * 1000), tz).hour};
 }
 
+/** Write day `d` and local hour `h` to the address: today drops ?day=, the hour becomes ISO UTC. */
+export function selectTime(now: Date, tz: string, d: string, h: number): void {
+  setParams({day: d === localParts(now, tz).day ? null : d, hour: utcHour(d, h, tz)});
+}
+
 export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   const tz = zone();
   const state = dockState(now, tz);
   const [playing, setPlaying] = useState(false);
-  const select = (d: string, h: number) => setParams({day: d === state.today ? null : d, hour: utcHour(d, h, tz)});
+  const select = (d: string, h: number) => selectTime(now, tz, d, h);
   useEffect(() => {
     if (!playing) return;
     const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;

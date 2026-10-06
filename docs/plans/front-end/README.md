@@ -135,3 +135,5 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   lint.
 - 2026-10-05: FE-05 added the desktop app shell (`web/app/`, `/map` behind
   `UI_V2`) with a placeholder map stage and the brief's empty state.
+- 2026-10-05: FE-06 added the mobile app shell (`web/app/Mobile.tsx`, under
+  1,024 px): full-screen map, top strip, one draggable sheet, four-tab nav.

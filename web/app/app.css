@@ -1,19 +1,21 @@
 /* The v2 app shell (FE-05, docs/plans/front-end/design.md § 6, concept A ·
    Bridge). Loaded after web/tokens.css and web/ui/ui.css by dist/app.html.
    Desktop (≥ 1,024 px): masthead, command bar, a 332 px brief column beside
-   the map stage with its chrome (rail, legend, dock, mark card). Narrower
-   screens stack the brief under the map with no horizontal scroll; FE-06
-   brings the sheet and tab layout. Every value is a token. */
+   the map stage with its chrome (rail, legend, dock, mark card). Mobile
+   (under 1,024 px, FE-06): the map fills the viewport under a floating top
+   strip, one bottom sheet and a tab nav, with no horizontal scroll from
+   320 px. Every value is a token; each vh line is the fallback for the dvh
+   line after it. */
 
 html, body { margin: 0; min-height: 100%; }
 body { background: var(--bg); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
 .app { display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; min-height: 100dvh; }
-.app a { color: var(--blue); }
-.app select {
+.app-brief a, .app-sheet a { color: var(--blue); }
+.app select, .app-mobile select {
   min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
 }
-.app select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app select:focus-visible, .app-mobile select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
 .app-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -80,11 +82,58 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 }
 
 @media (max-width: 1023px) {
+  /* The desktop layout only shows this narrow before main.tsx reads the width; it stacks rather than overflows. */
   .app-main { grid-template-columns: minmax(0, 1fr); }
   .app-brief { order: 2; border-right: 0; border-top: 1px solid var(--line); }
   .app-stage { min-height: 60vh; min-height: 60dvh; }
   .app-brief h1 { font-size: var(--text-22); }
   .app-views { margin: 0; flex-wrap: wrap; }
   .app-window { margin-left: 0; }
-  .app-legend { display: none; }
 }
+
+/* Mobile layout (FE-06): the stage fills the viewport; the top strip, the sheet and the tabs float over it. */
+.app-mobile { --app-tabs: calc(56px + env(safe-area-inset-bottom, 0px)); --app-strip: calc(84px + env(safe-area-inset-top, 0px)); position: relative; height: 100vh; height: 100dvh; overflow: hidden; }
+.app-mobile .app-stage { position: absolute; inset: 0; min-height: 0; }
+.app-top { position: absolute; top: 0; left: 0; right: 0; z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
+.app-top-row { display: flex; align-items: center; gap: var(--space-2); }
+.app-top-card { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 var(--space-3) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
+.app-top-card .app-brand { min-height: var(--touch-min); font-size: var(--text-15); }
+.app-top-card .app-location { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.app-top .ui-icon-button { flex: none; box-shadow: var(--elev-2); }
+.app-profile { display: flex; box-shadow: var(--elev-2); }
+.app-profile .ui-chip { flex: 1; min-width: 0; padding: var(--space-1) var(--space-2); }
+
+/* The sheet sits on the tab bar and stops under the top strip's first row at full; its detents are ui.css's, offset by the tabs. */
+.app-sheet {
+  --sheet-peek: 176px; bottom: var(--app-tabs);
+  height: calc(100vh - var(--app-tabs) - var(--app-strip)); height: calc(100dvh - var(--app-tabs) - var(--app-strip));
+  transform: translateY(calc(100vh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek))); transform: translateY(calc(100dvh - var(--app-tabs) - var(--app-strip) - var(--sheet-peek)));
+}
+.app-sheet--mark { --sheet-peek: 220px; }
+.app-sheet[data-detent="half"] { transform: translateY(calc(50vh - var(--app-tabs) - var(--app-strip))); transform: translateY(calc(50dvh - var(--app-tabs) - var(--app-strip))); }
+.app-sheet[data-detent="full"] { transform: translateY(0); }
+.app-sheet-hour { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) var(--space-2); }
+.app-sheet-brief, .app-sheet-layers { display: flex; flex-direction: column; gap: var(--space-3); }
+.app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
+.app-sheet h1 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.app-sheet h2 { margin: 0; }
+.app-sheet .app-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.app-sheet .ui-tile { min-width: 0; padding: var(--space-2) var(--space-1); }
+.app-sheet .ui-tile-label .icon { display: none; }
+.app-sheet .ui-tile-source { flex-wrap: wrap; overflow-wrap: break-word; }
+.app-sheet .ui-tile:nth-child(n + 3) .ui-popover-body { left: auto; right: 0; }
+.app-sheet .app-mark, .app-sheet .app-rail, .app-sheet .app-legend { position: static; width: auto; min-width: 0; max-width: none; box-shadow: none; }
+.app-sheet .app-mark { display: flex; flex-direction: column; gap: var(--space-1); padding: 0; border: 0; background: transparent; }
+.app-sheet .app-mark p { margin: 0; }
+.app-sheet .app-rail { padding: 0; border: 0; background: transparent; backdrop-filter: none; }
+.app-sheet-menus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.app-sheet-menus label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
+.app-sheet .app-brief-footer { margin-top: 0; }
+.app-sheet .app-brief-footer a { display: inline-block; min-height: var(--touch-min); box-sizing: border-box; margin-right: var(--space-2); padding: var(--space-3) var(--space-2); }
+
+/* The tab nav under the sheet: four equal 56 px targets with icon and label. */
+.app-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet); box-sizing: border-box; height: var(--app-tabs); padding-bottom: env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--line); background: var(--panel); }
+.app-tabs .app-views { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; height: 100%; margin: 0; }
+.app-tabs .app-views a { display: flex; flex-direction: column; justify-content: center; gap: var(--space-1); height: 100%; min-height: 56px; padding: 0; border-radius: 0; font-size: var(--text-11); }
+.app-tabs .app-views a[aria-current="page"] { color: var(--mint); box-shadow: inset 0 2px 0 var(--mint); }
+.app-tabs .app-views a:focus-visible { outline-offset: -2px; }
