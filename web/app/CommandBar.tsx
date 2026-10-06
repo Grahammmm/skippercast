@@ -3,9 +3,17 @@
 // The target list is the profile's defaults until FE-31 wires the region's
 // search plans; the area list is the current choice until FE-31 reads
 // coasts.json. Both menus keep whatever the link names so nothing is lost.
+// The area group also holds the port (FE-08, § 7): a button that opens the
+// port chooser with search, "Use my location" and "Explore the coast"; a
+// choice saves the port for v1 and v2 and navigates in place.
+import {useState} from 'preact/hooks';
+import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
+import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, speciesForProfile, type Profile} from '../profile.ts';
-import {area, profile, setParams, species} from '../state.ts';
+import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
+import {area, navigate, profile, region, setParams, species} from '../state.ts';
+import {track} from '../telemetry.ts';
 import {zone} from './App.tsx';
 import {dayOptions, dockState, hourText} from './TimeDock.tsx';
 import {titleCase} from './Masthead.tsx';
@@ -25,6 +33,31 @@ export function windowText(now: Date, tz: string): string {
   return `${label} · ${hourText(state.hour)}`;
 }
 
+/** Save `port` and open the app there, keeping the profile; the v2 store swaps the region without a reload. */
+export function choosePort(port: Port, href: string = location.href): void {
+  savePort(port.id);
+  track('port_selected', {region: port.region, flush: true});
+  navigate(portURL(href, port, profile.peek()));
+}
+
+/** The port control and its dialog; the directory loads on the first open and a failed load still offers "Explore the coast". */
+export function PortControl() {
+  const [open, setOpen] = useState<'closed' | 'search' | 'locate'>('closed');
+  const [ports, setPorts] = useState<readonly Port[] | null>(null);
+  const current = ports ? currentPort(ports, region.value, savedPortId()) : null;
+  const show = (how: 'search' | 'locate') => { setOpen(how); if (!ports) loadPorts().then(setPorts, () => setPorts([])); };
+  const close = () => setOpen('closed');
+  return (
+    <>
+      <Button icon="pin" class="app-port" aria-label={current ? `Change port (${current.name})` : 'Choose port'} onClick={() => show('search')}>{current?.name ?? 'Port'}</Button>
+      <IconButton icon="target" label="Use my location" onClick={() => show('locate')} />
+      <PortDialog open={open !== 'closed'} onClose={close}>
+        <PortInput ports={ports} autoFocus locate={open === 'locate'} onChoose={port => { close(); choosePort(port); }} onExplore={() => { close(); navigate(exploreURL(location.href)); }} />
+      </PortDialog>
+    </>
+  );
+}
+
 export function CommandBar({now = new Date()}: {now?: Date} = {}) {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, a = area.value;
   return (
@@ -35,12 +68,15 @@ export function CommandBar({now = new Date()}: {now?: Date} = {}) {
           {targetOptions(p, species.value).map(id => <option key={id} value={id}>{titleCase(id)}</option>)}
         </select>
       </label>
-      <label>Area
-        <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>
-          <option value="">Whole region</option>
-          {a ? <option value={a}>{titleCase(a)}</option> : null}
-        </select>
-      </label>
+      <div class="app-area" role="group" aria-label="Area and port">
+        <label>Area
+          <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>
+            <option value="">Whole region</option>
+            {a ? <option value={a}>{titleCase(a)}</option> : null}
+          </select>
+        </label>
+        <PortControl />
+      </div>
       <output class="app-window ui-mono" aria-label="Time window">{windowText(now, zone())}</output>
     </section>
   );

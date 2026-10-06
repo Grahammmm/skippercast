@@ -1,10 +1,12 @@
 // The v2 app shell (FE-05, design § 6, concept A · Bridge): masthead, command
 // bar and the desktop layout, all bound to web/state.ts so that every control
 // writes the URL. The map is a placeholder stage until FE-11 brings MapLibre;
-// the brief shows its empty state until FE-30 brings the readings.
+// the brief shows its empty state until FE-30 brings the readings. FirstRun
+// (FE-08) asks for the profile once, over the map, never blocking it.
 import {signal} from '@preact/signals';
 import {CommandBar} from './CommandBar.tsx';
 import {Desktop} from './Desktop.tsx';
+import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
 
 /** What the masthead knows about the region: name, centre and zone from regions/<id>/region.json. */
@@ -38,6 +40,7 @@ export function App() {
       <Masthead />
       <CommandBar />
       <Desktop />
+      <FirstRun />
     </div>
   );
 }

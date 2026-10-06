@@ -1,0 +1,47 @@
+/* Port chooser (FE-08, docs/plans/front-end/design.md § 7): the inline input
+   on the landing and the app's port dialog share these rules; the first-run
+   profile card sits with them because both are the entry flow. Loaded after
+   web/ui/ui.css. Every value is a token. */
+
+.port-input { display: flex; flex-direction: column; gap: var(--space-3); max-width: 520px; color: var(--text); }
+.port-input-label { font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
+.port-input-row { display: flex; gap: var(--space-2); }
+.port-input input {
+  flex: 1; min-width: 0; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans);
+}
+.port-input input::placeholder { color: var(--muted); }
+.port-input input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.port-input-results { display: flex; flex-direction: column; gap: var(--space-2); max-height: min(320px, 40vh); max-height: min(320px, 40dvh); overflow: auto; }
+.port-input-list { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.port-input-option {
+  display: grid; gap: var(--space-1); width: 100%; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); text-align: left; cursor: pointer;
+  transition: border-color var(--motion-state), background var(--motion-state);
+}
+.port-input-option:hover { border-color: var(--muted); }
+.port-input-option:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.port-input-option span { color: var(--muted); font-size: var(--text-13); }
+.port-input-empty, .port-input-feedback, .port-input-note { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.port-input-feedback { min-height: 1.2em; }
+.port-input-note { font-size: var(--text-11); }
+.port-input-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* The app's port dialog */
+.port-dialog { width: min(560px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
+.port-dialog::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
+.port-dialog-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.port-dialog-head h2 { flex: 1; margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+
+/* First run (FE-08, D11): the profile choice once, over the map, never modal */
+.app-firstrun {
+  position: fixed; top: calc(var(--space-7) * 3 + var(--space-5)); left: 50%; z-index: var(--z-toast); width: min(420px, calc(100% - var(--space-6))); transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--panel); color: var(--text); box-shadow: var(--elev-3);
+}
+.app-firstrun h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.app-firstrun p { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.app-firstrun-options { display: flex; flex-direction: column; gap: var(--space-2); }
+.app-firstrun-options .ui-button { justify-content: flex-start; text-align: left; }
+.app-firstrun-options .ui-button span { display: flex; flex-direction: column; gap: var(--space-1); }
+.app-firstrun-options .ui-button small { color: var(--muted); font-size: var(--text-13); }

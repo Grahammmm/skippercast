@@ -201,6 +201,7 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   const page = await readFile(join(ROOT, 'dist/app.html'), 'utf8');
   assert.match(page, /<div id="app">/);
   assert.match(page, /<script type="module" src="\.\.\/web\/app\/main\.tsx"><\/script>/);
-  assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css'], 'tokens first, then the primitives, then the shell');
+  assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css'],
+    'tokens first, then the primitives, then the shell, then the entry flow (FE-08)');
   assert.doesNotMatch(page, /leaflet|vendor\//, 'the v2 shell imports no Leaflet');
 });
