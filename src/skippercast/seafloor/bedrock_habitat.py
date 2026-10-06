@@ -207,24 +207,31 @@ def source_context(root, reach, policy, *, fetch=False):
     with rasterio.open(path) as ds:
         records, units, holds = original_vectors(archive, policy, ds.crs)
     existing, baseline_identity = verified_baseline(root, reach, run, physical)
-    support = unary_union([ch.cell_geometry(c) for c in read_json(folder/'cells.json')['cells']
-                           if c['tier'] == 1])
+    mode = ch.support_mode(policy)
+    support_cells = [c for c in read_json(folder/'cells.json')['cells']
+        if c['tier'] == 1 and (mode == ch.PAIRED_REFERENCE_SUPPORT or c.get('source_id') == row['id'])]
+    reference_ids = {c.get('source_id') for c in support_cells}
+    if not reference_ids <= {r['id'] for r in run['inputs']['sources']}:
+        raise ValueError('Unknown current bedrock reference contributor')
+    support = unary_union([ch.cell_geometry(c) for c in support_cells])
     # Also clip to the reviewed native depth acquisition window.
     reviewed = transform(ch.TO_LOCAL, box(*receipt['requested_bounds_wgs84']))
     support = support.intersection(reviewed)
     identity = {'profile': PROFILE, 'reach': reach, 'policy': policy,
         'depth_source': row, 'classification_binding': {'row': source},
         'normalized_receipt': receipt, 'normalized_sha256': receipt['cog_sha256'],
-        'source_scope': scope, 'baseline': baseline_identity,
-        'reference_support': {'version':ch.PAIRED_REFERENCE_SUPPORT,
-            'source_ids': sorted(r['id'] for r in run['inputs']['sources']),
-            'sources':sorted(reference_sources,key=lambda r:r['source_id']), 'meaning':ch.REFERENCE_NOTICE},
+        'source_scope': scope, 'baseline': baseline_identity, 'support_mode':mode,
+        'baseline_source_dependencies':sorted(reference_sources,key=lambda r:r['source_id']),
         'baseline_physical_sha256': sha256(folder/'physical.json'),
         'baseline_cells_sha256': sha256(folder/'cells.json'),
         'original_holds': holds,
         'implementation': {n:sha256(Path(__file__).with_name(n)) for n in
                            ('bedrock_habitat.py', 'bedrock_vectors.py', 'classified_habitat.py', 'normalized.py', 'terrain_support.py', 'fetch.py')},
         'geometry_representation': ch.geometry_runtime()}
+    if mode == ch.PAIRED_REFERENCE_SUPPORT:
+        identity['reference_support'] = {'version':ch.PAIRED_REFERENCE_SUPPORT,
+            'source_ids':sorted(reference_ids), 'sources':[r for r in sorted(reference_sources,key=lambda r:r['source_id'])
+                if r['source_id'] in reference_ids], 'meaning':ch.REFERENCE_NOTICE}
     neighbor, _ = ch.neighbor_planning(root, reach, policy, baseline=run)
     if neighbor is not None:
         identity['neighbor_planning'] = neighbor

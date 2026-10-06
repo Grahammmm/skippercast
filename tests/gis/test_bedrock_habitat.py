@@ -170,6 +170,37 @@ class BedrockProductionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'production reconstruction'):
                 ch.publication_features('fixture',root=tmp)
 
+    def test_selected_support_does_not_borrow_other_source_cells_and_paired_is_explicit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            policy,row,source,path,support,folder,manifest=self.fixture(tmp)
+            other=dict(row,id='other-native',sha256='d'*64,url=row['url']+'/other')
+            manifest['surveys'].append(other)
+            atomic_json(folder/'cells.json',{'cells':[{'tier':1,'source_id':'other-native'}]})
+            run=read_json(folder/'run.json');run['inputs']['sources'].append(other)
+            physical=read_json(folder/'physical.json');physical['input_hash']=ch.digest(run['inputs'])
+            physical['outputs']['cells.json']=sha256(folder/'cells.json')
+            atomic_json(folder/'physical.json',physical)
+            run['physical_input_hash']=physical['input_hash']
+            run['outputs'].update({n:sha256(folder/n) for n in ('physical.json','cells.json')})
+            atomic_json(folder/'run.json',run)
+            selected=ch.stage('fixture',root=tmp,edge=16)
+            self.assertEqual(selected['physical_summary']['candidate_count'],0)
+            identity=selected['inputs']['physical']['sources'][0]
+            self.assertEqual(identity['support_mode'],ch.SELECTED_SOURCE_SUPPORT)
+            self.assertNotIn('reference_support',identity)
+            self.assertEqual(ch.publication_features('fixture',root=tmp)[0],[])
+            policy['support_mode']=ch.PAIRED_REFERENCE_SUPPORT
+            atomic_json(Path(tmp)/ch.POLICY_FILE,{'schema_version':1,'profile':ch.PROFILE,'sources':[policy]})
+            paired=ch.stage('fixture',root=tmp,edge=16)
+            self.assertEqual(paired['physical_summary']['candidate_count'],1)
+            feature=ch.publication_features('fixture',root=tmp)[0][0]
+            self.assertEqual(feature['properties']['reference_support']['source_ids'],['other-native'])
+            self.assertEqual({r['source_id'] for r in feature['properties']['source_rights']},
+                             {'native','other-native','geology'})
+            other['status']='withdrawn'
+            with self.assertRaisesRegex(ValueError,'baseline source changed'):
+                ch.publication_features('fixture',root=tmp)
+
     def test_reviewed_windows_reject_overlap_outside_extent_and_source_bounds(self):
         with tempfile.TemporaryDirectory() as tmp:
             policy,row,source,path,support,folder,_=self.fixture(tmp)
