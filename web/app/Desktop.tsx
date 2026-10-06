@@ -88,7 +88,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
   );
 }
 
-export function Desktop() {
+export function Desktop({now = new Date()}: {now?: Date} = {}) {
   return (
     <main class="app-main">
       <Brief />
@@ -96,7 +96,7 @@ export function Desktop() {
         <MarkCard />
         <LayerRail />
         <Legend />
-        <TimeDock />
+        <TimeDock now={now} />
       </MapStage>
     </main>
   );

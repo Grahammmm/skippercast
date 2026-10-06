@@ -40,13 +40,14 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = fetch): Pro
   } catch { return null; }
 }
 
-export function App() {
-  if (narrow.value) return <><Mobile /><FirstRun /></>;
+/** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). */
+export function App({now = new Date()}: {now?: Date} = {}) {
+  if (narrow.value) return <><Mobile now={now} /><FirstRun /></>;
   return (
     <div class="app">
       <Masthead />
-      <CommandBar />
-      <Desktop />
+      <CommandBar now={now} />
+      <Desktop now={now} />
       <FirstRun />
     </div>
   );

@@ -67,6 +67,8 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
     const handle = event.currentTarget as HTMLElement, sheet = handle.closest<HTMLElement>('.ui-sheet');
     if (!sheet || event.button !== 0) return;
     const base = new DOMMatrixReadOnly(getComputedStyle(sheet).transform).m42;
+    // A cancelled drag (pointercancel fires no click) would otherwise leave the flag to swallow the next tap.
+    delete handle.dataset.dragged;
     drag.current = {y: event.clientY, base, sheet, moved: false};
     handle.setPointerCapture(event.pointerId);
   };

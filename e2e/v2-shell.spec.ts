@@ -171,6 +171,23 @@ test.describe('phone', () => {
       await expect(sheet).toHaveAttribute('data-detent', 'full');
       await handle.click();
       await expect(sheet).toHaveAttribute('data-detent', 'peek');
+      // A drag the browser cancels (no click follows) must not swallow the next tap.
+      await settled();
+      const grip = (await handle.boundingBox())!;
+      const cx = grip.x + grip.width / 2, cy = grip.y + grip.height / 2;
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      await page.mouse.move(cx, cy - 40);
+      await handle.dispatchEvent('pointercancel', {pointerId: 1, clientX: cx, clientY: cy - 40});
+      await handle.evaluate(el => { try { el.releasePointerCapture(1); } catch { /* not captured */ } });
+      await page.mouse.move(4, 4);
+      await page.mouse.up();
+      await expect(sheet).toHaveAttribute('data-detent', 'peek');
+      await handle.click();
+      await expect(sheet, 'the tap after a cancelled drag still steps the sheet').toHaveAttribute('data-detent', 'half');
+      await handle.click();
+      await handle.click();
+      await expect(sheet).toHaveAttribute('data-detent', 'peek');
       // Every visible control is at least 44 px tall and the tabs 56 px.
       const short = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('button, a, input, select, summary')]
         .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
