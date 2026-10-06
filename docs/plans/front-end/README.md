@@ -133,3 +133,5 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   pages, ADR 0005 and 0009 Accepted).
 - 2026-10-05: FE-02 added the tokens, fonts, contrast extension and token
   lint.
+- 2026-10-05: FE-05 added the desktop app shell (`web/app/`, `/map` behind
+  `UI_V2`) with a placeholder map stage and the brief's empty state.

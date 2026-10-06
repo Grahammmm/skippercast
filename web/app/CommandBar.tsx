@@ -1,0 +1,47 @@
+// Command bar (FE-05, design § 6 and § 8): the Boat / Shore / Spear switch,
+// the target species, the area and the time window, each bound to the store.
+// The target list is the profile's defaults until FE-31 wires the region's
+// search plans; the area list is the current choice until FE-31 reads
+// coasts.json. Both menus keep whatever the link names so nothing is lost.
+import {Segmented} from '../ui/Chip.tsx';
+import {PROFILES, PROFILE_TABLE, speciesForProfile, type Profile} from '../profile.ts';
+import {area, profile, setParams, species} from '../state.ts';
+import {zone} from './App.tsx';
+import {dayOptions, dockState, hourText} from './TimeDock.tsx';
+import {titleCase} from './Masthead.tsx';
+
+const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id].label, icon: id} as const));
+
+/** The profile's target list, plus the link's target when it is not in it. */
+export function targetOptions(p: Profile, current: string | null): string[] {
+  const ids = speciesForProfile({}, p);
+  return current && !ids.includes(current) ? [current, ...ids] : ids;
+}
+
+/** "Today · 2 pm" or "Tue · 6 am": the time window the dock has selected. */
+export function windowText(now: Date, tz: string): string {
+  const state = dockState(now, tz);
+  const label = dayOptions(now, tz, state.day).find(o => o.value === state.day)?.label ?? state.day;
+  return `${label} · ${hourText(state.hour)}`;
+}
+
+export function CommandBar({now = new Date()}: {now?: Date} = {}) {
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, a = area.value;
+  return (
+    <section class="app-command" aria-label="Command bar">
+      <Segmented label="Profile" options={PROFILE_OPTIONS} value={p} onChange={next => setParams({profile: next, target: null})} />
+      <label>Target
+        <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
+          {targetOptions(p, species.value).map(id => <option key={id} value={id}>{titleCase(id)}</option>)}
+        </select>
+      </label>
+      <label>Area
+        <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>
+          <option value="">Whole region</option>
+          {a ? <option value={a}>{titleCase(a)}</option> : null}
+        </select>
+      </label>
+      <output class="app-window ui-mono" aria-label="Time window">{windowText(now, zone())}</output>
+    </section>
+  );
+}
