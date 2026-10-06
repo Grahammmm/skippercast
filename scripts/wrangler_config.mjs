@@ -18,7 +18,8 @@
 // With ENABLE_ADVISOR, TEXT_ADVISOR_ENABLED and every ADVISOR_* variable set in
 // the environment are copied into the Worker's vars (never a secret). The charter
 // fleet has no bindings, so its FLEET_VARS (FLEET_ENABLED, FLEET_MAP_ENABLED) are copied whenever set
-// (docs/plans/charter-fleet/design.md § 16).
+// (docs/plans/charter-fleet/design.md § 16), and so is the front-end rebuild's UI_V2
+// (UI_VARS; docs/plans/front-end/design.md § 14).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
 // $schema path, a URL) is never mistaken for a comment.
 import {readFileSync, writeFileSync} from 'node:fs';
@@ -106,15 +107,27 @@ export function advisorVars(environ = {}) {
 // FLEET_* secret can never be published as a plain var.
 export const FLEET_VARS = ['FLEET_ENABLED', 'FLEET_MAP_ENABLED'];
 
-/** The charter fleet's plain vars from an environment: FLEET_VARS only, non-empty only (server/fleet/settings.ts). */
-export function fleetVars(environ = {}) {
+/** The allowlisted `names` from an environment, trimmed, non-empty only. */
+function pickVars(names, environ = {}) {
   const vars = {};
-  for (const key of FLEET_VARS) {
+  for (const key of names) {
     const value = environ[key];
     if (typeof value === 'string' && value.trim() !== '') vars[key] = value.trim();
   }
   return vars;
 }
+
+/** The charter fleet's plain vars from an environment: FLEET_VARS only, non-empty only (server/fleet/settings.ts). */
+export function fleetVars(environ = {}) { return pickVars(FLEET_VARS, environ); }
+
+// FE-01: the front-end rebuild's switch (docs/plans/front-end/design.md § 14), no
+// bindings, an allowlist like the fleet's. "true" serves the v2 landing at / and the
+// app at /map (server/routes/assets.ts uiV2); unset means the default in
+// deployments/production.json (off); ?ui=v2 previews per request either way.
+export const UI_VARS = ['UI_V2'];
+
+/** The front-end rebuild's plain vars from an environment: UI_VARS only, non-empty only. */
+export function uiVars(environ = {}) { return pickVars(UI_VARS, environ); }
 
 /** {queues, analytics, advisor} from environment variables; "true" (any case) turns a feature on. */
 export function features(environ = {}) {
@@ -146,8 +159,8 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
     config.r2_buckets.push({...ADVISOR_BUCKET});
     config.vars = {...config.vars, ...advisorVars(environ)};
   }
-  const fleet = fleetVars(environ);
-  if (Object.keys(fleet).length) config.vars = {...config.vars, ...fleet};
+  const switches = {...fleetVars(environ), ...uiVars(environ)};
+  if (Object.keys(switches).length) config.vars = {...config.vars, ...switches};
   return config;
 }
 

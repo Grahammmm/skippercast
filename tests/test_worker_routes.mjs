@@ -10,7 +10,7 @@ import {stripJsonComments} from '../scripts/wrangler_config.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
 const {default: deployed} = await import('../server/index.ts');
@@ -75,6 +75,36 @@ test('every method and path reaches the same handler as before the Hono router',
       for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(response.headers.get(name), value, `${method} ${path}: ${name}`);
     }
   } finally { sql.close(); }
+});
+
+// FE-01 (docs/plans/front-end/design.md § 14): the v2 shells behind UI_V2 and the ?ui= switch.
+// ASSETS answers 299 with the fetched path, so the chosen shell is visible in the body.
+test('UI_V2 off: / is the v1 shell as before and /map is 404; ?ui=v2 previews; UI_V2=true serves v2 and ?ui=v1 forces v1', async () => {
+  const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status]; };
+  const v1 = [299, '/index.0123456789', 'no-store'], landing = [299, '/landing.0123456789', 'no-store'], app = [299, '/app.0123456789', 'no-store'];
+  // 1. Flag unset, no switch: byte-identical v1 (the same fingerprinted file, no-store, query stripped); the v2 paths are dark.
+  for (const env of [{}, {UI_V2: ''}, {UI_V2: 'false'}, {UI_V2: 'yes'}, {UI_V2: '1'}]) {
+    assert.deepEqual(await shell('/', env), v1, JSON.stringify(env));
+    assert.deepEqual(await shell('/?region=morro-bay&view=tomorrow', env), v1);
+    assert.deepEqual(await shell('/index.html', env), v1);
+    for (const path of ['/map', '/map?region=morro-bay', '/landing.html', '/app.html']) assert.deepEqual(await shell(path, env), [404], `${path} ${JSON.stringify(env)}`);
+  }
+  // 2. ?ui=v2 on a request: the landing without an area parameter, the app with one (shared v1 links keep working), /map the app.
+  assert.deepEqual(await shell('/?ui=v2', {}), landing);
+  for (const query of ['region=morro-bay', 'coast=central', 'view=tomorrow', 'spot=x', 'target=lingcod', 'focus=y']) assert.deepEqual(await shell(`/?${query}&ui=v2`, {}), app, query);
+  assert.deepEqual(await shell('/map?ui=v2', {}), app);
+  assert.deepEqual(await shell('/landing.html?ui=v2', {}), landing); assert.deepEqual(await shell('/app.html?ui=v2', {}), app);
+  // 3. UI_V2=true: v2 by default (any case, trimmed); ?ui=v1 forces the v1 shell and darkens /map.
+  for (const env of [{UI_V2: 'true'}, {UI_V2: ' TRUE '}]) {
+    assert.deepEqual(await shell('/', env), landing); assert.deepEqual(await shell('/?region=morro-bay', env), app); assert.deepEqual(await shell('/map', env), app);
+    assert.deepEqual(await shell('/?ui=v1', env), v1); assert.deepEqual(await shell('/?region=morro-bay&ui=v1', env), v1);
+    assert.deepEqual(await shell('/map?ui=v1', env), [404]); assert.deepEqual(await shell('/index.html', env), v1);
+  }
+  // An unknown switch value is no switch; other pages and assets are untouched by the flag.
+  assert.deepEqual(await shell('/?ui=v3', {UI_V2: 'true'}), landing); assert.deepEqual(await shell('/?ui=v3', {}), v1);
+  assert.deepEqual(await shell('/sources.html?ui=v2', {}), [299, '/sources.html', null]);
+  const dark = await call('/map', {});
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(dark.headers.get(name), value, `404 /map: ${name}`);
 });
 
 test('without an identity provider /api/auth/ is unavailable and private routes fail closed', async () => {

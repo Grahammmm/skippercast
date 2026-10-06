@@ -51,6 +51,8 @@ Feed contents are described in [data contracts](../data-contracts.md), [live con
 
 Any path not under `/api/` or `/feeds/`. Stable page paths (`/`, `/index.html`, `/sources.html`, …; the `SHELLS` map built by `scripts/client-build.mjs`) are served from their build-id copy with `Cache-Control: no-store`. Every other path goes to the static assets binding unchanged (hashed scripts and styles, `vendor/`, `data/`, `regions/`). No authentication.
 
+**Front-end rebuild switch** (FE-01, [design § 14](../plans/front-end/design.md#14-feature-flag-routing-and-rollback); `server/routes/assets.ts` `shellFor`). With the Worker var `UI_V2` `true`, or `?ui=v2` on the request, `GET /` serves `dist/landing.html`, or `dist/app.html` when the query names an area (`region`, `coast`, `view`, `spot`, `target`, `focus`), and `GET /map` serves `dist/app.html`; `?ui=v1` forces the v1 shell on the same request. Otherwise (`UI_V2` unset, `false` or any other value, and the default `ui_v2: false` in `deployments/production.json`) `/` is `dist/index.html` exactly as above and `/map`, `/landing.html` and `/app.html` answer `404`. The switch is a query parameter only, never a cookie.
+
 **Pending changes:** PR #25 ([P0-02]) keeps `sw.js` unhashed and serves `GET /sw.js` with `Cache-Control: no-cache`. PR #36 ([P0-09]) adds `/terms.html`, `/privacy.html` and `/licenses.html` pages. PR #38/#43 ([P0-06]) add HSTS, CSP, `frame-ancestors 'none'`, `Permissions-Policy` and related headers to pages and (via a generated `_headers` file) to static assets.
 
 ## Public API

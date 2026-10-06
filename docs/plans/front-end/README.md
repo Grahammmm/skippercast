@@ -129,3 +129,5 @@ Append a dated line when a phase starts or finishes; keep the older lines.
 
 - 2026-10-05: plan written (Claude Fable 5.1) after reading both code bases;
   claims in design § 2 were checked against the files they cite. No code yet.
+- 2026-10-05: Phase 0 started (FE-01: `UI_V2` flag, shell routing, placeholder
+  pages, ADR 0005 and 0009 Accepted).

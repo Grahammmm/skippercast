@@ -14,5 +14,6 @@
   },
   "forecast_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/forecasts",
   "source_use": "noncommercial",
-  "monetization": "none"
+  "monetization": "none",
+  "ui_v2": false
 }

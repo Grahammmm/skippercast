@@ -1,6 +1,6 @@
 # 0005. Front end: Preact and Vite, with MapLibre and PMTiles for the map
 
-- **Status:** Proposed — owner decision required
+- **Status:** Accepted (2026-10-05, as adopted by [ADR 0009](0009-front-end-rebuild-and-fish-merge.md) with the front-end plan, PR #353; proposed 2026-09-29)
 - **Date:** 2026-09-29
 
 ## Context
@@ -10,7 +10,7 @@
 - Recent features were built inside this structure: design tokens (#35), the meteogram (#47), the regulations summary (#50), the offline trip pack (#64).
 - The Worker moved to strict TypeScript and Hono in #88; the front end is the remaining untyped code. The guide (§3.3, P4-01, P4-05) recommends Vite + TypeScript + Preact with signals, and MapLibre + PMTiles for the map.
 
-## Decision (proposed)
+## Decision
 
 1. **Vite + TypeScript + Preact + `@preact/signals`**, introduced by wrapping the current modules, not rewriting them. Vite emits the hashed assets; the contract of hashed assets, `no-store` shells and a stable `/sw.js` is kept.
 2. **MapLibre GL + PMTiles** replaces Leaflet behind the existing map-initialisation contract. Region layers are published as PMTiles to R2 and served through `/feeds/` ([ADR 0003](0003-r2-system-of-record.md)).
