@@ -3,7 +3,8 @@
 // and the Boat / Shore / Spear switch; one bottom sheet with three detents
 // holds the brief (peek: the time window, freshness and headline; half: the
 // four tiles and the top pick; full: the whole brief with the day, target
-// and area menus) with the hour slider pinned at its top edge; a four-tab
+// and area menus, the area group holding the port and locate controls as on
+// the desktop, FE-08) with the hour slider pinned at its top edge; a four-tab
 // nav sits under the sheet. The layers button swaps the sheet's content for
 // the rail and the legend; a selected mark replaces the peek content with
 // its card. Every piece is the desktop's, composed in this order.
@@ -14,7 +15,7 @@ import {Range} from '../ui/Dock.tsx';
 import {Sheet, type Detent} from '../ui/Sheet.tsx';
 import {day, selection} from '../state.ts';
 import {zone} from './App.tsx';
-import {AreaSelect, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
+import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {BriefFooter, Caveat, Headline, MapStage, Picks, TideSpark, Tiles, type Pick} from './Desktop.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
@@ -66,7 +67,10 @@ export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: reado
       <div class="app-sheet-menus">
         <Segmented label="Day" options={dayOptions(now, tz, day.value)} value={state.day} onChange={d => selectTime(now, tz, d, state.hour)} />
         <TargetSelect />
-        <AreaSelect />
+        <div class="app-area" role="group" aria-label="Area and port">
+          <AreaSelect />
+          <PortControl />
+        </div>
       </div>
       <Caveat />
       <BriefFooter><a href="/#account">Sign in</a></BriefFooter>

@@ -14,6 +14,12 @@ import {test, expect, VIEWPORTS, LCP_BUDGET_MS} from './fixtures.ts';
 const AREA = {region: 'morro-bay'};
 const TABS = 56;
 
+// A visitor who has chosen a profile: the first-run card (FE-08, covered by
+// e2e/v2-landing.spec.ts) would otherwise sit over the sheet and the rail.
+test.beforeEach(async ({page}) => {
+  await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
+});
+
 /** The sheet's visible height above the tab bar. */
 async function sheetPeek(page: Page): Promise<number> {
   const box = (await page.locator('.ui-sheet').boundingBox())!;
