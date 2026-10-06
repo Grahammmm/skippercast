@@ -137,7 +137,9 @@ def verified_baseline(root, reach, run, physical):
         {'id':f['properties']['id'], 'geometry':mapping(polygon(project(polygon(f['geometry']),4326,3310)))}
         for f in candidates]}
     identity = {'version':BASELINE_VERSION, 'reach':reach,
-        'baseline_hashes':{name:sha256(folder/name) for name in ('run.json','physical.json','candidates.geojson')},
+        # run.json also records legal screens and changing survey timestamps.
+        # Validate it in source_context, but never let those bytes invalidate physics.
+        'baseline_hashes':{name:sha256(folder/name) for name in ('physical.json','candidates.geojson','cells.json')},
         'physical_input_hash':physical['input_hash'], 'native_digest':ch.digest(inventory),
         'candidate_count':len(candidates),
         'reconstruction':'Exact canonical graded candidate projection; earlier classified native union added in stage policy order.'}

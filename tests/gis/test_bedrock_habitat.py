@@ -135,6 +135,50 @@ class BedrockProductionTests(unittest.TestCase):
             # Paired native spacing never becomes a terrain claim.
             self.assertEqual(staged['inputs']['physical']['sources'][0]['original_holds']['invalid_original_records'],[1])
 
+    def test_legal_only_baseline_refresh_reuses_physics_and_rejects_stale_screen(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.fixture(tmp)
+            folder=Path(tmp)/'var/seafloor/reaches/fixture'
+            current=state();current['scope']=mapping(box(-179,-89,179,89))
+            def identity(snapshot):
+                return {'snapshot_sha256':snapshot['snapshot_sha256']}
+            with patch('skippercast.seafloor.screen.load_snapshot',return_value=current), \
+                 patch('skippercast.seafloor.screen.input_identity',side_effect=identity):
+                first=ch.stage('fixture',root=tmp,edge=16)
+                candidate=read_json(folder/'classified-candidates.geojson')['features'][0]
+                run=read_json(folder/'run.json')
+                original_baseline_hash=run['physical_input_hash']
+                current['snapshot_sha256']='f'*64
+                current['layers'][0]['features']=[{'geometry':candidate['geometry']}]
+                run['inputs']['screen']=identity(current)
+                run['inputs']['screen_implementation_sha256']=sha256(Path(bh.__file__).with_name('screen.py'))
+                run['last_survey']='2026-10-06T23:00:00+00:00'
+                atomic_json(folder/'run.json',run)
+                # The previously passing interpretation cannot borrow its old screen.
+                with self.assertRaisesRegex(ValueError,'inputs changed'):
+                    ch.publication_features('fixture',root=tmp)
+                with patch.object(ch,'extract',side_effect=AssertionError('Legal refresh reread native physics')):
+                    refreshed=ch.stage('fixture',root=tmp,edge=16)
+                self.assertEqual(run['physical_input_hash'],original_baseline_hash)
+                self.assertEqual(first['physical_input_hash'],refreshed['physical_input_hash'])
+                self.assertTrue(refreshed['physical_reused'])
+                self.assertNotEqual(first['input_hash'],refreshed['input_hash'])
+                self.assertNotIn('run.json',refreshed['inputs']['physical']['sources'][0]['baseline']['baseline_hashes'])
+                self.assertEqual(ch.publication_features('fixture',root=tmp)[0],[])
+                self.assertEqual(len(read_json(folder/'classified-held.geojson')['features']),1)
+                self.assertIn('overlap-cdfw-mpa',read_json(folder/'classified-held.geojson')['features'][0]['properties']['hold_reasons'])
+                # Current physical artifacts still have to match their graded receipt.
+                atomic_json(folder/'candidates.geojson',{'type':'FeatureCollection','features':[candidate]})
+                for action in (ch.stage,ch.publication_features):
+                    with self.assertRaisesRegex(ValueError,'baseline output hash mismatch'):
+                        action('fixture',root=tmp)
+                atomic_json(folder/'candidates.geojson',{'type':'FeatureCollection','features':[]})
+                run['inputs']['changed_physical_input']=True
+                atomic_json(folder/'run.json',run)
+                for action in (ch.stage,ch.publication_features):
+                    with self.assertRaisesRegex(ValueError,'baseline identity'):
+                        action('fixture',root=tmp)
+
     def test_current_source_archive_metadata_policy_and_baseline_changes_fail_closed(self):
         for change in ('withdrawn','source-hash','archive','metadata','policy','rules','baseline'):
             with self.subTest(change=change), tempfile.TemporaryDirectory() as tmp:
