@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Add a reusable coastal-map skill with bounded subagents, tested model-setting records, honest visual enhancement, desktop/mobile acceptance and protected live-release checks.
+
 - Keep coastal zoom controls clear of the species selector at medium phone and narrow tablet widths.
 
 - Add an explicit conservative canonical occupied-subtraction option for reviewed original bedrock: remove bounded reprojection residuals without tolerating retained overlap, modifying prior geometry or activating a source.
