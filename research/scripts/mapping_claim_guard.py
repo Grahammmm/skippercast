@@ -10,6 +10,7 @@ import argparse
 import fcntl
 import json
 import os
+import math
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -28,7 +29,6 @@ TRANSITIONS = {
     "publishing": {"published", "blocked"},
     "published": set(), "blocked": {"queued"}, "no_delta": {"queued"},
 }
-IDENTITY_FIELDS = ("region", "reach", "method", "native_window")
 
 
 class GuardError(ValueError):
@@ -49,13 +49,60 @@ def _source_ids(job: dict[str, Any]) -> set[str]:
     return set(sources)
 
 
-def _writable_path(job: dict[str, Any]) -> str:
-    return os.path.normcase(os.path.realpath(str(_required(job, "output_path"))))
+def _window(job: dict[str, Any]) -> tuple[float, float, float, float]:
+    """Return a validated native pixel rectangle (x, y, width, height)."""
+    value = _required(job, "native_window")
+    if isinstance(value, dict):
+        value = [value.get("x"), value.get("y"), value.get("width"), value.get("height")]
+    if (not isinstance(value, (list, tuple)) or len(value) != 4
+            or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in value)
+            or value[2] <= 0 or value[3] <= 0):
+        raise GuardError(f"job {job.get('id', '<unknown>')} native_window must be [x, y, width, height]")
+    return tuple(float(v) for v in value)
+
+
+def _writable_path(job: dict[str, Any], base_dir: Path | None) -> str:
+    path = Path(str(_required(job, "output_path")))
+    if not path.is_absolute():
+        path = (base_dir or Path.cwd()) / path
+    return os.path.normcase(str(path.resolve(strict=False)))
+
+
+def _path_scopes_overlap(a: str, b: str) -> bool:
+    try:
+        common = os.path.commonpath((a, b))
+    except ValueError:  # different drives on Windows
+        return False
+    return common == a or common == b
+
+
+def _rectangles_overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
 
 
 def _overlaps(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    return (all(left.get(k) == right.get(k) for k in IDENTITY_FIELDS)
-            and bool(_source_ids(left) & _source_ids(right)))
+    return (all(left.get(k) == right.get(k) for k in ("region", "reach", "method"))
+            and bool(_source_ids(left) & _source_ids(right))
+            and _rectangles_overlap(_window(left), _window(right)))
+
+
+def _stop_proof(job: dict[str, Any], checkpoint: dict[str, Any], base_dir: Path | None) -> bool:
+    proof = job.get("stopped_process_receipt")
+    if not isinstance(proof, dict) or proof.get("verified") is not True:
+        return False
+    if proof.get("verified_by") != checkpoint.get("coordinator"):
+        return False
+    if not isinstance(proof.get("stopped_utc"), str) or not proof["stopped_utc"].strip():
+        return False
+    receipt = proof.get("path")
+    if not isinstance(receipt, str) or not receipt:
+        return False
+    path = Path(receipt)
+    if not path.is_absolute():
+        path = (base_dir or Path.cwd()) / path
+    return path.is_file()
 
 
 def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = None) -> None:
@@ -81,9 +128,11 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
         if dispatch_state not in DISPATCH_STATES:
             raise GuardError(f"job {job_id} has invalid dispatch_state {dispatch_state!r}")
         _required(job, "output_path")
-        if state in ACTIVE_STATES:
-            for field in IDENTITY_FIELDS:
+        unresolved_dispatch = job.get("dispatch_state") == "dispatching" and not _stop_proof(job, checkpoint, base_dir)
+        if state in ACTIVE_STATES or unresolved_dispatch:
+            for field in ("region", "reach", "method"):
                 _required(job, field)
+            _window(job)
             _source_ids(job)
             active.append(job)
         if state == "published":
@@ -92,7 +141,7 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
         for other in active[i + 1:]:
             if _overlaps(job, other):
                 raise GuardError(f"overlapping source/reach/method/window claim: {job['id']} and {other['id']}")
-            if _writable_path(job) == _writable_path(other):
+            if _path_scopes_overlap(_writable_path(job, base_dir), _writable_path(other, base_dir)):
                 raise GuardError(f"overlapping writable output path: {job['id']} and {other['id']}")
     # A dispatching job is deliberately retained as a claim. This validation
     # never changes or reassigns it; a coordinator must reconcile process state.
@@ -124,7 +173,11 @@ def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None) ->
 
 @contextmanager
 def _exclusive_lock(path: Path):
+    if path.is_symlink() or path != path.resolve(strict=False):
+        raise GuardError("checkpoint path must be canonical and must not be a symlink")
     lock_path = path.with_name(path.name + ".lock")
+    if lock_path.is_symlink():
+        raise GuardError("checkpoint lock path must not be a symlink")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
@@ -137,6 +190,11 @@ def _exclusive_lock(path: Path):
 def update_job(path: str | Path, job_id: str, patch: dict[str, Any], *, actor: str) -> dict[str, Any]:
     """Coordinator-only atomic update, preserving every unrelated handoff field."""
     checkpoint_path = Path(path)
+    if checkpoint_path.is_symlink():
+        raise GuardError("checkpoint path must not be a symlink")
+    # Resolve parent aliases (for example macOS /var -> /private/var) once so
+    # lock and replacement always address the same canonical checkpoint.
+    checkpoint_path = checkpoint_path.resolve(strict=False)
     with _exclusive_lock(checkpoint_path):
         try:
             checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
@@ -156,8 +214,17 @@ def update_job(path: str | Path, job_id: str, patch: dict[str, Any], *, actor: s
         old, new = job.get("state"), patch.get("state", job.get("state"))
         if new != old and (old not in TRANSITIONS or new not in TRANSITIONS[old]):
             raise GuardError(f"invalid state transition {old!r} -> {new!r}")
-        if job.get("dispatch_state") == "dispatching" and patch.get("owner", job.get("owner")) != job.get("owner"):
-            raise GuardError("dispatching claim cannot be reassigned until process state is reconciled")
+        owner_changed = patch.get("owner", job.get("owner")) != job.get("owner")
+        if owner_changed:
+            candidate = dict(job, **patch)
+            if not _stop_proof(candidate, checkpoint, checkpoint_path.parent):
+                raise GuardError("owner reassignment requires an existing verified stopped-process receipt")
+            if patch.get("dispatch_state", job.get("dispatch_state")) == "dispatching":
+                raise GuardError("stopped claim must leave dispatching before reassignment")
+            if new == "running":
+                raise GuardError("reassigned job cannot remain running")
+        if old == "queued" and new == "running" and patch.get("dispatch_state", job.get("dispatch_state")) != "acknowledged":
+            raise GuardError("queued job cannot enter running until dispatch is acknowledged")
         job.update(patch)
         validate_checkpoint(checkpoint, base_dir=checkpoint_path.parent)
         _atomic_write(checkpoint_path, checkpoint)

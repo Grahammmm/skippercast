@@ -10,7 +10,7 @@ def job(job_id="a", **overrides):
     value = {
         "id": job_id, "region": "fictional-coast", "reach": "reach-01",
         "source_ids": ["synthetic-555-0101", "synthetic-555-0102"],
-        "method": "method-v1", "native_window": "window-1",
+        "method": "method-v1", "native_window": [0, 0, 512, 512],
         "owner": "worker-a", "branch": "codex/worker-a",
         "output_path": "/private/tmp/mapping-guard/worker-a",
         "dispatch_state": "acknowledged", "state": "running",
@@ -34,21 +34,101 @@ class MappingClaimGuardTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardError, "overlapping source/reach/method/window"):
             validate_checkpoint(checkpoint(left, right))
 
+    def test_partially_overlapping_native_rectangles_are_refused(self):
+        left = job()
+        right = job("b", owner="worker-b", output_path="/private/tmp/mapping-guard/worker-b",
+                    native_window=[256, 0, 512, 512])
+        with self.assertRaisesRegex(GuardError, "overlapping source/reach/method/window"):
+            validate_checkpoint(checkpoint(left, right))
+
+    def test_disjoint_native_rectangles_are_allowed_and_opaque_windows_rejected(self):
+        left = job()
+        right = job("b", owner="worker-b", output_path="/private/tmp/mapping-guard/worker-b",
+                    native_window=[512, 0, 512, 512])
+        validate_checkpoint(checkpoint(left, right))
+        with self.assertRaisesRegex(GuardError, "native_window must be"):
+            validate_checkpoint(checkpoint(job(native_window="window-1")))
+
     def test_writable_path_collision_is_refused_independent_of_claim_identity(self):
         left = job()
         right = job("b", owner="worker-b", reach="reach-02", output_path=left["output_path"])
         with self.assertRaisesRegex(GuardError, "overlapping writable output path"):
             validate_checkpoint(checkpoint(left, right))
 
+    def test_relative_absolute_and_parent_child_writable_paths_overlap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            left = job(output_path="out")
+            right = job("b", owner="worker-b", reach="reach-02", output_path=str(root / "out"))
+            with self.assertRaisesRegex(GuardError, "overlapping writable output path"):
+                validate_checkpoint(checkpoint(left, right), base_dir=root)
+            right["output_path"] = "out/child"
+            with self.assertRaisesRegex(GuardError, "overlapping writable output path"):
+                validate_checkpoint(checkpoint(left, right), base_dir=root)
+
     def test_interrupted_dispatch_keeps_claim_and_cannot_be_stolen_by_update(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "checkpoint.json"
             path.write_text(json.dumps(checkpoint(job(dispatch_state="dispatching"))))
-            with self.assertRaisesRegex(GuardError, "process state is reconciled"):
+            with self.assertRaisesRegex(GuardError, "verified stopped-process receipt"):
                 update_job(path, "a", {"owner": "worker-b"}, actor="coordinator-a")
             saved = json.loads(path.read_text())
             self.assertEqual(saved["jobs"][0]["owner"], "worker-a")
             validate_checkpoint(saved)
+
+    def test_running_job_reassignment_requires_verified_existing_stop_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "checkpoint.json"
+            path.write_text(json.dumps(checkpoint(job())))
+            with self.assertRaisesRegex(GuardError, "verified stopped-process receipt"):
+                update_job(path, "a", {"owner": "worker-b"}, actor="coordinator-a")
+            receipt = Path(tmp) / "stopped.json"
+            receipt.write_text('{"stopped": true}\n')
+            with self.assertRaisesRegex(GuardError, "cannot remain running"):
+                update_job(path, "a", {"owner": "worker-b", "stopped_process_receipt": {
+                    "path": str(receipt), "verified": True, "verified_by": "coordinator-a",
+                    "stopped_utc": "2026-10-07T10:00:00Z"}}, actor="coordinator-a")
+
+    def test_valid_stop_receipt_allows_reassignment_after_leaving_active_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "checkpoint.json"
+            receipt = root / "stopped.json"
+            receipt.write_text('{"stopped": true}\n')
+            path.write_text(json.dumps(checkpoint(job())))
+            result = update_job(path, "a", {
+                "owner": "worker-b", "state": "blocked",
+                "stopped_process_receipt": {"path": str(receipt), "verified": True, "verified_by": "coordinator-a",
+                                            "stopped_utc": "2026-10-07T10:00:00Z"},
+            }, actor="coordinator-a")
+            self.assertEqual(result["jobs"][0]["owner"], "worker-b")
+            self.assertEqual(result["jobs"][0]["state"], "blocked")
+
+    def test_dispatching_to_queued_does_not_itself_authorize_owner_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "checkpoint.json"
+            path.write_text(json.dumps(checkpoint(job(state="queued", dispatch_state="dispatching"))))
+            update_job(path, "a", {"dispatch_state": "queued"}, actor="coordinator-a")
+            with self.assertRaisesRegex(GuardError, "verified stopped-process receipt"):
+                update_job(path, "a", {"owner": "worker-b"}, actor="coordinator-a")
+
+    def test_dispatching_to_blocked_remains_an_occupied_claim_until_stop_proof(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "checkpoint.json"
+            first = job(state="queued", dispatch_state="dispatching")
+            path.write_text(json.dumps(checkpoint(first)))
+            update_job(path, "a", {"state": "blocked"}, actor="coordinator-a")
+            saved = json.loads(path.read_text())
+            second = job("b", owner="worker-b", output_path="/private/tmp/mapping-guard/worker-b")
+            with self.assertRaisesRegex(GuardError, "overlapping source/reach/method/window"):
+                validate_checkpoint(checkpoint(saved["jobs"][0], second))
+
+    def test_queued_to_running_requires_dispatch_acknowledgement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "checkpoint.json"
+            path.write_text(json.dumps(checkpoint(job(state="queued", dispatch_state="queued"))))
+            with self.assertRaisesRegex(GuardError, "dispatch is acknowledged"):
+                update_job(path, "a", {"state": "running"}, actor="coordinator-a")
 
     def test_coordinator_only_and_transition_guard_preserve_handoff_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -72,6 +152,19 @@ class MappingClaimGuardTests(unittest.TestCase):
                 (tmp_path / receipt).write_text("synthetic receipt\n")
             # Receipt presence is not a scientific-clearance claim.
             validate_checkpoint(checkpoint(record), base_dir=tmp_path)
+
+    def test_checkpoint_symlink_alias_is_rejected_without_replacing_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "checkpoint.json"
+            alias = root / "alias.json"
+            target.write_text(json.dumps(checkpoint(job(state="queued"))))
+            alias.symlink_to(target)
+            before = target.read_text()
+            with self.assertRaisesRegex(GuardError, "must not be a symlink"):
+                update_job(alias, "a", {"state": "running", "dispatch_state": "acknowledged"}, actor="coordinator-a")
+            self.assertEqual(target.read_text(), before)
+            self.assertTrue(alias.is_symlink())
 
 
 if __name__ == "__main__":
