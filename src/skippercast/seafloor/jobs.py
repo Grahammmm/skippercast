@@ -26,6 +26,17 @@ CLASSIFIED_POLICY_PROFILE = 'original-rugose-classified-area-v1'
 CLASSIFIED_POLICY_CHANGELOG = 'CHANGELOG.md'
 
 
+def publication_origin(error):
+    """Report pipeline code locations without exception payloads or data paths."""
+    directory = Path(__file__).resolve().parent
+    frames = [frame for frame in traceback.extract_tb(error.__traceback__)
+              if Path(frame.filename).resolve().parent == directory]
+    if not frames:
+        return None
+    frame = frames[-1]
+    return {'module': Path(frame.filename).name, 'function': frame.name, 'line': frame.lineno}
+
+
 def scoped_policy_change(old, new, changed_paths, reach_rows):
     """Scope policy plus optional changelog deltas; reject every other cochange."""
     if (CLASSIFIED_POLICY_PATH not in changed_paths
@@ -493,7 +504,12 @@ def finish(root, matrix, batch, *, region=None, ledger_only=False):
             results.append(upload(target_region, root=root))
             print(f'finish: retained publication receipt {target_region}', file=sys.stderr, flush=True)
         except Exception as error:
-            failures.append({'region': target_region, 'reason': type(error).__name__+': publication failed'})
+            failure = {'region': target_region, 'reason': type(error).__name__+': publication failed'}
+            origin = publication_origin(error)
+            if origin is not None:
+                failure['origin'] = origin
+            print('finish: '+json.dumps(failure), file=sys.stderr, flush=True)
+            failures.append(failure)
     if (Path(root)/'var/seafloor/screen/refresh-failure.json').exists():
         failures.append({'reason': 'screen-refresh-failed; physical work retained, habitat held'})
     published = [r['key'] for r in results]
