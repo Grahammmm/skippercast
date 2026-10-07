@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Expand one unranked SCC06 bedrock outline into a reviewed adjoining native window, with a new geometry-derived identifier; retain unknown terrain grades and species fits and exclude precise exports.
+
 - Add four unranked SCC06 bedrock interpretations from one reviewed native window, with an explicitly reidentified SCC05 boundary after source-priority exclusion; retain unknown terrain grades and species fits and exclude precise exports.
 
 - Add a reusable coastal-map skill with bounded subagents, tested model-setting records, honest visual enhancement, desktop/mobile acceptance and protected live-release checks.

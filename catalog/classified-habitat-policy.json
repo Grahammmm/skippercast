@@ -422,6 +422,12 @@
             513,
             512,
             512
+          ],
+          [
+            1,
+            1025,
+            512,
+            512
           ]
         ],
         "source_profile": "usgs-sim3327-sansimeon-geology-audited-v1"
