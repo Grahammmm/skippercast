@@ -32,6 +32,27 @@ MAX_PIXELS = 25_000_000
 MIN_DEPTH_M = 25 * 0.3048
 MAX_DEPTH_M = 300 * 0.3048
 
+# This is a narrow compatibility pin for one already-reviewed, fail-closed
+# legacy San Simeon physical identity. That implementation had no
+# per-component quarantine output. Screen-only receipt refreshes may change
+# clear/held files, so only the native geometry is pinned; current receipts
+# and all current outputs must still verify. This does not certify legality.
+_LEGACY_NO_QUARANTINE = {
+    'reach': 'cambria-san-simeon-r01',
+    'physical_input_hash': '76d8a8cdeed4233847e461da48ff551b58075d9ae34001b7c25e0c8f29dcf2f5',
+    'source_policy': 'usgs-sim3327-sansimeon-bedrock-v1',
+    'source_profile': 'original-interpreted-bedrock-area-v1',
+    'interpretation_method': 'original-interpreted-bedrock-v1',
+    'depth_source_id': 'csumb-scc-block03-2m-native',
+    'classification_source_id': 'geology-sansimeon-zip-9387f22e02',
+    'implementation': {
+        'bedrock_habitat.py': 'aa31527aa2db404d629c3616ca3e5d95369c3f0fd0e0f10cb5a79d28f789ed7d',
+        'classified_habitat.py': '9c12f644cde357afc749e3a3b481df9e8276c123eb9c43720879470c0e03471f',
+    },
+    'native_sha256': '88e94c4825d52673c71ad711c9085a11841650388450a61b2457131ced1ee826',
+    'feature_count': 47,
+}
+
 
 def nominal_depth_count(values, valid):
     """Count finite, valid nominal depths in the inclusive 25–300 ft interval."""
@@ -151,6 +172,80 @@ def _read_feature_collection(path, expected_crs):
     return data['features']
 
 
+def _authenticated_legacy_no_quarantine(folder, reach, run, outputs,
+                                        *, contract=None):
+    """Recognize the pinned legacy physical identity with no audit branch.
+
+    Current receipt and four output hashes must match, while the physical
+    input, source identity, implementation and native geometry stay pinned.
+    A screen-only refresh can update legal clear/held outputs. A true result
+    does not synthesize an audit or certify current screen legality.
+    """
+    contract = _LEGACY_NO_QUARANTINE if contract is None else contract
+    try:
+        if reach != contract['reach'] or run.get('reach') != reach:
+            return False
+        if (Path(folder) / 'classified-bedrock-audit.json').exists():
+            return False
+        expected_names = {'classified-candidates.geojson', 'classified-native.geojson',
+                          'classified-habitat.geojson', 'classified-held.geojson'}
+        if not isinstance(outputs, dict) or set(outputs) != expected_names or outputs != run.get('outputs'):
+            return False
+        if any(not isinstance(digest, str) or len(digest) != 64
+               or any(c not in '0123456789abcdef' for c in digest)
+               for digest in outputs.values()):
+            return False
+        if (outputs.get('classified-native.geojson') != contract['native_sha256']
+                or any(sha256(Path(folder) / name) != digest
+                       for name, digest in outputs.items())):
+            return False
+        for filename, expected in contract['implementation'].items():
+            module = bh if filename == 'bedrock_habitat.py' else ch
+            if Path(module.__file__).name != filename or sha256(module.__file__) != expected:
+                return False
+
+        inputs = run.get('inputs')
+        if (not isinstance(inputs, dict) or run.get('input_hash') != ch.digest(inputs)
+                or not isinstance(inputs.get('physical'), dict)
+                or run.get('physical_input_hash') != ch.digest(inputs['physical'])
+                or run.get('physical_input_hash') != contract['physical_input_hash']):
+            return False
+        sources = inputs['physical'].get('sources')
+        if not isinstance(sources, list) or len(sources) != 1:
+            return False
+        source = sources[0]
+        policy = source.get('policy') if isinstance(source, dict) else None
+        if not isinstance(policy, dict):
+            return False
+        if (source.get('reach') != reach or source.get('profile') != contract['source_profile']
+                or policy.get('id') != contract['source_policy']
+                or policy.get('profile') != contract['source_profile']
+                or policy.get('interpretation_method') != contract['interpretation_method']
+                or policy.get('depth_source_id') != contract['depth_source_id']
+                or policy.get('classification_source_id') != contract['classification_source_id']):
+            return False
+        vector_review = policy.get('vector_review')
+        if (not isinstance(vector_review, dict) or 'source_profile' in vector_review
+                or bh.source_profile(policy) != bh.SAN_SIMEON or bh.audited(policy)):
+            return False
+        bh.validate_policy(policy)
+        representation = run.get('representation')
+        if (not isinstance(representation, dict)
+                or representation.get('version') != 'native-classified-geometry-v1'
+                or representation.get('feature_count') != contract['feature_count']):
+            return False
+
+        native = _read_feature_collection(Path(folder) / 'classified-native.geojson', 3310)
+        if len(native) != contract['feature_count']:
+            return False
+        for name in ('classified-candidates.geojson', 'classified-habitat.geojson',
+                     'classified-held.geojson'):
+            _read_feature_collection(Path(folder) / name, 4326)
+        return True
+    except (KeyError, TypeError, ValueError, OSError):
+        return False
+
+
 def _native_occupancy(root, target_reach, target_region, ds_crs):
     """Collect authenticated same-region classified occupancy, including held outputs.
 
@@ -181,6 +276,8 @@ def _native_occupancy(root, target_reach, target_region, ds_crs):
         present = [name for name in expected if (folder / name).is_file()]
         missing = [name for name in expected if name not in present]
         status, reasons, features_total, envelope_count = 'unprocessed', [], 0, 0
+        quarantine_status = 'not_verified'
+        compatibility_scope = None
         outputs = None
         if not present and not run_path.is_file():
             reasons.append('no classified outputs or receipt; occupancy unknown')
@@ -238,13 +335,27 @@ def _native_occupancy(root, target_reach, target_region, ds_crs):
                                'reach_id': reach})
                 if audit['quarantine']:
                     reasons.append('nonzero private bedrock quarantine not ingested; CRS/authentication required')
+                    quarantine_status = 'nonzero_quarantine_not_ingested'
+                else:
+                    quarantine_status = 'authenticated_zero_quarantine_audit'
             else:
-                reasons.append('private bedrock quarantine audit absent; zero quarantine is unverified')
+                if outputs is not None and _authenticated_legacy_no_quarantine(
+                        folder, reach, run, outputs):
+                    # This exact legacy extractor has no quarantine branch and
+                    # aborts on conversion failure. Its pinned physical and
+                    # native identity accounts for occupancy only; current
+                    # screen legality is outside this compatibility check.
+                    quarantine_status = 'authenticated_legacy_fail_closed_no_quarantine_output'
+                    compatibility_scope = 'physical_identity_only; current_screen_legality_not_asserted'
+                else:
+                    reasons.append('private bedrock quarantine audit absent; zero quarantine is unverified')
             if not reasons:
                 status = 'verified'
         assessments.append({'reach_id': reach, 'status': status, 'complete': status == 'verified',
                             'present_outputs': present, 'missing_outputs': missing,
                             'feature_count': features_total, 'conservative_envelope_count': envelope_count,
+                            'quarantine_status': quarantine_status,
+                            'compatibility_scope': compatibility_scope,
                             'reasons': reasons})
     occupancy = unary_union(pieces) if pieces else unary_union([])
     return occupancy, foreign_ids, inputs, assessments
