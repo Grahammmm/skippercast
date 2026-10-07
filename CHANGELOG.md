@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+- Add bounded preflight and progress checks for coastal mapping runs.
+
+### Internal
+
+- Bound mapping investigation by a shared operating allowance, downstream readiness and verified public progress; preserve scientific and release gates.
+
 ## 0.7.0 — 2026-10-07
 
 - Explicitly save and delete public coastal report, current and measured-history snapshots for offline use, with saved time and original source clocks.

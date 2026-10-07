@@ -38,6 +38,12 @@ habitat and new measurement area. A green job or diagnostic is not that release.
 
 ## Start from the smallest current state
 
+Before dispatch or pixel processing, use the [run progress control](references/progress-control.md).
+Record one publication path, the shared active-work allowance and downstream
+readiness in the existing checkpoint. Run its offline guard at stage boundaries.
+An overnight deadline is an observation window, not an allowance for continuous
+model work. Private proofs and code fixes do not reset a stalled map-growth run.
+
 Fetch main, reconcile relevant PRs, latest ledger, saved physical receipts and
 active jobs. Do not read the entire research archive or conversation. The
 coordinator owns shared catalog/skill/ledger integration decisions; a single
@@ -177,8 +183,10 @@ claiming additional area. Never add overlapping source or PR totals. Record:
 No-growth refreshes are maintenance. A downloaded source, document, adapter or
 successful CI run is not new coastline. A pipeline fix is useful progress only
 when a reproducible test or real-run receipt demonstrates the blocker removed.
-If no new batch is runnable, inspect retained native gaps and qualify the next
-original source instead of repeating maintenance as the expansion task.
+If no new batch is runnable, inspect a retained gap only when the run progress
+control still permits work and its downstream publication path is executable.
+Otherwise save the dependency and stop active expansion; do not substitute
+another source proof or maintenance run for the missing release.
 
 After two unsuccessful attempts, change approach. After 20 active investigation
 minutes without a usable batch or a demonstrated release-blocker fix, save the blocker and
