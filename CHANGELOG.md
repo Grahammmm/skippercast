@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.4.0 — 2026-10-07
+
 - Prevent early confidence UI imports from capturing another region’s forecast coordinates. Keep unit helpers independent of regional data; withhold current readings when the selected sample is absent.
 
 - Normalize legacy Fish place/species/profile/hour links before startup, retain unsupported selections explicitly, and share saved-home save/forget behavior with native coast preferences. Keep exact public geography and profile through port handoffs and browser history.
