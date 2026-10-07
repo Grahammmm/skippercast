@@ -3,7 +3,7 @@ import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js'
 import { positions } from './geo-screen.js';
 import {coastAt,coastURL} from './coasts.js';
 import {effect} from '@preact/signals';
-import {navigate,setParams,view} from '../web/state.ts';
+import {navigate,setParams,view,species} from '../web/state.ts';
 
 // Discovery extents select a reviewed package. They are not legal boundaries.
 export const contains = (b, p) => !!b && Number.isFinite(p?.longitude) && Number.isFinite(p?.latitude) && p.longitude >= b[0] && p.longitude <= b[2] && p.latitude >= b[1] && p.latitude <= b[3];
@@ -63,7 +63,7 @@ export function locationURL(url,regionId,point,zoom,target) {
 export function initLocationContext(map,{select,protectedAreas,onLocation,onSpeciesChange}) {
   const region=getRegion(), directory=getRegionDirectory();
   let context=null, selected=null, selectionCenter=null, timer, navigating=false;
-  let desired=new URL(location.href).searchParams.get('target') || select.value;
+  let desired=new URL(location.href).searchParams.get('target') ?? select.value;
   const caption=document.getElementById('location-caption');
   const same=(a,b)=>a && b && Math.abs(a.latitude-b.latitude)<0.00001 && Math.abs(a.longitude-b.longitude)<0.00001;
   const center=()=>{const p=map.getCenter();return {latitude:p.lat,longitude:p.lng};};
@@ -85,20 +85,22 @@ export function initLocationContext(map,{select,protectedAreas,onLocation,onSpec
       navigate(locationURL(location.href,next.regionId,point,map.getZoom(),desired),{replace:true});return;
     }
     const choices=targetsForLocation(region,next), old=select.value;
-    const chosen=choices.some(t=>t.id===desired)?desired:choices.some(t=>t.id===old)?old:choices[0]?.id;
+    const chosen=desired??choices[0]?.id;
+    const supported=choices.some(t=>t.id===chosen);
+    const shown=chosen!==undefined&&!supported?[...choices,{id:chosen,name:chosen?'Selected target · not mapped here':'Empty shared target · not mapped here',group:'Unavailable selection'}]:choices;
     if(choices.length) {
-      renderTargetOptions(select,choices,chosen);select.disabled=false;
-      next.targetNote=chosen!==desired ? (region.map?.unavailable_targets?.[desired] || next.hiddenTargets?.find(t=>t.id===desired)?.reason || 'The previous target is not in this area’s target list.') : null;
+      renderTargetOptions(select,shown,chosen);select.disabled=false;
+      next.targetNote=!supported ? (region.map?.unavailable_targets?.[desired] || next.hiddenTargets?.find(t=>t.id===desired)?.reason || 'The previous target is not in this area’s target list.') : null;
       next.targetSource=next.targetNote?(region.map?.unavailable_target_sources?.[desired]||next.hiddenTargets?.find(t=>t.id===desired)?.source_url):null;
     } else {
-      select.replaceChildren(new Option('Targets not mapped here',old));select.disabled=true;
+      select.replaceChildren(new Option('Targets not mapped here',chosen??old));select.disabled=true;
     }
     context=next;
     document.body.dataset.locationCoverage=next.coverage;
     caption.textContent=`${next.source} · ${next.name}${next.coverage==='discovery'?' · search context':''}`;
     caption.title=`${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)} · ${next.targetNote||'Targets reflect regional habitat; they do not indicate an open season.'}`;
     document.dispatchEvent(new CustomEvent('skippercast:location',{detail:next}));
-    if(chosen && chosen!==old)onSpeciesChange();
+    if(chosen!==undefined && chosen!==old)onSpeciesChange();
     if(['covered','discovery'].includes(next.coverage))onLocation(point);
   }
   function move() {
@@ -111,7 +113,7 @@ export function initLocationContext(map,{select,protectedAreas,onLocation,onSpec
   // After the frame in which navigation.js shows the map, so Leaflet measures it first.
   effect(()=>{const next=parseView(view.value);if(next&&viewParam(center(),map.getZoom())!==viewParam(next,next.zoom))requestAnimationFrame(()=>{map.invalidateSize(false);map.setView([next.latitude,next.longitude],next.zoom);});});
   document.addEventListener('skippercast:boundaries',()=>{clearTimeout(timer);timer=setTimeout(update,50);});
-  select.addEventListener('change',event=>{if(!event.detail?.location){desired=select.value;selected=null;setParams({target:desired});update();}});
+  select.addEventListener('change',event=>{if(!event.detail?.location){desired=select.value;selected=null;const unchanged=species.value===desired;setParams({target:desired});if(unchanged)update();}});
   const result={
     get:()=>context,
     resolve(value){return value?{...value,...enrichLocation(resolveLocation(value.point,directory,region.id),region,protectedAreas)}:value;},
@@ -119,5 +121,6 @@ export function initLocationContext(map,{select,protectedAreas,onLocation,onSpec
     clear(){selected=null;clearTimeout(timer);update();},
     refresh:update,
   };
-  update();return result;
+  effect(()=>{desired=species.value??region.species?.[0]??select.value;update();});
+  return result;
 }

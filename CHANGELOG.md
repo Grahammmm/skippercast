@@ -8,6 +8,10 @@
 
 ## Unreleased
 
+- Prevent early confidence UI imports from capturing another region’s forecast coordinates. Keep unit helpers independent of regional data; withhold current readings when the selected sample is absent.
+
+- Normalize legacy Fish place/species/profile/hour links before startup, retain unsupported selections explicitly, and share saved-home save/forget behavior with native coast preferences. Keep exact public geography and profile through port handoffs and browser history.
+
 - Add a readable coastal source report without JavaScript, original-clock SLO RSS, and canonical methods/about/privacy entry routes. Retain shared public selection and private request boundaries; fix profile-only changes after lazy local report loading.
 
 - Bring original local Boat/Shore/Spear readings, buoy history, dated fleet facts and source receipts into Conditions with the shared place and UTC hour. Preserve distinct native species and source horizons; unsupported methods and regions remain explicit gaps.

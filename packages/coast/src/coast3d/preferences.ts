@@ -1,5 +1,6 @@
 import type {Mode} from '../types.ts';
 
+export const HOME_PLACE_KEY='skippercast-home-place-v1';
 export const preferenceCookie='skippercast_home';
 export const homeCounties=[
  {id:'slo',name:'San Luis Obispo County',sites:[['morro','Morro Bay Harbor'],['avila','Avila / Port San Luis'],['cambria','Cambria / San Simeon']]},
@@ -27,11 +28,16 @@ export function browserPreferences(storage:{cookie:string}):HomePreferences|null
  let cookie:HomePreferences|null=null;try{cookie=readPreferences(storage.cookie);}catch{}
  try{const port=localStorage.getItem('skippercast-home-port-v1'),mode=localStorage.getItem('skippercast-profile-v1');
   if(port&&Object.hasOwn(portPlaces,port))return {v:1,place:portPlaces[port],mode:mode==='shore'||mode==='spear'?mode:'boat'};
+  const saved:unknown=JSON.parse(localStorage.getItem(HOME_PLACE_KEY)??'null');
+  if(validPreferences(saved))return {...saved,mode:mode==='boat'||mode==='shore'||mode==='spear'?mode:saved.mode};
+  if(cookie&&(mode==='boat'||mode==='shore'||mode==='spear'))return {...cookie,mode};
  }catch{}
  return cookie;
 }
 export function syncPreferences(p:HomePreferences|null):void{
- try{if(!p){localStorage.removeItem('skippercast-home-port-v1');localStorage.removeItem('skippercast-profile-v1');return;}
+ try{if(!p){localStorage.removeItem(HOME_PLACE_KEY);localStorage.removeItem('skippercast-home-port-v1');localStorage.removeItem('skippercast-profile-v1');return;}
+  if(!validPreferences(p))return;
+  localStorage.setItem(HOME_PLACE_KEY,JSON.stringify(p));
   const port=Object.entries(portPlaces).find(([,place])=>place===p.place)?.[0];
   if(port)localStorage.setItem('skippercast-home-port-v1',port);else localStorage.removeItem('skippercast-home-port-v1');
   localStorage.setItem('skippercast-profile-v1',p.mode);

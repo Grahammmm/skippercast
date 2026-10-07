@@ -113,18 +113,34 @@ their workflow smoke receipts. Actual phone map/Conditions/history interactions
 passed. Each release's 12 public-data, native range/hash, region and private-route
 checks passed; receipts are in the continuation workspace outputs.
 
-Current batch: `codex/readable-coastal-report`, based on main `3cecd5530`.
-Readable `/report`, original-clock `/feed.xml`, methods/about pages and `/privacy`
-alias use the existing generated shell and complete privacy notice. Shared public
-selection survives links; client identity is never sent to source snapshots. Exact
-UTC/profile/area checks retain gaps. Static checks exempt only registered
-navigation and the exact RSS tag; scripts/styles/unknown paths still fail. A real
-signals regression test now covers profile-only updates after lazy report mount.
+The readable routes (PR 395, main `a36d091fb`) are merged after independent
+review and exact-head core/science/browser/DCO checks. CI found a genuine
+seafloor display race during chart invalidation; the corrected draw waits for
+archive/header and mounted legend while retaining publication-expiry gates.
+Merged-main CI and Cloudflare deploy `37590022909` passed; live build
+`20e554ec41` matches the deployment receipt. Seventeen public route/data/hash/range
+and private-boundary readbacks passed. Live source report, selection-preserving
+methods link and full privacy notice rendered without horizontal overflow.
 
-Evidence: independent scoped source acceptance; strict typechecks; 19 route/host
-and six checker cases passed. Earlier report batch had 1,335 Node passes and live
-build `27bf9c676b`. Required full Linux gates, protected merge and readable-route
-live acceptance remain pending for this batch.
+Current batch: `codex/coastal-entry-home`, based on main `a36d091fb`.
+Actual v1 startup translates legacy Fish place/species/profile/hour choices before
+locking shared state. Empty and unsupported targets remain explicit. Canonical
+choices win; shared links do not change the saved home location. Home save/forget and
+native legacy preferences agree; port changes clear stale place/area selections.
+
+Evidence: independent scoped acceptance; strict typechecks, source-first build,
+client/web/repository/copy/token checks; 1,372 local Node tests pass including the
+seafloor race and unsupported-rule UI regressions. Actual desktop/phone legacy startup, empty target, home removal,
+Avila-to-Morro handoff, profile-only mounted report updates and Back navigation
+passed. Browser review also found inherited regulation-target lookup; exact-own complete
+record guards and actual header/spot regressions passed independent review.
+A second browser finding traced early confidence imports capturing Morro forecast
+points before Monterey loaded. Pure unit imports now prevent that capture; a
+subprocess startup regression verifies actual selected-region coordinates, and
+missing current samples remain unavailable. Independent final scoped review passed
+(54 focused cases plus 26 amendment/regulations cases); actual phone Monterey
+shows only its three named regional forecast points and the SLO exclusion. Monterey native entry correctly excludes
+local SLO readings and labels measured SLO history as a reference.
 
 Start: October 6, 2026 10:31 p.m. Pacific; checkpoint: October 7, 1:31 a.m. Pacific.
 Parent owns integration/browser/release. Bounded worker owns source adapters;
@@ -137,3 +153,25 @@ geography audit. Continuous-coast overview parity, visible imagery transitions,
 all profile/target interactions and regional Fish cutover still need explicit
 acceptance. Homepage defaults and Fish retirement remain unchanged until that
 matrix passes. Reachable legacy links are not parity.
+
+## Remaining cutover gaps (source audit, October 7)
+
+- Continuous coast overview bypasses shared native/report/planning setup
+  (`dist/boot.js`, `dist/coastal-discovery.js`). Its morning forecasts, target
+  handler and direct history writes do not yet use one UTC/profile controller.
+- Native surface-current visibility and chart ocean/current selectors are
+  independent (`dist/coast.html`, `dist/coast-workspace.js`).
+- Fish snapshots bypass public API caching and native terrain has no explicit
+  trip-pack/precache policy (`dist/sw.js`, `dist/offline-core.js`,
+  `scripts/precache.mjs`). Existing chart offline remains available.
+- Standalone `/coast` retains separate controller/settings. Original Fish route
+  aliases and readiness meanings need explicit compatibility acceptance.
+- Readable `/report` retains source readings/clocks; full original no-JavaScript
+  daily windows, history and catch brief are not yet unified there.
+- Imagery transitions and the complete desktop/mobile feature matrix remain
+  unaccepted. Upstream collectors/private stores remain upstream; no migration
+  or retirement is authorized by these scoped acceptances.
+
+These are remaining implementation/acceptance tasks. They do not prevent the
+reviewed regional increments, but they prevent declaring full integration or
+changing homepage defaults and retiring Fish.

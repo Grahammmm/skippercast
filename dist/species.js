@@ -203,7 +203,7 @@ export const PROFILES = {
 };
 // New coastlines supply selector metadata and local field notes as data.
 for (const target of sharedTargetOptions(getRegion())) {
-  PROFILES[target.id] = {...(PROFILES[target.id] || {
+  PROFILES[target.id] = {...(Object.hasOwn(PROFILES,target.id)?PROFILES[target.id]:{
     short: target.group, habitat: "Open the regional field notes for habitat evidence.",
     approach: "Confirm habitat, legal access and fish presence locally.",
     conditions: "Inspect the complete fishing and return window.",
@@ -211,6 +211,9 @@ for (const target of sharedTargetOptions(getRegion())) {
     unknown: "Catch success and individual rock dimensions are unverified.", sources: [rules]
   }), ...target};
 }
+/** Unknown identities never borrow a prototype or another target's method. */
+export function speciesProfile(id){return Object.hasOwn(PROFILES,id)?PROFILES[id]:{name:id||'Empty shared target',kind:'unavailable',short:'Target method unavailable',habitat:'No reviewed habitat method for this exact target.',approach:'Verify habitat, fish identification and current access locally.',conditions:'No target-specific conditions method is available.',map:'No substitute species or mapped search area is assumed.',unknown:'Fish presence and catch success are unverified.',sources:[]};}
+export function ecologicalProfile(ecology,id){return ecology?.profiles&&Object.hasOwn(ecology.profiles,id)?ecology.profiles[id]:null;}
 export function matchesSpecies(target, id) {
   if (id === "reef" || id === "rockfish") return true;
   return (
@@ -247,7 +250,7 @@ export async function initSpecies(
   const port = getRegion().harbor;
   const id = () => $("species-select").value;
   function guide() {
-    const base=PROFILES[id()] || {name:id(),kind:'coast',short:'Source-specific coastal habitat',habitat:'No reviewed field notes for this target.',approach:'Verify habitat, fish identification and current access locally.',conditions:'No target-specific conditions method is available.',map:'No substitute species is assumed.',unknown:'Fish presence and catch success are unverified.',sources:[rules]}, local=ecology?.profiles?.[id()];
+    const base=speciesProfile(id()), local=base.kind==='unavailable'?null:ecologicalProfile(ecology,id());
     const links=local?.source_links || (local?.sources || []).flatMap(s=>s.claims.map(c=>({title:s.name+" · source",url:c.source_url})));
     let p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),sources:links.length?links:base.sources,map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
     if(nativeOnlyTarget(id()))p={...p,kind:'coast',map:'Choose Coast 2D or Coast 3D for the original reviewed habitat and its evidence. The historical chart atlas and search plans have no admitted method for this exact target.',unknown:'Source-specific habitat fit is separate from fish presence. Species-specific regulations and fishing strategies remain unavailable unless explicitly reviewed.'};
@@ -268,14 +271,14 @@ export async function initSpecies(
           "",
         )}</div><p><strong>Habitat fit, fishing control, and boat comfort are separate.</strong> There is no supported universal recipe for “perfect” fishing. Favorable conditions improve presentation and comfort, not guaranteed catches.</p><p class="source-links">${[...new Map(p.sources.filter(s=>String(s.url).startsWith("https://")).map(s=>[s.url,s])).values()].map((s) => `<a href="${escapeHTML(s.url)}" target="_blank" rel="noopener">${escapeHTML(s.title)} ↗</a>`).join("")}</p><p class="small"><a href="species-research.html">Research, methods, and limitations ↗</a></p>`;
     $("species-guide").dataset.speciesEvidence=id();
-    void fillPrimaryStrategy($("species-guide"),getRegion().id,id());
-    appendSpeciesEvidence($("species-guide"),id());
+    if(base.kind!=='unavailable'){void fillPrimaryStrategy($("species-guide"),getRegion().id,id());appendSpeciesEvidence($("species-guide"),id());}
+    else{const placeholder=$("species-guide").querySelector('[data-primary-strategy]');if(placeholder)placeholder.textContent='Reviewed fishing strategy unavailable for this exact target.';}
     $("filter-options").hidden = !["reef", "soft"].includes(p.kind);
     for (const control of ["grade", "geometry"])
       $(control).disabled = p.kind !== "reef";
   }
   function chooseAreas() {
-    const p = PROFILES[id()];
+    const p = speciesProfile(id());
     if (p.kind === "soft")
       return habitats.filter(
         (a) =>
@@ -305,13 +308,13 @@ export async function initSpecies(
   }
   function selectArea(a) {
     const dist = distanceNm(port, a),
-      off = PROFILES[id()].kind === "offshore";
+      off = speciesProfile(id()).kind === "offshore";
     const html = `<div class="eyebrow">${a.kind === "search" ? "SEARCH REFERENCE" : "SURVEYED HABITAT AREA"}</div><h2>${escapeHTML(a.label)}</h2>
       <div class="area-facts">${a.depth_ft ? `<strong>${a.depth_ft.join("–")} ft</strong><span>${a.area_km2} km² · sand / mud</span>` : "<strong>Fish presence unverified</strong>"}</div>
       <p>${a.depth_ft ? "One outline follows connected soft sediment. Gaps and holes preserve rock, depth limits, closures and missing survey coverage." : "Constructed search sector centered on a regional weather sample. It is not a reported fish location."}</p>
       <p class="evidence-note"><strong>Charter visits: unverified</strong><br>No verified sportfishing-charter AIS visits support this area. <a href="#charter-evidence">See evidence coverage</a></p>
       <button id="area-weather" class="primary">Conditions for this area ↗</button>
-      <details class="detail-section"><summary>Approach & sources</summary><p>${escapeHTML(PROFILES[id()].approach)}</p><p>${escapeHTML(a.evidence || "No catch evidence or surveyed bottom-depth assurance.")}</p>
+      <details class="detail-section"><summary>Approach & sources</summary><p>${escapeHTML(speciesProfile(id()).approach)}</p><p>${escapeHTML(a.evidence || "No catch evidence or surveyed bottom-depth assurance.")}</p>
       ${off ? `<p>At least ${dist.toFixed(1)} nm from the harbor entrance; ≥${Math.ceil((dist / getRegion().boat.cruise_knots) * 60)} min each way at ${getRegion().boat.cruise_knots} kt. Straight-line lower bound; harbor travel, charted route, sea-state slowdown, search and reserve are additional.</p>` : ""}
       <p>Use the selected species’ Regulations card on the map for current season-check status and limits.</p>
       <p>Reference position ${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)}. ${a.depth_ft ? "Survey depth datum MLLW · 2008. Verify present depths with sonar." : ""}</p>
@@ -319,9 +322,10 @@ export async function initSpecies(
     onSelect(html, {...a,geometry:a.geometry||circleGeometry(a.latitude,a.longitude,a.radius_m)});
   }
   function draw() {
-    const p = PROFILES[id()];
+    const p = speciesProfile(id());
     if (p.kind === "reef") return;
     current = chooseAreas().filter(a => protectedAreas.pointAllowed(a) && protectedAreas.geometryAllowed(a.geometry || circleGeometry(a.latitude,a.longitude,a.radius_m)));
+    if(p.kind==='unavailable'){current=[];$("map-empty").hidden=false;$("map-empty").querySelector("strong").textContent="Target method unavailable";$("map-empty").querySelector("p").textContent="No mapped habitat or search method is admitted for this exact target. Choose another target to inspect its evidence.";return;}
     $("map-empty").hidden = current.length > 0 || !!assetURL("geology") || !!assetURL("survey_habitat") || !!assetURL("regional_context");
     if (!current.length) {
       $("map-empty").querySelector("strong").textContent = error
@@ -368,7 +372,7 @@ export async function initSpecies(
     }
   }
   function fit() {
-    if (PROFILES[id()].kind === "reef" || !current.length) return false;
+    if (["reef","unavailable"].includes(speciesProfile(id()).kind) || !current.length) return false;
     const h = map.getSize().y;
     const bounds = L.latLngBounds([]);
     for (const a of current) {

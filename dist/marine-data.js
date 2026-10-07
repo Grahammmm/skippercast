@@ -2,7 +2,8 @@ import { getRegion, localContext } from "./region.js";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
 import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js";
 
-export const HOUR = 3600;
+import {HOUR} from "./marine-units.js";
+export {HOUR,directionTo} from "./marine-units.js";
 export const POINTS = getRegion().forecast_points;
 export const POINT_SIGNATURE=JSON.stringify(POINTS.map(p=>[p.id,p.latitude,p.longitude]));
 export const MODELS = [
@@ -95,9 +96,6 @@ export function currentAt(currents, point, epoch, now = Date.now()) {
 export function timeline(now = Date.now()) {
   const start = Math.floor(now / 1000 / HOUR) * HOUR;
   return Array.from({ length: 169 }, (_, i) => start + i * HOUR);
-}
-export function directionTo(from) {
-  return Number.isFinite(from) ? (from + 180) % 360 : null;
 }
 export function angleBetween(a, b) {
   return Number.isFinite(a) && Number.isFinite(b)
