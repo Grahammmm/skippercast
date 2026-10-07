@@ -23,6 +23,8 @@ import { localDate } from "./forecast.js";
 import { detailHTML } from "./marine-detail.js";
 import { buoyReading, loadObservations, observationsHTML, observedDock, OBSERVATION_REFRESH, FORECAST_REFRESH } from "./live-conditions.js";
 import { buoyObservations } from "../web/views.ts";
+import {hour,parseHour} from '../web/state.ts';
+import {indexForHour} from '../web/hour.ts';
 const $ = (id) => document.getElementById(id);
 const isoDay = (t) => localDate(new Date(t*1000));
 const colors = {
@@ -40,7 +42,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     observations = null,
     liveLoading = false,
     hours = timeline(),
-    index = 0,
+    index = indexForHour(parseHour(hour.peek()), hours[0], 0, hours.length-1) ?? 0,
     point = Math.max(0,POINTS.findIndex(p=>p.id===(getRegion().default_forecast_point || POINTS[Math.min(1,POINTS.length-1)].id))),
     family = "gfs",
     overlay = "none",
@@ -407,7 +409,6 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
     evidence.select(lastSpecies, requested || POINTS[point]);
     const t = hours[index],
       provisional = index >= 72;
-    document.dispatchEvent(new CustomEvent("skippercast:time",{detail:{epoch:t,regionId:getRegion().id}}));
     $("map-time-label").textContent =
       (index === 0 ? "Now · " : "") +
       local(t, { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -418,6 +419,7 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
         full(t) + (provisional ? " · provisional" : ""),
       );
     }
+    document.dispatchEvent(new CustomEvent("skippercast:time",{detail:{epoch:t,regionId:getRegion().id}}));
     $("map-time-range").textContent = provisional
       ? "Provisional"
       : `+${index}h`;
@@ -567,6 +569,8 @@ export function initWeather(map, layer, onOpen, onForecast = () => {}) {
   load();
   loadLive();
   return {
+    /** Selected timeline hour, including missing-model states. */
+    getHour: () => hours[index],
     selectDate(date) {
       const chosen=hours.findIndex(t=>isoDay(t)===date && Number(local(t,{hour:'numeric',hour12:false}))>=7);
       if(chosen<0 || !bundle)return false;

@@ -65,6 +65,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <script type="module" src="coast-launch.js"></script>
+<link rel="stylesheet" href="coast-workspace.css"/>
 </head>
   <body class="atlas-app" data-view="map">
     <a class="skip" href="#workspace">Skip to fishing atlas</a>
@@ -91,7 +92,10 @@
         aria-label="Fishing map"
       >
         <div class="map-wrap" aria-busy="true">
-          <div id="map" aria-label="Interactive fishing habitat map"></div><div id="region-note" class="region-note" hidden></div>
+          <div id="map" aria-label="Interactive fishing habitat map"></div>
+          <div id="coast-workspace" aria-label="Shared coastal terrain presentation" hidden></div>
+          <div class="map-presentations"><label for="map-presentation"><span>Map</span><select id="map-presentation" aria-label="Map presentation"><option value="chart">Chart</option><option value="2d" disabled>Coast 2D</option><option value="3d" disabled>Coast 3D</option></select></label></div>
+          <p id="map-presentation-status" role="status" hidden></p><div id="region-note" class="region-note" hidden></div>
           <div id="map-loading" class="map-loading" role="status"><span>Loading the map…</span></div><!-- dist/startup.js mapReady() hides this once the markers are drawn. -->
           <div id="map-legend" class="map-legend"></div><!-- web/components/MapLegend.tsx -->
           <div class="species-bar">
@@ -355,6 +359,7 @@
       </div>
       <div class="options-body">
         <label class="region-control" for="region-select">Mapped area<select id="region-select"></select></label>
+        <label for="fishing-profile">Fishing method<select id="fishing-profile"><option value="boat">Boat</option><option value="shore">Shore</option><option value="spear">Spear</option></select></label>
         <label
           >Chart detail<select id="base-map">
             <option value="fishing">Fishing chart · detail as you zoom</option>

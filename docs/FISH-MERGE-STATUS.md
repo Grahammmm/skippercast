@@ -103,6 +103,19 @@ ownership and final parity requirements.
 
 ## Next action
 
-Publish and verify the bounded medium-width control fix through protected
-PR/CI. Then integrate remaining statewide layers, account/planning actions and model
-horizons into one workspace before changing the homepage or retiring Fish.
+The medium-width control fix is complete (PR 387, main `2427b0bda`, v0.3.3).
+
+Current batch: embed the native coast renderer inside the existing working chart,
+Conditions and planning workspace. The parent owns `codex/unified-coast-workspace`;
+a bounded worker owns the root-scoped renderer adapter. Start: October 6, 2026
+10:31 p.m. Pacific; checkpoint: October 7, 1:31 a.m. Pacific. Actual fetched main
+is `2fbaf7946`; public `/api/health` reads build `76493feb3f`.
+
+Acceptance: one place/target/profile/hour, native camera-only 2D/3D, current
+scientific gates unchanged, preserved chart/planner/account/offline capabilities,
+independent review, exact current PR-head CI, main/deploy checks and live desktop/
+mobile interactions. Full Fish report/history/shore/dive integration and complete
+capability verification remain required before homepage or regional cutover.
+
+Next: finish and test the embedded presentation, then mount the source-specific
+report/history views against the shared clock. Do not treat legacy links as parity.

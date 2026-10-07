@@ -16,14 +16,15 @@ export function indexForHour(wanted: number | null, selectedTime: number, select
 
 export function followForecastHour(doc: Document = document): void {
   let applied = false;
-  doc.addEventListener('skippercast:forecast', event => {
-    const detail = (event as CustomEvent<{time?: number}>).detail || {};
+  const follow = (event: Event) => {
+    const detail = (event as CustomEvent<{time?: number; epoch?: number}>).detail || {};
+    const selectedTime = detail.epoch ?? detail.time;
     const input = doc.getElementById('detail-hour') as HTMLInputElement | null;
-    if (!input || typeof detail.time !== 'number' || !Number.isFinite(detail.time)) return;
+    if (!input || typeof selectedTime !== 'number' || !Number.isFinite(selectedTime)) return;
     const index = Number(input.value) || 0;
     if (!applied) {
       applied = true;
-      const i = indexForHour(parseHour(hour.value), detail.time, index, Number(input.max) || 168);
+      const i = indexForHour(parseHour(hour.value), selectedTime, index, Number(input.max) || 168);
       if (i !== null && i !== index) {
         input.value = String(i);
         input.dispatchEvent(new Event('input', {bubbles: true}));
@@ -31,7 +32,10 @@ export function followForecastHour(doc: Document = document): void {
       }
     }
     // "Now" (index 0) is the default and is not written.
-    const next = index === 0 ? null : hourParam(detail.time);
+    const next = index === 0 ? null : hourParam(selectedTime);
     if (next !== hour.value) setParams({hour: next});
-  });
+  };
+  // The clock publishes even when neither model can load.
+  doc.addEventListener('skippercast:time', follow);
+  doc.addEventListener('skippercast:forecast', follow);
 }

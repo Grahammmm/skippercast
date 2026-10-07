@@ -1,3 +1,4 @@
+import './coast/coast-embedded.test.ts';
 import './coast/coast3d.test.ts';
 import './coast/coast-regional.test.ts';
 import './coast/coast-habitat-display.test.ts';

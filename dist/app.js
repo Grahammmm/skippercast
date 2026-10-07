@@ -628,6 +628,7 @@ try {
     onLocation:point=>weather?.selectLocation({...point,label:point.label||'Map location'}),
     onSpeciesChange:()=>$("species-select").dispatchEvent(new CustomEvent('change',{detail:{location:true}})),
   });
+  void import('./coast-workspace.js').then(({initCoastWorkspace})=>initCoastWorkspace({map,locationUI,weather})).catch(error=>console.warn('Coastal presentation unavailable',error));
   $("spot-dialog").addEventListener('close',()=>{if(document.body.dataset.view==='map')locationUI.clear();});
   const intelligence=initIntelligence(map);
   initTripAlerts(intelligence);
