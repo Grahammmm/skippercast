@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+- Add an opt-in bounded reader for authenticated original regular BAG cells.
+
+### Internal
+
+- Preserve original BAG cell values, uncertainty and source registration; keep the reader private-only and separate from EPSG:3310 production processing.
+
 ## 0.6.0 — 2026-10-07
 
 - Add isolated reference-grid routing for explicitly selected scope configs while keeping the Central Coast pipeline as the default.
