@@ -38,6 +38,7 @@ BASELINE_IMPLEMENTATION = ('coverage.py', 'terrain.py', 'run.py', 'habitat.py',
 
 
 SAN_SIMEON = 'usgs-sim3327-sansimeon-geology-v1'
+SAN_SIMEON_AUDITED = 'usgs-sim3327-sansimeon-geology-audited-v1'
 MONTEREY = 'usgs-offshore-monterey-geology-v1'
 SOURCE_CONTRACTS = {
     SAN_SIMEON: {'unit_field':'MapUnitAbb', 'member_stem':'Geology_SanSimeon',
@@ -52,13 +53,15 @@ SOURCE_CONTRACTS = {
             'Qms/Tm','Qms/Tvb','Qms/Tc','Qms/Tu','Qms/Kgr','Qchc','Qcpcf',
             'Qccf2','Qccf1','Qcb','Qmscp','Qcw']}}
 
+SOURCE_CONTRACTS[SAN_SIMEON_AUDITED] = deepcopy(SOURCE_CONTRACTS[SAN_SIMEON])
+
 
 def source_profile(policy):
     return policy.get('vector_review', {}).get('source_profile', SAN_SIMEON)
 
 
 def audited(policy):
-    return source_profile(policy) == MONTEREY
+    return source_profile(policy) in (MONTEREY, SAN_SIMEON_AUDITED)
 
 
 def source_contract(policy):
@@ -66,6 +69,8 @@ def source_contract(policy):
     profile = source_profile(policy)
     contract = SOURCE_CONTRACTS.get(profile)
     if (contract is None or any(review.get(k) != v for k,v in contract.items())
+            or (profile == SAN_SIMEON_AUDITED and (review.get('expected_polygon_count') != 625
+                or review.get('invalid_original_records') != [123]))
             or (profile == MONTEREY and (review.get('expected_polygon_count') != 894
                 or review.get('invalid_original_records') != []))):
         raise ValueError('Unapproved original geology source contract')
@@ -202,6 +207,7 @@ def original_vectors(path, policy, target_crs):
         if len(reader) != review['expected_polygon_count']:
             raise ValueError('Original bedrock record inventory changed')
         allowed_types = ((shapefile.POLYGON,) if source_profile(policy) == MONTEREY else
+            (shapefile.POLYGONZ,) if source_profile(policy) == SAN_SIMEON_AUDITED else
             (shapefile.POLYGON, shapefile.POLYGONZ))
         if (reader.shapeType not in allowed_types or review['unit_field'] not in
                 {field[0] for field in reader.fields[1:]}):
@@ -211,7 +217,7 @@ def original_vectors(path, policy, target_crs):
         positive_count, excluded_invalid = 0, []
         for index, item in enumerate(reader.iterShapeRecords()):
             unit = item.record.as_dict()[review['unit_field']]
-            if audited(policy) and unit not in contract['bedrock_units'] + contract['excluded_units']:
+            if source_profile(policy) == MONTEREY and unit not in contract['bedrock_units'] + contract['excluded_units']:
                 raise ValueError('Unapproved original geology map-unit code')
             if unit not in review['bedrock_units']:
                 if audited(policy):
@@ -229,7 +235,7 @@ def original_vectors(path, policy, target_crs):
                 transformed_holds.append(index)
                 continue
             records[str(index)], units[str(index)] = result, unit
-        if audited(policy) and (positive_count != 456 or excluded_invalid != [318,676]):
+        if source_profile(policy) == MONTEREY and (positive_count != 456 or excluded_invalid != [318,676]):
             raise ValueError('Original Monterey unit/invalid-excluded inventory changed')
         if held != review['invalid_original_records']:
             raise ValueError('Original bedrock invalid-record holds changed')
@@ -505,7 +511,7 @@ def features_for(patches, reach, policy, row, binding, **metadata):
                 'native_depth_area_m2':patch.native_depth_area_m2,'native_depth_crs':patch.native_depth_crs,
                 'window_notice':'Interpretation is limited to reviewed native windows; a window boundary is not an established reef edge.'}}
         if audited(policy):
-            properties['classified_area']['source_profile'] = MONTEREY
+            properties['classified_area']['source_profile'] = source_profile(policy)
         properties.update({k:deepcopy(v) for k,v in metadata.items() if v is not None})
         features.append({'type':'Feature','geometry':mapping(geo),'properties':properties})
     return {'type':'FeatureCollection','features':features}
