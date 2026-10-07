@@ -1,4 +1,4 @@
 interface:
-  display_name: "SkipperCast Coastal Map Pipeline"
-  short_description: "Build, verify and publish clear coastal fishing maps"
-  default_prompt: "Use $skippercast-build-coastal-map to deliver the next verified coastal map improvement with bounded subagents."
+  display_name: "SkipperCast Coastal 3D Rendering"
+  short_description: "Improve reviewed coastal terrain and imagery in 3D"
+  default_prompt: "Use $skippercast-build-coastal-map for a bounded 60-minute 3D rendering run with economical implementation and independent quality review."

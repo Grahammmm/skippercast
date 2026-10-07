@@ -1,86 +1,38 @@
 ---
 name: skippercast-build-coastal-map
-description: Build and refine SkipperCast coastal fishing maps from reviewed terrain, habitat and marine conditions through bounded subagents, visual verification and live release. Use for shared 2D/3D map improvements, coastal data integration or product consolidation; use the focused ingestion or mapping skills alone for routine refreshes or survey-only expansion.
+description: Improve SkipperCast website 3D coastal terrain and imagery from existing reviewed data. Use for coastal renderer and visual-quality work; use focused data skills for new sources or measured habitat expansion.
 ---
 
-# Build a clear, beautiful coastal fishing map
+# Render the coast in 3D
 
-Deliver a visitor-visible improvement: recognizable bottom structure, understandable
-conditions, selectable species habitat and honest confidence. Use one geographic
-batch or one shared interaction at a time. The map can emphasize relief for
-readability; it cannot manufacture soundings, reefs, current measurements or catch
-probabilities.
+Deliver a visible website improvement using reviewed terrain and imagery. Keep the task to rendering and presentation. Offline maps, product consolidation, forecast work, habitat expansion and unrelated source discovery are outside this workflow unless the user changes its scope.
 
-## Resume cheaply
+## Select one useful slice
 
-Locate the user's canonical repository; read its `AGENTS.md`, current branch and
-existing task ledger. In SkipperCast, start with `docs/FISH-MERGE-STATUS.md` or the
-newer ledger it points to. Confirm actual main, deployed build, active owners and
-relevant source identities. Dated receipts are historical evidence, not current
-readiness. Preserve other agents' checkouts.
+Resume the repository instructions and existing ledger. Confirm the relevant revision and reviewed terrain/imagery coverage using targeted reads. Prefer the requested region when supported; otherwise choose a supported pilot and explain the gap. Do not invent measurements to complete a region.
 
-Keep **one existing ledger** with objective, scope, acceptance checks, decisions,
-completed evidence, owner, exact blocker and next executable action. Add paths and
-hashes instead of copying logs. A small CSS change does not need a new pipeline.
-Choose the smallest batch that makes the map visibly better; do not rediscover all
-sources or rebuild unchanged surveys.
+Choose one visible defect or improvement. Put its region, visual reference, acceptance checks and relevant source identities in the run brief. Current regions, revisions and jobs belong in the ledger, not this skill.
 
-## Route only what changed
+Preserve original attribution, rights, hashes, coordinate systems, depth datum, coverage masks and native values. Exaggeration or interpolation must remain distinguishable from measured geometry. Align imagery and terrain; retain source inspection and coverage boundaries.
 
-Read these references on demand:
+## Use cheap, bounded implementation
 
-- Data binding, region rollout, integration or release: [pipeline](references/pipeline.md).
-- Terrain seams, shaders, imagery, layers, pins or map inspection: [visual standard](references/visual-standard.md).
-- Subagent assignment, model choice, stalled work: [orchestration](references/orchestration.md).
-- Testing a lower model setting or improving this process: [calibration](references/calibration.md).
+For an uncalibrated routine task, start with one `gpt-6-luna` worker at low effort. For comparable tasks, reuse the cheapest setting supported by accepted actual evidence; retain the last successful setting as fallback. Give it a brief of at most 250 words and five relevant paths, exact ownership and acceptance checks. Fork no conversation history; let it read additional targeted dependencies when necessary. The coordinator owns integration, browser verification and releases. Use scripts for extraction, builds, tests and waiting, rather than agents for these tasks.
 
-Use `skippercast-discover-data` for a missing authoritative source;
-`skippercast-ingest-data` for reviewed adapters/refreshes;
-`skippercast-map-coast` for measured habitat expansion/science changes;
-`skippercast-add-region` for a regional package. Read only the relevant skill and
-its needed reference. If absent, use the repository's corresponding contract;
-report a missing required contract instead of improvising a scientific gate.
+When a failure produces no new evidence, change approach or narrow the task. Escalate a model-caused implementation failure to `gpt-6.1-sol` medium with the saved reproduction and failed attempt. Missing data, permissions or services need a different action, not a stronger model. Reuse accepted evidence and avoid duplicate discovery.
 
-## Execute with bounded subagents
+## Stop development after 60 minutes
 
-For substantial work, delegate genuinely independent source, renderer or review
-work using the compact brief in orchestration. Usually one worker plus one
-independent reviewer is enough; stay within the repository's delegation limit.
-One owner integrates state, shared files and releases. Serialize browser use and
-shared-file edits. Reuse agents only when their context and settings fit; do not
-spawn a team for a trivial edit. Never create user-owned chats for internal work.
+At the start, record UTC start and deadline plus a monotonic timer. Before each assignment or edit, check remaining time; bound waits and tools to it. Keep workers interruptible and interrupt them at the deadline. A written deadline alone does not enforce a stop. Stop edits and save unfinished diffs, check results and live job handles. Do not restart running CI. Audit time is separate.
 
-Use scripts for deterministic fetch/normalize/hash/validate/build work and for
-waiting on jobs. Select supported model/effort pairs from orchestration; preserve
-explicit user settings. The table is a starting hypothesis, not a proven minimum.
-Calibrate against actual pass/fail evidence before lowering a consequential task.
+Within 15 minutes, seek an actual preview showing the proposed visual change. If it is absent, diagnose the specific blocker and change method or reduce the slice. Tests, documentation and releases alone are not rendering progress.
 
-After a repeated failure with no new evidence, save its fingerprint and change
-method, move to an independent task, or report the external need. Do not continually
-refresh snapshots or rerun an unchanged rejected import to appear busy. A blocked
-source can leave its layer withheld while other map work proceeds. No model
-setting can resolve missing authorization or an unavailable external service.
+Compare fixed before/after cameras on the actual site, including harbor, shoreline, reef and regional scale across desktop and phone. Reuse unaffected views; inspect changed views for terrain continuity, spikes, void cliffs, imagery seams, depth shading, readable labels and camera/control behavior. Record load/frame timing when a change could affect performance. Review rendered output early, not only at the end.
 
-## Acceptance before calling it done
+## Review, deploy and improve
 
-- Data: original rights, hashes, geographic binding, depth datum, native support,
-  units, masks and observation/issue/valid/retrieval clocks survive. Missing data
-  remain identifiable. Modeled fill is distinct from measurement.
-- Design: actual harbor, shoreline, reef and regional views are readable; no
-  terrain spikes, void cliffs, imagery seams, oversized labels or control overlap.
-  Source inspection reports native values even with relief emphasized.
-- Interaction: one place/profile/target/time state; camera-only 2D/3D toggle;
-  zoom-dependent habitat regions and compact selectable pins; clear details and
-  confidence; relevant Boat/Shore/Spear conditions. Existing unique capabilities
-  survive a merge and overlapping controls are consolidated.
-- Evidence: run relevant deterministic checks plus required repository gates;
-  inspect actual desktop/mobile rendering through supported browser access and
-  obtain required independent review. A build or screenshot alone is insufficient.
-- Live, when authorized: protected exact-head merge, required main CI, existing
-  Cloudflare workflow and actual deployed revision/data/interaction readback.
-  Report partial integration or unavailable layers explicitly.
+After stopping, use an independent `gpt-6-astra` medium reviewer with the bounded diff, screenshots, source receipts, check results and action log. It assesses visual quality, data honesty, correctness and avoidable rework, then recommends a small skill correction supported by evidence. Resolve blocking findings before release; if more implementation is needed, carry it into the next authorized run. Follow repository merge/deployment gates. An already-reviewed release may finish after the deadline when its checks pass.
 
-Finish with what changed for the fisherman, checks passed, meaningful remaining
-gaps and next action. Save a screenshot when it helps demonstrate the result.
-Do not claim all coastline is mapped, all features are merged, safe boating or
-likely catches merely because the map is beautiful.
+Keep one receipt: objective/region; start/deadline/stop; changed paths; visible result and data-supported area; before/after views; attempted/passed checks; review findings; live jobs; blockers/next action; available model, token, time and rework evidence. Do not invent unavailable usage or claim a cheapest proven setting from a simulation. Read [calibration](references/calibration.md) only for the end-of-run audit and model evidence.
+
+Apply the accepted skill correction, report the result, and wait for user feedback before starting another run. Repeat the requested four or five trials; do not automatically extend into a statewide goal.
