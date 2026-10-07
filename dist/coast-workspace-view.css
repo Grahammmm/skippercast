@@ -10,3 +10,8 @@ footer{bottom:150px;padding:14px;max-width:280px}.gesture,.map-note{display:none
 #reading{left:14px;bottom:150px;max-width:calc(100% - 28px);max-height:40%;overflow:auto}
 :host([data-perspective='2d']) .orbit-hint{display:none}:host([data-perspective='3d']) .pan-hint{display:none}
 @media(max-width:600px){.layers{top:180px;right:14px;width:220px;max-height:calc(100% - 295px)}.view-controls{bottom:95px}footer{display:none}.target-detail{top:180px;max-height:calc(100% - 285px)}#reading{bottom:145px}}
+
+:host([data-scope^='coast:']) .view-controls{bottom:180px}
+:host([data-scope^='coast:']) footer,:host([data-scope^='coast:']) #reading{bottom:230px}
+:host([data-scope^='coast:']) .target-detail{max-height:calc(100% - 380px)}
+:host([data-scope^='coast:']) .layers{max-height:calc(100% - 390px)}

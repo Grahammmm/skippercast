@@ -45,7 +45,7 @@ async function workspace(ready=true,initialView='map'){
  const factory=new Function('getRegion','navigate','profile','setParams','effect','coastPath','coastTarget','hasCoastTerrain','presentationFromURL','presentationURL','habitatURL','loadViewer','const template="",viewStyles="/synthetic.css";'+adapter+'\nreturn initCoastWorkspace;');
  const init=factory(()=>({id:'morro-bay'}),url=>location.href=String(url),{value:'boat'},()=>{},fn=>{fn();return()=>{}},x=>x,coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL,async()=>({CoastViewer:FakeViewer}));
  let invalidations=0,zoom=12,center={lat:35.43,lng:-120.98};const map={getCenter:()=>center,getZoom:()=>zoom,setView(p,z){center=Array.isArray(p)?{lat:p[0],lng:p[1]}:p;zoom=z},invalidateSize(){invalidations++}};
- const handle=init({map,locationUI:{get:()=>null,select(){},clear(){}},weather:{getHour:()=>1791288000}});
+ const handle=init({map,locationUI:{get:()=>null,select(p){assert.deepEqual(center,{lat:p.latitude,lng:p.longitude},'Move the map before publishing source metadata');},clear(){}},weather:{getHour:()=>1791288000}});
  const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
  return {get,doc,map,flush,invalidations:()=>invalidations,change:async mode=>{get('map-presentation').value=mode;get('map-presentation').listeners.change();await flush();},viewer:()=>viewer,setZoom:z=>zoom=z,cleanup:()=>{handle.destroy();Object.assign(globalThis,saved);}};
 }
@@ -68,3 +68,7 @@ test('finishing a delayed terrain load cannot restart a hidden tab',async()=>{
 });
 
 test('initial chart adapter cannot resize a chart hidden by Conditions or Export',async()=>{for(const initialView of ['forecast','export']){const w=await workspace(true,initialView);try{assert.equal(w.invalidations(),0);}finally{w.cleanup();}}});
+
+test('unsupported scoped UTC hour reaches terrain as a gap instead of retaining the old hour',async()=>{const s=await workspace();try{await s.change('2d');s.doc.listeners['skippercast:time']({detail:{epoch:NaN,regionId:'morro-bay'}});assert.ok(Number.isNaN(s.viewer().hours.at(-1).getTime()));}finally{s.cleanup()}});
+
+test('native feature selection publishes metadata after moving the chart and preserves original shared coordinates',async()=>{const s=await workspace();try{await s.change('2d');const p={id:'original',region:'morro-bay',latitude:35.37866518735354,longitude:-120.8749234607946};s.viewer().options.onSelection(p);const u=new URL(location.href);assert.equal(u.searchParams.get('habitat'),'original');assert.equal(u.searchParams.get('view'),'35.37867,-120.87492,12');}finally{s.cleanup()}});

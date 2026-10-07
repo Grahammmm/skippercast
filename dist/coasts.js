@@ -32,6 +32,14 @@ export function coastURL(href,coast,{point,zoom,target,packageId,overview=false}
   if(point && Number.isFinite(point.latitude)&&Number.isFinite(point.longitude)&&Number.isFinite(zoom))url.searchParams.set('view',`${point.latitude.toFixed(5)},${point.longitude.toFixed(5)},${zoom}`);
   url.hash='map';return url;
 }
+/** Shared workspace transitions preserve exact selections, including unsupported targets. */
+export function coastWorkspaceURL(href,coast,{target,...options}={}){
+ const u=coastURL(href,coast,options),input=new URL(href);
+ if(target!==undefined&&target!==null)u.searchParams.set('target',target);
+ else if(input.searchParams.has('target'))u.searchParams.set('target',input.searchParams.get('target'));
+ for(const key of ['place','area','habitat'])u.searchParams.delete(key);
+ return u;
+}
 export function sourceFresh(record,maxHours=36,now=Date.now()) {
   const age=(now-Date.parse(record?.data_retrieved_at))/3600000;
   return record?.status==='ok' && Number.isFinite(age) && age>=-0.1 && age<=maxHours;
@@ -59,7 +67,7 @@ export function initCoastSelector(catalog,coast) {
   select.addEventListener('change',()=>{
     const next=catalog.regions.find(r=>r.id===select.value);
     // Another coast: a full load until the app follows region changes (web/state.ts).
-    navigate(coastURL(location.href,next,{target:document.getElementById('species-select').value}));
+    navigate(coastWorkspaceURL(location.href,next,{target:document.getElementById('species-select').value,overview:true}));
   });
 }
 export async function loadCoastalStatus(catalog) {

@@ -10,9 +10,13 @@
 
 - Record verified NOAA reuse terms and original coordinate/depth references for two southern survey candidates.
 
+- Connect the Central Coast overview to shared terrain presentation, profile, target and UTC time. Preserve independent model forecasts, original source expiry, explicit package handoffs and geographic gaps in local readings.
+
 ### Internal
 
 - Preserve candidate status, source IDs and hashes, unknown acquisition lineage and source-specific terrain, regional, camera and hazard-review gates for the H11879 2 m and H11880 1 m records.
+
+- Verify exact restored source identities, earliest publication expiry, unsupported UTC selections, stale replies and malformed model cache admission.
 
 ## 0.4.0 — 2026-10-07
 

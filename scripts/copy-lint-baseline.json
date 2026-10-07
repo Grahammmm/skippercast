@@ -10,8 +10,6 @@
   {"file":"dist/coastal-discovery.js","rule":"method-name","text":"Original USGS bathymetry sources and vertical datums"},
   {"file":"dist/coastal-discovery.js","rule":"method-name","text":"Rock-description check: X historical free-text sample(s); X land on an audited 25–200 ft original MLLW cell outside the 100 m MPA review buffer."},
   {"file":"dist/coastal-discovery.js","rule":"method-name","text":"source depth X ft MLLW"},
-  {"file":"dist/coastal-forecast.js","rule":"method-name","text":"GFS X"},
-  {"file":"dist/coastal-forecast.js","rule":"method-name","text":"IFS / GFS · max gust X / X kt · 10 a.m."},
   {"file":"dist/coastal-forecast.js","rule":"method-name","text":"SkipperCast builds these forecasts from ECMWF IFS and NOAA GFS wind data ↗ and ECMWF WAM and NOAA GFS Wave data ↗ (NOAA and ECMWF open data, CC BY 4.0)."},
   {"file":"dist/coastal-forecast.js","rule":"method-name","text":"WAM / GFS Wave"},
   {"file":"dist/coastal-forecast.js","rule":"method-name","text":"Wind waves X ft (GFS Wave)"},

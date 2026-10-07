@@ -8,12 +8,12 @@ import {effect} from '@preact/signals';
 import {coastPath} from '../packages/coast/src/transport.ts';
 import {coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL} from '../web/coast-context.ts';
 
-export function initCoastWorkspace({map,locationUI,weather}) {
+export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.invalidateSize({pan:false}),getScope=()=>({id:getRegion().id,terrainAvailable:hasCoastTerrain(getRegion().id)})}) {
  const select=document.getElementById('map-presentation');
  const host=document.getElementById('coast-workspace');
  const status=document.getElementById('map-presentation-status');
  const method=document.getElementById('fishing-profile');
- const supported=hasCoastTerrain(getRegion().id);
+ const scope=getScope(),supported=scope.terrainAvailable;host.dataset.scope=scope.id;
  for(const option of select.options)if(option.value!=='chart')option.disabled=!supported;
  let viewer=null,pending=null,alive=true,mode='chart',point=null,forecastAt=null,lastTarget=null;
  const home={...map.getCenter()},homeZoom=map.getZoom();
@@ -51,15 +51,15 @@ export function initCoastWorkspace({map,locationUI,weather}) {
     const zoom=Math.max(7,Math.min(18,12-Math.log2(view.span/7300)));
     map.setView([view.latitude,view.longitude],zoom,{animate:false});
     point={latitude:view.latitude,longitude:view.longitude,span:chartSpan()};
-   },onSelection:selected=>{
+   },onSelectionInvalidated:()=>locationUI.clear?.(),onRestoredSelection:selected=>locationUI.restore?.(selected),onSelection:selected=>{
     // Existing location resolution enforces geographic forecast/legal binding.
     point={latitude:selected.latitude,longitude:selected.longitude};
-    navigate(habitatURL(location.href,selected.id??null),{replace:true});
-    locationUI.select({...selected,label:'Selected coastal habitat'});
     map.setView([selected.latitude,selected.longitude],Math.max(12,map.getZoom()),{animate:false});
+    locationUI.select({...selected,label:'Selected coastal habitat'});
+    const selectionURL=habitatURL(location.href,selected.id??null);selectionURL.searchParams.set('view',`${selected.latitude.toFixed(5)},${selected.longitude.toFixed(5)},${map.getZoom()}`);navigate(selectionURL,{replace:true});
    }});
    root.getElementById('top').onclick=()=>void apply('2d',true);
-   const clearSelection=()=>{viewer.selectHabitat(null);navigate(habitatURL(location.href,null),{replace:true});};
+   const clearSelection=()=>{viewer.selectHabitat(null);locationUI.clear?.();navigate(habitatURL(location.href,null),{replace:true});};
    root.getElementById('target-close').onclick=clearSelection;
    root.getElementById('reset').setAttribute('aria-label','Reset map view');
    root.getElementById('reset').onclick=()=>{
@@ -80,14 +80,14 @@ export function initCoastWorkspace({map,locationUI,weather}) {
   if(write)navigate(presentationURL(location.href,next));
   document.body.dataset.mapPresentation=next==='chart'?'chart':'terrain';
   host.hidden=next==='chart';
-  if(next==='chart'){viewer?.setVisible(false);if(document.body.dataset.view==='map')map.invalidateSize({pan:false});announce('');return;}
+  if(next==='chart'){viewer?.setVisible(false);if(document.body.dataset.view==='map')resizeChart();announce('');return;}
   announce('Loading the reviewed coast…');
   const ready=await mount();if(!alive||mode==='chart')return;
-  if(!ready){for(const option of select.options)if(option.value!=='chart')option.disabled=true;mode='chart';select.value='chart';host.hidden=true;document.body.dataset.mapPresentation='chart';viewer?.setVisible(false);if(document.body.dataset.view==='map')map.invalidateSize({pan:false});announce('Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable. Reload to retry the coast.');return;}
+  if(!ready){for(const option of select.options)if(option.value!=='chart')option.disabled=true;mode='chart';select.value='chart';host.hidden=true;document.body.dataset.mapPresentation='chart';viewer?.setVisible(false);if(document.body.dataset.view==='map')resizeChart();announce('Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable. Reload to retry the coast.');return;}
   viewer.setPerspective(mode);viewer.setVisible(document.body.dataset.view==='map'&&!document.hidden);announce('');
  }
- const onLocation=event=>{const context=event.detail;if(context?.regionId===getRegion().id)syncPoint(context.point);syncTarget();};
- const onTime=event=>{const epoch=event.detail?.epoch;if(event.detail?.regionId===getRegion().id&&Number.isFinite(epoch)){forecastAt=new Date(epoch*1000);viewer?.setHour(forecastAt);}};
+ const onLocation=event=>{const context=event.detail;if(context?.regionId===scope.id)syncPoint(context.point);syncTarget();};
+ const onTime=event=>{const epoch=event.detail?.epoch;if(event.detail?.regionId===scope.id&&typeof epoch==='number'){forecastAt=new Date(epoch*1000);viewer?.setHour(forecastAt);}};
  const onHistory=()=>{void apply(presentationFromURL(location.href));viewer?.selectHabitat(new URL(location.href).searchParams.get('habitat'));};
  const visibility=()=>viewer?.setVisible(mode!=='chart'&&document.body.dataset.view==='map'&&!document.hidden);
  select.addEventListener('change',()=>void apply(select.value,true));
@@ -99,7 +99,7 @@ export function initCoastWorkspace({map,locationUI,weather}) {
  const disposeMethod=effect(syncMethod);
  const destroy=()=>{alive=false;viewer?.destroy();observer.disconnect();disposeMethod();document.removeEventListener('skippercast:species',syncTarget);document.getElementById('species-select').removeEventListener('change',syncTarget);document.removeEventListener('skippercast:location',onLocation);document.removeEventListener('skippercast:time',onTime);window.removeEventListener('popstate',onHistory);window.removeEventListener('hashchange',visibility);document.removeEventListener('visibilitychange',visibility);};
  window.addEventListener('pagehide',destroy,{once:true});
- const selectedHour=weather.getHour();if(Number.isFinite(selectedHour))forecastAt=new Date(selectedHour*1000);
+ const selectedHour=weather.getHour();forecastAt=new Date(selectedHour*1000);
  syncMethod();syncPoint(locationUI.get()?.point);void apply(presentationFromURL(location.href));
- return {destroy};
+ return {destroy,clearSelection:()=>viewer?.selectHabitat(null)};
 }
