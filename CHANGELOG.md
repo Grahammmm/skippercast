@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Document recovery of replaced scoped seafloor publication runs: retain unverified region scopes, inspect actual prepare matrices, refresh omitted regions with the existing workflow and verify each regional live readback.
+
 - Extend reviewed San Simeon geology over 17 depth-qualified native SCC05 windows, preserving prior habitat, uncertain lithology, current spatial holds and private projection conflicts. Interpreted outlines remain unranked and nonexportable.
 
 - Add reviewed exposed-bedrock outlines from two native SCC06 depth windows near Cambria, retaining prior habitat, current whole-polygon spatial exclusions and separate producer rights. These interpreted areas remain unranked and nonexportable.
