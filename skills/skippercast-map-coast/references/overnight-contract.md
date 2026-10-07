@@ -4,6 +4,9 @@ Use after the owner authorizes a timed mapping goal. This is an execution mode
 of the existing mapping skill, not a new scheduler or source catalog. Read
 `parallel-pilot.md` for method-specific handoffs and `execution-and-release.md`
 for real production commands. Do not copy all references into worker context.
+Use [run progress control](progress-control.md) for downstream readiness,
+cumulative active-work limits and its offline stage-boundary decision. An
+overnight reporting window does not extend those limits.
 
 ## Preflight before unattended processing
 
@@ -21,9 +24,11 @@ for real production commands. Do not copy all references into worker context.
 4. Complete one end-to-end calibration batch, including current screens and
    live archive/map readback. If release access is unavailable, identify that
    limitation and continue useful private physical work; do not claim a release.
-5. Prefer two workers plus one independent reviewer within the host's slots.
-   Do not increase the pool until the two-hour checkpoint shows actual useful
-   batches, capacity and no integration/review backlog.
+5. Start with the coordinator and one execution worker only when useful. Bring
+   in independent review for a reviewable artifact. Increase execution capacity
+   only after a complete release, while remaining allowance, ready independent
+   batches and downstream capacity justify it. Qualified-but-blocked handoffs
+   count toward the queue limit; idle capacity need not be occupied.
 
 Creating a goal is not proof that a worker, command or schedule is running.
 Record actual dispatch and start receipts. A goal supplies continuity; it does

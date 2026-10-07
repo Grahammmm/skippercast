@@ -4,6 +4,9 @@ Use this procedure when the owner requests parallel mapping or a timed pilot.
 The duration is an observation window, not permission to prolong a blocked
 batch. Record the UTC start and deadline and the user's reporting preferences
 in the existing coordination issue and private progress checkpoint.
+Apply [run progress control](progress-control.md) before filling the pool and at
+every stage boundary. Its cumulative allowance and no-public-progress stop
+survive task reassignment, diagnostics, repairs and intermediate successes.
 
 ## Choose one release before filling the worker pool
 
@@ -29,7 +32,10 @@ For the classified-habitat production path and release gates, follow
 
 Use the concurrency available in the current session; do not assume that a
 requested increase overrides its hard limit. A useful starting arrangement is
-one coordinator, two bounded source/processing workers and one reviewer.
+one coordinator, one bounded execution worker when useful, and an independent
+reviewer when an artifact is ready. Do not keep idle review or observer agents
+sampling. Add a second execution worker after a complete calibration release
+only when remaining allowance and downstream capacity justify it.
 Reassign an idle source slot to implementation when that is the bottleneck.
 
 - The coordinator owns integration decisions and shared skills/state. It may
@@ -66,8 +72,9 @@ another worker's branch. Use focused branches and the existing protected PR
 flow; two independent branches can run concurrently, shared writes cannot.
 
 Where the owner permits model selection, start with a Sol coordinator at medium
-reasoning effort, two Luna workers at medium effort for bounded qualification
-and established deterministic processing, and one Sol reviewer. Use higher
+reasoning effort, one Luna worker at medium effort for bounded qualification
+and established deterministic processing when useful, and a Sol reviewer when
+an artifact is ready. Add execution capacity only after calibration. Use higher
 review effort for scientific method or ambiguous geometry changes. Respect the
 current session's hard concurrency limit; these four roles include the coordinator.
 This is a suggested allocation, not permission to switch an explicit user model.
@@ -126,7 +133,9 @@ window result as additional habitat before baseline comparison and publication.
 ## Switch work instead of repeating failure
 
 Keep physical mapping independent of final publication holds. A held source can
-produce private evidence while another qualified batch advances. After two
+produce one scoped private deliverable within the run allowance while another
+executable batch advances. Validated held candidates still count toward the
+two-handoff cap. After two
 failed attempts at the same problem, change source, reach or method using the
 diagnostic evidence. Within 20 active investigation minutes, require a usable
 batch or a demonstrated release-blocker fix. New metadata or debugging output
