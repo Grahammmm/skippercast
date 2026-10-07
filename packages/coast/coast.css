@@ -35,3 +35,5 @@ body[data-setup=pending]>header,body[data-setup=pending]>#report-bar,body[data-s
 @media(max-width:500px){header{gap:10px}#home-settings{font-size:0;width:34px;height:36px;padding:0;flex-shrink:0}#home-settings:after{content:'⌂';font-size:22px}#sources-open{flex-shrink:0;width:34px;padding:0}.report-metrics .dive-tide-metric{display:none}.report-bar{height:170px}.report-metrics>div{min-width:0;flex:1}.report-metrics small{line-height:1.4}#scene{height:calc(100svh - 234px)}}
 
 @media(max-width:850px){.layers #full-report-link{display:block;margin-top:10px;padding:10px 0;border-top:1px solid #cfdbd6;font-size:11px;text-decoration:none;min-height:44px}.layers:not(.expanded){max-height:calc(100% - 210px)}}
+/* Keep map controls clear of the species panel on narrow tablets. */
+@media(min-width:501px) and (max-width:850px){.view-controls{left:16px;right:auto;top:190px;bottom:auto}}

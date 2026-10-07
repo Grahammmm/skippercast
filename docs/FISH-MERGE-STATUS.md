@@ -15,7 +15,7 @@ renderer release uses `manual` plus the unchanged strict 200/206 response gate.
 A synthetic redirect regression verifies no follow-on request. The actual local
 Worker now returns 200 for the report and terrain manifest.
 
-The native Fish renderer is integrated at `/coast` in a separate feature branch,
+The native Fish renderer is live at `/coast` (PR 385, main `8bad7cb1`),
 with a launch link in the existing map options. It retains the original 2D/3D
 terrain, pins, outlines, rankings, source inspection, streaming seam refinements,
 current fields and report/history/catch components. It uses strictly typed
@@ -28,7 +28,8 @@ source admission, private dataset, migration, cron or security policy is added.
   receipt-path and empty-geography fixes; 52 focused tests pass.
 - Final local Node suite: 1,287 passed, no failures or skips. All three strict
   type checks, build, client/web/repository/copy/token checks passed; platform
-  rebuild left generated regions unchanged. Protected exact-head CI remains required.
+  rebuild left generated regions unchanged. Exact-head and merged-main Linux
+  Python/GIS/e2e CI passed. Cloudflare run `37573305538` published build `127342282d`.
 - Local browser: Morro terrain/imagery, shore summary, daily report dialog,
   camera-only 2D toggle and Monterey location binding were exercised. Monterey
   correctly labels the separate SLO forecast instead of treating it as local.
@@ -37,7 +38,12 @@ source admission, private dataset, migration, cron or security policy is added.
   dated catch facts, historical buoy charts and the mobile chart/tools link.
   Independent desktop review confirmed Morro in 3D/2D, compact reef selection
   and native lidar source/datum inspection; it stopped safely when another
-  operator changed its browser. Point Conception and live checks remain pending.
+  operator changed its browser. Root also verified Point Conception, source
+  receipt navigation and Back navigation. Twelve actual production checks
+  passed: exact snapshot/terrain hashes and source clocks, habitat HEAD/ranges,
+  source receipts and private/regional exclusions. Live 2D/3D interaction passed.
+  A final medium-width check caught zoom controls overlapping the species
+  selector; the follow-up places them below the location card.
 - Existing SkipperCast chart, seven-day dual-model forecast, planning/export,
   legal, account, alert, offline and fleet/advisor functions remain available.
   Keeping their routes is preservation, **not** proof of a finished unified UI.
@@ -97,8 +103,6 @@ ownership and final parity requirements.
 
 ## Next action
 
-Complete desktop/mobile and independent native map verification, run final
-checks, rebase to current main, publish through protected PR/CI and verify the
-actual production build, coastal data, byte ranges and private boundaries.
-Then integrate remaining statewide layers, account/planning actions and model
+Publish and verify the bounded medium-width control fix through protected
+PR/CI. Then integrate remaining statewide layers, account/planning actions and model
 horizons into one workspace before changing the homepage or retiring Fish.

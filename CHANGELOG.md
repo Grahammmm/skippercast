@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Keep coastal zoom controls clear of the species selector at medium phone and narrow tablet widths.
+
 - Add an explicit conservative canonical occupied-subtraction option for reviewed original bedrock: remove bounded reprojection residuals without tolerating retained overlap, modifying prior geometry or activating a source.
 - Bring the shared Monterey–Point Conception 2D/3D coast renderer and SLO daily report into SkipperCast at `/coast`, reachable from map options. Preserve original terrain evidence, habitat expiry, source clocks, existing chart/trip/account tools and shared location/target/hour links. Keep the existing homepage until full workspace parity. Fix coastal subrequests for the actual Cloudflare redirect API while continuing to reject every redirect.
 
