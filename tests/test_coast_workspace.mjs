@@ -33,21 +33,21 @@ const adapter=readFileSync(new URL('../dist/coast-workspace.js',import.meta.url)
  .replace(/^import .*;\n/gm,'').replace('export function initCoastWorkspace','function initCoastWorkspace')
  .replace("await import('../packages/coast/src/coast3d/viewer.ts')",'await loadViewer()');
 function element(){return {hidden:false,value:'lingcod',options:[{value:'chart'},{value:'2d'},{value:'3d'}],textContent:'',append(){},remove(){},setAttribute(){},listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]},dataset:{}};}
-async function workspace(ready=true){
+async function workspace(ready=true,initialView='map'){
  const keys=['document','window','location','DOMParser','MutationObserver'],saved=Object.fromEntries(keys.map(k=>[k,globalThis[k]]));
  const nodes=new Map(),get=id=>nodes.get(id)??(nodes.set(id,element()),nodes.get(id));
  const root={querySelector:()=>element(),getElementById:get,querySelectorAll:()=>[],append(){}};
  get('coast-workspace').attachShadow=()=>root;get('map-presentation').value='chart';
- const doc={getElementById:get,createElement:element,importNode:x=>x,body:{dataset:{view:'map'}},hidden:false,listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]}};
+ const doc={getElementById:get,createElement:element,importNode:x=>x,body:{dataset:{view:initialView}},hidden:false,listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]}};
  const win={listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]}};
  Object.assign(globalThis,{document:doc,window:win,location:{href:'https://example.test/?region=morro-bay#map'},DOMParser:class{parseFromString(){return {getElementById:get}}},MutationObserver:class{observe(){}disconnect(){}}});
  let viewer;class FakeViewer{constructor(host,options){viewer=this;this.options=options;this.hours=[];this.positions=[];this.visibility=[];this.loads=0;}setSpecies(){}setDepthLimit(){}setLocation(p){this.positions.push(p)}setHour(at){this.hours.push(at)}setPerspective(){}selectHabitat(id){this.selection=id}setVisible(v){this.visibility.push(v)}load(){this.loads++;return Promise.resolve(ready)}destroy(){}}
  const factory=new Function('getRegion','navigate','profile','setParams','effect','coastPath','coastTarget','hasCoastTerrain','presentationFromURL','presentationURL','habitatURL','loadViewer','const template="",viewStyles="/synthetic.css";'+adapter+'\nreturn initCoastWorkspace;');
  const init=factory(()=>({id:'morro-bay'}),url=>location.href=String(url),{value:'boat'},()=>{},fn=>{fn();return()=>{}},x=>x,coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL,async()=>({CoastViewer:FakeViewer}));
- let zoom=12,center={lat:35.43,lng:-120.98};const map={getCenter:()=>center,getZoom:()=>zoom,setView(p,z){center=Array.isArray(p)?{lat:p[0],lng:p[1]}:p;zoom=z},invalidateSize(){}};
+ let invalidations=0,zoom=12,center={lat:35.43,lng:-120.98};const map={getCenter:()=>center,getZoom:()=>zoom,setView(p,z){center=Array.isArray(p)?{lat:p[0],lng:p[1]}:p;zoom=z},invalidateSize(){invalidations++}};
  const handle=init({map,locationUI:{get:()=>null,select(){},clear(){}},weather:{getHour:()=>1791288000}});
  const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
- return {get,doc,map,flush,change:async mode=>{get('map-presentation').value=mode;get('map-presentation').listeners.change();await flush();},viewer:()=>viewer,setZoom:z=>zoom=z,cleanup:()=>{handle.destroy();Object.assign(globalThis,saved);}};
+ return {get,doc,map,flush,invalidations:()=>invalidations,change:async mode=>{get('map-presentation').value=mode;get('map-presentation').listeners.change();await flush();},viewer:()=>viewer,setZoom:z=>zoom=z,cleanup:()=>{handle.destroy();Object.assign(globalThis,saved);}};
 }
 test('a failed terrain load retains chart fallback on every later selection',async()=>{
  const s=await workspace(false);try{await s.change('2d');assert.equal(s.get('coast-workspace').hidden,true);await s.change('3d');assert.equal(s.get('coast-workspace').hidden,true);assert.equal(s.get('map-presentation').value,'chart');assert.equal(s.get('map-presentation-status').hidden,false);assert.equal(s.viewer().loads,1);}finally{s.cleanup();}
@@ -66,3 +66,5 @@ test('finishing a delayed terrain load cannot restart a hidden tab',async()=>{
  let resolve;const loading=new Promise(done=>resolve=done),s=await workspace(loading);
  try{await s.change('3d');s.doc.hidden=true;s.doc.listeners.visibilitychange();resolve(true);await s.flush();assert.equal(s.viewer().visibility.at(-1),false);}finally{s.cleanup();}
 });
+
+test('initial chart adapter cannot resize a chart hidden by Conditions or Export',async()=>{for(const initialView of ['forecast','export']){const w=await workspace(true,initialView);try{assert.equal(w.invalidations(),0);}finally{w.cleanup();}}});

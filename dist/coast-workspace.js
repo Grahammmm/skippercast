@@ -80,10 +80,10 @@ export function initCoastWorkspace({map,locationUI,weather}) {
   if(write)navigate(presentationURL(location.href,next));
   document.body.dataset.mapPresentation=next==='chart'?'chart':'terrain';
   host.hidden=next==='chart';
-  if(next==='chart'){viewer?.setVisible(false);map.invalidateSize({pan:false});announce('');return;}
+  if(next==='chart'){viewer?.setVisible(false);if(document.body.dataset.view==='map')map.invalidateSize({pan:false});announce('');return;}
   announce('Loading the reviewed coast…');
   const ready=await mount();if(!alive||mode==='chart')return;
-  if(!ready){for(const option of select.options)if(option.value!=='chart')option.disabled=true;mode='chart';select.value='chart';host.hidden=true;document.body.dataset.mapPresentation='chart';viewer?.setVisible(false);map.invalidateSize({pan:false});announce('Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable. Reload to retry the coast.');return;}
+  if(!ready){for(const option of select.options)if(option.value!=='chart')option.disabled=true;mode='chart';select.value='chart';host.hidden=true;document.body.dataset.mapPresentation='chart';viewer?.setVisible(false);if(document.body.dataset.view==='map')map.invalidateSize({pan:false});announce('Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable. Reload to retry the coast.');return;}
   viewer.setPerspective(mode);viewer.setVisible(document.body.dataset.view==='map'&&!document.hidden);announce('');
  }
  const onLocation=event=>{const context=event.detail;if(context?.regionId===getRegion().id)syncPoint(context.point);syncTarget();};
