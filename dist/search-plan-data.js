@@ -48,3 +48,11 @@ export function oceanSearchAreas(frame,profile,region,limit=30){
  }
  return areas.sort((a,b)=>a.properties.search_priority-b.properties.search_priority||b.properties.gradient-a.properties.gradient).slice(0,limit);
 }
+
+/** An old outline cannot be selected for a newly chosen species. */
+export function searchSelectionProfile(data,species,entry){
+ if(!data?.profiles||!Object.hasOwn(data.profiles,species)||entry?.target!==species)return null;
+ const p=entry.feature?.properties,profile=data.profiles[species];
+ if(!p||!(p.species?.includes(species)||(p.habitat_kind==='ocean'&&p.search_method==='ocean-transition-v2'&&['offshore','pelagic'].includes(profile.kind))))return null;
+ return data.profiles[species];
+}

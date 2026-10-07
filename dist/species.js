@@ -1,3 +1,4 @@
+import {sharedTargetOptions,nativeOnlyTarget} from './coast-targets.js';
 import { appendSpeciesEvidence } from "./species-evidence.js";
 import { fillPrimaryStrategy } from "./primary-strategy.js";
 import { getRegion, assetURL } from "./region.js";
@@ -201,7 +202,7 @@ export const PROFILES = {
   },
 };
 // New coastlines supply selector metadata and local field notes as data.
-for (const target of getRegion().target_options || []) {
+for (const target of sharedTargetOptions(getRegion())) {
   PROFILES[target.id] = {...(PROFILES[target.id] || {
     short: target.group, habitat: "Open the regional field notes for habitat evidence.",
     approach: "Confirm habitat, legal access and fish presence locally.",
@@ -246,11 +247,12 @@ export async function initSpecies(
   const port = getRegion().harbor;
   const id = () => $("species-select").value;
   function guide() {
-    const base=PROFILES[id()], local=ecology?.profiles?.[id()];
+    const base=PROFILES[id()] || {name:id(),kind:'coast',short:'Source-specific coastal habitat',habitat:'No reviewed field notes for this target.',approach:'Verify habitat, fish identification and current access locally.',conditions:'No target-specific conditions method is available.',map:'No substitute species is assumed.',unknown:'Fish presence and catch success are unverified.',sources:[rules]}, local=ecology?.profiles?.[id()];
     const links=local?.source_links || (local?.sources || []).flatMap(s=>s.claims.map(c=>({title:s.name+" · source",url:c.source_url})));
-    const p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),sources:links.length?links:base.sources,map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
+    let p=local?{...base,habitat:local.habitat,approach:local.method,conditions:local.condition_response,unknown:local.evidence_needed.join('; '),sources:links.length?links:base.sources,map:getRegion().status==='preview'?getRegion().coverage_note:base.map}:base;
+    if(nativeOnlyTarget(id()))p={...p,kind:'coast',map:'Choose Coast 2D or Coast 3D for the original reviewed habitat and its evidence. The historical chart atlas and search plans have no admitted method for this exact target.',unknown:'Source-specific habitat fit is separate from fish presence. Species-specific regulations and fishing strategies remain unavailable unless explicitly reviewed.'};
     $("species-guide").innerHTML =
-      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(getRegion().target_options.find(t=>t.id===id())?.name || p.name)}</h2><div data-primary-strategy><p>Loading primary strategy…</p></div><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
+      `<div class="eyebrow">SPECIES FIELD NOTES · ${escapeHTML(getRegion().name)} · ${escapeHTML(ecology?.reviewed_at || "source dates below")}</div><h2>${escapeHTML(sharedTargetOptions(getRegion()).find(t=>t.id===id())?.name || p.name)}</h2><div data-primary-strategy><p>Loading primary strategy…</p></div><p class="guide-lead">${escapeHTML(p.short)}</p><div class="field-note-grid">${[
         ["Habitat", p.habitat],
         ["What to look for", p.approach],
         ["Conditions that help", p.conditions],

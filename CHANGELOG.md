@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Bring original local Boat/Shore/Spear readings, buoy history, dated fleet facts and source receipts into Conditions with the shared place and UTC hour. Preserve distinct native species and source horizons; unsupported methods and regions remain explicit gaps.
+
 - Expand one unranked SCC06 bedrock outline into a reviewed adjoining native window, with a new geometry-derived identifier; retain unknown terrain grades and species fits and exclude precise exports.
 
 - Added the native coastal 2D/3D terrain as a presentation in the working chart workspace, sharing target, location and seven-day forecast time while retaining chart, planning, legal and account tools.

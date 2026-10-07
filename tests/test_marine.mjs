@@ -183,7 +183,7 @@ test("species filters separate reef candidates, sediment windows, and pelagic se
       new URL("../research/receipts/species-habitat.json", import.meta.url),
     ),
   );
-  assert.equal(Object.keys(PROFILES).length, 8); // Seven species plus their shared reef view.
+  assert.deepEqual(Object.keys(PROFILES).sort(), ['reef','lingcod','rockfish','halibut','salmon','albacore','bluefin','dungeness','rockfish-reef','gopher-rockfish','cabezon-shallow-reef','surfperch'].sort()); // Original chart profiles plus distinct native coast targets.
   assert.equal(atlas.targets.filter((t) => matchesSpecies(t, "reef")).length, 132);
   assert.equal(
     atlas.targets.filter((t) => matchesSpecies(t, "rockfish")).length,

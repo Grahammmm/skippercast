@@ -1,6 +1,6 @@
 import type {County,Area,Report,Mode,ForecastHour} from './types.ts';
 import {availableDays,buildDaily,dateKey,type DailyBrief} from './daily.ts';
-import type {NearshoreSite} from './enrichment-types.ts';
+import type {NearshoreSite,NearshoreHour} from './enrichment-types.ts';
 export const esc=(s:unknown)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export const n=(v:number|null|undefined,d=0)=>typeof v==='number'&&Number.isFinite(v)?v.toFixed(d):'—';
 export const clock=(at:string,tz='America/Los_Angeles',options:Intl.DateTimeFormatOptions={hour:'numeric',minute:'2-digit'})=>Number.isFinite(Date.parse(at))?new Intl.DateTimeFormat('en-US',{timeZone:tz,...options}).format(new Date(at)):'Unavailable';
@@ -9,7 +9,19 @@ export const symbols:Record<string,string>={boat:'<path d="M3 16l3 4h12l3-4-9-4-
 export const icon=(id:string)=>`<svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${symbols[id]??symbols.wave}</svg>`;
 const range=(v:{min:number|null;max:number|null},d=0)=>v.min===null?'—':v.min===v.max?n(v.min,d):`${n(v.min,d)}–${n(v.max,d)}`;
 export function freshNearshore(report:Report,areaId:string,now:Date){return (report.nearshore??[]).filter(s=>{const issue=s.issuedAt?now.getTime()-Date.parse(s.issuedAt):NaN,fetchAge=now.getTime()-Date.parse(s.fetchedAt);return s.areaId===areaId&&s.availability==='available'&&s.freshness==='current'&&issue>=-300000&&issue<48*3600000&&fetchAge>=-300000&&fetchAge<3*3600000;});}
-export function nearshoreAt(site:NearshoreSite,at:string){const time=Date.parse(at);return site.hours.filter(h=>Math.abs(Date.parse(h.at)-time)<=1.5*3600000).sort((a,b)=>Math.abs(Date.parse(a.at)-time)-Math.abs(Date.parse(b.at)-time))[0];}
+export function nearshoreAt(site:NearshoreSite,at:string){
+ const time=Date.parse(at),hours=site.hours.filter(h=>Number.isFinite(Date.parse(h.at))).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
+ if(!Number.isFinite(time)||!hours.length)return undefined;
+ const first=Date.parse(hours[0].at),last=Date.parse(hours.at(-1)!.at),declared=site.validThrough?Date.parse(site.validThrough):NaN;
+ if(time<first||time>last||(Number.isFinite(declared)&&time>declared))return undefined;
+ return hours.filter(h=>Math.abs(Date.parse(h.at)-time)<=1.5*3600000).sort((a,b)=>Math.abs(Date.parse(a.at)-time)-Math.abs(Date.parse(b.at)-time))[0];
+}
+/** Show the original valid time; a nearby model sample is not the selected hour. */
+export function nearshoreSampleLabel(site:NearshoreSite,hour:NearshoreHour|undefined,tz:string){
+ if(!hour)return site.name+' · no model sample covers the selected time';
+ const minutes=site.temporalResolutionMinutes,spacing=minutes!==null&&Number.isFinite(minutes)&&minutes>0?(minutes%60===0?minutes/60+'h':minutes+'min')+' model sampling':'model sample spacing unreported';
+ return site.name+' · sample '+clock(hour.at,tz,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})+' · '+spacing;
+}
 export function selectedHour(brief:DailyBrief,at?:string):ForecastHour|undefined{return brief.hours.find(h=>h.at===at)??brief.hours[0];}
 function spark(points:{at:string;v:number|null|undefined}[],color:string){
  const valid=points.filter(p=>typeof p.v==='number'&&Number.isFinite(p.v));if(valid.length<2)return '<span class="spark-gap">No series</span>';
@@ -36,7 +48,7 @@ export function trendChart(b:DailyBrief,county:County,at?:string){
 export function hourReadout(report:Report,county:County,area:Area,b:DailyBrief,at?:string,now=new Date()){
  const hour=selectedHour(b,at);if(!hour)return '<div class="hour-focus empty-state">No fresh hourly forecast is available for this date.</div>';
  const tide=b.tides.find(p=>Math.abs(Date.parse(p.at)-Date.parse(hour.at))<=4*60000),site=freshNearshore(report,area.id,now)[0],near=site?nearshoreAt(site,hour.at):undefined;
- return `<div class="hour-focus"><span class="hour-time">${icon('sun')}<strong>${clock(hour.at,county.timezone,{weekday:'short',hour:'numeric',timeZoneName:'short'})}</strong><span>Forecast hour</span></span><div><b>${n(hour.windKnots)}<small> kt</small></b><span>wind · ${n(hour.gustKnots)} kt gust</span></div><div><b>${n(hour.waveFt,1)}<small> ft</small></b><span>offshore · ${n(hour.wavePeriodS)} sec</span></div><div><b>${n(near?.waveFt,1)}<small> ft</small></b><span>${esc(site?.name??'nearshore unavailable')} · 3h sample</span></div><div><b>${n(tide?.heightFt,1)}<small> ft</small></b><span>${esc(county.tideStation.name)} · MLLW</span></div></div>`;
+ return `<div class="hour-focus"><span class="hour-time">${icon('sun')}<strong>${clock(hour.at,county.timezone,{weekday:'short',hour:'numeric',timeZoneName:'short'})}</strong><span>Forecast hour</span></span><div><b>${n(hour.windKnots)}<small> kt</small></b><span>wind · ${n(hour.gustKnots)} kt gust</span></div><div><b>${n(hour.waveFt,1)}<small> ft</small></b><span>offshore · ${n(hour.wavePeriodS)} sec</span></div><div><b>${n(near?.waveFt,1)}<small> ft</small></b><span>${esc(site?nearshoreSampleLabel(site,near,county.timezone):'Nearshore sample unavailable')}</span></div><div><b>${n(tide?.heightFt,1)}<small> ft</small></b><span>${esc(county.tideStation.name)} · MLLW</span></div></div>`;
 }
 export function reportPanel(report:Report,county:County,area:Area,mode:Mode,date:string,now:Date,at?:string){
  const b=buildDaily(report,county,area,mode,date,now),current=date===dateKey(now,county.timezone),site=freshNearshore(report,area.id,now)[0];

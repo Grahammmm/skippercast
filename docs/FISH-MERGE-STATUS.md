@@ -105,17 +105,31 @@ ownership and final parity requirements.
 
 The medium-width control fix is complete (PR 387, main `2427b0bda`, v0.3.3).
 
-Current batch: embed the native coast renderer inside the existing working chart,
-Conditions and planning workspace. The parent owns `codex/unified-coast-workspace`;
-a bounded worker owns the root-scoped renderer adapter. Start: October 6, 2026
-10:31 p.m. Pacific; checkpoint: October 7, 1:31 a.m. Pacific. Actual fetched main
-is `2fbaf7946`; public `/api/health` reads build `76493feb3f`.
+The shared map increment is merged in PR 392, main `39ea66b4c`, after independent
+review and all exact-head Linux science/core/browser checks. The phone browser
+gate caught hidden-chart resizing; the corrected head `a49be6459` passed. Main CI
+and production readback are still pending; a merge is not deployed acceptance.
 
-Acceptance: one place/target/profile/hour, native camera-only 2D/3D, current
-scientific gates unchanged, preserved chart/planner/account/offline capabilities,
-independent review, exact current PR-head CI, main/deploy checks and live desktop/
-mobile interactions. Full Fish report/history/shore/dive integration and complete
-capability verification remain required before homepage or regional cutover.
+Current batch: `codex/unified-coast-conditions`, based on `39ea66b4c`. Local SLO
+report/history/shore/dive fields follow the existing selected UTC hour, geographic
+context and profile. Native targets are added without borrowing chart search
+methods or species limits. CDIP samples stay within actual time support and keep
+their original valid clock; non-SLO local reports remain unavailable. Measured
+SLO history can be opened only as an explicitly labelled geographic reference.
 
-Next: finish and test the embedded presentation, then mount the source-specific
-report/history views against the shared clock. Do not treat legacy links as parity.
+Evidence: independent scoped source acceptance; 1,335 Node tests passed, strict
+typecheck and source rebuild passed (local build `27bf9c676b`). Actual desktop/
+mobile interaction retained the day-seven clock with local gaps, current Spear
+visibility unknown, original measured history dates, and non-SLO separation.
+Earlier full local GIS Python run had 1,880 passes, 32 allowed private-cache skips
+and 5 macOS fleet-shell/environment failures; required Linux science/core CI
+passed on PR 392. No test or gate was weakened.
+
+Start: October 6, 2026 10:31 p.m. Pacific; checkpoint: October 7, 1:31 a.m. Pacific.
+Parent owns integration/browser/release; bounded worker owns report adapter,
+independent reviewer owns source review. Existing Fish public Worker remains the
+bounded read-only data dependency. No collectors, private data or schedulers move.
+
+Next: protected report PR and deployment readback; restore canonical readable
+report/RSS/information routes; finish full capability and geography audit. Homepage
+and Fish regional cutover remain pending. Reachable legacy links are not parity.

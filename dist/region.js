@@ -1,3 +1,4 @@
+import {sharedTargetOptions} from './coast-targets.js';
 import defaultRegion from "./region-default.js";
 import {withFeeds} from "./feeds.js";
 import {loadCoasts,coastForPackage,coastURL} from './coasts.js';
@@ -38,13 +39,13 @@ export async function initRegion() {
   const species=document.getElementById('species-select');
   species.replaceChildren();
   const groups=new Map();
-  for(const target of active.target_options || []) {
+  for(const target of sharedTargetOptions(active)) {
     if(!groups.has(target.group)) {const group=document.createElement('optgroup');group.label=target.group;groups.set(target.group,group);species.append(group);}
     groups.get(target.group).append(new Option(target.name,target.id));
   }
   if(!species.options.length) throw Error('Regional species definitions unavailable');
   const target=new URL(location.href).searchParams.get('target');
-  species.value=active.species.includes(target)?target:active.species[0];
+  species.value=sharedTargetOptions(active).some(t=>t.id===target)?target:active.species[0];
   const chooser=document.getElementById("region-select");
   const catalog=await loadCoasts(),coast=coastForPackage(active.id,catalog);
   chooser.append(new Option(`Entire ${coast.name} coast · overview`,'coastal-overview'));
