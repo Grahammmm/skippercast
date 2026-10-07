@@ -85,7 +85,7 @@ export async function serveCoastData(request: Request, fetcher: typeof fetch = f
   // Do not forward client cookies, Origin, Referer, Authorization or arbitrary headers.
   try {
     const upstream = await fetcher(new Request(target.url, {method: request.method, headers,
-      redirect: 'error', signal: AbortSignal.timeout(20000)}));
+      redirect: 'manual', signal: AbortSignal.timeout(20000)}));
     if (![200, 206].includes(upstream.status)) {
       await upstream.body?.cancel();
       return json({error: 'Coast source unavailable'}, upstream.status === 404 ? 404 : 503);

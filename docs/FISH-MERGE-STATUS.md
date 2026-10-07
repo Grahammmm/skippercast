@@ -8,29 +8,45 @@ map. The owner's October 6 request is the product acceptance standard.
 
 ## Current result
 
-The source comparison, independent capability inventory and first shared-link
-adapter are complete. Map/data integration and the live cutover have **not**
-happened.
+The shared-link foundation is live (PR 379, main `d7cffd49`). The read-only
+public coastal bridge has merged (PR 381, main `88d16e9a`). Its production
+runtime revealed that Cloudflare rejects `Request.redirect="error"`; the native
+renderer release uses `manual` plus the unchanged strict 200/206 response gate.
+A synthetic redirect regression verifies no follow-on request. The actual local
+Worker now returns 200 for the report and terrain manifest.
 
-- SkipperCast inspected base: `04dfc9057662553dd6ca3a71c485b7845be46744`.
-- Fish inspected base: `68d7b444683ffb853327bb9cb3c72e9366620081`.
-- Work branch: `codex/fish-product-merge`, in an isolated SkipperCast checkout.
-- Both existing live applications remain available.
-- First bounded foundation: shared v2 state understands Fish links and full ISO
-  whole-hour timestamps. Explicit canonical values and geographic removals win;
-  unknown and inherited-property values cannot select a data package.
-- Independent foundation review accepted after all findings were resolved.
-  All 1,235 Node tests, type checks, build, generated-region comparison,
-  repository/web/copy/token/contrast checks passed locally. Full Python runs on
-  macOS completed with five unrelated platform failures (the listener installer
-  needs Bash `mapfile`, and macOS injects an extra process environment key).
-  Exact-head Linux CI is still required before merge.
-- The existing v2 shell has placeholder map and brief components. Enabling its
-  default now would fail the owner's feature-preservation requirement.
+The native Fish renderer is integrated at `/coast` in a separate feature branch,
+with a launch link in the existing map options. It retains the original 2D/3D
+terrain, pins, outlines, rankings, source inspection, streaming seam refinements,
+current fields and report/history/catch components. It uses strictly typed
+reusable source in `packages/coast`; page entry wrappers are built by Vite into
+hashed assets. Panel styles are external to satisfy the existing CSP. No atlas,
+source admission, private dataset, migration, cron or security policy is added.
 
-See [the independently prepared inventory](FISH-MERGE-REVIEW.md) for feature
-ownership, code locations and integration constraints. Its final implementation
-review is pending; source inspection is not a browser or deployment check.
+- Source origin: Fish `4ac5e0cabb369c97beba5db639856b855fda347a`.
+- Independent source review accepted after geographic conflict, launch-state,
+  receipt-path and empty-geography fixes; 52 focused tests pass.
+- Final local Node suite: 1,287 passed, no failures or skips. All three strict
+  type checks, build, client/web/repository/copy/token checks passed; platform
+  rebuild left generated regions unchanged. Protected exact-head CI remains required.
+- Local browser: Morro terrain/imagery, shore summary, daily report dialog,
+  camera-only 2D toggle and Monterey location binding were exercised. Monterey
+  correctly labels the separate SLO forecast instead of treating it as local.
+  Root mobile check at 390 × 844 verified no horizontal overflow, selectable
+  Cabezon pins and original details, the 60-foot spear filter, the report dialog,
+  dated catch facts, historical buoy charts and the mobile chart/tools link.
+  Independent desktop review confirmed Morro in 3D/2D, compact reef selection
+  and native lidar source/datum inspection; it stopped safely when another
+  operator changed its browser. Point Conception and live checks remain pending.
+- Existing SkipperCast chart, seven-day dual-model forecast, planning/export,
+  legal, account, alert, offline and fleet/advisor functions remain available.
+  Keeping their routes is preservation, **not** proof of a finished unified UI.
+- The homepage and v2 feature flag are unchanged. Full shared-workspace cutover
+  remains pending against the capability inventory below. Do not claim the
+  clean merge is complete merely because `/coast` works.
+
+See [the independently prepared inventory](FISH-MERGE-REVIEW.md) for capability
+ownership and final parity requirements.
 
 ## Product decisions
 
@@ -81,7 +97,8 @@ review is pending; source inspection is not a browser or deployment check.
 
 ## Next action
 
-Publish the independently reviewed shared-link foundation through protected
-PR/CI flow, then implement the source adapters. Keep the current live homepage until the real map
-and information views meet the capability matrix. No feature-removing switch
-or data-source activation is included in this assessment.
+Complete desktop/mobile and independent native map verification, run final
+checks, rebase to current main, publish through protected PR/CI and verify the
+actual production build, coastal data, byte ranges and private boundaries.
+Then integrate remaining statewide layers, account/planning actions and model
+horizons into one workspace before changing the homepage or retiring Fish.

@@ -33,6 +33,7 @@ export function uiV2(env: Pick<Env, 'UI_V2'>, search: URLSearchParams): boolean 
  * and `/map` is the app. `undefined`: not a page path this function decides.
  */
 export function shellFor(path: string, search: URLSearchParams, env: Pick<Env, 'UI_V2'>): string | null | undefined {
+  if(path === '/coast') return '/coast.html';
   const v2Only = path === '/map' || path === V2_SHELLS.landing || path === V2_SHELLS.app;
   if (path !== '/' && !v2Only) return undefined;
   if (!uiV2(env, search)) return v2Only ? null : '/';
