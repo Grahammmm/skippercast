@@ -8,7 +8,7 @@ import {effect} from '@preact/signals';
 import {coastPath} from '../packages/coast/src/transport.ts';
 import {coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL} from '../web/coast-context.ts';
 
-export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.invalidateSize({pan:false}),getScope=()=>({id:getRegion().id,terrainAvailable:hasCoastTerrain(getRegion().id)})}) {
+export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.invalidateSize({pan:false}),currentControl=null,getScope=()=>({id:getRegion().id,terrainAvailable:hasCoastTerrain(getRegion().id)})}) {
  const select=document.getElementById('map-presentation');
  const host=document.getElementById('coast-workspace');
  const status=document.getElementById('map-presentation-status');
@@ -40,13 +40,14 @@ export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.i
    root.querySelector('.intro').hidden=true;
    root.querySelector('.layers h2').remove();root.querySelector('.layers>.eyebrow').remove();
    root.querySelector('[for="species"]').hidden=true;root.getElementById('species').hidden=true;
+   if(currentControl)root.getElementById('currents').closest('label').hidden=true;
    const toggle=root.getElementById('layers-toggle');toggle.textContent='Terrain layers & evidence';
    const controls=root.querySelector('.view-controls');
    for(const id of ['perspective-2d','perspective-3d']){const button=document.createElement('button');button.id=id;button.hidden=true;controls.append(button);}
    const sources=document.createElement('button');sources.id='sources-open';sources.textContent='ⓘ';sources.setAttribute('aria-label','Terrain sources and assumptions');controls.append(sources);
    for(const link of root.querySelectorAll('[data-coast-receipt]'))link.href=coastPath(link.dataset.coastReceipt);
    for(const link of root.querySelectorAll('a[href="index.html#forecast"]'))link.href='#forecast';
-   viewer=new CoastViewer(root.getElementById('scene'),{root,managed:true,onView:view=>{
+   viewer=new CoastViewer(root.getElementById('scene'),{root,managed:true,onCurrentStatus:text=>{if(currentControl&&mode!=='chart'&&document.body.dataset.view==='map')currentControl.status(text);},onView:view=>{
     point={latitude:view.latitude,longitude:view.longitude};
     const zoom=Math.max(7,Math.min(18,12-Math.log2(view.span/7300)));
     map.setView([view.latitude,view.longitude],zoom,{animate:false});
@@ -65,7 +66,7 @@ export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.i
    root.getElementById('reset').onclick=()=>{
     clearSelection();locationUI.clear();point=null;map.setView(home,homeZoom,{animate:false});syncPoint({latitude:home.lat,longitude:home.lng});
    };
-   syncTarget();syncMethod();
+   viewer.setCurrentLayer?.(currentControl?.get()??'off');syncTarget();syncMethod();
    const savedPoint=point;point=null;syncPoint(savedPoint??locationUI.get()?.point??{latitude:home.lat,longitude:home.lng});
    viewer.setHour(forecastAt);viewer.setPerspective(mode==='2d'?'2d':'3d');
    viewer.selectHabitat(new URL(location.href).searchParams.get('habitat'));
@@ -97,7 +98,8 @@ export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.i
  window.addEventListener('popstate',onHistory);window.addEventListener('hashchange',visibility);document.addEventListener('visibilitychange',visibility);
  const observer=new MutationObserver(visibility);observer.observe(document.body,{attributes:true,attributeFilter:['data-view']});
  const disposeMethod=effect(syncMethod);
- const destroy=()=>{alive=false;viewer?.destroy();observer.disconnect();disposeMethod();document.removeEventListener('skippercast:species',syncTarget);document.getElementById('species-select').removeEventListener('change',syncTarget);document.removeEventListener('skippercast:location',onLocation);document.removeEventListener('skippercast:time',onTime);window.removeEventListener('popstate',onHistory);window.removeEventListener('hashchange',visibility);document.removeEventListener('visibilitychange',visibility);};
+ const disposeCurrent=currentControl?.subscribe(id=>viewer?.setCurrentLayer(id))??(()=>{});
+ const destroy=()=>{alive=false;viewer?.destroy();observer.disconnect();disposeMethod();disposeCurrent();document.removeEventListener('skippercast:species',syncTarget);document.getElementById('species-select').removeEventListener('change',syncTarget);document.removeEventListener('skippercast:location',onLocation);document.removeEventListener('skippercast:time',onTime);window.removeEventListener('popstate',onHistory);window.removeEventListener('hashchange',visibility);document.removeEventListener('visibilitychange',visibility);};
  window.addEventListener('pagehide',destroy,{once:true});
  const selectedHour=weather.getHour();forecastAt=new Date(selectedHour*1000);
  syncMethod();syncPoint(locationUI.get()?.point);void apply(presentationFromURL(location.href));

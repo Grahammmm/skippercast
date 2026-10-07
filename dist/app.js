@@ -8,6 +8,7 @@ import {initTripAlerts} from './trip-alerts.js';
 import {initTripRanking} from './trip-ranking-layer.js';
 import {initExport} from './export-ui.js';
 import {mountSpotEvidence} from './spot-evidence.js';
+import {initCoastalCurrentControl} from './coastal-current-control.js';
 import {initIntelligence} from './intelligence.js';
 import {initHabitatDynamics} from './habitat-map.js';
 import {terrainSource,terrainMetricsHTML} from './terrain-evidence.js';
@@ -629,10 +630,12 @@ try {
     onLocation:point=>weather?.selectLocation({...point,label:point.label||'Map location'}),
     onSpeciesChange:()=>$("species-select").dispatchEvent(new CustomEvent('change',{detail:{location:true}})),
   });
-  void import('./coast-workspace.js').then(({initCoastWorkspace})=>initCoastWorkspace({map,locationUI,weather})).catch(error=>console.warn('Coastal presentation unavailable',error));
+  const currentControl=initCoastalCurrentControl({mapHost:document.querySelector('#map-options .options-body'),forecastHost:document.getElementById('forecast-content')});
+  window.addEventListener('pagehide',()=>currentControl.destroy(),{once:true});
+  void import('./coast-workspace.js').then(({initCoastWorkspace})=>initCoastWorkspace({map,locationUI,weather,currentControl})).catch(error=>console.warn('Coastal presentation unavailable',error));
   void import('./coast-conditions.js').then(({initCoastConditions})=>initCoastConditions({locationUI,weather})).catch(error=>console.warn('Local coastal readings unavailable',error));
   $("spot-dialog").addEventListener('close',()=>{if(document.body.dataset.view==='map')locationUI.clear();});
-  const intelligence=initIntelligence(map);
+  const intelligence=initIntelligence(map,{currentControl,getHour:()=>weather.getHour()});
   initTripAlerts(intelligence);
   registerTools();
   // On a bad connection several optional layers fail within moments of each

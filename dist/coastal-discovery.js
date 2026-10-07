@@ -1,3 +1,5 @@
+import {initCoastalCurrentControl} from './coastal-current-control.js';
+import {initCoastalCurrents} from './coastal-currents.js';
 import {initCoastalSelection} from './coastal-selection.js';
 import {effect,untracked} from '@preact/signals';
 import {species,view as sharedView,hour as sharedHour,profile,setParams,navigate} from '../web/state.ts';
@@ -646,17 +648,20 @@ export async function initCoastalDiscovery(catalog,coast) {
   const onPackageClick=event=>{const anchor=event.target.closest?.('.coastal-package[data-package]');if(!anchor||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openPackage(anchor.dataset.package);};document.addEventListener('click',onPackageClick);
 
   clock=initCoastalClock({scopeId,mapHost:document.getElementById('map-time-dock'),forecastHost:clockHost,onChange:()=>{forecastKey='';refreshForecast(currentPoint(),sectorAt(sectorPacket,coast.id,currentPoint()));}});
-  workspace=initCoastWorkspace({map,locationUI,weather:clock,resizeChart:resizeMap,getScope:()=>({id:scopeId,terrainAvailable:coast.id==='central'})});
+  const currentControl=initCoastalCurrentControl({mapHost:document.querySelector('#map-options .options-body'),forecastHost:clockHost});
+  const currents=initCoastalCurrents({map,control:currentControl,getHour:clock.getHour,getScopeId:()=>scopeId});
+  workspace=initCoastWorkspace({map,locationUI,weather:clock,currentControl,resizeChart:resizeMap,getScope:()=>({id:scopeId,terrainAvailable:coast.id==='central'})});
   const conditions=initCoastConditions({locationUI,weather:clock,getScopeId:()=>scopeId,getContext:()=>overviewReportContext(currentPoint(),selectedHabitat,regionConfigs,profile.value,select.value,new Date(clock.getHour()*1000))});
   selectionContext=initCoastalSelection({scopeId,getPoint:currentPoint,getTarget:()=>select.value,getProfile:()=>profile.value,getSelection:()=>selectedHabitat,restore:point=>locationUI.restore(point),clear:()=>locationUI.clear()});
   const disposeTargets=effect(()=>{const value=species.value??coast.targets[0];untracked(()=>{renderTargets(value);targetInfo();document.dispatchEvent(new CustomEvent('skippercast:species'));forecastKey='';refreshForecast(currentPoint(),sectorAt(sectorPacket,coast.id,currentPoint()));});});
   const disposeProfile=effect(()=>{profile.value;untracked(()=>{selectionContext.sync();forecastKey='';refreshForecast(currentPoint(),sectorAt(sectorPacket,coast.id,currentPoint()));});});
   function refreshPackageLinks(){if(!alive)return;for(const anchor of document.querySelectorAll('.coastal-package[data-package]'))anchor.href=packageLink(anchor.dataset.package).href;}
+  const disposeCurrentLinks=currentControl.subscribe(refreshPackageLinks);
   const disposeLinks=effect(()=>{species.value;profile.value;sharedHour.value;sharedView.value;untracked(refreshPackageLinks);});
   const disposeView=effect(()=>{const position=viewFromURL(new URL('?view='+encodeURIComponent(sharedView.value??''),location.href).href);if(position){const p=map.getCenter();if(Math.abs(p.lat-position.latitude)>.00001||Math.abs(p.lng-position.longitude)>.00001||Math.abs(map.getZoom()-position.zoom)>.00001)untracked(()=>{logicalPoint={latitude:position.latitude,longitude:position.longitude};restoringView=true;try{map.setView([position.latitude,position.longitude],position.zoom,{animate:false});pointAnchor=map.getCenter();}finally{restoringView=false;}});}});
   select.addEventListener('change',()=>setParams({target:select.value}));map.on('moveend',move);move();
   void Promise.all(packages.filter(p=>['morro-bay','cambria-san-simeon'].includes(p.id)).map(async p=>{try{const response=await fetch(p.config,{signal:AbortSignal.timeout(12000)});if(!response.ok)return;const region=await response.json();if(alive&&region.id===p.id&&region.schema_version===1){regionConfigs.push(region);notifyLocation();}}catch{}}));
-  window.addEventListener('pagehide',()=>{alive=false;window.removeEventListener('resize',onResize);document.removeEventListener('click',onPackageClick);clearTimeout(forecastTimer);disposeTargets();disposeProfile();disposeLinks();disposeView();selectionContext.destroy();clock.destroy();workspace.destroy();conditions.destroy();disposeCoastalForecast(modelHost);},{once:true});
+  window.addEventListener('pagehide',()=>{alive=false;window.removeEventListener('resize',onResize);document.removeEventListener('click',onPackageClick);clearTimeout(forecastTimer);disposeTargets();disposeProfile();disposeCurrentLinks();disposeLinks();disposeView();selectionContext.destroy();clock.destroy();currents.destroy();workspace.destroy();currentControl.destroy();conditions.destroy();disposeCoastalForecast(modelHost);},{once:true});
   void initCoastalContext(catalog,coast).then(status=>{
     if(!alive)return;targetOptions=[...coastalTargetOptions(coast,status),...nativeOptions];renderTargets(species.value??coast.targets[0]);
     targetInfo();

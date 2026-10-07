@@ -4,3 +4,5 @@
 #map-presentation-status{position:absolute;top:65px;right:14px;z-index:520;max-width:min(360px,calc(100% - 28px));padding:9px 12px;background:#fff5d9;border-radius:7px;font-size:.8rem}
 body[data-map-presentation='terrain'] :is(#map,#map-legend,#show-charter-grounds,#boat-position-toggle,#boat-position-card,#map-empty,#region-note,.search-plan-card){visibility:hidden}
 @media(max-width:850px){.map-presentations{top:110px;right:14px}.map-presentations select{max-width:130px}.map-presentations label>span{display:none}#map-presentation-status{top:160px}}
+
+.coastal-current-control{padding:8px 0}.coastal-current-control label{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.8rem}.coastal-current-control select{min-height:44px;max-width:100%;font-size:.85rem}.coastal-current-control p{font-size:.75rem;margin:6px 0;line-height:1.4;overflow-wrap:anywhere}

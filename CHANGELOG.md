@@ -10,9 +10,13 @@
 
 - Add isolated reference-grid routing for explicitly selected scope configs while keeping the Central Coast pipeline as the default.
 
+- Share one explicit surface-current source choice across the coastal chart, native 2D/3D and Conditions. Off clears vectors; missing coverage or source hours remain gaps without provider substitution.
+
 ### Internal
 
 - Preserve retained Central Coast grid and physical-cache identities; keep noncentral screening, processing and publication held until their scope contracts are complete.
+
+- Validate exact current-product identity, original frame and source clocks, finite wet-cell values and source expiry; suppress delayed replies and preserve readable return state.
 
 ## 0.5.0 — 2026-10-07
 

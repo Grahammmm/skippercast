@@ -17,8 +17,14 @@ export function memberSummary(members,windLimit=8,gustLimit=12) {
     windPercent:winds.length>=20?100*winds.filter(w=>w>windLimit).length/winds.length:null,
     gustN:gusts.length,gustPercent:gusts.length>=20?100*gusts.filter(m=>m[2]>gustLimit).length/gusts.length:null};
 }
+export function validRegionalCurrent(source,id=null,now=Date.now()) {
+ const d=source?.data;if(!Number.isFinite(source?.max_age_hours)||source.max_age_hours<=0||id&&source.id!==undefined&&source.id!==id||!d||!['forecast','observation'].includes(d.kind)||id&&d.kind!==(id==='wcofs'?'forecast':'observation')||!Number.isFinite(d.resolution_km)||d.resolution_km<=0||!Array.isArray(d.frames)||!d.frames.length)return false;
+ const clock=Date.parse(d.sample_at||d.issued_at||source.data_retrieved_at);if(!Number.isFinite(clock)||clock>now+300000)return false;
+ if(d.kind==='forecast'&&(!Number.isFinite(d.valid_from)||!Number.isFinite(d.valid_through)||d.valid_from>d.valid_through))return false;
+ let prior=-Infinity;for(const f of d.frames){if(!f||!Number.isFinite(f.time)||f.time<=prior||!Array.isArray(f.cells)||!f.cells.every(c=>Array.isArray(c)&&c.length>=4&&c.slice(0,4).every(Number.isFinite)&&Math.abs(c[0])<=90&&Math.abs(c[1])<=180&&c[2]>=0&&c[3]>=0&&c[3]<=360))return false;prior=f.time;}return true;
+}
 export function currentFrame(source,time,now=Date.now()) {
-  if(!freshSource(source,now))return null;
+  if(!Number.isFinite(time)||!validRegionalCurrent(source,null,now)||!freshSource(source,now))return null;
   const d=source.data;
   if(d.kind==='observation') {
     if(Math.abs(time-now/1000)>3600)return null;
@@ -67,13 +73,14 @@ export function verificationHTML(data) {
   return `<p><strong>${esc(summary?.headline||v.status)}</strong></p><div class="insight-grid"><div><small>Forecast rows archived in advance</small><strong>${count(v.archived_forecasts)}</strong></div><div><small>Distinct station / variable / weather hours</small><strong>${count(summary?.matched_valid_times)}</strong></div><div><small>Matured forecasts with observations</small><strong>${percentage(summary?.coverage_fraction)}</strong></div></div><p>${esc(summary?.next_action||'The archive is collecting prospective history. No local model winner or automatic correction is assigned.')}</p>${Object.keys(collectionNotes).length?`<details><summary>Collection gaps & deferred samples</summary><ul>${Object.entries(collectionNotes).map(([key,reason])=>`<li><strong>${esc(key)}</strong>: ${esc(typeof reason==='string'?reason:reason?.reason||'Source detail unavailable')}</li>`).join('')}</ul><p class="small">Deferred or rejected samples do not enter the accuracy archive. A later refresh retries them with its actual acquisition time.</p></details>`:''}${groups.length?`<details><summary>Station errors & evidence coverage (${groups.length} groups)</summary><div class="matrix-scroll"><table class="forecast-matrix"><thead><tr><th>Model / station</th><th>Forecast lead</th><th>Mean absolute error / bias</th><th>Unique hours / days</th><th>Coverage / grid distance</th><th>Evidence</th></tr></thead><tbody>${groups.map(g=>`<tr><th>${esc(g.model)} · ${esc(g.station)}<small>${esc(g.variable)}</small></th><td>${g.lead_hours.join('–')} h<small>Acquired ${range(g.acquisition_lead_hours,' h ahead')}</small></td><td>${num(g.mae)} / ${g.bias>0?'+':''}${num(g.bias)} ${esc(g.unit)}</td><td>${count(g.distinct_valid_times)} / ${count(g.distinct_days)}<small>${count(g.n)} matched forecast rows</small></td><td>${percentage(g.coverage_fraction)}<small>${range(g.spatial_match?.distance_km,' km')}</small></td><td>${esc(g.support?.level||g.status)}<small>${esc(g.measurement_comparison||'Measurement basis not recorded')}</small></td></tr>`).join('')}</tbody></table></div></details>`:'<p>Results appear as archived forecasts reach their valid time and matching buoy observations arrive.</p>'}${pairs.length?`<details><summary>Compare models on the same cases</summary>${pairs.map(p=>`<p><strong>${esc(p.station)} · ${esc(p.variable)} · ${p.lead_hours.join('–')} h</strong><br>${esc(p.model_a)} ${num(p.mae_a)} ${esc(p.unit)} MAE; ${esc(p.model_b)} ${num(p.mae_b)} ${esc(p.unit)} MAE.<br><small>${p.distinct_valid_times} unique hours across ${p.distinct_days} days · ${esc(p.status)}. ${p.lower_error_model?'Lower historical error: '+esc(p.lower_error_model)+'. This is descriptive, not a permanent winner.':'Insufficient evidence to choose a model.'}</small></p>`).join('')}</details>`:''}<p class="small">Positive bias means the model ran high. Repeated runs do not create additional weather hours. Missing matches stay unknown. ${esc(v.limitations)}</p>`;
 }
 
-export function initIntelligence(map) {
-  let data=null,state=null,loading=false,heading=NaN,activeLayer='off';
+export function initIntelligence(map,{currentControl=null,getHour=()=>Math.floor(Date.now()/3600000)*3600}={}) {
+  let data=null,state=null,loading=false,heading=NaN,activeLayer='off',currentTime=getHour(),expiry=null,alive=true;let unsubscribe=()=>{};
   const mapLayer=L.layerGroup().addTo(map);
   const container=document.createElement('section');container.id='regional-intelligence';
   container.innerHTML=`<details class="insight-card" open><summary>Forecast range & uncertainty</summary><div id="ensemble-content">Loading ensemble sources…</div></details><details class="insight-card"><summary>Currents · measured and modeled</summary><div class="insight-form"><label>Map layer<select id="regional-current-layer"><option value="off">Off</option><option value="wcofs">NOAA regional forecast</option><option value="hfr-1">Observed HF radar · 1 km</option><option value="hfr-6">Observed HF radar · 6 km</option></select></label></div><div id="currents-content"></div></details><details class="insight-card"><summary>Wave energy & boat comfort</summary><div class="insight-form"><label>Your heading · ° true<input id="comfort-heading" type="number" min="0" max="359" placeholder="Optional"></label></div><div id="encounter-content"></div><div id="spectral-content"></div><div id="comfort-feedback"></div></details><details class="insight-card"><summary>How the forecasts perform locally</summary><div id="verification-content"></div></details><div id="trip-alerts"></div>`;
   document.getElementById('forecast-content').append(container);
   container.querySelector('#comfort-heading').addEventListener('input',e=>{heading=e.target.value===''?NaN:Number(e.target.value);renderWave();});
+  if(currentControl){container.querySelector('#regional-current-layer').closest('label').hidden=true;unsubscribe=currentControl.subscribe(id=>{activeLayer=id;draw();if(id!=='off')void load();});}
   container.querySelector('#regional-current-layer').addEventListener('change',e=>{activeLayer=e.target.value;draw();});
   function renderWave(){
     if(!state)return;const c=readConditions(state.bundle,state.point,state.time,'gfs');
@@ -84,33 +91,44 @@ export function initIntelligence(map) {
     container.querySelector('#spectral-content').innerHTML=`<p><strong>Observed energy · buoy ${esc(station)}</strong><br>${esc(statusText(source))}</p>${frame?spectrumSVG(frame):'<p>No fresh spectrum available.</p>'}<p class="small">Each dot is a measured frequency band with its mean incoming direction. This observation stays at its measured time as you browse future forecasts. ${sourceLink(source)}</p>`;
   }
   function draw(){
-    mapLayer.clearLayers();if(!state||activeLayer==='off')return;
-    const source=data?.sources?.[activeLayer],frame=currentFrame(source,state.time);
-    if(!frame)return;
+    if(!alive)return;
+    clearTimeout(expiry);mapLayer.clearLayers();if(activeLayer==='off')return;if(document.body.dataset.mapPresentation==='terrain')return;
+    const source=data?.sources?.[activeLayer],frame=validRegionalCurrent(source,activeLayer)?currentFrame(source,currentTime):null;
+    if(!frame){if(document.body.dataset.mapPresentation!=='terrain')currentControl?.status('Selected current source has no fresh regional sample for this hour.');return;}
+    if(document.body.dataset.mapPresentation!=='terrain')currentControl?.status(`${source.name} · regional feed · ${source.data.resolution_km} km source · valid ${new Date(frame.time*1000).toISOString()} · ${source.data.kind} · issued ${source.data.issued_at??'not provided'} · observed ${source.data.sample_at??'not provided'} · retrieved ${source.data_retrieved_at??'not provided'}`);
+    const stamp=source.data.sample_at||source.data.issued_at||source.data_retrieved_at;const deadline=Math.min(Date.parse(stamp)+source.max_age_hours*3600000,source.data.kind==='observation'?(frame.time+6*3600)*1000:Infinity);expiry=setTimeout(renderCurrents,Math.max(1,deadline-Date.now()+1));
     for(const c of frame.cells){
       const icon=L.divIcon({className:'current-vector',html:`<span style="display:block;transform:rotate(${c[3]}deg);color:${activeLayer==='wcofs'?'#087a90':'#7645a8'};font-size:23px;font-weight:bold">↑</span>`,iconSize:[24,24],iconAnchor:[12,12]});
       L.marker([c[0],c[1]],{icon,title:`${source.name}: ${c[2]} kt toward ${c[3]}°`,keyboard:true}).bindPopup(`<strong>${esc(source.name)}</strong><p>${num(c[2])} kt toward ${from(c[3])}<br>${esc(local(frame.time,{month:'short',day:'numeric',hour:'numeric'}))} · ${source.data.kind}</p><p>Surface flow; not bottom current or boat drift.</p>`).addTo(mapLayer);
     }
   }
+  function renderCurrents(){
+    if(!alive)return;
+    const point=state?getRegion().forecast_points[state.point]:null;
+    container.querySelector('#currents-content').innerHTML=['wcofs','hfr-1','hfr-6'].map(id=>{const s=data?.sources?.[id],v=validRegionalCurrent(s,id)?nearestCurrent(s,currentTime,point):null;return `<p><strong>${esc(s?.name||id)}</strong><br>${v?`${num(v.cell[2])} kt toward ${from(v.cell[3])} · ${num(v.distance)} nm from forecast sample · ${local(v.time,{weekday:'short',hour:'numeric'})}`:'No fresh, sufficiently close sample for this hour.'}<br><small>${esc(statusText(s))} · ${sourceLink(s)}</small></p>`;}).join('')+'<p class="small">Observed arrows are shown only near now. Regional forecasts use their nearest three-hour snapshot within the published 72-hour horizon. Empty coverage stays empty. WCOFS assimilates radar; these are not independent measurements.</p>';
+    draw();
+  }
   function render(){
-    if(!state)return;
+    if(!alive)return;
+    renderCurrents();if(!state)return;
     container.querySelector('#ensemble-content').innerHTML=uncertaintyHTML(data,state);
-    const point=getRegion().forecast_points[state.point];
-    container.querySelector('#currents-content').innerHTML=['wcofs','hfr-1','hfr-6'].map(id=>{const s=data?.sources?.[id],v=nearestCurrent(s,state.time,point);return `<p><strong>${esc(s?.name||id)}</strong><br>${v?`${num(v.cell[2])} kt toward ${from(v.cell[3])} · ${num(v.distance)} nm from forecast sample · ${local(v.time,{weekday:'short',hour:'numeric'})}`:'No fresh, sufficiently close sample for this hour.'}<br><small>${esc(statusText(s))} · ${sourceLink(s)}</small></p>`;}).join('')+'<p class="small">Observed arrows are shown only near now. Regional forecasts use their nearest three-hour snapshot within the published 72-hour horizon. Empty coverage stays empty. WCOFS assimilates radar; these are not independent measurements.</p>';
     container.querySelector('#verification-content').innerHTML=verificationHTML(data);renderWave();draw();
   }
   async function load(){
-    if(loading)return;loading=true;
+    if(loading||!alive)return;loading=true;
     for(const url of [`/api/intelligence?region=${encodeURIComponent(getRegion().id)}`,getRegion().intelligence_feed,`regions/${getRegion().id}/intelligence.json`].filter(Boolean)){
-      try{const response=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!response.ok)continue;const candidate=await response.json();if(candidate.schema_version!==1||candidate.region_id!==getRegion().id)continue;data=candidate;break;}catch{}
+      try{const response=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!response.ok)continue;const candidate=await response.json();if(candidate.schema_version!==1||candidate.region_id!==getRegion().id)continue;if(alive)data=candidate;break;}catch{}
     }
     loading=false;render();
   }
-  document.addEventListener('skippercast:forecast',event=>{state=event.detail;render();});
+  const onForecast=event=>{state=event.detail;render();};document.addEventListener('skippercast:forecast',onForecast);
+  const onTime=event=>{if(event.detail?.regionId===getRegion().id&&typeof event.detail.epoch==='number'){currentTime=event.detail.epoch;if(state)state={...state,time:currentTime};renderCurrents();}};document.addEventListener('skippercast:time',onTime);
+  const observer=new MutationObserver(draw);observer.observe(document.body,{attributes:true,attributeFilter:['data-map-presentation']});
   document.getElementById('load-forecast').addEventListener('click',load);
   // The feed is ~2 MB and only the Forecast screen shows it (the current
   // vectors are chosen there too): load it when that screen first opens.
   let started=false;whenView('forecast',()=>{started=true;load();});
-  setInterval(()=>{if(started&&!document.hidden)load();},30*60000);
-  return {getState:()=>state,getData:()=>data};
+  const interval=setInterval(()=>{if(started&&!document.hidden){load();draw();}},30*60000);
+  const destroy=()=>{alive=false;clearTimeout(expiry);clearInterval(interval);unsubscribe();observer.disconnect();document.removeEventListener('skippercast:forecast',onForecast);document.removeEventListener('skippercast:time',onTime);document.getElementById('load-forecast').removeEventListener('click',load);map.removeLayer(mapLayer);};window.addEventListener('pagehide',destroy,{once:true});
+  return {getState:()=>state,getData:()=>data,destroy};
 }
