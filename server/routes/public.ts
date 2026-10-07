@@ -13,7 +13,7 @@ export const publicApi = new Hono<AppEnv>();
 
 // Public liveness only: which bindings and secrets exist is not published.
 // Feed storage shows per response in X-Feed-Source on /feeds/.
-publicApi.all('/api/health', () => json({service: 'SkipperCast', version: '0.5.0', build: BUILD_ID}));
+publicApi.all('/api/health', () => json({service: 'SkipperCast', version: '0.6.0', build: BUILD_ID}));
 
 publicApi.get('/api/habitat', async c => {
   const url = new URL(c.req.url), region = regionById(url.searchParams.get('region'));

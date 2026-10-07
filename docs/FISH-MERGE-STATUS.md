@@ -42,8 +42,8 @@ map. The owner's October 6 request is the product acceptance standard.
 - Acceptance: Off clears immediately; selected source never silently substitutes; time/expiry/missing coverage remain gaps; original source clocks and resolution remain visible; desktop/mobile views retain one choice.
 - Preserve regional feed identity and existing native standalone behavior; do not migrate data providers, collectors or private stores.
 - Source and amendment reviews accepted. Final Node 1,434/1,434, strict typechecks and client build passed. Actual desktop/390px overview and regional controls, source clocks, Day 7 gap, Off, and copied/readable-return links passed. Browser receipt: continuation `outputs/coastal-currents-browser-check.json`.
-- Local synthetic preload fixtures require canonical macOS TMPDIR; isolated proof and 3/3 rechecks are saved. No build source was changed. Protected exact-head Linux gates, merge, deployment and live readback remain.
-- Next action: protected PR for explicit currents, followed by versioned release and live readback.
+- Local synthetic preload fixtures require canonical macOS TMPDIR; isolated proof and 3/3 rechecks are saved. No build source was changed. PR 402 merged at `f8eb237ade2f3c53e0ccc2051a49fe51d08d63c8` after exact-head Linux core/science/e2e/DCO success (Offline 37611288735, DCO 37611288935). Main CI/deploy and live readback remain.
+- Next action: finish `codex/release-v0.6.0`, verify main/deploy/live and publish the aligned annotated release. Then implement explicit bounded offline public snapshots.
 
 ## Previously completed integration
 
@@ -196,8 +196,7 @@ matrix passes. Reachable legacy links are not parity.
 ## Remaining cutover gaps (source audit, October 7)
 
 - Continuous overview now shares terrain, source Conditions and UTC/profile/target state (PR 399). Planning/private tools still use explicit detailed-package handoffs; reachability alone is not full workspace parity.
-- Native surface-current visibility and chart ocean/current selectors are
-  independent (`dist/coast.html`, `dist/coast-workspace.js`).
+- Explicit surface-current choice is unified in PR 402; other ocean context and full shared-layer capability acceptance remain.
 - Fish snapshots bypass public API caching and native terrain has no explicit
   trip-pack/precache policy (`dist/sw.js`, `dist/offline-core.js`,
   `scripts/precache.mjs`). Existing chart offline remains available.
