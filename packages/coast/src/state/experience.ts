@@ -4,12 +4,12 @@ import {availableDays,buildDaily,dateKey,type DailyBrief} from '../daily.ts';
 import {freshNearshore,nearshoreAt} from '../presentation.ts';
 export type View='coast'|'conditions'|'history';
 export type ThemeLayer='opportunity'|'temperature'|'currents'|'waves'|'clouds';
-export type AppState={report:Report;county:County;mode:Mode;areaId:string;species:SpeciesId;date:string;at:string;view:View;layer:ThemeLayer;base:'ocean'|'imagery';maxDepth:number;playing:boolean;motion:boolean;now:Date;selectedSite:string|null};
+export type AppState={report:Report;county:County;mode:Mode;areaId:string;species:string;date:string;at:string;view:View;layer:ThemeLayer;base:'ocean'|'imagery';maxDepth:number;playing:boolean;motion:boolean;now:Date;selectedSite:string|null};
 export const methodLabel:Record<Mode,string>={boat:'Boat',shore:'Shore',spear:'Spear'};
 export function defaultSpecies(mode:Mode):SpeciesId{return mode==='shore'?'surfperch':mode==='spear'?'cabezon-shallow-reef':'lingcod';}
 export function selectedArea(s:AppState):Area{return s.county.areas.find(a=>a.id===s.areaId)??s.county.areas[0];}
 export function daily(s:AppState):DailyBrief{return buildDaily(s.report,s.county,selectedArea(s),s.mode,s.date,s.now);}
-export function forecastHour(s:AppState):ForecastHour|undefined{return daily(s).hours.find(h=>h.at===s.at)??daily(s).hours[0];}
+export function forecastHour(s:AppState):ForecastHour|undefined{const at=Date.parse(s.at);return Number.isFinite(at)?daily(s).hours.find(h=>Date.parse(h.at)===at):undefined;}
 export function localWave(s:AppState){const site=freshNearshore(s.report,s.areaId,s.now)[0];return site?{site,hour:nearshoreAt(site,s.at)}:undefined;}
 export function createState(report:Report,county:County,mode:Mode,areaId:string,date?:string,species?:SpeciesId,now=new Date()):AppState{
  const area=county.areas.find(a=>a.id===areaId)??county.areas.find(a=>a.id===county.defaultAreaId)??county.areas[0];

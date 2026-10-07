@@ -137,6 +137,7 @@ function pin(target) {
 }
 
 function selectedSpeciesFit(target, fish) {
+  if(!['reef','lingcod','rockfish'].includes(fish))return null;
   if (fish==='lingcod' || fish==='rockfish') {
     const fit=speciesFit(target,fish);
     return fit && {rank:4-fit.rank,description:`${fish} habitat fit ${4-fit.rank} of 3 (3 strongest)`};
@@ -629,6 +630,7 @@ try {
     onSpeciesChange:()=>$("species-select").dispatchEvent(new CustomEvent('change',{detail:{location:true}})),
   });
   void import('./coast-workspace.js').then(({initCoastWorkspace})=>initCoastWorkspace({map,locationUI,weather})).catch(error=>console.warn('Coastal presentation unavailable',error));
+  void import('./coast-conditions.js').then(({initCoastConditions})=>initCoastConditions({locationUI,weather})).catch(error=>console.warn('Local coastal readings unavailable',error));
   $("spot-dialog").addEventListener('close',()=>{if(document.body.dataset.view==='map')locationUI.clear();});
   const intelligence=initIntelligence(map);
   initTripAlerts(intelligence);

@@ -1,6 +1,6 @@
 import {getRegion,assetURL} from './region.js';
 import {esc,local,num} from './marine-charts.js';
-import {nearestSearchForecast,searchWindow,oceanSearchAreas} from './search-plan-data.js';
+import {nearestSearchForecast,searchWindow,oceanSearchAreas,searchSelectionProfile} from './search-plan-data.js';
 import {loadPrimaryStrategies,strategyMarkup} from './primary-strategy.js';
 export async function initSearchPlans(map,screen,onSelect){
  const region=getRegion();let data,strategies=null,state=null,ocean=null,shown=[],generation=0,timer;
@@ -22,19 +22,20 @@ export async function initSearchPlans(map,screen,onSelect){
  }
  function species(){return document.getElementById('species-select').value;}
  function select(entry){
-  const {feature:f,rating,near}=entry,p=f.properties,profile=data.profiles[species()];
+  const profile=searchSelectionProfile(data,species(),entry);if(!profile)return;
+  const {feature:f,rating,near}=entry,p=f.properties;
   const assessment=Number.isFinite(rating.conditions)?`${num(rating.conditions)}/10 boat conditions · ${rating.confidence.toLowerCase()} confidence`:'Conditions incomplete';
   const html=`<div class="eyebrow">SPECIES SEARCH AREA · ${esc(profile.name)}</div><h2>${esc(p.name)}</h2><p><strong>${esc(assessment)}</strong><br>${esc(local(state?.time||Date.now()/1000,{weekday:'short',hour:'numeric'}))} + four hours · local sample, transit not evaluated</p><p>${esc(profile.search_for)}</p><h3>How to fish it</h3>${strategyMarkup(strategies?.strategies?.[species()],{compact:true})}<h3>Why this outline</h3><p>${p.habitat_kind==='ocean'?`Three adjacent populated surface-grid cells; ${p.temperature_c.map(t=>num(t*9/5+32)).join('–')}°F. Search priority ${p.search_priority}/3 (1 = strongest environmental lead), low evidence confidence. ${esc((p.search_reasons||[]).join('. '))}. This is a search heuristic, not a fish forecast. Frame ${esc(local(p.frame_time,{month:'short',day:'numeric',hour:'numeric'}))}.`:`The outline follows ${esc(p.habitat_kind)} habitat from the published survey. It does not fill unmapped gaps or extend the reef into surrounding water.`}</p><p>${esc(p.depth_note||'Water-column search: bottom depth and fish depth are unverified.')}</p><h3>Confirm before committing</h3><ul>${profile.required_to_confirm.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p>${esc(profile.caution)}</p><p>${esc(near?`Forecast sample ${near.p.name}, ${near.d.toFixed(1)} nm away; coarse model, not reef-scale shelter.`:'No geographically suitable forecast sample; conditions are withheld.')}</p>${rating.reasons.length?`<p>${esc(rating.reasons.join(' · '))}</p>`:''}<p>Fish and bait presence are unconfirmed. Check the selected species’ Rules card; this habitat outline is not permission to fish.</p><button id="search-area-weather" class="primary">Conditions near this area</button><details><summary>Evidence and method</summary><p>${esc(profile.tactics_basis)}</p>${[...(profile.source_links||[]),...(p.source_url?[{title:'Mapped source',url:p.source_url}]:[])].filter(s=>s.url?.startsWith('https://')).map(s=>`<p><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)} ↗</a></p>`).join('')}<p>Source date: ${esc(p.source_date||'See survey record')}. No charter catch or AIS claim is assigned.</p></details>`;
   onSelect(html,{...p,label:p.name,geometry:f.geometry},'search-area-weather');
  }
  async function render(){
-  const run=++generation;layer.clearLayers();const profile=data.profiles[species()];if(!profile)return;
+  const run=++generation,target=species();layer.clearLayers();const profile=Object.hasOwn(data.profiles,target)?data.profiles[target]:null;if(!profile){shown=[];panel.querySelector('summary').textContent='Search method unavailable for this target';panel.querySelector('div').textContent='No reviewed chart search plan exists for this exact target. Original native habitat evidence remains available in Coast 2D / 3D; no substitute species is assumed.';return;}
   const time=state?.time||Math.floor(Date.now()/3600000)*3600;
   const validOcean=ocean&&Math.abs(ocean.selectedTime-time)<1?ocean:null;
   let pool=data.features.filter(f=>f.properties.species.includes(species()));
   if(['offshore','pelagic'].includes(profile.kind))pool=pool.concat(oceanSearchAreas(validOcean,profile,region));
   const view=map.getBounds();pool=pool.filter(f=>{const b=f.properties.bounds;return view.intersects([[b[1],b[0]],[b[3],b[2]]]);});
-  const cache=new Map();const ranked=pool.map(feature=>{const near=nearestSearchForecast(feature.properties,profile);if(near&&!cache.has(near.i))cache.set(near.i,searchWindow(state?.bundle,near.i,species(),time));const rating=near?cache.get(near.i):{conditions:null,confidence:'Low',reasons:['No nearby marine forecast sample']};return {feature,near,rating};});
+  const cache=new Map();const ranked=pool.map(feature=>{const near=nearestSearchForecast(feature.properties,profile);if(near&&!cache.has(near.i))cache.set(near.i,searchWindow(state?.bundle,near.i,species(),time));const rating=near?cache.get(near.i):{conditions:null,confidence:'Low',reasons:['No nearby marine forecast sample']};return {feature,near,rating,target};});
   ranked.sort((a,b)=>(a.feature.properties.search_priority??4)-(b.feature.properties.search_priority??4)||(b.rating.conditions??-1)-(a.rating.conditions??-1)||Number(b.feature.properties.depth_qualified)-Number(a.feature.properties.depth_qualified)||(b.feature.properties.gradient||0)-(a.feature.properties.gradient||0));
   shown=[];
   if(screen.ready())for(const row of ranked){if(run!==generation)return;if(screen.geometryAllowed(row.feature.geometry))shown.push(row);if(shown.length===3)break;if(shown.length===0)await new Promise(resolve=>setTimeout(resolve,0));}
@@ -47,5 +48,5 @@ export async function initSearchPlans(map,screen,onSelect){
  }
  panel.addEventListener('click',e=>{const b=e.target.closest('[data-search]');if(b){const entry=shown[Number(b.dataset.search)];if(entry)select(entry);}});
  function queue(){if(!data)return;clearTimeout(timer);timer=setTimeout(render,120);}
- document.addEventListener('skippercast:species',()=>{ocean=null;queue();});document.getElementById('layer-areas').addEventListener('change',queue);map.on('moveend',queue);setInterval(queue,60000);return {refresh:queue,ready:started};
+ document.addEventListener('skippercast:species',()=>{generation++;ocean=null;shown=[];layer.clearLayers();panel.querySelector('summary').textContent='Updating search method…';panel.querySelector('div').replaceChildren();queue();});document.getElementById('layer-areas').addEventListener('change',queue);map.on('moveend',queue);setInterval(queue,60000);return {refresh:queue,ready:started};
 }

@@ -1,3 +1,4 @@
+import {sharedTargetOptions} from './coast-targets.js';
 import { getRegion, getRegionDirectory, renderTargetOptions } from './region.js';
 import { positions } from './geo-screen.js';
 import {coastAt,coastURL} from './coasts.js';
@@ -40,7 +41,7 @@ export function enrichLocation(base, region, protectedAreas) {
 export function targetsForLocation(region, context) {
   if(!['covered','discovery'].includes(context.coverage) || context.regionId!==region.id)return [];
   const hidden=new Set((context.hiddenTargets||[]).map(t=>t.id));
-  return region.target_options.filter(t=>!hidden.has(t.id) && (context.coverage!=='discovery'||t.kind==='offshore'));
+  return sharedTargetOptions(region).filter(t=>!hidden.has(t.id) && (context.coverage!=='discovery'||t.kind==='offshore'));
 }
 export function viewFromURL(url) {
   return parseView(new URL(url).searchParams.get('view'));
