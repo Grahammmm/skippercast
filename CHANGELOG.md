@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Record verified NOAA CC0 contract reuse terms and native NAD83/UTM11N, MLLW metadata for the H11879 2 m and H11880 1 m candidate surveys; retain admission, terrain, regional and public-use gates.
+
 ## 0.4.0 — 2026-10-07
 
 - Prevent early confidence UI imports from capturing another region’s forecast coordinates. Keep unit helpers independent of regional data; withhold current readings when the selected sample is absent.
