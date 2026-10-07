@@ -1,4 +1,5 @@
 import {lockRegion,startURLSync} from '../web/state.ts';
+import {fishEntry} from '../web/fish-entry.ts';
 import {mapReady} from './startup.js';
 import {initTelemetry} from '../web/telemetry.ts';
 // Cookie-less funnel and error reporting; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
@@ -7,8 +8,10 @@ initTelemetry();
 // module scripts (boot.js, offline.js, meteogram-ui.js) into one entry, and a
 // top-level await here would hold the others until the whole app had loaded.
 void (async()=>{
-startURLSync();
 try {
+  const entry=fishEntry(location.href);
+  if(entry.href!==location.href)history.replaceState(history.state,'',entry.href);
+  startURLSync();
   // Optional; a failure here must never block the map.
   void import('./boat-profile.js').then(m=>m.initBoatProfile()).catch(error=>console.warn('Boat profile unavailable',error));
   void import('./account.js').then(m=>m.initAccount()).catch(error=>console.warn('Account unavailable',error));

@@ -1,6 +1,9 @@
 // First-run preference only. Port match positions are approximate and never exported.
 import {navigate} from '../web/state.ts';
+import {fishEntry} from '../web/fish-entry.ts';
+import {readPreferences,validPreferences,forgetPreferenceHeader,HOME_PLACE_KEY} from '../packages/coast/src/coast3d/preferences.ts';
 import {track} from '../web/telemetry.ts';
+export {HOME_PLACE_KEY} from '../packages/coast/src/coast3d/preferences.ts';
 export const HOME_PORT_KEY = 'skippercast-home-port-v1';
 // Must equal FIRST_RUN_KEY in first-run.js (not imported: that module needs the region loaded).
 export const FIRST_RUN_KEY = 'skippercast-first-run-v1';
@@ -8,13 +11,13 @@ let directory;
 
 export function hasAreaLink(url) {
   const u = new URL(url);
-  return ['region', 'coast', 'view', 'focus', 'spot', 'target'].some(key => u.searchParams.has(key)) ||
+  return ['region', 'coast', 'view', 'focus', 'spot', 'habitat', 'target', 'place', 'area', 'mode', 'species', 'hour', 'profile', 'day', 'layer', 'layers'].some(key => u.searchParams.has(key)) ||
     ['#map', '#forecast', '#export', '#guide', '#spot', '#account'].includes(u.hash);
 }
 
 export function portURL(href, port) {
   const url = new URL(href);
-  for (const key of ['region', 'coast', 'view', 'focus', 'spot', 'target']) url.searchParams.delete(key);
+  for (const key of ['region', 'coast', 'view', 'focus', 'spot', 'habitat', 'place', 'area', 'target']) url.searchParams.delete(key);
   url.searchParams.set('region', port.region);
   url.searchParams.set('view', port.view.map((n, i) => i < 2 ? Number(n).toFixed(5) : n).join(','));
   url.hash = 'map';
@@ -27,7 +30,7 @@ export function portURL(href, port) {
  */
 export function portChoiceURL(href, port) {
   const next = new URL(portURL(href, port)), target = new URL(href).searchParams.get('target');
-  if (target && new URL(href).searchParams.get('region') === port.region) next.searchParams.set('target', target);
+  if (new URL(href).searchParams.has('target') && new URL(href).searchParams.get('region') === port.region) next.searchParams.set('target', target);
   return next.href;
 }
 
@@ -53,7 +56,26 @@ async function loadPorts() {
 }
 
 function savedPortId() { try { return localStorage.getItem(HOME_PORT_KEY); } catch { return null; } }
-function savePort(id) { try { localStorage.setItem(HOME_PORT_KEY, id); } catch { /* Session still navigates. */ } }
+function savePort(id) { try { localStorage.setItem(HOME_PORT_KEY, id);localStorage.removeItem(HOME_PLACE_KEY); } catch { /* Session still navigates. */ } try{document.cookie=forgetPreferenceHeader(location.protocol==='https:');}catch{} }
+
+/** Synthetic dependencies make migration testable without browser identity. */
+export function resolveHome(ports,storage,cookies='') {
+ const current=p=>{try{const mode=storage?.getItem('skippercast-profile-v1');if(['boat','shore','spear'].includes(mode))return {...p,mode};}catch{}return p;};
+ try{const id=storage?.getItem(HOME_PORT_KEY),port=ports.find(item=>item.id===id);if(port)return {port};}catch{}
+ try{const saved=JSON.parse(storage?.getItem(HOME_PLACE_KEY)??'null');if(validPreferences(saved))return {native:current(saved)};}catch{}
+ const legacy=readPreferences(cookies);if(!legacy)return null;
+ try{storage?.setItem(HOME_PLACE_KEY,JSON.stringify(legacy));if(!storage?.getItem('skippercast-profile-v1'))storage?.setItem('skippercast-profile-v1',legacy.mode);}catch{/* Visit still works if persistence is blocked. */}
+ return {native:current(legacy)};
+}
+export function nativeHomeURL(href,p,storage) {
+ let mode=p.mode;try{if(storage===undefined)storage=globalThis.localStorage;const stored=storage?.getItem('skippercast-profile-v1');if(['boat','shore','spear'].includes(stored))mode=stored;}catch{}
+ const url=new URL(href);url.searchParams.set('place',p.place);if(!url.searchParams.has('profile'))url.searchParams.set('profile',mode);url.hash='map';return fishEntry(url.href).href;
+}
+export function forgetHome(storage,cookieJar,secure=false) {
+ for(const key of [HOME_PORT_KEY,HOME_PLACE_KEY,'skippercast-profile-v1',FIRST_RUN_KEY])try{storage?.removeItem(key);}catch{}
+ try{cookieJar.cookie=forgetPreferenceHeader(secure);}catch{}
+}
+
 
 // Choosing navigates in place while the app has not loaded a region, or when
 // the port is in the region already shown; otherwise the page loads the region.
@@ -71,7 +93,7 @@ function chooser(ports, firstRun, onChosen = () => {}) {
     <p id="home-port-feedback" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="home-port-near">⌖ Use my location</button><button type="button" id="home-port-explore">Explore the coast</button></div>
     <p class="home-port-fine">Your choice stays in this browser. Location matching is approximate; forecast map centers are not harbor entrances or navigation waypoints.</p>
-    ${firstRun ? '' : '<button type="button" class="home-port-close" aria-label="Close port chooser">×</button>'}
+    ${firstRun ? '' : '<button type="button" class="home-port-forget">Forget saved home</button><button type="button" class="home-port-close" aria-label="Close port chooser">×</button>'}
   </section>`;
   document.body.append(scrim);
   document.body.classList.add('choosing-home-port');
@@ -123,6 +145,7 @@ function chooser(ports, firstRun, onChosen = () => {}) {
   });
   function close() { scrim.remove(); document.body.classList.remove('choosing-home-port'); previous?.focus?.(); }
   scrim.querySelector('.home-port-close')?.addEventListener('click', close);
+  scrim.querySelector('.home-port-forget')?.addEventListener('click',()=>{let storage=null;try{storage=localStorage;}catch{}forgetHome(storage,document,location.protocol==='https:');feedback.textContent='Saved home removed. This visit stays at the current selection.';buttonLabel(false);});
   scrim.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !firstRun) { event.preventDefault(); close(); }
     if (event.key === 'Tab') {
@@ -135,6 +158,7 @@ function chooser(ports, firstRun, onChosen = () => {}) {
   render(); input.focus();
 }
 
+function buttonLabel(saved){document.getElementById('home-port-button')?.setAttribute('aria-label',saved?'Change home port':'Choose home port');}
 export async function initHomePort() {
   const button = document.getElementById('home-port-button');
   const saved = savedPortId();
@@ -146,7 +170,11 @@ export async function initHomePort() {
   if (hasAreaLink(location.href)) return true; // Shared links always win; never overwrite preference.
   try {
     const ports = await loadPorts();
-    const port = ports.find(item => item.id === saved);
+    let storage=null,cookies='';try{storage=localStorage;}catch{}
+    // Read only this origin's legacy home cookie, after shared links and current home have won.
+    if(!ports.some(item=>item.id===saved))try{cookies=document.cookie;}catch{}
+    const home=resolveHome(ports,storage,cookies),port=home?.port;
+    if(home?.native)return navigate(nativeHomeURL(location.href,home.native,storage),{replace:true})==='in-place';
     // Nothing region-bound has loaded yet, so both paths continue in place.
     if (port) return navigate(portURL(location.href, port), {replace: true}) === 'in-place';
     return await new Promise(resolve => chooser(ports, true, () => resolve(true)));

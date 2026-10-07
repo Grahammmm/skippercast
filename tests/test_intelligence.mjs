@@ -76,3 +76,9 @@ test('spot evidence keeps physical structure separate from fish and AIS proof',(
   const e=spotEvidence(a.targets[0],'reef',{habitat:'Reviewed reef hypothesis'},r);
   assert.ok(e.measured.length);assert.ok(e.inferred.some(s=>s.includes('not a species or catch score')));assert.ok(e.unknown.some(s=>s.includes('camera')));
 });
+test('current selection with no valid original forecast point stays unavailable, never borrows a cell',()=>{
+ const source={status:'ok',max_age_hours:36,data:{issued_at:new Date(now).toISOString(),kind:'forecast',resolution_km:4,valid_from:now/1000,valid_through:now/1000+72*3600,frames:[{time:now/1000,cells:[[35.4,-120.9,1.2,90]]}]}};
+ assert.ok(nearestCurrent(source,now/1000,{latitude:35.4,longitude:-120.9},now),'valid nearby original point still has its original sample');
+ for(const point of [undefined,null,{}, {latitude:NaN,longitude:-120.9},{latitude:35.4,longitude:Infinity},{latitude:91,longitude:-120.9},{latitude:35.4,longitude:181}])assert.equal(nearestCurrent(source,now/1000,point,now),null);
+ assert.equal(nearestCurrent(source,now/1000+73*3600,{latitude:35.4,longitude:-120.9},now),null,'source horizon remains unchanged');
+});

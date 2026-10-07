@@ -1,5 +1,6 @@
 import {coastPoint} from './grid.ts';
-export const coastPlaces:[string,string,number,number,number][]=[['morro','Morro Bay Harbor',-120.847,35.352,7300],['monterey','Monterey Bay',-121.91,36.62,24000],['carmel','Carmel Bay',-121.96,36.52,12000],['point-sur','Point Sur',-121.94,36.32,18000],['big-sur','Big Sur',-121.9,36.25,18000],['gorda','Southern Big Sur',-121.45,35.9,24000],['cambria','Cambria',-121.11,35.56,12000],['avila','Avila / Port San Luis',-120.76,35.16,10000],['arguello','Point Arguello',-120.64,34.58,18000],['conception','Point Conception',-120.47,34.455,18000],['coast','Monterey → Point Conception',-121.15,35.55,245000]];
+import {coastPlaces} from './place-data.ts';
+export {coastPlaces} from './place-data.ts';
 const regionPlaces:Record<string,string[]>={'morro-bay':['morro'],'cambria-san-simeon':['cambria'],'monterey-point-sur':['monterey','carmel','point-sur'],'point-arguello-conception':['arguello','conception']};
 /** A published region limits naming; proximity never creates a forecast binding. */
 export function habitatPlace(region:string,lon:number,lat:number):string{

@@ -5,9 +5,17 @@ import { loadDailyPart } from "./daily-feed.js";
 import { positions } from "./geo-screen.js";
 
 const HOUR = 3600000;
+const own = (table,id) => table && typeof table==='object' && Object.hasOwn(table,id) ? table[id] : null;
+/** A shared target must name its own complete registry record. */
+export function ruleProfile(data,id) {
+ const p=own(data?.species,id);
+ return p&&typeof p==='object'&&[p.name,p.season,p.bag,p.size].every(value=>typeof value==='string')&&Array.isArray(p.details)&&p.details.every(value=>typeof value==='string')&&Array.isArray(p.source_ids)&&p.source_ids.length&&p.source_ids.every(id=>typeof id==='string'&&own(data.sources,id)?.url)&&Array.isArray(p.windows)&&p.windows.every(w=>w&&dateOnly(w.start)&&dateOnly(w.end)&&w.start<=w.end&&validOpening(w)&&validGeography(w.geography,data.sources)&&(!w.geography||p.source_ids.includes(w.geography.source_id)))?p:null;
+}
+
 export const requiredRuleIDs = (region=getRegion()) => [...new Set(region.species.flatMap(id=>id==='reef'?['lingcod','rockfish']:[id]))];
 export function ruleMethods(data,species) {
-  const methods=data?.species?.[species]?.methods;
+  if(species!=='reef'&&!ruleProfile(data,species))return [['unavailable','Method unavailable']];
+  const methods=ruleProfile(data,species)?.methods;
   if(methods && Object.keys(methods).length) return Object.entries(methods).map(([id,p])=>[id,p.label||({rod:'Rod and reel',hoop:'Hoop net',hand:'Hand capture',trap:'Crab trap',snare:'Snare'}[id]||id)]);
   return species==='lobster'?[['hoop','Hoop net'],['hand','Hand capture']]:species==='dungeness'?[['trap','Crab trap'],['hoop','Hoop net'],['snare','Snare']]:[['rod','Rod and reel']];
 }
@@ -33,6 +41,7 @@ export function officialURL(value) {
   } catch { return "https://wildlife.ca.gov/Fishing/Ocean"; }
 }
 export function sourceIssues(data, ids, now = Date.now()) {
+  if(!Array.isArray(ids))return ['rule-profile'];
   return ids.filter((id) => {
     const s = data.checks?.[id], definition = data.sources?.[id], approved = definition?.approved_content_sha256;
     return !s || s.status !== 'unchanged' || s.source_status !== 'ok' || s.url !== definition?.url ||
@@ -61,7 +70,7 @@ export function validRegulations(data) {
       typeof n.id === 'string' && typeof n.name === 'string' && typeof n.note === 'string' &&
       Array.isArray(n.source_ids) && n.source_ids.length && n.source_ids.every(id => data.sources[id]?.url))) &&
     requiredRuleIDs().every((id) => {
-      const p = data.species?.[id];
+      const p = ruleProfile(data,id);
       return p && [p.name, p.season, p.bag, p.size].every((x) => typeof x === "string") &&
         Array.isArray(p.details) && p.details.every((s) => typeof s === "string") &&
         Array.isArray(p.source_ids) && p.source_ids.length > 0 && p.source_ids.every((s) => data.sources[s]?.url) &&
@@ -105,9 +114,9 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
       label: status === "closed" && members.some((m) => m.status !== "closed") ? "Check both seasons" : members.find((m) => m.status === status).label };
   }
   const today = dateOnly(tripDate) ? tripDate : dateFormat.format(new Date(now));
-  if (!validRegulations(data) || !data?.species?.[species])
+  if (!validRegulations(data) || !ruleProfile(data,species))
     return { status: "unknown", label: "Check rules", today, reason: "Regulations unavailable. Open the official CDFW rules before fishing.", issues: [] };
-  const p = data.species[species];
+  const p = ruleProfile(data,species);
   const issues = sourceIssues(data, p.source_ids, now);
   const reviewed = today >= data.valid_from && today <= data.valid_through && age(data.reviewed_at, now) >= -1;
   const window = p.windows.find((w) => today >= w.start && today <= w.end);
@@ -136,7 +145,7 @@ export function regulationState(data, species, now = Date.now(), tripDate = null
       "An official source changed after review. The saved limits below may have changed; check CDFW." :
       "The daily source check is incomplete or over 36 hours old. Check CDFW; saved rules are shown below.";
   }
-  const methodProfile=p.methods?.[method];
+  const methodProfile=own(p.methods,method);
   const methodReason=methodProfile?.note || null;
   if (methodProfile?.requires_clearance && status==='open') {status='scheduled';reason='Season and permission for this gear are separate. Check the current gear clearance before setting it.';}
   const state={ method, methodReason, timingNote, status, label: timedRestriction && status==='restricted' ? 'Opening time applies' : { restricted: "Depth / species restrictions", open: "Season open", closed: "Season closed", scheduled: "Opener unconfirmed", unknown: "Check rules" }[status], today, reason, issues, profile: p };
@@ -167,7 +176,7 @@ export function depthLimit(profile, today) {
 const shortDate = (s) => Number.isFinite(Date.parse(s)) ? new Date(s).toLocaleDateString("en-US", { timeZone: getRegion().timezone, month: "short", day: "numeric" }) : null;
 export function ruleSummary(data, species, state) {
   const ids = species === "reef" ? ["lingcod", "rockfish"] : [species];
-  const profiles = validRegulations(data) ? ids.map((id) => data.species?.[id]).filter(Boolean) : [];
+  const profiles = validRegulations(data) ? ids.map((id) => ruleProfile(data,id)).filter(Boolean) : [];
   const status = SUMMARY_STATUS[state.status] ? state.status : "unknown";
   const summary = { status, label: SUMMARY_STATUS[status], bag: [], size: [], depth: null, verified: null, checked: null, link: "https://wildlife.ca.gov/Fishing/Ocean", linkLabel: "Official CDFW rules" };
   if (profiles.length !== ids.length) return summary;
@@ -211,7 +220,7 @@ export function regulationsHTML(data, species, now = Date.now(), fallback = fals
       <h2>Lingcod &amp; rockfish</h2><p class="reg-area">${esc(getRegion().name)} · recreational boat fishing</p>
       <p class="reg-notice reg-${state.status}">${esc(state.reason)}</p>
       ${seasonsMatch ? `<p>${esc(data.species.lingcod.season)}</p>` : "<p>Check each species’ season below.</p>"}
-      ${ids.map((id) => `<section class="reg-combined-limit"><h3>${esc(data.species[id].name)}</h3><p>${esc(data.species[id].bag)}</p><p>${esc(data.species[id].size)}</p></section>`).join("")}
+      ${ids.map((id) => `<section class="reg-combined-limit"><h3>${esc(ruleProfile(data,id).name)}</h3><p>${esc(ruleProfile(data,id).bag)}</p><p>${esc(ruleProfile(data,id).size)}</p></section>`).join("")}
       <p class="reg-separate">Keep the limits separate. Rockfish identification and species sublimits matter.</p>
       ${ids.map((id) => `<details class="reg-child" data-reg-section="${id}"><summary>${id === "lingcod" ? "Lingcod" : "Rockfish"} gear, sublimits &amp; sources</summary>${regulationsHTML(data, id, now, fallback, tripDate, method, tripInstant, false,location).replace(/^<summary>[\s\S]*?<\/summary>/, "")}</details>`).join("")}
       ${areaNoticesHTML(data, now,location)}
@@ -273,7 +282,7 @@ export function initRegulations(card, select, {resolveLocation=(v)=>v}={}) {
     // Change-alert hook (P4-10 alerts): announce the at-a-glance state whenever it changes,
     // including an official source that changed after review (status "unknown", changed ids listed).
     const glance=ruleSummary(registry,species,regulationState(registry,species,Date.now(),tripDate,method,tripInstant,locationContext));
-    const changed=registry?[...new Set((species==='reef'?['lingcod','rockfish']:[species]).flatMap(id=>registry.species?.[id]?.source_ids||[]))].filter(id=>registry.checks?.[id]?.status==='changed'):[];
+    const changed=registry?[...new Set((species==='reef'?['lingcod','rockfish']:[species]).flatMap(id=>ruleProfile(registry,id)?.source_ids||[]))].filter(id=>registry.checks?.[id]?.status==='changed'):[];
     const glanceKey=JSON.stringify([getRegion().id,species,glance,changed]);
     if(glanceKey!==lastGlance){lastGlance=glanceKey;document.dispatchEvent(new CustomEvent('skippercast:rules-status',{detail:{regionId:getRegion().id,species,...glance,changedSources:changed}}));}
     if (card.innerHTML !== html) {

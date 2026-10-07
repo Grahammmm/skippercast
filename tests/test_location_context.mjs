@@ -68,3 +68,22 @@ test('offshore search references keep their data package without borrowing nears
  const p={...point(34.43,-120.5),geometry:circleGeometry(34.43,-120.5,5500)};
  assert.equal(resolveLocation(p,directory,south.id).coverage,'mixed');
 });
+test('URL target synchronization updates visible selection and native/report callback without URL feedback',async()=>{
+ const {initLocationContext}=await import('../dist/location-context.js');
+ const {syncFromURL,configureStore}=await import('../web/state.ts');configureStore({storage:null});setRegion(central);
+ const old={document:globalThis.document,location:globalThis.location,history:globalThis.history,Option:globalThis.Option,CustomEvent:globalThis.CustomEvent,requestAnimationFrame:globalThis.requestAnimationFrame};
+ const caption={textContent:'',title:''},listeners=new Map(),events=[];let writes=0,changes=0;
+ globalThis.document={body:{dataset:{}},getElementById:()=>caption,addEventListener:(name,fn)=>listeners.set(name,fn),dispatchEvent:e=>events.push(e.type)};
+ globalThis.location={href:'https://skippercast.com/?region=morro-bay&target=reef'};globalThis.history={replaceState:()=>writes++,pushState:()=>writes++};
+ globalThis.Option=class{constructor(label,value){this.textContent=label;this.value=value;}};
+ globalThis.CustomEvent=class extends Event{constructor(name,options={}){super(name);this.detail=options.detail;}};
+ globalThis.requestAnimationFrame=fn=>fn();
+ const select={value:'reef',disabled:false,addEventListener:(name,fn)=>listeners.set('select:'+name,fn),replaceChildren(...nodes){this.value=nodes[0]?.value??'';}};
+ const map={getCenter:()=>({lat:35.4,lng:-120.9}),getZoom:()=>10,on:()=>{},invalidateSize:()=>{},setView:()=>{throw Error('Target-only navigation must not move map');}};
+ try{
+  syncFromURL(location.href);
+  const ui=initLocationContext(map,{select,protectedAreas:clear,onLocation:()=>{},onSpeciesChange:()=>{changes++;events.push('skippercast:species');}});
+  for(const target of ['surfperch','gopher-rockfish','unknown-shared-target','reef','']){globalThis.location.href='https://skippercast.com/?region=morro-bay&target='+target;syncFromURL(location.href);assert.equal(select.value,target);assert.ok(ui.get());}
+  assert.equal(changes,5);assert.equal(writes,0);assert.equal(events.filter(x=>x==='skippercast:species').length,5);
+ }finally{Object.assign(globalThis,old);}
+});

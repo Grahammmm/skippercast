@@ -173,3 +173,33 @@ test("summary escapes registry text", () => {
   const d = data(); d.species.halibut.bag = '<b onmouseover="x()">5</b> per person daily';
   assert.doesNotMatch(ruleSummaryHTML(ruleSummary(d, "halibut", regulationState(d, "halibut", now))), /<b /);
 });
+test('unsupported and inherited target identities remain unknown in state, header summary and spot HTML',async()=>{
+ const {ruleMethods,ruleProfile}=await import('../dist/regulations.js');const d=data();
+ for(const id of ['constructor','toString','__proto__','','unsupported-target']){
+  assert.equal(ruleProfile(d,id),null,id);const state=regulationState(d,id,now);assert.equal(state.status,'unknown');assert.equal(state.profile,undefined);
+  const summary=ruleSummary(d,id,state);assert.deepEqual(summary.bag,[]);assert.deepEqual(summary.size,[]);assert.equal(summary.depth,null);assert.equal(summary.verified,null);assert.match(ruleSummaryHTML(summary),/Check rules/);
+  for(const includeAreas of [true,false]){const html=regulationsHTML(d,id,now,false,null,null,null,includeAreas);assert.match(html,/Regulations unavailable|Check rules/);assert.doesNotMatch(html,/Season open|Verified Sep|10 fish|2 fish/);}
+  assert.deepEqual(ruleMethods(d,id),[['unavailable','Method unavailable']]);
+ }
+ const inherited=Object.create({borrowed:d.species.lingcod});Object.assign(inherited,d.species);assert.equal(regulationState({...d,species:inherited},'borrowed',now).status,'unknown');
+ const malformed={...d,species:{...d.species,broken:{name:'Broken'}}};assert.equal(regulationState(malformed,'broken',now).status,'unknown');
+});
+test('actual regulations header and mounted spot react safely to unknown and prototype target changes',async()=>{
+ const {initRegulations}=await import('../dist/regulations.js');const d=data(Date.now());
+ const saved={document:globalThis.document,fetch:globalThis.fetch,setInterval:globalThis.setInterval,CustomEvent:globalThis.CustomEvent};
+ const events=[],docHandlers=new Map(),selectHandlers=new Map();
+ const card=()=>({innerHTML:'',open:false,isConnected:true,addEventListener(){},querySelectorAll:()=>[]});
+ globalThis.document={visibilityState:'hidden',addEventListener:(name,fn)=>docHandlers.set(name,fn),dispatchEvent:event=>events.push(event),createElement:card};
+ globalThis.CustomEvent=class extends Event{constructor(name,options={}){super(name);this.detail=options.detail;}};globalThis.setInterval=()=>0;
+ globalThis.fetch=async()=>Response.json(d);
+ const header=card(),select={value:'lingcod',addEventListener:(name,fn)=>selectHandlers.set(name,fn)},spots=[];
+ try{
+  const ui=initRegulations(header,select);await new Promise(resolve=>setImmediate(resolve));
+  assert.match(header.innerHTML,/lingcod|Lingcod/,'the fixture loaded before testing shared target changes');
+  for(const id of ['constructor','toString','__proto__','','unsupported-target']){
+   select.value=id;assert.doesNotThrow(()=>selectHandlers.get('change')());assert.match(header.innerHTML,/Check rules/);assert.doesNotMatch(header.innerHTML,/reg-open|reg-restricted/);
+   ui.mountSpot({append:node=>spots.push(node)},null,id);assert.match(spots.at(-1).innerHTML,/Check rules/);
+   const status=events.filter(event=>event.type==='skippercast:rules-status').at(-1).detail;assert.equal(status.species,id);assert.equal(status.status,'unknown');assert.deepEqual(status.changedSources,[]);
+  }
+ }finally{Object.assign(globalThis,saved);}
+});

@@ -30,6 +30,7 @@ export function currentFrame(source,time,now=Date.now()) {
   return nearest&&Math.abs(nearest.time-time)<=5400?nearest:null;
 }
 export function nearestCurrent(source,time,point,now=Date.now()) {
+  if(!point||![point.latitude,point.longitude].every(Number.isFinite)||Math.abs(point.latitude)>90||Math.abs(point.longitude)>180)return null;
   const frame=currentFrame(source,time,now);if(!frame)return null;
   const best=frame.cells.map(c=>({cell:c,distance:distanceNm(point,{latitude:c[0],longitude:c[1]})})).sort((a,b)=>a.distance-b.distance)[0];
   if(!best || best.distance*1.852>source.data.resolution_km*1.5)return null;

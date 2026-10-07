@@ -1,5 +1,5 @@
 import { getRegion } from "./region.js";
-import { directionTo, HOUR } from "./marine-data.js";
+import { directionTo, HOUR } from "./marine-units.js";
 import { compass } from "./forecast.js";
 export const esc = (v) =>
   String(v ?? "").replace(
