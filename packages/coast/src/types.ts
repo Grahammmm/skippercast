@@ -1,0 +1,17 @@
+import type {NearshoreSite,BeachWaterQuality} from './enrichment-types.ts';
+import type {SpatialData} from './spatial-types.ts';
+export type Mode = 'boat' | 'shore' | 'spear';
+export type SourceStatus = { id: string; label: string; url: string; kind: 'forecast'|'observation'|'prediction'|'report'|'rule'|'analysis'; outcome: 'ok'|'error'|'pending'; fetchedAt: string; issuedAt?: string; validThrough?: string; error?: string };
+export type ForecastHour = { at: string; windKnots: number|null; gustKnots: number|null; waveFt: number|null; wavePeriodS: number|null; swellFt?: number|null; swellPeriodS?: number|null; windWaveFt?: number|null; windDirectionDeg?: number|null; airTempF?: number|null; precipPct?: number|null; cloudCoverPct?: number|null; relativeHumidityPct?: number|null; daylight?: boolean };
+export type Area = { id: string; name: string; coast: string; mapLabel: string; lat: number; lon: number; landLat: number; landLon: number; modes: Mode[]; exposure: string; accessNote: string; targets: Record<Mode,string[]>; forecastZone?: string; waterQualityUrl: string };
+export type County = { id: string; name: string; shortName: string; brand: string; brandPrefix: string; defaultAreaId: string; temperatureStationId: string; domain: string; timezone: string; center: [number,number]; bounds: [[number,number],[number,number]]; marineBounds?: [[number,number],[number,number]]; areas: Area[]; tideStation: {id:string;name:string;url:string;note:string}; buoys: {id:string;name:string;lat:number;lon:number;note:string}[]; ruleLinks: {label:string;url:string}[]; catchLinks: {label:string;url:string}[] };
+export type AreaForecast = { id: string; hours: ForecastHour[]; sourceId: string; issuedAt?: string; point?: [number,number] };
+export type Observation = { stationId: string; observedAt: string; url: string; waveFt: number|null; wavePeriodS: number|null; waterTempF: number|null; windKnots: number|null; gustKnots: number|null; directionDeg?: number|null };
+export type TidePoint = { at: string; heightFt: number };
+export type TideEvent = TidePoint & { type: 'H'|'L' };
+export type Alert = { id:string;event:string;headline:string;description:string;effective:string|null;expires:string|null;url:string;areaIds?:string[] };
+export type CatchReport = { id:string;tripDate:string;boat:string;landing:string;anglers:number|null;tripType:string;species:{name:string;count:number;released?:boolean;disposition?:'reported'|'retained'|'released'}[];sourceUrl:string;reportedGround?:string;retrievedAt:string };
+export type CatchContext = {feedUrl:string;feedGeneratedAt:string;receivedAt:string;windowStart:string;windowEnd:string;latestTripDate:string|null;rights:{scope:'linked-factual-counts';reviewedAt:string;sourceCatalogUrl:string}};
+export type Report = { schemaVersion:1;countyId:string;generatedAt:string;forecasts:AreaForecast[];observations:Observation[];tides:TidePoint[];tideEvents:TideEvent[];alerts:Alert[];sources:SourceStatus[];catches:CatchReport[];catchStatus:string;catchContext?:CatchContext;visibility:{status:'unknown'|'observed';feet:number|null;observedAt:string|null;sourceUrl:string|null};habitatStatus:string;nearshore?:NearshoreSite[];waterQuality?:BeachWaterQuality[];spatial?:SpatialData };
+export type Window = {start:string;end:string;label:string;confidence:'Moderate'|'Low';reasons:string[];wind:number;gust:number;wave:number;period:number|null};
+export type Assessment = {status:'Favorable'|'Mixed'|'Caution'|'Unknown';headline:string;summary:string;windows:Window[];reasons:string[];hours:ForecastHour[]};

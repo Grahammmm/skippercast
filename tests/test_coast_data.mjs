@@ -22,7 +22,7 @@ test('public snapshot bytes and original clock remain unchanged; identity header
   assert.equal(r.status, 200); assert.equal(await r.text(), raw);
   assert.deepEqual([...seen.headers], []);
   assert.equal(r.headers.get('Cache-Control'), 'no-store');
-  assert.equal(seen.redirect, 'error');
+  assert.equal(seen.redirect, 'manual');
 });
 
 test('missing, wrong-county, malformed, HTML and oversized snapshots are withheld', async () => {
@@ -79,4 +79,9 @@ test('declared oversize, malformed lengths and streaming overflow cancel the ups
     const r=await serveCoastData(request('/coast-data/data/coast-wide/a.bin'),async()=>new Response(stream,{headers}));
     assert.equal(r.status,503); assert.equal(cancelled,true,String(length));
   }
+});
+test('upstream redirects are rejected without following a foreign destination',async()=>{
+ let calls=0;
+ const response=await serveCoastData(new Request('https://skippercast.com/api/coast/report'),async request=>{calls++;assert.equal(request.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://foreign.example/private'}});});
+ assert.equal(response.status,503);assert.equal(calls,1);
 });
