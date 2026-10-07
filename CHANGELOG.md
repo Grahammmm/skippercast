@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+- Record verified NOAA reuse terms and original coordinate/depth references for two southern survey candidates.
+
+### Internal
+
+- Preserve candidate status, source IDs and hashes, unknown acquisition lineage and source-specific terrain, regional, camera and hazard-review gates for the H11879 2 m and H11880 1 m records.
+
 ## 0.4.0 — 2026-10-07
 
 - Prevent early confidence UI imports from capturing another region’s forecast coordinates. Keep unit helpers independent of regional data; withhold current readings when the selected sample is absent.
