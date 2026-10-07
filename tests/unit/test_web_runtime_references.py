@@ -1,8 +1,7 @@
-from pathlib import Path
 import importlib.util
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
 spec = importlib.util.spec_from_file_location("web_reference_checker", ROOT / "scripts/check_web.py")
 checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
