@@ -31,6 +31,7 @@ def main():
     migration.add_argument('--apply', action='store_true')
     publication = commands.add_parser('publish', help='Build a screened regional PMTiles bundle; upload only with --upload')
     publication.add_argument('--region', required=True)
+    publication.add_argument('--scope-config', type=Path, help='Explicit isolated scope config; publication remains disabled for non-central scopes')
     publication.add_argument('--upload', action='store_true')
     promotion = commands.add_parser('promote-survey', help='Promote a metadata/rights-reviewed native draft; changes the catalog')
     promotion.add_argument('--draft', type=Path, required=True)
@@ -51,9 +52,11 @@ def main():
     process.add_argument('--physical-only', action='store_true', help='Cache measured habitat before legal review; never publish')
     process.add_argument('--force', action='store_true')
     process.add_argument('--fetch', action='store_true', help='Fetch missing reviewed originals; pinned hashes still required')
+    process.add_argument('--scope-config', type=Path, help='Explicit scope config; non-central processing fails closed pending scoped source and screen contracts')
     for command in ('reaches', 'ledger'):
         sub = commands.add_parser(command)
-        sub.add_argument('--region', default='central-coast')
+        sub.add_argument('--region')
+        sub.add_argument('--scope-config', type=Path, help='Explicit scope config; artifacts are isolated by scope')
         if command == 'reaches':
             sub.add_argument('--fetch', action='store_true', help='Allow missing pinned reference assets to download')
         else:
@@ -81,6 +84,11 @@ def main():
             print(json.dumps(result, indent=2) if args.json else report(result))
             return
         if args.command == 'publish':
+            if args.scope_config:
+                from .scope_paths import resolve_scope
+                _, paths = resolve_scope(REPO, scope_config=args.scope_config)
+                if not paths.is_central_default:
+                    raise ValueError('Non-central publication is disabled until its scoped ingest, legal and screen contracts are reviewed')
             from .publish import build, upload
             if args.upload:
                 print(json.dumps(upload(args.region), indent=2))
@@ -106,8 +114,14 @@ def main():
             print(f'Restored verified reference cells: {restore_reference(fetch=args.fetch)}')
             return
         if args.command == 'run':
+            if args.scope_config:
+                from .scope_paths import resolve_scope
+                _, paths = resolve_scope(REPO, scope_config=args.scope_config)
+                if not paths.is_central_default:
+                    raise ValueError('Non-central processing is disabled until scoped source, physical and screen contracts are reviewed')
             from .run import run
-            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch, physical_only=args.physical_only)
+            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch,
+                                  physical_only=args.physical_only)
             print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
             return
         if args.command == 'promote-survey':
@@ -121,11 +135,28 @@ def main():
             print(f'Candidate draft: {path}. Review rights and metadata before manifest promotion.')
             return
         if args.command == 'reaches':
-            from .grid import build
-            ledger, unchanged = build(fetch=args.fetch, region=args.region)
+            from .scope_paths import resolve_scope
+            config, paths = resolve_scope(REPO, scope_config=args.scope_config)
+            region = args.region or config['id']
+            if paths.is_central_default:
+                from .grid import build
+                ledger, unchanged = build(fetch=args.fetch, region=region)
+            else:
+                from .scoped import build_reference
+                ledger, unchanged = build_reference(REPO, fetch=args.fetch, region=region,
+                                                     scope_config=args.scope_config)
+            if args.region is None:
+                args.region = ledger['scope']
             print('Reference unchanged; no rebuild.' if unchanged else 'Rebuilt reference baseline; all cells tier 0.')
         else:
-            ledger = read_json(REPO / 'dist/data/seafloor-ledger.json')
+            from .scope_paths import resolve_scope
+            config, paths = resolve_scope(REPO, scope_config=args.scope_config)
+            if paths.is_central_default:
+                ledger = read_json(REPO / 'dist/data/seafloor-ledger.json')
+            else:
+                ledger = read_json(paths.ledger_path)
+            if args.region is None:
+                args.region = config['id']
         known = {r['region'] for r in ledger['reaches']}
         if args.region != ledger['scope'] and args.region not in known:
             parser.error('Unknown seafloor region')

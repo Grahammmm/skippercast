@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+- Add isolated reference-grid routing for explicitly selected scope configs while keeping the Central Coast pipeline as the default.
+
+### Internal
+
+- Preserve retained Central Coast grid and physical-cache identities; keep noncentral screening, processing and publication held until their scope contracts are complete.
+
 ## 0.5.0 — 2026-10-07
 
 - Record verified NOAA reuse terms and original coordinate/depth references for two southern survey candidates.
