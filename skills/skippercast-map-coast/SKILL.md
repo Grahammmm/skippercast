@@ -205,9 +205,14 @@ separate checks.
 Use the existing scheduled workflow, per-region receipts and protected PR flow.
 One coordinator dispatches/integrates; do not create a competing schedule.
 Read [execution and release](references/execution-and-release.md) for commands,
-failed-job resume, regional readback and exact validation. Before calling a
-batch live, verify its current manifest, archive access and visitor map/export
-behavior. Ledger bookkeeping alone is not publication.
+failed-job resume, regional readback and exact validation. During successive
+source-policy merges, retain the union of merged regions whose publication is
+not yet verified. A later scoped push does not recover a replaced pending run's
+scope automatically. Inspect the actual prepare matrix and follow
+[scoped publication recovery](references/execution-and-release.md#recover-replaced-scoped-publication-work)
+when a required region is omitted. Before calling a batch live, verify its
+current manifest, archive access and visitor map/export behavior. Ledger
+bookkeeping alone is not publication.
 
 For the classified-habitat opt-ins, production command and release gates, follow
 the [classified-habitat production path](references/habitat-expansion-preflight.md#production-path).
