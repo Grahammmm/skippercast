@@ -287,6 +287,48 @@ class PublicationTests(unittest.TestCase):
 
 
 class PrivateRecoveryTests(unittest.TestCase):
+    def test_classified_original_survives_clean_worker_restore(self):
+        from hashlib import sha256 as digest
+        from skippercast.seafloor.fetch import fetch_source
+        for profile in ('original-rugose-classified-area-v1',
+                        'original-interpreted-bedrock-area-v1'):
+            with self.subTest(profile=profile), tempfile.TemporaryDirectory() as first, \
+                    tempfile.TemporaryDirectory() as second:
+                root = Path(first)
+                blobs = {'depth': b'synthetic depth', 'classification': b'synthetic geology',
+                         'unrelated': b'unrelated coast'}
+                hashes = {k: digest(v).hexdigest() for k, v in blobs.items()}
+                for name, data in blobs.items():
+                    path = root/'var/seafloor/cache'/hashes[name]/'source.zip'
+                    path.parent.mkdir(parents=True); path.write_bytes(data)
+                depth = {'sha256': hashes['depth']}
+                classification = {'sha256': hashes['classification'], 'bytes': len(blobs['classification']),
+                    'url': 'https://cmgds.marine.usgs.gov/data/test/Geology.zip'}
+                atomic_json(root/'var/seafloor/reaches/r01/run.json', {'inputs': {
+                    'sources': [depth], 'substrate_bindings': {}}})
+                atomic_json(root/'var/seafloor/reaches/r01/classified-run.json', {'inputs': {'physical': {
+                    'sources': [{'profile': profile, 'depth_source': depth,
+                                 'classification_binding': {'row': classification}}]}}})
+                paths = state_cache.reach_paths(root, 'r01')
+                self.assertTrue(any(hashes['classification'] in str(p) for p in paths))
+                self.assertFalse(any(hashes['unrelated'] in str(p) for p in paths))
+                s3 = Bucket(); state_cache.save(s3, 'b', root, 'r01', paths)
+                self.assertTrue(all(k.startswith('seafloor-cache/') for k in s3.puts))
+                self.assertTrue(state_cache.restore(s3, 'b', second, 'r01'))
+                restored, downloaded = fetch_source(classification, Path(second)/'var/seafloor/cache')
+                self.assertFalse(downloaded)
+                self.assertEqual(restored.read_bytes(), blobs['classification'])
+                self.assertFalse((Path(second)/'var/seafloor/cache'/hashes['unrelated']).exists())
+
+    def test_classified_cache_hash_cannot_escape_reach_inventory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            atomic_json(root/'var/seafloor/reaches/r01/classified-run.json', {'inputs': {'physical': {
+                'sources': [{'depth_source': {'sha256': 'a'*64},
+                             'classification_binding': {'row': {'sha256': '../private'}}}]}}})
+            with self.assertRaisesRegex(ValueError, 'Invalid source hash'):
+                state_cache.reach_paths(root, 'r01')
+
     def test_roundtrip_hashes_private_keys_no_repeat_download_and_scope_isolation(self):
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
             source = Path(first)/'var/seafloor/cache'/('a'*64)/'source.bag'

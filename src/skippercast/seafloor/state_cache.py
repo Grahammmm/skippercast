@@ -105,6 +105,14 @@ def reach_paths(root, reach):
             inputs = json.loads(receipt.read_text()).get('inputs', {})
             hashes.update(r['sha256'] for r in inputs.get('sources', []))
             hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
+        classified = folder/'classified-run.json'
+        if classified.exists():
+            # Original interpretation files may not contribute to the graded
+            # bathymetry run. A clean publisher must still authenticate them.
+            sources = json.loads(classified.read_text())['inputs']['physical']['sources']
+            for source in sources:
+                hashes.add(source['depth_source']['sha256'])
+                hashes.add(source['classification_binding']['row']['sha256'])
     if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
         raise ValueError('Invalid source hash in private reach state')
     directories = folders + [base/'cache'/h for h in sorted(hashes)]
