@@ -79,17 +79,23 @@ test('view links, the profile switch, the rail and the hour slider update the ad
     await expect(page.locator('.ui-rail')).toHaveCount(0);
   }
   const slider = page.locator('input[aria-label="Hour"]');
+  const initialHour = Number(await slider.inputValue());
+  // CI runs near 23:00 Pacific can start with the slider already at its end.
+  // Pressing End then emits no input event, so choose the opposite endpoint.
+  const targetHour = initialHour === 23 ? 0 : 23;
+  console.info('Hour slider keyboard selection', { initialHour, targetHour });
   await slider.focus();
-  await page.keyboard.press('End');
+  await page.keyboard.press(targetHour === 0 ? 'Home' : 'End');
   await expect(page).toHaveURL(/[?&]hour=\d{4}-\d{2}-\d{2}T\d{2}%3A00Z/);
-  await expect(page.locator('.ui-dock-readout')).toHaveText('11 pm');
+  await expect(slider).toHaveValue(String(targetHour));
+  await expect(page.locator('.ui-dock-readout')).toHaveText(targetHour === 0 ? '12 am' : '11 pm');
   expect(await stillLoaded(), 'no reload').toBe(true);
   // A shared link restores the same choices.
   const shared = page.url();
   await page.goto('about:blank');
   await page.goto(shared);
   await expect(page.locator('[aria-label="Profile"] button[aria-pressed="true"]')).toHaveText('Spear');
-  await expect(page.locator('.ui-dock-readout')).toHaveText('11 pm');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(targetHour === 0 ? '12 am' : '11 pm');
   expect(pageErrors).toEqual([]);
 });
 
