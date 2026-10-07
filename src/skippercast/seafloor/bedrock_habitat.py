@@ -201,7 +201,9 @@ def original_vectors(path, policy, target_crs):
                                     for suffix in ('shp', 'shx', 'dbf')})
         if len(reader) != review['expected_polygon_count']:
             raise ValueError('Original bedrock record inventory changed')
-        if (reader.shapeType != shapefile.POLYGON or review['unit_field'] not in
+        allowed_types = ((shapefile.POLYGON,) if source_profile(policy) == MONTEREY else
+            (shapefile.POLYGON, shapefile.POLYGONZ))
+        if (reader.shapeType not in allowed_types or review['unit_field'] not in
                 {field[0] for field in reader.fields[1:]}):
             raise ValueError('Original bedrock shape/attribute header changed')
         project = Transformer.from_crs(32610, target_crs, always_xy=True).transform
