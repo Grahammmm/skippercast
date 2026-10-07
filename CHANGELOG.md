@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.5.0 — 2026-10-07
+
 - Record verified NOAA reuse terms and original coordinate/depth references for two southern survey candidates.
 
 - Connect the Central Coast overview to shared terrain presentation, profile, target and UTC time. Preserve independent model forecasts, original source expiry, explicit package handoffs and geographic gaps in local readings.

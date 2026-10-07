@@ -15,7 +15,7 @@ map. The owner's October 6 request is the product acceptance standard.
   build `f651dcbb81`; release/live receipts remain in the continuation outputs.
 - Owner: parent integrates shared state and release; bounded worker owns native
   selection lifecycle and model adapter; independent reviewer checks source scope.
-- Branch: `codex/shared-coastal-overview`. Source is implemented and independently accepted; protected PR publication follows.
+- Overview PR 399 merged at `2bb1c514a678e37753dc661677d58874ad06cd61` after exact-head core/science/e2e/DCO success. Release branch: `codex/release-v0.5.0`; final main deployment and live acceptance are pending.
 - Decision: panning keeps the overview; detailed packages require explicit action.
   Only exact currently admitted source identity + reviewed original region bounds
   can bind local SLO readings. No nearest-package or Morro default is admitted.
@@ -31,13 +31,12 @@ map. The owner's October 6 request is the product acceptance standard.
 - Browser: shared original selection, fresh chart Conditions metadata restoration, Map/Conditions round trip, Day 7 gaps, current package hrefs and unsupported coast handoff passed at desktop/390px. Native phone controls clear the clock by 25 px. Receipt: continuation `outputs/coastal-overview-browser-check.json`.
 - Independent review accepted the final source; 95 focused checks and actual-source geographic/expiry regressions passed.
 - Acceptance remaining:
-  full required gates, exact-head protected PR merge, main CI/deploy/live readback.
+  release exact-head gates, main CI/deploy/live readback and annotated release tag.
 - Full product remains incomplete: shared layer/offline/route integration, full
   readable daily brief, default homepage cutover and capability matrix remain.
-- Next action: publish this
-  increment through the normal protected PR and deployment workflows.
+- Next action: publish v0.5.0 through the normal protected PR and deployment workflows, verify live, then unify the surface-current source choice.
 
-## Current result
+## Previously completed integration
 
 The shared-link foundation is live (PR 379, main `d7cffd49`). The read-only
 public coastal bridge has merged (PR 381, main `88d16e9a`). Its production
@@ -187,9 +186,7 @@ matrix passes. Reachable legacy links are not parity.
 
 ## Remaining cutover gaps (source audit, October 7)
 
-- Continuous coast overview bypasses shared native/report/planning setup
-  (`dist/boot.js`, `dist/coastal-discovery.js`). Its morning forecasts, target
-  handler and direct history writes do not yet use one UTC/profile controller.
+- Continuous overview now shares terrain, source Conditions and UTC/profile/target state (PR 399). Planning/private tools still use explicit detailed-package handoffs; reachability alone is not full workspace parity.
 - Native surface-current visibility and chart ocean/current selectors are
   independent (`dist/coast.html`, `dist/coast-workspace.js`).
 - Fish snapshots bypass public API caching and native terrain has no explicit
