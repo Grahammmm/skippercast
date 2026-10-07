@@ -7,6 +7,7 @@ establish scientific clearance.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import fcntl
 import json
 import os
@@ -88,8 +89,39 @@ def _overlaps(left: dict[str, Any], right: dict[str, Any]) -> bool:
             and _rectangles_overlap(_window(left), _window(right)))
 
 
-def _stop_proof(job: dict[str, Any], checkpoint: dict[str, Any], base_dir: Path | None) -> bool:
-    proof = job.get("stopped_process_receipt")
+EXECUTION_FIELDS = ("id", "owner", "attempt", "dispatch_id", "process_id")
+CLAIM_FIELDS = ("region", "reach", "method", "source_ids", "native_window", "output_path")
+
+
+def _execution_identity(job: dict[str, Any]) -> dict[str, Any]:
+    # Missing identity is preserved as unknown, never inferred from age or state.
+    return {field: job.get(field) for field in EXECUTION_FIELDS}
+
+
+def _execution_claim(job: dict[str, Any]) -> dict[str, Any] | None:
+    claim = job.get("execution_claim")
+    if claim is not None:
+        if not isinstance(claim, dict) or set(claim) != set(EXECUTION_FIELDS):
+            raise GuardError("execution_claim must contain the recorded execution identity")
+        if claim["id"] != job.get("id"):
+            raise GuardError("execution_claim job id does not match")
+        return claim
+    # Legacy checkpoints fail closed when execution may have started.
+    if job.get("state") == "running" or job.get("dispatch_state") in {"dispatching", "acknowledged"}:
+        return _execution_identity(job)
+    return None
+
+
+def _stop_proof(identity: dict[str, Any] | None, proof: Any,
+                checkpoint: dict[str, Any], base_dir: Path | None) -> bool:
+    """Check a coordinator attestation against the *prior* execution identity.
+
+    Receipt JSON repeats the identity, coordinator, stopped=true and stopped_utc.
+    The attestation pins its bytes with sha256. This is bookkeeping evidence;
+    the coordinator remains responsible for actually checking the process.
+    """
+    if identity is None or any(identity.get(k) is None or identity[k] == "" for k in EXECUTION_FIELDS):
+        return False
     if not isinstance(proof, dict) or proof.get("verified") is not True:
         return False
     if proof.get("verified_by") != checkpoint.get("coordinator"):
@@ -102,7 +134,18 @@ def _stop_proof(job: dict[str, Any], checkpoint: dict[str, Any], base_dir: Path 
     path = Path(receipt)
     if not path.is_absolute():
         path = (base_dir or Path.cwd()) / path
-    return path.is_file()
+    try:
+        raw = path.read_bytes()
+        content = json.loads(raw)
+    except (OSError, ValueError, UnicodeError):
+        return False
+    return (isinstance(content, dict)
+            and proof.get("sha256") == hashlib.sha256(raw).hexdigest()
+            and content.get("stopped") is True
+            and content.get("verified_by") == checkpoint.get("coordinator")
+            and content.get("stopped_utc") == proof["stopped_utc"]
+            and all(type(content.get(k)) is type(identity[k]) and content.get(k) == identity[k]
+                    for k in EXECUTION_FIELDS))
 
 
 def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = None) -> None:
@@ -128,8 +171,10 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
         if dispatch_state not in DISPATCH_STATES:
             raise GuardError(f"job {job_id} has invalid dispatch_state {dispatch_state!r}")
         _required(job, "output_path")
-        unresolved_dispatch = job.get("dispatch_state") == "dispatching" and not _stop_proof(job, checkpoint, base_dir)
-        if state in ACTIVE_STATES or unresolved_dispatch:
+        identity = _execution_claim(job)
+        unresolved_execution = identity is not None and not _stop_proof(
+            identity, job.get("stopped_process_receipt"), checkpoint, base_dir)
+        if state in ACTIVE_STATES or unresolved_execution:
             for field in ("region", "reach", "method"):
                 _required(job, field)
             _window(job)
@@ -143,8 +188,7 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
                 raise GuardError(f"overlapping source/reach/method/window claim: {job['id']} and {other['id']}")
             if _path_scopes_overlap(_writable_path(job, base_dir), _writable_path(other, base_dir)):
                 raise GuardError(f"overlapping writable output path: {job['id']} and {other['id']}")
-    # A dispatching job is deliberately retained as a claim. This validation
-    # never changes or reassigns it; a coordinator must reconcile process state.
+    # Execution claims survive status edits until matching process reconciliation.
     _ = coordinator
 
 
@@ -214,17 +258,52 @@ def update_job(path: str | Path, job_id: str, patch: dict[str, Any], *, actor: s
         old, new = job.get("state"), patch.get("state", job.get("state"))
         if new != old and (old not in TRANSITIONS or new not in TRANSITIONS[old]):
             raise GuardError(f"invalid state transition {old!r} -> {new!r}")
+        if "execution_claim" in patch:
+            raise GuardError("execution_claim is guard-owned and cannot be patched")
+        identity = _execution_claim(job)
+        proof = patch.get("stopped_process_receipt", job.get("stopped_process_receipt"))
+        stopped = _stop_proof(identity, proof, checkpoint, checkpoint_path.parent)
         owner_changed = patch.get("owner", job.get("owner")) != job.get("owner")
+        identity_changed = any(patch.get(k, job.get(k)) != job.get(k) for k in EXECUTION_FIELDS)
+        if owner_changed and not stopped:
+            raise GuardError("owner reassignment requires an existing verified stopped-process receipt")
+        if identity is not None and not stopped:
+            changed_fields = {k for k in EXECUTION_FIELDS if patch.get(k, job.get(k)) != job.get(k)}
+            # A coordinator may record an identity learned after dispatch (for
+            # example process_id at acknowledgement), but cannot replace it.
+            if any(k not in {"dispatch_id", "process_id"} or identity.get(k) not in (None, "")
+                   or not isinstance(patch.get(k), str) or not patch[k].strip() for k in changed_fields):
+                raise GuardError("execution identity cannot change before stopped-process reconciliation")
+            identity = dict(identity, **{k: patch[k] for k in changed_fields})
+            if any(patch.get(k, job.get(k)) != job.get(k) for k in CLAIM_FIELDS):
+                raise GuardError("occupied claim scope cannot change before stopped-process reconciliation")
+        candidate = dict(job, **patch)
         if owner_changed:
-            candidate = dict(job, **patch)
-            if not _stop_proof(candidate, checkpoint, checkpoint_path.parent):
-                raise GuardError("owner reassignment requires an existing verified stopped-process receipt")
-            if patch.get("dispatch_state", job.get("dispatch_state")) == "dispatching":
+            if candidate.get("dispatch_state") == "dispatching":
                 raise GuardError("stopped claim must leave dispatching before reassignment")
             if new == "running":
                 raise GuardError("reassigned job cannot remain running")
-        if old == "queued" and new == "running" and patch.get("dispatch_state", job.get("dispatch_state")) != "acknowledged":
+        if old == "queued" and new == "running" and candidate.get("dispatch_state") != "acknowledged":
             raise GuardError("queued job cannot enter running until dispatch is acknowledged")
+        # Persist observed execution before a status edit can hide it. New
+        # executions require a fresh identity; prior receipts cannot stop them.
+        starts_execution = (new == "running" or candidate.get("dispatch_state") == "dispatching"
+                            or candidate.get("dispatch_state") == "acknowledged")
+        if identity is None:
+            if starts_execution:
+                job["execution_claim"] = _execution_identity(candidate)
+        elif stopped and starts_execution and (
+                identity_changed or (old != "running" and new == "running")
+                or (candidate.get("dispatch_state") != job.get("dispatch_state")
+                    and candidate.get("dispatch_state") in {"dispatching", "acknowledged"})):
+            if _execution_identity(candidate) == identity:
+                raise GuardError("new execution requires a fresh execution identity")
+            if owner_changed:
+                # Reassignment must first return to queued dispatch, above.
+                raise GuardError("reassigned job must queue before a new execution")
+            job["execution_claim"] = _execution_identity(candidate)
+        else:
+            job["execution_claim"] = dict(identity)
         job.update(patch)
         validate_checkpoint(checkpoint, base_dir=checkpoint_path.parent)
         _atomic_write(checkpoint_path, checkpoint)
