@@ -281,6 +281,79 @@
           ]
         ]
       }
+    },
+    {
+      "id": "usgs-offshore-monterey-geology-monastery-2m-v1",
+      "profile": "original-interpreted-bedrock-area-v1",
+      "interpretation_method": "original-interpreted-bedrock-v1",
+      "reach_ids": [
+        "monterey-point-sur-r01"
+      ],
+      "reviewed_on": "2026-10-06",
+      "depth_source_id": "csumb-monastery-cypress-2m-native",
+      "depth_source_sha256": "2d07ac0cb8868b71759c16e4dade3ed895e4d2a2e07bc4b494ea2b3f7ecc1336",
+      "classification_source_id": "geology-offshoremonterey-zip-9fba59a4db",
+      "classification_source_sha256": "bed0e15456c3b96547b86d7efddcfbddc143db71f4acb92a3a9701cb2300919c",
+      "metadata_sha256": "ef37b594aea6bf650f0960b73e1a91810b1d6d29ea2bb323a91efab3e1f6bb08",
+      "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Geology_OffshoreMonterey_metadata.html",
+      "release_license": "public-domain-us-gov",
+      "credit": "U.S. Geological Survey; California State University Monterey Bay Seafloor Mapping Lab. Original USGS OFR2016-1110 geology; paired original CSUMB Monastery/Cypress native2m depth.",
+      "notice": "Original geological interpretation; retain original metadata/attribution and source-resolution limits. USGS requests sharing derived products. Not for navigation. Paired CSUMB depth is authorized for public noncommercial use only; express producer permission required for profit. No independent confirmation, fish-presence, rank, rugosity or new measurement. Processingwindow is not reefedge.",
+      "review_basis": "Authenticated original USGS Offshore Monterey geology: 894 original records, 456 valid pure exposed-bedrock polygons, exact PTYPE domain and nested archive/XML layout. Sediment and sediment-over-rock excluded; invalid sediment records318/676 remain excluded without repair. Actual Kgrcw is supported by publisher Table8-1; metadata Kgcw is not aliased. Paired native nominal25–300ft depth, existing graded baseline and all earlier ordered original native areas including held components are excluded. Whole polygons receive current spatial screens and authenticated publication reconstruction. Invalid derived representations and strict prior-projection overlaps remain privately quarantined. No terrain ranking, rugosity, new measurement or precise export.",
+      "vector_review": {
+        "source_profile": "usgs-offshore-monterey-geology-v1",
+        "original_crs": "EPSG:32610",
+        "unit_field": "PTYPE",
+        "member_stem": "Geology_OffshoreMonterey/Geology_OffshoreMonterey",
+        "metadata_member": "Geology_OffshoreMonterey_metadata.xml",
+        "expected_polygon_count": 894,
+        "bedrock_units": [
+          "Tp",
+          "Tm",
+          "Tvb",
+          "Tc",
+          "Tu",
+          "Kgr",
+          "Tpcw",
+          "Tmcw",
+          "Kgrcw"
+        ],
+        "excluded_units": [
+          "af",
+          "Qms",
+          "Qmsc",
+          "Qmsf",
+          "Qmsd",
+          "Qwp",
+          "Qwpr",
+          "Qms/Tp",
+          "Qms/Tm",
+          "Qms/Tvb",
+          "Qms/Tc",
+          "Qms/Tu",
+          "Qms/Kgr",
+          "Qchc",
+          "Qcpcf",
+          "Qccf2",
+          "Qccf1",
+          "Qcb",
+          "Qmscp",
+          "Qcw"
+        ],
+        "invalid_original_records": [],
+        "invalid_excluded_original_records": [
+          318,
+          676
+        ],
+        "native_windows": [
+          [
+            1,
+            1,
+            3624,
+            3644
+          ]
+        ]
+      }
     }
   ]
 }
