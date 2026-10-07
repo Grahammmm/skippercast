@@ -18,6 +18,7 @@
 // itself, so configureStore({v2: true}) makes lockRegion() a no-op.
 import {batch, signal} from '@preact/signals';
 import {DEFAULT_PROFILE, isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
+import {canonicalHour, fishLink} from './fish-links.ts';
 
 /** URL parameters the store owns. `target` is the species/target id. */
 export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base'] as const;
@@ -77,7 +78,7 @@ function store(key: string, value: string): void { try { storage()?.setItem(key,
 
 /** The store's parameters in `href`. */
 export function readURL(href: string): UrlState {
-  const params = new URL(href).searchParams;
+  const params = (options.v2 ? fishLink(href) : new URL(href)).searchParams;
   return {
     region: params.get('region'), coast: params.get('coast'), view: params.get('view'),
     target: params.get('target'), hour: params.get('hour'),
@@ -117,7 +118,8 @@ export function resolveStored(state: UrlState): {profile: Profile; layers: reado
 
 /** `href` with `patch` applied: a string sets a parameter, null removes it. */
 export function withParams(href: string, patch: Partial<Record<UrlKey, string | null>>): string {
-  const url = new URL(href);
+  const clearGeography = [patch.region, patch.coast].some(value => value === null || value === '');
+  const url = options.v2 ? fishLink(href, clearGeography) : new URL(href);
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;
     if (value === null || value === '') url.searchParams.delete(key);
@@ -211,7 +213,6 @@ export function hourParam(epochSeconds: number): string | null {
 
 /** Epoch seconds of an ?hour= value, or null when it is not a whole UTC hour. */
 export function parseHour(value: string | null): number | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}T\d{2}:00Z$/.test(value)) return null;
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) ? ms / 1000 : null;
+  const canonical = canonicalHour(value);
+  return canonical ? Date.parse(canonical) / 1000 : null;
 }
