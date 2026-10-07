@@ -114,16 +114,34 @@ def native_baseline(components, target_crs):
 
 
 def strict_geographic(native):
-    """Quarantine invalid derived representations; no structure repair here."""
-    from .classified_geometry import project, MAX_FEATURE_DIFFERENCE_M2
-    polygon(project(polygon(native), 3310, 4326))
-    geo = geographic(native)
-    for crs in (3310,3857):
-        rendered = polygon(project(geo,4326,crs))
-        returned = rendered if crs == 3310 else polygon(project(rendered,crs,3310))
-        if native.symmetric_difference(returned).area > MAX_FEATURE_DIFFERENCE_M2:
-            raise ValueError('Unfaithful unrepaired bedrock representation')
-    return geo
+    """Bounded edge conversion without repairing any intermediate geometry."""
+    from shapely import segmentize
+    from .classified_geometry import project, MAX_FEATURE_DIFFERENCE_M2, EDGE_STEPS_M, edge_vertex_count
+    native = polygon(native)
+    # Initial invalid projection stays held, even if densification might mask it.
+    polygon(project(native, 3310, 4326))
+    failure = None
+    for step in (None, *EDGE_STEPS_M):
+        if step is not None:
+            edge_vertex_count(native, step)
+        converted = native if step is None else polygon(segmentize(native, step))
+        try:
+            geo = polygon(project(converted, 3310, 4326))
+            w, s, e, n = geo.bounds
+            if not (-180 <= w <= e <= 180 and -90 <= s <= n <= 90):
+                raise ValueError('Classified representation must be WGS84')
+            for crs in (3310, 3857):
+                rendered = polygon(project(geo, 4326, crs))
+                returned = rendered if crs == 3310 else polygon(project(rendered, crs, 3310))
+                difference = native.symmetric_difference(returned).area
+                added = returned.difference(native).area
+                if (not math.isfinite(difference) or difference > MAX_FEATURE_DIFFERENCE_M2
+                        or not math.isfinite(added) or added > MAX_FEATURE_DIFFERENCE_M2):
+                    raise ValueError('Unfaithful unrepaired bedrock representation')
+            return geo
+        except ValueError as exc:
+            failure = exc
+    raise failure
 
 
 def selected(policy):

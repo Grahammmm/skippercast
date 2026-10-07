@@ -16,6 +16,30 @@ from tests.gis import test_bedrock_habitat as fixtures
 
 
 class MontereyTests(unittest.TestCase):
+    def test_strict_projection_never_repairs_densified_or_operational_geometry(self):
+        from skippercast.seafloor import classified_geometry as cg
+        native = box(0, 0, 10, 10)
+        invalid = Polygon([(0, 0), (10, 10), (0, 10), (10, 0), (0, 0)])
+        for invalid_target in (4326, 3310, 3857):
+            calls = []
+            def projected(g, source, target):
+                calls.append(target)
+                # Allow the initial source validity check, then model a failed
+                # fidelity trial followed by an invalid intermediate projection.
+                if len(calls) == 1:
+                    return native
+                if len(calls) == 3:
+                    return box(0, 0, 11, 11)  # First fidelity trial fails.
+                if len(calls) > 3 and target == invalid_target:
+                    return invalid
+                return native
+            with self.subTest(target=invalid_target), \
+                    patch.object(cg, 'project', side_effect=projected), \
+                    patch.object(cg, 'make_valid', side_effect=AssertionError('Repair forbidden')):
+                with self.assertRaises(ValueError):
+                    bh.strict_geographic(native)
+            self.assertGreater(len(calls), 2)
+
     def fixture(self,tmp,*,bad_code=False,bad_source=False):
         policy,row,source,path,old_support,folder,manifest=fixtures.BedrockProductionTests.fixture(self,tmp)
         root=Path(tmp);x,y=500000,4000000
