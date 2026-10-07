@@ -1,5 +1,6 @@
 """Effort decisions must retain stagnation and downstream holds."""
 import copy
+from datetime import datetime, timezone
 import importlib.util
 import unittest
 
@@ -155,6 +156,28 @@ class MappingProgressControlTests(unittest.TestCase):
         control.update(phase='finalize', finalization_job_id='already-running-publisher',
                        active_minutes=34, stage_active_minutes=25)
         self.assertEqual(GUARD.decide(state)['action'], 'STOP_ACTIVE_WORK')
+
+    def test_wall_clock_round_deadline_stops_even_named_finalization(self):
+        state = checkpoint()
+        control = state['progress_control']
+        control.update(phase='finalize', finalization_job_id='existing-publisher',
+                       deadline_utc='2026-10-07T15:30:00Z')
+        before = datetime(2026, 10, 7, 15, 29, 59, tzinfo=timezone.utc)
+        at = datetime(2026, 10, 7, 15, 30, tzinfo=timezone.utc)
+        self.assertEqual(GUARD.decide(state, now=before)['action'], 'FINISH_NAMED_JOB_ONLY')
+        self.assertEqual(GUARD.decide(state, now=at)['action'], 'STOP_ACTIVE_WORK')
+
+    def test_wall_clock_deadline_does_not_depend_on_active_time_or_token_exhaustion(self):
+        state = checkpoint()
+        state['progress_control']['deadline_utc'] = '2026-10-07T15:30:00+00:00'
+        after = datetime(2026, 10, 7, 15, 31, tzinfo=timezone.utc)
+        self.assertEqual(GUARD.decide(state, now=after)['action'], 'STOP_ACTIVE_WORK')
+
+    def test_naive_wall_clock_deadline_fails_closed(self):
+        state = checkpoint()
+        state['progress_control']['deadline_utc'] = '2026-10-07T15:30:00'
+        with self.assertRaises(ValueError):
+            GUARD.decide(state)
 
 
 if __name__ == '__main__':

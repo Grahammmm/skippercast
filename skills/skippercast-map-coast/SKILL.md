@@ -43,6 +43,9 @@ Record one publication path, the shared active-work allowance and downstream
 readiness in the existing checkpoint. Run its offline guard at stage boundaries.
 An overnight deadline is an observation window, not an allowance for continuous
 model work. Private proofs and code fixes do not reset a stalled map-growth run.
+When the owner requests repeated timed tests, follow the [round improvement
+loop](references/improvement-loop.md). Stop each round at its wall-clock deadline,
+audit before changing the method, and do not begin a longer run automatically.
 
 Fetch main, reconcile relevant PRs, latest ledger, saved physical receipts and
 active jobs. Do not read the entire research archive or conversation. The

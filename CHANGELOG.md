@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Add stopped-run audits and skill learning between bounded mapping experiment rounds.
+
 - Add bounded preflight and progress checks for coastal mapping runs.
 
 ### Internal
