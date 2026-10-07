@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {coastAt,coastURL,coastForPackage,ensoCurrent,sourceFresh,seasonalMarkup,coastalTargetOptions,localTargetAdvisory} from '../dist/coasts.js';
+import {coastAt,coastURL,coastWorkspaceURL,coastForPackage,ensoCurrent,sourceFresh,seasonalMarkup,coastalTargetOptions,localTargetAdvisory} from '../dist/coasts.js';
 import {chartLayers} from '../dist/chart-map.js';
 const catalog=JSON.parse(fs.readFileSync(new URL('../dist/data/coasts.json',import.meta.url)));
 const at=(lat,lon=-123)=>coastAt({latitude:lat,longitude:lon},catalog)?.id;
@@ -58,4 +58,12 @@ test('clean chart removes cables, traffic and extra areas; full chart stays opti
   assert.equal(chartLayers('fishing'),'0,1,2,6');assert.equal(chartLayers('nautical'),'0,1,2,3,4,5,6,7');
   const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
   assert.match(html,/id="coast-select"/);assert.ok(!/id="layer-drifts"[^>]*checked/.test(html));
+});
+
+test('workspace pan and explicit package handoffs preserve unsupported targets and shared clock',()=>{
+ const next=catalog.regions.find(r=>r.id==='southern'),central=catalog.regions.find(r=>r.id==='central');
+ for(const target of ['', 'unknown-target', 'cabezon-shallow-reef'])for(const [coast,options] of [[next,{overview:true}],[central,{packageId:'morro-bay'}]]){
+ const u=coastWorkspaceURL('https://example.test/?coast=central&profile=spear&hour=2026-11-01T09%3A00Z&presentation=3d&place=morro&area=central&habitat=old&target='+target,coast,{...options,target,point:{latitude:34,longitude:-120},zoom:10});
+ assert.equal(u.searchParams.get('target'),target);assert.equal(u.searchParams.get('profile'),'spear');assert.equal(u.searchParams.get('hour'),'2026-11-01T09:00Z');assert.equal(u.searchParams.get('presentation'),'3d');for(const key of ['place','area','habitat'])assert.equal(u.searchParams.has(key),false);assert.equal(u.searchParams.get(options.overview?'coast':'region'),options.overview?'southern':'morro-bay');
+ }
 });

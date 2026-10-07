@@ -1,3 +1,4 @@
+import {readableReportURL} from '../web/readable-links.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -99,4 +100,11 @@ test('Fish privacy path serves the complete existing notice under either UI swit
  const {shellFor}=await import('../server/routes/assets.ts');
  for(const UI_V2 of ['true','false'])assert.equal(shellFor('/privacy',new URLSearchParams(),{UI_V2}),'/privacy.html');
  assert.match(readFileSync(new URL('../dist/privacy.html',import.meta.url),'utf8'),/Privacy|privacy/);
+});
+
+test('admitted overview source selection opens readable report and returns to the same overview',()=>{
+ const context={regionId:'morro-bay',point:{latitude:35.36,longitude:-120.94},localAreas:regions['morro-bay'].map.local_areas,profile:'spear',target:'cabezon-shallow-reef',at:new Date('2026-10-07T12:00Z')};
+ const url=readableReportURL('https://skippercast.com/?coast=central&view=35.36,-120.94,12&profile=spear&target=cabezon-shallow-reef&hour=2026-10-07T12:00Z&habitat=original#forecast',context);
+ const selected=readableSelection(url,regions,now);assert.ok(selected.context,selected.reason);assert.equal(selected.context.regionId,'morro-bay');assert.equal(selected.context.at.toISOString(),'2026-10-07T12:00:00.000Z');assert.equal(new URL(selected.workspace,url).searchParams.get('coast'),'central');assert.equal(new URL(selected.workspace,url).searchParams.get('habitat'),'original');
+ const gap=readableSelection(readableReportURL('https://skippercast.com/?coast=central&view=35.36,-120.94,12'),regions,now);assert.equal(gap.context,null);
 });

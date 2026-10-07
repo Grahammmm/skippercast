@@ -1,27 +1,42 @@
+import {initCoastalSelection} from './coastal-selection.js';
+import {effect,untracked} from '@preact/signals';
+import {species,view as sharedView,hour as sharedHour,profile,setParams,navigate} from '../web/state.ts';
+import {COAST_TARGETS} from './coast-targets.js';
+import {initCoastWorkspace} from './coast-workspace.js';
+import {initCoastConditions} from './coast-conditions.js';
+import {initCoastalClock} from './coastal-clock.js';
+import {overviewReportContext} from '../web/overview-context.ts';
+import {habitatURL} from '../web/coast-context.ts';
 import {initChart} from './chart-map.js';
 import {outlook} from '../web/views.ts';
 import {initNavigation} from './navigation.js';
 import {esc} from './marine-charts.js';
 import {viewFromURL} from './location-context.js';
 import {mappedPackageAt} from './map-response.js';
-import {coastAt,coastURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions,localTargetAdvisory} from './coasts.js';
+import {coastAt,coastURL,coastWorkspaceURL,sourceFresh,initCoastSelector,initCoastalContext,coastalTargetOptions,localTargetAdvisory} from './coasts.js';
 import {loadCoastalSectors,loadSurveyDiscovery,loadSurveyProducts,sectorsForCoast,sectorAt} from './coastal-sectors.js';
-import {updateCoastalForecast} from './coastal-forecast.js';
+import {updateCoastalForecast,disposeCoastalForecast,suspendCoastalForecast} from './coastal-forecast.js';
 import {matchMontereyToStatewide,montereyResearchPopup} from './coastal-research-context.js';
 
 export async function initCoastalDiscovery(catalog,coast) {
   document.body.classList.add('coastal-discovery');
   initCoastSelector(catalog,coast);
   const view=viewFromURL(location.href),p=view&&coastAt(view,catalog)?.id===coast.id?view:null;
-  const map=L.map('map',{minZoom:7,maxZoom:18,zoomControl:false}).setView(p?[p.latitude,p.longitude]:coast.view.slice(0,2),p?.zoom||coast.view[2]);
+  const map=L.map('map',{minZoom:7,maxZoom:18,zoomControl:false,trackResize:false}).setView(p?[p.latitude,p.longitude]:coast.view.slice(0,2),p?.zoom||coast.view[2]);
+  let logicalPoint=p?{latitude:p.latitude,longitude:p.longitude}:null,pointAnchor=map.getCenter(),restoringView=false;
+  const currentPoint=()=>{const center=map.getCenter();return logicalPoint&&Math.abs(center.lat-pointAnchor.lat)<1e-9&&Math.abs(center.lng-pointAnchor.lng)<1e-9?logicalPoint:{latitude:center.lat,longitude:center.lng};};
+  const retainPoint=point=>{logicalPoint={latitude:point.latitude,longitude:point.longitude};pointAnchor=map.getCenter();};
+  function resizeMap(){const point=currentPoint();logicalPoint=point;restoringView=true;try{map.invalidateSize({pan:false});map.setView([point.latitude,point.longitude],map.getZoom(),{animate:false});pointAnchor=map.getCenter();}finally{restoringView=false;}}
+  const onResize=()=>{if(document.body.dataset.view==='map')resizeMap();};window.addEventListener('resize',onResize);
   L.control.zoom({position:'bottomright'}).addTo(map);
   const caption=document.getElementById('location-caption');
   initChart(map,message=>{caption.textContent=message;});
-  const navigation=initNavigation({onMapVisible:()=>map.invalidateSize()});
+  const navigation=initNavigation({onMapVisible:resizeMap});
   const select=document.getElementById('species-select');
-  let targetOptions=coast.target_options,selectionTouched=false;
-  select.replaceChildren(...targetOptions.map(t=>new Option(t.name,t.id)));
-  const desired=new URL(location.href).searchParams.get('target');select.value=coast.targets.includes(desired)?desired:coast.targets[0];select.disabled=false;
+  const nativeOptions=coast.id==='central'?COAST_TARGETS.filter(t=>!coast.target_options.some(o=>o.id===t.id)).map(t=>({...t,note:'Native coastal habitat evidence. Physical fit is not a catch prediction or fishing permission.',sources:[]})):[];
+  let targetOptions=[...coast.target_options,...nativeOptions];
+  function renderTargets(value){const options=targetOptions.some(t=>t.id===value)?targetOptions:[...targetOptions,{id:value,name:value?'Selected target · unavailable here':'Empty shared target · unavailable here'}];select.replaceChildren(...options.map(t=>new Option(t.name,t.id)));select.value=value;select.disabled=false;}
+  renderTargets(species.value??coast.targets[0]);
   const rules=document.getElementById('species-regulations');
   function updateLocalTargetAdvisory() {
     const advisory=localTargetAdvisory(coast,select.value,map.getCenter().lat);
@@ -33,9 +48,9 @@ export async function initCoastalDiscovery(catalog,coast) {
     }
   }
   function targetInfo() {
-    const t=targetOptions.find(t=>t.id===select.value);
+    const t=targetOptions.find(t=>t.id===select.value)??{name:select.value||'Empty shared target',note:'This target has no reviewed coast-wide species or legal binding here.',sources:[]};
     rules.innerHTML=`<summary>${esc(t.name)} · check local season</summary><div class="reg-body"><p>${esc(t.note)}</p><p id="coastal-local-rule" class="small" role="status" hidden></p><p>Potential regional target; surveyed spots and date-specific legal evaluation are not yet available here. Seasons, gear, depth and protected areas can restrict fishing.</p><p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} regulations ↗</a></p>${select.value==='reef'&&coast.groundfish_table_url?`<p><a href="${esc(coast.groundfish_table_url)}" target="_blank" rel="noopener">Official ${esc(coast.name)} groundfish table (PDF) ↗</a></p>`:''}${t.sources.map(url=>`<p><a href="${esc(url)}" target="_blank" rel="noopener">Species habitat source ↗</a></p>`).join('')}<p id="coastal-mpa-status" role="status">Checking MPA boundaries…</p><p id="coastal-federal-status" role="status">Checking federal groundfish areas…</p></div>`;
-    const url=new URL(location.href);url.searchParams.set('target',select.value);history.replaceState(null,'',url);
+
     const guide=document.getElementById('coastal-target-guide');guide.innerHTML=`<h2>${esc(t.name)}</h2><p>${esc(t.note)}</p><p id="coastal-local-guide" class="small" role="status" hidden></p><a href="${esc(coast.rules_url)}" target="_blank" rel="noopener">Check this coast’s rules ↗</a>`;
     updateLocalTargetAdvisory();
     drawMPAs();
@@ -44,7 +59,7 @@ export async function initCoastalDiscovery(catalog,coast) {
   const packages=(await fetch('regions/index.json').then(r=>{if(!r.ok)throw Error('Mapped-area directory unavailable');return r.json();})).regions.filter(r=>coast.packages.includes(r.id));
   const sectorPacket=await loadCoastalSectors();
   const sectors=sectorsForCoast(sectorPacket,coast.id).slice().reverse();
-  const links=packages.map(r=>`<a class="coastal-package" href="${esc(coastURL(location.href,coast,{packageId:r.id}).pathname+coastURL(location.href,coast,{packageId:r.id}).search+'#map')}">${esc(r.name)} · open detailed map ↗</a>`).join('');
+  const links=packages.map(r=>`<a class="coastal-package" data-package="${esc(r.id)}" href="${esc(coastWorkspaceURL(location.href,coast,{packageId:r.id,target:species.value}).pathname+coastWorkspaceURL(location.href,coast,{packageId:r.id,target:species.value}).search+'#map')}">${esc(r.name)} · open detailed map ↗</a>`).join('');
   const panel=document.getElementById('guide-panel');
   panel.innerHTML=`<h1>${esc(coast.name)} coast</h1><p>${esc(coast.limits)}</p><section id="coastal-target-guide"></section><details id="coastal-seasonal" class="guide-topic" open><summary>Regional species & seasonal watch</summary></details><details class="guide-topic"><summary>Explore ${sectors.length} local planning sectors</summary><div class="sector-choices">${sectors.map(s=>`<button type="button" class="sector-choice" data-sector="${esc(s.id)}">${esc(s.name)}<small data-survey-summary="${esc(s.id)}">${s.published_candidate_points?`${s.published_candidate_points} published point candidates in partial packages`:'Survey-qualified points not published'}</small></button>`).join('')}</div><details id="sector-survey-details" class="guide-topic"><summary>Original seabed survey products</summary><div id="sector-survey-list" aria-live="polite">Choose a sector to inspect its source surveys.</div></details><p class="small">${esc(sectorPacket.scope)} <a href="${esc(sectorPacket.survey_discovery[0].url)}" target="_blank" rel="noopener">USGS survey catalog ↗</a></p><p class="small" id="survey-discovery-status">Loading NOAA survey catalog leads…</p></details><h2>Detailed mapping</h2><p>${packages.length?'Open a reviewed local data package:':'Source discovery covers regional species and MPAs. Survey-qualified fishing spots, local weather and exports have not been published for this coast.'}</p>${links}<p class="small">${esc(catalog.scope)}</p>`;
   if(coast.id==='northern'){
@@ -200,12 +215,24 @@ export async function initCoastalDiscovery(catalog,coast) {
     usgsDatumData=data;showSurveySources();
   }).catch(()=>{/* NOAA original source links remain available if this optional ledger fails. */});
   const forecastPanel=document.getElementById('forecast-panel');
+  forecastPanel.replaceChildren();
+  const clockHost=document.createElement('div'),modelHost=document.createElement('section'),local=document.createElement('section');
+  local.className='local-coast-conditions';local.innerHTML='<h2>Local sources & measured history</h2><p>Local readings require an original published selection and reviewed geographic binding. Missing coverage stays missing.</p><p><a id="coast-readable-link" href="/report">Readable coastal source report</a></p><div id="coast-conditions"></div>';
+  forecastPanel.append(clockHost,modelHost,local);
+  const scopeId='coast:'+coast.id;
+  let selectedHabitat=null,alive=true,clock=null,workspace=null,selectionContext=null;
+  const notifyLocation=()=>{document.dispatchEvent(new CustomEvent('skippercast:location',{detail:{regionId:scopeId,point:currentPoint()}}));refreshPackageLinks();};
+  const locationUI={get:()=>({point:currentPoint()}),select(point){retainPoint(point);selectedHabitat=point;notifyLocation();},restore(point){const current=currentPoint();if(!Number.isFinite(point?.latitude)||!Number.isFinite(point?.longitude)||Math.abs(current.latitude-point.latitude)>.00001||Math.abs(current.longitude-point.longitude)>.00001){locationUI.clear();return;}if(selectedHabitat?.id===point.id&&selectedHabitat?.region===point.region&&selectedHabitat?.latitude===point.latitude&&selectedHabitat?.longitude===point.longitude)return;retainPoint(point);selectedHabitat=point;notifyLocation();},clear(){if(selectedHabitat===null)return;selectedHabitat=null;notifyLocation();}};
+  const regionConfigs=[];
+  function sharedLink(options={}){const u=coastURL(location.href,coast,options);u.hash=location.hash;if(species.value!==null)u.searchParams.set('target',species.value);return u;}
+
   document.getElementById('export-panel').innerHTML=`<h1>Fishing-plan export</h1><p>Only reviewed, surveyed fishing areas can be exported. Choose a detailed mapped area; discovery sectors and survey catalog footprints are not waypoints.</p>${links||'<p>This coast’s detailed fishing package is pending.</p>'}<a href="#map">Back to map</a>`;
-  outlook.value={label:'Coastal guide',value:'Species & sources'};document.getElementById('best-day-banner').addEventListener('click',()=>navigation.showView('guide'));
+  outlook.value={label:'Coastal guide',value:'Species & sources'};document.getElementById('best-day-banner').setAttribute('aria-label','Open coastal species and source guide');document.getElementById('best-day-banner').addEventListener('click',()=>navigation.showView('guide'));
   const options=document.getElementById('map-options');
   // Keep the existing chart selector, then discard controls for layers this browse mode does not own.
   const chartLabel=document.getElementById('base-map').closest('label');
-  const body=options.querySelector('.options-body');body.replaceChildren(chartLabel);
+  const body=options.querySelector('.options-body'),methodLabel=document.getElementById('fishing-profile').closest('label');
+  for(const child of [...body.children])if(child!==chartLabel&&child!==methodLabel)child.remove();
   const detail=document.createElement('div');detail.innerHTML=`<p class="small">Clean chart: depths, coastal features and navigation aids. MPAs stay visible. Full NOAA restores all chart symbols.</p><h3>${esc(coast.name)} · ${esc(coast.limits)}</h3>${links||'<p>Detailed fishing maps are pending for this coast.</p>'}`;body.append(detail);
   const statewideContext=L.layerGroup();let statewideShapes=[],statewideLoaded=false;
   map.createPane('statewideHistoricalSeabed').style.zIndex=424;
@@ -588,32 +615,50 @@ export async function initCoastalDiscovery(catalog,coast) {
   }
   let forecastTimer=null,forecastKey='';
   function refreshForecast(point,sector){
-    if(location.hash!=='#forecast')return;
-    const key=`${point.latitude.toFixed(2)},${point.longitude.toFixed(2)}`;
+    if(!alive)return;
+    if(location.hash!=='#forecast'){clearTimeout(forecastTimer);suspendCoastalForecast(modelHost);return;}
+    const key=`${point.latitude.toFixed(2)},${point.longitude.toFixed(2)}:${clock?.getHour()}:${profile.value}:${select.value}`;
     if(key===forecastKey)return;
-    forecastKey=key;clearTimeout(forecastTimer);
-    forecastTimer=setTimeout(()=>void updateCoastalForecast(forecastPanel,point,sector),350);
+    forecastKey=key;clearTimeout(forecastTimer);suspendCoastalForecast(modelHost);modelHost.textContent='Updating the selected location and UTC hour…';
+    forecastTimer=setTimeout(()=>void updateCoastalForecast(modelHost,point,sector,{at:clock?.getHour(),profile:profile.value,target:select.value}),350);
   }
   function move() {
-    const p=map.getCenter(),point={latitude:p.lat,longitude:p.lng},next=coastAt(point,catalog);
+    const p=map.getCenter(),point=restoringView?logicalPoint:currentPoint(),next=coastAt(point,catalog);retainPoint(point);
     const mapped=mappedPackageAt(point,packages,map.getZoom());
-    if(mapped&&!navigating){navigating=true;caption.textContent=`Loading ${mapped.name} fishing grounds…`;location.replace(coastURL(location.href,coast,{packageId:mapped.id,point,zoom:map.getZoom(),target:select.value}));return;}
-    if(next && next.id!==coast.id && !navigating) {navigating=true;location.replace(coastURL(location.href,next,{point,zoom:map.getZoom(),target:select.value}));return;}
+    detailed.disabled=!mapped;detailed.textContent=mapped?`Open ${mapped.name} detailed workspace`:'No reviewed package at this view';
+    if(selectedHabitat&&(Math.abs(point.latitude-selectedHabitat.latitude)>.00001||Math.abs(point.longitude-selectedHabitat.longitude)>.00001)){selectedHabitat=null;workspace?.clearSelection();navigate(habitatURL(location.href,null),{replace:true});}
+    if(next && next.id!==coast.id && !navigating) {navigating=true;navigate(coastWorkspaceURL(location.href,next,{point,zoom:map.getZoom(),target:select.value,overview:true}),{replace:true});return;}
     const sector=sectorAt(sectorPacket,coast.id,point);
     caption.textContent=next?`${coast.name} · ${sector?.name||coast.limits}${sector?' · discovery sector':''}`:'Outside California coastal browse coverage';
     select.disabled=!next;rules.hidden=!next;
     updateLocalTargetAdvisory();
-    const url=coastURL(location.href,coast,{point,zoom:map.getZoom(),target:select.value,overview:true});url.hash=location.hash;history.replaceState(null,'',url);
+    const url=sharedLink({point,zoom:map.getZoom(),target:select.value,overview:true});if(url.href!==location.href)navigate(url,{replace:true});
+    notifyLocation();
     drawMPAs();
     drawFederal();
     refreshForecast(point,sector);
   }
-  window.addEventListener('hashchange',()=>{if(location.hash==='#forecast'){forecastKey='';const p=map.getCenter();refreshForecast({latitude:p.lat,longitude:p.lng},sectorAt(sectorPacket,coast.id,{latitude:p.lat,longitude:p.lng}));}});
-  select.addEventListener('change',()=>{selectionTouched=true;targetInfo();});map.on('moveend',move);targetInfo();move();
+  window.addEventListener('hashchange',()=>{if(location.hash!=='#forecast'){clearTimeout(forecastTimer);suspendCoastalForecast(modelHost);}else{forecastKey='';const p=map.getCenter();refreshForecast({latitude:p.lat,longitude:p.lng},sectorAt(sectorPacket,coast.id,{latitude:p.lat,longitude:p.lng}));}});
+  const detailed=document.createElement('button');detailed.type='button';detailed.id='coastal-detailed-workspace';body.append(detailed);
+  function packageLink(id){const point=currentPoint(),mapped=mappedPackageAt(point,packages,map.getZoom());const url=coastWorkspaceURL(location.href,coast,{packageId:id,...(mapped?.id===id?{point,zoom:map.getZoom()}:{}),target:select.value});if(selectedHabitat?.region===id)url.searchParams.set('habitat',selectedHabitat.id);return url;}
+  function openPackage(id){navigate(packageLink(id));}
+  detailed.addEventListener('click',()=>{const mapped=mappedPackageAt(currentPoint(),packages,map.getZoom());if(mapped)openPackage(mapped.id);});
+  const onPackageClick=event=>{const anchor=event.target.closest?.('.coastal-package[data-package]');if(!anchor||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openPackage(anchor.dataset.package);};document.addEventListener('click',onPackageClick);
+
+  clock=initCoastalClock({scopeId,mapHost:document.getElementById('map-time-dock'),forecastHost:clockHost,onChange:()=>{forecastKey='';refreshForecast(currentPoint(),sectorAt(sectorPacket,coast.id,currentPoint()));}});
+  workspace=initCoastWorkspace({map,locationUI,weather:clock,resizeChart:resizeMap,getScope:()=>({id:scopeId,terrainAvailable:coast.id==='central'})});
+  const conditions=initCoastConditions({locationUI,weather:clock,getScopeId:()=>scopeId,getContext:()=>overviewReportContext(currentPoint(),selectedHabitat,regionConfigs,profile.value,select.value,new Date(clock.getHour()*1000))});
+  selectionContext=initCoastalSelection({scopeId,getPoint:currentPoint,getTarget:()=>select.value,getProfile:()=>profile.value,getSelection:()=>selectedHabitat,restore:point=>locationUI.restore(point),clear:()=>locationUI.clear()});
+  const disposeTargets=effect(()=>{const value=species.value??coast.targets[0];untracked(()=>{renderTargets(value);targetInfo();document.dispatchEvent(new CustomEvent('skippercast:species'));forecastKey='';refreshForecast(currentPoint(),sectorAt(sectorPacket,coast.id,currentPoint()));});});
+  const disposeProfile=effect(()=>{profile.value;untracked(()=>{selectionContext.sync();forecastKey='';refreshForecast(currentPoint(),sectorAt(sectorPacket,coast.id,currentPoint()));});});
+  function refreshPackageLinks(){if(!alive)return;for(const anchor of document.querySelectorAll('.coastal-package[data-package]'))anchor.href=packageLink(anchor.dataset.package).href;}
+  const disposeLinks=effect(()=>{species.value;profile.value;sharedHour.value;sharedView.value;untracked(refreshPackageLinks);});
+  const disposeView=effect(()=>{const position=viewFromURL(new URL('?view='+encodeURIComponent(sharedView.value??''),location.href).href);if(position){const p=map.getCenter();if(Math.abs(p.lat-position.latitude)>.00001||Math.abs(p.lng-position.longitude)>.00001||Math.abs(map.getZoom()-position.zoom)>.00001)untracked(()=>{logicalPoint={latitude:position.latitude,longitude:position.longitude};restoringView=true;try{map.setView([position.latitude,position.longitude],position.zoom,{animate:false});pointAnchor=map.getCenter();}finally{restoringView=false;}});}});
+  select.addEventListener('change',()=>setParams({target:select.value}));map.on('moveend',move);move();
+  void Promise.all(packages.filter(p=>['morro-bay','cambria-san-simeon'].includes(p.id)).map(async p=>{try{const response=await fetch(p.config,{signal:AbortSignal.timeout(12000)});if(!response.ok)return;const region=await response.json();if(alive&&region.id===p.id&&region.schema_version===1){regionConfigs.push(region);notifyLocation();}}catch{}}));
+  window.addEventListener('pagehide',()=>{alive=false;window.removeEventListener('resize',onResize);document.removeEventListener('click',onPackageClick);clearTimeout(forecastTimer);disposeTargets();disposeProfile();disposeLinks();disposeView();selectionContext.destroy();clock.destroy();workspace.destroy();conditions.destroy();disposeCoastalForecast(modelHost);},{once:true});
   void initCoastalContext(catalog,coast).then(status=>{
-    const current=select.value;targetOptions=coastalTargetOptions(coast,status);
-    select.replaceChildren(...targetOptions.map(t=>new Option(t.name,t.id)));
-    select.value=!selectionTouched&&targetOptions.some(t=>t.id===desired)?desired:current;
+    if(!alive)return;targetOptions=[...coastalTargetOptions(coast,status),...nativeOptions];renderTargets(species.value??coast.targets[0]);
     targetInfo();
   });
   // The daily collector checks the statewide feature count; saved geometry preserves its original timestamp.

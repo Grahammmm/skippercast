@@ -6,6 +6,37 @@ One live SkipperCast product. Preserve every working capability from Fish and
 SkipperCast, combine overlapping controls, and preserve the refined Fish coast
 map. The owner's October 6 request is the product acceptance standard.
 
+## Active increment — shared coastal overview (October 7)
+
+- Objective: connect the continuous Central Coast discovery map to native terrain,
+  one target/profile/view/UTC clock, independent model forecasts and managed local
+  Conditions. Preserve chart, survey, MPA, federal-area and package planning paths.
+- Base: deployed v0.4.0, main `5c622934dca58088d5c66aa2c8adeb7445e76db7`,
+  build `f651dcbb81`; release/live receipts remain in the continuation outputs.
+- Owner: parent integrates shared state and release; bounded worker owns native
+  selection lifecycle and model adapter; independent reviewer checks source scope.
+- Branch: `codex/shared-coastal-overview`. Source is implemented and independently accepted; protected PR publication follows.
+- Decision: panning keeps the overview; detailed packages require explicit action.
+  Only exact currently admitted source identity + reviewed original region bounds
+  can bind local SLO readings. No nearest-package or Morro default is admitted.
+- Completed: source-bound readable links; UTC/Unix independent models; strict unit
+  and horizon gaps; preserved unsupported target/time choices; original publication
+  expiry withdrawal across hidden views; immediate stale-response suspension.
+- Checks: renderer 66/66, forecast adapter 11/11, exact source resolver 5/5 and final Node 1,413/1,413 passed; focused clock/context,
+  Conditions, handoff and readable-page regressions passed. Initial full Node run
+  found two maintenance failures (removed copy baseline entries and placeholder
+  domain); both corrected. Final scientific suite: 1,896 passed, 32 skipped and five known macOS fleet runner failures. Required Linux CI remains the merge gate.
+- Browser finding resolved: selection must move the chart before publishing host
+  metadata, so the prior map center cannot withdraw a newly selected habitat.
+- Browser: shared original selection, fresh chart Conditions metadata restoration, Map/Conditions round trip, Day 7 gaps, current package hrefs and unsupported coast handoff passed at desktop/390px. Native phone controls clear the clock by 25 px. Receipt: continuation `outputs/coastal-overview-browser-check.json`.
+- Independent review accepted the final source; 95 focused checks and actual-source geographic/expiry regressions passed.
+- Acceptance remaining:
+  full required gates, exact-head protected PR merge, main CI/deploy/live readback.
+- Full product remains incomplete: shared layer/offline/route integration, full
+  readable daily brief, default homepage cutover and capability matrix remain.
+- Next action: publish this
+  increment through the normal protected PR and deployment workflows.
+
 ## Current result
 
 The shared-link foundation is live (PR 379, main `d7cffd49`). The read-only

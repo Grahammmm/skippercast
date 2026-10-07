@@ -5,16 +5,16 @@ import {profile} from '../web/state.ts';
 import {effect} from '@preact/signals';
 
 /** Source-specific local readings follow the existing Conditions clock. */
-export function initCoastConditions({locationUI,weather}) {
+export function initCoastConditions({locationUI,weather,getScopeId=()=>getRegion().id,getContext=null}) {
  const host=document.getElementById('coast-conditions');
  let report=null,pending=null,alive=true,at=new Date(weather.getHour()*1000);
- const context=()=>{const region=getRegion(),selected=locationUI.get();return {
+ const context=()=>{if(getContext)return {...getContext(),profile:profile.value,target:document.getElementById('species-select').value,at};const region=getRegion(),selected=locationUI.get();return {
   regionId:region.id,point:selected?.point??{latitude:NaN,longitude:NaN},
   localAreas:region.map?.local_areas??[],localId:selected?.localId??null,
   profile:profile.value,target:document.getElementById('species-select').value,at,
  };};
  const visible=()=>document.body.dataset.view==='forecast'&&!document.hidden;
- const sync=()=>{const next=context();document.getElementById('coast-readable-link').href=readableReportURL(location.href).href;report?.setContext(next);};
+ const sync=()=>{const next=context();document.getElementById('coast-readable-link').href=readableReportURL(location.href,getContext?next:null).href;report?.setContext(next);};
  async function mount(){
   if(pending)return pending;
   pending=(async()=>{const {CoastReport}=await import('../packages/coast/src/coast3d/report.ts');if(!alive)return;
@@ -26,7 +26,7 @@ export function initCoastConditions({locationUI,weather}) {
  }
  const visibility=()=>{if(visible())void mount();report?.setVisible(visible());};
  const onLocation=()=>sync();
- const onTime=event=>{const d=event.detail;if(d?.regionId===getRegion().id&&Number.isFinite(d.epoch)){at=new Date(d.epoch*1000);sync();}};
+ const onTime=event=>{const d=event.detail;if(d?.regionId===getScopeId()&&typeof d.epoch==='number'){at=new Date(d.epoch*1000);sync();}};
  document.addEventListener('skippercast:location',onLocation);document.addEventListener('skippercast:time',onTime);
  document.addEventListener('skippercast:species',sync);document.getElementById('species-select').addEventListener('change',sync);
  document.addEventListener('visibilitychange',visibility);window.addEventListener('hashchange',visibility);window.addEventListener('popstate',sync);
