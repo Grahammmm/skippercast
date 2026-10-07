@@ -7,7 +7,9 @@ import unittest
 import numpy as np
 from pyproj import CRS
 
-SCRIPT = Path(__file__).parents[2] / "scripts" / "qualify_original_vr_window.py"
+from tests._support import ROOT
+
+SCRIPT = ROOT / "research" / "scripts" / "qualify_original_vr_window.py"
 spec = importlib.util.spec_from_file_location("qualify_original_vr_window", SCRIPT)
 tool = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tool)
