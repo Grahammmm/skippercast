@@ -5,6 +5,7 @@
 import {installHint} from './offline-core.js';
 import {offlineStatus} from '../web/views.ts';
 import {track} from '../web/telemetry.ts';
+import {initCoastalOffline} from './coastal-offline.js';
 import {initOfflinePack} from './offline-pack.js';
 
 const sessionStart = Date.now();
@@ -98,3 +99,5 @@ registerWorker();
 mountBanner();
 mountInstall();
 initOfflinePack(document.getElementById('offline-pack'), {sessionStart});
+
+initCoastalOffline();

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {saveCoastalSnapshot} from '../dist/coastal-offline-core.js';
 import {tileKey, tileURL, ENC_WMS} from '../dist/offline-core.js';
 
 const SOURCE = readFileSync(new URL('../dist/sw.js', import.meta.url), 'utf8');
@@ -46,7 +47,7 @@ class WorkerRequest extends Request {
 }
 
 /** A fresh worker. `network(request)` answers fetches; throw to simulate offline. */
-function loadWorker({network = () => { throw new TypeError('offline'); }} = {}) {
+function loadWorker({network = () => { throw new TypeError('offline'); }, locks} = {}) {
   const listeners = {}, messages = [];
   const calls = [];
   const fetchImpl = async (input, init) => {
@@ -57,14 +58,14 @@ function loadWorker({network = () => { throw new TypeError('offline'); }} = {}) 
   const storage = new FakeStorage(fetchImpl);
   const client = {id: 'page-1', postMessage: m => messages.push(m)};
   const self = {
-    location: new URL(ORIGIN + '/sw.js'),
+    location: new URL(ORIGIN + '/sw.js'), navigator:{locks},
     addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); },
     clients: {get: async id => (id === client.id ? client : undefined), claim: async () => {}, matchAll: async () => []},
     registration: {showNotification: async () => {}},
     skipWaiting: async () => {},
   };
   const context = vm.createContext({self, caches: storage, clients: self.clients, fetch: fetchImpl, console: {warn() {}, log() {}},
-    URL, Request: WorkerRequest, Response, Headers, Map, Set, Promise, Date, Math, Number, String, JSON, Error, TypeError, Array});
+    URL, Request: WorkerRequest, Response, Headers, Map, Set, Promise, Date, Math, Number, String, JSON, Error, TypeError, Array, TextDecoder, Uint8Array, setTimeout, clearTimeout});
   vm.runInContext(SOURCE, context, {filename: 'sw.js'});
   return {context, listeners, storage, messages, calls, client};
 }
@@ -241,4 +242,38 @@ test('push delivery and notification clicks are still handled', async () => {
   worker.listeners.push[0]({data: {json: () => ({eventId: 'e1', body: 'Wind rising', title: 'Trip'})}, waitUntil: p => waits.push(p)});
   await Promise.all(waits);
   assert.deepEqual(shown, [['Trip', 'e1']]);
+});
+
+const coastalPaths=['/api/coast/report','/api/coast/ocean','/api/coast/history'];
+async function seedCoastal(worker){
+ const base={schemaVersion:1,countyId:'slo',generatedAt:'2026-01-01T00:00:00.000Z'};
+ return saveCoastalSnapshot({origin:ORIGIN,caches:worker.storage,fetcher:async url=>{const path=new URL(url).pathname;return Response.json({...base,...(path.endsWith('/report')?{forecasts:[],observations:[],tides:[],tideEvents:[],alerts:[],sources:[],catches:[],visibility:{}}:path.endsWith('/ocean')?{currents:[],sources:[]}:{stations:[],recentWindowDays:7})});}});
+}
+test('coastal snapshots serve exact original complete products only after network failure',async()=>{
+ const acquired=[];const worker=loadWorker({locks:{request:async(name,options,read)=>{acquired.push([name,options.mode]);return read();}}});
+ const meta=await seedCoastal(worker);
+ for(const path of coastalPaths){const response=await dispatch(worker,get(path));const original=await (await worker.storage.open(meta.cache)).match(path);assert.equal(await response.text(),await original.text());assert.equal(response.headers.get('X-SC-Offline'),meta.saved_at);}
+ assert.equal(acquired.length,3);assert.ok(acquired.every(([name,mode])=>name==='skippercast-coastal-snapshot:'+ORIGIN&&mode==='shared'));
+ assert.equal(worker.messages.length,3);
+});
+test('coastal online reads never save automatically or hide HTTP errors',async()=>{
+ let status=200;const worker=loadWorker({network:()=>new Response('live',{status})});
+ await dispatch(worker,get(coastalPaths[0]));assert.deepEqual(await worker.storage.keys(),[]);
+ await seedCoastal(worker);
+ for(status of [403,404,503]){const response=await dispatch(worker,get(coastalPaths[0]));assert.equal(response.status,status);assert.equal(response.headers.get('X-SC-Offline'),null);}
+});
+test('coastal fallback excludes save requests, private variants, HEAD and Range',()=>{
+ const {context}=loadWorker();const route=request=>context.routeFor(request,ORIGIN);
+ for(const path of coastalPaths){assert.equal(route(get(path)),'coastal');assert.equal(route(get(path+'?x=1')),null);assert.equal(route(get('https://other.test'+path)),null);
+ for(const headers of [{Authorization:'Bearer x'},{Cookie:'x=y'},{Range:'bytes=0-1'},{'X-SC-Offline-Save':'1'}])assert.equal(route(new Request(ORIGIN+path,{headers})),null);
+ assert.equal(route(new Request(ORIGIN+path,{method:'HEAD'})),null);}
+});
+test('coastal fallback rejects missing or damaged members before serving any product',async()=>{
+ for(const corruption of ['missing','shape','length','clock','metadata']){
+ const worker=loadWorker(),meta=await seedCoastal(worker),cache=await worker.storage.open(meta.cache);
+ if(corruption==='missing')await cache.delete(coastalPaths[2]);
+ else if(corruption==='metadata')await cache.put('/__skippercast-coastal.json',new Response(JSON.stringify(meta),{status:201,headers:{'X-SC-Saved-At':meta.saved_at}}));
+ else {const original=await cache.match(coastalPaths[2]),body=await original.json();if(corruption==='shape')delete body.stations;if(corruption==='length')body.extra='corrupt';if(corruption==='clock')body.generatedAt='2025-01-01T00:00:00.000Z';await cache.put(coastalPaths[2],Response.json(body,{headers:{'X-SC-Saved-At':meta.saved_at}}));}
+ await assert.rejects(dispatch(worker,get(coastalPaths[0])),/offline/,corruption);
+ }
 });

@@ -24,6 +24,8 @@ const SHELL_CACHE = SHELL_PREFIX + BUILD;
 const DATA_CACHE = 'sc-data';
 const PACK_PREFIX = 'sc-pack-';
 const DATA_LIMIT = 150;
+const COASTAL_PREFIX='sc-coastal-snapshot-',COASTAL_INDEX='sc-coastal-index',COASTAL_META='/__skippercast-coastal.json';
+const COASTAL_LIMITS={'/api/coast/report':8*1024*1024,'/api/coast/ocean':8*1024*1024,'/api/coast/history':16*1024*1024};
 const SAVED_HEADER = 'X-SC-Saved-At';
 const OFFLINE_HEADER = 'X-SC-Offline';
 // NOAA ENC chart display (chart-map.js). OSM street tiles are never stored:
@@ -49,6 +51,7 @@ function routeFor(request, origin) {
   }
   if (request.mode === 'navigate') return 'shell';
   if (url.pathname === '/sw.js' || url.pathname === '/precache.json') return null;
+  if(Object.hasOwn(COASTAL_LIMITS,url.pathname)){return !request.headers.has('X-SC-Offline-Save')&&!url.search&&!url.hash&&!request.headers.has('authorization')&&!request.headers.has('cookie')?'coastal':null;}
   if (url.pathname.startsWith('/api/')) return PUBLIC_API.test(url.pathname) ? 'data' : null;
   // Seafloor habitat is shown only while its screening manifest is current; a
   // saved copy would outlive the Worker's expiry gate, so it is never cached.
@@ -172,6 +175,41 @@ async function networkFirstData(event) {
   }
 }
 
+/** Explicit, completed public snapshot only. Ordinary browsing never saves it. */
+async function coastalSnapshot(request){
+ const manager=self.navigator?.locks??globalThis.navigator?.locks;const read=()=>readCoastalSnapshot(request);return manager?.request?manager.request('skippercast-coastal-snapshot:'+self.location.origin,{mode:'shared'},read):read();
+}
+function coastalProduct(path,body){
+ const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+ if(!object(body)||body.schemaVersion!==1||body.countyId!=='slo'||typeof body.generatedAt!=='string'||!Number.isFinite(Date.parse(body.generatedAt))||Date.parse(body.generatedAt)>Date.now())return false;
+ if(path==='/api/coast/report')return ['forecasts','observations','tides','tideEvents','alerts','sources','catches'].every(name=>Array.isArray(body[name]))&&object(body.visibility);
+ if(path==='/api/coast/ocean')return Array.isArray(body.currents)&&Array.isArray(body.sources);
+ return path==='/api/coast/history'&&Array.isArray(body.stations)&&Number.isFinite(body.recentWindowDays)&&body.recentWindowDays>0;
+}
+async function coastalBytes(response,limit){
+ const reader=response.body.getReader(),parts=[];let size=0,timedOut=false;const timer=setTimeout(()=>{timedOut=true;void reader.cancel().catch(()=>{});},20000);
+ try{while(true){const {done,value}=await reader.read();if(timedOut)throw Error('Snapshot read timeout');if(done)break;size+=value.byteLength;if(size>limit)throw Error('Snapshot byte limit');parts.push(value);}const bytes=new Uint8Array(size);let at=0;for(const part of parts){bytes.set(part,at);at+=part.byteLength;}return bytes;}catch(error){void reader.cancel().catch(()=>{});throw error;}finally{clearTimeout(timer);reader.releaseLock();}
+}
+async function readCoastalSnapshot(request){
+ try{
+  if(!await caches.has(COASTAL_INDEX))return null;const index=await caches.open(COASTAL_INDEX),pointer=await index.match(COASTAL_META);if(!pointer||pointer.status!==200)return null;
+  const meta=await pointer.json();if(pointer.headers.get(SAVED_HEADER)!==meta?.saved_at)return null;if(meta?.schema_version!==1||typeof meta.cache!=='string'||!meta.cache.startsWith(COASTAL_PREFIX)||meta.cache.length>160||!/^[a-z0-9-]+$/.test(meta.cache)||!Number.isFinite(Date.parse(meta.saved_at))||Date.parse(meta.saved_at)>Date.now()||!Array.isArray(meta.products)||meta.products.length!==3)return null;
+  const paths=new Set();let bytes=0;for(const product of meta.products){if(!product||!Object.hasOwn(COASTAL_LIMITS,product.path)||paths.has(product.path)||!Number.isFinite(Date.parse(product.generated_at))||Date.parse(product.generated_at)>Date.now()||!Number.isInteger(product.bytes)||product.bytes<1||product.bytes>COASTAL_LIMITS[product.path])return null;paths.add(product.path);bytes+=product.bytes;}if(bytes!==meta.bytes||bytes>32*1024*1024)return null;
+  if(!await caches.has(meta.cache))return null;const cache=await caches.open(meta.cache),record=await cache.match(COASTAL_META);if(!record||record.status!==200||record.headers.get(SAVED_HEADER)!==meta.saved_at)return null;const complete=await record.json();if(JSON.stringify(complete)!==JSON.stringify(meta))return null;
+  for(const product of meta.products){
+   const stored=await cache.match(product.path);if(!stored||!storable(stored)||stored.headers.get(SAVED_HEADER)!==meta.saved_at||stored.headers.has(OFFLINE_HEADER)||!/^application\/json(?:\s*;|$)/i.test(stored.headers.get('content-type')||''))return null;
+   const raw=await coastalBytes(stored,COASTAL_LIMITS[product.path]);if(raw.byteLength!==product.bytes)return null;const body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));if(!coastalProduct(product.path,body)||body.generatedAt!==product.generated_at)return null;
+  }
+  return await cache.match(request);
+ }catch{return null;}
+}
+async function networkFirstCoastal(event){
+ try{return await fetch(event.request);}catch(error){
+  const saved=await coastalSnapshot(event.request);if(!saved)throw error;const response=offlineResponse(saved);
+  event.waitUntil(tellClient(event.clientId,response.headers.get(OFFLINE_HEADER),event.request.url));return response;
+ }
+}
+
 async function shell(event) {
   try {
     return await fetch(event.request);
@@ -212,7 +250,7 @@ async function precached(request) {
 function handleFetch(event, origin = self.location.origin) {
   const route = routeFor(event.request, origin);
   if (!route) return null;
-  event.respondWith(route === 'data' ? networkFirstData(event)
+  event.respondWith(route === 'coastal' ? networkFirstCoastal(event) : route === 'data' ? networkFirstData(event)
     : route === 'shell' ? shell(event)
     : route === 'tile' ? tile(event)
     : route === 'immutable' ? cacheFirst(event.request)
