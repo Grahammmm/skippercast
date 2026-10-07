@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Extend reviewed San Simeon geology over 17 depth-qualified native SCC05 windows, preserving prior habitat, uncertain lithology, current spatial holds and private projection conflicts. Interpreted outlines remain unranked and nonexportable.
+
 - Add reviewed exposed-bedrock outlines from two native SCC06 depth windows near Cambria, retaining prior habitat, current whole-polygon spatial exclusions and separate producer rights. These interpreted areas remain unranked and nonexportable.
 
 - Enable reviewed Offshore Monterey exposed-bedrock outlines over existing native Monastery/Cypress depth at nominal25–300ft. Preserve original geology units, prior native areas, current whole-polygon exclusions and separate CSUMB noncommercial terms; leave uncertain terrain unranked and precise exports disabled.
