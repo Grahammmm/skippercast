@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Mapping batches can hand off one completed terrain/imagery slice for website 3D rendering, with exact display acceptance and explicit blocked prerequisites.
+
 - Add stopped-run audits and skill learning between bounded mapping experiment rounds.
 
 - Add bounded preflight and progress checks for coastal mapping runs.

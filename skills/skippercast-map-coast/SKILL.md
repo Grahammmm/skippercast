@@ -231,6 +231,29 @@ bookkeeping alone is not publication.
 For the classified-habitat opt-ins, production command and release gates, follow
 the [classified-habitat production path](references/habitat-expansion-preflight.md#production-path).
 
+## Hand off one completed slice for website 3D rendering
+
+When a suitable batch completes, reuse its artifacts and review evidence to save
+one compact private receipt for `skippercast-render-coast-3d`; do not wait for the
+whole coastline or repeat unchanged qualification. Include terrain path/format,
+coverage and valid support, resolution, units/sign, CRS, depth datum and NoData
+mask; paired imagery path or approved URL, format, coverage and terrain
+alignment; upstream revision, source identities, artifact hashes, attribution
+and rights permitting website display; exact review receipts and explicit
+website-display acceptance for these artifacts; remaining holds; and the
+existing loader/manifest or minimal loading instructions.
+
+Use `READY` only when both terrain and imagery are complete, hash-identified,
+reviewed and explicitly accepted for website display with applicable rights,
+restriction and publication gates satisfied. Otherwise use `BLOCKED`, name the
+missing prerequisites and preserve completed artifacts. Private proofs, running
+jobs, generic source rights and fishing-habitat qualification are not website
+acceptance. Keep terrain-display acceptance separate from habitat qualification,
+rankings, fishing exports and new measurement credit. Do not promote a sparse
+support mask to full rectangular coverage or substitute an unapproved imagery
+service. Report blockers promptly; no new offline work is required for a receipt.
+Keep current private paths and batch-specific evidence in the receipt, not here.
+
 Reconcile installed skills after changing the canonical repository version.
 Historical baselines, resolved failures and old PR ordering are preserved in
 [historical blockers](references/historical-blockers.md); read only the specific
