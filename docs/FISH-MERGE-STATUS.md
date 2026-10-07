@@ -15,7 +15,7 @@ map. The owner's October 6 request is the product acceptance standard.
   build `f651dcbb81`; release/live receipts remain in the continuation outputs.
 - Owner: parent integrates shared state and release; bounded worker owns native
   selection lifecycle and model adapter; independent reviewer checks source scope.
-- Overview PR 399 merged at `2bb1c514a678e37753dc661677d58874ad06cd61` after exact-head core/science/e2e/DCO success. Release branch: `codex/release-v0.5.0`; final main deployment and live acceptance are pending.
+- Overview PR 399 merged at `2bb1c514a678e37753dc661677d58874ad06cd61` after exact-head core/science/e2e/DCO success. Release branch: `codex/release-v0.5.0`; release PR 400 merged `21b29acdbdae93964086fb1ef127f15d8f9a4fd7`. Main CI 37604131040 attempt 2, deploy 37605987344 and Release 37606990372 passed; v0.5.0/build `58fbfb6421` and 17 live route/data/boundary checks passed.
 - Decision: panning keeps the overview; detailed packages require explicit action.
   Only exact currently admitted source identity + reviewed original region bounds
   can bind local SLO readings. No nearest-package or Morro default is admitted.
@@ -31,10 +31,19 @@ map. The owner's October 6 request is the product acceptance standard.
 - Browser: shared original selection, fresh chart Conditions metadata restoration, Map/Conditions round trip, Day 7 gaps, current package hrefs and unsupported coast handoff passed at desktop/390px. Native phone controls clear the clock by 25 px. Receipt: continuation `outputs/coastal-overview-browser-check.json`.
 - Independent review accepted the final source; 95 focused checks and actual-source geographic/expiry regressions passed.
 - Acceptance remaining:
-  release exact-head gates, main CI/deploy/live readback and annotated release tag.
+  full integration checks listed below; this overview release is complete.
 - Full product remains incomplete: shared layer/offline/route integration, full
   readable daily brief, default homepage cutover and capability matrix remain.
-- Next action: publish v0.5.0 through the normal protected PR and deployment workflows, verify live, then unify the surface-current source choice.
+- Next action: unify the surface-current source choice on `codex/shared-coastal-currents`, fresh from v0.5.0 main.
+
+## Active increment — explicit shared currents
+
+- Objective: one explicit Off/WCOFS/HF 1 km/HF 6 km source choice for Chart/2D/3D and Conditions. Parent owns controller/chart integration; bounded worker owns native renderer; independent reviewer checks source/time boundaries.
+- Acceptance: Off clears immediately; selected source never silently substitutes; time/expiry/missing coverage remain gaps; original source clocks and resolution remain visible; desktop/mobile views retain one choice.
+- Preserve regional feed identity and existing native standalone behavior; do not migrate data providers, collectors or private stores.
+- Source and amendment reviews accepted. Final Node 1,434/1,434, strict typechecks and client build passed. Actual desktop/390px overview and regional controls, source clocks, Day 7 gap, Off, and copied/readable-return links passed. Browser receipt: continuation `outputs/coastal-currents-browser-check.json`.
+- Local synthetic preload fixtures require canonical macOS TMPDIR; isolated proof and 3/3 rechecks are saved. No build source was changed. Protected exact-head Linux gates, merge, deployment and live readback remain.
+- Next action: protected PR for explicit currents, followed by versioned release and live readback.
 
 ## Previously completed integration
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {memberSummary,currentFrame,nearestCurrent,spectrumSVG,uncertaintyHTML} from '../dist/intelligence.js';
+import {validRegionalCurrent,freshSource,memberSummary,currentFrame,nearestCurrent,spectrumSVG,uncertaintyHTML} from '../dist/intelligence.js';
 import {getRegion} from '../dist/region.js';
 import {tripGPX} from '../dist/gpx.js';
 import {exportSelection} from '../dist/inavx.js';
@@ -82,3 +82,25 @@ test('current selection with no valid original forecast point stays unavailable,
  for(const point of [undefined,null,{}, {latitude:NaN,longitude:-120.9},{latitude:35.4,longitude:Infinity},{latitude:91,longitude:-120.9},{latitude:35.4,longitude:181}])assert.equal(nearestCurrent(source,now/1000,point,now),null);
  assert.equal(nearestCurrent(source,now/1000+73*3600,{latitude:35.4,longitude:-120.9},now),null,'source horizon remains unchanged');
 });
+
+
+test('an invalid selected UTC hour cannot reuse observed currents',()=>{const observation={status:'ok',max_age_hours:6,data:{kind:'observation',sample_at:new Date(now).toISOString(),resolution_km:1,frames:[{time:now/1000,cells:[[35.4,-120.9,.4,90]]}]}};assert.equal(currentFrame(observation,NaN,now),null);assert.equal(nearestCurrent(observation,NaN,{latitude:35.4,longitude:-120.9},now),null);});
+
+
+test('regional currents use selected clock through model outage and invalid time clears original readings',async t=>{
+ const globals=['document','window','L','MutationObserver','fetch'],saved=Object.fromEntries(globals.map(k=>[k,globalThis[k]])),nodes=new Map(),events={},arrows=[];let choose;
+ const node=id=>nodes.get(id)??(nodes.set(id,{innerHTML:'',addEventListener(){},removeEventListener(){},append(){},closest(){return this;}}),nodes.get(id));
+ const container={set innerHTML(v){},querySelector:s=>node(s)};globalThis.document={hidden:false,body:{dataset:{mapPresentation:'chart'}},createElement:()=>container,getElementById:node,addEventListener(k,f){events[k]=f},removeEventListener(k){delete events[k]}};globalThis.window={addEventListener(){}};globalThis.MutationObserver=class{observe(){}disconnect(){}};
+ const layer={addTo(){return this},clearLayers(){arrows.length=0}};globalThis.L={layerGroup:()=>layer,divIcon:x=>x,marker:()=>({bindPopup(){return this},addTo(){arrows.push(1)}})};
+ const epoch=Math.floor(Date.now()/1000),current={name:'Synthetic regional HF',status:'ok',max_age_hours:6,data:{kind:'observation',sample_at:new Date(epoch*1000).toISOString(),resolution_km:1,frames:[{time:epoch,cells:[[35.4,-120.9,.45,90]]}]}},region={id:'synthetic-region',forecast_points:[{latitude:35.4,longitude:-120.9}],boat:{name:'Synthetic'},timezone:'UTC'};
+ globalThis.fetch=async()=>({ok:true,json:async()=>({schema_version:1,region_id:region.id,sources:{'hfr-1':current}})});
+ const text=readFileSync(new URL('../dist/intelligence.js',import.meta.url),'utf8').slice(readFileSync(new URL('../dist/intelligence.js',import.meta.url),'utf8').indexOf('export function initIntelligence')).replace('export function','function');
+ const init=new Function('getRegion','localContext','readConditions','angleBetween','esc','num','from','local','freshSource','validRegionalCurrent','currentFrame','nearestCurrent','sourceLink','statusText','uncertaintyHTML','verificationHTML','spectrumSVG','whenView',text+';return initIntelligence')(()=>region,()=>({stations:{nearshore_buoy:'synthetic'}}),()=>({swell:{},secondary:{},chop:{}}),()=>null,String,x=>String(x),String,String,freshSource,validRegionalCurrent,currentFrame,nearestCurrent,()=>'',()=>'',()=>'',()=>'',()=>'',()=>{});
+ const h=init({removeLayer(){arrows.length=0;}},{currentControl:{subscribe(fn){choose=fn;fn('hfr-1');return()=>{}},status(){}},getHour:()=>epoch});t.after(()=>{h.destroy();Object.assign(globalThis,saved)});for(let i=0;i<12;i++)await Promise.resolve();assert.equal(arrows.length,1,'current does not depend on weather bundle');
+ events['skippercast:forecast']({detail:{point:0,time:epoch,bundle:{}}});assert.match(node('#currents-content').innerHTML,/0.45 kt/);
+ events['skippercast:time']({detail:{regionId:region.id,epoch:NaN}});assert.equal(arrows.length,0);assert.doesNotMatch(node('#currents-content').innerHTML,/0.45 kt/);assert.match(node('#currents-content').innerHTML,/No fresh/);
+ events['skippercast:time']({detail:{regionId:region.id,epoch}});assert.equal(arrows.length,1);choose('off');assert.equal(arrows.length,0);let delayed;globalThis.fetch=()=>new Promise(resolve=>delayed=resolve);choose('hfr-1');assert.equal(arrows.length,1);h.destroy();delayed({ok:true,json:async()=>({schema_version:1,region_id:region.id,sources:{'hfr-1':current}})});for(let i=0;i<12;i++)await Promise.resolve();assert.equal(arrows.length,0,'destroyed adapter cannot republish delayed data');
+});
+
+
+test('malformed regional current fields fail closed before selecting or drawing',()=>{const base={status:'ok',max_age_hours:6,data:{kind:'observation',sample_at:new Date(now).toISOString(),resolution_km:1,frames:[{time:now/1000,cells:[[35.4,-120.9,.4,90]]}]}};assert.ok(validRegionalCurrent(base,'hfr-1',now));assert.equal(validRegionalCurrent(base,'wcofs',now),false);assert.equal(validRegionalCurrent({...base,id:'hfr-6'},'hfr-1',now),false);assert.equal(validRegionalCurrent({...base,max_age_hours:Infinity},'hfr-1',now),false);for(const frames of [null,[null],[{time:now/1000,cells:[[null,-120.9,.4,90]]}],[...base.data.frames,...base.data.frames]]){const bad={...base,data:{...base.data,frames}};assert.equal(currentFrame(bad,now/1000,now),null);}});

@@ -10,7 +10,7 @@ import type {NearshoreSite,NearshoreHour} from '../packages/coast/src/enrichment
 export type CoastPageRegion={id:string;map?:{center?:readonly number[];local_areas?:readonly ReportLocalArea[]}};
 export type CoastPageOptions={template?:string;regions:Readonly<Record<string,CoastPageRegion>>;fetcher?:typeof fetch;now?:Date;publicOrigin?:string};
 export type ReadableSelection={context:ManagedReportContext|null;workspace:string;reference:boolean;reason:string|null};
-const STATE_KEYS=['region','coast','view','target','hour','profile','day','layers','area','base','spot','focus','presentation','habitat','ui','place','mode','species'];
+const STATE_KEYS=['region','coast','view','target','hour','profile','day','layers','area','base','spot','focus','presentation','current','habitat','ui','place','mode','species'];
 const AREA_PLACES:Readonly<Record<string,string>>={north:'cambria',central:'morro',south:'avila'};
 const PLACE_AREAS:Readonly<Record<string,string>>={cambria:'north',morro:'central',avila:'south'};
 const HOUR=3600000;

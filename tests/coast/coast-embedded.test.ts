@@ -9,7 +9,7 @@ function harness(){
  const nodes=new Map<string,any>();
  const node=(id:string)=>{if(!nodes.has(id))nodes.set(id,{value:'all',textContent:'',hidden:false,checked:true,dataset:{},replaceChildren(){this.replaced=true;},setAttribute(key:string,value:string){this[key]=value;}});return nodes.get(id);};
  const v:any=Object.create(CoastViewer.prototype);
- Object.assign(v,{root:{querySelector:(selector:string)=>node(selector.slice(5,-2))},options:{managed:true},host:{dataset:{},clientWidth:800,clientHeight:600},alive:true,visible:true,speciesSupported:true,habitat:new T.Group(),currents:new T.Group(),pins:[],labels:[],features:[],shoreFeatures:[],shoreGeneration:0,reviewed:null,selectedTarget:null,reefIndex:0,readingGeneration:0,depthLimit:300,revision:0,currentGeneration:0,habitatGeneration:0,frame:0,lodTimer:0,perspective:'3d',orbit:new T.Vector3(-100,100,100),orthoHeight:1000,camera:new T.PerspectiveCamera(42,1,2,1000000),scene:new T.Scene(),renderer:{setSize(){},render(){}},controls:{target:new T.Vector3(),update(){},touches:{},mouseButtons:{}},currentAt:null});
+ Object.assign(v,{root:{querySelector:(selector:string)=>node(selector.slice(5,-2))},options:{managed:true},host:{dataset:{},clientWidth:800,clientHeight:600},alive:true,visible:true,speciesSupported:true,habitat:new T.Group(),currents:new T.Group(),pins:[],labels:[],features:[],shoreFeatures:[],shoreGeneration:0,reviewed:null,selectedTarget:null,reefIndex:0,readingGeneration:0,depthLimit:300,revision:0,currentGeneration:0,habitatGeneration:0,frame:0,lodTimer:0,perspective:'3d',orbit:new T.Vector3(-100,100,100),orthoHeight:1000,camera:new T.PerspectiveCamera(42,1,2,1000000),scene:new T.Scene(),renderer:{setSize(){},render(){}},controls:{target:new T.Vector3(),update(){},touches:{},mouseButtons:{}},currentAt:null,currentLayer:null});
  v.camera.position.set(-100,100,100);v.refine=()=>{};v.refreshCurrents=()=>{};v.refreshHabitat=()=>{};
  return {v,node};
 }
@@ -164,4 +164,35 @@ test('earlier bound full-context publication expiry withdraws native receipt whi
  try{v.reviewed={manifest:{expiresAt:'2027-03-01T00:00:00Z',regions:[{expiresAt:'2027-02-01T00:00:00Z'}]}};v.context={expiresAt:'2026-10-08T00:00:00Z'};
   v.selectFeature({id:'bound',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',screen_expires_at:'2027-04-01T00:00:00Z'}},false);assert.equal(v.selectionReceipt.expires,Date.parse(v.context.expiresAt));v.setVisible(false);assert.equal(invalidated,0);assert.equal(v.selectionReceipt.id,'bound');now=Date.parse('2026-10-08T00:00:00Z');v.scheduleSelectionExpiry();assert.equal(v.selectionReceipt,null);assert.equal(invalidated,1);assert.equal(v.habitat.children.length,0);
  }finally{clearTimeout(v.selectionTimer);Date.now=originalNow;globalThis.cancelAnimationFrame=cancel;}
+});
+
+test('explicit current source choices clear immediately and Off never fetches or admits late replies',async()=>{
+ const {v,node}=harness();v.manifest={};v.currents.add(new T.Group());const prior=globalThis.fetch;let resolve!:(response:Response)=>void,calls=0;globalThis.fetch=(()=>{calls++;return new Promise(yes=>resolve=yes);}) as typeof fetch;
+ try{v.setCurrentLayer('hfr-6');assert.equal(v.currentLayer,'hfr-6');assert.equal(v.currents.children.length,0);const task=(CoastViewer.prototype as any).refreshCurrents.call(v);assert.equal(calls,1);v.setCurrentLayer('off');assert.equal(node('currents').checked,false);resolve(Response.json({currents:[]}));await task;assert.equal(v.currents.children.length,0);assert.equal(node('current-status').textContent,'Surface currents off.');await (CoastViewer.prototype as any).refreshCurrents.call(v);assert.equal(calls,1);v.setCurrentLayer('constructor');await (CoastViewer.prototype as any).refreshCurrents.call(v);assert.match(node('current-status').textContent,/unsupported selected source/);assert.equal(calls,1);}finally{globalThis.fetch=prior;}
+});
+test('explicit native source does not substitute another available product',async()=>{
+ const {v,node}=harness();v.currentLayer='hfr-6';const prior=globalThis.fetch;globalThis.fetch=(async()=>Response.json({currents:[{id:'wcofs'}]})) as typeof fetch;
+ try{await (CoastViewer.prototype as any).refreshCurrents.call(v);assert.equal(v.currents.children.length,0);assert.match(node('current-status').textContent,/No reviewed current field/);}finally{globalThis.fetch=prior;}
+});
+
+test('native current status callback retains original DOM receipt through choice, invalid hour and visibility withdrawal',()=>{
+ const {v,node}=harness();const statuses:string[]=[];v.options.onCurrentStatus=(text:string)=>statuses.push(text);v.setCurrentLayer('off');assert.equal(statuses.at(-1),node('current-status').textContent);v.setHour(new Date(NaN));assert.match(statuses.at(-1)!,/unsupported selected UTC hour/);v.withholdOverlays();assert.match(statuses.at(-1)!,/withheld/);assert.equal(statuses.at(-1),node('current-status').textContent);
+});
+
+test('late native current responses cannot publish after host location or hour changes',async()=>{
+ for(const change of [(v:any)=>v.setLocation({latitude:36,longitude:-121,span:4000}),(v:any)=>v.setHour(new Date(NaN))]){
+  const {v,node}=harness();v.currentLayer='wcofs';const prior=globalThis.fetch;let resolve!:(response:Response)=>void;globalThis.fetch=(()=>new Promise(yes=>resolve=yes)) as typeof fetch;
+  try{const task=(CoastViewer.prototype as any).refreshCurrents.call(v),before=v.currentGeneration;change(v);assert.ok(v.currentGeneration>before);const status=node('current-status').textContent;resolve(Response.json({currents:[]}));await task;assert.equal(v.currents.children.length,0);assert.equal(node('current-status').textContent,status);}finally{globalThis.fetch=prior;}
+ }
+});
+
+test('native admitted status preserves original clocks and expires at exact source deadline without a fetch',async()=>{
+ const {v,node}=harness();v.currentLayer='wcofs';const at=new Date(),fetched=at.toISOString(),issued=new Date(at.getTime()-35*3600000).toISOString(),later=new Date(at.getTime()+3*3600000).toISOString();
+ const field={surfaceOnly:true,id:'wcofs',kind:'forecast',label:'Original NOAA',fetchedAt:fetched,issuedAt:issued,nativeResolutionKm:4,frames:[{validAt:fetched,cells:[{lat:35.4,lon:-120.9,uMs:1,vMs:0,speedKnots:1.94,towardDeg:90}]},{validAt:later,cells:[]}]};
+ const prior=globalThis.fetch,set=globalThis.setTimeout,clear=globalThis.clearTimeout,clock=Date.now;let calls=0,expire!:()=>void;globalThis.fetch=(async()=>{calls++;return Response.json({currents:[field]});}) as typeof fetch;globalThis.setTimeout=((fn:any)=>{expire=fn;return {unref(){}};}) as any;globalThis.clearTimeout=(()=>{}) as any;
+ try{await (CoastViewer.prototype as any).refreshCurrents.call(v);assert.match(node('current-status').textContent,/Original NOAA · 4 km/);assert.ok(node('current-status').textContent.includes('valid '+fetched));assert.ok(node('current-status').textContent.includes('issued '+issued));assert.ok(node('current-status').textContent.includes('retrieved '+fetched));v.currents.add(new T.Group());Date.now=()=>at.getTime()+3600000;expire();assert.equal(v.currents.children.length,0);assert.match(node('current-status').textContent,/original source freshness deadline expired/);assert.equal(calls,1);}finally{globalThis.fetch=prior;globalThis.setTimeout=set;globalThis.clearTimeout=clear;Date.now=clock;}
+});
+test('source deadline timers are cancelled on Off, hour, location, and presentation withdrawal',()=>{
+ const {v}=harness();const prior=globalThis.clearTimeout;let cancelled=0;globalThis.clearTimeout=((timer:any)=>{if(timer==='source-timer')cancelled++;}) as any;
+ try{for(const change of [()=>v.setCurrentLayer('off'),()=>v.setHour(new Date(NaN)),()=>v.setLocation({latitude:35.4,longitude:-120.9}),()=>v.withholdOverlays()]){v.currentExpiryTimer='source-timer';change();}assert.equal(cancelled,4);}finally{globalThis.clearTimeout=prior;}
 });

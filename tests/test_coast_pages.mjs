@@ -108,3 +108,6 @@ test('admitted overview source selection opens readable report and returns to th
  const selected=readableSelection(url,regions,now);assert.ok(selected.context,selected.reason);assert.equal(selected.context.regionId,'morro-bay');assert.equal(selected.context.at.toISOString(),'2026-10-07T12:00:00.000Z');assert.equal(new URL(selected.workspace,url).searchParams.get('coast'),'central');assert.equal(new URL(selected.workspace,url).searchParams.get('habitat'),'original');
  const gap=readableSelection(readableReportURL('https://skippercast.com/?coast=central&view=35.36,-120.94,12'),regions,now);assert.equal(gap.context,null);
 });
+
+
+test('actual readable workspace return preserves supported, unknown and empty current choices only as public state',()=>{for(const current of ['wcofs','hfr-6','constructor','']){const u=new URL('https://skippercast.com/?coast=central&view=35.36,-120.94,12&private=excluded');u.searchParams.set('current',current);const outbound=readableReportURL(u.href),selected=readableSelection(outbound,regions,now),returned=new URL(selected.workspace,outbound);assert.equal(returned.searchParams.get('current'),current);assert.equal(returned.searchParams.has('private'),false);}});

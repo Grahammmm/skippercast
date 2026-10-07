@@ -1,5 +1,5 @@
 import {resolveReportBinding,type CoastReportContext} from '../packages/coast/src/state/report-binding.ts';
-const PUBLIC_STATE=['region','coast','view','target','hour','profile','day','layers','area','base','spot','focus','presentation','habitat','ui','place','mode','species'] as const;
+const PUBLIC_STATE=['region','coast','view','target','hour','profile','day','layers','area','base','spot','focus','presentation','current','habitat','ui','place','mode','species'] as const;
 /** Preserve public selection only; optional account or arbitrary query fields stay out. */
 export function readableReportURL(href:string,context:CoastReportContext|null=null):URL {
  const input=new URL(href),output=new URL('/report',input.origin);
