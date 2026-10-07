@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.6.0 — 2026-10-07
+
 - Add isolated reference-grid routing for explicitly selected scope configs while keeping the Central Coast pipeline as the default.
 
 - Share one explicit surface-current source choice across the coastal chart, native 2D/3D and Conditions. Off clears vectors; missing coverage or source hours remain gaps without provider substitution.
