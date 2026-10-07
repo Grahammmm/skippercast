@@ -487,7 +487,10 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
         to_local = Transformer.from_crs(ds.crs, 3310, always_xy=True).transform
         if audited(binding['policy']):
             patches, quarantine = [], []
-            prior_local, _ = native_baseline(binding.get('prior_components', []), 3310)
+            canonical_components = binding.get('prior_components', [])
+            if binding['policy']['vector_review'].get('projection_exclusion_method') == CANONICAL_EXCLUSION:
+                canonical_components = binding['baseline_components'] + canonical_components
+            prior_local, _ = native_baseline(canonical_components, 3310)
             prior_union = unary_union(list(prior_local.by_record.values()))
             for key,g in assembled:
                 local = transform(to_local,g)

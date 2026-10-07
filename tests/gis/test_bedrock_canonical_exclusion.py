@@ -31,6 +31,24 @@ class CanonicalExclusionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'conservative representation'):
             bh.canonical_occupied_subtraction(self.local, box(-199950, 0, -199850, 100))
 
+    def test_projected_graded_baseline_is_not_omitted(self):
+        from pyproj import Transformer
+        from shapely.ops import transform
+        from skippercast.seafloor.bedrock_vectors import NativeFragments, assemble_components
+        from pyproj import CRS
+        native = box(670000, 3950000, 670100, 3950100)
+        to_local = Transformer.from_crs(32610, 3310, always_xy=True).transform
+        to_depth = Transformer.from_crs(3310, 32610, always_xy=True).transform
+        local_original = transform(to_local,native)
+        w,s,e,n = local_original.bounds
+        occupied = box(w-100,s-100,local_original.centroid.x,n+100)
+        initial = assemble_components([NativeFragments(CRS.from_epsg(32610), {'0':native})],
+            existing=NativeFragments(CRS.from_epsg(32610), {'graded':transform(to_depth,occupied)}))
+        local = transform(to_local,initial[0][1])
+        self.assertGreater(local.intersection(occupied).area, MAX_FEATURE_DIFFERENCE_M2)
+        with self.assertRaisesRegex(ValueError, 'conservative representation'):
+            bh.canonical_occupied_subtraction(local, occupied)
+
     def test_fully_occupied_stays_held(self):
         with self.assertRaises(ValueError):
             bh.canonical_occupied_subtraction(self.local, self.local)

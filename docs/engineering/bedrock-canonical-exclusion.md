@@ -9,7 +9,8 @@ The physical kernel first intersects original valid geology with measured
 nominal-depth pixels, assembles connected components, and subtracts qualified
 occupied geometry in the depth CRS. Reprojection into canonical EPSG:3310 can
 reintroduce a narrow numerical overlap at an existing boundary. The opt-in
-subtracts the exact authenticated preceding inventory once again in that same
+subtracts the exact authenticated graded baseline and preceding classified
+inventory once again in that same
 canonical CRS. It never tolerates retained overlap or expands the source shape.
 
 Both input geometries and the original projection must already be valid.
@@ -19,7 +20,10 @@ component splits remain held. Discarded area must fit the existing reviewed
 budget, not a survey-accuracy statement or a permissible overlap. Larger real
 conflicts remain held. The resulting geometry must have exactly zero positive
 intersection with preceding canonical inventory and zero area outside its
-initial canonical projection. No snapping, buffer, epsilon or repair is used.
+initial canonical projection. No snapping, buffer, epsilon or repair is used. These exact-zero statements
+apply to canonical EPSG:3310 only. WGS84 transport and MVT display are separately
+bounded representations and can have small numerical differences; they are not
+new source or navigation geometry.
 
 After clipping, nominal-depth support is conservatively recounted by inverse
 projection intersected with the original native component. Neither original
