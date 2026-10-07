@@ -8,9 +8,13 @@
 
 ## Unreleased
 
+- Explicitly save and delete public coastal report, current and measured-history snapshots for offline use, with saved time and original source clocks.
+
 - Add an opt-in bounded reader for authenticated original regular BAG cells.
 
 ### Internal
+
+- Bound explicit coastal snapshot storage and preserve publication/private exclusions, source expiry and completed-pack replacement semantics.
 
 - Preserve original BAG cell values, uncertainty and source registration; keep the reader private-only and separate from EPSG:3310 production processing.
 
