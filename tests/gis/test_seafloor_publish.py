@@ -287,6 +287,30 @@ class PublicationTests(unittest.TestCase):
 
 
 class PrivateRecoveryTests(unittest.TestCase):
+    def test_bedrock_audit_survives_cold_restore_with_private_hash_checks(self):
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            root = Path(first)
+            audit = root/'var/seafloor/reaches/r01/classified-bedrock-audit.json'
+            atomic_json(audit, {'version': 'synthetic-private-audit', 'quarantine': [{
+                'geometry': {'type': 'Point', 'coordinates': [0, 0]},
+                'geometry_repaired': False, 'hold_category': 'representation-invalid'}]})
+            original = audit.read_bytes()
+            self.assertEqual(state_cache.reach_paths(root, 'r01'), [audit])
+            self.assertFalse(state_cache.allowed('r02', 'reaches/r01/classified-bedrock-audit.json'))
+            self.assertFalse(state_cache.allowed('r01', 'tiles/seafloor/classified-bedrock-audit.json'))
+            self.assertFalse(state_cache.allowed('r01', 'reaches/r01/classified-bedrock-audit.geojson'))
+            s3 = Bucket(); state_cache.save(s3, 'b', root, 'r01', [audit])
+            self.assertTrue(all(k.startswith('seafloor-cache/') for k in s3.puts))
+            self.assertTrue(state_cache.restore(s3, 'b', second, 'r01'))
+            restored = Path(second)/audit.relative_to(root)
+            self.assertEqual(restored.read_bytes(), original)
+            # An audit cannot be replaced by stale or altered bytes on a clean worker.
+            restored.unlink()
+            s3.objects[f'seafloor-cache/{sha256(audit)}/classified-bedrock-audit.json'] = b'altered'
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                state_cache.restore(s3, 'b', second, 'r01')
+            self.assertFalse(restored.exists())
+
     def test_classified_original_survives_clean_worker_restore(self):
         from hashlib import sha256 as digest
         from skippercast.seafloor.fetch import fetch_source
