@@ -8,7 +8,11 @@
 
 ## Unreleased
 
-- Record verified NOAA CC0 contract reuse terms and native NAD83/UTM11N, MLLW metadata for the H11879 2 m and H11880 1 m candidate surveys; retain admission, terrain, regional and public-use gates.
+- Record verified NOAA reuse terms and original coordinate/depth references for two southern survey candidates.
+
+### Internal
+
+- Preserve candidate status, source IDs and hashes, unknown acquisition lineage and source-specific terrain, regional, camera and hazard-review gates for the H11879 2 m and H11880 1 m records.
 
 ## 0.4.0 — 2026-10-07
 
