@@ -61,6 +61,14 @@ PYTHONPATH=src:. python research/scripts/plan_bedrock_windows.py \
   --policy-id REVIEWED_POLICY_ID --output /private/proposal.json
 ```
 
+One pinned, authenticated legacy San Simeon physical/native identity has no
+per-component quarantine branch. The proposer recognizes that reviewed case
+only when its implementation, source identity, current receipt and all four
+current outputs match. A screen-only refresh can retain this physical identity;
+the assessment explicitly does not certify current legality. Missing or changed
+physical identity, native geometry, code, or audited/mixed profiles remain
+incomplete. No empty quarantine audit is created.
+
 The configured target-policy windows are recorded as read-only context, not
 foreign occupancy, to prevent the policy from excluding itself. This does not
 allow the proposal to replace or expand that policy. Before any separate

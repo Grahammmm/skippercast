@@ -283,6 +283,156 @@ def test_foreign_occupancy_reports_unprocessed_incomplete_and_verified(tmp_path)
     assert any('nonzero private bedrock quarantine' in x for x in statuses[0]['reasons'])
 
 
+def test_legacy_no_quarantine_compatibility_is_exact_and_fail_closed(tmp_path):
+    import copy
+    import json
+    from skippercast.seafloor import bedrock_habitat as bh, classified_habitat as ch
+    from skippercast.seafloor.io import sha256
+
+    folder = tmp_path / 'cambria-san-simeon-r01'
+    folder.mkdir()
+    names = ('classified-candidates.geojson', 'classified-native.geojson',
+             'classified-habitat.geojson', 'classified-held.geojson')
+    native = {'version':'native-classified-geometry-v1','crs':'EPSG:3310','features':[
+        {'type':'Feature','properties':{},'geometry':{'type':'Polygon','coordinates':[
+            [[0,0],[10,0],[10,10],[0,10],[0,0]]]}}]}
+    geographic = {'type':'FeatureCollection','features':[]}
+    for name in names:
+        (folder / name).write_text(json.dumps(
+            native if name == 'classified-native.geojson' else geographic))
+    policy = {
+        'id':'usgs-sim3327-sansimeon-bedrock-v1',
+        'interpretation_method':'original-interpreted-bedrock-v1',
+        'profile':'original-interpreted-bedrock-area-v1',
+        'reach_ids':['cambria-san-simeon-r01'], 'reviewed_on':'2026-10-06',
+        'depth_source_id':'csumb-scc-block03-2m-native',
+        'classification_source_id':'geology-sansimeon-zip-9387f22e02',
+        'depth_source_sha256':'a'*64, 'classification_source_sha256':'b'*64,
+        'metadata_sha256':'c'*64, 'metadata_url':'https://pubs.usgs.gov/sim/3327/',
+        'release_license':'public-domain-us-gov', 'rugose_raw_codes':None,
+        'credit':'USGS', 'notice':'Limitations retained.', 'review_basis':'Synthetic test fixture.',
+        'vector_review':{
+            'original_crs':'EPSG:32610', 'expected_polygon_count':625,
+            'invalid_original_records':[123], 'unit_field':'MapUnitAbb',
+            'member_stem':'Geology_SanSimeon',
+            'metadata_member':'Geology_SanSimeon_metadata.txt',
+            'bedrock_units':['Tus','Tm','KJug','KJug?','KJf','Ksl','Jo','Jo?'],
+            'excluded_units':['Qms/Tus','Qms/KJf','Qms/KJug','Qms/KJug?'],
+            'native_windows':[[1,1,2,2]],
+        },
+    }
+    inputs = {'physical':{'sources':[{
+        'reach':'cambria-san-simeon-r01',
+        'profile':'original-interpreted-bedrock-area-v1', 'policy':policy,
+    }]}, 'screen':{}, 'screen_implementation_sha256':'d'*64}
+    run = {
+        'reach':'cambria-san-simeon-r01', 'inputs':inputs,
+        'input_hash':ch.digest(inputs), 'physical_input_hash':ch.digest(inputs['physical']),
+        'representation':{'version':'native-classified-geometry-v1','feature_count':1},
+        'outputs':{name:sha256(folder / name) for name in names},
+    }
+    run_path = folder / 'classified-run.json'
+    def save_run():
+        run_path.write_text(json.dumps(run, sort_keys=True))
+    def refresh_output_hashes():
+        run['outputs'] = {name:sha256(folder / name) for name in names}
+    save_run()
+    contract = {
+        'reach':'cambria-san-simeon-r01',
+        'physical_input_hash':run['physical_input_hash'],
+        'source_policy':'usgs-sim3327-sansimeon-bedrock-v1',
+        'source_profile':'original-interpreted-bedrock-area-v1',
+        'interpretation_method':'original-interpreted-bedrock-v1',
+        'depth_source_id':'csumb-scc-block03-2m-native',
+        'classification_source_id':'geology-sansimeon-zip-9387f22e02',
+        'implementation':{
+            'bedrock_habitat.py':sha256(bh.__file__),
+            'classified_habitat.py':sha256(ch.__file__),
+        },
+        'native_sha256':sha256(folder / 'classified-native.geojson'), 'feature_count':1,
+    }
+    args = (folder, 'cambria-san-simeon-r01', run, run['outputs'])
+    assert plan_module._authenticated_legacy_no_quarantine(*args, contract=contract)
+
+    # A current screen-only receipt/output refresh remains eligible for
+    # occupancy accounting when the physical identity and native geometry stay
+    # pinned. The current output hashes are read from this refreshed receipt.
+    initial_output_hashes = dict(run['outputs'])
+    original_screen = inputs['screen']
+    run['inputs'] = copy.deepcopy(inputs)
+    run['inputs']['screen'] = {'snapshot_sha256':'e'*64, 'status':'refreshed'}
+    run['inputs']['screen_implementation_sha256'] = 'f'*64
+    run['input_hash'] = ch.digest(run['inputs'])
+    run['physical_input_hash'] = ch.digest(run['inputs']['physical'])
+    refreshed_feature = {'type':'Feature','properties':{},'geometry':{
+        'type':'Polygon','coordinates':[[[1,1],[2,1],[2,2],[1,2],[1,1]]]}}
+    refreshed = {'type':'FeatureCollection','features':[refreshed_feature]}
+    (folder / 'classified-habitat.geojson').write_text(json.dumps(refreshed))
+    (folder / 'classified-held.geojson').write_text(json.dumps(refreshed))
+    refresh_output_hashes()
+    save_run()
+    assert plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, run['outputs'], contract=contract)
+    assert original_screen != run['inputs']['screen']
+    assert run['outputs']['classified-habitat.geojson'] != initial_output_hashes['classified-habitat.geojson']
+    assert run['outputs']['classified-held.geojson'] != initial_output_hashes['classified-held.geojson']
+    assert run['outputs']['classified-native.geojson'] == contract['native_sha256']
+
+    # Changed physical identity, audited profile, mixed profile, receipt
+    # identity, implementation, or native geometry must fail closed.
+    physical_changed = copy.deepcopy(run)
+    physical_changed['inputs']['physical']['sources'][0]['policy']['depth_source_sha256'] = 'f'*64
+    physical_changed['input_hash'] = ch.digest(physical_changed['inputs'])
+    physical_changed['physical_input_hash'] = ch.digest(physical_changed['inputs']['physical'])
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', physical_changed, physical_changed['outputs'], contract=contract)
+
+    audited = copy.deepcopy(run)
+    audited['inputs']['physical']['sources'][0]['policy']['vector_review']['source_profile'] = bh.MONTEREY
+    audited['input_hash'] = ch.digest(audited['inputs'])
+    audited['physical_input_hash'] = ch.digest(audited['inputs']['physical'])
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', audited, audited['outputs'], contract=contract)
+    mixed = copy.deepcopy(run)
+    mixed['inputs']['physical']['sources'][0]['profile'] = 'mixed-profile'
+    mixed['input_hash'] = ch.digest(mixed['inputs'])
+    mixed['physical_input_hash'] = ch.digest(mixed['inputs']['physical'])
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', mixed, mixed['outputs'], contract=contract)
+
+    stale_input = copy.deepcopy(run)
+    stale_input['input_hash'] = '0'*64
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', stale_input, stale_input['outputs'], contract=contract)
+    stale = copy.deepcopy(contract)
+    stale['implementation'] = dict(stale['implementation'], **{'bedrock_habitat.py':'0'*64})
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, run['outputs'], contract=stale)
+    stale_output = dict(run['outputs'], **{'classified-held.geojson':'0'*64})
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, stale_output, contract=contract)
+    missing = dict(run['outputs'])
+    del missing['classified-held.geojson']
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, missing, contract=contract)
+
+    (folder / 'classified-held.geojson').unlink()
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, run['outputs'], contract=contract)
+    (folder / 'classified-held.geojson').write_text(json.dumps(refreshed))
+
+    # Even if the current receipt hash is updated, the fixed native identity
+    # and schema cannot be replaced by malformed or different native geometry.
+    (folder / 'classified-native.geojson').write_text(json.dumps({'type':'FeatureCollection'}))
+    run['outputs']['classified-native.geojson'] = sha256(folder / 'classified-native.geojson')
+    save_run()
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, run['outputs'], contract=contract)
+    (folder / 'classified-bedrock-audit.json').write_text('{}')
+    assert not plan_module._authenticated_legacy_no_quarantine(
+        folder, 'cambria-san-simeon-r01', run, run['outputs'], contract=contract)
+
+
 def test_foreign_feature_schema_and_invalid_geometry_fail_closed(tmp_path):
     import json
     from skippercast.seafloor.io import sha256
