@@ -36,6 +36,40 @@ Research scripts may import product code (`skippercast.*`, and product tools in
 Cross-imports between research scripts use `research.scripts.<name>`; when a
 helper is shared by several of them, move it into `research/lib/`.
 
+## Private native bedrock window proposals
+
+`research/scripts/plan_bedrock_windows.py` creates an offline, private planning
+JSON from a locally qualified reach and classified-bedrock policy. It uses the
+reviewed source-context checks, cached normalized depth, and already-extracted
+ArcGrid terrain support only (`fetch=False`),
+then reports one-pixel-inset native windows, valid nominal 25–300 ft depth
+counts, resource use, and held-window reasons. It uses same-region prior
+classified and held geometry in whole-window overlap exclusions, with source
+path and hash receipts in the result. Each neighboring reach is marked verified,
+incomplete, or unprocessed. Missing outputs, missing receipts, or absent private
+bedrock-quarantine audits make the foreign-occupancy assessment incomplete;
+those states never mean empty occupancy. A nonempty quarantine is not imported
+without its native geometry and authentication context. Resolve these flags
+before any separate activation.
+
+The command requires an explicit output path and will not overwrite an existing
+file:
+
+```bash
+PYTHONPATH=src:. python research/scripts/plan_bedrock_windows.py \
+  --root /local/qualified/workroot --reach REACH_ID \
+  --policy-id REVIEWED_POLICY_ID --output /private/proposal.json
+```
+
+The configured target-policy windows are recorded as read-only context, not
+foreign occupancy, to prevent the policy from excluding itself. This does not
+allow the proposal to replace or expand that policy. Before any separate
+activation, compare prior output IDs and geometries and preserve them. The
+result is a research proposal only: the script does not qualify a source, edit
+policies, source catalogs, caches, reaches, screens or publication outputs,
+and it makes no habitat, fish-presence, depth-datum, measurement or ranking
+claim.
+
 ## Workflows
 
 Research runs only in `.github/workflows/research-*.yml`, each with a read-only
