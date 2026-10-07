@@ -3,6 +3,7 @@
 No source qualification, scientific approval, scheduling or state mutation.
 """
 import argparse
+from datetime import datetime, timezone
 import json
 import math
 from pathlib import Path
@@ -36,7 +37,7 @@ def number(value, name, *, optional=False):
     return value
 
 
-def decide(checkpoint):
+def decide(checkpoint, *, now=None):
     c = checkpoint['progress_control']
     if not c.get('run_id') or not c.get('batch_id'):
         raise ValueError('Stable run_id and batch_id are required')
@@ -115,6 +116,14 @@ def decide(checkpoint):
     def emit(action, reason):
         return dict(result, action=action, reason=reason)
 
+    if c.get('deadline_utc') is not None:
+        deadline = datetime.fromisoformat(c['deadline_utc'].replace('Z', '+00:00'))
+        current_time = now or datetime.now(timezone.utc)
+        if deadline.tzinfo is None or current_time.tzinfo is None:
+            raise ValueError('Wall-clock deadline and current time require a timezone')
+        result['deadline_utc'] = deadline.isoformat()
+        if current_time >= deadline:
+            return emit('STOP_ACTIVE_WORK', 'Round wall-clock deadline reached; freeze results and audit before more work')
     if active >= limits['active_minutes'] or (spent is not None and spent >= limits['accounted_tokens']):
         return emit('STOP_ACTIVE_WORK', 'Run ceiling reached; save evidence and any pending external job')
     if phase == 'finalize':
