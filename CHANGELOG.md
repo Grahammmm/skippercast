@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+## 0.7.0 — 2026-10-07
+
 - Explicitly save and delete public coastal report, current and measured-history snapshots for offline use, with saved time and original source clocks.
 
 - Add an opt-in bounded reader for authenticated original regular BAG cells.
