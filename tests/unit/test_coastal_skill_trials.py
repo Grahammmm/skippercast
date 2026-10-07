@@ -1,11 +1,12 @@
 """Calibration receipts cannot conflate simulations with actual model trials."""
 
 import json
-from pathlib import Path
 import subprocess
 import sys
 
-SCRIPT = Path(__file__).resolve().parents[1] / "skills/skippercast-build-coastal-map/scripts/model_trials.py"
+from tests._support import ROOT
+
+SCRIPT = ROOT / "skills/skippercast-build-coastal-map/scripts/model_trials.py"
 
 
 def run_script(*args):
