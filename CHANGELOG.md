@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Add explicit isolated artifact paths for reviewed seafloor scopes; preserve the Central Coast default and hold noncentral processing and publication until scoped inputs are reviewed.
+
 ## 0.5.0 — 2026-10-07
 
 - Record verified NOAA reuse terms and original coordinate/depth references for two southern survey candidates.

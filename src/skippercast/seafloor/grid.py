@@ -20,6 +20,7 @@ from shapely.ops import substring, transform
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 from . import reference
 from .io import sha256
+from .scope_paths import resolve_scope
 
 
 def make_reaches(config, spine):
@@ -119,18 +120,19 @@ def mosaic_reference(config, tiles, sampled):
     return result, affine
 
 
-def build(root=REPO, *, fetch=False, region='central-coast'):
-    root = Path(root)
-    config_path = root / 'catalog/seafloor-scope.json'
-    config = read_json(config_path)
-    ledger_path = root / 'dist/data/seafloor-ledger.json'
+def build(root=REPO, *, fetch=False, region=None, scope_config=None, scope_id=None):
+    root = Path(root).resolve()
+    config, paths = resolve_scope(root, scope_config=scope_config, scope_id=scope_id)
+    config_path = paths.config_path
+    ledger_path = paths.ledger_path
+    region = region or config['id']
     if ledger_path.exists() and read_json(ledger_path)['stage'] != 'M1-reference-baseline':
         raise ValueError('Reference rebuild cannot overwrite a processed survey ledger')
     if region != config['id'] and region not in {r['id'] for r in config['regions']}:
         raise ValueError('Unknown seafloor region')
     # Rebuild the shared scope even when a regional ledger view is requested;
     # independently built geographic grids must never shift cell ownership.
-    cache = root / 'var/seafloor/reference'
+    cache = paths.reference_dir
     cache.mkdir(parents=True, exist_ok=True)
     spine = reference.planning_spine(config, cache, fetch)
     reaches = make_reaches(config, spine)
@@ -139,14 +141,14 @@ def build(root=REPO, *, fetch=False, region='central-coast'):
     input_document = {'config_sha256': sha256(config_path), 'scheme_sha256': pin['scheme_sha256'],
                       'rule_version': config['rule_version'],
                       'implementation_sha256': {name: sha256(Path(__file__).parent / name)
-                                                for name in ('grid.py', 'reference.py', 'io.py')},
+                                                for name in ('grid.py', 'reference.py', 'io.py', 'scope_paths.py')},
                       'requirements_sha256': sha256(root / 'requirements-survey.txt'),
                       'samples': [{'tile': t['id'], 'sha256': r['sample_sha256']}
                                   for t, (_, r) in zip(tiles, sampled)]}
     input_hash = hashlib.sha256(json.dumps(input_document, sort_keys=True).encode()).hexdigest()
-    receipt_path = root / 'var/seafloor/reference/run.json'
-    reaches_path = root / 'catalog/reaches.json'
-    cells_path = root / 'var/seafloor/reference/cells.json'
+    receipt_path = paths.build_receipt_path
+    reaches_path = paths.reaches_path
+    cells_path = paths.cells_path
     outputs = (ledger_path, reaches_path, cells_path)
     if receipt_path.exists():
         previous = read_json(receipt_path)
@@ -213,7 +215,7 @@ def build(root=REPO, *, fetch=False, region='central-coast'):
                'cell_size_m': 250, 'input_hash': input_hash,
                'planning_spine_3310': mapping(spine),
                'ownership': 'Nearest alongshore projection of cell center; half-open reach intervals; terminal projections excluded.',
-               'source_config': 'catalog/seafloor-scope.json',
+               'source_config': config_path.relative_to(root).as_posix(),
                'reaches': sorted(reaches, key=lambda r: r['order'])}
     atomic_json(reaches_path, catalog, indent=2)
     atomic_json(cells_path, {'input_hash': input_hash, 'cells': cells})

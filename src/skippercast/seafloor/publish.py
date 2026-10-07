@@ -210,9 +210,14 @@ def region_layers(root, region, *, rerun=True, now=None):
     return {'cells': features, 'habitat': habitat}, receipts, expires
 
 
-def build(region, *, root=REPO, tool=None, now=None):
+def build(region, *, root=REPO, tool=None, now=None, scope_config=None):
     from scripts.build_map_tiles import build_vector_archive
     root = Path(root)
+    if scope_config is not None:
+        from .scope_paths import resolve_scope
+        _, paths = resolve_scope(root, scope_config=scope_config)
+        if not paths.is_central_default:
+            raise ValueError('Non-central publication is disabled until its scoped ingest, legal and screen contracts are reviewed')
     tool = tool or os.environ.get('TIPPECANOE') or shutil.which('tippecanoe')
     if not tool:
         raise ValueError('Install pinned tippecanoe or set TIPPECANOE')

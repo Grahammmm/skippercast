@@ -99,9 +99,14 @@ def apply_ledger(root, reach_id, summary):
     atomic_json(path, ledger, indent=2)
 
 
-def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
+def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, scope_config=None):
     started = monotonic()
     root = Path(root)
+    if scope_config is not None:
+        from .scope_paths import resolve_scope
+        _, paths = resolve_scope(root, scope_config=scope_config)
+        if not paths.is_central_default:
+            raise ValueError('Non-central processing is disabled until scoped source, physical and screen contracts are reviewed')
     catalog = read_json(root / 'catalog/reaches.json')
     reach = next((r for r in catalog['reaches'] if r['id'] == reach_id), None)
     if reach is None:

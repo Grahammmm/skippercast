@@ -58,10 +58,19 @@ def current(stamp, now):
         return False
 
 
-def load_snapshot(root, reach_id, now=None):
+def load_snapshot(root, reach_id, now=None, *, scope_config=None):
     """Hash every input; an unavailable layer cannot silently become an empty layer."""
     now = now or datetime.now(timezone.utc)
-    path = Path(root)/'var/seafloor/screen/snapshot.json'
+    root = Path(root)
+    if scope_config is None:
+        path = root/'var/seafloor/screen/snapshot.json'
+    else:
+        from .scope_paths import resolve_scope
+        config, paths = resolve_scope(root, scope_config=scope_config)
+        if paths.is_central_default:
+            path = root/'var/seafloor/screen/snapshot.json'
+        else:
+            path = paths.screen_dir/'snapshot.json'
     state = {'version': VERSION, 'status': 'held', 'reasons': [], 'layers': []}
     if not path.exists():
         state['reasons'] = ['screen-missing']
@@ -69,6 +78,8 @@ def load_snapshot(root, reach_id, now=None):
     state['snapshot_sha256'] = sha256(path)
     try:
         data = read_json(path)
+        if scope_config is not None and not paths.is_central_default and data.get('scope_id') != config['id']:
+            raise ValueError('Screen snapshot is not bound to the selected scope')
         if (path.parent/'refresh-failure.json').exists():
             state['reasons'].append('screen-refresh-failed')
         if data['policy_sha256'] != sha256(Path(root)/'catalog/seafloor-screen.json'):
