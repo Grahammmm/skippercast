@@ -10,6 +10,8 @@
 
 - Enable reviewed Offshore Monterey exposed-bedrock outlines over existing native Monastery/Cypress depth at nominal25–300ft. Preserve original geology units, prior native areas, current whole-polygon exclusions and separate CSUMB noncommercial terms; leave uncertain terrain unranked and precise exports disabled.
 
+- Add an explicit audited San Simeon geology profile for additional native survey pairs. Keep existing profile behavior unchanged, retain original PolygonZ geometry and invalid-source holds, and use strict unrepaired representations with private recovery. This code change activates no source.
+
 - Support an explicit reviewed Monterey original-geology profile for unranked bedrock habitat. Preserve prior native features and source units; retain invalid derived representations privately with authenticated recovery and publication reconstruction. This code change enables no source, new ranks or precise exports.
 
 - Enable reviewed original San Simeon exposed-bedrock habitat from two disjoint native depth windows, retaining source units, current habitat exclusions and whole-polygon spatial screens. These areas are unranked and receive no new measurement or precise fishing export.
