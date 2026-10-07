@@ -18,6 +18,7 @@ import {onError} from './middleware/error.ts';
 import {feeds} from './routes/feeds.ts';
 import {om} from './routes/om.ts';
 import {publicApi} from './routes/public.ts';
+import {coastData} from './routes/coast.ts';
 import {telemetry} from './routes/telemetry.ts';
 import {jobs} from './routes/jobs.ts';
 import {advisorPublic} from './routes/advisor.ts';
@@ -45,6 +46,7 @@ app.all('/api', serveAsset);
 app.route('/', feeds);
 app.route('/', om);
 app.route('/', publicApi);
+app.route('/', coastData);
 app.route('/', telemetry);
 app.route('/', jobs);
 // Text Advisor: webhooks, pages, media; 404 per request unless TEXT_ADVISOR_ENABLED=true (server/advisor/gate.ts).

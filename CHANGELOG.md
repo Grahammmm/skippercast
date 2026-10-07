@@ -11,6 +11,7 @@
 - Add Fish link compatibility to the shared v2 state: preserve the fishing profile, target, place and whole-hour timestamps while giving explicit SkipperCast choices precedence. Legacy UI remains the live default until feature integration is verified.
 
 - Define a bounded overnight mapping contract with exclusive worker claims, compact model briefs, release preflight and outcome-based checkpoints; distinguish the documented protocol from automated enforcement.
+- Add a bounded read-only coastal data bridge for the Fish integration. Preserve public snapshot clocks and habitat release checks, isolate private storage and accounts, and reject foreign-region bindings, unsafe paths and inexact byte ranges. The current homepage remains active.
 
 - Recognize one authenticated legacy San Simeon physical inventory in private window planning across screen-only refreshes, without fabricating a quarantine audit or changing publication checks.
 
