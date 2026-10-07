@@ -495,6 +495,38 @@ def features_for(patches, reach, policy, row, binding, *, reference_support=None
     return {'type': 'FeatureCollection', 'features': features}
 
 
+BEDROCK_AUDIT_FILE = 'classified-bedrock-audit.json'
+
+
+def _bedrock_prior_components(candidates, native, preceding, quarantine):
+    ids = {f['properties']['id'] for f in candidates['features']
+        if f['properties']['classified_area']['policy_id'] in preceding}
+    result = [{'id':'classified:'+f['properties']['id'],'crs':3310,
+        'geometry':shape(f['geometry'])} for f in native['features']
+        if f['properties']['id'] in ids]
+    result.extend({'id':'quarantine:'+h['policy_id']+':'+h['record']+':'+h['native_sha256'],
+        'crs':h['native_crs'],'geometry':shape(h['geometry'])} for h in quarantine
+        if h['policy_id'] in preceding)
+    return result
+
+
+def _bedrock_quarantine_identity(quarantine):
+    return {'component_count':len(quarantine), 'native_digest':digest(quarantine)}
+
+
+def _bedrock_projection_inputs(contexts, candidates, native, quarantine):
+    from . import bedrock_habitat as bh
+    preceding, result = [], {}
+    for identity, _, binding, _, _, _, _ in contexts:
+        policy = identity['policy']
+        if bh.audited(policy):
+            components = binding['baseline_components'] + _bedrock_prior_components(
+                candidates,native,preceding,quarantine)
+            _, result[policy['id']] = bh.native_baseline(components,binding['native_crs'])
+        preceding.append(policy['id'])
+    return result
+
+
 def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     """Refresh only opt-in classified physics/screens; never edit the graded run."""
     from .screen import load_snapshot, input_identity
@@ -516,10 +548,23 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
     from . import bedrock_habitat
     if any(bedrock_habitat.selected(c[0]['policy']) for c in contexts):
         physical_inputs['bedrock_processing'] = {'edge':edge, 'max_pixels':max_pixels}
+    audited = any(bedrock_habitat.audited(c[0]['policy']) for c in contexts)
     physical_hash = digest(physical_inputs)
     candidates_path = folder/'classified-candidates.geojson'
     native_path = folder/'classified-native.geojson'
     previous = read_json(receipt_path) if receipt_path.exists() else None
+    private_audit = {'version':'interpreted-bedrock-private-audit-v1','quarantine':[]}
+    if audited and previous and BEDROCK_AUDIT_FILE in previous.get('outputs', {}):
+        for name in ('classified-candidates.geojson','classified-native.geojson',BEDROCK_AUDIT_FILE):
+            if sha256(folder/name) != previous['outputs'][name]:
+                raise ValueError('Classified bedrock private artifact hash mismatch')
+        cached_candidates = read_json(candidates_path)
+        cached_native = read_json(native_path)
+        private_audit = read_json(folder/BEDROCK_AUDIT_FILE)
+        physical_inputs['bedrock_projection'] = _bedrock_projection_inputs(
+            contexts,cached_candidates,cached_native,private_audit['quarantine'])
+        physical_inputs['bedrock_quarantine'] = _bedrock_quarantine_identity(private_audit['quarantine'])
+        physical_hash = digest(physical_inputs)
     reuse = bool(previous and previous['physical_input_hash'] == physical_hash)
     if reuse:
         if (sha256(candidates_path) != previous['outputs']['classified-candidates.geojson']
@@ -533,12 +578,18 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
         native = {'version': GEOMETRY_VERSION, 'crs': 'EPSG:3310', 'features': []}
         physical_summary = {'candidate_count': 0, 'class3_valid_depth_pixels': 0,
                             'classified_selected_area_km2': 0, 'new_measured_area_km2': 0}
+        private_audit = {'version':'interpreted-bedrock-private-audit-v1','quarantine':[]}
         prior_native_patches = []
+        preceding = []
         for p, (identity, row, binding, path, support, existing, _) in zip(selected, contexts):
             pair_existing = (unary_union([existing, *prior_native_patches])
                              if prior_native_patches else existing)
+            if bedrock_habitat.audited(p):
+                binding = dict(binding, prior_components=_bedrock_prior_components(
+                    candidates,native,preceding,private_audit['quarantine']))
             patches, summary = extract(row, binding, path, support, pair_existing,
                                        root=root, edge=edge, max_pixels=max_pixels)
+            private_audit['quarantine'].extend(summary.pop('_private_quarantine', []))
             represented = features_for(patches, reach, p, row, binding,
                 reference_support=identity.get('reference_support'),
                 neighbor_planning=identity.get('neighbor_planning'))['features']
@@ -548,11 +599,19 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
             native['features'].extend({'type': 'Feature', 'geometry': mapping(patch),
                 'properties': {'id': f['properties']['id']}} for patch, f in zip(native_patches, represented))
             prior_native_patches.extend(native_patches)
+            preceding.append(p['id'])
             for key, value in summary.items():
                 physical_summary[key] = physical_summary.get(key, 0) + value
         physical_summary['candidate_count'] = len(candidates['features'])
         atomic_json(candidates_path, candidates)
         atomic_json(native_path, native)
+    if audited:
+        physical_inputs['bedrock_projection'] = _bedrock_projection_inputs(
+            contexts,candidates,native,private_audit['quarantine'])
+        physical_inputs['bedrock_quarantine'] = _bedrock_quarantine_identity(private_audit['quarantine'])
+        physical_hash = digest(physical_inputs)
+        private_audit['baseline_projection'] = physical_inputs['bedrock_projection']
+        atomic_json(folder/BEDROCK_AUDIT_FILE,private_audit)
     state = load_snapshot(root, reach)
     representation = verify_inventory(candidates, native)
     verify_pair_disjointness(candidates, native, contexts)
@@ -567,6 +626,8 @@ def stage(reach, *, root=REPO, fetch=False, edge=512, max_pixels=25_000_000):
         'physical_summary': physical_summary, 'summary': summary, 'representation': representation,
         'outputs': {name: sha256(folder/name) for name in
             ('classified-candidates.geojson', 'classified-native.geojson', 'classified-habitat.geojson', 'classified-held.geojson')}}
+    if audited:
+        receipt['outputs'][BEDROCK_AUDIT_FILE] = sha256(folder/BEDROCK_AUDIT_FILE)
     atomic_json(receipt_path, receipt, indent=2)
     return receipt
 
@@ -606,6 +667,18 @@ def publication_features(reach, *, root=REPO):
         processing = physical['bedrock_processing']
         if not isinstance(processing, dict) or set(processing) != {'edge','max_pixels'}:
             raise ValueError('Bedrock processing receipt missing')
+    audited = any(bedrock_habitat.audited(c[0]['policy']) for c in contexts)
+    private_audit = {'quarantine':[]}
+    if audited:
+        if sha256(folder/BEDROCK_AUDIT_FILE) != receipt['outputs'].get(BEDROCK_AUDIT_FILE):
+            raise ValueError('Classified bedrock private artifact hash mismatch')
+        private_audit = read_json(folder/BEDROCK_AUDIT_FILE)
+        physical['bedrock_projection'] = _bedrock_projection_inputs(contexts,
+            read_json(folder/'classified-candidates.geojson'),
+            read_json(folder/'classified-native.geojson'),private_audit['quarantine'])
+        physical['bedrock_quarantine'] = _bedrock_quarantine_identity(private_audit['quarantine'])
+        if private_audit.get('baseline_projection') != physical['bedrock_projection']:
+            raise ValueError('Classified conservative baseline projection changed')
     state = load_snapshot(root, reach)
     inputs = {'physical': physical, 'screen': input_identity(state),
               'screen_implementation_sha256': sha256(Path(__file__).with_name('screen.py'))}
@@ -613,6 +686,8 @@ def publication_features(reach, *, root=REPO):
             or receipt['physical_input_hash'] != digest(physical)):
         raise ValueError('Classified inputs changed; restage required')
     expected_names = {'classified-candidates.geojson', 'classified-native.geojson', 'classified-habitat.geojson', 'classified-held.geojson'}
+    if audited:
+        expected_names.add(BEDROCK_AUDIT_FILE)
     if set(receipt['outputs']) != expected_names or any(
             sha256(folder/name) != expected for name, expected in receipt['outputs'].items()):
         raise ValueError('Classified output hash mismatch')
@@ -622,19 +697,28 @@ def publication_features(reach, *, root=REPO):
     verify_pair_disjointness(candidates, native, contexts)
     if any(bedrock_habitat.selected(c[0]['policy']) for c in contexts):
         prior = []
+        preceding = []
+        reconstructed_holds = []
         for identity,row,binding,source_path,support,existing,_ in contexts:
             policy = identity['policy']
             saved_features = [f for f in candidates['features'] if f['properties']['classified_area']['policy_id'] == policy['id']]
             saved_ids = {f['properties']['id'] for f in saved_features}
             saved_native = [shape(f['geometry']) for f in native['features'] if f['properties']['id'] in saved_ids]
             if bedrock_habitat.selected(policy):
-                patches,_ = extract(row,binding,source_path,support,unary_union([existing,*prior]) if prior else existing,root=root,**processing)
+                if bedrock_habitat.audited(policy):
+                    binding = dict(binding,prior_components=_bedrock_prior_components(
+                        candidates,native,preceding,private_audit['quarantine']))
+                patches,reconstructed_summary = extract(row,binding,source_path,support,unary_union([existing,*prior]) if prior else existing,root=root,**processing)
+                reconstructed_holds.extend(reconstructed_summary.get('_private_quarantine',[]))
                 expected = features_for(patches,reach,policy,row,binding,
                     reference_support=identity.get('reference_support'),neighbor_planning=identity.get('neighbor_planning'))['features']
                 if (digest(expected) != digest(saved_features) or len(patches) != len(saved_native)
                         or any(not p.geometry.equals_exact(g,0) for p,g in zip(patches,saved_native))):
                     raise ValueError('Original bedrock production reconstruction changed')
             prior.extend(saved_native)
+            preceding.append(policy['id'])
+        if audited and digest(reconstructed_holds) != digest(private_audit['quarantine']):
+            raise ValueError('Original bedrock quarantine reconstruction changed')
     native_geometries = {f['properties']['id']: f['geometry'] for f in native['features']}
     habitat, held, summary = classified_screen(candidates, state, native_geometries, contexts, root, reach)
     if (representation != receipt.get('representation')
