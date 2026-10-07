@@ -1,5 +1,6 @@
 """Release notes come from the matching CHANGELOG section."""
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -60,8 +61,12 @@ class ChangelogSectionTests(unittest.TestCase):
     def test_unreleased_separates_internal_changes(self):
         text = (ROOT / 'CHANGELOG.md').read_text()
         unreleased = text.split('## Unreleased', 1)[1].split('\n## ', 1)[0]
-        self.assertEqual(unreleased.count('### Internal'), 1)
-        user_facing = unreleased.split('### Internal')[0]
+        # Cutting a release creates an empty Unreleased section (release-process
+        # step 2). The released notes must still retain both kinds of changes.
+        version = json.loads((ROOT / 'package.json').read_text())['version']
+        notes = unreleased if unreleased.strip() else changelog.section(text, version)
+        self.assertEqual(notes.count('### Internal'), 1)
+        user_facing = notes.split('### Internal')[0]
         self.assertTrue(any(line.startswith('- ') for line in user_facing.splitlines()))
 
     def test_cli_exit_status(self):
