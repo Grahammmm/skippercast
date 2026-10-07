@@ -8,8 +8,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {hourParam, needsReload, parseHour, readURL, withParams} from '../web/state.ts';
-import {indexForHour} from '../web/hour.ts';
+import {hour, hourParam, needsReload, parseHour, readURL, syncFromURL, withParams} from '../web/state.ts';
+import {followForecastHour, indexForHour} from '../web/hour.ts';
 import {portChoiceURL} from '../dist/home-port.js';
 import {parseView, viewParam} from '../dist/location-context.js';
 
@@ -131,4 +131,15 @@ test('the freshness banner says how old saved data is and offers a reload once b
   assert.match(back, /<span>Connection problem — showing data saved 1 h ago<\/span>/);
   assert.match(back, /<button type="button" data-offline-reload>Reload<\/button>/);
   assert.match(render(h(FreshnessBanner, {status: {online: true, savedAt: null, now}})), /^<span><\/span>/);
+});
+
+test('the shared clock updates its URL without requiring a forecast bundle',()=>{
+ const saved={location:globalThis.location,history:globalThis.history};
+ const start=Date.parse('2026-10-06T12:00:00Z')/1000;
+ globalThis.location={href:'https://skippercast.com/?region=morro-bay#map'};
+ globalThis.history={state:null,replaceState(_state,_title,href){location.href=href;},pushState(_state,_title,href){location.href=href;}};
+ const listeners={},input={value:'0',max:'168',dispatchEvent(){}};
+ const doc={addEventListener(name,fn){listeners[name]=fn;},getElementById(){return input;}};
+ try{syncFromURL();followForecastHour(doc);listeners['skippercast:time']({detail:{epoch:start}});input.value='168';listeners['skippercast:time']({detail:{epoch:start+168*3600}});assert.equal(new URL(location.href).searchParams.get('hour'),'2026-10-13T12:00Z');assert.equal(hour.value,'2026-10-13T12:00Z');}
+ finally{Object.assign(globalThis,saved);hour.value=null;}
 });

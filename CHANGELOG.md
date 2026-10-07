@@ -10,6 +10,8 @@
 
 - Expand one unranked SCC06 bedrock outline into a reviewed adjoining native window, with a new geometry-derived identifier; retain unknown terrain grades and species fits and exclude precise exports.
 
+- Added the native coastal 2D/3D terrain as a presentation in the working chart workspace, sharing target, location and seven-day forecast time while retaining chart, planning, legal and account tools.
+
 - Add four unranked SCC06 bedrock interpretations from one reviewed native window, with an explicitly reidentified SCC05 boundary after source-priority exclusion; retain unknown terrain grades and species fits and exclude precise exports.
 
 - Add a reusable coastal-map skill with bounded subagents, tested model-setting records, honest visual enhancement, desktop/mobile acceptance and protected live-release checks.

@@ -87,7 +87,7 @@ test('all map surfaces exclude curtain skirts during loading and relief changes'
   saved.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{value,writable:true,configurable:true});
  }
  try{
-  const viewer={terrain:new T.Group(),waters:new T.Group(),relief:{value:1},manifest:{waterReferenceM:0},
+  const viewer={options:{},root:document,$:node,terrain:new T.Group(),waters:new T.Group(),relief:{value:1},manifest:{waterReferenceM:0},
    renderer:{domElement:{addEventListener(){}}},visualSource:(id:number)=>id,
    geometry(g:Grid,skirts?:boolean){return prototype.geometry.call(this,g,skirts);},material(){return new T.MeshBasicMaterial();},drawCoverageSeams(){},goPlace(){}};
   const g=grid(0,0,3,100,()=>-10),surfaces=[0,4,1,2].map(kind=>({kind,...prototype.addSurface.call(viewer,g,kind,kind===2)}));

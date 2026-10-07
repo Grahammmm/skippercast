@@ -1,0 +1,6 @@
+#coast-workspace{position:absolute;inset:0;z-index:400}#coast-workspace[hidden]{display:none}
+.map-presentations{position:absolute;z-index:510;top:12px;right:14px;padding:4px 7px;background:#fffffff2;border-radius:8px;box-shadow:0 3px 15px #163e4b20}
+.map-presentations label{display:flex;align-items:center;gap:8px;font-size:.75rem}.map-presentations select{min-height:40px;font-size:.875rem;border:0;background:transparent;color:#174b58;max-width:150px}
+#map-presentation-status{position:absolute;top:65px;right:14px;z-index:520;max-width:min(360px,calc(100% - 28px));padding:9px 12px;background:#fff5d9;border-radius:7px;font-size:.8rem}
+body[data-map-presentation='terrain'] :is(#map,#map-legend,#show-charter-grounds,#boat-position-toggle,#boat-position-card,#map-empty,#region-note,.search-plan-card){visibility:hidden}
+@media(max-width:850px){.map-presentations{top:110px;right:14px}.map-presentations select{max-width:130px}.map-presentations label>span{display:none}#map-presentation-status{top:160px}}
