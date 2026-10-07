@@ -354,6 +354,66 @@
           ]
         ]
       }
+    },
+    {
+      "id": "usgs-sim3327-scc06-bedrock-v1",
+      "interpretation_method": "original-interpreted-bedrock-v1",
+      "profile": "original-interpreted-bedrock-area-v1",
+      "reach_ids": [
+        "cambria-san-simeon-r02"
+      ],
+      "reviewed_on": "2026-10-06",
+      "depth_source_id": "csumb-scc-block06-2m-native",
+      "depth_source_sha256": "ddc507f83c2b68dcb8ad869fa37c78dca402ffd73e8abe58e44a652607af1d4a",
+      "classification_source_id": "geology-sansimeon-zip-9387f22e02",
+      "classification_source_sha256": "6309074b299845769735d291e78a9a58a8d226a746c5e80ee7cbfa95f9633ad6",
+      "metadata_sha256": "e330211c7b5b2512f37083bcc5d96e5f921bc5bd8a035387360dd61da3efc688",
+      "metadata_url": "https://pubs.usgs.gov/sim/3327/",
+      "credit": "U.S. Geological Survey, California State Waters Map Series, SIM3327 (2015). Paired original bathymetry: California State University Monterey Bay Seafloor Mapping Lab.",
+      "notice": "Original USGS geologic interpretation; retain source attribution, source-resolution limitations and the metadata request to share derived products with USGS. Not for navigation. Paired CSUMB depth is authorized for public noncommercial use only; express producer permission is required for for-profit use. Unknown depth datum conversion, accuracy, interpolation and rugosity remain unknown. Processing-window boundaries are not established reef edges.",
+      "review_basis": "Authenticated original San Simeon PolygonZ geology:625records,328 valid exposed-bedrock records and original invalid record123 held without repair. Pair only reviewed nominal25–300ft native depth windows with current selected-source support. Preserve all preceding native areas including held components; the complete new windows are disjoint from the occupied SCC03 footprint. Strict unrepaired representations, private representation audit, current whole-polygon spatial screens and publication reconstruction required. No measurement, terrain rank, fish presence or precise export inferred.",
+      "release_license": "public-domain-us-gov",
+      "vector_review": {
+        "original_crs": "EPSG:32610",
+        "unit_field": "MapUnitAbb",
+        "member_stem": "Geology_SanSimeon",
+        "metadata_member": "Geology_SanSimeon_metadata.txt",
+        "expected_polygon_count": 625,
+        "bedrock_units": [
+          "Tus",
+          "Tm",
+          "KJug",
+          "KJug?",
+          "KJf",
+          "Ksl",
+          "Jo",
+          "Jo?"
+        ],
+        "excluded_units": [
+          "Qms/Tus",
+          "Qms/KJf",
+          "Qms/KJug",
+          "Qms/KJug?"
+        ],
+        "invalid_original_records": [
+          123
+        ],
+        "native_windows": [
+          [
+            2659,
+            384,
+            1024,
+            1024
+          ],
+          [
+            738,
+            568,
+            1024,
+            1024
+          ]
+        ],
+        "source_profile": "usgs-sim3327-sansimeon-geology-audited-v1"
+      }
     }
   ]
 }
