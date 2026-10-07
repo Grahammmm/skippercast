@@ -20806,6 +20806,41 @@
           "sha256": "e6fdb1b47482735e13cad8ffee9fa42bd90a3f33445547020f4e2bfed8a45f5c"
         }
       }
+    },
+    {
+      "id": "geology-offshoremonterey-zip-9fba59a4db",
+      "publisher": "USGS",
+      "title": "Geology_OffshoreMonterey.zip",
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Geology_OffshoreMonterey.zip",
+      "landing_page": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Geology_OffshoreMonterey_metadata.html",
+      "format": "vector",
+      "kind": "substrate",
+      "year": 2016,
+      "resolution_m": "unknown",
+      "horizontal_crs": "EPSG:32610",
+      "vertical_datum": "unknown",
+      "license": "public-domain-us-gov",
+      "sha256": "bed0e15456c3b96547b86d7efddcfbddc143db71f4acb92a3a9701cb2300919c",
+      "bytes": 1003053,
+      "derived_from": [],
+      "status": "candidate",
+      "hold_reason": "unknown",
+      "notes": "Hash-verified original USGS OFR2016-1110 interpreted exposed-bedrock vectors; candidate in the ordinary raster pipeline. Only explicitly reviewed vector habitat policies may admit this source. No measured depth, numerical habitat rank, rugosity or fish confirmation. Paired CSUMB depth retains separate noncommercial terms. Invalid sediment records318/676 are excluded; all456 pure bedrock originals were valid.",
+      "archive_member": "Geology_OffshoreMonterey/Geology_OffshoreMonterey.shp",
+      "evidence": [
+        "catalog/usgs-monterey-geology.json#/archive_url",
+        "catalog/usgs-monterey-geology.json#/interpretation_review",
+        "catalog/usgs-monterey-geology.json#/rights"
+      ],
+      "field_evidence": {
+        "sha256": "catalog/usgs-monterey-geology.json#/archive_sha256",
+        "horizontal_crs": "catalog/usgs-monterey-geology.json#/shapefile_crs",
+        "bytes": "catalog/usgs-monterey-geology.json#/archive_bytes",
+        "year": "catalog/usgs-monterey-geology.json#/publication_year",
+        "license": "catalog/usgs-monterey-geology.json#/rights"
+      },
+      "inspection_level": "metadata",
+      "lineage_status": "unknown"
     }
   ],
   "inventory_method": "Seeded from committed source registry, acquisition queue and review/gap receipts. Linked catalog candidates and native receipts enrich explicit fields. Native raster measurements take precedence over metadata spacing. No new survey qualification in M0.",

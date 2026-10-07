@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "usgs-ofr2016-1110-monterey-geology",
+  "producer": "U.S. Geological Survey",
+  "documentation_url": "https://pubs.usgs.gov/of/2016/1110/",
+  "archive_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Geology_OffshoreMonterey.zip",
+  "metadata_url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Geology_OffshoreMonterey_metadata.html",
+  "dataset_doi": "https://doi.org/10.5066/F70Z71C8",
+  "archive_bytes": 1003053,
+  "archive_sha256": "bed0e15456c3b96547b86d7efddcfbddc143db71f4acb92a3a9701cb2300919c",
+  "metadata_member_sha256": "ef37b594aea6bf650f0960b73e1a91810b1d6d29ea2bb323a91efab3e1f6bb08",
+  "shapefile_crs": "EPSG:32610",
+  "expected_polygon_count": 894,
+  "pure_bedrock_units": [
+    "Tp",
+    "Tm",
+    "Tvb",
+    "Tc",
+    "Tu",
+    "Kgr",
+    "Tpcw",
+    "Tmcw",
+    "Kgrcw"
+  ],
+  "actual_vertex_extent_wgs84": [
+    -122.06488629711788,
+    36.53272230033204,
+    -121.81177470752304,
+    36.692799259477674
+  ],
+  "footprint_notice": "Bounds are actual transformed original vertices, not continuous mapped coverage. Depth comes from paired original depth, not this vector.",
+  "publication_year": 2016,
+  "reviewed_on": "2026-10-06",
+  "rights": "Original USGS geological interpretation is public-domain/CC0 according to publisher metadata. Retain USGS/CSUMB credit, original source-resolution and non-navigation limitations. Paired CSUMB depth retains separate reviewed public noncommercial terms; for-profit permission has not been obtained.",
+  "interpretation_review": {
+    "profile": "original-interpreted-bedrock-area-v1",
+    "unit_field": "PTYPE",
+    "member_stem": "Geology_OffshoreMonterey/Geology_OffshoreMonterey",
+    "metadata_member": "Geology_OffshoreMonterey_metadata.xml",
+    "invalid_exposed_bedrock_records": [],
+    "excluded_invalid_sediment_records": [
+      318,
+      676
+    ],
+    "canyon_wall_units": [
+      "Tpcw",
+      "Tmcw",
+      "Kgrcw"
+    ],
+    "unit_note": "Kgrcw is the actual original attribute and official pamphlet Table8-1 unit; metadata Kgcw is not an allowed replacement.",
+    "unit_evidence_url": "https://pubs.usgs.gov/of/2016/1110/ofr20161110_pamphlet.pdf",
+    "unit_evidence_location": "page32 Table8-1",
+    "interpretation": "Original interpreted exposed bedrock; not rugose class3, boulder size, numerical habitat rank or fish presence. Sediment-over-rock and sediment units excluded. Small original polygons remain retained evidence; ordinary component minimum remains1000m².",
+    "depth": "Pair only with authenticated nominal valid native depth up to300ft; original vector has no measured depth.",
+    "source_time": "2016 interpreted map publication; underlying2006–2010 depth/backscatter overlap prior mapping and are not independent corroboration.",
+    "publication_notice": "Reviewed processing window boundaries are not established reef edges."
+  }
+}
