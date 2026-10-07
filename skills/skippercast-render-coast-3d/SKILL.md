@@ -1,5 +1,5 @@
 ---
-name: skippercast-build-coastal-map
+name: skippercast-render-coast-3d
 description: Improve SkipperCast website 3D coastal terrain and imagery from existing reviewed data. Use for coastal renderer and visual-quality work; use focused data skills for new sources or measured habitat expansion.
 ---
 
