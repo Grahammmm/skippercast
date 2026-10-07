@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Add an explicit conservative canonical occupied-subtraction option for reviewed original bedrock: remove bounded reprojection residuals without tolerating retained overlap, modifying prior geometry or activating a source.
+
 - Add Fish link compatibility to the shared v2 state: preserve the fishing profile, target, place and whole-hour timestamps while giving explicit SkipperCast choices precedence. Legacy UI remains the live default until feature integration is verified.
 
 - Define a bounded overnight mapping contract with exclusive worker claims, compact model briefs, release preflight and outcome-based checkpoints; distinguish the documented protocol from automated enforcement.

@@ -40,6 +40,7 @@ BASELINE_IMPLEMENTATION = ('coverage.py', 'terrain.py', 'run.py', 'habitat.py',
 SAN_SIMEON = 'usgs-sim3327-sansimeon-geology-v1'
 SAN_SIMEON_AUDITED = 'usgs-sim3327-sansimeon-geology-audited-v1'
 MONTEREY = 'usgs-offshore-monterey-geology-v1'
+CANONICAL_EXCLUSION = 'canonical-occupied-subtraction-v1'
 SOURCE_CONTRACTS = {
     SAN_SIMEON: {'unit_field':'MapUnitAbb', 'member_stem':'Geology_SanSimeon',
         'metadata_member':'Geology_SanSimeon_metadata.txt',
@@ -172,6 +173,9 @@ def validate_policy(p):
             or len(set(review['invalid_original_records'])) != len(review['invalid_original_records'])):
         raise ValueError('Incomplete original interpreted-bedrock review')
     source_contract(p)
+    exclusion = review.get('projection_exclusion_method')
+    if exclusion is not None and (exclusion != CANONICAL_EXCLUSION or not audited(p)):
+        raise ValueError('Unreviewed projected occupied exclusion method')
     windows = review.get('native_windows')
     if (not isinstance(windows, list) or not windows or len(windows) > 1000
             or any(not isinstance(w, list) or len(w) != 4
@@ -395,6 +399,36 @@ class Patch:
     geometry: object
     native_depth_area_m2: float
     native_depth_crs: str
+    projection_exclusion: dict | None = None
+
+
+def canonical_occupied_subtraction(local, occupied):
+    """Conservative, opt-in canonical subtraction; never tolerate overlap.
+
+    The existing representation-fidelity bound caps discarded area, not retained
+    overlap. Valid source/projection geometry is required before this operation.
+    Real/material conflicts, invalid overlays and topology splits remain held.
+    """
+    from .classified_geometry import MAX_FEATURE_DIFFERENCE_M2
+    local = polygon(local)
+    if not occupied.is_empty:
+        occupied = polygon(occupied)
+    overlap = local.intersection(occupied).area
+    if not math.isfinite(overlap):
+        raise ValueError('Nonfinite canonical occupied overlap')
+    retained = local if overlap == 0 else polygon(local.difference(occupied))
+    removed = local.difference(retained).area
+    added = retained.difference(local).area
+    remaining = retained.intersection(occupied).area
+    if (not all(math.isfinite(v) for v in (removed, added, remaining))
+            or removed > MAX_FEATURE_DIFFERENCE_M2 or added > 0 or remaining > 0
+            or retained.geom_type != local.geom_type
+            or (hasattr(local, 'geoms') and len(retained.geoms) != len(local.geoms))):
+        raise ValueError('Canonical occupied subtraction exceeds conservative representation contract')
+    strict_geographic(retained)
+    return retained, {'version': CANONICAL_EXCLUSION,
+        'initial_overlap_m2': overlap, 'removed_area_m2': removed,
+        'added_area_m2': added, 'remaining_overlap_m2': remaining}
 
 
 def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels=25_000_000):
@@ -453,7 +487,10 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
         to_local = Transformer.from_crs(ds.crs, 3310, always_xy=True).transform
         if audited(binding['policy']):
             patches, quarantine = [], []
-            prior_local, _ = native_baseline(binding.get('prior_components', []), 3310)
+            canonical_components = binding.get('prior_components', [])
+            if binding['policy']['vector_review'].get('projection_exclusion_method') == CANONICAL_EXCLUSION:
+                canonical_components = binding['baseline_components'] + canonical_components
+            prior_local, _ = native_baseline(canonical_components, 3310)
             prior_union = unary_union(list(prior_local.by_record.values()))
             for key,g in assembled:
                 local = transform(to_local,g)
@@ -461,9 +498,21 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
                 try:
                     strict_geographic(polygon(local))
                     overlap = local.intersection(prior_union).area
-                    if overlap > 0:
+                    exclusion = None
+                    native_area = g.area
+                    if binding['policy']['vector_review'].get('projection_exclusion_method') == CANONICAL_EXCLUSION:
+                        local, exclusion = canonical_occupied_subtraction(local, prior_union)
+                        if exclusion['removed_area_m2'] > 0:
+                            # Count only retained original nominal-depth support.
+                            back = Transformer.from_crs(3310, ds.crs, always_xy=True).transform
+                            retained_native = polygon(transform(back, local)).intersection(g)
+                            polygon(retained_native)
+                            native_area = retained_native.area
+                            if native_area < 1000:  # Existing native connected-component minimum.
+                                raise ValueError('Canonical exclusion drops native component below accepted area')
+                    elif overlap > 0:
                         raise ValueError('Projected bedrock representation overlaps preceding native inventory')
-                    patches.append(Patch(key,units[key],local,g.area,ds.crs.to_string()))
+                    patches.append(Patch(key,units[key],local,native_area,ds.crs.to_string(),exclusion))
                 except ValueError as exc:
                     quarantine.append({'policy_id':binding['policy']['id'], 'record':key,
                         'unit':units[key], 'reason':str(exc),
@@ -512,6 +561,8 @@ def features_for(patches, reach, policy, row, binding, **metadata):
                 'window_notice':'Interpretation is limited to reviewed native windows; a window boundary is not an established reef edge.'}}
         if audited(policy):
             properties['classified_area']['source_profile'] = source_profile(policy)
+        if patch.projection_exclusion is not None:
+            properties['classified_area']['projection_exclusion'] = deepcopy(patch.projection_exclusion)
         properties.update({k:deepcopy(v) for k,v in metadata.items() if v is not None})
         features.append({'type':'Feature','geometry':mapping(geo),'properties':properties})
     return {'type':'FeatureCollection','features':features}
