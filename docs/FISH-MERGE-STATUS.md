@@ -105,31 +105,35 @@ ownership and final parity requirements.
 
 The medium-width control fix is complete (PR 387, main `2427b0bda`, v0.3.3).
 
-The shared map increment is merged in PR 392, main `39ea66b4c`, after independent
-review and all exact-head Linux science/core/browser checks. The phone browser
-gate caught hidden-chart resizing; the corrected head `a49be6459` passed. Main CI
-and production readback are still pending; a merge is not deployed acceptance.
+The shared map increment (PR 392, main `39ea66b4c`) and local report/history
+increment (PR 393, main `539a3c66c`) are merged through protected flow after
+independent review and every exact-head required check. Both merged main CI and
+existing Cloudflare deploys passed. Live builds `55dbed0ed0` and `27bf9c676b` match
+their workflow smoke receipts. Actual phone map/Conditions/history interactions
+passed. Each release's 12 public-data, native range/hash, region and private-route
+checks passed; receipts are in the continuation workspace outputs.
 
-Current batch: `codex/unified-coast-conditions`, based on `39ea66b4c`. Local SLO
-report/history/shore/dive fields follow the existing selected UTC hour, geographic
-context and profile. Native targets are added without borrowing chart search
-methods or species limits. CDIP samples stay within actual time support and keep
-their original valid clock; non-SLO local reports remain unavailable. Measured
-SLO history can be opened only as an explicitly labelled geographic reference.
+Current batch: `codex/readable-coastal-report`, based on main `3cecd5530`.
+Readable `/report`, original-clock `/feed.xml`, methods/about pages and `/privacy`
+alias use the existing generated shell and complete privacy notice. Shared public
+selection survives links; client identity is never sent to source snapshots. Exact
+UTC/profile/area checks retain gaps. Static checks exempt only registered
+navigation and the exact RSS tag; scripts/styles/unknown paths still fail. A real
+signals regression test now covers profile-only updates after lazy report mount.
 
-Evidence: independent scoped source acceptance; 1,335 Node tests passed, strict
-typecheck and source rebuild passed (local build `27bf9c676b`). Actual desktop/
-mobile interaction retained the day-seven clock with local gaps, current Spear
-visibility unknown, original measured history dates, and non-SLO separation.
-Earlier full local GIS Python run had 1,880 passes, 32 allowed private-cache skips
-and 5 macOS fleet-shell/environment failures; required Linux science/core CI
-passed on PR 392. No test or gate was weakened.
+Evidence: independent scoped source acceptance; strict typechecks; 19 route/host
+and six checker cases passed. Earlier report batch had 1,335 Node passes and live
+build `27bf9c676b`. Required full Linux gates, protected merge and readable-route
+live acceptance remain pending for this batch.
 
 Start: October 6, 2026 10:31 p.m. Pacific; checkpoint: October 7, 1:31 a.m. Pacific.
-Parent owns integration/browser/release; bounded worker owns report adapter,
+Parent owns integration/browser/release. Bounded worker owns source adapters;
 independent reviewer owns source review. Existing Fish public Worker remains the
-bounded read-only data dependency. No collectors, private data or schedulers move.
+bounded read-only data dependency. No collectors, private stores or schedulers move.
 
-Next: protected report PR and deployment readback; restore canonical readable
-report/RSS/information routes; finish full capability and geography audit. Homepage
-and Fish regional cutover remain pending. Reachable legacy links are not parity.
+Next: release/read back the readable routes; normalize actual v1 Fish entry links,
+Back/Forward target state and home preferences; finish the complete capability and
+geography audit. Continuous-coast overview parity, visible imagery transitions,
+all profile/target interactions and regional Fish cutover still need explicit
+acceptance. Homepage defaults and Fish retirement remain unchanged until that
+matrix passes. Reachable legacy links are not parity.
