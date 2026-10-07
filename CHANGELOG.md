@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Support an explicit reviewed Monterey original-geology profile for unranked bedrock habitat. Preserve prior native features and source units; retain invalid derived representations privately with authenticated recovery and publication reconstruction. This code change enables no source, new ranks or precise exports.
+
 - Enable reviewed original San Simeon exposed-bedrock habitat from two disjoint native depth windows, retaining source units, current habitat exclusions and whole-polygon spatial screens. These areas are unranked and receive no new measurement or precise fishing export.
 
 - Add explicit reviewed original-geology admission for unranked bedrock habitat, using bounded native depth windows, current canonical habitat exclusions, retained source units and separate producer rights. Preserve legacy rugose-rock outputs; bedrock map details keep rugosity, boulder size and species fit unknown. No source is enabled by this code change.

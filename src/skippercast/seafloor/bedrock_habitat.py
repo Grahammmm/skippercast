@@ -8,6 +8,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date
 import hashlib
+import math
 from io import BytesIO
 from pathlib import Path
 import re
@@ -36,6 +37,113 @@ BASELINE_IMPLEMENTATION = ('coverage.py', 'terrain.py', 'run.py', 'habitat.py',
     'normalized.py', 'source_scope.py')
 
 
+SAN_SIMEON = 'usgs-sim3327-sansimeon-geology-v1'
+MONTEREY = 'usgs-offshore-monterey-geology-v1'
+SOURCE_CONTRACTS = {
+    SAN_SIMEON: {'unit_field':'MapUnitAbb', 'member_stem':'Geology_SanSimeon',
+        'metadata_member':'Geology_SanSimeon_metadata.txt',
+        'bedrock_units':['Tus','Tm','KJug','KJug?','KJf','Ksl','Jo','Jo?'],
+        'excluded_units':['Qms/Tus','Qms/KJf','Qms/KJug','Qms/KJug?']},
+    MONTEREY: {'unit_field':'PTYPE',
+        'member_stem':'Geology_OffshoreMonterey/Geology_OffshoreMonterey',
+        'metadata_member':'Geology_OffshoreMonterey_metadata.xml',
+        'bedrock_units':['Tp','Tm','Tvb','Tc','Tu','Kgr','Tpcw','Tmcw','Kgrcw'],
+        'excluded_units':['af','Qms','Qmsc','Qmsf','Qmsd','Qwp','Qwpr','Qms/Tp',
+            'Qms/Tm','Qms/Tvb','Qms/Tc','Qms/Tu','Qms/Kgr','Qchc','Qcpcf',
+            'Qccf2','Qccf1','Qcb','Qmscp','Qcw']}}
+
+
+def source_profile(policy):
+    return policy.get('vector_review', {}).get('source_profile', SAN_SIMEON)
+
+
+def audited(policy):
+    return source_profile(policy) == MONTEREY
+
+
+def source_contract(policy):
+    review = policy.get('vector_review', {})
+    profile = source_profile(policy)
+    contract = SOURCE_CONTRACTS.get(profile)
+    if (contract is None or any(review.get(k) != v for k,v in contract.items())
+            or (profile == MONTEREY and (review.get('expected_polygon_count') != 894
+                or review.get('invalid_original_records') != []))):
+        raise ValueError('Unapproved original geology source contract')
+    return contract
+
+
+def native_baseline(components, target_crs):
+    """Authenticated valid originals only; finite invalid projections over-exclude.
+
+    An envelope fills projected holes and encloses every projected vertex. It
+    strengthens exclusion; it never repairs or promotes a source candidate.
+    """
+    from . import classified_habitat as ch
+    records, audit = {}, []
+    projectors = {}
+    for item in components:
+        ident = item['id']
+        if ident in records:
+            raise ValueError('Duplicate native baseline component')
+        original = polygon(item['geometry'])
+        projector = projectors.setdefault(str(item['crs']),
+            Transformer.from_crs(item['crs'], target_crs, always_xy=True).transform)
+        projected = transform(projector, original)
+        from shapely import get_coordinates
+        if (projected.is_empty or not np.isfinite(get_coordinates(projected)).all()
+                or not all(math.isfinite(v) for v in projected.bounds)):
+            raise ValueError('Unbounded baseline projection cannot be excluded')
+        reason = None
+        used = projected
+        if not projected.is_valid:
+            from shapely.validation import explain_validity
+            reason = explain_validity(projected)
+            used = polygon(box(*projected.bounds))
+        records[ident] = polygon(used)
+        audit.append({'id':ident,'source_crs':str(item['crs']),
+            'original_sha256':hashlib.sha256(original.wkb).hexdigest(),
+            'projected_sha256':hashlib.sha256(projected.wkb).hexdigest(),
+            'excluded_sha256':hashlib.sha256(used.wkb).hexdigest(),
+            'conservative_envelope':reason is not None,'reason':reason,
+            'envelope_bounds':list(used.bounds) if reason else None})
+    identity = {'version':'conservative-native-exclusion-v1',
+        'native_crs':CRS.from_user_input(target_crs).to_string(),
+        'component_count':len(audit),'components':audit,'digest':ch.digest(audit),
+        'meaning':'Valid authenticated occupied components; invalid finite projections conservatively over-excluded. Lower-bound additional interpretation only.'}
+    return kernel.NativeFragments(CRS.from_user_input(target_crs), records), identity
+
+
+def strict_geographic(native):
+    """Bounded edge conversion without repairing any intermediate geometry."""
+    from shapely import segmentize
+    from .classified_geometry import project, MAX_FEATURE_DIFFERENCE_M2, EDGE_STEPS_M, edge_vertex_count
+    native = polygon(native)
+    # Initial invalid projection stays held, even if densification might mask it.
+    polygon(project(native, 3310, 4326))
+    failure = None
+    for step in (None, *EDGE_STEPS_M):
+        if step is not None:
+            edge_vertex_count(native, step)
+        converted = native if step is None else polygon(segmentize(native, step))
+        try:
+            geo = polygon(project(converted, 3310, 4326))
+            w, s, e, n = geo.bounds
+            if not (-180 <= w <= e <= 180 and -90 <= s <= n <= 90):
+                raise ValueError('Classified representation must be WGS84')
+            for crs in (3310, 3857):
+                rendered = polygon(project(geo, 4326, crs))
+                returned = rendered if crs == 3310 else polygon(project(rendered, crs, 3310))
+                difference = native.symmetric_difference(returned).area
+                added = returned.difference(native).area
+                if (not math.isfinite(difference) or difference > MAX_FEATURE_DIFFERENCE_M2
+                        or not math.isfinite(added) or added > MAX_FEATURE_DIFFERENCE_M2):
+                    raise ValueError('Unfaithful unrepaired bedrock representation')
+            return geo
+        except ValueError as exc:
+            failure = exc
+    raise failure
+
+
 def selected(policy):
     return policy.get('interpretation_method') == METHOD
 
@@ -52,17 +160,13 @@ def validate_policy(p):
                    ('depth_source_sha256', 'classification_source_sha256', 'metadata_sha256'))
             or not all(p.get(k) for k in ('credit', 'notice', 'review_basis'))
             or review.get('original_crs') != 'EPSG:32610'
-            or review.get('unit_field') != 'MapUnitAbb'
-            or review.get('member_stem') != 'Geology_SanSimeon'
-            or review.get('metadata_member') != 'Geology_SanSimeon_metadata.txt'
-            or review.get('bedrock_units') != ['Tus', 'Tm', 'KJug', 'KJug?', 'KJf', 'Ksl', 'Jo', 'Jo?']
-            or review.get('excluded_units') != ['Qms/Tus', 'Qms/KJf', 'Qms/KJug', 'Qms/KJug?']
             or type(review.get('expected_polygon_count')) is not int
             or not 1 <= review['expected_polygon_count'] <= 10000
             or not isinstance(review.get('invalid_original_records'), list)
             or any(type(i) is not int or i < 0 for i in review['invalid_original_records'])
             or len(set(review['invalid_original_records'])) != len(review['invalid_original_records'])):
         raise ValueError('Incomplete original interpreted-bedrock review')
+    source_contract(p)
     windows = review.get('native_windows')
     if (not isinstance(windows, list) or not windows or len(windows) > 1000
             or any(not isinstance(w, list) or len(w) != 4
@@ -79,6 +183,7 @@ def validate_policy(p):
 def original_vectors(path, policy, target_crs):
     """Authenticate original bytes and native validity before transformation."""
     review = policy['vector_review']
+    contract = source_contract(policy)
     if Path(path).stat().st_size > MAX_ARCHIVE_BYTES or sha256(path) != policy['classification_source_sha256']:
         raise ValueError('Original bedrock archive changed')
     stem = review['member_stem']
@@ -96,12 +201,25 @@ def original_vectors(path, policy, target_crs):
                                     for suffix in ('shp', 'shx', 'dbf')})
         if len(reader) != review['expected_polygon_count']:
             raise ValueError('Original bedrock record inventory changed')
+        allowed_types = ((shapefile.POLYGON,) if source_profile(policy) == MONTEREY else
+            (shapefile.POLYGON, shapefile.POLYGONZ))
+        if (reader.shapeType not in allowed_types or review['unit_field'] not in
+                {field[0] for field in reader.fields[1:]}):
+            raise ValueError('Original bedrock shape/attribute header changed')
         project = Transformer.from_crs(32610, target_crs, always_xy=True).transform
         records, units, held, transformed_holds = {}, {}, [], []
+        positive_count, excluded_invalid = 0, []
         for index, item in enumerate(reader.iterShapeRecords()):
             unit = item.record.as_dict()[review['unit_field']]
+            if audited(policy) and unit not in contract['bedrock_units'] + contract['excluded_units']:
+                raise ValueError('Unapproved original geology map-unit code')
             if unit not in review['bedrock_units']:
+                if audited(policy):
+                    excluded = shape(item.shape.__geo_interface__)
+                    if not excluded.is_valid:
+                        excluded_invalid.append(index)
                 continue  # Sediment, including sediment-over-rock, stays excluded.
+            positive_count += 1
             native = shape(item.shape.__geo_interface__)
             if native.geom_type not in ('Polygon', 'MultiPolygon') or native.is_empty or not native.is_valid:
                 held.append(index)
@@ -111,10 +229,14 @@ def original_vectors(path, policy, target_crs):
                 transformed_holds.append(index)
                 continue
             records[str(index)], units[str(index)] = result, unit
+        if audited(policy) and (positive_count != 456 or excluded_invalid != [318,676]):
+            raise ValueError('Original Monterey unit/invalid-excluded inventory changed')
         if held != review['invalid_original_records']:
             raise ValueError('Original bedrock invalid-record holds changed')
-    return records, units, {'invalid_original_records': held,
-                           'invalid_transformed_records': transformed_holds}
+    holds = {'invalid_original_records': held, 'invalid_transformed_records': transformed_holds}
+    if audited(policy):
+        holds.update(pure_bedrock_record_count=positive_count, invalid_excluded_records=excluded_invalid)
+    return records, units, holds
 
 
 def verified_baseline(root, reach, run, physical):
@@ -208,7 +330,20 @@ def source_context(root, reach, policy, *, fetch=False):
     archive, _ = fetch_source(source, root/'var/seafloor/cache', fetch=fetch, max_bytes=MAX_ARCHIVE_BYTES)
     with rasterio.open(path) as ds:
         records, units, holds = original_vectors(archive, policy, ds.crs)
-    existing, baseline_identity = verified_baseline(root, reach, run, physical)
+        baseline_crs = ds.crs.to_string()
+    baseline_components = None
+    if audited(policy):
+        graded = read_json(folder/'candidates.geojson')['features']
+        baseline_components = [{'id':'graded:'+f['properties']['id'], 'crs':4326,
+            'geometry':polygon(f['geometry'])} for f in graded]
+        native_graded, projection = native_baseline(baseline_components, baseline_crs)
+        existing = unary_union([])  # Authoritative components travel in the binding.
+        baseline_identity = {'version':BASELINE_VERSION, 'reach':reach,
+            'baseline_hashes':{n:sha256(folder/n) for n in ('physical.json','candidates.geojson','cells.json')},
+            'physical_input_hash':physical['input_hash'], 'candidate_count':len(graded),
+            'native_projection':projection}
+    else:
+        existing, baseline_identity = verified_baseline(root, reach, run, physical)
     mode = ch.support_mode(policy)
     support_cells = [c for c in read_json(folder/'cells.json')['cells']
         if c['tier'] == 1 and (mode == ch.PAIRED_REFERENCE_SUPPORT or c.get('source_id') == row['id'])]
@@ -239,6 +374,11 @@ def source_context(root, reach, policy, *, fetch=False):
         identity['neighbor_planning'] = neighbor
     binding = {'row': source, 'policy': policy, 'archive': archive,
                'reviewed_depth_bounds_wgs84': receipt['requested_bounds_wgs84']}
+    if baseline_components is not None:
+        binding['baseline_components'] = baseline_components
+        with rasterio.open(path) as ds:
+            binding['native_crs'] = ds.crs.to_string()
+        binding['reach'] = reach
     return identity, row, binding, path, support, existing, rights
 
 
@@ -265,7 +405,10 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
         records, units, _ = original_vectors(binding['archive'], binding['policy'], ds.crs)
         project = Transformer.from_crs(3310, ds.crs, always_xy=True).transform
         native_support = transform(project, support).intersection(box(*ds.bounds))
-        baseline = kernel.NativeFragments(CRS.from_user_input(ds.crs), {'baseline':transform(project, existing)} if not existing.is_empty else {})
+        if audited(binding['policy']):
+            baseline, _ = native_baseline(binding['baseline_components'] + binding.get('prior_components', []), ds.crs)
+        else:
+            baseline = kernel.NativeFragments(CRS.from_user_input(ds.crs), {'baseline':transform(project, existing)} if not existing.is_empty else {})
         clipped = {key:g.intersection(native_support) for key,g in records.items() if g.intersection(native_support).area > 0}
         if not clipped:
             return [], {'bedrock_selected_area_km2': 0}
@@ -302,16 +445,47 @@ def extract(row, binding, path, support, existing, *, root, edge=512, max_pixels
                         raise ValueError('Bedrock native fragment budget exceeded')
         assembled = kernel.assemble_components(batches, existing=baseline)
         to_local = Transformer.from_crs(ds.crs, 3310, always_xy=True).transform
-        patches = [Patch(key,units[key],polygon(transform(to_local,g)),g.area,ds.crs.to_string()) for key,g in assembled]
-    return patches, {'bedrock_selected_area_km2': unary_union([p.geometry for p in patches]).area/1e6,
-                     'bedrock_native_depth_area_km2': unary_union([g for _,g in assembled]).area/1e6}
+        if audited(binding['policy']):
+            patches, quarantine = [], []
+            prior_local, _ = native_baseline(binding.get('prior_components', []), 3310)
+            prior_union = unary_union(list(prior_local.by_record.values()))
+            for key,g in assembled:
+                local = transform(to_local,g)
+                overlap = 0.0
+                try:
+                    strict_geographic(polygon(local))
+                    overlap = local.intersection(prior_union).area
+                    if overlap > 0:
+                        raise ValueError('Projected bedrock representation overlaps preceding native inventory')
+                    patches.append(Patch(key,units[key],local,g.area,ds.crs.to_string()))
+                except ValueError as exc:
+                    quarantine.append({'policy_id':binding['policy']['id'], 'record':key,
+                        'unit':units[key], 'reason':str(exc),
+                        'hold_category':'representation-prior-overlap' if overlap else 'representation-invalid',
+                        'projected_prior_overlap_m2':overlap,
+                        'source_sha256':binding['policy']['classification_source_sha256'],
+                        'native_crs':ds.crs.to_string(),'native_area_m2':g.area,
+                        'native_sha256':hashlib.sha256(g.wkb).hexdigest(),
+                        'geometry':mapping(g),'attempted_crs':'EPSG:3310',
+                        'attempted_geometry':mapping(local),'geometry_repaired':False})
+        else:
+            patches = [Patch(key,units[key],polygon(transform(to_local,g)),g.area,ds.crs.to_string()) for key,g in assembled]
+    summary = {'bedrock_selected_area_km2': unary_union([p.geometry for p in patches]).area/1e6,
+               'bedrock_native_depth_area_km2': unary_union([g for _,g in assembled]).area/1e6}
+    if audited(binding['policy']):
+        summary['_private_quarantine'] = quarantine
+        summary['bedrock_projection_held_count'] = len(quarantine)
+        summary['bedrock_projection_invalid_count'] = sum(h['hold_category']=='representation-invalid' for h in quarantine)
+        summary['bedrock_projection_overlap_count'] = sum(h['hold_category']=='representation-prior-overlap' for h in quarantine)
+        summary['bedrock_projection_held_native_m2'] = sum(h['native_area_m2'] for h in quarantine)
+    return patches, summary
 
 
 def features_for(patches, reach, policy, row, binding, **metadata):
     features = []
     from shapely import normalize
     for patch in patches:
-        geo = geographic(patch.geometry)
+        geo = strict_geographic(patch.geometry) if audited(policy) else geographic(patch.geometry)
         content = hashlib.sha256(normalize(patch.geometry).wkb).hexdigest()[:20]
         properties = {'id':f'bedrock-{reach}-{policy["id"]}-{patch.record}-{content}', 'reach':reach,
             'source_ids':[row['id'],binding['row']['id']], 'source_year':row.get('survey_year','unknown'),
@@ -330,6 +504,8 @@ def features_for(patches, reach, policy, row, binding, **metadata):
                 'basis':'Original producer interpreted exposed bedrock; lithology uncertainty retained. No rugosity or fish presence inferred.',
                 'native_depth_area_m2':patch.native_depth_area_m2,'native_depth_crs':patch.native_depth_crs,
                 'window_notice':'Interpretation is limited to reviewed native windows; a window boundary is not an established reef edge.'}}
+        if audited(policy):
+            properties['classified_area']['source_profile'] = MONTEREY
         properties.update({k:deepcopy(v) for k,v in metadata.items() if v is not None})
         features.append({'type':'Feature','geometry':mapping(geo),'properties':properties})
     return {'type':'FeatureCollection','features':features}
@@ -337,7 +513,8 @@ def features_for(patches, reach, policy, row, binding, **metadata):
 
 def assessment(p):
     area, substrate = p.get('classified_area',{}), p.get('substrate',{})
-    if (area.get('profile') != PROFILE or area.get('interpretation_method') != METHOD
+    contract = SOURCE_CONTRACTS.get(area.get('source_profile', SAN_SIMEON))
+    if (contract is None or area.get('profile') != PROFILE or area.get('interpretation_method') != METHOD
             or not area.get('policy_id') or area.get('independent_confirmation') is not False
             or area.get('new_measured_area_km2') != 0 or p.get('terrain') != 'unknown'
             or p.get('fit') != {'lingcod':'unknown','rockfish-reef':'unknown'}
@@ -348,7 +525,7 @@ def assessment(p):
             or p.get('terrain_grade','unknown') != 'unknown' or p.get('terrain_score','unknown') != 'unknown'
             or substrate.get('interpretation') != 'exposed-bedrock' or 'normalized_code' in substrate
             or not substrate.get('source_id') or substrate.get('independent_confirmation') is not False
-            or substrate.get('map_unit') not in ['Tus','Tm','KJug','KJug?','KJf','Ksl','Jo','Jo?']
+            or substrate.get('map_unit') not in contract['bedrock_units']
             or type(substrate.get('original_record_index')) is not int or substrate['original_record_index'] < 0
             or substrate.get('lithology_uncertain') is not ('?' in substrate['map_unit'])
             or p.get('metric_support_fraction') is not None or p.get('habitat_quality_hold') or p.get('habitat_quality_dependencies')):
