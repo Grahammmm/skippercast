@@ -52,6 +52,9 @@ For an authorized parallel or overnight run, use the bounded
 work, limits work waiting for integration, and measures verified map additions
 before deciding whether more agents would help. Use the existing coordination
 issue and private checkpoint; this is not another source catalog or scheduler.
+For an unattended run, first use the [overnight execution contract](references/overnight-contract.md).
+It defines preflight, exclusive queue claims, compact worker briefs, the two-hour
+checkpoint and the difference between a configured goal and an executing job.
 
 Use the pinned runtime and existing verified reference/cache:
 

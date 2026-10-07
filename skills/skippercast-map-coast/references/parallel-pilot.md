@@ -65,12 +65,23 @@ other active chats and agents for the same source/reach/method. Never commit to
 another worker's branch. Use focused branches and the existing protected PR
 flow; two independent branches can run concurrently, shared writes cannot.
 
-Where the owner permits model selection, focused qualification and deterministic
-run supervision can use an economical model such as Luna with sufficient
-reasoning effort. Use Sol for integration, ambiguous code changes and independent
-review. Respect an explicit user choice; do not silently switch the coordinator
-or escalate to Astra. Give fresh workers a bounded brief and relevant paths,
-not the full conversation. Model names are choices, not measured cost savings.
+Where the owner permits model selection, start with a Sol coordinator at medium
+reasoning effort, two Luna workers at medium effort for bounded qualification
+and established deterministic processing, and one Sol reviewer. Use higher
+review effort for scientific method or ambiguous geometry changes. Respect the
+current session's hard concurrency limit; these four roles include the coordinator.
+This is a suggested allocation, not permission to switch an explicit user model.
+Do not escalate to Astra without owner authorization. Give fresh workers the
+compact manifest in [overnight-contract.md](overnight-contract.md), not the full
+conversation. Models supervise scripts; they do not repeatedly inspect unchanged
+jobs. Model names are choices, not measured token or billing savings.
+
+An optional second session can own read-only review and receipt comparison.
+Use Sol for scientific review; Luna can perform bounded source and receipt
+checks. Neither session changes the other's branch, shared claim state or
+publication state. Record that ownership before dispatch; the coordinator alone
+integrates and publishes unless one release operator is explicitly designated.
+A second session is not automatically created or messaged by loading this skill.
 
 ## Require a handoff that can be executed
 
@@ -185,10 +196,13 @@ not work around the restriction with credentialed access.
 
 ## Checkpoint and reconcile
 
-For the owner's requested pilot, give brief updates about every three minutes
-of active work and a milestone summary every 15 minutes. Summarize new evidence,
-the deliverable, remaining blocker and next action. Do not manufacture activity
-updates while an unchanged deterministic job runs. Save completed commands and
+Honor the owner's reporting cadence. The interactive pilot uses brief updates
+about every three active minutes and a milestone summary every 15 minutes;
+unattended overnight mode uses hourly outcome summaries plus material failures,
+completion or required action. Normal tool-driven turns still follow the host's
+communication requirements. Summarize new evidence, the deliverable, remaining
+blocker and next action. Do not manufacture updates or keep a model sampling
+while an unchanged deterministic job runs. Save completed commands and
 evidence before a turn ends or a worker changes tasks.
 
 Honor the user's active-work cap. Record deterministic background wall time
