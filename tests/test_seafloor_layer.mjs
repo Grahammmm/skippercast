@@ -178,3 +178,27 @@ test('classified area sheet separates publisher interpretation from terrain and 
   assert.doesNotMatch(html, /surrounding measurements are insufficient|of 3|Terrain grade A/);
   assert.match(legendHTML('terrain'), /Interpreted rock habitat · unranked/);
 });
+test('map movement during delayed archive initialization or refresh cannot draw before legend/header mount',async t=>{
+ const {initSeafloor}=await import('../dist/seafloor-layer.js');
+ const elements=new Map();for(const id of ['species-select','layer-seafloor','layer-seafloor-cells','seafloor-view','seafloor-status','seafloor-options']){
+  const handlers={};elements.set(id,{value:id==='species-select'?'reef':'terrain',checked:false,hidden:false,textContent:'',add(){},addEventListener(name,fn){handlers[name]=fn;},removeEventListener(){},change(){handlers.change?.();}});
+ }
+ const saved={document:globalThis.document,L:globalThis.L,Option:globalThis.Option,pmtiles:globalThis.pmtiles,location:globalThis.location};t.after(()=>Object.assign(globalThis,saved));
+ globalThis.document={getElementById:id=>elements.get(id)};globalThis.Option=class{constructor(label,id){this.value=id;}};globalThis.location={href:'https://skippercast.com/'};
+ let clears=0,mounted=false,legendHost,legendWrites=0,headerReads=0,release;
+ const layer=()=>({addTo(){return this;},remove(){},clearLayers(){clears++;}});
+ globalThis.L={canvas:()=>({}),layerGroup:layer,control:()=>({addTo(){mounted=true;legendHost={set innerHTML(value){legendWrites++;}};return this;},remove(){mounted=false;},getContainer:()=>legendHost})};
+ const handlers={};const map={createPane:()=>({style:{}}),on(name,fn){handlers[name]=fn;},off(){},getZoom:()=>9,invalidateSize(){return handlers.moveend?.();}};
+ let headerWait=new Promise(resolve=>{release=resolve;});globalThis.pmtiles={PMTiles:class{async getHeader(){headerReads++;await headerWait;return {};}}};
+ const ready={status:'ready',region:'morro-bay',archive_sha256:'a'.repeat(64),expires_at:'2099-01-01T00:00:00Z',layers:{habitat:9}};
+ const reader=initSeafloor(map,()=>{}, {fetchImpl:async()=>Response.json(ready),setTimeoutImpl:()=>0,clearTimeoutImpl:()=>{}});t.after(()=>reader.dispose());const settle=()=>new Promise(resolve=>setImmediate(resolve));await settle();
+ assert.equal(reader.state(),'ready','publication admission can precede display readiness');assert.equal(mounted,false);assert.equal(headerReads,1);
+ await assert.doesNotReject(async()=>map.invalidateSize());assert.equal(clears,0);assert.equal(legendWrites,0);
+ release();await settle();assert.equal(mounted,true);assert.equal(legendWrites,1);assert.equal(clears,2);
+ // Real Leaflet retains the old control container after removal. A truthy
+ // getContainer alone therefore cannot authorize drawing during a refresh.
+ headerWait=new Promise(resolve=>{release=resolve;});const refresh=reader.enable();await settle();assert.equal(mounted,false);assert.ok(legendHost);const previous={clears,legendWrites,headerReads};
+ await assert.doesNotReject(async()=>map.invalidateSize());assert.deepEqual({clears,legendWrites,headerReads},previous);
+ release();await refresh;assert.equal(mounted,true);assert.equal(legendWrites,previous.legendWrites+1);assert.equal(clears,previous.clears+2);
+ reader.dispose();await assert.doesNotReject(async()=>reader.draw());assert.equal(mounted,false);
+});

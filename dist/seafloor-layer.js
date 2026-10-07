@@ -114,7 +114,7 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch,
   const legend = L.control({ position: 'bottomright' });
   legend.onAdd = () => L.DomUtil.create('div', 'seafloor-key');
   let archive = null, manifest = null, state = 'idle', loading = 0;
-  let timer = null, retryAttempt = 0, disposed = false;
+  let timer = null, retryAttempt = 0, disposed = false, displayReady = false;
   const retryDelays = [30000, 60000, 120000, 240000, 300000];
   const cancelTimer = () => { if (timer !== null) clearTimeoutImpl(timer); timer = null; };
   function schedule(delay) {
@@ -133,7 +133,7 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch,
   const tiles = new Map();   // "z/x/y" -> {habitat, cells} | Promise
 
   const setStatus = (text) => { status.textContent = text; };
-  const show = (on) => { if (on) { habitatLayer.addTo(map); cellsLayer.addTo(map); legend.addTo(map); } else { habitatLayer.remove(); cellsLayer.remove(); legend.remove(); } };
+  const show = (on) => { displayReady = false; if (on) { habitatLayer.addTo(map); cellsLayer.addTo(map); legend.addTo(map); displayReady = true; } else { habitatLayer.remove(); cellsLayer.remove(); legend.remove(); } };
 
   async function tile(z, x, y) {
     const key = `${z}/${x}/${y}`;
@@ -146,10 +146,12 @@ export function initSeafloor(map, onSelect, { fetchImpl = globalThis.fetch,
   }
 
   async function draw() {
-    if (disposed || !toggle.checked || !currentPublication()) return;
+    if (disposed || !toggle.checked || !currentPublication() || !displayReady || !archive) return;
+    const legendHost = legend.getContainer();
+    if (!legendHost) return;
     const zoom = map.getZoom();
     habitatLayer.clearLayers(); cellsLayer.clearLayers();
-    legend.getContainer().innerHTML = legendHTML(viewSelect.value);
+    legendHost.innerHTML = legendHTML(viewSelect.value);
     if (zoom < MIN_VIEW_ZOOM) { setStatus(`Zoom in to see seafloor habitat · ${manifest.layers?.habitat ?? 0} screened candidates across ${publishedReachCount(manifest)} published reach inputs`); return; }
     const b = map.getBounds(), header = await archive.getHeader();
     const view = [Math.max(b.getWest(), header.minLon), Math.max(b.getSouth(), header.minLat), Math.min(b.getEast(), header.maxLon), Math.min(b.getNorth(), header.maxLat)];
