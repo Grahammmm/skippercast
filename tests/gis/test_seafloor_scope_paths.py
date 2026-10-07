@@ -2,17 +2,21 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+import shutil
 import sys
 from unittest.mock import patch
 
 import numpy as np
 import pytest
+from rasterio.transform import Affine
 from shapely.geometry import LineString, box, mapping
 
-from skippercast.seafloor import grid, publish, run, screen
+from skippercast.seafloor import grid, run, screen, scoped, scoped_grid
+from skippercast.seafloor.restore import restore_reference
 from skippercast.seafloor.scope_paths import resolve_scope
 from skippercast.seafloor import __main__ as cli
 from skippercast.seafloor.io import sha256
+from skippercast.platform.contracts import atomic_json, read_json
 
 
 def fixture_root(tmp_path):
@@ -41,17 +45,17 @@ def test_noncentral_grid_build_uses_only_isolated_artifact_paths(tmp_path):
             return np.full(np.shape(x), .5), np.full(np.shape(y), .5)
 
     with patch.object(grid.reference, 'planning_spine', return_value=spine), \
-         patch.object(grid, 'make_reaches', return_value=[{'id': 'demo-region-r01', 'region': 'demo-region',
+         patch.object(scoped_grid, 'make_reaches', return_value=[{'id': 'demo-region-r01', 'region': 'demo-region',
              'order': 1, 'start_m': 0, 'end_m': 1000, 'length_m': 1000,
              'bounds_3310': [0, 0, 1000, 0], 'geometry': mapping(spine)}]), \
          patch.object(grid.reference, 'scheme_tiles', return_value=({'scheme_sha256': 'fixture', 'scheme_url': 'fixture'}, [])), \
          patch.object(grid.reference, 'samples', return_value=[]), \
-         patch.object(grid, 'mosaic_reference', return_value=(np.full((10, 10), 2, dtype='uint8'),
-             __import__('rasterio').transform.Affine(25, 0, 0, 0, -25, 250))), \
-         patch.object(grid, 'assign_reaches', return_value=np.array([0])), \
-         patch.object(grid.Transformer, 'from_crs', return_value=FakeTransform), \
-         patch.object(grid, 'sha256', return_value='fixture-hash'):
-        ledger, unchanged = grid.build(root, scope_config=config_path)
+         patch.object(scoped_grid, 'mosaic_reference', return_value=(np.full((10, 10), 2, dtype='uint8'),
+             Affine(25, 0, 0, 0, -25, 250))), \
+         patch.object(scoped_grid, 'assign_reaches', return_value=np.array([0])), \
+         patch.object(scoped_grid.Transformer, 'from_crs', return_value=FakeTransform), \
+         patch.object(scoped_grid, 'sha256', return_value='fixture-hash'):
+        ledger, unchanged = scoped_grid.build(root, scope_config=config_path)
 
     paths = resolve_scope(root, scope_config=config_path)[1]
     assert not unchanged
@@ -64,24 +68,44 @@ def test_noncentral_grid_build_uses_only_isolated_artifact_paths(tmp_path):
     assert not (root/'var/seafloor/reference/cells.json').exists()
 
 
-def test_noncentral_screen_run_and_publish_fail_closed_without_reusing_central(tmp_path):
+def test_noncentral_screen_run_and_publish_fail_closed_without_reusing_central(tmp_path, monkeypatch, capsys):
     root, config_path = fixture_root(tmp_path)
     central = root/'var/seafloor/screen/snapshot.json'
     central.parent.mkdir(parents=True)
     central.write_text('{"scope_id":"central-coast"}')
-    state = screen.load_snapshot(root, 'demo-reach', scope_config=config_path)
+    state = scoped.load_snapshot(root, 'demo-reach', scope_config=config_path)
     assert state['status'] == 'held'
-    assert state['reasons'] == ['screen-missing']
-    with pytest.raises(ValueError, match='Non-central processing is disabled'):
-        run.run('demo-reach', root=root, scope_config=config_path)
-    with pytest.raises(ValueError, match='Non-central publication is disabled'):
-        publish.build('demo-region', root=root, tool='unused', scope_config=config_path)
+    assert state['reasons'] == ['scope-screen-contract-unavailable']
+    monkeypatch.setattr(cli, 'REPO', root)
+    monkeypatch.setattr(sys, 'argv', ['seafloor', 'run', '--reach', 'demo-reach',
+                                      '--scope-config', 'catalog/demo-scope.json'])
+    with pytest.raises(SystemExit) as run_error:
+        cli.main()
+    assert run_error.value.code == 1
+    assert 'Non-central processing is disabled' in capsys.readouterr().err
+    monkeypatch.setattr(sys, 'argv', ['seafloor', 'publish', '--region', 'demo-region',
+                                      '--scope-config', 'catalog/demo-scope.json'])
+    with pytest.raises(SystemExit) as publish_error:
+        cli.main()
+    assert publish_error.value.code == 1
+    assert 'Non-central publication is disabled' in capsys.readouterr().err
     assert central.read_text() == '{"scope_id":"central-coast"}'
 
 
 def test_noncentral_scope_requires_explicit_config(tmp_path):
     with pytest.raises(ValueError, match='requires an explicit scope config'):
         resolve_scope(tmp_path, scope_id='offline-demo')
+
+
+def test_implicit_noncentral_canonical_config_is_rejected(tmp_path):
+    root = tmp_path
+    catalog = root/'catalog'
+    catalog.mkdir()
+    config = json.loads(Path('catalog/seafloor-scope.json').read_text())
+    config['id'] = 'accidental-southern'
+    (catalog/'seafloor-scope.json').write_text(json.dumps(config))
+    with pytest.raises(ValueError, match='must be selected explicitly'):
+        resolve_scope(root)
 
 
 def test_relative_root_resolves_central_default():
@@ -96,7 +120,7 @@ def test_reaches_cli_defaults_region_to_selected_ledger_scope(monkeypatch, capsy
     monkeypatch.setattr(sys, 'argv', ['seafloor', 'reaches'])
     with patch.object(grid, 'build', return_value=(ledger, True)) as build:
         cli.main()
-    assert build.call_args.kwargs['region'] is None
+    assert build.call_args.kwargs['region'] == 'central-coast'
     assert 'Reference unchanged' in capsys.readouterr().out
 
 
@@ -123,7 +147,48 @@ def test_explicit_central_config_keeps_legacy_screen_snapshot_contract(tmp_path)
                 'scope': geometry, 'policy_sha256': sha256(policy), 'layers': layers}
     (folder/'snapshot.json').write_text(json.dumps(snapshot))
 
-    state = screen.load_snapshot(root, 'fixture', datetime(2026, 9, 28, tzinfo=timezone.utc),
+    state = scoped.load_snapshot(root, 'fixture', datetime(2026, 9, 28, tzinfo=timezone.utc),
                                  scope_config=config)
     assert state['status'] == 'ready'
     assert state['reasons'] == []
+
+
+def test_retained_central_reference_restore_rebuilds_the_processed_baseline(tmp_path):
+    root = tmp_path
+    (root/'catalog').mkdir()
+    for name in ('catalog/seafloor-scope.json', 'catalog/bluetopo-sample.json',
+                 'requirements-survey.txt'):
+        shutil.copyfile(Path(name), root/name)
+    spine = LineString([(-200000, -100000), (-100000, -100000)])
+    reach = {'id': 'central-r01', 'region': 'central-coast', 'order': 1,
+             'start_m': 0, 'end_m': 100000, 'length_m': 100000,
+             'bounds_3310': list(spine.bounds), 'geometry': mapping(spine)}
+    native_mosaic = (np.full((10, 10), 2, dtype='uint8'),
+                     Affine(25, 0, -150125, 0, -25, -99875))
+    patches = (
+        patch.object(grid.reference, 'planning_spine', return_value=spine),
+        patch.object(grid, 'make_reaches', return_value=[reach]),
+        patch.object(grid.reference, 'scheme_tiles', return_value=(
+            {'scheme_sha256': 'fixture-scheme', 'scheme_url': 'fixture://scheme'}, [])),
+        patch.object(grid.reference, 'samples', return_value=[]),
+        patch.object(grid, 'mosaic_reference', return_value=native_mosaic),
+        patch.object(grid, 'assign_reaches', return_value=np.array([0])),
+    )
+    with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5]:
+        ledger, unchanged = grid.build(root)
+        assert not unchanged
+        cells_path = root/'var/seafloor/reference/cells.json'
+        expected_cells_hash = sha256(cells_path)
+        ledger['stage'] = 'M3-habitat-screen'
+        ledger['reference_cells_sha256'] = expected_cells_hash
+        atomic_json(root/'dist/data/seafloor-ledger.json', ledger)
+        cells_path.unlink()
+        (root/'var/seafloor/reference/run.json').unlink()
+        restored = restore_reference(root=root)
+    assert sha256(restored) == expected_cells_hash
+    assert read_json(restored)['input_hash'] == ledger['input_hash']
+    assert read_json(root/'dist/data/seafloor-ledger.json')['stage'] == 'M3-habitat-screen'
+
+
+def test_run_module_hash_preserves_retained_physical_cache_fingerprint():
+    assert sha256(Path(run.__file__)) == '5228a5150afd9bb298f35c5c29d5a2e39baa7bda18889e1a9875d90b091019d1'

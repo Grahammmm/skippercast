@@ -1,136 +1,37 @@
-"""Disjoint planning reaches and a provisional shallow-water reference grid.
-
-No BlueTopo pixel is accepted as original-survey coverage or habitat evidence.
-"""
+"""Explicit opt-in orchestration for isolated noncentral reference scopes."""
 import hashlib
 import json
 import math
 from pathlib import Path
 
 import numpy as np
-from pyproj import CRS, Transformer
-from rasterio.enums import Resampling
+from pyproj import Transformer
 from rasterio.transform import Affine
-from rasterio.warp import reproject, transform_bounds
-from rasterio.windows import Window, from_bounds, transform as window_transform
-import shapely
-from shapely.geometry import LineString, Point, mapping
-from shapely.ops import substring, transform
+from shapely.geometry import mapping
 
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 from . import reference
+from .grid import assign_reaches, cell_counts, make_reaches, mosaic_reference
 from .io import sha256
+from .scope_paths import resolve_scope
 
-
-def make_reaches(config, spine):
-    project = Transformer.from_crs(4326, 3310, always_xy=True).transform
-    unproject = Transformer.from_crs(3310, 4326, always_xy=True).transform
-    starts = [0.0] + [spine.project(Point(project(*r['start_anchor'])))
-                      for r in config['regions'][1:]] + [spine.length]
-    if any(b <= a for a, b in zip(starts, starts[1:])):
-        raise ValueError('Region anchors are not ordered along the coast')
-    reaches = []
-    for region, start, stop in zip(config['regions'], starts, starts[1:]):
-        count = max(1, round((stop - start) / config['reach_length_m']))
-        edges = np.linspace(start, stop, count + 1)
-        for number, (a, b) in enumerate(zip(edges, edges[1:]), 1):
-            line = substring(spine, float(a), float(b))
-            reaches.append({'id': f'{region["id"]}-r{number:02}', 'region': region['id'],
-                            'start_m': float(a), 'end_m': float(b),
-                            'length_m': float(b - a), 'bounds_3310': list(line.bounds),
-                            'geometry': mapping(transform(unproject, line))})
-    anchor = spine.project(Point(project(*config['priority_anchor'])))
-    order = sorted(reaches, key=lambda r: (abs((r['start_m'] + r['end_m']) / 2 - anchor), r['id']))
-    for number, reach in enumerate(order, 1):
-        reach['order'] = number
-    return reaches
-
-
-def assign_reaches(spine, reaches, x, y):
-    """One owner per cell center. Half-open chainage intervals remove shared cells.
-
-    Centers whose closest point is a terminal endpoint are outside this scope.
-    """
-    distance = shapely.line_locate_point(spine, shapely.points(x, y))
-    index = np.searchsorted([r['end_m'] for r in reaches], distance, side='right')
-    return np.where((distance > 0) & (distance < spine.length), index, -1)
-
-
-def classify_reference(elevation):
-    """0 unknown/no-data, 1 other valid elevation, 2 provisional 0–100 m band."""
-    result = np.zeros(elevation.shape, dtype='uint8')
-    valid = np.isfinite(elevation)
-    result[valid] = 1
-    result[valid & (elevation < 0) & (elevation >= -100)] = 2
-    return result
-
-
-def merge_reference(destination, incoming):
-    """Caller supplies coarse/older first; fine valid pixels overwrite, holes do not."""
-    valid = incoming != 0
-    destination[valid] = incoming[valid]
-
-
-def cell_counts(mosaic, pixels_per_cell):
-    h, w = mosaic.shape
-    n = pixels_per_cell
-    if h % n or w % n:
-        raise ValueError('Reference raster must align to full planning cells')
-    blocks = mosaic.reshape(h // n, n, w // n, n)
-    return ((blocks == 2).sum(axis=(1, 3)), (blocks == 0).sum(axis=(1, 3)))
-
-
-def mosaic_reference(config, tiles, sampled):
-    pixel = config['reference_pixel_m']
-    cell = config['cell_size_m']
-    if cell != 250 or pixel != 25 or config['reference_depth_m'] != [0, 100]:
-        raise ValueError('Changing the reference rule requires a reviewed rule version')
-    west, south, east, north = transform_bounds(4326, 3310, *config['bounds'], densify_pts=41)
-    west, south = math.floor(west / cell) * cell, math.floor(south / cell) * cell
-    east, north = math.ceil(east / cell) * cell, math.ceil(north / cell) * cell
-    affine = Affine(pixel, 0, west, 0, -pixel, north)
-    height, width = round((north - south) / pixel), round((east - west) / pixel)
-    result = np.zeros((height, width), dtype='uint8')
-    # Fine resolution wins; delivery date only resolves equal-resolution compilation overlap.
-    ordered = sorted(zip(tiles, sampled), key=lambda pair: (
-        -pair[0]['native_resolution_m'], pair[0]['delivered_date'], pair[0]['id']))
-    for tile, (path, receipt) in ordered:
-        with np.load(path, allow_pickle=False) as sample:
-            elevation = sample['elevation']
-            source_transform = Affine(*sample['transform'])
-            crs = CRS.from_wkt(str(sample['crs'])).to_2d().to_wkt()
-            h, w = elevation.shape
-            source_bounds = (source_transform.c, source_transform.f + source_transform.e * h,
-                             source_transform.c + source_transform.a * w, source_transform.f)
-            bounds = transform_bounds(crs, 3310, *source_bounds, densify_pts=21)
-            raw = from_bounds(*bounds, transform=affine)
-            left, top = max(0, math.floor(raw.col_off)), max(0, math.floor(raw.row_off))
-            right = min(width, math.ceil(raw.col_off + raw.width))
-            bottom = min(height, math.ceil(raw.row_off + raw.height))
-            if right <= left or bottom <= top:
-                continue
-            window = Window(left, top, right - left, bottom - top)
-            incoming = np.zeros((bottom - top, right - left), dtype='uint8')
-            reproject(classify_reference(elevation), incoming, src_transform=source_transform,
-                      src_crs=crs, dst_transform=window_transform(window, affine),
-                      dst_crs='EPSG:3310', resampling=Resampling.nearest,
-                      src_nodata=0, dst_nodata=0)
-            merge_reference(result[top:bottom, left:right], incoming)
-    return result, affine
-
-
-def build(root=REPO, *, fetch=False, region='central-coast'):
-    root = Path(root)
-    config_path = root / 'catalog/seafloor-scope.json'
-    config = read_json(config_path)
-    ledger_path = root / 'dist/data/seafloor-ledger.json'
+def build(root=REPO, *, fetch=False, region=None, scope_config=None, scope_id=None):
+    root = Path(root).resolve()
+    if scope_config is None:
+        raise ValueError('Scoped grid construction requires an explicit scope config')
+    config, paths = resolve_scope(root, scope_config=scope_config, scope_id=scope_id)
+    if paths.is_central_default:
+        raise ValueError('Use the retained central grid builder for the Central Coast scope')
+    config_path = paths.config_path
+    ledger_path = paths.ledger_path
+    region = region or config['id']
     if ledger_path.exists() and read_json(ledger_path)['stage'] != 'M1-reference-baseline':
         raise ValueError('Reference rebuild cannot overwrite a processed survey ledger')
     if region != config['id'] and region not in {r['id'] for r in config['regions']}:
         raise ValueError('Unknown seafloor region')
     # Rebuild the shared scope even when a regional ledger view is requested;
     # independently built geographic grids must never shift cell ownership.
-    cache = root / 'var/seafloor/reference'
+    cache = paths.reference_dir
     cache.mkdir(parents=True, exist_ok=True)
     spine = reference.planning_spine(config, cache, fetch)
     reaches = make_reaches(config, spine)
@@ -139,14 +40,14 @@ def build(root=REPO, *, fetch=False, region='central-coast'):
     input_document = {'config_sha256': sha256(config_path), 'scheme_sha256': pin['scheme_sha256'],
                       'rule_version': config['rule_version'],
                       'implementation_sha256': {name: sha256(Path(__file__).parent / name)
-                                                for name in ('grid.py', 'reference.py', 'io.py')},
+                                                for name in ('scoped_grid.py', 'grid.py', 'reference.py', 'io.py', 'scope_paths.py')},
                       'requirements_sha256': sha256(root / 'requirements-survey.txt'),
                       'samples': [{'tile': t['id'], 'sha256': r['sample_sha256']}
                                   for t, (_, r) in zip(tiles, sampled)]}
     input_hash = hashlib.sha256(json.dumps(input_document, sort_keys=True).encode()).hexdigest()
-    receipt_path = root / 'var/seafloor/reference/run.json'
-    reaches_path = root / 'catalog/reaches.json'
-    cells_path = root / 'var/seafloor/reference/cells.json'
+    receipt_path = paths.build_receipt_path
+    reaches_path = paths.reaches_path
+    cells_path = paths.cells_path
     outputs = (ledger_path, reaches_path, cells_path)
     if receipt_path.exists():
         previous = read_json(receipt_path)
@@ -213,7 +114,7 @@ def build(root=REPO, *, fetch=False, region='central-coast'):
                'cell_size_m': 250, 'input_hash': input_hash,
                'planning_spine_3310': mapping(spine),
                'ownership': 'Nearest alongshore projection of cell center; half-open reach intervals; terminal projections excluded.',
-               'source_config': 'catalog/seafloor-scope.json',
+               'source_config': config_path.relative_to(root).as_posix(),
                'reaches': sorted(reaches, key=lambda r: r['order'])}
     atomic_json(reaches_path, catalog, indent=2)
     atomic_json(cells_path, {'input_hash': input_hash, 'cells': cells})

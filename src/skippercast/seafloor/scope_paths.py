@@ -50,6 +50,8 @@ def resolve_scope(root, *, scope_config=None, scope_id=None):
         raise ValueError('Scope config needs a stable lowercase ID')
     if scope_id is not None and scope_id != ident:
         raise ValueError('Requested scope ID does not match the selected scope config')
+    if scope_config is None and ident != CENTRAL_SCOPE:
+        raise ValueError('A non-central scope must be selected explicitly')
     central_path = (root / CENTRAL_CONFIG).resolve()
     is_central = ident == CENTRAL_SCOPE and config_path == central_path
     if ident == CENTRAL_SCOPE and not is_central:

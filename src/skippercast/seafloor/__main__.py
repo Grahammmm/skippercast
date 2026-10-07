@@ -93,7 +93,7 @@ def main():
             if args.upload:
                 print(json.dumps(upload(args.region), indent=2))
             else:
-                folder, manifest = build(args.region, scope_config=args.scope_config)
+                folder, manifest = build(args.region)
                 print(json.dumps({'directory': str(folder), **manifest}, indent=2))
             return
         if args.command == 'migrate-numeric-cache':
@@ -121,7 +121,7 @@ def main():
                     raise ValueError('Non-central processing is disabled until scoped source, physical and screen contracts are reviewed')
             from .run import run
             receipt, reused = run(args.reach, force=args.force, fetch=args.fetch,
-                                  physical_only=args.physical_only, scope_config=args.scope_config)
+                                  physical_only=args.physical_only)
             print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
             return
         if args.command == 'promote-survey':
@@ -135,15 +135,26 @@ def main():
             print(f'Candidate draft: {path}. Review rights and metadata before manifest promotion.')
             return
         if args.command == 'reaches':
-            from .grid import build
-            ledger, unchanged = build(fetch=args.fetch, region=args.region, scope_config=args.scope_config)
+            from .scope_paths import resolve_scope
+            config, paths = resolve_scope(REPO, scope_config=args.scope_config)
+            region = args.region or config['id']
+            if paths.is_central_default:
+                from .grid import build
+                ledger, unchanged = build(fetch=args.fetch, region=region)
+            else:
+                from .scoped import build_reference
+                ledger, unchanged = build_reference(REPO, fetch=args.fetch, region=region,
+                                                     scope_config=args.scope_config)
             if args.region is None:
                 args.region = ledger['scope']
             print('Reference unchanged; no rebuild.' if unchanged else 'Rebuilt reference baseline; all cells tier 0.')
         else:
             from .scope_paths import resolve_scope
             config, paths = resolve_scope(REPO, scope_config=args.scope_config)
-            ledger = read_json(paths.ledger_path)
+            if paths.is_central_default:
+                ledger = read_json(REPO / 'dist/data/seafloor-ledger.json')
+            else:
+                ledger = read_json(paths.ledger_path)
             if args.region is None:
                 args.region = config['id']
         known = {r['region'] for r in ledger['reaches']}

@@ -8,7 +8,11 @@
 
 ## Unreleased
 
-- Add explicit isolated artifact paths for reviewed seafloor scopes; preserve the Central Coast default and hold noncentral processing and publication until scoped inputs are reviewed.
+- Add isolated reference-grid routing for explicitly selected scope configs while keeping the Central Coast pipeline as the default.
+
+### Internal
+
+- Preserve retained Central Coast grid and physical-cache identities; keep noncentral screening, processing and publication held until their scope contracts are complete.
 
 ## 0.5.0 — 2026-10-07
 
