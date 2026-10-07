@@ -34,6 +34,7 @@ export function uiV2(env: Pick<Env, 'UI_V2'>, search: URLSearchParams): boolean 
  */
 export function shellFor(path: string, search: URLSearchParams, env: Pick<Env, 'UI_V2'>): string | null | undefined {
   if(path === '/coast') return '/coast.html';
+  if(path === '/privacy') return '/privacy.html'; // Fish compatibility uses the complete existing notice.
   const v2Only = path === '/map' || path === V2_SHELLS.landing || path === V2_SHELLS.app;
   if (path !== '/' && !v2Only) return undefined;
   if (!uiV2(env, search)) return v2Only ? null : '/';

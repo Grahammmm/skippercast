@@ -30,6 +30,38 @@ class AssetParser(HTMLParser):
     handle_startendtag = handle_starttag
 
 
+def check_page_references(path):
+    """Resolve static resources; only registered navigation/RSS routes are dynamic."""
+    parser = AssetParser()
+    parser.feed(path.read_text())
+    public_pages = {"/report", "/feed.xml", "/methodology", "/about"}
+    for tag, attrs in parser.tags:
+        for attribute in ("src", "href"):
+            ref = attrs.get(attribute)
+            if not ref:
+                continue
+            url = urlsplit(ref)
+            if url.scheme or url.netloc or not url.path:
+                continue
+            navigation = tag == "a" and attribute == "href"
+            rss = (tag == "link" and attribute == "href" and
+                   attrs.get("rel") == "alternate" and
+                   attrs.get("type") == "application/rss+xml" and ref == "/feed.xml")
+            if (navigation and url.path in public_pages) or rss:
+                router = (ROOT / "server/routes/coast-pages.ts").read_text()
+                app = (ROOT / "server/app.ts").read_text()
+                assert f"'{url.path}'" in router and "app.route('/', coastPages);" in app, (path, ref)
+                continue
+            if navigation and url.path == "/privacy":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if(path === '/privacy') return '/privacy.html';" in assets, (path, ref)
+                assert (WEB / "privacy.html").exists(), (path, ref)
+                continue
+            target = ((WEB / unquote(url.path).lstrip("/")) if url.path.startswith("/")
+                      else (path.parent / unquote(url.path))).resolve()
+            assert (target.is_relative_to(WEB) or target.is_relative_to(ROOT / "web")) and target.exists(), (path, ref)
+
+
 def sri_digest(integrity, data):
     """True when one of the SRI tokens (sha256/384/512, base64) matches data."""
     for token in integrity.split():
@@ -219,15 +251,7 @@ def main():
     check_vendor_integrity(pinned)
     for path in WEB.rglob("*.html"):
         if path.relative_to(WEB).parts[0] in {"client","server"}:continue
-        parser = AssetParser()
-        parser.feed(path.read_text())
-        for ref in parser.refs:
-            url = urlsplit(ref)
-            if url.scheme or url.netloc or not url.path:
-                continue
-            target = (path.parent / unquote(url.path)).resolve()
-            # Pages may also load the typed client source in web/, which Vite builds.
-            assert (target.is_relative_to(WEB) or target.is_relative_to(ROOT / "web")) and target.exists(), (path, ref)
+        check_page_references(path)
     for path in WEB.rglob("*.css"):
         if path.relative_to(WEB).parts[0] in {"client","server"}:continue
         for ref in re.findall(r"url\(['\"]?([^)'\"]+)", path.read_text()):
