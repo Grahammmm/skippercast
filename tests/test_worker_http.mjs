@@ -183,6 +183,6 @@ test('alert acknowledgement binds only a well-formed event id and only the calle
 test('public health is minimal: no binding or secret presence is disclosed', async () => {
   const response = await worker.fetch(request('/api/health'), {DB: {}, FEEDS: {}, VAPID_PUBLIC_KEY: 'k', VAPID_PRIVATE_KEY: 'k', ANTHROPIC_API_KEY: 'k'});
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {service: 'SkipperCast', version: '0.4.0', build: 'build-test'});
+  assert.deepEqual(await response.json(), {service: 'SkipperCast', version: read('../package.json').version, build: 'build-test'});
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
 });
