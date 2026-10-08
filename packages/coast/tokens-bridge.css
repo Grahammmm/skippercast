@@ -4,7 +4,11 @@
    (on an ancestor, or on a shadow host through :host), so v1 pages keep
    their fallbacks. Under the opt-in each role reads a web/tokens.css
    variable; custom properties inherit into shadow roots. Load web/tokens.css
-   in the document first. scripts/check_tokens.mjs lints this file: no literals. */
+   in the document first. scripts/check_tokens.mjs lints this file: no literals.
+   panel.css (FE-77) maps its many v1 shades onto these roles. The legend
+   ramps of layers v2 does not draw (--coast-reef-*, --coast-current-*,
+   --coast-wave-*) have no web/tokens.css ramp yet, so they are not mapped and
+   keep their v1 colours under the opt-in too. */
 
 [data-coast-theme="tokens"],
 :host([data-coast-theme="tokens"]) {
@@ -14,12 +18,19 @@
   --coast-panel: var(--panel);
   --coast-panel-glass: color-mix(in srgb, var(--panel) 94%, transparent);
   --coast-panel-2: var(--panel-2);
+  --coast-hover: color-mix(in srgb, var(--panel-2) 88%, var(--muted));
+  --coast-sheen: color-mix(in srgb, var(--panel-2) 27%, transparent);
   --coast-line: var(--line);
   --coast-text: var(--text);
   --coast-muted: var(--muted);
   --coast-mint: var(--mint);
   --coast-on-mint: var(--bg);
+  --coast-mint-wash: color-mix(in srgb, var(--mint) 14%, var(--panel));
+  --coast-mint-line: color-mix(in srgb, var(--mint) 35%, var(--line));
+  --coast-mint-glow: color-mix(in srgb, var(--mint) 27%, transparent);
   --coast-blue: var(--blue);
+  --coast-coral: var(--coral);
+  --coast-coral-glow: color-mix(in srgb, var(--coral) 10%, transparent);
   --coast-amber: var(--amber);
   --coast-focus: var(--focus);
   --coast-label: var(--text);
@@ -32,6 +43,12 @@
   --coast-depth-1: var(--depth-1);
   --coast-depth-2: var(--depth-2);
   --coast-depth-3: var(--depth-3);
+  --coast-sst-0: var(--sst-0);
+  --coast-sst-1: var(--sst-1);
+  --coast-sst-2: var(--sst-2);
+  --coast-sst-3: var(--sst-3);
+  --coast-sst-4: var(--sst-4);
+  --coast-sst-5: var(--sst-5);
   --coast-sans: var(--font-sans);
   --coast-mono: var(--font-mono);
 }

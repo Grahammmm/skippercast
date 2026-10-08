@@ -25,6 +25,8 @@
 
 - Bound mapping investigation by a shared operating allowance, downstream readiness and verified public progress; preserve scientific and release gates.
 
+- Move the first half of `packages/coast/panel.css` onto the token bridge (FE-77a): its colour aliases become `var(--coast-…, v1 value)` and lines 1–1,472 follow, so the rules they hold read `web/tokens.css` under `data-coast-theme="tokens"` (FE-77b converts the rest). The v1 report dialog computes the same colours on every tab (browser check against values recorded from `main`).
+
 - Bridge `packages/coast` to the v2 tokens (FE-76): `coast.css` and the series chart write colours as `var(--coast-…, v1 literal)`, `tokens-bridge.css` maps them to `web/tokens.css` only under `data-coast-theme="tokens"`, the 3D viewer reads `DEFAULT_COAST_PALETTE`, and the token lint now covers `packages/coast` with its own shrink-only baseline. v1 pages compute the same colours (browser check against values recorded from `main`).
 
 ## 0.7.0 — 2026-10-07

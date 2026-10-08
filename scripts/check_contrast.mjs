@@ -74,6 +74,51 @@ export function check(css, spec = V1) {
   return {failures, rows};
 }
 
+// packages/coast under data-coast-theme="tokens" (FE-77, design.md § 3A.4):
+// the bridge maps --coast-* roles onto web/tokens.css, and panel.css draws
+// these text roles on these background roles.
+export const BRIDGE = 'packages/coast/tokens-bridge.css';
+export const PAIRS_BRIDGE = [
+  ...['ground', 'panel', 'panel-2', 'hover', 'mint-wash'].flatMap(bg => [['text', bg, 'coast body text'], ['muted', bg, 'coast labels and units']]),
+  ...['mint', 'blue', 'coral', 'amber'].flatMap(fg => ['panel', 'panel-2'].map(bg => [fg, bg, 'coast reading text'])),
+  ['mint', 'mint-wash', 'coast selected tab and day text'],
+  ['on-mint', 'mint', 'coast primary button label'],
+];
+
+const hex = rgb => '#' + rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+const rgbOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+/** Each --coast-* role as hex per web/tokens.css theme; translucent roles (color-mix with transparent) are left out. */
+export function bridged(bridgeCss, tokensCss) {
+  const body = bridgeCss.replace(/\/\*[\s\S]*?\*\//g, '').match(/\{([^}]*)\}/)[1];
+  const roles = [...body.matchAll(/--coast-([a-z0-9-]+):\s*([^;]+);/g)];
+  const out = {};
+  for (const [theme, tokens] of Object.entries(themes(tokensCss, FILES['web/tokens.css']))) {
+    out[theme] = {};
+    for (const [, role, value] of roles) {
+      const plain = value.match(/^var\(--([a-z0-9-]+)\)$/);
+      const mix = value.match(/^color-mix\(in srgb, var\(--([a-z0-9-]+)\) (\d+)%, var\(--([a-z0-9-]+)\)\)$/);
+      if (plain && tokens[plain[1]]) out[theme][role] = tokens[plain[1]];
+      else if (mix && tokens[mix[1]] && tokens[mix[3]]) {
+        const [a, b, p] = [rgbOf(tokens[mix[1]]), rgbOf(tokens[mix[3]]), Number(mix[2]) / 100];
+        out[theme][role] = hex(a.map((v, i) => v * p + b[i] * (1 - p)));
+      }
+    }
+  }
+  return out;
+}
+export function checkBridge(bridgeCss, tokensCss) {
+  const failures = [], rows = [];
+  for (const [name, roles] of Object.entries(bridged(bridgeCss, tokensCss))) {
+    for (const [fg, bg, use] of PAIRS_BRIDGE) {
+      if (!roles[fg] || !roles[bg]) { failures.push(`${name}: --coast-${fg} or --coast-${bg} does not resolve to an opaque web/tokens.css colour`); continue; }
+      const ratio = contrast(roles[fg], roles[bg]);
+      rows.push(`${name.padEnd(5)} --coast-${fg} on --coast-${bg}: ${ratio.toFixed(2)}:1 (${use})`);
+      if (ratio < MIN) failures.push(`${name}: --coast-${fg} ${roles[fg]} on --coast-${bg} ${roles[bg]} is ${ratio.toFixed(2)}:1, below ${MIN}:1 (${use})`);
+    }
+  }
+  return {failures, rows};
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const root = new URL('../', import.meta.url);
   const named = process.argv.slice(2).filter(a => !a.startsWith('--'));
@@ -83,6 +128,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const {failures, rows} = check(readFileSync(named.length ? file : new URL(file, root), 'utf8'), spec);
     if (process.argv.includes('--verbose')) console.log(rows.map(r => `${file}: ${r}`).join('\n'));
     if (failures.length) { failed = true; console.error(`Contrast check failed in ${file}:\n  ${failures.join('\n  ')}`); }
+    count += rows.length;
+  }
+  if (!named.length) {
+    const {failures, rows} = checkBridge(readFileSync(new URL(BRIDGE, root), 'utf8'), readFileSync(new URL('web/tokens.css', root), 'utf8'));
+    if (process.argv.includes('--verbose')) console.log(rows.map(r => `${BRIDGE}: ${r}`).join('\n'));
+    if (failures.length) { failed = true; console.error(`Contrast check failed in ${BRIDGE}:\n  ${failures.join('\n  ')}`); }
     count += rows.length;
   }
   if (failed) process.exit(1);
