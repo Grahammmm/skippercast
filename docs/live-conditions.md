@@ -141,3 +141,27 @@ model path only) and writes `regions/<id>/nearshore.json` on this branch:
 
 Data from CDIP, Scripps Institution of Oceanography (https://cdip.ucsd.edu/).
 Modelled significant height at a site differs from breaking waves at a beach.
+
+## Beach health (FE-41)
+
+`python -m skippercast.pipeline.beach_health --root var/live` runs in each
+live cycle (`scripts/live_cycle.sh`) and writes
+`regions/morro-bay/beach-health.json` to the `conditions` branch (served at
+`/feeds/conditions/regions/morro-bay/beach-health.json`). It reads the San Luis
+Obispo County SurfSafeSLO public ArcGIS view and polls about hourly: a cycle
+less than 55 minutes after a good fetch keeps the published file.
+
+- **Shape:** `waterQuality` holds `packages/coast` `BeachWaterQuality` rows and
+  `sources` one `SourceStatus` (`slo-beach-water-quality`), the part of the coast
+  report's enrichment that FE-84 merges.
+- **Facts only:** each site's status text, the county's advisory text, its
+  coordinates, the nearest coast area and the county page link.
+- **Clocks:** the public view has no sample or effective date, so `sampledAt` is
+  null and `sampleDateAvailable` false. `fetchedAt` is the retrieval time,
+  recorded separately and never shown as a sample date; the view's edit time is
+  ignored.
+- **Checks:** the feature count must equal the service's own count, the
+  response must not exceed its transfer limit, coordinates must be WGS84 and
+  inside the county, and every site needs a unique identity.
+- **Failures:** any failed check publishes no rows and an `error` source, so a
+  missing row never reads as an open beach; the next cycle retries.

@@ -2279,6 +2279,37 @@
         "thredds.cdip.ucsd.edu",
         "cdip.ucsd.edu"
       ]
+    },
+    {
+      "id": "slo-beach-water-quality",
+      "name": "SLO County beach water-contact status (SurfSafeSLO public view)",
+      "provider": "County of San Luis Obispo Public Health, Environmental Health Services",
+      "needs": [],
+      "documentation_url": "https://www.slocounty.ca.gov/departments/slo-health/public-health/environmental-health-services/all-environmental-health-services/recreational-health/beach-water-quality-monitoring",
+      "adapter": "slo-beach-health",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "County of San Luis Obispo Public Health; link to the county beach water quality monitoring page",
+        "terms_url": "https://www.slocounty.ca.gov/departments/slo-health/public-health/environmental-health-services/all-environmental-health-services/recreational-health/beach-water-quality-monitoring",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Public county status page with no stated licence. SkipperCast keeps concise factual statuses, the county's advisory text and the page link only; no dashboard design, photos or maps are reused. Commercial use pending owner confirmation (FE-41, open question Q8)."
+      },
+      "authenticity": {
+        "basis": "The county's officially linked SurfSafeSLO public ArcGIS view; full-count, WGS84 and in-county geometry checks on every fetch",
+        "transport": "HTTPS; services6.arcgis.com under the county's organisation path only"
+      },
+      "coverage_note": "San Luis Obispo County sampling sites, published for morro-bay as conditions/regions/morro-bay/beach-health.json about hourly.",
+      "limitations": [
+        "The public view publishes no sample or effective date; fetchedAt is SkipperCast's retrieval time, never a sample date.",
+        "The county samples weekly; advisories can also follow rain or sewage releases between samples.",
+        "A failed or incomplete fetch publishes no rows, so a missing row never means an open beach."
+      ],
+      "allowed_hosts": [
+        "services6.arcgis.com"
+      ]
     }
   ]
 }

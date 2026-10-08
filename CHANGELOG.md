@@ -25,6 +25,8 @@
 
 - Collect the CDIP nearshore model for five SLO sites (Pismo Beach Pier to San Simeon Beach) each live cycle into `conditions/regions/morro-bay/nearshore.json`, with site identity and coordinate checks, native three-hour times and publisher quality masks, in the coast report's `NearshoreSite` shape (FE-40).
 
+- Collect SLO County beach water-contact statuses (status text, advisory text and the county link; no sample date invented) into the conditions feed about hourly, in the shape the coast report reads (FE-41).
+
 - Collect NDBC 46215 and 46028 recorded history (SHA-checked annual archives, monthly p10/median/p90 with counts and coverage, 45-day hourly means) into the data feed for the History view (FE-42).
 
 - Bound mapping investigation by a shared operating allowance, downstream readiness and verified public progress; preserve scientific and release gates.

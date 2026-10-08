@@ -40,6 +40,11 @@ if [ "$intelligence" = 1 ] || [ ! -f var/live/intelligence-health.json ]; then
   python scripts/refresh_regions.py intelligence --output var/live --previous-root var/live-published
 fi
 python scripts/refresh_regions.py habitat --output var/live --previous-root var/live-published
+# SLO County beach statuses beside each bound region's latest.json, about hourly (FE-41).
+# A failed fetch publishes an error source with no rows; it never stops the cycle.
+if ! python -m skippercast.pipeline.beach_health --root var/live; then
+  echo "::warning title=Beach health::county beach status fetch failed; published as unavailable"
+fi
 
 # Publish.
 cp var/live/latest.json var/live/intelligence-health.json var/live/habitat-health.json var/live-published/

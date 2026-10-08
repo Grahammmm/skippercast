@@ -374,8 +374,8 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ### FE-41 · Beach health collector · S
 - Status: CHANGED (output = `BeachWaterQuality`). Agent (proposed): Codex.
 - Depends: —
-- Files: `src/skippercast/pipeline/beach_health.py`, `live.py`, `catalog/sources.json`, `tests/fixtures/beach-health/*`, `tests/unit/test_beach_health.py`.
-- Build: § 11 row; statuses and links only.
+- Files: `src/skippercast/pipeline/beach_health.py`, `scripts/live_cycle.sh` (not `live.py`: the collector writes its own file per bound region, so the region refresh and its offline tests stay free of county calls), `catalog/sources.json`, `tests/fixtures/beach-health/*`, `tests/unit/test_beach_health.py`, `docs/data-sources.md`, `docs/live-conditions.md`.
+- Build: § 11 row; statuses and links only. Source id `slo-beach-water-quality`, the id `packages/coast` already reads.
 - Accept: 1. `exceededTransferLimit` or a count mismatch raises. 2. Out-of-county geometry is rejected. 3. No date is invented. 4. Output validates against `BeachWaterQuality`.
 - **Owner**: add the register row.
 
