@@ -29,7 +29,7 @@ import re
 import struct
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 import zlib
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -46,6 +46,20 @@ LIMITATIONS = [
     'quantisation (display_quantisation_m) is separate from source accuracy (HOR_ACC, metres).',
     'Tiles NOAA did not serve are listed as unavailable; their absence is not proof of no shoreline.',
 ]
+
+
+class OnlyHost(HTTPRedirectHandler):
+    """Refuse a redirect to any host but the allow-listed one, before following it."""
+    def __init__(self, host):
+        self.host = host
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urlsplit(newurl).hostname != self.host:
+            raise HTTPError(newurl, code, f'redirect away from {self.host} refused', headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+urlopen = build_opener(OnlyHost(HOST)).open
 
 
 def varint(buf, i):

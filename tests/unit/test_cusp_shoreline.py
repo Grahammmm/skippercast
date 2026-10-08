@@ -110,6 +110,21 @@ class FetchTests(unittest.TestCase):
                 cusp.fetch((12, 672, 1617))
 
 
+    def test_off_host_redirects_are_refused_before_they_are_followed(self):
+        from urllib.error import HTTPError
+        from urllib.request import Request
+        handler, request = cusp.OnlyHost(cusp.HOST), Request('https://nsde.ngs.noaa.gov/cusp/tiles/12/1/1.pbf')
+        moved = handler.redirect_request(request, None, 302, 'Found', {}, 'https://nsde.ngs.noaa.gov/cusp/tiles/12/1/2.pbf')
+        self.assertEqual(moved.full_url, 'https://nsde.ngs.noaa.gov/cusp/tiles/12/1/2.pbf')
+        with self.assertRaises(HTTPError):
+            handler.redirect_request(request, None, 302, 'Found', {}, 'https://example.com/t.pbf')
+
+    def test_a_tile_that_inflates_past_the_cap_is_refused(self):
+        with patch.object(cusp, 'MAX_TILE_BYTES', 1024):
+            with self.assertRaises(ValueError):
+                cusp.decode_tile(gzip.compress(bytes(9000)))
+
+
 class ExtractTests(unittest.TestCase):
     def test_extract_keeps_dated_noaa_lines_and_records_the_rest(self):
         z, x, y = cusp.tiles_for(BOX)[0]

@@ -24,7 +24,8 @@ from pathlib import Path
 import re
 import sys
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLISHED = ('active', 'preview')
@@ -35,6 +36,20 @@ PREFIX = 'tiles/basemap'
 ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
 MAX_LISTING_BYTES = 1 << 20  # 12 KB today
 AGENT = {'User-Agent': 'SkipperCast basemap build (https://skippercast.com)'}
+
+
+class OnlyHost(HTTPRedirectHandler):
+    """Refuse a redirect to any host but the allow-listed one, before following it."""
+    def __init__(self, host):
+        self.host = host
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urlsplit(newurl).hostname != self.host:
+            raise HTTPError(newurl, code, f'redirect away from {self.host} refused', headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+urlopen = build_opener(OnlyHost(urlsplit(BUILDS).hostname)).open
 
 
 def check_bbox(box):
