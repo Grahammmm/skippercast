@@ -8,6 +8,7 @@
 
 ## Unreleased
 
+- Publish the Morro Bay region's ESI 2006 sandy-shore runs and Coastal Commission beach approaches as a candidate region file (reviews pending owner confirmation), with dated source, access and rules reviews that no import renews.
 - The readable coastal report, methods and about pages (`/report`, `/methodology`, `/about`) use the new dark visual system with self-hosted fonts and add a "How it’s built" link to the sources page; their text is unchanged.
 - In the new map preview (`?ui=v2`), the masthead's sign in opens an account menu: passkey sign in, boat presets and the exact-boat sheet, saved-trip alerts, and the offline notes, GPX and offline pack entries.
 - In the new map preview (`?ui=v2`), the map stage switches between Chart, 2D and 3D: the reviewed coastal terrain loads on the first 2D or 3D choice and follows the profile's depth limit, the target, the hour, the surface-current source and the selected habitat; a region without terrain, or a browser without graphics, stays on the chart and says why.

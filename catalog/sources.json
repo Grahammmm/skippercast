@@ -2310,6 +2310,85 @@
       "allowed_hosts": [
         "services6.arcgis.com"
       ]
+    },
+    {
+      "id": "noaa-esi-2006",
+      "name": "NOAA Central California Environmental Sensitivity Index (2006) shoreline",
+      "provider": "NOAA NOS Office of Response and Restoration",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://www.arcgis.com/home/item.html?id=5eb03df505b14b57a6a717261f529496",
+      "adapter": "shore-habitat-import",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA NOS Office of Response and Restoration, Central California ESI (2006)",
+        "terms_url": "https://www.arcgis.com/home/item.html?id=5eb03df505b14b57a6a717261f529496",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NOAA publication; the source item states no use constraints beyond its mapping limitations and encourages attribution. Pending owner confirmation (FE-43 register row)."
+      },
+      "authenticity": {
+        "basis": "Primary NOAA ArcGIS feature service (layer 3, shoreline classification); response sha256 and fetch time kept in the asset's sourceChecks",
+        "transport": "HTTPS; exact provider host only; bounded response, truncated responses refused"
+      },
+      "bounds": [
+        -121.35,
+        34.92,
+        -120.51,
+        35.82
+      ],
+      "coverage_note": "Five reviewed San Luis Obispo County sandy-shore runs (ESI 3A) in catalog/shore-habitat/morro-bay.geojson, published to dist/regions/morro-bay/shore-habitat.geojson; written by scripts/collect_shore_habitat.py.",
+      "limitations": [
+        "2006 intertidal shoreline classification: the seabed offshore is unclassified, and this is neither today's shoreline, beach width nor surf channels; horizontal accuracy unknown.",
+        "The oil-sensitivity rank is never a fishing rank; only the sand class is reused, and fish presence is unknown."
+      ],
+      "publication_date": "2006",
+      "allowed_hosts": [
+        "services2.arcgis.com",
+        "www.arcgis.com"
+      ],
+      "update_policy": "Manual reviewed import; the source review is dated in the importer (30 days) and never renewed by a download."
+    },
+    {
+      "id": "ccc-access-points",
+      "name": "California Coastal Commission coastal access points",
+      "provider": "California Coastal Commission",
+      "needs": [],
+      "documentation_url": "https://www.arcgis.com/home/item.html?id=e45f130ce101423ea1de943a69445ece",
+      "adapter": "shore-habitat-import",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "California Coastal Commission access inventory",
+        "terms_url": "https://www.arcgis.com/home/item.html?id=e45f130ce101423ea1de943a69445ece",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Facts only: inventory id, name, coordinates and the public/closure flags used to admit a point. No photos, descriptions, phone numbers or links from the inventory are kept. The item's terms disclaim accuracy and ask users to indemnify the Commission; commercial use pending owner confirmation (FE-43 register row)."
+      },
+      "authenticity": {
+        "basis": "Primary Coastal Commission ArcGIS feature service (layer 0); response sha256, fetch time and the item's terms text kept in the asset's sourceChecks",
+        "transport": "HTTPS; exact provider hosts only; bounded response, truncated responses refused"
+      },
+      "bounds": [
+        -121.35,
+        34.92,
+        -120.51,
+        35.82
+      ],
+      "coverage_note": "Eight public beach approaches beside the five Morro Bay region shore runs.",
+      "limitations": [
+        "An inventory point is a reference, never a current-access certification, opening status or directions; check posted notices on arrival.",
+        "The access review is dated in the importer (7 days) and never renewed by a download."
+      ],
+      "allowed_hosts": [
+        "services9.arcgis.com",
+        "www.arcgis.com"
+      ],
+      "update_policy": "Manual reviewed import with the shore runs."
     }
   ]
 }
