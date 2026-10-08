@@ -40,6 +40,8 @@
 
 - Bridge `packages/coast` to the v2 tokens (FE-76): `coast.css` and the series chart write colours as `var(--coast-…, v1 literal)`, `tokens-bridge.css` maps them to `web/tokens.css` only under `data-coast-theme="tokens"`, the 3D viewer reads `DEFAULT_COAST_PALETTE`, and the token lint now covers `packages/coast` with its own shrink-only baseline. v1 pages compute the same colours (browser check against values recorded from `main`).
 
+- Add an overlay API to the coast embed (FE-81): `setOverlay` drapes GeoJSON fills, lines and points on the terrain in draw order with colours named by role from a host `overlayPalette`, `removeOverlay` frees them, and `onOverlayPick` reports the overlay and feature ids of a click. v1 passes no overlays and is unchanged.
+
 ## 0.7.0 — 2026-10-07
 
 - Explicitly save and delete public coastal report, current and measured-history snapshots for offline use, with saved time and original source clocks.

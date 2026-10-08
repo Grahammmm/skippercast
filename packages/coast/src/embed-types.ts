@@ -3,9 +3,10 @@
 // pulling three or the viewer into its program (FE-71). src/embed.ts
 // re-exports every name, so hosts may import either module.
 // The exports here are a shared API: announce a change on issue #413 first.
-import type {CoastPalette} from './palette.ts';
+import type {CoastOverlayColor,CoastOverlayPalette,CoastPalette} from './palette.ts';
 import type {CurrentLayer} from './state/current-layer.ts';
 
+export type {CoastOverlayColor,CoastOverlayPalette} from './palette.ts';
 export type CoastPerspective='2d'|'3d';
 /** An admitted habitat selection in WGS84 degrees, with its public id. */
 export type CoastSelection={latitude:number;longitude:number;region?:string;id?:string};
@@ -56,6 +57,10 @@ export type CoastMountOptions={
  onCloseSelection?:()=>void;
  /** Also relabels the button "Reset map view", since the host decides where home is. */
  onReset?:()=>void;
+ /** Colours for `setOverlay` styles, by role (v2 passes its web/map/palette.ts Palette); without it `setOverlay` throws. */
+ overlayPalette?:CoastOverlayPalette;
+ /** A click on a host overlay; the renderer then shows no terrain reading for that click. */
+ onOverlayPick?:(pick:CoastOverlayPick)=>void;
 };
 
 /**
@@ -79,5 +84,45 @@ export interface CoastHandle{
  selectHabitat(id:string|null):void;
  /** A hidden embed stops drawing and withdraws its overlays until shown again. */
  setVisible(visible:boolean):void;
+ /** Drapes GeoJSON features on the terrain under `id`, replacing an overlay with that id; kept while hidden; invalid input throws. */
+ setOverlay(id:string,overlay:CoastOverlay):void;
+ /** Removes an overlay and frees its geometry; false when the id is unknown. */
+ removeOverlay(id:string):boolean;
  destroy():void;
 }
+
+// Host overlays draped on the terrain (FE-81, src/coast3d/overlays.ts).
+export type CoastOverlayKind='fill'|'line'|'point';
+type Position=readonly number[];
+type Ring=readonly Position[];
+/** GeoJSON geometries in WGS84 longitude, latitude. */
+export type CoastOverlayGeometry=
+ |{readonly type:'Point';readonly coordinates:Position}
+ |{readonly type:'MultiPoint';readonly coordinates:readonly Position[]}
+ |{readonly type:'LineString';readonly coordinates:readonly Position[]}
+ |{readonly type:'MultiLineString';readonly coordinates:readonly Ring[]}
+ |{readonly type:'Polygon';readonly coordinates:readonly Ring[]}
+ |{readonly type:'MultiPolygon';readonly coordinates:readonly (readonly Ring[])[]};
+/** A GeoJSON feature; `id` is what a pick reports. */
+export type CoastOverlayFeature={readonly id:string|number;readonly geometry:CoastOverlayGeometry;readonly properties?:Readonly<Record<string,unknown>>|null};
+export type CoastOverlayStyle={
+ /** Fill, line or point colour. */
+ readonly color:CoastOverlayColor;
+ /** 0–1; fills default to 0.25, lines and points to 1. */
+ readonly opacity?:number;
+ /** A fill's boundary line or a point's ring. */
+ readonly outline?:CoastOverlayColor;
+ readonly outlineOpacity?:number;
+ /** Point diameter in CSS pixels (8 by default). */
+ readonly size?:number;
+};
+export type CoastOverlay={
+ readonly kind:CoastOverlayKind;
+ /** fill: Polygon or MultiPolygon; line: LineString or MultiLineString; point: Point or MultiPoint. */
+ readonly features:readonly CoastOverlayFeature[];
+ readonly style:CoastOverlayStyle;
+ /** Draw order, bottom to top; equal orders stack in the order first set. Default 0. */
+ readonly order?:number;
+};
+/** A selected overlay feature and the picked place in WGS84 degrees. */
+export type CoastOverlayPick={overlay:string;feature:string|number;kind:CoastOverlayKind;latitude:number;longitude:number};
