@@ -54,6 +54,19 @@ test('only allow-listed packages/coast renderers produce markup', async () => {
   for (const name of ['historyView', 'toString', 'constructor', '__proto__', '']) assert.throws(() => coastMarkup(name, args), TypeError, name);
 });
 
+test('a chart series colour is a CSS colour, never markup', async () => {
+  const {coastMarkup, isCoastColour} = await load();
+  for (const ok of ['var(--coast-blue)', 'var(--blue)', '#abc', '#abcd', '#a1b2c3', '#a1b2c3d4', 'rgb(1, 2, 3)', 'rgba(1 2 3 / 50%)', 'hsl(200, 50%, 40%)', 'hsla(200 50% 40% / .5)'])
+    assert.ok(isCoastColour(ok), ok);
+  const attacks = ['"><img src=x onerror=alert(1)>', 'red;background:url(https://s.test/x)', 'var(--x);}', 'rgb(1,2,3)"', 'expression(alert(1))', '#abcde', 'red', '', null, 7];
+  for (const bad of attacks) {
+    assert.equal(isCoastColour(bad), false, String(bad));
+    assert.throws(() => coastMarkup('chart', [[{...ROWS[0], color: bad}], START, END, START, 'UTC']), TypeError, String(bad));
+  }
+  assert.throws(() => coastMarkup('chart', [[ROWS[0], {...ROWS[0], color: '"><img onerror=alert(1)>'}], START, END, START, 'UTC']), TypeError, 'every row is checked');
+  assert.throws(() => coastMarkup('chart', [null, START, END, START, 'UTC']), TypeError);
+});
+
 test('the renderer allow-list holds in the types (tsc on the fixture)', t => {
   const tsc = join(ROOT, 'node_modules/.bin/tsc');
   if (!existsSync(tsc)) { t.skip('web dependencies are not installed'); return; }
@@ -115,4 +128,5 @@ test('the host loads panel.css, its own sheet and the token bridge and holds no 
   assert.match(source, /from '\.\.\/\.\.\/packages\/coast\/tokens-bridge\.css\?url'/);
   assert.deepEqual(lintFile(HOST, source), []);
   assert.equal(source.match(/\.innerHTML\s*=/g)?.length, 1, 'one assignment, of a COAST_RENDERERS result');
+  assert.doesNotMatch(source, /outerHTML\s*=|insertAdjacentHTML|dangerouslySetInnerHTML|document\.write|setHTMLUnsafe|createContextualFragment|parseFromString/);
 });

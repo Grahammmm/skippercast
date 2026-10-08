@@ -8,15 +8,17 @@
 // type-check under web/tsconfig.json's noUncheckedIndexedAccess, and fixing
 // that is a packages/coast change announced on issue #413.
 //
-// Trust boundary. This is the one file in web/ that may assign innerHTML
-// (scripts/check_web.py fails on any other). It assigns only the string that
-// a renderer in COAST_RENDERERS returns: the prop names the renderer, the host
-// never passes a function or a string, and an unknown name throws. Those
-// renderers escape every feed-derived value with packages/coast's
-// `escapeHTML`. Values they interpolate without escaping, such as a
-// `Series.color`, are the caller's own constants (pass a token such as
-// 'var(--coast-blue)'), never a value read from a feed. Adding a renderer
-// here means reading it for that rule first.
+// Trust boundary. This is the one file in web/ that may write markup into the
+// DOM (scripts/check_web.py fails on innerHTML and the other sinks anywhere
+// else). It assigns only the string that a renderer in COAST_RENDERERS
+// returns: the prop names the renderer, the host never passes a function or a
+// string, and an unknown name throws. Those renderers escape every
+// feed-derived value with packages/coast's `escapeHTML`. The one value `chart`
+// interpolates unescaped, `Series.color`, must pass `isCoastColour` (a hex,
+// rgb()/hsl() or var(--name) colour) or the call throws, so an attribute
+// break-out never reaches the DOM; pass a token such as 'var(--coast-blue)'.
+// Adding a renderer here means reading it for unescaped values and guarding
+// them the same way.
 //
 // The string mounts in a shadow root with panel.css, coast-markup.css (keeps
 // panel.css's own :host variables from shadowing web/tokens.css) and the token
@@ -35,9 +37,17 @@ export const COAST_RENDERERS = Object.freeze({chart});
 export type CoastRendererName = keyof typeof COAST_RENDERERS;
 export type CoastArgs<K extends CoastRendererName> = Parameters<(typeof COAST_RENDERERS)[K]>;
 
-/** The markup an allow-listed renderer returns for `args`; any other name throws. */
+const COLOUR = /^(?:#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgb|hsl)a?\([\d\s.,%/+-]+\)|var\(--[\w-]+\))$/;
+/** A colour `chart()` may write into a `style` attribute: hex, rgb()/hsl() with numbers only, or var(--name). */
+export const isCoastColour = (value: unknown): value is string => typeof value === 'string' && COLOUR.test(value);
+
+/** The markup an allow-listed renderer returns for `args`; any other name, or an unsafe colour, throws. */
 export function coastMarkup<K extends CoastRendererName>(renderer: K, args: CoastArgs<K>): string {
   if (!Object.hasOwn(COAST_RENDERERS, renderer)) throw new TypeError(`Not a packages/coast renderer: ${String(renderer)}`);
+  if (renderer === 'chart') {
+    const rows: unknown = (args as CoastArgs<'chart'>)[0];
+    if (!Array.isArray(rows) || !rows.every(row => isCoastColour((row as {color?: unknown} | null)?.color))) throw new TypeError('chart() series colours must be a hex, RGB, HSL or custom-property colour');
+  }
   const render = COAST_RENDERERS[renderer] as (...input: CoastArgs<K>) => string;
   return render(...args);
 }
