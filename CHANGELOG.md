@@ -9,6 +9,7 @@
 ## Unreleased
 
 - Publish the Morro Bay region's ESI 2006 sandy-shore runs and Coastal Commission beach approaches as a candidate region file (reviews pending owner confirmation), with dated source, access and rules reviews that no import renews.
+- The sources page now also answers at `/sources` (`/sources.html` keeps working), and the new landing, the readable report, methods and about pages and the new map's brief link there; the landing's “How it’s built” link no longer returns “Not found”.
 - The readable coastal report, methods and about pages (`/report`, `/methodology`, `/about`) use the new dark visual system with self-hosted fonts and add a "How it’s built" link to the sources page; their text is unchanged.
 - In the new map preview (`?ui=v2`), the masthead's sign in opens an account menu: passkey sign in, boat presets and the exact-boat sheet, saved-trip alerts, and the offline notes, GPX and offline pack entries.
 - In the new map preview (`?ui=v2`), the time dock covers the full seven-day forecast: eight day chips, the chosen day's hours as exact UTC times, play that stops at the last hour and pauses when the page is hidden, and under reduced motion a "Next hour" step instead of play; the terrain follows the dock's hour.

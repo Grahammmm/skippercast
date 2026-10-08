@@ -52,6 +52,7 @@ export function uiV2(env: Pick<Env, 'UI_V2'>, search: URLSearchParams): boolean 
 export function shellFor(path: string, search: URLSearchParams, env: Pick<Env, 'UI_V2'>): string | null | undefined {
   if(path === '/coast') return '/coast.html';
   if(path === '/privacy') return '/privacy.html'; // Fish compatibility uses the complete existing notice.
+  if(path === '/sources') return '/sources.html'; // #475: the canonical sources page (open-questions Q16).
   const v2Only = path === '/map' || path === V2_SHELLS.landing || path === V2_SHELLS.app;
   if (path !== '/' && !v2Only) return undefined;
   if (!uiV2(env, search)) return v2Only ? null : '/';
@@ -70,6 +71,8 @@ export const serveAsset: Handler<AppEnv> = async c => {
   const search = new URL(request.url).searchParams;
   const coast = c.var.path === '/coast' ? coastRedirect(search, c.env ?? {}) : null;
   if (coast) return new Response(null, {status: 302, headers: {Location: coast, 'Cache-Control': 'no-store'}});
+  // #475: the page's links are relative, so /sources/ moves to /sources rather than serving the shell there.
+  if (c.var.path === '/sources/') return new Response(null, {status: 301, headers: {Location: `/sources${new URL(request.url).search}`, 'Cache-Control': 'no-store'}});
   const page = shellFor(c.var.path, search, c.env ?? {});
   if (page === null) return new Response('Not found', {status: 404});
   const current = SHELLS[page ?? c.var.path];

@@ -10,7 +10,7 @@ import {stripJsonComments} from '../scripts/wrangler_config.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html', '/coast.html': '/coast.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html', '/coast.html': '/coast.0123456789.html', '/sources.html': '/sources.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
 const {default: deployed} = await import('../server/index.ts');
@@ -102,9 +102,27 @@ test('UI_V2 off: / is the v1 shell as before and /map is 404; ?ui=v2 previews; U
   }
   // An unknown switch value is no switch; other pages and assets are untouched by the flag.
   assert.deepEqual(await shell('/?ui=v3', {UI_V2: 'true'}), landing); assert.deepEqual(await shell('/?ui=v3', {}), v1);
-  assert.deepEqual(await shell('/sources.html?ui=v2', {}), [299, '/sources.html', null]);
+  assert.deepEqual(await shell('/sources.html?ui=v2', {}), [299, '/sources.0123456789', 'no-store']);
   const dark = await call('/map', {});
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(dark.headers.get(name), value, `404 /map: ${name}`);
+});
+
+// #475 (open-questions Q16): /sources is the canonical sources page under either switch; /sources.html keeps
+// working; /sources/ moves to /sources, since the page's links are relative and would resolve under /sources/.
+test('#475: /sources serves the sources shell, /sources/ redirects to it and /sources.html still works', async () => {
+  const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status, r.headers.get('Location'), r.headers.get('Cache-Control')]; };
+  const sources = [299, '/sources.0123456789', 'no-store'];
+  for (const env of [{}, {UI_V2: 'false'}, {UI_V2: 'true'}]) for (const ui of ['', '?ui=v1', '?ui=v2']) {
+    const label = `${ui} ${JSON.stringify(env)}`;
+    assert.deepEqual(await shell(`/sources${ui}`, env), sources, `/sources${label}`);
+    assert.deepEqual(await shell(`/sources.html${ui}`, env), sources, `/sources.html${label}`);
+    assert.deepEqual(await shell(`/sources/${ui}`, env), [301, `/sources${ui}`, 'no-store'], `/sources/${label}`);
+  }
+  assert.deepEqual(await shell('/sources/?region=morro-bay#ais', {}), [301, '/sources?region=morro-bay', 'no-store'], 'the query is kept');
+  for (const path of ['/sources/x', '/sourcesx', '/Sources']) assert.deepEqual(await shell(path, {}), [299, path, null], `${path} is not the page`);
+  const {shellFor} = await import('../server/routes/assets.ts');
+  for (const UI_V2 of ['true', 'false']) assert.equal(shellFor('/sources', new URLSearchParams(), {UI_V2}), '/sources.html');
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal((await call('/sources', {})).headers.get(name), value, `/sources: ${name}`);
 });
 
 // FE-78 (design § 3A.3): Fish and coast keys open the app at / and, with v2 on, /coast is the app at presentation=3d.

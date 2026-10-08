@@ -1,7 +1,7 @@
 // FE-86: the readable and information pages (/report, /methodology, /about;
 // server/coast-pages.ts) in the v2 visual system. They load web/tokens.css and
 // the self-hosted fonts, link to the sources page (open-questions Q16; the
-// served path is /sources.html, since /sources has no route), and axe finds
+// canonical /sources, #475), and axe finds
 // nothing serious (colour contrast included). /report runs with an empty
 // region, the explicit-gap page, so the local Worker fetches no upstream report.
 import {readFileSync, readdirSync} from 'node:fs';
@@ -12,7 +12,7 @@ for (const [name, path] of [['methodology', '/methodology'], ['about', '/about']
   test(`the ${name} page uses the v2 tokens and fonts and passes axe`, async ({page, pageErrors}, info) => {
     expect((await page.goto(path))?.status()).toBe(200);
     await expect(page.locator('h1')).toBeVisible();
-    await expect(page.getByRole('navigation', {name: 'Public information'}).getByRole('link', {name: 'How it’s built'})).toHaveAttribute('href', '/sources.html');
+    await expect(page.getByRole('navigation', {name: 'Public information'}).getByRole('link', {name: 'How it’s built'})).toHaveAttribute('href', '/sources');
     const look = await page.evaluate(async () => {
       await document.fonts.ready;
       const root = getComputedStyle(document.documentElement), body = getComputedStyle(document.body);
@@ -28,7 +28,7 @@ for (const [name, path] of [['methodology', '/methodology'], ['about', '/about']
       expect(await page.locator('.gap').first().evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(18, 37, 53)');
     }
     await checkA11y(page, `coast-readable-${name}`, info.project.name);
-    expect((await page.request.get('/sources.html')).status(), 'the sources link resolves').toBe(200);
+    expect((await page.request.get('/sources')).status(), 'the sources link resolves').toBe(200);
     expect(pageErrors).toEqual([]);
   });
 }

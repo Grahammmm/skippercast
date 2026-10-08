@@ -115,8 +115,7 @@ test('actual readable workspace return preserves supported, unknown and empty cu
 // FE-86: the readable and information pages in the v2 visual system. The page
 // text is the text recorded on main before the restyle (the fixture is main's
 // template), node for node, except the one declared addition: the nav link to
-// the sources page that open-questions Q16 makes canonical. It points at
-// /sources.html because the bare /sources path has no Worker route yet.
+// the sources page that open-questions Q16 makes canonical, at /sources (#475).
 const textNodes=html=>html.replace(/<!--[\s\S]*?-->/g,'').split(/<[^>]*>/).filter(text=>text.trim());
 const before=readFileSync(new URL('./fixtures/coast-readable/main-before-fe86.html',import.meta.url),'utf8');
 test('FE-86 restyle keeps every text node of the readable and information pages byte-identical',async()=>{
@@ -141,7 +140,7 @@ test('FE-86 methodology and about link to the sources page; the pages need nothi
  const {CSP}=await import('../server/security-headers.ts');
  for(const path of ['/methodology','/about','/report']){
   const response=await serveCoastPage(request(path),options()),html=await response.text();
-  assert.match(html,/<a href="\/sources\.html">How it’s built<\/a>/,path);
+  assert.match(html,/<a href="\/sources">How it’s built<\/a>/,path);
   assert.equal(response.headers.get('Content-Security-Policy'),CSP,path);
  }
  assert.doesNotMatch(template,/<style|<script|\sstyle=|https?:\/\//i,'no inline style or script and no other origin');
