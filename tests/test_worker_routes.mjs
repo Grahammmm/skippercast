@@ -10,7 +10,7 @@ import {stripJsonComments} from '../scripts/wrangler_config.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html', '/coast.html': '/coast.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
 const {default: deployed} = await import('../server/index.ts');
@@ -105,6 +105,47 @@ test('UI_V2 off: / is the v1 shell as before and /map is 404; ?ui=v2 previews; U
   assert.deepEqual(await shell('/sources.html?ui=v2', {}), [299, '/sources.html', null]);
   const dark = await call('/map', {});
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(dark.headers.get(name), value, `404 /map: ${name}`);
+});
+
+// FE-78 (design § 3A.3): Fish and coast keys open the app at / and, with v2 on, /coast is the app at presentation=3d.
+test('FE-78: coast and Fish keys open the v2 app; /coast is the app at presentation=3d; with v2 off every path is unchanged', async () => {
+  const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status, r.headers.get('Location'), r.headers.get('Cache-Control')]; };
+  const v1 = [299, '/index.0123456789', 'no-store'], app = [299, '/app.0123456789', 'no-store'], coastPage = [299, '/coast.0123456789', 'no-store'];
+  const keys = ['place=morro', 'mode=shore', 'species=lingcod', 'presentation=3d', 'habitat=reef:1', 'current=wcofs'];
+  // 1. v2 off: /coast still serves coast.html, / and every Fish or coast link is the v1 shell byte for byte.
+  for (const env of [{}, {UI_V2: 'false'}, {UI_V2: 'true', ui: 'v1'}]) {
+    const off = env.ui ? '&ui=v1' : '', e = {UI_V2: env.UI_V2};
+    assert.deepEqual(await shell(`/coast?${off.slice(1)}`, e), coastPage, JSON.stringify(env));
+    assert.deepEqual(await shell(`/coast?place=morro&mode=shore${off}`, e), coastPage);
+    for (const query of ['', ...keys, 'place=morro&mode=shore']) assert.deepEqual(await shell(`/?${query}${off}`, e), v1, `${query} ${JSON.stringify(env)}`);
+  }
+  assert.equal(await (await call('/', {})).text(), await (await call('/?place=morro&mode=shore', {})).text(), '/ is byte-identical with v2 off');
+  // 2. v2 on (the flag or ?ui=v2): each key opens the app at /; /coast moves to the app at presentation=3d, query kept.
+  for (const query of keys) {
+    assert.deepEqual(await shell(`/?${query}`, {UI_V2: 'true'}), app, query);
+    assert.deepEqual(await shell(`/?${query}&ui=v2`, {}), app, `${query} ?ui=v2`);
+  }
+  assert.deepEqual(await shell('/?place=morro&mode=shore', {UI_V2: 'true'}), app);
+  assert.deepEqual(await shell('/coast', {UI_V2: 'true'}), [302, '/map?presentation=3d', 'no-store']);
+  assert.deepEqual(await shell('/coast?place=morro&mode=shore', {UI_V2: 'true'}), [302, '/map?place=morro&mode=shore&presentation=3d', 'no-store']);
+  assert.deepEqual(await shell('/coast?ui=v2', {}), [302, '/map?ui=v2&presentation=3d', 'no-store']);
+  assert.deepEqual(await shell('/coast?presentation=2d', {UI_V2: 'true'}), [302, '/map?presentation=2d', 'no-store'], 'a link that names a presentation keeps it');
+  const moved = await call('/coast', {env: {UI_V2: 'true'}});
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(moved.headers.get(name), value, `302 /coast: ${name}`);
+  // The redirect target is the app.
+  assert.deepEqual(await shell('/map?presentation=3d', {UI_V2: 'true'}), app); assert.deepEqual(await shell('/map?ui=v2&presentation=3d', {}), app);
+  // 3. The readable pages answer the same with v2 on and off (offline: the upstream report is unavailable).
+  const real = globalThis.fetch;
+  globalThis.fetch = async () => { throw Error('offline'); };
+  try {
+    for (const path of ['/report', '/feed.xml', '/methodology', '/about']) {
+      const read = async (p, env) => { const r = await call(p, {env}); return [r.status, r.headers.get('Content-Type'), r.headers.get('Location'), await r.text()]; };
+      const before = await read(path, {});
+      assert.notEqual(before[0], 302, path);
+      assert.deepEqual(await read(path, {UI_V2: 'true'}), before, `${path} UI_V2=true`);
+      assert.deepEqual(await read(`${path}?ui=v2`, {}), await read(`${path}?ui=v1`, {}), `${path} ?ui=`);
+    }
+  } finally { globalThis.fetch = real; }
 });
 
 test('without an identity provider /api/auth/ is unavailable and private routes fail closed', async () => {

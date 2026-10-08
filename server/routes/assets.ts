@@ -9,8 +9,25 @@ import type {AppEnv, Env} from '../env.ts';
 // FE-01: the front-end rebuild's pages, served only behind the UI_V2 switch
 // (docs/plans/front-end/design.md § 14) until FE-60 turns it on by default.
 export const V2_SHELLS = Object.freeze({landing: '/landing.html', app: '/app.html'});
-/** Parameters that name an area: with one of them `/` serves the app, so every shared v1 link keeps working (design § 7). */
-export const AREA_PARAMS: readonly string[] = Object.freeze(['region', 'coast', 'view', 'spot', 'target', 'focus']);
+/**
+ * Parameters that name an area: with one of them `/` serves the app, so every shared
+ * v1 link keeps working (design § 7), as do Fish links (`place`, `mode`, `species`,
+ * translated by web/fish-links.ts) and v1 coast links (FE-78, design § 3A.3).
+ */
+export const AREA_PARAMS: readonly string[] = Object.freeze(['region', 'coast', 'view', 'spot', 'target', 'focus', 'place', 'mode', 'species', 'presentation', 'habitat', 'current']);
+
+/**
+ * FE-78: with v2 on, `/coast` is the app at the 3D terrain presentation. The
+ * standalone page's link (query kept, so `?ui=v2` and Fish keys carry over) moves
+ * to `/map` with `presentation=3d` unless the link names one. `null`: `/coast`
+ * still serves coast.html.
+ */
+export function coastRedirect(search: URLSearchParams, env: Pick<Env, 'UI_V2'>): string | null {
+  if (!uiV2(env, search)) return null;
+  const query = new URLSearchParams(search);
+  if (!query.has('presentation')) query.set('presentation', '3d');
+  return `/map?${query}`;
+}
 
 /**
  * Whether the request gets the v2 shell. `?ui=v2` and `?ui=v1` win (a shareable
@@ -50,7 +67,10 @@ export const serveAsset: Handler<AppEnv> = async c => {
     const response = await assets.fetch(request), fresh = new Response(response.body, response);
     fresh.headers.set('Cache-Control', 'no-cache'); return fresh;
   }
-  const page = shellFor(c.var.path, new URL(request.url).searchParams, c.env ?? {});
+  const search = new URL(request.url).searchParams;
+  const coast = c.var.path === '/coast' ? coastRedirect(search, c.env ?? {}) : null;
+  if (coast) return new Response(null, {status: 302, headers: {Location: coast, 'Cache-Control': 'no-store'}});
+  const page = shellFor(c.var.path, search, c.env ?? {});
   if (page === null) return new Response('Not found', {status: 404});
   const current = SHELLS[page ?? c.var.path];
   if (!current) return assets.fetch(request);
