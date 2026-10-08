@@ -101,6 +101,18 @@ export function speciesForProfile(plans: Readonly<Record<string, PlanLike>>, pro
   return ids.filter((id, i) => ids.indexOf(id) === i);
 }
 
+/** The terrain renderer's deepest limit, which packages/coast `experience.ts` applies where a profile sets none. */
+export const TERRAIN_DEPTH_CEILING_FT = 300;
+
+/**
+ * The depth limit the terrain renderer takes for `profile` (`setDepthLimit`):
+ * the profile's own limit, else the ceiling. tests/test_profile.mjs pins it to
+ * `experience.ts` `maxDepth`, so the two tables cannot drift.
+ */
+export function terrainDepthLimitFt(profile: Profile): number {
+  return PROFILE_TABLE[profile].maxDepthFt ?? TERRAIN_DEPTH_CEILING_FT;
+}
+
 /** Whether a mark or candidate at `depthFt` is inside the profile's limit; unknown depth stays in. */
 export function withinDepth(profile: Profile, depthFt: number | null | undefined): boolean {
   const limit = PROFILE_TABLE[profile].maxDepthFt;

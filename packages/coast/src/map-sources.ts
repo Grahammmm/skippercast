@@ -34,7 +34,7 @@ export function selectCurrentFrame(field:CurrentField,selectedAt:string|Date,now
  }
  const issued=field.issuedAt?Date.parse(field.issuedAt):NaN;
  if(!Number.isFinite(issued)||issued>clock+300000||clock-issued>36*3600000||!field.frames.length)return null;
- const first=Date.parse(field.frames[0].validAt),last=Date.parse(field.frames.at(-1)!.validAt);
+ const first=Date.parse(field.frames[0]!.validAt),last=Date.parse(field.frames.at(-1)!.validAt);
  if(selected<first||selected>last)return null;
  const nearest=field.frames.reduce((a,b)=>Math.abs(Date.parse(a.validAt)-selected)<=Math.abs(Date.parse(b.validAt)-selected)?a:b);
  return Math.abs(Date.parse(nearest.validAt)-selected)<=90*60000&&nearest.cells.length?nearest:null;

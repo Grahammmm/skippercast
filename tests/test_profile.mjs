@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {
-  DEFAULT_PROFILE, METHODS, PROFILES, PROFILE_TABLE, RAIL_IDS, isProfile, planMethods, profileSemantics, speciesForProfile, withinDepth,
+  DEFAULT_PROFILE, METHODS, PROFILES, PROFILE_TABLE, RAIL_IDS, TERRAIN_DEPTH_CEILING_FT, isProfile, planMethods, profileSemantics,
+  speciesForProfile, terrainDepthLimitFt, withinDepth,
 } from '../web/profile.ts';
+import {createState, defaultSpecies} from '../packages/coast/src/state/experience.ts';
+import {slo} from '../packages/coast/src/counties.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
@@ -75,4 +78,19 @@ test('depth limits: 300 ft boat, 60 ft spear, none for shore; unknown depth stay
   assert.equal(withinDepth('shore', 5000), true);
   assert.equal(withinDepth('spear', null), true);
   assert.equal(withinDepth('spear', Number.NaN), true);
+});
+
+test('PROFILE_TABLE depth limits and default targets equal packages/coast experience.ts', () => {
+  // A synthetic, empty report at a fixed instant: createState only needs the shape.
+  const now = new Date('2026-10-06T18:00:00Z');
+  const report = {schemaVersion: 1, countyId: 'slo', generatedAt: now.toISOString(), forecasts: [], observations: [], tides: [], tideEvents: [],
+    alerts: [], sources: [], catches: [], catchStatus: 'none', visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}, habitatStatus: 'none'};
+  assert.equal(TERRAIN_DEPTH_CEILING_FT, 300);
+  assert.deepEqual(PROFILES.map(terrainDepthLimitFt), [300, 300, 60], 'boat 300, shore the ceiling, spear 60');
+  for (const profile of PROFILES) {
+    const state = createState(report, slo, profile, slo.defaultAreaId, undefined, undefined, now);
+    assert.equal(state.maxDepth, terrainDepthLimitFt(profile), `${profile}: experience.ts maxDepth`);
+    assert.equal(defaultSpecies(profile), PROFILE_TABLE[profile].defaultTarget, `${profile}: experience.ts defaultSpecies`);
+    assert.equal(state.species, PROFILE_TABLE[profile].defaultTarget, `${profile}: createState selects the default target`);
+  }
 });
