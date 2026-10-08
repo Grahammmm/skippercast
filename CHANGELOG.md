@@ -18,6 +18,8 @@
 
 ### Internal
 
+- Collect NDBC 46215 and 46028 recorded history (SHA-checked annual archives, monthly p10/median/p90 with counts and coverage, 45-day hourly means) into the data feed for the History view (FE-42).
+
 - Bound mapping investigation by a shared operating allowance, downstream readiness and verified public progress; preserve scientific and release gates.
 
 - Bridge `packages/coast` to the v2 tokens (FE-76): `coast.css` and the series chart write colours as `var(--coast-…, v1 literal)`, `tokens-bridge.css` maps them to `web/tokens.css` only under `data-coast-theme="tokens"`, the 3D viewer reads `DEFAULT_COAST_PALETTE`, and the token lint now covers `packages/coast` with its own shrink-only baseline. v1 pages compute the same colours (browser check against values recorded from `main`).

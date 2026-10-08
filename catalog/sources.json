@@ -2079,6 +2079,39 @@
         "Name and port matches stay leads until a stable key or an admin decision confirms them."
       ],
       "allowed_hosts": []
+    },
+    {
+      "id": "ndbc-history",
+      "name": "NDBC standard-met annual archives and 45-day realtime files (recorded history)",
+      "provider": "NOAA National Data Buoy Center",
+      "needs": [
+        "wave-observations",
+        "weather-observations"
+      ],
+      "documentation_url": "https://www.ndbc.noaa.gov/faq/dataindex.shtml",
+      "adapter": "ndbc-history",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-07",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA National Data Buoy Center; 46215 measured by CDIP/Scripps",
+        "terms_url": "https://www.weather.gov/disclaimer/",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "U.S. government work. Monthly bands and hourly means are SkipperCast aggregations, credited to NOAA/NDBC without implied endorsement. Pending owner confirmation (FE-42)."
+      },
+      "authenticity": {
+        "basis": "Primary publisher archive index and annual files; SHA-256 recorded per file",
+        "transport": "HTTPS; www.ndbc.noaa.gov only"
+      },
+      "coverage_note": "46215 (2004 onward) and 46028 (1983 onward) as each station's archive index lists them; missing years and hours stay missing.",
+      "limitations": [
+        "Descriptive recorded history, not a climatology, forecast or catch probability.",
+        "Realtime files are automated-QC; annual archives are post-processed and can be revised."
+      ],
+      "allowed_hosts": [
+        "www.ndbc.noaa.gov"
+      ]
     }
   ]
 }
