@@ -6,7 +6,8 @@
 // (data-coast-theme="tokens") the same chrome reads web/tokens.css.
 //
 // The expected values live in e2e/coast-computed-style.json, one block per
-// Playwright project. A deliberate coast.css change re-records them:
+// Playwright project. FE-77 adds the report dialog, whose shadow root loads
+// packages/coast/panel.css. A deliberate coast.css or panel.css change re-records them:
 //   COAST_STYLE_RECORD=1 pnpm exec playwright test e2e/coast-computed-style.spec.ts --workers=1
 import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
@@ -92,6 +93,76 @@ test('the v1 terrain presentation computes the same colours and fonts as before 
   check(info.project.name, 'workspace', await read(page, CHROME, '#coast-workspace'));
 });
 
+// FE-77: the /coast report dialog renders packages/coast/panel.css in a shadow
+// root. A synthetic report and buoy history (e2e/coast-report-fixture.ts) at a
+// fixed clock render the same markup on every run; every element of each tab
+// is read, keyed by its own and its parent's tag, id and classes. Values that
+// equal the property's default (or, for border, outline and decoration
+// colours, the text colour) are left out so a re-recording stays readable.
+const REPORT_NOW = Date.parse('2026-07-15T19:00:00Z');
+const REPORT_TABS = ['Overview', 'Forecast & tides', 'Buoys', 'History', 'Fleet reports', 'Sources'];
+const REPORT_PROPS = [...PROPS, 'fill', 'stroke', 'stop-color', 'scrollbar-color', 'text-decoration-color'];
+
+/** Computed REPORT_PROPS of every element (and drawn ::before / ::after) in the report's shadow root. */
+const readReport = (page: Page): Promise<Styles> => page.evaluate(props => {
+  const root = document.getElementById('report-content')!.shadowRoot!;
+  const DEFAULTS: Record<string, string> = {'background-color': 'rgba(0, 0, 0, 0)', 'background-image': 'none', 'box-shadow': 'none',
+    'text-shadow': 'none', 'accent-color': 'auto', fill: 'rgb(0, 0, 0)', stroke: 'none', 'stop-color': 'rgb(0, 0, 0)', 'scrollbar-color': 'auto'};
+  const sig = (el: Element | null) => !el ? '' : el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + [...el.classList].map(c => '.' + c).join('');
+  const pick = (el: Element, pseudo?: string) => {
+    const s = getComputedStyle(el, pseudo), color = s.getPropertyValue('color'), out: Record<string, string> = {};
+    for (const p of props) {
+      const v = s.getPropertyValue(p);
+      if (p === 'color' || p === 'font-family' || (DEFAULTS[p] ?? color) !== v) out[p] = v;
+    }
+    return out;
+  };
+  const out: Record<string, Record<string, string>> = {};
+  const add = (key: string, style: Record<string, string>) => {
+    const text = JSON.stringify(style);
+    for (let n = 1; ; n++) {
+      const k = n === 1 ? key : `${key} (${n})`;
+      if (!out[k]) { out[k] = style; return; }
+      if (JSON.stringify(out[k]) === text) return;
+    }
+  };
+  for (const el of root.querySelectorAll('*')) {
+    if (el.tagName === 'LINK') continue;
+    const key = `${sig(el.parentElement)} > ${sig(el)}`;
+    add(key, pick(el));
+    for (const pseudo of ['::before', '::after'])
+      if (!['none', 'normal'].includes(getComputedStyle(el, pseudo).getPropertyValue('content'))) add(key + pseudo, pick(el, pseudo));
+  }
+  return out;
+}, REPORT_PROPS);
+
+/** Opens the /coast report dialog on the synthetic report; returns a function that shows a tab once its stylesheet applies. */
+async function openReport(page: Page) {
+  const {coastHistoryFixture, coastReportFixture} = await import('./coast-report-fixture.ts');
+  await page.clock.setFixedTime(REPORT_NOW);
+  await page.route('**/api/coast/report', route => route.fulfill({json: coastReportFixture(REPORT_NOW)}));
+  await page.route('**/api/coast/history', route => route.fulfill({json: coastHistoryFixture(REPORT_NOW)}));
+  await page.goto('/coast?place=morro');
+  await expect(page.locator('#report-bar .report-metrics')).toBeVisible();
+  await page.locator('#report-bar [data-report-open]').click();   // the header button is hidden on phones
+  const panel = page.locator('#report-content');
+  return async (tab: string) => {
+    await panel.getByRole('tab', {name: tab}).click();
+    await expect(panel.getByRole('tab', {name: tab})).toHaveAttribute('aria-selected', 'true');
+    if (tab === 'History') await expect(panel.locator('.history-chart-card').first()).toBeVisible();
+    await expect.poll(() => page.evaluate(() => [...document.getElementById('report-content')!.shadowRoot!.querySelectorAll('link')]
+      .every(link => !!link.sheet))).toBe(true);
+  };
+}
+
+test('the /coast report dialog computes the same colours and fonts on every tab', async ({page}, info) => {
+  const show = await openReport(page);
+  for (const [index, tab] of REPORT_TABS.entries()) {
+    await show(tab);
+    check(info.project.name, `report ${index} ${tab}`, await readReport(page));
+  }
+});
+
 test.describe('with data-coast-theme="tokens"', () => {
   test.skip(RECORD, 'the opt-in has nothing to record');
   // The site's CSP (style-src-elem 'self') rightly refuses injected <style>; only these probes bypass it.
@@ -137,6 +208,29 @@ test.describe('with data-coast-theme="tokens"', () => {
     }, css('packages/coast/tokens-bridge.css'));
     const rows = await compare(page, SHADOW_PAIRS, '#coast-workspace');
     expect(rows.length).toBe(SHADOW_PAIRS.length);
+    for (const [sel, prop, got, want] of rows) expect(got, `${sel} ${prop}`).toBe(want);
+  });
+
+  // FE-77: panel.css in the report dialog's shadow root.
+  const REPORT_PAIRS: [string, string, string][] = [['.report-heading h2', 'color', '--text'], ['.report-heading .eyebrow', 'font-family', '--font-mono'],
+    ['.report-heading select', 'border-top-color', '--line'], ['.report-tabs [aria-selected=false]', 'background-color', '--panel-2'],
+    ['.report-tabs [aria-selected=false]', 'color', '--muted'], ['.report-tabs [aria-selected=true]', 'color', '--mint'],
+    ['.brief-kicker', 'color', '--text'], ['.brief-deck', 'color', '--muted'], ['.plan-answer', 'border-left-color', '--mint'],
+    ['.brief-footer', 'border-top-color', '--line']];
+
+  test('the report dialog reads web/tokens.css through :host', async ({page}) => {
+    await (await openReport(page))('Overview');
+    await page.addStyleTag({content: css('web/tokens.css')});
+    await page.evaluate(bridge => {
+      const host = document.getElementById('report-content')!, style = document.createElement('style');
+      style.textContent = bridge;
+      host.shadowRoot!.append(style);
+      host.dataset.coastTheme = 'tokens';
+      // fish's dark values equal several dark tokens; the light set tells a bridged colour from a fallback.
+      document.documentElement.dataset.theme = 'light';
+    }, css('packages/coast/tokens-bridge.css'));
+    const rows = await compare(page, REPORT_PAIRS, '#report-content');
+    expect(rows.length).toBe(REPORT_PAIRS.length);
     for (const [sel, prop, got, want] of rows) expect(got, `${sel} ${prop}`).toBe(want);
   });
 });

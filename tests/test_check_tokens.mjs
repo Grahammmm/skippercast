@@ -9,7 +9,7 @@ import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {BASELINE, COAST_BASELINE, SCOPES, compare, formatBaseline, grown, lint, lintFile, readBaseline, tally} from '../scripts/check_tokens.mjs';
-import {FILES, check} from '../scripts/check_contrast.mjs';
+import {BRIDGE, FILES, check, checkBridge} from '../scripts/check_contrast.mjs';
 
 const SCRIPT = new URL('../scripts/check_tokens.mjs', import.meta.url).pathname;
 const ROOT = new URL('../', import.meta.url).pathname;
@@ -97,6 +97,23 @@ test('packages/coast matches its seeded baseline; the bridged files have no find
     assert.ok(![...baseline.keys()].some(k => JSON.parse(k)[0] === file), file);
   }
   assert.ok(SCOPES.some(s => s.dir === 'packages/coast' && s.baseline === COAST_BASELINE));
+});
+
+test('packages/coast/panel.css declares no custom property and reads only bridged roles (FE-77)', () => {
+  const css = readFileSync(join(ROOT, 'packages/coast/panel.css'), 'utf8');
+  assert.deepEqual(css.match(/(?:^|[{;\s])--[\w-]+\s*:/g) ?? [], []);
+  const mapped = new Set([...readFileSync(join(ROOT, BRIDGE), 'utf8').matchAll(/^\s*(--coast-[\w-]+):/gm)].map(m => m[1]));
+  // Legend ramps of layers v2 does not draw have no web/tokens.css ramp yet (tokens-bridge.css says so).
+  const unmapped = [...new Set([...css.matchAll(/var\((--coast-[\w-]+),/g)].map(m => m[1]))].filter(role => !mapped.has(role));
+  assert.deepEqual(unmapped.filter(role => !/^--coast-(?:reef|current|wave)-\d$/.test(role)), []);
+});
+
+test('bridged coast text pairs reach 4.5:1 under the opt-in in both web/tokens.css themes', () => {
+  const bridge = readFileSync(join(ROOT, BRIDGE), 'utf8'), tokens = readFileSync(join(ROOT, 'web/tokens.css'), 'utf8');
+  assert.deepEqual(checkBridge(bridge, tokens).failures, []);
+  const dim = bridge.replace('--coast-hover: color-mix(in srgb, var(--panel-2) 88%, var(--muted));', '--coast-hover: color-mix(in srgb, var(--panel-2) 60%, var(--muted));');
+  assert.match(checkBridge(dim, tokens).failures.join('\n'), /dark: --coast-muted #[0-9a-f]{6} on --coast-hover/);
+  assert.match(checkBridge(bridge.replace('--coast-coral: var(--coral);', ''), tokens).failures.join('\n'), /--coast-coral or --coast-panel does not resolve/);
 });
 
 test('the script fails on a new literal in packages/coast and passes once it is a fallback', () => {
