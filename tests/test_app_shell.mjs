@@ -272,7 +272,8 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
     const source = readFileSync(join(ROOT, file), 'utf8');
     assert.deepEqual(lintFile(file, source), [], file);
     assert.doesNotMatch(source, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, `${file} has no emoji`);
-    assert.doesNotMatch(source, /innerHTML/, `${file} renders through Preact`);
+    // FE-75: CoastMarkup is the one markup host (scripts/check_web.py enforces it across web/).
+    if (file !== 'web/app/CoastMarkup.tsx') assert.doesNotMatch(source, /innerHTML/, `${file} renders through Preact`);
     assert.doesNotMatch(source, /\b(?:best spot|productive|catch rate|bite)\b/i, `${file} promises no fish`);
   }
   const page = await readFile(join(ROOT, 'dist/app.html'), 'utf8');

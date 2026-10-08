@@ -158,6 +158,56 @@ def check_no_versioned_client_names():
     assert not versioned, f"versioned file names in dist/ (use the canonical name): {versioned}"
 
 
+MARKUP_HOST = "web/app/CoastMarkup.tsx"
+SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
+# `el.innerHTML = …`, `el['innerHTML'] = …` or `+=` (never `==`), and Preact's dangerouslySetInnerHTML.
+INNER_HTML = re.compile(r"(?:\.\s*innerHTML|\[\s*['\"`]innerHTML['\"`]\s*\])\s*\+?=(?!=)|\bdangerouslySetInnerHTML\b")
+
+
+def strip_comments(source):
+    """Blank out // and /* */ comments, keeping strings, template literals and line numbers."""
+    out, i, n, quote = [], 0, len(source), None
+    while i < n:
+        c = source[i]
+        if quote:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(source[i + 1])
+                i += 2
+                continue
+            if c == quote or (c == "\n" and quote != "`"):
+                quote = None
+            i += 1
+        elif c in "'\"`":
+            quote = c
+            out.append(c)
+            i += 1
+        elif source.startswith("//", i):
+            end = source.find("\n", i)
+            i = n if end < 0 else end
+        elif source.startswith("/*", i):
+            end = source.find("*/", i + 2)
+            end = n if end < 0 else end + 2
+            out.append("".join("\n" if ch == "\n" else " " for ch in source[i:end]))
+            i = end
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def inner_html_assignments(root=ROOT):
+    """FE-75: only web/app/CoastMarkup.tsx may assign innerHTML in web/ (comments ignored)."""
+    found = []
+    for path in sorted((root / "web").rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.suffix not in SOURCE_SUFFIXES or not path.is_file() or relative == MARKUP_HOST:
+            continue
+        code = strip_comments(path.read_text())
+        found += [f"{relative}:{code.count(chr(10), 0, m.start()) + 1}" for m in INNER_HTML.finditer(code)]
+    return found
+
+
 LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
@@ -178,6 +228,8 @@ def main():
     assert (WEB / "index.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
+    assigned = inner_html_assignments()
+    assert not assigned, f"innerHTML assigned outside {MARKUP_HOST} (mount packages/coast markup through it): {assigned}"
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
     usgs_leads = json.loads((WEB / 'data/usgs-ds781-source-leads.json').read_text())
     assert (WEB / 'data/usgs-ds781-source-leads.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-source-leads.json').read_bytes()
