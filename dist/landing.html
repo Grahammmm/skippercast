@@ -4,13 +4,34 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
+    <meta name="description" content="Wind, swell, water temperature and tide from fixed buoys and a tide gauge on the Central California coast, each with its station and age." />
     <title>SkipperCast · Know the water before you leave the dock</title>
-    <link rel="stylesheet" href="tokens.css" />
+    <!-- FE-07: the v2 tokens, the primitives, the port chooser's sheet and the landing's, in this order. The hero text and the footer line are static so the
+         largest paint waits for neither the module nor a re-render; web/landing/main.tsx renders the shoreline, nav, readout, pills, port input,
+         layer dots and the shoreline's credit (from its generated module) into the hosts below (the CSP allows no inline script). -->
+    <link rel="stylesheet" href="../web/tokens.css" />
+    <link rel="stylesheet" href="../web/ui/ui.css" />
+    <link rel="stylesheet" href="../web/landing/port-input.css" />
+    <link rel="stylesheet" href="../web/landing/landing.css" />
   </head>
-  <body>
-    <main>
-      <h1>Know the water before you leave the dock.</h1>
-      <p>The new SkipperCast landing is being built here.</p>
-    </main>
+  <body class="landing-body">
+    <div class="landing">
+      <div id="landing-shore" class="landing-host"></div>
+      <div id="landing-head" class="landing-host">
+        <header class="landing-head"><a class="landing-brand" href="/">SkipperCast</a></header>
+      </div>
+      <main class="landing-main">
+        <p class="landing-eyebrow ui-eyebrow">Central California coast · live readings</p>
+        <h1 class="landing-title">Know the water before you leave the dock.</h1>
+        <p class="landing-lede">Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map.</p>
+        <div id="landing-app" class="landing-host"></div>
+      </main>
+      <div id="landing-dots" class="landing-host"></div>
+      <footer class="landing-foot">
+        <p>Forecasts, observations and habitat carry separate clocks; check the rules before you fish.</p>
+        <div id="landing-credit" class="landing-host"></div>
+      </footer>
+    </div>
+    <script type="module" src="../web/landing/main.tsx"></script>
   </body>
 </html>

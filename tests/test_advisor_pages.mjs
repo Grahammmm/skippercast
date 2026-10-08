@@ -16,7 +16,7 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json'), 'so
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html'};
 globalThis.BUILD_ID = '0123456789';
-globalThis.ADVISOR_ASSETS = {'advisor/pages.css': '/assets/chat.abcdef0123.css', 'advisor/chat.js': '/assets/chat.0123abcdef.js'};
+globalThis.ADVISOR_ASSETS = {'advisor/tokens.css': '/assets/tokens.fedcba9876.css', 'advisor/pages.css': '/assets/chat.abcdef0123.css', 'advisor/chat.js': '/assets/chat.0123abcdef.js'};
 const {default: worker} = await import('../server/index.ts');
 const {pagesDeps, pageCacheKey} = await import('../server/routes/advisor.ts');
 const {html, raw, escapeHtml, jsonLd, pageLanguage} = await import('../server/advisor/pages/render.ts');
@@ -152,7 +152,8 @@ dbTest('the port page: today, reports (verified linked, the <script> boat inert,
   assert.match(page, /^<!doctype html>\n<html lang="en"/);
   assert.match(page, /<title>Morro Bay fishing report · SkipperCast<\/title>/);
   assert.match(page, /<link rel="canonical" href="https:\/\/skippercast.com\/ports\/morro-bay">/);
-  assert.match(page, /<link rel="stylesheet" href="\/assets\/chat.abcdef0123.css">/);
+  assert.match(page, /<link rel="stylesheet" href="\/assets\/tokens.fedcba9876.css">\n<link rel="stylesheet" href="\/assets\/chat.abcdef0123.css">/, 'the v2 tokens first (FE-55)');
+  assert.match(page, /<meta name="color-scheme" content="dark">/);
   assert.match(page, /<script type="module" src="\/assets\/chat.0123abcdef.js"><\/script>/);
   assert.match(page, /<body class="adv-page" data-advisor-page="port" data-region="morro-bay">/);
   assert.match(page, /"@type":"Organization"/);
@@ -388,8 +389,19 @@ dbTest('without a number the call to action opens the web chat', async () => {
 test('ADVISOR_ASSETS comes from the chat page\'s manifest entry', () => {
   assert.deepEqual(advisorAssetPaths({'chat.html': {file: 'assets/chat.1111111111.js', isEntry: true, css: ['assets/chat.2222222222.css']}}),
     {'advisor/pages.css': '/assets/chat.2222222222.css', 'advisor/chat.js': '/assets/chat.1111111111.js'});
+  // FE-55: web/tokens.css is a chunk of its own when app.html shares it; the pages link it too.
+  assert.deepEqual(advisorAssetPaths({'chat.html': {file: 'assets/chat.1111111111.js', isEntry: true, css: ['assets/chat.2222222222.css', 'assets/tokens.3333333333.css']}}),
+    {'advisor/tokens.css': '/assets/tokens.3333333333.css', 'advisor/pages.css': '/assets/chat.2222222222.css', 'advisor/chat.js': '/assets/chat.1111111111.js'});
+  assert.throws(() => advisorAssetPaths({'chat.html': {file: 'assets/chat.1.js', isEntry: true, css: ['assets/chat.2.css', 'assets/ui.3.css']}}), /one stylesheet/, 'a stylesheet the pages would not link fails the build');
   assert.throws(() => advisorAssetPaths({}), /chat\.html/);
-  assert.match(readFileSync(new URL('../dist/chat.html', import.meta.url), 'utf8'), /<link rel="stylesheet" href="advisor\/pages.css" \/>/);
+  const chat = readFileSync(new URL('../dist/chat.html', import.meta.url), 'utf8');
+  assert.match(chat, /<link rel="stylesheet" href="advisor\/pages.css" \/>/);
+  // FE-55: the v2 tokens and fonts first; the v1 token file no longer reaches the chat page or the advisor pages.
+  assert.deepEqual([...chat.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(m => m[1]), ['../web/tokens.css', 'advisor/chat.css', 'advisor/pages.css']);
+  for (const sheet of ['../dist/advisor/pages.css', '../dist/advisor/chat.css']) {
+    const css = readFileSync(new URL(sheet, import.meta.url), 'utf8');
+    assert.doesNotMatch(css, /var\(--(?:surface|ink|ink-2|card|brand|brand-tint|deep|on-deep|on-brand|go|caution|rough|weight-instrument|text-1[246]|text-36)\)/, `${sheet} reads only web/tokens.css names`);
+  }
 });
 
 test('telemetry: the page events and the `s` source are accepted and written as blob5; unknown sources are rejected', async () => {

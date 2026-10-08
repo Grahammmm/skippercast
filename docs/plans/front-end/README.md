@@ -1,6 +1,6 @@
 # Front-end rebuild and the `fish` merge
 
-Status: **Phase 0 built except the landing (FE-07); plan reconciled with
+Status: **Phase 0 built (the landing, FE-07, in review); plan reconciled with
 `packages/coast` on 2026-10-07** (design
 [§ 3A](design.md#3a-integration-with-packagescoast-2026-10-07), coordination
 issue [#413](https://github.com/Grahammmm/skippercast/issues/413)). The plan replaces the Leaflet
@@ -151,3 +151,7 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   consume `packages/coast`; five partly on `main`; FE-70 … FE-86 added.
   Ownership boundary proposed in open-questions Q14; coordination on issue
   [#413](https://github.com/Grahammmm/skippercast/issues/413).
+- 2026-10-07: FE-07 added the landing (`dist/landing.html`, `web/landing/`)
+  behind `UI_V2`: static hero, CUSP shoreline (FE-10's file), live readout with
+  source, age and stale state, saved-port redirect. Phase 0 finishes when it
+  merges.

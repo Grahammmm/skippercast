@@ -1,0 +1,17 @@
+/* FE-75: CoastMarkup's shadow root loads this after packages/coast/panel.css.
+   panel.css's :host block declares --bg, --panel, --line, --text, --muted,
+   --mint, --blue, --coral and --amber with fish's values. On the v2 host they
+   would shadow web/tokens.css, and the token bridge reads these names, so the
+   host inherits them back from the document. FE-77 renames panel.css's
+   aliases to --coast-*, after which this file changes nothing. */
+:host {
+  --bg: inherit;
+  --panel: inherit;
+  --line: inherit;
+  --text: inherit;
+  --muted: inherit;
+  --mint: inherit;
+  --blue: inherit;
+  --coral: inherit;
+  --amber: inherit;
+}

@@ -777,6 +777,27 @@ The readings come from the same feeds the app uses for the default region
 (Morro Bay while it is the only active region; the landing's region follows
 the port input once typed). Each tile links to the app at that reading.
 
+As built by FE-07 (2026-10-07): the eyebrow, headline, paragraph and footer
+line are static in `dist/landing.html`, so the largest paint waits for no
+module; `web/landing/main.tsx` renders the shoreline, nav, readout, pills,
+port input and layer dots into hosts around them. The readout sits right
+under the paragraph rather than along the bottom, because the port list
+pushes a bottom strip below the fold and D4 asks for sourced readings
+before any choice. Wind, swell and water come from the live conditions
+feed (NDBC 46028 and 46215), tide from the CO-OPS water level at Port San
+Luis, each stale past its source's own limit (a source that gives none
+shows its age without a stale threshold). These are fixed stations, not
+the visitor's launch: each buoy's basis gives its distance and bearing
+from the harbor (the wind buoy is about 56 nm WNW, offshore, not a harbor
+reading), and the tide basis carries the region's `tide_note`. One link
+under the strip opens the app's Conditions view instead of a link per tile
+(a tile holds its basis disclosure, which cannot sit inside a link). The
+shoreline is FE-10's CUSP import, `catalog/shoreline/morro-bay.geojson`,
+projected into one SVG path by `scripts/build_landing_shoreline.mjs`; the
+footer credit is rendered from that generated module. The fleet line
+renders only when the page is given one; no public fleet summary exists
+yet, so it stays hidden.
+
 ### URL structure
 
 Ranked in open-questions Q2; the plan assumes:

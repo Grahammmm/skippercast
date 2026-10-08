@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "countyId": "slo",
+  "generatedAt": "2026-10-07T15:00:00.000Z",
+  "forecasts": [
+    {
+      "id": "central",
+      "sourceId": "synthetic-forecast",
+      "issuedAt": "2026-10-07T14:00:00.000Z",
+      "hours": [
+        {"at": "2026-10-07T15:00:00.000Z", "windKnots": 6, "gustKnots": 9, "waveFt": 3, "wavePeriodS": 11, "airTempF": 61, "precipPct": 0},
+        {"at": "2026-10-07T16:00:00.000Z", "windKnots": 8, "gustKnots": 12, "waveFt": 3.5, "wavePeriodS": 11, "airTempF": 62, "precipPct": 0},
+        {"at": "2026-10-07T17:00:00.000Z", "windKnots": 11, "gustKnots": 15, "waveFt": 4, "wavePeriodS": 10, "airTempF": 63, "precipPct": 5}
+      ]
+    }
+  ],
+  "observations": [
+    {"stationId": "synthetic-buoy", "observedAt": "2026-10-07T14:40:00.000Z", "url": "https://example.invalid/buoy", "waveFt": 3.2, "wavePeriodS": 12, "waterTempF": 57.4, "windKnots": 7, "gustKnots": 10}
+  ],
+  "tides": [
+    {"at": "2026-10-07T15:00:00.000Z", "heightFt": 2.1},
+    {"at": "2026-10-07T16:00:00.000Z", "heightFt": 2.8}
+  ],
+  "tideEvents": [
+    {"at": "2026-10-07T18:12:00.000Z", "heightFt": 4.6, "type": "H"}
+  ],
+  "alerts": [],
+  "sources": [
+    {"id": "synthetic-forecast", "label": "Synthetic forecast", "url": "https://example.invalid/forecast", "kind": "forecast", "outcome": "ok", "fetchedAt": "2026-10-07T14:55:00.000Z", "issuedAt": "2026-10-07T14:00:00.000Z"}
+  ],
+  "catches": [],
+  "catchStatus": "Synthetic fixture: no catch reports.",
+  "visibility": {"status": "unknown", "feet": null, "observedAt": null, "sourceUrl": null},
+  "habitatStatus": "Synthetic fixture"
+}

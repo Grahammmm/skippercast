@@ -28,7 +28,7 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export * from './web/app/App.tsx';
-      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS} from './web/app/Masthead.tsx';
+      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, advisorOn, checkAdvisor, ChatEntry} from './web/app/Masthead.tsx';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
@@ -267,12 +267,34 @@ test('loadRegion fills the masthead from regions/<id>/region.json and leaves pla
   assert.equal(regionInfo.value, null);
 });
 
+// FE-55: the chat entry renders only while the advisor answers (its gate 404s /chat.html while TEXT_ADVISOR_ENABLED is off).
+test('the masthead chat entry renders nothing with the advisor off and links to the web chat when on', async () => {
+  const {advisorOn, checkAdvisor, ChatEntry, render, h} = await load();
+  const asked = [];
+  const answer = status => async (url, init) => { asked.push([url, init]); return {ok: status >= 200 && status < 300, status}; };
+  assert.equal(await checkAdvisor(answer(404)), false, 'the gate answers 404 while the advisor is off');
+  assert.equal(await checkAdvisor(async () => { throw new Error('offline'); }), false);
+  assert.equal(await checkAdvisor(answer(200)), true);
+  assert.deepEqual(asked[0], ['/chat.html', {method: 'HEAD', credentials: 'omit', cache: 'no-store'}], 'one HEAD, no cookie');
+
+  advisorOn.value = false;
+  assert.equal(render(h(ChatEntry, {})), '');
+  const off = await renderShell(`${ORIGIN}?region=morro-bay`);
+  assert.doesNotMatch(off, /data-advisor-entry|chat\.html|Ask SkipperCast/);
+  advisorOn.value = true;
+  try {
+    assert.equal(render(h(ChatEntry, {})), '<a class="ui-button ui-button--quiet" href="/chat.html" data-advisor-entry="true">Ask SkipperCast</a>');
+    assert.match(await renderShell(`${ORIGIN}?region=morro-bay`), /class="app-fresh".*data-advisor-entry="true">Ask SkipperCast<\/a><div class="app-account">/s, 'between freshness and the account menu');
+  } finally { advisorOn.value = false; }
+});
+
 test('the shell files keep the token and copy rules, and app.html mounts the entry', async () => {
   for (const file of APP_FILES) {
     const source = readFileSync(join(ROOT, file), 'utf8');
     assert.deepEqual(lintFile(file, source), [], file);
     assert.doesNotMatch(source, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, `${file} has no emoji`);
-    assert.doesNotMatch(source, /innerHTML/, `${file} renders through Preact`);
+    // FE-75: CoastMarkup is the one markup host (scripts/check_web.py enforces it across web/).
+    if (file !== 'web/app/CoastMarkup.tsx') assert.doesNotMatch(source, /innerHTML/, `${file} renders through Preact`);
     assert.doesNotMatch(source, /\b(?:best spot|productive|catch rate|bite)\b/i, `${file} promises no fish`);
   }
   const page = await readFile(join(ROOT, 'dist/app.html'), 'utf8');
