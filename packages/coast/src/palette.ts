@@ -23,3 +23,12 @@ export const DEFAULT_COAST_PALETTE:Readonly<CoastPalette>=Object.freeze({
  ground:'#dce8e7',sky:'#effbff',groundLight:'#4b655d',sun:'#fff2d4',surface:'#ffffff',
  gradeA:'#f8d69a',gradeB:'#afd7ba',gradeOther:'#abcad8',habitatArea:'#69e6c3',current:'#fcfaf0',
 });
+
+// Host overlay colours (FE-81, src/coast3d/overlays.ts). An overlay style names
+// one of these roles, never a colour, and the host supplies the values at mount
+// (`overlayPalette`). The names are v2's web/map/palette.ts keys, so v2 passes
+// the Palette it read from web/tokens.css as is. There are no defaults here:
+// an overlay draws only in colours its host read from the tokens.
+export const COAST_OVERLAY_COLORS=['bg','line','text','muted','mint','blue','coral','amber','mpaFill','mpaLine'] as const;
+export type CoastOverlayColor=typeof COAST_OVERLAY_COLORS[number];
+export type CoastOverlayPalette=Readonly<Record<CoastOverlayColor,string>>;

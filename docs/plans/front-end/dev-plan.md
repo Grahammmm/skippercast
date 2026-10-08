@@ -258,10 +258,10 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - Accept: 1. Every control `fish` offered on the terrain has a home (table in the PR). 2. Measured and modelled labels and source clocks are preserved verbatim. 3. Keyboard reaches every option; axe clean.
 
 ### FE-81 · Overlay API on the terrain · L
-- Status: NEW. Agent (proposed): Codex; Claude reviews the API.
+- Status: NEW. Agent: Claude (owner decision on #413, 2026-10-07).
 - Depends: FE-70
-- Files: `packages/coast/src/coast3d/overlays.ts`, `packages/coast/src/embed.ts`, `tests/coast/coast-overlays.test.ts`.
-- Build: `handle.setOverlay(id, {kind: 'fill' | 'line' | 'point', features, style})` drapes GeoJSON on the terrain in draw order; styles take palette colours, never literals; picking returns the feature id.
+- Files: `packages/coast/src/coast3d/overlays.ts`, `packages/coast/src/embed.ts`, `packages/coast/src/coast3d/viewer.ts` (own the overlays, re-drape after seams and relief, route clicks), `packages/coast/src/palette.ts` (overlay colour roles), `packages/coast/src/embed-types.ts` (the public overlay types, FE-71 split), `tests/coast/coast-overlays.test.ts` (run from `tests/test_coast_renderer.mjs`).
+- Build: `handle.setOverlay(id, {kind: 'fill' | 'line' | 'point', features, style, order})` drapes GeoJSON on the terrain in draw order and `handle.removeOverlay(id)` frees it; styles name colour roles (`COAST_OVERLAY_COLORS`, the `web/map/palette.ts` keys) resolved from the mount's `overlayPalette`, never literals; a click on an overlay calls the mount's `onOverlayPick` with the overlay id and feature id instead of showing a terrain reading; an overlay builds at most 100,000 fill triangles and 50,000 line segments (the drape coarsens to fit, else it is refused).
 - Accept: 1. A fixture polygon drapes without z-fighting at both perspectives (screenshot test or vertex check). 2. Removing an overlay frees its geometry. 3. Picking returns the overlay id and feature id.
 
 ### FE-82 · Registry layers on the terrain · S
