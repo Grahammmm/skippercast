@@ -4,20 +4,27 @@
 // key and the 75 nm rule are dist/home-port.js's, so v1 and v2 share the
 // saved port; v1 keeps its own copy until FE-61. Match positions are
 // approximate harbor centres for on-device matching, never waypoints.
+// Home memory (FE-83, design § 3A.3) is one home for v1, v2 and /coast:
+// save, read and forget follow dist/home-port.js since #396, with the
+// packages/coast preference key and cookie imported, never copied.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
+import {forgetPreferenceHeader, HOME_PLACE_KEY, readPreferences, validPreferences, type HomePreferences} from '../packages/coast/src/coast3d/preferences.ts';
 import {isProfile, type Profile} from './profile.ts';
-import type {StoreStorage} from './state.ts';
+import {STORAGE_KEYS, type StoreStorage} from './state.ts';
 
 /** Must equal HOME_PORT_KEY in dist/home-port.js: v1 reads the port v2 saved. */
 export const HOME_PORT_KEY = 'skippercast-home-port-v1';
+/** Must equal FIRST_RUN_KEY in dist/home-port.js: forgetting the home restarts v1's first run too. */
+export const FIRST_RUN_KEY = 'skippercast-first-run-v1';
+export {HOME_PLACE_KEY};
 export const PORTS_URL = 'data/home-ports.json';
 /** Ports listed before any search, as in v1. */
 export const FEATURED: readonly string[] = ['morro-bay', 'san-diego', 'monterey', 'ventura', 'santa-cruz', 'bodega-bay'];
 /** The 75 nm rule: a position farther than this from every port matches none. */
 export const MAX_MATCH_NM = 75;
 /** Parameters a port choice replaces; everything else in the address (ui, utm) stays. */
-const AREA_KEYS = ['region', 'coast', 'view', 'focus', 'spot', 'target', 'area'] as const;
+const AREA_KEYS = ['region', 'coast', 'view', 'focus', 'spot', 'habitat', 'place', 'target', 'area'] as const;
 
 export interface Port {
   readonly id: string;
@@ -40,6 +47,8 @@ export const COPY = {
   none: 'No listed port is nearby. Search or explore the coast.',
   empty: 'No matching port yet. Try a nearby harbor or explore the coast.',
   privacy: 'Your choice stays in this browser. Location matching is approximate; forecast map centers are not harbor entrances or navigation waypoints.',
+  forget: 'Forget saved home',
+  forgotten: 'Saved home removed. This visit stays at the current selection.',
   found: (port: Port): string => `Closest listed port: ${port.name}. Select it below to continue.`,
   detail: (port: Port): string => `${port.status === 'active' ? 'Mapped area' : 'Regional preview'} · ${port.forecast_name}`,
 } as const;
@@ -111,15 +120,87 @@ export function landingURL(href: string): string {
   return url.href;
 }
 
-function browserStorage(): StoreStorage | null {
+/** Storage the home memory uses; removeItem is optional so a minimal stand-in still reads and saves. */
+export type HomeStorage = StoreStorage & {removeItem?(key: string): void};
+/** `document`, or a test's stand-in: where the /coast preference cookie lives. */
+export type CookieJar = {cookie: string};
+/** A saved home: a listed port, or a /coast place with its fishing mode. */
+export type Home = {port: Port} | {native: HomePreferences};
+
+function browserStorage(): HomeStorage | null {
   try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
 }
-export function savedPortId(storage: StoreStorage | null = browserStorage()): string | null {
-  try { return storage?.getItem(HOME_PORT_KEY) ?? null; } catch { return null; }
+function browserCookies(): CookieJar | null {
+  try { return typeof document === 'undefined' ? null : document; } catch { return null; }
 }
-/** Remember the port; a blocked storage still lets the session navigate. */
-export function savePort(id: string, storage: StoreStorage | null = browserStorage()): boolean {
-  try { storage?.setItem(HOME_PORT_KEY, id); return storage !== null; } catch { return false; }
+const secureContext = (): boolean => globalThis.location?.protocol === 'https:';
+const read = (storage: HomeStorage | null, key: string): string | null => { try { return storage?.getItem(key) ?? null; } catch { return null; } };
+const cookieText = (jar: CookieJar | null): string => { try { return jar?.cookie ?? ''; } catch { return ''; } };
+/** The /coast place preference in storage, when valid. */
+function savedPlace(storage: HomeStorage | null): HomePreferences | null {
+  try { const saved: unknown = JSON.parse(read(storage, HOME_PLACE_KEY) ?? 'null'); return validPreferences(saved) ? saved : null; } catch { return null; }
+}
+
+export function savedPortId(storage: HomeStorage | null = browserStorage()): string | null {
+  return read(storage, HOME_PORT_KEY);
+}
+/**
+ * Remember the port as the one home, as v1 does: the shared key, with the
+ * /coast place preference and cookie cleared so no reader finds an older
+ * home. A blocked storage still lets the session navigate.
+ */
+export function savePort(id: string, storage: HomeStorage | null = browserStorage(), jar: CookieJar | null = browserCookies(), secure = secureContext()): boolean {
+  let saved = false;
+  try { storage?.setItem(HOME_PORT_KEY, id); storage?.removeItem?.(HOME_PLACE_KEY); saved = storage !== null; } catch { saved = false; }
+  try { if (jar) jar.cookie = forgetPreferenceHeader(secure); } catch { /* The choice still applies to this visit. */ }
+  return saved;
+}
+/** Forget the home everywhere v1 and /coast keep it: port, place, profile, v1's first run and the cookie. */
+export function forgetHome(storage: HomeStorage | null = browserStorage(), jar: CookieJar | null = browserCookies(), secure = secureContext()): void {
+  for (const key of [HOME_PORT_KEY, HOME_PLACE_KEY, STORAGE_KEYS.profile, FIRST_RUN_KEY]) try { storage?.removeItem?.(key); } catch { /* blocked */ }
+  try { if (jar) jar.cookie = forgetPreferenceHeader(secure); } catch { /* blocked */ }
+}
+/** Whether any reader would find a saved home (what "Forget saved home" removes). */
+export function hasSavedHome(storage: HomeStorage | null = browserStorage(), jar: CookieJar | null = browserCookies()): boolean {
+  return read(storage, HOME_PORT_KEY) !== null || savedPlace(storage) !== null || readPreferences(cookieText(jar)) !== null;
+}
+/** The fishing mode a /coast home was saved with (storage, then the cookie), or null. */
+export function savedHomeMode(storage: HomeStorage | null = browserStorage(), jar: CookieJar | null = browserCookies()): Profile | null {
+  return (savedPlace(storage) ?? readPreferences(cookieText(jar)))?.mode ?? null;
+}
+
+/**
+ * v1's resolveHome: a saved listed port, else the /coast place in storage,
+ * else the legacy cookie, migrated to storage. The stored profile is the
+ * current mode, as in v1 and /coast.
+ */
+export function resolveHome(ports: readonly Port[], storage: HomeStorage | null = browserStorage(), cookies = ''): Home | null {
+  const stored = read(storage, STORAGE_KEYS.profile), mode = isProfile(stored) ? stored : null;
+  const current = (p: HomePreferences): HomePreferences => mode ? {...p, mode} : p;
+  const id = read(storage, HOME_PORT_KEY), port = ports.find(item => item.id === id);
+  if (port) return {port};
+  const place = savedPlace(storage);
+  if (place) return {native: current(place)};
+  const legacy = readPreferences(cookies);
+  if (!legacy) return null;
+  try { storage?.setItem(HOME_PLACE_KEY, JSON.stringify(legacy)); if (!mode) storage?.setItem(STORAGE_KEYS.profile, legacy.mode); } catch { /* The visit still opens the home. */ }
+  return {native: current(legacy)};
+}
+/** Where a home opens: the port's app, the /coast place's app (the address's own profile wins), or the landing. */
+export function homeURL(href: string, home: Home | null): string {
+  if (!home) return landingURL(href);
+  if ('port' in home) return portURL(href, home.port);
+  return appURL(href, {place: home.native.place, profile: new URL(href).searchParams.has('profile') ? undefined : home.native.mode});
+}
+/**
+ * /map with no area: the saved home's address, else the landing. The
+ * directory loads only for a saved port, and the cookie is read only when
+ * no saved port won (v1's order). A shared link never reaches this.
+ */
+export async function savedHomeURL(href: string, storage: HomeStorage | null = browserStorage(), jar: CookieJar | null = browserCookies(), load: () => Promise<readonly Port[]> = loadPorts): Promise<string> {
+  const id = savedPortId(storage);
+  const ports = id ? await load().catch(() => [] as Port[]) : [];
+  return homeURL(href, resolveHome(ports, storage, ports.some(port => port.id === id) ? '' : cookieText(jar)));
 }
 
 /** Whether `data` is the directory's schema, with every port's match position. */

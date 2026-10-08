@@ -5,13 +5,15 @@
 // focused; the first-run profile choice shows once and never with ?profile=
 // in the address. On the phone (FE-06) the port and locate controls sit in
 // the sheet's area group, so the sheet opens to full first. FE-07 adds the
-// landing's own input to this file.
+// landing's own input to this file. FE-83: a /coast home opens in v2,
+// Forget clears it everywhere, and denied storage still navigates.
 import type {Page} from '@playwright/test';
 import {test, expect, checkA11y} from './fixtures.ts';
 
 const SHELL = '/map?region=morro-bay&ui=v2';
 const PORT_KEY = 'skippercast-home-port-v1';
 const PROFILE_KEY = 'skippercast-profile-v1';
+const PLACE_KEY = 'skippercast-home-place-v1';
 const stay = (page: Page) => page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
 const stayed = (page: Page) => page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1);
 /** The brief: the desktop column, or the phone's sheet. */
@@ -86,6 +88,51 @@ test('a refused location leaves a message and the input focused; Explore the coa
   await dialog.getByRole('button', {name: 'Explore the coast'}).click();
   await expect(page).toHaveURL(/[?&]coast=central/);
   await expect(page).not.toHaveURL(/region=/);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast too (FE-83)', async ({page, context, baseURL, pageErrors, isMobile}) => {
+  const home = {v: 1, place: 'cambria', mode: 'spear'};
+  await context.addCookies([{name: 'skippercast_home', value: encodeURIComponent(JSON.stringify(home)), url: baseURL!}]);
+  // Seed once per tab, so the forget below is not undone by the next navigation.
+  await context.addInitScript(([key, value]) => {
+    try { if (sessionStorage.getItem('fe83')) return; sessionStorage.setItem('fe83', '1'); localStorage.setItem(key, value); } catch { /* storage blocked */ }
+  }, [PLACE_KEY, JSON.stringify(home)]);
+  await page.goto('/map?ui=v2');
+  await expect(page).toHaveURL(/[?&]place=cambria/);
+  await expect(page.locator('.app-location')).toHaveAttribute('data-region', 'cambria-san-simeon');
+  await expect(page.locator('[aria-label="Profile"] button[aria-pressed="true"]')).toHaveText('Spear');
+  await expect(page.locator('.app-firstrun')).toHaveCount(0);   // the /coast home already chose the mode
+  await openMenus(page, isMobile);
+  await page.locator('.app-port').click();
+  const dialog = page.locator('dialog.port-dialog');
+  await dialog.getByRole('button', {name: 'Forget saved home'}).click();
+  await expect(dialog.locator('[role="status"]')).toHaveText('Saved home removed. This visit stays at the current selection.');
+  await expect(dialog.getByRole('button', {name: 'Forget saved home'})).toHaveCount(0);
+  expect(await page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [PORT_KEY, PLACE_KEY, PROFILE_KEY])).toEqual([null, null, null]);
+  expect((await context.cookies()).some(c => c.name === 'skippercast_home')).toBe(false);
+  await expect(page).toHaveURL(/[?&]place=cambria/);   // this visit stays where it is
+  await page.goto('/?ui=v1');
+  await expect(page.locator('.home-port-card')).toBeVisible();   // v1 has no home either
+  expect(pageErrors).toEqual([]);
+});
+
+test('with storage denied the chooser still navigates', async ({page, pageErrors, isMobile}) => {
+  await page.addInitScript(() => {
+    for (const name of ['getItem', 'setItem', 'removeItem'] as const) Object.defineProperty(Storage.prototype, name, {value() { throw new DOMException('denied', 'SecurityError'); }});
+  });
+  await page.goto(SHELL + '&profile=boat');
+  await stay(page);
+  await openMenus(page, isMobile);
+  await page.locator('.app-port').click();
+  const dialog = page.locator('dialog.port-dialog');
+  await expect(dialog.getByRole('button', {name: 'Forget saved home'})).toHaveCount(0);
+  const input = dialog.locator('input[type="search"]');
+  await input.fill('san d');
+  await input.press('Enter');
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(/[?&]region=southern-california/);
+  expect(await stayed(page), 'no reload').toBe(true);
   expect(pageErrors).toEqual([]);
 });
 
