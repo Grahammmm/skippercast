@@ -419,10 +419,10 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: approve (`server/`); confirm the run receipts.
 
 ### FE-85 · Terrain, imagery and habitat assets in SkipperCast storage · L
-- Status: NEW. Agent (proposed): Codex.
+- Status: NEW. Agent: Claude (#413). The first publish waits on rights rows ([coastal-service.md](../../coastal-service.md#assets-in-skippercast-storage-fe-85)).
 - Depends: —
-- Files: `scripts/coast/publish_assets.py`, `.github/workflows/coast-assets.yml` (dispatch), `server/coast-data.ts` (R2 reads for `/coast-data/data/*` and habitat tiles), `tests/test_coast_data.mjs`, `docs/coastal-service.md`.
-- Build: copy the reviewed assets with their SHA-256 manifest to R2; add server-side manifest SHA-256 verification (the bridge has none today; only the browser checks, in `regional.ts`): an object whose digest differs from its manifest entry, or that has no entry, is refused before any byte is served; keep the existing size and range gates and the private-prefix denial. Split by asset group if over ~400 lines.
+- Files: `scripts/coast/publish_assets.py`, `.github/workflows/coast-assets.yml` (dispatch), `server/coast-data.ts` (R2 reads for `/coast-data/data/*` and habitat tiles), `server/routes/coast.ts` (passes the `FEEDS` binding), `tests/test_coast_data.mjs`, `tests/unit/test_coast_assets.py`, `tests/contract/test_coast_assets_workflow.py`, `docs/coastal-service.md`.
+- Build: copy the reviewed assets with their SHA-256 manifest to R2; add server-side manifest SHA-256 verification (the bridge has none today; only the browser checks, in `regional.ts`): an object whose digest differs from its manifest entry, or that has no entry, is refused before any byte is served; keep the existing size and range gates and the private-prefix denial. Two groups, `terrain` and `habitat`; the reef context travels with `habitat` (it is derived from the habitat release), every region archive the release lists is copied (the renderer HEADs each one), and the shore files stay on the bridge for FE-10 and FE-43. A source without an approved, commercial-use `catalog/sources.json` row refuses the run. Split by asset group if over ~400 lines.
 - Accept: 1. A fixture object with an altered byte, and one missing from the manifest, are both refused by the server (test). 2. Every served asset matches its manifest SHA-256 (live check recorded in the PR). 3. Encoded and traversal paths are refused. 4. The renderer's in-browser verified-asset checks still pass against R2.
 - **Owner**: approve the workflow and `server/`; run the first publish.
 

@@ -1,0 +1,58 @@
+name: Copy coast assets to R2
+
+# FE-85: copy reviewed terrain, imagery and habitat assets from the Fish Worker
+# into SkipperCast's R2 store with a SHA-256 manifest (docs/coastal-service.md).
+# Manual only, on the owner's runner. The rights check runs first and refuses
+# unknown or rights-held sources before any asset is downloaded; the R2 token
+# is visible only to the upload step.
+on:
+  workflow_dispatch:
+    inputs:
+      groups:
+        description: Asset groups to publish together; a group left out returns to the bridge
+        type: choice
+        options: ['terrain,habitat', terrain, habitat]
+        default: terrain,habitat
+      upload:
+        description: Upload and promote (false checks rights, downloads and verifies only)
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: coast-assets
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main' && vars.DATA_RUNNER != ''
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: .
+      GROUPS: ${{ inputs.groups }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - run: python -m pip install -r requirements-publish.txt
+      - name: Check every source's rights before downloading assets
+        run: python scripts/coast/publish_assets.py --plan --groups "$GROUPS" >> "$GITHUB_STEP_SUMMARY"
+      - name: Download and verify against the upstream manifests
+        if: ${{ !inputs.upload }}
+        run: python scripts/coast/publish_assets.py --groups "$GROUPS" --out var/coast-assets >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload, read back and promote the release pointer last
+        if: ${{ inputs.upload }}
+        env:
+          # R2-only token when configured (docs/cloudflare.md); the deploy token is the fallback.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python scripts/coast/publish_assets.py --groups "$GROUPS" --out var/coast-assets --upload >> "$GITHUB_STEP_SUMMARY"
