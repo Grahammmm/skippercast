@@ -17,6 +17,8 @@
 
 - Add bounded preflight and progress checks for coastal mapping runs.
 
+- Text Advisor pages and the web chat use the new dark visual system, and the new app's masthead links to the chat while the advisor is on (both stay off until enabled).
+
 ### Internal
 
 - Collect NDBC 46215 and 46028 recorded history (SHA-checked annual archives, monthly p10/median/p90 with counts and coverage, 45-day hourly means) into the data feed for the History view (FE-42).
