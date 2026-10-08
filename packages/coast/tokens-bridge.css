@@ -1,0 +1,37 @@
+/* Token bridge for packages/coast (docs/plans/front-end/design.md § 3A.4).
+   coast.css and series.ts write every colour as var(--coast-<role>, <v1 literal>).
+   Nothing here applies unless a host opts in with data-coast-theme="tokens"
+   (on an ancestor, or on a shadow host through :host), so v1 pages keep
+   their fallbacks. Under the opt-in each role reads a web/tokens.css
+   variable; custom properties inherit into shadow roots. Load web/tokens.css
+   in the document first. scripts/check_tokens.mjs lints this file: no literals. */
+
+[data-coast-theme="tokens"],
+:host([data-coast-theme="tokens"]) {
+  --coast-ground: var(--bg);
+  --coast-ground-glass: color-mix(in srgb, var(--bg) 96%, transparent);
+  --coast-ground-clear: color-mix(in srgb, var(--bg) 0%, transparent);
+  --coast-panel: var(--panel);
+  --coast-panel-glass: color-mix(in srgb, var(--panel) 94%, transparent);
+  --coast-panel-2: var(--panel-2);
+  --coast-line: var(--line);
+  --coast-text: var(--text);
+  --coast-muted: var(--muted);
+  --coast-mint: var(--mint);
+  --coast-on-mint: var(--bg);
+  --coast-blue: var(--blue);
+  --coast-amber: var(--amber);
+  --coast-focus: var(--focus);
+  --coast-label: var(--text);
+  --coast-label-halo: var(--bg);
+  --coast-highlight: color-mix(in srgb, var(--text) 20%, transparent);
+  --coast-shadow: color-mix(in srgb, var(--bg-deep) 45%, transparent);
+  --coast-scrim: color-mix(in srgb, var(--bg-deep) 72%, transparent);
+  --coast-night: var(--bg-deep);
+  --coast-depth-0: var(--depth-0);
+  --coast-depth-1: var(--depth-1);
+  --coast-depth-2: var(--depth-2);
+  --coast-depth-3: var(--depth-3);
+  --coast-sans: var(--font-sans);
+  --coast-mono: var(--font-mono);
+}

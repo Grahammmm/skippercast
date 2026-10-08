@@ -18,6 +18,8 @@
 
 - Bound mapping investigation by a shared operating allowance, downstream readiness and verified public progress; preserve scientific and release gates.
 
+- Bridge `packages/coast` to the v2 tokens (FE-76): `coast.css` and the series chart write colours as `var(--coast-…, v1 literal)`, `tokens-bridge.css` maps them to `web/tokens.css` only under `data-coast-theme="tokens"`, the 3D viewer reads `DEFAULT_COAST_PALETTE`, and the token lint now covers `packages/coast` with its own shrink-only baseline. v1 pages compute the same colours (browser check against values recorded from `main`).
+
 ## 0.7.0 — 2026-10-07
 
 - Explicitly save and delete public coastal report, current and measured-history snapshots for offline use, with saved time and original source clocks.
