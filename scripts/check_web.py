@@ -158,6 +158,107 @@ def check_no_versioned_client_names():
     assert not versioned, f"versioned file names in dist/ (use the canonical name): {versioned}"
 
 
+MARKUP_HOST = "web/app/CoastMarkup.tsx"
+SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
+# Every way web/ code could turn a string into DOM: innerHTML or outerHTML set
+# by property (`.x =`, `+=`, never `==`), by unquoted object key
+# (Object.assign(el, {innerHTML: s}); this also flags a type member of that
+# name) or named in any quoted string (`el['innerHTML'] =`, Reflect.set,
+# Object.defineProperty, a template-literal key), insertAdjacentHTML, Preact's
+# dangerouslySetInnerHTML, document.write/writeln, setHTMLUnsafe,
+# Range.createContextualFragment and DOMParser.parseFromString.
+MARKUP_SINK = re.compile(
+    r"\.\s*(?:inner|outer)HTML\s*\+?=(?!=)"
+    r"|\b(?:inner|outer)HTML\s*:"
+    r"|['\"`](?:inner|outer)HTML['\"`]"
+    r"|\b(?:insertAdjacentHTML|dangerouslySetInnerHTML|setHTMLUnsafe|createContextualFragment|parseFromString)\b"
+    r"|\bdocument\s*\.\s*write(?:ln)?\b")
+# A `/` after one of these (or a keyword below, or at the start) begins a regex literal, not division.
+REGEX_AFTER = set("(,=:[!&|?{};+-*%~^")
+REGEX_KEYWORDS = {"return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await"}
+
+
+def _regex_end(source, i):
+    """Index just past the regex literal starting at source[i] == '/', or None if the line ends first."""
+    j, klass, n = i + 1, False, len(source)
+    while j < n and source[j] != "\n":
+        c = source[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "[":
+            klass = True
+        elif c == "]":
+            klass = False
+        elif c == "/" and not klass:
+            j += 1
+            while j < n and (source[j].isalnum() or source[j] == "_"):
+                j += 1
+            return j
+        j += 1
+    return None
+
+
+def strip_comments(source):
+    """Blank out // and /* */ comments, keeping strings, template literals, regex literals and line numbers."""
+    out, i, n, quote = [], 0, len(source), None
+    last = ""   # the last significant character emitted outside strings and comments
+    while i < n:
+        c = source[i]
+        if quote:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(source[i + 1])
+                i += 2
+                continue
+            if c == quote or (c == "\n" and quote != "`"):
+                quote = None
+                last = c
+            i += 1
+        elif c in "'\"`":
+            quote = c
+            out.append(c)
+            i += 1
+        elif source.startswith("//", i):
+            end = source.find("\n", i)
+            i = n if end < 0 else end
+        elif source.startswith("/*", i):
+            end = source.find("*/", i + 2)
+            end = n if end < 0 else end + 2
+            out.append("".join("\n" if ch == "\n" else " " for ch in source[i:end]))
+            i = end
+        elif c == "/":
+            word = re.search(r"([A-Za-z_$]+)\s*$", "".join(out[-20:]))
+            regex = not last or last in REGEX_AFTER or bool(word and word.group(1) in REGEX_KEYWORDS)
+            end = _regex_end(source, i) if regex else None
+            out.append(source[i:end or i + 1])
+            i = end or i + 1
+            last = "/"
+        else:
+            out.append(c)
+            if not c.isspace():
+                last = c
+            i += 1
+    return "".join(out)
+
+
+def markup_sinks(root=ROOT):
+    """FE-75: only web/app/CoastMarkup.tsx may write markup into the DOM in web/ (comments ignored).
+
+    This is static text matching, not analysis: a property name built at run
+    time (`el['inner' + 'HTML']`, a variable holding the name) is not caught.
+    Review owns that case; the rule catches every literal spelling.
+    """
+    found = []
+    for path in sorted((root / "web").rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.suffix not in SOURCE_SUFFIXES or not path.is_file() or relative == MARKUP_HOST:
+            continue
+        code = strip_comments(path.read_text())
+        found += [f"{relative}:{code.count(chr(10), 0, m.start()) + 1}" for m in MARKUP_SINK.finditer(code)]
+    return found
+
+
 LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
@@ -178,6 +279,8 @@ def main():
     assert (WEB / "index.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
+    sinks = markup_sinks()
+    assert not sinks, f"markup written into the DOM outside {MARKUP_HOST} (mount packages/coast markup through it): {sinks}"
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
     usgs_leads = json.loads((WEB / 'data/usgs-ds781-source-leads.json').read_text())
     assert (WEB / 'data/usgs-ds781-source-leads.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-source-leads.json').read_bytes()
