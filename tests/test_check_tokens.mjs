@@ -90,7 +90,7 @@ test('packages/coast matches its seeded baseline; the bridged files have no find
   const findings = lint(ROOT, 'packages/coast');
   const baseline = readBaseline(readFileSync(join(ROOT, COAST_BASELINE), 'utf8'));
   assert.deepEqual(compare(tally(findings), baseline), {added: [], stale: []});
-  const bridged = ['packages/coast/coast.css', 'packages/coast/tokens-bridge.css', 'packages/coast/src/palette.ts',
+  const bridged = ['packages/coast/coast.css', 'packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'packages/coast/src/palette.ts',
     'packages/coast/src/coast3d/viewer.ts', 'packages/coast/src/charts/series.ts'];
   for (const file of bridged) {
     assert.deepEqual(findings.filter(f => f.file === file), [], file);
@@ -105,7 +105,7 @@ test('packages/coast/panel.css declares no custom property and reads only bridge
   const mapped = new Set([...readFileSync(join(ROOT, BRIDGE), 'utf8').matchAll(/^\s*(--coast-[\w-]+):/gm)].map(m => m[1]));
   // Legend ramps of layers v2 does not draw have no web/tokens.css ramp yet (tokens-bridge.css says so).
   const unmapped = [...new Set([...css.matchAll(/var\((--coast-[\w-]+),/g)].map(m => m[1]))].filter(role => !mapped.has(role));
-  assert.deepEqual(unmapped.filter(role => !/^--coast-(?:reef|current|wave)-\d$/.test(role)), []);
+  assert.deepEqual(unmapped.filter(role => !/^--coast-(?:reef|reef-fit|shore|current|wave|bathy)-\d$/.test(role)), []);
 });
 
 test('bridged coast text pairs reach 4.5:1 under the opt-in in both web/tokens.css themes', () => {

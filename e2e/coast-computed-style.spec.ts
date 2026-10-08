@@ -218,19 +218,30 @@ test.describe('with data-coast-theme="tokens"', () => {
     ['.brief-kicker', 'color', '--text'], ['.brief-deck', 'color', '--muted'], ['.plan-answer', 'border-left-color', '--mint'],
     ['.brief-footer', 'border-top-color', '--line']];
 
-  test('the report dialog reads web/tokens.css through :host', async ({page}) => {
-    await (await openReport(page))('Overview');
-    await page.addStyleTag({content: css('web/tokens.css')});
-    await page.evaluate(bridge => {
-      const host = document.getElementById('report-content')!, style = document.createElement('style');
-      style.textContent = bridge;
-      host.shadowRoot!.append(style);
-      host.dataset.coastTheme = 'tokens';
-      // fish's dark values equal several dark tokens; the light set tells a bridged colour from a fallback.
-      document.documentElement.dataset.theme = 'light';
-    }, css('packages/coast/tokens-bridge.css'));
-    const rows = await compare(page, REPORT_PAIRS, '#report-content');
-    expect(rows.length).toBe(REPORT_PAIRS.length);
-    for (const [sel, prop, got, want] of rows) expect(got, `${sel} ${prop}`).toBe(want);
-  });
+  // FE-77b: the later rules, on the tabs that render them. A --coast-* role stands in where the bridge mixes two tokens.
+  const LATER_PAIRS: Record<string, [string, string, string][]> = {
+    'Fleet reports': [['.catch-counts > div', 'background-color', '--panel'], ['.sheet-links', 'border-top-color', '--line'],
+      ['.sheet-links', 'color', '--mint']],
+    Sources: [['.source-summary', 'background-color', '--coast-mint-wash'], ['.source-summary > b', 'color', '--mint'],
+      ['.source-summary span', 'color', '--muted'], ['.source-list a', 'border-bottom-color', '--line'],
+      ['.source-dot.ok', 'background-color', '--mint']],
+  };
+
+  for (const [tab, pairs] of [['Overview', REPORT_PAIRS], ...Object.entries(LATER_PAIRS)] as const) {
+    test(`the report dialog reads web/tokens.css through :host (${tab})`, async ({page}) => {
+      await (await openReport(page))(tab);
+      await page.addStyleTag({content: css('web/tokens.css')});
+      await page.evaluate(bridge => {
+        const host = document.getElementById('report-content')!, style = document.createElement('style');
+        style.textContent = bridge;
+        host.shadowRoot!.append(style);
+        host.dataset.coastTheme = 'tokens';
+        // fish's dark values equal several dark tokens; the light set tells a bridged colour from a fallback.
+        document.documentElement.dataset.theme = 'light';
+      }, css('packages/coast/tokens-bridge.css'));
+      const rows = await compare(page, [...pairs], '#report-content');
+      expect(rows.length).toBe(pairs.length);
+      for (const [sel, prop, got, want] of rows) expect(got, `${sel} ${prop}`).toBe(want);
+    });
+  }
 });
