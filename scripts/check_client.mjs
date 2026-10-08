@@ -148,6 +148,31 @@ for (const [page, budget] of Object.entries(budgets)) {
   }
 }
 
+// 8. The v2 app loads three and the coast renderer only by dynamic import on the
+// first terrain choice (FE-71, front-end design § 3A.2): nothing the app entry
+// imports statically may come from three or packages/coast's renderer. Shared
+// chunks carry no `src` in the manifest, so each one is matched by its source
+// path, its manifest key, its chunk name and file, and by three's own markers in
+// its code (three.core sets window.__THREE__; the renderer warns as "THREE.").
+const RENDERER_SRC = /(?:^|\/)node_modules\/(?:\.pnpm\/three@[^/]+\/node_modules\/)?three\/|packages\/coast\/src\/(?:coast3d\/|embed\.ts)/;
+const RENDERER_CHUNK = /^(?:three|viewer|embed|OrbitControls)(?:\.|$)/i;
+const THREE_MARKERS = ['__THREE__', 'THREE.WebGLRenderer'];
+const chunkName = name => posix.basename(name).replace(/^_/, '');
+if (manifest['app.html']) {
+  const seen = new Set();
+  const walk = async key => {
+    const e = manifest[key];
+    if (!e || seen.has(key)) return;
+    seen.add(key);
+    const named = [e.src, key].some(n => n && RENDERER_SRC.test(n)) || [key, e.name, e.file].some(n => n && RENDERER_CHUNK.test(chunkName(n)));
+    const code = e.file.endsWith('.js') ? await readFile(join(dir, e.file), 'utf8').catch(() => '') : '';
+    if (named) problems.push(`app.html statically imports ${e.src || key} (three and the coast renderer load by dynamic import only)`);
+    else if (THREE_MARKERS.some(marker => code.includes(marker))) problems.push(`app.html statically imports ${e.file}, which contains three`);
+    for (const next of e.imports || []) await walk(next);
+  };
+  await walk('app.html');
+}
+
 if (problems.length) {
   console.error(`Client check failed:\n  ${problems.join('\n  ')}`);
   process.exit(1);

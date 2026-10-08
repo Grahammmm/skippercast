@@ -5,85 +5,10 @@
 // Importing this module loads three; hosts import it dynamically.
 import {CoastViewer,type CoastViewerOptions} from './coast3d/viewer.ts';
 import {DEFAULT_COAST_PALETTE,type CoastPalette} from './palette.ts';
-import type {CurrentLayer} from './state/current-layer.ts';
+import type {CoastHandle,CoastMountOptions} from './embed-types.ts';
 import {coastPath} from './transport.ts';
 import {coastEmbedTemplate} from './embed-template.ts';
-
-export type CoastPerspective='2d'|'3d';
-/** An admitted habitat selection in WGS84 degrees, with its public id. */
-export type CoastSelection={latitude:number;longitude:number;region?:string;id?:string};
-/** The renderer camera: centre in WGS84 degrees and visible span in metres. */
-export type CoastView={latitude:number;longitude:number;span:number};
-/** A host camera request; without `span` the renderer keeps its scale. */
-export type CoastLocation={latitude:number;longitude:number;span?:number};
-
-/** State applied once at mount, before `load()`, in the order v1 applies it. */
-export type CoastInitialState={
- currentLayer?:CurrentLayer;
- /** A `packages/coast` species id (map SkipperCast targets with `coastTarget`). */
- species?:string;
- /** Feet: 60 for Spear, 300 otherwise. */
- depthLimit?:number;
- location?:CoastLocation;
- hour?:Date|null;
- perspective?:CoastPerspective;
- /** An exact public habitat id to restore (`?habitat=`). */
- habitat?:string|null;
- visible?:boolean;
-};
-
-export type CoastMountOptions={
- /**
-  * The shadow root to mount into; by default `host`'s open shadow root, attached
-  * if absent. A root that still holds a mounted coast (`#scene`) throws: destroy
-  * that handle first. Other content in the root is left alone.
-  */
- root?:ShadowRoot;
- /** Stylesheet URLs linked at the top of the root, before the scene. */
- styles?:readonly string[];
- /** Renderer colours over DEFAULT_COAST_PALETTE (v2 reads them through web/map/palette.ts; v1 passes none). */
- palette?:Partial<CoastPalette>;
- initial?:CoastInitialState;
- /** The host shows its own surface-current choice, so the scene's checkbox is hidden. */
- hostCurrents?:boolean;
- /** Replaces the scene's links to the standalone page's report (`index.html#forecast`). */
- forecastHref?:string;
- onSelection?:(selection:CoastSelection)=>void;
- onRestoredSelection?:(selection:CoastSelection)=>void;
- onSelectionInvalidated?:()=>void;
- onCurrentStatus?:(text:string)=>void;
- onView?:(view:CoastView)=>void;
- onPerspective?:(mode:CoastPerspective)=>void;
- /** Host handlers for the scene's own buttons; each replaces the renderer's. */
- onTop?:()=>void;
- onCloseSelection?:()=>void;
- /** Also relabels the button "Reset map view", since the host decides where home is. */
- onReset?:()=>void;
-};
-
-/**
- * The handle v2's MapStage and v1's workspace drive. Every method may be
- * called before `load()` resolves; after `destroy()` the handle is inert.
- */
-export interface CoastHandle{
- /** Streams the reviewed terrain; resolves false when graphics or assets are unavailable. */
- load():Promise<boolean>;
- /** Moves the camera only; both perspectives share one scene. */
- setPerspective(mode:CoastPerspective):void;
- setLocation(point:CoastLocation):void;
- /** Returns false, and clears habitat, when the species is unsupported. */
- setSpecies(id:string):boolean;
- /** The selected UTC hour for surface currents; `null` means none chosen. */
- setHour(at:Date|null):void;
- /** Maximum habitat depth in feet. */
- setDepthLimit(ft:number):void;
- setCurrentLayer(id:CurrentLayer):void;
- /** Restores an exact public habitat id without selection callbacks; `null` clears. */
- selectHabitat(id:string|null):void;
- /** A hidden embed stops drawing and withdraws its overlays until shown again. */
- setVisible(visible:boolean):void;
- destroy():void;
-}
+export type {CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastSelection,CoastView} from './embed-types.ts';
 
 type Viewer=Pick<CoastViewer,keyof CoastHandle>;
 /** Test seam: constructs the renderer. Hosts never pass it. */
@@ -117,6 +42,8 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  root.querySelector<HTMLElement>('[for="species"]')!.hidden=true;$('species').hidden=true;
  if(options.hostCurrents)$('currents').closest('label')!.hidden=true;
  $('layers-toggle').textContent='Terrain layers & evidence';
+ // A named group of pin buttons: aria-label alone is prohibited on a role-less div (axe, FE-71).
+ $('pins').setAttribute('role','group');
  const controls=root.querySelector('.view-controls')!;
  // CoastViewer binds these ids; hidden stand-ins keep it off the host's chrome.
  for(const id of ['perspective-2d','perspective-3d']){const button=document.createElement('button');button.id=id;button.hidden=true;controls.append(button);}

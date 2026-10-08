@@ -87,6 +87,8 @@ test('mounting adapts the scene for a managed host as v1 did',()=>{
   assert.equal(f.selected.get('[for="species"]')!.hidden,true);assert.equal(f.byId('species').hidden,true);
   assert.equal(f.byId('currents').closest('label').hidden,false,'the scene keeps its currents checkbox without a host control');
   assert.equal(f.byId('layers-toggle').textContent,'Terrain layers & evidence');
+  assert.ok(coastSceneMarkup.includes('<div id="pins" aria-label="Ranked species habitat pins">'),'the template names the pin list');
+  assert.equal(f.byId('pins').attributes.role,'group','a named group, so its aria-label is permitted (axe, FE-71)');
   const added=f.selected.get('.view-controls')!.children;
   assert.deepEqual(added.map(n=>[n.id,n.hidden]),[['perspective-2d',true],['perspective-3d',true],['sources-open',false]]);
   assert.equal(added[2]!.textContent,'ⓘ');assert.equal(added[2]!.attributes['aria-label'],'Terrain sources and assumptions');

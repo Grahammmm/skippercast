@@ -9,6 +9,7 @@
 ## Unreleased
 
 - In the new map preview (`?ui=v2`), the masthead's sign in opens an account menu: passkey sign in, boat presets and the exact-boat sheet, saved-trip alerts, and the offline notes, GPX and offline pack entries.
+- In the new map preview (`?ui=v2`), the map stage switches between Chart, 2D and 3D: the reviewed coastal terrain loads on the first 2D or 3D choice and follows the profile's depth limit, the target, the hour, the surface-current source and the selected habitat; a region without terrain, or a browser without graphics, stays on the chart and says why.
 - Add the new landing page behind `UI_V2`: the Morro Bay shoreline drawn from NOAA CUSP, live wind, swell, water and tide with each source, age and stale state, the port question with Boat / Shore / Spear, links into the map's layers, and a saved port opening the map directly.
 
 - Mapping batches can hand off one completed terrain/imagery slice for website 3D rendering, with exact display acceptance and explicit blocked prerequisites.

@@ -1,0 +1,58 @@
+// The map stage (FE-71, design § 3A.2): the Chart host (MapLibre arrives with
+// FE-11; the placeholder stands in), the terrain host whose shadow root
+// packages/coast mounts into, and the Chart / 2D / 3D toggle in the map chrome
+// with its status line. web/map/stage.ts owns the renderers; this component
+// creates one stage while it is mounted and destroys it when it unmounts (a
+// layout change), which releases the terrain's WebGL context.
+import type {ComponentChildren} from 'preact';
+import {useEffect, useRef} from 'preact/hooks';
+import {Chip} from '../ui/Chip.tsx';
+import type {Presentation} from '../coast-context.ts';
+import {coastPalette, readPalette} from '../map/palette.ts';
+import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
+import {regionInfo} from './App.tsx';
+
+export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
+  {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
+];
+const NOTE_ID = 'app-stage-note';
+
+/** Chart, 2D, 3D; where no terrain can show, the terrain choices are disabled and point at the reason in the status line. */
+export function PresentationToggle() {
+  const shown = shownPresentation.value, blocked = terrainBlocked.value;
+  return (
+    <div class="app-presentation">
+      <p id={NOTE_ID} class="app-stage-note" role="status">{blocked ?? ''}</p>
+      <div role="group" aria-label="Map presentation" class="ui-segmented">
+        {PRESENTATIONS.map(p => {
+          const off = p.value !== 'chart' && !!blocked;
+          return (
+            <Chip key={p.value} on={p.value === shown} disabled={off} aria-describedby={off ? NOTE_ID : undefined}
+              onClick={() => { if (p.value !== shown) choosePresentation(p.value); }}>{p.label}</Chip>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Token colours for the renderer; without web/tokens.css the embed keeps its defaults. */
+const palette = () => { try { return coastPalette(readPalette()); } catch { return undefined; } };
+
+/** The map stage with whatever chrome the layout puts over it. */
+export function MapStage({children}: {children?: ComponentChildren} = {}) {
+  const terrainHost = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null});
+    return () => stage.destroy();
+  }, []);
+  const shown = shownPresentation.value;
+  return (
+    <section class="app-stage" aria-label="Map">
+      <div class="app-map" hidden={shown !== 'chart'}><span>Map unavailable.</span></div>
+      <div class="app-terrain" ref={terrainHost} hidden={shown === 'chart'} data-coast-theme="tokens" />
+      <PresentationToggle />
+      {children}
+    </section>
+  );
+}

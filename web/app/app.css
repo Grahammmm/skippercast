@@ -56,6 +56,14 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* Map stage and its chrome */
 .app-stage { position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
 .app-map { position: absolute; inset: 0; z-index: var(--z-map); display: grid; place-items: center; color: var(--muted); }
+/* FE-71: the terrain host (packages/coast mounts in its shadow root), the Chart / 2D / 3D toggle and the stage's status line. */
+.app-terrain { position: absolute; inset: 0; z-index: var(--z-map); }
+.app-map[hidden], .app-terrain[hidden] { display: none; }
+.app-presentation { position: absolute; right: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); max-width: min(280px, calc(100% - 2 * var(--space-4))); }
+.app-presentation .ui-segmented { box-shadow: var(--elev-2); }
+.app-presentation .ui-chip { min-width: var(--touch-min); }
+.app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
+.app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
 .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
 .app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
 .app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
@@ -94,6 +102,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* Mobile layout (FE-06): the stage fills the viewport; the top strip, the sheet and the tabs float over it. */
 .app-mobile { --app-tabs: calc(56px + env(safe-area-inset-bottom, 0px)); --app-strip: calc(84px + env(safe-area-inset-top, 0px)); position: relative; height: 100vh; height: 100dvh; overflow: hidden; }
 .app-mobile .app-stage { position: absolute; inset: 0; min-height: 0; }
+.app-mobile .app-presentation { top: calc(var(--app-strip) + var(--touch-min) + var(--space-5)); bottom: auto; flex-direction: column-reverse; }
 .app-top { position: absolute; top: 0; left: 0; right: 0; z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-2); padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) 0; }
 .app-top-row { display: flex; align-items: center; gap: var(--space-2); }
 .app-top-card { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 var(--space-3) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }

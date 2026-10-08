@@ -218,6 +218,7 @@ web/
   coast-data.ts         v2 loaders for the coast report, ocean and history snapshots (FE-74)
   map/
     stage.ts            MapStage adapter: one camera, selection and hour over three presentations (FE-71)
+    terrain.js  terrain.d.ts  terrain.css   the dynamically imported terrain module: mountCoast and the shadow-root stylesheets (FE-71)
     engine.ts           MapLibre init for the Chart presentation (FE-11)
     style.ts  palette.ts  basemap style and the CSS-to-JS colour bridge (FE-72)
     layers.ts           layer registry: id, order, presentations, sources, basis, legend, time
@@ -237,6 +238,7 @@ packages/coast/         fish's client (Codex, #385): renderer, report model, cha
   tokens-bridge.css     --coast-* properties mapped to web/tokens.css under an opt-in (FE-76)
   src/palette.ts        the renderer's colours as data, defaults = today's values (FE-76)
   src/embed.ts          the typed mount API v2 and v1 share (FE-70)
+  src/embed-types.ts    its types, renderer-free, so web/tsconfig.json never loads three or the viewer (FE-71)
 dist/
   app.html              the v2 app shell entry (/map)
   landing.html          the v2 landing entry (/)
@@ -432,6 +434,24 @@ presentation, so the app's 350 KB first-paint budget (§ 13) is unchanged and
 imports. A WebGL or asset failure returns the stage to Chart with "Coastal
 graphics are unavailable. The chart, forecasts and trip tools remain
 usable." (v1's wording).
+
+As built (FE-71): the dynamic import is `web/map/terrain.js` with its types in
+`terrain.d.ts`, and `stage.ts` takes the handle types from
+`packages/coast/src/embed-types.ts`. `packages/coast`'s renderer sources do not
+type-check under `web/tsconfig.json`'s `noUncheckedIndexedAccess`, so the web
+program must never load them; `embed.ts` re-exports every type, so v1 and the
+tests are unchanged. Choosing Chart hides the renderer (`setVisible(false)`)
+and keeps it, so returning to terrain is immediate; the layout's unmount
+destroys it. A failure is sticky until a reload, as in v1, and the link keeps
+`?presentation=`. While the terrain loads, the renderer's own `#loading`
+status speaks; the stage's status line carries only why the terrain choices
+are disabled. A terrain camera move writes `?view=` (span-to-zoom rule) once it
+settles, without a history entry; a selection writes `?habitat=` with one, so
+Back restores the previous selection. `onSelectionInvalidated` clears the
+mark card but keeps `?habitat=` in the link (v1 parity: the renderer may
+restore it when its data admits the id again); only the scene's close button
+removes it. Without `?hour=` the terrain takes the current whole UTC hour and
+the stage's own clock moves it on at each hour boundary.
 
 **Layers.** Every registry entry (§ 9) declares the presentations it draws
 in. Terrain-native layers (relief, water, contours, ranked habitat pins,
