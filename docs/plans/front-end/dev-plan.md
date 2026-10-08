@@ -406,7 +406,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - Status: CHANGED (host list shared with `map-sources.ts`). Agent (proposed): Codex.
 - Depends: —
 - Files: `catalog/sources.json`, `regions/morro-bay/region.json` (`basemap.aerial`), `schemas/region.schema.json` (if needed), `docs/data-sources.md`, rebuilt `dist/regions/*`.
-- Build: § 11 row; the region flag; a test that `catalog/sources.json`'s NAIP host equals `packages/coast` `mapSourceHosts`.
+- Build: § 11 row; the region flag (`basemap.aerial` is an object naming the catalog source, the coverage check date and the acquisition window, so the Aerial attribution can carry the imagery date); a test that `catalog/sources.json`'s NAIP host equals `packages/coast` `mapSourceHosts`.
 - Accept: 1. Contract tests pass. 2. Platform build diff clean.
 - **Owner**: add the register row.
 

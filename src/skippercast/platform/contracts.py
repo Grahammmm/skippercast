@@ -18,6 +18,7 @@ from ..paths import repo_root
 from ..util.time import stamp  # noqa: F401  (re-exported; callers import it from here)
 
 ID = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 REPO = repo_root()
 PUBLIC_RIGHTS = {"public-domain", "CC0-1.0", "CC-BY-4.0", "CC-BY-NC-4.0", "facts-only"}
 # Redistribution (above) and commercial use are separate questions; see docs/legal/data-rights-register.md.
@@ -190,6 +191,18 @@ def _region_shape(region):
     for bindings in region["source_bindings"].values():
         if not isinstance(bindings, list) or len(bindings) != len(set(bindings)):
             raise ValueError("Source bindings must be distinct source ids in preferred order")
+    basemap = region.get('basemap', {})
+    if not isinstance(basemap, dict) or set(basemap) - {'aerial'}:
+        raise ValueError('Unknown regional base layer')
+    if 'aerial' in basemap:
+        aerial = basemap['aerial']
+        acquired = aerial.get('acquired') if isinstance(aerial, dict) else None
+        if (not isinstance(aerial, dict) or set(aerial) != {'source', 'checked_at', 'acquired', 'note'}
+                or not isinstance(aerial['source'], str) or not ID.fullmatch(aerial['source'])
+                or not isinstance(aerial['note'], str) or not aerial['note']
+                or not isinstance(acquired, dict) or set(acquired) != {'first', 'last'}
+                or not all(isinstance(v, str) and DATE.fullmatch(v) for v in (aerial['checked_at'], *acquired.values()))):
+            raise ValueError('Aerial base needs a source, check date, acquisition window and note')
     intelligence=region.get('intelligence')
     if intelligence:
         if intelligence.get('regional_current_model')!='wcofs' or intelligence.get('wind_ensemble_model')!='gfs025' or intelligence.get('wave_ensemble_provider')!='noaa-gefs':
@@ -292,6 +305,16 @@ def validate_region(region, needs, sources, root=REPO):
         for ident in bindings:
             if ident not in sources or need not in sources[ident]["needs"]:
                 raise ValueError(f"Source {ident} cannot fulfill {need}")
+    aerial = region.get('basemap', {}).get('aerial')
+    if aerial:
+        source = sources.get(aerial['source'])
+        endpoint = (source or {}).get('tiles', {}).get('endpoint', '')
+        if (not source or source['review_status'] not in {'approved', 'candidate'}
+                or source['rights']['commercial_use'] != 'allowed' or not source['rights']['attribution']
+                or not endpoint or urlsplit(public_url(endpoint)).hostname not in source['allowed_hosts']):
+            raise ValueError('Aerial base needs a reviewed live-tile source on a fixed host, cleared for commercial use')
+        if not aerial['acquired']['first'] <= aerial['acquired']['last'] <= aerial['checked_at']:
+            raise ValueError('Aerial acquisition window must precede its coverage check')
     for asset in region["assets"].values():
         if asset is not None:
             within(Path(root) / "dist", asset)
