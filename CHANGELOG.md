@@ -10,6 +10,7 @@
 
 - The readable coastal report, methods and about pages (`/report`, `/methodology`, `/about`) use the new dark visual system with self-hosted fonts and add a "How it’s built" link to the sources page; their text is unchanged.
 - In the new map preview (`?ui=v2`), the masthead's sign in opens an account menu: passkey sign in, boat presets and the exact-boat sheet, saved-trip alerts, and the offline notes, GPX and offline pack entries.
+- In the new map preview (`?ui=v2`), the time dock covers the full seven-day forecast: eight day chips, the chosen day's hours as exact UTC times, play that stops at the last hour and pauses when the page is hidden, and under reduced motion a "Next hour" step instead of play; the terrain follows the dock's hour.
 - In the new map preview (`?ui=v2`), the map stage switches between Chart, 2D and 3D: the reviewed coastal terrain loads on the first 2D or 3D choice and follows the profile's depth limit, the target, the hour, the surface-current source and the selected habitat; a region without terrain, or a browser without graphics, stays on the chart and says why.
 - Add the new landing page behind `UI_V2`: the Morro Bay shoreline drawn from NOAA CUSP, live wind, swell, water and tide with each source, age and stale state, the port question with Boat / Shore / Spear, links into the map's layers, and a saved port opening the map directly.
 

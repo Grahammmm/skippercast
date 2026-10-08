@@ -14,9 +14,10 @@ import {computed, effect, signal} from '@preact/signals';
 import type {CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastSelection} from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
 import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from '../coast-context.ts';
+import {dockTime} from '../hour.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from '../profile.ts';
 import {
-  appView, current, habitat, hour, navigate, parseHour, presentation, profile, region, setParams, species,
+  appView, current, day, habitat, hour, navigate, parseHour, presentation, profile, region, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
 
@@ -55,15 +56,18 @@ export function coastSpecies(target: string | null, p: Profile): string {
   const id = target || PROFILE_TABLE[p].defaultTarget;
   return coastTarget(id) ?? id;
 }
-/** `?hour=` as a Date; without one, the current whole UTC hour (the dock's "now"). */
-export function terrainHour(value: string | null, now: Date): Date {
-  const seconds = parseHour(value);
-  return new Date(seconds !== null ? seconds * 1000 : Math.floor(now.getTime() / HOUR_MS) * HOUR_MS);
+/** The zone the dock reads days in until the region's own arrives (web/app/App.tsx DEFAULT_ZONE). */
+const DOCK_ZONE = 'America/Los_Angeles';
+/** The time dock's hour (FE-12): `?hour=`; else the same hour on a later `?day=`; else the current whole UTC hour. */
+export function terrainHour(value: string | null, now: Date, dayValue: string | null = null, tz: string = DOCK_ZONE): Date {
+  return new Date(parseHour(value) === null && dayValue === null ? Math.floor(now.getTime() / HOUR_MS) * HOUR_MS : dockTime(dayValue, value, now, tz).at);
 }
 
 export interface TerrainInput {
   profile: Profile; target: string | null; hour: string | null; camera: Camera | null; current: CurrentChoice;
   habitat: string | null; presentation: Presentation; appView: AppView; hidden: boolean; now: Date;
+  /** `?day=` and the region's zone, which the time dock reads it in. */
+  day?: string | null; zone?: string;
 }
 /** What the terrain handle is told, in the order v1 applies it (CoastInitialState). */
 export interface TerrainState {
@@ -77,7 +81,7 @@ export function terrainState(i: TerrainInput): TerrainState {
     // An unlisted source draws nothing, as in v1; the status line says why.
     currentLayer: i.current === UNSUPPORTED ? 'off' : i.current,
     species: coastSpecies(i.target, i.profile), depthLimit: terrainDepthLimitFt(i.profile),
-    location: i.camera ? locationFor(i.camera) : null, hour: terrainHour(i.hour, i.now),
+    location: i.camera ? locationFor(i.camera) : null, hour: terrainHour(i.hour, i.now, i.day, i.zone),
     perspective: i.presentation === '2d' ? '2d' : '3d', habitat: i.habitat,
     visible: i.appView === 'coast' && !i.hidden && i.presentation !== 'chart',
   };
@@ -100,6 +104,8 @@ export interface StageOptions {
   /** The region's centre; a signal read here is followed. */
   center?: () => readonly [number, number] | null;
   now?: () => Date;
+  /** The region's zone, for the dock's `?day=`; a signal read here is followed. */
+  zone?: () => string;
   doc?: Pick<Document, 'hidden' | 'addEventListener' | 'removeEventListener'>;
   /** Milliseconds a terrain camera move waits before it is written to `?view=`. */
   viewDelay?: number;
@@ -148,8 +154,11 @@ export function createStage(options: StageOptions): Stage {
   const wanted = computed(() => terrainState({
     profile: profile.value, target: species.value, hour: hour.value, camera: camera.value, current: current.value,
     habitat: habitat.value, presentation: shownPresentation.value, appView: appView.value, hidden: pageHidden.value, now: clock.value,
+    day: day.value, zone: options.zone?.(),
   }));
 
+  // The hour the renderer was last told, on the host (data-hour), so the dock's hour can be checked end to end.
+  const markHour = (at: Date): void => { host.dataset.hour = at.toISOString(); };
   const apply = (h: CoastHandle, state: TerrainState): void => {
     for (const name of ORDER) {
       const value = state[name], k = key(value);
@@ -159,7 +168,7 @@ export function createStage(options: StageOptions): Stage {
       else if (name === 'species') h.setSpecies(state.species);
       else if (name === 'depthLimit') h.setDepthLimit(state.depthLimit);
       else if (name === 'location') { if (state.location) h.setLocation(state.location); }
-      else if (name === 'hour') h.setHour(state.hour);
+      else if (name === 'hour') { h.setHour(state.hour); markHour(state.hour); }
       else if (name === 'perspective') h.setPerspective(state.perspective);
       else if (name === 'habitat') h.selectHabitat(state.habitat);
       else h.setVisible(state.visible);
@@ -229,6 +238,7 @@ export function createStage(options: StageOptions): Stage {
         },
       });
       for (const name of ORDER) applied[name] = key(state[name]);
+      markHour(state.hour);
       handle.value = h;
       const ready = await h.load();
       if (alive && !ready) fail(new Error('Coastal terrain did not load'));

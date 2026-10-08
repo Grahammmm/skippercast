@@ -20,6 +20,10 @@ const ORIGIN = 'https://s.test/map';
 const TZ = 'America/Los_Angeles';
 /** The shell's clock in every render: Monday 2026-10-05, 1 pm Pacific, so chips and windows read the same whatever day the tests run. */
 const NOW = new Date('2026-10-05T20:00:00Z');
+/** The day chips of the 169-hour horizon from NOW: the eighth day repeats Monday, so it carries its date. */
+const WEEK = ['Today', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon 12'];
+/** 2 pm Pacific on Tuesday 2026-10-06. */
+const TUE_2PM = '2026-10-06T21:00Z';
 
 let shell;
 async function load() {
@@ -33,7 +37,7 @@ async function load() {
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {clearSelection, placeholderMark} from './web/app/MarkCard.tsx';
-      export {dayOptions, dockState, hourText, localParts, utcHour, zoneName, DAY_COUNT} from './web/app/TimeDock.tsx';
+      export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
       export {dragDetent, DRAG_MIN} from './web/ui/Sheet.tsx';
       export * as state from './web/state.ts';
@@ -78,7 +82,8 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.equal(count(html, /<label>Target<select/g), 1);
   assert.equal(count(html, /<label>Area<select/g), 1);
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
-  assert.deepEqual(dayChips(html), [['Today', true], ['Tue', false], ['Wed', false]], 'no ?day= means today, at the fixed clock');
+  assert.deepEqual(dayChips(html), [['Today', true], ...WEEK.slice(1).map(label => [label, false])], 'no ?day= means today, at the fixed clock');
+  assert.match(html, /aria-label="Hour" aria-valuetext="1 pm" min="0" max="10" step="1" value="0"/, 'today runs from the current hour to 11 pm');
   assert.match(html, /<aside class="app-brief" aria-label="Brief">/);
   assert.match(html, /class="ui-eyebrow">Today's brief</);
   assert.match(html, /<h1>[A-Z][^<]*\.<\/h1>/, 'the headline is one sentence with a full stop');
@@ -120,9 +125,7 @@ test('the brief invents no number: every tile reads "—" and keeps its source l
 });
 
 test('every control reflects the address: profile, view, day, hour, layers and the selection', async () => {
-  const {utcHour} = await load();
-  const hour = utcHour('2026-10-06', 14, TZ);
-  const html = await renderShell(`${ORIGIN}?region=morro-bay&profile=shore&view=conditions&layers=swell,water-temp&spot=r12&day=2026-10-06&hour=${encodeURIComponent(hour)}&target=halibut&area=estero`);
+  const html = await renderShell(`${ORIGIN}?region=morro-bay&profile=shore&view=conditions&layers=swell,water-temp&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&target=halibut&area=estero`);
   // Profile switch: exactly Shore is on, and the shore caveat and swell source follow.
   const chips = [...html.matchAll(/<button[^>]*class="ui-button ui-button--ghost ui-button--sm ui-chip"[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/svg>(Boat|Shore|Spear)/gs)].map(m => [m[2], m[1]]);
   assert.deepEqual(chips, [['Boat', 'false'], ['Shore', 'true'], ['Spear', 'false']]);
@@ -140,7 +143,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
   assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['water-temp', 'swell']);
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
-  assert.deepEqual(dayChips(html), [['Today', false], ['Tue', true], ['Wed', false]]);
+  assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
   assert.match(html, /<output class="ui-dock-readout ui-mono" aria-live="off">2 pm<\/output>/);
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
@@ -152,22 +155,21 @@ test('every control reflects the address: profile, view, day, hour, layers and t
 });
 
 test('the helpers behind the controls round-trip through the store keys', async () => {
-  const {utcHour, localParts, dayOptions, dockState, hourText, toggled, targetOptions, coordinates, titleCase, viewParam, clearSelection, windowText, RAIL_ENTRIES, RAIL_IDS, state, MASTHEAD_VIEWS, DAY_COUNT} = await load();
-  // Local hour to ?hour= and back, across the zone's offset.
-  for (const [d, h, expected] of [['2026-10-06', 14, '2026-10-06T21:00Z'], ['2026-10-06', 0, '2026-10-06T07:00Z'], ['2026-12-20', 23, '2026-12-21T07:00Z']]) {
-    assert.equal(utcHour(d, h, TZ), expected);
-    assert.deepEqual([localParts(new Date(expected), TZ).day, localParts(new Date(expected), TZ).hour], [d, h]);
-  }
-  assert.equal(utcHour('nonsense', 1, TZ), null);
+  const {localParts, dayOptions, dockState, hourText, readout, toggled, targetOptions, coordinates, titleCase, viewParam, clearSelection, windowText, RAIL_ENTRIES, RAIL_IDS, state, MASTHEAD_VIEWS} = await load();
+  assert.deepEqual([localParts(new Date(TUE_2PM), TZ).day, localParts(new Date(TUE_2PM), TZ).hour], ['2026-10-06', 14]);
   assert.deepEqual([hourText(0), hourText(12), hourText(14)], ['12 am', '12 pm', '2 pm']);
-  // Day chips: today first, then weekdays; a selected day outside the horizon is kept.
+  // Day chips: the horizon's eight local days; a selected day outside the horizon is kept.
   const now = new Date('2026-10-05T20:00:00Z');
-  assert.deepEqual(dayOptions(now, TZ, null), [{value: '2026-10-05', label: 'Today'}, {value: '2026-10-06', label: 'Tue'}, {value: '2026-10-07', label: 'Wed'}]);
-  assert.equal(dayOptions(now, TZ, null).length, DAY_COUNT);
+  assert.deepEqual(dayOptions(now, TZ, null).map(o => o.label), WEEK);
+  assert.deepEqual(dayOptions(now, TZ, null).slice(0, 2), [{value: '2026-10-05', label: 'Today'}, {value: '2026-10-06', label: 'Tue'}]);
   assert.deepEqual(dayOptions(now, TZ, '2026-10-20').at(-1), {value: '2026-10-20', label: '10-20'});
   state.configureStore({storage: memory()});
   state.syncFromURL(ORIGIN);
-  assert.deepEqual(dockState(now, TZ), {day: '2026-10-05', today: '2026-10-05', hour: 13}, 'no ?day= or ?hour= means today, now');
+  const today = dockState(now, TZ);
+  assert.deepEqual([today.day, today.today, today.at, today.index, today.hours.length], ['2026-10-05', '2026-10-05', Date.parse('2026-10-05T20:00Z'), 0, 11], 'no ?day= or ?hour= means today, now');
+  state.syncFromURL(`${ORIGIN}?hour=2026-09-01T20:00Z`);
+  assert.equal(readout(dockState(now, TZ), TZ), '1 pm · outside the forecast', 'a stale hour is kept and said to be outside');
+  state.syncFromURL(ORIGIN);
   assert.equal(windowText(now, TZ), 'Today · 1 pm');
   // Rail toggles keep rail order and write ?layers=none for an empty rail.
   assert.deepEqual(RAIL_ENTRIES.map(e => e.id), [...RAIL_IDS]);
@@ -222,14 +224,13 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
 });
 
 test('the mobile sheet reflects the address: the mark card stands in at peek, the hour and day follow the dock', async () => {
-  const {utcHour, render, h, LayersPanel, state, afterDetent, toggleLayers, dragDetent, DRAG_MIN} = await load();
-  const hour = utcHour('2026-10-06', 14, TZ);
-  const html = await renderMobile(`${ORIGIN}?region=morro-bay&profile=spear&spot=r12&day=2026-10-06&hour=${encodeURIComponent(hour)}&layers=clouds`);
+  const {render, h, LayersPanel, state, afterDetent, toggleLayers, dragDetent, DRAG_MIN} = await load();
+  const html = await renderMobile(`${ORIGIN}?region=morro-bay&profile=spear&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&layers=clouds`);
   assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" aria-label="Brief">/);
   assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2>r12<\/h2>/);
   assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
-  assert.deepEqual(dayChips(html), [['Today', false], ['Tue', true], ['Wed', false]], 'the sheet\'s day menu runs from the fixed clock');
+  assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']), 'the sheet\'s day menu runs from the fixed clock');
   assert.match(html, /Nearshore site —/);
   assert.match(html, /In-water visibility is unverified/);
   // The layers panel: the rail with the legend of what is on, and a Done button.
