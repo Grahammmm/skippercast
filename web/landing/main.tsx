@@ -10,7 +10,7 @@ import {loadPorts, portURL, savedPortId, type Port} from '../ports.ts';
 import {LandingApp, LandingHead} from './Landing.tsx';
 import {LayerDots} from './LayerDots.tsx';
 import {DEFAULT_REGION} from './readings.ts';
-import {Shoreline} from './Shoreline.tsx';
+import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
 export const PROFILE_KEY = 'skippercast-profile-v1';
@@ -34,6 +34,7 @@ const mount = (id: string, part: ComponentChild) => {
   if (host) { host.replaceChildren(); render(part, host); }
 };
 mount('landing-shore', <Shoreline />);
+mount('landing-credit', <ShorelineCredit />);
 mount('landing-head', <LandingHead href={location.href} />);
 mount('landing-app', <LandingApp href={location.href} initialProfile={profile} />);
 mount('landing-dots', <LayerDots href={location.href} region={DEFAULT_REGION} />);

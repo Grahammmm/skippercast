@@ -13,7 +13,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_landing_shoreline.mjs';
-import {ageText, buoyReadings, compass, feedPath, feedState, loadReadout, tideReading, tideURL} from '../web/landing/readings.ts';
+import {ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, tideReading, tideURL} from '../web/landing/readings.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -37,12 +37,25 @@ test('buoy readings: units converted, newest row, direction, source with age, st
   assert.deepEqual([wind.reading, wind.unit, wind.detail, wind.source, wind.stale], ['14', 'kt', 'NW · gusts 17', 'NDBC 46028 · 20 min', false]);
   assert.deepEqual([swell.reading, swell.unit, swell.detail, swell.source, swell.stale], ['2.3', 'ft', '11 s · WNW', 'NDBC 46215 · 34 min', false]);
   assert.deepEqual([water.reading, water.unit, water.source, water.stale], ['58', '°F', 'NDBC 46215 · 3 h', true]);
-  assert.match(wind.basis, /^Observed wind at the Cape San Martin offshore buoy, averaged over 8 minutes, with the peak gust; stale after 2 h\.$/);
+  assert.equal(wind.basis, 'Observed wind at the Cape San Martin offshore buoy, out at sea: not a harbor or launch reading. Averaged over 8 minutes, with the peak gust; stale after 2 h.');
+  // With the region's positions the basis says how far from the harbor each buoy is.
+  const region = JSON.parse(readFileSync(join(ROOT, 'regions/morro-bay/region.json'), 'utf8'));
+  const placed = buoyReadings(FEED, region, NOW);
+  assert.match(placed[0].basis, /^Observed wind at the Cape San Martin offshore buoy, about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading\./);
+  assert.match(placed[2].basis, /at the Diablo Canyon buoy, about 10 nm S of Morro Bay harbor;/);
+  assert.equal(fromHarbor({harbor: region.harbor}, '46028'), null, 'no buoy position, no distance');
+  // A source without its own age limit shows its age and is never called stale for age alone.
+  const unlimited = structuredClone(FEED);
+  delete unlimited.sources.diablo.max_age_hours;
+  const water0 = buoyReadings(unlimited, {}, NOW)[2];
+  assert.deepEqual([water0.source, water0.stale], ['NDBC 46215 · 3 h', false]);
+  assert.match(water0.basis, /the feed gives no age limit, so only the age is shown\.$/);
+  assert.doesNotMatch(water0.basis, /stale after/);
   // A failed fetch at the source turns a fresh-looking row stale; a feed with another schema reads as missing.
   const failed = structuredClone(FEED);
   failed.sources.offshore.status = 'error';
   assert.equal(buoyReadings(failed, {}, NOW)[0].stale, true);
-  const none = buoyReadings({schema_version: 2}, {offshore_buoy: '46028', nearshore_buoy: '46215'}, NOW);
+  const none = buoyReadings({schema_version: 2}, {stations: {offshore_buoy: '46028', nearshore_buoy: '46215'}}, NOW);
   assert.deepEqual(none.map(r => [r.reading, r.source, r.stale]), [['No reading', 'NDBC 46028 · unavailable', true], ['No reading', 'NDBC 46215 · unavailable', true], ['No reading', 'NDBC 46215 · unavailable', true]]);
   // A unit the model does not know is never converted as if it were.
   const knots = structuredClone(FEED);
@@ -57,7 +70,9 @@ test('buoy readings: units converted, newest row, direction, source with age, st
 test('tide: latest water level, trend over two hours, NOAA station and age; stale after an hour; missing data says so', () => {
   const tide = tideReading(TIDE, '9412110', 'Port San Luis', NOW);
   assert.deepEqual([tide.reading, tide.unit, tide.detail, tide.source, tide.stale], ['3.0', 'ft', 'rising', 'NOAA 9412110 · 6 min', false]);
-  assert.match(tide.basis, /Port San Luis, in feet above mean lower low water, every 6 minutes; stale after 1 h\./);
+  assert.match(tide.basis, /Port San Luis, in feet above mean lower low water, every 6 minutes; stale after 1 h\.$/);
+  assert.match(tideReading(TIDE, '9412110', 'Port San Luis', NOW, 'Reference water level; not a Morro Bay bar-current prediction.').basis,
+    /stale after 1 h\. Reference water level; not a Morro Bay bar-current prediction\.$/, 'the region\'s tide note reaches the basis');
   assert.equal(tideReading(TIDE, '9412110', 'Port San Luis', NOW + 2 * 3600000).stale, true);
   assert.equal(tideReading({data: coops([[90, '3.0'], [6, '2.4']])}, '9412110', 'x', NOW).detail, 'falling');
   assert.equal(tideReading({data: coops([[6, '2.4']])}, '9412110', 'x', NOW).detail, undefined, 'one point gives no trend');
@@ -91,6 +106,8 @@ test('loadReadout reads the region, the feed and the tide; a failure becomes an 
   assert.deepEqual(asked, ['regions/morro-bay/region.json', '/feeds/conditions/regions/morro-bay/latest.json', tideURL('9412110')]);
   assert.deepEqual(readout.readings.map(r => r.id), ['wind', 'swell', 'water', 'tide']);
   assert.deepEqual(readout.readings.map(r => r.source), ['NDBC 46028 · 20 min', 'NDBC 46215 · 34 min', 'NDBC 46215 · 3 h', 'NOAA 9412110 · unavailable']);
+  assert.match(readout.readings[0].basis, /about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading/);
+  assert.ok(readout.readings[3].basis.endsWith(region.stations.tide_note), 'the tide tile carries the region\'s tide note');
   const offline = await loadReadout(async () => { throw Error('offline'); }, 'morro-bay', () => NOW);
   assert.ok(offline.readings.every(r => r.stale && /unavailable$/.test(r.source)));
   assert.deepEqual(offline.feed, {age: null, stale: true});
@@ -102,11 +119,11 @@ test('the landing reads the stored profile under the store\'s key', async () => 
   assert.equal(main.match(/PROFILE_KEY = '([^']+)'/)?.[1], STORAGE_KEYS.profile);
 });
 
-test('the shoreline module is generated from the catalog extract, framed on the region, with its attribution', () => {
+test('the shoreline module is generated from the region\'s CUSP import, framed on the region, with its attribution', () => {
   const geojson = JSON.parse(readFileSync(join(ROOT, 'catalog/shoreline/morro-bay.geojson'), 'utf8'));
   assert.equal(readFileSync(join(ROOT, 'web/landing/shoreline-path.ts'), 'utf8'), shorelineModule(geojson), 'run node scripts/build_landing_shoreline.mjs');
-  assert.equal(geojson.provenance.license, 'public-domain-us-gov');
-  assert.match(geojson.provenance.source, /NOAA National Geodetic Survey CUSP/);
+  assert.equal(geojson.provenance.license, 'public-domain');
+  assert.match(geojson.provenance.source, /^NOAA National Geodetic Survey, Continually Updated Shoreline Product \(CUSP\)$/);
   assert.ok(geojson.features.every(f => /^\d{8}$/.test(f.properties.SRC_DATE)), 'a source date on every feature');
   const {height, project} = projector();
   assert.deepEqual(project([FRAME[0], FRAME[3]]), [0, 0]);
@@ -124,7 +141,7 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {LandingHead, LandingApp, NAV} from './web/landing/Landing.tsx';
-      export {Shoreline} from './web/landing/Shoreline.tsx';
+      export {Shoreline, ShorelineCredit} from './web/landing/Shoreline.tsx';
       export {SHORELINE} from './web/landing/shoreline-path.ts';
       export {Readout} from './web/landing/Readout.tsx';
       export {LayerDots, layerURL, DOT_LABELS} from './web/landing/LayerDots.tsx';
@@ -139,14 +156,16 @@ async function load() {
 }
 
 test('the landing page holds the hero and footer statically; its parts render the nav, pills, port question and readout; no map engine', async () => {
-  const {LandingHead, LandingApp, Shoreline, SHORELINE, NAV, render, h} = await load();
+  const {LandingHead, LandingApp, Shoreline, ShorelineCredit, SHORELINE, NAV, render, h} = await load();
   const page = readFileSync(join(ROOT, 'dist/landing.html'), 'utf8');
   assert.match(page, /<h1 class="landing-title">Know the water before you leave the dock\.<\/h1>/);
-  assert.match(page, /<p class="landing-lede">Wind, swell, water temperature and tide for your launch, each with its source and age, beside the seafloor and currents on one map\.<\/p>/);
+  assert.match(page, /<p class="landing-lede">Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map\.<\/p>/);
+  assert.doesNotMatch(page, /your launch/, 'the readings are fixed stations, not the visitor\'s launch');
   assert.equal((page.match(/<footer/g) || []).length, 1);
   assert.match(page, /<p>Forecasts, observations and habitat carry separate clocks; check the rules before you fish\.<\/p>/);
-  assert.ok(page.includes(`Shoreline: ${SHORELINE.attribution}, surveyed ${SHORELINE.sourceYears.join('–')}.`), 'the credit names the extract\'s source and years');
-  for (const id of ['landing-shore', 'landing-head', 'landing-app', 'landing-dots']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));
+  assert.doesNotMatch(page, /CUSP|surveyed/, 'the credit comes from the generated module, not the page');
+  assert.equal(render(h(ShorelineCredit, {})), `<p class="landing-credit">Shoreline: ${SHORELINE.attribution}, surveyed ${SHORELINE.sourceYears[0]}–${SHORELINE.sourceYears.at(-1)}.</p>`);
+  for (const id of ['landing-shore', 'landing-head', 'landing-app', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));
   assert.deepEqual([...page.matchAll(/<script\b[^>]*>/g)].map(m => m[0]), ['<script type="module" src="../web/landing/main.tsx">'], 'one module, no inline script');
   const head = render(h(LandingHead, {href: 'https://s.test/?ui=v2'}));
   assert.match(head, /href="\/\?ui=v2">SkipperCast</);

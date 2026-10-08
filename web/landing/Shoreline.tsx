@@ -19,3 +19,10 @@ export function Shoreline() {
     </svg>
   );
 }
+
+/** The footer credit, from the generated module, so it always names the drawn extract's source and survey years. */
+export function ShorelineCredit() {
+  const [first, last] = [SHORELINE.sourceYears[0], SHORELINE.sourceYears.at(-1)];
+  const years = first === last ? first : `${first}–${last}`;
+  return <p class="landing-credit">Shoreline: {SHORELINE.attribution}, surveyed {years}.</p>;
+}

@@ -201,6 +201,10 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&ui=v2$/);
   await page.locator('[data-reading="tide"] summary').click();
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('mean lower low water');
+  await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('not a Morro Bay bar-current prediction');
+  await page.locator('[data-reading="wind"] summary').click();
+  await expect(page.locator('[data-reading="wind"] .ui-popover-body')).toContainText('about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading');
+  await expect(page.locator('.landing-credit')).toHaveText('Shoreline: NOAA National Geodetic Survey · CUSP shoreline, surveyed 1994–2010.');
   await checkA11y(page, 'v2-landing', info.project.name);
   expect(requests.filter(url => ENGINE.test(new URL(url).pathname)), 'no MapLibre or three request').toEqual([]);
   expect(pageErrors).toEqual([]);

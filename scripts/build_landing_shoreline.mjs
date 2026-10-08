@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // The landing's static shoreline (FE-07, docs/plans/front-end/design.md § 7):
-// projects catalog/shoreline/<region>.geojson (NOAA NGS CUSP, display extract
-// with its provenance) into one SVG path for web/landing/Shoreline.tsx and
+// projects catalog/shoreline/<region>.geojson (NOAA NGS CUSP, imported with
+// its provenance by FE-10's scripts/import_cusp_shoreline.py; CUSP is
+// published in NAD83 and drawn here as plain lon/lat, a metre-scale
+// difference far below one viewBox unit, about 120 m) into one SVG path for
+// web/landing/Shoreline.tsx and
 // writes web/landing/shoreline-path.ts. Only mean-high-water and built
 // shoreline lines are drawn (no ponds or marsh edges); each line is
 // simplified to about half a viewBox unit, under a pixel at desktop width.
@@ -9,8 +12,8 @@
 //   node scripts/build_landing_shoreline.mjs           write
 //   node scripts/build_landing_shoreline.mjs --check   fail when the committed file differs
 //
-// FE-10 replaces the catalog extract with the full CUSP import; rerun this
-// script then. tests/test_landing_shoreline.mjs runs the check.
+// Rerun it whenever FE-10's importer refreshes the region's file.
+// tests/test_landing.mjs runs the check.
 import {readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 

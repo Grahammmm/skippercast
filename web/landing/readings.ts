@@ -23,7 +23,7 @@ export interface Reading {
   /** Station and age ("NDBC 46028 · 22 min"). */
   readonly source: string;
   readonly stale: boolean;
-  /** One basis sentence naming product, place and age rule. */
+  /** The basis: product, place (with its distance from the harbor when the region gives both positions) and age rule. */
   readonly basis: string;
 }
 export interface FeedState {readonly age: string | null; readonly stale: boolean}
@@ -31,7 +31,9 @@ export interface FeedState {readonly age: string | null; readonly stale: boolean
 /** The parts of regions/<id>/region.json the readout needs. */
 export interface RegionStations {
   readonly conditions_feed?: string;
-  readonly stations?: {tide?: string; tide_name?: string; nearshore_buoy?: string; offshore_buoy?: string};
+  readonly stations?: {tide?: string; tide_name?: string; tide_note?: string; nearshore_buoy?: string; offshore_buoy?: string};
+  readonly harbor?: {name?: string; latitude?: number; longitude?: number};
+  readonly intelligence?: {verification_stations?: readonly {id?: string; latitude?: number; longitude?: number}[]};
 }
 
 type Row = Record<string, unknown>;
@@ -43,6 +45,16 @@ const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFi
 const POINTS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 /** 16-point compass name for degrees true. */
 export const compass = (deg: number): string => POINTS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]!;
+
+/** "about 56 nm WNW of Morro Bay harbor" for NDBC `station`, or null when the region lacks either position. */
+export function fromHarbor(region: RegionStations, station: string | undefined): string | null {
+  const h = region.harbor, b = region.intelligence?.verification_stations?.find(s => s.id === station);
+  if (!h?.name || !finite(h.latitude) || !finite(h.longitude) || !b || !finite(b.latitude) || !finite(b.longitude)) return null;
+  const rad = Math.PI / 180, p1 = h.latitude * rad, p2 = b.latitude * rad, dl = (b.longitude - h.longitude) * rad;
+  const nm = 2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2)) * 3440.065;
+  const bearing = Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / rad;
+  return `about ${Math.round(nm)} nm ${compass(bearing)} of ${h.name} harbor`;
+}
 
 /** "45 min", "2 h", "3 d": how old a reading is (web/confidence.ts's rule). */
 export function ageText(ms: number): string {
@@ -64,21 +76,27 @@ function newest(source: Source | undefined, key: string, unit: string): {row: Ro
   return rows.filter(r => Number.isFinite(r.at)).sort((a, b) => b.at - a.at)[0] ?? null;
 }
 
-/** Source line and stale state for an observation at `at` from `station`, `limitH` hours allowed. */
-function judged(station: string, at: number | null, ok: boolean, limitH: number, now: number): {source: string; stale: boolean} {
+/** Source line and stale state for an observation at `at` from `station`, `limitH` hours allowed (null: the source gave no limit, so age alone never marks it stale). */
+function judged(station: string, at: number | null, ok: boolean, limitH: number | null, now: number): {source: string; stale: boolean} {
   if (at === null || !Number.isFinite(at)) return {source: `${station} · unavailable`, stale: true};
-  const stale = !ok || now - at > limitH * 3600000 || at - now > 5 * 60000;
+  const stale = !ok || (limitH !== null && now - at > limitH * 3600000) || at - now > 5 * 60000;
   return {source: `${station} · ${ageText(now - at)}`, stale};
 }
 
-/** Wind, swell and water from the conditions feed; `stations` names the buoys when the feed is missing. */
-export function buoyReadings(feed: unknown, stations: RegionStations['stations'] = {}, now = Date.now()): Reading[] {
+/** Wind, swell and water from the conditions feed; the region names the buoys when the feed is missing and places them against its harbor. */
+export function buoyReadings(feed: unknown, region: RegionStations = {}, now = Date.now()): Reading[] {
   const f = (feed as Feed)?.schema_version === 1 ? feed as Feed : null;
-  const src = (id: string) => f?.sources?.[id];
-  const station = (id: string, fallback?: string) => `NDBC ${src(id)?.data?.station ?? fallback ?? '—'}`;
-  const ok = (id: string) => src(id)?.status === 'ok';
-  const limit = (id: string) => finite(src(id)?.max_age_hours) ? src(id)!.max_age_hours! : 2;
-  const name = (id: string, fallback: string) => `the ${src(id)?.name ?? fallback} buoy`;
+  const stations = region.stations ?? {};
+  const src = (key: string) => f?.sources?.[key];
+  const stationId = (key: string, fallback?: string) => src(key)?.data?.station ?? fallback;
+  const station = (key: string, fallback?: string) => `NDBC ${stationId(key, fallback) ?? '—'}`;
+  const ok = (key: string) => src(key)?.status === 'ok';
+  /** The source's own age limit; none is assumed when the feed gives none. */
+  const limit = (key: string): number | null => finite(src(key)?.max_age_hours) ? src(key)!.max_age_hours! : null;
+  const name = (key: string, fallback: string, buoy?: string) => {
+    const where = fromHarbor(region, stationId(key, buoy));
+    return `the ${src(key)?.name ?? fallback} buoy${where ? `, ${where}` : ''}`;
+  };
 
   const wind = newest(src('offshore'), 'WSPD', 'm/s');
   const gust = wind && finite(wind.row.GST) ? Math.round((wind.row.GST as number) * 1.943844) : null;
@@ -86,19 +104,19 @@ export function buoyReadings(feed: unknown, stations: RegionStations['stations']
   const swell = newest(src('diablo-spectrum'), 'SwH', 'm');
   const period = swell && finite(swell.row.SwP) ? `${Math.round(swell.row.SwP as number)} s` : null;
   const water = newest(src('diablo'), 'WTMP', 'degC');
-  const rule = (id: string) => `stale after ${limit(id)} h`;
+  const rule = (key: string) => { const h = limit(key); return h === null ? 'the feed gives no age limit, so only the age is shown' : `stale after ${h} h`; };
   return [
     {id: 'wind', label: 'Wind', ...(wind ? {reading: String(Math.round((wind.row.WSPD as number) * 1.943844)), unit: 'kt'} : {reading: 'No reading'}),
       detail: [windFrom, gust !== null ? `gusts ${gust}` : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('offshore', stations.offshore_buoy), wind?.at ?? null, ok('offshore'), limit('offshore'), now),
-      basis: `Observed wind at ${name('offshore', 'offshore')}, averaged over 8 minutes, with the peak gust; ${rule('offshore')}.`},
+      basis: `Observed wind at ${name('offshore', 'offshore', stations.offshore_buoy)}, out at sea: not a harbor or launch reading. Averaged over 8 minutes, with the peak gust; ${rule('offshore')}.`},
     {id: 'swell', label: 'Swell', ...(swell ? {reading: ((swell.row.SwH as number) * 3.28084).toFixed(1), unit: 'ft'} : {reading: 'No reading'}),
       detail: [period, swell && typeof swell.row.SwD === 'string' && /^[NSEW]{1,3}$/.test(swell.row.SwD) ? swell.row.SwD : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('diablo-spectrum', stations.nearshore_buoy), swell?.at ?? null, ok('diablo-spectrum'), limit('diablo-spectrum'), now),
-      basis: `Swell height, period and direction from the wave spectrum at ${name('diablo', 'nearshore')}; wind waves are left out; ${rule('diablo-spectrum')}.`},
+      basis: `Swell height, period and direction from the wave spectrum at ${name('diablo', 'nearshore', stations.nearshore_buoy)}; wind waves are left out; ${rule('diablo-spectrum')}.`},
     {id: 'water', label: 'Water', ...(water ? {reading: String(Math.round((water.row.WTMP as number) * 1.8 + 32)), unit: '°F'} : {reading: 'No reading'}),
       ...judged(station('diablo', stations.nearshore_buoy), water?.at ?? null, ok('diablo'), limit('diablo'), now),
-      basis: `Surface water temperature measured at ${name('diablo', 'nearshore')}; ${rule('diablo')}.`},
+      basis: `Surface water temperature measured at ${name('diablo', 'nearshore', stations.nearshore_buoy)}; ${rule('diablo')}.`},
   ];
 }
 
@@ -108,8 +126,8 @@ export const TIDE_LIMIT_H = 1;
 export const tideURL = (station: string): string =>
   `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=${encodeURIComponent(station)}&range=2&datum=MLLW&time_zone=gmt&units=english&format=json`;
 
-/** Tide: the latest observed water level and whether it rose over the last two hours. */
-export function tideReading(response: unknown, station: string, stationName = 'the tide station', now = Date.now()): Reading {
+/** Tide: the latest observed water level and whether it rose over the last two hours; `note` is the region's own caveat for the station. */
+export function tideReading(response: unknown, station: string, stationName = 'the tide station', now = Date.now(), note?: string): Reading {
   const rows = ((response as {data?: {t?: unknown; v?: unknown}[]})?.data ?? [])
     .map(r => ({at: coopsTime(r?.t), v: typeof r?.v === 'string' && r.v.trim() ? Number(r.v) : NaN}))
     .filter(r => Number.isFinite(r.at) && Number.isFinite(r.v)).sort((a, b) => a.at - b.at);
@@ -118,7 +136,7 @@ export function tideReading(response: unknown, station: string, stationName = 't
   return {
     id: 'tide', label: 'Tide', ...(last ? {reading: last.v.toFixed(1), unit: 'ft'} : {reading: 'No reading'}), detail: trend,
     ...judged(`NOAA ${station}`, last?.at ?? null, true, TIDE_LIMIT_H, now),
-    basis: `Observed water level at ${stationName}, in feet above mean lower low water, every 6 minutes; stale after ${TIDE_LIMIT_H} h.`,
+    basis: `Observed water level at ${stationName}, in feet above mean lower low water, every 6 minutes; stale after ${TIDE_LIMIT_H} h.${note?.trim() ? ` ${note.trim()}` : ''}`,
   };
 }
 
@@ -142,5 +160,5 @@ export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAUL
   const station = info.stations?.tide ?? '9412110';
   const [feed, tide] = await Promise.all([json(feedPath(info.conditions_feed, region)).catch(() => null), json(tideURL(station)).catch(() => null)]);
   const at = now();
-  return {readings: [...buoyReadings(feed, info.stations, at), tideReading(tide, station, info.stations?.tide_name, at)], feed: feedState(feed, at)};
+  return {readings: [...buoyReadings(feed, info, at), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note)], feed: feedState(feed, at)};
 }
