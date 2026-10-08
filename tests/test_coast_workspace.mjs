@@ -29,9 +29,10 @@ test('public habitat selection cannot overwrite atlas selection or geographic co
 
 // Execute the actual adapter with inert DOM/renderer dependencies. No network or GPU.
 import {readFileSync} from 'node:fs';
+import {mountCoast} from '../packages/coast/src/embed.ts';
 const adapter=readFileSync(new URL('../dist/coast-workspace.js',import.meta.url),'utf8')
  .replace(/^import .*;\n/gm,'').replace('export function initCoastWorkspace','function initCoastWorkspace')
- .replace("await import('../packages/coast/src/coast3d/viewer.ts')",'await loadViewer()');
+ .replace("await import('../packages/coast/src/embed.ts')",'await loadEmbed()');
 function element(){return {hidden:false,value:'lingcod',options:[{value:'chart'},{value:'2d'},{value:'3d'}],textContent:'',append(){},remove(){},setAttribute(){},listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]},dataset:{}};}
 async function workspace(ready=true,initialView='map'){
  const keys=['document','window','location','DOMParser','MutationObserver'],saved=Object.fromEntries(keys.map(k=>[k,globalThis[k]]));
@@ -41,9 +42,9 @@ async function workspace(ready=true,initialView='map'){
  const doc={getElementById:get,createElement:element,importNode:x=>x,body:{dataset:{view:initialView}},hidden:false,listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]}};
  const win={listeners:{},addEventListener(k,f){this.listeners[k]=f},removeEventListener(k){delete this.listeners[k]}};
  Object.assign(globalThis,{document:doc,window:win,location:{href:'https://example.test/?region=morro-bay#map'},DOMParser:class{parseFromString(){return {getElementById:get}}},MutationObserver:class{observe(){}disconnect(){}}});
- let viewer;class FakeViewer{constructor(host,options){viewer=this;this.options=options;this.hours=[];this.positions=[];this.visibility=[];this.loads=0;}setSpecies(){}setDepthLimit(){}setLocation(p){this.positions.push(p)}setHour(at){this.hours.push(at)}setPerspective(){}selectHabitat(id){this.selection=id}setVisible(v){this.visibility.push(v)}load(){this.loads++;return Promise.resolve(ready)}destroy(){}}
- const factory=new Function('getRegion','navigate','profile','setParams','effect','coastPath','coastTarget','hasCoastTerrain','presentationFromURL','presentationURL','habitatURL','loadViewer','const template="",viewStyles="/synthetic.css";'+adapter+'\nreturn initCoastWorkspace;');
- const init=factory(()=>({id:'morro-bay'}),url=>location.href=String(url),{value:'boat'},()=>{},fn=>{fn();return()=>{}},x=>x,coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL,async()=>({CoastViewer:FakeViewer}));
+ let viewer;class FakeViewer{constructor(host,options){viewer=this;this.options=options;this.hours=[];this.positions=[];this.visibility=[];this.loads=0;}setSpecies(){}setDepthLimit(){}setCurrentLayer(){}setLocation(p){this.positions.push(p)}setHour(at){this.hours.push(at)}setPerspective(){}selectHabitat(id){this.selection=id}setVisible(v){this.visibility.push(v)}load(){this.loads++;return Promise.resolve(ready)}destroy(){}}
+ const factory=new Function('getRegion','navigate','profile','setParams','effect','coastTarget','hasCoastTerrain','presentationFromURL','presentationURL','habitatURL','loadEmbed','const viewStyles="/synthetic.css";'+adapter+'\nreturn initCoastWorkspace;');
+ const init=factory(()=>({id:'morro-bay'}),url=>location.href=String(url),{value:'boat'},()=>{},fn=>{fn();return()=>{}},coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL,async()=>({mountCoast:(host,options)=>mountCoast(host,options,(scene,viewerOptions)=>new FakeViewer(scene,viewerOptions))}));
  let invalidations=0,zoom=12,center={lat:35.43,lng:-120.98};const map={getCenter:()=>center,getZoom:()=>zoom,setView(p,z){center=Array.isArray(p)?{lat:p[0],lng:p[1]}:p;zoom=z},invalidateSize(){invalidations++}};
  const handle=init({map,locationUI:{get:()=>null,select(p){assert.deepEqual(center,{lat:p.latitude,lng:p.longitude},'Move the map before publishing source metadata');},clear(){}},weather:{getHour:()=>1791288000}});
  const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};

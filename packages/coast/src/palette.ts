@@ -2,7 +2,7 @@
 // The only file in packages/coast where colour literals are allowed
 // (scripts/check_tokens.mjs); CSS and SVG strings use var(--coast-…, literal)
 // instead. These are the CoastViewer's v1 values, unchanged; a v2 host will
-// pass values read through web/map/palette.ts once the embed takes a palette.
+// pass values read through web/map/palette.ts to mountCoast (src/embed.ts).
 export type CoastPalette={
  /** Clear colour and 3D fog. */
  ground:string;

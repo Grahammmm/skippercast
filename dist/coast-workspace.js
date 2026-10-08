@@ -1,11 +1,9 @@
 // One native terrain presentation within the existing chart/planning workspace.
 // The chart owns region, target, location and hour; the renderer owns its camera.
-import template from './coast.html?raw';
 import viewStyles from './coast-workspace-view.css?url';
 import {getRegion} from './region.js';
 import {navigate,profile,setParams} from '../web/state.ts';
 import {effect} from '@preact/signals';
-import {coastPath} from '../packages/coast/src/transport.ts';
 import {coastTarget,hasCoastTerrain,presentationFromURL,presentationURL,habitatURL} from '../web/coast-context.ts';
 
 export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.invalidateSize({pan:false}),currentControl=null,getScope=()=>({id:getRegion().id,terrainAvailable:hasCoastTerrain(getRegion().id)})}) {
@@ -32,22 +30,13 @@ export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.i
  async function mount() {
   if(pending)return pending;
   pending=(async()=>{
-   const {CoastViewer}=await import('../packages/coast/src/coast3d/viewer.ts');
+   const {mountCoast}=await import('../packages/coast/src/embed.ts');
    if(!alive)return false;
-   const root=host.attachShadow({mode:'open'}),parsed=new DOMParser().parseFromString(template,'text/html');
-   const style=document.createElement('link');style.rel='stylesheet';style.href=viewStyles;root.append(style);
-   root.append(document.importNode(parsed.getElementById('scene'),true),document.importNode(parsed.getElementById('sources'),true));
-   root.querySelector('.intro').hidden=true;
-   root.querySelector('.layers h2').remove();root.querySelector('.layers>.eyebrow').remove();
-   root.querySelector('[for="species"]').hidden=true;root.getElementById('species').hidden=true;
-   if(currentControl)root.getElementById('currents').closest('label').hidden=true;
-   const toggle=root.getElementById('layers-toggle');toggle.textContent='Terrain layers & evidence';
-   const controls=root.querySelector('.view-controls');
-   for(const id of ['perspective-2d','perspective-3d']){const button=document.createElement('button');button.id=id;button.hidden=true;controls.append(button);}
-   const sources=document.createElement('button');sources.id='sources-open';sources.textContent='ⓘ';sources.setAttribute('aria-label','Terrain sources and assumptions');controls.append(sources);
-   for(const link of root.querySelectorAll('[data-coast-receipt]'))link.href=coastPath(link.dataset.coastReceipt);
-   for(const link of root.querySelectorAll('a[href="index.html#forecast"]'))link.href='#forecast';
-   viewer=new CoastViewer(root.getElementById('scene'),{root,managed:true,onCurrentStatus:text=>{if(currentControl&&mode!=='chart'&&document.body.dataset.view==='map')currentControl.status(text);},onView:view=>{
+   const clearSelection=()=>{viewer.selectHabitat(null);locationUI.clear?.();navigate(habitatURL(location.href,null),{replace:true});};
+   // The embed adapts the scene markup for a managed host (packages/coast/src/embed.ts).
+   viewer=mountCoast(host,{styles:[viewStyles],hostCurrents:!!currentControl,forecastHref:'#forecast',onTop:()=>void apply('2d',true),onCloseSelection:clearSelection,onReset:()=>{
+    clearSelection();locationUI.clear();point=null;map.setView(home,homeZoom,{animate:false});syncPoint({latitude:home.lat,longitude:home.lng});
+   },onCurrentStatus:text=>{if(currentControl&&mode!=='chart'&&document.body.dataset.view==='map')currentControl.status(text);},onView:view=>{
     point={latitude:view.latitude,longitude:view.longitude};
     const zoom=Math.max(7,Math.min(18,12-Math.log2(view.span/7300)));
     map.setView([view.latitude,view.longitude],zoom,{animate:false});
@@ -59,14 +48,7 @@ export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.i
     locationUI.select({...selected,label:'Selected coastal habitat'});
     const selectionURL=habitatURL(location.href,selected.id??null);selectionURL.searchParams.set('view',`${selected.latitude.toFixed(5)},${selected.longitude.toFixed(5)},${map.getZoom()}`);navigate(selectionURL,{replace:true});
    }});
-   root.getElementById('top').onclick=()=>void apply('2d',true);
-   const clearSelection=()=>{viewer.selectHabitat(null);locationUI.clear?.();navigate(habitatURL(location.href,null),{replace:true});};
-   root.getElementById('target-close').onclick=clearSelection;
-   root.getElementById('reset').setAttribute('aria-label','Reset map view');
-   root.getElementById('reset').onclick=()=>{
-    clearSelection();locationUI.clear();point=null;map.setView(home,homeZoom,{animate:false});syncPoint({latitude:home.lat,longitude:home.lng});
-   };
-   viewer.setCurrentLayer?.(currentControl?.get()??'off');syncTarget();syncMethod();
+   viewer.setCurrentLayer(currentControl?.get()??'off');syncTarget();syncMethod();
    const savedPoint=point;point=null;syncPoint(savedPoint??locationUI.get()?.point??{latitude:home.lat,longitude:home.lng});
    viewer.setHour(forecastAt);viewer.setPerspective(mode==='2d'?'2d':'3d');
    viewer.selectHabitat(new URL(location.href).searchParams.get('habitat'));
