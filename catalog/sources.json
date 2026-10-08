@@ -2174,6 +2174,44 @@
       "allowed_hosts": [
         "nsde.ngs.noaa.gov"
       ]
+    },
+    {
+      "id": "usgs-naip",
+      "name": "NAIP natural-colour aerial mosaic (USGS The National Map ImageServer, live tiles)",
+      "provider": "USDA Farm Service Agency National Agriculture Imagery Program, served by USGS The National Map",
+      "needs": [],
+      "documentation_url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer",
+      "adapter": "arcgis-image-export",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "USGS / USDA · NAIP aerial imagery (dated mosaic)",
+        "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "U.S. government imagery; the service metadata identifies NAIP downloads as public domain and credits 'USGS, USDA, The National Map: Orthoimagery'. Credit USGS/USDA without implied endorsement. Only this NAIP-only service is used: mixed USGS imagery services (USGSImageryOnly, USGSNAIPPlus) carry third-party restrictions and are not substituted without review. Nothing is stored or redistributed; the browser requests tiles live. Pending owner confirmation (FE-45)."
+      },
+      "authenticity": {
+        "basis": "Fixed publisher ImageServer; service metadata, NaturalColor raster function and catalog acquisition dates checked 2026-10-08",
+        "transport": "HTTPS; imagery.nationalmap.gov only, the host packages/coast mapSourceHosts allows"
+      },
+      "coverage_note": "Conterminous U.S. land and shoreline at about 0.6 m. Open water returns transparent tiles. Each region that offers the aerial base records its checked acquisition window in region.json basemap.aerial; the publisher can replace the mosaic when a newer NAIP year is loaded.",
+      "limitations": [
+        "Dated aerial imagery of land and shore: not live satellite imagery, weather, underwater photography or a bottom measurement.",
+        "Offshore and open-water tiles are blank; a blank tile is not a survey of the seafloor.",
+        "Selecting the aerial base sends ordinary tile requests and network information from the browser directly to USGS.",
+        "Display zoom beyond the native resolution adds no detail."
+      ],
+      "allowed_hosts": [
+        "imagery.nationalmap.gov"
+      ],
+      "tiles": {
+        "endpoint": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage",
+        "rendering_rule": "NaturalColor",
+        "client": "packages/coast/src/map-sources.ts naipSource()",
+        "storage": "none (live tiles; design open question Q5, option 1)"
+      }
     }
   ]
 }

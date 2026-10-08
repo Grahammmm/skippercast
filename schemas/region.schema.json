@@ -171,6 +171,33 @@
         "unavailable_target_sources": {"type": "object", "additionalProperties": {"$ref": "common.schema.json#/$defs/https_url"}}
       }
     },
+    "basemap": {
+      "description": "Optional base layers offered where their coverage was checked for this region (FE-45). An absent key means the base is not offered here. validate_region checks the catalog source and the date order.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "aerial": {
+          "description": "Live aerial tiles from a catalog source (usgs-naip). acquired is the acquisition window the publisher's catalog listed for the region bounds on checked_at.",
+          "type": "object",
+          "required": ["source", "checked_at", "acquired", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "source": {"$ref": "common.schema.json#/$defs/id"},
+            "checked_at": {"$ref": "common.schema.json#/$defs/date"},
+            "acquired": {
+              "type": "object",
+              "required": ["first", "last"],
+              "additionalProperties": false,
+              "properties": {
+                "first": {"$ref": "common.schema.json#/$defs/date"},
+                "last": {"$ref": "common.schema.json#/$defs/date"}
+              }
+            },
+            "note": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
     "coverage": {
       "description": "Reviewed evidence per need; need_status() only reads status and reason.",
       "type": "object",

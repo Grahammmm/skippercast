@@ -99,6 +99,17 @@
       "lobster": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central"
     }
   },
+  "basemap": {
+    "aerial": {
+      "source": "usgs-naip",
+      "checked_at": "2026-10-08",
+      "acquired": {
+        "first": "2022-05-13",
+        "last": "2022-05-29"
+      },
+      "note": "USDA NAIP 2022 natural-colour mosaic of the region's land and shore, flown 13–29 May 2022. Open water has no imagery."
+    }
+  },
   "harbor": {
     "name": "Morro Bay",
     "latitude": 35.3667,
