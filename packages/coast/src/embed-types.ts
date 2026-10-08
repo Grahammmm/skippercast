@@ -8,6 +8,29 @@ import type {CurrentLayer} from './state/current-layer.ts';
 
 export type {CoastOverlayColor,CoastOverlayPalette} from './palette.ts';
 export type CoastPerspective='2d'|'3d';
+/**
+ * `native` (default): the scene's own layers panel, view controls, reading, habitat
+ * detail and sources button, as v1 shows them. `host`: the host draws those
+ * functions from the handle's setters and the reading, target-detail and
+ * source-coverage events; the root holds only the scene, its labels, pins and
+ * footer, and the closed sources sheet that `openSources()` shows.
+ */
+export type CoastChrome='native'|'host';
+/** One terrain source from the reviewed manifest (the shape of `coast3d/regional.ts` `TerrainSource`, kept here so this module imports no renderer code). */
+export type CoastTerrainSource={id:number;label:string;kind:string;resolutionM:number|null;datum:string;sourceDate:string;url:string};
+/**
+ * A terrain inspection at the sample's WGS84 point. `heightM` is the original
+ * sample value in the source's own vertical reference (`source.datum`), `source.kind`
+ * is the manifest's source class (for example lidar, estimate or model) and
+ * `source.sourceDate` is its clock. The strings are the native reading panel's,
+ * verbatim: `label` is its measured or modelled eyebrow ("MEASURED LIDAR · NAVD88",
+ * "REGIONAL MODEL"), and `detail` gains the chart band when it arrives later.
+ */
+export type CoastReading={latitude:number;longitude:number;heightM:number;spacingM:number;source:Readonly<CoastTerrainSource>;label:string;value:string;location:string;detail:string};
+/** The selected habitat's evidence; the strings are the native detail panel's, verbatim. */
+export type CoastTargetDetail={id:string;kind:'reef'|'shore';title:string;facts:string;evidence:string};
+/** The terrain sources behind the source-coverage colours, with the native key verbatim. */
+export type CoastSourceCoverage={sources:readonly Readonly<CoastTerrainSource>[];key:string};
 /** An admitted habitat selection in WGS84 degrees, with its public id. */
 export type CoastSelection={latitude:number;longitude:number;region?:string;id?:string};
 /** The renderer camera: centre in WGS84 degrees and visible span in metres. */
@@ -37,6 +60,8 @@ export type CoastMountOptions={
   * that handle first. Other content in the root is left alone.
   */
  root?:ShadowRoot;
+ /** Who draws the terrain controls; `native` unless the host opts in. */
+ chrome?:CoastChrome;
  /** Stylesheet URLs linked at the top of the root, before the scene. */
  styles?:readonly string[];
  /** Renderer colours over DEFAULT_COAST_PALETTE (v2 reads them through web/map/palette.ts; v1 passes none). */
@@ -52,6 +77,12 @@ export type CoastMountOptions={
  onCurrentStatus?:(text:string)=>void;
  onView?:(view:CoastView)=>void;
  onPerspective?:(mode:CoastPerspective)=>void;
+ /** A terrain inspection with its measured or modelled label and source date; `null` when it clears. */
+ onReading?:(reading:CoastReading|null)=>void;
+ /** The selected or restored habitat's evidence; `null` when the detail closes. */
+ onTargetDetail?:(detail:CoastTargetDetail|null)=>void;
+ /** The terrain source inventory, once the reviewed release loads. */
+ onSourceCoverage?:(coverage:CoastSourceCoverage)=>void;
  /** Host handlers for the scene's own buttons; each replaces the renderer's. */
  onTop?:()=>void;
  onCloseSelection?:()=>void;
@@ -88,6 +119,23 @@ export interface CoastHandle{
  setOverlay(id:string,overlay:CoastOverlay):void;
  /** Removes an overlay and frees its geometry; false when the id is unknown. */
  removeOverlay(id:string):boolean;
+ /** Seabed relief exaggeration, 1 (true scale) to 12 in whole steps; land stays true scale. */
+ setRelief(factor:number):void;
+ /** Opacity of the illustrative +0.8 m water surface, 0 (clear) to 0.8, in 0.05 steps; the native slider calls it transparency. */
+ setWaterOpacity(opacity:number):void;
+ setWaterVisible(visible:boolean):void;
+ setContours(visible:boolean):void;
+ /** Colours the terrain by the source behind each sample (lidar, survey, chart estimate, model). */
+ setSourceCoverage(visible:boolean):void;
+ /** Reef areas, outlines and species pins. */
+ setHabitatVisible(visible:boolean):void;
+ zoom(direction:'in'|'out'):void;
+ /** The renderer's home view; the new camera arrives through `onView`. */
+ resetView():void;
+ /** The top-down camera, as `setPerspective('2d')`. */
+ topView():void;
+ /** Shows the renderer's sources and assumptions sheet. */
+ openSources():void;
  destroy():void;
 }
 

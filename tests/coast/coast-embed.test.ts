@@ -67,7 +67,9 @@ function fixture(){
  class FakeViewer{constructor(scene:unknown,options:any){viewerArgs={scene,options};}
   load(){calls.push(['load']);return Promise.resolve(true);}setPerspective(m:unknown){calls.push(['setPerspective',m]);}setLocation(p:unknown){calls.push(['setLocation',p]);}
   setSpecies(id:string){calls.push(['setSpecies',id]);return id!=='tuna';}setHour(at:unknown){calls.push(['setHour',at]);}setDepthLimit(ft:unknown){calls.push(['setDepthLimit',ft]);}
-  setCurrentLayer(id:unknown){calls.push(['setCurrentLayer',id]);}selectHabitat(id:unknown){calls.push(['selectHabitat',id]);}setVisible(v:unknown){calls.push(['setVisible',v]);}destroy(){calls.push(['destroy']);}}
+  setCurrentLayer(id:unknown){calls.push(['setCurrentLayer',id]);}selectHabitat(id:unknown){calls.push(['selectHabitat',id]);}setVisible(v:unknown){calls.push(['setVisible',v]);}destroy(){calls.push(['destroy']);}
+  setRelief(v:unknown){calls.push(['setRelief',v]);}setWaterOpacity(v:unknown){calls.push(['setWaterOpacity',v]);}setWaterVisible(v:unknown){calls.push(['setWaterVisible',v]);}setContours(v:unknown){calls.push(['setContours',v]);}
+  setSourceCoverage(v:unknown){calls.push(['setSourceCoverage',v]);}setHabitatVisible(v:unknown){calls.push(['setHabitatVisible',v]);}zoom(d:unknown){calls.push(['zoom',d]);}resetView(){calls.push(['resetView']);}topView(){calls.push(['topView']);}openSources(){calls.push(['openSources']);}}
  const mount=(options?:CoastMountOptions)=>mountCoast(host as unknown as HTMLElement,options,(scene,viewerOptions)=>new FakeViewer(scene,viewerOptions) as never);
  const last=()=>docs.at(-1)!;
  return {root,host,docs,parsed,calls,mount,byId:(id:string)=>last().get(id),selected:{get:(selector:string)=>last().selected.get(selector)},
@@ -96,6 +98,9 @@ test('mounting adapts the scene for a managed host as v1 did',()=>{
   assert.ok(f.reportLinks.length>0);for(const link of f.reportLinks)assert.equal(link.href,'#forecast');
   const {scene,options}=f.viewer();assert.equal(scene,f.byId('scene'));assert.equal(options.root,f.root);assert.equal(options.managed,true);
   assert.equal('palette' in options,false,'v1 passes no palette, so the renderer keeps DEFAULT_COAST_PALETTE');
+  assert.equal('controls' in options,false,'native chrome keeps every control in the root');
+  assert.equal(f.selected.get('.layers'),undefined,'native chrome never selects the whole layers panel');
+  for(const panel of [f.selected.get('.intro')!,f.byId('target-detail'),f.byId('reading'),f.selected.get('.view-controls')!])assert.equal(panel.parent,null,'native chrome moves no panel');
   for(const id of ['top','target-close','reset'])assert.equal(f.byId(id).onclick,null);
   assert.equal(f.byId('reset').attributes['aria-label'],undefined);
   assert.deepEqual(f.calls,[],'no state is applied without initial values');
@@ -183,5 +188,88 @@ test('CoastViewer.destroy releases the WebGL context, canvas and pagehide listen
   v.destroy();v.destroy();
   assert.deepEqual(removed.filter(([type])=>type==='pagehide'),[['pagehide',v.pagehide]]);
   assert.deepEqual(events,['resize','controls','dispose','contextLoss','canvas']);
+ }finally{Object.assign(globalThis,saved);}
+});
+
+// FE-79: host chrome. The native panels leave the shadow root; the handle's
+// setters and events replace them.
+test('host chrome keeps the native panels out of the shadow root but bound to the renderer',()=>{
+ const f=fixture(),pressed:string[]=[];
+ try{
+  const handle=f.mount({chrome:'host',styles:['/a.css'],onTop:()=>pressed.push('top'),onReset:()=>pressed.push('reset')});
+  const {scene,options}=f.viewer(),detached=options.controls as FakeNode;
+  assert.ok(detached,'the renderer resolves the detached controls');
+  assert.deepEqual(f.root.children.map(n=>n.href??n.id),['/a.css','scene','sources'],'the root holds the scene and the closed sources sheet only');
+  assert.equal(scene,f.byId('scene'));assert.equal(detached.parent,null,'the detached panels are never inserted');
+  const panels=[f.selected.get('.intro')!,f.selected.get('.layers')!,f.byId('target-detail'),f.byId('reading'),f.selected.get('.view-controls')!];
+  assert.deepEqual(detached.children,panels);for(const panel of panels)assert.equal(panel.parent,detached);
+  assert.ok(f.selected.get('.view-controls')!.children.some(n=>n.id==='sources-open'),'the sources button leaves with the view controls');
+  f.byId('top').onclick!();f.byId('reset').onclick!();assert.deepEqual(pressed,['top','reset'],'host button handlers still bind');
+  handle.destroy();assert.deepEqual(f.root.children,[],'a host-mode destroy leaves the shadow root empty');
+ }finally{f.restore();}
+});
+
+test('the terrain-control methods reach the renderer once and go inert after destroy',()=>{
+ const f=fixture();
+ try{
+  const handle=f.mount({chrome:'host'});
+  const run=()=>{handle.setRelief(8);handle.setWaterOpacity(.2);handle.setWaterVisible(false);handle.setContours(false);handle.setSourceCoverage(true);handle.setHabitatVisible(false);handle.zoom('in');handle.zoom('out');handle.resetView();handle.topView();handle.openSources();};
+  run();
+  assert.deepEqual(f.calls,[['setRelief',8],['setWaterOpacity',.2],['setWaterVisible',false],['setContours',false],['setSourceCoverage',true],['setHabitatVisible',false],['zoom','in'],['zoom','out'],['resetView'],['topView'],['openSources']]);
+  handle.destroy();const before=f.calls.length;run();assert.equal(f.calls.length,before);
+ }finally{f.restore();}
+});
+
+test('host-chrome setters change the scene and readings, target detail and sources arrive as data',async()=>{
+ const T=await import('three');const {CoastViewer}=await import('../../packages/coast/src/coast3d/viewer.ts');
+ // Ids that stay in the shadow root under host chrome; the rest resolve in the detached controls.
+ const rootIds=new Set(['labels','pins','loading','mesh-status','habitat-view-note','sources','sources-close','source-list']);
+ const nodes=new Map<string,any>(),looked:string[]=[];
+ const node=(id:string)=>{if(!nodes.has(id))nodes.set(id,{id,value:'all',textContent:'',hidden:false,checked:true,open:false,shown:0,dataset:{},options:[],children:[],min:'',max:'',step:'',
+  replaceChildren(){this.children=[];},append(...n:unknown[]){this.children.push(...n);},setAttribute(key:string,value:string){this[key]=value;},showModal(){this.open=true;this.shown++;},close(){this.open=false;}});return nodes.get(id);};
+ const lookup=(inRoot:boolean)=>(selector:string)=>{const id=/^\[id="(.+)"\]$/.exec(selector)?.[1]??selector;if(!inRoot)looked.push(id);return rootIds.has(id)===inRoot?node(id):null;};
+ Object.assign(node('relief'),{min:'1',max:'12',step:'1',value:'5'});Object.assign(node('water-opacity'),{min:'0',max:'0.8',step:'0.05',value:'0.5'});node('source-coverage').checked=false;node('reading').hidden=true;node('target-detail').hidden=true;
+ node('.coverage-key').textContent='Mint: lidar · blue: survey · amber: chart estimate · purple: regional model';
+ const views:any[]=[],readings:any[]=[],details:any[]=[],coverage:any[]=[];let seams=0;
+ const v:any=Object.create(CoastViewer.prototype);
+ Object.assign(v,{root:{querySelector:lookup(true)},options:{managed:true,controls:{querySelector:lookup(false)},onView:(view:unknown)=>views.push(view),onReading:(r:unknown)=>readings.push(r),onTargetDetail:(d:unknown)=>details.push(d),onSourceCoverage:(c:unknown)=>coverage.push(c)},
+  host:{dataset:{},clientWidth:800,clientHeight:600},alive:true,visible:true,speciesSupported:true,habitat:new T.Group(),currents:new T.Group(),waters:new T.Group(),terrain:new T.Group(),pins:[],labels:[],features:[],shoreFeatures:[],shoreGeneration:0,reviewed:null,selectedTarget:null,reefIndex:0,readingGeneration:0,depthLimit:300,revision:0,currentGeneration:0,habitatGeneration:0,frame:0,lodTimer:0,
+  perspective:'3d',orbit:new T.Vector3(),orthoHeight:1000,camera:new T.PerspectiveCamera(42,1,2,1000000),scene:new T.Scene(),renderer:{setSize(){},render(){},domElement:{addEventListener(){}}},controls:{target:new T.Vector3(),update(){},touches:{},mouseButtons:{}},currentAt:null,currentLayer:null,
+  relief:{value:5},contours:{value:1},sourceColors:{value:0},waterOpacity:{value:.5}});
+ v.camera.position.set(-3000,3000,3000);v.refine=()=>{};v.refreshCurrents=()=>{};v.refreshHabitat=()=>{};v.drawPins=()=>{};v.drawCoverageSeams=()=>{seams++;};v.geometry=()=>new T.BufferGeometry();
+ const mesh=new T.Mesh(new T.BufferGeometry());mesh.userData.grid={};v.terrain.add(mesh);const water=new T.Mesh(mesh.geometry);v.waters.add(water);
+ const saved={window:(globalThis as any).window,document:(globalThis as any).document};
+ Object.assign(globalThis,{window:{addEventListener(){},removeEventListener(){}},document:{createElement:(tag:string)=>({tag})}});
+ try{
+  v.bind();
+  const old=mesh.geometry;v.setRelief(7.4);
+  assert.equal(v.relief.value,7);assert.equal(node('relief-label').textContent,'×7');assert.notEqual(mesh.geometry,old,'terrain is rebuilt at the new relief');assert.equal(water.geometry,mesh.geometry);assert.equal(seams,1);
+  v.setRelief(40);assert.equal(v.relief.value,12);v.setRelief(Number.NaN);assert.equal(v.relief.value,12);
+  v.setWaterOpacity(.33);assert.equal(v.waterOpacity.value,.35);v.setWaterOpacity(2);assert.equal(v.waterOpacity.value,.8);
+  v.setWaterVisible(false);assert.equal(v.waters.visible,false);v.setWaterVisible(true);assert.equal(v.waters.visible,true);
+  v.setContours(false);assert.equal(v.contours.value,0);v.setContours(true);assert.equal(v.contours.value,1);
+  v.setSourceCoverage(true);assert.equal(v.sourceColors.value,1);v.setSourceCoverage(false);assert.equal(v.sourceColors.value,0);
+  v.setHabitatVisible(false);assert.equal(v.habitat.visible,false);
+  const distance=()=>v.camera.position.distanceTo(v.controls.target),far=distance();
+  v.zoom('in');assert.ok(Math.abs(distance()-far*.7)<1e-6);v.zoom('out');assert.ok(Math.abs(distance()-far*.7*1.4)<1e-6);assert.equal(views.length,2,'each zoom reports the camera');
+  v.topView();assert.equal(v.perspective,'2d');assert.ok(v.camera instanceof T.OrthographicCamera);assert.equal(node('perspective-2d')['aria-pressed'],'true');
+  v.zoom('in');assert.ok(Math.abs(v.camera.zoom-1/.7)<1e-9,'the top view zooms its orthographic camera');
+  node('reset').dataset.homePlace='avila';v.resetView();
+  assert.equal(node('place-title').textContent,'Avila / Port San Luis');const home=views.at(-1);assert.ok(Math.abs(home.latitude-35.16)<.01&&Math.abs(home.longitude+120.76)<.01,'the home view reaches the host');
+  v.openSources();v.openSources();assert.equal(node('sources').shown,1,'an open sheet is not reopened');
+  // Synthetic sources; the labels below are the native panel's own strings.
+  v.manifest={sources:[{id:1,label:'Synthetic lidar',kind:'lidar',resolutionM:1,datum:'Synthetic datum',sourceDate:'2022-06-14',url:'https://example.test/lidar'},{id:2,label:'Synthetic model',kind:'model',resolutionM:30,datum:'Model sea level',sourceDate:'2013-01-01',url:'https://example.test/model'}]};
+  v.listSources();
+  assert.deepEqual(coverage,[{sources:v.manifest.sources,key:node('.coverage-key').textContent}]);assert.ok(Object.isFrozen(coverage[0].sources[0]));assert.equal(node('source-list').children.length,2);
+  v.showReading(0,0,{height:-6,source:1,spacing:2});v.showReading(0,0,{height:-40,source:2,spacing:30});
+  assert.deepEqual(readings.map(r=>[r.label,r.source.sourceDate,r.value,r.heightM]),[['MEASURED LIDAR · NAVD88','2022-06-14','20 ft depth',-6],['REGIONAL MODEL','2013-01-01','131 ft depth',-40]]);
+  assert.ok(readings[0].detail.startsWith('Synthetic lidar · 2022-06-14 · 2 m display spacing. Synthetic datum.'));assert.ok(Number.isFinite(readings[0].latitude)&&Number.isFinite(readings[0].longitude));
+  v.setLocation({latitude:35.3,longitude:-120.9});v.setLocation({latitude:35.31,longitude:-120.9});assert.deepEqual(readings.slice(2),[null],'a cleared reading is reported once');
+  const reef={id:'synthetic-reef',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
+  v.selectFeature(reef,false);
+  assert.equal(details.length,1);const detail=details[0];
+  assert.deepEqual([detail.id,detail.kind,detail.title],['synthetic-reef','reef','Reviewed reef · grade B']);assert.match(detail.facts,/^Nominal 40–70 ft · physical score 60\/100/);assert.match(detail.evidence,/Fish presence unverified\./);
+  assert.equal(node('target-detail').hidden,false);v.selectHabitat(null);assert.deepEqual(details.slice(1),[null]);assert.equal(node('target-detail').hidden,true);
+  for(const id of ['relief','water-opacity','water','contours','source-coverage','habitat','zoom-in','reset','reading','target-detail','.coverage-key'])assert.ok(looked.includes(id),id+' resolves outside the root');
  }finally{Object.assign(globalThis,saved);}
 });
