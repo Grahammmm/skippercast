@@ -38,6 +38,8 @@ The static app bundles Leaflet 1.9.4 under its BSD 2-Clause license, preserved i
 
 The v2 pages self-host two typefaces under `web/fonts/` (Latin subsets of the variable fonts, as served by Google Fonts), both under the [SIL Open Font License 1.1](https://openfontlicense.org/) with no Reserved Font Name: DM Sans, Copyright 2014 The DM Sans Project Authors ([DM-SANS-OFL.txt](web/fonts/DM-SANS-OFL.txt)), and JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors ([JETBRAINS-MONO-OFL.txt](web/fonts/JETBRAINS-MONO-OFL.txt)). The font files' hashes are in the vendor manifest; no font is requested from Google at runtime.
 
+The v2 chart basemap's label glyphs under `dist/basemap/glyphs/dm-sans-medium/` are signed-distance-field renderings of DM Sans at weight 500, generated from the font file above by `scripts/basemap/build_glyphs.py`. As a Modified Version of DM Sans they stay under the SIL Open Font License 1.1 ([DM-SANS-OFL.txt](dist/basemap/glyphs/DM-SANS-OFL.txt)); their hashes are in the vendor manifest.
+
 The browser base map is © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), under ODbL; standard tile access follows the [OSMF tile policy](https://operations.osmfoundation.org/policies/tiles/). Tiles are requested for the visible map, not redistributed in this repository or bulk-cached. The map is geographic context, not a nautical chart. Open-Meteo forecast data retain the attribution and terms above.
 
 ## Published charter-ground facts

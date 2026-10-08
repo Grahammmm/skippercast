@@ -3,6 +3,8 @@
   "dist/app-icon-512.png": "74697b1bf40f8303ba8033ff67b1698fe4aaec2b0a6f88e60c7fe355ae793301",
   "dist/app-icon-maskable-512.png": "e958f7e7c89f94d792c5ba703b7eef85ee7886f098e9f9ff3c8062a8d8cd12d0",
   "dist/apple-touch-icon.png": "c370704497f6449cd66f430d8ded4d19b307a530da9975d82a35e024878c3d31",
+  "dist/basemap/glyphs/dm-sans-medium/0-255.pbf": "70697283f14d5c70e526598fd8e56e9263a3e5d6161417d8385e61c87a51cc90",
+  "dist/basemap/glyphs/dm-sans-medium/8192-8447.pbf": "318885db2d0ec91424ab0af07192bca8fbe469399120ce11d98ca97bc273f46e",
   "dist/skippercast-parker-preview.jpg": "88a1f2c3475e879cebb8dd2476fbaaa82342842cb835cf47ffea894582dc587c",
   "dist/tiles/morro-bay-reef-outlines.pmtiles": "4023258baaf5b668266267d96f2a632bc207e12a60e138c2eb7ff268b2bbfd80",
   "dist/tiles/socal-survey-habitat.pmtiles": "f83be49cddd7e114b2ec3f7c73d1edc9ff49462ac4cfe66df0b72f3db5824802",
@@ -27,6 +29,7 @@
   "tests/fixtures/advisor/vision/images/count-board.png": "1cbb0531d71942081cc26a3fdc7405a11f742551454e334c4e5dda345eb9073b",
   "tests/fixtures/advisor/vision/images/deck-person.png": "8ae61d3facca2cdb94cb27db27aa4064cb583fd4c73aedb12263032179d4dfe9",
   "tests/fixtures/advisor/vision/images/fish.png": "a5e63e859e7c5a8b7359f2ffc1d2f187bcb7cb342b791406966d1bf33f3260a3",
+  "tests/fixtures/basemap/tiny.pmtiles": "0c131d0e729606ac697b4ff9cc608a2c8e0da8fab7e1e0dc2d6c3e2b6f1d8274",
   "tests/fixtures/seafloor/classified-point-contact.pmtiles": "b9c703bf0048c78d489beff5af20bafbc39f0766cebd11ae8a8ab462bdd82416",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"
