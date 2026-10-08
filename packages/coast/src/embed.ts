@@ -33,7 +33,11 @@ export type CoastInitialState={
 };
 
 export type CoastMountOptions={
- /** An open shadow root on `host` to reuse; by default the embed attaches one. */
+ /**
+  * The shadow root to mount into; by default `host`'s open shadow root, attached
+  * if absent. A root that still holds a mounted coast (`#scene`) throws: destroy
+  * that handle first. Other content in the root is left alone.
+  */
  root?:ShadowRoot;
  /** Stylesheet URLs linked at the top of the root, before the scene. */
  styles?:readonly string[];
@@ -93,12 +97,19 @@ export function embedPalette(overrides:Partial<CoastPalette>={}):Readonly<CoastP
  return Object.freeze(palette);
 }
 
-/** Mounts the managed terrain renderer and its scene markup in `host`'s shadow root. */
+/**
+ * Mounts the managed terrain renderer and its scene markup in `host`'s shadow
+ * root. `destroy()` removes every node the embed inserted and releases the
+ * renderer, so the same host can be mounted again.
+ */
 export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory:CoastViewerFactory=createViewer):CoastHandle{
- const root=options.root??host.attachShadow({mode:'open'});
- for(const href of options.styles??[]){const style=document.createElement('link');style.rel='stylesheet';style.href=href;root.append(style);}
+ const existing=options.root??host.shadowRoot,root=existing??host.attachShadow({mode:'open'});
+ if(existing?.getElementById('scene'))throw Error('mountCoast: this root already holds a mounted coast; destroy its handle first');
+ const inserted:Element[]=[];
+ for(const href of options.styles??[]){const style=document.createElement('link');style.rel='stylesheet';style.href=href;root.append(style);inserted.push(style);}
  const parsed=new DOMParser().parseFromString(coastEmbedTemplate,'text/html');
- root.append(document.importNode(parsed.getElementById('scene')!,true),document.importNode(parsed.getElementById('sources')!,true));
+ const scene=document.importNode(parsed.getElementById('scene')!,true),sourcesDialog=document.importNode(parsed.getElementById('sources')!,true);
+ root.append(scene,sourcesDialog);inserted.push(scene,sourcesDialog);
  const $=<E extends HTMLElement=HTMLElement>(id:string)=>root.getElementById(id) as E;
  // The host owns place, target and perspective, so their in-scene controls go.
  root.querySelector<HTMLElement>('.intro')!.hidden=true;
@@ -113,7 +124,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  for(const link of root.querySelectorAll<HTMLAnchorElement>('[data-coast-receipt]'))link.href=coastPath(link.dataset.coastReceipt!);
  if(options.forecastHref!==undefined)for(const link of root.querySelectorAll<HTMLAnchorElement>('a[href="index.html#forecast"]'))link.href=options.forecastHref;
  const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onView,onPerspective}=options;
- const viewer=factory($('scene'),{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),onCurrentStatus,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective});
+ const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),onCurrentStatus,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective});
  if(options.onTop)$('top').onclick=options.onTop;
  if(options.onCloseSelection)$('target-close').onclick=options.onCloseSelection;
  if(options.onReset){$('reset').setAttribute('aria-label','Reset map view');$('reset').onclick=options.onReset;}
@@ -129,7 +140,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   setCurrentLayer:live(id=>viewer.setCurrentLayer(id),undefined),
   selectHabitat:live(id=>viewer.selectHabitat(id),undefined),
   setVisible:live(visible=>viewer.setVisible(visible),undefined),
-  destroy:live(()=>{alive=false;viewer.destroy();},undefined),
+  destroy:live(()=>{alive=false;try{viewer.destroy();}finally{for(const node of inserted)node.remove();}},undefined),
  };
  const initial=options.initial??{};
  if(initial.currentLayer!==undefined)handle.setCurrentLayer(initial.currentLayer);

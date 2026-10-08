@@ -33,34 +33,46 @@ test('embedPalette keeps v1 colours and takes only known string roles',()=>{
  assert.ok(Object.isFrozen(palette));
 });
 
-// Nodes by id and by selector, recording what the embed changes.
-type FakeNode={id?:string;hidden:boolean;textContent:string;removed:boolean;attributes:Record<string,string>;dataset:Record<string,string>;children:FakeNode[];href?:string;rel?:string;onclick:null|(()=>void);append(...nodes:FakeNode[]):void;remove():void;setAttribute(key:string,value:string):void;closest(selector:string):FakeNode};
+// A small DOM: each parse yields fresh scene and sources nodes, and the shadow
+// root resolves ids and selectors in the first parsed copy it holds, as a real
+// root resolves them in document order.
+type FakeNode={id?:string;doc?:ParsedDoc;parent:FakeNode|null;hidden:boolean;textContent:string;removed:boolean;attributes:Record<string,string>;dataset:Record<string,string>;children:FakeNode[];href?:string;rel?:string;onclick:null|(()=>void);append(...nodes:FakeNode[]):void;remove():void;setAttribute(key:string,value:string):void;closest(selector:string):FakeNode};
+type ParsedDoc={get(id:string):FakeNode;selected:Map<string,FakeNode>;select(selector:string):FakeNode;receipts:FakeNode[];reportLinks:FakeNode[]};
 function node(init:Partial<FakeNode>={}):FakeNode{
  const label=init.id==='currents'?node({id:'currents-label'}):null;
- return {hidden:false,textContent:'',removed:false,attributes:{},dataset:{},children:[],onclick:null,...init,
-  append(...nodes){this.children.push(...nodes);},remove(){this.removed=true;},setAttribute(key,value){this.attributes[key]=value;},
-  closest(selector){assert.equal(selector,'label');return label!;}};
+ return {parent:null,hidden:false,textContent:'',removed:false,attributes:{},dataset:{},children:[],onclick:null,...init,
+  append(...nodes){for(const n of nodes){n.parent?.children.splice(n.parent.children.indexOf(n),1);n.parent=this;this.children.push(n);}},
+  remove(){if(this.parent)this.parent.children.splice(this.parent.children.indexOf(this),1);this.parent=null;this.removed=true;},
+  setAttribute(key,value){this.attributes[key]=value;},closest(selector){assert.equal(selector,'label');return label!;}};
+}
+function parse():ParsedDoc{
+ const ids=new Map<string,FakeNode>(),selected=new Map<string,FakeNode>();
+ const doc:ParsedDoc={get:id=>ids.get(id)??(ids.set(id,node({id,doc})),ids.get(id)!),selected,select:selector=>selected.get(selector)??(selected.set(selector,node()),selected.get(selector)!),
+  receipts:[...coastSourcesMarkup.matchAll(/data-coast-receipt="([^"]+)"/g)].map(m=>node({dataset:{coastReceipt:m[1]!}})),
+  reportLinks:[...coastEmbedTemplate.matchAll(/href="index\.html#forecast"/g)].map(()=>node({href:'index.html#forecast'}))};
+ return doc;
 }
 function fixture(){
- const ids=new Map<string,FakeNode>(),selected=new Map<string,FakeNode>(),parsed:string[]=[];
- const byId=(id:string)=>ids.get(id)??(ids.set(id,node({id})),ids.get(id)!);
- const receipts=[...coastSourcesMarkup.matchAll(/data-coast-receipt="([^"]+)"/g)].map(m=>node({dataset:{coastReceipt:m[1]!}}));
- const reportLinks=[...coastEmbedTemplate.matchAll(/href="index\.html#forecast"/g)].map(()=>node({href:'index.html#forecast'}));
+ const parsed:string[]=[],docs:ParsedDoc[]=[];
  const root=node();
- Object.assign(root,{getElementById:byId,querySelector:(selector:string)=>selected.get(selector)??(selected.set(selector,node()),selected.get(selector)!),
-  querySelectorAll:(selector:string)=>selector==='[data-coast-receipt]'?receipts:selector==='a[href="index.html#forecast"]'?reportLinks:[]});
+ const mounted=()=>root.children.find(n=>n.doc)?.doc;
+ Object.assign(root,{getElementById:(id:string)=>mounted()?.get(id)??null,querySelector:(selector:string)=>mounted()?.select(selector)??null,
+  querySelectorAll:(selector:string)=>{const d=mounted();return !d?[]:selector==='[data-coast-receipt]'?d.receipts:selector==='a[href="index.html#forecast"]'?d.reportLinks:[];}});
  let attached=0;
- const host={attachShadow:(init:{mode:string})=>{assert.equal(init.mode,'open');attached++;return root;}};
+ const host={shadowRoot:null as FakeNode|null,attachShadow(init:{mode:string}){assert.equal(init.mode,'open');attached++;this.shadowRoot=root;return root;}};
  const saved={document:globalThis.document,DOMParser:globalThis.DOMParser};
  Object.assign(globalThis,{document:{createElement:(tag:string)=>node({attributes:{tag}}),importNode:(n:FakeNode,deep:boolean)=>{assert.equal(deep,true);return n;}},
-  DOMParser:class{parseFromString(text:string,type:string){assert.equal(type,'text/html');parsed.push(text);return {getElementById:byId};}}});
+  DOMParser:class{parseFromString(text:string,type:string){assert.equal(type,'text/html');parsed.push(text);const d=parse();docs.push(d);return {getElementById:d.get};}}});
  const calls:unknown[][]=[];let viewerArgs:{scene:unknown;options:any}|null=null;
  class FakeViewer{constructor(scene:unknown,options:any){viewerArgs={scene,options};}
   load(){calls.push(['load']);return Promise.resolve(true);}setPerspective(m:unknown){calls.push(['setPerspective',m]);}setLocation(p:unknown){calls.push(['setLocation',p]);}
   setSpecies(id:string){calls.push(['setSpecies',id]);return id!=='tuna';}setHour(at:unknown){calls.push(['setHour',at]);}setDepthLimit(ft:unknown){calls.push(['setDepthLimit',ft]);}
   setCurrentLayer(id:unknown){calls.push(['setCurrentLayer',id]);}selectHabitat(id:unknown){calls.push(['selectHabitat',id]);}setVisible(v:unknown){calls.push(['setVisible',v]);}destroy(){calls.push(['destroy']);}}
  const mount=(options?:CoastMountOptions)=>mountCoast(host as unknown as HTMLElement,options,(scene,viewerOptions)=>new FakeViewer(scene,viewerOptions) as never);
- return {root,byId,selected,receipts,reportLinks,parsed,calls,mount,attached:()=>attached,viewer:()=>viewerArgs!,restore:()=>Object.assign(globalThis,saved)};
+ const last=()=>docs.at(-1)!;
+ return {root,host,docs,parsed,calls,mount,byId:(id:string)=>last().get(id),selected:{get:(selector:string)=>last().selected.get(selector)},
+  get receipts(){return last().receipts;},get reportLinks(){return last().reportLinks;},
+  attached:()=>attached,viewer:()=>viewerArgs!,restore:()=>Object.assign(globalThis,saved)};
 }
 
 test('mounting adapts the scene for a managed host as v1 did',()=>{
@@ -133,4 +145,41 @@ test('every handle method reaches the renderer once and the handle is inert afte
 test('a supplied shadow root is reused instead of attaching another',()=>{
  const f=fixture();
  try{f.mount({root:f.root as unknown as ShadowRoot});assert.equal(f.attached(),0);assert.equal(f.viewer().options.root,f.root);}finally{f.restore();}
+});
+
+test('destroy removes every inserted node, and the same host mounts again with fresh ids',()=>{
+ const f=fixture();
+ try{
+  const first=f.mount({styles:['/a.css'],onReset:()=>{}});const firstScene=f.viewer().scene as FakeNode;
+  assert.throws(()=>f.mount(),/already holds a mounted coast/,'a live mount is never doubled');
+  assert.equal(f.root.children.length,3,'a refused mount inserts nothing');
+  first.destroy();
+  assert.deepEqual(f.root.children,[],'stylesheet, scene and sources are gone');assert.equal(firstScene.removed,true);
+  first.destroy();assert.deepEqual(f.calls,[['destroy']],'a second destroy is a no-op');
+  const reset=()=>{},second=f.mount({styles:['/a.css'],onReset:reset}),fresh=f.docs[1]!;
+  assert.equal(f.attached(),1,'the host\'s shadow root is reused');
+  assert.notEqual(f.viewer().scene,firstScene);assert.equal(f.viewer().scene,fresh.get('scene'));
+  assert.equal((f.root as unknown as {getElementById(id:string):unknown}).getElementById('reset'),fresh.get('reset'));
+  assert.equal(fresh.get('reset').onclick,reset);
+  assert.deepEqual(f.root.children.map(n=>n.href??n.id),['/a.css','scene','sources']);
+  second.destroy();assert.deepEqual(f.root.children,[]);
+ }finally{f.restore();}
+});
+
+test('CoastViewer.destroy releases the WebGL context, canvas and pagehide listener once',async()=>{
+ const {CoastViewer}=await import('../../packages/coast/src/coast3d/viewer.ts');
+ assert.match(viewerSource,/window\.addEventListener\('pagehide',this\.pagehide,\{once:true\}\)/,'bind registers the handler destroy removes');
+ const events:string[]=[],removed:[string,unknown][]=[];
+ const v:any=Object.create(CoastViewer.prototype);
+ Object.assign(v,{alive:true,options:{managed:true},loaded:new Map(),terrain:{children:[]},waters:{children:[]},textureValues:[],habitat:{},currents:{},seams:{},
+  resize:{disconnect:()=>events.push('resize')},controls:{dispose:()=>events.push('controls')},clearPins:()=>{},clear:()=>{},
+  renderer:{dispose:()=>events.push('dispose'),forceContextLoss:()=>events.push('contextLoss'),domElement:{remove:()=>events.push('canvas')}}});
+ v.pagehide=()=>v.destroy();
+ const saved={window:(globalThis as any).window,cancelAnimationFrame:(globalThis as any).cancelAnimationFrame};
+ Object.assign(globalThis,{window:{removeEventListener:(type:string,fn:unknown)=>removed.push([type,fn])},cancelAnimationFrame:()=>{}});
+ try{
+  v.destroy();v.destroy();
+  assert.deepEqual(removed.filter(([type])=>type==='pagehide'),[['pagehide',v.pagehide]]);
+  assert.deepEqual(events,['resize','controls','dispose','contextLoss','canvas']);
+ }finally{Object.assign(globalThis,saved);}
 });
