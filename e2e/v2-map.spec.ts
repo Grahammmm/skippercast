@@ -98,3 +98,66 @@ test('a region without terrain offers Chart only and says why', async ({page, v2
     await expect(toggle(page, name)).toHaveAttribute('aria-describedby', 'app-stage-note');
   }
 });
+
+// The time dock (FE-12): the horizon is the 169 whole hours from now; the dock's hour reaches the renderer.
+const HOUR_MS = 3_600_000;
+const hourParam = (ms: number) => new Date(ms).toISOString().slice(0, 16) + 'Z';
+const horizonStart = () => Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
+const urlHour = (page: Page) => new URL(page.url()).searchParams.get('hour');
+
+test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: '3d'});
+  const host = page.locator('.app-terrain');
+  await expect(host).toHaveAttribute('data-hour', /^\d{4}-\d{2}-\d{2}T\d{2}:00:00\.000Z$/);
+  // Tomorrow is a full day: its chip, then the slider's first or last hour.
+  await page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1).evaluate(b => (b as HTMLButtonElement).click());
+  await expect.poll(() => urlHour(page)).not.toBeNull();
+  const slider = page.locator('input[aria-label="Hour"]');
+  const atStart = await slider.inputValue() === '0';
+  await slider.focus();
+  await page.keyboard.press(atStart ? 'End' : 'Home');
+  await expect(page.locator('.ui-dock-readout')).toHaveText(atStart ? '11 pm' : '12 am');
+  const chosen = urlHour(page)!;
+  await expect(host).toHaveAttribute('data-hour', chosen.replace('Z', ':00.000Z'));
+  expect(pageErrors).toEqual([]);
+});
+
+test('play steps hours, stops at the end of the horizon and pauses when the page is hidden', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the play button is the desktop dock\'s');
+  const end = horizonStart() + 168 * HOUR_MS;
+  await v2.open('app', {region: 'morro-bay', hour: hourParam(end - 2 * HOUR_MS)});
+  await page.getByRole('button', {name: 'Play'}).click();
+  await expect(page.getByRole('button', {name: 'Pause'})).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', {name: 'Play'})).toBeVisible({timeout: 10_000});
+  expect(Date.parse(urlHour(page)!), 'stopped on the horizon\'s last hour').toBeGreaterThanOrEqual(end);
+  await page.waitForTimeout(1500);
+  expect(Date.parse(urlHour(page)!)).toBeLessThanOrEqual(horizonStart() + 168 * HOUR_MS);
+
+  await page.goto(v2.url('app', {region: 'morro-bay', hour: hourParam(horizonStart())}));
+  await page.getByRole('button', {name: 'Play'}).click();
+  await expect.poll(() => urlHour(page)).not.toBe(hourParam(horizonStart()));
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, get: () => true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.getByRole('button', {name: 'Play'})).toHaveAttribute('aria-pressed', 'false');
+  const paused = urlHour(page);
+  await page.waitForTimeout(2500);
+  expect(urlHour(page), 'no step while hidden').toBe(paused);
+  expect(pageErrors).toEqual([]);
+});
+
+test('prefers-reduced-motion never auto-plays: the button steps one hour per press', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the step button is the desktop dock\'s');
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  const start = horizonStart();
+  await v2.open('app', {region: 'morro-bay', hour: hourParam(start)});
+  await expect(page.getByRole('button', {name: 'Play'})).toHaveCount(0);
+  await page.getByRole('button', {name: 'Next hour'}).click();
+  await expect.poll(() => urlHour(page)).toBe(hourParam(start + HOUR_MS));
+  await page.waitForTimeout(2500);
+  expect(urlHour(page), 'one press, one hour').toBe(hourParam(start + HOUR_MS));
+  await v2.a11y('v2-dock-reduced-motion');
+  expect(pageErrors).toEqual([]);
+});

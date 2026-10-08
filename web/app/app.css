@@ -76,7 +76,11 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="fleet"] { background: var(--fleet); }
 .app-swatch[data-layer="clouds"] { background: var(--text); }
 .app-dock { position: absolute; left: var(--space-4); right: var(--space-4); bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
-.app-dock .ui-dock { flex: 1; min-width: 0; flex-wrap: wrap; }
+.app-dock .ui-dock { flex: 1; min-width: 0; }
+/* Eight day chips (FE-12): the strip scrolls sideways so the dock stays one row under the stage chrome. */
+.app-dock .ui-dock > .ui-segmented { flex: 0 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.app-dock .ui-dock > .ui-segmented .ui-chip { flex: none; }
+.app-dock .ui-dock-readout { white-space: nowrap; }
 .app-dock-zone { color: var(--muted); }
 .app-mark { position: absolute; left: var(--space-4); top: var(--space-4); z-index: var(--z-map-chrome); width: min(320px, calc(100% - var(--space-6))); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); }
 .app-mark-head { display: flex; align-items: flex-start; gap: var(--space-2); }

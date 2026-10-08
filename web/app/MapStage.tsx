@@ -10,7 +10,7 @@ import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
-import {regionInfo} from './App.tsx';
+import {regionInfo, zone} from './App.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
   {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
@@ -43,7 +43,7 @@ const palette = () => { try { return coastPalette(readPalette()); } catch { retu
 export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null});
+    const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;

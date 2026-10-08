@@ -69,7 +69,7 @@ function document() {
 }
 
 function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => NOW} = {}) {
-  const host = {shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
+  const host = {dataset: {}, shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
   terrainFailed.value = false;
   terrainMark.value = null;
   const s = createStage({host, load: async () => fake.module, center: () => center, now, doc, viewDelay: 0});

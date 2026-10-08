@@ -13,7 +13,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {Range} from '../ui/Dock.tsx';
 import {Sheet, type Detent} from '../ui/Sheet.tsx';
-import {day, selection} from '../state.ts';
+import {selection} from '../state.ts';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
@@ -23,7 +23,7 @@ import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {MarkCard} from './MarkCard.tsx';
 import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
-import {dayOptions, dockState, hourText, selectTime} from './TimeDock.tsx';
+import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
 export type Panel = 'brief' | 'layers';
@@ -40,11 +40,13 @@ export function toggleLayers(panel: Panel, detent: Detent): {panel: Panel; deten
 
 /** The hour slider and its readout, pinned at the sheet's top edge. */
 export function HourEdge({now}: {now: Date}) {
-  const tz = zone(), state = dockState(now, tz);
+  const tz = zone(), state = dockState(now, tz), outside = state.index < 0;
+  const at = (i: number): number => state.hours[i] ?? state.at;
   return (
     <div class="app-sheet-hour" role="group" aria-label="Time">
-      <Range label="Hour" value={state.hour} max={23} onChange={h => selectTime(now, tz, state.day, h)} valueText={hourText} class="ui-dock-range" />
-      <output class="ui-dock-readout ui-mono" aria-live="off">{hourText(state.hour)}</output>
+      <Range label="Hour" value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => selectHour(now, tz, at(i))} disabled={outside}
+        valueText={i => outside ? readout(state, tz) : hourText(localParts(new Date(at(i)), tz).hour)} class="ui-dock-range" />
+      <output class="ui-dock-readout ui-mono" aria-live="off">{readout(state, tz)}</output>
     </div>
   );
 }
@@ -67,7 +69,7 @@ export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: reado
       <Picks picks={picks} />
       <TideSpark />
       <div class="app-sheet-menus">
-        <Segmented label="Day" options={dayOptions(now, tz, day.value)} value={state.day} onChange={d => selectTime(now, tz, d, state.hour)} />
+        <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
         <TargetSelect />
         <div class="app-area" role="group" aria-label="Area and port">
           <AreaSelect />

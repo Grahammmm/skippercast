@@ -1,37 +1,20 @@
-// Time dock (FE-05, design § 6): the Dock primitive bound to the day and hour
-// signals. Day chips are today and the next two days in the region's zone;
-// the slider is the hour of that day; ?hour= stays ISO UTC and ?day= local.
-// Play steps an hour a second and stops at the day's end; under
-// prefers-reduced-motion it steps one hour per press. FE-12 replaces the
-// fixed horizon with the forecast's frames and their age gates.
-import {useEffect, useState} from 'preact/hooks';
+// Time dock (FE-05, FE-12, design § 6): the Dock primitive bound to the day and
+// hour signals over the 169-hour horizon of web/hour.ts. Day chips are the
+// horizon's local days in the region's zone; the slider runs over the chosen
+// day's horizon hours (today from the current hour), so ?hour= stays an exact
+// UTC instant and no local-to-UTC offset is guessed. Play steps an hour a
+// second across days, stops at the horizon's end and pauses when the page is
+// hidden; under prefers-reduced-motion it never auto-plays and the button
+// steps one hour per press. A ?hour= outside the horizon is kept, never reset
+// (v1's coastal-clock.js rule): the slider is off and the readout says so.
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {Dock} from '../ui/Dock.tsx';
-import {day, hour, hourParam, parseHour, setParams} from '../state.ts';
+import {dockTime, horizonDays, localParts, nearestHour, nextHour, play, type DockTime} from '../hour.ts';
+import {day, hour, hourParam, setParams} from '../state.ts';
 import {zone} from './App.tsx';
 
-export const DAY_COUNT = 3;
-const pad = (n: number): string => String(n).padStart(2, '0');
-
-/** The local calendar day and hour of `date` in `tz`. */
-export function localParts(date: Date, tz: string): {day: string; hour: number; weekday: string} {
-  const f = new Intl.DateTimeFormat('en-US', {timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', weekday: 'short'});
-  const p = Object.fromEntries(f.formatToParts(date).map(part => [part.type, part.value]));
-  return {day: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) % 24, weekday: p.weekday ?? ''};
-}
-
-/**
- * The ?hour= value for local `hourOfDay` on calendar `dayValue` in `tz`. The
- * offset is read once at the guessed instant, so on a DST change day the hours
- * around the switch can land one hour off; FE-12 replaces this with the
- * forecast's own frame times and drops the conversion.
- */
-export function utcHour(dayValue: string, hourOfDay: number, tz: string): string | null {
-  const guess = Date.parse(`${dayValue}T${pad(hourOfDay)}:00:00Z`);
-  if (!Number.isFinite(guess)) return null;
-  const local = localParts(new Date(guess), tz);
-  const offset = Date.parse(`${local.day}T${pad(local.hour)}:00:00Z`) - guess;
-  return hourParam((guess - offset) / 1000);
-}
+export {localParts};
+export const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
 /** "2 pm" for an hour of the day. */
 export const hourText = (h: number): string => `${h % 12 || 12} ${h < 12 ? 'am' : 'pm'}`;
@@ -39,49 +22,77 @@ export const hourText = (h: number): string => `${h % 12 || 12} ${h < 12 ? 'am' 
 export const zoneName = (date: Date, tz: string): string =>
   new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName: 'short'}).formatToParts(date).find(p => p.type === 'timeZoneName')?.value ?? tz;
 
-/** Day chips from `now`: today, then the next days by weekday; a selected day outside the horizon is kept as a chip. */
+/**
+ * Day chips: Today, then weekdays; the eighth day repeats today's weekday, so it carries its
+ * date ("Mon 12"). A selected day outside the horizon is kept as a chip.
+ */
 export function dayOptions(now: Date, tz: string, selected: string | null): {value: string; label: string}[] {
-  const options = Array.from({length: DAY_COUNT}, (_, i) => {
-    const p = localParts(new Date(now.getTime() + i * 86_400_000), tz);
-    return {value: p.day, label: i === 0 ? 'Today' : p.weekday};
-  });
+  const options = horizonDays(now, tz).map((d, i) => ({value: d.day, label: i === 0 ? 'Today' : i >= 7 ? `${d.weekday} ${Number(d.day.slice(8))}` : d.weekday}));
   if (selected && !options.some(o => o.value === selected)) options.push({value: selected, label: selected.slice(5)});
   return options;
 }
 
-/** The dock's day and hour index for the signals: today and the current hour when the URL names none. */
-export function dockState(now: Date, tz: string): {day: string; today: string; hour: number} {
-  const current = localParts(now, tz);
-  const at = parseHour(hour.value);
-  return {day: day.value ?? current.day, today: current.day, hour: at === null ? current.hour : localParts(new Date(at * 1000), tz).hour};
+/** The dock's time for the signals: today and the current hour when the URL names neither. */
+export const dockState = (now: Date, tz: string): DockTime => dockTime(day.value, hour.value, now, tz);
+
+/** "2 pm" for the selected hour; outside the horizon the slider is off and this says why. */
+export function readout(state: DockTime, tz: string): string {
+  const text = hourText(localParts(new Date(state.at), tz).hour);
+  return state.index < 0 ? `${text} · outside the forecast` : text;
 }
 
-/** Write day `d` and local hour `h` to the address: today drops ?day=, the hour becomes ISO UTC. */
-export function selectTime(now: Date, tz: string, d: string, h: number): void {
-  setParams({day: d === localParts(now, tz).day ? null : d, hour: utcHour(d, h, tz)});
+/** Write hour `at` (epoch ms): ?hour= ISO UTC, ?day= its local day unless that is today. */
+export function selectHour(now: Date, tz: string, at: number): void {
+  const d = localParts(new Date(at), tz).day;
+  setParams({day: d === localParts(now, tz).day ? null : d, hour: hourParam(at / 1000)});
+}
+
+/** A day chip: the same local hour on day `d`, or the nearest hour that day has in the horizon. */
+export function selectDay(now: Date, tz: string, d: string, state: DockTime): void {
+  const hours = horizonDays(now, tz).find(x => x.day === d)?.hours ?? [];
+  const at = nearestHour(hours, localParts(new Date(state.at), tz).hour, tz);
+  if (at !== null) selectHour(now, tz, at);
+}
+
+const media = (): MediaQueryList | null => typeof matchMedia === 'function' ? matchMedia(REDUCED_MOTION) : null;
+
+/** Whether prefers-reduced-motion asks for no motion, followed while mounted. */
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() => media()?.matches ?? false);
+  useEffect(() => {
+    const query = media();
+    if (!query) return;
+    const change = () => setReduced(query.matches);
+    query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, []);
+  return reduced;
 }
 
 export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   const tz = zone();
   const state = dockState(now, tz);
+  const reduced = useReducedMotion();
   const [playing, setPlaying] = useState(false);
-  const select = (d: string, h: number) => selectTime(now, tz, d, h);
   useEffect(() => {
     if (!playing) return;
-    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const step = () => {
-      const next = dockState(new Date(), tz);
-      if (next.hour >= 23) { setPlaying(false); return; }
-      select(next.day, next.hour + 1);
+    const step = (): boolean => {
+      const clock = new Date(), next = nextHour(dockState(clock, tz).at, clock);
+      if (next === null) return false;
+      selectHour(clock, tz, next);
+      return true;
     };
-    if (still) { step(); setPlaying(false); return; }
-    const timer = setInterval(step, 1000);
-    return () => clearInterval(timer);
+    return play({step, onStop: () => setPlaying(false), motion: media()});
   }, [playing, tz]);
+  // The day strip scrolls sideways on narrow stages: keep the chosen chip in view.
+  const dock = useRef<HTMLDivElement>(null);
+  useEffect(() => { dock.current?.querySelector<HTMLElement>('[aria-label="Day"] [aria-pressed="true"]')?.scrollIntoView?.({block: 'nearest', inline: 'nearest'}); }, [state.day]);
+  const at = (i: number): number => state.hours[i] ?? state.at;
   return (
-    <div class="app-dock">
-      <Dock days={dayOptions(now, tz, day.value)} day={state.day} onDay={d => select(d, state.hour)} playing={playing} onPlay={setPlaying}
-        hour={state.hour} hours={24} onHour={h => select(state.day, h)} hourText={hourText} />
+    <div class="app-dock" ref={dock}>
+      <Dock days={dayOptions(now, tz, state.day)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
+        stepOnly={reduced} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
+        onHour={i => selectHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz) : hourText(localParts(new Date(at(i)), tz).hour)} />
       <span class="app-dock-zone ui-mono">{zoneName(now, tz)}</span>
     </div>
   );

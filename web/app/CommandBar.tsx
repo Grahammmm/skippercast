@@ -16,7 +16,7 @@ import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type
 import {area, navigate, profile, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
 import {zone} from './App.tsx';
-import {dayOptions, dockState, hourText} from './TimeDock.tsx';
+import {dayOptions, dockState, readout} from './TimeDock.tsx';
 import {titleCase} from './Masthead.tsx';
 
 const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id].label, icon: id} as const));
@@ -31,7 +31,7 @@ export function targetOptions(p: Profile, current: string | null): string[] {
 export function windowText(now: Date, tz: string): string {
   const state = dockState(now, tz);
   const label = dayOptions(now, tz, state.day).find(o => o.value === state.day)?.label ?? state.day;
-  return `${label} · ${hourText(state.hour)}`;
+  return `${label} · ${readout(state, tz)}`;
 }
 
 export function ProfileSwitch({class: cls}: {class?: string} = {}) {
