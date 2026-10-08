@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- In the new map preview (`?ui=v2`), the masthead's sign in opens an account menu: passkey sign in, boat presets and the exact-boat sheet, saved-trip alerts, and the offline notes, GPX and offline pack entries.
+
 - Mapping batches can hand off one completed terrain/imagery slice for website 3D rendering, with exact display acceptance and explicit blocked prerequisites.
 
 - Add stopped-run audits and skill learning between bounded mapping experiment rounds.

@@ -140,3 +140,5 @@ export function initBoatProfile() {
 }
 
 export {REFERENCE};
+/** The boat sheet without v1's #boat-button: the v2 account menu opens it (web/account.ts). */
+export {sheet as openBoatProfile};

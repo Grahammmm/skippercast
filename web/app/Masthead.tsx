@@ -1,12 +1,13 @@
 // Masthead (FE-05, design § 6): brand, the location in mono (port name and
 // centre from the region), the four views as ?view= links that navigate in
-// place, the freshness dot with the oldest age, and sign in (v1's #account
-// passkey dialog, dist/account.js, until the account menu moves into v2).
+// place, the freshness dot with the oldest age, and the account menu (FE-50:
+// sign in through v1's passkey dialog, the boat, trip alerts, downloads).
 // The pieces are exported so the mobile shell (FE-06) composes the same
 // brand, location, views and freshness into its top strip, sheet and tabs.
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {APP_VIEWS, appView, region, setParams, withParams, type AppView} from '../state.ts';
 import {freshness, regionInfo} from './App.tsx';
+import {AccountMenu} from './AccountMenu.tsx';
 
 export const VIEW_LABELS: Readonly<Record<AppView, string>> = {coast: 'Coast', conditions: 'Conditions', history: 'History', fleet: 'Fleet', reports: 'Reports'};
 /** The tab icons of the mobile nav (§ 6 mobile). */
@@ -73,10 +74,6 @@ export function FreshnessDot() {
   );
 }
 
-export function SignIn() {
-  return <a class="ui-button ui-button--quiet" href="/#account"><Icon name="user" size={18} />Sign in</a>;
-}
-
 export function Masthead({href}: {href?: string} = {}) {
   return (
     <header class="app-masthead">
@@ -84,7 +81,7 @@ export function Masthead({href}: {href?: string} = {}) {
       <Location />
       <ViewNav href={href} />
       <FreshnessDot />
-      <SignIn />
+      <AccountMenu />
     </header>
   );
 }
