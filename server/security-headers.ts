@@ -14,6 +14,7 @@ export const CONNECT_ORIGINS = [
   'https://services2.arcgis.com',             // CDFW MPA boundary query (protected-areas.js)
   'https://tile.openstreetmap.org',           // base map tiles (MapLibre fetches tiles)
   'https://gis.charttools.noaa.gov',          // NOAA ENC chart WMS
+  'https://nowcoast.noaa.gov',                // GOES cloud frames: WMS tiles pinned to listed times (web/map/clouds.ts)
 ];
 // Hosts that serve map tile images (Leaflet loads tiles as <img>).
 export const IMAGE_ORIGINS = ['https://tile.openstreetmap.org', 'https://gis.charttools.noaa.gov'];

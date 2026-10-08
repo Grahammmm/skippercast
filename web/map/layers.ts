@@ -7,6 +7,7 @@
 // whose `task` is theirs; the order and the presentations are fixed here.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
+import {signal} from '@preact/signals';
 import type {RailId} from '../profile.ts';
 import type {PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
@@ -122,6 +123,15 @@ export function layerEntry(id: string): LayerEntry {
 /** The layer that owns MapLibre source `sourceId`, or null for a source no entry owns. */
 export function sourceLayer(sourceId: string | undefined): string | null {
   return sourceId ? LAYERS.find(e => e.sources.includes(sourceId))?.id ?? null : null;
+}
+
+/**
+ * The note under a rail entry's name, written by the layer that draws it: what it shows or why it
+ * cannot ("no fresh frame · last 1:28 pm"). Empty: no note. The rail reads it (FE-22 first).
+ */
+export const railNotes = signal<Readonly<Partial<Record<RailId, string>>>>({});
+export function setRailNote(rail: RailId, note: string): void {
+  if ((railNotes.peek()[rail] ?? '') !== note) railNotes.value = {...railNotes.peek(), [rail]: note};
 }
 
 /** The entries a rail entry turns on and off, in draw order. */

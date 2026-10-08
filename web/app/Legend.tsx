@@ -11,8 +11,12 @@
 // ds582 credit in its basis.
 // Currents (FE-15) follows the source choice `?current=`; its row carries the
 // drawn source's basis sentence, or why nothing draws.
+// The Clouds row labels the GOES frame on screen with its acquisition time and
+// age and holds or resumes the loop (FE-22, web/map/clouds.ts).
+import {IconButton} from '../ui/Button.tsx';
 import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
+import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {currentsState} from '../map/currents.ts';
 import {layerEntry} from '../map/layers.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
@@ -79,6 +83,18 @@ function CurrentsRow() {
   );
 }
 
+/** The Clouds row: the frame drawn now, and the loop toggle while more than one frame can play. */
+export function CloudsRow({label}: {label: string}) {
+  const stamp = cloudStamp.value;
+  return (
+    <>
+      <span class="app-legend-text">{label}{stamp ? <span class="app-legend-note ui-mono">{stamp.label}</span> : null}</span>
+      {stamp?.canLoop ? <IconButton icon={cloudHeld.value ? 'play' : 'pause'} label="Cloud loop" pressed={!cloudHeld.value} size="sm"
+        onClick={() => { cloudHeld.value = !cloudHeld.value; }} /> : null}
+    </>
+  );
+}
+
 export function Legend() {
   const source = current.value, chart = shownPresentation.value === 'chart';
   const on = RAIL_ENTRIES.filter(e => e.id === 'currents' ? source !== 'off' : layers.value.includes(e.id));
@@ -88,7 +104,7 @@ export function Legend() {
       {on.length || chart ? (
         <ul>
           {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} />
-            : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.label}</li>)}
+            : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.id === 'clouds' ? <CloudsRow label={e.label} /> : e.label}</li>)}
           {chart ? <MpaRow /> : null}
         </ul>
       ) : <p class="app-empty">No layers on.</p>}

@@ -11,10 +11,12 @@
 // always on; the host's `data-mpa`, `data-mpa-drawn` and `data-mpa-labels`
 // report their state and what MapLibre drew in view. Habitat, geology, reef
 // marks and the selection (FE-18) come from web/map/marks.ts.
+// Registry layers with run-time sources (FE-22's clouds) are created with the
+// Chart and draw through its engine (`layers`, Engine.setOverlay).
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
-import {effect, signal} from '@preact/signals';
+import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams} from '../state.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
@@ -79,8 +81,12 @@ export function markUnavailable(layer: string, error?: unknown): void {
   unavailable.value = [...unavailable.peek(), layer];
 }
 
+/** A registry layer the Chart draws at run time (FE-22's clouds): created with the Chart, handed its engine once MapLibre is up. */
+export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {destroy(): void};
+
 export interface ChartOptions {
   host: HTMLElement;
+  layers?: readonly ChartLayer[];
   load?: () => Promise<MapLibraryModule>;
   fetchFn?: typeof fetch;
   palette?: () => Palette;
@@ -96,7 +102,7 @@ export interface ChartOptions {
 const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 
 export function createChart(options: ChartOptions): {destroy(): void} {
-  const {host, load = loadLibrary, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
+  const {host, layers = [], load = loadLibrary, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
   const engine = signal<Engine | null>(null);
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   let currents: Currents | null = null;
@@ -190,6 +196,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     if (state.status === 'unavailable') markUnavailable('mpas', new Error(state.detail));
   }
 
+  const drawn = layers.map(create => create(engine));
   return {
     destroy() {
       if (!alive) return;
@@ -199,6 +206,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       seafloor?.destroy();
       marks.destroy();
       currents?.destroy();
+      for (const layer of drawn) layer.destroy();
       engine.peek()?.destroy();
       engine.value = null;
       chartMark.value = null;

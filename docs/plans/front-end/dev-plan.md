@@ -222,15 +222,16 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 ### FE-22 · Clouds: GOES observed-frame loop · M
 - Status: CHANGED (frames from the ocean snapshot; `cloudSource` imported). Agent: Claude.
 - Depends: FE-12, FE-74
-- Files: `web/map/clouds.ts`, `server/security-headers.ts` (`IMAGE_ORIGINS` + nowCOAST), `tests/test_security_headers.mjs`, `tests/test_clouds_layer.mjs`.
+- Files: `web/map/clouds.ts`, `server/security-headers.ts` (`CONNECT_ORIGINS` + nowCOAST), `tests/test_security_headers.mjs`, `tests/test_clouds_layer.mjs`.
 - Build: § 9 Clouds: times from `/api/coast/ocean` `cloud.availableTimes` where a report binds (FE-44's index elsewhere once it exists; until then the rail entry reads "no frames for this area"); tile URLs from `packages/coast` `cloudSource`; loop and pause; withheld on future days.
 - Accept: 1. A time not in the list is never requested (test). 2. The loop stops when hidden. 3. CSP test passes with the new origin.
 - **Owner**: approve (`server/`).
+- As built: nowCOAST joins `CONNECT_ORIGINS`, not `IMAGE_ORIGINS`: MapLibre fetches raster tiles (`refreshExpiredTiles` stays on), so `img-src` is not widened. Times come from FE-44's index (`/feeds/conditions/goes-times.json`) everywhere, and from the bound ocean packet's list where FE-74 binds a report and that list is newer (no v2 code binds a place yet); both list nowCOAST's time dimension. `frames.ts` `cloudFrames` gates them (90 minutes, today's local day only) and the loop shows the newest 12: one raster source per frame, all loading, one shown at a time, oldest to newest with the newest held. The legend's Clouds row labels the frame on screen with its acquisition time and age and holds or resumes the loop; the rail note (`web/map/layers.ts` `railNotes`, written by the layer that draws) names the newest frame, "no fresh frame · last <time>", "observed frames show today only" or "no frames for this area". The loop stops while the page is hidden, the Chart is not shown or the viewer holds it, and never plays under reduced motion. Also touched: `web/map/engine.ts` (`setOverlay`, `setRasterOpacity`: run-time sources and layers added once the style loads, through FE-14's one `style.load` gate, their errors routed to the owning registry layer), `web/map/chart.ts` (`layers`: run-time registry layers created with the Chart), `web/map/layers.ts` (`railNotes`), `web/app/{MapStage,Legend,LayerRail}.tsx`, `web/app/app.css`, `e2e/v2-map.spec.ts`.
 
 ### FE-23 · Aerial base: NAIP toggle · S
 - Status: CHANGED (`naipSource` imported). Agent: Claude.
 - Depends: FE-11, FE-45
-- Files: `web/map/aerial.ts`, `server/security-headers.ts` (`IMAGE_ORIGINS` + USGS), `tests/test_security_headers.mjs`.
+- Files: `web/map/aerial.ts`, `server/security-headers.ts` (`CONNECT_ORIGINS` + USGS: MapLibre fetches raster tiles, as FE-22 found), `tests/test_security_headers.mjs`.
 - Build: § 9 Aerial in Chart where the region has `basemap.aerial`, tile template from `packages/coast` `naipSource`; attribution line.
 - Accept: 1. Absent in regions without the flag. 2. Only the fixed USGS host from `mapSourceHosts` is requested.
 - **Owner**: approve (`server/`).

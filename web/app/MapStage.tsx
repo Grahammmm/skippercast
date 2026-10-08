@@ -3,12 +3,14 @@
 // packages/coast mounts into, and the Chart / 2D / 3D toggle in the map chrome
 // with its status line. web/map/stage.ts owns the renderers; this component
 // creates one stage while it is mounted and destroys it when it unmounts (a
-// layout change), which releases the terrain's WebGL context.
+// layout change), which releases the terrain's WebGL context. The Chart's
+// run-time layers (FE-22's clouds) are created with it.
 import type {ComponentChildren} from 'preact';
 import {useEffect, useRef} from 'preact/hooks';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {chartFailed, createChart} from '../map/chart.ts';
+import {createClouds} from '../map/clouds.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
@@ -47,7 +49,8 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
-      renderers: [() => createChart({host: chartHost.current!, zone, place: () => regionPlace(regionInfo.value, profile.value, species.value ?? '')})]});
+      renderers: [() => createChart({host: chartHost.current!, zone, place: () => regionPlace(regionInfo.value, profile.value, species.value ?? ''),
+        layers: [engine => createClouds({engine, zone})]})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;
