@@ -398,7 +398,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ### FE-44 · GOES frame times index · S
 - Status: CHANGED (output = `CloudImage`). Agent (proposed): Codex.
 - Depends: —
-- Files: `src/skippercast/pipeline/goes_frames.py`, `live.py`, `catalog/sources.json`, `tests/unit/test_goes_frames.py`.
+- Files: `src/skippercast/pipeline/goes_frames.py`, `scripts/live_cycle.sh` (one call per cycle; the index is region-independent, so it is published beside `latest.json` rather than from the per-region `live.py`), `catalog/sources.json`, `tests/unit/test_goes_frames.py`, `tests/fixtures/goes/capabilities.xml`.
 - Build: § 11 row: GetCapabilities time list as a `CloudImage` record with the fetch time.
 - Accept: 1. A capabilities fixture yields the list. 2. Times are ISO UTC, sorted, deduplicated.
 
