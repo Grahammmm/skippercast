@@ -13,7 +13,6 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {Range} from '../ui/Dock.tsx';
 import {Sheet, type Detent} from '../ui/Sheet.tsx';
-import {selection} from '../state.ts';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
@@ -21,7 +20,7 @@ import {BriefFooter, Caveat, Headline, Picks, TideSpark, Tiles, type Pick} from 
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
-import {MarkCard} from './MarkCard.tsx';
+import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
@@ -56,7 +55,7 @@ export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: reado
   const tz = zone(), state = dockState(now, tz);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus}>
-      {selection.value ? <MarkCard /> : (
+      {currentMark.value ? <MarkCard /> : (
         <>
           <div class="app-sheet-head">
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
@@ -115,7 +114,7 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
         <ProfileSwitch class="app-profile" />
       </header>
       <Sheet label={layersOpen ? 'Layers' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
-        class={['app-sheet', selection.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
+        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : <SheetBrief now={now} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>
       <ViewNav icons class="app-tabs" />

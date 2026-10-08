@@ -1,7 +1,7 @@
 // MapStage adapter (FE-71, docs/plans/front-end/design.md § 3A.2): one camera,
 // one selection and one hour over three presentations of the same place.
-// Chart is MapLibre (FE-11 adds its branch here; until then the component's
-// placeholder). Terrain 2D and 3D are packages/coast's renderer through its
+// Chart is MapLibre (web/map/chart.ts, FE-11), registered as one of the stage's
+// renderers and following its camera. Terrain 2D and 3D are packages/coast's renderer through its
 // embed API (mountCoast, FE-70), loaded by dynamic import on the first terrain
 // choice so three never reaches the app's first paint (scripts/check_client.mjs).
 // Preact components never touch a renderer: web/app/MapStage.tsx creates one
@@ -109,7 +109,12 @@ export interface StageOptions {
   doc?: Pick<Document, 'hidden' | 'addEventListener' | 'removeEventListener'>;
   /** Milliseconds a terrain camera move waits before it is written to `?view=`. */
   viewDelay?: number;
+  /** Other presentations' renderers, created with the stage and destroyed with it: MapStage registers the Chart (FE-11, web/map/chart.ts). */
+  renderers?: ReadonlyArray<() => Renderer>;
 }
+
+/** A renderer the stage owns beside the terrain; it reads the stage's camera and presentation signals. */
+export interface Renderer {destroy(): void}
 
 /** The shared camera: `?view=` when it names one, else the region's centre at HOME_ZOOM. FE-11's Chart reads it too. */
 export const camera = signal<Camera | null>(null);
@@ -261,12 +266,14 @@ export function createStage(options: StageOptions): Stage {
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),
     effect(() => { if (current.value === UNSUPPORTED) currentStatus.value = UNSUPPORTED_CURRENT; else if (current.value === 'off') currentStatus.value = ''; }),
   ];
+  const renderers = (options.renderers ?? []).map(create => create());
   return {
     destroy() {
       if (!alive) return;
       alive = false;
       clearTimeout(viewTimer); clearTimeout(clockTimer);
       for (const dispose of disposers) dispose();
+      for (const renderer of renderers) renderer.destroy();
       doc.removeEventListener('visibilitychange', visibility);
       release();
     },

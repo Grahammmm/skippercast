@@ -1,22 +1,41 @@
 // The v2 map stage (FE-71, docs/plans/front-end/design.md § 3A.2): one stage,
 // three presentations. The terrain is packages/coast's renderer mounted in the
-// stage's shadow root by dynamic import; Chart stays the MapLibre placeholder
-// until FE-11. The Fish Worker bridge (/api/coast, /coast-data) never answers
+// stage's shadow root by dynamic import; Chart is MapLibre (FE-11) over the
+// synthetic basemap fixture (tests/fixtures/basemap/tiny.pmtiles, served by
+// range here, since the published archive lives on R2) and the region's
+// committed shoreline. The Fish Worker bridge (/api/coast, /coast-data) never answers
 // here: either it is held open, so the terrain stays mounted and loading, or it
 // fails, so the stage must return to Chart with v1's message.
+import {readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 import {expect, test} from './fixtures.ts';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
 
-test.beforeEach(async ({page}) => {
+// `v2` first: its catch-all /feeds/ stub is registered before the basemap routes, which take precedence.
+test.beforeEach(async ({page, v2: _v2}) => {
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
+  await serveBasemap(page);
 });
 
 /** Hold every coast data request open: the renderer mounts and waits for its terrain. */
 const holdCoastData = (page: Page) => page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered */ });
 const failCoastData = (page: Page) => page.route(/\/(?:api\/coast|coast-data)\//, route => route.fulfill({status: 503, json: {error: 'Offline map test'}}));
+const TINY = readFileSync(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
+const ARCHIVE = 'tiles/basemap/ca-coast-fixture.pmtiles';
+/** FE-10's manifest and archive, answered by byte range as R2 answers the PMTiles reader. */
+async function serveBasemap(page: Page) {
+  await page.route('**/feeds/tiles/basemap/manifest.json', route => route.fulfill({json: {schema_version: 1, key: ARCHIVE}}));
+  await page.route(`**/feeds/${ARCHIVE}`, route => {
+    const range = /bytes=(\d+)-(\d+)/.exec(route.request().headers().range ?? '');
+    if (!range) return route.fulfill({body: TINY, headers: {'Accept-Ranges': 'bytes'}});
+    const start = Number(range[1]), end = Math.min(Number(range[2]), TINY.length - 1);
+    return route.fulfill({status: 206, body: TINY.subarray(start, end + 1),
+      headers: {'Content-Range': `bytes ${start}-${end}/${TINY.length}`, 'Accept-Ranges': 'bytes', 'Content-Type': 'application/octet-stream'}});
+  });
+}
+const viewOf = (value: string | null) => { const [latitude, longitude, zoom] = (value ?? '').split(',').map(Number); return {latitude, longitude, zoom}; };
 const toggle = (page: Page, name: string) => page.getByRole('group', {name: 'Map presentation'}).getByRole('button', {name, exact: true});
 const params = (page: Page) => Object.fromEntries(new URL(page.url()).searchParams);
 
@@ -160,4 +179,50 @@ test('prefers-reduced-motion never auto-plays: the button steps one hour per pre
   expect(urlHour(page), 'one press, one hour').toBe(hourParam(start + HOUR_MS));
   await v2.a11y('v2-dock-reduced-motion');
   expect(pageErrors).toEqual([]);
+});
+
+test('the Chart draws the basemap and the Morro Bay coastline with their attribution', async ({page, pageErrors, v2}) => {
+  const fetched: string[] = [];
+  page.on('response', response => { if (/ca-coast-fixture\.pmtiles|shoreline\.geojson/.test(response.url())) fetched.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,11'});
+  const chart = page.locator('.app-chart');
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
+  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('NOAA NGS · CUSP shoreline');
+  await expect(chart.locator('.maplibregl-ctrl-scale')).toHaveText(/nm|ft/);
+  await expect.poll(() => fetched.some(f => f.startsWith('206 /feeds/tiles/basemap/')), {message: 'the basemap is read by range'}).toBe(true);
+  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline.geojson');
+  await expect(chart).toHaveAttribute('data-view', '35.38000,-120.88000,11');
+  await expect(page.locator('[data-unavailable]')).toHaveCount(0);
+  await v2.a11y('v2-map-chart-engine');
+  expect(pageErrors).toEqual([]);
+});
+
+test('a failing coastline marks only its layer unavailable; the basemap keeps drawing', async ({page, v2}) => {
+  await page.route('**/regions/morro-bay/shoreline.geojson', route => route.fulfill({status: 503, body: 'Offline map test'}));
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart'});
+  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
+  await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
+  await expect(page.locator('[data-unavailable]')).toHaveCount(1);
+  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+});
+
+test('Chart → 3D → Chart keeps the centre within one zoom step', async ({page, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {...PLACE, presentation: 'chart'});
+  const chart = page.locator('.app-chart');
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  const before = viewOf(await chart.getAttribute('data-view'));
+  await toggle(page, '3D').click();
+  await expect(page.locator('.app-terrain')).toBeVisible();
+  await toggle(page, 'Chart').click();
+  await expect(chart).toBeVisible();
+  const after = viewOf(await chart.getAttribute('data-view'));
+  expect(Math.abs(after.latitude - before.latitude)).toBeLessThan(0.01);
+  expect(Math.abs(after.longitude - before.longitude)).toBeLessThan(0.01);
+  expect(Math.abs(after.zoom - before.zoom)).toBeLessThanOrEqual(1);
+  expect(viewOf(params(page).view).zoom, 'the link keeps the place').toBeCloseTo(before.zoom, 0);
 });

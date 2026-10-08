@@ -590,8 +590,9 @@ labels, roads at high zoom only, no points of interest. Options, best first:
    ranges 0–255 and 8192–8447, about 86 KB, built by
    `scripts/basemap/build_glyphs.py`). The style draws no icons, so it has
    no sprite sheet (FE-72). Attribution:
-   "© OpenStreetMap contributors, © Protomaps" in the legend's attribution
-   row (ODbL). The archive is publicly downloadable from `/feeds/`, so
+   "© OpenStreetMap contributors, © Protomaps" in the Chart's attribution
+   control, always expanded on both layouts (ODbL; FE-11 moved it from the
+   legend because the mobile legend sits in the closed layers sheet). The archive is publicly downloadable from `/feeds/`, so
    it is redistributed as an ODbL derivative database: attribution and
    share-alike apply to the extract itself.
    Rights: `docs/legal/data-rights-register.md` row B6 marks OpenStreetMap
@@ -903,7 +904,7 @@ always-on), the presentations it draws in (`chart`, `terrain`, or both;
 `observed`), legend entries, the **basis** sentence (one sentence naming the
 product, its resolution and its age rule, shown in the rail's info popover
 and the legend), gating, and the `fish` module it ports. Draw order, bottom
-to top: basemap, aerial, relief, water temperature field, contours, swell
+to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell
 field, MPAs, habitat polygons, shore runs, seafloor candidates, charter
 grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents
 streamlines (canvas), clouds (raster, above fields so the loop reads as
