@@ -1,0 +1,103 @@
+name: Buoy history (NDBC 46215, 46028)
+
+# FE-42: monthly full pass over each station's annual archives (checkpointed by
+# SHA-256, so unchanged years download nothing) and a weekly 45-day refresh that
+# keeps the published monthly bands. Publishes data/regions/<id>/history.json.
+on:
+  schedule:
+    - cron: "23 9 3 * *"   # full: 3rd of each month
+    - cron: "41 10 * * 1"  # recent: Mondays
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "full reads every annual archive (the backfill); recent only the 45-day files"
+        type: choice
+        options: [full, recent]
+        default: full
+      revalidate:
+        description: "Refetch annual archives even when the checkpoint SHA-256 verifies"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: buoy-history
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    permissions:
+      contents: write  # pushes the data branch
+    env:
+      PYTHONPATH: src
+      MODE: ${{ inputs.mode || (github.event.schedule == '23 9 3 * *' && 'full') || 'recent' }}
+      REVALIDATE: ${{ inputs.revalidate && '--revalidate' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-publish.txt
+      - name: Install the R2 publisher
+        run: python -m pip install -r requirements-publish.txt
+      - name: Test the history collector offline
+        run: python -m unittest tests.unit.test_ndbc_history -v
+      - name: Restore annual checkpoints
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: var/ndbc-history
+          key: ndbc-history-${{ github.run_id }}
+          restore-keys: ndbc-history-
+      - name: Load the published data branch
+        run: bash scripts/publish_branch_snapshot.sh --load data var/published
+      - name: Collect NDBC history (${{ env.MODE }})
+        run: >-
+          python -m skippercast.pipeline.ndbc_history --mode "$MODE" $REVALIDATE --region morro-bay
+          --cache var/ndbc-history --previous var/published/regions/morro-bay/history.json
+          --output var/history/regions/morro-bay/history.json
+      - name: Save annual checkpoints
+        if: ${{ !cancelled() && env.MODE == 'full' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: var/ndbc-history
+          key: ndbc-history-${{ github.run_id }}
+      - name: Publish to the data branch
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # daily-data.yml publishes the same branch with a lease; on a lost race, reload and retry.
+          for attempt in 1 2 3; do
+            mkdir -p var/published/regions/morro-bay
+            cp var/history/regions/morro-bay/history.json var/published/regions/morro-bay/history.json
+            if bash scripts/publish_branch_snapshot.sh data var/published "Refresh NDBC buoy history ($MODE)"; then
+              bash scripts/publish_branch_r2.sh var/published data
+              exit 0
+            fi
+            sleep $((attempt * 30))
+            bash scripts/publish_branch_snapshot.sh --load data var/published
+          done
+          exit 1
+      - name: Report history coverage
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path('var/history/regions/morro-bay/history.json')
+          lines = ['## NDBC buoy history (' + os.environ['MODE'] + ')']
+          if not p.is_file():
+              lines.append('No history produced; the published file is unchanged.')
+          else:
+              for s in json.loads(p.read_text())['stations']:
+                  failed = sum(x['outcome'] == 'error' for x in s['sources'])
+                  lines.append(f"- {s['stationId']}: {len(s['baseline']['years'])} annual years · "
+                               f"{s['recent']['observedHours']}/{s['recent']['expectedHours']} recent hours · "
+                               f"last {s['recent']['lastObservedAt']} · {failed} failed requests")
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('\n'.join(lines) + '\n')
+          PY
