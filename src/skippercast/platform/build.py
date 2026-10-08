@@ -34,6 +34,29 @@ def validate_regional_rules(region, root, now=None):
     region['regulatory_authority_hosts'] = jurisdiction['authority_hosts']
 
 
+def compile_shore_habitat(root, regions):
+    """Copy each reviewed catalog/shore-habitat/<id>.geojson into its published region package.
+
+    The file is validated (schema, region id, coordinates inside the region) and copied
+    byte for byte; its review dates are the importer's and are never changed here."""
+    from .. import validate
+    known = {r['id']: r for r in regions}
+    for path in sorted((root / 'catalog/shore-habitat').glob('*.geojson')):
+        region = known.get(path.stem)
+        if region is None:
+            raise ValueError(f'Shore habitat names an unknown or draft region {path.stem}')
+        data = read_json(path)
+        validate.check('shore-habitat', data)
+        if data['regionId'] != region['id'] or any(f['properties']['region'] != region['id'] for f in data['features']):
+            raise ValueError(f'Shore habitat {path.name} belongs to another region')
+        west, south, east, north = region['bounds']
+        points = [p for f in data['features'] for line in f['geometry']['coordinates'] for p in line]
+        points += [a['coordinates'] for f in data['features'] for a in f['properties']['access']]
+        if not all(west <= x <= east and south <= y <= north for x, y in points):
+            raise ValueError(f'Shore habitat {path.name} lies outside the {region["id"]} bounds')
+        shutil.copyfile(path, root / 'dist/regions' / region['id'] / 'shore-habitat.geojson')
+
+
 def build(root=REPO, now=None):
     """Compile every non-draft region; legal review is judged as of ``now`` (default: the current time)."""
     root = Path(root)
@@ -115,6 +138,7 @@ def build(root=REPO, now=None):
         receipt = atomic_json(output / "manifest.json", {"schema_version": 1, "region_id": region["id"], "assets": assets}, kind="region-manifest")
         entries.append({"id": region["id"], "name": region["name"], "status": region["status"], "fishing_bounds": region['fishing_bounds'], "discovery_bounds": region.get('map',{}).get('discovery_bounds',region['fishing_bounds']), "config": f"regions/{region['id']}/region.json", "manifest": receipt["sha256"]})
     compile_launch_points(root, published)
+    compile_shore_habitat(root, published)
     atomic_json(root / "dist/regions/index.json", {"schema_version": 1, "default_region": DEFAULT_REGION, "regions": entries}, kind="published-regions")
     default = load_region(DEFAULT_REGION, root)
     validate_regional_rules(default, root, now)

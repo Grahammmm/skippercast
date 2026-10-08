@@ -47,6 +47,12 @@ The regional MPA geometry was checked September 20, 2026. SkipperCast selected r
 
 The Diablo Canyon security restriction is a separate legal source: [33 CFR 165.1155](https://www.ecfr.gov/current/title-33/part-165/section-165.1155). A dataset download date or an atlas label does not certify that a location remains lawful to fish.
 
+## Shore runs and beach approaches
+
+`scripts/collect_shore_habitat.py` (FE-43, ported from fish's `import-shore-habitat.mjs`) writes `catalog/shore-habitat/morro-bay.geojson`; the platform build validates it against `schemas/shore-habitat.schema.json` and copies it unchanged to `dist/regions/morro-bay/shore-habitat.geojson`. Five San Luis Obispo County sandy-shore runs (Hearst Memorial Beach, Morro Strand, Cayucos, Pismo, Oceano) keep only original vertices of the [NOAA Central California ESI 2006](https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Central_California_ESI_2006_test/FeatureServer) class 3A shoreline (sand beach) inside each beach's latitude window: no interpolation, buffers or joins across gaps. Eight [California Coastal Commission access points](https://services9.arcgis.com/wwVnNW92ZHUIr0V0/arcgis/rest/services/AccessPoints/FeatureServer) keep the inventory id, name, coordinates and a query link; the import refuses a point that is not public beach access or carries an archive or closure entry, and never copies the inventory's photos, descriptions or phone numbers. Each response's sha256 and fetch time are kept in the asset.
+
+The shoreline is a 2006 classification of the beach, not of today's beach or the seabed offshore, and an access point is a reference, never a current-access certification. Three dated human reviews travel with every run: source (30 days), access (7 days) and the CDFW rules page (24 hours). They live in `REVIEWS` in the importer and are copied verbatim; a download or an offline rebuild (`--sources`, from responses saved under `var/` with `--save-sources`) never renews them. The current dates carry fish's 2026-10-03 review and await owner confirmation, with the register rows `noaa-esi-2006` and `ccc-access-points`. Readers drop a run once its source review expires.
+
 ## Material excluded from this edition
 
 | Source | Why it is excluded | Effect on public output |

@@ -390,7 +390,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ### FE-43 · ESI shore runs and access points import · M
 - Status: CHANGED (schema = the shore-habitat GeoJSON the renderer reads). Agent (proposed): Codex.
 - Depends: —
-- Files: `scripts/import_shore_habitat.py`, `catalog/shore-habitat/morro-bay.geojson`, `schemas/shore-habitat.schema.json`, `src/skippercast/platform/build.py`, `catalog/sources.json`, `tests/contract/test_shore_habitat.py`, `docs/data-sources.md`.
+- Files: `scripts/collect_shore_habitat.py` (a `collect_` product collector like `collect_cdfw_mpas.py`; `import_` is a research prefix in `tests/contract/test_research_boundary.py`), `catalog/shore-habitat/morro-bay.geojson`, `schemas/shore-habitat.schema.json`, `src/skippercast/platform/build.py`, `catalog/sources.json`, `tests/contract/test_shore_habitat.py`, `docs/data-sources.md`.
 - Build: § 11 row: runs with source year, access points with ids and links, review dates in the asset.
 - Accept: 1. Schema validation in the contract test, compatible with `slo-shore-habitat.geojson`. 2. Platform build diff clean. 3. No photo or description text from the inventory.
 - **Owner**: add the register rows; confirm the review dates.
