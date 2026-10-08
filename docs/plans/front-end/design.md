@@ -53,7 +53,11 @@ charter fleet shows the public.
 ## 2. Research findings (verified 2026-10-05)
 
 Each claim names the file it was checked in. When a task finds a claim is
-wrong, fix this section in the same PR.
+wrong, fix this section in the same PR. The findings below describe the two
+code bases on 2026-10-05; what Codex merged into SkipperCast afterwards
+(`packages/coast/`, the coastal bridge and the v1 coastal modules) is in
+[§ 3A.1](#3a1-what-is-on-main-verified-2026-10-07-at-668c2cb), which wins
+where the two disagree.
 
 ### SkipperCast today
 
@@ -192,6 +196,14 @@ ADR 0009 adopts ADR 0005's stack and records the flag, routing and basemap
 decisions below. The owner accepts both by approving the plan PR; FE-01
 flips their status lines.
 
+**Amended 2026-10-07.** Codex merged `fish`'s client into SkipperCast as
+`packages/coast/` while this plan was in Phase 0. [§ 3A](#3a-integration-with-packagescoast-2026-10-07)
+records how the v2 shell consumes it; the module layout below is the
+amended one. Modules this plan meant to port from `fish` (`surface-field`,
+`frames`, `daily`, `series`) are imported from `packages/coast/src/`
+instead, and the relief pipeline is replaced by the coast renderer's
+terrain.
+
 ### Module layout
 
 ```
@@ -199,38 +211,47 @@ web/
   tokens.css            the visual system (§ 5); loaded first by every v2 page
   fonts/                DM Sans and JetBrains Mono woff2 + OFL licences
   ui/                   icons.tsx, Button, Tile, Chip, Sheet, Rail, Dock (§ 6)
-  state.ts              existing store, extended: profile, day, layers, area (§ 8)
+  state.ts              the one URL/profile/time store for both shells (§ 8, § 3A.3)
   profile.ts            Boat / Shore / Spear semantics (§ 8)
+  fish-links.ts         Fish link aliases (Codex, #379); the only alias table
+  coast-context.ts      coast target ids, terrain coverage, presentation, habitat URL helpers
+  coast-data.ts         v2 loaders for the coast report, ocean and history snapshots (FE-74)
   map/
-    engine.ts           MapLibre init, PMTiles protocol, controls, resize, errors
-    style.ts            basemap style built from tokens (§ 4)
-    layers.ts           layer registry: id, order, sources, basis, legend, time
-    relief.ts  flow.ts  field.ts  marks.ts  mpa.ts  swell.ts  clouds.ts  fleet.ts
-    surface-field.ts    ported from fish (interpolation, contours, ramps)
-    frames.ts           ported from fish map-sources.ts (frame selection, age gates)
+    stage.ts            MapStage adapter: one camera, selection and hour over three presentations (FE-71)
+    engine.ts           MapLibre init for the Chart presentation (FE-11)
+    style.ts  palette.ts  basemap style and the CSS-to-JS colour bridge (FE-72)
+    layers.ts           layer registry: id, order, presentations, sources, basis, legend, time
+    flow.ts  field.ts  marks.ts  mpa.ts  swell.ts  clouds.ts  fleet.ts  seafloor.ts
+    frames.ts           thin wrapper over packages/coast map-sources.ts and state/current-layer.ts
   brief/
-    daily.ts            ported from fish daily.ts (headline, tiles, windows, caveats)
+    model.ts            brief adapter: packages/coast daily.ts where a report binds, regional feeds elsewhere (FE-31)
     Brief.tsx  Tiles.tsx  WhereToLook.tsx  TideSpark.tsx
-  charts/
-    series.tsx          ported from fish series.ts as a Preact component
-    Conditions.tsx  History.tsx
   app/
     App.tsx  Masthead.tsx  CommandBar.tsx  Desktop.tsx  Mobile.tsx  TimeDock.tsx
-    LayerRail.tsx  Legend.tsx  MarkCard.tsx  views/{Coast,Conditions,History,Fleet}.tsx
+    MapStage.tsx  CoastMarkup.tsx (shadow-root host for packages/coast markup, FE-75)
+    LayerRail.tsx  Legend.tsx  MarkCard.tsx  views/{Coast,Conditions,History,Fleet,Reports}.tsx
   landing/
     Landing.tsx  Readout.tsx  PortInput.tsx  ProfilePills.tsx  LayerDots.tsx
     Shoreline.tsx (static SVG, FE-07)  NightMap.tsx (live map, FE-25)
+packages/coast/         fish's client (Codex, #385): renderer, report model, charts, ui markup
+  tokens-bridge.css     --coast-* properties mapped to web/tokens.css under an opt-in (FE-76)
+  src/palette.ts        the renderer's colours as data, defaults = today's values (FE-76)
+  src/embed.ts          the typed mount API v2 and v1 share (FE-70)
 dist/
   app.html              the v2 app shell entry (/map)
   landing.html          the v2 landing entry (/)
   index.html            the v1 shell, untouched until FE-61
+  coast.html            the standalone /coast page, retired by FE-61
 ```
 
 Rules: product code never imports `research/`; `web/` modules import
 `dist/*.js` only through typed wrappers during the migration (the Node
 tests import `dist/*.js` directly, so those modules keep their exports until
 FE-61 deletes them); every new component reads colour, type, spacing and
-radius from `var(--…)`; no `innerHTML` in `web/` (Preact renders).
+radius from `var(--…)`; no `innerHTML` in `web/` (Preact renders), with
+one audited exception: `web/app/CoastMarkup.tsx` assigns, inside its own
+shadow root, only strings returned by `packages/coast/src` renderers, which
+escape every value (`esc`, `escapeHTML`) (§ 3A.2).
 
 ### Build and serving
 
@@ -260,7 +281,271 @@ until FE-61. v2 pages import no Leaflet. Modules shared by both shells
 `species-fit.js`, `spot-ranking.js`) are wrapped, not edited, except where a
 task says so. When a task must change a shared module, it keeps v1
 behaviour and adds a test for the v2 call path. Ranked alternatives are in
-open-questions Q4.
+open-questions Q4. The v1 coastal modules Codex added (`dist/coast-*.js`,
+`dist/coastal-*.js`, `dist/coast.html`) are v1 shell code under the same
+rule: v2 never imports them, and FE-61 deletes them with the rest of v1.
+
+## 3A. Integration with `packages/coast` (2026-10-07)
+
+This section amends § 3, § 5, § 8, § 9, § 10, § 11, § 13 and § 15 and
+takes precedence over them where they disagree. ADR 0009's 2026-10-07
+addendum records the decision.
+
+### 3A.1 What is on `main` (verified 2026-10-07 at `668c2cb`)
+
+Read in the code, not the commit titles. PR numbers are Codex's.
+
+- **`packages/coast/` (#385, extended by #392, #393, #395, #396, #399,
+  #402, #405).** Strictly typed TypeScript from `fish` `4ac5e0c`, its own
+  `tsconfig.json` in `pnpm typecheck`. Renderer: `src/coast3d/viewer.ts`
+  `CoastViewer` on `three` 0.180 (npm, with `OrbitControls`); its 2D is a
+  camera-only top-down view of the same Three scene
+  (`setPerspective('2d' | '3d')`). There is **no MapLibre in
+  `packages/coast`**: `fish`'s MapLibre `src/map/coast.ts` was not ported.
+  The viewer's public methods are `load`, `setPerspective`, `setPlace`,
+  `setLocation`, `setSpecies`, `setHour`, `setDepthLimit`,
+  `setCurrentLayer`, `selectHabitat`, `setVisible`, `destroy`, with the
+  `CoastViewerOptions` callbacks `onSelection`, `onRestoredSelection`,
+  `onSelectionInvalidated`, `onCurrentStatus`, `onPlace`, `onView`,
+  `onPerspective` and `managed: true` for a host that owns region, target,
+  location and hour. It reads about forty element ids of `fish`'s page
+  template (`relief`, `water`, `contours`, `depth-limit`, `reading`,
+  `target-detail`, `sources-open` and the rest), so it cannot mount without
+  that markup today. `src/coast3d/regional.ts` streams SHA-verified terrain
+  and imagery with byte bounds; `src/coast3d/report.ts` `CoastReport` reads
+  the report and history snapshots.
+- **Models and markup in `packages/coast/src`.** `daily.ts` (`buildDaily`,
+  `availableDays`), `state/experience.ts` (`defaultSpecies`, `maxDepth` 60
+  for spear and 300 otherwise, `quietestHours`, `initialForecastAt`),
+  `presentation.ts` (`freshNearshore`, `nearshoreAt`, `hourReadout`,
+  `reportPanel`), `charts/series.ts` (`chart`, `linePath`, returning SVG
+  strings), `ui/briefing.ts`, `ui/history.ts` (`historyView`),
+  `ui/catches.ts` (`catchSheet`, `fleetBrief`), `ui/icons.ts`, all
+  returning escaped HTML strings; `map/surface-field.ts` (interpolation,
+  contours, `temperatureColors`); `map-sources.ts` (`selectCurrentFrame`,
+  `cloudSource`, `naipSource`; the last two are unused by any client
+  today); `state/current-layer.ts` (`selectedCurrent`,
+  `validCurrentField`); `state/habitat-selection.ts`;
+  `state/report-binding.ts` (`resolveReportBinding`: exact reviewed
+  bounds, no nearest package); `links.ts`; `transport.ts` (`coastFetch`
+  reaches only `/api/coast/*` and `/coast-data/*`). `fish`'s
+  `opportunity.ts` (shore-run priority and guidance) was not ported.
+- **Styling.** `packages/coast/coast.css` is the terrain chrome in a light
+  scheme (ground `#dce8eb`, 15 literals); `panel.css` (2,944 lines, 281 hex
+  literals) is `fish`'s dark report panel with its own `:root` variables
+  whose names shadow `web/tokens.css` (`--bg: #091521` against `#07131d`,
+  `--panel2` against `--panel-2`, a system `--mono`); `viewer.ts` holds ten
+  colour literals. `scripts/check_tokens.mjs` lints `web/**` only, so none
+  of this is linted.
+- **v1 mounts.** `/coast` serves `dist/coast.html` + `coast-entry.js`, a
+  standalone page with its own controller and home settings.
+  `dist/coast-workspace.js` (#392) mounts `CoastViewer` `managed` in a
+  shadow root inside the Leaflet page as the presentations
+  `chart | 2d | 3d` (`?presentation=`), syncing the chart centre with the
+  span-to-zoom rule `zoom = 12 − log2(span / 7300)` clamped to 7–18.
+  `dist/coastal-discovery.js` is the continuous Central Coast overview
+  (`coast=central`); `coast-conditions.js` adds the local report and
+  history to v1 Conditions (#393); `coastal-clock.js` is one UTC clock
+  across Map and Conditions; `coastal-current-control.js` is one explicit
+  surface-current choice `?current=off|wcofs|hfr-1|hfr-6` (#402);
+  `coastal-offline*.js` saves the three public snapshots (#405). These v1
+  modules import `web/state.ts` directly.
+- **Server.** `server/coast-data.ts` + `server/routes/coast.ts` (#381) are
+  a bounded read-only bridge to the owner's Fish Worker:
+  `/api/coast/{report,ocean,history}` (SLO only: `morro-bay`,
+  `cambria-san-simeon`), `/api/coast/habitat/{release,tiles}` and an
+  enumerated list under `/coast-data/data/` (habitat, shore habitat,
+  shoreline, terrain model). `server/coast-pages.ts` (#395) serves `/report`,
+  `/feed.xml`, `/methodology` and `/about`. `server/app.ts` registers both
+  routers before the private gate.
+- **State.** `web/fish-links.ts` (#379) translates `place`, `mode`,
+  `species`, `layer` and full ISO hours; `web/state.ts` applies it only
+  under `configureStore({v2: true})`. `web/fish-entry.ts` (#396) normalises
+  v1 startup links; `web/coast-context.ts` maps targets, terrain coverage,
+  `presentation` and `habitat`; `web/overview-context.ts` binds a report
+  only on exact identity and bounds. `presentation`, `current` and
+  `habitat` are read ad hoc from `location`, not owned by the store.
+- **Data.** No collector moved. Report, ocean and history snapshots, the
+  habitat release and the terrain assets still come from the Fish Worker
+  through the bridge (`docs/coastal-service.md`). Phase 3 (FE-40 … FE-45)
+  has not started.
+- **Status.** `docs/FISH-MERGE-STATUS.md` keeps the acceptance matrix and
+  states that the v2 shell, the homepage default and Fish retirement are
+  unchanged; `docs/FISH-MERGE-REVIEW.md` requires one public map shell and
+  one profile, location and time controller.
+
+### 3A.2 Decision: one shell, one map stage, three presentations
+
+The v2 Bridge shell (`web/app/`) becomes the single public shell at FE-60.
+The v1 chart, the v1 coastal overview and the standalone `/coast` page are
+retired by FE-61 once the parity matrix passes; until then each stays
+reachable.
+
+**MapStage.** The shell's map area is one `MapStage` (`web/app/MapStage.tsx`
+over `web/map/stage.ts`) with one camera, one selection and one hour, and
+three presentations of the same place:
+
+| Presentation | Renderer | Where | Notes |
+| --- | --- | --- | --- |
+| Chart | MapLibre GL + PMTiles (ADR 0005), self-hosted basemap (§ 4) | every region | the registry layers of § 9; atlas marks, GPX, regulations, fleet |
+| Terrain 2D | `packages/coast` `CoastViewer`, top-down camera | regions where `hasCoastTerrain(region)` | the same scene as 3D; the toggle moves only the camera |
+| Terrain 3D | `CoastViewer`, orbit camera | same | measured versus modelled labels, native masks and source inspection kept |
+
+This corrects the plan's 2026-10-05 picture in one respect: the 2D view the
+owner saw in `fish` is SkipperCast's to build in MapLibre (the Chart
+presentation), while the terrain is Three in both perspectives. The
+surface-field mathematics is shared: the Chart presentation imports
+`packages/coast/src/map/surface-field.ts`, and the terrain draws currents
+with the same field.
+
+`?presentation=chart|2d|3d` is the key (already written by v1). The
+perspective toggle sits in the map chrome beside the zoom controls; it is
+disabled with a one-line reason where no terrain exists. Default: Chart
+(open-questions Q15).
+
+**Adapter.** `web/map/stage.ts` owns the renderers; Preact components
+never touch them. The terrain side goes through `packages/coast/src/embed.ts`
+(FE-70), a typed `mountCoast(host, options)` returning a `CoastHandle`
+that wraps today's `CoastViewer` and its template, so v1's
+`coast-workspace.js` and v2 share one mount. State flows:
+
+| Store → renderer | Renderer → store |
+| --- | --- |
+| `profile` → `setDepthLimit(60 or 300)` (the values `web/profile.ts` and `experience.ts` both hold) | `onSelection` → `?habitat=` and the mark card |
+| `target` → `coastTarget()` → `setSpecies` | `onView` → the shared camera (span-to-zoom rule of § 3A.1) |
+| `hour` → `setHour` | `onPerspective` → `?presentation=` |
+| shared camera → `setLocation({latitude, longitude, span})` | `onCurrentStatus` → the Currents rail entry's status line |
+| `current` → `setCurrentLayer` | `onSelectionInvalidated` → clear selection |
+| `habitat` → `selectHabitat` | `onRestoredSelection` → mark card |
+| visible = view is Coast, page visible, presentation is terrain → `setVisible` | |
+
+Three and the viewer load by dynamic import on the first terrain
+presentation, so the app's 350 KB first-paint budget (§ 13) is unchanged and
+`check_client.mjs` asserts `three` is absent from the app entry's static
+imports. A WebGL or asset failure returns the stage to Chart with "Coastal
+graphics are unavailable. The chart, forecasts and trip tools remain
+usable." (v1's wording).
+
+**Layers.** Every registry entry (§ 9) declares the presentations it draws
+in. Terrain-native layers (relief, water, contours, ranked habitat pins,
+shore features) are options of the Seafloor rail entry in terrain (FE-80,
+on Codex's host-chrome mode FE-79). SkipperCast layers the renderer lacks
+(MPAs, atlas marks, charter grounds, fleet) draw in Chart; in terrain their
+rail entries read "Chart only" until Codex's overlay API (FE-81) lets the
+registry drape them (FE-82). No layer has two rail entries.
+
+**Brief, Conditions, History, Reports.** v2 reuses `packages/coast` code,
+never a fork:
+
+- *Data*: `web/coast-data.ts` (FE-74) loads the report, ocean and history
+  snapshots through `coastFetch`, admits them only when
+  `resolveReportBinding` / `overviewReportContext` bind the selected place
+  (Morro Bay and Cambria today), aborts on change and exposes signals that
+  are `null` outside a binding.
+- *Models*: the brief adapter (FE-31) calls `buildDaily` where a report
+  binds and SkipperCast's regional feeds elsewhere, saying in one line that
+  the local report is unavailable for this area. SkipperCast's seven-day
+  dual-model forecast stays the forecast; `fish`'s report adds local rows
+  and never shortens or fills that horizon.
+- *Markup*: `ui/*.ts` and `charts/series.ts` return escaped HTML strings.
+  `web/app/CoastMarkup.tsx` (FE-75) mounts such a string in a shadow root
+  with `panel.css` and the token bridge (§ 3A.4). When v2 needs another
+  structure, the change is made in `packages/coast` with a comment on the
+  coordination issue first, so both shells keep one implementation.
+
+### 3A.3 One state controller
+
+`web/state.ts` is the one store for both shells; v1's coastal modules
+already import it. FE-73 adds the keys v1 reads ad hoc:
+
+| Key | Values | Stored | Notes |
+| --- | --- | --- | --- |
+| `presentation` | `chart`, `2d`, `3d` | yes (`skippercast-presentation-v1`) | terrain values fall back to `chart` where `hasCoastTerrain` is false, without rewriting the URL |
+| `current` | `off`, `wcofs`, `hfr-1`, `hfr-6` | no | default `off`; an unknown value stays in the URL and shows as unsupported (v1 rule, #402) |
+| `habitat` | coast habitat id (`[A-Za-z0-9._:-]{1,160}`) | no | independent of the atlas `spot` |
+
+Rules:
+
+- `web/fish-links.ts` stays the only alias table (`place`, `mode`,
+  `species`, `layer`, `area` → place). New aliases go there, with a test.
+- `web/profile.ts` stays the profile table; a test asserts its depth limits
+  and default targets equal `experience.ts` `maxDepth` and
+  `defaultSpecies`, so the two cannot drift.
+- One home memory: v2's port and profile save and forget go through the
+  same path as `dist/home-port.js`, which #396 synchronised with
+  `packages/coast` preferences (FE-83). A shared link never changes home.
+- Region change keeps no reload in v2 (§ 8); the terrain handle receives
+  the new place, and a region without terrain returns to Chart.
+- `server/routes/assets.ts` `AREA_PARAMS` gains the coast and Fish keys so
+  a shared Fish link opens the app, and `/coast` serves the app at
+  `presentation=3d` once v2 is on (FE-78).
+
+### 3A.4 Visual system: a token bridge for `packages/coast`
+
+One visual system (D1) means the terrain chrome, the report panel and the
+renderer read `web/tokens.css`. v1 pages use the same files today, so the
+bridge must leave them unchanged:
+
+1. **`packages/coast/tokens-bridge.css`** declares `--coast-*` properties
+   (ground, panel, panel-2, line, text, muted, mint, blue, coral, amber,
+   violet, water, land, label, mono and sans font) **only** under an
+   opt-in: `[data-coast-theme="tokens"]` and
+   `:host([data-coast-theme="tokens"])`, each mapped to a `web/tokens.css`
+   variable. Custom properties inherit into shadow roots, so a v2 host
+   element with the attribute themes everything inside.
+2. **Literals become fallbacks.** In `coast.css` and `panel.css` each
+   literal becomes `var(--coast-<name>, <today's literal>)`. Without the
+   opt-in the fallback applies, so v1 computes the same values. `panel.css`'s
+   local `:root` aliases are renamed to `--coast-*` so they never collide
+   with `web/tokens.css` names in a v2 document. FE-76 converts `coast.css`;
+   FE-77 converts `panel.css`.
+3. **Renderer colours as data.** `packages/coast/src/palette.ts` exports
+   `CoastPalette` and `DEFAULT_COAST_PALETTE` (today's ten values); the
+   embed takes an optional `palette`; v2 passes values read through
+   `web/map/palette.ts`; v1 passes none.
+4. **Lint.** `check_tokens.mjs` adds `packages/coast/**` with its own
+   shrink-only baseline seeded from today's findings; a literal is allowed
+   only as the fallback of a `var(--coast-…, …)` or in
+   `packages/coast/src/palette.ts` until FE-61, which removes the fallbacks
+   once no v1 page loads these files. SVG strings from `series.ts` carry
+   colours in `style` properties, because presentation attributes do not
+   resolve `var()`.
+5. **Proof.** A Playwright check reads computed colours of fixed elements on
+   `/coast` and the v1 terrain presentation before and after; they must be
+   equal. A unit test pins `DEFAULT_COAST_PALETTE` to today's values.
+   `check_contrast.mjs` covers the bridged text pairs under the opt-in.
+
+### 3A.5 Ownership boundary (proposal; the owner decides)
+
+Ranked options are in open-questions Q14. The plan assumes option 1:
+Codex owns `packages/coast` renderer internals, the coast data adapters and
+bridge, the terrain and mapping pipeline, the collectors (FE-40 … FE-45,
+FE-84, FE-85) and the v1 coastal modules until FE-61; Claude owns the v2
+shell, the visual system including the token bridge files, the landing, the
+layer registry and MapStage adapter, `web/state.ts`, the flag flip and the
+v1 deletion. The `packages/coast` exports v2 consumes (§ 3A.2) are a public
+API: changing one needs a comment on the
+[coordination issue](#3a6-hot-spots-shared-with-codex) first. Changing
+AGENTS.md's division of work is the owner's call; open-questions Q14 holds
+the proposed text.
+
+### 3A.6 Hot spots shared with Codex
+
+Coordination happens on GitHub issue
+[#413 "Front-end v2 and packages/coast: one shell, ownership boundary"](https://github.com/Grahammmm/skippercast/issues/413).
+Before a PR edits one of these, check open PRs and comment on the issue.
+
+| File | Why it is hot | Rule |
+| --- | --- | --- |
+| `packages/coast/**` | Codex's renderer and models; FE-70, FE-76, FE-77, FE-79, FE-81 touch it | renderer internals: Codex; bridge files (`tokens-bridge.css`, `src/palette.ts`): Claude with Codex review |
+| `dist/coast-*.js`, `dist/coastal-*.js`, `dist/coast.html` | v1 coastal glue that imports the shared store | Codex until FE-61; v2 never imports them |
+| `web/state.ts`, `web/fish-links.ts`, `web/coast-context.ts` | read by both shells | append keys and aliases; renames need an issue comment and both shells' tests |
+| `server/app.ts`, `server/routes/assets.ts`, `server/coast-data.ts`, `server/coast-pages.ts` | route order and the bridge; owner-approved paths | one router line per PR; Codex owns the bridge |
+| `dist/sw.js`, `dist/offline-core.js` | v1 offline packs plus coastal snapshots | FE-51 and Codex's offline work rebase on each other |
+| `scripts/check_tokens.mjs`, token baseline | FE-76 adds `packages/coast` | shrink-only |
+| `package.json`, `pnpm-lock.yaml` | `three`, `suncalc`, later `maplibre-gl`, `pmtiles` | one dependency change per PR |
+| `docs/FISH-MERGE-STATUS.md` | Codex's acceptance log | Codex writes; Claude links |
+| `CHANGELOG.md` | both agents add lines | rebase, never reorder |
 
 ## 4. Basemap strategy (cost near zero)
 
@@ -376,6 +661,8 @@ map 0, chrome 10, dock 20, sheet 30, modal 40, toast 50; `--touch-min` 44 px.
   only shrink (`--base` compares it with the base branch in CI).
 - `scripts/check_contrast.mjs` covers both token files until FE-61.
 - `node scripts/check_copy.mjs` already lints `web/`.
+- `packages/coast` joins the system through the token bridge of § 3A.4
+  (FE-76, FE-77); the lint covers it with its own shrink-only baseline.
 
 ## 6. The app shell (concept A · Bridge)
 
@@ -453,9 +740,10 @@ Full-viewport night map on `--bg-deep`. FE-07 ships it as the static
 shoreline: the region's CUSP coastline GeoJSON drawn as an inline SVG with
 the glow treatment, which is also the WebGL fallback (§ 13). FE-25 replaces
 it with the live night map (the basemap style's night variant: land
-`--panel`, no labels below zoom 9, coastline glow, relief tiles for the
-region at 0.5 opacity, animated streamlines from the latest fresh current
-frame) and keeps the SVG as the fallback. Over it, left-aligned, DM Sans display: the headline "Know the
+`--panel`, no labels below zoom 9, coastline glow, animated streamlines
+from the latest fresh current frame; the PNG relief layer was dropped on
+2026-10-07, § 3A.2) and keeps the SVG as the fallback. The landing never
+loads `three`. Over it, left-aligned, DM Sans display: the headline "Know the
 water before you leave the dock.", the input "Where are you launching?"
 with "Use my location", the profile pills; along the bottom the live readout
 strip (wind, swell, water, tide, fleet line, freshness) in the same tiles as
@@ -508,6 +796,11 @@ Ranked in open-questions Q2; the plan assumes:
 | `layers` | comma list of rail ids | yes (`skippercast-layers-v1`) | default per profile |
 | `area` | coast or focus id | no | replaces `focus` for the command bar; `focus` still read |
 | `base` | `night`, `chart`, `aerial` | yes | aerial only where NAIP is configured |
+| `presentation`, `current`, `habitat` | see § 3A.3 | see § 3A.3 | added by FE-73; already written by v1 |
+
+Fish links (`place`, `mode`, `species`, `layer`) are translated by
+`web/fish-links.ts` before the store reads them (Codex, #379); explicit
+SkipperCast keys win.
 
 `?view=` is shared with v1, which writes the map position as
 `lat,lng,zoom`. The store keeps the raw value in `view` for v1 and sets
@@ -542,7 +835,8 @@ wrapper, not edited.
 ## 9. Map layers
 
 `web/map/layers.ts` registers each layer with: id, rail entry (or base, or
-always-on), draw order, sources, time behaviour (`static`, `hour`,
+always-on), the presentations it draws in (`chart`, `terrain`, or both;
+§ 3A.2), draw order, sources, time behaviour (`static`, `hour`,
 `observed`), legend entries, the **basis** sentence (one sentence naming the
 product, its resolution and its age rule, shown in the rail's info popover
 and the legend), gating, and the `fish` module it ports. Draw order, bottom
@@ -556,19 +850,19 @@ sky), marks, selection, coastline glow.
 | --- | --- | --- | --- | --- | --- | --- |
 | Basemap | base | Protomaps extract on R2 (§ 4) | token style; night variant on the landing | static | "OpenStreetMap data, Protomaps build <date>." | FE-10 |
 | Coastline glow | always | NOAA CUSP extract per region (GeoJSON, § 11 row) | blurred line under a crisp line, as `fish` | static | "NOAA NGS CUSP shoreline, 1994–2010 sources." | FE-11 |
-| Seafloor relief | Seafloor | PNG PMTiles of USGS grids built by `src/skippercast/seafloor/relief.py` (ported from `fish/scripts/import-bathymetry.py`), on R2 at `tiles/relief/relief-<region>.pmtiles`, served by `server/relief.ts` (ported proxy: approved-source SHA table, 16 MB and 2 MB caps, range checks) | raster with the depth ramp; transparent gaps; nearest sampling | static | "USGS survey relief, nominal 0–300 ft; gaps are unsurveyed." | FE-13, FE-26, FE-14 |
+| Terrain relief (2D and 3D) | Seafloor (terrain options) | `packages/coast` regional terrain and imagery, SHA-verified and byte-bounded, served by `server/coast-data.ts` from the Fish Worker until FE-85 moves them to R2 | the Three scene of the Terrain presentations; relief, water and contour controls move to the rail in FE-80 | static | the renderer's existing source and coverage lines | #385, #392 (on `main`); FE-71, FE-79, FE-80. The PNG relief raster (FE-13, FE-26) is dropped |
 | Seafloor candidates and cells | Seafloor (option) | existing `tiles/seafloor/seafloor-<region>.pmtiles` | vector fill by terrain grade or species fit (existing views) | static | existing seafloor sentence | FE-14 |
-| Currents | Currents | `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames, through `frames.ts` gates | canvas streamlines: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
-| Water temp | Water temp | `habitat-tiles/sst-analysis-*.json` (MUR) | `ImageSource` texture ≤ 1,024 px from `surfaceField`, feathered inward at gaps; 0.5 °F contours with sparse labels; click reading with analysis time and error | observed (daily analysis) | "MUR daily analysis, 0.01°, sampled at 0.02°, <age>." | FE-16 |
-| Swell | Swell | forecast matrix grid (`forecast-matrix.js` data) and nearshore model sites (§ 11) | field texture of significant height with period isolines; direction as short strokes at low density, never per-cell arrows; nearshore sites as rings sized by height | hour | "Model wave forecast on the region grid, issued <age>; nearshore sites from the CDIP MOP model." | FE-17 (field), FE-27 (nearshore rings) |
-| Habitat and marks | always (zoom ≥ 10) | existing survey habitat, geology, reef marks (GeoJSON / PMTiles) | habitat as fills at 0.25 with token hue by class; geology as hatched outline; marks as rings with a fit badge; selected mark highlighted | static | existing sentences per source | FE-18 |
+| Currents | Currents (source choice `?current=`) | `/api/coast/ocean` current fields where a report binds; `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames elsewhere; gates from `packages/coast` `selectCurrentFrame` and `selectedCurrent` through `frames.ts`; Terrain: `setCurrentLayer` | canvas streamlines from `packages/coast/src/map/surface-field.ts`: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
+| Water temp | Water temp | `habitat-tiles/sst-analysis-*.json` (MUR) | `ImageSource` texture ≤ 1,024 px from `packages/coast` `surfaceField` and `fieldContours`, feathered inward at gaps; 0.5 °F contours with sparse labels; click reading with analysis time and error | observed (daily analysis) | "MUR daily analysis, 0.01°, sampled at 0.02°, <age>." | FE-16 |
+| Swell | Swell | forecast matrix grid (`forecast-matrix.js` data); nearshore model sites from the coast report where one binds (`presentation.ts` `freshNearshore`), from FE-40 after FE-84 | field texture of significant height with period isolines; direction as short strokes at low density, never per-cell arrows; nearshore sites as rings sized by height | hour | "Model wave forecast on the region grid, issued <age>; nearshore sites from the CDIP MOP model." | FE-17 (field), FE-27 (nearshore rings) |
+| Habitat and marks | always (zoom ≥ 10) | existing survey habitat, geology, reef marks (GeoJSON / PMTiles) | habitat as fills at 0.25 with token hue by class; geology as hatched outline; marks as rings with a fit badge; selected mark highlighted | static | existing sentences per source; a terrain selection keeps the renderer's evidence lines | FE-18 (atlas `?spot=` and coast `?habitat=` in one mark card) |
 | MPAs | always | CDFW ds582 (existing) | `--mpa-fill` 0.08, dashed `--mpa-line`; name label at zoom ≥ 11 | static | "CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page." | FE-19 |
-| Shore runs | with `profile=shore` | ESI runs and access points (§ 11) | run as a wide soft line in `--amber` 0.6 with priority tint; access points as pins | static | "ESI 2006 sandy-shore runs; access points from the Coastal Commission inventory, checked <date>." | FE-36 |
+| Shore runs | with `profile=shore` | ESI runs and access points: `slo-shore-habitat.geojson` through the bridge today, FE-43's import later; in Terrain the renderer draws its own shore features | run as a wide soft line in `--amber` 0.6 with priority tint; access points as pins | static | "ESI 2006 sandy-shore runs; access points from the Coastal Commission inventory, checked <date>." | FE-36 |
 | Charter grounds | Fleet | `charter-grounds.json` | hatched polygons, label on hover | static | existing sentence | FE-21 |
 | Commercial AIS 2024 | Fleet (option) | `commercial-ais-effort.geojson` | heat fill in `--amber` | static | existing sentence (`commercial-ais.html`) | FE-21 |
 | Charter fleet activity | Fleet (admin) | `/api/fleet/map/*` | events sized by dwell, tracks by segment, heat cells, all `--amber` family | static (filters) | "Inferred from movement; filters in the Fleet view." | FE-24 |
-| Clouds | Clouds | nowCOAST GOES longwave WMS, frames from the times index (§ 11) | raster 512 px tiles, monochrome contrast, loop over observed frames only, 90-minute age gate, withheld on future days | observed | "GOES infrared, observed <time>; a loop of real frames, never a forecast." | FE-22 |
-| Aerial | base | USGS NAIP ImageServer (live tiles) | raster at 0.92 opacity, desaturated | static | "USGS/USDA NAIP natural-colour mosaic, dated imagery." | FE-23 |
+| Clouds | Clouds | nowCOAST GOES longwave WMS through `packages/coast` `cloudSource`; frame times from `/api/coast/ocean` `cloud.availableTimes` where a report binds, the FE-44 index elsewhere | raster 512 px tiles, monochrome contrast, loop over observed frames only, 90-minute age gate, withheld on future days | observed | "GOES infrared, observed <time>; a loop of real frames, never a forecast." | FE-22 |
+| Aerial | base (Chart) | USGS NAIP ImageServer (live tiles) through `packages/coast` `naipSource`; the terrain drapes its own reviewed imagery | raster at 0.92 opacity, desaturated | static | "USGS/USDA NAIP natural-colour mosaic, dated imagery." | FE-23 |
 | Chart | base | NOAA ENC WMS (existing) | raster, zoom ≥ 10 | static | existing sentence | FE-11 |
 
 Rules for every layer:
@@ -593,7 +887,18 @@ corner on desktop and as the sheet's peek on mobile.
 
 ## 10. Brief and charts
 
-### The daily brief (`web/brief/daily.ts`, ported from `fish/src/daily.ts`)
+**Amended 2026-10-07 (§ 3A.2).** The brief model is
+`packages/coast/src/daily.ts` (`buildDaily`) behind the adapter
+`web/brief/model.ts`, used where a coast report binds (Morro Bay and
+Cambria today); elsewhere the adapter builds the same fields from
+SkipperCast's regional feeds, and `fish`'s report never fills or shortens
+the seven-day forecast. Charts are `packages/coast/src/charts/series.ts`
+(`chart`, SVG strings) mounted through `CoastMarkup`; History is
+`ui/history.ts` `historyView` over `/api/coast/history`; catch cards are
+`ui/catches.ts`. The contracts below stand; only "ported" becomes
+"imported".
+
+### The daily brief (`web/brief/model.ts` over `packages/coast/src/daily.ts`)
 
 Inputs: the region's forecast hours (wind, gust, seas, period, air, rain,
 cloud), alerts, sunrise and sunset, tides (curve and events), the latest
@@ -628,7 +933,7 @@ profile. Outputs:
   the landing-reports feed, linking to the Reports page; absent when no
   report is within seven days.
 
-### Series chart (`web/charts/series.tsx`, ported from `fish/src/charts/series.ts`)
+### Series chart (`packages/coast/src/charts/series.ts`, mounted by `CoastMarkup`)
 
 A Preact component with the same contract: rows with label, unit, colour
 token, points, optional min and max and `gapMs`; one time axis; night
@@ -636,9 +941,12 @@ shading; quiet-window shading; a cursor bound to the `hour` signal that
 also moves the map; independent row scales with their extremes on the right;
 "No supported samples" for an empty row; paths break at gaps; `mini` mode
 for sparklines; `role="img"` with a label listing rows and units.
-Colours come from tokens via `palette.ts`; the hard-coded values in
-`fish` are mapped (`#64e4c0` → `--mint`, `#60b9ff` → `--blue`, `#eabd76` →
-`--amber`, `#ff9580` → `--coral`, the rest to `--muted` tints).
+Colours come from tokens through the `--coast-*` bridge (§ 3A.4); the
+hard-coded values in `series.ts` are mapped (`#64e4c0` → `--mint`,
+`#60b9ff` → `--blue`, `#eabd76` → `--amber`, `#ff9580` → `--coral`, the
+rest to `--muted` tints) as `var(--coast-…, literal)` so v1 keeps its look.
+The cursor follows `hour`; the host listens for the chart's pointer events
+and writes `hour`, so the renderer stays a pure function.
 
 ### Conditions view
 
@@ -647,7 +955,11 @@ Gusts, Offshore, Nearshore, Tide, Air, Cloud) in a horizontally scrollable
 region on mobile, a caption line, tide events, and the profile's
 "before you go" notes with the CDFW rules link. The time dock stays
 visible and drives the cursor. The existing `meteogram-core.js` chart stays
-for v1 until FE-61.
+for v1 until FE-61. Rows come from SkipperCast's seven-day dual-model
+forecast for every region, plus the coast report's local rows (nearshore,
+tide events, beach notices) only where a report binds, each with its own
+clock, as v1's `coast-conditions.js` does since #393. The surface-current
+choice (`?current=`) is the same control as the map's.
 
 ### History view
 
@@ -657,8 +969,25 @@ once the history collector covers them), a day range (7, 14, 45, the
 recent hourly means line over the monthly p10 / median / p90 bands from
 the history feed (§ 11), with sample counts, years with data and missing
 coverage shown as text. Copy: "recorded history", never "climatology".
+Since #385 and #393 this is `packages/coast` `historyView` over
+`/api/coast/history` (46028 and 46215 today); a region without a history
+binding shows the unavailable state.
 
 ## 11. Data ingest for the `fish`-only sources
+
+**Amended 2026-10-07.** The v2 shell no longer waits for these collectors:
+until they exist, the coast report, ocean and history snapshots, the
+habitat release and the terrain assets reach SkipperCast through Codex's
+bounded bridge to the Fish Worker (`server/coast-data.ts`,
+`docs/coastal-service.md`), SLO only. The collectors below are still
+required to retire `fish`, and each now has one more acceptance rule: its
+output matches the `packages/coast` type the client already reads
+(`Enrichment` nearshore and water quality, `HistoryBundle`, `CloudImage`,
+the shore-habitat GeoJSON), so FE-84 can switch the bridge's upstream to
+SkipperCast feeds without a client change. FE-85 moves the terrain,
+imagery and habitat assets. Under the ownership proposal (§ 3A.5) these are
+Codex's tasks; the bathymetry row's PNG relief (FE-13, FE-26) is dropped in
+favour of the renderer's terrain.
 
 Each source becomes a SkipperCast collector under
 `src/skippercast/pipeline/`, runs in an existing workflow on the owner's
@@ -746,7 +1075,10 @@ v1 entries it deletes.
   lowers `max_bytes` toward the 400 KB target as layers move to tiles;
   Largest Contentful Paint ≤ 2.5 s on Playwright's throttled mobile profile
   against the built site; basemap tile fetch per session ≤ 150 tiles at the
-  default view.
+  default view. `three` and `CoastViewer` load only by dynamic import when a
+  Terrain presentation is first chosen; `check_client.mjs` fails if the app
+  entry's static imports reach `three`. Terrain streaming keeps the
+  renderer's own byte bounds.
 - **Tests**: Node tests for every ported module (`surface-field`,
   `frames`, `series`, `daily`, `profile`, `layers` registry, `palette`);
   table tests from `fish`'s test suite ported with their fixtures where
@@ -781,8 +1113,11 @@ Before the owner archives and deletes the repository (FE-62), verify live
 on skippercast.com with `UI_V2` on, and link each item in the PR:
 
 1. Landing and app render at `/` and `/map` for Morro Bay with every rail
-   layer toggling (basemap, relief, currents, water temperature, swell,
-   MPAs, marks, clouds, aerial where configured).
+   layer toggling (basemap, currents, water temperature, swell, MPAs,
+   marks, clouds, aerial where configured) and the Terrain 2D and 3D
+   presentations preserving place, target, profile, hour and selection;
+   `/coast` and every Fish link open the same app (FE-78). No second map,
+   picker or timeline is offered for the same context.
 2. Boat, Shore and Spear each change the species list, depth limit,
    "where to look" and caveat as § 8 says.
 3. The brief shows the four tiles with sources and ages, the tide curve
@@ -795,8 +1130,11 @@ on skippercast.com with `UI_V2` on, and link each item in the PR:
    on future days.
 7. Every `fish` data source in § 11 has a catalog entry, a register row
    (**Owner**) and a collector run visible in the workflow logs.
-8. The relief archive on R2 matches an approved SHA and the proxy refuses
-   an altered manifest (test and a live check).
+8. The terrain, imagery and habitat assets are served from SkipperCast's
+   own storage with their SHA manifest (FE-85), the bridge reads SkipperCast
+   feeds instead of the Fish Worker (FE-84), and distinct persisted refresh
+   runs are witnessed; `docs/FISH-MERGE-STATUS.md`'s acceptance matrix is
+   complete.
 9. `docs/archive/fish/` holds: `fish/docs/*.md` (architecture, surface
    layer design, history pipeline, species opportunity, bathymetry
    overlay, independent review, quality review, launch), `fish/research/`
@@ -818,7 +1156,7 @@ GitHub, delete the Cloudflare resources, delete the repository, release the
 | Item | Monthly | Note |
 | --- | --- | --- |
 | Basemap on R2 | ≤ $1 | § 4; storage cents, reads mostly edge-cached |
-| Relief tiles on R2 | < $0.01 | about 12 MB per region today |
+| Terrain assets on R2 (FE-85) | cents | sized by the mapping pipeline's receipts; replaces the dropped relief tiles |
 | Fonts, icons, bundles | $0 | static assets on Workers |
 | New collectors | $0 | run on the owner's runner in existing workflows |
 | NAIP, GOES, CDIP, county, NDBC | $0 | public services; NAIP and GOES tiles are fetched by the browser |
@@ -836,6 +1174,11 @@ GitHub, delete the Cloudflare resources, delete the repository, release the
 | Rights of the Coastal Commission inventory and the county feed for a paid product | Facts only, owner rows in the register before FE-60, open-questions Q8 |
 | Startup JSON budget grows with new feeds | Feeds are lazy per rail entry; the budget file's `max_bytes` only decreases |
 | The owner's `fish` deletion loses receipts | § 15 item 9 copies them first; FE-62 is blocked until the copy PR merges |
+| v2 and Codex's v1 coastal work change the same files in parallel | § 3A.6 hot-spot rules; the coordination issue; the `packages/coast` exports v2 uses are a public API |
+| The renderer's ~40 template ids make a host-chrome mount a large refactor | FE-70 keeps the template inside the embed first; FE-79 moves controls one group at a time |
+| Three plus terrain on older phones | Chart is the default presentation; terrain is lazy, bounded and stops rendering when hidden (`setVisible`) |
+| Restyling `packages/coast` changes v1's look | fallbacks equal today's literals and the computed-style check of § 3A.4 |
+| The Fish Worker bridge is a live dependency | FE-84 and FE-85 before FE-62; the bridge refuses non-SLO regions, so nothing else depends on it |
 
 ## 18. Phasing
 
