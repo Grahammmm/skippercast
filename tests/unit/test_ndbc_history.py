@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 import gzip
 import json
+import math
 from pathlib import Path
 import re
 import tempfile
@@ -28,26 +29,84 @@ def routes():
             nh.annual_url("46028", 1999): gz("h1999-legacy.txt"), nh.annual_url("46028", 2024): gz("h2024.txt")}
 
 
-def ts_fields():
-    """Top-level field names (and optional ones) of each type in packages/coast history-types.ts."""
-    source = (ROOT / "packages/coast/src/history-types.ts").read_text()
-    types = {}
-    for name, body in re.findall(r"export type (\w+)=(.*?);\n", source + "\n"):
-        fields = {}
-        for block in re.findall(r"\{(.*)\}", body):
-            depth, part, parts = 0, "", []
-            for ch in block + ";":
-                depth += ch in "{[(" and 1 or (ch in "}])" and -1 or 0)
-                if ch == ";" and depth == 0:
-                    parts.append(part)
-                    part = ""
-                else:
-                    part += ch
-            for item in filter(None, parts):
-                key = item.split(":", 1)[0]
-                fields[key.rstrip("?")] = key.endswith("?")
-        types[name] = fields
-    return types
+def split_top(expr, sep):
+    """Split a TypeScript type expression on `sep` outside brackets."""
+    depth, part, parts = 0, "", []
+    for ch in expr:
+        depth += ch in "{[(<" and 1 or (ch in "}])>" and -1 or 0)
+        if ch == sep and depth == 0:
+            parts.append(part.strip())
+            part = ""
+        else:
+            part += ch
+    return [p for p in parts + [part.strip()] if p]
+
+
+class TsTypes:
+    """Values and nullability checked against the packages/coast history-types.ts declarations."""
+
+    def __init__(self):
+        source = (ROOT / "packages/coast/src/history-types.ts").read_text()
+        self.types = dict(re.findall(r"export type (\w+)=(.*?);\n", source + "\n"))
+
+    def literals(self, expr):
+        expr = self.types.get(expr, expr)
+        return [p.strip("'") for p in split_top(expr, "|")]
+
+    def fields(self, expr):
+        """Object-like type -> {field: (optional, type)}, or None for non-object types."""
+        expr = expr.strip()
+        if expr in self.types:
+            return self.fields(self.types[expr])
+        parts = split_top(expr, "&")
+        if len(parts) > 1:
+            merged = {}
+            for part in parts:
+                merged.update(self.fields(part))
+            return merged
+        if expr.startswith("Record<"):
+            key, value = split_top(expr[7:-1], ",")
+            return {k: (False, value) for k in self.literals(key)}
+        if expr.startswith("{") and expr.endswith("}"):
+            out = {}
+            for item in split_top(expr[1:-1], ";"):
+                key, value = item.split(":", 1)
+                out[key.rstrip("?")] = (key.endswith("?"), value)
+            return out
+        return None
+
+    def errors(self, value, expr, where="$"):
+        expr = expr.strip()
+        options = split_top(expr, "|")
+        if len(options) > 1:
+            found = [self.errors(value, o, where) for o in options]
+            return [] if any(not f for f in found) else [f"{where}: {value!r} is not {expr}"]
+        if expr.endswith("[]"):
+            if not isinstance(value, list):
+                return [f"{where}: expected array, got {value!r}"]
+            return [e for i, item in enumerate(value) for e in self.errors(item, expr[:-2], f"{where}[{i}]")]
+        primitives = {"number": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v),
+                      "string": lambda v: isinstance(v, str), "boolean": lambda v: isinstance(v, bool), "null": lambda v: v is None}
+        if expr in primitives:
+            return [] if primitives[expr](value) else [f"{where}: {value!r} is not {expr}"]
+        if expr.startswith("'"):
+            return [] if value == expr.strip("'") else [f"{where}: {value!r} is not {expr}"]
+        if re.fullmatch(r"-?\d+", expr):
+            return [] if value == int(expr) and not isinstance(value, bool) else [f"{where}: {value!r} is not {expr}"]
+        if expr in self.types and self.fields(expr) is None:
+            return self.errors(value, self.types[expr], where)
+        fields = self.fields(expr)
+        if fields is None:
+            raise AssertionError(f"Unhandled TypeScript type {expr}")
+        if not isinstance(value, dict):
+            return [f"{where}: expected object, got {value!r}"]
+        out = [f"{where}.{k}: unexpected field" for k in value.keys() - fields.keys()]
+        for key, (optional, kind) in fields.items():
+            if key in value:
+                out += self.errors(value[key], kind, f"{where}.{key}")
+            elif not optional:
+                out.append(f"{where}.{key}: missing")
+        return out
 
 
 class NdbcHistoryTests(TestCase):
@@ -111,34 +170,48 @@ class NdbcHistoryTests(TestCase):
 
     def test_output_matches_packages_coast_history_bundle(self):
         bundle, _ = self.run_full()
-        types = ts_fields()
-        hour_fields = {**types["HistoricalHour"], **{m: False for m in nh.FIELDS}, "at": False}
-
-        def check(value, fields, where):
-            required = {k for k, optional in fields.items() if not optional}
-            self.assertLessEqual(required, value.keys(), where)
-            self.assertLessEqual(value.keys(), fields.keys(), where)
-
-        check(bundle, types["HistoryBundle"], "bundle")
+        types = TsTypes()
+        self.assertEqual(types.errors(bundle, "HistoryBundle"), [])
         self.assertEqual((bundle["schemaVersion"], bundle["countyId"], bundle["recentWindowDays"]), (1, "slo", 45))
         for station in bundle["stations"]:
-            check(station, types["StationHistory"], "station")
-            check(station["recent"], types["RecentHistory"], "recent")
-            check(station["recent"]["qc"], types["HistoryQC"], "qc")
-            check(station["archive"], types["HistoryArchive"], "archive")
-            for hour in station["recent"]["hours"]:
-                check(hour, hour_fields, "hour")
-                self.assertEqual(set(hour["counts"]), set(nh.FIELDS))
-            for source in station["sources"]:
-                check(source, types["HistorySource"], "source")
-                self.assertIn(source["role"], ("index", "recent", "annual"))
-            baseline_type = re.search(r"baseline:\{(.*?)\};archive", (ROOT / "packages/coast/src/history-types.ts").read_text()).group(1)
-            self.assertEqual(set(station["baseline"]), set(re.findall(r"(?:^|;)(\w+):", baseline_type)))
             self.assertEqual(len(station["baseline"]["months"]), 12 * len(nh.FIELDS))
-            for month in station["baseline"]["months"]:
-                check(month, types["MonthlyDistribution"], "month")
+            for hour in station["recent"]["hours"]:
+                self.assertEqual(set(hour["counts"]), set(nh.FIELDS))
         self.assertTrue(re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z", bundle["generatedAt"]))
         json.dumps(bundle, allow_nan=False)
+        # The checker catches wrong value types and nulls, not only field names.
+        broken = json.loads(json.dumps(bundle))
+        broken["stations"][0]["baseline"]["months"][0]["count"] = None
+        broken["stations"][0]["recent"]["stale"] = "no"
+        broken["stations"][0]["recent"]["hours"][0]["waveFt"] = "1.5"
+        broken["stations"][0]["sources"][0]["role"] = "archive"
+        broken["stations"][1]["baseline"]["periodStart"] = 2024
+        self.assertEqual(len(types.errors(broken, "HistoryBundle")), 5)
+
+    def test_corrupt_gzip_fails_only_its_year(self):
+        truncated = b"\x1f\x8b\x08\x00garbage"  # ends mid-header: decodes to nothing, never reaches EOF
+        garbage = truncated + b"\xff" * 20  # invalid deflate data: zlib.error inside the decoder
+        for body, message in ((truncated, "truncated"), (garbage, "Corrupt NOAA gzip")):
+            with self.assertRaisesRegex(ValueError, message):
+                nh.decode(body)
+        bundle, _ = self.run_full(FakeSession({**routes(), nh.annual_url("46215", 2023): garbage}))
+        station = bundle["stations"][0]
+        failed = next(s for s in station["sources"] if s.get("year") == 2023)
+        self.assertEqual(failed["outcome"], "error")
+        self.assertIn("Corrupt NOAA gzip", failed["error"])
+        self.assertEqual(station["baseline"]["years"], [2024])
+        self.assertEqual(bundle["stations"][1]["baseline"]["years"], [1999, 2024])
+
+    def test_short_units_line_is_a_recorded_mismatch(self):
+        lines = text("h2024.txt").decode().splitlines()
+        lines[1] = "#yr  mo dy hr mn degT m/s  m/s     m   sec"  # stops before the ATMP/WTMP units
+        short = "\n".join(lines)
+        with self.assertRaisesRegex(ValueError, "unit"):
+            nh.parse(short, NOW, 2024)
+        bundle, _ = self.run_full(FakeSession({**routes(), nh.annual_url("46215", 2024): gzip.compress(short.encode(), mtime=0)}))
+        station = bundle["stations"][0]
+        failed = next(s for s in station["sources"] if s.get("year") == 2024)
+        self.assertEqual((failed["outcome"], station["baseline"]["years"]), ("error", [2023]))
 
     def test_recent_mode_keeps_published_baseline_and_fetches_only_recent(self):
         published, _ = self.run_full()

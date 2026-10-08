@@ -55,17 +55,25 @@ jobs:
       - name: Load the published data branch
         run: bash scripts/publish_branch_snapshot.sh --load data var/published
       - name: Collect NDBC history (${{ env.MODE }})
-        run: >-
-          python -m skippercast.pipeline.ndbc_history --mode "$MODE" $REVALIDATE --region morro-bay
-          --cache var/ndbc-history --previous var/published/regions/morro-bay/history.json
-          --output var/history/regions/morro-bay/history.json
+        id: collect
+        run: |
+          # The recent pass keeps the published monthly bands, so it waits for the first full backfill.
+          if [ "$MODE" = recent ] && [ ! -f var/published/regions/morro-bay/history.json ]; then
+            echo "::notice::No published history yet; skipping the recent pass until a full backfill runs (dispatch mode full)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python -m skippercast.pipeline.ndbc_history --mode "$MODE" $REVALIDATE --region morro-bay \
+            --cache var/ndbc-history --previous var/published/regions/morro-bay/history.json \
+            --output var/history/regions/morro-bay/history.json
       - name: Save annual checkpoints
-        if: ${{ !cancelled() && env.MODE == 'full' }}
+        if: ${{ !cancelled() && env.MODE == 'full' && steps.collect.outputs.skip != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: var/ndbc-history
           key: ndbc-history-${{ github.run_id }}
       - name: Publish to the data branch
+        if: ${{ steps.collect.outputs.skip != 'true' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -91,7 +99,8 @@ jobs:
           p = Path('var/history/regions/morro-bay/history.json')
           lines = ['## NDBC buoy history (' + os.environ['MODE'] + ')']
           if not p.is_file():
-              lines.append('No history produced; the published file is unchanged.')
+              lines.append('No history produced; the published file is unchanged. '
+                           'A recent pass before the first full backfill skips on purpose.')
           else:
               for s in json.loads(p.read_text())['stations']:
                   failed = sum(x['outcome'] == 'error' for x in s['sources'])

@@ -79,6 +79,8 @@ history, not a climatology, forecast or catch probability.
   full pass simply downloads the files again.
 - **Recent pass** (weekly): fetches only the two 45-day realtime files and keeps
   the published monthly bands, archive index and annual receipts unchanged.
+  Until the first full backfill has published `history.json`, the recent pass
+  skips with a notice and publishes nothing, so run the full pass first.
 - **Aggregation:** UTC-hour means of valid samples only, with raw and per-metric
   counts. Monthly p10 / median / p90 (linear interpolation), min, max and mean
   pool those hours across years, each hour weighted equally, with the count,

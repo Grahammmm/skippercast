@@ -75,7 +75,8 @@ def parse(text, now, year=None):
     if lines and lines[0].startswith("#"):
         units = lines.pop(0).lstrip("#").split()
         for column, unit in UNITS.items():
-            if column in header and units[header.index(column)] != unit:
+            # a units line shorter than the header is a mismatch, not a crash
+            if column in header and (units[header.index(column):] or [None])[0] != unit:
                 raise ValueError(f"Unexpected NDBC {column} unit")
     minutes, limit = header[4] == "mm", now.timestamp() * 1000 + 300_000
     qc, records = dict.fromkeys(QC_KEYS, 0), {}
@@ -197,7 +198,10 @@ def decode(body):
     if body[:2] != b"\x1f\x8b":
         return body.decode("utf-8")
     decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
-    text = decoder.decompress(body, MAX_DECODED + 1)
+    try:
+        text = decoder.decompress(body, MAX_DECODED + 1)
+    except (zlib.error, EOFError) as error:  # a corrupt archive fails its year, not the run
+        raise ValueError(f"Corrupt NOAA gzip archive: {error}") from error
     if decoder.unconsumed_tail or len(text) > MAX_DECODED or not decoder.eof:
         raise ValueError("NOAA archive exceeds the decoded budget or is truncated")
     return text.decode("utf-8")
