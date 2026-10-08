@@ -8,7 +8,7 @@ import {DEFAULT_COAST_PALETTE,type CoastPalette} from './palette.ts';
 import type {CoastHandle,CoastMountOptions} from './embed-types.ts';
 import {coastPath} from './transport.ts';
 import {coastEmbedTemplate} from './embed-template.ts';
-export type {CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastSelection,CoastView} from './embed-types.ts';
+export type {CoastChrome,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastView} from './embed-types.ts';
 export type {CoastOverlay,CoastOverlayColor,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPalette,CoastOverlayPick,CoastOverlayStyle} from './embed-types.ts';
 
 type Viewer=Pick<CoastViewer,keyof CoastHandle>;
@@ -36,7 +36,10 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  const parsed=new DOMParser().parseFromString(coastEmbedTemplate,'text/html');
  const scene=document.importNode(parsed.getElementById('scene')!,true),sourcesDialog=document.importNode(parsed.getElementById('sources')!,true);
  root.append(scene,sourcesDialog);inserted.push(scene,sourcesDialog);
- const $=<E extends HTMLElement=HTMLElement>(id:string)=>root.getElementById(id) as E;
+ // Host chrome: the native panels leave the root but stay bound, detached, so the
+ // handle's setters drive the same controls and handlers as v1's chrome.
+ const detached=options.chrome==='host'?document.createElement('div'):undefined;
+ const $=<E extends HTMLElement=HTMLElement>(id:string)=>(root.getElementById(id)??detached?.querySelector(`[id="${id}"]`)) as E;
  // The host owns place, target and perspective, so their in-scene controls go.
  root.querySelector<HTMLElement>('.intro')!.hidden=true;
  root.querySelector('.layers h2')!.remove();root.querySelector('.layers>.eyebrow')!.remove();
@@ -49,10 +52,11 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  // CoastViewer binds these ids; hidden stand-ins keep it off the host's chrome.
  for(const id of ['perspective-2d','perspective-3d']){const button=document.createElement('button');button.id=id;button.hidden=true;controls.append(button);}
  const sources=document.createElement('button');sources.id='sources-open';sources.textContent='ⓘ';sources.setAttribute('aria-label','Terrain sources and assumptions');controls.append(sources);
+ if(detached)detached.append(root.querySelector('.intro')!,root.querySelector('.layers')!,$('target-detail'),$('reading'),controls);
  for(const link of root.querySelectorAll<HTMLAnchorElement>('[data-coast-receipt]'))link.href=coastPath(link.dataset.coastReceipt!);
  if(options.forecastHref!==undefined)for(const link of root.querySelectorAll<HTMLAnchorElement>('a[href="index.html#forecast"]'))link.href=options.forecastHref;
- const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onView,onPerspective,overlayPalette,onOverlayPick}=options;
- const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),onCurrentStatus,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective,overlayPalette,onOverlayPick});
+ const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onView,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage}=options;
+ const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),...(detached?{controls:detached}:{}),onCurrentStatus,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage});
  if(options.onTop)$('top').onclick=options.onTop;
  if(options.onCloseSelection)$('target-close').onclick=options.onCloseSelection;
  if(options.onReset){$('reset').setAttribute('aria-label','Reset map view');$('reset').onclick=options.onReset;}
@@ -70,6 +74,16 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   setVisible:live(visible=>viewer.setVisible(visible),undefined),
   setOverlay:live((id,overlay)=>viewer.setOverlay(id,overlay),undefined),
   removeOverlay:live(id=>viewer.removeOverlay(id),false),
+  setRelief:live(factor=>viewer.setRelief(factor),undefined),
+  setWaterOpacity:live(opacity=>viewer.setWaterOpacity(opacity),undefined),
+  setWaterVisible:live(visible=>viewer.setWaterVisible(visible),undefined),
+  setContours:live(visible=>viewer.setContours(visible),undefined),
+  setSourceCoverage:live(visible=>viewer.setSourceCoverage(visible),undefined),
+  setHabitatVisible:live(visible=>viewer.setHabitatVisible(visible),undefined),
+  zoom:live(direction=>viewer.zoom(direction),undefined),
+  resetView:live(()=>viewer.resetView(),undefined),
+  topView:live(()=>viewer.topView(),undefined),
+  openSources:live(()=>viewer.openSources(),undefined),
   destroy:live(()=>{alive=false;try{viewer.destroy();}finally{for(const node of inserted)node.remove();}},undefined),
  };
  const initial=options.initial??{};
