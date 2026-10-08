@@ -15,9 +15,17 @@
 // - Original clocks are kept: the payload is never rewritten; generatedAt is
 //   the snapshot's own clock, receivedAt and savedAt (X-SC-Offline, a saved
 //   offline copy) are reported beside it.
-// - Expiry hides, never refreshes. Past SNAPSHOT_LIMIT_MS after its
-//   generatedAt a snapshot becomes null with status 'expired' and no request
-//   follows. Only refresh() or a new place requests again.
+// - Readings are withdrawn by packages/coast's own per-reading rules (for
+//   example the 3 h fetch age of nearshore and beach readings, the 6 h
+//   current-field rule), as v1 does. The whole-snapshot limit here is only a
+//   backstop for a snapshot nothing has replaced.
+// - Expiry hides, never refreshes. Past its limit a snapshot becomes null
+//   with status 'expired' and no request follows. Only refresh() or a new
+//   place requests again. The limit is checked on every read as well as by a
+//   timer, since timers stall in throttled or suspended tabs.
+// - A newer snapshot is never replaced by an older one (a saved offline copy
+//   arriving after a fresher network read), and an expired reply never hides
+//   an unexpired snapshot.
 //
 // Snapshots are county-wide, so a loaded snapshot is cached across places and
 // admitted again when the user returns to a bound place, until it expires.
@@ -34,12 +42,21 @@ export const COAST_PRODUCTS: readonly CoastProduct[] = ['report', 'ocean', 'hist
 
 const HOUR = 3_600_000;
 /**
- * How long after its own generatedAt each snapshot may be shown. The report
- * limit matches packages/coast's 3 h fetch-age rule for nearshore and beach
- * readings, the ocean limit its 6 h current-field rule; history holds
- * measured records, so it keeps a longer limit.
+ * Backstop: how long after its own generatedAt a snapshot may be shown at all
+ * (owner decision, PR #425). Basis: report 3 h, packages/coast's fetch-age
+ * rule for nearshore and beach readings (presentation.ts freshNearshore);
+ * ocean 6 h, its current-field rule (state/current-layer.ts); history 36 h,
+ * measured records that stay valid longer.
  */
 export const SNAPSHOT_LIMIT_MS: Readonly<Record<CoastProduct, number>> = {report: 3 * HOUR, ocean: 6 * HOUR, history: 36 * HOUR};
+/**
+ * The report limit for a saved offline copy (X-SC-Offline, the offline packs
+ * of PR #405): a day, so a pack saved before a trip still opens; its readings
+ * still pass the per-reading rules.
+ */
+export const OFFLINE_REPORT_LIMIT_MS = 24 * HOUR;
+export const snapshotLimit = (product: CoastProduct, savedAt: string | null): number =>
+  product === 'report' && savedAt !== null ? OFFLINE_REPORT_LIMIT_MS : SNAPSHOT_LIMIT_MS[product];
 /** A generatedAt further ahead of the device clock than this is refused. */
 export const CLOCK_SKEW_MS = 5 * 60_000;
 export const REQUEST_TIMEOUT_MS = 20_000;
@@ -55,7 +72,7 @@ export type CoastSnapshot<P extends CoastProduct = CoastProduct> = {
   receivedAt: string;
   /** When a saved offline copy was saved (X-SC-Offline); null for a network read. */
   savedAt: string | null;
-  /** generatedAt plus the product's limit; the snapshot is hidden from then on. */
+  /** generatedAt plus snapshotLimit(); the snapshot is hidden from then on. */
   expiresAt: string;
 };
 
@@ -103,13 +120,14 @@ export function admitSnapshot<P extends CoastProduct>(product: P, body: unknown,
   if (!validSnapshot(product, body)) return 'invalid';
   const generated = Date.parse(body.generatedAt);
   if (generated > now + CLOCK_SKEW_MS) return 'invalid';
-  const expires = generated + SNAPSHOT_LIMIT_MS[product];
-  if (expires <= now) return 'expired';
   const saved = savedAt !== null && Number.isFinite(Date.parse(savedAt)) ? savedAt : null;
+  const expires = generated + snapshotLimit(product, saved);
+  if (expires <= now) return 'expired';
   return {product, data: body, generatedAt: body.generatedAt, receivedAt: new Date(now).toISOString(), savedAt: saved, expiresAt: new Date(expires).toISOString()};
 }
 
 const allStatus = (status: CoastStatus): Statuses => ({report: status, ocean: status, history: status});
+const live = (snapshot: CoastSnapshot | null): snapshot is CoastSnapshot => snapshot !== null && Date.parse(snapshot.expiresAt) > Date.now();
 const placeKey = (context: CoastReportContext, binding: ReportBinding): string => JSON.stringify([context.regionId, binding.localAreaId]);
 
 export function createCoastData(): CoastData {
@@ -124,7 +142,16 @@ export function createCoastData(): CoastData {
 
   const setStatus = (product: CoastProduct, next: CoastStatus): void => { status.value = {...status.value, [product]: next}; };
   const setCache = <P extends CoastProduct>(product: P, snapshot: CoastSnapshot<P> | null): void => { cache.value = {...cache.value, [product]: snapshot}; };
-  const admitted = <P extends CoastProduct>(product: P) => computed<CoastSnapshot<P> | null>(() => binding.value ? cache.value[product] as CoastSnapshot<P> | null : null);
+  // Each read checks the clock too: a stalled expiry timer must not show an expired snapshot.
+  const admitted = <P extends CoastProduct>(product: P) => computed<CoastSnapshot<P> | null>(() => {
+    const snapshot = cache.value[product] as CoastSnapshot<P> | null;
+    return binding.value && live(snapshot) ? snapshot : null;
+  });
+  const shownStatus = computed<Statuses>(() => {
+    const shown = {...status.value};
+    for (const product of COAST_PRODUCTS) if (shown[product] === 'ready' && !live(cache.value[product])) shown[product] = 'expired';
+    return shown;
+  });
 
   function abortAll(): void {
     for (const {controller} of requests.values()) controller.abort();
@@ -139,6 +166,11 @@ export function createCoastData(): CoastData {
     const remaining = Date.parse(snapshot.expiresAt) - Date.now();
     if (remaining > 0) { timers.set(product, setTimeout(() => expire(product), Math.min(remaining, MAX_TIMER))); return; }
     batch(() => { setCache(product, null); if (binding.value && status.value[product] !== 'loading') setStatus(product, 'expired'); });
+  }
+
+  /** Hide every snapshot already past its limit (timers may have stalled). */
+  function sweep(): void {
+    for (const product of COAST_PRODUCTS) if (cache.value[product] && !live(cache.value[product])) expire(product);
   }
 
   function request(product: CoastProduct): Promise<void> {
@@ -156,12 +188,17 @@ export function createCoastData(): CoastData {
       // A response for a superseded place (or a destroyed client) is discarded.
       if (!alive || requests.get(product) !== entry) return;
       requests.delete(product);
+      const held = cache.value[product];
       batch(() => {
-        if (typeof outcome === 'object') { setCache(product, outcome); setStatus(product, 'ready'); }
-        else {
-          if (outcome === 'expired') setCache(product, null);
-          setStatus(product, outcome);
-        }
+        if (typeof outcome === 'object') {
+          // Keep the newer snapshot: an older copy (a saved offline pack) never replaces a fresher one.
+          if (!live(held) || Date.parse(outcome.generatedAt) >= Date.parse(held.generatedAt)) setCache(product, outcome);
+          setStatus(product, 'ready');
+        } else if (outcome === 'expired') {
+          // An expired reply never hides a snapshot that is still within its limit.
+          if (live(held)) setStatus(product, 'ready');
+          else { setCache(product, null); setStatus(product, 'expired'); }
+        } else setStatus(product, outcome);
       });
       expire(product);
     })();
@@ -170,6 +207,7 @@ export function createCoastData(): CoastData {
 
   function setPlace(context: CoastReportContext | null): ReportBinding | null {
     if (!alive) return null;
+    sweep();
     const next = context ? resolveReportBinding(context) : null;
     const key = context && next ? placeKey(context, next) : null;
     if (key === place) return binding.value;
@@ -185,6 +223,7 @@ export function createCoastData(): CoastData {
 
   async function load(...products: CoastProduct[]): Promise<void> {
     const pending: Promise<void>[] = [];
+    sweep();
     for (const product of products) {
       wanted.add(product);
       if (!alive || !binding.value) continue;
@@ -210,7 +249,7 @@ export function createCoastData(): CoastData {
 
   return {
     coastReport: admitted('report'), coastOcean: admitted('ocean'), coastHistory: admitted('history'),
-    coastStatus: status, coastBinding: binding, setPlace, load, refresh, destroy,
+    coastStatus: shownStatus, coastBinding: binding, setPlace, load, refresh, destroy,
   };
 }
 

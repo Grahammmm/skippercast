@@ -3,7 +3,7 @@
 import test, {mock} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {CLOCK_SKEW_MS, SNAPSHOT_LIMIT_MS, admitSnapshot, createCoastData} from '../web/coast-data.ts';
+import {CLOCK_SKEW_MS, OFFLINE_REPORT_LIMIT_MS, SNAPSHOT_LIMIT_MS, admitSnapshot, createCoastData} from '../web/coast-data.ts';
 import {overviewReportContext} from '../web/overview-context.ts';
 import {managedReportState} from '../packages/coast/src/state/report-context.ts';
 
@@ -170,6 +170,48 @@ test('an expired snapshot yields null and the reason, and expiry never refreshes
   assert.equal(client.coastStatus.value.report, 'ready');
 });
 
+test('a stalled expiry timer cannot show an expired snapshot', async t => {
+  withClock(t);
+  const net = bridge(); t.after(net.restore);
+  const client = createCoastData(); t.after(client.destroy);
+  client.setPlace(MORRO());
+  await client.load('report');
+  assert.ok(client.coastReport.value);
+  // A suspended tab: the clock moves past expiresAt but no timer fires (setTime runs none).
+  mock.timers.setTime(GENERATED + SNAPSHOT_LIMIT_MS.report + 60_000);
+  assert.deepEqual(client.setPlace(place('morro-bay', 35.36, -120.94, {profile: 'shore', target: 'surfperch'})), {areaId: 'central', localAreaId: 'estero-bay'});
+  assert.equal(client.coastReport.value, null);
+  assert.equal(client.coastStatus.value.report, 'expired');
+  await client.load('report');
+  assert.equal(net.calls.length, 1, 'the expired report is hidden, not refreshed');
+});
+
+test('a refresh keeps the newer snapshot', async t => {
+  withClock(t);
+  let reply = () => respond(fixtures.report);
+  const net = bridge(() => reply()); t.after(net.restore);
+  const client = createCoastData(); t.after(client.destroy);
+  client.setPlace(MORRO());
+  await client.load('report');
+  const fresh = client.coastReport.value;
+  // An older saved offline copy arrives after the fresher network read.
+  reply = () => respond({...fixtures.report, generatedAt: new Date(GENERATED - 1_800_000).toISOString()}, {'X-SC-Offline': '2026-10-07T13:00:00.000Z'});
+  await client.refresh('report');
+  assert.equal(client.coastReport.value, fresh);
+  assert.equal(client.coastStatus.value.report, 'ready');
+  // An expired reply does not hide the unexpired snapshot.
+  reply = () => respond({...fixtures.report, generatedAt: new Date(NOW - SNAPSHOT_LIMIT_MS.report - 1).toISOString()});
+  await client.refresh('report');
+  assert.equal(client.coastReport.value, fresh);
+  assert.equal(client.coastStatus.value.report, 'ready');
+  // A newer one replaces it.
+  const newer = {...fixtures.report, generatedAt: new Date(GENERATED + 1_800_000).toISOString()};
+  reply = () => respond(newer);
+  await client.refresh('report');
+  assert.equal(client.coastReport.value.generatedAt, newer.generatedAt);
+  assert.equal(net.calls.length, 4);
+});
+
 test('bridge failures and wrong identities are reported without inventing data', async t => {
   withClock(t);
   const replies = [
@@ -205,6 +247,12 @@ test('admission checks each product shape and clock', () => {
   assert.equal(admitSnapshot('history', fixtures.history, 'not a time', NOW).savedAt, null);
   assert.equal(admitSnapshot('history', fixtures.history, null, GENERATED + SNAPSHOT_LIMIT_MS.history), 'expired');
   assert.equal(admitSnapshot('report', fixtures.report, null, GENERATED - CLOCK_SKEW_MS).generatedAt, fixtures.report.generatedAt);
+  // A saved offline report copy keeps a day's backstop; a network read of the same age is hidden.
+  const tenHours = GENERATED + 10 * 3_600_000;
+  assert.equal(admitSnapshot('report', fixtures.report, null, tenHours), 'expired');
+  assert.equal(admitSnapshot('report', fixtures.report, '2026-10-07T15:30:00.000Z', tenHours).expiresAt, new Date(GENERATED + OFFLINE_REPORT_LIMIT_MS).toISOString());
+  assert.equal(admitSnapshot('report', fixtures.report, '2026-10-07T15:30:00.000Z', GENERATED + OFFLINE_REPORT_LIMIT_MS), 'expired');
+  assert.equal(admitSnapshot('ocean', fixtures.ocean, '2026-10-07T15:30:00.000Z', GENERATED + SNAPSHOT_LIMIT_MS.ocean), 'expired');
 });
 
 test('destroy aborts requests and drops late responses', async t => {
