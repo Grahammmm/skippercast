@@ -112,3 +112,32 @@ listed time through `cloudSource`, never `current`.
   index keeps its own clocks and drops out of the client's 90-minute gate.
 - **Meaning:** longwave infrared brightness temperature from GOES East and West,
   observed frames only; it is no cloud-cover percentage and no forecast.
+
+## Nearshore model sites (FE-40)
+
+Each live cycle runs `python -m skippercast.pipeline.cdip_nearshore` after the
+buoy refresh. For every published region whose `region.json` has a
+`nearshore_model` (today Morro Bay: Pismo Beach Pier, Port San Luis, Morro Rock,
+Cayucos Pier and San Simeon Beach), it reads each CDIP MOP alongshore forecast
+(`.das` metadata and an `.ascii` subset, 750 KB and 12 s per read, CDIP host and
+model path only) and writes `regions/<id>/nearshore.json` on this branch:
+`nearshore` holds `packages/coast` `NearshoreSite` records and `sources` their
+`SourceStatus`, so the coast report can read them unchanged (FE-84).
+
+- **Checks:** the site label and coordinates (within 0.02°) must match the
+  reviewed binding; units, time origin, direction convention and flag meanings
+  must be unchanged; an array shorter or longer than declared, or shorter than
+  the time axis, rejects the site.
+- **Values:** native three-hour times from three hours back to 72 hours ahead;
+  only primary `good` samples, with `low_energy` keeping height only; fill values
+  and out-of-range values stay null. Height is converted from metres to feet.
+- **Clocks:** `issuedAt` is CDIP's `date_issued` (absent: `unknown`; older than
+  48 hours: `stale`), separate from `fetchedAt`.
+- **Failures:** one site's failure never blocks the others. A failed site keeps
+  its previous record unchanged while that fetch is under three hours old (the
+  coast report's freshness gate), else it is published as `error` with no hours.
+  A region whose refresh fails keeps its last published file; the cycle only
+  warns.
+
+Data from CDIP, Scripps Institution of Oceanography (https://cdip.ucsd.edu/).
+Modelled significant height at a site differs from breaking waves at a beach.

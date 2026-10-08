@@ -531,5 +531,46 @@
     }
   },
   "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/intelligence.json",
-  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/habitat-dynamics.json"
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/habitat-dynamics.json",
+  "nearshore_model": {
+    "source_id": "cdip-mop",
+    "note": "CDIP MOP alongshore model sites reviewed for the SLO coast report (ported from fish). area_id is the packages/coast SLO county area. Modelled nearshore significant height, not breakers at a beach.",
+    "sites": [
+      {
+        "id": "SL097",
+        "name": "Pismo Beach Pier",
+        "area_id": "south",
+        "lat": 35.13593,
+        "lon": -120.6609
+      },
+      {
+        "id": "SL165",
+        "name": "Port San Luis",
+        "area_id": "south",
+        "lat": 35.16219,
+        "lon": -120.74368
+      },
+      {
+        "id": "SL345",
+        "name": "Morro Rock",
+        "area_id": "central",
+        "lat": 35.36503,
+        "lon": -120.87659
+      },
+      {
+        "id": "SL400",
+        "name": "Cayucos Pier",
+        "area_id": "central",
+        "lat": 35.43385,
+        "lon": -120.91185
+      },
+      {
+        "id": "SL552",
+        "name": "San Simeon Beach",
+        "area_id": "north",
+        "lat": 35.58976,
+        "lon": -121.13583
+      }
+    ]
+  }
 }
