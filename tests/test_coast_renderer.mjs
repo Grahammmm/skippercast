@@ -43,3 +43,4 @@ test('renderer admission rejects empty and unsupported explicit geography while 
  for(const query of ['region=&place=morro','coast=&place=morro','place=','place=unknown','region=san-diego&place=morro','coast=north'])assert.equal(coastAdmission('https://skippercast.com/coast?'+query),false,query);
  for(const query of ['', 'place=morro','region=monterey-point-sur&place=avila','coast=central','area=north'])assert.equal(coastAdmission('https://skippercast.com/coast?'+query),true,query);
 });
+import './coast/coast-palette.test.ts';
