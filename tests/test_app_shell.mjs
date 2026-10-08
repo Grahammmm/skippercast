@@ -41,6 +41,8 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    // The terrain module (FE-71, Vite `?url` stylesheets and three) is a dynamic import that rendering never reaches.
+    plugins: [{name: 'terrain', setup: b => b.onResolve({filter: /^\.\/terrain\.js$/}, args => ({path: args.path, external: true}))}],
   });
   shell = await import(pathToFileURL(out).href);
   return shell;
@@ -286,6 +288,23 @@ test('the masthead chat entry renders nothing with the advisor off and links to 
     assert.equal(render(h(ChatEntry, {})), '<a class="ui-button ui-button--quiet" href="/chat.html" data-advisor-entry="true">Ask SkipperCast</a>');
     assert.match(await renderShell(`${ORIGIN}?region=morro-bay`), /class="app-fresh".*data-advisor-entry="true">Ask SkipperCast<\/a><div class="app-account">/s, 'between freshness and the account menu');
   } finally { advisorOn.value = false; }
+});
+
+test('the map chrome offers Chart, 2D and 3D; without terrain the terrain choices are disabled and point at the reason', async () => {
+  const toggle = html => [...html.match(/aria-label="Map presentation"[^>]*>(.*?)<\/div>/s)[1].matchAll(/<button([^>]*)>([^<]+)<\/button>/g)]
+    .map(([, a, label]) => [label, /aria-pressed="true"/.test(a), /disabled/.test(a), /aria-describedby="app-stage-note"/.test(a)]);
+  for (const narrowed of [false, true]) {
+    const {narrow} = await load();
+    narrow.value = narrowed;
+    try {
+      const terrain = await renderShell(`${ORIGIN}?region=morro-bay&presentation=3d`);
+      assert.deepEqual(toggle(terrain), [['Chart', false, false, false], ['2D', false, false, false], ['3D', true, false, false]]);
+      assert.match(terrain, /<div class="app-map" hidden><span>Map unavailable.<\/span><\/div><div class="app-terrain" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in');
+      const none = await renderShell(`${ORIGIN}?region=channel-islands&presentation=3d`);
+      assert.deepEqual(toggle(none), [['Chart', true, false, false], ['2D', false, true, true], ['3D', false, true, true]]);
+      assert.match(none, /<p id="app-stage-note" class="app-stage-note" role="status">No reviewed coastal terrain covers this region yet.<\/p>/);
+    } finally { narrow.value = false; }
+  }
 });
 
 test('the shell files keep the token and copy rules, and app.html mounts the entry', async () => {

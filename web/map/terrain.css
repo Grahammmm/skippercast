@@ -1,0 +1,32 @@
+/* The terrain presentation inside the v2 map stage (FE-71, design § 3A.2).
+   Linked last in the terrain host's shadow root by web/map/terrain.ts, after
+   packages/coast/coast.css and the token bridge: it places the scene's panels
+   clear of the stage's own chrome. Desktop: the layer rail (top right), the
+   legend (bottom left), the presentation toggle (bottom right) and the time
+   dock (bottom edge). Under 1,024 px: the top strip, the toggle under it and
+   the sheet's peek with the tab bar (the bottom 232 px). */
+:host { display: block; color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
+[hidden] { display: none !important; }
+#scene { width: 100%; height: 100%; min-height: 0; }
+.intro, .gesture, .map-note { display: none; }
+.layers { top: var(--space-4); left: var(--space-4); right: auto; bottom: auto; width: 240px; max-height: calc(100% - 260px); padding: var(--space-3); overflow: auto; }
+.layers #layers-toggle { display: block; width: 100%; min-height: var(--touch-min); margin: 0; padding: var(--space-2) var(--space-3); font-size: var(--text-13); line-height: var(--leading-heading); }
+.layers:not(.expanded) .layer-controls { display: none; }
+.layers.expanded .layer-controls { display: block; }
+.target-detail { top: calc(var(--touch-min) + var(--space-7) + var(--space-4)); left: var(--space-4); bottom: auto; width: auto; max-width: min(340px, calc(100% - 2 * var(--space-4))); max-height: calc(100% - 320px); overflow: auto; }
+.view-controls { top: auto; left: auto; right: var(--space-4); bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); }
+.view-controls button { min-width: var(--touch-min); min-height: var(--touch-min); }
+#reading { top: auto; left: auto; right: calc(var(--touch-min) + var(--space-7) + var(--space-4)); bottom: calc(var(--touch-min) + var(--space-7)); max-width: min(320px, calc(100% - 2 * var(--space-4))); max-height: 40%; overflow: auto; }
+footer { left: auto; right: var(--space-4); bottom: calc(3 * var(--touch-min) + var(--space-7) + var(--space-5)); padding: 0; background: none; }
+:host([data-perspective='2d']) .orbit-hint { display: none; }
+:host([data-perspective='3d']) .pan-hint { display: none; }
+
+@media (max-width: 1023px) {
+  /* Under the top strip: the stage's toggle (right), then the view controls, then a selected habitat.
+     Above the sheet's peek and the tab bar (248 px): the layers panel, which opens upward, and the reading. */
+  .view-controls { top: calc(var(--app-strip, 84px) + 2 * var(--touch-min) + var(--space-5) + var(--space-4)); left: auto; right: var(--space-4); bottom: auto; }
+  .target-detail { top: calc(var(--app-strip, 84px) + 3 * var(--touch-min) + var(--space-5) + var(--space-6)); left: var(--space-4); right: var(--space-4); width: auto; max-width: none; max-height: calc(100% - var(--app-strip, 84px) - 3 * var(--touch-min) - 360px); }
+  .layers { top: auto; bottom: 248px; left: var(--space-4); right: var(--space-4); width: auto; max-height: calc(100% - var(--app-strip, 84px) - 2 * var(--touch-min) - 300px); z-index: 3; }
+  #reading { left: var(--space-4); right: var(--space-4); bottom: calc(248px + var(--touch-min) + var(--space-6)); max-width: none; }
+  footer { display: none; }
+}

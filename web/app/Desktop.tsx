@@ -1,7 +1,7 @@
 // Desktop layout (FE-05, design § 6): the 332 px brief column beside the map
 // stage with its chrome. The brief here is the shell's empty state, bound to
 // the profile: tiles show "—" with their source line and basis until FE-30
-// wires web/brief/daily.ts; the map is a token-coloured stage until FE-11.
+// wires web/brief/daily.ts; the map is MapStage.tsx (FE-71).
 // The brief's pieces are exported so Mobile.tsx (FE-06) composes them into
 // the sheet in its own order.
 import type {ComponentChildren} from 'preact';
@@ -10,6 +10,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {profile} from '../state.ts';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
+import {MapStage} from './MapStage.tsx';
 import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
 
@@ -75,16 +76,6 @@ export function Brief({picks = []}: {picks?: readonly Pick[]} = {}) {
       <Caveat />
       <BriefFooter />
     </aside>
-  );
-}
-
-/** The map stage: the engine's host (FE-11) with whatever chrome the layout puts over it. */
-export function MapStage({children}: {children?: ComponentChildren} = {}) {
-  return (
-    <section class="app-stage" aria-label="Map">
-      <div class="app-map"><span>Map unavailable.</span></div>
-      {children}
-    </section>
   );
 }
 

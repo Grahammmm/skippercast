@@ -146,6 +146,23 @@ test('check_client fails a v2 page over its gzipped JavaScript or CSS budget (FE
   await rm(root, {recursive: true, force: true});
 });
 
+test('check_client fails when the v2 app entry statically imports three (FE-71)', async () => {
+  const root = await site();
+  const renderer = 'export const make = () => { throw new Error("THREE.WebGLRenderer: Error creating WebGL context."); };';
+  await writeFile(join(root, 'renderer.js'), renderer);
+  await writeFile(join(root, 'app.html'), '<!doctype html><html><head><script type="module" src="shell.js"></script></head><body>v2</body></html>');
+  const out = join(root, 'client');
+  // A dynamic import keeps the renderer out of the entry's static imports.
+  await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nhelper(1);\nexport const later = () => import('./renderer.js');`);
+  await buildClient({root, out, headers: '/*\n'});
+  await run(process.execPath, [CHECK, out, root]);
+  await rm(out, {recursive: true, force: true});
+  await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nimport {make} from './renderer.js';\nhelper(make);`);
+  await buildClient({root, out, headers: '/*\n'});
+  await assert.rejects(run(process.execPath, [CHECK, out, root]), /app\.html statically imports assets\/[\w.-]+\.js, which contains three/);
+  await rm(root, {recursive: true, force: true});
+});
+
 test('the real site builds and passes the client check (static data directories skipped)', async () => {
   const out = await mkdtemp(join(tmpdir(), 'client-real-'));
   const keep = name => !['data', 'regions', 'downloads', 'tiles'].includes(name);

@@ -148,6 +148,24 @@ for (const [page, budget] of Object.entries(budgets)) {
   }
 }
 
+// 8. The v2 app loads three and the coast renderer only by dynamic import on the
+// first terrain choice (FE-71, front-end design § 3A.2): nothing the app entry
+// imports statically may come from three or packages/coast/src/coast3d.
+const RENDERER = /(?:^|\/)node_modules\/(?:\.pnpm\/three@[^/]+\/node_modules\/)?three\/|packages\/coast\/src\/(?:coast3d|embed\.ts)/;
+const THREE_SIGNATURE = 'THREE.WebGLRenderer';
+if (manifest['app.html']) {
+  const seen = new Set();
+  const walk = async key => {
+    const e = manifest[key];
+    if (!e || seen.has(key)) return;
+    seen.add(key);
+    if (RENDERER.test(e.src || key)) problems.push(`app.html statically imports ${e.src || key} (three and the coast renderer load by dynamic import only)`);
+    else if (e.file.endsWith('.js') && (await readFile(join(dir, e.file), 'utf8').catch(() => '')).includes(THREE_SIGNATURE)) problems.push(`app.html statically imports ${e.file}, which contains three`);
+    for (const next of e.imports || []) await walk(next);
+  };
+  await walk('app.html');
+}
+
 if (problems.length) {
   console.error(`Client check failed:\n  ${problems.join('\n  ')}`);
   process.exit(1);
