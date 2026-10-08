@@ -160,6 +160,23 @@ test('check_client fails when the v2 app entry statically imports three (FE-71)'
   await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nimport {make} from './renderer.js';\nhelper(make);`);
   await buildClient({root, out, headers: '/*\n'});
   await assert.rejects(run(process.execPath, [CHECK, out, root]), /app\.html statically imports assets\/[\w.-]+\.js, which contains three/);
+  // three's core as a shared chunk (no `src` in the manifest), as `import {Vector3} from 'three'` builds it when
+  // another page shares it: caught by three's __THREE__ marker under any chunk name, and by the chunk name without it.
+  await writeFile(join(root, 'other.html'), '<!doctype html><html><head><script type="module" src="other.js"></script></head><body>other</body></html>');
+  await writeFile(join(root, 'other.js'), `import {Vector3} from './math.js';\nexport const v = new Vector3();`);
+  await writeFile(join(root, 'shell.js'), `import {helper} from './helper.js';\nimport {Vector3} from './math.js';\nhelper(new Vector3());`);
+  for (const [file, body, message] of [
+    ['math.js', 'export class Vector3 {}\nif (typeof window !== "undefined") window.__THREE__ = "180";', /app\.html statically imports assets\/math\.[0-9a-f]+\.js, which contains three/],
+    ['three.core.js', 'export class Vector3 {}', /app\.html statically imports _three\.core\.[0-9a-f]+\.js \(three and the coast renderer load by dynamic import only\)/],
+  ]) {
+    await rm(out, {recursive: true, force: true});
+    await writeFile(join(root, file), body);
+    for (const name of ['other.js', 'shell.js']) await writeFile(join(root, name), (await readFile(join(root, name), 'utf8')).replace(/'\.\/(?:math|three\.core)\.js'/, `'./${file}'`));
+    await buildClient({root, out, headers: '/*\n'});
+    const manifest = JSON.parse(await readFile(join(out, '.vite/manifest.json'), 'utf8'));
+    assert.ok(Object.entries(manifest).some(([key, e]) => key.startsWith('_') && !e.src && e.file.includes(file.replace('.js', ''))), `${file} is a shared chunk without src`);
+    await assert.rejects(run(process.execPath, [CHECK, out, root]), message);
+  }
   await rm(root, {recursive: true, force: true});
 });
 

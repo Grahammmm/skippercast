@@ -68,11 +68,11 @@ function document() {
   };
 }
 
-function stage(fake, {center = [35.37, -120.86], doc = document()} = {}) {
+function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => NOW} = {}) {
   const host = {shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
   terrainFailed.value = false;
   terrainMark.value = null;
-  const s = createStage({host, load: async () => fake.module, center: () => center, now: () => NOW, doc, viewDelay: 0});
+  const s = createStage({host, load: async () => fake.module, center: () => center, now, doc, viewDelay: 0});
   return {stage: s, host, doc};
 }
 
@@ -254,5 +254,26 @@ test('a region without terrain shows Chart and says why; the link keeps the requ
   navigate(`${ORIGIN}?region=cambria-san-simeon&presentation=3d`);
   await tick();
   assert.equal(fake.mounts, 1, 'a region with terrain mounts it without a reload');
+  s.destroy();
+});
+
+test('without ?hour= the terrain hour moves on at each hour boundary, not frozen at mount', async t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const fake = terrain();
+  let clock = NOW;
+  const {stage: s} = stage(fake, {now: () => clock});
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+  assert.deepEqual(fake.options.initial.hour, new Date('2026-10-05T20:00:00Z'));
+  clock = new Date('2026-10-05T21:00:01Z');
+  t.mock.timers.tick(43 * 60 * 1000 + 1000);
+  assert.deepEqual(fake.last('setHour'), new Date('2026-10-05T21:00:00Z'), 'the next whole hour reaches the renderer');
+  clock = new Date('2026-10-05T22:00:01Z');
+  t.mock.timers.tick(60 * 60 * 1000);
+  assert.deepEqual(fake.last('setHour'), new Date('2026-10-05T22:00:00Z'));
+  setParams({hour: '2026-10-06T03:00Z'});
+  clock = new Date('2026-10-05T23:00:01Z');
+  t.mock.timers.tick(60 * 60 * 1000);
+  assert.deepEqual(fake.last('setHour'), new Date('2026-10-06T03:00:00Z'), 'a chosen hour stays chosen');
   s.destroy();
 });

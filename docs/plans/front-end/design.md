@@ -447,7 +447,11 @@ destroys it. A failure is sticky until a reload, as in v1, and the link keeps
 status speaks; the stage's status line carries only why the terrain choices
 are disabled. A terrain camera move writes `?view=` (span-to-zoom rule) once it
 settles, without a history entry; a selection writes `?habitat=` with one, so
-Back restores the previous selection.
+Back restores the previous selection. `onSelectionInvalidated` clears the
+mark card but keeps `?habitat=` in the link (v1 parity: the renderer may
+restore it when its data admits the id again); only the scene's close button
+removes it. Without `?hour=` the terrain takes the current whole UTC hour and
+the stage's own clock moves it on at each hour boundary.
 
 **Layers.** Every registry entry (§ 9) declares the presentations it draws
 in. Terrain-native layers (relief, water, contours, ranked habitat pins,

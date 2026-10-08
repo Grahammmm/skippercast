@@ -31,6 +31,7 @@ export const NO_TERRAIN = 'No reviewed coastal terrain covers this region yet.';
 /** v1's status for an unlisted ?current= (dist/coastal-current-control.js, #402). */
 export const UNSUPPORTED_CURRENT = 'Unsupported surface-current source. Choose a listed source.';
 
+const HOUR_MS = 3_600_000;
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 /** The span-to-zoom rule v1 uses between its chart and the terrain (§ 3A.1): zoom 12 shows 7.3 km. */
 export const zoomForSpan = (span: number): number => clamp(12 - Math.log2(span / 7300), 7, 18);
@@ -57,7 +58,7 @@ export function coastSpecies(target: string | null, p: Profile): string {
 /** `?hour=` as a Date; without one, the current whole UTC hour (the dock's "now"). */
 export function terrainHour(value: string | null, now: Date): Date {
   const seconds = parseHour(value);
-  return new Date(seconds !== null ? seconds * 1000 : Math.floor(now.getTime() / 3_600_000) * 3_600_000);
+  return new Date(seconds !== null ? seconds * 1000 : Math.floor(now.getTime() / HOUR_MS) * HOUR_MS);
 }
 
 export interface TerrainInput {
@@ -135,11 +136,18 @@ export function createStage(options: StageOptions): Stage {
   const {host, load = loadTerrain, now = () => new Date(), doc = document, viewDelay = 400} = options;
   const handle = signal<CoastHandle | null>(null);
   let applied: Partial<Record<keyof TerrainState, string>> = {};
-  let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined;
+  let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, clockTimer: ReturnType<typeof setTimeout> | undefined;
+  // Without ?hour= the terrain shows the current whole hour; this clock moves it on at each hour boundary.
+  const clock = signal(now());
+  const nextHour = (): void => {
+    clock.value = now();
+    clockTimer = setTimeout(nextHour, HOUR_MS - (clock.peek().getTime() % HOUR_MS) + 1000);
+  };
+  clockTimer = setTimeout(nextHour, HOUR_MS - (clock.peek().getTime() % HOUR_MS) + 1000);
 
   const wanted = computed(() => terrainState({
     profile: profile.value, target: species.value, hour: hour.value, camera: camera.value, current: current.value,
-    habitat: habitat.value, presentation: shownPresentation.value, appView: appView.value, hidden: pageHidden.value, now: now(),
+    habitat: habitat.value, presentation: shownPresentation.value, appView: appView.value, hidden: pageHidden.value, now: clock.value,
   }));
 
   const apply = (h: CoastHandle, state: TerrainState): void => {
@@ -247,7 +255,7 @@ export function createStage(options: StageOptions): Stage {
     destroy() {
       if (!alive) return;
       alive = false;
-      clearTimeout(viewTimer);
+      clearTimeout(viewTimer); clearTimeout(clockTimer);
       for (const dispose of disposers) dispose();
       doc.removeEventListener('visibilitychange', visibility);
       release();
