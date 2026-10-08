@@ -126,6 +126,18 @@ nothing is an `error` source. The Worker serves it at `/api/coast/ocean` only
 when `COAST_FEEDS` lists `ocean` and the packet is under three hours old
 ([coastal-service.md](coastal-service.md#snapshots-from-skippercast-feeds-fe-84)).
 
+## Coast report base (FE-87)
+
+Then `python -m skippercast.pipeline.coast_report` writes
+`regions/morro-bay/coast-report.json`, the SLO county `packages/coast` `Report`:
+NWS gridpoint forecasts for its three areas and the active NWS alerts that reach
+them, CO-OPS Port San Luis tides, this cycle's 46215 and 46028 buoy readings, and
+the daily feed's catch facts, sea-surface temperature and protected areas. Each
+source keeps its own status and clocks. A run with no populated forecast and no
+buoy reading under three hours old keeps the last file; the Worker serves it
+only when `COAST_FEEDS` lists `report` and it is under two hours old
+([coastal-service.md](coastal-service.md#report-base-from-skippercast-collectors-fe-87)).
+
 ## Nearshore model sites (FE-40)
 
 Each live cycle runs `python -m skippercast.pipeline.cdip_nearshore` after the

@@ -59,7 +59,7 @@ export interface Env {
   UI_V2?: string;                    // "true": / serves landing.html and /map serves app.html; "false": the v1 shell; unset: deployments/production.json ui_v2
   // FE-84: coast snapshot sources served from SkipperCast's own feeds instead of the Fish Worker (repository variable
   // copied by scripts/wrangler_config.mjs); read only through coastFeeds() in server/coast-data.ts. Unset: all from Fish.
-  COAST_FEEDS?: string;              // comma list of nearshore, water-quality, ocean, history
+  COAST_FEEDS?: string;              // comma list of nearshore, water-quality, ocean, history, report
   // Secrets (wrangler secret put)
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;

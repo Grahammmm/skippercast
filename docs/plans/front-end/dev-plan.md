@@ -421,9 +421,9 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: approve (`server/`, the deploy workflow line); set `COAST_FEEDS` after the receipts; confirm the run receipts.
 
 ### FE-87 · Coast report base from SkipperCast feeds · L
-- Status: NEW (split from FE-84). Agent: Claude.
+- Status: NEW (split from FE-84), built 2026-10-08. Agent: Claude.
 - Depends: FE-84
-- Files: `src/skippercast/pipeline/coast_snapshots.py` (report assembly), `scripts/live_cycle.sh`, `server/coast-data.ts` (a `report` source in `COAST_FEEDS`), `tests/unit/test_coast_snapshots.py`, `tests/test_coast_data.mjs`, `docs/coastal-service.md`.
+- Files: `src/skippercast/pipeline/coast_report.py` (report assembly with the NWS and CO-OPS reads ported from `fish`; network reads kept out of the local-only `coast_snapshots.py`), `scripts/live_cycle.sh`, `server/coast-data.ts` (a `report` source in `COAST_FEEDS`, the rights gate and the #422 follow-ups), `server/env.ts` (comment), `tests/unit/test_coast_report.py`, `tests/fixtures/coast/skippercast-report.json`, `tests/test_coast_data.mjs`, `docs/coastal-service.md`, `docs/live-conditions.md`.
 - Build: the report's area forecasts (NWS gridpoints per county area), buoy observations, CO-OPS tides and events, NWS alerts with the area-zone filter, catch reports with their context and the spatial layers, assembled in the `Report` shape from SkipperCast collectors (existing ones where they cover the same source, new ones ported from `fish` `src/providers/` where not), each with its own `SourceStatus`; the FE-84 overlays then apply on SkipperCast's own report.
 - Accept: 1. A fixture report validates against `Report` and passes `packages/coast` readiness. 2. Each source keeps its own clocks and outcome. 3. With every source switched, `/api/coast/*` snapshots make no Fish request (test).
 - **Owner**: rights rows for any new source; confirm the run receipts.

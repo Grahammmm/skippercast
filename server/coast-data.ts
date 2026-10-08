@@ -4,6 +4,7 @@
 // copied to R2 by scripts/coast/publish_assets.py are served from there instead,
 // each object hashed against its manifest entry before any byte leaves.
 import {json} from './http.ts';
+import catalog from '../catalog/sources.json' with {type: 'json'};
 
 const ORIGIN = 'https://fish-report.g4651.workers.dev';
 const MB = 1024 * 1024;
@@ -146,14 +147,15 @@ async function fromStore(store: CoastStore, target: {asset: string; release: str
 // COAST_FEEDS var. A switched feed is used only while it is present, valid and inside its age
 // limit; otherwise that source comes from the Fish Worker exactly as before. That fallback is dated:
 // it goes when FE-62 retires the bridge. Values keep their original clocks and outcomes.
-export type CoastFeed = 'nearshore' | 'water-quality' | 'ocean' | 'history';
+// FE-87: `report` is the report's base (forecasts, buoys, tides, alerts, catches, spatial layers).
+export type CoastFeed = 'nearshore' | 'water-quality' | 'ocean' | 'history' | 'report';
 type Json = Record<string, any>;
 const HOUR = 3_600_000, SKEW = 300_000;
 const clock = (v: unknown) => typeof v === 'string' ? Date.parse(v) : NaN;
 const isClock = (v: unknown) => Number.isFinite(clock(v));
 const rows = (v: unknown): v is Json[] => Array.isArray(v) && v.every(x => !!x && typeof x === 'object' && !Array.isArray(x));
 const reported = (s: Json) => typeof s.id === 'string' && ['ok', 'error', 'pending'].includes(s.outcome) && isClock(s.fetchedAt);
-// SLO's feeds are published under the Morro Bay region: FE-40, FE-41, coast_snapshots.py (live cycle) and FE-42 (weekly).
+// SLO's feeds are published under the Morro Bay region: FE-40, FE-41, coast_snapshots.py and coast_report.py (live cycle) and FE-42 (weekly).
 const FEEDS: Record<CoastFeed, {key: string; max: number; maxAge: number; generated: string; valid: (d: Json) => boolean}> = {
   nearshore: {key: 'conditions/regions/morro-bay/nearshore.json', max: MB, maxAge: 3 * HOUR, generated: 'generated_at',
     valid: d => d.schema_version === 1 && d.region_id === 'morro-bay' && rows(d.nearshore) && rows(d.sources) &&
@@ -168,14 +170,26 @@ const FEEDS: Record<CoastFeed, {key: string; max: number; maxAge: number; genera
     valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && rows(d.currents) && (d.cloud === null || (!!d.cloud && typeof d.cloud === 'object')) &&
       rows(d.sources) && d.sources.every(s => typeof s.id === 'string' && ['ok', 'error'].includes(s.status) && isClock(s.fetchedAt))},
   history: {key: 'data/regions/morro-bay/history.json', max: 16 * MB, maxAge: 8 * 24 * HOUR, generated: 'generatedAt',
-    valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && rows(d.stations) &&
+    valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && rows(d.stations) && Number.isFinite(d.recentWindowDays) && d.recentWindowDays > 0 &&
       d.stations.every(s => typeof s.stationId === 'string' && !!s.recent && typeof s.recent === 'object' && !!s.baseline && Array.isArray(s.sources))},
+  report: {key: 'conditions/regions/morro-bay/coast-report.json', max: 8 * MB, maxAge: 2 * HOUR, generated: 'generatedAt',
+    valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && ['forecasts', 'observations', 'tides', 'tideEvents', 'alerts', 'catches'].every(k => rows(d[k])) &&
+      rows(d.sources) && d.sources.every(reported) && typeof d.catchStatus === 'string' && !!d.visibility && typeof d.visibility === 'object'},
 };
-const SNAPSHOT_FEEDS: Record<string, CoastFeed[]> = {report: ['nearshore', 'water-quality'], ocean: ['ocean'], history: ['history']};
+const SNAPSHOT_FEEDS: Record<string, CoastFeed[]> = {report: ['report', 'nearshore', 'water-quality'], ocean: ['ocean'], history: ['history']};
+// The catalog rows behind each feed. A name is honoured only while none of them is refused by the rights register.
+const FEED_SOURCES: Record<CoastFeed, string[]> = {nearshore: ['cdip-mop'], 'water-quality': ['slo-beach-water-quality'],
+  ocean: ['noaa-wcofs', 'noaa-hfr-thredds', 'noaa-goes-nowcoast'], history: ['ndbc-history'],
+  report: ['nws-weather', 'ndbc-buoys', 'noaa-tides', 'landing-reports', 'noaa-blended-sst', 'cdfw-mpas']};
+type CatalogRow = {id: string; review_status?: string; rights?: {commercial_use?: string}};
+const refused = (row: CatalogRow | undefined) => !row || ['restricted', 'unavailable'].includes(row.review_status ?? '') ||
+  ['prohibited', 'permission-required'].includes(row.rights?.commercial_use ?? '');
 
-/** The sources COAST_FEEDS moves to SkipperCast feeds. Unset or unknown names: none, so every snapshot is Fish's. */
-export function coastFeeds(value: string | undefined): Set<CoastFeed> {
-  return new Set((value ?? '').split(',').map(s => s.trim().toLowerCase()).filter((s): s is CoastFeed => Object.hasOwn(FEEDS, s)));
+/** The sources COAST_FEEDS moves to SkipperCast feeds. Unset, unknown or rights-refused names: none, so those snapshots stay Fish's. */
+export function coastFeeds(value: string | undefined, sources: readonly CatalogRow[] = catalog.sources): Set<CoastFeed> {
+  const byId = new Map(sources.map(s => [s.id, s]));
+  return new Set((value ?? '').split(',').map(s => s.trim().toLowerCase()).filter((s): s is CoastFeed =>
+    Object.hasOwn(FEEDS, s) && !FEED_SOURCES[s as CoastFeed].some(id => refused(byId.get(id)))));
 }
 
 /** A published feed, or why it is not used: missing, unreadable, invalid or stale (its own clock against this request's). */
@@ -206,8 +220,26 @@ function overlay(report: Json, own: Partial<Record<CoastFeed, Json>>, now: numbe
     sources: [...out.sources.filter((s: Json) => s?.id !== 'slo-beach-water-quality'), ...water.sources]};
   return out;
 }
-function ownResponse(data: Json, method: string, upstream: string): Response {
+/** Fish's nearshore and beach rows and statuses, kept in SkipperCast's report where their own feeds are not used. */
+function fishEnrichment(report: Json, fish: Json | null): Json {
+  if (!fish) return report;
+  const enrichment = (s: Json) => String(s?.id).startsWith('cdip-') || s?.id === 'slo-beach-water-quality';
+  return {...report, nearshore: Array.isArray(fish.nearshore) ? fish.nearshore : [], waterQuality: Array.isArray(fish.waterQuality) ? fish.waterQuality : [],
+    sources: [...report.sources, ...(Array.isArray(fish.sources) ? fish.sources.filter(enrichment) : [])]};
+}
+/** The Fish report as JSON for its enrichment rows, or null when it is unavailable or not the SLO snapshot. */
+async function fishReport(fetcher: typeof fetch, url: URL): Promise<Json | null> {
+  try {
+    const upstream = await fetcher(new Request(url, {method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(20000)}));
+    if (upstream.status !== 200 || !/^application\/json\b/i.test(upstream.headers.get('Content-Type') ?? '')) { await upstream.body?.cancel(); return null; }
+    const data = JSON.parse(new TextDecoder().decode(await bounded(upstream, 8 * MB))) as Json;
+    return data?.schemaVersion === 1 && data.countyId === 'slo' && isClock(data.generatedAt) && Array.isArray(data.sources) ? data : null;
+  } catch { return null; }
+}
+/** A SkipperCast packet, re-checked against the route's byte limit after any merge (as the service worker does). */
+function ownResponse(data: Json, method: string, upstream: string, max: number): Response {
   const bytes = new TextEncoder().encode(JSON.stringify(data));
+  if (bytes.byteLength > max) return json({error: 'Coast source unavailable'}, 503);
   return new Response(method === 'HEAD' ? null : bytes, {status: 200, headers: {'Cache-Control': 'no-store', 'Content-Type': 'application/json',
     'Content-Length': String(bytes.byteLength), 'X-Content-Type-Options': 'nosniff', 'X-Coast-Upstream': upstream}});
 }
@@ -260,8 +292,13 @@ export async function serveCoastData(request: Request, fetcher: typeof fetch = f
       if (typeof result === 'string') notes.push(`${name}=fish (${result})`);
       else { own[name] = result; notes.push(`${name}=skippercast`); }
     }
-    if (own.ocean) return ownResponse(own.ocean, request.method, notes.join(', '));
-    if (own.history) return ownResponse(historyNow(own.history, now), request.method, notes.join(', '));
+    if (own.ocean) return ownResponse(own.ocean, request.method, notes.join(', '), target.max);
+    if (own.history) return ownResponse(historyNow(own.history, now), request.method, notes.join(', '), target.max);
+    if (own.report) {  // FE-87: an enrichment source not taken from its own feed still comes from Fish's report
+      const fish = own.nearshore && own['water-quality'] ? null : await fishReport(fetcher, target.url);
+      if (!fish && !(own.nearshore && own['water-quality'])) notes.push('fish=unavailable');
+      return ownResponse(overlay(fishEnrichment(own.report, fish), own, now), request.method, notes.join(', '), target.max);
+    }
   }
   const overlaid = Object.keys(own).length > 0;
   // Do not forward client cookies, Origin, Referer, Authorization or arbitrary headers.
@@ -302,6 +339,7 @@ export async function serveCoastData(request: Request, fetcher: typeof fetch = f
       const data = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
       if (!data || data.schemaVersion !== 1 || data.countyId !== 'slo' || typeof data.generatedAt !== 'string' || !Number.isFinite(Date.parse(data.generatedAt))) throw Error('Wrong snapshot identity');
       if (overlaid) bytes = new TextEncoder().encode(JSON.stringify(overlay(data, own, now)));
+      if (bytes.byteLength > target.max) throw Error('Byte limit');  // merged rows can outgrow Fish's bytes
     }
     if (rangeLength !== null && bytes.byteLength !== rangeLength) throw Error('Invalid returned range');
     out.set('Content-Length', String(bytes.byteLength));
