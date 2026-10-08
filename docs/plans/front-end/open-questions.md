@@ -228,6 +228,12 @@ A preview switch could persist in a cookie or travel in the URL.
 
 ## Q13. Relief tiles for preview regions
 
+**Superseded 2026-10-07.** FE-13 and FE-26 are dropped: the
+`packages/coast` renderer's terrain is the relief (design § 3A.2), and
+terrain coverage grows region by region through Codex's mapping pipeline
+(`skills/skippercast-map-coast`). The original question is kept below for
+the record.
+
 **Context.** FE-13 and FE-26 port the PNG PMTiles pipeline and proxy and publish Morro Bay
 from the three approved USGS grids. The fourteen preview regions have
 seafloor candidates but no relief archive.
@@ -239,4 +245,98 @@ seafloor candidates but no relief archive.
    now. Several GB of builds and reviews before the shell exists.
 
 **Plan assumes:** option 1 (dev-plan backlog).
+**Blocks:** nothing.
+
+## Q14. Ownership boundary between the v2 shell and `packages/coast`
+
+**Context.** Since 2026-10-06 Codex has built `packages/coast` (the `fish`
+renderer, report model, charts and markup), the bridge to the Fish Worker
+and the v1 coastal modules, while Claude built the v2 shell. Both now need
+the same files (design § 3A.6). AGENTS.md's division (Codex: data and
+pipelines; Claude: product features and app code) does not say who owns a
+renderer package that is product code built from a data-heavy pipeline.
+Changing AGENTS.md is the owner's decision; this plan only proposes text.
+
+1. **Split by layer (recommended).** Codex owns `packages/coast` renderer
+   internals (`src/coast3d/**`, `src/map/habitat-lifecycle.ts`,
+   `src/state/{habitat-selection,report-binding,report-context}.ts`,
+   `src/transport.ts`), the coast data adapters and bridge
+   (`server/coast-data.ts`, `server/coast-pages.ts`), the terrain and mapping
+   pipeline and its skills, the collectors (FE-40 … FE-45, FE-84, FE-85) and
+   the v1 coastal modules until FE-61. Claude owns the v2 shell
+   (`web/app/**`, `web/landing/**`, `web/ui/**`, `web/map/**`), the visual
+   system including the bridge files inside `packages/coast`
+   (`tokens-bridge.css`, `src/palette.ts`, the `var(--coast-*)` conversions,
+   each reviewed by Codex), `web/state.ts`, the layer registry and MapStage
+   adapter, the flag flip and the v1 deletion. The `packages/coast` exports
+   v2 consumes are a public API: a change to one is announced on the
+   coordination issue first. Matches each agent's existing context and
+   keeps one owner per file.
+2. **Split by capability.** Each agent owns a feature end to end (Codex:
+   terrain, Conditions and History; Claude: chart, brief, landing). Faster
+   per feature, but two agents style the same shell and both edit the
+   store, which is the drift the merge review warns against.
+3. **Claude owns every front-end file, Codex only data.** One owner for
+   the visual system, but it discards Codex's renderer context while Codex
+   is mid-way through renderer work (PR #410), and the terrain evidence
+   gates are where a regression would be costly.
+4. **Codex owns the v2 shell too, Claude reviews.** Contradicts the current
+   division and the plan's Phase 0 work.
+
+Proposed AGENTS.md text for option 1, replacing "Division of work
+(current)":
+
+> - **Codex:** data discovery, source audits, ingestion and regional
+>   pipelines; the terrain and mapping pipeline; `packages/coast` renderer
+>   internals and the coast data adapters (`server/coast-data.ts`,
+>   `server/coast-pages.ts`); the v1 coastal modules until the v1 shell is
+>   deleted.
+> - **Claude:** product features and app code in the v2 shell (`web/`), the
+>   visual system (`web/tokens.css` and the token bridge inside
+>   `packages/coast`), `web/state.ts`, CI and reviews of Codex PRs.
+> - The `packages/coast` exports the v2 shell imports are a shared API.
+>   Announce a change to one on the coordination issue before opening the PR;
+>   the other agent reviews it.
+
+**Plan assumes:** option 1; the dev plan's "Agent" field follows it.
+**Owner action:** pick an option, and edit AGENTS.md if you accept the text.
+**Blocks:** nothing immediately; FE-70, FE-76 and FE-77 wait for Codex's
+comment on the coordination issue.
+
+## Q15. Default map presentation where terrain exists
+
+**Context.** The map stage offers Chart (MapLibre, every region) and
+Terrain 2D / 3D (the `packages/coast` renderer, six terrain packages today)
+(design § 3A.2). v1 opens on Chart and remembers nothing.
+
+1. **Chart by default; the last choice is remembered on the device and a
+   link's `?presentation=` wins (recommended).** Same picture in every
+   region, the lightest first load on phones (no `three` until asked), and
+   every SkipperCast layer is visible at once. Revisit once FE-82 drapes the
+   registry layers on terrain.
+2. **Terrain 2D by default where terrain exists, Chart elsewhere.** Shows
+   the strongest relief first and reads like concept A, but a first visit
+   downloads Three and terrain, and chart-only layers are hidden until
+   FE-82.
+3. **Terrain 3D by default.** `fish`'s native view; the heaviest on phones
+   and the least like the instrument console.
+
+**Plan assumes:** option 1 (FE-71, FE-73).
+**Blocks:** nothing.
+
+## Q16. One "How it's built" page
+
+**Context.** The plan's landing nav links "How it's built" to `/sources`.
+Codex's #395 added `/methodology` and `/about` (from `fish`) served by
+`server/coast-pages.ts`. Two explanation pages would repeat each other.
+
+1. **`/sources` is the canonical page; `/methodology` and `/about` keep
+   answering for old links, restyled with the tokens, each linking to
+   `/sources` for layer basis (recommended).** No broken Fish links, one
+   place for every basis sentence.
+2. Make `/methodology` canonical and fold `/sources` into it. The Fish URL
+   wins, but `/sources` is linked from every v1 layer today.
+3. Keep both as equals. Least work; two pages drift.
+
+**Plan assumes:** option 1 (FE-54, FE-86).
 **Blocks:** nothing.

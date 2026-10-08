@@ -1,6 +1,9 @@
 # Front-end rebuild and the `fish` merge
 
-Status: **Planned** (2026-10-05). No code yet. The plan replaces the Leaflet
+Status: **Phase 0 built except the landing (FE-07); plan reconciled with
+`packages/coast` on 2026-10-07** (design
+[§ 3A](design.md#3a-integration-with-packagescoast-2026-10-07), coordination
+issue [#413](https://github.com/Grahammmm/skippercast/issues/413)). The plan replaces the Leaflet
 app shell with the "Bridge" instrument console (concept A), adds the "Open
 water" landing page (concept D), moves the map to MapLibre GL and PMTiles as
 [ADR 0005](../../engineering/adr/0005-front-end-preact-vite-maplibre.md)
@@ -26,7 +29,8 @@ The architecture decision is recorded in
 ## How to use this plan
 
 1. Work through [dev-plan.md](dev-plan.md) in phase order. Each task is one
-   PR on its own branch `claude/fe-<task-id>`, sized for one builder
+   PR on its own branch (`claude/fe-<task-id>`, or `codex/fe-<task-id>` for
+   a task whose Agent field says Codex), sized for one builder
    subagent (at most about 400 changed lines excluding generated files) and
    reviewed independently, as [AGENTS.md](../../../AGENTS.md) requires.
 2. Before each task, re-read the [design.md](design.md) section it cites;
@@ -38,12 +42,14 @@ The architecture decision is recorded in
 5. Steps marked **Owner** (flags, data-rights rows, R2 uploads, archiving
    and deleting `fish`) need the owner. Do the engineering around them, stop
    at the owner step, and report exactly what is needed with the link.
-6. Code may be copied from `fish`: same owner, and `fish`'s `NOTICE.md`
-   records that it reuses SkipperCast data exports. Every copied module is
-   ported into `web/` as typed TypeScript with the token system, never pasted
-   as-is, and every data source it brings needs a `catalog/sources.json`
-   entry with rights fields (the commercial-sources contract test rejects
-   entries without them).
+6. `fish`'s client is already in SkipperCast as `packages/coast/` (Codex,
+   2026-10-06). Import its exports; never copy or fork them, and announce a
+   needed change to one on issue #413 first. Code still missing from
+   `packages/coast` (for example `fish`'s `opportunity.ts`) may be ported
+   from `fish` as typed TypeScript with the token system: same owner, and
+   `fish`'s `NOTICE.md` records that it reuses SkipperCast data exports.
+   Every data source needs a `catalog/sources.json` entry with rights fields
+   (the commercial-sources contract test rejects entries without them).
 7. Copy follows the voice guide in [design.md § 12](design.md#12-copy-voice-and-claims):
    specific, sourced, aged, never promising fish. `node scripts/check_copy.mjs`
    stays green and its baseline only shrinks.
@@ -137,3 +143,11 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   `UI_V2`) with a placeholder map stage and the brief's empty state.
 - 2026-10-05: FE-06 added the mobile app shell (`web/app/Mobile.tsx`, under
   1,024 px): full-screen map, top strip, one draggable sheet, four-tab nav.
+- 2026-10-07: plan reconciled with the ~50 commits Codex merged since
+  2026-10-06 (`packages/coast/`, the coastal bridge, the v1 coastal
+  modules). The v2 shell stays the one public shell; its map stage gains
+  Terrain 2D / 3D from `packages/coast` beside the MapLibre Chart (design
+  § 3A, ADR 0009 addendum). FE-13 and FE-26 dropped; 27 tasks changed to
+  consume `packages/coast`; five partly on `main`; FE-70 … FE-86 added.
+  Ownership boundary proposed in open-questions Q14; coordination on issue
+  [#413](https://github.com/Grahammmm/skippercast/issues/413).
