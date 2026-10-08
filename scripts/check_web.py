@@ -161,14 +161,16 @@ def check_no_versioned_client_names():
 MARKUP_HOST = "web/app/CoastMarkup.tsx"
 SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
 # Every way web/ code could turn a string into DOM: innerHTML or outerHTML set
-# by property (`.x =`, `+=`, `['x'] =`, never `==`) or by object key
+# by property (`.x =`, `+=`, never `==`), by unquoted object key
 # (Object.assign(el, {innerHTML: s}); this also flags a type member of that
-# name), insertAdjacentHTML, Preact's dangerouslySetInnerHTML,
-# document.write/writeln, setHTMLUnsafe, Range.createContextualFragment and
-# DOMParser.parseFromString.
+# name) or named in any quoted string (`el['innerHTML'] =`, Reflect.set,
+# Object.defineProperty, a template-literal key), insertAdjacentHTML, Preact's
+# dangerouslySetInnerHTML, document.write/writeln, setHTMLUnsafe,
+# Range.createContextualFragment and DOMParser.parseFromString.
 MARKUP_SINK = re.compile(
-    r"(?:\.\s*(?:inner|outer)HTML|\[\s*['\"`](?:inner|outer)HTML['\"`]\s*\])\s*\+?=(?!=)"
-    r"|(?:\b(?:inner|outer)HTML|['\"`](?:inner|outer)HTML['\"`])\s*:"
+    r"\.\s*(?:inner|outer)HTML\s*\+?=(?!=)"
+    r"|\b(?:inner|outer)HTML\s*:"
+    r"|['\"`](?:inner|outer)HTML['\"`]"
     r"|\b(?:insertAdjacentHTML|dangerouslySetInnerHTML|setHTMLUnsafe|createContextualFragment|parseFromString)\b"
     r"|\bdocument\s*\.\s*write(?:ln)?\b")
 # A `/` after one of these (or a keyword below, or at the start) begins a regex literal, not division.
@@ -241,7 +243,12 @@ def strip_comments(source):
 
 
 def markup_sinks(root=ROOT):
-    """FE-75: only web/app/CoastMarkup.tsx may write markup into the DOM in web/ (comments ignored)."""
+    """FE-75: only web/app/CoastMarkup.tsx may write markup into the DOM in web/ (comments ignored).
+
+    This is static text matching, not analysis: a property name built at run
+    time (`el['inner' + 'HTML']`, a variable holding the name) is not caught.
+    Review owns that case; the rule catches every literal spelling.
+    """
     found = []
     for path in sorted((root / "web").rglob("*")):
         relative = path.relative_to(root).as_posix()
