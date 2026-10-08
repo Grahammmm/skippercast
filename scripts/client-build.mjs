@@ -76,15 +76,22 @@ export async function hashPages(out, pages) {
 
 // TA-W1: the hashed files the Worker's server-rendered advisor pages link
 // (docs/plans/text-advisor/01-architecture.md § touch points, ADVISOR_ASSETS).
-// dist/chat.html carries advisor/pages.css in its stylesheet set, so its one
-// built stylesheet and its entry script serve the pages too.
+// dist/chat.html carries advisor/pages.css in its stylesheet set, so its
+// built stylesheet and its entry script serve the pages too. FE-55: the page
+// links web/tokens.css, which Vite emits as its own chunk when another page
+// (app.html) shares it; the pages then link that chunk as advisor/tokens.css.
 export const ADVISOR_PAGE = 'chat.html';
-/** {'advisor/pages.css': '/assets/chat.<hash>.css', 'advisor/chat.js': '/assets/chat.<hash>.js'} from the Vite manifest; throws if the entry is missing. */
+const TOKENS_CHUNK = /(?:^|\/)tokens\.[\w-]+\.css$/;
+/**
+ * {'advisor/tokens.css'?: '/assets/tokens.<hash>.css', 'advisor/pages.css': '/assets/chat.<hash>.css', 'advisor/chat.js': '/assets/chat.<hash>.js'}
+ * from the Vite manifest; throws if the entry is missing or has a stylesheet the pages would not link.
+ */
 export function advisorAssetPaths(manifest) {
-  const entry = manifest?.[ADVISOR_PAGE];
-  const css = entry?.css?.[0], js = entry?.file;
-  if (!entry?.isEntry || typeof css !== 'string' || typeof js !== 'string') throw Error(`Vite manifest has no ${ADVISOR_PAGE} entry with a stylesheet and a script`);
-  return {'advisor/pages.css': `/${css}`, 'advisor/chat.js': `/${js}`};
+  const entry = manifest?.[ADVISOR_PAGE], js = entry?.file;
+  const sheets = Array.isArray(entry?.css) ? entry.css : [];
+  const tokens = sheets.filter(f => TOKENS_CHUNK.test(f)), own = sheets.filter(f => !TOKENS_CHUNK.test(f));
+  if (!entry?.isEntry || own.length !== 1 || tokens.length > 1 || typeof js !== 'string') throw Error(`Vite manifest has no ${ADVISOR_PAGE} entry with one stylesheet (plus the tokens) and a script`);
+  return {...(tokens.length ? {'advisor/tokens.css': `/${tokens[0]}`} : {}), 'advisor/pages.css': `/${own[0]}`, 'advisor/chat.js': `/${js}`};
 }
 // TA-W1 end.
 

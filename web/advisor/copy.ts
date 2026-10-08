@@ -63,7 +63,11 @@ export const CHAT_COPY = {
   continueHeading: 'Continue by text',
   saveContact: 'Save the number',
   textUs: 'Text us',
+  /** FE-55: the v2 masthead's link to dist/chat.html, shown only while TEXT_ADVISOR_ENABLED is on (the same words as the pages' PAGES_COPY.ctaChat). */
+  entry: 'Ask SkipperCast',
 } as const;
+/** The web chat page, which the advisor gate answers 404 while TEXT_ADVISOR_ENABLED is off. */
+export const CHAT_PATH = '/chat.html';
 
 /** Largest photo the chat accepts, in bytes (the server checks it again). */
 export const CHAT_MAX_PHOTO_BYTES = 8 * 1024 * 1024;

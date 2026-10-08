@@ -4,6 +4,11 @@
 // sign in through v1's passkey dialog, the boat, trip alerts, downloads).
 // The pieces are exported so the mobile shell (FE-06) composes the same
 // brand, location, views and freshness into its top strip, sheet and tabs.
+// FE-55: the chat entry links to the Text Advisor's web chat, and only while
+// the advisor is on.
+import {signal} from '@preact/signals';
+import {useEffect} from 'preact/hooks';
+import {CHAT_COPY, CHAT_PATH} from '../advisor/copy.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {APP_VIEWS, appView, region, setParams, withParams, type AppView} from '../state.ts';
 import {freshness, regionInfo} from './App.tsx';
@@ -74,6 +79,28 @@ export function FreshnessDot() {
   );
 }
 
+/** Whether the Text Advisor answers: false until a probe finds the chat page. */
+export const advisorOn = signal(false);
+let probe: Promise<boolean> | null = null;
+/**
+ * HEAD the chat page. The advisor gate (server/advisor/gate.ts) answers 404
+ * on it while TEXT_ADVISOR_ENABLED is off, so only an ok answer means on; a
+ * failure means off. No cookie is sent and nothing is stored.
+ */
+export const checkAdvisor = (fetcher: typeof fetch = fetch): Promise<boolean> =>
+  fetcher(CHAT_PATH, {method: 'HEAD', credentials: 'omit', cache: 'no-store'}).then(response => response.ok, () => false);
+/** Check once per page load and publish the answer to `advisorOn`. */
+export function probeAdvisor(): Promise<boolean> {
+  probe ??= checkAdvisor().then(on => (advisorOn.value = on));
+  return probe;
+}
+
+/** The chat entry: nothing while the advisor is off. */
+export function ChatEntry() {
+  useEffect(() => { void probeAdvisor(); }, []);
+  return advisorOn.value ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{CHAT_COPY.entry}</a> : null;
+}
+
 export function Masthead({href}: {href?: string} = {}) {
   return (
     <header class="app-masthead">
@@ -81,6 +108,7 @@ export function Masthead({href}: {href?: string} = {}) {
       <Location />
       <ViewNav href={href} />
       <FreshnessDot />
+      <ChatEntry />
       <AccountMenu />
     </header>
   );

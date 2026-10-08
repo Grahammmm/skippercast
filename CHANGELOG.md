@@ -16,6 +16,8 @@
 
 - Add bounded preflight and progress checks for coastal mapping runs.
 
+- Text Advisor pages and the web chat use the new dark visual system, and the new app's masthead links to the chat while the advisor is on (both stay off until enabled).
+
 ### Internal
 
 - Bound mapping investigation by a shared operating allowance, downstream readiness and verified public progress; preserve scientific and release gates.
