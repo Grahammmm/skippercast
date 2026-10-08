@@ -330,13 +330,20 @@ Read in the code, not the commit titles. PR numbers are Codex's.
   bounds, no nearest package); `links.ts`; `transport.ts` (`coastFetch`
   reaches only `/api/coast/*` and `/coast-data/*`). `fish`'s
   `opportunity.ts` (shore-run priority and guidance) was not ported.
-- **Styling.** `packages/coast/coast.css` is the terrain chrome in a light
-  scheme (ground `#dce8eb`, 15 literals); `panel.css` (2,944 lines, 281 hex
-  literals) is `fish`'s dark report panel with its own `:root` variables
-  whose names shadow `web/tokens.css` (`--bg: #091521` against `#07131d`,
-  `--panel2` against `--panel-2`, a system `--mono`); `viewer.ts` holds ten
-  colour literals. `scripts/check_tokens.mjs` lints `web/**` only, so none
-  of this is linted.
+- **Styling.** Counts use `scripts/check_tokens.mjs`'s own `HEX` regex
+  (`/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g`) over
+  each file, counting every match, distinct lower-cased values and lines
+  with a match. `packages/coast/coast.css` is the terrain chrome in a light
+  scheme (ground `#dce8eb`): 148 hex literals, 122 distinct, on 15
+  minified lines. `panel.css` (2,944 lines; 315 hex literals, 288 distinct,
+  on 285 lines) is `fish`'s dark report panel with its own `:root`
+  variables whose names shadow `web/tokens.css` (`--bg: #091521` against
+  `#07131d`, `--panel2` against `--panel-2`, a system `--mono`); it also
+  keeps `.maplibregl-*` rules (lines 912–962) from `fish`'s MapLibre map,
+  though nothing in `packages/coast` imports MapLibre. `viewer.ts` holds 14
+  hex literals (10 distinct) and `charts/series.ts` 7 (4 distinct).
+  `scripts/check_tokens.mjs` lints `web/**` only, so none of this is
+  linted.
 - **v1 mounts.** `/coast` serves `dist/coast.html` + `coast-entry.js`, a
   standalone page with its own controller and home settings.
   `dist/coast-workspace.js` (#392) mounts `CoastViewer` `managed` in a
@@ -500,7 +507,7 @@ bridge must leave them unchanged:
    with `web/tokens.css` names in a v2 document. FE-76 converts `coast.css`;
    FE-77 converts `panel.css`.
 3. **Renderer colours as data.** `packages/coast/src/palette.ts` exports
-   `CoastPalette` and `DEFAULT_COAST_PALETTE` (today's ten values); the
+   `CoastPalette` and `DEFAULT_COAST_PALETTE` (today's ten distinct values); the
    embed takes an optional `palette`; v2 passes values read through
    `web/map/palette.ts`; v1 passes none.
 4. **Lint.** `check_tokens.mjs` adds `packages/coast/**` with its own
@@ -850,7 +857,7 @@ sky), marks, selection, coastline glow.
 | --- | --- | --- | --- | --- | --- | --- |
 | Basemap | base | Protomaps extract on R2 (§ 4) | token style; night variant on the landing | static | "OpenStreetMap data, Protomaps build <date>." | FE-10 |
 | Coastline glow | always | NOAA CUSP extract per region (GeoJSON, § 11 row) | blurred line under a crisp line, as `fish` | static | "NOAA NGS CUSP shoreline, 1994–2010 sources." | FE-11 |
-| Terrain relief (2D and 3D) | Seafloor (terrain options) | `packages/coast` regional terrain and imagery, SHA-verified and byte-bounded, served by `server/coast-data.ts` from the Fish Worker until FE-85 moves them to R2 | the Three scene of the Terrain presentations; relief, water and contour controls move to the rail in FE-80 | static | the renderer's existing source and coverage lines | #385, #392 (on `main`); FE-71, FE-79, FE-80. The PNG relief raster (FE-13, FE-26) is dropped |
+| Terrain relief (2D and 3D) | Seafloor (terrain options) | `packages/coast` regional terrain and imagery, SHA-256-verified in the browser (`regional.ts`), size- and range-bounded (no hashing) by `server/coast-data.ts` from the Fish Worker until FE-85 moves them to R2 and adds server-side manifest verification | the Three scene of the Terrain presentations; relief, water and contour controls move to the rail in FE-80 | static | the renderer's existing source and coverage lines | #385, #392 (on `main`); FE-71, FE-79, FE-80. The PNG relief raster (FE-13, FE-26) is dropped |
 | Seafloor candidates and cells | Seafloor (option) | existing `tiles/seafloor/seafloor-<region>.pmtiles` | vector fill by terrain grade or species fit (existing views) | static | existing seafloor sentence | FE-14 |
 | Currents | Currents (source choice `?current=`) | `/api/coast/ocean` current fields where a report binds; `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames elsewhere; gates from `packages/coast` `selectCurrentFrame` and `selectedCurrent` through `frames.ts`; Terrain: `setCurrentLayer` | canvas streamlines from `packages/coast/src/map/surface-field.ts`: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
 | Water temp | Water temp | `habitat-tiles/sst-analysis-*.json` (MUR) | `ImageSource` texture ≤ 1,024 px from `packages/coast` `surfaceField` and `fieldContours`, feathered inward at gaps; 0.5 °F contours with sparse labels; click reading with analysis time and error | observed (daily analysis) | "MUR daily analysis, 0.01°, sampled at 0.02°, <age>." | FE-16 |
@@ -1008,7 +1015,7 @@ Rights notes are carried from `fish/NOTICE.md`.
 | GOES longwave imagery (nowCOAST WMS) | `pipeline/goes_frames.py`: GetCapabilities time list only; frames are fetched live by the browser as WMS tiles pinned to listed times | `live-conditions.yml` | `conditions/goes-times.json` | NOAA public; brightness is not cloud fraction; frames pinned to acquisition times, never `current` | `noaa-goes-nowcoast` · public domain · commercial: allowed · attribution yes | FE-44 |
 | NOAA NGS CUSP shoreline (Continually Updated Shoreline Product, ArcGIS feature service) | `scripts/import_cusp_shoreline.py`: per-region bbox extract, vertices quantised for display, source dates kept per feature | manual, re-run when a region is added | `catalog/shoreline/<region>.geojson` → `dist/regions/<id>/shoreline.geojson` | NOAA public domain; source dates 1994–2010 kept, display quantisation is separate from source accuracy, some tiles unavailable; NOAA policy does not cover unreviewed outside contributors in other regions, so each new region's extract is reviewed | `noaa-cusp-shoreline` · public domain · commercial: allowed (per-region review) · attribution yes | FE-10 |
 | NAIP natural-colour mosaic (USGS ImageServer) | none (live tiles); `regions/<id>/region.json` gains `basemap.aerial: true` where coverage was checked | — | — | USGS/USDA attribution; dated land imagery, not live or underwater; only the fixed USGS service | `usgs-naip` · public domain · commercial: allowed · attribution yes | FE-45 |
-| USGS bathymetry grids as PNG PMTiles | `seafloor/relief.py` (ported `import-bathymetry.py`): approved ZIP/COG hashes, nearest sampling, transparent gaps | `seafloor.yml` dispatch | `tiles/relief/relief-<region>.pmtiles` + manifest on R2 | public domain; credit USGS, CSUMB Seafloor Mapping Lab, UC CISR; no exact-depth or navigation claim | existing USGS rows; add the credit line | FE-13, FE-26 |
+| **Dropped 2026-10-07 (FE-13, FE-26; § 3A.2):** USGS bathymetry grids as PNG PMTiles | `seafloor/relief.py` (ported `import-bathymetry.py`): approved ZIP/COG hashes, nearest sampling, transparent gaps | `seafloor.yml` dispatch | `tiles/relief/relief-<region>.pmtiles` + manifest on R2 | public domain; credit USGS, CSUMB Seafloor Mapping Lab, UC CISR; no exact-depth or navigation claim | existing USGS rows; add the credit line | FE-13, FE-26 |
 
 Already in SkipperCast, so no ingest task: Port San Luis tides (`noaa-tides`),
 HFR and WCOFS currents, MUR surface temperature, MPAs, NWS forecast and

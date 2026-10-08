@@ -95,7 +95,7 @@ Merged as [#360](https://github.com/Grahammmm/skippercast/pull/360).
 ## Phase 1: one map stage and its layers
 
 ### FE-70 · Coast embed API shared by v1 and v2 · M
-- Status: NEW. Agent: Codex (renderer internals); Claude reviews.
+- Status: NEW. Agent (proposed): Codex (renderer internals); Claude reviews.
 - Depends: —
 - Files: `packages/coast/src/embed.ts`, `packages/coast/src/embed-template.ts` (the scene markup `dist/coast-workspace.js` takes from `dist/coast.html` today), `dist/coast-workspace.js` (switches to the embed, behaviour unchanged), `tests/coast/coast-embed.test.ts`.
 - Build: § 3A.2 adapter: `mountCoast(host, {root?, palette?, onSelection, onRestoredSelection, onSelectionInvalidated, onCurrentStatus, onView, onPerspective})` creates the shadow root, inserts the template, constructs `CoastViewer` `managed`, and returns a `CoastHandle` with `load`, `setPerspective`, `setLocation`, `setSpecies`, `setHour`, `setDepthLimit`, `setCurrentLayer`, `selectHabitat`, `setVisible`, `destroy`; the handle type is exported and documented as the public API v2 uses.
@@ -123,7 +123,7 @@ Merged as [#360](https://github.com/Grahammmm/skippercast/pull/360).
 - Accept: 1. Every style colour comes from `palette.ts` (test). 2. The night variant has no labels below zoom 9 (test). 3. Attribution reads "© OpenStreetMap contributors, © Protomaps".
 
 ### FE-10 · Basemap and shoreline build and publish · L
-- Status: CHANGED (pipeline only; the style moved to FE-72). Agent: Codex.
+- Status: CHANGED (pipeline only; the style moved to FE-72). Agent (proposed): Codex.
 - Depends: —
 - Files: `scripts/basemap/build_basemap.sh`, `scripts/basemap/regions.py`, `scripts/import_cusp_shoreline.py`, `catalog/shoreline/<region>.geojson`, `.github/workflows/basemap.yml` (dispatch, `DATA_RUNNER`), `catalog/sources.json` (`protomaps-basemap`, `noaa-cusp-shoreline`), `docs/data-sources.md`, `tests/unit/test_basemap_regions.py`.
 - Build: § 4 option 1 extract per region bbox merged into `tiles/basemap/ca-coast-<date>.pmtiles` on R2; CUSP shoreline per region with source dates kept, copied by the platform build to `dist/regions/<id>/shoreline.geojson`; reuse the SLO extract the bridge already serves (`/coast-data/data/slo-shoreline.geojson`) as the Morro Bay reference.
@@ -148,7 +148,7 @@ Merged as [#360](https://github.com/Grahammmm/skippercast/pull/360).
 The `packages/coast` renderer's SHA-verified terrain is the relief ([#385](https://github.com/Grahammmm/skippercast/pull/385), [#392](https://github.com/Grahammmm/skippercast/pull/392)); a PNG relief raster would be less capable (`docs/FISH-MERGE-STATUS.md`, product decision 3). Coverage grows through Codex's mapping pipeline.
 
 ### FE-26 · Relief proxy and publish workflow — DROPPED
-Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://github.com/Grahammmm/skippercast/pull/381)), which already enforces hash, range and size bounds; moving the assets to SkipperCast storage is FE-85.
+Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://github.com/Grahammmm/skippercast/pull/381)), which already bounds response size, checks range syntax and the returned range, and accepts only a 64-hex `release` id. The bridge computes no hash: SHA-256 is verified only in the browser (`packages/coast/src/coast3d/regional.ts` line 17). FE-85 moves the assets to SkipperCast storage and adds server-side manifest SHA verification.
 
 ### FE-14 · Seafloor layer: candidates and cells in Chart · M
 - Status: CHANGED (relief removed; terrain options are FE-80). Agent: Claude.
@@ -244,7 +244,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - Accept: 1. LCP and the 180 KB first-paint budget hold. 2. With WebGL disabled the SVG renders and axe stays clean. 3. Motion stops under `prefers-reduced-motion`. 4. No `three` request (e2e network log).
 
 ### FE-79 · Host-chrome mode for the coast embed · L
-- Status: NEW. Agent: Codex; Claude reviews the handle API.
+- Status: NEW. Agent (proposed): Codex; Claude reviews the handle API.
 - Depends: FE-70
 - Files: `packages/coast/src/embed.ts`, `packages/coast/src/embed-template.ts`, `packages/coast/src/coast3d/viewer.ts`, `tests/coast/coast-embed.test.ts`.
 - Build: `mountCoast(host, {chrome: 'host'})` renders the scene without the native layers panel, view controls, reading, target detail and sources sheet; the handle gains setters for relief exaggeration, water opacity, contours, depth display, zoom, reset and top view, and events for readings, target detail and source coverage as typed data. `chrome: 'native'` (default) is unchanged. Split by control group if it exceeds 400 lines.
@@ -258,7 +258,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - Accept: 1. Every control `fish` offered on the terrain has a home (table in the PR). 2. Measured and modelled labels and source clocks are preserved verbatim. 3. Keyboard reaches every option; axe clean.
 
 ### FE-81 · Overlay API on the terrain · L
-- Status: NEW. Agent: Codex; Claude reviews the API.
+- Status: NEW. Agent (proposed): Codex; Claude reviews the API.
 - Depends: FE-70
 - Files: `packages/coast/src/coast3d/overlays.ts`, `packages/coast/src/embed.ts`, `tests/coast/coast-overlays.test.ts`.
 - Build: `handle.setOverlay(id, {kind: 'fill' | 'line' | 'point', features, style})` drapes GeoJSON on the terrain in draw order; styles take palette colours, never literals; picking returns the feature id.
@@ -292,13 +292,13 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - Depends: —
 - Files: `packages/coast/tokens-bridge.css`, `packages/coast/coast.css`, `packages/coast/src/palette.ts`, `packages/coast/src/coast3d/viewer.ts` (read colours from the palette only), `packages/coast/src/charts/series.ts` (literals → `var(--coast-…, literal)`), `scripts/check_tokens.mjs`, `scripts/token-lint-baseline.json`, `tests/test_check_tokens.mjs`, `tests/coast/coast-palette.test.ts`, `e2e/coast-computed-style.spec.ts`.
 - Build: § 3A.4 items 1, 3, 4 and 5 for `coast.css`, the viewer and `series.ts`; in `series.ts` colours move from SVG presentation attributes into `style` properties, since attributes do not resolve `var()`; `packages/coast/src/palette.ts` is the package's one allowed literal file (like `web/map/palette.ts`); the lint covers `packages/coast/**` with a seeded shrink-only baseline that excludes the converted files.
-- Accept: 1. Computed colours on `/coast` and the v1 terrain presentation are equal before and after (e2e reads fixed elements). 2. `DEFAULT_COAST_PALETTE` equals today's ten values (test). 3. With `data-coast-theme="tokens"` the terrain chrome reads `web/tokens.css` values. 4. The lint fails on a new literal in `packages/coast` and passes on `main`.
+- Accept: 1. Computed colours on `/coast` and the v1 terrain presentation are equal before and after (e2e reads fixed elements). 2. `DEFAULT_COAST_PALETTE` equals today's ten distinct values (test). 3. With `data-coast-theme="tokens"` the terrain chrome reads `web/tokens.css` values. 4. The lint fails on a new literal in `packages/coast` and passes on `main`.
 
-### FE-77 · `panel.css` onto the token bridge · L
+### FE-77 · `panel.css` onto the token bridge · L (two PRs, FE-77a and FE-77b)
 - Status: NEW. Agent: Claude; Codex reviews. Hot spot: `packages/coast/panel.css`.
 - Depends: FE-76
 - Files: `packages/coast/panel.css`, `packages/coast/tokens-bridge.css`, `scripts/token-lint-baseline.json`, `e2e/coast-computed-style.spec.ts`, `scripts/check_contrast.mjs` (bridged pairs).
-- Build: § 3A.4 item 2: each of the 281 literals becomes `var(--coast-…, literal)`; the local `:root` aliases are renamed `--coast-*`; the baseline shrinks by the converted entries. Split into two PRs by line range if over 400 lines.
+- Build: § 3A.4 item 2: each of the 315 hex literals (288 unique, on 285 lines; counted with `check_tokens.mjs`'s `HEX` regex) becomes `var(--coast-…, literal)`; the local `:root` aliases are renamed `--coast-*`; FE-76 seeds the baseline with these 315 `panel.css` findings and each PR removes the ones it converts. The 288 values map to a few dozen `--coast-*` role names, not one name each; about 285 changed lines plus those role mappings and the e2e additions exceed one PR, so FE-77a converts lines 1–1,472 and FE-77b the rest, each ≤ ~400 lines.
 - Accept: 1. Computed colours of the report dialog, history and catch sheet in v1 are unchanged. 2. Under the opt-in, text pairs pass 4.5:1 in `check_contrast.mjs`. 3. `panel.css` defines no unprefixed custom property.
 
 ### FE-30 · Profiles applied across the app · M
@@ -364,7 +364,7 @@ Under Q14 option 1 these are Codex's. Each output matches the
 bridge without a client change. None blocks the v2 shell; all block FE-62.
 
 ### FE-40 · CDIP nearshore model collector · M
-- Status: CHANGED (output = `packages/coast` `NearshoreSite`). Agent: Codex.
+- Status: CHANGED (output = `packages/coast` `NearshoreSite`). Agent (proposed): Codex.
 - Depends: —
 - Files: `src/skippercast/pipeline/cdip_nearshore.py`, `src/skippercast/pipeline/live.py`, `regions/morro-bay/region.json` (sites), `catalog/sources.json`, `tests/fixtures/cdip/*`, `tests/unit/test_cdip_nearshore.py`, `docs/data-sources.md`.
 - Build: § 11 row: site identity and coordinate checks, three-hour series with masks, freshness, published in `live-conditions.yml`'s snapshot.
@@ -372,7 +372,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: add the register row.
 
 ### FE-41 · Beach health collector · S
-- Status: CHANGED (output = `BeachWaterQuality`). Agent: Codex.
+- Status: CHANGED (output = `BeachWaterQuality`). Agent (proposed): Codex.
 - Depends: —
 - Files: `src/skippercast/pipeline/beach_health.py`, `live.py`, `catalog/sources.json`, `tests/fixtures/beach-health/*`, `tests/unit/test_beach_health.py`.
 - Build: § 11 row; statuses and links only.
@@ -380,7 +380,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: add the register row.
 
 ### FE-42 · NDBC history backfill and seasonal bands · L
-- Status: CHANGED (output = `HistoryBundle`). Agent: Codex.
+- Status: CHANGED (output = `HistoryBundle`). Agent (proposed): Codex.
 - Depends: —
 - Files: `src/skippercast/pipeline/ndbc_history.py`, `.github/workflows/buoy-history.yml`, `catalog/sources.json`, `tests/fixtures/ndbc-history/*`, `tests/unit/test_ndbc_history.py`, `docs/live-conditions.md`.
 - Build: § 11 row: annual checkpoints with SHA under `var/`, monthly p10 / median / p90 with counts, coverage and years; recent hourly means for 7, 14 and 45 days.
@@ -388,7 +388,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: approve the workflow; run the backfill once.
 
 ### FE-43 · ESI shore runs and access points import · M
-- Status: CHANGED (schema = the shore-habitat GeoJSON the renderer reads). Agent: Codex.
+- Status: CHANGED (schema = the shore-habitat GeoJSON the renderer reads). Agent (proposed): Codex.
 - Depends: —
 - Files: `scripts/import_shore_habitat.py`, `catalog/shore-habitat/morro-bay.geojson`, `schemas/shore-habitat.schema.json`, `src/skippercast/platform/build.py`, `catalog/sources.json`, `tests/contract/test_shore_habitat.py`, `docs/data-sources.md`.
 - Build: § 11 row: runs with source year, access points with ids and links, review dates in the asset.
@@ -396,14 +396,14 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: add the register rows; confirm the review dates.
 
 ### FE-44 · GOES frame times index · S
-- Status: CHANGED (output = `CloudImage`). Agent: Codex.
+- Status: CHANGED (output = `CloudImage`). Agent (proposed): Codex.
 - Depends: —
 - Files: `src/skippercast/pipeline/goes_frames.py`, `live.py`, `catalog/sources.json`, `tests/unit/test_goes_frames.py`.
 - Build: § 11 row: GetCapabilities time list as a `CloudImage` record with the fetch time.
 - Accept: 1. A capabilities fixture yields the list. 2. Times are ISO UTC, sorted, deduplicated.
 
 ### FE-45 · NAIP source config and rights · S
-- Status: CHANGED (host list shared with `map-sources.ts`). Agent: Codex.
+- Status: CHANGED (host list shared with `map-sources.ts`). Agent (proposed): Codex.
 - Depends: —
 - Files: `catalog/sources.json`, `regions/morro-bay/region.json` (`basemap.aerial`), `schemas/region.schema.json` (if needed), `docs/data-sources.md`, rebuilt `dist/regions/*`.
 - Build: § 11 row; the region flag; a test that `catalog/sources.json`'s NAIP host equals `packages/coast` `mapSourceHosts`.
@@ -411,19 +411,19 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: add the register row.
 
 ### FE-84 · Snapshots from SkipperCast feeds; bridge upstream switch · L
-- Status: NEW. Agent: Codex.
+- Status: NEW. Agent (proposed): Codex.
 - Depends: FE-40, FE-41, FE-42, FE-44
 - Files: `src/skippercast/pipeline/coast_snapshots.py` (assembles report, ocean and history packets in the `packages/coast` shapes), `server/coast-data.ts` (upstream: SkipperCast feeds, Fish Worker as a dated fallback flag), `tests/test_coast_data.mjs`, `tests/unit/test_coast_snapshots.py`, `docs/coastal-service.md`.
-- Build: the bridge serves SkipperCast-assembled snapshots with the same validation; source clocks stay original.
+- Build: the bridge serves SkipperCast-assembled snapshots with the same validation; source clocks stay original. Split if over ~400 lines: one PR per snapshot (report, ocean, history), then the upstream switch.
 - Accept: 1. `/api/coast/{report,ocean,history}` return schema-valid packets from SkipperCast feeds (fixture test). 2. The client tests pass unchanged. 3. Two distinct persisted refresh runs are recorded in the PR.
 - **Owner**: approve (`server/`); confirm the run receipts.
 
 ### FE-85 · Terrain, imagery and habitat assets in SkipperCast storage · L
-- Status: NEW. Agent: Codex.
+- Status: NEW. Agent (proposed): Codex.
 - Depends: —
 - Files: `scripts/coast/publish_assets.py`, `.github/workflows/coast-assets.yml` (dispatch), `server/coast-data.ts` (R2 reads for `/coast-data/data/*` and habitat tiles), `tests/test_coast_data.mjs`, `docs/coastal-service.md`.
-- Build: copy the reviewed assets with their SHA manifest to R2; serve them with the existing hash, range and size gates; keep the private-prefix denial.
-- Accept: 1. Every served asset matches its manifest SHA (test and live check). 2. Encoded and traversal paths are refused. 3. The renderer's verified-asset checks pass against R2.
+- Build: copy the reviewed assets with their SHA-256 manifest to R2; add server-side manifest SHA-256 verification (the bridge has none today; only the browser checks, in `regional.ts`): an object whose digest differs from its manifest entry, or that has no entry, is refused before any byte is served; keep the existing size and range gates and the private-prefix denial. Split by asset group if over ~400 lines.
+- Accept: 1. A fixture object with an altered byte, and one missing from the manifest, are both refused by the server (test). 2. Every served asset matches its manifest SHA-256 (live check recorded in the PR). 3. Encoded and traversal paths are refused. 4. The renderer's in-browser verified-asset checks still pass against R2.
 - **Owner**: approve the workflow and `server/`; run the first publish.
 
 ## Phase 4: the remaining features in the new shell
