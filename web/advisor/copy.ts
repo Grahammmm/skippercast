@@ -1,6 +1,10 @@
 // User-facing strings of the Text Advisor's pages (docs/plans/text-advisor/01-architecture.md
 // § touch points: every advisor page string lives here so scripts/check_copy.mjs
 // lints it). TA-C4 adds the upload page, TA-C3 the web chat; TA-W1 adds the site pages' copy.
+// FE-55: the masthead's chat entry lives in ./entry.ts (re-exported here) so the
+// v2 app does not load this module.
+import {CHAT_ENTRY} from './entry.ts';
+export {CHAT_ENTRY, CHAT_PATH} from './entry.ts';
 
 /** The upload link page, dist/upload.html + dist/advisor/upload.js (03 § Uploads for compressed channels). */
 export const UPLOAD_COPY = {
@@ -63,11 +67,9 @@ export const CHAT_COPY = {
   continueHeading: 'Continue by text',
   saveContact: 'Save the number',
   textUs: 'Text us',
-  /** FE-55: the v2 masthead's link to dist/chat.html, shown only while TEXT_ADVISOR_ENABLED is on (the same words as the pages' PAGES_COPY.ctaChat). */
-  entry: 'Ask SkipperCast',
+  /** FE-55: the v2 masthead's link to dist/chat.html, shown only while TEXT_ADVISOR_ENABLED is on. */
+  entry: CHAT_ENTRY,
 } as const;
-/** The web chat page, which the advisor gate answers 404 while TEXT_ADVISOR_ENABLED is off. */
-export const CHAT_PATH = '/chat.html';
 
 /** Largest photo the chat accepts, in bytes (the server checks it again). */
 export const CHAT_MAX_PHOTO_BYTES = 8 * 1024 * 1024;

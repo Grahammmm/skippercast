@@ -8,7 +8,7 @@
 // the advisor is on.
 import {signal} from '@preact/signals';
 import {useEffect} from 'preact/hooks';
-import {CHAT_COPY, CHAT_PATH} from '../advisor/copy.ts';
+import {CHAT_ENTRY, CHAT_PATH} from '../advisor/entry.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {APP_VIEWS, appView, region, setParams, withParams, type AppView} from '../state.ts';
 import {freshness, regionInfo} from './App.tsx';
@@ -98,7 +98,7 @@ export function probeAdvisor(): Promise<boolean> {
 /** The chat entry: nothing while the advisor is off. */
 export function ChatEntry() {
   useEffect(() => { void probeAdvisor(); }, []);
-  return advisorOn.value ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{CHAT_COPY.entry}</a> : null;
+  return advisorOn.value ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{CHAT_ENTRY}</a> : null;
 }
 
 export function Masthead({href}: {href?: string} = {}) {
