@@ -16,6 +16,7 @@ import {Sheet, type Detent} from '../ui/Sheet.tsx';
 import {day, selection} from '../state.ts';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
+import {AccountMenu} from './AccountMenu.tsx';
 import {BriefFooter, Caveat, Headline, MapStage, Picks, TideSpark, Tiles, type Pick} from './Desktop.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
@@ -73,7 +74,7 @@ export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: reado
         </div>
       </div>
       <Caveat />
-      <BriefFooter><a href="/#account">Sign in</a></BriefFooter>
+      <BriefFooter><AccountMenu inline /></BriefFooter>
     </div>
   );
 }

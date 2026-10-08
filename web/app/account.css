@@ -1,0 +1,69 @@
+/* Account menu (FE-50, docs/plans/front-end/design.md § 6) and the v1 dialogs
+   it opens: dist/account.js (passkeys), dist/boat-profile.js (exact boat) and
+   dist/trip-alerts.js (inside the app's dialog) keep their markup; these rules
+   give it the tokens. Loaded after web/ui/ui.css. Every value is a token. */
+
+.app-account { position: relative; }
+.app-account-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
+.app-account-panel {
+  position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: var(--z-modal); width: min(360px, calc(100vw - var(--space-6)));
+  max-height: calc(100vh - var(--space-7) * 2); overflow: auto; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3);
+}
+.app-account-panel[hidden] { display: none; }
+.app-account[data-inline] { margin-top: var(--space-3); }
+.app-account[data-inline] .app-account-panel { position: static; width: auto; max-height: none; margin-top: var(--space-2); box-shadow: none; }
+.app-account-panel section { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.app-account-panel h2 { margin: 0; }
+.app-account-panel p { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.app-account-presets { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); width: 100%; }
+.app-account-presets .ui-button { flex-direction: column; align-items: flex-start; height: auto; padding: var(--space-2); text-align: left; }
+.app-account-presets small { color: var(--muted); font-size: var(--text-11); }
+.app-account-links { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.app-account-links a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); color: var(--blue); font-size: var(--text-13); }
+.app-account-links a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* v1 dialogs over the v2 shell */
+.home-port-scrim { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
+.home-port-card, .app-alerts { color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
+.home-port-card {
+  position: relative; width: min(560px, 100%); max-height: calc(100% - var(--space-4)); overflow: auto; display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--elev-3);
+}
+#account-body { display: flex; flex-direction: column; gap: var(--space-3); }
+.home-port-card h1 { margin: 0; padding-right: var(--space-7); font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.home-port-card h2 { margin: var(--space-2) 0 0; font: var(--weight-semibold) var(--text-15) / var(--leading-heading) var(--font-sans); }
+.home-port-kicker { color: var(--muted); font-size: var(--text-11); font-weight: var(--weight-medium); letter-spacing: var(--tracking-eyebrow); }
+.home-port-card p, .app-alerts p { margin: 0; }
+.home-port-intro, .home-port-fine, .home-port-feedback, .account-hint, .boat-unit, .app-alerts .small { color: var(--muted); font-size: var(--text-13); }
+.home-port-fine { font-size: var(--text-11); }
+.home-port-feedback:empty { display: none; }
+.home-port-actions, .inavx-actions, .boat-query-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.boat-query-row input { flex: 1; }
+.home-port-card :is(button, input, select), .app-alerts :is(button, input, select) {
+  box-sizing: border-box; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel-2); color: var(--text); font: inherit;
+}
+.home-port-card :is(input, select), .app-alerts :is(input, select) { width: 100%; }
+.home-port-card :is(button, input, select):focus-visible, .app-alerts :is(button, input, select, summary, a):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.home-port-card button:not(:disabled), .app-alerts button:not(:disabled) { cursor: pointer; }
+.home-port-card button:disabled { opacity: 0.6; cursor: not-allowed; }
+.home-port-card .account-primary { border-color: var(--mint); background: var(--mint); color: var(--bg); font-weight: var(--weight-semibold); }
+.home-port-card .account-destructive { border-color: var(--coral); color: var(--coral); }
+.home-port-card a, .app-alerts a { color: var(--blue); }
+.home-port-close { position: absolute; top: var(--space-3); right: var(--space-3); }
+.home-port-card label, .app-alerts label { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); color: var(--muted); }
+.account-passkeys { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.account-passkeys li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--text-13); }
+.account-danger summary, .app-alerts summary { min-height: var(--touch-min); display: flex; align-items: center; cursor: pointer; }
+.account-danger { color: var(--coral); }
+.account-confirm { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--coral); border-radius: var(--radius-md); }
+.boat-form, .insight-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2) var(--space-3); }
+.boat-ai { color: var(--amber); font-size: var(--text-11); }
+.boat-match { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-13); }
+
+/* Trip alerts inside the app dialog (trip-alerts.js's insight cards) */
+.app-alerts { display: flex; flex-direction: column; gap: var(--space-3); }
+.app-alerts .insight-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.app-alerts .insight-card[open] > summary { color: var(--text); font-weight: var(--weight-semibold); }
+.app-alerts article { padding: var(--space-2) 0; border-top: 1px solid var(--line); }

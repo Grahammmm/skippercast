@@ -69,7 +69,8 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<main class="app-main"><aside/);
   assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet']);
   assert.match(html, /class="app-fresh" role="status" data-state="unknown" aria-label="Freshness: No readings yet"/);
-  assert.match(html, /href="\/#account">.*Sign in<\/a>/);
+  // FE-50: sign in is the account menu's button, closed until pressed.
+  assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)">.*?Sign in<\/button><div id="\1" class="app-account-panel" hidden/);
   assert.match(html, /role="group" aria-label="Profile"/);
   assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
   assert.equal(count(html, /<label>Target<select/g), 1);
@@ -203,7 +204,7 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">1 pm<\/output><\/div><\/div>/);
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
   const order = ['class="ui-eyebrow">Today · 1 pm</span>','class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<figure class="app-spark"',
-    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<p class="app-caveat">', '<footer class="app-brief-footer">', 'href="/#account">Sign in</a>'];
+    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<p class="app-caveat">', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
   const at = order.map(s => body.indexOf(s));
   assert.ok(at.every(i => i >= 0), `every piece renders: ${JSON.stringify(order.filter((_, i) => at[i] < 0))}`);
   assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: eyebrow, freshness, headline, tiles, picks, tide, menus, caveat, footer');
@@ -277,7 +278,8 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   const page = await readFile(join(ROOT, 'dist/app.html'), 'utf8');
   assert.match(page, /<div id="app">/);
   assert.match(page, /<script type="module" src="\.\.\/web\/app\/main\.tsx"><\/script>/);
-  assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css'],
-    'tokens first, then the primitives, then the shell, then the entry flow (FE-08)');
-  assert.doesNotMatch(page, /leaflet|vendor\//, 'the v2 shell imports no Leaflet');
+  assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css', '../web/app/account.css'],
+    'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50)');
+  assert.doesNotMatch(page, /leaflet/i, 'the v2 shell imports no Leaflet');
+  assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), ['vendor/simplewebauthn-browser-14.0.0/index.umd.min.js'], 'the only vendored script is the passkey library (FE-50)');
 });
