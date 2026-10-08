@@ -9,8 +9,10 @@ import {useEffect, useRef} from 'preact/hooks';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {chartFailed, createChart} from '../map/chart.ts';
+import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
+import {profile, species} from '../state.ts';
 import {regionInfo, zone} from './App.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
@@ -45,7 +47,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
-      renderers: [() => createChart({host: chartHost.current!})]});
+      renderers: [() => createChart({host: chartHost.current!, zone, place: () => regionPlace(regionInfo.value, profile.value, species.value ?? '')})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;

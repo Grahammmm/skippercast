@@ -72,6 +72,8 @@
 .ui-rail-toggle { flex: 1; justify-content: flex-start; border-color: transparent; background: transparent; text-align: left; }
 .ui-rail-text { display: flex; flex-direction: column; gap: var(--space-1); }
 .ui-rail-note, .ui-rail-item[data-on="false"] .ui-rail-label { color: var(--muted); }
+/* On the pressed toggle's mint tint --muted falls under 4.5:1 (4.39), so a note there reads in --text. */
+.ui-rail-toggle[aria-pressed="true"] .ui-rail-note { color: var(--text); }
 .ui-dock { z-index: var(--z-dock); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
 .ui-dock-range { flex: 1; min-width: 120px; }
 .ui-dock-readout { min-width: 5ch; text-align: right; color: var(--text); font-size: var(--text-13); }

@@ -9,12 +9,15 @@
 // Protected areas (FE-19) are always drawn on the Chart: their row says what
 // the drawing covers (MpaRow), links the official rules page and carries the
 // ds582 credit in its basis.
-import {layers} from '../state.ts';
+// Currents (FE-15) follows the source choice `?current=`; its row carries the
+// drawn source's basis sentence, or why nothing draws.
+import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
+import {currentsState} from '../map/currents.ts';
 import {layerEntry} from '../map/layers.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
-import {shownPresentation} from '../map/stage.ts';
+import {currentStatus, shownPresentation} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES} from './LayerRail.tsx';
@@ -64,14 +67,28 @@ export function MpaRow() {
   );
 }
 
+function CurrentsRow() {
+  const chart = shownPresentation.value === 'chart', state = currentsState.value, reason = chart ? state.reason : currentStatus.value;
+  return (
+    <li class="app-legend-currents">
+      <span class="app-swatch" data-layer="currents" aria-hidden="true"></span>Currents
+      <span class="app-swatch" data-layer="currents-fast" aria-hidden="true"></span>fastest fifth
+      <Popover iconOnly summary="Currents basis">{chart ? state.basis : layerEntry('currents').basis}</Popover>
+      {reason ? <p class="app-legend-note" data-reason="currents">{reason}</p> : null}
+    </li>
+  );
+}
+
 export function Legend() {
-  const on = RAIL_ENTRIES.filter(e => layers.value.includes(e.id)), chart = shownPresentation.value === 'chart';
+  const source = current.value, chart = shownPresentation.value === 'chart';
+  const on = RAIL_ENTRIES.filter(e => e.id === 'currents' ? source !== 'off' : layers.value.includes(e.id));
   return (
     <section class="app-legend" aria-label="Legend">
       <span class="ui-eyebrow">Legend</span>
       {on.length || chart ? (
         <ul>
-          {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.label}</li>)}
+          {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} />
+            : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.label}</li>)}
           {chart ? <MpaRow /> : null}
         </ul>
       ) : <p class="app-empty">No layers on.</p>}
