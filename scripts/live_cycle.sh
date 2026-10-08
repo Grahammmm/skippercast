@@ -61,6 +61,11 @@ PY
 cp docs/live-conditions.md var/live-published/README.md
 # GOES longwave frame times (FE-44). A failure keeps the last index, which ages out of the client's 90-minute gate.
 python -m skippercast.pipeline.goes_frames --output var/live-published/goes-times.json || true
+# The coast report's ocean packet (FE-84) from the intelligence feed and the GOES index above. A failure
+# keeps the last packet, which the Worker stops serving three hours after its generatedAt.
+if ! python -m skippercast.pipeline.coast_snapshots --root var/live-published; then
+  echo "::warning title=Coast ocean packet::assembly failed; the Worker falls back to the Fish bridge once it is 3 h old"
+fi
 # One parentless commit, force-pushed with a lease: the branch never grows history.
 bash scripts/publish_branch_snapshot.sh conditions var/live-published 'Refresh regional ocean evidence and forecast archive'
 echo "published"

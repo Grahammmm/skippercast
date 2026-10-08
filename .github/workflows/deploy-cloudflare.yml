@@ -141,6 +141,9 @@ jobs:
           # landing at / and app at /map, "false" the current shell; unset means the default in
           # deployments/production.json (off). ?ui=v2 previews per request. docs/plans/front-end/design.md § 14.
           UI_V2: ${{ vars.UI_V2 }}
+          # FE-84: coast snapshot sources served from SkipperCast's feeds (nearshore, water-quality, ocean, history),
+          # copied whenever set; unset keeps all of them on the Fish Worker bridge. docs/coastal-service.md.
+          COAST_FEEDS: ${{ vars.COAST_FEEDS }}
           # "true" binds the Analytics Engine dataset skippercast_events; docs/cloudflare.md#observability.
           ENABLE_ANALYTICS: ${{ vars.ENABLE_ANALYTICS }}
           # "false" turns off Workers Logs' per-request invocation log, whose message is the request URL

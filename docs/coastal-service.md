@@ -79,7 +79,7 @@ grouped asset route 503; deleting it returns to the bridge. An R2 error (a
 failed read, an unreadable pointer or manifest) is also 503: a published group
 never falls back to the bridge. Groups left out of
 a run return to the bridge, so publish together the groups that should stay in
-R2. Snapshots (`report`, `ocean`, `history`) always use the bridge.
+R2. Snapshots (`report`, `ocean`, `history`) follow the FE-84 switch below.
 
 Habitat entries carry the release's expiry. A published habitat group serves
 503 after that date until the workflow runs again on the newer Fish release, so
@@ -96,6 +96,55 @@ that day (164 objects: all ten habitat assets and 154 terrain and imagery
 assets, 54 MB, kept outside the repository) matched every manifest SHA-256,
 and served from an in-memory R2 stand-in through `server/coast-data.ts` it
 passed the renderer's `verifiedAsset` and `readReviewedHabitat` checks.
+
+## Snapshots from SkipperCast feeds (FE-84)
+
+The Worker var `COAST_FEEDS` (a repository variable, copied at deploy) lists the
+snapshot sources served from SkipperCast's own published feeds in the `FEEDS`
+bucket instead of the Fish Worker. Unset or empty, every snapshot comes from
+the bridge exactly as before. The SLO county's feeds live under the Morro Bay
+region:
+
+| Name | Feed (R2 key) | Written by | Age limit | Replaces |
+| --- | --- | --- | --- | --- |
+| `nearshore` | `conditions/regions/morro-bay/nearshore.json` | FE-40, each live cycle | 3 h after `generated_at` | the report's `nearshore` and its `cdip-*` sources |
+| `water-quality` | `conditions/regions/morro-bay/beach-health.json` | FE-41, about hourly | 3 h after `generatedAt` | the report's `waterQuality` and its `slo-beach-water-quality` source |
+| `ocean` | `conditions/regions/morro-bay/coast-ocean.json` | `coast_snapshots.py`, each live cycle | 3 h after `generatedAt` | the whole `/api/coast/ocean` packet |
+| `history` | `data/regions/morro-bay/history.json` | FE-42, weekly recent pass | 8 days after `generatedAt` | the whole `/api/coast/history` packet |
+
+A switched feed is used only while it is present, readable, shaped as the
+`packages/coast` type it stands for and inside its age limit, measured by the
+Worker against its own clock (a feed more than five minutes in the future is
+stale too). Otherwise that one source comes from the Fish Worker as before;
+this fallback is dated and goes when FE-62 retires the bridge. The server makes
+the age check itself because a collector that fails for a whole region keeps
+its last published file: a region-wide CDIP failure re-publishes the previous
+`nearshore.json`, whose sites still say `current`.
+
+Values are never re-dated. Each row keeps its fetch, issue, sample and
+observation clocks and each source its `outcome`, so a failed beach fetch is
+served as an `error` source with no rows, never as open beaches. Two values are
+re-read against the request's clock, only ever towards stale: a nearshore site
+whose model issue is 48 h old or more is `stale`, and a history station whose
+last observation is more than 3 h old has `recent.stale` set (the weekly pass
+publishes it as current). Until the recent pass runs more often than weekly,
+a switched History view shows the recent series as stale most of the week; on
+October 8, 2026 Fish's recent series was under an hour old. The rest of the report (forecasts, observations,
+tides, alerts, catches and spatial layers) still comes from Fish, so a Fish
+failure keeps `/api/coast/report` unavailable; the ocean and history packets
+need no bridge once switched. Every switched response names its upstream per
+source in `X-Coast-Upstream`, for example `nearshore=skippercast,
+water-quality=fish (stale)`.
+
+`python -m skippercast.pipeline.coast_snapshots --root var/live-published` runs
+in `scripts/live_cycle.sh` after the GOES index. It builds `OceanData` from the
+region's `intelligence.json` (WCOFS and HF radar surface currents, with the
+Fish Worker's own selection rules ported from `normalizeSkipperOcean`: status
+`ok`, fetched within 6 h, a forecast issued within 36 h or an observation
+sampled within 6 h, native frames, SLO marine bounds, HDOP and radar-count
+gates) and from `goes-times.json` while its newest frame is within 90 minutes.
+On October 8, 2026 its currents were byte-identical to Fish's normaliser run on
+the same `intelligence.json`.
 
 The upstream origin is fixed in `server/coast-data.ts`. The bridge is transport
 for an existing reviewed publication, not an independent claim that every

@@ -19,7 +19,7 @@
 // the environment are copied into the Worker's vars (never a secret). The charter
 // fleet has no bindings, so its FLEET_VARS (FLEET_ENABLED, FLEET_MAP_ENABLED) are copied whenever set
 // (docs/plans/charter-fleet/design.md § 16), and so is the front-end rebuild's UI_V2
-// (UI_VARS; docs/plans/front-end/design.md § 14).
+// (UI_VARS; docs/plans/front-end/design.md § 14), and the coast snapshots' COAST_FEEDS (COAST_VARS; FE-84).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
 // $schema path, a URL) is never mistaken for a comment.
 import {readFileSync, writeFileSync} from 'node:fs';
@@ -129,6 +129,13 @@ export const UI_VARS = ['UI_V2'];
 /** The front-end rebuild's plain vars from an environment: UI_VARS only, non-empty only. */
 export function uiVars(environ = {}) { return pickVars(UI_VARS, environ); }
 
+// FE-84: the coast snapshot sources served from SkipperCast's feeds instead of the Fish Worker
+// (server/coast-data.ts coastFeeds); unset means every source from Fish. No bindings.
+export const COAST_VARS = ['COAST_FEEDS'];
+
+/** The coast snapshots' plain vars from an environment: COAST_VARS only, non-empty only. */
+export function coastVars(environ = {}) { return pickVars(COAST_VARS, environ); }
+
 /** {queues, analytics, advisor} from environment variables; "true" (any case) turns a feature on. */
 export function features(environ = {}) {
   const on = name => String(environ[name] ?? '').trim().toLowerCase() === 'true';
@@ -159,7 +166,7 @@ export function deployConfig(text, databaseId, bucket, domains = '', {queues = f
     config.r2_buckets.push({...ADVISOR_BUCKET});
     config.vars = {...config.vars, ...advisorVars(environ)};
   }
-  const switches = {...fleetVars(environ), ...uiVars(environ)};
+  const switches = {...fleetVars(environ), ...uiVars(environ), ...coastVars(environ)};
   if (Object.keys(switches).length) config.vars = {...config.vars, ...switches};
   return config;
 }

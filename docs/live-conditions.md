@@ -113,6 +113,19 @@ listed time through `cloudSource`, never `current`.
 - **Meaning:** longwave infrared brightness temperature from GOES East and West,
   observed frames only; it is no cloud-cover percentage and no forecast.
 
+## Coast ocean packet (FE-84)
+
+After the GOES index, each cycle runs `python -m skippercast.pipeline.coast_snapshots`,
+which writes `regions/morro-bay/coast-ocean.json` (served at
+`/feeds/conditions/regions/morro-bay/coast-ocean.json`): the `packages/coast`
+`OceanData` the coast report's map reads, built from this region's
+`intelligence.json` surface currents and `goes-times.json`. Each current field
+and the cloud record keep their own fetch, issue, sample and observation
+clocks; a field that fails a check is left out, and an input that yields
+nothing is an `error` source. The Worker serves it at `/api/coast/ocean` only
+when `COAST_FEEDS` lists `ocean` and the packet is under three hours old
+([coastal-service.md](coastal-service.md#snapshots-from-skippercast-feeds-fe-84)).
+
 ## Nearshore model sites (FE-40)
 
 Each live cycle runs `python -m skippercast.pipeline.cdip_nearshore` after the
