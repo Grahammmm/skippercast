@@ -2,15 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.REGIONS = {};
 globalThis.DEPLOYMENT = {allowed_origins:['https://skippercast.com']};
-const {coastTarget, serveCoastData} = await import('../server/coast-data.ts');
+const {coastTarget, coastFeeds, serveCoastData} = await import('../server/coast-data.ts');
 
 const request = (path, init) => new Request('https://skippercast.com' + path, init);
 const snapshot = {schemaVersion:1, countyId:'slo', generatedAt:'2026-10-06T12:00:00Z', observations:[]};
 const response = (data = snapshot) => new Response(JSON.stringify(data), {headers:{'Content-Type':'application/json'}});
 
 // The bridge cases run with no R2 binding and with an empty one: nothing published keeps the bridge.
-for (const [label, store] of [['no R2', null], ['empty R2', fakeStore({})]]) {
-  const serve = (req, fetcher) => serveCoastData(req, fetcher, store);
+// FE-84: and with every snapshot source switched to SkipperCast feeds that are not published, which must fall back to the same bridge.
+for (const [label, store, feeds] of [['no R2', null, undefined], ['empty R2', fakeStore({}), undefined],
+  ['all feeds switched, none published', fakeStore({}), coastFeeds('nearshore,water-quality,ocean,history')]]) {
+  const serve = (req, fetcher) => serveCoastData(req, fetcher, store, feeds);
   test(`${label}: bridge reads only explicit public datasets on the fixed owned host`, () => {
     for (const path of ['/api/coast/report', '/api/coast/ocean', '/api/coast/history?county=slo', '/api/coast/habitat/release', '/api/coast/habitat/tiles?region=morro-bay', '/coast-data/data/coast-wide/c--122880--155648-32.bin', '/coast-data/data/coast3d/chart-model.json', '/coast-data/data/skippercast-habitat.geojson']) {
       assert.equal(coastTarget(new URL(request(path).url)).url.origin, 'https://fish-report.g4651.workers.dev', path);
@@ -218,4 +220,109 @@ test("the renderer's verified-asset and habitat HEAD checks pass against R2 and 
     await assert.rejects(verifiedAsset(asset), /Asset unavailable/);
     await assert.rejects(validateHabitatHeads({...manifest, regions: [{...region, regionId: 'cambria-san-simeon'}]}, serve), /publication changed/);
   } finally { globalThis.fetch = original; }
+});
+
+// FE-84: snapshot sources from SkipperCast's own feeds (synthetic packets in the FE-40, FE-41, FE-42 and coast_snapshots.py shapes).
+const ago = hours => new Date(Date.now() - hours * 3_600_000).toISOString();
+const site = (id, areaId, extra = {}) => ({id, name: `Site ${id}`, areaId, lat: 35.37, lon: -120.88, sourceId: `cdip-${id}`, issuedAt: ago(5), fetchedAt: ago(0.5),
+  hours: [{at: ago(-1), waveFt: 4.2, periodS: 13, directionDeg: 290, qualityFlag: 1, secondaryFlag: 0}], url: `https://cdip.ucsd.edu/mops/?mop=${id}`, kind: 'forecast',
+  availability: 'available', freshness: 'current', temporalResolutionMinutes: 180, waterDepthM: 10, depthDatum: 'NAVD88', directionConvention: 'from degrees true',
+  modelInputCycleAt: null, validThrough: ago(-60), ...extra});
+const nearshoreFeed = (generated = ago(0.5), sites = [site('SL345', 'central')]) => ({schema_version: 1, region_id: 'morro-bay', generated_at: generated,
+  nearshore: sites, sources: sites.map(s => ({id: s.sourceId, label: `CDIP nearshore · ${s.name}`, url: s.url, kind: 'forecast', outcome: 'ok', fetchedAt: s.fetchedAt, issuedAt: s.issuedAt}))});
+const beachFeed = (generated = ago(0.2), outcome = 'ok') => ({schemaVersion: 1, countyId: 'slo', regionId: 'morro-bay', generatedAt: generated,
+  waterQuality: outcome === 'ok' ? [{id: 'b1', name: 'Synthetic Beach', lat: 35.37, lon: -120.86, status: 'Beach Open', advisory: null, sampledAt: null, fetchedAt: generated,
+    sourceId: 'slo-beach-water-quality', url: 'https://www.slocounty.ca.gov/', areaId: 'central', stationCode: 'SB1', sampleDateAvailable: false}] : [],
+  sources: [{id: 'slo-beach-water-quality', label: 'SLO County beach water-contact status', url: 'https://services6.arcgis.com/', kind: 'observation', outcome, fetchedAt: generated}]});
+const oceanFeed = (generated = ago(0.3)) => ({schemaVersion: 1, countyId: 'slo', generatedAt: generated, currents: [], cloud: null,
+  sources: [{id: 'skippercast-noaa-ocean', url: 'https://raw.githubusercontent.com/', fetchedAt: ago(0.4), status: 'error', error: 'No fresh reviewed current fields'}]});
+const historyFeed = (generated = ago(30)) => ({schemaVersion: 1, countyId: 'slo', generatedAt: generated, recentWindowDays: 45, stations: [
+  {stationId: '46215', recent: {lastObservedAt: ago(30.5), stale: false}, baseline: {months: []}, sources: []},
+  {stationId: '46028', recent: {lastObservedAt: ago(1), stale: false}, baseline: {months: []}, sources: []}]});
+const fishReport = {...snapshot, observations: [{stationId: '46215'}], forecasts: [], tides: [], tideEvents: [], alerts: [], catches: [],
+  nearshore: [site('SL345', 'central', {fetchedAt: ago(2), sourceId: 'cdip-SL345'})], waterQuality: [],
+  sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: ago(1)}, {id: 'cdip-SL345', outcome: 'ok', fetchedAt: ago(2)}, {id: 'slo-beach-water-quality', outcome: 'error', fetchedAt: ago(1)}]};
+const fish = async () => response(fishReport);
+const feedStore = files => fakeStore(Object.fromEntries(Object.entries(files).map(([key, value]) => [key, new TextEncoder().encode(JSON.stringify(value))])));
+const NEARSHORE = 'conditions/regions/morro-bay/nearshore.json', BEACH = 'conditions/regions/morro-bay/beach-health.json';
+const OCEAN = 'conditions/regions/morro-bay/coast-ocean.json', HISTORY = 'data/regions/morro-bay/history.json';
+const all = coastFeeds('nearshore,water-quality,ocean,history');
+
+test('COAST_FEEDS names the switched sources; unset, empty and unknown names switch nothing', () => {
+  assert.deepEqual([...coastFeeds(' Nearshore, bogus ,history,')], ['nearshore', 'history']);
+  for (const value of [undefined, '', 'fish,report']) assert.equal(coastFeeds(value).size, 0);
+});
+
+test('with the switch off, published SkipperCast feeds are never read and Fish bytes pass unchanged', async () => {
+  const store = feedStore({[NEARSHORE]: nearshoreFeed(), [BEACH]: beachFeed(), [OCEAN]: oceanFeed(), [HISTORY]: historyFeed()});
+  for (const name of ['report', 'ocean', 'history']) {
+    const r = await serveCoastData(request('/api/coast/' + name), fish, store);
+    assert.equal(await r.text(), JSON.stringify(fishReport)); assert.equal(r.headers.get('X-Coast-Upstream'), null);
+  }
+  assert.deepEqual(store.reads, []);
+});
+
+test('the report takes switched nearshore and beach rows from SkipperCast with their own clocks; the rest stays Fish', async () => {
+  const near = nearshoreFeed(), beach = beachFeed();
+  const r = await serveCoastData(request('/api/coast/report?region=morro-bay'), fish, feedStore({[NEARSHORE]: near, [BEACH]: beach}), all);
+  assert.equal(r.status, 200); assert.equal(r.headers.get('X-Coast-Upstream'), 'nearshore=skippercast, water-quality=skippercast');
+  const report = await r.json();
+  assert.deepEqual(report.nearshore, near.nearshore); assert.deepEqual(report.waterQuality, beach.waterQuality);
+  assert.deepEqual(report.sources, [fishReport.sources[0], ...near.sources, ...beach.sources]);
+  for (const key of ['generatedAt', 'observations', 'forecasts', 'tides', 'alerts', 'catches']) assert.deepEqual(report[key], fishReport[key], key);
+  const {freshNearshore} = await import('../packages/coast/src/presentation.ts');
+  assert.deepEqual(freshNearshore(report, 'central', new Date()).map(s => s.fetchedAt), [near.nearshore[0].fetchedAt]);
+  // A switched beach feed that failed keeps its error outcome and no rows: never read as open beaches.
+  const failed = await (await serveCoastData(request('/api/coast/report'), fish, feedStore({[BEACH]: beachFeed(ago(0.2), 'error')}), coastFeeds('water-quality'))).json();
+  assert.deepEqual(failed.waterQuality, []); assert.equal(failed.sources.at(-1).outcome, 'error');
+  assert.deepEqual(failed.nearshore, fishReport.nearshore, 'an unswitched source stays Fish');
+});
+
+test('a stale, future, foreign or malformed feed falls back to Fish; the server checks nearshore generated_at itself', async () => {
+  // A region-wide CDIP failure re-publishes the last nearshore.json, whose sites still say "current".
+  for (const [feed, reason] of [[nearshoreFeed(ago(3.1)), 'stale'], [nearshoreFeed(ago(-0.5)), 'stale'], [{...nearshoreFeed(), region_id: 'monterey-point-sur'}, 'invalid'],
+    [{...nearshoreFeed(), generated_at: 'yesterday'}, 'invalid'], [nearshoreFeed(ago(0.5), [{...site('SL345', 'central'), availability: 'ok'}]), 'invalid']]) {
+    const r = await serveCoastData(request('/api/coast/report'), fish, feedStore({[NEARSHORE]: feed}), coastFeeds('nearshore'));
+    assert.equal(r.headers.get('X-Coast-Upstream'), `nearshore=fish (${reason})`);
+    assert.equal(await r.text(), JSON.stringify(fishReport));
+  }
+  const r = await serveCoastData(request('/api/coast/report'), fish, feedStore({[BEACH]: beachFeed(ago(3.5))}), coastFeeds('water-quality'));
+  assert.equal(r.headers.get('X-Coast-Upstream'), 'water-quality=fish (stale)');
+  const broken = fakeStore({[NEARSHORE]: new TextEncoder().encode('{')});
+  assert.equal((await serveCoastData(request('/api/coast/report'), fish, broken, coastFeeds('nearshore'))).headers.get('X-Coast-Upstream'), 'nearshore=fish (unreadable)');
+  assert.equal((await serveCoastData(request('/api/coast/report'), fish, null, coastFeeds('nearshore'))).headers.get('X-Coast-Upstream'), 'nearshore=fish (unbound)');
+});
+
+test('a site whose model issue reached 48 h is served stale, never current, with its clocks unchanged', async () => {
+  const old = site('SL552', 'north', {issuedAt: ago(48.2)}), feed = nearshoreFeed(ago(0.5), [site('SL345', 'central'), old]);
+  const report = await (await serveCoastData(request('/api/coast/report'), fish, feedStore({[NEARSHORE]: feed}), coastFeeds('nearshore'))).json();
+  assert.deepEqual(report.nearshore.map(s => s.freshness), ['current', 'stale']);
+  assert.equal(report.nearshore[1].issuedAt, old.issuedAt); assert.equal(report.nearshore[1].fetchedAt, old.fetchedAt);
+});
+
+test('switched ocean and history packets are served from R2 without the bridge; stale ones fall back', async () => {
+  const ocean = oceanFeed(), history = historyFeed(), store = feedStore({[OCEAN]: ocean, [HISTORY]: history});
+  const o = await serveCoastData(request('/api/coast/ocean'), noBridge, store, all);
+  assert.equal(o.status, 200); assert.deepEqual(await o.json(), ocean); assert.equal(o.headers.get('X-Coast-Upstream'), 'ocean=skippercast');
+  assert.equal(o.headers.get('Cache-Control'), 'no-store');
+  const h = await (await serveCoastData(request('/api/coast/history?county=slo'), noBridge, store, all)).json();
+  // Published weekly: a series last observed over 3 h ago is stale now, whatever it was at publication.
+  assert.deepEqual(h.stations.map(s => s.recent.stale), [true, false]);
+  assert.deepEqual(h.stations.map(s => s.recent.lastObservedAt), history.stations.map(s => s.recent.lastObservedAt));
+  assert.equal(h.generatedAt, history.generatedAt);
+  const head = await serveCoastData(request('/api/coast/ocean', {method: 'HEAD'}), noBridge, store, all);
+  assert.equal(head.status, 200); assert.equal(await head.text(), '');
+  const stale = feedStore({[OCEAN]: oceanFeed(ago(3.2)), [HISTORY]: historyFeed(ago(8 * 24 + 1))});
+  for (const name of ['ocean', 'history']) {
+    const r = await serveCoastData(request('/api/coast/' + name), fish, stale, all);
+    assert.equal(r.headers.get('X-Coast-Upstream'), `${name}=fish (stale)`); assert.equal(await r.text(), JSON.stringify(fishReport));
+  }
+});
+
+test('the report still needs the bridge: a Fish failure is unavailable even with fresh SkipperCast rows', async () => {
+  const store = feedStore({[NEARSHORE]: nearshoreFeed(), [BEACH]: beachFeed()});
+  assert.equal((await serveCoastData(request('/api/coast/report'), async () => new Response('down', {status: 503}), store, all)).status, 503);
+  assert.equal((await serveCoastData(request('/api/coast/report'), async () => response({...fishReport, countyId: 'monterey'}), store, all)).status, 503);
+  const head = await serveCoastData(request('/api/coast/report', {method: 'HEAD'}), async () => new Response(null, {headers: {'Content-Length': '99'}}), store, all);
+  assert.equal(head.status, 200); assert.equal(head.headers.get('Content-Length'), null, "an overlaid report's length is not Fish's");
 });

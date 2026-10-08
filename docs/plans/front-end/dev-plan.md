@@ -411,12 +411,20 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: add the register row.
 
 ### FE-84 · Snapshots from SkipperCast feeds; bridge upstream switch · L
-- Status: NEW. Agent (proposed): Codex.
+- Status: NEW, narrowed 2026-10-08. Agent: Claude (#413). Narrowed to the four sources its dependencies publish: the report's forecasts, observations, tides, alerts, catches and spatial layers have no SkipperCast feed in the `Report` shape yet, so they move in FE-87.
 - Depends: FE-40, FE-41, FE-42, FE-44
-- Files: `src/skippercast/pipeline/coast_snapshots.py` (assembles report, ocean and history packets in the `packages/coast` shapes), `server/coast-data.ts` (upstream: SkipperCast feeds, Fish Worker as a dated fallback flag), `tests/test_coast_data.mjs`, `tests/unit/test_coast_snapshots.py`, `docs/coastal-service.md`.
-- Build: the bridge serves SkipperCast-assembled snapshots with the same validation; source clocks stay original. Split if over ~400 lines: one PR per snapshot (report, ocean, history), then the upstream switch.
-- Accept: 1. `/api/coast/{report,ocean,history}` return schema-valid packets from SkipperCast feeds (fixture test). 2. The client tests pass unchanged. 3. Two distinct persisted refresh runs are recorded in the PR.
-- **Owner**: approve (`server/`); confirm the run receipts.
+- Files: `src/skippercast/pipeline/coast_snapshots.py` (assembles the ocean packet; the nearshore, beach and history feeds are already `packages/coast` shapes and are read as published), `scripts/live_cycle.sh`, `server/coast-data.ts` (`COAST_FEEDS` per-source switch, Fish Worker as the dated fallback), `server/routes/coast.ts`, `server/env.ts`, `scripts/wrangler_config.mjs` and `.github/workflows/deploy-cloudflare.yml` (the var), `tests/test_coast_data.mjs`, `tests/test_wrangler_config.mjs`, `tests/unit/test_coast_snapshots.py`, `docs/coastal-service.md`, `docs/live-conditions.md`.
+- Build: the bridge serves SkipperCast's feeds per source (`nearshore`, `water-quality`, `ocean`, `history`) with the same validation; source clocks and outcomes stay original; the server applies each feed's age limit itself and falls back to Fish for a missing, invalid or stale feed.
+- Accept: 1. `/api/coast/{report,ocean,history}` return schema-valid packets with the switched sources from SkipperCast feeds (fixture test). 2. The client tests pass unchanged, and with the switch off every path behaves as before (the bridge tests also run with every source switched and nothing published). 3. Two distinct persisted refresh runs are recorded in the PR.
+- **Owner**: approve (`server/`, the deploy workflow line); set `COAST_FEEDS` after the receipts; confirm the run receipts.
+
+### FE-87 · Coast report base from SkipperCast feeds · L
+- Status: NEW (split from FE-84). Agent: Claude.
+- Depends: FE-84
+- Files: `src/skippercast/pipeline/coast_snapshots.py` (report assembly), `scripts/live_cycle.sh`, `server/coast-data.ts` (a `report` source in `COAST_FEEDS`), `tests/unit/test_coast_snapshots.py`, `tests/test_coast_data.mjs`, `docs/coastal-service.md`.
+- Build: the report's area forecasts (NWS gridpoints per county area), buoy observations, CO-OPS tides and events, NWS alerts with the area-zone filter, catch reports with their context and the spatial layers, assembled in the `Report` shape from SkipperCast collectors (existing ones where they cover the same source, new ones ported from `fish` `src/providers/` where not), each with its own `SourceStatus`; the FE-84 overlays then apply on SkipperCast's own report.
+- Accept: 1. A fixture report validates against `Report` and passes `packages/coast` readiness. 2. Each source keeps its own clocks and outcome. 3. With every source switched, `/api/coast/*` snapshots make no Fish request (test).
+- **Owner**: rights rows for any new source; confirm the run receipts.
 
 ### FE-85 · Terrain, imagery and habitat assets in SkipperCast storage · L
 - Status: NEW. Agent: Claude (#413). The first publish waits on rights rows ([coastal-service.md](../../coastal-service.md#assets-in-skippercast-storage-fe-85)).
@@ -513,7 +521,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 
 ### FE-62 · Archive `fish` receipts and retire the repository · M
 - Status: CHANGED (blocked on the bridge's retirement). Agent: Claude, with Codex for the data receipts.
-- Depends: FE-60, FE-84, FE-85; FE-40 … FE-45 merged and run
+- Depends: FE-60, FE-84, FE-85, FE-87; FE-40 … FE-45 merged and run
 - Files: `docs/archive/fish/README.md`, `docs/archive/fish/**` (the § 15 item 9 list), `docs/plans/front-end/README.md` (status), `docs/data-sources.md`.
 - Build: copy the listed docs and receipts with the historical-note prefix; tick § 15's checklist with links; list the Cloudflare resources, including the Fish Worker the bridge used.
 - Accept: 1. Every § 15 item has a link or a dated note. 2. No `fish/public/data` file is copied. 3. `server/coast-data.ts` has no Fish Worker origin. 4. `check_repository.py` passes on the archive.
@@ -533,7 +541,7 @@ Waves (a task starts when its dependencies merge; C = Claude, X = Codex):
 | 6 | FE-20 (FE-14 … FE-18, FE-71) | — |
 | 7 | FE-21, FE-24, FE-30, FE-80 (FE-79), FE-82 (FE-81) | — |
 | 8 | FE-31 → FE-37 → FE-32 → FE-33, FE-35; FE-34, FE-36, FE-51, FE-52, FE-53, FE-54 | — |
-| 9 | FE-60 → FE-61; FE-62 (FE-84, FE-85) | data receipts for FE-62 |
+| 9 | FE-60 → FE-61; FE-87 (FE-84); FE-62 (FE-84, FE-85, FE-87) | data receipts for FE-62 |
 
 Critical path: FE-70 → FE-71 → FE-11 → FE-14/FE-18 and FE-12 → FE-15 →
 FE-16 → FE-17 → FE-20 → FE-30 → FE-31 → FE-37 → FE-32 → FE-60. FE-10
@@ -574,7 +582,7 @@ FE-30 + FE-74 + FE-12 ─► FE-31;  FE-31 + FE-75 ─► FE-37;  FE-37 + FE-75 
 FE-32 + FE-74 ─► FE-35;  FE-37 + FE-18 ─► FE-34;  FE-30 + FE-74 ─► FE-36
 FE-18 + FE-50 ─► FE-51;  FE-37 + FE-75 ─► FE-52;  FE-24 + FE-21 ─► FE-53;  FE-30 + FE-18 ─► FE-54
 FE-40 + FE-41 + FE-42 + FE-44 ─► FE-84
-Phases 0–4 and FE-71 … FE-83, FE-86 ─► FE-60 ─► FE-61;  FE-60 + FE-84 + FE-85 + FE-40 … FE-45 ─► FE-62
+Phases 0–4 and FE-71 … FE-83, FE-86 ─► FE-60 ─► FE-61;  FE-84 ─► FE-87;  FE-60 + FE-84 + FE-85 + FE-87 + FE-40 … FE-45 ─► FE-62
 ```
 
 ## Backlog (no task yet)

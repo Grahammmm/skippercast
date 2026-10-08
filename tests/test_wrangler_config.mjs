@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, uiVars, UI_VARS, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
+import {stripJsonComments, deployConfig, customDomains, features, advisorVars, fleetVars, FLEET_VARS, uiVars, UI_VARS, coastVars, COAST_VARS, ADVISOR_SECRETS} from '../scripts/wrangler_config.mjs';
 
 test('comment stripping leaves // and /* inside strings alone', () => {
   const text = '{\n  // a comment\n  "url": "https://example.com/a//b", /* block */ "glob": "x/*y*/z",\n  "n": 1, // trailing\n}';
@@ -274,6 +274,20 @@ test('ui vars: UI_V2 only is copied (trimmed, non-empty), beside the fleet vars;
   assert.match(workflow, /^ {10}UI_V2: \$\{\{ vars\.UI_V2 \}\}$/m, 'deploy-cloudflare.yml passes UI_V2');
   const deployment = JSON.parse(readFileSync(new URL('../deployments/production.json', import.meta.url), 'utf8'));
   assert.equal(deployment.ui_v2, false, 'the v2 shell stays off by default until FE-60');
+});
+
+// FE-84: the coast snapshot switch is a plain var too; unset keeps every source on the Fish Worker bridge.
+test('coast vars: COAST_FEEDS only is copied (trimmed, non-empty); the Worker declares it and the deploy workflow passes it', () => {
+  const base = deployConfig(committed(), ID, 'skippercast-feeds');
+  assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {COAST_FEEDS: ' ', COAST_TOKEN: 'secret'}}), base);
+  const on = deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {COAST_FEEDS: ' nearshore,ocean '}});
+  assert.deepEqual(on.vars, {...base.vars, COAST_FEEDS: 'nearshore,ocean'});
+  assert.deepEqual({...on, vars: base.vars}, base, 'only vars change: no bindings');
+  assert.deepEqual(COAST_VARS, ['COAST_FEEDS']);
+  assert.deepEqual(coastVars({COAST_FEEDS: 'history', COAST_TOKEN: 'secret', UI_V2: 'true'}), {COAST_FEEDS: 'history'});
+  assert.match(readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8'), /^\s+COAST_FEEDS\?:/m, 'server/env.ts declares COAST_FEEDS');
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /^ {10}COAST_FEEDS: \$\{\{ vars\.COAST_FEEDS \}\}$/m, 'deploy-cloudflare.yml passes COAST_FEEDS');
 });
 
 test('the CLI copies the fleet vars from the environment without ENABLE_ADVISOR', () => {

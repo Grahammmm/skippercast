@@ -1195,7 +1195,8 @@ on skippercast.com with `UI_V2` on, and link each item in the PR:
    (**Owner**) and a collector run visible in the workflow logs.
 8. The terrain, imagery and habitat assets are served from SkipperCast's
    own storage with their SHA manifest (FE-85), the bridge reads SkipperCast
-   feeds instead of the Fish Worker (FE-84), and distinct persisted refresh
+   feeds instead of the Fish Worker (FE-84 for nearshore, beach, ocean and
+   history; FE-87 for the rest of the report), and distinct persisted refresh
    runs are witnessed; `docs/FISH-MERGE-STATUS.md`'s acceptance matrix is
    complete.
 9. `docs/archive/fish/` holds: `fish/docs/*.md` (architecture, surface
@@ -1241,7 +1242,7 @@ GitHub, delete the Cloudflare resources, delete the repository, release the
 | The renderer's ~40 template ids make a host-chrome mount a large refactor | FE-70 keeps the template inside the embed first; FE-79 moves controls one group at a time |
 | Three plus terrain on older phones | Chart is the default presentation; terrain is lazy, bounded and stops rendering when hidden (`setVisible`) |
 | Restyling `packages/coast` changes v1's look | fallbacks equal today's literals and the computed-style check of § 3A.4 |
-| The Fish Worker bridge is a live dependency | FE-84 and FE-85 before FE-62; the bridge refuses non-SLO regions, so nothing else depends on it |
+| The Fish Worker bridge is a live dependency | FE-84, FE-85 and FE-87 before FE-62; the bridge refuses non-SLO regions, so nothing else depends on it |
 
 ## 18. Phasing
 
