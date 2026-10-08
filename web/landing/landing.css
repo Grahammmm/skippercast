@@ -1,0 +1,82 @@
+/* The landing (FE-07, docs/plans/front-end/design.md § 7, concept D · Open
+   water): the landing ground, the glowing static shoreline behind
+   everything, the hero on the left over open water with the readout tiles
+   at a smaller size, the layer dots on the right edge and one footer line.
+   Loaded after web/tokens.css, web/ui/ui.css and port-input.css. DM Sans
+   only (D6): readings and ages switch from the mono face to the sans one,
+   keeping tabular figures. Every value is a token. */
+
+.landing-body { margin: 0; background: var(--bg-deep); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
+.landing {
+  position: relative; display: flex; flex-direction: column; gap: var(--space-5); min-height: 100vh; min-height: 100dvh; box-sizing: border-box;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+}
+.landing-host { display: contents; }
+.landing a { color: inherit; }
+.landing a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* Static shoreline: a blurred wide stroke under a fine bright one */
+.landing-shore { position: fixed; inset: 0; z-index: var(--z-map); width: 100%; height: 100%; pointer-events: none; }
+.landing-shore path { fill: none; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.landing-shore-glow { stroke: var(--depth-0); stroke-width: 6; opacity: 0.45; }
+.landing-shore-line { stroke: var(--flow); stroke-width: 1.25; opacity: 0.9; }
+.landing-head, .landing-main, .landing-dots, .landing-foot { position: relative; z-index: var(--z-map-chrome); }
+/* On a phone the shore runs behind the text: quieter there. */
+@media (max-width: 1023px) { .landing-shore { opacity: 0.5; } }
+
+/* Minimal nav */
+.landing-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.landing-brand { display: inline-flex; align-items: center; min-height: var(--touch-min); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none; }
+.landing-nav { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); margin: 0; padding: 0; list-style: none; }
+.landing-nav a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--muted); font-size: var(--text-13); text-decoration: none; }
+.landing-nav a:hover { color: var(--text); }
+
+/* Hero over open water */
+.landing-main { display: flex; flex-direction: column; gap: var(--space-4); max-width: 640px; }
+.landing-head { min-height: var(--touch-min); }
+/* The static header holds the brand only; reserve the nav's wrapped row so the hero never moves when it renders. */
+@media (max-width: 599px) { .landing-head { min-height: calc(var(--touch-min) * 2 + var(--space-2)); align-content: flex-start; } }
+.landing-eyebrow { margin: 0; }
+.landing-title { margin: 0; font: var(--weight-semibold) var(--text-40) / var(--leading-heading) var(--font-sans); letter-spacing: -0.01em; }
+.landing-lede { margin: 0; max-width: 34em; color: var(--text); font-size: var(--text-18); }
+.landing-pills { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.landing .port-input { max-width: none; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--panel) 88%, transparent); }
+
+/* Readout: the brief's tiles at a smaller size, in the sans face */
+.landing-readout { display: flex; flex-direction: column; gap: var(--space-2); }
+.landing-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.landing-tile { height: 100%; box-sizing: border-box; padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--panel) 88%, transparent); }
+.landing .ui-reading { font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); font-variant-numeric: tabular-nums; }
+.landing .ui-mono { font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-sans); font-variant-numeric: tabular-nums; }
+.landing-tile .ui-tile-unit, .landing-tile .ui-tile-detail, .landing-tile .ui-tile-source { font-size: var(--text-11); }
+.landing-tiles-wait { grid-column: 1 / -1; padding: var(--space-3) 0; }
+.landing-readout-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); }
+.landing-more { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); font-size: var(--text-13); }
+.landing-fresh, .landing-fleet { margin: 0; }
+.landing-fresh[data-state="stale"] { color: var(--amber); }
+.landing-fleet { color: var(--amber); font-size: var(--text-13); }
+
+/* Layer dots: a row of links on a phone, the right edge on a wide screen */
+.landing-dots ul { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding: 0; list-style: none; }
+.landing-dots a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); color: var(--muted); font-size: var(--text-13); text-decoration: none; }
+.landing-dots a:hover { color: var(--text); }
+.landing-dot { width: 10px; height: 10px; border: 1px solid var(--depth-0); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--depth-0) 35%, transparent); box-shadow: 0 0 var(--space-2) var(--depth-0); }
+.landing-dots a:hover .landing-dot, .landing-dots a:focus-visible .landing-dot { background: var(--depth-0); }
+
+.landing-foot { display: flex; flex-direction: column; gap: var(--space-1); margin-top: auto; color: var(--muted); font-size: var(--text-13); }
+.landing-foot p { margin: 0; }
+.landing-credit { font-size: var(--text-11); }
+
+@media (min-width: 1024px) {
+  .landing { padding: var(--space-5) var(--space-7) var(--space-5); }
+  .landing-title { font-size: var(--text-56); }
+  .landing-main { max-width: 760px; }
+  .landing-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .landing-dots { position: fixed; top: 50%; right: var(--space-5); transform: translateY(-50%); }
+  .landing-dots ul { flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+  .landing-dots a { flex-direction: row-reverse; }
+  /* The name shows on hover and focus only; it stays the link's accessible name. */
+  .landing-dot-name { position: absolute; right: calc(var(--space-5) + 10px); white-space: nowrap; clip-path: inset(50%); }
+  .landing-dots a:hover .landing-dot-name, .landing-dots a:focus-visible .landing-dot-name { clip-path: none; color: var(--text); }
+  .landing-dots a { position: relative; justify-content: center; min-width: var(--touch-min); }
+}
