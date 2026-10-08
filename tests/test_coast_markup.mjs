@@ -120,10 +120,10 @@ test('the host element opts into the token bridge and renders no markup on the s
   assert.equal(html, '<div class="app-coast-markup conditions-chart" data-coast-theme="tokens" data-renderer="chart"></div>');
 });
 
-test('the host loads panel.css, its own sheet and the token bridge and holds no colour literal', () => {
+test('the host loads panel.css and the token bridge and holds no colour literal', () => {
   const source = readFileSync(join(ROOT, HOST), 'utf8');
-  assert.match(source, /\[panelStyles, hostStyles, bridgeStyles\]/, 'panel.css first, so coast-markup.css overrides its :host variables');
-  assert.deepEqual(lintFile('web/app/coast-markup.css', readFileSync(join(ROOT, 'web/app/coast-markup.css'), 'utf8')), []);
+  assert.match(source, /\[panelStyles, bridgeStyles\]/, 'panel.css, then the bridge; panel.css declares no custom property (FE-77)');
+  assert.doesNotMatch(source, /coast-markup\.css/);
   assert.match(source, /from '\.\.\/\.\.\/packages\/coast\/panel\.css\?url'/);
   assert.match(source, /from '\.\.\/\.\.\/packages\/coast\/tokens-bridge\.css\?url'/);
   assert.deepEqual(lintFile(HOST, source), []);

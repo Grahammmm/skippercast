@@ -6,9 +6,11 @@
    variable; custom properties inherit into shadow roots. Load web/tokens.css
    in the document first. scripts/check_tokens.mjs lints this file: no literals.
    panel.css (FE-77) maps its many v1 shades onto these roles. The legend
-   ramps of layers v2 does not draw (--coast-reef-*, --coast-current-*,
-   --coast-wave-*) have no web/tokens.css ramp yet, so they are not mapped and
-   keep their v1 colours under the opt-in too. */
+   ramps of fish's map layers, which v2 does not draw (--coast-reef-*,
+   --coast-reef-fit-*, --coast-shore-*, --coast-current-*, --coast-wave-*,
+   --coast-bathy-*), have no web/tokens.css ramp (design § 5), so they are not
+   mapped and keep their v1 colours under the opt-in too; FE-61 adds tokens
+   for them or drops those legends. */
 
 [data-coast-theme="tokens"],
 :host([data-coast-theme="tokens"]) {

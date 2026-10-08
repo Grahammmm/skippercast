@@ -20,15 +20,15 @@
 // Adding a renderer here means reading it for unescaped values and guarding
 // them the same way.
 //
-// The string mounts in a shadow root with panel.css, coast-markup.css (keeps
-// panel.css's own :host variables from shadowing web/tokens.css) and the token
-// bridge, and the host carries data-coast-theme="tokens", so packages/coast's
-// var(--coast-…, literal) colours read web/tokens.css (§ 3A.4). Clicks on the
+// The string mounts in a shadow root with panel.css and the token bridge, and
+// the host carries data-coast-theme="tokens", so packages/coast's
+// var(--coast-…, literal) colours read web/tokens.css (§ 3A.4). panel.css
+// declares no custom property of its own (FE-77), so nothing in the shadow
+// root shadows the web/tokens.css names the bridge reads. Clicks on the
 // renderers' controls and drags on a `chart` come back as typed callbacks.
 import {useLayoutEffect, useRef} from 'preact/hooks';
 import panelStyles from '../../packages/coast/panel.css?url';
 import bridgeStyles from '../../packages/coast/tokens-bridge.css?url';
-import hostStyles from './coast-markup.css?url';
 import {chart} from '../../packages/coast/src/charts/series.ts';
 import {hourParam} from '../state.ts';
 
@@ -110,7 +110,7 @@ export function CoastMarkup<K extends CoastRendererName>(props: CoastMarkupProps
     const element = host.current;
     if (!element) return;
     const root = element.shadowRoot ?? element.attachShadow({mode: 'open'});
-    const sheets = [panelStyles, hostStyles, bridgeStyles].map(href => Object.assign(document.createElement('link'), {rel: 'stylesheet', href}));
+    const sheets = [panelStyles, bridgeStyles].map(href => Object.assign(document.createElement('link'), {rel: 'stylesheet', href}));
     const content = document.createElement('div');
     content.className = 'coast-markup';
     root.replaceChildren(...sheets, content);

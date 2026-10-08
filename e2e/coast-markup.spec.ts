@@ -10,8 +10,7 @@ import {expect, test} from './fixtures.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const BASE = '/__coast-markup/';
-const STYLES: Record<string, string> = {'tokens.css': 'web/tokens.css', 'panel.css': 'packages/coast/panel.css', 'coast-markup.css': 'web/app/coast-markup.css',
-  'tokens-bridge.css': 'packages/coast/tokens-bridge.css'};
+const STYLES: Record<string, string> = {'tokens.css': 'web/tokens.css', 'panel.css': 'packages/coast/panel.css', 'tokens-bridge.css': 'packages/coast/tokens-bridge.css'};
 const css = (file: string) => readFileSync(join(ROOT, file), 'utf8').replace(/@font-face\s*\{[^}]*\}/g, '');
 
 /** `?url` stylesheet imports resolve to this page's routes, as Vite's hashed URLs would. */
@@ -52,13 +51,13 @@ test.beforeEach(async ({page}) => {
   await page.goto(BASE);
 });
 
-/** Mount the chart and wait until the three shadow-root stylesheets have loaded. */
+/** Mount the chart and wait until the two shadow-root stylesheets have loaded. */
 async function mount(page: import('@playwright/test').Page, selected: string) {
   await page.evaluate(a => (window as unknown as {mountChart(args: unknown): void}).mountChart(a), args(selected));
   await expect.poll(() => page.evaluate(() => {
     const root = document.querySelector('[data-coast-theme="tokens"]')?.shadowRoot;
     const links = [...(root?.querySelectorAll('link') ?? [])] as HTMLLinkElement[];
-    return links.length === 3 && links.every(link => !!link.sheet) && !!root?.querySelector('svg.series-chart');
+    return links.length === 2 && links.every(link => !!link.sheet) && !!root?.querySelector('svg.series-chart');
   })).toBe(true);
 }
 
@@ -81,7 +80,7 @@ test('a chart() inside CoastMarkup reads web/tokens.css colours, dark and light'
   for (const [what, got, want] of dark) expect(got, `dark ${what}`).toBe(want);
   // The fallbacks (v1's literals) differ from the tokens, so equality above is the bridge at work.
   expect(dark.map(([, got]) => got)).not.toContain('rgb(227, 247, 255)');
-  // Light tokens differ from panel.css's own :host values, so this also proves coast-markup.css un-shadows them.
+  // Light tokens differ from v1's values, so this also proves nothing in the shadow root shadows web/tokens.css.
   await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
   const light = await colours(page);
   for (const [what, got, want] of light) expect(got, `light ${what}`).toBe(want);
