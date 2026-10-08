@@ -577,18 +577,28 @@ labels, roads at high zoom only, no points of interest. Options, best first:
    self-hosted extract removes the tile-service question but still needs
    its own register row (`protomaps-basemap`, ODbL, attribution yes,
    commercial use: owner to confirm), an **Owner** ask on FE-10.
-   - Size, estimated from the Protomaps planet build (about 110–120 GB at
-     zoom 15 for the whole planet, concentrated on populated land): a
-     California statewide bbox at zoom 15 is in the order of 1–2 GB; the
-     fifteen coastal region bboxes at maximum zoom 14 plus a statewide
-     overview at maximum zoom 10 are in the order of 300–600 MB. FE-10
-     measures the real numbers and records them in its PR and here.
-   - Cost at R2 list prices: storage $0.015 per GB-month, so 2 GB is $0.03
-     a month; egress is free; Class B reads $0.36 per million after the
-     first 10 million a month. A map session fetches 50–150 tiles; the
-     Worker's `/feeds/` route already serves PMTiles ranges through the
-     edge cache (`server/feeds.ts`), so origin reads are a fraction of tile
-     requests. Estimate: under $1 a month at 100,000 sessions.
+   - Size, **measured by FE-10** (2026-10-08, `scripts/basemap/build_basemap.sh`
+     against Protomaps build 20261008, a 138.7 GB planet): zooms 0–10 over
+     the overview box `[-125.3, 32.0, -116.55, 42.5]` (every active and
+     preview region padded by 0.5°) are 17 MB in 1,133 tiles; zooms 11–14
+     inside the fifteen region `bounds` are 172 MB in 22,244 tiles. The
+     merged `ca-coast-20261008.pmtiles` is 189,085,436 bytes (180.3 MiB)
+     and took 16–36 s to extract and merge in two runs, the second with
+     the pinned go-pmtiles v1.31.2 and the same bytes (198 MB of range
+     reads in 168 requests). The earlier estimate of 300–600 MB was high.
+   - Cost at R2 list prices: storage $0.015 per GB-month, so 0.19 GB is
+     under $0.01 a month; egress is free; Class B reads $0.36 per million
+     after the first 10 million a month. A map session fetches 50–150
+     tiles. The Worker's `/feeds/` route keeps whole objects only up to
+     32 MiB in the edge cache (`EDGE_CACHE_MAX_BYTES`, `server/feeds.ts`),
+     so every basemap range read that reaches the Worker is an R2 read:
+     100,000 sessions are up to 5–15 million reads, $0–1.80 a month. Splitting the archive by region below
+     32 MiB would put it in the edge cache if reads grow.
+   - Manifest: `tiles/basemap/manifest.json` (served at
+     `/feeds/tiles/basemap/manifest.json`) names the current archive with
+     its bytes, SHA-256, source build and boxes; the publish step uploads
+     the archive, reads its size and hash back, and only then writes the
+     manifest. Older archives are never deleted by the job.
    - Refresh: quarterly, by `workflow_dispatch` on `vars.DATA_RUNNER`; the
      archive name carries the build date so the style can pin it.
 2. **A hosted vector tile service (MapTiler Cloud, Stadia, Protomaps API).**
@@ -1016,7 +1026,7 @@ Rights notes are carried from `fish/NOTICE.md`.
 | NDBC standard-met annual archives, 46028 (1983–2025) and 46215 (2004–2025) | `pipeline/ndbc_history.py`: SHA-checked annual checkpoints under `var/`, monthly p10 / median / p90 per metric with counts and coverage, recent 45-day means | new `buoy-history.yml` (monthly full, weekly recent) | `data/regions/<id>/history.json` | NOAA public data; aggregations are SkipperCast's; retain counts and missing coverage | `ndbc-history` · public domain · commercial: allowed · attribution yes | FE-42 |
 | ESI 2006 Central California sandy-shore runs (NOAA ORR, ArcGIS) and California Coastal Commission access points | `scripts/import_shore_habitat.py` (reviewed import, not hourly): run geometry with source year, access points with ids and links, review dates in the asset | manual, like `import-shore-habitat.mjs` | `catalog/shore-habitat/<region>.geojson` → `dist/regions/<id>/shore-habitat.geojson` | ESI: no constraints stated beyond mapping limits, attribution encouraged; CCC: facts only, no photos or descriptions; access point is not a current-access certification; rule and access reviews are dated and expire | `noaa-esi-2006` · public · commercial: allowed · attribution yes; `ccc-access-points` · facts only · commercial: owner to confirm · attribution yes | FE-43 |
 | GOES longwave imagery (nowCOAST WMS) | `pipeline/goes_frames.py`: GetCapabilities time list only; frames are fetched live by the browser as WMS tiles pinned to listed times | `live-conditions.yml` | `conditions/goes-times.json` | NOAA public; brightness is not cloud fraction; frames pinned to acquisition times, never `current` | `noaa-goes-nowcoast` · public domain · commercial: allowed · attribution yes | FE-44 |
-| NOAA NGS CUSP shoreline (Continually Updated Shoreline Product, ArcGIS feature service) | `scripts/import_cusp_shoreline.py`: per-region bbox extract, vertices quantised for display, source dates kept per feature | manual, re-run when a region is added | `catalog/shoreline/<region>.geojson` → `dist/regions/<id>/shoreline.geojson` | NOAA public domain; source dates 1994–2010 kept, display quantisation is separate from source accuracy, some tiles unavailable; NOAA policy does not cover unreviewed outside contributors in other regions, so each new region's extract is reviewed | `noaa-cusp-shoreline` · public domain · commercial: allowed (per-region review) · attribution yes | FE-10 |
+| NOAA NGS CUSP shoreline (Continually Updated Shoreline Product, NOAA Shoreline Data Explorer vector tiles at zoom 12) | `scripts/import_cusp_shoreline.py`: per-region bbox extract, lines clipped to their own tile and the region, zoom-12 display quantisation (about 2 m at 35° N) recorded, source dates kept per feature, only NOAA-created features kept (others counted) | manual, re-run when a region is added | `catalog/shoreline/<region>.geojson` → `dist/regions/<id>/shoreline.geojson` | NOAA public domain; source dates 1994–2010 kept, display quantisation is separate from source accuracy, some tiles unavailable; NOAA policy does not cover unreviewed outside contributors in other regions, so each new region's extract is reviewed | `noaa-cusp-shoreline` · public domain · commercial: allowed (per-region review) · attribution yes | FE-10 |
 | NAIP natural-colour mosaic (USGS ImageServer) | none (live tiles); `regions/<id>/region.json` gains `basemap.aerial: true` where coverage was checked | — | — | USGS/USDA attribution; dated land imagery, not live or underwater; only the fixed USGS service | `usgs-naip` · public domain · commercial: allowed · attribution yes | FE-45 |
 | **Dropped 2026-10-07 (FE-13, FE-26; § 3A.2):** USGS bathymetry grids as PNG PMTiles | `seafloor/relief.py` (ported `import-bathymetry.py`): approved ZIP/COG hashes, nearest sampling, transparent gaps | `seafloor.yml` dispatch | `tiles/relief/relief-<region>.pmtiles` + manifest on R2 | public domain; credit USGS, CSUMB Seafloor Mapping Lab, UC CISR; no exact-depth or navigation claim | existing USGS rows; add the credit line | FE-13, FE-26 |
 

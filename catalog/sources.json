@@ -2112,6 +2112,68 @@
       "allowed_hosts": [
         "www.ndbc.noaa.gov"
       ]
+    },
+    {
+      "id": "protomaps-basemap",
+      "name": "Protomaps basemap (OpenStreetMap vector tiles), self-hosted coastal extract",
+      "provider": "Protomaps, from OpenStreetMap contributors and Natural Earth",
+      "needs": [],
+      "documentation_url": "https://docs.protomaps.com/basemaps/downloads",
+      "adapter": "pmtiles-extract",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "ODbL-1.0",
+        "attribution": "© OpenStreetMap contributors, © Protomaps",
+        "terms_url": "https://www.openstreetmap.org/copyright",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "ODbL permits commercial use with attribution; the archive is shown as a map and never offered as data. The data-rights register's B6 marks OpenStreetMap commercial use unknown (tile-service policy), and this self-hosted extract needs its own register row before the owner confirms it."
+      },
+      "authenticity": {
+        "basis": "Protomaps daily planet build named by date, with its listed size and BLAKE3 hash recorded in tiles/basemap/manifest.json",
+        "transport": "HTTPS range reads from build.protomaps.com by scripts/basemap/build_basemap.sh (FE-10); served from R2 under /feeds/tiles/basemap/"
+      },
+      "coverage_note": "Chart basemap (design § 4): zooms 0-10 over the California coast, zooms 11-14 inside each active and preview region's bounds; MapLibre overzooms past 14.",
+      "limitations": [
+        "OpenStreetMap land, water and road features as mapped by volunteers; not a nautical chart and not for navigation.",
+        "Refreshed by hand about quarterly; the archive name carries the Protomaps build date."
+      ],
+      "allowed_hosts": [
+        "build.protomaps.com",
+        "build-metadata.protomaps.dev"
+      ]
+    },
+    {
+      "id": "noaa-cusp-shoreline",
+      "name": "NOAA NGS Continually Updated Shoreline Product (CUSP)",
+      "provider": "NOAA National Geodetic Survey",
+      "needs": [],
+      "documentation_url": "https://nsde.ngs.noaa.gov/more.html",
+      "adapter": "cusp-vector-tiles",
+      "review_status": "approved",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA National Geodetic Survey · CUSP shoreline",
+        "terms_url": "https://oceanservice.noaa.gov/about/faq.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NOAA-created features are U.S. government public domain. CUSP also carries outside contributors; scripts/import_cusp_shoreline.py keeps only features whose creator (DAT_SET_CR) is NOAA and counts the rest for each region's review."
+      },
+      "authenticity": {
+        "basis": "NOAA Shoreline Data Explorer vector tiles; tile receipts (bytes, SHA-256) recorded in each catalog/shoreline/<region>.geojson",
+        "transport": "HTTPS; exact provider host only"
+      },
+      "coverage_note": "Per-region display shoreline for the Chart coastline (FE-11); Morro Bay imported 2026-10-08 with source dates 1994-2010.",
+      "limitations": [
+        "Historical mean-high-water lines from each feature's source_date; not a live or tidal shoreline, legal boundary or nautical chart.",
+        "Lines come from NOAA's zoom-12 display tiles (about 2 m quantisation at 35° N), separate from source accuracy (HOR_ACC).",
+        "Tiles NOAA does not serve are listed as unavailable, not certified empty."
+      ],
+      "allowed_hosts": [
+        "nsde.ngs.noaa.gov"
+      ]
     }
   ]
 }
