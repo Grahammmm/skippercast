@@ -81,7 +81,10 @@ def parse(payload, expected_count, binding, fetched_at):
     if (not isinstance(features, list) or payload.get("exceededTransferLimit") is True
             or not isinstance(expected_count, int) or expected_count <= 0 or len(features) != expected_count):
         raise ValueError("Incomplete beach water-quality response")
-    wkid = (payload.get("spatialReference") or {}).get("wkid")
+    spatial_reference = payload.get("spatialReference")
+    if spatial_reference is not None and not isinstance(spatial_reference, dict):
+        raise ValueError("Unexpected beach coordinate reference system")
+    wkid = (spatial_reference or {}).get("wkid")
     if wkid and wkid != 4326:
         raise ValueError("Unexpected beach coordinate reference system")
     (west, south), (east, north) = binding["bounds"]
@@ -89,6 +92,8 @@ def parse(payload, expected_count, binding, fetched_at):
     for feature in features:
         attributes = feature.get("attributes") if isinstance(feature, dict) else None
         geometry = feature.get("geometry") if isinstance(feature, dict) else None
+        if geometry is not None and not isinstance(geometry, dict):
+            raise ValueError("Invalid/out-of-county beach geometry")
         lat, lon = (geometry or {}).get("y"), (geometry or {}).get("x")
         if (not isinstance(attributes, dict) or not _number(lat) or not _number(lon)
                 or not south <= lat <= north or not west <= lon <= east):

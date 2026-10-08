@@ -131,6 +131,33 @@ class CollectTests(TestCase):
                 self.assertTrue(feed["sources"][0]["error"])
                 self.assertEqual(coast_types().errors(feed["sources"], "SourceStatus[]"), [])
 
+    def assert_published_error(self, query):
+        """The CLI path: publish() writes zero rows and an error source instead of crashing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(bh.publish(tmp, FakeSession(routes(query=query))), {"morro-bay": "error"})
+            feed = json.loads((Path(tmp) / "regions/morro-bay/beach-health.json").read_text())
+        self.assertEqual(feed["waterQuality"], [])
+        self.assertEqual(feed["sources"][0]["outcome"], "error")
+        self.assertTrue(feed["sources"][0]["error"])
+        self.assertEqual(coast_types().errors(feed["sources"], "SourceStatus[]"), [])
+
+    def test_non_object_geometry_publishes_an_error_source(self):
+        for geometry in ("POINT (-120.8 35.3)", [-120.8, 35.3], 35.3):
+            payload = fixture("query.json")
+            payload["features"][0]["geometry"] = geometry
+            with self.subTest(geometry=geometry):
+                with self.assertRaisesRegex(ValueError, "out-of-county"):
+                    bh.parse(payload, 4, BINDING, FETCHED)
+                self.assert_published_error(payload)
+
+    def test_non_object_spatial_reference_publishes_an_error_source(self):
+        for spatial_reference in ("4326", "EPSG:3857", [4326]):
+            payload = {**fixture("query.json"), "spatialReference": spatial_reference}
+            with self.subTest(spatial_reference=spatial_reference):
+                with self.assertRaisesRegex(ValueError, "reference system"):
+                    bh.parse(payload, 4, BINDING, FETCHED)
+                self.assert_published_error(payload)
+
     def test_unbound_region_and_unreviewed_host(self):
         self.assertIsNone(bh.collect("crescent-city", FakeSession({}), NOW))
         with self.assertRaisesRegex(ValueError, "Unreviewed"):
