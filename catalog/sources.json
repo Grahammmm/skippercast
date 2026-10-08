@@ -2245,6 +2245,40 @@
       "allowed_hosts": [
         "nowcoast.noaa.gov"
       ]
+    },
+    {
+      "id": "cdip-mop",
+      "name": "CDIP MOP alongshore nearshore wave model (SLO sites)",
+      "provider": "Coastal Data Information Program (CDIP), Scripps Institution of Oceanography, UC San Diego",
+      "needs": [
+        "wave-forecast"
+      ],
+      "documentation_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
+      "adapter": "cdip-mop-dap2",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "CDIP dataset licence attribute: redistribution and use without restriction",
+        "attribution": "Data from CDIP, Scripps Institution of Oceanography (https://cdip.ucsd.edu/)",
+        "terms_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "Each MOP forecast file's licence attribute reads 'These data may be redistributed and used without restriction.' CDIP's data-use page asks web displays to link to cdip.ucsd.edu and asks that the data be used unaltered; SkipperCast converts metres to feet and nulls samples the publisher flags, which the owner should confirm. Pending owner confirmation (FE-40)."
+      },
+      "authenticity": {
+        "basis": "Primary publisher THREDDS OPeNDAP server; the site label and coordinates in each file are checked against the reviewed binding",
+        "transport": "HTTPS; thredds.cdip.ucsd.edu MOP_alongshore path only"
+      },
+      "coverage_note": "Five MOP alongshore sites bound in regions/morro-bay/region.json (Pismo Beach Pier, Port San Luis, Morro Rock, Cayucos Pier, San Simeon Beach); native three-hour valid times.",
+      "limitations": [
+        "Modelled significant wave height at a nearshore site, which differs from breaking waves at a beach.",
+        "Water depth is relative to sea level; the files name no specific vertical datum.",
+        "Samples the publisher flags stay null; low-energy samples keep height only."
+      ],
+      "allowed_hosts": [
+        "thredds.cdip.ucsd.edu",
+        "cdip.ucsd.edu"
+      ]
     }
   ]
 }

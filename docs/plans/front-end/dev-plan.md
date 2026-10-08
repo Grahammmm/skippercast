@@ -364,9 +364,9 @@ Under Q14 option 1 these are Codex's. Each output matches the
 bridge without a client change. None blocks the v2 shell; all block FE-62.
 
 ### FE-40 · CDIP nearshore model collector · M
-- Status: CHANGED (output = `packages/coast` `NearshoreSite`). Agent (proposed): Codex.
+- Status: CHANGED (output = `packages/coast` `NearshoreSite`). Agent: Claude (owner decision, #413).
 - Depends: —
-- Files: `src/skippercast/pipeline/cdip_nearshore.py`, `src/skippercast/pipeline/live.py`, `regions/morro-bay/region.json` (sites), `catalog/sources.json`, `tests/fixtures/cdip/*`, `tests/unit/test_cdip_nearshore.py`, `docs/data-sources.md`.
+- Files: `src/skippercast/pipeline/cdip_nearshore.py` (collector, `publish`, CLI), `scripts/live_cycle.sh` (one step after the buoy refresh; replaces the `live.py` hook, so `refresh_regions.py` and its offline tests stay untouched), `regions/morro-bay/region.json` (sites), `catalog/sources.json`, `tests/fixtures/cdip/*`, `tests/unit/test_cdip_nearshore.py`, `docs/data-sources.md`, `docs/live-conditions.md`.
 - Build: § 11 row: site identity and coordinate checks, three-hour series with masks, freshness, published in `live-conditions.yml`'s snapshot.
 - Accept: 1. A site label or coordinate mismatch raises. 2. Partial arrays are rejected. 3. A fixture validates against the `NearshoreSite` shape. 4. Platform build diff clean.
 - **Owner**: add the register row.

@@ -32,6 +32,8 @@ if [ -f var/forecasts/index.json ]; then
 fi
 
 python scripts/refresh_regions.py live --output var/live --previous-root var/live-published
+# CDIP nearshore model sites (FE-40): warns per site or region, never fails the cycle.
+python -m skippercast.pipeline.cdip_nearshore --output var/live --previous-root var/live-published
 if [ "$intelligence" = 1 ] || [ ! -f var/live/intelligence-health.json ]; then
   python scripts/refresh_regions.py intelligence --output var/live --previous-root var/live-published
 fi
