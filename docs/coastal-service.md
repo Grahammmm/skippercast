@@ -50,8 +50,14 @@ FE-10 and FE-43 publish SkipperCast's own.
 Each source behind a group must be an approved `catalog/sources.json` row with
 `commercial_use: allowed`, matched by DOI or documented URL. An unknown source
 or a held one (candidate, restricted, permission-required, unknown) refuses the
-run before any asset is downloaded. Upstream SHA-256 and byte counts are
-checked on download. Objects are stored as `coast/objects/<sha256>`, the
+run before any asset is downloaded, and so does a group whose manifest names
+no source at all. Terrain reads the sources of the coast-wide manifest and of
+the chart provenance (`/data/coast3d/chart-provenance.json`, NOAA ENC Direct).
+An asset whose upstream manifest declares a SHA-256 and byte count is checked
+against them on download. Bare paths a manifest names without a digest (the
+two terrain provenance files, `skippercast-species.json`) have no upstream
+digest: they are pinned to the bytes of their first download, and the copied
+indexes are pinned to the exact bytes that were enumerated and rights-checked. Objects are stored as `coast/objects/<sha256>`, the
 manifest (`{path: {sha256, bytes, contentType, habitatRelease?, expiresAt?}}`)
 as `coast/releases/<manifest sha256>.json`, and `coast/current.json` is written
 last after every object and the manifest read back. `/feeds/` cannot read the
@@ -69,7 +75,9 @@ one read) and then pins that R2 version's etag for range reads; a replaced
 object is hashed again. Responses carry `ETag: "sha256-<digest>"` and the
 original `X-Fish-Habitat-Release`, so the renderer's own SHA, ETag and HEAD
 checks are unchanged. A pointer with any status other than `ready` makes every
-grouped asset route 503; deleting it returns to the bridge. Groups left out of
+grouped asset route 503; deleting it returns to the bridge. An R2 error (a
+failed read, an unreadable pointer or manifest) is also 503: a published group
+never falls back to the bridge. Groups left out of
 a run return to the bridge, so publish together the groups that should stay in
 R2. Snapshots (`report`, `ocean`, `history`) always use the bridge.
 
@@ -81,7 +89,8 @@ release's `expiresAt`.
 On October 8, 2026 the rights check refused both groups: the USGS Morro Bay,
 Point Buchon and Point Estero rows are `permission-required` (CSUMB
 co-production), and NOAA BAG, CSMP Monterey and Point Conception, ETOPO, CRM,
-3DEP, NOAA lidar, NOAA chart and NAIP sources have no matching catalog row. The
+3DEP, NOAA lidar, NOAA chart, NOAA ENC Direct and NAIP sources have no matching
+catalog row. The
 owner resolves those rows before the first publish. A download-only dry run
 that day (164 objects: all ten habitat assets and 154 terrain and imagery
 assets, 54 MB, kept outside the repository) matched every manifest SHA-256,

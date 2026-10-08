@@ -34,7 +34,9 @@ ORIGIN = 'https://fish-report.g4651.workers.dev'
 RANGE = 2 * 1024 * 1024  # the Fish habitat proxy serves archives only in ranges of at most 2 MiB
 TYPES = {'.json': 'application/json', '.geojson': 'application/json', '.bin': 'application/octet-stream',
          '.png': 'image/png', '.jpg': 'image/jpeg'}
-TERRAIN_INDEX = ['/data/coast-wide/manifest.json', '/data/coast3d/chart-model.json']
+# Documents whose `sources` the terrain group's rights check reads; their exact bytes are copied.
+TERRAIN_INDEX = ['/data/coast-wide/manifest.json', '/data/coast3d/chart-model.json', '/data/coast3d/chart-provenance.json']
+TERRAIN_SOURCES = ['/data/coast-wide/manifest.json', '/data/coast3d/chart-provenance.json']
 REEF_CONTEXT = '/data/coast-wide/reef-context.json'
 # Sources a group carries that its upstream manifest does not list by URL (design § 11 register rows).
 DECLARED = {'terrain': ['usgs-naip'], 'habitat': []}
@@ -73,6 +75,8 @@ def catalog_ids(urls, catalog):
 def refusals(group, urls, catalog):
     """Reasons this group may not be published; empty when every source is approved for commercial use."""
     rows, problems = {s['id']: s for s in catalog}, []
+    if not urls:  # a manifest that names no source is never treated as cleared
+        problems.append(f'{group}: upstream manifest lists no sources')
     ids = set(DECLARED[group])
     for url, source in catalog_ids(urls, catalog).items():
         if source is None:
@@ -112,7 +116,7 @@ def habitat_plan(origin, catalog, now):
     release, public_bytes, reef_bytes = (get(path, origin)[2] for path in
                                          ('/api/habitat/release', '/data/skippercast-manifest.json', REEF_CONTEXT))
     control, public, reef = json.loads(release), json.loads(public_bytes), json.loads(reef_bytes)
-    problems = refusals('habitat', sorted({s['url'] for s in public.get('sources', [])}), catalog)
+    problems = refusals('habitat', sorted({s['url'] for s in public.get('sources') or []}), catalog)
     if control.get('status') != 'ready' or control.get('ready') is not True or public.get('releaseId') != control.get('releaseId'):
         problems.append('habitat: public manifest does not name the live ready release')
     if not datetime.fromisoformat(control['expiresAt']) > now:
@@ -150,16 +154,20 @@ def plan(groups, origin=ORIGIN, catalog=None, now=None):
     if 'terrain' in groups:
         raw = {path: get(path, origin)[2] for path in TERRAIN_INDEX}
         indexes = {path: json.loads(data) for path, data in raw.items()}
-        problems += refusals('terrain', sorted({s['url'] for s in indexes[TERRAIN_INDEX[0]].get('sources', [])}), catalog)
+        for path in TERRAIN_SOURCES:  # each document must name its own sources
+            problems += refusals('terrain', sorted({s['url'] for s in indexes[path].get('sources') or []}), catalog)
         for index in indexes.values():
             wanted.update({k: v for k, v in assets(index, {}).items() if group_of(k) == 'terrain'})
         # The copied indexes are the exact bytes whose references were enumerated and rights-checked.
-        wanted.update({path: pinned(data) for path, data in raw.items()})
+        for path, data in raw.items():
+            if wanted.get(path, {}).get('sha256') not in (None, pinned(data)['sha256']):
+                problems.append(f'terrain: {path} differs from the digest the chart model declares')
+            wanted[path] = pinned(data)
     if 'habitat' in groups:
         found, entries = habitat_plan(origin, catalog, now)
         problems += found
         wanted.update(entries)
-    return problems, wanted
+    return list(dict.fromkeys(problems)), wanted
 
 
 def fetch(path, entry, origin=ORIGIN):

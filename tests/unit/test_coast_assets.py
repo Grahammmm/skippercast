@@ -57,7 +57,11 @@ class RightsGateTests(unittest.TestCase):
         self.assertTrue(any('rights held for noaa-candidate' in p for p in problems))
         self.assertTrue(any('unknown source https://unlisted.example/grid' in p for p in problems))
         self.assertEqual(pa.refusals('terrain', urls[:1], CATALOG), [])
-        self.assertEqual(pa.refusals('terrain', [], CATALOG[:3]), ['terrain: unknown source usgs-naip (no catalog/sources.json row)'])
+        self.assertEqual(pa.refusals('terrain', urls[:1], CATALOG[:3]), ['terrain: unknown source usgs-naip (no catalog/sources.json row)'])
+
+    def test_a_group_whose_manifest_names_no_source_is_refused(self):
+        self.assertEqual(pa.refusals('habitat', [], CATALOG), ['habitat: upstream manifest lists no sources'])
+        self.assertIn('terrain: upstream manifest lists no sources', pa.refusals('terrain', [], CATALOG))
 
     def test_terrain_plan_pins_enumerated_assets_and_refuses_before_downloading_them(self):
         terrain = {'sources': [{'url': 'https://doi.org/10.5066/P9HELD01'}],
@@ -65,13 +69,26 @@ class RightsGateTests(unittest.TestCase):
                    'provenanceUrl': '/data/coast-wide/provenance.json',
                    'shoreAsset': {'url': '/data/slo-shore-habitat.geojson', 'sha256': 'b' * 64, 'bytes': 1}}
         calls = []
-        with serving({pa.TERRAIN_INDEX[0]: terrain, pa.TERRAIN_INDEX[1]: {}}, calls):
+        provenance = {'sources': [{'url': 'https://doi.org/10.5066/P9OPEN01'}]}
+        with serving({pa.TERRAIN_INDEX[0]: terrain, pa.TERRAIN_INDEX[1]: {}, pa.TERRAIN_INDEX[2]: provenance}, calls):
             problems, wanted = pa.plan(['terrain'], catalog=CATALOG, now=NOW)
         self.assertEqual(sorted(calls), sorted(pa.TERRAIN_INDEX))
-        self.assertTrue(any('usgs-held' in p for p in problems))
+        self.assertEqual(problems, ['terrain: rights held for usgs-held (approved, commercial_use permission-required)'])
         self.assertEqual(wanted['/data/coast-wide/t.bin'], {'sha256': 'a' * 64, 'bytes': 3})
         self.assertIn('/data/coast-wide/provenance.json', wanted)
         self.assertNotIn('/data/slo-shore-habitat.geojson', wanted)  # shore files stay on the bridge (FE-10, FE-43)
+
+    def test_chart_provenance_sources_are_checked_and_must_be_listed(self):
+        terrain = {'sources': [{'url': 'https://doi.org/10.5066/P9OPEN01'}]}
+        for provenance, reason in (({'sources': [{'url': 'https://encdirect.example.gov/enc/76'}]}, 'unknown source https://encdirect.example.gov/enc/76'),
+                                   ({}, 'upstream manifest lists no sources')):
+            with serving({pa.TERRAIN_INDEX[0]: terrain, pa.TERRAIN_INDEX[1]: {}, pa.TERRAIN_INDEX[2]: provenance}, []):
+                problems, _ = pa.plan(['terrain'], catalog=CATALOG, now=NOW)
+            self.assertEqual(problems, [f'terrain: {reason}'])
+        chart = {'provenance': {'url': pa.TERRAIN_INDEX[2], 'sha256': 'f' * 64, 'bytes': 2}}
+        with serving({pa.TERRAIN_INDEX[0]: terrain, pa.TERRAIN_INDEX[1]: chart, pa.TERRAIN_INDEX[2]: terrain}, []):
+            problems, _ = pa.plan(['terrain'], catalog=CATALOG, now=NOW)
+        self.assertEqual(problems, [f'terrain: {pa.TERRAIN_INDEX[2]} differs from the digest the chart model declares'])
 
     def test_groups_match_the_worker(self):
         self.assertEqual([pa.group_of(p) for p in ('/api/habitat/release', '/data/skippercast-species.json',
@@ -107,6 +124,13 @@ class HabitatPlanTests(unittest.TestCase):
         problems, wanted = self.plan(habitat_documents(public_region=drifted))
         self.assertTrue(any('morro-bay differs from the live release' in p for p in problems))
         self.assertNotIn('/api/habitat/tiles?region=morro-bay', wanted)
+
+    def test_a_public_manifest_without_sources_is_refused(self):
+        for sources in ([], None):
+            documents = habitat_documents()
+            documents['/data/skippercast-manifest.json']['sources'] = sources
+            problems, _ = self.plan(documents)
+            self.assertEqual(problems, ['habitat: upstream manifest lists no sources'])
 
     def test_expired_or_unready_release_and_held_sources_are_refused(self):
         documents = habitat_documents()
