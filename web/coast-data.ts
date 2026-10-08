@@ -21,8 +21,11 @@
 //   backstop for a snapshot nothing has replaced.
 // - Expiry hides, never refreshes. Past its limit a snapshot becomes null
 //   with status 'expired' and no request follows. Only refresh() or a new
-//   place requests again. The limit is checked on every read as well as by a
-//   timer, since timers stall in throttled or suspended tabs.
+//   place requests again. Besides the expiry timer, which stalls in
+//   throttled or suspended tabs, a clock signal ticks on focus, pageshow and
+//   visibilitychange and on every setPlace and load, and the snapshot and
+//   status signals read it, so a returning tab withholds an expired snapshot
+//   at once.
 // - A newer snapshot is never replaced by an older one (a saved offline copy
 //   arriving after a fresher network read), and an expired reply never hides
 //   an unexpired snapshot.
@@ -88,6 +91,9 @@ export type CoastSnapshot<P extends CoastProduct = CoastProduct> = {
 export type CoastStatus = 'unbound' | 'idle' | 'loading' | 'ready' | 'error' | 'invalid' | 'expired';
 type Statuses = Readonly<Record<CoastProduct, CoastStatus>>;
 type Cache = {readonly [P in CoastProduct]: CoastSnapshot<P> | null};
+/** Events that tick the clock; the default is `window` when there is one. */
+export type CoastDataOptions = {clockEvents?: EventTarget | null};
+const CLOCK_EVENTS = ['focus', 'pageshow', 'visibilitychange'] as const;
 
 export type CoastData = {
   coastReport: ReadonlySignal<CoastSnapshot<'report'> | null>;
@@ -127,10 +133,10 @@ export function admitSnapshot<P extends CoastProduct>(product: P, body: unknown,
 }
 
 const allStatus = (status: CoastStatus): Statuses => ({report: status, ocean: status, history: status});
-const live = (snapshot: CoastSnapshot | null): snapshot is CoastSnapshot => snapshot !== null && Date.parse(snapshot.expiresAt) > Date.now();
+const live = (snapshot: CoastSnapshot | null, now: number): snapshot is CoastSnapshot => snapshot !== null && Date.parse(snapshot.expiresAt) > now;
 const placeKey = (context: CoastReportContext, binding: ReportBinding): string => JSON.stringify([context.regionId, binding.localAreaId]);
 
-export function createCoastData(): CoastData {
+export function createCoastData(options: CoastDataOptions = {}): CoastData {
   const cache = signal<Cache>({report: null, ocean: null, history: null});
   const status = signal<Statuses>(allStatus('unbound'));
   const binding = signal<ReportBinding | null>(null);
@@ -139,17 +145,22 @@ export function createCoastData(): CoastData {
   const timers = new Map<CoastProduct, ReturnType<typeof setTimeout>>();
   let place: string | null = null;
   let alive = true;
+  // The time the signals judge expiry by; computeds cache, so they must read a signal, not Date.now().
+  const clock = signal(Date.now());
+  const tick = (): void => { clock.value = Date.now(); };
+  const events = options.clockEvents !== undefined ? options.clockEvents : typeof window === 'undefined' ? null : window;
+  for (const type of CLOCK_EVENTS) events?.addEventListener(type, tick);
 
   const setStatus = (product: CoastProduct, next: CoastStatus): void => { status.value = {...status.value, [product]: next}; };
   const setCache = <P extends CoastProduct>(product: P, snapshot: CoastSnapshot<P> | null): void => { cache.value = {...cache.value, [product]: snapshot}; };
   // Each read checks the clock too: a stalled expiry timer must not show an expired snapshot.
   const admitted = <P extends CoastProduct>(product: P) => computed<CoastSnapshot<P> | null>(() => {
     const snapshot = cache.value[product] as CoastSnapshot<P> | null;
-    return binding.value && live(snapshot) ? snapshot : null;
+    return binding.value && live(snapshot, clock.value) ? snapshot : null;
   });
   const shownStatus = computed<Statuses>(() => {
     const shown = {...status.value};
-    for (const product of COAST_PRODUCTS) if (shown[product] === 'ready' && !live(cache.value[product])) shown[product] = 'expired';
+    for (const product of COAST_PRODUCTS) if (shown[product] === 'ready' && !live(cache.value[product], clock.value)) shown[product] = 'expired';
     return shown;
   });
 
@@ -165,12 +176,13 @@ export function createCoastData(): CoastData {
     if (!alive || !snapshot) return;
     const remaining = Date.parse(snapshot.expiresAt) - Date.now();
     if (remaining > 0) { timers.set(product, setTimeout(() => expire(product), Math.min(remaining, MAX_TIMER))); return; }
-    batch(() => { setCache(product, null); if (binding.value && status.value[product] !== 'loading') setStatus(product, 'expired'); });
+    batch(() => { tick(); setCache(product, null); if (binding.value && status.value[product] !== 'loading') setStatus(product, 'expired'); });
   }
 
   /** Hide every snapshot already past its limit (timers may have stalled). */
   function sweep(): void {
-    for (const product of COAST_PRODUCTS) if (cache.value[product] && !live(cache.value[product])) expire(product);
+    tick();
+    for (const product of COAST_PRODUCTS) if (cache.value[product] && !live(cache.value[product], clock.value)) expire(product);
   }
 
   function request(product: CoastProduct): Promise<void> {
@@ -190,13 +202,14 @@ export function createCoastData(): CoastData {
       requests.delete(product);
       const held = cache.value[product];
       batch(() => {
+        tick();
         if (typeof outcome === 'object') {
           // Keep the newer snapshot: an older copy (a saved offline pack) never replaces a fresher one.
-          if (!live(held) || Date.parse(outcome.generatedAt) >= Date.parse(held.generatedAt)) setCache(product, outcome);
+          if (!live(held, Date.now()) || Date.parse(outcome.generatedAt) >= Date.parse(held.generatedAt)) setCache(product, outcome);
           setStatus(product, 'ready');
         } else if (outcome === 'expired') {
           // An expired reply never hides a snapshot that is still within its limit.
-          if (live(held)) setStatus(product, 'ready');
+          if (live(held, Date.now())) setStatus(product, 'ready');
           else { setCache(product, null); setStatus(product, 'expired'); }
         } else setStatus(product, outcome);
       });
@@ -241,6 +254,7 @@ export function createCoastData(): CoastData {
 
   function destroy(): void {
     alive = false;
+    for (const type of CLOCK_EVENTS) events?.removeEventListener(type, tick);
     abortAll();
     for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();

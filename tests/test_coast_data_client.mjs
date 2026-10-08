@@ -186,6 +186,31 @@ test('a stalled expiry timer cannot show an expired snapshot', async t => {
   assert.equal(net.calls.length, 1, 'the expired report is hidden, not refreshed');
 });
 
+test('a returning tab withholds an expired snapshot on its clock events alone', async t => {
+  withClock(t);
+  const net = bridge(); t.after(net.restore);
+  const page = new EventTarget();
+  const client = createCoastData({clockEvents: page}); t.after(client.destroy);
+  client.setPlace(MORRO());
+  await client.load('report', 'ocean');
+  const report = client.coastReport.value;
+  assert.ok(report);
+  // Suspended: the clock passes expiresAt, no timer fires and nothing calls setPlace or load.
+  mock.timers.setTime(GENERATED + SNAPSHOT_LIMIT_MS.report + 60_000);
+  assert.equal(client.coastReport.value, report, 'no tick yet');
+  page.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(client.coastReport.value, null);
+  assert.equal(client.coastStatus.value.report, 'expired');
+  assert.ok(client.coastOcean.value, 'the ocean snapshot is within its own limit');
+  mock.timers.setTime(GENERATED + SNAPSHOT_LIMIT_MS.ocean + 60_000);
+  page.dispatchEvent(new Event('focus'));
+  assert.equal(client.coastOcean.value, null);
+  assert.equal(net.calls.length, 2, 'withholding requests nothing');
+  client.destroy();
+  mock.timers.setTime(NOW);
+  page.dispatchEvent(new Event('focus'));
+});
+
 test('a refresh keeps the newer snapshot', async t => {
   withClock(t);
   let reply = () => respond(fixtures.report);
