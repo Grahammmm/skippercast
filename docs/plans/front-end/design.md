@@ -467,7 +467,7 @@ already import it. FE-73 adds the keys v1 reads ad hoc:
 
 | Key | Values | Stored | Notes |
 | --- | --- | --- | --- |
-| `presentation` | `chart`, `2d`, `3d` | yes (`skippercast-presentation-v1`) | terrain values fall back to `chart` where `hasCoastTerrain` is false, without rewriting the URL |
+| `presentation` | `chart`, `2d`, `3d` | v2 only (`skippercast-presentation-v1`); v1 writes chart by removing the key, so a v1 store neither reads nor writes it, and v2 writes `presentation=chart` | terrain values fall back to `chart` where `hasCoastTerrain` is false, without rewriting the URL (`stagePresentation`) |
 | `current` | `off`, `wcofs`, `hfr-1`, `hfr-6` | no | default `off`; an unknown value stays in the URL and shows as unsupported (v1 rule, #402) |
 | `habitat` | coast habitat id (`[A-Za-z0-9._:-]{1,160}`) | no | independent of the atlas `spot` |
 

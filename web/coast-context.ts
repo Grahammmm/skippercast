@@ -1,4 +1,6 @@
 import {FISH_REGIONS} from './fish-links.ts';
+/** The surface-current choices of `?current=` (FE-73): web/state.ts reads them from here. */
+export {currentLayers, isCurrentLayer, type CurrentLayer} from '../packages/coast/src/state/current-layer.ts';
 
 const TARGETS: Readonly<Record<string, string>> = {
  reef: 'all', all: 'all', lingcod: 'lingcod', rockfish: 'rockfish-reef',
