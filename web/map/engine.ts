@@ -1,5 +1,5 @@
 // MapLibre init for the Chart presentation (FE-11, docs/plans/front-end/design.md
-// § 3, § 3A.2): the PMTiles protocol and the CSP worker registered once, a
+// § 3, § 3A.2): the PMTiles protocol and the worker URL registered once, a
 // north-up map (no rotation or pitch by any gesture or key), a nautical scale,
 // zoom buttons, the attribution control, resize with its host, and error
 // routing: a failing source marks only the registry layer that owns it
@@ -11,7 +11,7 @@
 import type * as MapLibre from 'maplibre-gl';
 import {sourceLayer} from './layers.ts';
 
-/** What web/map/maplibre.js provides: the CSP build, its worker's URL and the PMTiles protocol. */
+/** What web/map/maplibre.js provides: the ESM build, its worker's URL and the PMTiles protocol. */
 export interface MapLibraryModule {
   readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'AttributionControl' | 'setWorkerUrl' | 'addProtocol'>;
   readonly workerUrl: string;

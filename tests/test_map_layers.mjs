@@ -125,7 +125,7 @@ function library() {
       Map: FakeMap, NavigationControl: control('navigation'), ScaleControl: control('scale'), AttributionControl: control('attribution'),
       setWorkerUrl: url => fake.workerUrls.push(url), addProtocol: (name, fn) => fake.protocols.push([name, fn]),
     },
-    workerUrl: '/assets/maplibre-gl-csp-worker.0123456789.js',
+    workerUrl: '/assets/maplibre-gl-worker.0123456789.js',
     Protocol: class { constructor() { this.tile = () => {}; } },
   };
   return fake;
@@ -139,7 +139,7 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
     onMove: c => moves.push(c), onLayerError: (layer, error) => errors.push([layer, error.message])};
   createEngine(fake.module, options);
   const second = createEngine(fake.module, options);
-  assert.deepEqual(fake.workerUrls, [fake.module.workerUrl], 'the CSP worker is set once');
+  assert.deepEqual(fake.workerUrls, [fake.module.workerUrl], 'the worker URL is set once');
   assert.deepEqual(fake.protocols.map(([name]) => name), ['pmtiles'], 'the pmtiles protocol is registered once');
   const [map] = fake.maps;
   assert.equal(map.options.container, host);
