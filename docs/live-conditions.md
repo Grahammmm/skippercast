@@ -91,3 +91,24 @@ history, not a climatology, forecast or catch probability.
 - **Failures:** a station whose index or annual files fail keeps its published
   baseline; a failed realtime file keeps the last series, marked stale after
   three hours. If every request fails nothing is published.
+
+## GOES frame times (FE-44)
+
+Each live cycle runs `python -m skippercast.pipeline.goes_frames`, which reads
+the nowCOAST satellite WMS GetCapabilities document and publishes
+`goes-times.json` at the root of the `conditions` branch (served at
+`/feeds/conditions/goes-times.json`). The file is one `packages/coast`
+`CloudImage` record: the acquisition times the `goes_longwave_imagery` layer
+advertises (ISO UTC, sorted, deduplicated, the newest 24), the newest of them as
+`observedAt`, and `fetchedAt`. Times come only from the layer's time dimension;
+entries without a zone, ranges and times more than five minutes ahead are
+dropped. No imagery is stored: the browser requests WMS tiles pinned to a
+listed time through `cloudSource`, never `current`.
+
+- **Age gate:** the newest listed frame must be at most 90 minutes old, the
+  same gate `cloudSource` applies in the client.
+- **Failures:** a failed request, a malformed document or a stale list writes
+  nothing, logs a warning and leaves the cycle running. The last published
+  index keeps its own clocks and drops out of the client's 90-minute gate.
+- **Meaning:** longwave infrared brightness temperature from GOES East and West,
+  observed frames only; it is no cloud-cover percentage and no forecast.

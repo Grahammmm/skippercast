@@ -2212,6 +2212,39 @@
         "client": "packages/coast/src/map-sources.ts naipSource()",
         "storage": "none (live tiles; design open question Q5, option 1)"
       }
+    },
+    {
+      "id": "noaa-goes-nowcoast",
+      "name": "GOES East and West longwave infrared imagery (nowCOAST WMS time index)",
+      "provider": "NOAA National Ocean Service nowCOAST; imagery NOAA/NESDIS GOES-18 and GOES-19",
+      "needs": [
+        "weather-observations"
+      ],
+      "documentation_url": "https://nowcoast.noaa.gov/",
+      "adapter": "goes-frames",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA / NESDIS GOES East and West longwave infrared, served by NOAA nowCOAST",
+        "terms_url": "https://www.weather.gov/disclaimer/",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "U.S. government work. SkipperCast publishes only the advertised acquisition times; the browser requests the imagery from nowCOAST, pinned to a listed time. Pending owner confirmation (FE-44)."
+      },
+      "authenticity": {
+        "basis": "The goes_longwave_imagery layer's own WMS time dimension; no time is derived from the clock",
+        "transport": "HTTPS; nowcoast.noaa.gov only"
+      },
+      "coverage_note": "GOES East and West composite over the Americas, a frame about every five minutes; the newest listed frame must be at most 90 minutes old.",
+      "limitations": [
+        "Longwave infrared brightness temperature, not a cloud-cover percentage or underwater visibility.",
+        "Observed frames only, never a forecast; about 2 km resolution, coarser than individual beaches."
+      ],
+      "max_age_hours": 1.5,
+      "allowed_hosts": [
+        "nowcoast.noaa.gov"
+      ]
     }
   ]
 }

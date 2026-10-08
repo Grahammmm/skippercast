@@ -50,6 +50,8 @@ for region in Path('var/live-published/regions').iterdir():
         prune_archive(region)
 PY
 cp docs/live-conditions.md var/live-published/README.md
+# GOES longwave frame times (FE-44). A failure keeps the last index, which ages out of the client's 90-minute gate.
+python -m skippercast.pipeline.goes_frames --output var/live-published/goes-times.json || true
 # One parentless commit, force-pushed with a lease: the branch never grows history.
 bash scripts/publish_branch_snapshot.sh conditions var/live-published 'Refresh regional ocean evidence and forecast archive'
 echo "published"
