@@ -8,6 +8,7 @@
 
 ## Unreleased
 
+- The readable coastal report, methods and about pages (`/report`, `/methodology`, `/about`) use the new dark visual system with self-hosted fonts and add a "How it’s built" link to the sources page; their text is unchanged.
 - In the new map preview (`?ui=v2`), the masthead's sign in opens an account menu: passkey sign in, boat presets and the exact-boat sheet, saved-trip alerts, and the offline notes, GPX and offline pack entries.
 - Add the new landing page behind `UI_V2`: the Morro Bay shoreline drawn from NOAA CUSP, live wind, swell, water and tide with each source, age and stale state, the port question with Boat / Shore / Spear, links into the map's layers, and a saved port opening the map directly.
 

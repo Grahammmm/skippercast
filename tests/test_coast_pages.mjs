@@ -111,3 +111,38 @@ test('admitted overview source selection opens readable report and returns to th
 
 
 test('actual readable workspace return preserves supported, unknown and empty current choices only as public state',()=>{for(const current of ['wcofs','hfr-6','constructor','']){const u=new URL('https://skippercast.com/?coast=central&view=35.36,-120.94,12&private=excluded');u.searchParams.set('current',current);const outbound=readableReportURL(u.href),selected=readableSelection(outbound,regions,now),returned=new URL(selected.workspace,outbound);assert.equal(returned.searchParams.get('current'),current);assert.equal(returned.searchParams.has('private'),false);}});
+
+// FE-86: the readable and information pages in the v2 visual system. The page
+// text is the text recorded on main before the restyle (the fixture is main's
+// template), node for node, except the one declared addition: the nav link to
+// the sources page that open-questions Q16 makes canonical. It points at
+// /sources.html because the bare /sources path has no Worker route yet.
+const textNodes=html=>html.replace(/<!--[\s\S]*?-->/g,'').split(/<[^>]*>/).filter(text=>text.trim());
+const before=readFileSync(new URL('./fixtures/coast-readable/main-before-fe86.html',import.meta.url),'utf8');
+test('FE-86 restyle keeps every text node of the readable and information pages byte-identical',async()=>{
+ for(const path of ['/report','/report?region=','/report?region=morro-bay&hour=2026-10-07T13:00Z','/methodology','/about']){
+  const render=async shell=>textNodes(await(await serveCoastPage(request(path),{...options(),template:shell})).text());
+  const old=await render(before),current=await render(template),at=old.indexOf('About');
+  assert.ok(old.length>12&&at>0,path);assert.deepEqual(current,[...old.slice(0,at+1),'How it’s built',...old.slice(at+1)],path);
+ }
+});
+test('FE-86 template links web/tokens.css and its sheet reads only token names',()=>{
+ assert.deepEqual([...template.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(m=>m[1]),['../web/tokens.css','coast-readable.css']);
+ assert.match(template,/<meta name="color-scheme" content="dark">/);
+ const tokens=readFileSync(new URL('../web/tokens.css',import.meta.url),'utf8'),defined=new Set([...tokens.matchAll(/(--[\w-]+)\s*:/g)].map(m=>m[1]));
+ const css=readFileSync(new URL('../dist/coast-readable.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+ const used=[...css.matchAll(/var\((--[\w-]+)\)/g)].map(m=>m[1]);assert.ok(used.length>20);
+ for(const name of used)assert.ok(defined.has(name),`${name} is a web/tokens.css name`);
+ assert.doesNotMatch(css,/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(|\b(?:white|black)\b/i,'no colour literals');
+ assert.doesNotMatch(css,/font-family:(?!\s*var\(--font-mono\))/,'faces come from the font tokens');
+ assert.doesNotMatch(css,/system-ui|sans-serif/);
+});
+test('FE-86 methodology and about link to the sources page; the pages need nothing beyond the unchanged CSP',async()=>{
+ const {CSP}=await import('../server/security-headers.ts');
+ for(const path of ['/methodology','/about','/report']){
+  const response=await serveCoastPage(request(path),options()),html=await response.text();
+  assert.match(html,/<a href="\/sources\.html">How it’s built<\/a>/,path);
+  assert.equal(response.headers.get('Content-Security-Policy'),CSP,path);
+ }
+ assert.doesNotMatch(template,/<style|<script|\sstyle=|https?:\/\//i,'no inline style or script and no other origin');
+});

@@ -1,1 +1,88 @@
-:root{font-family:system-ui,-apple-system,sans-serif;color:#17343d;background:#f4f7f7;line-height:1.65}*{box-sizing:border-box}body{margin:0}a{color:#0a616d;text-underline-offset:.18em}header,main,footer{width:min(960px,100%);margin:auto;padding:24px}header{display:flex;justify-content:space-between;gap:24px;border-bottom:1px solid #cfdcdf}.brand{font-size:1.4rem;font-weight:750;text-decoration:none}nav{display:flex;gap:18px;flex-wrap:wrap}main{min-height:50vh}h1{font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.2}h2{font-size:1.35rem;line-height:1.3;margin-top:2rem}h3{font-size:1.1rem}p,li{max-width:80ch}.scope,.gap{padding:16px;border-left:4px solid #387b85;background:#e5eff0}.gap{border-color:#b8792c;background:#fbf0df}.metrics,.observations{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}article,.source{background:white;border:1px solid #d5e0e2;border-radius:8px;padding:16px;margin:12px 0}dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}dt{color:#405f69}dd{margin:0;font-weight:650}time{font-variant-numeric:tabular-nums}.small{font-size:.9rem;color:#425f69}table{border-collapse:collapse;width:100%;margin:16px 0}th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid #d5e0e2}.catch-counts{display:block}.catch-counts>div{display:flex;justify-content:space-between;gap:20px;padding:5px}.catch-bar{display:none}footer{border-top:1px solid #cfdcdf;font-size:.9rem;color:#425f69}.skip-link{position:absolute;left:16px;top:-100px;background:#fff;padding:10px;z-index:2}.skip-link:focus{top:8px}:focus-visible{outline:3px solid #258c9b;outline-offset:3px}@media(max-width:600px){header{display:block}nav{margin-top:16px;gap:14px}header,main,footer{padding:18px}th,td{padding:8px}}@media print{body{background:white}header nav,.skip-link{display:none}article{break-inside:avoid}a{color:inherit}}
+/* The readable report, methodology and about pages (/report, /methodology,
+   /about; server/coast-pages.ts fills dist/coast-readable.html). FE-86: the
+   concept-A system (docs/plans/front-end/design.md § 5): the page links
+   web/tokens.css, and every colour, face, size and space here is one of its
+   tokens (dark ground, DM Sans for text, JetBrains Mono for readings, clocks
+   and codes). The built page may emit the shared tokens chunk after this
+   sheet, so nothing here relies on coming later than it. The pages use no
+   packages/coast styles, so the --coast-* bridge is not needed here. Print
+   switches to the system's light canvas so a report prints dark on white. */
+body.coast-readable {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans);
+}
+.coast-readable *, .coast-readable *::before, .coast-readable *::after { box-sizing: border-box; }
+.coast-readable a { color: var(--blue); text-underline-offset: 0.18em; }
+.coast-readable :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+.coast-readable header, .coast-readable main, .coast-readable footer { width: min(960px, 100%); margin: auto; padding: var(--space-5); }
+.coast-readable header {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+.coast-readable .brand {
+  display: inline-flex; align-items: center; min-height: var(--touch-min);
+  color: var(--text); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none;
+}
+.coast-readable nav { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); }
+.coast-readable nav a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--muted); font-size: var(--text-13); text-decoration: none; }
+.coast-readable nav a:hover { color: var(--text); }
+.coast-readable main { min-height: 50vh; }
+
+.coast-readable h1 { margin: var(--space-4) 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.coast-readable h2 { margin: var(--space-6) 0 var(--space-3); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
+.coast-readable h3 { margin: 0 0 var(--space-2); font: var(--weight-semibold) var(--text-15) / var(--leading-heading) var(--font-sans); }
+.coast-readable p, .coast-readable li { max-width: 80ch; }
+.coast-readable time, .coast-readable code, .coast-readable dd {
+  font-family: var(--font-mono); font-size: var(--text-13); font-variant-numeric: tabular-nums;
+}
+
+/* Scope note and explicit gaps: the reading text stays --text on a raised tile; the edge marks the kind. */
+.coast-readable .scope, .coast-readable .gap {
+  padding: var(--space-4); border-left: 4px solid var(--blue); border-radius: var(--radius-sm); background: var(--panel-2);
+}
+.coast-readable .gap { border-left-color: var(--amber); }
+
+.coast-readable .metrics, .coast-readable .observations { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
+.coast-readable article, .coast-readable .source {
+  margin: var(--space-3) 0; padding: var(--space-4);
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel);
+}
+.coast-readable dl { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.coast-readable dt { color: var(--muted); font-size: var(--text-13); }
+.coast-readable dd { margin: 0; font-weight: var(--weight-medium); }
+.coast-readable .small { color: var(--muted); font-size: var(--text-13); }
+
+.coast-readable table { width: 100%; margin: var(--space-4) 0; border-collapse: collapse; }
+.coast-readable th, .coast-readable td { padding: var(--space-3); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.coast-readable .catch-counts { display: block; }
+.coast-readable .catch-counts > div { display: flex; justify-content: space-between; gap: var(--space-5); padding: var(--space-1); }
+.coast-readable .catch-bar { display: none; }
+
+.coast-readable footer { border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-13); }
+
+.coast-readable .skip-link {
+  position: absolute; top: -100px; left: var(--space-4); z-index: var(--z-toast);
+  padding: var(--space-3); border-radius: var(--radius-sm); background: var(--panel); color: var(--text);
+}
+.coast-readable .skip-link:focus { top: var(--space-2); }
+
+@media (min-width: 600px) {
+  .coast-readable h1 { font-size: var(--text-28); }
+}
+@media (max-width: 599px) {
+  .coast-readable header, .coast-readable main, .coast-readable footer { padding: var(--space-4); }
+  .coast-readable th, .coast-readable td { padding: var(--space-2); }
+}
+@media print {
+  /* Outranks web/tokens.css's :root wherever the built page orders the two sheets. */
+  html:root { color-scheme: light; }
+  body.coast-readable { background: Canvas; color: CanvasText; }
+  .coast-readable article, .coast-readable .source, .coast-readable .scope, .coast-readable .gap { background: none; }
+  .coast-readable dt, .coast-readable .small, .coast-readable footer { color: inherit; }
+  .coast-readable header nav, .coast-readable .skip-link { display: none; }
+  .coast-readable article { break-inside: avoid; }
+  .coast-readable a { color: inherit; }
+}
