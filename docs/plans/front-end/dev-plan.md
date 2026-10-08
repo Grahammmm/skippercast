@@ -500,7 +500,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - Status: NEW. Agent: Claude. Hot spot: `server/coast-pages.ts` (Codex's).
 - Depends: FE-76
 - Files: `dist/coast-readable.html`, `dist/coast-readable.css`, `tests/test_coast_pages.mjs`, `tests/fixtures/coast-readable/` (the pre-restyle template), `e2e/coast-readable.spec.ts`.
-- Build: the `/report`, `/methodology` and `/about` template loads `web/tokens.css` and its sheet reads only token names (the pages use no `packages/coast` styles, so the `--coast-*` bridge has nothing to theme and is not loaded); `/methodology` and `/about` link to the sources page (Q16) at `/sources.html`, the path the Worker serves (bare `/sources` has no route); text content unchanged apart from that link.
+- Build: the `/report`, `/methodology` and `/about` template loads `web/tokens.css` and its sheet reads only token names (the pages use no `packages/coast` styles, so the `--coast-*` bridge has nothing to theme and is not loaded); `/methodology` and `/about` link to the sources page (Q16) at `/sources` (the Worker route added by #475; `/sources.html` keeps working); text content unchanged apart from that link.
 - Accept: 1. Page text is byte-identical (test compares text nodes). 2. Contrast and axe clean. 3. CSP unchanged.
 
 ## Phase 5: flip, delete, retire

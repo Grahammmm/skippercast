@@ -63,7 +63,7 @@ export const Caveat = () => <p class="app-caveat">{PROFILE_TABLE[profile.value].
 
 /** The one disclaimer line per page with the sources link; `children` adds links after it. */
 export const BriefFooter = ({children}: {children?: ComponentChildren} = {}) =>
-  <footer class="app-brief-footer">{DISCLAIMER} <a href="sources.html">Sources</a>{children}</footer>;
+  <footer class="app-brief-footer">{DISCLAIMER} <a href="/sources">Sources</a>{children}</footer>;
 
 export function Brief({picks = []}: {picks?: readonly Pick[]} = {}) {
   return (
