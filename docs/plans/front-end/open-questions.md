@@ -12,12 +12,14 @@ refer to [dev-plan.md](dev-plan.md); section numbers to [design.md](design.md).
 
 **Context.** The Bridge look needs a quiet vector basemap under relief,
 fields and marks. Today the app uses OpenStreetMap raster tiles and the NOAA
-ENC WMS. Numbers are estimates until FE-10 measures (§ 4).
+ENC WMS. FE-10 measured the extract on 2026-10-08: 180 MiB (§ 4).
 
 1. **Self-hosted Protomaps extract on R2 behind `/feeds/` (recommended).**
    Built on Hermes with `pmtiles extract` (range reads, no planet
-   download); about 0.3–2 GB on R2 at cents a month, egress free, origin
-   reads edge-cached. One style file in the tokens, day and night variants.
+   download); 180 MiB on R2 (measured), under a cent a month to store,
+   egress free; tile reads go to R2 because the archive is above the
+   32 MiB edge-cache limit (§ 4 cost). One style file in the tokens, day
+   and night variants.
    Risk: build size; mitigated by lowering maximum zoom in preview regions.
 2. A hosted vector service (MapTiler Cloud, Stadia, Protomaps API) on a
    free tier with attribution. No build step, but a key in the client,

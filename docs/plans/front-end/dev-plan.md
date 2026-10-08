@@ -123,9 +123,9 @@ Merged as [#360](https://github.com/Grahammmm/skippercast/pull/360).
 - Accept: 1. Every style colour comes from `palette.ts` (test). 2. The night variant has no labels below zoom 9 (test). 3. Attribution reads "© OpenStreetMap contributors, © Protomaps".
 
 ### FE-10 · Basemap and shoreline build and publish · L
-- Status: CHANGED (pipeline only; the style moved to FE-72). Agent (proposed): Codex.
+- Status: CHANGED (pipeline only; the style moved to FE-72). Agent: Claude (owner, issue #413).
 - Depends: —
-- Files: `scripts/basemap/build_basemap.sh`, `scripts/basemap/regions.py`, `scripts/import_cusp_shoreline.py`, `catalog/shoreline/<region>.geojson`, `.github/workflows/basemap.yml` (dispatch, `DATA_RUNNER`), `catalog/sources.json` (`protomaps-basemap`, `noaa-cusp-shoreline`), `docs/data-sources.md`, `tests/unit/test_basemap_regions.py`.
+- Files: `scripts/basemap/build_basemap.sh`, `scripts/basemap/regions.py`, `scripts/shoreline/import_cusp.py`, `catalog/shoreline/<region>.geojson`, `.github/workflows/basemap.yml` (dispatch, `DATA_RUNNER`), `catalog/sources.json` (`protomaps-basemap`, `noaa-cusp-shoreline`), `docs/data-sources.md`, `tests/unit/test_basemap_regions.py`.
 - Build: § 4 option 1 extract per region bbox merged into `tiles/basemap/ca-coast-<date>.pmtiles` on R2; CUSP shoreline per region with source dates kept, copied by the platform build to `dist/regions/<id>/shoreline.geojson`; reuse the SLO extract the bridge already serves (`/coast-data/data/slo-shoreline.geojson`) as the Morro Bay reference.
 - Accept: 1. The workflow has no `pull_request` trigger and pinned actions. 2. The PR records the measured archive size and build time and updates § 4. 3. The shoreline keeps a source date per feature; platform build diff clean.
 - **Owner**: approve the new workflow; dispatch the first build and confirm the R2 object; add the register rows for `protomaps-basemap` and `noaa-cusp-shoreline`.

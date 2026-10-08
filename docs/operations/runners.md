@@ -30,7 +30,7 @@ variable change, not a code change:
 
 | Variable | Workflows | Unset (default) | Set to `skippercast` |
 | --- | --- | --- | --- |
-| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install, fleet registry, fleet OSINT | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
+| `DATA_RUNNER` | live loop, daily data, freshness, ops report, legal review, research, rehearsal, forecast tiles, fleet AIS listener install, fleet registry, fleet OSINT, basemap | `ubuntu-latest` (GitHub-hosted, billed) | our runners (free minutes) |
 | `SEAFLOOR_RUNNER` | seafloor preparation, reach processing and publication | `ubuntu-latest` | a verified dedicated runner label |
 | `CI_RUNNER` | `ci.yml` (check, e2e, survey-science) | `ubuntu-latest` | our runners only when `CI_SELF_HOSTED_READY=true` |
 

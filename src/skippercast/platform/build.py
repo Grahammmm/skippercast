@@ -12,6 +12,7 @@ from .qualified_scope import validate_qualified_scope, qualified_subset_satisfie
 from .coasts import compile_coasts
 from .sectors import compile_sectors
 from .readiness import compile_readiness
+from .shoreline import publish_shoreline
 
 
 def target_options(region, targets):
@@ -78,6 +79,9 @@ def build(root=REPO, now=None):
             if not asset.is_file():
                 raise ValueError(f"Missing published asset for {region['id']}: {value}")
             assets[key] = {"path": value, "sha256": hashlib.sha256(asset.read_bytes()).hexdigest(), "bytes": asset.stat().st_size}
+        # The CUSP shoreline (FE-10) ships beside the package, outside region.assets and the manifest,
+        # so v1 offline packs (every manifest asset) stay the same until the v2 Chart reads it.
+        publish_shoreline(root, region, output)
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)
