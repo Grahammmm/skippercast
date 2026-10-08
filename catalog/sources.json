@@ -2128,7 +2128,7 @@
         "terms_url": "https://www.openstreetmap.org/copyright",
         "commercial_use": "unknown",
         "attribution_required": true,
-        "commercial_note": "ODbL permits commercial use with attribution; the archive is shown as a map and never offered as data. The data-rights register's B6 marks OpenStreetMap commercial use unknown (tile-service policy), and this self-hosted extract needs its own register row before the owner confirms it."
+        "commercial_note": "ODbL permits commercial use with attribution. The whole archive is publicly downloadable from /feeds/tiles/basemap/ (CORS open), so it is redistributed as an ODbL derivative database: keep the attribution and ODbL notice with it, and offer the extract itself under ODbL (share-alike). The data-rights register's B6 marks OpenStreetMap commercial use unknown (tile-service policy); this self-hosted extract's commercial status is for the owner to confirm."
       },
       "authenticity": {
         "basis": "Protomaps daily planet build named by date, with its listed size and BLAKE3 hash recorded in tiles/basemap/manifest.json",
@@ -2159,7 +2159,7 @@
         "terms_url": "https://oceanservice.noaa.gov/about/faq.html",
         "commercial_use": "allowed",
         "attribution_required": true,
-        "commercial_note": "NOAA-created features are U.S. government public domain. CUSP also carries outside contributors; scripts/import_cusp_shoreline.py keeps only features whose creator (DAT_SET_CR) is NOAA and counts the rest for each region's review."
+        "commercial_note": "NOAA-created features are U.S. government public domain. CUSP also carries outside contributors; scripts/shoreline/import_cusp.py keeps only features whose creator (DAT_SET_CR) is NOAA and counts the rest for each region's review."
       },
       "authenticity": {
         "basis": "NOAA Shoreline Data Explorer vector tiles; tile receipts (bytes, SHA-256) recorded in each catalog/shoreline/<region>.geojson",

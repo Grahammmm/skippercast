@@ -1,6 +1,6 @@
 """Publish a region's NOAA CUSP shoreline (FE-10, docs/plans/front-end/design.md § 11).
 
-scripts/import_cusp_shoreline.py writes catalog/shoreline/<id>.geojson; the
+scripts/shoreline/import_cusp.py writes catalog/shoreline/<id>.geojson; the
 platform build copies it byte for byte to dist/regions/<id>/shoreline.geojson
 after checking that every feature keeps its source date and NOAA creator and
 lies inside the region. A region without an import publishes no shoreline.

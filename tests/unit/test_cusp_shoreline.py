@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from scripts import import_cusp_shoreline as cusp
+from scripts.shoreline import import_cusp as cusp
 from skippercast.platform.shoreline import check_shoreline, publish_shoreline
 from tests._support import ROOT, NOW
 
@@ -77,6 +78,36 @@ class DecodeAndClipTests(unittest.TestCase):
         self.assertEqual(cusp.source_date('19940228'), '1994-02-28')
         self.assertIsNone(cusp.source_date('19941345'))
         self.assertIsNone(cusp.source_date(None))
+
+
+class Response:
+    def __init__(self, url, body):
+        self.url, self.body = url, body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def geturl(self):
+        return self.url
+
+    def read(self, size=-1):
+        return self.body[:size] if size >= 0 else self.body
+
+
+class FetchTests(unittest.TestCase):
+    def test_fetch_refuses_other_hosts_and_oversized_tiles(self):
+        url = 'https://nsde.ngs.noaa.gov/cusp/tiles/12/672/1617.pbf'
+        with patch.object(cusp, 'urlopen', return_value=Response(url, b'tile')):
+            self.assertEqual(cusp.fetch((12, 672, 1617)), b'tile')
+        with patch.object(cusp, 'urlopen', return_value=Response('https://example.com/t.pbf', b'tile')):
+            with self.assertRaises(ValueError):
+                cusp.fetch((12, 672, 1617))
+        with patch.object(cusp, 'urlopen', return_value=Response(url, bytes(cusp.MAX_TILE_BYTES + 1))):
+            with self.assertRaises(ValueError):
+                cusp.fetch((12, 672, 1617))
 
 
 class ExtractTests(unittest.TestCase):

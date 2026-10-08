@@ -23,6 +23,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,6 +33,7 @@ BUILDS = 'https://build-metadata.protomaps.dev/builds.json'
 SOURCE = 'https://build.protomaps.com/{build}.pmtiles'
 PREFIX = 'tiles/basemap'
 ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
+MAX_LISTING_BYTES = 1 << 20  # 12 KB today
 AGENT = {'User-Agent': 'SkipperCast basemap build (https://skippercast.com)'}
 
 
@@ -133,8 +135,14 @@ def publish(s3, bucket, archive, document):
 
 
 def listing():
+    """The Protomaps builds listing, from its exact host and at most 1 MiB."""
     with urlopen(Request(BUILDS, headers=AGENT), timeout=60) as response:
-        return json.load(response)
+        if urlsplit(response.geturl()).hostname != urlsplit(BUILDS).hostname:
+            raise ValueError('The Protomaps builds listing redirected to another host')
+        body = response.read(MAX_LISTING_BYTES + 1)
+    if len(body) > MAX_LISTING_BYTES:
+        raise ValueError('The Protomaps builds listing exceeds 1 MiB')
+    return json.loads(body)
 
 
 def main(argv=None):

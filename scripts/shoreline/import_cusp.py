@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Import the NOAA CUSP shoreline for a region (FE-10, docs/plans/front-end/design.md § 11).
 
-    python scripts/import_cusp_shoreline.py morro-bay [more region ids]   # writes catalog/shoreline/<id>.geojson
+    python scripts/shoreline/import_cusp.py morro-bay [more region ids]   # writes catalog/shoreline/<id>.geojson
 
 Reads NOAA's published CUSP vector tiles (zoom 12, the tiles fish's SLO
 extract used) over the region's `bounds` from regions/<id>/region.json, clips
@@ -21,7 +21,6 @@ The platform build copies the file to dist/regions/<id>/shoreline.geojson.
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-import gzip
 import hashlib
 import json
 import math
@@ -29,11 +28,15 @@ from pathlib import Path
 import re
 import struct
 from urllib.error import HTTPError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
+import zlib
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 TILES = 'https://nsde.ngs.noaa.gov/cusp/tiles/{z}/{x}/{y}.pbf'
 ZOOM = 12
+HOST = 'nsde.ngs.noaa.gov'  # catalog/sources.json noaa-cusp-shoreline allowed_hosts
+MAX_TILE_BYTES = 4 << 20  # largest Morro Bay tile is 11 KB gzipped
 KEEP = ('SOURCE_ID', 'SRC_DATE', 'HOR_ACC', 'ATTRIBUTE', 'DATA_SOURC', 'EXT_METH', 'DAT_SET_CR', 'SRC_CITA')
 AGENT = {'User-Agent': 'SkipperCast shoreline import (https://skippercast.com)'}
 LIMITATIONS = [
@@ -89,7 +92,10 @@ VALUES = {1: lambda b: bytes(b).decode('utf-8'), 2: lambda b: struct.unpack('<f'
 def decode_tile(data):
     """[{name, extent, features: [{type, properties, geometry}]}] of a Mapbox Vector Tile (gzip or plain)."""
     if data[:2] == b'\x1f\x8b':
-        data = gzip.decompress(data)
+        inflate = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        data = inflate.decompress(data, MAX_TILE_BYTES * 8)
+        if inflate.unconsumed_tail:
+            raise ValueError('CUSP tile inflates beyond the size cap')
     layers = []
     for number, raw in fields(data):
         if number != 3:
@@ -194,11 +200,16 @@ def fetch(tile):
     z, x, y = tile
     try:
         with urlopen(Request(TILES.format(z=z, x=x, y=y), headers=AGENT), timeout=60) as response:
-            return response.read()
+            if urlsplit(response.geturl()).hostname != HOST:
+                raise ValueError(f'CUSP tile {z}/{x}/{y} redirected away from {HOST}')
+            body = response.read(MAX_TILE_BYTES + 1)
     except HTTPError as error:
         if error.code in (403, 404):
             return None
         raise
+    if len(body) > MAX_TILE_BYTES:
+        raise ValueError(f'CUSP tile {z}/{x}/{y} exceeds {MAX_TILE_BYTES} bytes')
+    return body
 
 
 def region_bounds(region_id, root=ROOT):

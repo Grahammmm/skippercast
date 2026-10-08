@@ -4,9 +4,11 @@ from pathlib import Path
 import re
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from scripts.basemap import regions
 from tests._support import ROOT, NOW
+from tests.unit.test_cusp_shoreline import Response
 
 LISTING = [{'key': '20261007.pmtiles', 'size': 138664957457, 'version': '4.15.2', 'b3sum': 'a' * 64},
            {'key': '20261008.pmtiles', 'size': 138703391160, 'version': '4.15.2', 'b3sum': 'b' * 64},
@@ -77,6 +79,19 @@ class RegionPlanTests(unittest.TestCase):
         self.assertEqual(planned['source']['b3sum'], 'b' * 64)
         self.assertEqual(planned['overview']['maxzoom'] + 1, planned['detail']['minzoom'])
         self.assertEqual(planned['detail']['maxzoom'], 14)
+
+
+class ListingTests(unittest.TestCase):
+    def test_listing_comes_from_its_exact_host_and_is_capped(self):
+        body = json.dumps(LISTING).encode()
+        with patch.object(regions, 'urlopen', return_value=Response(regions.BUILDS, body)):
+            self.assertEqual(regions.listing(), LISTING)
+        with patch.object(regions, 'urlopen', return_value=Response('https://example.com/builds.json', body)):
+            with self.assertRaises(ValueError):
+                regions.listing()
+        with patch.object(regions, 'urlopen', return_value=Response(regions.BUILDS, bytes(regions.MAX_LISTING_BYTES + 1))):
+            with self.assertRaises(ValueError):
+                regions.listing()
 
 
 class ManifestAndPublishTests(unittest.TestCase):
