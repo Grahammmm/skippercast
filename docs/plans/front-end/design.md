@@ -565,8 +565,11 @@ labels, roads at high zoom only, no points of interest. Options, best first:
    ranges (no planet download), for a bounding box per active and preview
    region clipped to the coast, merged into one archive
    `tiles/basemap/ca-coast-<build-date>.pmtiles`. Style: a Protomaps
-   "basemaps" style recoloured from the tokens in `web/map/style.ts`; glyphs
-   and sprites self-hosted under `dist/basemap/`. Attribution:
+   "basemaps" style recoloured from the tokens in `web/map/style.ts`; label
+   glyphs self-hosted under `dist/basemap/glyphs/` (DM Sans Medium SDF,
+   ranges 0–255 and 8192–8447, about 86 KB, built by
+   `scripts/basemap/build_glyphs.py`). The style draws no icons, so it has
+   no sprite sheet (FE-72). Attribution:
    "© OpenStreetMap contributors, © Protomaps" in the legend's attribution
    row (ODbL; the data is used as a map, never redistributed as data).
    Rights: `docs/legal/data-rights-register.md` row B6 marks OpenStreetMap
