@@ -58,3 +58,36 @@ The conditions branch is independent of the daily fishing-evidence data branch;
 the two jobs do not write the same files or branch. Each cycle replaces the
 branch with one parentless commit, so it carries only the current snapshot. No API keys or private
 observations are used. [Job status](https://github.com/Grahammmm/skippercast/actions/workflows/live-conditions.yml).
+
+## Recorded buoy history (FE-42)
+
+`python -m skippercast.pipeline.ndbc_history` builds the History view's
+`HistoryBundle` (`packages/coast/src/history-types.ts`) for 46215 and 46028 and
+[`buoy-history.yml`](../.github/workflows/buoy-history.yml) publishes it to the
+`data` branch as `regions/morro-bay/history.json` (served at
+`/feeds/data/regions/morro-bay/history.json`). It is descriptive recorded
+history, not a climatology, forecast or catch probability.
+
+- **Full pass** (monthly, and the one-off backfill by manual dispatch): reads each
+  station's archive index and every annual standard-met file it lists (46215
+  from 2004, 46028 from 1983; 65 files, about 12 MB compressed). Each file is
+  kept under `var/ndbc-history/ndbc/stdmet/<station>/<year>/<sha256>.bin` with a
+  checkpoint recording its URL, fetch time, size and SHA-256; a later pass reuses
+  any file whose bytes still match and downloads nothing for it. `--revalidate`
+  refetches them when NOAA may have revised an archive. The workflow carries the
+  checkpoints between runs in the Actions cache; if the cache is evicted the next
+  full pass simply downloads the files again.
+- **Recent pass** (weekly): fetches only the two 45-day realtime files and keeps
+  the published monthly bands, archive index and annual receipts unchanged.
+  Until the first full backfill has published `history.json`, the recent pass
+  skips with a notice and publishes nothing, so run the full pass first.
+- **Aggregation:** UTC-hour means of valid samples only, with raw and per-metric
+  counts. Monthly p10 / median / p90 (linear interpolation), min, max and mean
+  pool those hours across years, each hour weighted equally, with the count,
+  calendar hours expected, coverage fraction and the years that contributed.
+  The 7-, 14- and 45-day views read the 45 days of hourly means. Missing hours
+  and sentinel values are counted, never filled or interpolated; conflicting
+  duplicate rows mask the value.
+- **Failures:** a station whose index or annual files fail keeps its published
+  baseline; a failed realtime file keeps the last series, marked stale after
+  three hours. If every request fails nothing is published.
