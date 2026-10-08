@@ -210,6 +210,10 @@ def usages():
                 unmapped.add(f"{region['id']}:{kind}={path}")
                 continue
             found.update((path, ident) for ident in ids)
+        # The CUSP shoreline ships beside the region package (FE-10), outside region.json assets.
+        shoreline = f"regions/{region['id']}/shoreline.geojson"
+        if (ROOT / 'dist' / shoreline).is_file():
+            found.add((shoreline, 'noaa-cusp-shoreline'))
         for role, ident in (region.get('intelligence') or {}).get('providers', {}).items():
             found.add((f'region.json:intelligence.providers.{role}', ident))
         for role, ident in region.get('pipeline_sources', {}).items():

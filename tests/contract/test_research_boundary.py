@@ -18,7 +18,9 @@ RESEARCH_PREFIXES = ('audit_', 'screen_', 'triage_', 'review_', 'discover_', 'in
                      'assess_', 'fetch_', 'import_', 'inventory_')
 # Run by daily-data.yml; their outputs (survey-discovery.json, survey-products.json) are loaded by the app.
 # measure_startup.mjs measures the app itself; the startup budget browser test (e2e/startup.spec.ts) runs it.
-PRODUCT_EXCEPTIONS = {'audit_noaa_survey_products.py', 'discover_noaa_surveys.py', 'measure_startup.mjs'}
+# import_cusp_shoreline.py writes catalog/shoreline/, which the platform build publishes (FE-10).
+PRODUCT_EXCEPTIONS = {'audit_noaa_survey_products.py', 'discover_noaa_surveys.py', 'measure_startup.mjs',
+                      'import_cusp_shoreline.py'}
 JS_RESEARCH_IMPORT = re.compile(r"""(?:\bfrom\s*|\bimport\s*\(?\s*)['"][^'"]*\bresearch/""")
 
 
