@@ -32,12 +32,15 @@ const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000;
 const NOW = new Date('2026-10-09T03:00:00Z'), AT = new Date('2026-10-09T03:00:00Z');
 const WEST = -121.0, SOUTH = 35.2, STEP = 0.02, COLS = 12, ROWS = 9;
 const sentinel = readPalette(name => `token(${name})`);
-/** One analysis sample per cell, 57.3 °F in the south-west corner to 63.8 °F in the north-east; `hole` drops cells. */
+/**
+ * One analysis sample per cell, 57.3 °F in the south-west corner to 64.08 °F in the north-east; `hole` drops cells.
+ * The i·j term twists every quad (its corners are not a plane), so the every-pixel comparison exercises the bilinear cross-term.
+ */
 function points({hole = (i, j) => (i === 5 || i === 6) && j === 4, step = STEP} = {}) {
   const out = [];
   for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
     if (hole(i, j)) continue;
-    out.push({lon: +(WEST + i * step).toFixed(6), lat: +(SOUTH + j * step).toFixed(6), tempF: 57.3 + i * 0.5 + j * 0.125, errorF: 0.4 + (i % 6) * 0.1});
+    out.push({lon: +(WEST + i * step).toFixed(6), lat: +(SOUTH + j * step).toFixed(6), tempF: 57.3 + i * 0.1 + j * 0.05 + i * j * 0.06, errorF: 0.4 + (i % 6) * 0.1});
   }
   return out;
 }
@@ -62,7 +65,7 @@ test('the token ramp equals packages/coast temperatureColors, in every theme', a
 });
 
 test('the texture paints exactly the field\'s support, in the ramp\'s colours, feathered inward at gaps', () => {
-  const field = fieldOf(), range = [57, 64], tex = fieldTexture(field, range, temperatureColors, v => v[0]);
+  const field = fieldOf(), range = [57, 65], tex = fieldTexture(field, range, temperatureColors, v => v[0]);
   const {width, height} = textureSize(field);
   assert.deepEqual([tex.width, tex.height], [width, height]);
   assert.ok(width <= MAX_TEXTURE && height <= MAX_TEXTURE && width >= 64);
@@ -92,7 +95,7 @@ test('the texture paints exactly the field\'s support, in the ramp\'s colours, f
 
 test('the legend range is the rounded extrema of the accepted analysis; its product and age are named exactly', () => {
   const s = status();
-  assert.deepEqual(s.drawn.range, [57, 64], '57.3 to 63.8 °F gives whole degrees 57 to 64');
+  assert.deepEqual(s.drawn.range, [57, 65], '57.3 to 64.08 °F gives whole degrees 57 to 65');
   assert.deepEqual(s.drawn.error.map(e => +e.toFixed(2)), [0.4, 0.9]);
   assert.equal(s.drawn.product, 'NASA JPL MUR', 'from the report\'s own status for the source id');
   assert.equal(s.note, 'analysis Oct 7 · 42 h old');
@@ -126,9 +129,9 @@ test('nothing draws without a fresh, loaded, drawable analysis, and the reason i
 });
 
 test('contours run every 0.5 °F, join into lines, label whole degrees with the unit and stop at the hole', () => {
-  const field = fieldOf(), lines = contourLines(field, [57, 64]);
+  const field = fieldOf(), lines = contourLines(field, [57, 65]);
   const levels = [...new Set(lines.features.map(f => f.properties.level))].sort((a, b) => a - b);
-  assert.ok(levels.every(l => l * 2 === Math.round(l * 2) && l > 57 && l < 64));
+  assert.ok(levels.every(l => l * 2 === Math.round(l * 2) && l > 57 && l < 65));
   assert.ok(levels.includes(60) && levels.includes(60.5));
   for (const f of lines.features) {
     assert.equal(f.properties.major, Number.isInteger(f.properties.level));
@@ -155,7 +158,7 @@ test('the overlay sits under the protected areas, coloured from the palette; a c
   const mark = sstMark(a, {lon: WEST + 0.01, lat: SOUTH + 0.01}, NOW, TZ);
   assert.equal(mark.name, 'Surface temperature');
   assert.equal(mark.kind, 'Daily analysis · Oct 7');
-  assert.equal(mark.reading, '57.6 °F · analysis error 0.5 °F');
+  assert.equal(mark.reading, '57.4 °F · analysis error 0.5 °F');
   assert.equal(mark.source, 'NASA JPL MUR · analysis Oct 7 · 42 h old');
   assert.match(mark.basis, /neither bottom temperature nor a forecast; .* Display interpolation between adjacent ocean samples, which adds no measurements\.$/);
   assert.equal(sstMark(a, {lon: WEST + 5.5 * STEP, lat: SOUTH + 4 * STEP}, NOW, TZ), null, 'the hole reads nothing');
@@ -199,7 +202,7 @@ test('a rejected replacement grid hides the previous texture and contours', t =>
   assert.equal(e.images.length, 1);
   assert.equal(e.images[0][0], SST_SOURCE);
   assert.ok(e.data.some(([id, d]) => id === CONTOUR_SOURCE && d.features.length > 0));
-  assert.deepEqual(waterTempState.value.drawn.range, [57, 64]);
+  assert.deepEqual(waterTempState.value.drawn.range, [57, 65]);
   assert.equal(railNotes.value['water-temp'], 'analysis Oct 7 · 42 h old');
   chartMark.value = w.reading({lon: WEST + 0.01, lat: SOUTH + 0.01});
   assert.equal(chartMark.value.name, 'Surface temperature');
@@ -276,7 +279,7 @@ test('the legend gives the range, product and age with the basis; the rail gives
   m.waterTempState.value = status();
   m.railNotes.value = {'water-temp': 'analysis Oct 7 · 42 h old'};
   const legend = m.render(m.h(m.Legend));
-  assert.match(legend, /<span class="app-swatch" data-layer="water-temp" aria-hidden="true"><\/span>Water temp<span class="app-legend-range ui-mono" data-range="water-temp">57–64 °F<\/span>/);
+  assert.match(legend, /<span class="app-swatch" data-layer="water-temp" aria-hidden="true"><\/span>Water temp<span class="app-legend-range ui-mono" data-range="water-temp">57–65 °F<\/span>/);
   assert.match(legend, /data-stamp="water-temp">NASA JPL MUR · analysis Oct 7 · 42 h old</);
   assert.match(legend, /NASA JPL MUR daily analysis on a 0\.01° grid sampled every 0\.02°/);
   assert.match(m.render(m.h(m.LayerRail)), /Water temp<\/span><span class="ui-rail-note ui-mono">analysis Oct 7 · 42 h old<\/span>/);
