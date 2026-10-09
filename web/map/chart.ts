@@ -142,7 +142,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
-      currents = createCurrents({view: e.view, palette, zone: options.zone, place: options.place});
+      currents = createCurrents({view: e.view, palette, zone: options.zone, place: options.place,
+        onHide: () => { if (chartMark.peek()?.id.startsWith('current:')) chartMark.value = null; }});
       drawnRegion = id;
       show(start);
     } catch (error) {

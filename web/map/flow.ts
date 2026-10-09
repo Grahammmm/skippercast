@@ -26,6 +26,16 @@ export const STILL_MS = 0.012;
 export const FAST_PERCENTILE = 0.8;
 /** Dash and gap in px; the dash offset moves at 10 + 12 × knots px/s (fish). */
 export const DASH = [11, 43] as const;
+/** At most this many seeds, so streamlines, on any screen: 64 px seeds would trace about 2,000 on a 4K display. */
+export const MAX_PATHS = 300;
+
+/** Seed spacing in px: fish's 64, widened evenly on a large screen so that at most MAX_PATHS seeds fall on it. */
+export function seedSpacing(width: number, height: number): number {
+  const count = (s: number): number => Math.ceil((width - s * SEEDS.offset / SEEDS.spacing) / s) * Math.ceil((height - s * SEEDS.offset / SEEDS.spacing) / s);
+  let spacing = Math.max(SEEDS.spacing, Math.sqrt(width * height / MAX_PATHS));
+  while (count(spacing) > MAX_PATHS) spacing *= 1.05;
+  return spacing;
+}
 
 /**
  * The frame's wet cells as packages/coast's surface field (u, v in m/s). As fish, a cell
@@ -56,14 +66,15 @@ export function screenVector(field: SurfaceField, unproject: (x: number, y: numb
   };
 }
 
-/** Streamlines over a width × height screen; `fast` is the speed (knots) above which a path is fast. */
+/** Streamlines over a width × height screen, at most MAX_PATHS; `fast` is the speed (knots) above which a path is fast. */
 export function flowPaths(vector: ScreenVector, width: number, height: number, fast: number): FlowPath[] {
   const paths: FlowPath[] = [];
   const inside = (p: Point): boolean => p.x >= 0 && p.y >= 0 && p.x <= width && p.y <= height;
-  for (let y = SEEDS.offset; y < height; y += SEEDS.spacing) {
-    for (let x = SEEDS.offset; x < width; x += SEEDS.spacing) {
+  const spacing = seedSpacing(width, height), offset = spacing * SEEDS.offset / SEEDS.spacing;
+  for (let y = offset; y < height; y += spacing) {
+    for (let x = offset; x < width; x += spacing) {
       const seed = vector(x, y);
-      if (!seed) continue;
+      if (!seed || paths.length === MAX_PATHS) continue;
       const halves: Point[][] = [];
       for (const sign of [-1, 1]) {
         const points: Point[] = [];

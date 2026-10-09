@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {DASH, drawDashes, fastSpeed, flowPaths, frameField, screenVector} from '../web/map/flow.ts';
+import {DASH, MAX_PATHS, SEEDS, drawDashes, fastSpeed, flowPaths, frameField, screenVector, seedSpacing} from '../web/map/flow.ts';
 import {CURRENTS_BASIS, createCurrents, currentMark, currentsState, currentsStatus, regionPlace} from '../web/map/currents.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {UNSUPPORTED_CURRENT} from '../web/map/stage.ts';
@@ -70,6 +70,19 @@ test('land ends a path, still water draws nothing, and a coarse or ragged grid i
   assert.equal(frameField(wcofs(), {validAt: AT.toISOString(), cells: []}), null);
 });
 
+test('seeds keep the 64 px spacing on a laptop and widen on a large screen: never more than MAX_PATHS streamlines', () => {
+  const everywhere = () => ({x: 1, y: 0, speed: 0.5});
+  assert.equal(seedSpacing(1280, 800), SEEDS.spacing);
+  assert.equal(flowPaths(everywhere, 1280, 800, Infinity).length, 20 * 13, 'a laptop keeps a seed every 64 px');
+  assert.equal(seedSpacing(390, 844), SEEDS.spacing);
+  for (const [width, height] of [[1920, 1080], [2560, 1440], [3840, 2160], [7680, 4320], [5000, 300]]) {
+    const n = flowPaths(everywhere, width, height, Infinity).length;
+    assert.ok(n <= MAX_PATHS, `${width}×${height}: ${n} paths`);
+    assert.ok(n >= MAX_PATHS * 0.75, `${width}×${height}: ${n} paths still cover the screen`);
+    assert.ok(seedSpacing(width, height) > SEEDS.spacing, `${width}×${height} widens the spacing`);
+  }
+});
+
 test('the fastest fifth of cells draws in --flow-fast; dashes move only with the clock', () => {
   const speeds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
   assert.equal(fastSpeed({validAt: '', cells: speeds.map(speedKnots => ({speedKnots}))}), 0.8, 'the 80th percentile by nearest rank');
@@ -120,6 +133,20 @@ test('a chosen source draws only its own frame; off, unsupported and missing fra
   assert.equal(currentsStatus('wcofs', 'ready', packet(wcofs(), wcofs()), AT, NOW, TZ).drawn, null);
 });
 
+test('a frame the surface field refuses draws nothing, and the rail and legend say why rather than naming the frame', () => {
+  const refused = 'Currents unavailable: the NOAA WCOFS forecast frame valid Wed 5 am is not a grid that can be drawn without bridging gaps (too sparse, too coarse, irregular or too large), and no other source is shown.';
+  const ragged = cells().filter((_, k) => k % 2 === 0).map((c, k) => ({...c, lon: c.lon + (k % 3) * 0.013}));
+  // Cells 0.04° apart against a 1 km native grid are too coarse to join.
+  for (const [what, field] of [['ragged', wcofs(ragged)], ['coarse', wcofs(cells(), {nativeResolutionKm: 1})]]) {
+    const s = currentsStatus('wcofs', 'ready', packet(field), AT, NOW, TZ);
+    assert.equal(s.drawn, null, what);
+    assert.equal(s.note, 'grid cannot be drawn · Wed 5 am', what);
+    assert.equal(s.reason, refused, what);
+    assert.equal(s.basis, CURRENTS_BASIS, what);
+  }
+  assert.ok(currentsStatus('wcofs', 'ready', packet(wcofs()), AT, NOW, TZ).drawn.surface, 'a regular grid carries its field');
+});
+
 test('a click reads the blended field with its time, source and basis; outside the field it reads nothing', () => {
   const drawn = currentsStatus('wcofs', 'ready', packet(wcofs()), AT, NOW, TZ).drawn;
   const field = frameField(drawn.field, drawn.frame);
@@ -139,7 +166,7 @@ test('the region place binds by its centre and reviewed local areas', () => {
 });
 
 /** A fake map view, document, canvas and frame clock for the Chart overlay. */
-function harness({reduced = false, ocean = packet(wcofs()), land = []} = {}) {
+function harness({reduced = false, ocean = packet(wcofs()), land = [], now = () => NOW, onHide} = {}) {
   const listeners = {}, docListeners = {}, motionListeners = {}, canvases = [], requests = [], cancels = [];
   let next = 1;
   const context = () => ({
@@ -161,7 +188,7 @@ function harness({reduced = false, ocean = packet(wcofs()), land = []} = {}) {
   const motion = {matches: reduced, addEventListener: (t, fn) => { motionListeners[t] = fn; }, removeEventListener: () => {}};
   const frames = {request: fn => { requests.push(fn); return next++; }, cancel: id => cancels.push(id)};
   const data = {coastOcean: signal({data: ocean}), coastStatus: signal({ocean: 'ready', report: 'idle', history: 'idle'}), setPlace() {}, load: async () => {}};
-  const currents = createCurrents({view, palette: () => readPalette(name => `token(${name})`), zone: () => TZ, data, doc, motion, frames, now: () => NOW});
+  const currents = createCurrents({view, palette: () => readPalette(name => `token(${name})`), zone: () => TZ, data, doc, motion, frames, now, onHide});
   const fire = type => { for (const fn of listeners[type] ?? []) fn(); };
   const visibility = hidden => { doc.hidden = hidden; for (const fn of docListeners.visibilitychange ?? []) fn(); };
   return {currents, canvases, requests, cancels, fire, visibility, data, listeners, dash: () => canvases[1], motionListeners, motion};
@@ -236,4 +263,36 @@ test('a drawn frame reads on click and is withdrawn when the presentation leaves
   presentation.value = '3d';
   assert.equal(h.dash().dataset.paths, '0');
   assert.equal(h.currents.reading({lon: WEST + 0.1, lat: NORTH - 0.1}), null);
+});
+
+test('a reading is withdrawn with its frame: at the frame\'s own deadline, on off, another source or another hour', t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const at = {lon: WEST + 0.1, lat: NORTH - 0.1};
+  t.after(() => { current.value = 'off'; hour.value = null; });
+  // The packet was fetched at 11:50Z, so its frames expire at 17:50Z; nothing touches the map or the dock.
+  let clock = NOW.getTime();
+  choose('wcofs');
+  const hides = [];
+  const h = harness({now: () => new Date(clock), onHide: () => hides.push(currentsState.value.note)});
+  assert.ok(h.currents.reading(at));
+  t.mock.timers.tick(60 * 60_000);
+  assert.deepEqual(hides, [], 'the hourly re-judge keeps a frame still in date');
+  clock = Date.parse('2026-10-07T17:51:00Z');
+  t.mock.timers.tick(5 * 60 * 60_000);
+  assert.equal(hides.length, 1, 'the card is cleared when the frame reaches expiresAt');
+  assert.equal(h.currents.reading(at), null);
+  assert.equal(h.dash().dataset.paths, '0');
+  assert.match(currentsState.value.note, /^no fresh frame/);
+  h.currents.destroy();
+
+  for (const [what, change] of [['off', () => { current.value = 'off'; }], ['another source', () => { current.value = 'hfr-6'; }],
+    ['another hour', () => { hour.value = '2026-10-07T15:00Z'; }]]) {
+    clock = NOW.getTime();
+    choose('wcofs');
+    let hidden = 0;
+    const each = harness({onHide: () => { hidden++; }});
+    change();
+    assert.equal(hidden, 1, what);
+    each.currents.destroy();
+  }
 });

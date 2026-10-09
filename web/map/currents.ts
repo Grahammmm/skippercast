@@ -10,8 +10,10 @@
 // - Frames: exactly the chosen product at the dock's hour through frames.ts
 //   (packages/coast `selectedCurrent`, `selectCurrentFrame`). Without a fresh
 //   frame nothing draws and the rail and legend give the reason and the last
-//   frame the source published at or before that hour. A drawn frame is
-//   withdrawn at its own deadline (`expiresAt`) without any interaction.
+//   frame the source published at or before that hour. A frame whose cells
+//   packages/coast's surface field refuses draws nothing and says why. A drawn
+//   frame is withdrawn at its own deadline (`expiresAt`) without any
+//   interaction, and a reading of it on the mark card goes with it.
 // - Land: paths, arrowheads and source dots stop at the basemap's land, read
 //   from the tiles in view once the map is idle.
 // - Motion: paths are rebuilt only when the map settles, and the dashes advance
@@ -36,8 +38,8 @@ import {vectorReading, type SurfaceField} from './surface-field.js';
 
 type Drawn = {field: CurrentField; frame: CurrentFrame; expiresAt: number};
 export interface CurrentsStatus {
-  /** The frame drawn, or null: nothing draws. */
-  readonly drawn: Drawn | null;
+  /** The frame drawn and its surface field, or null: nothing draws. */
+  readonly drawn: (Drawn & {readonly surface: SurfaceField}) | null;
   /** The rail's short note. */
   readonly note: string;
   /** Why nothing draws, for the legend; '' when a frame draws or the source is off. */
@@ -94,9 +96,14 @@ export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean
   if (status === 'error' || status === 'invalid') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the surface-current packet failed to load, and no other source is shown.'};
   if (status === 'expired') return {...OFF, note: 'expired', reason: 'Currents unavailable: the surface-current packet passed its age limit, and no other source is shown.'};
   if (!ocean) return {...OFF, note: 'loading', reason: 'Loading the surface-current packet.'};
-  const drawn = chosenCurrent(ocean.currents, choice, at, now);
-  if (drawn) return {drawn, note: `${drawn.field.kind === 'forecast' ? 'forecast' : 'observed'} ${frameTime(drawn.frame.validAt, tz)}`, reason: '', basis: sourceBasis(drawn, now)};
-  const last = lastFrame(ocean.currents, choice, at), name = CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice;
+  const drawn = chosenCurrent(ocean.currents, choice, at, now), name = CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice;
+  if (drawn) {
+    const time = frameTime(drawn.frame.validAt, tz), surface = frameField(drawn.field, drawn.frame);
+    if (!surface) return {...OFF, note: `grid cannot be drawn · ${time}`,
+      reason: `Currents unavailable: the ${name} frame valid ${time} is not a grid that can be drawn without bridging gaps (too sparse, too coarse, irregular or too large), and no other source is shown.`};
+    return {drawn: {...drawn, surface}, note: `${drawn.field.kind === 'forecast' ? 'forecast' : 'observed'} ${time}`, reason: '', basis: sourceBasis(drawn, now)};
+  }
+  const last = lastFrame(ocean.currents, choice, at);
   return {...OFF, note: `no fresh frame${last ? ` · last ${frameTime(last, tz)}` : ''}`,
     reason: `Currents unavailable: no fresh ${name} frame for this hour${last ? `; the last was valid ${frameTime(last, tz)}` : ''}.`};
 }
@@ -138,6 +145,8 @@ export interface CurrentsOptions {
   motion?: Pick<MediaQueryList, 'matches' | 'addEventListener' | 'removeEventListener'> | null;
   frames?: {request(step: (t: number) => void): number; cancel(id: number): void};
   now?: () => Date;
+  /** The drawn frame was withdrawn (off, another source or hour, its deadline, or the Chart left): a reading of it is stale. */
+  onHide?: () => void;
 }
 export interface Currents {reading(at: {lon: number; lat: number}): ChartMark | null; destroy(): void}
 
@@ -166,10 +175,9 @@ export function createCurrents(o: CurrentsOptions): Currents {
   });
   const shown = computed(() => status.value.drawn !== null && shownPresentation.value === 'chart' && appView.value === 'coast');
   const drawnKey = computed(() => { const d = status.value.drawn; return d ? `${d.field.id}|${d.field.fetchedAt}|${d.frame.validAt}` : ''; });
-  const field = computed(() => { void drawnKey.value; const d = status.peek().drawn; return d ? frameField(d.field, d.frame) : null; });
 
   let base: HTMLCanvasElement | null = null, dash: HTMLCanvasElement | null = null, paths: FlowPath[] = [];
-  let frameId = 0, last = 0, moving = false, timer: ReturnType<typeof setTimeout> | undefined, unlisten: (() => void)[] = [];
+  let frameId = 0, last = 0, moving = false, timer: ReturnType<typeof setTimeout> | undefined, unlisten: (() => void)[] = [], shownKey = '';
   const dpr = (): number => Math.min(2, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1);
   const colours = () => { const p = o.palette(); return {flow: p.flow, fast: p.flowFast}; };
   const context = (c: HTMLCanvasElement): CanvasRenderingContext2D | null => {
@@ -203,8 +211,8 @@ export function createCurrents(o: CurrentsOptions): Currents {
     mark('paused');
   }
   function rebuild(): void {
-    const d = status.peek().drawn, f = field.peek();
-    if (!d || !f || !doc || !shown.peek() || moving) { clear(); return; }
+    const d = status.peek().drawn;
+    if (!d || !doc || !shown.peek() || moving) { clear(); return; }
     if (!base || !dash) {
       const make = (kind: string): HTMLCanvasElement => {
         const c = doc.createElement('canvas');
@@ -218,7 +226,7 @@ export function createCurrents(o: CurrentsOptions): Currents {
     const {width, height} = view.size();
     for (const c of [base, dash]) { c.width = Math.round(width * dpr()); c.height = Math.round(height * dpr()); }
     const land = landMask(view, width, height, doc);
-    paths = flowPaths(screenVector(f, view.unproject, land), width, height, fastSpeed(d.frame));
+    paths = flowPaths(screenVector(d.surface, view.unproject, land), width, height, fastSpeed(d.frame));
     const ctx = context(base);
     if (ctx) drawBase(ctx, paths, colours(), d.frame.cells.map(c => view.project(c.lon, c.lat)).filter(p => !land(p.x, p.y)));
     start();
@@ -247,9 +255,12 @@ export function createCurrents(o: CurrentsOptions): Currents {
       timer = setTimeout(() => { tick.value++; }, Math.min(Math.max(1000, due - t + 1000), 2 ** 31 - 1));
     }),
     // `off`, another view or presentation, or a lost frame clears at once; a new frame rebuilds.
+    // Either way a reading of the frame no longer drawn is withdrawn with it.
     effect(() => {
-      void drawnKey.value;
-      if (shown.value) {
+      const key = shown.value ? drawnKey.value : '';
+      if (shownKey && shownKey !== key) o.onHide?.();
+      shownKey = key;
+      if (key) {
         if (!unlisten.length) unlisten = [
           view.on('movestart', () => { moving = true; clear(); }),
           // `idle`, not `moveend`: the basemap's land in view has loaded by then, so the mask is complete.
@@ -269,8 +280,8 @@ export function createCurrents(o: CurrentsOptions): Currents {
 
   return {
     reading(at) {
-      const d = status.peek().drawn, f = field.peek();
-      return d && f && shown.peek() ? currentMark(d, f, at, zone(), now()) : null;
+      const d = status.peek().drawn;
+      return d && shown.peek() ? currentMark(d, d.surface, at, zone(), now()) : null;
     },
     destroy() {
       for (const dispose of disposers) dispose();
