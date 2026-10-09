@@ -115,7 +115,7 @@ async function startPlanner(id: string): Promise<Planner> {
 export async function addToTrip(id: string): Promise<void> { (await loadPlanner())?.add(id); refreshIds(); }
 export async function reviewTrip(id: string): Promise<void> { (await loadPlanner())?.review(id); refreshIds(); }
 
-/** "Show ranked spots on map": the Chart moves to the ranked set's extent (drawing their pins is a follow-up). */
+/** "Show ranked spots on map": the Chart moves to the ranked set's extent (drawing their pins: #495). */
 export function fitCamera(targets: readonly {latitude: number; longitude: number}[]): Camera | null {
   if (!targets.length) return null;
   const lat = targets.map(t => t.latitude), lon = targets.map(t => t.longitude);
