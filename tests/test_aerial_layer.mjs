@@ -169,7 +169,7 @@ test('in the Chart style the base waits for style.load, then sits over the basem
   assert.equal(map.layers.indexOf(id), -1);
 });
 
-test('the rail offers Aerial only where the region has it, labelled with its dates', async () => {
+test('the rail\'s base choice offers Aerial only where the region has it, labelled with its dates', async () => {
   const out = join(await mkdtemp(join(tmpdir(), 'aerial-')), 'rail.mjs');
   await build({
     stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
@@ -182,20 +182,21 @@ test('the rail offers Aerial only where the region has it, labelled with its dat
     plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
   });
   const m = await import(pathToFileURL(out).href);
+  // FE-20 replaced FE-23's Aerial toggle with the rail's one base select (Night, Chart detail, Aerial where offered).
+  const choice = () => m.render(m.h(m.LayerRail)).match(/<div class="app-rail-base">.*?<\/div>$/s)[0];
   m.state.configureStore({v2: true, storage: null});
   m.state.syncFromURL(`${PAGE}?region=southern-california&base=aerial`);
-  assert.doesNotMatch(m.render(m.h(m.LayerRail)), /Aerial/, 'absent without basemap.aerial');
+  assert.doesNotMatch(choice(), /Aerial/, 'absent without basemap.aerial');
+  assert.match(choice(), /<option selected value="night">Night<\/option>/, 'an aerial base no region offers draws the basemap alone');
   m.aerialOffer.value = MORRO;
   m.state.syncFromURL(`${PAGE}?region=morro-bay`);
-  const entry = () => m.render(m.h(m.LayerRail)).split('<li ').filter(item => item.includes('>Aerial<'));
-  let [item, ...more] = entry();
-  assert.equal(more.length, 0);
-  assert.match(item, /^class="ui-rail-item" data-on="false"><button[^>]*aria-pressed="false"/);
-  assert.match(item, /Aerial<\/span><span class="ui-rail-note ui-mono">flown 13–29 May 2022<\/span>/);
+  let item = choice();
+  assert.match(item, /<option selected value="night">Night<\/option><option value="chart">Chart detail<\/option><option value="aerial">Aerial<\/option><\/select>/);
   assert.ok(item.includes(MORRO.note), 'the basis carries the package\'s note');
   assert.match(item, /requests its tiles from USGS/);
   m.state.syncFromURL(`${PAGE}?region=morro-bay&base=aerial`);
-  [item] = entry();
-  assert.match(item, /^class="ui-rail-item" data-on="true"><button[^>]*aria-pressed="true"/);
+  item = choice();
+  assert.match(item, /<option selected value="aerial">Aerial<\/option>/);
+  assert.match(item, /<span id="app-rail-base-note" class="ui-rail-note ui-mono">flown 13–29 May 2022<\/span>/);
   m.aerialOffer.value = null;
 });

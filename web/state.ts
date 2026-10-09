@@ -21,6 +21,11 @@
 // v1's terrain modules already write, are signals here too. The parsers are
 // the ones web/coast-context.ts and packages/coast use, so both shells read a
 // link the same way.
+//
+// Profile defaults (FE-20, design § 8): the stored rail list is kept per
+// profile, so switching profile (profilePatch) restores that profile's last
+// list or its defaults. In v2 a link without ?current= draws the WCOFS
+// forecast when the rail's list includes Currents (#482); v1 keeps `off`.
 import {batch, computed, signal} from '@preact/signals';
 import {DEFAULT_PROFILE, isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
 import {canonicalHour, fishLink} from './fish-links.ts';
@@ -50,6 +55,8 @@ export const STORAGE_KEYS = {
 /** `current` when ?current= names no listed source; the value stays in the URL (v1 rule, #402). */
 export const UNSUPPORTED = 'unsupported';
 export type CurrentChoice = CurrentLayer | typeof UNSUPPORTED;
+/** The source the rail's Currents entry turns on, and a v2 link's choice when it names none but its rail list has Currents. */
+export const DEFAULT_CURRENT: CurrentLayer = 'wcofs';
 
 export const region = signal<string | null>(null);
 export const coast = signal<string | null>(null);
@@ -74,7 +81,7 @@ export const area = signal<string | null>(null);
 export const base = signal<Base>('night');
 /** The presentation the link or (v2) the last choice asks for; see stagePresentation for what the stage shows. */
 export const presentation = signal<Presentation>('chart');
-/** Surface-current source; off by default, UNSUPPORTED for an unlisted ?current=. */
+/** Surface-current source; UNSUPPORTED for an unlisted ?current=; without the key, see resolveCurrent. */
 export const current = signal<CurrentChoice>('off');
 /** Coast habitat id (?habitat=), independent of the atlas spot in `selection`. */
 export const habitat = signal<string | null>(null);
@@ -156,14 +163,36 @@ export function parseLayers(value: string | null): string[] | null {
 /** The ?layers= value for `ids`. */
 export const layersParam = (ids: readonly string[]): string => ids.length ? ids.join(',') : NO_LAYERS;
 
-/** The profile, layers and base `href` resolves to: URL, then storage, then the profile's defaults. */
+/** The stored rail lists by profile (`{"boat": "seafloor,clouds", …}`); FE-04's single list or anything else reads as none. */
+function storedLayers(): Readonly<Record<string, unknown>> {
+  try {
+    const value: unknown = JSON.parse(stored(STORAGE_KEYS.layers) ?? '');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  } catch { return {}; }
+}
+
+/** The profile, layers and base `href` resolves to: URL, then storage (the profile's own rail list), then the profile's defaults. */
 export function resolveStored(state: UrlState): {profile: Profile; layers: readonly string[]; base: Base} {
   const first = <T extends string>(is: (v: unknown) => v is T, fallback: T, ...values: (string | null)[]): T => values.find(is) ?? fallback;
   const p = first(isProfile, DEFAULT_PROFILE, state.profile, stored(STORAGE_KEYS.profile));
-  const l = parseLayers(state.layers) ?? parseLayers(stored(STORAGE_KEYS.layers)) ?? PROFILE_TABLE[p].defaultLayers;
+  const saved = storedLayers()[p];
+  const l = parseLayers(state.layers) ?? parseLayers(typeof saved === 'string' ? saved : null) ?? PROFILE_TABLE[p].defaultLayers;
   const b = first(isBase, 'night', state.base, stored(STORAGE_KEYS.base));
   return {profile: p, layers: l, base: b};
 }
+
+/**
+ * The surface-current choice: `?current=` when the link names it, `off` included. Without it a v2 store
+ * draws DEFAULT_CURRENT when the rail list `on` has Currents (a profile default, a stored or a linked list;
+ * #482) and nothing otherwise; v1 keeps `off` (#402).
+ */
+export function resolveCurrent(state: UrlState, on: readonly string[]): CurrentChoice {
+  if (state.current !== undefined || !options.v2) return parseCurrent(state.current);
+  return on.includes('currents') ? DEFAULT_CURRENT : 'off';
+}
+
+/** The parameters that switch to profile `next`: its default target, and its own rail (stored, else its defaults) with Currents following it. */
+export const profilePatch = (next: Profile): Partial<Record<UrlKey, null | string>> => ({profile: next, target: null, layers: null, current: null});
 
 /**
  * The presentation `state` asks for: the URL, then (v2 only) the stored choice, then chart.
@@ -193,7 +222,7 @@ export function syncFromURL(href: string = location.href): UrlState {
   const kept = resolveStored(state);
   // A key the URL names is the user's latest choice: remember it for links that omit it.
   if (isProfile(state.profile)) store(STORAGE_KEYS.profile, kept.profile);
-  if (parseLayers(state.layers)) store(STORAGE_KEYS.layers, layersParam(kept.layers));
+  if (parseLayers(state.layers)) store(STORAGE_KEYS.layers, JSON.stringify({...storedLayers(), [kept.profile]: layersParam(kept.layers)}));
   if (isBase(state.base)) store(STORAGE_KEYS.base, kept.base);
   const shown = resolvePresentation(state);
   if (options.v2 && parsePresentation(state.presentation)) store(STORAGE_KEYS.presentation, shown);
@@ -203,7 +232,7 @@ export function syncFromURL(href: string = location.href): UrlState {
     profile.value = kept.profile; layers.value = kept.layers; base.value = kept.base;
     appView.value = isAppView(state.view) ? state.view : 'coast';
     day.value = parseDay(state.day); area.value = state.area;
-    presentation.value = shown; current.value = parseCurrent(state.current); habitat.value = parseHabitat(state.habitat);
+    presentation.value = shown; current.value = resolveCurrent(state, kept.layers); habitat.value = parseHabitat(state.habitat);
   });
   return state;
 }

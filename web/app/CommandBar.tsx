@@ -1,4 +1,5 @@
-// Command bar (FE-05, design § 6 and § 8): the Boat / Shore / Spear switch,
+// Command bar (FE-05, design § 6 and § 8): the Boat / Shore / Spear switch
+// (FE-20: a switch restores that profile's own layers, stored or default),
 // the target species, the area and the time window, each bound to the store.
 // The target list is the profile's defaults until FE-31 wires the region's
 // search plans; the area list is the current choice until FE-31 reads
@@ -13,7 +14,7 @@ import {Segmented} from '../ui/Chip.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, speciesForProfile, type Profile} from '../profile.ts';
 import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
-import {area, navigate, profile, region, setParams, species} from '../state.ts';
+import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
 import {zone} from './App.tsx';
 import {dayOptions, dockState, readout} from './TimeDock.tsx';
@@ -35,7 +36,7 @@ export function windowText(now: Date, tz: string): string {
 }
 
 export function ProfileSwitch({class: cls}: {class?: string} = {}) {
-  return <Segmented label="Profile" options={PROFILE_OPTIONS} value={profile.value} onChange={next => setParams({profile: next, target: null})} class={cls} />;
+  return <Segmented label="Profile" options={PROFILE_OPTIONS} value={profile.value} onChange={next => setParams(profilePatch(next))} class={cls} />;
 }
 
 export function TargetSelect() {
