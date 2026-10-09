@@ -140,10 +140,10 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   // Target and area menus show the link's values.
   assert.match(html, /<label>Target<select><option value="surfperch">Surfperch<\/option><option selected value="halibut">Halibut<\/option><\/select>/);
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
-  // Rail and legend: swell and water temp on, the rest off.
+  // Rail and legend: swell and water temp on, the rest off; the protected areas always draw on the Chart (FE-19).
   const rail = Object.fromEntries([...html.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
   assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
-  assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['water-temp', 'swell']);
+  assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['water-temp', 'swell', 'mpas']);
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
@@ -241,7 +241,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
   assert.equal(count(panel, /class="ui-rail-item"/g), 6);
-  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['clouds']);
+  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['clouds', 'mpas']);
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
   assert.deepEqual(toggleLayers('brief', 'peek'), {panel: 'layers', detent: 'half'});
   assert.deepEqual(toggleLayers('brief', 'full'), {panel: 'layers', detent: 'full'});

@@ -336,4 +336,50 @@ test('A seafloor publication that expires while drawn hides its candidates with 
   await page.waitForTimeout(300);
   await expect(page.locator('.app-mark')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
+// Protected areas (FE-19): the committed region files, always drawn on the Chart. BUCHON is a
+// point well inside Point Buchon SMR (about 1 km from its edges), so a click at the canvas centre lands in it.
+const BUCHON = '35.24178,-120.91053';
+const mapAttr = async (page: Page, name: string) => Number(await page.locator('.app-chart').getAttribute(name));
+
+test('protected areas draw with the ds582 credit, are named from zoom 11 and open their card with the official rules page', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},10`});
+  const chart = page.locator('.app-chart');
+  await expect(chart).toHaveAttribute('data-mpa', 'complete');
+  await expect.poll(() => mapAttr(page, 'data-mpa-drawn'), {message: 'outlines drawn in view'}).toBeGreaterThan(0);
+  await expect(chart).toHaveAttribute('data-mpa-labels', '0');
+  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('CDFW Marine Region GIS Lab · California MPAs ds582 · CC BY 4.0');
+
+  await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},11`}));
+  await expect.poll(() => mapAttr(page, 'data-mpa-labels'), {message: 'names placed at zoom 11'}).toBeGreaterThan(0);
+  const box = (await chart.locator('canvas.maplibregl-canvas').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  const card = page.locator('.app-mark');
+  await expect(card.locator('h2')).toHaveText('Point Buchon State Marine Reserve');
+  await expect(card.locator('.app-mark-kind')).toHaveText('State Marine Reserve');
+  await expect(card.locator('.ui-reading')).toHaveText('CCR Title 14, Section 632 (b) (93)');
+  await expect(card.locator('.app-mark-source')).toHaveText('CDFW ds582 · checked 2026-09-21');
+  await expect(card.getByRole('link', {name: /^Regulations/})).toHaveAttribute('href', 'https://wildlife.ca.gov/Conservation/Marine/MPAs');
+
+  await showLayers(page);
+  const row = page.locator('.app-legend-mpa');
+  await expect(row.locator('.app-mpa-note')).toHaveText('CDFW ds582 snapshot checked 2026-09-21.');
+  await expect(row.getByRole('link', {name: 'Official rules and boundaries (CDFW)'})).toHaveAttribute('href', 'https://wildlife.ca.gov/Conservation/Marine/MPAs');
+  await v2.a11y('v2-map-mpas');
+  expect(pageErrors).toEqual([]);
+});
+
+test('a region its snapshot does not cover, or boundaries that fail to load, say an area without an outline may still be protected', async ({page, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'bodega-point-reyes', presentation: 'chart', layers: 'none'});
+  await expect(page.locator('.app-chart')).toHaveAttribute('data-mpa', 'incomplete');
+  await showLayers(page);
+  await expect(page.locator('.app-legend-mpa .app-mpa-note')).toHaveText('The boundary snapshot is incomplete for this region; an area without an outline may still be protected.');
+
+  await page.route('**/data/protected-areas.geojson', route => route.fulfill({status: 503, body: 'Offline map test'}));
+  await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none'}));
+  await expect(page.locator('.app-chart')).toHaveAttribute('data-mpa', 'unavailable');
+  await showLayers(page);
+  await expect(page.locator('.app-legend-mpa .app-mpa-note')).toHaveText('Boundaries did not load, so none are drawn; an area without an outline may still be protected.');
+  await expect(page.locator('[data-unavailable="mpas"]'), 'the row speaks for the layer').toHaveCount(0);
 });

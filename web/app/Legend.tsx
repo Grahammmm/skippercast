@@ -6,10 +6,15 @@
 // target's species fit, switchable here), the surveys and years drawn, the
 // credits in its basis, and why nothing draws when the publication is held,
 // updating or expired.
+// Protected areas (FE-19) are always drawn on the Chart: their row says what
+// the drawing covers (MpaRow), links the official rules page and carries the
+// ds582 credit in its basis.
 import {layers} from '../state.ts';
 import {unavailable} from '../map/chart.ts';
 import {layerEntry} from '../map/layers.ts';
+import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
+import {shownPresentation} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES} from './LayerRail.tsx';
@@ -37,17 +42,36 @@ function SeafloorRow() {
   );
 }
 
+/** The protected areas' row: the check date, or what the drawing lacks, so a missing outline never reads as open water. */
+export function MpaRow() {
+  const s = mpaState.value;
+  return (
+    <li class="app-legend-mpa" data-mpa={s.status}>
+      <span class="app-legend-mpa-head">
+        <span class="app-swatch" data-layer="mpas" aria-hidden="true"></span>{layerEntry('mpas').label}
+        <Popover iconOnly summary="Protected areas basis">
+          {layerEntry('mpas').basis} {s.detail ? <>{s.detail} </> : null}Regional selection by SkipperCast from <a href={DS582_METADATA} target="_blank" rel="noopener">CDFW
+          Marine Region GIS Lab, California MPAs ds582</a>, <a href={CC_BY_4} target="_blank" rel="noopener">CC BY 4.0</a>.
+        </Popover>
+      </span>
+      {s.note ? <p class="app-mpa-note">{s.note}</p> : null}
+      <a class="app-mpa-rules" href={CDFW_MPA_PAGE} target="_blank" rel="noopener">Official rules and boundaries (CDFW)</a>
+    </li>
+  );
+}
+
 export function Legend() {
-  const on = RAIL_ENTRIES.filter(e => layers.value.includes(e.id));
+  const on = RAIL_ENTRIES.filter(e => layers.value.includes(e.id)), chart = shownPresentation.value === 'chart';
   return (
     <section class="app-legend" aria-label="Legend">
       <span class="ui-eyebrow">Legend</span>
-      {on.length ? (
+      {on.length || chart ? (
         <ul>
           {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.label}</li>)}
+          {chart ? <MpaRow /> : null}
         </ul>
       ) : <p class="app-empty">No layers on.</p>}
-      {unavailable.value.map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}
+      {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}
     </section>
   );
 }

@@ -3,10 +3,13 @@
 // FE-11 fills it from the Chart (a clicked shoreline segment, web/map/chart.ts)
 // and, while the Chart shows, from the terrain's admitted habitat selection
 // (in 2D and 3D the renderer's own panel shows it). An atlas `?spot=` or
-// `?focus=` keeps its placeholder until FE-18 draws the marks.
+// `?focus=` keeps its placeholder until FE-18 draws the marks. A mark that
+// names its rules page (a protected area, FE-19) turns Regulations into a
+// link to that official page; the card never states the rules itself.
 import {computed} from '@preact/signals';
 import type {CoastSelection} from '../../packages/coast/src/embed-types.ts';
 import {Button, IconButton} from '../ui/Button.tsx';
+import {Icon} from '../ui/icons.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {chartMark} from '../map/chart.ts';
 import type {ChartMark} from '../map/coastline.ts';
@@ -69,7 +72,12 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       <div class="app-mark-actions">
         <Button size="sm" icon="plus" disabled>Add to trip</Button>
         <Button size="sm" icon="download" disabled>GPX</Button>
-        <Button size="sm" icon="shield" disabled>Regulations</Button>
+        {selected.regulations ? (
+          <a class="ui-button ui-button--ghost ui-button--sm" href={selected.regulations.href} target="_blank" rel="noopener"
+            aria-label={`Regulations: ${selected.regulations.label} (official page, opens in a new tab)`}>
+            <Icon name="shield" size={16} />Regulations
+          </a>
+        ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
       <Popover>{selected.basis}</Popover>
     </section>

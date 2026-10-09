@@ -41,6 +41,8 @@ export interface EngineOptions {
   pickLayers?: readonly string[];
   /** Credit always shown (the basemap's): MapLibre lists a tiled source's own credit only if it was drawn when its metadata arrived. */
   attribution?: string;
+  /** The map has settled and drawn every tile in view (MapLibre `idle`). */
+  onIdle?(): void;
 }
 
 /** What a GeoJSON source accepts: a URL or GeoJSON. */
@@ -52,6 +54,8 @@ export interface Engine {
   setVisible(layerId: string, visible: boolean): void;
   /** Replace a GeoJSON source's data; before the style has loaded, the latest data per source waits for it. */
   setData(sourceId: string, data: SourceData): void;
+  /** How many features of `layerId` are drawn in view now (labels count once placed). */
+  rendered(layerId: string): number;
   destroy(): void;
 }
 
@@ -104,6 +108,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       pick(feature?.layer.id ?? null, feature ? feature.properties as Record<string, unknown> : null);
     });
   }
+  if (options.onIdle) map.on('idle', options.onIdle);
   const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map.resize()) : null;
   resize?.observe(host);
   // The style gate (FE-14), this file's one deferral: a style's layers and sources exist only
@@ -131,6 +136,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       if (early && !map.getSource(sourceId)) early.data.set(sourceId, data);
       else { early?.data.delete(sourceId); fill(sourceId, data); }
     },
+    rendered: layerId => map.getLayer(layerId) ? map.queryRenderedFeatures({layers: [layerId]}).length : 0,
     destroy() { resize?.disconnect(); map.remove(); },
   };
 }

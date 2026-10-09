@@ -37,7 +37,11 @@ export function coastlineLayers(p: Palette): LineLayer[] {
 }
 
 /** What the mark card shows for any Chart selection (web/app/MarkCard.tsx renders it). */
-export interface ChartMark {readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string}
+export interface ChartMark {
+  readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string;
+  /** The official page with the rules that apply there (FE-19's protected areas); the card's Regulations action opens it. */
+  readonly regulations?: {readonly href: string; readonly label: string};
+}
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
