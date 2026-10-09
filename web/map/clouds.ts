@@ -24,10 +24,10 @@ import {coastOcean} from '../coast-data.ts';
 import {dockTime, localParts} from '../hour.ts';
 import {appView, day, hour, layers} from '../state.ts';
 import {unavailable} from './chart.ts';
-import {COASTLINE_GLOW} from './coastline.ts';
 import {setRailNote} from './layers.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {cloudFrames, cloudImage, cloudTiles, type CloudImage} from './frames.ts';
+import {MARK_PICK} from './marks.ts';
 import {shownPresentation} from './stage.ts';
 
 /** FE-44's index of GOES acquisition times, under the page's /feeds/ route. */
@@ -136,7 +136,9 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
   const overlay = computed(() => cloud.value && frames.value.length ? cloudOverlay(cloud.value, frames.value, clock.value) : null);
   const canLoop = computed(() => frames.value.length > 1 && !reduced.value);
   const shown = computed(() => { const f = frames.value; return f.length ? f[reduced.value ? f.length - 1 : Math.min(step.value, f.length - 1)]! : null; });
-  const playing = computed(() => canLoop.value && !cloudHeld.value && !hidden.value && shownPresentation.value === 'chart' && appView.value === 'coast');
+  // No step and no label without a map: MapLibre still loading, or the Chart failed (`chartFailed`).
+  const mapped = computed(() => engine.value !== null);
+  const playing = computed(() => mapped.value && canLoop.value && !cloudHeld.value && !hidden.value && shownPresentation.value === 'chart' && appView.value === 'coast');
 
   async function refresh(): Promise<void> {
     if (reading) return;
@@ -178,11 +180,12 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
     effect(() => {
       const e = engine.value, o = overlay.value, at = shown.value;
       if (!e) return;
-      if (o !== drawn || e !== drawnOn) { e.setOverlay(REGISTRY_ID, o, COASTLINE_GLOW); drawn = o; drawnOn = e; }
+      // § 9 draw order: above the fields, under the marks, the selection and the coastline glow.
+      if (o !== drawn || e !== drawnOn) { e.setOverlay(REGISTRY_ID, o, MARK_PICK); drawn = o; drawnOn = e; }
       for (const l of o?.layers ?? []) e.setRasterOpacity(l.id, at !== null && l.id === frameId(at) ? CLOUD_OPACITY : 0);
     }),
     effect(() => {
-      const tz = zone(), at = shown.value, chart = shownPresentation.value === 'chart';
+      const tz = zone(), at = shown.value, chart = shownPresentation.value === 'chart' && mapped.value;
       cloudStamp.value = at && chart ? {at, label: frameLabel(at, clock.value, tz), canLoop: canLoop.value} : null;
       setRailNote(REGISTRY_ID, on.value && (read.value || cloud.value) ? cloudStatus(cloud.value, frames.value, selected.value, clock.value, tz) : '');
     }),

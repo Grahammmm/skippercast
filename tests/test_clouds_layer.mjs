@@ -19,6 +19,7 @@ import {
 } from '../web/map/clouds.ts';
 import {createEngine, mapOptions} from '../web/map/engine.ts';
 import {COASTLINE_GLOW} from '../web/map/coastline.ts';
+import {MARK_PICK} from '../web/map/marks.ts';
 import {railNotes} from '../web/map/layers.ts';
 import {unavailable} from '../web/map/chart.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -104,13 +105,13 @@ function engine() {
 const shown = e => (e.overlay?.layers ?? []).filter(l => e.opacity[l.id] === CLOUD_OPACITY).map(l => l.id.slice('clouds:'.length));
 
 /** Clouds over a fake engine at a hand-driven clock; `answers` are the index replies, in order (the last repeats). */
-async function clouds(t, {href = `${PAGE}?region=morro-bay&layers=clouds`, answers = [index()], reduced = false, reported = () => null} = {}) {
+async function clouds(t, {href = `${PAGE}?region=morro-bay&layers=clouds`, answers = [index()], reduced = false, reported = () => null, live = null} = {}) {
   t.mock.timers.enable({apis: ['setTimeout', 'setInterval']});
   browser(href);
   cloudHeld.value = false; unavailable.value = [];
   const clock = {now: NOW}, e = engine(), doc = watched({hidden: false}), motion = watched({matches: reduced}), fetched = [];
   const fetchFn = async url => { fetched.push(url); const body = answers[Math.min(fetched.length - 1, answers.length - 1)]; return {ok: body !== null, json: async () => body}; };
-  const c = createClouds({engine: signal(e), zone: () => TZ, fetchFn, page: () => PAGE, now: () => new Date(clock.now), doc, motion, reported});
+  const c = createClouds({engine: live ?? signal(e), zone: () => TZ, fetchFn, page: () => PAGE, now: () => new Date(clock.now), doc, motion, reported});
   await flush();
   const advance = async ms => { clock.now += ms; t.mock.timers.tick(ms); await flush(); };
   return {c, e, doc, motion, fetched, clock, advance};
@@ -120,7 +121,7 @@ test('only listed times are ever requested, across index refreshes and an ageing
   const first = index(), later = index(NOW + INDEX_REFRESH_MS);
   const {c, e, fetched, advance} = await clouds(t, {answers: [first, later]});
   assert.equal(fetched.length, 1, 'the index is read when Clouds turns on');
-  assert.equal(e.before, COASTLINE_GLOW, 'under the coastline glow, above the fields');
+  assert.equal(e.before, MARK_PICK, 'under the marks, the selection and the coastline glow, above the fields (§ 9)');
   assert.equal(e.overlay.layers.length, MAX_FRAMES, 'the newest frames inside the 90-minute gate');
   for (let i = 0; i < 30; i++) await advance(MIN);
   assert.equal(fetched.length, 4, 'read again every ten minutes while on');
@@ -179,6 +180,29 @@ test('the loop also stops while the viewer holds it or the Chart is not shown; r
   await run.advance(HOLD_MS + 5 * FRAME_MS);
   assert.deepEqual(shown(run.e), [frames.at(-1)], 'reduced motion: the newest frame, still');
   assert.equal(cloudStamp.value.canLoop, false, 'and no loop toggle');
+  run.c.destroy();
+});
+
+test('no label and no step while MapLibre is still loading or after the Chart failed', async t => {
+  const live = signal(null);
+  const run = await clouds(t, {live});
+  await run.advance(HOLD_MS + 5 * FRAME_MS);
+  assert.equal(cloudStamp.value, null, 'loading: the legend labels no frame');
+  assert.equal(run.e.overlay, null, 'and nothing is drawn');
+  live.value = run.e;
+  await flush();
+  const frames = run.e.overlay.layers.map(l => l.id.slice(7));
+  assert.deepEqual(shown(run.e), [frames.at(-1)], 'the map up: it opens on the newest frame, not mid-loop');
+  assert.equal(cloudStamp.value.label, 'observed 7:53 pm · 7 min ago');
+  await run.advance(HOLD_MS);
+  assert.deepEqual(shown(run.e), [frames[0]], 'and loops');
+  live.value = null;
+  await flush();
+  assert.equal(cloudStamp.value, null, 'no map (chartFailed, or the Chart torn down): no label');
+  const label = cloudStamp.value;
+  await run.advance(HOLD_MS + 5 * FRAME_MS);
+  assert.equal(cloudStamp.value, label, 'and no step');
+  assert.deepEqual(shown(run.e), [frames[0]], 'the last map is not stepped either');
   run.c.destroy();
 });
 
