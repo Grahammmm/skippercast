@@ -84,12 +84,12 @@ export interface Engine {
   rendered(layerId: string): number;
   readonly view: MapView;
   /**
-   * Draw registry layer `layer`'s overlay under map layer `before` (on top when that is absent);
-   * null removes it. Ids already drawn stay as they are, tiles included; ids no longer listed are
-   * removed. Errors on its sources mark `layer` unavailable. Before the style has loaded, the
-   * latest overlay per layer waits for it.
+   * Draw registry layer `layer`'s overlay under map layer `before`, or under the first drawn layer of
+   * a list (on top when none is); null removes it. Ids already drawn stay as they are, tiles included;
+   * ids no longer listed are removed. Errors on its sources mark `layer` unavailable. Before the style
+   * has loaded, the latest overlay per layer waits for it.
    */
-  setOverlay(layer: string, overlay: Overlay | null, before?: string): void;
+  setOverlay(layer: string, overlay: Overlay | null, before?: string | readonly string[]): void;
   /** A raster layer's opacity (FE-22 shows one cloud frame at a time; the others keep loading); before the style has loaded, the latest call per layer waits for it. */
   setRasterOpacity(layerId: string, opacity: number): void;
   /**
@@ -170,16 +170,16 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   // visibility, data and overlays through these calls rather than adding a deferral.
   let early: {
     visible: Map<string, boolean>; data: Map<string, SourceData>;
-    overlays: Map<string, {overlay: Overlay | null; before?: string}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
+    overlays: Map<string, {overlay: Overlay | null; before?: string | readonly string[]}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
   } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map(), images: new Map()};
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
-  const draw = (layer: string, overlay: Overlay | null, before?: string): void => {
+  const draw = (layer: string, overlay: Overlay | null, before?: string | readonly string[]): void => {
     const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
     for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
     for (const [id, source] of Object.entries(next.sources)) if (!map.getSource(id)) map.addSource(id, source);
-    const under = before && map.getLayer(before) ? before : undefined;
+    const under = ([] as string[]).concat(before ?? []).find(id => map.getLayer(id));
     for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
     if (overlay) overlays.set(layer, overlay); else overlays.delete(layer);
   };
