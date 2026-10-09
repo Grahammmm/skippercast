@@ -56,7 +56,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
     const place = () => regionPlace(regionInfo.value, profile.value, species.value ?? '');
     const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
-        layers: [engine => createSwell({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
+        layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null})]})]});
     return () => stage.destroy();
   }, []);

@@ -80,7 +80,7 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'water-temp-contours', label: 'Water temp contours', control: 'water-temp', presentations: ['chart'], time: ['observed'],
     basis: 'Half-degree Fahrenheit contours of the same analysis, labelled at whole degrees.', task: 'FE-16'}),
   entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],
-    basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours; a model forecast, not a buoy observation.', task: 'FE-17'}),
+    basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
   entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart'], sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
     legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
     basis: 'CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page.', task: 'FE-19'}),

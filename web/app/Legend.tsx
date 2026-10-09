@@ -35,7 +35,8 @@ import {markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
-import {HEIGHT_SCALE, frameSummary, swellState} from '../map/swell.ts';
+import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
+import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
@@ -120,14 +121,15 @@ function WaterTempRow() {
 
 /** The Swell row (on the Chart): the drawn hour's reading, scale, model run and valid hour, or why nothing draws. */
 function SwellRow() {
-  const s = swellState.value, f = s.drawn, reason = s.reason;
+  const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value;
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}Swell
-      <Popover iconOnly summary="Swell basis">{s.basis}</Popover>
+      <Popover iconOnly summary="Swell basis">{s.basis}{r ? <> {ringBasis(r.product)}</> : null}</Popover>
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell">{frameSummary(f)}</p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
+      {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span>{ringSummary(r, new Date())}</p> : null}
       {reason ? <p class="app-legend-note" data-reason="swell">{reason}</p> : null}
     </li>
   );
