@@ -44,6 +44,14 @@ export const ENC_SOURCE = 'enc';
 export const SEAFLOOR_SOURCE = 'seafloor';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
+export const MPA_SOURCE = 'mpas';
+/**
+ * The on-map CC BY 4.0 credit for ds582 (catalog `cdfw-mpas`): creator, dataset, licence. The legend
+ * row's basis gives it in full with the metadata and licence links. Kept short so that, beside the
+ * coastline credit, MapLibre's attribution stays one line on a phone: the box paints when MapLibre
+ * loads, and a wrapped box becomes the page's largest paint (the LCP budget, design § 13).
+ */
+export const MPA_ATTRIBUTION = 'CDFW ds582 · CC BY 4.0';
 
 const STATIC: readonly TimeBehaviour[] = ['static'];
 const entry = (e: Omit<LayerEntry, 'sources' | 'legend' | 'time'> & Partial<Pick<LayerEntry, 'sources' | 'legend' | 'time'>>): LayerEntry =>
@@ -65,7 +73,8 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'Half-degree Fahrenheit contours of the same MUR analysis.', task: 'FE-16'}),
   entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Significant height', swatch: 'blue'}],
     basis: 'Model wave forecast on the region grid; nearshore sites from the CDIP MOP model.', task: 'FE-17'}),
-  entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart'], legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
+  entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart'], sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
+    legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
     basis: 'CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page.', task: 'FE-19'}),
   entry({id: 'habitat', label: 'Habitat', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10',
     basis: 'Survey habitat and geology polygons, each with its survey and year.', task: 'FE-18'}),

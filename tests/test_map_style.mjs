@@ -24,7 +24,11 @@ const symbols = style => style.layers.filter(layer => layer.type === 'symbol');
 
 test('the palette reads every token from web/tokens.css in both themes', () => {
   const css = read('web/tokens.css').toString();
-  for (const [theme, tokens] of Object.entries(themes(css, FILES['web/tokens.css']))) {
+  // The contrast parser reads colours only; the one numeric token (the MPA fill's opacity, FE-19) is read here.
+  const numbers = Object.fromEntries([...css.matchAll(/--([a-z0-9-]+):\s*(\d*\.?\d+)\s*;/g)].map(m => [m[1], m[2]]));
+  assert.equal(numbers['mpa-fill-opacity'], '0.08');
+  for (const [theme, colours] of Object.entries(themes(css, FILES['web/tokens.css']))) {
+    const tokens = {...numbers, ...colours};
     const palette = readPalette(name => tokens[name] ?? '');
     for (const [key, token] of Object.entries(PALETTE_TOKENS)) assert.equal(palette[key], tokens[token], `${theme} --${token}`);
   }

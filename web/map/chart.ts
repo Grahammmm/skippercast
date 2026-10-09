@@ -7,6 +7,9 @@
 // returns to the same place. MapLibre loads by dynamic import on the first
 // Chart view (web/map/maplibre.js), after the app's first paint. The Seafloor
 // rail entry draws the region's seafloor publication (web/map/seafloor.ts, FE-14).
+// The region's protected areas (FE-19, web/map/mpa.ts) draw under the seafloor,
+// always on; the host's `data-mpa`, `data-mpa-drawn` and `data-mpa-labels`
+// report their state and what MapLibre drew in view.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -15,7 +18,8 @@ import type * as MapLibre from 'maplibre-gl';
 import {appView, base, region, setParams} from '../state.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, MPA_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_SOURCE, basemapStyle} from './style.ts';
@@ -49,16 +53,17 @@ export async function basemapArchive(fetchFn: typeof fetch, page: string): Promi
 }
 
 export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string}
-/** The whole Chart style: the token basemap (or only its water without an archive), the ENC base, the seafloor (hidden), then the coastline on top. */
+/** The whole Chart style: the token basemap (or only its water without an archive), the ENC base, the protected areas, the seafloor (hidden), then the coastline on top. */
 export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   const style = basemapStyle(o.palette, {archive: o.archive ?? '', assets: new URL('basemap/', o.page).href});
   const layers: unknown[] = o.archive ? style.layers : style.layers.filter(l => l.source !== BASEMAP_SOURCE);
   const sources: Record<string, unknown> = o.archive ? {...style.sources} : {};
   sources[ENC_SOURCE] = {type: 'raster', tiles: [ENC_WMS], tileSize: 512, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, maxzoom: 18, attribution: layerEntry('chart').attribution};
+  sources[MPA_SOURCE] = mpaSource();
   sources[SEAFLOOR_SOURCE] = seafloorSource();
   sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page);
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
-  layers.push(...seafloorLayers(o.palette), ...coastlineLayers(o.palette));
+  layers.push(...mpaLayers(o.palette), ...seafloorLayers(o.palette), ...coastlineLayers(o.palette));
   return {...style, sources, layers} as unknown as MapLibre.StyleSpecification;
 }
 
@@ -110,14 +115,17 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!alive) return;
       if (!archive) markUnavailable('basemap', new Error(`No basemap archive at ${BASEMAP_MANIFEST}`));
       const start = camera.peek() ?? at;
-      engine.value = createEngine(library, {
-        host, camera: start, onMove, onLayerError: markUnavailable, pickLayers: [SEAFLOOR_PICK, COASTLINE_PICK], attribution: archive ? attributionFor(['basemap']) : undefined,
+      const e: Engine = createEngine(library, {
+        host, camera: start, onMove, onLayerError: markUnavailable, pickLayers: [SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL], attribution: archive ? attributionFor(['basemap']) : undefined,
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
         onPick: (layer, properties) => {
-          chartMark.value = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null : null;
+          chartMark.value = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
+            : layer === MPA_FILL ? mpaMark(properties) : null;
         },
+        onIdle: () => { host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL)); },
       });
-      seafloor = createSeafloor({engine: engine.value, open: url => new library.PMTiles(url), fetchFn, page,
+      engine.value = e;
+      seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
       drawnRegion = id;
@@ -144,7 +152,20 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       e.setData(COASTLINE_SOURCE, new URL(shorelineURL(id), page()).href);
     }),
     effect(() => { engine.value?.setVisible(ENC_LAYER, base.value === 'chart'); }),
+    // The region's protected areas, checked before they draw; a region change replaces them.
+    effect(() => { const e = engine.value, id = region.value; if (e && id) void drawMpas(e, id); }),
+    effect(() => { host.dataset.mpa = mpaState.value.status; }),
   ];
+  async function drawMpas(e: Engine, id: string): Promise<void> {
+    mpaState.value = LOADING;
+    unavailable.value = unavailable.peek().filter(layer => layer !== 'mpas');
+    const {state, data} = await loadMpas(id, fetchFn, page());
+    if (!alive || engine.peek() !== e || region.peek() !== id) return;
+    e.setData(MPA_SOURCE, data);
+    mpaState.value = state;
+    if (state.status === 'unavailable') markUnavailable('mpas', new Error(state.detail));
+  }
+
   return {
     destroy() {
       if (!alive) return;
@@ -156,6 +177,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       engine.value = null;
       chartMark.value = null;
       unavailable.value = [];
+      mpaState.value = IDLE;
     },
   };
 }

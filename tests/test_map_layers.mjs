@@ -3,7 +3,7 @@
 // over a fake MapLibre and a fake terrain, so neither a GPU nor the library is
 // needed. The web/map/*.ts files run by type stripping.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
 import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, layerEntry, layersIn, railLayers, sourceLayer} from '../web/map/layers.ts';
@@ -212,11 +212,21 @@ function terrain() {
   return fake;
 }
 
+/** The published file under dist/ for a page-relative URL (the region packages FE-19's protected areas read), or a 404. */
+function serveDist(url) {
+  const file = new URL(`../dist${new URL(url).pathname}`, import.meta.url);
+  return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
+}
+
 function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
-  const fetchFn = async url => { fetches.push(url); return manifest ? {ok: true, json: async () => manifest} : {ok: false, json: async () => ({})}; };
+  const fetchFn = async url => {
+    fetches.push(url);
+    if (/^https:\/\/s\.test\/(?:regions|data)\//.test(url)) return serveDist(url);
+    return manifest ? {ok: true, json: async () => manifest} : {ok: false, json: async () => ({})};
+  };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const stage = createStage({host: {shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
     renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
@@ -230,8 +240,10 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   await tick(); await tick();
   assert.equal(fake.maps.length, 1, 'one map');
   const [map] = fake.maps;
-  // The boat profile's default layers include Seafloor (FE-14), which checks its own publication.
-  assert.deepEqual(fetches, [`https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json']);
+  // The boat profile's default layers include Seafloor (FE-14), which checks its own publication; the
+  // protected areas (FE-19) read only the region's own files.
+  assert.deepEqual(fetches.filter(url => !url.startsWith('https://s.test/regions/') && !url.startsWith('https://s.test/data/')),
+    [`https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json']);
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');

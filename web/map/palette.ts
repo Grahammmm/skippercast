@@ -3,7 +3,9 @@
 // colours from a Palette read here; scripts/check_tokens.mjs rejects colour
 // literals everywhere under web/ and getPropertyValue('--…') outside this file.
 // Values are whatever web/tokens.css resolves to for the current theme, so a
-// token change reaches the map without touching map code.
+// token change reaches the map without touching map code. Every value is a
+// colour except `mpaFillOpacity`, the protected-area fill's opacity (FE-19),
+// carried as its CSS text for MapLibre's `to-number`.
 import {basemapRoles} from './style.ts';
 
 /** Palette keys and the custom property each one reads (without the leading `--`). */
@@ -12,7 +14,7 @@ export const PALETTE_TOKENS = {
   mint: 'mint', blue: 'blue', coral: 'coral', amber: 'amber',
   depth0: 'depth-0', depth1: 'depth-1', depth2: 'depth-2', depth3: 'depth-3',
   sst0: 'sst-0', sst1: 'sst-1', sst2: 'sst-2', sst3: 'sst-3', sst4: 'sst-4', sst5: 'sst-5',
-  flow: 'flow', flowFast: 'flow-fast', mpaFill: 'mpa-fill', mpaLine: 'mpa-line',
+  flow: 'flow', flowFast: 'flow-fast', mpaFill: 'mpa-fill', mpaFillOpacity: 'mpa-fill-opacity', mpaLine: 'mpa-line',
 } as const;
 
 export type PaletteKey = keyof typeof PALETTE_TOKENS;
