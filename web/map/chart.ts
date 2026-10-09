@@ -18,6 +18,7 @@ import {effect, signal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams} from '../state.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
+import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
 import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
@@ -87,6 +88,9 @@ export interface ChartOptions {
   page?: () => string;
   /** Milliseconds a settled chart move waits before it is written to `?view=`. */
   viewDelay?: number;
+  /** The region's zone and report place, for the Currents layer (FE-15, web/map/currents.ts). */
+  zone?: () => string;
+  place?: CurrentsOptions['place'];
 }
 
 const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
@@ -95,6 +99,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   const {host, load = loadLibrary, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
   const engine = signal<Engine | null>(null);
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
+  let currents: Currents | null = null;
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
   const marks = createMarks({fetchFn, page, onError: markUnavailable});
@@ -124,11 +129,12 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
         pickLayers: [MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL],
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
-        onPick: (layer, properties) => {
+        onPick: (layer, properties, at) => {
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
             : layer === MPA_FILL ? mpaMark(properties) : null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
-          chartMark.value = chartPick(layer, properties, other);
+          // A click on nothing else reads the drawn surface current, if any (FE-15).
+          chartMark.value = chartPick(layer, properties, other ?? (at && currents?.reading(at) || null));
         },
         onIdle: () => { host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL)); },
       });
@@ -136,6 +142,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
+      currents = createCurrents({view: e.view, palette, zone: options.zone, place: options.place,
+        onHide: () => { if (chartMark.peek()?.id.startsWith('current:')) chartMark.value = null; }});
       drawnRegion = id;
       show(start);
     } catch (error) {
@@ -190,6 +198,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       for (const dispose of disposers) dispose();
       seafloor?.destroy();
       marks.destroy();
+      currents?.destroy();
       engine.peek()?.destroy();
       engine.value = null;
       chartMark.value = null;

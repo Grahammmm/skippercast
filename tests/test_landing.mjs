@@ -145,7 +145,7 @@ async function load() {
       export {SHORELINE} from './web/landing/shoreline-path.ts';
       export {Readout} from './web/landing/Readout.tsx';
       export {LayerDots, layerURL, DOT_LABELS} from './web/landing/LayerDots.tsx';
-      export {RAIL_ENTRIES} from './web/app/LayerRail.tsx';
+      export {RAIL_ENTRIES} from './web/app/rail.ts';
       export {STORAGE_KEYS} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},

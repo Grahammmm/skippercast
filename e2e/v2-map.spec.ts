@@ -434,3 +434,98 @@ test('a shared ?spot= names its mark in the terrain too, and Escape clears it', 
   expect(params(page).spot).toBeUndefined();
   expect(pageErrors).toEqual([]);
 });
+
+// Currents (FE-15): a synthetic WCOFS packet on a 0.04° grid off Morro Bay, three-hourly native
+// frames around now, answered for the bound place's ocean snapshot; the rest of the bridge is held.
+const CURRENT_VIEW = '35.32000,-120.90000,11';
+async function serveOcean(page: Page) {
+  const now = Date.now(), three = 3 * HOUR_MS, first = Math.floor(now / three) * three - three, iso = (ms: number) => new Date(ms).toISOString();
+  const cells = [];
+  // Seventeen columns reach -120.60, over the basemap fixture's land (its tile's east half, east of -120.76).
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 17; i++) {
+    const lon = +(-121.24 + i * 0.04).toFixed(6), lat = +(35.16 + j * 0.04).toFixed(6), uMs = 0.15 + i * 0.03, vMs = 0.12 - j * 0.02;
+    cells.push({lat, lon, uMs, vMs, speedKnots: Math.hypot(uMs, vMs) * 1.943844492, towardDeg: (Math.atan2(uMs, vMs) * 180 / Math.PI + 360) % 360});
+  }
+  const wcofs = {id: 'wcofs', kind: 'forecast', label: 'NOAA WCOFS surface forecast', url: 'https://example.test/wcofs', fetchedAt: iso(now - 600_000),
+    issuedAt: iso(now - three), sampleAt: null, nativeResolutionKm: 4, sampleStride: 1, horizontalDatum: 'NAD83', surfaceOnly: true,
+    attribution: 'NOAA', license: 'public-domain-us-gov', limitations: 'Surface only.', frames: [0, 1, 2, 3].map(k => ({validAt: iso(first + k * three), cells}))};
+  await page.route('**/api/coast/ocean', route => route.fulfill({json: {schemaVersion: 1, countyId: 'slo', generatedAt: iso(now - 300_000), currents: [wcofs], cloud: null, sources: []}}));
+}
+const flow = (page: Page) => page.locator('.app-chart canvas.chart-flow--dash');
+/** Drawn pixels of the still canvas inside and outside the fixture's land (lon > -120.76, lat 35.18–35.47), 8 px kept clear of its edge. */
+const flowOnLand = (page: Page, view: string) => page.evaluate(view => {
+  const [lat0, lon0, zoom] = view.split(',').map(Number) as [number, number, number];
+  const c = document.querySelector<HTMLCanvasElement>('canvas.chart-flow--base')!, w = c.width, h = c.height, world = 512 * 2 ** (zoom - 1);
+  const mercator = (lat: number) => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+  const x = (lon: number) => w / 2 + (lon - lon0) / 360 * world, y = (lat: number) => h / 2 - (mercator(lat) - mercator(lat0)) / (2 * Math.PI) * world;
+  const [east, top, bottom] = [x(-120.76) + 8, y(35.47) + 8, y(35.18) - 8], data = c.getContext('2d')!.getImageData(0, 0, w, h).data;
+  let land = 0, water = 0;
+  for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) if (data[(py * w + px) * 4 + 3]) { if (px > east && py > top && py < bottom) land++; else water++; }
+  return {land, water};
+}, view);
+const openLayers = async (page: Page) => { if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click(); };
+
+test('Currents draw the bound forecast as animated streamlines, read on click and follow ?current=', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await serveOcean(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, current: 'wcofs'});
+  await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
+  expect(Number(await flow(page).getAttribute('data-paths')), 'streamlines over the field').toBeGreaterThan(10);
+  const drawn = await flowOnLand(page, CURRENT_VIEW);
+  expect(drawn.land, 'the land mask clips paths, arrowheads and source dots').toBe(0);
+  expect(drawn.water).toBeGreaterThan(1000);
+  // A click on open water inside the field reads the blended current.
+  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
+  // Left of the desktop rail, above the mobile sheet's peek.
+  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.4);
+  await expect(page.locator('.app-mark h2')).toHaveText('Surface current');
+  await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d\d kt toward \d{1,3}° true$/);
+  await expect(page.locator('.app-mark-source')).toHaveText('NOAA WCOFS surface forecast · issued 3 h ago');
+
+  await openLayers(page);
+  const entry = page.locator('.ui-rail-item', {hasText: 'Currents'});
+  await expect(entry.locator('.ui-rail-note')).toHaveText(/^forecast \w{3} \d{1,2} [ap]m$/);
+  await expect(page.locator('.app-legend-currents .ui-popover-body')).toHaveText(/^NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.$/);
+  await v2.a11y('v2-map-currents');
+
+  const source = entry.getByRole('combobox', {name: 'Source'});
+  await source.selectOption('hfr-6');
+  await expect.poll(() => params(page).current).toBe('hfr-6');
+  await expect(flow(page)).toHaveAttribute('data-paths', '0');
+  await expect(page.locator('[data-reason="currents"]')).toHaveText('Currents unavailable: no fresh Observed HF radar · 6 km frame for this hour.');
+  await source.selectOption('off');
+  await expect.poll(() => params(page).current).toBe('off');
+  await expect(entry.getByRole('button', {name: /Currents/})).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.app-legend-currents')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Currents stand still under reduced motion and pause while the page is hidden', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await serveOcean(page);
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, current: 'wcofs'});
+  await expect(flow(page)).toHaveAttribute('data-motion', 'still');
+  expect(Number(await flow(page).getAttribute('data-paths'))).toBeGreaterThan(10);
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, get: () => true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(flow(page)).toHaveAttribute('data-motion', 'paused');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable: true, get: () => false});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
+  expect(pageErrors).toEqual([]);
+});
+
+test('Currents in a region no packet covers draw nothing and say so', async ({page, v2}) => {
+  await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', current: 'wcofs'});
+  await openLayers(page);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Currents'}).locator('.ui-rail-note')).toHaveText('no packet for this region');
+  await expect(page.locator('[data-reason="currents"]')).toHaveText('Currents unavailable: no local surface-current packet covers this region yet.');
+  await expect(page.locator('canvas.chart-flow')).toHaveCount(0);
+});

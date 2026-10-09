@@ -11,6 +11,7 @@
 import type * as MapLibre from 'maplibre-gl';
 import {sourceLayer} from './layers.ts';
 import type {ArchiveReader} from './seafloor.ts';
+import {BASEMAP_SOURCE} from './style.ts';
 
 /** What web/map/maplibre.js provides: the ESM build, its worker's URL, the PMTiles protocol and its archive reader. */
 export interface MapLibraryModule {
@@ -36,8 +37,8 @@ export interface EngineOptions {
   onMove(camera: EngineCamera): void;
   /** A source error, routed to the registry layer that owns the source. */
   onLayerError(layer: string, error: unknown): void;
-  /** A click: the first feature under it in `pickLayers`, or null for empty water. */
-  onPick?(layer: string | null, properties: Record<string, unknown> | null): void;
+  /** A click: the first feature under it in `pickLayers`, or null for empty water, and where it fell. */
+  onPick?(layer: string | null, properties: Record<string, unknown> | null, at: {lon: number; lat: number} | null): void;
   pickLayers?: readonly string[];
   /** Credit always shown (the basemap's): MapLibre lists a tiled source's own credit only if it was drawn when its metadata arrived. */
   attribution?: string;
@@ -48,6 +49,22 @@ export interface EngineOptions {
 /** What a GeoJSON source accepts: a URL or GeoJSON. */
 export type SourceData = Parameters<MapLibre.GeoJSONSource['setData']>[0];
 
+/** What a canvas overlay (web/map/currents.ts, FE-15) reads from the map; the Chart stays north up. */
+export interface MapView {
+  /** The map's canvas container: an overlay canvas added here sits above the map and under its controls. */
+  container(): HTMLElement;
+  /** The map's size in CSS pixels. */
+  size(): {width: number; height: number};
+  project(lon: number, lat: number): {x: number; y: number};
+  unproject(x: number, y: number): {lon: number; lat: number};
+  /** True while the camera moves, or before every tile in view has loaded (the next `idle` settles it). */
+  busy(): boolean;
+  /** The basemap's land polygons in the loaded tiles, as [lon, lat] rings, for clipping an overlay. */
+  land(): number[][][];
+  /** `idle`: the map has settled and drawn every tile in view. */
+  on(type: 'movestart' | 'idle' | 'resize', listener: () => void): () => void;
+}
+
 export interface Engine {
   setCamera(camera: EngineCamera): void;
   /** Show or hide a style layer; before the style has loaded, the latest call per layer waits for it. */
@@ -56,6 +73,7 @@ export interface Engine {
   setData(sourceId: string, data: SourceData): void;
   /** How many features of `layerId` are drawn in view now (labels count once placed). */
   rendered(layerId: string): number;
+  readonly view: MapView;
   destroy(): void;
 }
 
@@ -105,7 +123,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     map.on('click', (event: MapLibre.MapMouseEvent) => {
       const layers = (options.pickLayers ?? []).filter(id => map.getLayer(id));
       const feature = layers.length ? map.queryRenderedFeatures(event.point, {layers})[0] : undefined;
-      pick(feature?.layer.id ?? null, feature ? feature.properties as Record<string, unknown> : null);
+      pick(feature?.layer.id ?? null, feature ? feature.properties as Record<string, unknown> : null, event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null);
     });
   }
   if (options.onIdle) map.on('idle', options.onIdle);
@@ -137,6 +155,16 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       else { early?.data.delete(sourceId); fill(sourceId, data); }
     },
     rendered: layerId => map.getLayer(layerId) ? map.queryRenderedFeatures({layers: [layerId]}).length : 0,
+    view: {
+      container: () => map.getCanvasContainer(),
+      size: () => ({width: host.clientWidth, height: host.clientHeight}),
+      project: (lon, lat) => map.project([lon, lat]),
+      unproject: (x, y) => { const p = map.unproject([x, y]); return {lon: p.lng, lat: p.lat}; },
+      busy: () => map.isMoving() || !map.loaded(),
+      land: () => map.getSource(BASEMAP_SOURCE) ? map.querySourceFeatures(BASEMAP_SOURCE, {sourceLayer: 'earth'}).flatMap(f =>
+        f.geometry.type === 'Polygon' ? f.geometry.coordinates : f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates.flat() : []) : [],
+      on: (type, listener) => { map.on(type, listener); return () => { map.off(type, listener); }; },
+    },
     destroy() { resize?.disconnect(); map.remove(); },
   };
 }

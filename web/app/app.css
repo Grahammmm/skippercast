@@ -74,6 +74,12 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
+.app-swatch[data-layer="currents-fast"] { background: var(--flow-fast); }
+.app-legend-currents { flex-wrap: wrap; }
+.app-legend-note { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-11); }
+.app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
+.app-rail-source select { flex: 1; min-width: 0; }
+.app-rail .ui-rail-item { flex-wrap: wrap; }
 .app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-5)); }
 .app-swatch[data-layer="swell"] { background: var(--blue); }
 .app-swatch[data-layer="fleet"] { background: var(--fleet); }

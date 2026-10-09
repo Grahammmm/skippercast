@@ -19,9 +19,11 @@ export type RailItemProps = {
   /** The basis sentence, rendered in a Popover. */
   basis?: ComponentChildren;
   disabled?: boolean;
+  /** Controls of the entry itself (the Currents source), shown under it. */
+  children?: ComponentChildren;
 };
 
-export function RailItem({id, label, icon, on, onToggle, note, basis, disabled}: RailItemProps) {
+export function RailItem({id, label, icon, on, onToggle, note, basis, disabled, children}: RailItemProps) {
   return (
     <li class="ui-rail-item" data-on={on ? 'true' : 'false'}>
       <Button icon={icon} pressed={on} disabled={disabled} class="ui-rail-toggle" onClick={() => onToggle(id, !on)}>
@@ -31,6 +33,7 @@ export function RailItem({id, label, icon, on, onToggle, note, basis, disabled}:
         </span>
       </Button>
       {basis ? <Popover iconOnly align="end" summary={`${label} basis`}>{basis}</Popover> : null}
+      {children}
     </li>
   );
 }

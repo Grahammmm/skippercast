@@ -260,8 +260,10 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
 test('loadRegion fills the masthead from regions/<id>/region.json and leaves placeholders on failure', async () => {
   const {loadRegion, regionInfo, render, h, App, state} = await load();
   const fetched = [];
-  const ok = async url => { fetched.push(url); return {ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965]}})}; };
-  assert.deepEqual(await loadRegion('morro-bay', ok), {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: TZ});
+  const area = {id: 'estero-bay', name: 'Estero Bay', bounds: [-121.05, 35.32, -120.78, 35.47]};
+  const ok = async url => { fetched.push(url); return {ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], local_areas: [area, {id: 7}, null]}})}; };
+  // The reviewed local areas come along for the coast report binding (FE-15's currents packet); malformed ones are dropped.
+  assert.deepEqual(await loadRegion('morro-bay', ok), {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: TZ, localAreas: [area]});
   assert.deepEqual(fetched, ['regions/morro-bay/region.json']);
   state.configureStore({storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);

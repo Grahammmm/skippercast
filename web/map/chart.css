@@ -23,3 +23,6 @@
   /* Under the top strip and the presentation toggle; the sheet's peek and the tab bar own the bottom. */
   .app-chart .maplibregl-ctrl-bottom-right { top: calc(var(--app-strip, 84px) + 2 * var(--touch-min) + var(--space-5) + var(--space-4)); bottom: auto; }
 }
+
+/* The Currents streamlines (FE-15, web/map/currents.ts): two canvases over the map's own, under its controls, never taking a click. */
+.app-chart .chart-flow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
