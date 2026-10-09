@@ -76,7 +76,12 @@ export function markUnavailable(layer: string, error?: unknown): void {
  * A registry layer the Chart draws at run time (FE-22's clouds, FE-16's water temperature): created
  * with the Chart, handed its engine once MapLibre is up. A field layer reads itself at a click on open water.
  */
-export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {destroy(): void; reading?(at: {lon: number; lat: number}): ChartMark | null};
+export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {
+  destroy(): void;
+  reading?(at: {lon: number; lat: number}): ChartMark | null;
+  /** Its own clickable map layers (FE-27's nearshore rings), asked before the Chart's, and the card for a feature of them. */
+  pick?: {readonly layers: readonly string[]; mark(layer: string, properties: Record<string, unknown> | null): ChartMark | null};
+};
 
 export interface ChartOptions {
   host: HTMLElement;
@@ -128,10 +133,11 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       const e: Engine = createEngine(library, {
         host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
         pickLayers: [MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL],
+        pickFirst: () => drawn.flatMap(l => l.pick?.layers ?? []),
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
         onPick: (layer, properties, at) => {
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
-            : layer === MPA_FILL ? mpaMark(properties) : null;
+            : layer === MPA_FILL ? mpaMark(properties) : drawn.find(l => layer !== null && l.pick?.layers.includes(layer))?.pick?.mark(layer!, properties) ?? null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
           // A click on nothing else reads the drawn surface current (FE-15), else the drawn water temperature (FE-16).
           chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));

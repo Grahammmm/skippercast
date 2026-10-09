@@ -24,10 +24,16 @@
 // - The legend names the model, its run and age and the valid hour, as a model
 //   forecast and never a buoy observation; a click reads height, period and
 //   direction there.
+// - Nearshore rings (FE-27, web/map/nearshore.ts): where the region's place
+//   binds a coast report, its fresh nearshore model sites draw as rings sized
+//   by height above the field, and a ring opens the mark card. Without a
+//   binding the report is never drawn from and the layer is as before.
 //
 // Erasable syntax only: tests/test_swell_layer.mjs imports it by type stripping.
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
+import {coastData, type CoastData} from '../coast-data.ts';
+import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import {compass} from '../landing/readings.ts';
 import {day, hour, layers, region} from '../state.ts';
 import {chartMark} from './chart.ts';
@@ -38,6 +44,7 @@ import {WAVE_MODEL, loadForecast, swellPoints, type WaveForecast} from './foreca
 import {forecastTime} from './frames.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
+import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
@@ -188,12 +195,15 @@ export function directionStrokes(f: SwellFrame): {type: 'FeatureCollection'; fea
   return {type: 'FeatureCollection', features};
 }
 
-/** The texture, period isolines with their labels and the direction strokes, under the protected areas (§ 9). */
-export function swellOverlay(p: Palette): Overlay {
+/**
+ * The texture, period isolines with their labels and the direction strokes, under the protected areas (§ 9);
+ * with `rings`, the nearshore rings above them (FE-27), and without `field`, the rings alone.
+ */
+export function swellOverlay(p: Palette, {field = true, rings = false}: {field?: boolean; rings?: boolean} = {}): Overlay {
   const empty = {type: 'geojson' as const, data: {type: 'FeatureCollection' as const, features: []}};
   const width = (low: number, high: number): MapLibre.ExpressionSpecification => ['interpolate', ['linear'], ['zoom'], 7, low, 12, high];
   const head = (a: number, b: number): MapLibre.ExpressionSpecification => ['case', ['==', ['get', 'part'], 'head'], a, b];
-  return {
+  const drawn: Overlay = {
     sources: {[SWELL_SOURCE]: {type: 'image', coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]]}, [ISOLINE_SOURCE]: empty, [STROKE_SOURCE]: empty},
     layers: [
       {id: SWELL_LAYER, type: 'raster', source: SWELL_SOURCE, paint: {'raster-opacity': SWELL_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
@@ -208,6 +218,8 @@ export function swellOverlay(p: Palette): Overlay {
         paint: {'line-color': p.text, 'line-opacity': head(0.95, 0.4), 'line-width': head(2.2, 1.2)}},
     ],
   };
+  if (!rings) return drawn;
+  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringHitLayer(p), ringLayer(p)]};
 }
 
 /** The mark card's reading at a clicked point inside the drawn field, or null outside it. */
@@ -225,6 +237,8 @@ export function swellMark(f: SwellFrame, at: {lon: number; lat: number}, now: Da
 
 /** What the rail and legend show for Swell. */
 export const swellState = signal<SwellStatus>(OFF);
+/** The nearshore rings drawn now, for the legend (FE-27); null without a binding or a fresh site. */
+export const nearshoreState = signal<Rings | null>(null);
 
 export interface SwellOptions {
   engine: ReadonlySignal<Engine | null>;
@@ -233,10 +247,18 @@ export interface SwellOptions {
   page?: () => string;
   palette?: () => Palette;
   now?: () => Date;
+  /** The region's report context for the nearshore rings, or null until the region is known (none: no rings). */
+  place?: () => CoastReportContext | null;
+  data?: Pick<CoastData, 'coastReport' | 'coastBinding' | 'setPlace' | 'load'>;
 }
 
-export function createSwell(o: SwellOptions): {reading(at: {lon: number; lat: number}): ChartMark | null; destroy(): void} {
-  const {engine, zone, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette(), now = () => new Date()} = o;
+export function createSwell(o: SwellOptions): {
+  reading(at: {lon: number; lat: number}): ChartMark | null;
+  pick: {layers: readonly string[]; mark(layer: string, properties: Record<string, unknown> | null): ChartMark | null};
+  destroy(): void;
+} {
+  const {engine, zone, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette(), now = () => new Date(),
+    place = () => null, data = coastData} = o;
   const tick = signal(0), load = signal<SwellLoad>({state: 'idle', region: null, forecast: null, at: 0});
   const on = computed(() => layers.value.includes(REGISTRY_ID));
   const status = computed(() => {
@@ -244,8 +266,15 @@ export function createSwell(o: SwellOptions): {reading(at: {lon: number; lat: nu
     const t = now(), l = load.value, id = region.value;
     return swellStatus(on.value, l.region === id ? l : {state: 'loading', region: id, forecast: null, at: 0}, terrainHour(hour.value, t, day.value, zone()), t, zone());
   });
-  let alive = true, drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
-  const withdraw = (): void => { if (chartMark.peek()?.id.startsWith('swell:')) chartMark.value = null; };
+  // The rings read the bound report at the dock's hour; outside a binding the report is null and nothing draws.
+  const rings = computed(() => {
+    void tick.value;
+    if (!on.value) return null;
+    const t = now(), report = data.coastReport.value?.data ?? null;
+    return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
+  });
+  let alive = true, drawnKey = '', drawnShape = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  const withdraw = (): void => { if (/^(?:swell|nearshore):/.test(chartMark.peek()?.id ?? '')) chartMark.value = null; };
 
   async function read(id: string): Promise<void> {
     const kept = load.peek().region === id ? load.peek().forecast : null, at = now().getTime();
@@ -264,6 +293,14 @@ export function createSwell(o: SwellOptions): {reading(at: {lon: number; lat: nu
       if (!on.value || !id) return;
       if (l.region !== id || (l.state !== 'loading' && now().getTime() - l.at >= REFRESH_MS)) void read(id);
     }),
+    // Ask for the coast report only while Swell is on, for the region's place once it is known.
+    effect(() => {
+      const p = place();
+      if (!on.value || !p) return;
+      data.setPlace(p);
+      void data.load('report');
+    }),
+    effect(() => { nearshoreState.value = rings.value; }),
     effect(() => {
       const s = status.value;
       swellState.value = s;
@@ -271,23 +308,32 @@ export function createSwell(o: SwellOptions): {reading(at: {lon: number; lat: nu
     }),
     // A new frame (an hour, a run, a region) repaints at once; none (off, refused, stale) removes everything.
     effect(() => {
-      const e = engine.value, f = status.value.drawn, key = f?.key ?? '';
+      const e = engine.value, f = status.value.drawn, r = rings.value, key = `${f?.key ?? ''}#${r?.key ?? ''}`;
       if (!e || (key === drawnKey && e === drawnOn)) return;
       if (key !== drawnKey) withdraw();
-      drawnKey = key; drawnOn = e;
-      if (!f) { e.setOverlay(REGISTRY_ID, null); return; }
+      // A field arriving under rings already drawn would add its layers above them (the engine adds
+      // only missing layers, under MPA_FILL): redraw the overlay whole so the rings stay on top.
+      const shape = `${f ? 'field' : ''}+${r ? 'rings' : ''}`;
+      if (e === drawnOn && drawnShape === '+rings' && shape === 'field+rings') e.setOverlay(REGISTRY_ID, null);
+      drawnKey = key; drawnShape = shape; drawnOn = e;
+      if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      e.setOverlay(REGISTRY_ID, swellOverlay(p), MPA_FILL);
-      e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
-      e.setData(ISOLINE_SOURCE, periodLines(f));
-      e.setData(STROKE_SOURCE, directionStrokes(f));
+      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), MPA_FILL);
+      if (f) {
+        e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
+        e.setData(ISOLINE_SOURCE, periodLines(f));
+        e.setData(STROKE_SOURCE, directionStrokes(f));
+      }
+      if (r) e.setData(NEARSHORE_SOURCE, r.collection);
     }),
     // Re-judge at the next whole hour (the dock's default hour moves on), at the run's and the feed's age limits, and to refresh.
     effect(() => {
       const l = load.value, f = l.forecast, t = now().getTime();
       clearTimeout(timer);
       if (!on.value) return;
-      const limits = [...l.region ? [l.at + REFRESH_MS] : [], ...f?.model ? [f.model.issued * 1000 + 36 * HOUR, f.retrieved + 6 * HOUR].filter(x => x > t) : []];
+      // A ring leaves when its site's run passes 48 hours or its retrieval 3 hours (freshNearshore).
+      const sites = (rings.value?.rings ?? []).flatMap(r => [Date.parse(r.site.issuedAt ?? '') + 48 * HOUR, Date.parse(r.site.fetchedAt) + 3 * HOUR]);
+      const limits = [...l.region ? [l.at + REFRESH_MS] : [], ...[...f?.model ? [f.model.issued * 1000 + 36 * HOUR, f.retrieved + 6 * HOUR] : [], ...sites].filter(x => x > t)];
       const next = Math.min((Math.floor(t / HOUR) + 1) * HOUR, ...limits);
       timer = setTimeout(() => { tick.value++; }, Math.min(Math.max(1000, next - t + 1000), 2 ** 31 - 1));
     }),
@@ -295,14 +341,19 @@ export function createSwell(o: SwellOptions): {reading(at: {lon: number; lat: nu
   return {
     reading(at) {
       const f = status.peek().drawn;
-      return f && drawnKey === f.key && shownPresentation.peek() === 'chart' ? swellMark(f, at, now(), zone()) : null;
+      return f && drawnKey.startsWith(`${f.key}#`) && shownPresentation.peek() === 'chart' ? swellMark(f, at, now(), zone()) : null;
     },
+    pick: {layers: [NEARSHORE_LAYER, NEARSHORE_HIT], mark: (layer, properties) => {
+      const r = rings.peek();
+      return (layer === NEARSHORE_LAYER || layer === NEARSHORE_HIT) && r ? ringMark(r, properties?.id, now(), zone()) : null;
+    }},
     destroy() {
       alive = false;
       for (const dispose of disposers) dispose();
       clearTimeout(timer);
       withdraw();
       swellState.value = OFF;
+      nearshoreState.value = null;
       setRailNote(REGISTRY_ID, '');
     },
   };

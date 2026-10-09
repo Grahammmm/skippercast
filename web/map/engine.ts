@@ -41,6 +41,8 @@ export interface EngineOptions {
   /** A click: the first feature under it in `pickLayers`, or null for empty water, and where it fell. */
   onPick?(layer: string | null, properties: Record<string, unknown> | null, at: {lon: number; lat: number} | null): void;
   pickLayers?: readonly string[];
+  /** Run-time layers asked before `pickLayers` (FE-27's nearshore rings, which draw under the protected areas); read at each click. */
+  pickFirst?: () => readonly string[];
   /** Credit always shown (the basemap's): MapLibre lists a tiled source's own credit only if it was drawn when its metadata arrived. */
   attribution?: string;
   /** The map has settled and drawn every tile in view (MapLibre `idle`). */
@@ -152,8 +154,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   if (options.onPick) {
     const pick = options.onPick;
     map.on('click', (event: MapLibre.MapMouseEvent) => {
-      const layers = (options.pickLayers ?? []).filter(id => map.getLayer(id));
-      const feature = layers.length ? map.queryRenderedFeatures(event.point, {layers})[0] : undefined;
+      const query = (ids: readonly string[]) => { const layers = ids.filter(id => map.getLayer(id)); return layers.length ? map.queryRenderedFeatures(event.point, {layers})[0] : undefined; };
+      const feature = query(options.pickFirst?.() ?? []) ?? query(options.pickLayers ?? []);
       pick(feature?.layer.id ?? null, feature ? feature.properties as Record<string, unknown> : null, event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null);
     });
   }
