@@ -7,11 +7,18 @@
 // and depth suitability from surveys, never a count or promise of fish, with one wording
 // in both presentations: "fits <species> habitat n of 3", 3 the strongest (v1's pins,
 // packages/coast's `fit_*`). Erasable syntax only: the tests import it by type stripping.
+//
+// v1's run-time screen (dist/protected-areas.js `pointAllowed`, #489) is kept too: a mark
+// shows only while the region's protected areas and closures were checked within 36 hours
+// and the mark lies outside all of them (dist/geo-screen.js, boundary contact counts as
+// inside). Otherwise it is withheld, and the card and legend say why.
+import {pointInGeometry} from '../../dist/geo-screen.js';
 import {speciesFit} from '../../dist/species-fit.js';
 import type {CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import {speciesOptions} from '../../packages/coast/src/habitat-types.ts';
 import {withinDepth, type Profile} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
+import {CDFW_MPA_PAGE, NOAA_GEA_PAGE, type ScreenSource} from './mpa.ts';
 
 type Props = Record<string, unknown>;
 export interface Feature {readonly type: 'Feature'; readonly geometry: unknown; readonly properties: Props}
@@ -27,7 +34,7 @@ export interface AtlasTarget {
 export interface Atlas {source_validation_date?: string; targets: AtlasTarget[]; sources?: {id: string; name?: string; credit?: string; rights?: string}[]}
 export interface RegionData {
   id: string; assets?: Record<string, string | null>; source_names?: Record<string, string>; target_options?: {id: string; habitat_kinds?: string[]}[];
-  regulations_url?: string;
+  regulations_url?: string; mpa?: {bounds?: number[]; minimum_features?: number}; daily_feed?: string;
 }
 export type Survey = Collection & {created_at?: string; mpa_margin_m?: number; source_kind?: string};
 export type Geology = Collection & {source?: {attribution?: string; derivation?: string; limitations?: string}};
@@ -76,9 +83,78 @@ const point = (t: AtlasTarget): unknown => ({type: 'Point', coordinates: [t.long
 const keep = (f: Feature, extra: Props): Feature => ({type: 'Feature', geometry: f.geometry, properties: {id: f.properties.id, ...extra}});
 const collection = (features: Feature[]): Collection => ({type: 'FeatureCollection', features});
 
-/** The marks the target and profile admit (the profile's depth limit on the deepest nearby depth), with their fit badge. */
-export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile): Collection {
-  return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1])).map(t => {
+/** v1's check age window (dist/protected-areas.js `freshEnough`): at most 36 h old and 5 min ahead. */
+export const SCREEN_MAX_AGE_MS = 36 * 3600000;
+const AHEAD_MS = 300000;
+export const freshCheck = (at: string | null | undefined, now: number): boolean => {
+  const age = now - Date.parse(at ?? '');
+  return age >= -AHEAD_MS && age <= SCREEN_MAX_AGE_MS;
+};
+/** What the screen checked against: v1's `data` and `checked`, `live` for its own ds582 query, and `extra` with `extraChecked`. */
+export type ScreenInputs = ScreenSource & {readonly live: boolean};
+export interface Boundary {readonly name: string; readonly federal: boolean; readonly geometry: unknown}
+export type ScreenStatus = 'checking' | 'ready' | 'stale' | 'unavailable';
+/** The screen at one time: its legend line, the source line for a withheld card, and when a ready screen goes stale. */
+export interface MarkScreen {readonly status: ScreenStatus; readonly note: string; readonly source: string; readonly boundaries: readonly Boundary[]; readonly until: number}
+/** v1's lines while marks are withheld (dist/app.js `updateReefCoverage`, dist/protected-areas.js status). */
+export const SCREEN_NOTES = {
+  checking: 'Checking protected areas before showing fishing spots…',
+  unavailable: 'Protected-area check unavailable · fishing spots withheld',
+  stale: 'Boundary check stale; fishing targets withheld',
+} as const;
+export const CHECKING: MarkScreen = Object.freeze({status: 'checking', note: SCREEN_NOTES.checking, source: 'CDFW ds582 check in progress', boundaries: [], until: Infinity});
+
+const boundary = (f: Props): Boundary => {
+  const p = (f.properties ?? {}) as Props;
+  return {name: String(p.FULLNAME || p.NAME || 'Protected area'), federal: p.Type === 'GEA', geometry: f.geometry};
+};
+/** v1's `freshEnough` at `now`: ready only while the boundaries, and the region's closures if it names any, were checked within the window. */
+export function assessScreen(i: ScreenInputs | null, now: number): MarkScreen {
+  if (!i) return CHECKING;
+  const c = i.closures, at = i.areas ? i.checkedAt : null;
+  const when = (t: string | null | undefined, live = false) => live ? 'checked this session' : t ? `checked ${t.slice(0, 10)}` : 'check unavailable';
+  const source = [`CDFW ds582 ${when(at, i.live && !!at)}`, c !== undefined && `NOAA closures ${when(c?.checkedAt)}`].filter(Boolean).join(' · ');
+  const fresh = freshCheck(at, now) && (c === undefined || !!c && freshCheck(c.checkedAt, now));
+  if (!fresh) {
+    const status = i.areas ? 'stale' : 'unavailable';
+    return {status, note: SCREEN_NOTES[status], source, boundaries: [], until: Infinity};
+  }
+  return {status: 'ready', source, until: Math.min(...[at!, c?.checkedAt].filter(t => t != null).map(t => Date.parse(t!))) + SCREEN_MAX_AGE_MS,
+    note: `Reef marks inside protected areas${c ? ' or groundfish exclusions' : ''} are withheld · ${i.live ? 'boundaries checked this session' : `boundary snapshot ${at!.slice(0, 10)}`}`,
+    boundaries: [...i.areas!, ...c?.areas ?? []].map(boundary)};
+}
+
+/** dist/region.js `acceptsFeed`: the region's own feed (Morro Bay's predates the region id). */
+export const acceptsFeed = (d: Props | null | undefined, region: string): boolean => d?.region_id === region || (!d?.region_id && region === 'morro-bay');
+/** dist/daily-feed.js `validDailyPart` with the region passed in: one part of the region's daily feed as the Worker's /api/daily returns it. */
+export function validDailyPart(d: Props | null | undefined, part: string, region: string): boolean {
+  if (d?.schema_version !== 1 || d.part !== part || !acceptsFeed(d, region)) return false;
+  if (!Number.isFinite(Date.parse(String(d.generated_at))) || d.catch_probability !== null || d.bite_score !== null) return false;
+  const body = part === 'regulations' ? d.regulations : d.sources;
+  return !!body && typeof body === 'object' && (part === 'regulations' || !Array.isArray(body));
+}
+/** One record of the daily feed (pipeline/collect.py `source`). */
+export interface DailyRecord {readonly status?: unknown; readonly data_retrieved_at?: unknown; readonly data?: {readonly sha256?: unknown; readonly geojson?: unknown} | null}
+/**
+ * v1's closure refresh: the feed's daily check of NOAA's coordinate file renews the closures' check time while
+ * its hash matches the published file's, and a changed file voids it; without a check the file's own time stands.
+ */
+export function closureCheckedAt(c: {readonly checkedAt: string | null; readonly sha256: string | null}, r: DailyRecord | null | undefined): string | null {
+  if (r?.status !== 'ok') return c.checkedAt;
+  return typeof c.sha256 === 'string' && r.data?.sha256 === c.sha256 && typeof r.data_retrieved_at === 'string' ? r.data_retrieved_at : null;
+}
+
+/** Why a mark is withheld: the screen's own line, or the areas it lies in; null when it shows (v1's `pointAllowed`). */
+export interface Withheld {readonly reading: string; readonly inside: readonly Boundary[]}
+export function withheld(t: {latitude: number; longitude: number}, screen: MarkScreen): Withheld | null {
+  if (screen.status !== 'ready') return {reading: screen.note, inside: []};
+  const inside = screen.boundaries.filter(b => pointInGeometry([t.longitude, t.latitude], b.geometry));
+  return inside.length ? {reading: `Inside ${inside.map(b => b.name).join('; ')}`, inside} : null;
+}
+
+/** The marks the target, profile and run-time screen admit (the profile's depth limit on the deepest nearby depth), with their fit badge. */
+export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen): Collection {
+  return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && !withheld(t, screen)).map(t => {
     const fit = markFit(t, target);
     return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}}};
   }));
@@ -117,6 +193,21 @@ export function atlasCard(t: AtlasTarget, data: MarkData, target: string): Chart
     rules: rules(typeof screened === 'number' && screened > 0 && !!date && `Screened against protected areas with ${Math.round(screened)} m clearance in the atlas of ${date}`),
     regulations: regulationsLink(data.region),
     basis: [t.terrain_interpretation, t.evidence_status, source && joined(source.credit, source.rights)].filter(Boolean).join(' '),
+  };
+}
+
+/** v1's words for a target inside a protected area (dist/regulations.js) or a NOAA closure (dist/protected-areas.js). */
+const WITHHELD_MPA = 'SkipperCast withholds fishing targets in all mapped protected areas, including conservation areas that allow some activities. Consult the exact official rules.';
+const WITHHELD_GEA = 'NOAA groundfish closure. SkipperCast excludes all target species here as a conservative planning rule. Federal regulations control over this supplemental map.';
+/** A linked mark the run-time screen withholds, or has yet to check: why, the check, and the official page; never its position or fit. */
+export function withheldCard(t: AtlasTarget, w: Withheld, screen: MarkScreen): ChartMark {
+  const federal = w.inside.length > 0 && w.inside.every(b => b.federal);
+  return {
+    id: `spot:${t.id}`, name: screen.status === 'checking' ? 'Checking reef mark' : 'Reef mark withheld', kind: `Reef mark · ${t.id}`, reading: w.reading, source: screen.source, withheld: true,
+    rules: w.inside.length ? (federal ? WITHHELD_GEA : WITHHELD_MPA) : 'Check current rules and boundaries before you fish.',
+    regulations: federal ? {href: NOAA_GEA_PAGE, label: 'NOAA groundfish closed areas'} : {href: CDFW_MPA_PAGE, label: 'CDFW marine protected areas'},
+    basis: 'Atlas marks are checked again in the browser against current protected-area boundaries and the region\'s closures before they show. '
+      + 'A mark inside one is withheld, and every mark is withheld while that check is unavailable or more than 36 hours old.',
   };
 }
 

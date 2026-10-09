@@ -117,7 +117,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="mpas"] { box-sizing: border-box; border: 1px dashed var(--mpa-line); background: color-mix(in srgb, var(--mpa-fill) calc(var(--mpa-fill-opacity) * 100%), transparent); }
 .app-legend li.app-legend-mpa { flex-direction: column; align-items: flex-start; gap: 0; }
 .app-legend-mpa-head { display: flex; align-items: center; gap: var(--space-2); }
-.app-mpa-note { margin: 0; color: var(--muted); }
+.app-mpa-note, .app-mpa-marks { margin: 0; color: var(--muted); }
 .app-mpa-rules { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 .app-dock { position: absolute; left: var(--space-4); right: var(--space-4); bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
 .app-dock .ui-dock { flex: 1; min-width: 0; }

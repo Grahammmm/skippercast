@@ -13,7 +13,8 @@
 // and the region's coverage review (coverage.json, need `protected-areas`)
 // decides whether the drawing can be called complete. Anything short of that
 // says so in the legend, because a missing outline must never read as "no
-// protected area here".
+// protected area here". Each result also carries the files under v1's own
+// rules (`screen`) for the reef marks' run-time screen (web/map/habitat.ts, #489).
 //
 // Erasable syntax only: tests/test_mpa_layer.mjs imports this file by type stripping.
 import {signal} from '@preact/signals';
@@ -30,6 +31,9 @@ export const MPA_LABEL = 'mpa-label';
 export const MPA_LABEL_MIN_ZOOM = 11;
 /** The ds582 feature service v1 queries (dist/protected-areas.js `MPA_SERVICE`). */
 export const MPA_SERVICE = 'https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query';
+/** v1's live boundary query for a region's `mpa.bounds` (dist/protected-areas.js `MPA_QUERY`); the reef marks' screen asks it (#489). */
+export const mpaQuery = (bounds: readonly number[]): string => `${MPA_SERVICE}?${new URLSearchParams({where: '1=1', geometry: bounds.join(','),
+  geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'NAME,FULLNAME,Type,CCR', returnGeometry: 'true', outSR: '4326', f: 'geojson'})}`;
 /** Official pages for the rules; the map never states them. */
 export const CDFW_MPA_PAGE = 'https://wildlife.ca.gov/Conservation/Marine/MPAs';
 export const NOAA_GEA_PAGE = 'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas';
@@ -88,7 +92,18 @@ type Json = Record<string, unknown>;
 type Collection = {type: 'FeatureCollection'; features: Json[]};
 export interface RegionMpaConfig {readonly mpa?: {readonly bounds?: readonly number[]; readonly minimum_features?: number}; readonly assets?: Readonly<Record<string, unknown>>}
 export interface MpaInput {region: string; config: RegionMpaConfig; snapshot: unknown; coverage?: unknown; closures?: unknown}
-export interface MpaResult {readonly state: MpaState; readonly data: Collection}
+/**
+ * What the reef marks' run-time screen reads (web/map/habitat.ts, #489): the files under v1's own
+ * rules (dist/protected-areas.js), with each check's full time and the closures file's hash.
+ */
+export interface ScreenSource {
+  /** The snapshot's areas when it passes v1's `validMPAs`; null otherwise. */
+  readonly areas: readonly Json[] | null;
+  readonly checkedAt: string | null;
+  /** The region's closures: undefined where it names none, null when they failed v1's check. */
+  readonly closures?: {readonly areas: readonly Json[]; readonly checkedAt: string | null; readonly sha256: string | null} | null;
+}
+export interface MpaResult {readonly state: MpaState; readonly data: Collection; readonly screen: ScreenSource}
 
 const EMPTY = (): Collection => ({type: 'FeatureCollection', features: []});
 const obj = (v: unknown): Json | null => v && typeof v === 'object' && !Array.isArray(v) ? v as Json : null;
@@ -103,6 +118,18 @@ export function validSnapshot(data: unknown): boolean {
   return d?.type === 'FeatureCollection' && !d.exceededTransferLimit && Array.isArray(list) && list.length > 0 &&
     list.every(f => typeof obj(obj(f)?.properties)?.NAME === 'string' && polygon(obj(f) ?? {}));
 }
+/** v1's whole `validMPAs`: the snapshot rule and the region's `mpa.minimum_features` (a region without one passes nothing). */
+export const validMpas = (data: unknown, minimum: unknown): boolean => validSnapshot(data) && features(data).length >= Number(minimum);
+/** v1's closures rule: a non-empty FeatureCollection of polygons for this region. */
+const validClosures = (c: Json | null, region: string): boolean => {
+  const list = features(c);
+  return c?.type === 'FeatureCollection' && c.region_id === region && list.length > 0 && list.every(polygon);
+};
+const closuresSource = (closures: unknown, region: string): ScreenSource['closures'] => {
+  if (closures === undefined) return undefined;
+  const c = obj(closures);
+  return c && validClosures(c, region) ? {areas: features(c), checkedAt: text(c.checked_at) || null, sha256: text(c.source_sha256) || null} : null;
+};
 
 /** The [west, south, east, north] a snapshot was queried for, read from its ds582 `source_url`; null for any other source. */
 export function snapshotEnvelope(sourceURL: unknown): number[] | null {
@@ -128,7 +155,7 @@ function review(coverage: unknown, region: string): string {
   return need ? text(need.status) : '';
 }
 
-/** What a partial drawing holds, in the data's own terms (the review's reasons describe v1's screening, which v2 does not do). */
+/** What a partial drawing holds, in the data's own terms (the review's reasons describe v1's screening, which this drawing does not do). */
 function partialDetail(count: number, checked: string | null, reviewed: boolean): string {
   const drawnLine = `Drawn: ${count} areas from the CDFW ds582 snapshot${checked ? ` checked ${checked}` : ''}.`;
   return `${drawnLine} ${reviewed ? 'The region\'s review has not confirmed that this is every protected area here.' : 'This region\'s boundary review did not load, so the drawing is unconfirmed.'}`;
@@ -144,8 +171,12 @@ const drawn = (list: Json[], source: 'cdfw' | 'noaa', checked: string | null): J
  * passes the fetched files (closures `undefined` when the region names none, null when they failed).
  */
 export function assessMpas({region, config, snapshot, coverage, closures}: MpaInput): MpaResult {
-  if (!validSnapshot(snapshot)) return {state: state('unavailable', NOTES.unavailable, 'The boundary snapshot failed its completeness check.'), data: EMPTY()};
+  // v1 reads the closures only after the snapshot passes, so a failed snapshot fails them too.
+  if (!validSnapshot(snapshot)) return {state: state('unavailable', NOTES.unavailable, 'The boundary snapshot failed its completeness check.'), data: EMPTY(),
+    screen: {areas: null, checkedAt: null, closures: closures === undefined ? undefined : null}};
   const snap = obj(snapshot)!, list = features(snap), checked = day(snap.checked_at);
+  const valid = validMpas(snap, config.mpa?.minimum_features);
+  const screen: ScreenSource = {areas: valid ? list : null, checkedAt: valid ? text(snap.checked_at) || null : null, closures: valid ? closuresSource(closures, region) : closures === undefined ? undefined : null};
   const bounds = config.mpa?.bounds ?? [], minimum = Math.max(1, Number(config.mpa?.minimum_features) || 1);
   const envelope = snapshotEnvelope(snap.source_url);
   const gaps: string[] = [];
@@ -154,15 +185,15 @@ export function assessMpas({region, config, snapshot, coverage, closures}: MpaIn
   if (!envelope || !covers(envelope, bounds)) gaps.push('The snapshot\'s query area does not cover this whole region.');
   const out = drawn(list, 'cdfw', checked);
   if (closures !== undefined) {
-    const c = obj(closures), extra = features(c);
-    if (c?.type === 'FeatureCollection' && c.region_id === region && extra.length && extra.every(polygon)) out.push(...drawn(extra, 'noaa', day(c.checked_at)));
+    const c = obj(closures);
+    if (validClosures(c, region)) out.push(...drawn(features(c), 'noaa', day(c!.checked_at)));
     else gaps.push('The federal groundfish closures named for this region did not load.');
   }
   const data: Collection = {type: 'FeatureCollection', features: out};
-  if (gaps.length) return {state: state('incomplete', NOTES.incomplete, gaps.join(' '), checked, out.length), data};
+  if (gaps.length) return {state: state('incomplete', NOTES.incomplete, gaps.join(' '), checked, out.length), data, screen};
   const status = review(coverage, region);
-  if (status === 'ready') return {state: state('complete', checked ? `CDFW ds582 snapshot for this region, checked ${checked}.` : 'CDFW ds582 snapshot for this region.', '', checked, out.length), data};
-  return {state: state('partial', NOTES.partial, partialDetail(out.length, checked, status !== ''), checked, out.length), data};
+  if (status === 'ready') return {state: state('complete', checked ? `CDFW ds582 snapshot for this region, checked ${checked}.` : 'CDFW ds582 snapshot for this region.', '', checked, out.length), data, screen};
+  return {state: state('partial', NOTES.partial, partialDetail(out.length, checked, status !== ''), checked, out.length), data, screen};
 }
 
 /** A region asset path (relative to the site root) that may be fetched: `data/…` or `regions/<id>/…` GeoJSON. */
@@ -176,18 +207,19 @@ async function json(fetchFn: typeof fetch, url: string): Promise<unknown> {
 /** Fetch and assess the region's boundary files; never throws (a failure is the `unavailable` state). */
 export async function loadMpas(region: string, fetchFn: typeof fetch, page: string): Promise<MpaResult> {
   const at = (path: string): string => new URL(path, page).href;
-  const failed = (detail: string): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail), data: EMPTY()});
+  // Closures the region names fail with its snapshot (null); unknown before region.json loads (the screen reads the region's own copy).
+  const failed = (detail: string, closures?: null): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail), data: EMPTY(), screen: {areas: null, checkedAt: null, closures}});
   const base = `regions/${encodeURIComponent(region)}/`;
   let config: RegionMpaConfig;
   try { config = (obj(await json(fetchFn, at(`${base}region.json`))) ?? {}) as RegionMpaConfig; } catch { return failed('The region package did not load.'); }
-  const asset = text(config.assets?.protected_areas), closuresAsset = text(config.assets?.closures);
-  if (!ASSET.test(asset)) return failed('This region names no boundary snapshot.');
+  const asset = text(config.assets?.protected_areas), closuresAsset = text(config.assets?.closures), named = closuresAsset ? null : undefined;
+  if (!ASSET.test(asset)) return failed('This region names no boundary snapshot.', named);
   const [snapshot, coverage, closures] = await Promise.all([
     json(fetchFn, at(asset)).catch(() => null),
     json(fetchFn, at(`${base}coverage.json`)).catch(() => null),
     closuresAsset ? (ASSET.test(closuresAsset) ? json(fetchFn, at(closuresAsset)).catch(() => null) : Promise.resolve(null)) : Promise.resolve(undefined),
   ]);
-  if (snapshot === null) return failed('The boundary snapshot did not load.');
+  if (snapshot === null) return failed('The boundary snapshot did not load.', named);
   return assessMpas({region, config, snapshot, coverage, closures});
 }
 
