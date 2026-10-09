@@ -10,12 +10,15 @@
 // drives it with a fake map. Erasable syntax only.
 import type * as MapLibre from 'maplibre-gl';
 import {sourceLayer} from './layers.ts';
+import type {ArchiveReader} from './seafloor.ts';
 
-/** What web/map/maplibre.js provides: the ESM build, its worker's URL and the PMTiles protocol. */
+/** What web/map/maplibre.js provides: the ESM build, its worker's URL, the PMTiles protocol and its archive reader. */
 export interface MapLibraryModule {
   readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'AttributionControl' | 'setWorkerUrl' | 'addProtocol'>;
   readonly workerUrl: string;
   readonly Protocol: new () => {tile: MapLibre.AddProtocolAction};
+  /** Reads archives the Chart decodes itself (the seafloor publication, web/map/seafloor.ts). */
+  readonly PMTiles: new (url: string) => ArchiveReader;
 }
 
 /** A camera in the `?view=` convention (web/map/stage.ts): 256 px web-map zoom, as v1's chart writes it. */
@@ -43,7 +46,7 @@ export interface EngineOptions {
 export interface Engine {
   setCamera(camera: EngineCamera): void;
   setVisible(layerId: string, visible: boolean): void;
-  setData(sourceId: string, data: string): void;
+  setData(sourceId: string, data: Parameters<MapLibre.GeoJSONSource['setData']>[0]): void;
   destroy(): void;
 }
 
@@ -98,11 +101,17 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   }
   const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map.resize()) : null;
   resize?.observe(host);
+  // Layers and sources exist once the style has loaded: earlier calls wait for it, in order.
+  let waiting: (() => void)[] | null = [];
+  map.on('style.load', () => { const run = waiting ?? []; waiting = null; for (const fn of run) fn(); });
+  const styled = (ready: unknown, fn: () => void): void => { if (ready || !waiting) fn(); else waiting.push(fn); };
 
   return {
     setCamera(c) { map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
-    setVisible(layerId, visible) { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); },
-    setData(sourceId, data) { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); },
+    setVisible(layerId, visible) {
+      styled(map.getLayer(layerId), () => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); });
+    },
+    setData(sourceId, data) { styled(map.getSource(sourceId), () => (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data)); },
     destroy() { resize?.disconnect(); map.remove(); },
   };
 }

@@ -204,7 +204,8 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   await tick(); await tick();
   assert.equal(fake.maps.length, 1, 'one map');
   const [map] = fake.maps;
-  assert.deepEqual(fetches, [`https://s.test/${BASEMAP_MANIFEST}`]);
+  // The boat profile's default layers include Seafloor (FE-14), which checks its own publication.
+  assert.deepEqual(fetches, [`https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json']);
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');

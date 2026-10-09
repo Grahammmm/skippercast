@@ -4,6 +4,7 @@
 // then the entries are the rail ids profile.ts names, with no data behind them.
 import type {IconName} from '../ui/icons.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
+import {layerEntry} from '../map/layers.ts';
 import {RAIL_IDS, type RailId} from '../profile.ts';
 import {layers, layersParam, setParams} from '../state.ts';
 
@@ -11,7 +12,7 @@ export interface RailEntry {readonly id: RailId; readonly label: string; readonl
 
 /** Rail order and copy (§ 9); the basis sentences name product, resolution and age rule. */
 export const RAIL_ENTRIES: readonly RailEntry[] = [
-  {id: 'seafloor', label: 'Seafloor', icon: 'seafloor', basis: 'USGS survey relief, nominal 0–300 ft; gaps are unsurveyed.'},
+  {id: 'seafloor', label: 'Seafloor', icon: 'seafloor', basis: layerEntry('seafloor').basis},
   {id: 'currents', label: 'Currents', icon: 'current', basis: 'WCOFS surface forecast at about 4 km, or HF radar at 6 km when observed within the hour.'},
   {id: 'water-temp', label: 'Water temp', icon: 'temperature', basis: 'MUR daily analysis, 0.01°, sampled at 0.02°, with the analysis age shown.'},
   {id: 'swell', label: 'Swell', icon: 'wave', basis: 'Model wave forecast on the region grid; nearshore sites from the CDIP MOP model.'},

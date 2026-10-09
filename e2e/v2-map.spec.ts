@@ -6,8 +6,9 @@
 // committed shoreline. The Fish Worker bridge (/api/coast, /coast-data) never answers
 // here: either it is held open, so the terrain stays mounted and loading, or it
 // fails, so the stage must return to Chart with v1's message.
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
-import type {Page} from '@playwright/test';
+import type {Page, Route} from '@playwright/test';
 import {expect, test} from './fixtures.ts';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
@@ -225,4 +226,114 @@ test('Chart → 3D → Chart keeps the centre within one zoom step', async ({pag
   expect(Math.abs(after.longitude - before.longitude)).toBeLessThan(0.01);
   expect(Math.abs(after.zoom - before.zoom)).toBeLessThanOrEqual(1);
   expect(viewOf(params(page).view).zoom, 'the link keeps the place').toBeCloseTo(before.zoom, 0);
+});
+
+// Seafloor (FE-14): a synthetic publication (tests/fixtures/seafloor/chart.pmtiles, built by
+// build-chart.mjs) with its manifest and the regional ledger whose SHA-256 the manifest names,
+// answered as the Worker answers them. Candidate A covers the view's centre, offshore.
+const SEAFLOOR = readFileSync(new URL('../tests/fixtures/seafloor/chart.pmtiles', import.meta.url));
+const SEAFLOOR_LEDGER = JSON.stringify({region: 'morro-bay', reaches: [
+  {id: 'morro-bay-fx1', region: 'morro-bay', status: 'habitat-screened'}, {id: 'morro-bay-fx2', region: 'morro-bay', status: 'habitat-held-for-screen'}]});
+const SEAFLOOR_PLACE = {region: 'morro-bay', presentation: 'chart', view: '35.35300,-120.94800,13', target: 'lingcod'};
+const HELD = 'Seafloor habitat is held for screening review';
+const EXPIRED = 'Seafloor screening has expired and is being refreshed';
+const byRange = (route: Route, bytes: Buffer) => {
+  const range = /bytes=(\d+)-(\d+)/.exec(route.request().headers().range ?? '');
+  if (!range) return route.fulfill({body: bytes, headers: {'Accept-Ranges': 'bytes'}});
+  const start = Number(range[1]), end = Math.min(Number(range[2]), bytes.length - 1);
+  return route.fulfill({status: 206, body: bytes.subarray(start, end + 1),
+    headers: {'Content-Range': `bytes ${start}-${end}/${bytes.length}`, 'Accept-Ranges': 'bytes', 'Content-Type': 'application/octet-stream'}});
+};
+async function serveSeafloor(page: Page, manifest: Record<string, unknown> = {}): Promise<string[]> {
+  const archive: string[] = [], expires = new Date(Date.now() + 86_400_000).toISOString();
+  await page.route('**/feeds/tiles/seafloor/manifest-morro-bay.json', route => route.fulfill({headers: {'Cache-Control': 'no-store'}, json: {
+    schema_version: 1, region: 'morro-bay', status: 'ready', expires_at: expires, archive_sha256: 'f'.repeat(64),
+    ledger_sha256: createHash('sha256').update(SEAFLOOR_LEDGER).digest('hex'), source_attribution: ['Fixture Survey Lab'],
+    source_use_notice: 'Retain source-specific terms and credits.', planning_notice: 'Planning only. Not a navigation chart. Check current CDFW regulations.', ...manifest}}));
+  await page.route('**/feeds/tiles/seafloor/regions/morro-bay/ledger.json', route => route.fulfill({body: SEAFLOOR_LEDGER, contentType: 'application/json'}));
+  await page.route('**/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles', route => { archive.push(route.request().url()); return byRange(route, SEAFLOOR); });
+  return archive;
+}
+const narrow = (page: Page) => page.viewportSize()!.width < 1024;
+/** The rail and legend: on a phone they are the sheet's Layers panel. */
+const showLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Layers', exact: true}).click(); };
+const hideLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click(); };
+const clickCentre = async (page: Page) => {
+  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+};
+
+test('Seafloor draws screened candidates and cells in Chart, names its surveys, and toggling removes its layers', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  const archive = await serveSeafloor(page);
+  await v2.open('app', {...SEAFLOOR_PLACE, layers: 'seafloor'});
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect.poll(() => archive.length, {message: 'the archive is read by range once the publication is admitted'}).toBeGreaterThan(0);
+  // The candidate under the centre opens the card: nominal depth, survey and year, then basis, datum and credits.
+  await expect(async () => {
+    await clickCentre(page);
+    await expect(page.locator('.app-mark h2')).toHaveText('Habitat candidate, unverified', {timeout: 1000});
+  }).toPass();
+  await expect(page.locator('.app-mark-kind')).toHaveText('Terrain grade A · fits lingcod habitat 3 of 3');
+  await expect(page.locator('.app-mark .ui-reading')).toHaveText('41–90 ft nominal');
+  await expect(page.locator('.app-mark-source')).toHaveText('Survey fixture-survey-2m · 2010 · 2 m grid');
+  const basis = page.locator('.app-mark .ui-popover-body');
+  await expect(basis).toContainText('Habitat candidate, unverified. Nominal depth (NAVD88); verify on your sounder.');
+  await expect(basis).toContainText('Fixture Survey Lab Synthetic test credit; never survey data.');
+
+  await showLayers(page);
+  const row = page.locator('.app-legend-seafloor');
+  await expect(row.locator('[data-surveys="seafloor"]')).toHaveText('Surveys fixture-survey-2m (2010), fixture-survey-2m (unknown)');
+  await expect(row.locator('[data-reason="seafloor"]')).toHaveText('2 candidates · 2 unranked in view');
+  await expect(row.locator('.app-legend-title')).toHaveText('Physical habitat fit, not catch probability');
+  await expect(row.locator('.app-key')).toHaveCount(7);
+  await row.getByRole('group', {name: 'Colour seafloor by'}).getByRole('button', {name: 'Terrain grade'}).click();
+  await expect(row.locator('.app-legend-title')).toHaveText('Terrain grade');
+  await expect(row.locator('.app-key').first()).toHaveAttribute('data-tone', 'strong');
+  await expect(row).toContainText('A · most rugged terrain');
+  await v2.a11y('v2-map-seafloor');
+
+  // Off: its layers leave the map, the card that showed one of its candidates closes, and the same click finds nothing.
+  await page.locator('.ui-rail-item', {hasText: 'Seafloor'}).getByRole('button', {name: /Seafloor/}).click();
+  await expect.poll(() => params(page).layers).not.toContain('seafloor');
+  await expect(row).toHaveCount(0);
+  await expect(page.locator('.app-mark')).toHaveCount(0);
+  await hideLayers(page);
+  await clickCentre(page);
+  await page.waitForTimeout(300);
+  await expect(page.locator('.app-mark')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('A held seafloor publication draws nothing and says why', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  const archive = await serveSeafloor(page, {status: 'held'});
+  await v2.open('app', {...SEAFLOOR_PLACE, layers: 'seafloor'});
+  await showLayers(page);
+  await expect(page.locator('[data-reason="seafloor"]')).toHaveText(HELD);
+  await expect(page.locator('.app-legend-seafloor .app-key')).toHaveCount(0);
+  expect(archive, 'a held publication never opens its archive').toEqual([]);
+  await v2.a11y('v2-map-seafloor-held');
+  expect(pageErrors).toEqual([]);
+});
+
+test('A seafloor publication that expires while drawn hides its candidates with v1\'s message', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await serveSeafloor(page, {expires_at: new Date(Date.now() + 20_000).toISOString()});
+  await v2.open('app', {...SEAFLOOR_PLACE, layers: 'seafloor'});
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect(async () => {
+    await clickCentre(page);
+    await expect(page.locator('.app-mark h2')).toHaveText('Habitat candidate, unverified', {timeout: 1000});
+  }).toPass();
+  // At expiry the layer hides before it asks for a fresh publication; the card that showed a candidate closes.
+  await expect(page.locator('.app-mark')).toHaveCount(0, {timeout: 30_000});
+  await showLayers(page);
+  await expect(page.locator('[data-reason="seafloor"]')).toHaveText(EXPIRED);
+  await expect(page.locator('.app-legend-seafloor .app-key')).toHaveCount(0);
+  await hideLayers(page);
+  await clickCentre(page);
+  await page.waitForTimeout(300);
+  await expect(page.locator('.app-mark')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 });
