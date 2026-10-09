@@ -45,8 +45,13 @@ export const SEAFLOOR_SOURCE = 'seafloor';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 export const MPA_SOURCE = 'mpas';
-/** CC BY 4.0 credit for ds582 (catalog `cdfw-mpas`); the legend's basis links the metadata and the licence. */
-export const MPA_ATTRIBUTION = 'CDFW Marine Region GIS Lab · California MPAs ds582 · CC BY 4.0';
+/**
+ * The on-map CC BY 4.0 credit for ds582 (catalog `cdfw-mpas`): creator, dataset, licence. The legend
+ * row's basis gives it in full with the metadata and licence links. Kept short so that, beside the
+ * coastline credit, MapLibre's attribution stays one line on a phone: the box paints when MapLibre
+ * loads, and a wrapped box becomes the page's largest paint (the LCP budget, design § 13).
+ */
+export const MPA_ATTRIBUTION = 'CDFW ds582 · CC BY 4.0';
 
 const STATIC: readonly TimeBehaviour[] = ['static'];
 const entry = (e: Omit<LayerEntry, 'sources' | 'legend' | 'time'> & Partial<Pick<LayerEntry, 'sources' | 'legend' | 'time'>>): LayerEntry =>

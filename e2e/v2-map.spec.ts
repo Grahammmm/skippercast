@@ -348,7 +348,7 @@ test('protected areas draw with the ds582 credit, are named from zoom 11 and ope
   await expect(chart).toHaveAttribute('data-mpa', 'complete');
   await expect.poll(() => mapAttr(page, 'data-mpa-drawn'), {message: 'outlines drawn in view'}).toBeGreaterThan(0);
   await expect(chart).toHaveAttribute('data-mpa-labels', '0');
-  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('CDFW Marine Region GIS Lab · California MPAs ds582 · CC BY 4.0');
+  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('CDFW ds582 · CC BY 4.0');
 
   await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},11`}));
   await expect.poll(() => mapAttr(page, 'data-mpa-labels'), {message: 'names placed at zoom 11'}).toBeGreaterThan(0);

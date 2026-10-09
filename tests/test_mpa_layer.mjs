@@ -58,7 +58,8 @@ test('the registry entry is always on in Chart, has no rail entry, owns its sour
   const source = json('catalog/sources.json').sources.find(s => s.id === 'cdfw-mpas');
   assert.equal(source.rights.license, 'CC-BY-4.0');
   assert.equal(e.attribution, MPA_ATTRIBUTION);
-  assert.ok(MPA_ATTRIBUTION.startsWith(source.rights.attribution) && /ds582/.test(MPA_ATTRIBUTION) && /CC BY 4\.0$/.test(MPA_ATTRIBUTION), MPA_ATTRIBUTION);
+  assert.equal(MPA_ATTRIBUTION, 'CDFW ds582 · CC BY 4.0', 'on the map: creator, dataset, licence; the legend\'s basis names the GIS Lab and links both');
+  assert.equal(source.rights.attribution, 'CDFW Marine Region GIS Lab');
   // § 9: above the swell field, under the habitat polygons.
   const ids = LAYERS.map(l => l.id);
   assert.equal(ids.indexOf('mpas'), ids.indexOf('swell') + 1);
