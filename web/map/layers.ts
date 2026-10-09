@@ -42,6 +42,11 @@ export const COASTLINE_SOURCE = 'coastline';
 export const ENC_SOURCE = 'enc';
 /** The seafloor publication's admitted features (web/map/seafloor.ts, FE-14). */
 export const SEAFLOOR_SOURCE = 'seafloor';
+/** FE-18's GeoJSON sources (web/map/marks.ts): survey habitat, geology, atlas reef marks and the selection. */
+export const SURVEY_SOURCE = 'survey-habitat';
+export const GEOLOGY_SOURCE = 'geology';
+export const MARKS_SOURCE = 'marks';
+export const SELECTION_SOURCE = 'selection';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 export const MPA_SOURCE = 'mpas';
@@ -76,7 +81,8 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart'], sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
     legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
     basis: 'CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page.', task: 'FE-19'}),
-  entry({id: 'habitat', label: 'Habitat', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10',
+  entry({id: 'habitat', label: 'Habitat', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [SURVEY_SOURCE, GEOLOGY_SOURCE],
+    legend: [{label: 'Hard bottom', swatch: 'depth1'}, {label: 'Mixed bottom', swatch: 'muted'}, {label: 'Soft bottom', swatch: 'amber'}, {label: 'Kelp', swatch: 'mint'}],
     basis: 'Survey habitat and geology polygons, each with its survey and year.', task: 'FE-18'}),
   entry({id: 'shore-runs', label: 'Shore runs', control: 'always', presentations: ['chart'], gate: 'profile = shore',
     basis: 'ESI 2006 sandy-shore runs with public access points.', task: 'FE-36'}),
@@ -97,9 +103,10 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'WCOFS surface forecast at about 4 km, or HF radar at 6 km when observed within the hour.', task: 'FE-15'}),
   entry({id: 'clouds', label: 'Clouds', control: 'clouds', presentations: ['chart'], time: ['observed'],
     basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.', task: 'FE-22'}),
-  entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10',
+  entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [MARKS_SOURCE],
+    legend: [{label: 'Reef mark; badge: habitat fit, 3 strongest', swatch: 'mint'}],
     basis: 'Atlas reef marks, each with its source survey.', task: 'FE-18'}),
-  entry({id: 'selection', label: 'Selection', control: 'always', presentations: ['chart'],
+  entry({id: 'selection', label: 'Selection', control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
     basis: 'The selected mark, outlined.', task: 'FE-18'}),
   entry({id: 'coastline', label: 'Coastline', control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.', task: 'FE-11'}),

@@ -11,7 +11,7 @@
 // Erasable syntax only: tests/test_map_stage.mjs imports this file by type
 // stripping and passes a fake terrain module, so no GPU or three is needed.
 import {computed, effect, signal} from '@preact/signals';
-import type {CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastSelection} from '../../packages/coast/src/embed-types.ts';
+import type {CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
 import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from '../coast-context.ts';
 import {dockTime} from '../hour.ts';
@@ -133,12 +133,21 @@ export const terrainBlocked = computed<string | null>(() =>
 export const currentStatus = signal('');
 /** The admitted terrain habitat selection, for the mark card. */
 export const terrainMark = signal<CoastSelection | null>(null);
+/** The renderer's evidence lines for that selection (onTargetDetail), which the mark card shows on the Chart (FE-18). */
+export const terrainDetail = signal<CoastTargetDetail | null>(null);
 const pageHidden = signal(false);
 
 export interface Stage {destroy(): void}
 
 const key = (value: unknown): string => JSON.stringify(value);
 const ORDER = ['currentLayer', 'species', 'depthLimit', 'location', 'hour', 'perspective', 'habitat', 'visible'] as const;
+
+/** `href` selecting terrain habitat `id`: one selection at a time, so the atlas `?spot=` goes (FE-18). */
+export function habitatHref(href: string, id: string): string {
+  const url = new URL(withParams(href, {habitat: id}));
+  url.searchParams.delete('spot');
+  return url.href;
+}
 
 /** Go to a presentation, with a history entry (v2 writes `presentation=chart` explicitly). */
 export const choosePresentation = (next: Presentation): void => { navigate(withParams(location.href, {presentation: next})); };
@@ -182,7 +191,7 @@ export function createStage(options: StageOptions): Stage {
 
   const release = (): void => {
     const h = handle.peek();
-    handle.value = null; applied = {}; terrainMark.value = null;
+    handle.value = null; applied = {}; terrainMark.value = null; terrainDetail.value = null;
     h?.destroy();
   };
   const fail = (error: unknown): void => {
@@ -212,13 +221,14 @@ export function createStage(options: StageOptions): Stage {
           terrainMark.value = picked;
           if (!picked.id || picked.id === habitat.peek()) return;
           applied.habitat = key(picked.id);
-          navigate(withParams(location.href, {habitat: picked.id}));
+          navigate(habitatHref(location.href, picked.id));
         },
         onRestoredSelection: picked => { terrainMark.value = picked; },
         // As v1: an invalidated selection leaves ?habitat= in the link; the close button clears it.
-        onSelectionInvalidated: () => { terrainMark.value = null; },
+        onSelectionInvalidated: () => { terrainMark.value = null; terrainDetail.value = null; },
+        onTargetDetail: detail => { terrainDetail.value = detail; },
         onCloseSelection: () => {
-          terrainMark.value = null; applied.habitat = key(null);
+          terrainMark.value = null; terrainDetail.value = null; applied.habitat = key(null);
           handle.peek()?.selectHabitat(null);
           setParams({habitat: null});
         },

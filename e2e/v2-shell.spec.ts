@@ -213,10 +213,11 @@ test.describe('phone', () => {
   }
 
   test('a selected mark takes the sheet\'s peek and clearing it brings the headline back', async ({page, pageErrors, v2}) => {
-    await v2.open('app', {...AREA, spot: 'r12'});
+    // FE-18: the link names a reef mark of the Morro Bay atlas, so the card carries its name once the atlas loads.
+    await v2.open('app', {...AREA, spot: 'SC26-001'});
     const sheet = page.locator('.ui-sheet');
     await expect(sheet).toHaveAttribute('data-detent', 'peek');
-    await expect(sheet.locator('.app-mark h2')).toHaveText('r12');
+    await expect(sheet.locator('.app-mark h2')).toHaveText('Southern rocky rise');
     await expect(sheet.locator('.app-mark h2')).toBeInViewport();
     await expect(sheet.locator('h1')).toHaveCount(0);
     await page.locator('button[aria-label="Clear selection"]').click();

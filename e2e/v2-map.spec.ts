@@ -384,4 +384,51 @@ test('a region its snapshot does not cover, or boundaries that fail to load, say
   await showLayers(page);
   await expect(page.locator('.app-legend-mpa .app-mpa-note')).toHaveText('Boundaries did not load, so none are drawn; an area without an outline may still be protected.');
   await expect(page.locator('[data-unavailable="mpas"]'), 'the row speaks for the layer').toHaveCount(0);
+
+// FE-18: atlas reef marks on the Chart and the one mark card. SC26-001 sits alone (the next mark is
+// 750 m away), so a click at the chart's centre, with the view on it, picks it.
+const MARK = {id: 'SC26-001', name: 'Southern rocky rise', view: '35.164314,-120.843179,14'};
+
+test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; closing returns focus to the chart', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'lingcod', habitat: 'reef:r1', view: MARK.view});
+  const chart = page.locator('.app-chart');
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect(chart).toHaveAttribute('data-marks', /^[1-9]\d*$/);
+  const box = (await chart.boundingBox())!;
+  await expect(async () => {
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    expect(params(page).spot).toBe(MARK.id);
+  }).toPass({timeout: 20_000, intervals: [1000]});  // a second apart, never a double-click zoom
+  expect(params(page).habitat, 'one selection at a time').toBeUndefined();
+  const card = page.getByRole('region', {name: 'Selected mark'});
+  const heading = card.getByRole('heading', {name: MARK.name});
+  await expect(heading).toBeFocused();
+  await expect(card.locator('.app-mark-kind')).toHaveText('Reef mark · grade A · ~135–184 ft');
+  await expect(card.locator('.ui-reading')).toHaveText('Fits lingcod habitat 3 of 3');
+  await expect(card.locator('.app-mark-source')).toHaveText('Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27');
+  await expect(card.locator('.app-mark-rules')).toHaveText('Screened clear of MPAs and closures in the atlas of 2026-09-27; check current rules before you fish.');
+  const close = card.getByRole('button', {name: 'Clear selection'});
+  const size = (await close.boundingBox())!;
+  expect(Math.min(size.width, size.height), 'a 44 px close button').toBeGreaterThanOrEqual(44);
+  await v2.a11y('v2-map-mark-card');
+  await close.click();
+  await expect(card).toHaveCount(0);
+  expect(params(page).spot).toBeUndefined();
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeFocused();
+  expect(pageErrors).toEqual([]);
+});
+
+test('a shared ?spot= names its mark in the terrain too, and Escape clears it', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: '3d', target: 'lingcod', spot: MARK.id});
+  const card = page.getByRole('region', {name: 'Selected mark'});
+  await expect(card.getByRole('heading')).toHaveText(MARK.name);
+  await expect(card.locator('.ui-reading')).toHaveText('Fits lingcod habitat 3 of 3');
+  await expect(card.getByRole('heading')).not.toBeFocused();
+  await card.getByRole('button', {name: 'Clear selection'}).focus();
+  await page.keyboard.press('Escape');
+  await expect(card).toHaveCount(0);
+  expect(params(page).spot).toBeUndefined();
+  expect(pageErrors).toEqual([]);
 });
