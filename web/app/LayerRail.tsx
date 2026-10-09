@@ -7,11 +7,15 @@
 // source off, and the source select picks exactly one product.
 // Any other layer that draws says under its name what it shows or why it cannot
 // (web/map/layers.ts railNotes; Clouds, FE-22: the newest observed frame).
+// Aerial (FE-23) is a base, not a rail id: offered only where the region's
+// package names one, it writes `?base=aerial` (one base at a time, § 8) and its
+// note is the imagery's acquisition window.
 import {Rail, RailItem} from '../ui/Rail.tsx';
+import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
-import {railNotes} from '../map/layers.ts';
+import {layerEntry, railNotes} from '../map/layers.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
-import {current, layers, layersParam, setParams, UNSUPPORTED} from '../state.ts';
+import {base, current, layers, layersParam, setParams, UNSUPPORTED} from '../state.ts';
 import {RAIL_ENTRIES, toggled} from './rail.ts';
 
 export {RAIL_ENTRIES, toggled, type RailEntry} from './rail.ts';
@@ -36,8 +40,18 @@ function CurrentSource() {
   );
 }
 
+/** The Aerial base: on, it replaces any other base; off, the token basemap draws alone. */
+function AerialEntry({offer}: {offer: AerialBase}) {
+  const entry = layerEntry('aerial');
+  return (
+    <RailItem id="aerial" label={entry.label} icon="map" on={base.value === 'aerial'} note={flownText(offer)}
+      basis={<>{entry.basis} {offer.note} Coverage checked {offer.checkedAt}. While it is on, the browser requests its tiles from USGS.</>}
+      onToggle={(_, next) => setParams({base: next ? 'aerial' : 'night'})} />
+  );
+}
+
 export function LayerRail() {
-  const on = layers.value, source = current.value;
+  const on = layers.value, source = current.value, aerial = aerialOffer.value;
   return (
     <Rail class="app-rail">
       {RAIL_ENTRIES.map(e => e.id === 'currents' ? (
@@ -49,6 +63,7 @@ export function LayerRail() {
         <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={on.includes(e.id)} basis={e.basis} note={railNotes.value[e.id] || undefined}
           onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})} />
       ))}
+      {aerial ? <AerialEntry offer={aerial} /> : null}
     </Rail>
   );
 }
