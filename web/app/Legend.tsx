@@ -10,9 +10,9 @@
 // the drawing covers (MpaRow), links the official rules page and carries the
 // ds582 credit in its basis.
 import {layers} from '../state.ts';
-import {unavailable} from '../map/chart.ts';
+import {chartFailed, unavailable} from '../map/chart.ts';
 import {layerEntry} from '../map/layers.ts';
-import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState} from '../map/mpa.ts';
+import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
 import {shownPresentation} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
@@ -42,9 +42,13 @@ function SeafloorRow() {
   );
 }
 
-/** The protected areas' row: the check date, or what the drawing lacks, so a missing outline never reads as open water. */
+/**
+ * The protected areas' row: the check date, or what the drawing lacks, so a missing outline never reads as
+ * open water. "Loading boundaries." until they load, "Map unavailable." without a map, and unavailable when
+ * MapLibre failed to draw the checked data.
+ */
 export function MpaRow() {
-  const s = mpaState.value;
+  const s = shownMpaState(mpaState.value, {sourceFailed: unavailable.value.includes('mpas'), mapFailed: chartFailed.value});
   return (
     <li class="app-legend-mpa" data-mpa={s.status}>
       <span class="app-legend-mpa-head">

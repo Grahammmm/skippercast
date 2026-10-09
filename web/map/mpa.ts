@@ -50,7 +50,7 @@ export interface MpaState {
   readonly status: MpaStatus;
   /** The legend's line: the check date, or what is missing. Empty while idle or loading. */
   readonly note: string;
-  /** Why, for the basis popover: the region review's own reason or the gap found; empty when complete. */
+  /** Why, for the basis popover: what the drawn data covers, or the gap found; empty when complete. */
   readonly detail: string;
   /** The snapshot's check date (YYYY-MM-DD), when known. */
   readonly checked: string | null;
@@ -69,6 +69,20 @@ export const NOTES = {
   incomplete: `The boundary snapshot is incomplete for this region; ${MAYBE}`,
   unavailable: `Boundaries did not load, so none are drawn; ${MAYBE}`,
 } as const;
+/** The Chart itself could not start (no WebGL): nothing is drawn at all. */
+export const MAP_UNAVAILABLE: MpaState = state('unavailable', 'Map unavailable.', `The map could not start, so no boundaries are drawn; ${MAYBE}`);
+
+/**
+ * What the legend shows: "Loading boundaries." until the Chart has loaded them, "Map unavailable."
+ * when the Chart cannot start, and unavailable when MapLibre reported an error on the boundary
+ * source after the loader checked it, so a drawing that failed never shows the check's date.
+ */
+export function shownMpaState(s: MpaState, {sourceFailed = false, mapFailed = false}: {sourceFailed?: boolean; mapFailed?: boolean} = {}): MpaState {
+  if (mapFailed) return MAP_UNAVAILABLE;
+  if (s.status === 'idle') return LOADING;
+  if (sourceFailed && s.status !== 'unavailable') return state('unavailable', NOTES.unavailable, 'The map could not draw the boundary data.', s.checked);
+  return s;
+}
 
 type Json = Record<string, unknown>;
 type Collection = {type: 'FeatureCollection'; features: Json[]};
@@ -107,11 +121,17 @@ export const covers = (envelope: readonly number[], bounds: readonly number[]): 
     envelope[0]! <= w + eps && envelope[1]! <= s + eps && envelope[2]! >= e - eps && envelope[3]! >= n - eps;
 };
 
-/** The region's own review of its boundary data (coverage.json need `protected-areas`). */
-function review(coverage: unknown, region: string): {status: string; reason: string} {
+/** The status of the region's own review of its boundary data (coverage.json need `protected-areas`); '' when it did not load. */
+function review(coverage: unknown, region: string): string {
   const c = obj(coverage);
   const need = c?.region_id === region && Array.isArray(c.needs) ? c.needs.map(obj).find(n => n?.id === 'protected-areas') : null;
-  return need ? {status: text(need.status), reason: text(need.reason)} : {status: '', reason: 'This region\'s boundary review did not load.'};
+  return need ? text(need.status) : '';
+}
+
+/** What a partial drawing holds, in the data's own terms (the review's reasons describe v1's screening, which v2 does not do). */
+function partialDetail(count: number, checked: string | null, reviewed: boolean): string {
+  const drawnLine = `Drawn: ${count} areas from the CDFW ds582 snapshot${checked ? ` checked ${checked}` : ''}.`;
+  return `${drawnLine} ${reviewed ? 'The region\'s review has not confirmed that this is every protected area here.' : 'This region\'s boundary review did not load, so the drawing is unconfirmed.'}`;
 }
 
 const drawn = (list: Json[], source: 'cdfw' | 'noaa', checked: string | null): Json[] => list.map(f => {
@@ -140,9 +160,9 @@ export function assessMpas({region, config, snapshot, coverage, closures}: MpaIn
   }
   const data: Collection = {type: 'FeatureCollection', features: out};
   if (gaps.length) return {state: state('incomplete', NOTES.incomplete, gaps.join(' '), checked, out.length), data};
-  const {status, reason} = review(coverage, region);
-  if (status === 'ready') return {state: state('complete', checked ? `CDFW ds582 snapshot checked ${checked}.` : 'CDFW ds582 snapshot.', '', checked, out.length), data};
-  return {state: state('partial', NOTES.partial, `Region review: ${reason}`, checked, out.length), data};
+  const status = review(coverage, region);
+  if (status === 'ready') return {state: state('complete', checked ? `CDFW ds582 snapshot for this region, checked ${checked}.` : 'CDFW ds582 snapshot for this region.', '', checked, out.length), data};
+  return {state: state('partial', NOTES.partial, partialDetail(out.length, checked, status !== ''), checked, out.length), data};
 }
 
 /** A region asset path (relative to the site root) that may be fetched: `data/…` or `regions/<id>/…` GeoJSON. */

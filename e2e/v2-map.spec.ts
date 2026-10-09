@@ -336,6 +336,8 @@ test('A seafloor publication that expires while drawn hides its candidates with 
   await page.waitForTimeout(300);
   await expect(page.locator('.app-mark')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
+});
+
 // Protected areas (FE-19): the committed region files, always drawn on the Chart. BUCHON is a
 // point well inside Point Buchon SMR (about 1 km from its edges), so a click at the canvas centre lands in it.
 const BUCHON = '35.24178,-120.91053';
@@ -363,7 +365,7 @@ test('protected areas draw with the ds582 credit, are named from zoom 11 and ope
 
   await showLayers(page);
   const row = page.locator('.app-legend-mpa');
-  await expect(row.locator('.app-mpa-note')).toHaveText('CDFW ds582 snapshot checked 2026-09-21.');
+  await expect(row.locator('.app-mpa-note')).toHaveText('CDFW ds582 snapshot for this region, checked 2026-09-21.');
   await expect(row.getByRole('link', {name: 'Official rules and boundaries (CDFW)'})).toHaveAttribute('href', 'https://wildlife.ca.gov/Conservation/Marine/MPAs');
   await v2.a11y('v2-map-mpas');
   expect(pageErrors).toEqual([]);

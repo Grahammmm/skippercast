@@ -15,11 +15,11 @@ import {build} from 'esbuild';
 import {MPA_SERVICE as V1_SERVICE, validMPAs} from '../dist/protected-areas.js';
 import {lintFile} from '../scripts/check_tokens.mjs';
 import {PROFILE_TABLE, RAIL_IDS} from '../web/profile.ts';
-import {MPA_ATTRIBUTION, MPA_SOURCE, LAYERS, layerEntry, sourceLayer} from '../web/map/layers.ts';
+import {MPA_ATTRIBUTION, MPA_SOURCE, LAYERS, SEAFLOOR_SOURCE, layerEntry, sourceLayer} from '../web/map/layers.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {
-  CDFW_MPA_PAGE, DESIGNATIONS, IDLE, MPA_FILL, MPA_LABEL, MPA_LABEL_MIN_ZOOM, MPA_LINE, MPA_SERVICE, NOAA_GEA_PAGE, NOTES,
-  assessMpas, covers, loadMpas, mpaLayers, mpaMark, mpaState, snapshotEnvelope, validSnapshot,
+  CDFW_MPA_PAGE, DESIGNATIONS, IDLE, LOADING, MAP_UNAVAILABLE, MPA_FILL, MPA_LABEL, MPA_LABEL_MIN_ZOOM, MPA_LINE, MPA_SERVICE, NOAA_GEA_PAGE, NOTES,
+  assessMpas, covers, loadMpas, mpaLayers, mpaMark, mpaState, shownMpaState, snapshotEnvelope, validSnapshot,
 } from '../web/map/mpa.ts';
 import {chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -84,11 +84,14 @@ test('fill, dashed outline and names read the --mpa-* tokens; names start at ?vi
   // The tokens hold design D5's values.
   const css = read('web/tokens.css');
   assert.match(css, /--mpa-fill: #e8a877;\s*--mpa-fill-opacity: 0\.08;\s*--mpa-line: #e8b584;/);
-  // In the Chart: after the ENC base, before the coastline glow, with the credit on its source.
+  // In the Chart (§ 9): after the ENC base, under the seafloor (FE-14) and the coastline glow, with the credit on its source.
   const style = chartStyle({palette: sentinel, archive: null, page: PAGE, region: 'morro-bay', base: 'night'});
   const order = style.layers.map(l => l.id);
-  assert.deepEqual(order.slice(-5), [MPA_FILL, MPA_LINE, MPA_LABEL, 'coastline-glow', 'coastline']);
-  assert.ok(order.indexOf('chart-enc') < order.indexOf(MPA_FILL));
+  const mpas = [MPA_FILL, MPA_LINE, MPA_LABEL].map(id => order.indexOf(id));
+  assert.deepEqual(mpas, [mpas[0], mpas[0] + 1, mpas[0] + 2], 'fill, outline, names together');
+  assert.ok(order.indexOf('chart-enc') < mpas[0]);
+  const seafloor = style.layers.findIndex(l => l.source === SEAFLOOR_SOURCE);
+  assert.ok(seafloor > mpas[2] && seafloor < order.indexOf('coastline-glow'), 'MPAs, then the seafloor, then the coastline');
   assert.deepEqual(style.sources[MPA_SOURCE], {type: 'geojson', data: {type: 'FeatureCollection', features: []}, attribution: MPA_ATTRIBUTION});
 });
 
@@ -140,12 +143,14 @@ test('every published region: complete only when reviewed and covered; anything 
     assert.equal(state.status, expected[id] ?? 'partial', id);
     if (state.status === 'complete') {
       assert.equal(review.status, 'ready', `${id} is complete only after its review`);
-      assert.equal(state.note, `CDFW ds582 snapshot checked ${snapshot.checked_at.slice(0, 10)}.`);
+      assert.equal(state.note, `CDFW ds582 snapshot for this region, checked ${snapshot.checked_at.slice(0, 10)}.`, 'the region, not whatever is in view');
     } else {
       assert.match(state.note, /an area without an outline may still be protected\.$/, id);
       assert.ok(state.detail.length > 0, `${id} says why`);
     }
-    if (state.status === 'partial') assert.equal(state.detail, `Region review: ${review.reason}`);
+    // A partial drawing says what the data holds, never the review's v1 screening language.
+    if (state.status === 'partial') assert.equal(state.detail, `Drawn: ${data.features.length} areas from the CDFW ds582 snapshot checked ${snapshot.checked_at.slice(0, 10)}. The region's review has not confirmed that this is every protected area here.`);
+    assert.doesNotMatch(state.detail, /target|promotion|screen|exclud|trip-time|gate/i, id);
     assert.doesNotMatch(`${state.note} ${state.detail}`, VERDICT, id);
     // Everything valid is drawn, whatever the status: a partial drawing is still real boundaries.
     assert.equal(data.features.length, snapshot.features.length + (closures?.features.length ?? 0), id);
@@ -181,8 +186,23 @@ test('a damaged, short or foreign snapshot is never presented as complete', () =
   // Without the region's own review, the drawing is not called complete.
   const unreviewed = assessMpas({region: 'morro-bay', config, coverage: null, snapshot});
   assert.equal(unreviewed.state.status, 'partial');
-  assert.equal(unreviewed.state.detail, 'Region review: This region\'s boundary review did not load.');
+  assert.equal(unreviewed.state.detail, 'Drawn: 8 areas from the CDFW ds582 snapshot checked 2026-09-21. This region\'s boundary review did not load, so the drawing is unconfirmed.');
   assert.equal(assessMpas({region: 'morro-bay', config, coverage: {...coverage, region_id: 'big-sur-coast'}, snapshot}).state.status, 'partial');
+});
+
+test('the legend state: loading until the Chart loads, "Map unavailable." without a map, unavailable when MapLibre fails the checked data', () => {
+  const complete = assessMpas({region: 'morro-bay', ...regionFiles('morro-bay'), snapshot: json('dist/data/protected-areas.geojson')}).state;
+  assert.equal(shownMpaState(complete), complete);
+  assert.equal(shownMpaState(IDLE), LOADING, 'before the Chart mounts');
+  assert.equal(LOADING.note, 'Loading boundaries.');
+  assert.equal(shownMpaState(complete, {mapFailed: true}), MAP_UNAVAILABLE);
+  assert.equal(shownMpaState(IDLE, {mapFailed: true}).note, 'Map unavailable.');
+  const failed = shownMpaState(complete, {sourceFailed: true});
+  assert.equal(failed.status, 'unavailable');
+  assert.equal(failed.note, NOTES.unavailable, 'never the check date of data that did not draw');
+  assert.match(failed.note, /an area without an outline may still be protected\.$/);
+  const already = shownMpaState({...complete, status: 'unavailable', note: NOTES.unavailable, detail: 'The boundary snapshot did not load.'}, {sourceFailed: true});
+  assert.equal(already.detail, 'The boundary snapshot did not load.', 'the loader\'s own reason stays');
 });
 
 test('the loader reads the region\'s own files, never an asset path outside data/ or regions/, and never throws', async () => {
@@ -335,6 +355,7 @@ async function components() {
       export {Legend, MpaRow} from './web/app/Legend.tsx';
       export {MarkCard} from './web/app/MarkCard.tsx';
       export {mpaState, LOADING, NOTES} from './web/map/mpa.ts';
+      export {chartFailed, unavailable} from './web/map/chart.ts';
       export {shownPresentation} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
@@ -347,22 +368,34 @@ async function components() {
 }
 
 test('the legend row says what the drawing covers, links the official rules and carries the ds582 credit', async () => {
-  const {Legend, MpaRow, mpaState: state, NOTES: notes, LOADING: loading, render, h, state: store} = await components();
+  const {Legend, MpaRow, mpaState: state, NOTES: notes, LOADING: loading, chartFailed, unavailable: failedLayers, render, h, state: store} = await components();
   store.configureStore({v2: true, storage: null});
   store.syncFromURL(`${PAGE}?region=morro-bay&layers=none`);
-  state.value = {status: 'complete', note: 'CDFW ds582 snapshot checked 2026-09-21.', detail: '', checked: '2026-09-21', count: 8};
+  state.value = {status: 'complete', note: 'CDFW ds582 snapshot for this region, checked 2026-09-21.', detail: '', checked: '2026-09-21', count: 8};
   const row = render(h(MpaRow, {}));
   assert.match(row, /^<li class="app-legend-mpa" data-mpa="complete">/);
   assert.match(row, /<span class="app-swatch" data-layer="mpas" aria-hidden="true"><\/span>Marine protected areas/);
-  assert.match(row, /<p class="app-mpa-note">CDFW ds582 snapshot checked 2026-09-21\.<\/p>/);
+  assert.match(row, /<p class="app-mpa-note">CDFW ds582 snapshot for this region, checked 2026-09-21\.<\/p>/);
   assert.match(row, new RegExp(`<a class="app-mpa-rules" href="${CDFW_MPA_PAGE}" target="_blank" rel="noopener">Official rules and boundaries \\(CDFW\\)</a>`));
   // The credit sits in the basis disclosure: creator, dataset, licence, and that the selection is SkipperCast's.
   assert.match(row, /<details class="ui-popover ui-popover--icon"[^>]*>.*Regional selection by SkipperCast from <a href="https:\/\/filelib\.wildlife\.ca\.gov\/public\/BDB\/GIS\/BIOS\/metadata\/DS0582\.html"[^>]*>CDFW\s+Marine Region GIS Lab, California MPAs ds582<\/a>, <a href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/"[^>]*>CC BY 4\.0<\/a>\./s);
-  state.value = {status: 'partial', note: notes.partial, detail: 'Region review: Four polygons reviewed.', checked: '2026-09-25', count: 4};
+  // MapLibre failed to draw the checked data: the row says unavailable, not the check date.
+  failedLayers.value = ['mpas'];
+  const broken = render(h(MpaRow, {}));
+  assert.match(broken, /data-mpa="unavailable"/);
+  assert.match(broken, /<p class="app-mpa-note">Boundaries did not load, so none are drawn; an area without an outline may still be protected\.<\/p>/);
+  assert.doesNotMatch(broken, /checked 2026-09-21/);
+  failedLayers.value = [];
+  chartFailed.value = true;
+  assert.match(render(h(MpaRow, {})), /data-mpa="unavailable".*<p class="app-mpa-note">Map unavailable\.<\/p>/s);
+  chartFailed.value = false;
+  state.value = {status: 'idle', note: '', detail: '', checked: null, count: 0};
+  assert.match(render(h(MpaRow, {})), /data-mpa="loading".*<p class="app-mpa-note">Loading boundaries\.<\/p>/s, 'before the Chart loads');
+  state.value = {status: 'partial', note: notes.partial, detail: 'Drawn: 4 areas from the CDFW ds582 snapshot checked 2026-09-25.', checked: '2026-09-25', count: 4};
   const partial = render(h(MpaRow, {}));
   assert.match(partial, /data-mpa="partial"/);
   assert.match(partial, /<p class="app-mpa-note">Boundary review for this region is partial; an area without an outline may still be protected\.<\/p>/);
-  assert.match(partial, /Region review: Four polygons reviewed\. Regional selection/);
+  assert.match(partial, /Drawn: 4 areas from the CDFW ds582 snapshot checked 2026-09-25\. Regional selection/);
   state.value = loading;
   assert.match(render(h(MpaRow, {})), /<p class="app-mpa-note">Loading boundaries\.<\/p>/);
   // The legend shows the row on the Chart, under the rail's layers, and names an unavailable load only in the row.
