@@ -1,5 +1,5 @@
-// The map stage (FE-71, design § 3A.2): the Chart host (MapLibre arrives with
-// FE-11; the placeholder stands in), the terrain host whose shadow root
+// The map stage (FE-71, design § 3A.2): the Chart host (MapLibre, FE-11,
+// registered with the stage as a renderer), the terrain host whose shadow root
 // packages/coast mounts into, and the Chart / 2D / 3D toggle in the map chrome
 // with its status line. web/map/stage.ts owns the renderers; this component
 // creates one stage while it is mounted and destroys it when it unmounts (a
@@ -8,6 +8,7 @@ import type {ComponentChildren} from 'preact';
 import {useEffect, useRef} from 'preact/hooks';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
+import {chartFailed, createChart} from '../map/chart.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
 import {regionInfo, zone} from './App.tsx';
@@ -41,15 +42,19 @@ const palette = () => { try { return coastPalette(readPalette()); } catch { retu
 
 /** The map stage with whatever chrome the layout puts over it. */
 export function MapStage({children}: {children?: ComponentChildren} = {}) {
-  const terrainHost = useRef<HTMLDivElement>(null);
+  const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone});
+    const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
+      renderers: [() => createChart({host: chartHost.current!})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;
   return (
     <section class="app-stage" aria-label="Map">
-      <div class="app-map" hidden={shown !== 'chart'}><span>Map unavailable.</span></div>
+      <div class="app-map" hidden={shown !== 'chart'}>
+        <div class="app-chart" ref={chartHost} hidden={chartFailed.value} />
+        {chartFailed.value ? <span>Map unavailable.</span> : null}
+      </div>
       <div class="app-terrain" ref={terrainHost} hidden={shown === 'chart'} data-coast-theme="tokens" />
       <PresentationToggle />
       {children}

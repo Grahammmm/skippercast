@@ -25,7 +25,6 @@
   {"file":"dist/intelligence.js","rule":"consecutive-not","text":"Raw ensemble fractions, not calibrated odds or catch probability. NOAA's sea threshold is 3.28 ft, not your 3 ft comfort limit."},
   {"file":"dist/live-conditions.js","rule":"method-name","text":"X ft MLLW"},
   {"file":"dist/map-test-leaflet.html","rule":"consecutive-not","text":"Reef outlines are partial mapped rough-habitat footprints (USGS, research-only), not complete reefs or fishing spots. Planning use only; not a navigation chart."},
-  {"file":"dist/map-test.html","rule":"consecutive-not","text":"Reef outlines are partial mapped rough-habitat footprints (USGS, research-only), not complete reefs or fishing spots. Planning use only; not a navigation chart."},
   {"file":"dist/marine-detail.js","rule":"consecutive-not","text":"Live entrance conditions are not loaded here. Active-alert checks do not cover unissued warnings later in the forecast."},
   {"file":"dist/marine-detail.js","rule":"consecutive-not","text":"Period is seconds per cycle, not a countdown for individual waves. X X Combined significant height is not the sum of component heights; larger individual waves occur."},
   {"file":"dist/marine-detail.js","rule":"consecutive-not","text":"Surface current is not bottom drift or a usable harbor-current prediction. An hourly sea-surface temperature forecast is not available from SkipperCast's own sources yet; the Ocean habitat layer in..."},
