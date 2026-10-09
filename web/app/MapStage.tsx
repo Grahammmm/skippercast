@@ -4,7 +4,8 @@
 // with its status line. web/map/stage.ts owns the renderers; this component
 // creates one stage while it is mounted and destroys it when it unmounts (a
 // layout change), which releases the terrain's WebGL context. The Chart's
-// run-time layers (FE-22's clouds, FE-23's aerial base) are created with it.
+// run-time layers (FE-16's water temperature, FE-22's clouds, FE-23's aerial base) are
+// created with it.
 import type {ComponentChildren} from 'preact';
 import {useEffect, useRef} from 'preact/hooks';
 import {Chip} from '../ui/Chip.tsx';
@@ -14,6 +15,7 @@ import {chartFailed, createChart} from '../map/chart.ts';
 import {createClouds} from '../map/clouds.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
+import {createWaterTemp} from '../map/sst.ts';
 import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
 import {profile, region, species} from '../state.ts';
 import {regionInfo, zone} from './App.tsx';
@@ -49,9 +51,10 @@ const palette = () => { try { return coastPalette(readPalette()); } catch { retu
 export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const place = () => regionPlace(regionInfo.value, profile.value, species.value ?? '');
     const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
-      renderers: [() => createChart({host: chartHost.current!, zone, place: () => regionPlace(regionInfo.value, profile.value, species.value ?? ''),
-        layers: [engine => createClouds({engine, zone}),
+      renderers: [() => createChart({host: chartHost.current!, zone, place,
+        layers: [engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null})]})]});
     return () => stage.destroy();
   }, []);
