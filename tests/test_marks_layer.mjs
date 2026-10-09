@@ -11,18 +11,18 @@ import {speciesFit} from '../dist/species-fit.js';
 import {matchesSpecies} from '../dist/species.js';
 import {habitatMatches} from '../dist/survey-habitat.js';
 import {
-  EMPTY, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
-  receiptCard, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
+  CDFW_REGULATIONS, EMPTY, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
+  receiptCard, regulationsLink, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
 } from '../web/map/habitat.ts';
 import {
-  GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markSources, markStyle, picked, spotCard,
+  GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markSources, markStyle, picked, spotCard, spotHref,
 } from '../web/map/marks.ts';
 import {GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE} from '../web/map/layers.ts';
 import {ENC_LAYER, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {COASTLINE_GLOW, COASTLINE_PICK} from '../web/map/coastline.ts';
 import {readPalette} from '../web/map/palette.ts';
-import {createStage, terrainDetail, terrainFailed, terrainMark} from '../web/map/stage.ts';
+import {createStage, habitatHref, terrainDetail, terrainFailed, terrainMark} from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map';
@@ -95,16 +95,21 @@ test('a mark\'s card: fit, grade and depth range; source and age; the regulation
   assert.deepEqual({...card, basis: undefined}, {
     id: 'spot:SC26-001', name: 'Southern rocky rise', kind: 'Reef mark · grade A · ~135–184 ft', reading: 'Fits lingcod habitat 3 of 3',
     source: 'Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27',
-    rules: 'Screened clear of MPAs and closures in the atlas of 2026-09-27; check current rules before you fish.', basis: undefined,
+    rules: 'Screened against protected areas with 2992 m clearance in the atlas of 2026-09-27; check current rules before you fish.',
+    regulations: {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', label: 'CDFW ocean fishing regulations'}, basis: undefined,
   });
   assert.match(card.basis, /^Raised, rough bedrock.*Research-only historical terrain candidate.*USGS; CSUMB Seafloor Mapping Lab.*U\.S\. public domain/);
   const socal = atlasCard(SOCAL_ATLAS.targets[0], {region: SOCAL, atlas: SOCAL_ATLAS, survey: null, geology: null}, 'reef');
   assert.equal(socal.reading, 'Habitat fit unrated for this target');
   assert.equal(socal.source, 'NOAA H13093: Vicinity of Anacapa Island · surveyed 2017 · atlas 2026-09-24');
   assert.match(socal.basis, /CC0-1\.0/, 'each feature carries its own source\'s rights');
+  assert.equal(socal.rules, 'Screened against protected areas with 75 m clearance in the atlas of 2026-09-24; check current rules before you fish.', 'v1\'s terrain-evidence wording');
+  assert.deepEqual(socal.regulations, {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern', label: 'CDFW regional fishing regulations'}, 'the region\'s own CDFW page');
+  assert.equal(regulationsLink({id: 'x', regulations_url: 'https://example.test/rules'}).href, CDFW_REGULATIONS, 'only an official CDFW page');
   for (const t of [...ATLAS.targets, ...SOCAL_ATLAS.targets]) {
     const c = atlasCard(t, {region: MORRO, atlas: ATLAS, survey: null, geology: null}, 'reef');
     assert.doesNotMatch(`${c.name} ${c.kind} ${c.reading} ${c.rules}`, PROMISE, t.id);
+    assert.doesNotMatch(c.rules, /\bclear of\b|\ballowed\b|\blegal to\b/i, 'never a clearance promise');
     if (/of 3/.test(c.reading)) assert.match(c.reading, /^Fits .+ habitat [1-3] of 3$/, 'the fit line is the one wording');
   }
 });
@@ -119,16 +124,17 @@ test('survey habitat fills and geology outlines carry their class; their cards n
   assert.ok(geologyFeatures(data, 'halibut').features.every(f => f.properties.kind === 'sediment'));
   assert.deepEqual(geologyFeatures(data, 'salmon'), {type: 'FeatureCollection', features: []});
 
-  const survey = surveyCard(SURVEY.features[0].properties, SURVEY);
+  const survey = surveyCard(SURVEY.features[0].properties, SURVEY, CAMBRIA);
   assert.equal(survey.kind, 'Mapped hard bottom');
   assert.equal(survey.reading, '0.574 km²');
   assert.equal(survey.source, 'USGS original seafloor-character class 3 · compiled 2022-06-07');
   assert.equal(survey.rules, 'MPAs subtracted with a 102 m margin when built on 2026-09-26; check current rules before you fish.');
   assert.match(survey.basis, /^Compiled historical habitat, not a waypoint/);
-  const unit = GEOLOGY.features[0].properties, geology = geologyCard(unit, GEOLOGY);
+  const unit = GEOLOGY.features[0].properties, geology = geologyCard(unit, GEOLOGY, CAMBRIA);
   assert.deepEqual([geology.name, geology.kind, geology.source], ['Coast Range ophiolite', 'Geology · map unit Jo?', 'U.S. Geological Survey, Watt and others, SIM 3327 (2015)']);
   assert.equal(geology.rules, 'MPAs excluded when the layer was built; check current rules before you fish.');
-  assert.equal(geologyCard(unit, {...GEOLOGY, source: {}}).rules, 'Check current rules before you fish.', 'no screen claimed where the build states none');
+  assert.equal(geologyCard(unit, {...GEOLOGY, source: {}}, CAMBRIA).rules, 'Check current rules before you fish.', 'no screen claimed where the build states none');
+  for (const c of [survey, geology]) assert.equal(c.regulations.href, CDFW_REGULATIONS, 'every card links the official rules');
   for (const c of [survey, geology]) assert.doesNotMatch(`${c.kind} ${c.reading} ${c.rules}`, PROMISE);
 });
 
@@ -167,7 +173,11 @@ test('the Chart style draws habitat in its § 9 slot and marks under the coastli
   const style = chartStyle({palette: sentinel, archive: null, page: PAGE, region: 'morro-bay', base: 'night'});
   const ids = style.layers.map(l => l.id);
   for (const source of [SURVEY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE]) assert.deepEqual(style.sources[source], {type: 'geojson', data: EMPTY}, source);
-  assert.deepEqual(ids.slice(ids.indexOf(ENC_LAYER) + 1), [SURVEY_PICK, GEOLOGY_PICK, 'geology-line', MARK_PICK, 'marks-ring', 'marks-fit', 'selection-ring', COASTLINE_GLOW, 'coastline']);
+  // § 9: MPAs (FE-19), then habitat, the seafloor (FE-14), marks and the selection, the coastline on top.
+  const at = id => ids.indexOf(id);
+  assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 3), [SURVEY_PICK, GEOLOGY_PICK, 'geology-line']);
+  assert.ok(at(ENC_LAYER) < at('mpa-line') && at('mpa-label') < at(SURVEY_PICK) && at('geology-line') < at('seafloor-fill') && at('seafloor-unranked') < at(MARK_PICK), ids.join(' '));
+  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'selection-ring', COASTLINE_GLOW, 'coastline']);
   const layer = id => style.layers.find(l => l.id === id);
   assert.equal(layer(SURVEY_PICK).paint['fill-opacity'], 0.25, 'habitat fills at 0.25');
   assert.deepEqual(layer('geology-line').paint['line-dasharray'], [3, 2], 'geology as a dashed outline');
@@ -300,7 +310,7 @@ test('data set before MapLibre has parsed the style reaches the source once it h
   engine.setData(MARKS_SOURCE, marks);
   assert.equal(map.data[MARKS_SOURCE], undefined, 'nothing to set yet');
   map.styleLoaded = true;
-  map.fire('styledata');
+  map.fire('style.load');
   assert.equal(map.data[MARKS_SOURCE], marks, 'the latest data, once');
   engine.destroy();
 });
@@ -342,6 +352,25 @@ test('the link\'s spot loads in any presentation; a failed file marks only its l
   assert.equal(spotCard.value, null);
   assert.equal(markSources[GEOLOGY_SOURCE].value.features.length > 0, true);
   again.destroy();
+});
+
+test('the selection hrefs drop ?focus= too, and a link naming both a spot and a habitat keeps the spot', async () => {
+  const both = `${PAGE}?region=morro-bay&focus=estero&spot=SC26-001&habitat=reef:r1&view=1,2,3`;
+  const spot = new URL(spotHref(both, 'SC26-002')).searchParams, none = new URL(spotHref(both, null)).searchParams, terrain = new URL(habitatHref(both, 'reef:r2')).searchParams;
+  assert.deepEqual([spot.get('spot'), spot.get('focus'), spot.get('habitat'), spot.get('view')], ['SC26-002', null, null, '1,2,3']);
+  assert.deepEqual([none.get('spot'), none.get('focus'), none.get('habitat')], [null, null, null]);
+  assert.deepEqual([terrain.get('habitat'), terrain.get('spot'), terrain.get('focus')], ['reef:r2', null, null]);
+
+  const nav = browser(both);
+  const marks = createMarks({fetchFn: files(), page: () => PAGE, resolver: async () => ({resolveHabitatSelection: async () => null})});
+  assert.deepEqual([nav.params().get('spot'), nav.params().get('habitat'), nav.params().get('focus')], ['SC26-001', null, null], 'one selection: the spot');
+  assert.equal(nav.stack.length, 1, 'normalised in place, without a history entry');
+  marks.destroy();
+  const kept = browser(`${PAGE}?region=morro-bay&focus=estero&habitat=reef:r1`);
+  const again = createMarks({fetchFn: files(), page: () => PAGE, resolver: async () => ({resolveHabitatSelection: async () => null})});
+  assert.equal(kept.params().get('habitat'), 'reef:r1', 'a focus area is no spot: the habitat stays');
+  again.destroy();
+  await settle();
 });
 
 test('on the Chart a ?habitat= the terrain has not restored resolves without graphics, until its receipt expires', async () => {

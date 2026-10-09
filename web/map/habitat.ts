@@ -27,6 +27,7 @@ export interface AtlasTarget {
 export interface Atlas {source_validation_date?: string; targets: AtlasTarget[]; sources?: {id: string; name?: string; credit?: string; rights?: string}[]}
 export interface RegionData {
   id: string; assets?: Record<string, string | null>; source_names?: Record<string, string>; target_options?: {id: string; habitat_kinds?: string[]}[];
+  regulations_url?: string;
 }
 export type Survey = Collection & {created_at?: string; mpa_margin_m?: number; source_kind?: string};
 export type Geology = Collection & {source?: {attribution?: string; derivation?: string; limitations?: string}};
@@ -87,6 +88,14 @@ export const surveyFeatures = (data: MarkData | null, target: string): Collectio
 export const geologyFeatures = (data: MarkData | null, target: string): Collection => !data?.geology ? EMPTY
   : collection(data.geology.features.filter(f => geologyShown(f.properties.kind, habitatFamily(target))).map(f => keep(f, {kind: f.properties.kind})));
 
+/** CDFW's ocean sport fishing regulations, for a region whose data names no regional page (v1's species.js names the Central one). */
+export const CDFW_REGULATIONS = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations';
+/** The official page the regulations line links: the region's own CDFW page if its data names one, else CDFW's ocean page. Never advice. */
+export function regulationsLink(region: RegionData): {href: string; label: string} {
+  const own = region.regulations_url;
+  return typeof own === 'string' && /^https:\/\/wildlife\.ca\.gov\//.test(own)
+    ? {href: own, label: 'CDFW regional fishing regulations'} : {href: CDFW_REGULATIONS, label: 'CDFW ocean fishing regulations'};
+}
 /** The card's regulations line: what the layer's own build screened, then the rules check (FE-54 adds the rules themselves). */
 const rules = (screen?: string | false): string => screen ? `${screen}; check current rules before you fish.` : 'Check current rules before you fish.';
 const isoDate = (value: unknown): string => {
@@ -104,31 +113,33 @@ export function atlasCard(t: AtlasTarget, data: MarkData, target: string): Chart
     id: `spot:${t.id}`, name: t.label, kind: joined('Reef mark', t.habitat_grade && `grade ${t.habitat_grade}`, depthRange(t.neighborhood_depth_ft)),
     reading: markFit(t, target)?.line ?? 'Habitat fit unrated for this target',
     source: joined(t.source_name ?? data.region.source_names?.[t.source_id ?? ''] ?? source?.name ?? t.source_id, t.survey_year && `surveyed ${t.survey_year}`, date && `atlas ${date}`),
-    rules: rules(typeof screened === 'number' && screened > 0 && !!date && `Screened clear of MPAs and closures in the atlas of ${date}`),
+    // v1's wording (dist/terrain-evidence.js): a build-time screen with its measured clearance, never a promise.
+    rules: rules(typeof screened === 'number' && screened > 0 && !!date && `Screened against protected areas with ${Math.round(screened)} m clearance in the atlas of ${date}`),
+    regulations: regulationsLink(data.region),
     basis: [t.terrain_interpretation, t.evidence_status, source && joined(source.credit, source.rights)].filter(Boolean).join(' '),
   };
 }
 
 const UNIT: Readonly<Record<string, string>> = {rock: 'Mapped hard bottom', mixed: 'Mapped mixed bottom', sediment: 'Mapped soft bottom', kelp: 'Historical kelp detections'};
 /** A survey habitat outline's card, from the published feature (v1's habitatDetails facts). */
-export function surveyCard(p: Props, survey: Survey): ChartMark {
+export function surveyCard(p: Props, survey: Survey, region: RegionData): ChartMark {
   const kelp = p.habitat_kind === 'kelp', area = Number(p.area_km2), margin = survey.mpa_margin_m;
   return {
     id: `survey:${String(p.id)}`, name: String(p.name ?? 'Survey habitat'), kind: UNIT[String(p.habitat_kind)] ?? 'Survey context',
     reading: Number.isFinite(area) ? `${area.toFixed(3)} km²` : '—',
     source: joined(survey.source_kind ?? 'Survey habitat', `${kelp ? 'observed' : 'compiled'} ${isoDate(p.source_date)}`),
-    rules: rules(typeof margin === 'number' && `MPAs subtracted with a ${margin} m margin when built on ${isoDate(survey.created_at)}`),
+    rules: rules(typeof margin === 'number' && `MPAs subtracted with a ${margin} m margin when built on ${isoDate(survey.created_at)}`), regulations: regulationsLink(region),
     basis: [p.limitations, p.depth_note].filter(Boolean).join(' '),
   };
 }
 
 /** A geology unit's card (v1's geology.js facts). */
-export function geologyCard(p: Props, geology: Geology): ChartMark {
+export function geologyCard(p: Props, geology: Geology, region: RegionData): ChartMark {
   const s = geology.source ?? {};
   return {
     id: `geology:${String(p.id)}`, name: String(p.label ?? 'Geology'), kind: `Geology · map unit ${String(p.unit ?? '—')}`,
     reading: Number.isFinite(Number(p.area_km2)) ? `${Number(p.area_km2)} km²` : '—', source: s.attribution ?? 'Geological map',
-    rules: rules(/MPA exclusion/i.test(s.derivation ?? '') && 'MPAs excluded when the layer was built'),
+    rules: rules(/MPA exclusion/i.test(s.derivation ?? '') && 'MPAs excluded when the layer was built'), regulations: regulationsLink(region),
     basis: [s.derivation, s.limitations].filter(Boolean).join(' '),
   };
 }

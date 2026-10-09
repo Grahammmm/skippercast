@@ -62,9 +62,10 @@ export const habitatCard = computed<ChartMark | null>(() => {
   return receipt && receipt.id === habitat.value ? receiptCard(receipt) : null;
 });
 
-/** `href` without the link's selections (`?spot=` and `?habitat=`), or with `spot` as the only one. */
+/** `href` without the link's selections (`?spot=`, `?focus=`, `?habitat=`), or with `spot` as the only one. */
 export function spotHref(href: string, spot: string | null): string {
   const url = new URL(withParams(href, {habitat: null}));
+  url.searchParams.delete('focus');
   if (spot) url.searchParams.set('spot', spot); else url.searchParams.delete('spot');
   return url.href;
 }
@@ -83,7 +84,7 @@ export function chartPick(layer: string | null, properties: Record<string, unkno
     return null;
   }
   const survey = layer === SURVEY_PICK ? find(data?.survey) : undefined, geology = layer === GEOLOGY_PICK ? find(data?.geology) : undefined;
-  const mark = survey ? surveyCard(survey, data!.survey!) : geology ? geologyCard(geology, data!.geology!) : other;
+  const mark = survey ? surveyCard(survey, data!.survey!, data!.region) : geology ? geologyCard(geology, data!.geology!, data!.region) : other;
   if (!mark) return null;
   if (selection.peek() || habitat.peek()) navigate(spotHref(location.href, null));
   picked.value++;
@@ -155,6 +156,12 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     if (current === run) markData.value = {region: {...meta, id}, atlas, survey, geology};
   }
   const disposers = [
+    // A link naming both an atlas spot and a terrain habitat keeps the spot, which every presentation shows: one selection.
+    effect(() => {
+      if (!selection.value || !habitat.value) return;
+      const spot = new URL(location.href).searchParams.get('spot');
+      if (spot) navigate(spotHref(location.href, spot), {replace: true});
+    }),
     effect(() => {
       const id = region.value, current = ++run;
       markData.value = null;

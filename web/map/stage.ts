@@ -142,10 +142,10 @@ export interface Stage {destroy(): void}
 const key = (value: unknown): string => JSON.stringify(value);
 const ORDER = ['currentLayer', 'species', 'depthLimit', 'location', 'hour', 'perspective', 'habitat', 'visible'] as const;
 
-/** `href` selecting terrain habitat `id`: one selection at a time, so the atlas `?spot=` goes (FE-18). */
+/** `href` selecting terrain habitat `id`: one selection at a time, so the atlas `?spot=` (or `?focus=`) goes (FE-18). */
 export function habitatHref(href: string, id: string): string {
   const url = new URL(withParams(href, {habitat: id}));
-  url.searchParams.delete('spot');
+  url.searchParams.delete('spot'); url.searchParams.delete('focus');
   return url.href;
 }
 

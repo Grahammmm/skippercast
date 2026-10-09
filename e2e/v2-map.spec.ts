@@ -384,6 +384,7 @@ test('a region its snapshot does not cover, or boundaries that fail to load, say
   await showLayers(page);
   await expect(page.locator('.app-legend-mpa .app-mpa-note')).toHaveText('Boundaries did not load, so none are drawn; an area without an outline may still be protected.');
   await expect(page.locator('[data-unavailable="mpas"]'), 'the row speaks for the layer').toHaveCount(0);
+});
 
 // FE-18: atlas reef marks on the Chart and the one mark card. SC26-001 sits alone (the next mark is
 // 750 m away), so a click at the chart's centre, with the view on it, picks it.
@@ -407,7 +408,8 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   await expect(card.locator('.app-mark-kind')).toHaveText('Reef mark · grade A · ~135–184 ft');
   await expect(card.locator('.ui-reading')).toHaveText('Fits lingcod habitat 3 of 3');
   await expect(card.locator('.app-mark-source')).toHaveText('Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27');
-  await expect(card.locator('.app-mark-rules')).toHaveText('Screened clear of MPAs and closures in the atlas of 2026-09-27; check current rules before you fish.');
+  await expect(card.locator('.app-mark-rules')).toHaveText('Screened against protected areas with 2992 m clearance in the atlas of 2026-09-27; check current rules before you fish. CDFW ocean fishing regulations');
+  await expect(card.locator('.app-mark-rules').getByRole('link', {name: /^CDFW ocean fishing regulations/})).toHaveAttribute('href', 'https://wildlife.ca.gov/Fishing/Ocean/Regulations');
   const close = card.getByRole('button', {name: 'Clear selection'});
   const size = (await close.boundingBox())!;
   expect(Math.min(size.width, size.height), 'a 44 px close button').toBeGreaterThanOrEqual(44);
