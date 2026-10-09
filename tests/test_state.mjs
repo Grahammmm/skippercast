@@ -55,8 +55,20 @@ test('stored profile, layers and base restore when the URL omits them; layers ar
   assert.deepEqual(JSON.parse(store.map.get(STORAGE_KEYS.layers)), {spear: 'seafloor', boat: 'none'});
   syncFromURL(ORIGIN + '?profile=spear');
   assert.deepEqual(layers.value, ['seafloor'], 'each profile restores its own list');
-  // FE-04's single stored list, or junk, reads as nothing stored.
-  for (const old of ['clouds', '"clouds"', '[1]', '{"spear": 7}']) {
+  // FE-04's single stored list becomes the stored profile's own list; other profiles keep their defaults.
+  store.setItem(STORAGE_KEYS.layers, 'clouds');
+  syncFromURL(ORIGIN + '?region=morro-bay');
+  assert.deepEqual(layers.value, ['clouds'], 'the legacy list loads for the stored profile');
+  assert.deepEqual(JSON.parse(store.map.get(STORAGE_KEYS.layers)), {spear: 'clouds'});
+  syncFromURL(ORIGIN + '?profile=boat');
+  assert.deepEqual(layers.value, PROFILE_TABLE.boat.defaultLayers);
+  syncFromURL(ORIGIN + '?profile=spear');
+  assert.deepEqual(layers.value, ['clouds'], 'and stays that profile\'s after a switch');
+  store.setItem(STORAGE_KEYS.layers, 'none');
+  syncFromURL(ORIGIN + '?profile=spear');
+  assert.deepEqual(layers.value, [], 'a legacy empty rail loads too');
+  // Junk reads as nothing stored.
+  for (const old of ['"clouds"', '[1]', '{"spear": 7}', '{']) {
     store.setItem(STORAGE_KEYS.layers, old);
     syncFromURL(ORIGIN + '?profile=spear');
     assert.deepEqual(layers.value, PROFILE_TABLE.spear.defaultLayers, old);

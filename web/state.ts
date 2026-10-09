@@ -171,6 +171,12 @@ function storedLayers(): Readonly<Record<string, unknown>> {
   } catch { return {}; }
 }
 
+/** FE-04 stored one rail list for every profile: it becomes the stored profile's own list, once (FE-20). */
+function migrateLayers(): void {
+  const raw = stored(STORAGE_KEYS.layers), p = stored(STORAGE_KEYS.profile);
+  if (raw !== null && !raw.trimStart().startsWith('{') && parseLayers(raw)) store(STORAGE_KEYS.layers, JSON.stringify({[isProfile(p) ? p : DEFAULT_PROFILE]: raw}));
+}
+
 /** The profile, layers and base `href` resolves to: URL, then storage (the profile's own rail list), then the profile's defaults. */
 export function resolveStored(state: UrlState): {profile: Profile; layers: readonly string[]; base: Base} {
   const first = <T extends string>(is: (v: unknown) => v is T, fallback: T, ...values: (string | null)[]): T => values.find(is) ?? fallback;
@@ -219,6 +225,7 @@ export function withParams(href: string, patch: Partial<Record<UrlKey, string | 
 /** Set the signals from `href` (default: the current address). */
 export function syncFromURL(href: string = location.href): UrlState {
   const state = readURL(href);
+  migrateLayers();
   const kept = resolveStored(state);
   // A key the URL names is the user's latest choice: remember it for links that omit it.
   if (isProfile(state.profile)) store(STORAGE_KEYS.profile, kept.profile);
