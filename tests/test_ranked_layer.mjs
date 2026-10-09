@@ -13,7 +13,7 @@ import {CHECKING, assessScreen} from '../web/map/habitat.ts';
 import {markScreen} from '../web/map/marks.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {
-  NO_PLAN, RANKED_PICK, RANKED_PIN, drawnSpots, fitCamera, rankedCard, rankedFeatures, rankedSpots, rankedStyle, screenRanked, zoomToGroup,
+  NO_PLAN, RANKED_PICK, RANKED_PIN, drawnSpots, fitCamera, rankedCard, rankedFeatures, rankedSpots, rankedStyle, recheckPlan, screenRanked, zoomToGroup,
 } from '../web/map/ranked.ts';
 import {createStage, terrainFailed} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
@@ -105,6 +105,26 @@ test('a rejected publication stays hidden until verified again; another region o
   assert.deepEqual(screenRanked(PLAN, null, rejected, 'morro-bay'), [], 'no screen, no pins');
   assert.deepEqual(screenRanked(NO_PLAN, screen(), rejected, 'morro-bay'), []);
   assert.deepEqual(rankedFeatures(screenRanked(PLAN, screen(), rejected, 'morro-bay'), null).features, [], 'no camera, no pins');
+});
+
+test('the every-minute re-check keeps a plan its publication still matches; a changed or not-ready one holds it until verified again', () => {
+  const now = Date.now(), ready = {state: 'ready', manifest: {export_sha256: publication.export_sha256}};
+  const kept = new Map();
+  assert.equal(recheckPlan(PLAN, ready, kept, now), PLAN, 'same hash, ready: the same plan');
+  assert.equal(kept.size, 0);
+  assert.equal(recheckPlan(NO_PLAN, {state: 'held'}, kept, now), NO_PLAN, 'a cleared plan is left alone');
+  const gates = [['a changed hash', {state: 'ready', manifest: {export_sha256: 'c'.repeat(64)}}],
+    ['held', {state: 'held'}], ['updating', {state: 'updating'}], ['unavailable', {state: 'unavailable'}]];
+  for (const [name, gate] of gates) {
+    const rejected = new Map(), next = recheckPlan(PLAN, gate, rejected, now);
+    assert.deepEqual(next, {...PLAN, invalid: true}, name);
+    assert.deepEqual([...rejected], [[publication.export_sha256, now]], `${name}: the hash is held`);
+  }
+  const rejected = new Map();
+  recheckPlan(PLAN, {state: 'held'}, rejected, now);
+  assert.deepEqual(screenRanked(PLAN, screen(), rejected, 'morro-bay'), [], 'held: nothing drawn');
+  const later = {...PLAN, publication: {...publication, verified_at: new Date(now + 1000).toISOString()}};
+  assert.equal(screenRanked(later, screen(), rejected, 'morro-bay').length, 20, 'a later verification lifts the hold');
 });
 
 test('a spot the marks\' run-time screen (#492) withholds is not drawn, the others keep their ranks; no ready screen, no pins', () => {

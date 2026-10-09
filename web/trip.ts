@@ -17,7 +17,7 @@ import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
 import {shorelineURL} from './map/coastline.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
-import {NO_PLAN, fitCamera, rankedSpots, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
+import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
 import {camera, cameraParam, type Camera} from './map/stage.ts';
 import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
 
@@ -135,7 +135,8 @@ async function recheckRanked(): Promise<void> {
   if (!current.targets.length || !hash) return;
   const gate = await loadManifest(current.publication?.region);
   if (ranked !== current) return;
-  if (gate.state !== 'ready' || gate.manifest?.export_sha256 !== hash) { rejected.set(hash, Date.now()); ranked = {...current, invalid: true}; drawRanked(); }
+  const next = recheckPlan(current, gate, rejected, Date.now());
+  if (next !== current) { ranked = next; drawRanked(); }
 }
 
 // The offline pack.

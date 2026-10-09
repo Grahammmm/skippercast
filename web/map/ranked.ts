@@ -74,6 +74,21 @@ export function screenRanked(plan: RankedPlan, screen: RankedScreen | null, reje
   return [...plan.targets].sort((a, b) => a.trip_rank - b.trip_rank).filter(t => !!t.trip_rank && screen.pointAllowed(t) && !!t.area_ids?.every(allowed));
 }
 
+/** A seafloor publication gate as dist/seafloor-data.js `loadManifest` returns it (the fields read here). */
+export interface PublicationGate { readonly state: string; readonly manifest?: {readonly export_sha256?: string} | null }
+
+/**
+ * The planner's every-minute re-check (web/trip.ts): a plan with spots stays as it is while its
+ * publication is ready with the same export hash; otherwise it becomes invalid and its hash is held
+ * in `rejected` from `now`, so `screenRanked` draws nothing until a later verification.
+ */
+export function recheckPlan(plan: RankedPlan, gate: PublicationGate, rejected: Map<string, number>, now = Date.now()): RankedPlan {
+  const hash = plan.publication?.export_sha256;
+  if (!plan.targets.length || !hash || (gate.state === 'ready' && gate.manifest?.export_sha256 === hash)) return plan;
+  rejected.set(hash, now);
+  return {...plan, invalid: true};
+}
+
 /** Web Mercator in `?view=` pixels (256 px tiles), as v1's Leaflet measures its pins. */
 const pixel = (t: {latitude: number; longitude: number}, zoom: number) => {
   const world = 256 * 2 ** zoom, sin = Math.sin(t.latitude * Math.PI / 180);
