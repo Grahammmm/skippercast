@@ -155,3 +155,7 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   behind `UI_V2`: static hero, CUSP shoreline (FE-10's file), live readout with
   source, age and stale state, saved-port redirect. Phase 0 finishes when it
   merges.
+- 2026-10-08: FE-11 replaced the Chart placeholder with MapLibre: the token
+  basemap from FE-10's archive, the CUSP coastline glow, the ENC base on
+  `?base=chart`, the § 9 layer registry (`web/map/layers.ts`) and the mark
+  card's Chart selections; `dist/map-test.html` removed.

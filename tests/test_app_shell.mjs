@@ -36,7 +36,9 @@ async function load() {
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
-      export {clearSelection, placeholderMark} from './web/app/MarkCard.tsx';
+      export {MarkCard, clearSelection, currentMark, placeholderMark, terrainCard} from './web/app/MarkCard.tsx';
+      export {chartMark} from './web/map/chart.ts';
+      export {terrainMark} from './web/map/stage.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
       export {dragDetent, DRAG_MIN} from './web/ui/Sheet.tsx';
@@ -45,8 +47,8 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    // The terrain module (FE-71, Vite `?url` stylesheets and three) is a dynamic import that rendering never reaches.
-    plugins: [{name: 'terrain', setup: b => b.onResolve({filter: /^\.\/terrain\.js$/}, args => ({path: args.path, external: true}))}],
+    // The terrain and MapLibre modules (FE-71, FE-11: Vite `?url` assets, three, maplibre-gl) are dynamic imports that rendering never reaches.
+    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
   });
   shell = await import(pathToFileURL(out).href);
   return shell;
@@ -300,12 +302,34 @@ test('the map chrome offers Chart, 2D and 3D; without terrain the terrain choice
     try {
       const terrain = await renderShell(`${ORIGIN}?region=morro-bay&presentation=3d`);
       assert.deepEqual(toggle(terrain), [['Chart', false, false, false], ['2D', false, false, false], ['3D', true, false, false]]);
-      assert.match(terrain, /<div class="app-map" hidden><span>Map unavailable.<\/span><\/div><div class="app-terrain" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in');
+      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart"><\/div><\/div><div class="app-terrain" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
       const none = await renderShell(`${ORIGIN}?region=channel-islands&presentation=3d`);
       assert.deepEqual(toggle(none), [['Chart', true, false, false], ['2D', false, true, true], ['3D', false, true, true]]);
       assert.match(none, /<p id="app-stage-note" class="app-stage-note" role="status">No reviewed coastal terrain covers this region yet.<\/p>/);
     } finally { narrow.value = false; }
   }
+});
+
+test('the mark card shows a Chart selection, then the terrain\'s on the Chart, then the link\'s atlas mark', async () => {
+  const {MarkCard, currentMark, terrainCard, chartMark, terrainMark, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const shore = {id: 'coastline:S1', name: 'Shoreline', kind: 'Mean High Water · Natural', reading: 'Lidar · ±2 m stated', source: 'NOAA NGS CUSP · source date 2010-11-01', basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.'};
+  const reef = {latitude: 35.38, longitude: -120.88, id: 'reef:r1'};
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&spot=r12`);
+    assert.equal(currentMark.value.name, 'r12', 'the atlas placeholder');
+    terrainMark.value = reef;
+    assert.deepEqual(currentMark.value, terrainCard(reef));
+    assert.equal(terrainCard(reef).reading, '35.3800° N, 120.8800° W');
+    chartMark.value = shore;
+    assert.equal(currentMark.value, shore, 'a Chart click wins');
+    const html = render(h(MarkCard, {}));
+    assert.match(html, /<h2>Shoreline<\/h2>.*Lidar · ±2 m stated.*NOAA NGS CUSP · source date 2010-11-01/s);
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&spot=r12`);
+    assert.equal(currentMark.value.name, 'r12', 'in the terrain its own panel speaks; the atlas mark stays');
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+    assert.equal(currentMark.value, null);
+  } finally { chartMark.value = null; terrainMark.value = null; }
 });
 
 test('the shell files keep the token and copy rules, and app.html mounts the entry', async () => {
