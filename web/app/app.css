@@ -78,6 +78,19 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="swell"] { background: var(--blue); }
 .app-swatch[data-layer="fleet"] { background: var(--fleet); }
 .app-swatch[data-layer="clouds"] { background: var(--text); }
+/* Seafloor (FE-14): the depth ramp ranks grade and fit, strongest brightest; unranked areas are dashed outlines; cells are the deepest step. */
+.app-legend-seafloor { flex-wrap: wrap; }
+.app-legend-detail { flex-basis: 100%; display: flex; flex-direction: column; gap: var(--space-1); }
+.app-legend-detail .ui-segmented { display: flex; flex-wrap: wrap; border-radius: var(--radius-md); }
+.app-legend-detail ul { margin: 0; }
+.app-legend-title, .app-legend-seafloor .app-legend-note { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-11); }
+.app-key { flex: none; width: var(--space-3); height: var(--space-3); border-radius: var(--radius-sm); background: var(--muted); }
+.app-key[data-tone="strong"] { background: var(--depth-0); }
+.app-key[data-tone="moderate"] { background: var(--depth-1); }
+.app-key[data-tone="some"] { background: var(--depth-2); }
+.app-key[data-tone="search"] { background: transparent; border: 1px dashed var(--amber); }
+.app-key[data-tone="interpreted"] { background: transparent; border: 1px dashed var(--blue); }
+.app-key[data-tone="cell"] { background: var(--depth-3); border: 1px solid var(--line); }
 .app-dock { position: absolute; left: var(--space-4); right: var(--space-4); bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2); }
 .app-dock .ui-dock { flex: 1; min-width: 0; }
 /* Eight day chips (FE-12): the strip scrolls sideways so the dock stays one row under the stage chrome. */

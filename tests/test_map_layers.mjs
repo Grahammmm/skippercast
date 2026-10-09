@@ -112,9 +112,11 @@ function library() {
     getZoom() { return this.zoom; }
     jumpTo({center, zoom}) { this.jumps.push({center, zoom}); this.center = {lat: center[1], lng: center[0]}; this.zoom = zoom; this.fire('moveend'); }
     move(lat, lng, zoom) { this.center = {lat, lng}; this.zoom = zoom; this.fire('moveend'); }
-    getLayer(id) { return this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
-    setLayoutProperty(id, name, value) { this.visibility[id] = value; }
-    getSource(id) { return this.options.style.sources[id] ? {setData: data => { this.data[id] = data; }} : undefined; }
+    // With `fake.lateStyle`, the style's layers and sources exist only once a test sets `styled` (as MapLibre's before `style.load`).
+    get loaded() { return this.styled ?? !fake.lateStyle; }
+    getLayer(id) { return this.loaded && this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
+    setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
+    getSource(id) { return this.loaded && this.options.style.sources[id] ? {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
     queryRenderedFeatures(_point, {layers}) { return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
     remove() { this.removed = true; }
@@ -166,6 +168,30 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   assert.equal(fake.maps[1].removed, true);
 });
 
+test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {
+  const fake = library();
+  fake.lateStyle = true;
+  const style = {version: 8, sources: {[COASTLINE_SOURCE]: {type: 'geojson', data: 'start'}}, layers: [{id: COASTLINE_LINE, type: 'line', source: COASTLINE_SOURCE}]};
+  const engine = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {}, onLayerError() {}});
+  const [map] = fake.maps;
+  engine.setVisible(COASTLINE_LINE, false);
+  engine.setVisible(COASTLINE_LINE, true);
+  engine.setData(COASTLINE_SOURCE, 'first');
+  engine.setData(COASTLINE_SOURCE, 'latest');
+  engine.setVisible('not-in-style', true);
+  engine.setData('not-in-style', 'ignored');
+  assert.deepEqual([map.layoutCalls, map.dataCalls], [undefined, undefined], 'nothing applies before the style has loaded');
+  map.styled = true;
+  map.fire('style.load');
+  assert.deepEqual(map.layoutCalls, [[COASTLINE_LINE, 'visible']], 'once, with the latest visibility');
+  assert.deepEqual(map.dataCalls, [[COASTLINE_SOURCE, 'latest']], 'once, with the latest data');
+  engine.setData(COASTLINE_SOURCE, 'after');
+  engine.setVisible(COASTLINE_LINE, false);
+  map.fire('style.load');
+  assert.deepEqual(map.dataCalls.map(([, data]) => data), ['latest', 'after'], 'after the style loads, calls apply at once and nothing replays');
+  assert.deepEqual(map.layoutCalls.map(([, value]) => value), ['visible', 'none']);
+});
+
 /** A browser just big enough for navigate() (as tests/test_map_stage.mjs). */
 function browser(href) {
   globalThis.location = {href};
@@ -204,7 +230,8 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   await tick(); await tick();
   assert.equal(fake.maps.length, 1, 'one map');
   const [map] = fake.maps;
-  assert.deepEqual(fetches, [`https://s.test/${BASEMAP_MANIFEST}`]);
+  // The boat profile's default layers include Seafloor (FE-14), which checks its own publication.
+  assert.deepEqual(fetches, [`https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json']);
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');

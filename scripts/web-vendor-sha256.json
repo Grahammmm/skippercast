@@ -30,6 +30,7 @@
   "tests/fixtures/advisor/vision/images/deck-person.png": "8ae61d3facca2cdb94cb27db27aa4064cb583fd4c73aedb12263032179d4dfe9",
   "tests/fixtures/advisor/vision/images/fish.png": "a5e63e859e7c5a8b7359f2ffc1d2f187bcb7cb342b791406966d1bf33f3260a3",
   "tests/fixtures/basemap/tiny.pmtiles": "0c131d0e729606ac697b4ff9cc608a2c8e0da8fab7e1e0dc2d6c3e2b6f1d8274",
+  "tests/fixtures/seafloor/chart.pmtiles": "bac60140560c5bb3e4783c6ebb6d409831eecb62fe43948a2d8603238383bae2",
   "tests/fixtures/seafloor/classified-point-contact.pmtiles": "b9c703bf0048c78d489beff5af20bafbc39f0766cebd11ae8a8ab462bdd82416",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"

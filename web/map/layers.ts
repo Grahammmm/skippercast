@@ -40,6 +40,8 @@ export interface LayerEntry {
 
 export const COASTLINE_SOURCE = 'coastline';
 export const ENC_SOURCE = 'enc';
+/** The seafloor publication's admitted features (web/map/seafloor.ts, FE-14). */
+export const SEAFLOOR_SOURCE = 'seafloor';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 
@@ -69,8 +71,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'Survey habitat and geology polygons, each with its survey and year.', task: 'FE-18'}),
   entry({id: 'shore-runs', label: 'Shore runs', control: 'always', presentations: ['chart'], gate: 'profile = shore',
     basis: 'ESI 2006 sandy-shore runs with public access points.', task: 'FE-36'}),
-  entry({id: 'seafloor', label: 'Seafloor', control: 'seafloor', presentations: ['chart'], legend: [{label: 'Terrain grade', swatch: 'depth1'}],
-    basis: 'USGS survey relief, nominal 0–300 ft; gaps are unsurveyed.', task: 'FE-14'}),
+  entry({id: 'seafloor', label: 'Seafloor', control: 'seafloor', presentations: ['chart'], sources: [SEAFLOOR_SOURCE],
+    legend: [{label: 'Strongest grade or fit', swatch: 'depth0'}, {label: 'Weakest grade or fit', swatch: 'depth2'}, {label: 'Surveyed cell', swatch: 'depth3'}],
+    basis: 'Terrain screening of original seafloor surveys (grids of 16 m or finer, 250 m coverage cells) at nominal 25–300 ft in each survey\'s own vertical datum, drawn only while its 35-day legal screen is current.', task: 'FE-14'}),
   entry({id: 'charter-grounds', label: 'Charter grounds', control: 'fleet', presentations: ['chart'], legend: [{label: 'Charter ground', swatch: 'amber'}],
     basis: 'Charter grounds verified for this region; each ground lists its sources.', task: 'FE-21'}),
   entry({id: 'commercial-ais', label: 'Commercial AIS 2024', control: 'fleet', presentations: ['chart'],

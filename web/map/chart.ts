@@ -5,7 +5,8 @@
 // the terrain: the stage's camera moves the chart, and a settled chart move
 // writes the camera and `?view=` (no history entry), so Chart → 3D → Chart
 // returns to the same place. MapLibre loads by dynamic import on the first
-// Chart view (web/map/maplibre.js), after the app's first paint.
+// Chart view (web/map/maplibre.js), after the app's first paint. The Seafloor
+// rail entry draws the region's seafloor publication (web/map/seafloor.ts, FE-14).
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -14,8 +15,9 @@ import type * as MapLibre from 'maplibre-gl';
 import {appView, base, region, setParams} from '../state.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_SOURCE, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, type Camera} from './stage.ts';
 
@@ -47,15 +49,16 @@ export async function basemapArchive(fetchFn: typeof fetch, page: string): Promi
 }
 
 export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string}
-/** The whole Chart style: the token basemap (or only its water without an archive), the ENC base, then the coastline on top. */
+/** The whole Chart style: the token basemap (or only its water without an archive), the ENC base, the seafloor (hidden), then the coastline on top. */
 export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   const style = basemapStyle(o.palette, {archive: o.archive ?? '', assets: new URL('basemap/', o.page).href});
   const layers: unknown[] = o.archive ? style.layers : style.layers.filter(l => l.source !== BASEMAP_SOURCE);
   const sources: Record<string, unknown> = o.archive ? {...style.sources} : {};
   sources[ENC_SOURCE] = {type: 'raster', tiles: [ENC_WMS], tileSize: 512, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, maxzoom: 18, attribution: layerEntry('chart').attribution};
+  sources[SEAFLOOR_SOURCE] = seafloorSource();
   sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page);
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
-  layers.push(...coastlineLayers(o.palette));
+  layers.push(...seafloorLayers(o.palette), ...coastlineLayers(o.palette));
   return {...style, sources, layers} as unknown as MapLibre.StyleSpecification;
 }
 
@@ -82,7 +85,7 @@ const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 export function createChart(options: ChartOptions): {destroy(): void} {
   const {host, load = loadLibrary, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
   const engine = signal<Engine | null>(null);
-  let mounting = false, alive = true, applied = '', drawnRegion: string | null = null;
+  let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
 
@@ -108,10 +111,15 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!archive) markUnavailable('basemap', new Error(`No basemap archive at ${BASEMAP_MANIFEST}`));
       const start = camera.peek() ?? at;
       engine.value = createEngine(library, {
-        host, camera: start, onMove, onLayerError: markUnavailable, pickLayers: [COASTLINE_PICK], attribution: archive ? attributionFor(['basemap']) : undefined,
+        host, camera: start, onMove, onLayerError: markUnavailable, pickLayers: [SEAFLOOR_PICK, COASTLINE_PICK], attribution: archive ? attributionFor(['basemap']) : undefined,
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
-        onPick: (layer, properties) => { chartMark.value = layer === COASTLINE_PICK ? coastlineMark(properties) : null; },
+        onPick: (layer, properties) => {
+          chartMark.value = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null : null;
+        },
       });
+      seafloor = createSeafloor({engine: engine.value, open: url => new library.PMTiles(url), fetchFn, page,
+        size: () => ({width: host.clientWidth, height: host.clientHeight}),
+        onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
       drawnRegion = id;
       show(start);
     } catch (error) {
@@ -143,6 +151,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       alive = false;
       clearTimeout(viewTimer);
       for (const dispose of disposers) dispose();
+      seafloor?.destroy();
       engine.peek()?.destroy();
       engine.value = null;
       chartMark.value = null;

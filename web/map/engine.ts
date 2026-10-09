@@ -10,12 +10,15 @@
 // drives it with a fake map. Erasable syntax only.
 import type * as MapLibre from 'maplibre-gl';
 import {sourceLayer} from './layers.ts';
+import type {ArchiveReader} from './seafloor.ts';
 
-/** What web/map/maplibre.js provides: the ESM build, its worker's URL and the PMTiles protocol. */
+/** What web/map/maplibre.js provides: the ESM build, its worker's URL, the PMTiles protocol and its archive reader. */
 export interface MapLibraryModule {
   readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'AttributionControl' | 'setWorkerUrl' | 'addProtocol'>;
   readonly workerUrl: string;
   readonly Protocol: new () => {tile: MapLibre.AddProtocolAction};
+  /** Reads archives the Chart decodes itself (the seafloor publication, web/map/seafloor.ts). */
+  readonly PMTiles: new (url: string) => ArchiveReader;
 }
 
 /** A camera in the `?view=` convention (web/map/stage.ts): 256 px web-map zoom, as v1's chart writes it. */
@@ -40,10 +43,15 @@ export interface EngineOptions {
   attribution?: string;
 }
 
+/** What a GeoJSON source accepts: a URL or GeoJSON. */
+export type SourceData = Parameters<MapLibre.GeoJSONSource['setData']>[0];
+
 export interface Engine {
   setCamera(camera: EngineCamera): void;
+  /** Show or hide a style layer; before the style has loaded, the latest call per layer waits for it. */
   setVisible(layerId: string, visible: boolean): void;
-  setData(sourceId: string, data: string): void;
+  /** Replace a GeoJSON source's data; before the style has loaded, the latest data per source waits for it. */
+  setData(sourceId: string, data: SourceData): void;
   destroy(): void;
 }
 
@@ -98,11 +106,31 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   }
   const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map.resize()) : null;
   resize?.observe(host);
+  // The style gate (FE-14), this file's one deferral: a style's layers and sources exist only
+  // once MapLibre fires `style.load`. Until then setVisible keeps the latest visibility per
+  // layer and setData the latest data per source; both apply once when it fires. Afterwards
+  // (or for a layer or source that already exists) every call applies at once. Layers route
+  // their visibility and data through setVisible and setData rather than adding a deferral.
+  let early: {visible: Map<string, boolean>; data: Map<string, SourceData>} | null = {visible: new Map(), data: new Map()};
+  const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
+  const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
+  map.on('style.load', () => {
+    const pending = early;
+    early = null;
+    pending?.visible.forEach((visible, layerId) => show(layerId, visible));
+    pending?.data.forEach((data, sourceId) => fill(sourceId, data));
+  });
 
   return {
     setCamera(c) { map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
-    setVisible(layerId, visible) { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); },
-    setData(sourceId, data) { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); },
+    setVisible(layerId, visible) {
+      if (early && !map.getLayer(layerId)) early.visible.set(layerId, visible);
+      else { early?.visible.delete(layerId); show(layerId, visible); }
+    },
+    setData(sourceId, data) {
+      if (early && !map.getSource(sourceId)) early.data.set(sourceId, data);
+      else { early?.data.delete(sourceId); fill(sourceId, data); }
+    },
     destroy() { resize?.disconnect(); map.remove(); },
   };
 }
