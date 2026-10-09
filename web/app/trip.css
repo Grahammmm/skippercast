@@ -1,0 +1,53 @@
+/* Trip plan and offline (FE-51, docs/plans/front-end/design.md § 6): v1's day
+   planner (dist/export-ui.js) keeps its markup inside the app's dialog; these
+   rules give it the tokens, 44 px targets and focus rings, and lay out the
+   offline section. Loaded after web/app/account.css. Every value is a token. */
+
+.app-trip { width: min(720px, calc(100% - var(--space-6))); overflow: auto; font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
+.app-trip h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The region comes from the command bar; v1's region list has no entries in the app. */
+.app-trip label:has(> #export-region) { display: none; }
+.app-trip .export-card { margin: 0 0 var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel-2); }
+.app-trip .export-plan, .app-trip .export-transfer, .app-trip .export-card-body { padding: var(--space-3) var(--space-4); }
+.app-trip .export-card > summary, .app-trip .export-card-body > details > summary, .app-trip .export-help > summary, .app-trip .export-trip-filters > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--touch-min); padding: 0 var(--space-4); cursor: pointer; font-weight: var(--weight-semibold);
+}
+.app-trip .export-card-body > details > summary, .app-trip .export-help > summary, .app-trip .export-trip-filters > summary { padding: 0; }
+.app-trip .export-card > summary strong { color: var(--mint); font: var(--weight-medium) var(--text-13) / var(--leading-body) var(--font-mono); }
+.app-trip p { margin: var(--space-2) 0; overflow-wrap: anywhere; }
+.app-trip .export-note, .app-trip small, #export-validation { color: var(--muted); font-size: var(--text-13); }
+.app-trip label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--muted); font-size: var(--text-13); }
+.app-trip :is(button, input:not([type="checkbox"]), select) {
+  box-sizing: border-box; min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel); color: var(--text); font: inherit;
+}
+.app-trip :is(input:not([type="checkbox"]), select) { width: 100%; }
+.app-trip button:not(:disabled) { cursor: pointer; }
+.app-trip button:disabled { opacity: 0.6; cursor: not-allowed; }
+.app-trip button.primary { border-color: var(--mint); background: var(--mint); color: var(--bg); font-weight: var(--weight-semibold); }
+.app-trip :is(button, input, select, summary, a):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-trip a { color: var(--blue); }
+.app-trip .export-fields, .app-trip .export-presets, .app-trip .export-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-2); margin: var(--space-2) 0; }
+.app-trip .export-best { width: 100%; }
+.app-trip .export-check { flex-direction: row; align-items: flex-start; gap: var(--space-3); min-height: var(--touch-min); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); color: var(--text); cursor: pointer; }
+.app-trip .export-check input { flex: none; width: var(--space-5); height: var(--space-5); margin: 0; accent-color: var(--mint); }
+.app-trip .export-check strong, .app-trip .export-check small { display: block; }
+.app-trip .export-spot-list { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.app-trip .export-counts { display: flex; flex-wrap: wrap; gap: var(--space-5); }
+.app-trip .export-counts strong { font: var(--weight-medium) var(--text-28) / var(--leading-heading) var(--font-mono); }
+.app-trip .export-counts span { display: block; color: var(--muted); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
+.app-trip .export-transfer h2 { margin: 0 0 var(--space-2); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
+
+/* Save for offline */
+.app-offline { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+.app-offline h3 { margin: 0; font: var(--weight-semibold) var(--text-15) / var(--leading-heading) var(--font-sans); }
+.app-offline p { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.app-offline-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.app-offline progress { width: 100%; accent-color: var(--mint); }
+.app-offline-list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
+.app-offline-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.app-offline-list li > div, .app-offline-list li { flex-wrap: wrap; }
+.app-offline-list li > div { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.app-offline-list span { color: var(--muted); }
+/* The account menu's trip and offline entries read as its links do. */
+.app-account-links .ui-button { justify-content: flex-start; padding-inline: 0; color: var(--blue); }

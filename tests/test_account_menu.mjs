@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const {RETURN_KEY, accountLabel, classicURL, dropEmptyHash, readSession, remember} = await import('../web/account.ts');
+const {RETURN_KEY, accountLabel, dropEmptyHash, readSession, remember} = await import('../web/account.ts');
 
 test('the session answer reads as signed in, signed out, disabled or offline', () => {
   assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ' Skipper '}}), {state: 'signed-in', name: 'Skipper'});
@@ -34,11 +34,6 @@ test('account.js returns to the hash before #account, else a bare hash the app d
   dropEmptyHash({href: 'https://skippercast.com/map?region=morro-bay#', hash: '', pathname: '/map', search: '?region=morro-bay'}, history);
   dropEmptyHash({href: 'https://skippercast.com/map?region=morro-bay#x', hash: '#x', pathname: '/map', search: '?region=morro-bay'}, history);
   assert.deepEqual(calls, [[{v: 2}, '', '/map?region=morro-bay']]);
-});
-
-test('downloads and the offline pack open the classic map for the same region', () => {
-  assert.equal(classicURL('morro-bay', '#export'), '/?ui=v1&region=morro-bay#export');
-  assert.equal(classicURL(null, '#guide'), '/?ui=v1#guide');
 });
 
 test('v1 boat-profile.js exposes its sheet to the menu without changing v1', () => {

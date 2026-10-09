@@ -54,8 +54,10 @@ async function pool(items, worker, signal) {
 /**
  * Save the current region. `progress({phase, done, total, bytes})` reports as
  * it goes; `signal` cancels (the partial pack is deleted). Resolves to meta.
+ * `more` (FE-51, web/trip.ts) adds the v2 app's shell and basemap tiles to the
+ * same pack before it is committed; its answer is the meta's `v2` record.
  */
-export async function savePack({signal, progress = () => {}, sessionStart = 0} = {}) {
+export async function savePack({signal, progress = () => {}, sessionStart = 0, more = null} = {}) {
   const region = getRegion(), origin = location.origin;
   const name = `${PACK_PREFIX}${region.id}-${Date.now()}`, cache = await caches.open(name);
   const started = new Date();
@@ -111,12 +113,15 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0} =
       if (await store(tileURL(t, layers), tileKey(layers, t.z, t.x, t.y), {cache: 'default', mode: 'cors'}, tileMisses)) tilesSaved++;
       progress({phase: 'tiles', done: ++tilesDone, total: plan.tiles.length, bytes});
     }, signal);
+    const put = async (key, body, headers) => { bytes += body.byteLength; await cache.put(key, new Response(body, {status: 200, headers: stampedHeaders(headers)})); };
+    const v2 = more && !signal.aborted ? await more({store, put, signal, progress: (phase, done, total) => progress({phase, done, total, bytes})}) : null;
     if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
     const meta = {
       schema_version: 1, region_id: region.id, region_name: region.name, saved_at: started.toISOString(), bytes,
       files: {saved: urls.length - missing.length, requested: urls.length, from_session: copied},
       missing: missing.slice(0, 50),
       tiles: {saved: tilesSaved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom, requested_max_zoom: plan.requestedMaxZoom, layers},
+      ...(v2 ? {v2} : {}),
     };
     await cache.put(PACK_META, new Response(JSON.stringify(meta), {headers: {'Content-Type': 'application/json'}}));
     // The new pack is complete: older packs of the same region go.

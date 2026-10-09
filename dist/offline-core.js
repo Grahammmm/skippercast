@@ -62,6 +62,29 @@ export function tileURL({z, x, y}, layers, size = ENC_TILE_SIZE) {
   return `${ENC_WMS}?${q}&bbox=${[minX, maxY - span, minX + span, maxY].join(',')}`;
 }
 
+/** The v2 Chart's basemap archive path (FE-10's manifest names it, web/map/chart.ts). */
+export const BASEMAP_ARCHIVE = /^\/feeds\/tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
+
+/**
+ * The basemap tiles of a v2 pack (FE-51): the chart plan's cells at zoom 8–12
+ * as archive tiles. MapLibre draws a 512 px vector tile at zoom z where a
+ * 256 px map shows z + 1, so archive zoom z - 1 covers map zoom z (same cap).
+ */
+export function planBasemap(bounds, options) {
+  const plan = planTiles(bounds, options);
+  return {...plan, tiles: plan.tiles.map(({z, x, y}) => ({z: z - 1, x, y}))};
+}
+
+/**
+ * Cache key of one byte range of the basemap archive: web/trip.ts stores each
+ * range the PMTiles reader asks for under it, and dist/sw.js derives the same
+ * key from the Range header MapLibre's reader sends. Null for anything else.
+ */
+export function basemapRangeKey(archive, range) {
+  const m = /^bytes=(\d+)-(\d+)$/.exec(range || ''), url = new URL(archive);
+  return m && !url.search && BASEMAP_ARCHIVE.test(url.pathname) ? `${url.origin}${url.pathname}?sc-range=${m[1]}-${m[2]}` : null;
+}
+
 /** Parts of the daily feed the map reads through the Worker (/api/daily; dist/daily-feed.js). */
 export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures'];
 /** The /api/daily URL for one part: the same string the page requests, so a saved copy matches. */
