@@ -9,16 +9,18 @@
 // rail entry draws the region's seafloor publication (web/map/seafloor.ts, FE-14).
 // The region's protected areas (FE-19, web/map/mpa.ts) draw under the seafloor,
 // always on; the host's `data-mpa`, `data-mpa-drawn` and `data-mpa-labels`
-// report their state and what MapLibre drew in view.
+// report their state and what MapLibre drew in view. Habitat, geology, reef
+// marks and the selection (FE-18) come from web/map/marks.ts.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
 import {effect, signal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
-import {appView, base, region, setParams} from '../state.ts';
+import {appView, base, habitat, region, selection, setParams} from '../state.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, MPA_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
@@ -53,7 +55,7 @@ export async function basemapArchive(fetchFn: typeof fetch, page: string): Promi
 }
 
 export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string}
-/** The whole Chart style: the token basemap (or only its water without an archive), the ENC base, the protected areas, the seafloor (hidden), then the coastline on top. */
+/** The whole Chart style in § 9 order: the token basemap (or only its water without an archive), the ENC base, the protected areas, habitat, the seafloor (hidden), marks, then the coastline on top. */
 export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   const style = basemapStyle(o.palette, {archive: o.archive ?? '', assets: new URL('basemap/', o.page).href});
   const layers: unknown[] = o.archive ? style.layers : style.layers.filter(l => l.source !== BASEMAP_SOURCE);
@@ -62,8 +64,10 @@ export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   sources[MPA_SOURCE] = mpaSource();
   sources[SEAFLOOR_SOURCE] = seafloorSource();
   sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page);
+  const marks = markStyle(o.palette);
+  Object.assign(sources, marks.sources);
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
-  layers.push(...mpaLayers(o.palette), ...seafloorLayers(o.palette), ...coastlineLayers(o.palette));
+  layers.push(...mpaLayers(o.palette), ...marks.habitat, ...seafloorLayers(o.palette), ...marks.marks, ...coastlineLayers(o.palette));
   return {...style, sources, layers} as unknown as MapLibre.StyleSpecification;
 }
 
@@ -93,6 +97,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
+  const marks = createMarks({fetchFn, page, onError: markUnavailable});
 
   const onMove = (seen: Camera): void => {
     const next = parseCamera(cameraParam(seen));
@@ -116,11 +121,14 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!archive) markUnavailable('basemap', new Error(`No basemap archive at ${BASEMAP_MANIFEST}`));
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
-        host, camera: start, onMove, onLayerError: markUnavailable, pickLayers: [SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL], attribution: archive ? attributionFor(['basemap']) : undefined,
+        host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
+        pickLayers: [MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL],
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
         onPick: (layer, properties) => {
-          chartMark.value = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
+          const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
             : layer === MPA_FILL ? mpaMark(properties) : null;
+          // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
+          chartMark.value = chartPick(layer, properties, other);
         },
         onIdle: () => { host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL)); },
       });
@@ -148,13 +156,21 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!e || !id || id === drawnRegion) return;
       drawnRegion = id;
       chartMark.value = null;
-      unavailable.value = unavailable.peek().filter(layer => layer !== 'coastline');
+      unavailable.value = unavailable.peek().filter(layer => !['coastline', 'marks', 'habitat'].includes(layer));
       e.setData(COASTLINE_SOURCE, new URL(shorelineURL(id), page()).href);
     }),
     effect(() => { engine.value?.setVisible(ENC_LAYER, base.value === 'chart'); }),
     // The region's protected areas, checked before they draw; a region change replaces them.
     effect(() => { const e = engine.value, id = region.value; if (e && id) void drawMpas(e, id); }),
     effect(() => { host.dataset.mpa = mpaState.value.status; }),
+    // A new link selection (a mark, a terrain pick, Back) replaces the Chart's own: one selection at a time.
+    effect(() => { if (selection.value || habitat.value) chartMark.value = null; }),
+    ...Object.entries(markSources).map(([id, data]) => effect(() => {
+      const e = engine.value, collection = data.value;
+      if (!e) return;
+      e.setData(id, collection);
+      if (id === MARKS_SOURCE) host.dataset.marks = String(collection.features.length);
+    })),
   ];
   async function drawMpas(e: Engine, id: string): Promise<void> {
     mpaState.value = LOADING;
@@ -173,6 +189,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       clearTimeout(viewTimer);
       for (const dispose of disposers) dispose();
       seafloor?.destroy();
+      marks.destroy();
       engine.peek()?.destroy();
       engine.value = null;
       chartMark.value = null;

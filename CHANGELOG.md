@@ -8,6 +8,7 @@
 
 ## Unreleased
 
+- In the new map preview (`?ui=v2`), the Chart draws the atlas reef marks with their habitat fit ("fits lingcod habitat 3 of 3"), survey habitat and geology outlines; one card shows the selected mark, outline or coastal habitat with its source, age and what its build screened, and a shared `?spot=` or `?habitat=` stays the one selection across Chart, 2D and 3D.
 - In the new map preview (`?ui=v2`), the Seafloor layer draws the region's screened seafloor candidates and surveyed cells on the Chart, coloured by terrain grade or the target's species fit, with a legend naming the surveys and years; a held, updating or expired publication draws nothing and says why, and a click opens a candidate's nominal depth, survey, basis and source credits.
 - In the new map preview (`?ui=v2`), the Chart always outlines the region's marine protected areas from CDFW ds582 (and southern California's NOAA groundfish exclusion areas) with a faint fill and dashed edge, names them from zoom 11, and credits ds582 (CC BY 4.0). A clicked area shows its name, designation, regulation section and snapshot date, with Regulations linking the official CDFW or NOAA page. The legend gives the snapshot date, or says the boundaries are partial, incomplete or did not load, so an area without an outline is never presented as unprotected.
 - Publish the Morro Bay region's ESI 2006 sandy-shore runs and Coastal Commission beach approaches as a candidate region file (reviews pending owner confirmation), with dated source, access and rules reviews that no import renews.

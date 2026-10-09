@@ -41,6 +41,8 @@ export interface ChartMark {
   readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string;
   /** The official page with the rules that apply there (FE-19's protected areas); the card's Regulations action opens it. */
   readonly regulations?: {readonly href: string; readonly label: string};
+  /** The regulations line (FE-18): what the feature's own build screened, and the rules check. */
+  readonly rules?: string;
 }
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';

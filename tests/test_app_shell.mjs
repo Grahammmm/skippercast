@@ -151,7 +151,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
   assert.match(html, /aria-label="Time window">Tue · 2 pm<\/output>/);
   // Selection: the mark card names the spot with blank reading and source.
-  assert.match(html, /<section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2>r12<\/h2>/);
+  assert.match(html, /<section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
   assert.match(html, /<p class="ui-reading">—<\/p><p class="app-mark-source ui-mono">Source —<\/p>/);
   assert.match(html, /aria-label="Clear selection"/);
 });
@@ -229,7 +229,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   const {render, h, LayersPanel, state, afterDetent, toggleLayers, dragDetent, DRAG_MIN} = await load();
   const html = await renderMobile(`${ORIGIN}?region=morro-bay&profile=spear&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&layers=clouds`);
   assert.match(html, /<section class="ui-sheet app-sheet app-sheet--mark" data-detent="peek" aria-label="Brief">/);
-  assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2>r12<\/h2>/);
+  assert.match(html, /<div class="ui-sheet-body"><div class="app-sheet-brief"><section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
   assert.doesNotMatch(html, /<h1>/, 'the card replaces the headline');
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
   assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']), 'the sheet\'s day menu runs from the fixed clock');
@@ -319,12 +319,14 @@ test('the mark card shows a Chart selection, then the terrain\'s on the Chart, t
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&spot=r12`);
     assert.equal(currentMark.value.name, 'r12', 'the atlas placeholder');
     terrainMark.value = reef;
+    assert.equal(currentMark.value.name, 'r12', 'the terrain\'s selection shows only while the link names it');
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&spot=r12&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef));
     assert.equal(terrainCard(reef).reading, '35.3800° N, 120.8800° W');
     chartMark.value = shore;
     assert.equal(currentMark.value, shore, 'a Chart click wins');
     const html = render(h(MarkCard, {}));
-    assert.match(html, /<h2>Shoreline<\/h2>.*Lidar · ±2 m stated.*NOAA NGS CUSP · source date 2010-11-01/s);
+    assert.match(html, /<h2 tabindex="-1">Shoreline<\/h2>.*Lidar · ±2 m stated.*NOAA NGS CUSP · source date 2010-11-01/s);
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&spot=r12`);
     assert.equal(currentMark.value.name, 'r12', 'in the terrain its own panel speaks; the atlas mark stays');
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
