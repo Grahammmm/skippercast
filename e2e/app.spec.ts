@@ -112,6 +112,26 @@ test('research export requires session consent and downloads labeled GPX', async
   expect(pageErrors).toEqual([]);
 });
 
+// #496: a page opened on another tab draws its map hidden; the Map tab must
+// show the opening view (here the region default), not move it by half the map.
+test('the Map tab opened from the Guide shows the opening view and keeps the region', async ({page, pageErrors}) => {
+  const {map: {center: [latitude, longitude], zoom}} = JSON.parse(await readFile('dist/regions/morro-bay/region.json', 'utf8'));
+  await openMap(page, '/?region=morro-bay#guide');
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  await page.locator('[data-nav="map"]').click();
+  // Moves after the map is shown write its centre to the address: it must stay
+  // within a pixel of the opening view (Leaflet pans in whole pixels).
+  const pixel = 360 / (256 * 2 ** zoom);
+  await expect.poll(() => {
+    const raw = new URL(page.url()).searchParams.get('view'), view = raw?.split(',').map(Number);
+    const near = !!view && Math.abs(view[0] - latitude) <= pixel && Math.abs(view[1] - longitude) <= pixel && view[2] === zoom;
+    return {view: raw, near};
+  }).toMatchObject({near: true});
+  await expect(page).toHaveURL(/[?&]region=morro-bay/);
+  await expect(page.locator('#map .leaflet-marker-icon').first()).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
 test.describe('offline', () => {
   test.use({serviceWorkers: 'allow'});
   test('a saved region opens offline with the freshness banner', async ({page, context, pageErrors}, info) => {
@@ -125,8 +145,19 @@ test.describe('offline', () => {
     await checkA11y(page, 'guide', info.project.name);
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     await context.setOffline(true);
+    // The open page says so at once.
+    await expect(page.locator('#offline-banner span')).toHaveText(/^Offline — /);
+    // Then open the saved region again from the service worker. Leave the page
+    // first: a goto that changes only the fragment stays in this document (#496).
+    await page.goto('about:blank');
     await page.goto('/?region=morro-bay#map');
     await expect(page.locator('#map .leaflet-marker-icon').first()).toBeVisible({timeout: 30_000});
+    await expect(page).toHaveURL(/[?&]region=morro-bay/);
+    // Playwright's offline emulation fails this new document's requests but
+    // leaves navigator.onLine true; apply it again so the page sees what an
+    // offline device reports.
+    await context.setOffline(false);
+    await context.setOffline(true);
     await expect(page.locator('#offline-banner')).toBeVisible();
     await expect(page.locator('#offline-banner span')).toHaveText(/^Offline — /);
     await context.setOffline(false);

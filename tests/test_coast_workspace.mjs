@@ -70,6 +70,19 @@ test('finishing a delayed terrain load cannot restart a hidden tab',async()=>{
 
 test('initial chart adapter cannot resize a chart hidden by Conditions or Export',async()=>{for(const initialView of ['forecast','export']){const w=await workspace(true,initialView);try{assert.equal(w.invalidations(),0);}finally{w.cleanup();}}});
 
+// #496: a Map tab link is a fragment navigation, so popstate fires after navigation.js
+// has shown the map panel. A resize then is Leaflet's first measurement of a map drawn
+// hidden and moves its centre; app.js measures it on first show instead.
+test('a tab switch to Map does not resize the chart; leaving terrain still does',async()=>{
+ const s=await workspace(true,'guide');
+ try{
+  s.doc.body.dataset.view='map';window.listeners.popstate();await s.flush();
+  assert.equal(s.invalidations(),0,'A tab switch keeps the chart presentation and must not resize it');
+  await s.change('3d');await s.change('chart');
+  assert.equal(s.invalidations(),1,'Terrain giving the chart back resizes it once');
+ }finally{s.cleanup();}
+});
+
 test('unsupported scoped UTC hour reaches terrain as a gap instead of retaining the old hour',async()=>{const s=await workspace();try{await s.change('2d');s.doc.listeners['skippercast:time']({detail:{epoch:NaN,regionId:'morro-bay'}});assert.ok(Number.isNaN(s.viewer().hours.at(-1).getTime()));}finally{s.cleanup()}});
 
 test('native feature selection publishes metadata after moving the chart and preserves original shared coordinates',async()=>{const s=await workspace();try{await s.change('2d');const p={id:'original',region:'morro-bay',latitude:35.37866518735354,longitude:-120.8749234607946};s.viewer().options.onSelection(p);const u=new URL(location.href);assert.equal(u.searchParams.get('habitat'),'original');assert.equal(u.searchParams.get('view'),'35.37867,-120.87492,12');}finally{s.cleanup()}});
