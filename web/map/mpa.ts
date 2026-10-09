@@ -207,18 +207,19 @@ async function json(fetchFn: typeof fetch, url: string): Promise<unknown> {
 /** Fetch and assess the region's boundary files; never throws (a failure is the `unavailable` state). */
 export async function loadMpas(region: string, fetchFn: typeof fetch, page: string): Promise<MpaResult> {
   const at = (path: string): string => new URL(path, page).href;
-  const failed = (detail: string): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail), data: EMPTY(), screen: {areas: null, checkedAt: null}});
+  // Closures the region names fail with its snapshot (null); unknown before region.json loads (the screen reads the region's own copy).
+  const failed = (detail: string, closures?: null): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail), data: EMPTY(), screen: {areas: null, checkedAt: null, closures}});
   const base = `regions/${encodeURIComponent(region)}/`;
   let config: RegionMpaConfig;
   try { config = (obj(await json(fetchFn, at(`${base}region.json`))) ?? {}) as RegionMpaConfig; } catch { return failed('The region package did not load.'); }
-  const asset = text(config.assets?.protected_areas), closuresAsset = text(config.assets?.closures);
-  if (!ASSET.test(asset)) return failed('This region names no boundary snapshot.');
+  const asset = text(config.assets?.protected_areas), closuresAsset = text(config.assets?.closures), named = closuresAsset ? null : undefined;
+  if (!ASSET.test(asset)) return failed('This region names no boundary snapshot.', named);
   const [snapshot, coverage, closures] = await Promise.all([
     json(fetchFn, at(asset)).catch(() => null),
     json(fetchFn, at(`${base}coverage.json`)).catch(() => null),
     closuresAsset ? (ASSET.test(closuresAsset) ? json(fetchFn, at(closuresAsset)).catch(() => null) : Promise.resolve(null)) : Promise.resolve(undefined),
   ]);
-  if (snapshot === null) return failed('The boundary snapshot did not load.');
+  if (snapshot === null) return failed('The boundary snapshot did not load.', named);
   return assessMpas({region, config, snapshot, coverage, closures});
 }
 

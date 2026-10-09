@@ -182,9 +182,10 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
         const live = bounds ? await json(mpaQuery(bounds)) as Props : null;
         if (validMpas(live, minimum)) return {areas: live!.features as Props[], checkedAt: new Date(now()).toISOString(), live: true};
       } catch { /* v1 then reads the daily feed's boundary record */ }
+      // v1 takes a valid record's geometry with its retrieval time; one without a time is no current check (stale), never the snapshot's.
       const r = await record('mpa-boundaries'), geojson = r?.data?.geojson as Props | undefined;
-      return r?.status === 'ok' && validMpas(geojson, minimum) && typeof r.data_retrieved_at === 'string'
-        ? {areas: geojson!.features as Props[], checkedAt: r.data_retrieved_at, live: false} : null;
+      return r?.status === 'ok' && validMpas(geojson, minimum)
+        ? {areas: geojson!.features as Props[], checkedAt: typeof r.data_retrieved_at === 'string' ? r.data_retrieved_at : null, live: false} : null;
     };
     const [first, fresh, check] = await Promise.all([loadMpas(id, fetchFn, page()), boundaries(), named ? record('additional-closures') : null]);
     if (current !== run) return;

@@ -203,7 +203,7 @@ const WITHHELD_GEA = 'NOAA groundfish closure. SkipperCast excludes all target s
 export function withheldCard(t: AtlasTarget, w: Withheld, screen: MarkScreen): ChartMark {
   const federal = w.inside.length > 0 && w.inside.every(b => b.federal);
   return {
-    id: `spot:${t.id}`, name: screen.status === 'checking' ? 'Checking reef mark' : 'Reef mark withheld', kind: `Reef mark · ${t.id}`, reading: w.reading, source: screen.source,
+    id: `spot:${t.id}`, name: screen.status === 'checking' ? 'Checking reef mark' : 'Reef mark withheld', kind: `Reef mark · ${t.id}`, reading: w.reading, source: screen.source, withheld: true,
     rules: w.inside.length ? (federal ? WITHHELD_GEA : WITHHELD_MPA) : 'Check current rules and boundaries before you fish.',
     regulations: federal ? {href: NOAA_GEA_PAGE, label: 'NOAA groundfish closed areas'} : {href: CDFW_MPA_PAGE, label: 'CDFW marine protected areas'},
     basis: 'Atlas marks are checked again in the browser against current protected-area boundaries and the region\'s closures before they show. '

@@ -21,7 +21,7 @@ import {
 } from '../web/map/habitat.ts';
 import {MARKS_SOURCE, SELECTION_SOURCE} from '../web/map/layers.ts';
 import {createMarks, markNote, markScreen, markSources, spotCard} from '../web/map/marks.ts';
-import {CDFW_MPA_PAGE, MPA_SERVICE, NOAA_GEA_PAGE, mpaQuery, validMpas} from '../web/map/mpa.ts';
+import {CDFW_MPA_PAGE, MPA_SERVICE, NOAA_GEA_PAGE, loadMpas, mpaQuery, validMpas} from '../web/map/mpa.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -130,6 +130,13 @@ test('the rules v2 restates are v1\'s: the live query, the snapshot count, the d
   }
 });
 
+test('a snapshot that fails to load fails the closures the region names', async () => {
+  const noSnapshot = url => (String(url).endsWith('protected-areas.geojson') ? down(503) : site()(url));
+  assert.equal((await loadMpas('southern-california', noSnapshot, PAGE)).screen.closures, null);
+  assert.equal((await loadMpas('morro-bay', noSnapshot, PAGE)).screen.closures, undefined, 'none named, none failed');
+  assert.equal((await loadMpas('southern-california', async () => down(503), PAGE)).screen.closures, undefined, 'unknown before region.json loads');
+});
+
 test('a check counts for 36 hours and from 5 minutes ahead; the screen says why it withholds', () => {
   const now = Date.parse('2026-10-09T12:00:00Z');
   assert.equal(freshCheck(iso(now - SCREEN_MAX_AGE_MS), now), true);
@@ -186,6 +193,7 @@ test('parity with v1\'s screen: the same answers withhold the same marks', async
   const all = ATLAS.targets.map(x => x.id);
   assert.deepEqual(await parity(MORRO, ATLAS, {daily: {'mpa-boundaries': record(40, {geojson: MPAS})}}), all, 'a 40-hour-old record withholds every mark');
   assert.deepEqual(await parity(MORRO, ATLAS, {daily: {'mpa-boundaries': record(2, {geojson: MPAS}, 'retained')}}), all, 'only a fresh "ok" record counts');
+  assert.deepEqual(await parity(MORRO, ATLAS, {daily: {'mpa-boundaries': {status: 'ok', data: {geojson: MPAS}}}}), all, 'a record without its retrieval time is no check');
   assert.deepEqual(await parity(MORRO, ATLAS, {}), all, 'no check at all: the committed snapshot is weeks old');
   // Southern California also names NOAA's groundfish exclusion areas.
   const mark = SOCAL_ATLAS.targets[0], closures = withAreas(GEAS, exclusion(square(mark)));
@@ -291,7 +299,7 @@ async function components() {
       export {MpaRow} from './web/app/Legend.tsx';
       export {MarkCard} from './web/app/MarkCard.tsx';
       export {markData, markScreen} from './web/map/marks.ts';
-      export {assessScreen, withheld, withheldCard} from './web/map/habitat.ts';
+      export {assessScreen} from './web/map/habitat.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
@@ -302,17 +310,29 @@ async function components() {
   return ui;
 }
 
-test('the legend\'s protected-area row carries the marks\' line; a withheld card links the official page', async () => {
-  const {MpaRow, MarkCard, markData, markScreen: screen, assessScreen: assess, withheld: why, withheldCard: card, state, render, h} = await components();
+test('the legend row stays one line while marks show; a withheld screen adds its own line; a withheld card offers no trip', async () => {
+  const {MpaRow, MarkCard, markData, markScreen: screen, assessScreen: assess, state, render, h} = await components();
   state.configureStore({v2: true, storage: null});
-  state.syncFromURL(`${PAGE}?region=morro-bay&target=reef`);
-  screen.value = assess({areas: MPAS.features, checkedAt: iso(Date.now() - 40 * HOUR), live: false}, Date.now());
+  state.syncFromURL(`${PAGE}?region=morro-bay&target=reef&spot=${ATLAS.targets[0].id}`);
   markData.value = {region: MORRO, atlas: ATLAS, survey: null, geology: null};
-  assert.match(render(h(MpaRow, {})), /<p class="app-mpa-note" data-reason="marks">Boundary check stale; fishing targets withheld<\/p>/);
+  // Current: the screen's line sits in the row's basis, so the row keeps its height (one .app-mpa-note at most).
+  screen.value = assess({areas: MPAS.features, checkedAt: iso(Date.now() - HOUR), live: true}, Date.now());
+  const ready = render(h(MpaRow, {}));
+  assert.match(ready, /<div class="ui-popover-body">.*<p data-reason="marks">Reef marks inside protected areas are withheld · boundaries checked this session<\/p><\/div><\/details>/s);
+  assert.doesNotMatch(ready, /app-mpa-marks/);
+  assert.match(render(h(MarkCard, {})), /<div class="app-mark-actions"><button type="button" class="ui-button ui-button--ghost ui-button--sm">(?:(?!<\/button>).)*(?:Add to trip|Save research reference)<\/button>/s, 'a mark that shows joins a trip');
+  // Stale: a visible line of its own, outside .app-mpa-note.
+  screen.value = assess({areas: MPAS.features, checkedAt: iso(Date.now() - 40 * HOUR), live: false}, Date.now());
+  const stale = render(h(MpaRow, {}));
+  assert.match(stale, /<p class="app-mpa-marks" data-reason="marks">Boundary check stale; fishing targets withheld<\/p>/);
+  assert.equal(stale.match(/data-reason="marks"/g).length, 1);
+  assert.doesNotMatch(stale, /class="app-mpa-note" data-reason/);
+  const card = render(h(MarkCard, {}));
+  assert.match(card, /<h2 tabindex="-1">Reef mark withheld<\/h2>/);
+  assert.match(card, /<button disabled type="button" class="ui-button ui-button--ghost ui-button--sm">(?:(?!<\/button>).)*Add to trip<\/button>/s, 'no trip for a withheld mark');
+  assert.match(card, /<button disabled type="button" class="ui-button ui-button--ghost ui-button--sm">(?:(?!<\/button>).)*GPX<\/button>/s);
+  assert.match(card, new RegExp(`<a class="ui-button ui-button--ghost ui-button--sm" href="${CDFW_MPA_PAGE}" target="_blank" rel="noopener" aria-label="Regulations: CDFW marine protected areas \\(official page, opens in a new tab\\)">`));
   markData.value = {region: MORRO, atlas: {...ATLAS, targets: []}, survey: null, geology: null};
   assert.doesNotMatch(render(h(MpaRow, {})), /data-reason="marks"/, 'no marks, no line');
-  const html = render(h(MarkCard, {mark: card(ATLAS.targets[0], why(ATLAS.targets[0], screen.value), screen.value)}));
-  assert.match(html, /<h2 tabindex="-1">Reef mark withheld<\/h2>/);
-  assert.match(html, new RegExp(`<a class="ui-button ui-button--ghost ui-button--sm" href="${CDFW_MPA_PAGE}" target="_blank" rel="noopener" aria-label="Regulations: CDFW marine protected areas \\(official page, opens in a new tab\\)">`));
   markData.value = null;
 });

@@ -74,8 +74,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
     heading.current.focus();
   }, [request, selected?.id]);
   if (!selected) return null;
-  // Only an atlas mark joins a trip: v1's planner exports atlas targets.
-  const spot = selected === spotCard.value ? selection.value : null;
+  // Only an atlas mark joins a trip: v1's planner exports atlas targets. A mark the run-time screen withholds (#489) never does.
+  const spot = selected === spotCard.value && !selected.withheld ? selection.value : null;
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : document.querySelector<HTMLElement>('.app-chart canvas');

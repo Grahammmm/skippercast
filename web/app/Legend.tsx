@@ -9,8 +9,9 @@
 // Protected areas (FE-19) are always drawn on the Chart: their row says what
 // the drawing covers (MpaRow), links the official rules page and carries the
 // ds582 credit in its basis. Where the region has reef marks for the target,
-// the row also says what the marks' run-time screen checked, or why they are
-// withheld (#489, web/map/habitat.ts).
+// the basis also says what the marks' run-time screen checked (#489,
+// web/map/habitat.ts), and a stale or unavailable check adds a visible line
+// saying the marks are withheld; the row stays one line while marks show.
 // Currents (FE-15) follows the source choice `?current=`; its row carries the
 // drawn source's basis sentence, or why nothing draws.
 // The Clouds row labels the GOES frame on screen with its acquisition time and
@@ -26,7 +27,7 @@ import {chartFailed, unavailable} from '../map/chart.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {currentsState} from '../map/currents.ts';
 import {layerEntry} from '../map/layers.ts';
-import {markNote} from '../map/marks.ts';
+import {markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
@@ -67,6 +68,7 @@ function SeafloorRow() {
  */
 export function MpaRow() {
   const s = shownMpaState(mpaState.value, {sourceFailed: unavailable.value.includes('mpas'), mapFailed: chartFailed.value});
+  const marks = markNote.value, withheld = !!marks && (markScreen.value.status === 'stale' || markScreen.value.status === 'unavailable');
   return (
     <li class="app-legend-mpa" data-mpa={s.status}>
       <span class="app-legend-mpa-head">
@@ -74,10 +76,11 @@ export function MpaRow() {
         <Popover iconOnly summary="Protected areas basis">
           {layerEntry('mpas').basis} {s.detail ? <>{s.detail} </> : null}Regional selection by SkipperCast from <a href={DS582_METADATA} target="_blank" rel="noopener">CDFW
           Marine Region GIS Lab, California MPAs ds582</a>, <a href={CC_BY_4} target="_blank" rel="noopener">CC BY 4.0</a>.
+          {marks && !withheld ? <p data-reason="marks">{marks}</p> : null}
         </Popover>
       </span>
       {s.note ? <p class="app-mpa-note">{s.note}</p> : null}
-      {markNote.value ? <p class="app-mpa-note" data-reason="marks">{markNote.value}</p> : null}
+      {withheld ? <p class="app-mpa-marks" data-reason="marks">{marks}</p> : null}
       <a class="app-mpa-rules" href={CDFW_MPA_PAGE} target="_blank" rel="noopener">Official rules and boundaries (CDFW)</a>
     </li>
   );

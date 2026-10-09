@@ -43,6 +43,8 @@ export interface ChartMark {
   readonly regulations?: {readonly href: string; readonly label: string};
   /** The regulations line (FE-18): what the feature's own build screened, and the rules check. */
   readonly rules?: string;
+  /** An atlas mark the run-time screen withholds (#489): the card offers no trip actions. */
+  readonly withheld?: boolean;
 }
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
