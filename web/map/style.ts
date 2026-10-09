@@ -14,6 +14,20 @@ export const BASEMAP_SOURCE = 'basemap';
 export const LABEL_FONT = 'dm-sans-medium';
 export const LABEL_MIN_ZOOM = 9;
 
+/** FE-10's pointer to the current basemap archive, under the page's /feeds/ route. */
+export const BASEMAP_MANIFEST = 'feeds/tiles/basemap/manifest.json';
+const ARCHIVE_KEY = /^tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
+
+/** The basemap archive's absolute URL from the manifest, or null when there is no valid manifest. */
+export async function basemapArchive(fetchFn: typeof fetch, page: string): Promise<string | null> {
+  try {
+    const response = await fetchFn(new URL(BASEMAP_MANIFEST, page).href, {signal: AbortSignal.timeout(15000)});
+    if (!response.ok) return null;
+    const manifest = await response.json() as {key?: unknown};
+    return typeof manifest.key === 'string' && ARCHIVE_KEY.test(manifest.key) ? new URL(`feeds/${manifest.key}`, page).href : null;
+  } catch { return null; }
+}
+
 export type BasemapVariant = 'day' | 'night';
 export interface BasemapOptions {
   /** Absolute URL of the Protomaps extract (FE-10), read through the pmtiles:// protocol. */

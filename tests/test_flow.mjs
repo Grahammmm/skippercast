@@ -166,7 +166,7 @@ test('the region place binds by its centre and reviewed local areas', () => {
 });
 
 /** A fake map view, document, canvas and frame clock for the Chart overlay. */
-function harness({reduced = false, ocean = packet(wcofs()), land = [], now = () => NOW, onHide} = {}) {
+function harness({reduced = false, ocean = packet(wcofs()), land = [], now = () => NOW, onHide, options = {}} = {}) {
   const listeners = {}, docListeners = {}, motionListeners = {}, canvases = [], requests = [], cancels = [];
   let next = 1;
   const context = () => ({
@@ -188,7 +188,7 @@ function harness({reduced = false, ocean = packet(wcofs()), land = [], now = () 
   const motion = {matches: reduced, addEventListener: (t, fn) => { motionListeners[t] = fn; }, removeEventListener: () => {}};
   const frames = {request: fn => { requests.push(fn); return next++; }, cancel: id => cancels.push(id)};
   const data = {coastOcean: signal({data: ocean}), coastStatus: signal({ocean: 'ready', report: 'idle', history: 'idle'}), setPlace() {}, load: async () => {}};
-  const currents = createCurrents({view, palette: () => readPalette(name => `token(${name})`), zone: () => TZ, data, doc, motion, frames, now, onHide});
+  const currents = createCurrents({view, palette: () => readPalette(name => `token(${name})`), zone: () => TZ, data, doc, motion, frames, now, onHide, ...options});
   const fire = type => { for (const fn of listeners[type] ?? []) fn(); };
   const visibility = hidden => { doc.hidden = hidden; for (const fn of docListeners.visibilitychange ?? []) fn(); };
   return {currents, canvases, requests, cancels, fire, visibility, data, listeners, dash: () => canvases[1], motionListeners, motion};
@@ -252,6 +252,19 @@ test('a source without a fresh frame draws nothing; reduced motion draws still a
   assert.ok(still.canvases[0].ctx.calls > 0, 'paths and arrowheads on the still canvas');
   still.motion.matches = false; still.motionListeners.change();
   assert.equal(still.dash().dataset.motion, 'animated');
+});
+
+test('a host picks its own source and shown rule: the landing draws without ?current= or the Chart (FE-25)', t => {
+  presentation.value = '3d'; appView.value = 'coast'; current.value = 'off'; hour.value = '2026-10-07T12:00Z';
+  let pick = 'hfr-1';
+  const h = harness({options: {source: () => pick, shown: () => true}});
+  t.after(() => { h.currents.destroy(); presentation.value = 'chart'; hour.value = null; });
+  assert.equal(h.canvases.length, 0, 'a source the packet does not hold draws nothing');
+  pick = 'wcofs';
+  h.visibility(false);   // any clock tick re-asks the host for its source
+  assert.ok(Number(h.dash().dataset.paths) > 0, 'drawn while ?current= is off and the stage shows 3D');
+  assert.equal(h.dash().dataset.motion, 'animated');
+  assert.match(currentsState.value.basis, /^NOAA WCOFS surface forecast, about 4 km/);
 });
 
 test('a drawn frame reads on click and is withdrawn when the presentation leaves the Chart', t => {

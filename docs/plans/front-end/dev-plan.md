@@ -248,8 +248,8 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 ### FE-25 · Landing night map · M
 - Status: CHANGED (no relief layer). Agent: Claude.
 - Depends: FE-07, FE-11, FE-15
-- Files: `web/landing/NightMap.tsx`, `web/landing/main.tsx` (lazy MapLibre after first paint), `e2e/v2-landing.spec.ts`.
-- Build: § 7 live night map: FE-72's night style, coastline glow, streamlines from the latest fresh frame; the FE-07 SVG stays as the fallback; layer dots preview a layer on hover.
+- Files: `web/landing/NightMap.tsx`, `web/landing/main.tsx` (lazy MapLibre after first paint), `e2e/v2-landing.spec.ts`. As built also: `dist/landing.html` (a `#landing-night` host under the shoreline's), `web/landing/{landing.css,LayerDots.tsx,save-data.ts}`, `web/map/engine.ts` (a `still` option: no input, control or label fade), `web/map/currents.ts` (a host's own `source` and `shown` rule), `web/map/style.ts` (the basemap manifest reader, moved from `chart.ts`, which re-exports it), `tests/test_landing.mjs`, `tests/test_flow.mjs`, `tests/test_map_layers.mjs`; and #422's readout item in `web/landing/{readings.ts,Readout.tsx}` (the strip names the region it reads).
+- Build: § 7 live night map: FE-72's night style, coastline glow, streamlines from the latest fresh frame; the FE-07 SVG stays as the fallback; layer dots preview a layer on hover. As built: there is no shelf glow, because no bathymetry layer is drawn since the relief was dropped (the coastline glow carries the edge); the hover preview covers Currents, the one layer the night map draws (the other layers need the app's store and stay links); the streamlines come from the first of WCOFS, HF radar 6 km and HF radar 1 km with a fresh frame for the current hour, through FE-15's own gates.
 - Accept: 1. LCP and the 180 KB first-paint budget hold. 2. With WebGL disabled the SVG renders and axe stays clean. 3. Motion stops under `prefers-reduced-motion`. 4. No `three` request (e2e network log).
 
 ### FE-79 · Host-chrome mode for the coast embed · L

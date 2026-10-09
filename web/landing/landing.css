@@ -1,6 +1,7 @@
 /* The landing (FE-07, docs/plans/front-end/design.md § 7, concept D · Open
    water): the landing ground, the glowing static shoreline behind
-   everything, the hero on the left over open water with the readout tiles
+   everything (FE-25: the live night map under it, which takes over once it
+   has drawn), the hero on the left over open water with the readout tiles
    at a smaller size, the layer dots on the right edge and one footer line.
    Loaded after web/tokens.css, web/ui/ui.css and port-input.css. DM Sans
    only (D6): readings and ages switch from the mono face to the sans one,
@@ -24,6 +25,19 @@
 /* On a phone the shore runs behind the text: quieter there. */
 @media (max-width: 1023px) { .landing-shore { opacity: 0.5; } }
 
+/* The live night map (FE-25): still, decorative, under the shoreline until it has drawn; then the
+   shoreline fades out. Doubled selectors win over maplibre-gl.css, which loads after this sheet. */
+.landing .landing-night { position: fixed; inset: 0; z-index: var(--z-map); pointer-events: none; opacity: 0; transition: opacity var(--motion-sheet); }
+.landing .landing-night[data-state="ready"] { opacity: 1; }
+.landing[data-night="ready"] .landing-shore { opacity: 0; transition: opacity var(--motion-sheet); }
+@media (max-width: 1023px) { .landing .landing-night[data-state="ready"] { opacity: 0.55; } }
+/* FE-15's streamline canvases over the map; a hovered Currents dot previews them over a dimmed map. */
+.landing-night .chart-flow { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.8; transition: opacity var(--motion-state); }
+.landing-night .maplibregl-canvas { transition: opacity var(--motion-state); }
+.landing[data-preview="currents"] .landing-night .chart-flow { opacity: 1; }
+/* The map dims only while streamlines are drawn (data-currents), so a preview never leaves an empty, darker map. */
+.landing[data-preview="currents"] .landing-night[data-currents="drawn"] .maplibregl-canvas { opacity: 0.45; }
+
 /* Minimal nav */
 .landing-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
 .landing-brand { display: inline-flex; align-items: center; min-height: var(--touch-min); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none; }
@@ -44,6 +58,7 @@
 
 /* Readout: the brief's tiles at a smaller size, in the sans face */
 .landing-readout { display: flex; flex-direction: column; gap: var(--space-2); }
+.landing-readout-title { margin: 0; }
 .landing-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .landing-tile { height: 100%; box-sizing: border-box; padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--panel) 88%, transparent); }
 .landing .ui-reading { font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); font-variant-numeric: tabular-nums; }

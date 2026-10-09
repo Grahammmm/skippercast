@@ -819,6 +819,26 @@ footer credit is rendered from that generated module. The fleet line
 renders only when the page is given one; no public fleet summary exists
 yet, so it stays hidden.
 
+As built by FE-25 (2026-10-09): once the page has loaded and painted, and
+only where WebGL2 works and the browser does not ask to save data
+(`navigator.connection.saveData`), `web/landing/main.tsx` imports
+`web/landing/NightMap.tsx`, which loads MapLibre by dynamic import as the
+Chart does. The map is FE-11's engine in a `still` mode (no gesture, key,
+control or label fade) over FE-72's night variant, framed so the region's
+bounds fill the height with the harbor 72 % across a wide screen (62 % on a
+phone) and the hero over open water. The region's CUSP coastline takes the
+SVG's glow colours, and FE-15's `createCurrents` draws the first of WCOFS,
+HF radar 6 km and HF radar 1 km that has a fresh frame for the current hour
+(none fresh: nothing draws). The SVG stays on top until the map is idle,
+then fades out; without WebGL2, a basemap archive, the region file or the
+coastline it stays alone. The map is hidden from assistive technology, and
+the footer credits the basemap and gives the drawn currents' basis (source,
+age, illustrative motion). Hovering or focusing the Currents dot previews
+the streamlines over a dimmed map; the other dots stay links, since their
+layers need the app's store. No shelf is drawn (§ 3A.2 dropped the relief).
+The readout now names its region ("Latest readings · Morro Bay & Avila
+area", from `region.json`) rather than implying the visitor's launch.
+
 ### URL structure
 
 Ranked in open-questions Q2; the plan assumes:

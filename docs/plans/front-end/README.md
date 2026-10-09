@@ -159,3 +159,7 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   basemap from FE-10's archive, the CUSP coastline glow, the ENC base on
   `?base=chart`, the § 9 layer registry (`web/map/layers.ts`) and the mark
   card's Chart selections; `dist/map-test.html` removed.
+- 2026-10-09: FE-25 added the landing's live night map after first paint
+  (`web/landing/NightMap.tsx`): FE-11's engine as a still backdrop, the CUSP
+  coastline glow and FE-15's streamlines, with the shoreline SVG as the first
+  paint and the fallback.
