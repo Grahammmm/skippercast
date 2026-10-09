@@ -77,7 +77,7 @@ function ChartPack() {
   return (
     <section class="app-offline" aria-labelledby="app-offline-pack">
       <h3 id="app-offline-pack">Chart pack</h3>
-      <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12 and this app on this device. Offline, saved readings show their saved time.</p>
+      <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12 and this app on this device. The list below shows when each region was saved.</p>
       <div class="app-offline-actions">
         <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>Save {name} for offline</Button>
         {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : null}

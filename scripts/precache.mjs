@@ -9,11 +9,14 @@
 // The build id is written into sw.js so every deploy installs a new worker.
 //
 // FE-51: hashed files that only the v2 pages load (MapLibre and its worker, the
-// app and landing chunks, about 1.9 MB) are left out of the install list, so a
-// v1 visitor never stores them. `v2` lists what the app needs to open offline
-// (its page graph without the terrain renderer, which streams online only, and
-// the basemap glyphs); web/trip.ts stores those files inside a trip pack when
-// someone saves a region for offline from the v2 app, and only then.
+// app and landing chunks, about 1.9 MB) are left out of the install list, so the
+// worker's install no longer stores them for every visitor. `v2` lists what the
+// app needs to open offline (its page graph without the terrain renderer, which
+// streams online only, and the basemap glyphs); web/trip.ts stores those files
+// inside a trip pack when someone saves a region for offline from the v2 app.
+// A v2 page the worker controls (after such a save, or because a classic-map
+// visit registered it) still adds each hashed file it loads to the build's
+// shell cache at run time (sw.js cacheFirst), as every page does.
 import {readdir, readFile, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 
