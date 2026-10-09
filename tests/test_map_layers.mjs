@@ -11,6 +11,7 @@ import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastli
 import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
+import {mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
 import {camera, cameraParam, choosePresentation, createStage, terrainFailed, zoomForSpan} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -251,9 +252,12 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.equal(fake.maps.length, 1, 'one map');
   const [map] = fake.maps;
   // The boat profile's default layers include Seafloor (FE-14), which checks its own publication; the
-  // protected areas (FE-19) read only the region's own files.
-  assert.deepEqual(fetches.filter(url => !url.startsWith('https://s.test/regions/') && !url.startsWith('https://s.test/data/')),
-    [`https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json']);
+  // protected areas (FE-19) read only the region's own files. The reef marks' run-time screen (#489) asks
+  // v1's live ds582 query, then the daily feed's boundary record (the Worker's part, else the whole feed).
+  assert.deepEqual(fetches.filter(url => !url.startsWith('https://s.test/regions/') && !url.startsWith('https://s.test/data/')).sort(), [
+    `https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json', mpaQuery([-121.9, 34.95, -120.55, 35.85]),
+    'https://s.test/api/daily?region=morro-bay&part=mpa-boundaries', 'https://s.test/feeds/data/regions/morro-bay/latest.json',
+  ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');

@@ -11,9 +11,10 @@ import {speciesFit} from '../dist/species-fit.js';
 import {matchesSpecies} from '../dist/species.js';
 import {habitatMatches} from '../dist/survey-habitat.js';
 import {
-  CDFW_REGULATIONS, EMPTY, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
+  CDFW_REGULATIONS, EMPTY, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
   receiptCard, regulationsLink, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
 } from '../web/map/habitat.ts';
+import {MPA_SERVICE} from '../web/map/mpa.ts';
 import {
   GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markSources, markStyle, picked, spotCard, spotHref,
 } from '../web/map/marks.ts';
@@ -33,6 +34,8 @@ const MORRO = read('regions/morro-bay/region.json'), ATLAS = read('data/atlas.js
 const CAMBRIA = read('regions/cambria-san-simeon/region.json');
 const SURVEY = read('regions/cambria-san-simeon/survey-habitat.geojson'), GEOLOGY = read('regions/cambria-san-simeon/geology.geojson');
 const SOCAL = read('regions/southern-california/region.json'), SOCAL_ATLAS = read('regions/southern-california/atlas.json');
+/** The run-time screen just after a live check against the committed snapshot (#489; tests/test_mark_screen.mjs covers the screen itself). */
+const CHECKED = assessScreen({areas: read('data/protected-areas.geojson').features, checkedAt: new Date().toISOString(), live: true}, Date.now());
 const sentinel = readPalette(name => `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 /** Words § 12 keeps off every card: no count, chance or promise of fish. */
@@ -78,15 +81,15 @@ test('fit is v1\'s ordinal, 3 the strongest, in the one wording "fits <species> 
 });
 
 test('marks are points with their fit badge, inside the profile\'s depth limit', () => {
-  const boat = markFeatures(ATLAS, 'lingcod', 'boat');
+  const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
   assert.equal(boat.features.length, ATLAS.targets.filter(t => matchesSpecies(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
   assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3'}});
-  const spear = markFeatures(ATLAS, 'reef', 'spear');
+  const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);
   assert.ok(spear.features.length > 0 && spear.features.every(f => ATLAS.targets.find(t => t.id === f.properties.id).neighborhood_depth_ft[1] <= 60), 'Spear: 60 ft');
-  assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear').features.every(f => !('fit' in f.properties)), 'no badge without a fit');
-  assert.deepEqual(markFeatures(ATLAS, 'halibut', 'boat').features, [], 'soft-bottom targets show no reef marks');
-  assert.deepEqual(markFeatures(null, 'reef', 'boat'), EMPTY);
+  assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', CHECKED).features.every(f => !('fit' in f.properties)), 'no badge without a fit');
+  assert.deepEqual(markFeatures(ATLAS, 'halibut', 'boat', CHECKED).features, [], 'soft-bottom targets show no reef marks');
+  assert.deepEqual(markFeatures(null, 'reef', 'boat', CHECKED), EMPTY);
 });
 
 test('a mark\'s card: fit, grade and depth range; source and age; the regulations line; credit and rights in the basis', () => {
@@ -201,9 +204,16 @@ function browser(href) {
   syncFromURL(href);
   return {back() { stack.pop(); location.href = stack.at(-1); syncFromURL(location.href); }, params: () => new URL(location.href).searchParams, stack};
 }
-/** The committed region files, served from dist/; `fail` names paths that answer 503. */
+/** Each region's committed boundary snapshot by its ds582 query area. */
+const SNAPSHOTS = new Map(read('regions/index.json').regions.map(r => read(r.config)).map(r => [r.mpa.bounds.join(','), r.assets.protected_areas]));
+/**
+ * The committed region files, served from dist/, and the live ds582 query answered with the region's
+ * committed snapshot (so the run-time screen has a current check); `fail` names paths that answer 503.
+ */
 const files = (fail = []) => async url => {
-  const path = new URL(url).pathname.slice(1);
+  const at = new URL(url), snapshot = at.origin + at.pathname === MPA_SERVICE && SNAPSHOTS.get(at.searchParams.get('geometry'));
+  if (snapshot) return {ok: true, json: async () => read(snapshot)};
+  const path = at.pathname.slice(1);
   if (fail.includes(path)) return {ok: false, status: 503, json: async () => ({})};
   return {ok: true, json: async () => read(path)};
 };

@@ -8,7 +8,9 @@
 // updating or expired.
 // Protected areas (FE-19) are always drawn on the Chart: their row says what
 // the drawing covers (MpaRow), links the official rules page and carries the
-// ds582 credit in its basis.
+// ds582 credit in its basis. Where the region has reef marks for the target,
+// the row also says what the marks' run-time screen checked, or why they are
+// withheld (#489, web/map/habitat.ts).
 // Currents (FE-15) follows the source choice `?current=`; its row carries the
 // drawn source's basis sentence, or why nothing draws.
 // The Clouds row labels the GOES frame on screen with its acquisition time and
@@ -24,6 +26,7 @@ import {chartFailed, unavailable} from '../map/chart.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {currentsState} from '../map/currents.ts';
 import {layerEntry} from '../map/layers.ts';
+import {markNote} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
@@ -74,6 +77,7 @@ export function MpaRow() {
         </Popover>
       </span>
       {s.note ? <p class="app-mpa-note">{s.note}</p> : null}
+      {markNote.value ? <p class="app-mpa-note" data-reason="marks">{markNote.value}</p> : null}
       <a class="app-mpa-rules" href={CDFW_MPA_PAGE} target="_blank" rel="noopener">Official rules and boundaries (CDFW)</a>
     </li>
   );
