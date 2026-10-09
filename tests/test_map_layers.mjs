@@ -168,6 +168,16 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   assert.equal(fake.maps[1].removed, true);
 });
 
+test('a still engine (the landing\'s night map, FE-25) takes no input, fades no label and adds no control', () => {
+  const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.4, longitude: -121.2, zoom: 10.2};
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, still: true});
+  const [map] = fake.maps;
+  assert.equal(map.options.interactive, false);
+  assert.equal(map.options.fadeDuration, 0);
+  assert.deepEqual(map.controls, [], 'the page credits the basemap itself');
+  assert.equal(mapOptions({}, style, camera).interactive, undefined, 'the Chart keeps its gestures');
+});
+
 test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {
   const fake = library();
   fake.lateStyle = true;

@@ -3,7 +3,8 @@
 // judged at a fixed clock), the feed path, the committed shoreline module
 // against its generator, and the components rendered to strings: the hero
 // copy, every tile with a source and an age, the fleet line only when given,
-// and the layer dots as links into /map?layers=.
+// and the layer dots as links into /map?layers=. FE-25: the night map's frame,
+// source choice, style and credit, and that it loads only by dynamic import.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -13,7 +14,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_landing_shoreline.mjs';
-import {ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, tideReading, tideURL} from '../web/landing/readings.ts';
+import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, tideReading, tideURL} from '../web/landing/readings.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -108,8 +109,11 @@ test('loadReadout reads the region, the feed and the tide; a failure becomes an 
   assert.deepEqual(readout.readings.map(r => r.source), ['NDBC 46028 · 20 min', 'NDBC 46215 · 34 min', 'NDBC 46215 · 3 h', 'NOAA 9412110 · unavailable']);
   assert.match(readout.readings[0].basis, /about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading/);
   assert.ok(readout.readings[3].basis.endsWith(region.stations.tide_note), 'the tide tile carries the region\'s tide note');
+  assert.equal(readout.place, region.name, 'the readout names the region it reads (#422)');
+  assert.equal(DEFAULT_PLACE, region.name, 'the name shown while region.json loads is the region\'s own');
   const offline = await loadReadout(async () => { throw Error('offline'); }, 'morro-bay', () => NOW);
   assert.ok(offline.readings.every(r => r.stale && /unavailable$/.test(r.source)));
+  assert.equal(offline.place, DEFAULT_PLACE);
   assert.deepEqual(offline.feed, {age: null, stale: true});
 });
 
@@ -165,7 +169,8 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.match(page, /<p>Forecasts, observations and habitat carry separate clocks; check the rules before you fish\.<\/p>/);
   assert.doesNotMatch(page, /CUSP|surveyed/, 'the credit comes from the generated module, not the page');
   assert.equal(render(h(ShorelineCredit, {})), `<p class="landing-credit">Shoreline: ${SHORELINE.attribution}, surveyed ${SHORELINE.sourceYears[0]}–${SHORELINE.sourceYears.at(-1)}.</p>`);
-  for (const id of ['landing-shore', 'landing-head', 'landing-app', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));
+  for (const id of ['landing-night', 'landing-shore', 'landing-head', 'landing-app', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));
+  assert.ok(page.indexOf('id="landing-night"') < page.indexOf('id="landing-shore"'), 'the shoreline paints over the night map until it has drawn');
   assert.deepEqual([...page.matchAll(/<script\b[^>]*>/g)].map(m => m[0]), ['<script type="module" src="../web/landing/main.tsx">'], 'one module, no inline script');
   const head = render(h(LandingHead, {href: 'https://s.test/?ui=v2'}));
   assert.match(head, /href="\/\?ui=v2">SkipperCast</);
@@ -201,6 +206,8 @@ test('every readout tile shows a source and an age, a stale one says stale, and 
   assert.deepEqual(tiles.filter(m => /data-state="stale"/.test(m[2])).map(m => m[1]), ['water']);
   assert.match(tiles[2][2], /<span class="ui-tile-stale ui-eyebrow">stale<\/span>/);
   assert.match(html, /<p class="landing-fresh ui-eyebrow" data-state="ok">Buoy feed updated 12 min ago<\/p>/);
+  assert.match(html, /aria-labelledby="landing-readout-title"[^>]*><h2 id="landing-readout-title" class="landing-readout-title ui-eyebrow">Latest readings · Morro Bay &amp; Avila area<\/h2>/, 'the strip names the place, not the visitor\'s launch (#422)');
+  assert.match(render(h(Readout, {data: {...readout, place: 'Cambria'}})), />Latest readings · Cambria area</);
   assert.doesNotMatch(html, /landing-more/, 'no link without an address');
   assert.match(render(h(Readout, {data: readout, conditions: '/map?region=morro-bay&view=conditions'})), /<a class="landing-more" href="\/map\?region=morro-bay&amp;view=conditions">Hour by hour on the map<\/a>/);
   assert.doesNotMatch(html, /data-fleet/);
@@ -216,4 +223,87 @@ test('layer dots link each rail entry into the app with that layer, keeping the 
   assert.deepEqual([...html.matchAll(/data-layer="([a-z-]+)"/g)].map(m => m[1]), [...RAIL_IDS]);
   assert.match(html, /href="https:\/\/s\.test\/map\?region=morro-bay&amp;layers=seafloor&amp;ui=v2" data-layer="seafloor">.*?<span class="landing-dot-name">Seafloor<\/span>/s);
   assert.equal(layerURL('https://s.test/#x', 'morro-bay', 'swell'), 'https://s.test/map?region=morro-bay&layers=swell');
+});
+
+let night;
+/** NightMap.tsx and what it shares with the app, bundled for Node; MapLibre and the terrain renderer stay out (both load by dynamic import only). */
+async function loadNight() {
+  if (night) return night;
+  const out = join(await mkdtemp(join(tmpdir(), 'night-')), 'night.mjs');
+  await build({
+    stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+      export {NIGHT_SOURCES, NightCredit, nightCamera, nightCoastline, nightRegion, nightSource, nightState, nightStyle} from './web/landing/NightMap.tsx';
+      export {currentsState} from './web/map/currents.ts';
+      export {readPalette} from './web/map/palette.ts';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    external: ['*/maplibre.js', '*/terrain.js'],
+  });
+  night = await import(pathToFileURL(out).href);
+  return night;
+}
+
+test('the night map frames the region with the harbor right of centre, over the hero\'s open water (FE-25)', async () => {
+  const {nightCamera, nightRegion} = await loadNight();
+  const region = JSON.parse(readFileSync(join(ROOT, 'regions/morro-bay/region.json'), 'utf8'));
+  const asked = [];
+  const info = await nightRegion('morro-bay', async url => { asked.push(url); return {ok: true, json: async () => region}; }, 'https://s.test/?ui=v2');
+  assert.deepEqual(asked, ['https://s.test/regions/morro-bay/region.json']);
+  assert.deepEqual([info.bounds, info.center, info.harbor, info.timezone], [region.bounds, region.map.center, {latitude: region.harbor.latitude, longitude: region.harbor.longitude}, 'America/Los_Angeles']);
+  assert.deepEqual(info.localAreas.map(a => a.id), region.map.local_areas.map(a => a.id));
+  assert.equal(await nightRegion('morro-bay', async () => ({ok: true, json: async () => ({...region, bounds: [1, 2]})}), 'https://s.test/'), null);
+  assert.equal(await nightRegion('morro-bay', async () => ({ok: false, json: async () => region}), 'https://s.test/'), null);
+  const [, south, , north] = info.bounds;
+  const merc = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+  for (const [width, height, at] of [[1440, 900, 0.72], [1024, 768, 0.72], [390, 844, 0.62]]) {
+    const c = nightCamera(info, width, height), world = 256 * 2 ** c.zoom;
+    assert.ok(Math.abs((width / 2 + (info.harbor.longitude - c.longitude) / 360 * world) / width - at) < 1e-9, `harbor ${at * 100}% across at ${width} px`);
+    assert.ok(Math.abs((merc(north) - merc(south)) / (2 * Math.PI) * world / height - 1) < 0.01, `the bounds fill ${height} px top to bottom`);
+    assert.equal(c.latitude, (south + north) / 2);
+  }
+});
+
+test('the night map draws the first listed source with a fresh frame, the night style with the landing glow, and credits both once drawn', async () => {
+  const {NIGHT_SOURCES, NightCredit, currentsState, nightSource, nightState, nightStyle, readPalette, render, h} = await loadNight();
+  const now = new Date('2026-10-07T12:20:00Z'), cells = [{lat: 35.3, lon: -121, uMs: 0.2, vMs: 0.1, speedKnots: 0.43, towardDeg: 63}];
+  const field = (id, kind, extra) => ({id, kind, label: id, fetchedAt: '2026-10-07T12:00:00Z', nativeResolutionKm: kind === 'forecast' ? 4 : 6, sampleStride: 1, surfaceOnly: true, ...extra});
+  const forecast = field('wcofs', 'forecast', {issuedAt: '2026-10-07T03:00:00Z', frames: [{validAt: '2026-10-07T12:00:00Z', cells}]});
+  const radar = field('hfr-6', 'observation', {frames: [{validAt: '2026-10-07T11:00:00Z', cells}]});
+  const staleForecast = {...forecast, issuedAt: '2026-10-05T03:00:00Z'};
+  assert.deepEqual(NIGHT_SOURCES, ['wcofs', 'hfr-6', 'hfr-1']);
+  assert.equal(nightSource([radar, forecast], now), 'wcofs', 'the forecast first while it is fresh');
+  assert.equal(nightSource([radar, staleForecast], now), 'hfr-6', 'observed radar when the forecast cycle is too old');
+  assert.equal(nightSource([staleForecast], now), 'wcofs', 'none fresh: the forecast, which then draws nothing and says why');
+  assert.equal(nightSource(undefined, now), 'wcofs');
+
+  const palette = readPalette(name => `token(${name})`);
+  const style = nightStyle(palette, 'https://s.test/feeds/tiles/basemap/a.pmtiles', 'https://s.test/?ui=v2', 'morro-bay');
+  assert.equal(style.name, 'SkipperCast basemap (night)');
+  assert.equal(style.glyphs, 'https://s.test/basemap/glyphs/{fontstack}/{range}.pbf');
+  assert.equal(style.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  assert.deepEqual(style.layers.slice(-2).map(l => [l.id, l.paint['line-color'], l.paint['line-opacity']]), [['coastline-glow', 'token(depth-0)', 0.45], ['coastline', 'token(flow)', 0.9]], 'the coastline last, in the SVG\'s glow');
+  const colours = style.layers.flatMap(l => Object.entries(l.paint ?? {}).filter(([k]) => k.endsWith('-color')).map(([, v]) => v));
+  assert.ok(colours.length > 5 && colours.every(v => /^token\([a-z0-9-]+\)$/.test(v)), 'every colour is a token');
+
+  try {
+    nightState.value = 'loading';
+    assert.equal(render(h(NightCredit, {})), '', 'no credit before the map draws');
+    nightState.value = 'ready';
+    assert.equal(render(h(NightCredit, {})), '<p class="landing-credit" data-credit="basemap">Basemap: © OpenStreetMap contributors, © Protomaps.</p>');
+    currentsState.value = {drawn: {}, note: '', reason: '', basis: 'NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative.'};
+    assert.match(render(h(NightCredit, {})), /<p class="landing-credit" data-credit="currents">Currents: NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.<\/p>$/);
+    nightState.value = 'failed';
+    assert.equal(render(h(NightCredit, {})), '', 'a failed map credits nothing');
+  } finally { nightState.value = 'loading'; }
+});
+
+test('MapLibre and the night map load only by dynamic import, after first paint (FE-25, design § 13)', () => {
+  const main = readFileSync(join(ROOT, 'web/landing/main.tsx'), 'utf8'), map = readFileSync(join(ROOT, 'web/landing/NightMap.tsx'), 'utf8');
+  assert.match(main, /import\('\.\/NightMap\.tsx'\)/);
+  assert.doesNotMatch(main, /from '\.\/NightMap/, 'main.tsx never imports the night map statically');
+  assert.match(main, /afterFirstPaint\(nightMap\)/);
+  assert.match(main, /if \(!webgl2\(\)\) return;/, 'no WebGL2: MapLibre is never fetched and the shoreline stays');
+  assert.match(map, /import\('\.\.\/map\/maplibre\.js'\)/);
+  assert.doesNotMatch(map.replace(/^import type [^;]+;$/gm, ''), /from '[^']*(?:maplibre|pmtiles|three|coast3d|embed)[^']*'/, 'MapLibre types only; no renderer');
 });

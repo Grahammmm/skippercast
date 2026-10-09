@@ -45,6 +45,8 @@ export interface EngineOptions {
   attribution?: string;
   /** The map has settled and drawn every tile in view (MapLibre `idle`). */
   onIdle?(): void;
+  /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; the page credits the basemap itself. */
+  still?: boolean;
 }
 
 /** What a GeoJSON source accepts: a URL or GeoJSON. */
@@ -107,9 +109,10 @@ export function prepareLibrary(module: MapLibraryModule): void {
   prepared.add(module.lib);
 }
 
-/** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name. */
-export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera): MapLibre.MapOptions {
+/** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. */
+export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera, still = false): MapLibre.MapOptions {
   return {
+    ...still ? {interactive: false, fadeDuration: 0} : {},
     container: host, style,
     center: [camera.longitude, camera.latitude], zoom: camera.zoom - ZOOM_OFFSET,
     minZoom: VIEW_ZOOM.min - ZOOM_OFFSET, maxZoom: VIEW_ZOOM.max - ZOOM_OFFSET,
@@ -123,12 +126,14 @@ export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification
 export function createEngine(module: MapLibraryModule, options: EngineOptions): Engine {
   prepareLibrary(module);
   const {lib} = module, {host} = options;
-  const map = new lib.Map(mapOptions(host, options.style, options.camera));
+  const map = new lib.Map(mapOptions(host, options.style, options.camera, options.still));
   map.keyboard.disableRotation();
   map.touchZoomRotate.disableRotation();
-  map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
-  map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
-  map.addControl(new lib.AttributionControl({compact: false, ...options.attribution ? {customAttribution: options.attribution} : {}}), 'bottom-right');
+  if (!options.still) {
+    map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
+    map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
+    map.addControl(new lib.AttributionControl({compact: false, ...options.attribution ? {customAttribution: options.attribution} : {}}), 'bottom-right');
+  }
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
   const overlays = new Map<string, Overlay>();
