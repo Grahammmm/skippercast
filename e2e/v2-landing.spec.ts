@@ -205,7 +205,7 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('#landing-readout-title')).toHaveText('Latest readings · Morro Bay & Avila area');
   await expect(page.locator('[data-fleet]')).toHaveCount(0);
   await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(6);
-  await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&ui=v2$/);
+  await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&current=wcofs&ui=v2$/);
   await page.locator('[data-reading="tide"] summary').click();
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('mean lower low water');
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('not a Morro Bay bar-current prediction');

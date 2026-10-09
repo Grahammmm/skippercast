@@ -88,6 +88,11 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
 .app-rail-source select { flex: 1; min-width: 0; }
 .app-rail .ui-rail-item { flex-wrap: wrap; }
+/* FE-20: the base choice under the entries, its note ("Chart only", the imagery's dates) beneath it; a legend row with nothing drawn gives its reason under its name. */
+.app-rail-base { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--line); }
+.app-rail-base .app-rail-source { flex: 1 1 0; padding-bottom: 0; }
+.app-rail-base .ui-rail-note { flex-basis: 100%; padding: 0 var(--space-2) var(--space-1); }
+.app-legend-plain { flex-wrap: wrap; }
 /* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */
 .app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-1), var(--sst-2), var(--sst-3), var(--sst-4), var(--sst-5)); }
 .app-legend-water-temp, .app-legend-swell { flex-wrap: wrap; }

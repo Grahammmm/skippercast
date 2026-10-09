@@ -465,6 +465,7 @@ const flowOnLand = (page: Page, view: string) => page.evaluate(view => {
   return {land, water};
 }, view);
 const openLayers = async (page: Page) => { if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click(); };
+const baseSelect = (page: Page) => page.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
 
 test('Currents draw the bound forecast as animated streamlines, read on click and follow ?current=', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
@@ -588,13 +589,14 @@ test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, lab
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,12'});
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   await openLayers(page);
-  const entry = page.locator('.ui-rail-item', {hasText: 'Aerial'});
-  await expect(entry.locator('.ui-rail-note')).toHaveText('flown 13–29 May 2022');
+  // FE-20: the rail's one base select; Aerial is listed where the region's package offers it.
+  const select = baseSelect(page);
+  await expect(select.locator('option')).toHaveText(['Night', 'Chart detail', 'Aerial']);
   await page.waitForTimeout(1000);
   expect(requested, 'nothing is requested before Aerial is chosen').toEqual([]);
 
-  await entry.locator('.ui-rail-toggle').click();
-  await expect(entry.locator('.ui-rail-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await select.selectOption('aerial');
+  await expect(page.locator('#app-rail-base-note')).toHaveText('flown 13–29 May 2022');
   await expect.poll(() => params(page).base).toBe('aerial');
   await expect.poll(() => requested.length, {message: 'MapLibre fetches the tiles'}).toBeGreaterThan(0);
   expect(blocked, 'the CSP allows the USGS host for MapLibre').toEqual([]);
@@ -603,7 +605,7 @@ test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, lab
   await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('USGS / USDA · NAIP aerial imagery (dated mosaic) · flown 13–29 May 2022');
   await v2.a11y('v2-map-aerial');
 
-  await entry.locator('.ui-rail-toggle').click();
+  await select.selectOption('night');
   await expect.poll(() => params(page).base).toBe('night');
   await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).not.toContainText('NAIP');
   const count = requested.length;
@@ -619,9 +621,86 @@ test('a region without basemap.aerial offers no Aerial base, whatever ?base= say
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   await openLayers(page);
   await expect(page.locator('.ui-rail-item', {hasText: 'Currents'})).toBeVisible();
-  await expect(page.locator('.ui-rail-item', {hasText: 'Aerial'})).toHaveCount(0);
+  await expect(baseSelect(page).locator('option')).toHaveText(['Night', 'Chart detail']);
+  await expect(baseSelect(page), 'what draws: the basemap alone').toHaveValue('night');
   await page.waitForTimeout(1000);
   expect(requested).toEqual([]);
+});
+
+// FE-20: the rail, the legend, ?layers= and the profile defaults; the base select (FE-23 review) and "Chart only" in the terrain.
+const railToggle = (page: Page, name: string) => page.locator('.ui-rail-item', {hasText: name}).locator('.ui-rail-toggle');
+const pressedEntries = (page: Page) => page.locator('.ui-rail-toggle[aria-pressed="true"] .ui-rail-label').allTextContents();
+
+test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile switch applies that profile\'s layers', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
+  await showLayers(page);
+  await expect.poll(() => pressedEntries(page)).toEqual(['Seafloor', 'Currents']);
+  expect(params(page).current, 'the link names no source: its list turns on the forecast (#482)').toBeUndefined();
+  await expect(page.locator('.app-legend-seafloor')).toBeVisible();
+  await expect(page.locator('.app-legend-currents')).toBeVisible();
+  await expect(page.locator('.app-legend .app-swatch:not([data-layer="mpas"])'), 'no colour key until a layer draws').toHaveCount(0);
+
+  await page.locator('[aria-label="Profile"] button', {hasText: 'Shore'}).click();
+  await expect.poll(() => params(page).profile).toBe('shore');
+  expect(params(page).layers, 'a switch drops the link\'s list').toBeUndefined();
+  await expect.poll(() => pressedEntries(page)).toEqual(['Water temp', 'Swell']);
+  await page.locator('[aria-label="Profile"] button', {hasText: 'Boat'}).click();
+  await expect.poll(() => pressedEntries(page), 'Boat\'s own list comes back').toEqual(['Seafloor', 'Currents']);
+
+  await v2.open('app', {place: 'morro', layer: 'temperature'});
+  await showLayers(page);
+  await expect.poll(() => pressedEntries(page), 'Fish\'s layer=temperature').toEqual(['Water temp']);
+  await expect(page.locator('.app-location')).toHaveAttribute('data-region', 'morro-bay');
+  expect(pageErrors).toEqual([]);
+});
+
+test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle hidden layers', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
+  await expect(page.locator('.app-terrain')).toBeVisible();
+  await showLayers(page);
+  for (const name of ['Seafloor', 'Water temp', 'Swell', 'Charter fleet', 'Clouds']) {
+    await expect(railToggle(page, name), name).toBeDisabled();
+    await expect(page.locator('.ui-rail-item', {hasText: name}).locator('.ui-rail-note'), name).toHaveText('Chart only');
+  }
+  await expect(railToggle(page, 'Currents'), 'Currents draw in the terrain too').toBeEnabled();
+  await expect(baseSelect(page)).toBeDisabled();
+  await expect(page.locator('#app-rail-base-note')).toHaveText('Chart only');
+  await expect(page.locator('.app-legend [data-reason="seafloor"]')).toHaveText('Chart only');
+  await railToggle(page, 'Water temp').click({force: true});
+  await page.waitForTimeout(300);
+  expect(params(page).layers, 'a disabled entry changes nothing').toBe('seafloor');
+  await v2.a11y('v2-map-terrain-rail');
+
+  await hideLayers(page);
+  await toggle(page, 'Chart').click();
+  await showLayers(page);
+  await expect(railToggle(page, 'Water temp')).toBeEnabled();
+  await expect(railToggle(page, 'Seafloor')).toHaveAttribute('aria-pressed', 'true');
+  await expect(baseSelect(page)).toBeEnabled();
+  expect(pageErrors).toEqual([]);
+});
+
+test('a link\'s ?base=chart shows Chart detail in the base select, which can be chosen again after another base', async ({page, pageErrors, v2}) => {
+  const enc: string[] = [];
+  await page.route('https://gis.charttools.noaa.gov/**', route => { enc.push(route.request().url()); return route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}); });
+  await page.route('https://imagery.nationalmap.gov/**', route => route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}));
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', base: 'chart', view: '35.38000,-120.88000,12'});
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await showLayers(page);
+  const select = baseSelect(page);
+  await expect(select).toHaveValue('chart');
+  await expect(page.locator('#app-rail-base-note')).toHaveText('from zoom 10');
+  await expect.poll(() => enc.length, {message: 'the ENC display draws'}).toBeGreaterThan(0);
+  await select.selectOption('aerial');
+  await expect.poll(() => params(page).base).toBe('aerial');
+  await select.selectOption('chart');
+  await expect.poll(() => params(page).base).toBe('chart');
+  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('NOAA ENC display');
+  await v2.a11y('v2-map-base');
+  expect(pageErrors).toEqual([]);
 });
 
 // FE-16: a synthetic coast report whose surface-temperature analysis covers the water off Morro Bay on

@@ -8,6 +8,7 @@
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import {signal} from '@preact/signals';
+import type {Presentation} from '../coast-context.ts';
 import type {RailId} from '../profile.ts';
 import type {PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
@@ -71,7 +72,8 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'USGS/USDA NAIP natural-colour mosaic, dated imagery.', task: 'FE-23'}),
   entry({id: 'chart', label: 'Chart detail', control: 'base', presentations: ['chart'], sources: [ENC_SOURCE], attribution: ENC_ATTRIBUTION, gate: 'zoom ≥ 10',
     basis: 'NOAA electronic navigational chart display service, drawn from zoom 10; for planning, never for navigation.', task: 'FE-11'}),
-  entry({id: 'relief', label: 'Terrain relief', control: 'seafloor', presentations: ['terrain'],
+  // The renderer draws relief whatever the rail says; FE-80 moves its options into the Seafloor entry.
+  entry({id: 'relief', label: 'Terrain relief', control: 'always', presentations: ['terrain'],
     basis: 'Reviewed regional terrain and imagery, checked by hash in the browser before it draws.', task: 'FE-80'}),
   entry({id: 'water-temp', label: 'Water temp', control: 'water-temp', presentations: ['chart'], time: ['observed'], legend: [{label: 'Cold to warm', swatch: 'sst0'}],
     basis: 'The bound coast report\'s daily sea-surface temperature analysis, named with its product, grid and age where it draws and withheld 72 hours after analysis; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),
@@ -134,8 +136,17 @@ export function setRailNote(rail: RailId, note: string): void {
   if ((railNotes.peek()[rail] ?? '') !== note) railNotes.value = {...railNotes.peek(), [rail]: note};
 }
 
-/** The entries a rail entry turns on and off, in draw order. */
-export const railLayers = (rail: RailId): LayerEntry[] => LAYERS.filter(e => e.control === rail);
+/** The entries a rail entry (or the base choice) turns on and off, in draw order. */
+export const railLayers = (rail: LayerControl): LayerEntry[] => LAYERS.filter(e => e.control === rail);
+
+/**
+ * Whether turning rail entry `rail` (or choosing a base) changes what presentation `shown` draws: one of
+ * its layers draws there. In 2D and 3D an entry that draws nothing reads "Chart only" and cannot be
+ * switched, so it never toggles a hidden layer (FE-20).
+ */
+export const drawsIn = (rail: LayerControl, shown: Presentation): boolean =>
+  railLayers(rail).some(e => e.presentations.includes(shown === 'chart' ? 'chart' : 'terrain'));
+export const CHART_ONLY = 'Chart only';
 
 /** The entries that draw in `presentation`, in draw order. */
 export const layersIn = (presentation: LayerPresentation): LayerEntry[] => LAYERS.filter(e => e.presentations.includes(presentation));

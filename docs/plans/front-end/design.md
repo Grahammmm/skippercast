@@ -879,9 +879,9 @@ Ranked in open-questions Q2; the plan assumes:
 | `profile` | `boat`, `shore`, `spear` | yes (`skippercast-profile-v1`) | default `boat` |
 | `view` | `coast`, `conditions`, `history`, `fleet`, `reports` | no | masthead and mobile tabs |
 | `day` | `YYYY-MM-DD` | no | time dock day chips; `hour` stays ISO UTC |
-| `layers` | comma list of rail ids | yes (`skippercast-layers-v1`) | default per profile |
+| `layers` | comma list of rail ids | yes (`skippercast-layers-v1`, one list per profile) | default per profile |
 | `area` | coast or focus id | no | replaces `focus` for the command bar; `focus` still read |
-| `base` | `night`, `chart`, `aerial` | yes | aerial only where NAIP is configured |
+| `base` | `night`, `chart`, `aerial` | yes | aerial only where NAIP is configured; one select under the rail (FE-20) |
 | `presentation`, `current`, `habitat` | see § 3A.3 | see § 3A.3 | added by FE-73; already written by v1 |
 
 Fish links (`place`, `mode`, `species`, `layer`) are translated by
@@ -892,9 +892,15 @@ SkipperCast keys win.
 `lat,lng,zoom`. The store keeps the raw value in `view` for v1 and sets
 `appView` only when the value names a masthead view (otherwise `coast`), so
 one parameter serves both shells; FE-11 picks the v2 key for the map
-position. `?layers=none` is an empty rail; an absent key restores the stored
-list, then the profile's defaults. A key the URL names is persisted, so a
-link that omits it next time restores the last choice (FE-04).
+position. `?layers=none` is an empty rail; an absent key restores the
+profile's stored list, then its defaults. A key the URL names is persisted,
+so a link that omits it next time restores the last choice (FE-04); the rail
+list is stored per profile, and the profile switch drops `?layers=` and
+`?current=` so the new profile's own list applies (FE-20). In v2 an absent
+`?current=` draws the WCOFS forecast when the rail list has Currents, and an
+explicit `current=off` stays off; v1 keeps `off` ([open-questions Q17](open-questions.md#q17-the-boat-profiles-default-currents-layer)).
+In 2D and 3D a rail entry none of whose layers draws there reads "Chart only"
+and is disabled ([Q19](open-questions.md#q19-rail-entries-that-draw-nothing-in-the-shown-presentation)).
 
 Region change no longer reloads: `lockRegion()` is a no-op under
 `configureStore({v2: true})` (ADR 0005 item 3); the engine swaps

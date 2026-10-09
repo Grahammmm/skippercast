@@ -143,7 +143,8 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   // Rail and legend: swell and water temp on, the rest off; the protected areas always draw on the Chart (FE-19).
   const rail = Object.fromEntries([...html.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
   assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
-  assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['water-temp', 'swell', 'mpas']);
+  assert.match(html, /class="app-legend-water-temp"/);
+  assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
@@ -241,7 +242,8 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
   assert.equal(count(panel, /class="ui-rail-item"/g), 6);
-  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['clouds', 'mpas']);
+  assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
+  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
   assert.deepEqual(toggleLayers('brief', 'peek'), {panel: 'layers', detent: 'half'});
   assert.deepEqual(toggleLayers('brief', 'full'), {panel: 'layers', detent: 'full'});

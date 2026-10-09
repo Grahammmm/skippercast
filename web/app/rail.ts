@@ -20,6 +20,9 @@ export const RAIL_ENTRIES: readonly RailEntry[] = [
 ];
 for (const id of RAIL_IDS) if (!RAIL_ENTRIES.some(e => e.id === id)) throw new Error(`rail entry missing for ${id}`);
 
+/** Whether rail entry `id` is on: Currents while a source is chosen (FE-15), any other entry while the rail list has it. */
+export const railOn = (id: string, on: readonly string[], source: string): boolean => id === 'currents' ? source !== 'off' : on.includes(id);
+
 /** The rail list with `id` switched `on` or off, in rail order. */
 export function toggled(current: readonly string[], id: string, on: boolean): string[] {
   const set = new Set(current);

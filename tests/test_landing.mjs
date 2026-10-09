@@ -149,9 +149,9 @@ async function load() {
       export {Shoreline, ShorelineCredit} from './web/landing/Shoreline.tsx';
       export {SHORELINE} from './web/landing/shoreline-path.ts';
       export {Readout} from './web/landing/Readout.tsx';
-      export {LayerDots, layerURL, DOT_LABELS} from './web/landing/LayerDots.tsx';
+      export {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS} from './web/landing/LayerDots.tsx';
       export {RAIL_ENTRIES} from './web/app/rail.ts';
-      export {STORAGE_KEYS} from './web/state.ts';
+      export {DEFAULT_CURRENT, STORAGE_KEYS} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -220,12 +220,15 @@ test('every readout tile shows a source and an age, a stale one says stale, and 
 });
 
 test('layer dots link each rail entry into the app with that layer, keeping the ui switch', async () => {
-  const {LayerDots, layerURL, DOT_LABELS, RAIL_ENTRIES, render, h} = await load();
+  const {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, DEFAULT_CURRENT, RAIL_ENTRIES, render, h} = await load();
   assert.deepEqual(DOT_LABELS, Object.fromEntries(RAIL_ENTRIES.map(e => [e.id, e.label])), 'the dots carry the rail labels');
   const html = render(h(LayerDots, {href: 'https://s.test/?ui=v2&utm=x', region: 'morro-bay'}));
   assert.deepEqual([...html.matchAll(/data-layer="([a-z-]+)"/g)].map(m => m[1]), [...RAIL_IDS]);
   assert.match(html, /href="https:\/\/s\.test\/map\?region=morro-bay&amp;layers=seafloor&amp;ui=v2" data-layer="seafloor">.*?<span class="landing-dot-name">Seafloor<\/span>/s);
   assert.equal(layerURL('https://s.test/#x', 'morro-bay', 'swell'), 'https://s.test/map?region=morro-bay&layers=swell');
+  // FE-20 (#482): the Currents dot names the source the rail's toggle turns on, so the map opens with Currents drawn.
+  assert.equal(DOT_CURRENT, DEFAULT_CURRENT);
+  assert.match(html, /href="https:\/\/s\.test\/map\?region=morro-bay&amp;layers=currents&amp;current=wcofs&amp;ui=v2" data-layer="currents">/);
 });
 
 let night;
