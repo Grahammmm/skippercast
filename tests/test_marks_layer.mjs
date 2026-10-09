@@ -180,7 +180,7 @@ test('the Chart style draws habitat in its § 9 slot and marks under the coastli
   const at = id => ids.indexOf(id);
   assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 3), [SURVEY_PICK, GEOLOGY_PICK, 'geology-line']);
   assert.ok(at(ENC_LAYER) < at('mpa-line') && at('mpa-label') < at(SURVEY_PICK) && at('geology-line') < at('seafloor-fill') && at('seafloor-unranked') < at(MARK_PICK), ids.join(' '));
-  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'selection-ring', COASTLINE_GLOW, 'coastline']);
+  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'selection-ring', 'ranked-target', 'ranked-pin', 'ranked-number', 'ranked-more', COASTLINE_GLOW, 'coastline']);
   const layer = id => style.layers.find(l => l.id === id);
   assert.equal(layer(SURVEY_PICK).paint['fill-opacity'], 0.25, 'habitat fills at 0.25');
   assert.deepEqual(layer('geology-line').paint['line-dasharray'], [3, 2], 'geology as a dashed outline');

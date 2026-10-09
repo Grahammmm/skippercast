@@ -14,6 +14,9 @@
 // Registry layers with run-time sources (FE-22's clouds, FE-16's water
 // temperature) are created with the Chart and draw through its engine
 // (`layers`, Engine.setOverlay); a click on open water asks them for a reading.
+// The trip planner's ranked spots (#495, web/map/ranked.ts) draw above the marks;
+// the host's `data-ranked` and `data-ranked-drawn` report how many pins the plan
+// has and how many MapLibre drew in view.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -23,10 +26,11 @@ import {appView, base, habitat, region, selection, setParams} from '../state.ts'
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {RANKED_PICK, RANKED_PIN, rankedFeatures, rankedMark, rankedSpots, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, type Camera} from './stage.ts';
@@ -49,7 +53,7 @@ export const unavailable = signal<readonly string[]>([]);
 export const chartFailed = signal(false);
 
 export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string}
-/** The whole Chart style in § 9 order: the token basemap (or only its water without an archive), the ENC base, the protected areas, habitat, the seafloor (hidden), marks, then the coastline on top. */
+/** The whole Chart style in § 9 order: the token basemap (or only its water without an archive), the ENC base, the protected areas, habitat, the seafloor (hidden), marks, the ranked trip spots, then the coastline on top. */
 export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   const style = basemapStyle(o.palette, {archive: o.archive ?? '', assets: new URL('basemap/', o.page).href});
   const layers: unknown[] = o.archive ? style.layers : style.layers.filter(l => l.source !== BASEMAP_SOURCE);
@@ -58,10 +62,10 @@ export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   sources[MPA_SOURCE] = mpaSource();
   sources[SEAFLOOR_SOURCE] = seafloorSource();
   sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page);
-  const marks = markStyle(o.palette);
-  Object.assign(sources, marks.sources);
+  const marks = markStyle(o.palette), ranked = rankedStyle(o.palette);
+  Object.assign(sources, marks.sources, {[RANKED_SOURCE]: ranked.source});
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
-  layers.push(...mpaLayers(o.palette), ...marks.habitat, ...seafloorLayers(o.palette), ...marks.marks, ...coastlineLayers(o.palette));
+  layers.push(...mpaLayers(o.palette), ...marks.habitat, ...seafloorLayers(o.palette), ...marks.marks, ...ranked.layers, ...coastlineLayers(o.palette));
   return {...style, sources, layers} as unknown as MapLibre.StyleSpecification;
 }
 
@@ -132,17 +136,23 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
         host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
-        pickLayers: [MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL],
+        pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL],
         pickFirst: () => drawn.flatMap(l => l.pick?.layers ?? []),
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
         onPick: (layer, properties, at) => {
+          // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
+          if (layer === RANKED_PICK && zoomToGroup(properties)) return;
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
-            : layer === MPA_FILL ? mpaMark(properties) : drawn.find(l => layer !== null && l.pick?.layers.includes(layer))?.pick?.mark(layer!, properties) ?? null;
+            : layer === MPA_FILL ? mpaMark(properties) : layer === RANKED_PICK ? rankedMark(properties)
+            : drawn.find(l => layer !== null && l.pick?.layers.includes(layer))?.pick?.mark(layer!, properties) ?? null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
           // A click on nothing else reads the drawn surface current (FE-15), else the drawn water temperature (FE-16).
           chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
         },
-        onIdle: () => { host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL)); },
+        onIdle: () => {
+          host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
+          host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
+        },
       });
       engine.value = e;
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
@@ -185,6 +195,14 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       e.setData(id, collection);
       if (id === MARKS_SOURCE) host.dataset.marks = String(collection.features.length);
     })),
+    // The ranked trip spots, grouped at the camera's zoom; a spot that is cleared or withheld takes its card with it.
+    effect(() => {
+      const e = engine.value, spots = rankedSpots.value;
+      host.dataset.ranked = String(spots.length);
+      e?.setData(RANKED_SOURCE, rankedFeatures(spots, rankedZoom.value));
+      const shown = chartMark.peek()?.trip;
+      if (shown && !spots.some(s => s.id === shown)) chartMark.value = null;
+    }),
   ];
   async function drawMpas(e: Engine, id: string): Promise<void> {
     mpaState.value = LOADING;
