@@ -1,16 +1,19 @@
 // The trip planner's ranked spots on the Chart (#495, web/map/ranked.ts): v1's draw gate
 // and 44 px grouping pinned to v1's own dist/trip-ranking-layer.js over a fake Leaflet with
-// EPSG:3857's projection, the style from the palette, the card's wording, and the Chart
-// path (source data, a lone pin's card, a group's zoom, a cleared plan) over a fake MapLibre.
+// EPSG:3857's projection, the marks' run-time screen (#492) over them, the style from the
+// palette, the card's wording, and the Chart path (source data, a lone pin's card, a group's
+// zoom, a screen that stops being ready, a cleared plan) over a fake MapLibre.
 // Synthetic plan: the 20 screened reefs of e2e/ranked-export.spec.ts, 0.007° apart.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {initTripRanking} from '../dist/trip-ranking-layer.js';
 import {RANKED_SOURCE} from '../web/map/layers.ts';
 import {chartFailed, chartMark, createChart, unavailable} from '../web/map/chart.ts';
+import {CHECKING, assessScreen} from '../web/map/habitat.ts';
+import {markScreen} from '../web/map/marks.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {
-  NO_PLAN, RANKED_PICK, RANKED_PIN, fitCamera, rankedCard, rankedFeatures, rankedSpots, rankedStyle, screenRanked, zoomToGroup,
+  NO_PLAN, RANKED_PICK, RANKED_PIN, drawnSpots, fitCamera, rankedCard, rankedFeatures, rankedSpots, rankedStyle, screenRanked, zoomToGroup,
 } from '../web/map/ranked.ts';
 import {createStage, terrainFailed} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
@@ -41,6 +44,12 @@ const screen = ({ready = true, points = [], areas = []} = {}) => ({
   pointAllowed: p => ready && !points.includes(p.id),
   geometryAllowed: g => ready && !areas.some(id => PLAN.areas.find(a => a.id === id).geometry === g),
 });
+
+/** The marks' run-time screen (#492): ready with these boundaries, stale (37 h old) or unavailable (no boundaries). */
+const HOUR = 3600000;
+const marksReady = (areas = []) => assessScreen({areas, checkedAt: new Date().toISOString(), live: true}, Date.now());
+const marksStale = () => assessScreen({areas: [], checkedAt: new Date(Date.now() - 37 * HOUR).toISOString(), live: false}, Date.now());
+const marksUnavailable = () => assessScreen({areas: null, checkedAt: null, live: false}, Date.now());
 
 /** v1's layer over a fake Leaflet: Leaflet's EPSG:3857 projection at `zoom`, and the pins it draws. */
 async function v1Pins(plan, s, zoom) {
@@ -96,6 +105,22 @@ test('a rejected publication stays hidden until verified again; another region o
   assert.deepEqual(screenRanked(PLAN, null, rejected, 'morro-bay'), [], 'no screen, no pins');
   assert.deepEqual(screenRanked(NO_PLAN, screen(), rejected, 'morro-bay'), []);
   assert.deepEqual(rankedFeatures(screenRanked(PLAN, screen(), rejected, 'morro-bay'), null).features, [], 'no camera, no pins');
+});
+
+test('a spot the marks\' run-time screen (#492) withholds is not drawn, the others keep their ranks; no ready screen, no pins', () => {
+  rankedSpots.value = screenRanked(PLAN, screen(), new Map(), 'morro-bay');
+  try {
+    for (const s of [CHECKING, marksStale(), marksUnavailable()]) {
+      markScreen.value = s;
+      assert.deepEqual(drawnSpots.value, [], `${s.status}: the planner's screen alone draws nothing`);
+    }
+    // A boundary the marks' screen holds over spot 1 (its reef square) that the planner's screen does not.
+    markScreen.value = marksReady([{type: 'Feature', properties: {NAME: 'Test SMR'}, geometry: reefs[0].area.geometry}]);
+    assert.deepEqual(drawnSpots.value.map(t => t.trip_rank), Array.from({length: 19}, (_, i) => i + 2));
+    assert.deepEqual(rankedFeatures(drawnSpots.value, 16).features.map(f => f.properties.rank)[0], 2, 'pin 2 keeps its number');
+    markScreen.value = marksReady();
+    assert.equal(drawnSpots.value.length, 20);
+  } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
 });
 
 test('the style: a 44 px target, a numbered disc and a "+n", all from the palette', () => {
@@ -172,6 +197,7 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
     center: () => [35.37, -120.86], viewDelay: 0, doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
     renderers: [() => createChart({host, load: async () => lib.module, fetchFn: files, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
   await settle();
+  markScreen.value = marksReady();
   const [map] = lib.maps;
   assert.ok(map, 'the Chart mounted');
   assert.deepEqual(map.data[RANKED_SOURCE]?.features ?? [], [], 'no plan, no pins');
@@ -195,10 +221,25 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
   await settle();
   assert.equal(map.data[RANKED_SOURCE].features[0].properties.more, 0, 'zoomed in, pin 1 stands alone');
 
-  // A lone pin opens its card; a cleared plan takes the pins and the card.
-  lib.features = [{layer: {id: RANKED_PICK}, properties: map.data[RANKED_SOURCE].features[0].properties}];
+  // A lone pin opens its card; the marks' screen going stale (#492) takes the pins and the card.
+  const pin1 = map.data[RANKED_SOURCE].features[0].properties;
+  lib.features = [{layer: {id: RANKED_PICK}, properties: pin1}];
   map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
   assert.equal(chartMark.value.name, '#1 · 01 LR H3 C90% 90-120ft');
+  assert.equal(chartMark.value.trip, 'test-reef-00');
+  markScreen.value = marksStale();
+  assert.equal(chartMark.value, null, 'the card goes with its pin');
+  assert.deepEqual(map.data[RANKED_SOURCE].features, []);
+  assert.equal(host.dataset.ranked, '0');
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
+  assert.equal(chartMark.value, null, 'a withheld spot opens no card');
+  markScreen.value = CHECKING;
+  assert.deepEqual(map.data[RANKED_SOURCE].features, [], 'checking again: still none');
+  markScreen.value = marksReady();
+  assert.equal(host.dataset.ranked, '20');
+
+  // A cleared plan takes the pins and the card.
+  map.fire('click', {point: {x: 0, y: 0}, lngLat: {lng: -121.169, lat: 35.431}});
   assert.equal(chartMark.value.trip, 'test-reef-00');
   rankedSpots.value = [];
   assert.equal(chartMark.value, null);

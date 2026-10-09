@@ -15,8 +15,8 @@
 // temperature) are created with the Chart and draw through its engine
 // (`layers`, Engine.setOverlay); a click on open water asks them for a reading.
 // The trip planner's ranked spots (#495, web/map/ranked.ts) draw above the marks;
-// the host's `data-ranked` and `data-ranked-drawn` report how many pins the plan
-// has and how many MapLibre drew in view.
+// the host's `data-ranked` and `data-ranked-drawn` report how many ranked spots
+// both screens admit and how many pins MapLibre drew in view.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -30,7 +30,7 @@ import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, S
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
-import {RANKED_PICK, RANKED_PIN, rankedFeatures, rankedMark, rankedSpots, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
+import {RANKED_PICK, RANKED_PIN, drawnSpots, rankedFeatures, rankedMark, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, type Camera} from './stage.ts';
@@ -197,7 +197,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     })),
     // The ranked trip spots, grouped at the camera's zoom; a spot that is cleared or withheld takes its card with it.
     effect(() => {
-      const e = engine.value, spots = rankedSpots.value;
+      const e = engine.value, spots = drawnSpots.value;
       host.dataset.ranked = String(spots.length);
       e?.setData(RANKED_SOURCE, rankedFeatures(spots, rankedZoom.value));
       const shown = chartMark.peek()?.trip;

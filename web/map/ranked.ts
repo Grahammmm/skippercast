@@ -1,8 +1,9 @@
 // The trip planner's ranked spots on the Chart (#495, FE-51 follow-up; design § 9): v1's
 // numbered pins (dist/trip-ranking-layer.js) as a GeoJSON source and layers. The plan comes
 // from the planner's `skippercast:trip-ranked` event (web/trip.ts); a spot draws only while
-// the planner's own protected-area screen is current and allows it and its reef area, and
-// while the plan's seafloor publication is ready, so a cleared, withheld or changed plan
+// the planner's own protected-area screen is current and allows it and its reef area, the
+// marks' run-time screen (#492, marks.ts `markScreen`) is ready and does not withhold it,
+// and the plan's seafloor publication is ready, so a cleared, withheld or changed plan
 // draws nothing. Pins are numbered in the planner's order (`trip_rank`), never a forecast
 // of fish. As in v1, spots within 44 px of an earlier pin at the camera's zoom join it
 // ("1 +4"); a click on such a pin zooms to its spots, and a lone pin opens the one mark
@@ -11,9 +12,9 @@ import {computed, signal} from '@preact/signals';
 import {manifestState} from '../../dist/seafloor-data.js';
 import {setParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
-import {regulationsLink, type Collection, type RegionData} from './habitat.ts';
+import {regulationsLink, withheld, type Collection, type RegionData} from './habitat.ts';
 import {RANKED_SOURCE} from './layers.ts';
-import {markData} from './marks.ts';
+import {markData, markScreen} from './marks.ts';
 import type {Palette} from './palette.ts';
 import {camera, cameraParam, zoomForSpan, type Camera} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
@@ -46,8 +47,14 @@ export interface RankedScreen {
 }
 export const NO_PLAN: RankedPlan = Object.freeze({targets: [], areas: []});
 
-/** The ranked spots the Chart draws, in rank order. */
+/** The ranked spots the planner's screen admits, in rank order (web/trip.ts writes them). */
 export const rankedSpots = signal<readonly RankedTarget[]>([]);
+/**
+ * The ranked spots the Chart draws: those the marks' run-time screen (#492) also shows, so the
+ * Chart never draws a spot it withholds as a mark; while that screen is checking, stale or
+ * unavailable, none. Ranks stay the planner's.
+ */
+export const drawnSpots = computed(() => { const s = markScreen.value; return rankedSpots.value.filter(t => !withheld(t, s)); });
 
 /**
  * v1's draw gate (dist/trip-ranking-layer.js): nothing unless the screen is current, the plan has
@@ -146,6 +153,6 @@ export function rankedCard(t: RankedTarget, region: RegionData | null): ChartMar
 
 /** The card for a clicked lone pin; null when its spot is no longer drawn. */
 export function rankedMark(properties: Record<string, unknown> | null): ChartMark | null {
-  const t = rankedSpots.peek().find(s => s.id === properties?.id);
+  const t = drawnSpots.peek().find(s => s.id === properties?.id);
   return t ? rankedCard(t, markData.peek()?.region ?? null) : null;
 }

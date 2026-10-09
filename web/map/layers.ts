@@ -115,7 +115,7 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'The selected mark, outlined.', task: 'FE-18'}),
   entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
     legend: [{label: 'Ranked trip spot; number: the planner\'s order', swatch: 'mint'}],
-    basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check is current.', task: 'FE-51'}),
+    basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks\' run-time screen are current.', task: 'FE-51'}),
   entry({id: 'coastline', label: 'Coastline', control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.', task: 'FE-11'}),
 ]);
