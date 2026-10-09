@@ -1,7 +1,7 @@
 // Water temp (FE-16, docs/plans/front-end/design.md § 9): the bound coast
 // report's daily sea-surface temperature analysis on the Chart, as a texture
 // (web/map/field.ts) in an image source, with 0.5 °F contours labelled at whole
-// degrees, under the protected areas.
+// degrees, under the swell field (FE-17) and the protected areas.
 //
 // - Data: `spatial.surfaceTemperature` of the coast report (web/coast-data.ts,
 //   FE-74), requested only while Water temp is on, for the region's place when
@@ -34,13 +34,14 @@ import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
-import {fieldTexture} from './field.ts';
+import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
-import {fieldContours, surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
+import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
+import {SWELL_LAYER} from './swell.ts';
 
 const REGISTRY_ID = 'water-temp' as const;
 export const SST_SOURCE = 'water-temp';
@@ -140,41 +141,13 @@ export function analysisStatus(on: boolean, status: CoastStatus, report: Report 
   return {drawn, note: stamp, reason: '', basis: analysisBasis(drawn, now, tz)};
 }
 
-type Line = {type: 'Feature'; properties: {level: number; label: string; major: boolean}; geometry: {type: 'LineString'; coordinates: number[][]}};
-const end = (p: number[]): string => `${Math.round(p[0]! * 1e7)},${Math.round(p[1]! * 1e7)}`;
 /**
- * packages/coast `fieldContours` every 0.5 °F across `range`, its two-point segments joined into lines
- * per level (so a label fits along them); whole degrees are `major` and carry their label with the unit.
+ * packages/coast `fieldContours` every 0.5 °F across `range`, joined into lines per level (field.ts
+ * `isolines`); whole degrees are `major` and carry their label with the unit.
  */
-export function contourLines(field: SurfaceField, range: readonly [number, number]): {type: 'FeatureCollection'; features: Line[]} {
-  const levels = Array.from({length: (range[1] - range[0]) * 2 + 1}, (_, i) => range[0] + i / 2), byLevel = new Map<number, number[][][]>();
-  for (const f of fieldContours(field, levels).features) {
-    const list = byLevel.get(f.properties.level) ?? [];
-    list.push(f.geometry.coordinates);
-    byLevel.set(f.properties.level, list);
-  }
-  const features: Line[] = [];
-  for (const [level, segments] of byLevel) {
-    const ends = new Map<string, number[]>(), used = new Uint8Array(segments.length);
-    segments.forEach((s, i) => { for (const p of s) ends.set(end(p), [...ends.get(end(p)) ?? [], i]); });
-    const other = (s: number[][], at: number[]): number[] => end(s[0]!) === end(at) ? s[1]! : s[0]!;
-    const grow = (line: number[][]): void => {
-      for (let j = ends.get(end(line.at(-1)!))?.find(i => !used[i]); j !== undefined; j = ends.get(end(line.at(-1)!))?.find(i => !used[i])) {
-        used[j] = 1;
-        line.push(other(segments[j]!, line.at(-1)!));
-      }
-    };
-    segments.forEach((s, i) => {
-      if (used[i]) return;
-      used[i] = 1;
-      const ahead = [...s], behind = [s[0]!];
-      grow(ahead); grow(behind);
-      const major = Number.isInteger(level);
-      features.push({type: 'Feature', properties: {level, label: `${major ? level : level.toFixed(1)} °F`, major},
-        geometry: {type: 'LineString', coordinates: [...behind.slice(1).reverse(), ...ahead]}});
-    });
-  }
-  return {type: 'FeatureCollection', features};
+export function contourLines(field: SurfaceField, range: readonly [number, number]): ReturnType<typeof isolines> {
+  const levels = Array.from({length: (range[1] - range[0]) * 2 + 1}, (_, i) => range[0] + i / 2);
+  return isolines(field, levels, level => { const major = Number.isInteger(level); return {label: `${major ? level : level.toFixed(1)} °F`, major}; });
 }
 
 /** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. */
@@ -255,7 +228,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), MPA_FILL);
+      // § 9 order: under the swell field when it is drawn, else under the protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),

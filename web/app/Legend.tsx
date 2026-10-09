@@ -15,6 +15,9 @@
 // age and holds or resumes the loop (FE-22, web/map/clouds.ts).
 // Water temp (FE-16) gives the drawn analysis's range in whole °F, its product,
 // date and age, and the basis with its error, or why nothing draws.
+// Swell (FE-17) gives the drawn hour's heights, periods and direction, its fixed
+// colour scale, the model with its run, age and valid hour as a model forecast,
+// and the basis, or why nothing draws.
 import {IconButton} from '../ui/Button.tsx';
 import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
@@ -24,6 +27,8 @@ import {layerEntry} from '../map/layers.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
+import {HEIGHT_SCALE, frameSummary, swellState} from '../map/swell.ts';
+import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -101,6 +106,22 @@ function WaterTempRow() {
   );
 }
 
+/** The Swell row: the drawn hour's reading, scale, model run and valid hour, or why nothing draws (the Chart only). */
+function SwellRow() {
+  const s = swellState.value, chart = shownPresentation.value === 'chart', f = chart ? s.drawn : null;
+  const reason = chart ? s.reason : 'Swell draws on the Chart.';
+  return (
+    <li class="app-legend-swell">
+      <span class="app-swatch" data-layer="swell" aria-hidden="true"></span>Swell
+      <Popover iconOnly summary="Swell basis">{s.basis}</Popover>
+      {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell">{frameSummary(f)}</p> : null}
+      {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span>{HEIGHT_SCALE[1]}+ ft</p> : null}
+      {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
+      {reason ? <p class="app-legend-note" data-reason="swell">{reason}</p> : null}
+    </li>
+  );
+}
+
 /** The Clouds row: the frame drawn now, and the loop toggle while more than one frame can play. */
 export function CloudsRow({label}: {label: string}) {
   const stamp = cloudStamp.value;
@@ -121,7 +142,7 @@ export function Legend() {
       <span class="ui-eyebrow">Legend</span>
       {on.length || chart ? (
         <ul>
-          {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
+          {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} /> : e.id === 'swell' ? <SwellRow key={e.id} />
             : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.id === 'clouds' ? <CloudsRow label={e.label} /> : e.label}</li>)}
           {chart ? <MpaRow /> : null}
         </ul>

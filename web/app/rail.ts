@@ -14,7 +14,7 @@ export const RAIL_ENTRIES: readonly RailEntry[] = [
   {id: 'seafloor', label: 'Seafloor', icon: 'seafloor', basis: layerEntry('seafloor').basis},
   {id: 'currents', label: 'Currents', icon: 'current', basis: layerEntry('currents').basis},
   {id: 'water-temp', label: 'Water temp', icon: 'temperature', basis: layerEntry('water-temp').basis},
-  {id: 'swell', label: 'Swell', icon: 'wave', basis: 'Model wave forecast on the region grid; nearshore sites from the CDIP MOP model.'},
+  {id: 'swell', label: 'Swell', icon: 'wave', basis: layerEntry('swell').basis},
   {id: 'fleet', label: 'Charter fleet', icon: 'fleet', basis: 'Charter grounds and 2024 commercial AIS effort; activity is inferred from movement.'},
   {id: 'clouds', label: 'Clouds', icon: 'cloud', basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.'},
 ];

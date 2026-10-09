@@ -11,10 +11,12 @@
 //   90-minute age gate, on today's local day only. conditions/goes-times.json
 //   (FE-44) lists about two hours of frames, so the window is applied here,
 //   frame by frame; a future or past day shows no cloud loop.
+// - Gridded model forecasts (FE-17's wave grid): the currents' forecast gate,
+//   applied to the hours the model lists (forecastTime).
 //
 // Erasable syntax only: tests/test_frames.mjs imports this file by type stripping.
 import {cloudSource, selectCurrentFrame} from '../../packages/coast/src/map-sources.ts';
-import type {CloudImage, CurrentField, CurrentFrame} from '../../packages/coast/src/ocean-types.ts';
+import type {CloudImage, CurrentCell, CurrentField, CurrentFrame} from '../../packages/coast/src/ocean-types.ts';
 import {isCurrentLayer, selectedCurrent} from '../../packages/coast/src/state/current-layer.ts';
 import {localParts} from '../hour.ts';
 
@@ -29,6 +31,23 @@ export const currentFrame = (field: CurrentField, at: Date, now: Date): CurrentF
  */
 export function chosenCurrent(fields: unknown, choice: string, at: Date, now: Date): {field: CurrentField; frame: CurrentFrame; expiresAt: number} | null {
   return isCurrentLayer(choice) ? selectedCurrent(fields, choice, at, now) : null;
+}
+
+// A listed hour of a model grid stands for the whole grid; which points have a sample is the reader's to
+// judge. One placeholder cell per frame, since selectCurrentFrame never picks an empty one.
+const LISTED = [{}] as unknown as CurrentCell[];
+/**
+ * The listed hour (epoch ms) of a gridded model forecast for `at`, through selectCurrentFrame's forecast
+ * gate: a run issued at most 36 hours ago and retrieved at most 6 hours ago (each at most 5 minutes
+ * ahead), and the listed time nearest `at` within 90 minutes, inside the listed span; else null.
+ * `times`, `issuedAt` and `fetchedAt` are epoch ms.
+ */
+export function forecastTime(times: readonly number[], issuedAt: number, fetchedAt: number, at: Date, now: Date): number | null {
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(fetchedAt) || !times.every(Number.isFinite)) return null;
+  const iso = (ms: number): string => new Date(ms).toISOString();
+  const frames = [...times].sort((a, b) => a - b).map(t => ({validAt: iso(t), cells: LISTED}));
+  const frame = selectCurrentFrame({kind: 'forecast', issuedAt: iso(issuedAt), fetchedAt: iso(fetchedAt), frames} as unknown as CurrentField, at, now);
+  return frame ? Date.parse(frame.validAt) : null;
 }
 
 const time = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));

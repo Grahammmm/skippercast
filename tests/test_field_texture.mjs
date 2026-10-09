@@ -26,6 +26,7 @@ import {
   analysisStatus, contourLines, createWaterTemp, sstMark, waterTempOverlay, waterTempState,
 } from '../web/map/sst.ts';
 import {surfaceField} from '../web/map/surface-field.js';
+import {SWELL_LAYER} from '../web/map/swell.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000;
@@ -198,7 +199,7 @@ test('a rejected replacement grid hides the previous texture and contours', t =>
   const {w, e, data, asked} = layer(t);
   assert.deepEqual(asked, [['place', 'morro-bay'], ['load', 'report']], 'the report is asked for while Water temp is on');
   assert.deepEqual(e.overlay.layers.map(l => l.id), [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS]);
-  assert.equal(e.before, MPA_FILL, 'under the protected areas (§ 9 order)');
+  assert.deepEqual(e.before, [SWELL_LAYER, MPA_FILL], 'under the swell field, else the protected areas (§ 9 order)');
   assert.equal(e.images.length, 1);
   assert.equal(e.images[0][0], SST_SOURCE);
   assert.ok(e.data.some(([id, d]) => id === CONTOUR_SOURCE && d.features.length > 0));

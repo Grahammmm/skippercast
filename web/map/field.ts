@@ -19,8 +19,11 @@
 //   analysis (1,971 samples at 0.02°) paints 456 × 441 pixels in about 15 ms
 //   (Node, warm), once per analysis.
 //
+// Isolines of a field (Water temp's contours, Swell's period lines) join
+// packages/coast `fieldContours`' two-point segments into lines per level.
+//
 // Erasable syntax only: tests/test_field_texture.mjs imports it by type stripping.
-import {fieldColor, type FieldPoint, type SurfaceField} from './surface-field.js';
+import {fieldColor, fieldContours, type FieldPoint, type SurfaceField} from './surface-field.js';
 
 export const MAX_TEXTURE = 1024;
 export const MIN_TEXTURE = 64;
@@ -102,4 +105,39 @@ export function fieldTexture(field: SurfaceField, range: readonly [number, numbe
   // Fish's radius: about a quarter of a cell, never under 2 px.
   feather(data, width, height, Math.max(2, Math.min(width * field.step[0] / (east - west), height * field.step[1] / (north - south)) * 0.23));
   return {width, height, data, coordinates: [[west, north], [east, north], [east, south], [west, south]]};
+}
+
+export type Isoline = {type: 'Feature'; properties: {level: number; label: string; major: boolean}; geometry: {type: 'LineString'; coordinates: number[][]}};
+const end = (p: number[]): string => `${Math.round(p[0]! * 1e7)},${Math.round(p[1]! * 1e7)}`;
+/**
+ * packages/coast `fieldContours` of the field's first value at `levels` (complete quads only), its two-point
+ * segments joined into lines per level so a label fits along them; each line takes `properties(level)`.
+ */
+export function isolines(field: SurfaceField, levels: readonly number[], properties: (level: number) => {label: string; major: boolean}): {type: 'FeatureCollection'; features: Isoline[]} {
+  const byLevel = new Map<number, number[][][]>();
+  for (const f of fieldContours(field, [...levels]).features) {
+    const list = byLevel.get(f.properties.level) ?? [];
+    list.push(f.geometry.coordinates);
+    byLevel.set(f.properties.level, list);
+  }
+  const features: Isoline[] = [];
+  for (const [level, segments] of byLevel) {
+    const ends = new Map<string, number[]>(), used = new Uint8Array(segments.length);
+    segments.forEach((s, i) => { for (const p of s) ends.set(end(p), [...ends.get(end(p)) ?? [], i]); });
+    const other = (s: number[][], at: number[]): number[] => end(s[0]!) === end(at) ? s[1]! : s[0]!;
+    const grow = (line: number[][]): void => {
+      for (let j = ends.get(end(line.at(-1)!))?.find(i => !used[i]); j !== undefined; j = ends.get(end(line.at(-1)!))?.find(i => !used[i])) {
+        used[j] = 1;
+        line.push(other(segments[j]!, line.at(-1)!));
+      }
+    };
+    segments.forEach((s, i) => {
+      if (used[i]) return;
+      used[i] = 1;
+      const ahead = [...s], behind = [s[0]!];
+      grow(ahead); grow(behind);
+      features.push({type: 'Feature', properties: {level, ...properties(level)}, geometry: {type: 'LineString', coordinates: [...behind.slice(1).reverse(), ...ahead]}});
+    });
+  }
+  return {type: 'FeatureCollection', features};
 }

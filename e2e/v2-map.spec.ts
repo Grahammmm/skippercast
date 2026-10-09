@@ -702,3 +702,86 @@ test('Water temp draws nothing for a stale analysis or a region no report covers
   await expect(page.locator('.ui-rail-item', {hasText: 'Water temp'}).locator('.ui-rail-note')).toHaveText('no analysis for this region');
   await expect(page.locator('[data-reason="water-temp"]')).toHaveText('Water temp unavailable: no local surface-temperature analysis covers this region yet.');
 });
+
+// FE-17: a synthetic regional forecast feed whose NOAA GFS-Wave grid (3 × 3 points 0.2° apart) lies over the
+// water in CURRENT_VIEW, from a run issued six hours before the current hour. The primary swell alternates
+// between about 3 and 7 ft from hour to hour, its period crosses 12 and 13 s, and it comes from the west-northwest.
+async function serveForecast(page: Page, {region = 'morro-bay', issuedHoursAgo = 6, points = 'grid'}: {region?: string; issuedHoursAgo?: number; points?: 'grid' | 'scattered'} = {}) {
+  const now = Date.now(), issued = horizonStart() - issuedHoursAgo * HOUR_MS, times = Array.from({length: 60}, (_, k) => issued / 1000 + k * 3600);
+  const requested: [string, number, number][] = [], data: unknown[] = [];
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
+    requested.push([`p-${j}-${i}`, +(35.10 + j * 0.2 + (points === 'scattered' ? i * 0.01 : 0)).toFixed(2), +(-121.30 + i * 0.2).toFixed(2)]);
+    data.push({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
+      hourly: {time: times, swell_wave_height: times.map((t, k) => 3 + (k % 2) * 4 + i * 0.3 + j * 0.2), swell_wave_period: times.map(() => 11.5 + i), swell_wave_direction: times.map(() => 285 + j * 5)}});
+  }
+  await page.route(new RegExp(`/api/forecast\\?region=${region}$`), route => route.fulfill({json: {region_id: region, requested_points: requested, retrieved: now - 600_000,
+    models: {ncep_gfswave016: {data, meta: {last_run_initialisation_time: issued / 1000, data_end_time: times.at(-1)}}}}}));
+}
+
+test('Swell draws the model grid as a field with period lines and strokes, names the run, follows the hour and leaves when off', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await serveForecast(page);
+  // Tomorrow has all 24 hours, so the slider can always step.
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(horizonStart() + 24 * HOUR_MS)});
+  // Inside the grid and clear of the legend, which grows over the chart's lower left while Swell is on.
+  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!, x = box.x + box.width * 0.3, y = box.y + box.height * 0.25;
+  let water: number[] = [];
+  await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
+
+  await openLayers(page);
+  const entry = page.locator('.ui-rail-item', {hasText: 'Swell'});
+  await entry.getByRole('button', {name: /Swell/}).click();
+  await expect.poll(() => params(page).layers).toBe('swell');
+  const row = page.locator('.app-legend-swell'), stamp = row.locator('[data-stamp="swell"]');
+  await expect(row.locator('[data-range="swell"]')).toHaveText(/^\d\.\d–\d\.\d ft · 11\.5–13\.5 s · from WNW$/);
+  await expect(row.locator('[data-scale="swell"]')).toHaveText('0 ft15+ ft');
+  await expect(stamp).toHaveText(/^NOAA GFS-Wave model forecast · run \w{3} \d{1,2}, \d{1,2} [ap]m · 6 h old · valid \w{3} \w{3} \d{1,2}, \d{1,2} [ap]m$/);
+  await expect(row.locator('.ui-popover-body')).toContainText('A model forecast, not a buoy observation.');
+  await expect(entry.locator('.ui-rail-note')).toHaveText(/^valid \w{3} \d{1,2} [ap]m · run 6 h old$/);
+  await expect(page.locator('[data-unavailable="swell"]')).toHaveCount(0);
+  await v2.a11y('v2-map-swell');
+  const before = await stamp.textContent();
+  if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  let drawn: number[] = [];
+  await expect.poll(async () => apart(drawn = await pixel(page, x, y), water), {message: 'the field is drawn over the water'}).toBeGreaterThan(40);
+
+  // The next (or previous) hour: about 4 ft apart, so new pixels and a new valid hour.
+  const slider = page.locator('input[aria-label="Hour"]');
+  await slider.focus();
+  await page.keyboard.press(await slider.inputValue() === await slider.getAttribute('max') ? 'ArrowLeft' : 'ArrowRight');
+  await expect.poll(async () => apart(await pixel(page, x, y), drawn), {message: 'the texture follows the hour'}).toBeGreaterThan(30);
+  await openLayers(page);
+  await expect(stamp).not.toHaveText(before!);
+  if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+
+  // A click on the field reads the model there (on a phone, south-west of the reef marks the probe sits among).
+  await page.mouse.click(...(narrow(page) ? [box.x + box.width * 0.12, box.y + box.height * 0.36] : [x, y]) as [number, number]);
+  await expect(page.locator('.app-mark h2')).toHaveText('Primary swell');
+  await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d ft · 1[123]\.\d s · from WNW \d{3}°$/);
+  await expect(page.locator('.app-mark-source')).toHaveText(/^NOAA GFS-Wave · run \w{3} \d{1,2}, \d{1,2} [ap]m · 6 h old · valid /);
+
+  await openLayers(page);
+  await entry.getByRole('button', {name: /Swell/}).click();
+  await expect.poll(() => params(page).layers).toBe('none');
+  await expect(row).toHaveCount(0);
+  await expect(page.locator('.app-mark')).toHaveCount(0);
+  if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Swell draws nothing for a stale run or points that form no grid, and says why', async ({page, v2}) => {
+  await holdCoastData(page);
+  await serveForecast(page, {issuedHoursAgo: 40});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'swell'});
+  await openLayers(page);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Swell'}).locator('.ui-rail-note')).toHaveText(/^no fresh forecast · run \w{3} \d{1,2}, \d{1,2} [ap]m$/);
+  await expect(page.locator('[data-reason="swell"]')).toHaveText(/^Swell unavailable: the latest NOAA GFS-Wave run, of \w{3} \d{1,2}, \d{1,2} [ap]m, is past its 36-hour age limit\.$/);
+  await expect(page.locator('[data-range="swell"]')).toHaveCount(0);
+
+  await serveForecast(page, {region: 'santa-cruz-monterey-bay', points: 'scattered'});
+  await page.goto(v2.url('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', layers: 'swell'}));
+  await openLayers(page);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Swell'}).locator('.ui-rail-note')).toHaveText('no forecast grid for this region');
+  await expect(page.locator('[data-reason="swell"]')).toHaveText('Swell unavailable: this region\'s forecast points do not form a grid, so no field is drawn.');
+});
