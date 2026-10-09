@@ -45,14 +45,14 @@ const kOf = at => (at - ISSUED) / HOUR;
  * rises east and north and by 0.5 ft an hour; the period crosses 12 s between the first two columns; the
  * swell comes from 290° plus 5° a row. `values(i, j, k)` may return nulls; inshore points sit off the grid.
  */
-function feed({region = 'morro-bay', retrieved = NOW.getTime() - HOUR, issued = ISSUED / 1000, values = (i, j, k) => [2 + i * 0.5 + j * 0.3 + k * 0.5, 11.2 + i * 1.2, 290 + j * 5], model = {}} = {}) {
+function feed({region = 'morro-bay', retrieved = NOW.getTime() - HOUR, issued = ISSUED / 1000, values = (i, j, k) => [2 + i * 0.5 + j * 0.3 + k * 0.5, 11.2 + i * 1.2, 290 + j * 5], model = {}, hours = times} = {}) {
   const points = [['north', 35.45, -121.02], ['central', 35.36, -120.94]], series = [];
   const at = (i, j) => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
-    hourly: {time: times, ...Object.fromEntries(['swell_wave_height', 'swell_wave_period', 'swell_wave_direction'].map((v, n) => [v, times.map((_, k) => values(i, j, k)[n])]))}});
+    hourly: {time: hours, ...Object.fromEntries(['swell_wave_height', 'swell_wave_period', 'swell_wave_direction'].map((v, n) => [v, hours.map((_, k) => values(i, j, k)[n])]))}});
   series.push(at(0, 0), at(0, 0));
   for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) { points.push([`offshore-${j}-${i}`, LATS[j], LONS[i]]); series.push(at(i, j)); }
   return {region_id: region, requested_points: points, retrieved,
-    models: {[WAVE_MODEL.id]: {data: series, meta: {last_run_initialisation_time: issued, data_end_time: times.at(-1)}, ...model}, gfs_global: {data: [], meta: {}}}};
+    models: {[WAVE_MODEL.id]: {data: series, meta: {last_run_initialisation_time: issued, data_end_time: hours.at(-1)}, ...model}, gfs_global: {data: [], meta: {}}}};
 }
 const parsed = (o = {}) => parseForecast(feed(o), 'morro-bay');
 const ready = forecast => ({state: 'ready', region: 'morro-bay', forecast, at: NOW.getTime()});
@@ -119,6 +119,17 @@ test('nothing draws off the gate, and the reason names the run', () => {
   const late = status(parsed(), new Date(ISSUED + 60 * HOUR));
   assert.equal(late.note, 'no forecast for this hour');
   assert.equal(late.reason, 'Swell unavailable: the selected hour is outside the NOAA GFS-Wave run of Oct 8, 11 pm, which ends Sat Oct 10, 10 pm.');
+  // A run or a retrieval dated over 5 minutes ahead of the clock, and a run listing no hour within 90 minutes, each say so.
+  const early = status(parsed({issued: (NOW.getTime() + 10 * 60_000) / 1000}));
+  assert.equal(early.note, 'run ahead of the clock · Oct 9, 11 am');
+  assert.equal(early.reason, 'Swell unavailable: the NOAA GFS-Wave run of Oct 9, 11 am is dated more than 5 minutes ahead of this device\'s clock, so its age cannot be checked.');
+  const fetchedAhead = status(parsed({retrieved: NOW.getTime() + 10 * 60_000}));
+  assert.equal(fetchedAhead.note, 'forecast ahead of the clock · run Oct 8, 11 pm');
+  assert.equal(fetchedAhead.reason, 'Swell unavailable: the regional forecast\'s retrieval is dated more than 5 minutes ahead of this device\'s clock, so its age cannot be checked.');
+  const sparse = status(parsed({hours: times.filter((_, k) => k % 6 === 0)}));
+  assert.equal(sparse.note, 'no forecast hour near Fri 1 pm');
+  assert.equal(sparse.reason, 'Swell unavailable: the NOAA GFS-Wave run of Oct 8, 11 pm lists no hour within 90 minutes of Fri Oct 9, 1 pm.');
+  for (const s of [early, fetchedAhead, sparse]) assert.equal(s.drawn, null);
   const gone = status(parsed({values: () => [null, 12, 290]}));
   assert.equal(gone.note, 'no complete grid cell · valid Fri 1 pm');
   assert.match(gone.reason, /missing samples stay blank\.$/);
@@ -343,7 +354,7 @@ test('the legend gives the hour\'s reading, the fixed scale and the model run as
   const legend = m.render(m.h(m.Legend));
   assert.match(legend, /data-layer="swell" aria-hidden="true"><\/span>Swell<details/);
   assert.match(legend, /<p class="app-legend-note app-legend-range ui-mono" data-range="swell">9\.0–10\.6 ft · 11\.2–13\.6 s · from WNW<\/p>/);
-  assert.match(legend, /data-scale="swell">0 ft<span class="app-swatch" data-layer="swell" aria-hidden="true"><\/span>15\+ ft</);
+  assert.match(legend, /data-scale="swell">0 ft<span class="app-swatch" data-layer="swell" aria-hidden="true"><\/span><span class="app-visually-hidden"> to <\/span>15\+ ft</);
   assert.match(legend, /data-stamp="swell">NOAA GFS-Wave model forecast · run Oct 8, 11 pm · 12 h old · valid Fri Oct 9, 1 pm</);
   assert.match(legend, /A model forecast, not a buoy observation\./);
   assert.match(m.render(m.h(m.LayerRail)), /Swell<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);

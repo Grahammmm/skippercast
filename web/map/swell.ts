@@ -149,10 +149,15 @@ export function swellStatus(on: boolean, load: SwellLoad, at: Date, now: Date, t
   const issued = f.model.issued * 1000, run = runText(issued, tz);
   const t = forecastTime(f.model.times.map(s => s * 1000), issued, f.retrieved, at, now);
   if (t === null) {
-    if (now.getTime() - issued > 36 * HOUR) return none(`no fresh forecast · run ${run}`, `Swell unavailable: the latest ${name} run, of ${run}, is past its 36-hour age limit.`);
-    if (now.getTime() - f.retrieved > 6 * HOUR) return none(`no fresh forecast · run ${run}`, 'Swell unavailable: the regional forecast was last retrieved more than 6 hours ago.');
-    const last = f.model.times.at(-1);
-    return none('no forecast for this hour', `Swell unavailable: the selected hour is outside the ${name} run of ${run}${last === undefined ? '' : `, which ends ${validText(last * 1000, tz, true)}`}.`);
+    // Why the gate refused, in its own order: a time ahead of the clock, an age limit, the run's span, then no listed hour near.
+    const clock = now.getTime(), ahead = clock + 5 * 60_000, first = f.model.times[0], last = f.model.times.at(-1);
+    if (issued > ahead) return none(`run ahead of the clock · ${run}`, `Swell unavailable: the ${name} run of ${run} is dated more than 5 minutes ahead of this device's clock, so its age cannot be checked.`);
+    if (clock - issued > 36 * HOUR) return none(`no fresh forecast · run ${run}`, `Swell unavailable: the latest ${name} run, of ${run}, is past its 36-hour age limit.`);
+    if (f.retrieved > ahead) return none(`forecast ahead of the clock · run ${run}`, 'Swell unavailable: the regional forecast\'s retrieval is dated more than 5 minutes ahead of this device\'s clock, so its age cannot be checked.');
+    if (clock - f.retrieved > 6 * HOUR) return none(`no fresh forecast · run ${run}`, 'Swell unavailable: the regional forecast was last retrieved more than 6 hours ago.');
+    if (first === undefined || last === undefined || at.getTime() < first * 1000 || at.getTime() > last * 1000)
+      return none('no forecast for this hour', `Swell unavailable: the selected hour is outside the ${name} run of ${run}${last === undefined ? '' : `, which ends ${validText(last * 1000, tz, true)}`}.`);
+    return none(`no forecast hour near ${validText(at.getTime(), tz)}`, `Swell unavailable: the ${name} run of ${run} lists no hour within 90 minutes of ${validText(at.getTime(), tz, true)}.`);
   }
   const frame = swellFrame(f, t, now, tz);
   if (!frame) return none(`no complete grid cell · valid ${validText(t, tz)}`,

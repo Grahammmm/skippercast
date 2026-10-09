@@ -115,7 +115,7 @@ function SwellRow() {
       <span class="app-swatch" data-layer="swell" aria-hidden="true"></span>Swell
       <Popover iconOnly summary="Swell basis">{s.basis}</Popover>
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell">{frameSummary(f)}</p> : null}
-      {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span>{HEIGHT_SCALE[1]}+ ft</p> : null}
+      {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
       {reason ? <p class="app-legend-note" data-reason="swell">{reason}</p> : null}
     </li>

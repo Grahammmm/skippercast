@@ -734,7 +734,7 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await expect.poll(() => params(page).layers).toBe('swell');
   const row = page.locator('.app-legend-swell'), stamp = row.locator('[data-stamp="swell"]');
   await expect(row.locator('[data-range="swell"]')).toHaveText(/^\d\.\d–\d\.\d ft · 11\.5–13\.5 s · from WNW$/);
-  await expect(row.locator('[data-scale="swell"]')).toHaveText('0 ft15+ ft');
+  await expect(row.locator('[data-scale="swell"]')).toHaveText('0 ft to 15+ ft');
   await expect(stamp).toHaveText(/^NOAA GFS-Wave model forecast · run \w{3} \d{1,2}, \d{1,2} [ap]m · 6 h old · valid \w{3} \w{3} \d{1,2}, \d{1,2} [ap]m$/);
   await expect(row.locator('.ui-popover-body')).toContainText('A model forecast, not a buoy observation.');
   await expect(entry.locator('.ui-rail-note')).toHaveText(/^valid \w{3} \d{1,2} [ap]m · run 6 h old$/);

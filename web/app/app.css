@@ -96,6 +96,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="swell"] { background: linear-gradient(90deg, var(--swell-0), var(--swell-1), var(--swell-2), var(--swell-3)); }
 .app-legend-scale { display: flex; align-items: center; gap: var(--space-1); }
 .app-legend-scale .app-swatch { width: calc(var(--space-6) * 2); }
+/* Read aloud, not shown: the scale reads "0 ft to 15+ ft". */
+.app-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .app-swatch[data-layer="fleet"] { background: var(--fleet); }
 .app-swatch[data-layer="clouds"] { background: var(--text); }
 /* Seafloor (FE-14): the depth ramp ranks grade and fit, strongest brightest; unranked areas are dashed outlines; cells are the deepest step. */
