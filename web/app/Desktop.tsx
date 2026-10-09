@@ -84,9 +84,8 @@ export function Desktop({now = new Date()}: {now?: Date} = {}) {
     <main class="app-main">
       <Brief />
       <MapStage>
-        <MarkCard />
+        <div class="app-chrome-left"><MarkCard /><Legend /></div>
         <LayerRail />
-        <Legend />
         <TimeDock now={now} />
       </MapStage>
     </main>

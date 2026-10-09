@@ -6,7 +6,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {saveCoastalSnapshot} from '../dist/coastal-offline-core.js';
-import {tileKey, tileURL, ENC_WMS} from '../dist/offline-core.js';
+import {tileKey, tileURL, ENC_WMS, basemapRangeKey} from '../dist/offline-core.js';
 
 const SOURCE = readFileSync(new URL('../dist/sw.js', import.meta.url), 'utf8');
 const ORIGIN = 'https://skippercast.test';
@@ -276,4 +276,55 @@ test('coastal fallback rejects missing or damaged members before serving any pro
  else {const original=await cache.match(coastalPaths[2]),body=await original.json();if(corruption==='shape')delete body.stations;if(corruption==='length')body.extra='corrupt';if(corruption==='clock')body.generatedAt='2025-01-01T00:00:00.000Z';await cache.put(coastalPaths[2],Response.json(body,{headers:{'X-SC-Saved-At':meta.saved_at}}));}
  await assert.rejects(dispatch(worker,get(coastalPaths[0])),/offline/,corruption);
  }
+});
+
+// FE-51: a pack saved from the v2 app also holds the app's page, its hashed files and the basemap byte ranges.
+const ARCHIVE = ORIGIN + '/feeds/tiles/basemap/ca-coast-20261008.pmtiles';
+const ranged = (url, range) => new Request(url, {headers: {Range: range}});
+async function v2Pack(worker) {
+  const pack = await worker.storage.open('sc-pack-morro-bay-2'), at = {'X-SC-Saved-At': '2026-10-09T01:00:00.000Z'};
+  await pack.put(ORIGIN + '/map', new Response('v2 page', {headers: {...at, 'Content-Type': 'text/html'}}));
+  await pack.put(ORIGIN + '/assets/app.0123456789.js', new Response('v2 code', {headers: at}));
+  await pack.put(ORIGIN + '/basemap/glyphs/dm-sans-medium/0-255.pbf', new Response('glyphs', {headers: at}));
+  await pack.put(basemapRangeKey(ARCHIVE, 'bytes=0-16383'), new Response('header', {headers: {...at, 'Content-Range': 'bytes 0-16383/189085436', ETag: '"e"'}}));
+}
+
+test('basemap byte ranges route by archive and Range header only; the page and the worker derive one key', () => {
+  const {context} = loadWorker();
+  const route = request => context.routeFor(request, ORIGIN);
+  assert.equal(route(ranged(ARCHIVE, 'bytes=0-16383')), 'basemap');
+  assert.equal(context.basemapKey(ranged(ARCHIVE, 'bytes=16384-20000')), basemapRangeKey(ARCHIVE, 'bytes=16384-20000'));
+  for (const request of [ranged(ARCHIVE + '?v=1', 'bytes=0-1'), ranged(ARCHIVE, 'bytes=0-'), ranged(ORIGIN + '/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles', 'bytes=0-1'),
+    ranged('https://other.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles', 'bytes=0-1'), new Request(ARCHIVE, {method: 'HEAD', headers: {Range: 'bytes=0-1'}})])
+    assert.equal(route(request), null, request.url);
+});
+
+test('offline, a v2 pack opens the app: its page at /map, hashed files, glyphs and basemap ranges, marked with the saved time', async () => {
+  let online = true;
+  const worker = loadWorker({network: request => { if (!online) throw new TypeError('offline'); return new Response('live', {status: request.headers.has('range') ? 206 : 200}); }});
+  await v2Pack(worker);
+  assert.equal(await (await dispatch(worker, ranged(ARCHIVE, 'bytes=0-16383'))).text(), 'live', 'network first');
+  online = false;
+  const page = await dispatch(worker, nav('/map?ui=v2&region=morro-bay#export'));
+  assert.equal(await page.text(), 'v2 page');
+  assert.equal(page.headers.get('X-SC-Offline'), '2026-10-09T01:00:00.000Z');
+  assert.equal(await (await dispatch(worker, get('/assets/app.0123456789.js'))).text(), 'v2 code');
+  assert.equal(await (await dispatch(worker, get('/basemap/glyphs/dm-sans-medium/0-255.pbf'))).text(), 'glyphs');
+  const range = await dispatch(worker, ranged(ARCHIVE, 'bytes=0-16383'));
+  assert.equal(range.status, 206);
+  assert.equal(range.headers.get('Content-Range'), 'bytes 0-16383/189085436');
+  assert.equal(range.headers.get('ETag'), '"e"');
+  assert.equal(await range.text(), 'header');
+  await assert.rejects(dispatch(worker, ranged(ARCHIVE, 'bytes=16384-20000')), /offline/, 'an unsaved range still fails');
+  await assert.rejects(dispatch(worker, get('/assets/other.0123456789.js')), /offline/);
+});
+
+test('without a v2 pack the v1 offline answers are unchanged: /map and unsaved files fail, / opens the v1 shell', async () => {
+  const worker = loadWorker();
+  await (await worker.storage.open('sc-shell-dev')).put(ORIGIN + '/', new Response('v1 shell'));
+  await assert.rejects(dispatch(worker, nav('/map?ui=v2')), /offline/);
+  await assert.rejects(dispatch(worker, get('/basemap/glyphs/dm-sans-medium/0-255.pbf')), /offline/);
+  assert.equal(await (await dispatch(worker, nav('/?region=morro-bay'))).text(), 'v1 shell');
+  await v2Pack(worker);
+  assert.equal(await (await dispatch(worker, nav('/?region=morro-bay'))).text(), 'v1 shell', 'a v2 pack never answers for the v1 shell');
 });

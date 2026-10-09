@@ -271,9 +271,10 @@ escape every value (`esc`, `escapeHTML`) (§ 3A.2).
 - `scripts/build-worker.mjs` adds `app.html` and `landing.html` to `SHELLS`.
   `server/routes/assets.ts` decides which shell answers `/` and `/map`
   (§ 7, flag rules in § 14).
-- The service worker's precache gains the v2 entries; the offline pack
-  (FE-51) precaches the basemap tiles for the saved region's bounds at
-  zooms 8–12 only (budget in § 13).
+- The service worker's install precache keeps v1's shell; the v2 entries
+  are stored only inside an offline pack saved from v2 (FE-51), which also
+  holds the basemap tiles for the saved region's bounds at zooms 8–12 under
+  the pack's tile cap (budget in § 13; dev-plan FE-51 records the decision).
 
 ### Keeping Leaflet alive during the migration
 
@@ -565,7 +566,7 @@ Before a PR edits one of these, check open PRs and comment on the issue.
 | File | Why it is hot | Rule |
 | --- | --- | --- |
 | `packages/coast/**` | Codex's renderer and models; FE-70, FE-76, FE-77, FE-79, FE-81 touch it | renderer internals: Codex; bridge files (`tokens-bridge.css`, `src/palette.ts`): Claude with Codex review |
-| `dist/coast-*.js`, `dist/coastal-*.js`, `dist/coast.html` | v1 coastal glue that imports the shared store | Codex until FE-61; v2 never imports them |
+| `dist/coast-*.js`, `dist/coastal-*.js`, `dist/coast.html` | v1 coastal glue that imports the shared store | Codex until FE-61; v2 never imports them, except the pure `coastal-offline-core.js` (FE-51) |
 | `web/state.ts`, `web/fish-links.ts`, `web/coast-context.ts` | read by both shells | append keys and aliases; renames need an issue comment and both shells' tests |
 | `server/app.ts`, `server/routes/assets.ts`, `server/coast-data.ts`, `server/coast-pages.ts` | route order and the bridge; owner-approved paths | one router line per PR; Codex owns the bridge |
 | `dist/sw.js`, `dist/offline-core.js` | v1 offline packs plus coastal snapshots | FE-51 and Codex's offline work rebase on each other |

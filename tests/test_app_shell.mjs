@@ -348,8 +348,8 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   const page = await readFile(join(ROOT, 'dist/app.html'), 'utf8');
   assert.match(page, /<div id="app">/);
   assert.match(page, /<script type="module" src="\.\.\/web\/app\/main\.tsx"><\/script>/);
-  assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css', '../web/app/account.css'],
-    'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50)');
+  assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css', '../web/app/account.css', '../web/app/trip.css'],
+    'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50), then the trip plan (FE-51)');
   assert.doesNotMatch(page, /leaflet/i, 'the v2 shell imports no Leaflet');
   assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), ['vendor/simplewebauthn-browser-14.0.0/index.umd.min.js'], 'the only vendored script is the passkey library (FE-50)');
 });

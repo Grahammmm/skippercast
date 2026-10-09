@@ -12,6 +12,7 @@ import {Desktop} from './Desktop.tsx';
 import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
+import {Trip} from './Trip.tsx';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
 export const NARROW_QUERY = '(max-width: 1023px)';
@@ -51,15 +52,19 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = fetch): Pro
   } catch { return null; }
 }
 
-/** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). */
+/** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). The trip dialogs keep their place across layouts. */
 export function App({now = new Date()}: {now?: Date} = {}) {
-  if (narrow.value) return <><Mobile now={now} /><FirstRun /></>;
   return (
-    <div class="app">
-      <Masthead />
-      <CommandBar now={now} />
-      <Desktop now={now} />
-      <FirstRun />
-    </div>
+    <>
+      {narrow.value ? <><Mobile now={now} /><FirstRun /></> : (
+        <div class="app">
+          <Masthead />
+          <CommandBar now={now} />
+          <Desktop now={now} />
+          <FirstRun />
+        </div>
+      )}
+      <Trip />
+    </>
   );
 }
