@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {CSP, CONNECT_ORIGINS, IMAGE_ORIGINS, SECURITY_HEADERS, secure, headersFile} from '../server/security-headers.ts';
+import {cloudSource, mapSourceHosts} from '../packages/coast/src/map-sources.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
@@ -30,6 +31,21 @@ test('the policy is enumerated: no scheme wildcards, no inline script, no framin
   for (const origin of IMAGE_ORIGINS) assert.ok(directives['img-src'].includes(origin));
   assert.match(SECURITY_HEADERS['Strict-Transport-Security'], /max-age=63072000; includeSubDomains; preload/);
   assert.match(SECURITY_HEADERS['Permissions-Policy'], /geolocation=\(self\)/);
+});
+
+// FE-22: the v2 cloud loop requests nowCOAST WMS tiles through MapLibre, which loads raster
+// tiles with fetch (web/map/engine.ts keeps refreshExpiredTiles on), so its one host joins
+// connect-src only; no <img> loads it and img-src stays as it was.
+test('the GOES cloud frames\' host is allowed for MapLibre\'s tile fetches, and nothing wider', () => {
+  const at = '2026-10-02T02:53:00.000Z';
+  const frame = cloudSource({id: 'goes-longwave', kind: 'observation', observedAt: at, fetchedAt: at, availableTimes: [at], layer: 'goes_longwave_imagery',
+    url: 'https://nowcoast.noaa.gov/', attribution: 'NOAA / NESDIS · GOES', license: 'public-domain-us-gov', limitations: 'Observed frames only.'}, new Date(at));
+  const origin = new URL(frame.tiles[0]).origin;
+  assert.equal(origin, 'https://nowcoast.noaa.gov');
+  assert.ok(mapSourceHosts.includes(origin), 'the fixed publisher host packages/coast names');
+  assert.ok(directives['connect-src'].includes(origin));
+  assert.ok(!directives['img-src'].includes(origin), 'img-src is not widened');
+  assert.equal(CONNECT_ORIGINS.filter(o => o.includes('nowcoast')).length, 1);
 });
 
 // Every https origin written as a string literal in the client must be either

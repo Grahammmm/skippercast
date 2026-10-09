@@ -529,3 +529,47 @@ test('Currents in a region no packet covers draw nothing and say so', async ({pa
   await expect(page.locator('[data-reason="currents"]')).toHaveText('Currents unavailable: no local surface-current packet covers this region yet.');
   await expect(page.locator('canvas.chart-flow')).toHaveCount(0);
 });
+
+// FE-22: the cloud loop over a synthetic GOES index (goes-times.json's shape, times relative to now).
+// nowCOAST answers with a 1×1 PNG; the CSP must let MapLibre fetch it, and only listed times are asked for.
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+test('Clouds loops over the listed GOES frames only, each labelled with its time and age', async ({page, pageErrors, v2}) => {
+  const MIN = 60_000, newest = Math.floor(Date.now() / MIN) * MIN - 7 * MIN;
+  const times = Array.from({length: 24}, (_, i) => new Date(newest - (23 - i) * 5 * MIN).toISOString());
+  await v2.feed('**/feeds/conditions/goes-times.json', {id: 'goes-longwave', kind: 'observation', observedAt: times.at(-1), fetchedAt: new Date(newest).toISOString(),
+    availableTimes: times, layer: 'goes_longwave_imagery', url: 'https://nowcoast.noaa.gov/', attribution: 'NOAA / NESDIS · GOES', license: 'public-domain-us-gov', limitations: 'Observed frames only.'});
+  const requested: string[] = [], blocked: string[] = [];
+  await page.route('https://nowcoast.noaa.gov/**', route => {
+    requested.push(new URL(route.request().url()).searchParams.get('time') ?? 'none');
+    return route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}});
+  });
+  page.on('console', message => { if (/Content Security Policy/i.test(message.text())) blocked.push(message.text()); });
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'clouds', view: '35.38000,-120.88000,9'});
+  if (page.viewportSize()!.width < 1024) {
+    // The phone's rail and legend are the sheet's layers panel; the full sheet shows both.
+    await page.getByRole('button', {name: 'Layers'}).click();
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+  }
+  await expect.poll(() => requested.length, {message: 'MapLibre fetches the frames'}).toBeGreaterThan(0);
+  expect(blocked, 'the CSP allows nowCOAST for MapLibre').toEqual([]);
+  const note = page.locator('.app-legend-note');
+  await expect(note).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · (?:under 1|\d+) min ago$/);
+  const first = await note.textContent();
+  await expect(note, 'the loop steps').not.toHaveText(first!, {timeout: 10_000});
+  await expect(page.locator('.ui-rail-note')).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · \d+ min ago$/);
+  await v2.a11y('v2-map-clouds');
+  await page.getByRole('button', {name: 'Cloud loop'}).click();
+  await expect(page.getByRole('button', {name: 'Cloud loop'})).toHaveAttribute('aria-pressed', 'false');
+  const held = await note.textContent();
+  await page.waitForTimeout(1500);
+  await expect(note, 'held').toHaveText(held!);
+  expect([...new Set(requested)].every(at => times.includes(at)), `only listed times: ${[...new Set(requested)].join(', ')}`).toBe(true);
+  await page.locator('.ui-rail-item', {hasText: 'Clouds'}).locator('.ui-rail-toggle').click();
+  await expect(note).toHaveCount(0);
+  const count = requested.length;
+  await page.waitForTimeout(1500);
+  expect(requested.length, 'no frame is requested once Clouds is off').toBe(count);
+  expect(pageErrors).toEqual([]);
+});

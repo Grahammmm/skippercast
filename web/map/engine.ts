@@ -65,6 +65,12 @@ export interface MapView {
   on(type: 'movestart' | 'idle' | 'resize', listener: () => void): () => void;
 }
 
+/** A registry layer's sources and MapLibre layers added after the style (FE-22's cloud frames). */
+export interface Overlay {
+  readonly sources: Readonly<Record<string, MapLibre.SourceSpecification>>;
+  readonly layers: readonly MapLibre.LayerSpecification[];
+}
+
 export interface Engine {
   setCamera(camera: EngineCamera): void;
   /** Show or hide a style layer; before the style has loaded, the latest call per layer waits for it. */
@@ -74,6 +80,15 @@ export interface Engine {
   /** How many features of `layerId` are drawn in view now (labels count once placed). */
   rendered(layerId: string): number;
   readonly view: MapView;
+  /**
+   * Draw registry layer `layer`'s overlay under map layer `before` (on top when that is absent);
+   * null removes it. Ids already drawn stay as they are, tiles included; ids no longer listed are
+   * removed. Errors on its sources mark `layer` unavailable. Before the style has loaded, the
+   * latest overlay per layer waits for it.
+   */
+  setOverlay(layer: string, overlay: Overlay | null, before?: string): void;
+  /** A raster layer's opacity (FE-22 shows one cloud frame at a time; the others keep loading); before the style has loaded, the latest call per layer waits for it. */
+  setRasterOpacity(layerId: string, opacity: number): void;
   destroy(): void;
 }
 
@@ -109,8 +124,13 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
   map.addControl(new lib.AttributionControl({compact: false, ...options.attribution ? {customAttribution: options.attribution} : {}}), 'bottom-right');
 
+  // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
+  const overlays = new Map<string, Overlay>();
+  const overlayOf = (sourceId: string | undefined): string | null =>
+    sourceId === undefined ? null : [...overlays].find(([, o]) => sourceId in o.sources)?.[0] ?? null;
+
   map.on('error', (event: MapLibre.ErrorEvent & {sourceId?: string}) => {
-    const layer = sourceLayer(event.sourceId);
+    const layer = overlayOf(event.sourceId) ?? sourceLayer(event.sourceId);
     if (layer) options.onLayerError(layer, event.error);
     else console.error('Chart error', event.error);
   });
@@ -131,17 +151,35 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   resize?.observe(host);
   // The style gate (FE-14), this file's one deferral: a style's layers and sources exist only
   // once MapLibre fires `style.load`. Until then setVisible keeps the latest visibility per
-  // layer and setData the latest data per source; both apply once when it fires. Afterwards
-  // (or for a layer or source that already exists) every call applies at once. Layers route
-  // their visibility and data through setVisible and setData rather than adding a deferral.
-  let early: {visible: Map<string, boolean>; data: Map<string, SourceData>} | null = {visible: new Map(), data: new Map()};
+  // layer, setData the latest data per source, setOverlay the latest overlay per registry layer
+  // (MapLibre refuses run-time sources and layers earlier) and setRasterOpacity the latest
+  // opacity per layer; all apply once when it fires, overlays first so the others find their
+  // layers. Afterwards (or for a layer or source that already exists) every call applies at
+  // once. Layers route their visibility, data and overlays through these calls rather than
+  // adding a deferral.
+  let early: {
+    visible: Map<string, boolean>; data: Map<string, SourceData>;
+    overlays: Map<string, {overlay: Overlay | null; before?: string}>; opacity: Map<string, number>;
+  } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map()};
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
+  const draw = (layer: string, overlay: Overlay | null, before?: string): void => {
+    const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
+    for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
+    for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
+    for (const [id, source] of Object.entries(next.sources)) if (!map.getSource(id)) map.addSource(id, source);
+    const under = before && map.getLayer(before) ? before : undefined;
+    for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
+    if (overlay) overlays.set(layer, overlay); else overlays.delete(layer);
+  };
+  const fade = (layerId: string, opacity: number): void => { if (map.getLayer(layerId)) map.setPaintProperty(layerId, 'raster-opacity', opacity); };
   map.on('style.load', () => {
     const pending = early;
     early = null;
+    pending?.overlays.forEach(({overlay, before}, layer) => draw(layer, overlay, before));
     pending?.visible.forEach((visible, layerId) => show(layerId, visible));
     pending?.data.forEach((data, sourceId) => fill(sourceId, data));
+    pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
   });
 
   return {
@@ -164,6 +202,14 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       land: () => map.getSource(BASEMAP_SOURCE) ? map.querySourceFeatures(BASEMAP_SOURCE, {sourceLayer: 'earth'}).flatMap(f =>
         f.geometry.type === 'Polygon' ? f.geometry.coordinates : f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates.flat() : []) : [],
       on: (type, listener) => { map.on(type, listener); return () => { map.off(type, listener); }; },
+    },
+    setOverlay(layer, overlay, before) {
+      if (early) early.overlays.set(layer, {overlay, before});
+      else draw(layer, overlay, before);
+    },
+    setRasterOpacity(layerId, opacity) {
+      if (early && !map.getLayer(layerId)) early.opacity.set(layerId, opacity);
+      else { early?.opacity.delete(layerId); fade(layerId, opacity); }
     },
     destroy() { resize?.disconnect(); map.remove(); },
   };

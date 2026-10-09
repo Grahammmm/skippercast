@@ -5,8 +5,11 @@
 // Currents (FE-15) is the one surface-current source choice, `?current=`, for
 // the Chart and the terrain alike: the toggle turns the forecast on or the
 // source off, and the source select picks exactly one product.
+// Any other layer that draws says under its name what it shows or why it cannot
+// (web/map/layers.ts railNotes; Clouds, FE-22: the newest observed frame).
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
+import {railNotes} from '../map/layers.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
 import {current, layers, layersParam, setParams, UNSUPPORTED} from '../state.ts';
 import {RAIL_ENTRIES, toggled} from './rail.ts';
@@ -43,7 +46,7 @@ export function LayerRail() {
           {source !== 'off' ? <CurrentSource /> : null}
         </RailItem>
       ) : (
-        <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={on.includes(e.id)} basis={e.basis}
+        <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={on.includes(e.id)} basis={e.basis} note={railNotes.value[e.id] || undefined}
           onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})} />
       ))}
     </Rail>
