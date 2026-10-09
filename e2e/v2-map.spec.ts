@@ -558,7 +558,7 @@ test('Clouds loops over the listed GOES frames only, each labelled with its time
   await expect(note).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · (?:under 1|\d+) min ago$/);
   const first = await note.textContent();
   await expect(note, 'the loop steps').not.toHaveText(first!, {timeout: 10_000});
-  await expect(page.locator('.ui-rail-note')).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · \d+ min ago$/);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Clouds'}).locator('.ui-rail-note')).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · \d+ min ago$/);
   await v2.a11y('v2-map-clouds');
   await page.getByRole('button', {name: 'Cloud loop'}).click();
   await expect(page.getByRole('button', {name: 'Cloud loop'})).toHaveAttribute('aria-pressed', 'false');
@@ -572,4 +572,53 @@ test('Clouds loops over the listed GOES frames only, each labelled with its time
   await page.waitForTimeout(1500);
   expect(requested.length, 'no frame is requested once Clouds is off').toBe(count);
   expect(pageErrors).toEqual([]);
+});
+
+// FE-23: the aerial base where the region's package offers it (region.json basemap.aerial). USGS answers with
+// the 1×1 PNG; the CSP must let MapLibre fetch it, only the fixed NAIP service is asked, and only while it is on.
+test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, labelled with its dates', async ({page, pageErrors, v2}) => {
+  const requested: string[] = [], blocked: string[] = [];
+  await page.route('https://imagery.nationalmap.gov/**', route => {
+    requested.push(route.request().url());
+    return route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}});
+  });
+  page.on('console', message => { if (/Content Security Policy/i.test(message.text())) blocked.push(message.text()); });
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,12'});
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await openLayers(page);
+  const entry = page.locator('.ui-rail-item', {hasText: 'Aerial'});
+  await expect(entry.locator('.ui-rail-note')).toHaveText('flown 13–29 May 2022');
+  await page.waitForTimeout(1000);
+  expect(requested, 'nothing is requested before Aerial is chosen').toEqual([]);
+
+  await entry.locator('.ui-rail-toggle').click();
+  await expect(entry.locator('.ui-rail-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => params(page).base).toBe('aerial');
+  await expect.poll(() => requested.length, {message: 'MapLibre fetches the tiles'}).toBeGreaterThan(0);
+  expect(blocked, 'the CSP allows the USGS host for MapLibre').toEqual([]);
+  expect(requested.every(url => url.startsWith('https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?')),
+    'the one NAIP service packages/coast names').toBe(true);
+  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('USGS / USDA · NAIP aerial imagery (dated mosaic) · flown 13–29 May 2022');
+  await v2.a11y('v2-map-aerial');
+
+  await entry.locator('.ui-rail-toggle').click();
+  await expect.poll(() => params(page).base).toBe('night');
+  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).not.toContainText('NAIP');
+  const count = requested.length;
+  await page.waitForTimeout(1500);
+  expect(requested.length, 'no tile is requested once Aerial is off').toBe(count);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a region without basemap.aerial offers no Aerial base, whatever ?base= says', async ({page, v2}) => {
+  const requested: string[] = [];
+  await page.route('https://imagery.nationalmap.gov/**', route => { requested.push(route.request().url()); return route.abort(); });
+  await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', base: 'aerial'});
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await openLayers(page);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Currents'})).toBeVisible();
+  await expect(page.locator('.ui-rail-item', {hasText: 'Aerial'})).toHaveCount(0);
+  await page.waitForTimeout(1000);
+  expect(requested).toEqual([]);
 });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {CSP, CONNECT_ORIGINS, IMAGE_ORIGINS, SECURITY_HEADERS, secure, headersFile} from '../server/security-headers.ts';
-import {cloudSource, mapSourceHosts} from '../packages/coast/src/map-sources.ts';
+import {cloudSource, mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
@@ -46,6 +46,18 @@ test('the GOES cloud frames\' host is allowed for MapLibre\'s tile fetches, and 
   assert.ok(directives['connect-src'].includes(origin));
   assert.ok(!directives['img-src'].includes(origin), 'img-src is not widened');
   assert.equal(CONNECT_ORIGINS.filter(o => o.includes('nowcoast')).length, 1);
+});
+
+// FE-23: the aerial base's NAIP tiles load the same way (web/map/aerial.ts draws naipSource()), so its
+// one USGS host joins connect-src only; every fixed publisher host packages/coast names is now allowed.
+test('the NAIP aerial base\'s host is allowed for MapLibre\'s tile fetches, and nothing wider', () => {
+  const origins = [...new Set(naipSource().tiles.map(t => new URL(t.replace('{bbox-epsg-3857}', '0,0,1,1')).origin))];
+  assert.deepEqual(origins, ['https://imagery.nationalmap.gov']);
+  assert.ok(mapSourceHosts.includes(origins[0]), 'the fixed publisher host packages/coast names');
+  assert.ok(directives['connect-src'].includes(origins[0]));
+  assert.ok(!directives['img-src'].includes(origins[0]), 'img-src is not widened');
+  assert.equal(CONNECT_ORIGINS.filter(o => o.includes('nationalmap')).length, 1);
+  for (const host of mapSourceHosts) assert.ok(directives['connect-src'].includes(host), host);
 });
 
 // Every https origin written as a string literal in the client must be either

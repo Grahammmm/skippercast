@@ -6,6 +6,7 @@
 // profile once, over the map, never blocking it.
 import {signal} from '@preact/signals';
 import type {ReportLocalArea} from '../../packages/coast/src/state/report-binding.ts';
+import {aerialBase, type AerialBase} from '../map/aerial.ts';
 import {CommandBar} from './CommandBar.tsx';
 import {Desktop} from './Desktop.tsx';
 import {FirstRun} from './FirstRun.tsx';
@@ -21,6 +22,8 @@ export interface RegionInfo {
   readonly id: string; readonly name: string; readonly center: readonly [number, number]; readonly timezone: string;
   /** The reviewed local areas a coast report binds to (packages/coast resolveReportBinding). */
   readonly localAreas?: readonly ReportLocalArea[];
+  /** The aerial base the region's package offers (region.json `basemap.aerial`, FE-23); absent where none is. */
+  readonly aerial?: AerialBase;
 }
 export const regionInfo = signal<RegionInfo | null>(null);
 /** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
@@ -40,8 +43,9 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = fetch): Pro
     const center = json.map?.center;
     if (typeof json.name !== 'string' || !center || center.length !== 2) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
+    const aerial = aerialBase(json);
     const info: RegionInfo = {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
-      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds))};
+      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}};
     regionInfo.value = info;
     return info;
   } catch { return null; }
