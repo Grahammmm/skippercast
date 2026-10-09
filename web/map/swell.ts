@@ -44,7 +44,7 @@ import {WAVE_MODEL, loadForecast, swellPoints, type WaveForecast} from './foreca
 import {forecastTime} from './frames.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
-import {NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringLayer, ringMark, type Rings} from './nearshore.ts';
+import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
@@ -219,7 +219,7 @@ export function swellOverlay(p: Palette, {field = true, rings = false}: {field?:
     ],
   };
   if (!rings) return drawn;
-  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringLayer(p)]};
+  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringHitLayer(p), ringLayer(p)]};
 }
 
 /** The mark card's reading at a clicked point inside the drawn field, or null outside it. */
@@ -273,7 +273,7 @@ export function createSwell(o: SwellOptions): {
     const t = now(), report = data.coastReport.value?.data ?? null;
     return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
   });
-  let alive = true, drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let alive = true, drawnKey = '', drawnShape = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
   const withdraw = (): void => { if (/^(?:swell|nearshore):/.test(chartMark.peek()?.id ?? '')) chartMark.value = null; };
 
   async function read(id: string): Promise<void> {
@@ -311,7 +311,11 @@ export function createSwell(o: SwellOptions): {
       const e = engine.value, f = status.value.drawn, r = rings.value, key = `${f?.key ?? ''}#${r?.key ?? ''}`;
       if (!e || (key === drawnKey && e === drawnOn)) return;
       if (key !== drawnKey) withdraw();
-      drawnKey = key; drawnOn = e;
+      // A field arriving under rings already drawn would add its layers above them (the engine adds
+      // only missing layers, under MPA_FILL): redraw the overlay whole so the rings stay on top.
+      const shape = `${f ? 'field' : ''}+${r ? 'rings' : ''}`;
+      if (e === drawnOn && drawnShape === '+rings' && shape === 'field+rings') e.setOverlay(REGISTRY_ID, null);
+      drawnKey = key; drawnShape = shape; drawnOn = e;
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), MPA_FILL);
@@ -339,9 +343,9 @@ export function createSwell(o: SwellOptions): {
       const f = status.peek().drawn;
       return f && drawnKey.startsWith(`${f.key}#`) && shownPresentation.peek() === 'chart' ? swellMark(f, at, now(), zone()) : null;
     },
-    pick: {layers: [NEARSHORE_LAYER], mark: (layer, properties) => {
+    pick: {layers: [NEARSHORE_LAYER, NEARSHORE_HIT], mark: (layer, properties) => {
       const r = rings.peek();
-      return layer === NEARSHORE_LAYER && r ? ringMark(r, properties?.id, now(), zone()) : null;
+      return (layer === NEARSHORE_LAYER || layer === NEARSHORE_HIT) && r ? ringMark(r, properties?.id, now(), zone()) : null;
     }},
     destroy() {
       alive = false;

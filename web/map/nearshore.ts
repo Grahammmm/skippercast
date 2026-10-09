@@ -25,6 +25,8 @@ import type {Palette} from './palette.ts';
 
 export const NEARSHORE_SOURCE = 'swell-nearshore';
 export const NEARSHORE_LAYER = 'swell-nearshore';
+/** A transparent circle at least 44 px across under each ring, so a 0–2 ft ring is still a 44 px tap target. */
+export const NEARSHORE_HIT = 'swell-nearshore-hit';
 /** Ring radius in pixels: RING_BASE plus RING_PER_FT per foot, up to RING_MAX_FT. */
 export const RING_BASE = 4;
 export const RING_PER_FT = 3;
@@ -65,6 +67,11 @@ export function nearshoreRings(report: Report | null, areaId: string | null, at:
     collection: {type: 'FeatureCollection', features: rings.map(r => ({type: 'Feature', properties: {id: r.site.id, radius: ringRadius(r.waveFt)},
       geometry: {type: 'Point', coordinates: [r.site.lon, r.site.lat]}}))},
   };
+}
+
+/** The ring's tap target: transparent, radius at least 22 px (a 44 px circle), drawn just under the ring. */
+export function ringHitLayer(p: Palette): MapLibre.LayerSpecification {
+  return {id: NEARSHORE_HIT, type: 'circle', source: NEARSHORE_SOURCE, paint: {'circle-radius': ['max', 22, ['get', 'radius']], 'circle-color': p.blue, 'circle-opacity': 0}};
 }
 
 /** The ring layer: an outline sized by the feature's radius, above the swell field. */

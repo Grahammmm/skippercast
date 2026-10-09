@@ -13,9 +13,10 @@ import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
 import {chartMark} from '../web/map/chart.ts';
+import {WAVE_MODEL} from '../web/map/forecast-grid.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
-import {NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringMark, ringRadius, ringSummary} from '../web/map/nearshore.ts';
+import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringMark, ringRadius, ringSummary} from '../web/map/nearshore.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {ISOLINE_LABELS, ISOLINE_LAYER, ISOLINE_SOURCE, STROKE_CASING, STROKE_LAYER, STROKE_SOURCE, SWELL_LAYER, SWELL_SOURCE, createSwell, nearshoreState, swellOverlay} from '../web/map/swell.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -126,9 +127,9 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
   const reportSignal = signal({data: report()}), binding = signal({areaId: 'central', localAreaId: 'morro-bay'});
   const {s, e, asked} = await swell(t, {place: () => ({regionId: 'morro-bay'}), data: {coastReport: reportSignal, coastBinding: binding}, clock: () => new Date(clock)});
   assert.deepEqual(asked, [['place', 'morro-bay'], ['load', 'report']], 'the report is asked for while Swell is on');
-  assert.deepEqual(e.calls.at(-2), ['overlay', [NEARSHORE_LAYER], MPA_FILL], 'without a grid, the rings alone');
+  assert.deepEqual(e.calls.at(-2), ['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], MPA_FILL], 'without a grid, the rings alone');
   assert.deepEqual(e.calls.at(-1), ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]);
-  assert.deepEqual(swellOverlay(sentinel, {rings: true}).layers.map(l => l.id), [...FIELD, NEARSHORE_LAYER], 'with a grid, above the field');
+  assert.deepEqual(swellOverlay(sentinel, {rings: true}).layers.map(l => l.id), [...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER], 'with a grid, above the field');
   const ring = swellOverlay(sentinel, {rings: true}).layers.at(-1);
   assert.deepEqual([ring.type, ring.paint['circle-radius'], ring.paint['circle-stroke-color'], ring.paint['circle-opacity']], ['circle', ['get', 'radius'], 'token(blue)', 0]);
 
@@ -138,7 +139,7 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
 
   e.calls.length = 0;
   setParams({hour: '2026-10-09T23:00Z'});
-  assert.deepEqual(e.calls, [['overlay', [NEARSHORE_LAYER], MPA_FILL], ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]], 'a new hour, new rings at once');
+  assert.deepEqual(e.calls, [['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], MPA_FILL], ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]], 'a new hour, new rings at once');
   assert.equal(nearshoreState.value.rings[0].waveFt.toFixed(1), '4.1');
   assert.equal(chartMark.value, null, 'the card of the previous hour goes');
 
@@ -152,6 +153,59 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
   assert.deepEqual(e.calls.at(-1), ['overlay', null, null], 'leaving the binding removes the rings');
   setParams({layers: 'none'});
   assert.equal(nearshoreState.value, null);
+});
+
+test('a small ring has a transparent 44 px hit circle under it that opens the same card', async t => {
+  const {s} = await swell(t, {place: () => ({regionId: 'morro-bay'}), data: {coastReport: signal({data: report()}), coastBinding: signal({areaId: 'central', localAreaId: 'morro-bay'})}});
+  const [hit, ring] = swellOverlay(sentinel, {field: false, rings: true}).layers;
+  assert.deepEqual([hit.id, hit.type, hit.source, hit.paint], [NEARSHORE_HIT, 'circle', NEARSHORE_SOURCE, {'circle-radius': ['max', 22, ['get', 'radius']], 'circle-color': 'token(blue)', 'circle-opacity': 0}]);
+  assert.equal(ring.id, NEARSHORE_LAYER);
+  assert.deepEqual(s.pick.layers, [NEARSHORE_LAYER, NEARSHORE_HIT]);
+  const viaHit = s.pick.mark(NEARSHORE_HIT, {id: 'SL345'});
+  assert.equal(viaHit.name, 'Morro Rock');
+  assert.deepEqual(viaHit, s.pick.mark(NEARSHORE_LAYER, {id: 'SL345'}));
+});
+
+test('a field arriving after the rings draws under them: swell-nearshore stays directly under mpa-fill', async t => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  browser(`${PAGE}?region=morro-bay&layers=swell&hour=${AT_PARAM}`);
+  const maps = [];
+  class FakeMap {
+    constructor(options) { this.handlers = {}; this.sources = {}; this.layers = options.style.layers.map(l => l.id); this.keyboard = this.touchZoomRotate = {disableRotation() {}}; maps.push(this); }
+    on(type, fn) { (this.handlers[type] ??= []).push(fn); }
+    fire(type) { for (const fn of this.handlers[type] ?? []) fn({}); }
+    addControl() {}
+    getLayer(id) { return this.layers.includes(id) ? {} : undefined; }
+    getSource(id) { return this.sources[id]; }
+    addSource(id, spec) { this.sources[id] = {spec, updateImage() {}, setData() {}}; }
+    removeSource(id) { delete this.sources[id]; }
+    addLayer(l, before) { const i = before ? this.layers.indexOf(before) : -1; this.layers.splice(i < 0 ? this.layers.length : i, 0, l.id); }
+    removeLayer(id) { this.layers = this.layers.filter(l => l !== id); }
+    remove() {}
+  }
+  const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
+    workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
+  const eng = createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'water'}, {id: MPA_FILL}, {id: 'coastline'}]},
+    camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}});
+  const map = maps[0];
+  map.fire('style.load');
+  // The coast report answers first; /api/forecast answers later with a 3 × 3 grid (synthetic, FE-17's shape).
+  let answer;
+  const answered = new Promise(resolve => { answer = resolve; });
+  const s = createSwell({engine: signal(eng), zone: () => TZ, fetchFn: () => answered, page: () => PAGE, palette: () => sentinel, now: () => NOW, place: () => ({regionId: 'morro-bay'}),
+    data: {coastReport: signal({data: report()}), coastBinding: signal({areaId: 'central', localAreaId: 'morro-bay'}), setPlace() {}, load: async () => {}}});
+  t.after(() => s.destroy());
+  await flush();
+  assert.deepEqual(map.layers, ['water', NEARSHORE_HIT, NEARSHORE_LAYER, MPA_FILL, 'coastline'], 'the rings alone');
+  const issued = Date.parse('2026-10-09T06:00:00Z') / 1000, hours = Array.from({length: 48}, (_, k) => issued + k * 3600);
+  const series = () => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
+    hourly: {time: hours, swell_wave_height: hours.map(() => 3), swell_wave_period: hours.map(() => 12), swell_wave_direction: hours.map(() => 290)}});
+  const points = [];
+  for (const lat of [35.05, 35.3, 35.55]) for (const lon of [-121.75, -121.5, -121.25]) points.push([`offshore-${points.length}`, lat, lon]);
+  answer({ok: true, json: async () => ({region_id: 'morro-bay', retrieved: NOW - HOUR, requested_points: points,
+    models: {[WAVE_MODEL.id]: {data: points.map(series), meta: {last_run_initialisation_time: issued, data_end_time: hours.at(-1)}}}})});
+  await flush(); await flush();
+  assert.deepEqual(map.layers, ['water', ...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER, MPA_FILL, 'coastline'], 'the field under the rings, the rings directly under mpa-fill');
 });
 
 test('a ring is asked before the Chart\'s own pick layers, so it opens over a protected area', () => {
