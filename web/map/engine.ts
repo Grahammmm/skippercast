@@ -10,6 +10,7 @@
 // drives it with a fake map. Erasable syntax only.
 import type * as MapLibre from 'maplibre-gl';
 import {sourceLayer} from './layers.ts';
+import type {FieldTexture} from './field.ts';
 import type {ArchiveReader} from './seafloor.ts';
 import {BASEMAP_SOURCE} from './style.ts';
 
@@ -89,6 +90,11 @@ export interface Engine {
   setOverlay(layer: string, overlay: Overlay | null, before?: string): void;
   /** A raster layer's opacity (FE-22 shows one cloud frame at a time; the others keep loading); before the style has loaded, the latest call per layer waits for it. */
   setRasterOpacity(layerId: string, opacity: number): void;
+  /**
+   * Replace an overlay's image source with `texture` and its corners (FE-16's water temperature): the
+   * pixels go straight to MapLibre, with no request. Before the style has loaded, the latest per source waits for it.
+   */
+  setImage(sourceId: string, texture: FieldTexture): void;
   destroy(): void;
 }
 
@@ -152,15 +158,15 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   // The style gate (FE-14), this file's one deferral: a style's layers and sources exist only
   // once MapLibre fires `style.load`. Until then setVisible keeps the latest visibility per
   // layer, setData the latest data per source, setOverlay the latest overlay per registry layer
-  // (MapLibre refuses run-time sources and layers earlier) and setRasterOpacity the latest
-  // opacity per layer; all apply once when it fires, overlays first so the others find their
-  // layers. Afterwards (or for a layer or source that already exists) every call applies at
-  // once. Layers route their visibility, data and overlays through these calls rather than
-  // adding a deferral.
+  // (MapLibre refuses run-time sources and layers earlier), setRasterOpacity the latest
+  // opacity per layer and setImage the latest texture per image source; all apply once when it
+  // fires, overlays first so the others find their layers and sources. Afterwards (or for a
+  // layer or source that already exists) every call applies at once. Layers route their
+  // visibility, data and overlays through these calls rather than adding a deferral.
   let early: {
     visible: Map<string, boolean>; data: Map<string, SourceData>;
-    overlays: Map<string, {overlay: Overlay | null; before?: string}>; opacity: Map<string, number>;
-  } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map()};
+    overlays: Map<string, {overlay: Overlay | null; before?: string}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
+  } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map(), images: new Map()};
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
   const draw = (layer: string, overlay: Overlay | null, before?: string): void => {
@@ -173,6 +179,10 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     if (overlay) overlays.set(layer, overlay); else overlays.delete(layer);
   };
   const fade = (layerId: string, opacity: number): void => { if (map.getLayer(layerId)) map.setPaintProperty(layerId, 'raster-opacity', opacity); };
+  const paint = (sourceId: string, t: FieldTexture): void => {
+    const image = typeof ImageData === 'function' ? new ImageData(t.data, t.width, t.height) : t as unknown as ImageData;
+    (map.getSource(sourceId) as MapLibre.ImageSource | undefined)?.updateImage({image, coordinates: t.coordinates});
+  };
   map.on('style.load', () => {
     const pending = early;
     early = null;
@@ -180,6 +190,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     pending?.visible.forEach((visible, layerId) => show(layerId, visible));
     pending?.data.forEach((data, sourceId) => fill(sourceId, data));
     pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
+    pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
   });
 
   return {
@@ -210,6 +221,10 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     setRasterOpacity(layerId, opacity) {
       if (early && !map.getLayer(layerId)) early.opacity.set(layerId, opacity);
       else { early?.opacity.delete(layerId); fade(layerId, opacity); }
+    },
+    setImage(sourceId, texture) {
+      if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
+      else { early?.images.delete(sourceId); paint(sourceId, texture); }
     },
     destroy() { resize?.disconnect(); map.remove(); },
   };

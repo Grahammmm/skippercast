@@ -11,8 +11,9 @@
 // always on; the host's `data-mpa`, `data-mpa-drawn` and `data-mpa-labels`
 // report their state and what MapLibre drew in view. Habitat, geology, reef
 // marks and the selection (FE-18) come from web/map/marks.ts.
-// Registry layers with run-time sources (FE-22's clouds) are created with the
-// Chart and draw through its engine (`layers`, Engine.setOverlay).
+// Registry layers with run-time sources (FE-22's clouds, FE-16's water
+// temperature) are created with the Chart and draw through its engine
+// (`layers`, Engine.setOverlay); a click on open water asks them for a reading.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -81,8 +82,11 @@ export function markUnavailable(layer: string, error?: unknown): void {
   unavailable.value = [...unavailable.peek(), layer];
 }
 
-/** A registry layer the Chart draws at run time (FE-22's clouds): created with the Chart, handed its engine once MapLibre is up. */
-export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {destroy(): void};
+/**
+ * A registry layer the Chart draws at run time (FE-22's clouds, FE-16's water temperature): created
+ * with the Chart, handed its engine once MapLibre is up. A field layer reads itself at a click on open water.
+ */
+export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {destroy(): void; reading?(at: {lon: number; lat: number}): ChartMark | null};
 
 export interface ChartOptions {
   host: HTMLElement;
@@ -139,8 +143,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
             : layer === MPA_FILL ? mpaMark(properties) : null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
-          // A click on nothing else reads the drawn surface current, if any (FE-15).
-          chartMark.value = chartPick(layer, properties, other ?? (at && currents?.reading(at) || null));
+          // A click on nothing else reads the drawn surface current (FE-15), else the drawn water temperature (FE-16).
+          chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
         },
         onIdle: () => { host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL)); },
       });
@@ -197,6 +201,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   }
 
   const drawn = layers.map(create => create(engine));
+  const fieldReading = (at: {lon: number; lat: number}): ChartMark | null =>
+    currents?.reading(at) ?? drawn.map(l => l.reading?.(at) ?? null).find(m => m !== null) ?? null;
   return {
     destroy() {
       if (!alive) return;
