@@ -59,11 +59,16 @@ export function initCoastWorkspace({map,locationUI,weather,resizeChart=()=>map.i
  }
  async function apply(next,write=false) {
   if(next!=='chart'&&!supported)next='chart';
+  const previous=mode;
   mode=next;select.value=next;
   if(write)navigate(presentationURL(location.href,next));
   document.body.dataset.mapPresentation=next==='chart'?'chart':'terrain';
   host.hidden=next==='chart';
-  if(next==='chart'){viewer?.setVisible(false);if(document.body.dataset.view==='map')resizeChart();announce('');return;}
+  // Resize only when terrain gives the chart back. Every popstate re-applies the
+  // presentation, a tab switch included; resizing then would be Leaflet's first
+  // measurement of a map drawn hidden (0 × 0), moving its centre by half the map
+  // before app.js reads the opening view (#496).
+  if(next==='chart'){viewer?.setVisible(false);if(previous!=='chart'&&document.body.dataset.view==='map')resizeChart();announce('');return;}
   announce('Loading the reviewed coast…');
   const ready=await mount();if(!alive||mode==='chart')return;
   if(!ready){for(const option of select.options)if(option.value!=='chart')option.disabled=true;mode='chart';select.value='chart';host.hidden=true;document.body.dataset.mapPresentation='chart';viewer?.setVisible(false);if(document.body.dataset.view==='map')resizeChart();announce('Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable. Reload to retry the coast.');return;}
