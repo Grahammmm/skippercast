@@ -8,7 +8,8 @@
     <title>SkipperCast · Know the water before you leave the dock</title>
     <!-- FE-07: the v2 tokens, the primitives, the port chooser's sheet and the landing's, in this order. The hero text and the footer line are static so the
          largest paint waits for neither the module nor a re-render; web/landing/main.tsx renders the shoreline, nav, readout, pills, port input,
-         layer dots and the shoreline's credit (from its generated module) into the hosts below (the CSP allows no inline script). -->
+         layer dots and the shoreline's credit (from its generated module) into the hosts below (the CSP allows no inline script); after first
+         paint it loads the live night map (FE-25) into #landing-night, under the shoreline until the map has drawn. -->
     <link rel="stylesheet" href="../web/tokens.css" />
     <link rel="stylesheet" href="../web/ui/ui.css" />
     <link rel="stylesheet" href="../web/landing/port-input.css" />
@@ -16,6 +17,7 @@
   </head>
   <body class="landing-body">
     <div class="landing">
+      <div id="landing-night" class="landing-host"></div>
       <div id="landing-shore" class="landing-host"></div>
       <div id="landing-head" class="landing-host">
         <header class="landing-head"><a class="landing-brand" href="/">SkipperCast</a></header>

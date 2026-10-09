@@ -68,6 +68,12 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
 .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
 .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
+/* FE-51: on the desktop map the selected card and the legend share one left column, so neither covers the
+   other's controls; on a short map the card scrolls. */
+.app-chrome-left { position: absolute; left: var(--space-4); top: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-3); width: min(320px, calc(100% - var(--space-6))); pointer-events: none; }
+.app-chrome-left > .app-mark, .app-chrome-left > .app-legend { position: static; pointer-events: auto; }
+.app-chrome-left > .app-mark { flex: 0 1 auto; min-height: 0; width: auto; overflow-y: auto; }
+.app-chrome-left > .app-legend { flex: none; align-self: flex-start; margin-top: auto; }
 .app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
 .app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
 .app-legend li { display: flex; align-items: center; gap: var(--space-2); }
@@ -82,7 +88,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
 .app-rail-source select { flex: 1; min-width: 0; }
 .app-rail .ui-rail-item { flex-wrap: wrap; }
-.app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-5)); }
+/* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */
+.app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-1), var(--sst-2), var(--sst-3), var(--sst-4), var(--sst-5)); }
+.app-legend-water-temp { flex-wrap: wrap; }
+.app-legend-range { color: var(--text); font-size: var(--text-11); }
 .app-swatch[data-layer="swell"] { background: var(--blue); }
 .app-swatch[data-layer="fleet"] { background: var(--fleet); }
 .app-swatch[data-layer="clouds"] { background: var(--text); }

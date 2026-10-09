@@ -8,6 +8,7 @@
 // fails, so the stage must return to Chart with v1's message.
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+import {inflateSync} from 'node:zlib';
 import type {Page, Route} from '@playwright/test';
 import {expect, test} from './fixtures.ts';
 
@@ -621,4 +622,83 @@ test('a region without basemap.aerial offers no Aerial base, whatever ?base= say
   await expect(page.locator('.ui-rail-item', {hasText: 'Aerial'})).toHaveCount(0);
   await page.waitForTimeout(1000);
   expect(requested).toEqual([]);
+});
+
+// FE-16: a synthetic coast report whose surface-temperature analysis covers the water off Morro Bay on
+// a 0.02° grid (57.3 to 64.1 °F, so the legend reads 57–65 °F), analysed 30 hours ago and named by its
+// own source status, as the bridge serves it; the rest of the bridge is held.
+async function serveReport(page: Page, sst: Record<string, unknown> = {}) {
+  const now = Date.now(), iso = (ms: number) => new Date(ms).toISOString(), points = [];
+  for (let j = 0; j < 21; j++) for (let i = 0; i < 26; i++) {
+    points.push({lon: +(-121.30 + i * 0.02).toFixed(6), lat: +(35.10 + j * 0.02).toFixed(6), tempF: +(57.3 + i * 0.2 + j * 0.09).toFixed(2), errorF: 0.6});
+  }
+  const source = {id: 'mur-surface-temperature', label: 'NASA JPL MUR · surface temperature analysis', url: 'https://example.test/mur', kind: 'analysis', outcome: 'ok', fetchedAt: iso(now - HOUR_MS)};
+  await page.route('**/api/coast/report', route => route.fulfill({json: {schemaVersion: 1, countyId: 'slo', generatedAt: iso(now - 600_000),
+    forecasts: [], observations: [], tides: [], tideEvents: [], alerts: [], catches: [], catchStatus: '', habitatStatus: '', sources: [source],
+    visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null},
+    spatial: {surfaceTemperature: {sourceId: source.id, analysedAt: iso(now - 30 * HOUR_MS), fetchedAt: source.fetchedAt, nativeResolutionDeg: 0.01,
+      sampleSpacingDeg: 0.02, points, url: source.url, kind: 'analysis', ...sst}}}}));
+}
+/** The colour at a page point: a 1×1 screenshot, whose first PNG pixel is raw under every row filter. */
+async function pixel(page: Page, x: number, y: number): Promise<number[]> {
+  const png = await page.screenshot({clip: {x, y, width: 1, height: 1}}), data: Buffer[] = [];
+  for (let at = 8; at < png.length; at += 12 + png.readUInt32BE(at)) if (png.toString('ascii', at + 4, at + 8) === 'IDAT') data.push(png.subarray(at + 8, at + 8 + png.readUInt32BE(at)));
+  return [...inflateSync(Buffer.concat(data)).subarray(1, 4)];
+}
+const apart = (a: number[], b: number[]) => a.reduce((n, v, i) => n + Math.abs(v - b[i]!), 0);
+
+test('Water temp draws the bound analysis as a field with contours, names it, reads it on click and leaves when off', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await serveReport(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none'});
+  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!, x = box.x + box.width * 0.3, y = box.y + box.height * 0.35;
+  // Open water before the layer is on, once the chart has settled.
+  let water: number[] = [];
+  await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
+
+  await openLayers(page);
+  const entry = page.locator('.ui-rail-item', {hasText: 'Water temp'});
+  await entry.getByRole('button', {name: /Water temp/}).click();
+  await expect.poll(() => params(page).layers).toBe('water-temp');
+  const row = page.locator('.app-legend-water-temp');
+  await expect(row.locator('[data-range="water-temp"]')).toHaveText('57–65 °F');
+  await expect(row.locator('[data-stamp="water-temp"]')).toHaveText(/^NASA JPL MUR · analysis \w{3} \d{1,2} · 30 h old$/);
+  await expect(row.locator('.ui-popover-body')).toHaveText(/^NASA JPL MUR daily analysis on a 0\.01° grid sampled every 0\.02°, for \w{3} \d{1,2} \(30 h old\), with an analysis error of 0\.6 °F\. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank\.$/);
+  await expect(entry.locator('.ui-rail-note')).toHaveText(/^analysis \w{3} \d{1,2} · 30 h old$/);
+  await expect(page.locator('[data-unavailable="water-temp"]')).toHaveCount(0);
+  await v2.a11y('v2-map-water-temp');
+  if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the field is drawn over the water'}).toBeGreaterThan(60);
+
+  // A click on the field reads the analysis there, with its error, date and product.
+  await page.mouse.click(x, y);
+  await expect(page.locator('.app-mark h2')).toHaveText('Surface temperature');
+  await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^(?:5[7-9]|6[0-5])\.\d °F · analysis error 0\.6 °F$/);
+  await expect(page.locator('.app-mark-source')).toHaveText(/^NASA JPL MUR · analysis \w{3} \d{1,2} · 30 h old$/);
+
+  // Off: the field, its contours and the reading of it go.
+  await openLayers(page);
+  await entry.getByRole('button', {name: /Water temp/}).click();
+  await expect.poll(() => params(page).layers).toBe('none');
+  await expect(row).toHaveCount(0);
+  await expect(page.locator('.app-mark')).toHaveCount(0);
+  if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  // The phone's sheet may rest at another height now, and its shadow tints the water by a few levels.
+  await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Water temp draws nothing for a stale analysis or a region no report covers, and says why', async ({page, v2}) => {
+  await holdCoastData(page);
+  await serveReport(page, {analysedAt: new Date(Date.now() - 80 * HOUR_MS).toISOString()});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp'});
+  await openLayers(page);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Water temp'}).locator('.ui-rail-note')).toHaveText(/^no fresh analysis · last \w{3} \d{1,2}$/);
+  await expect(page.locator('[data-reason="water-temp"]')).toHaveText(/^Water temp unavailable: the latest NASA JPL MUR analysis, for \w{3} \d{1,2}, is past its 72-hour age limit\.$/);
+  await expect(page.locator('[data-range="water-temp"]')).toHaveCount(0);
+
+  await page.goto(v2.url('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', layers: 'water-temp'}));
+  await openLayers(page);
+  await expect(page.locator('.ui-rail-item', {hasText: 'Water temp'}).locator('.ui-rail-note')).toHaveText('no analysis for this region');
+  await expect(page.locator('[data-reason="water-temp"]')).toHaveText('Water temp unavailable: no local surface-temperature analysis covers this region yet.');
 });

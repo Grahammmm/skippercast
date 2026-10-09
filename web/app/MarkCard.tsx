@@ -10,6 +10,8 @@
 // official page; the card never states the rules itself. A pick moves focus to
 // the card's heading; the close button, or Escape with no basis open, clears
 // the selection and returns focus to where it was (the chart, after a click).
+// FE-51: an atlas mark's "Add to trip" and "GPX" go to the trip planner
+// (web/trip.ts), as v1's spot sheet does; other selections have no trip action.
 import {computed} from '@preact/signals';
 import {useEffect, useRef} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
@@ -17,9 +19,10 @@ import {Icon} from '../ui/icons.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {chartMark} from '../map/chart.ts';
 import type {ChartMark} from '../map/coastline.ts';
-import {habitatCard, picked, spotCard} from '../map/marks.ts';
+import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
 import {shownPresentation, terrainDetail, terrainMark} from '../map/stage.ts';
 import {navigate, selection, setParams} from '../state.ts';
+import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
 
 export type Mark = ChartMark;
 export {terrainCard} from '../map/habitat.ts';
@@ -71,6 +74,9 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
     heading.current.focus();
   }, [request, selected?.id]);
   if (!selected) return null;
+  // Only an atlas mark joins a trip: v1's planner exports atlas targets.
+  const spot = selected === spotCard.value ? selection.value : null;
+  const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : document.querySelector<HTMLElement>('.app-chart canvas');
     returnTo = null;
@@ -93,8 +99,9 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
         </> : null}</p>
       ) : null}
       <div class="app-mark-actions">
-        <Button size="sm" icon="plus" disabled>Add to trip</Button>
-        <Button size="sm" icon="download" disabled>GPX</Button>
+        <Button size="sm" icon={spot && tripIds.value.includes(spot) ? 'check' : 'plus'} disabled={!spot} onClick={() => { if (spot) void addToTrip(spot); }}>
+          {spot && tripIds.value.includes(spot) ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
+        <Button size="sm" icon="download" disabled={!spot} onClick={() => { if (spot) void reviewTrip(spot); }}>GPX</Button>
         {selected.regulations ? (
           <a class="ui-button ui-button--ghost ui-button--sm" href={selected.regulations.href} target="_blank" rel="noopener"
             aria-label={`Regulations: ${selected.regulations.label} (official page, opens in a new tab)`}>

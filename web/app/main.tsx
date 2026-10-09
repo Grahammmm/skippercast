@@ -9,6 +9,7 @@ import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {configureStore, coast, region, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
+import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 
 configureStore({v2: true});
@@ -20,6 +21,8 @@ narrow.value = width.matches;
 width.addEventListener('change', event => { narrow.value = event.matches; });
 const host = document.getElementById('app');
 if (host) { host.replaceChildren(); render(<App />, host); }
+// FE-51: after the render, so `#export` finds the planner's host.
+startTrip();
 
 effect(() => {
   const id = region.value;

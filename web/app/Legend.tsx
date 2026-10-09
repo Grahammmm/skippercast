@@ -13,6 +13,8 @@
 // drawn source's basis sentence, or why nothing draws.
 // The Clouds row labels the GOES frame on screen with its acquisition time and
 // age and holds or resumes the loop (FE-22, web/map/clouds.ts).
+// Water temp (FE-16) gives the drawn analysis's range in whole °F, its product,
+// date and age, and the basis with its error, or why nothing draws.
 import {IconButton} from '../ui/Button.tsx';
 import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
@@ -21,6 +23,7 @@ import {currentsState} from '../map/currents.ts';
 import {layerEntry} from '../map/layers.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
+import {waterTempState} from '../map/sst.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -83,6 +86,21 @@ function CurrentsRow() {
   );
 }
 
+/** The Water temp row: the drawn analysis's range, product and age, or why nothing draws (the Chart only). */
+function WaterTempRow() {
+  const s = waterTempState.value, chart = shownPresentation.value === 'chart', a = chart ? s.drawn : null;
+  const reason = chart ? s.reason : 'Water temp draws on the Chart.';
+  return (
+    <li class="app-legend-water-temp">
+      <span class="app-swatch" data-layer="water-temp" aria-hidden="true"></span>Water temp
+      {a ? <span class="app-legend-range ui-mono" data-range="water-temp">{a.range[0]}–{a.range[1]} °F</span> : null}
+      <Popover iconOnly summary="Water temp basis">{s.basis}</Popover>
+      {a ? <p class="app-legend-note ui-mono" data-stamp="water-temp">{a.product} · {a.stamp}</p> : null}
+      {reason ? <p class="app-legend-note" data-reason="water-temp">{reason}</p> : null}
+    </li>
+  );
+}
+
 /** The Clouds row: the frame drawn now, and the loop toggle while more than one frame can play. */
 export function CloudsRow({label}: {label: string}) {
   const stamp = cloudStamp.value;
@@ -103,7 +121,7 @@ export function Legend() {
       <span class="ui-eyebrow">Legend</span>
       {on.length || chart ? (
         <ul>
-          {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} />
+          {on.map(e => e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
             : <li key={e.id}><span class="app-swatch" data-layer={e.id} aria-hidden="true"></span>{e.id === 'clouds' ? <CloudsRow label={e.label} /> : e.label}</li>)}
           {chart ? <MpaRow /> : null}
         </ul>

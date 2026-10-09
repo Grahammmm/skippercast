@@ -271,9 +271,10 @@ escape every value (`esc`, `escapeHTML`) (§ 3A.2).
 - `scripts/build-worker.mjs` adds `app.html` and `landing.html` to `SHELLS`.
   `server/routes/assets.ts` decides which shell answers `/` and `/map`
   (§ 7, flag rules in § 14).
-- The service worker's precache gains the v2 entries; the offline pack
-  (FE-51) precaches the basemap tiles for the saved region's bounds at
-  zooms 8–12 only (budget in § 13).
+- The service worker's install precache keeps v1's shell; the v2 entries
+  are stored only inside an offline pack saved from v2 (FE-51), which also
+  holds the basemap tiles for the saved region's bounds at zooms 8–12 under
+  the pack's tile cap (budget in § 13; dev-plan FE-51 records the decision).
 
 ### Keeping Leaflet alive during the migration
 
@@ -565,7 +566,7 @@ Before a PR edits one of these, check open PRs and comment on the issue.
 | File | Why it is hot | Rule |
 | --- | --- | --- |
 | `packages/coast/**` | Codex's renderer and models; FE-70, FE-76, FE-77, FE-79, FE-81 touch it | renderer internals: Codex; bridge files (`tokens-bridge.css`, `src/palette.ts`): Claude with Codex review |
-| `dist/coast-*.js`, `dist/coastal-*.js`, `dist/coast.html` | v1 coastal glue that imports the shared store | Codex until FE-61; v2 never imports them |
+| `dist/coast-*.js`, `dist/coastal-*.js`, `dist/coast.html` | v1 coastal glue that imports the shared store | Codex until FE-61; v2 never imports them, except the pure `coastal-offline-core.js` (FE-51) |
 | `web/state.ts`, `web/fish-links.ts`, `web/coast-context.ts` | read by both shells | append keys and aliases; renames need an issue comment and both shells' tests |
 | `server/app.ts`, `server/routes/assets.ts`, `server/coast-data.ts`, `server/coast-pages.ts` | route order and the bridge; owner-approved paths | one router line per PR; Codex owns the bridge |
 | `dist/sw.js`, `dist/offline-core.js` | v1 offline packs plus coastal snapshots | FE-51 and Codex's offline work rebase on each other |
@@ -819,6 +820,26 @@ footer credit is rendered from that generated module. The fleet line
 renders only when the page is given one; no public fleet summary exists
 yet, so it stays hidden.
 
+As built by FE-25 (2026-10-09): once the page has loaded and painted, and
+only where WebGL2 works and the browser does not ask to save data
+(`navigator.connection.saveData`), `web/landing/main.tsx` imports
+`web/landing/NightMap.tsx`, which loads MapLibre by dynamic import as the
+Chart does. The map is FE-11's engine in a `still` mode (no gesture, key,
+control or label fade) over FE-72's night variant, framed so the region's
+bounds fill the height with the harbor 72 % across a wide screen (62 % on a
+phone) and the hero over open water. The region's CUSP coastline takes the
+SVG's glow colours, and FE-15's `createCurrents` draws the first of WCOFS,
+HF radar 6 km and HF radar 1 km that has a fresh frame for the current hour
+(none fresh: nothing draws). The SVG stays on top until the map is idle,
+then fades out; without WebGL2, a basemap archive, the region file or the
+coastline it stays alone. The map is hidden from assistive technology, and
+the footer credits the basemap and gives the drawn currents' basis (source,
+age, illustrative motion). Hovering or focusing the Currents dot previews
+the streamlines over a dimmed map; the other dots stay links, since their
+layers need the app's store. No shelf is drawn (§ 3A.2 dropped the relief).
+The readout now names its region ("Latest readings · Morro Bay & Avila
+area", from `region.json`) rather than implying the visitor's launch.
+
 ### URL structure
 
 Ranked in open-questions Q2; the plan assumes:
@@ -917,7 +938,7 @@ sky), marks, selection, coastline glow.
 | Terrain relief (2D and 3D) | Seafloor (terrain options) | `packages/coast` regional terrain and imagery, SHA-256-verified in the browser (`regional.ts`), size- and range-bounded (no hashing) by `server/coast-data.ts` from the Fish Worker until FE-85 moves them to R2 and adds server-side manifest verification | the Three scene of the Terrain presentations; relief, water and contour controls move to the rail in FE-80 | static | the renderer's existing source and coverage lines | #385, #392 (on `main`); FE-71, FE-79, FE-80. The PNG relief raster (FE-13, FE-26) is dropped |
 | Seafloor candidates and cells | Seafloor (option) | existing `tiles/seafloor/seafloor-<region>.pmtiles` | vector fill by terrain grade or species fit (existing views) | static | existing seafloor sentence | FE-14 |
 | Currents | Currents (source choice `?current=`) | `/api/coast/ocean` current fields where a report binds; `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames elsewhere; gates from `packages/coast` `selectCurrentFrame` and `selectedCurrent` through `frames.ts`; Terrain: `setCurrentLayer` | canvas streamlines from `packages/coast/src/map/surface-field.ts`: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
-| Water temp | Water temp | `habitat-tiles/sst-analysis-*.json` (MUR) | `ImageSource` texture ≤ 1,024 px from `packages/coast` `surfaceField` and `fieldContours`, feathered inward at gaps; 0.5 °F contours with sparse labels; click reading with analysis time and error | observed (daily analysis) | "MUR daily analysis, 0.01°, sampled at 0.02°, <age>." | FE-16 |
+| Water temp | Water temp | `/api/coast/report` `spatial.surfaceTemperature` where a report binds, named by the report's status for its source id (NASA JPL MUR in Fish's report; NOAA Geo-Polar Blended in SkipperCast's own, FE-87); `habitat-tiles/sst-analysis-*.json` (MUR) elsewhere ([#491](https://github.com/Grahammmm/skippercast/issues/491)) | image source texture ≤ 1,024 px from `packages/coast` `surfaceField`, filled with pixels (no request), feathered inward at gaps; `fieldContours` every 0.5 °F, labelled at whole degrees with the unit; click reading with analysis time and error | observed (daily analysis, 72 h limit) | "<product> daily analysis on a <grid>, for <date> (<age> old), with an analysis error of <low> °F to <high> °F. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank." | FE-16 |
 | Swell | Swell | forecast matrix grid (`forecast-matrix.js` data); nearshore model sites from the coast report where one binds (`presentation.ts` `freshNearshore`), from FE-40 after FE-84 | field texture of significant height with period isolines; direction as short strokes at low density, never per-cell arrows; nearshore sites as rings sized by height | hour | "Model wave forecast on the region grid, issued <age>; nearshore sites from the CDIP MOP model." | FE-17 (field), FE-27 (nearshore rings) |
 | Habitat and marks | always (zoom ≥ 10) | existing survey habitat, geology, reef marks (GeoJSON from the region's `assets`) | habitat as fills at 0.25 with token hue by class; geology as dashed outline; marks as rings with a fit badge on a 44 px target; selected mark highlighted | static | existing sentences per source; a terrain selection keeps the renderer's evidence lines | FE-18 (atlas `?spot=` and coast `?habitat=` in one mark card, one selected at a time) |
 | MPAs | always | CDFW ds582 (existing) | `--mpa-fill` 0.08, dashed `--mpa-line`; name label at zoom ≥ 11 | static | "CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page." | FE-19 |

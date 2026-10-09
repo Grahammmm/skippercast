@@ -8,6 +8,10 @@
 // Erasable syntax only: Node tests import this file by type stripping.
 
 export const DEFAULT_REGION = 'morro-bay';
+/** The default region's name (its region.json `name`, equal by test), shown until that loads: the readout names the place it reads (#422). */
+export const DEFAULT_PLACE = 'Morro Bay & Avila';
+/** "Morro Bay & Avila area"; a name that already ends in "area" is kept as it is. */
+export const placeLabel = (name: string): string => /\barea$/i.test(name.trim()) ? name.trim() : `${name.trim()} area`;
 /** v1's rule (dist/live-conditions.js): a feed generated more than 90 minutes ago is late. */
 export const FEED_LATE_MIN = 90;
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
@@ -30,6 +34,7 @@ export interface FeedState {readonly age: string | null; readonly stale: boolean
 
 /** The parts of regions/<id>/region.json the readout needs. */
 export interface RegionStations {
+  readonly name?: string;
   readonly conditions_feed?: string;
   readonly stations?: {tide?: string; tide_name?: string; tide_note?: string; nearshore_buoy?: string; offshore_buoy?: string};
   readonly harbor?: {name?: string; latitude?: number; longitude?: number};
@@ -147,7 +152,7 @@ export function feedState(feed: unknown, now = Date.now()): FeedState {
   return {age: ageText(now - at), stale: now - at > FEED_LATE_MIN * 60000};
 }
 
-export interface Readout {readonly readings: Reading[]; readonly feed: FeedState}
+export interface Readout {readonly readings: Reading[]; readonly feed: FeedState; /** The region the stations are read for (region.json `name`). */ readonly place?: string}
 
 /** Load the default region's readings; every failure becomes an unavailable tile, never an error. */
 export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAULT_REGION, now: () => number = Date.now): Promise<Readout> {
@@ -160,5 +165,6 @@ export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAUL
   const station = info.stations?.tide ?? '9412110';
   const [feed, tide] = await Promise.all([json(feedPath(info.conditions_feed, region)).catch(() => null), json(tideURL(station)).catch(() => null)]);
   const at = now();
-  return {readings: [...buoyReadings(feed, info, at), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note)], feed: feedState(feed, at)};
+  return {readings: [...buoyReadings(feed, info, at), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note)], feed: feedState(feed, at),
+    place: typeof info.name === 'string' && info.name.trim() ? info.name.trim() : DEFAULT_PLACE};
 }

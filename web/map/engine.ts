@@ -10,6 +10,7 @@
 // drives it with a fake map. Erasable syntax only.
 import type * as MapLibre from 'maplibre-gl';
 import {sourceLayer} from './layers.ts';
+import type {FieldTexture} from './field.ts';
 import type {ArchiveReader} from './seafloor.ts';
 import {BASEMAP_SOURCE} from './style.ts';
 
@@ -44,6 +45,8 @@ export interface EngineOptions {
   attribution?: string;
   /** The map has settled and drawn every tile in view (MapLibre `idle`). */
   onIdle?(): void;
+  /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; the page credits the basemap itself. */
+  still?: boolean;
 }
 
 /** What a GeoJSON source accepts: a URL or GeoJSON. */
@@ -89,6 +92,11 @@ export interface Engine {
   setOverlay(layer: string, overlay: Overlay | null, before?: string): void;
   /** A raster layer's opacity (FE-22 shows one cloud frame at a time; the others keep loading); before the style has loaded, the latest call per layer waits for it. */
   setRasterOpacity(layerId: string, opacity: number): void;
+  /**
+   * Replace an overlay's image source with `texture` and its corners (FE-16's water temperature): the
+   * pixels go straight to MapLibre, with no request. Before the style has loaded, the latest per source waits for it.
+   */
+  setImage(sourceId: string, texture: FieldTexture): void;
   destroy(): void;
 }
 
@@ -101,9 +109,10 @@ export function prepareLibrary(module: MapLibraryModule): void {
   prepared.add(module.lib);
 }
 
-/** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name. */
-export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera): MapLibre.MapOptions {
+/** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. */
+export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera, still = false): MapLibre.MapOptions {
   return {
+    ...still ? {interactive: false, fadeDuration: 0} : {},
     container: host, style,
     center: [camera.longitude, camera.latitude], zoom: camera.zoom - ZOOM_OFFSET,
     minZoom: VIEW_ZOOM.min - ZOOM_OFFSET, maxZoom: VIEW_ZOOM.max - ZOOM_OFFSET,
@@ -117,12 +126,14 @@ export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification
 export function createEngine(module: MapLibraryModule, options: EngineOptions): Engine {
   prepareLibrary(module);
   const {lib} = module, {host} = options;
-  const map = new lib.Map(mapOptions(host, options.style, options.camera));
+  const map = new lib.Map(mapOptions(host, options.style, options.camera, options.still));
   map.keyboard.disableRotation();
   map.touchZoomRotate.disableRotation();
-  map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
-  map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
-  map.addControl(new lib.AttributionControl({compact: false, ...options.attribution ? {customAttribution: options.attribution} : {}}), 'bottom-right');
+  if (!options.still) {
+    map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
+    map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
+    map.addControl(new lib.AttributionControl({compact: false, ...options.attribution ? {customAttribution: options.attribution} : {}}), 'bottom-right');
+  }
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
   const overlays = new Map<string, Overlay>();
@@ -152,15 +163,15 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   // The style gate (FE-14), this file's one deferral: a style's layers and sources exist only
   // once MapLibre fires `style.load`. Until then setVisible keeps the latest visibility per
   // layer, setData the latest data per source, setOverlay the latest overlay per registry layer
-  // (MapLibre refuses run-time sources and layers earlier) and setRasterOpacity the latest
-  // opacity per layer; all apply once when it fires, overlays first so the others find their
-  // layers. Afterwards (or for a layer or source that already exists) every call applies at
-  // once. Layers route their visibility, data and overlays through these calls rather than
-  // adding a deferral.
+  // (MapLibre refuses run-time sources and layers earlier), setRasterOpacity the latest
+  // opacity per layer and setImage the latest texture per image source; all apply once when it
+  // fires, overlays first so the others find their layers and sources. Afterwards (or for a
+  // layer or source that already exists) every call applies at once. Layers route their
+  // visibility, data and overlays through these calls rather than adding a deferral.
   let early: {
     visible: Map<string, boolean>; data: Map<string, SourceData>;
-    overlays: Map<string, {overlay: Overlay | null; before?: string}>; opacity: Map<string, number>;
-  } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map()};
+    overlays: Map<string, {overlay: Overlay | null; before?: string}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
+  } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map(), images: new Map()};
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
   const draw = (layer: string, overlay: Overlay | null, before?: string): void => {
@@ -173,6 +184,10 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     if (overlay) overlays.set(layer, overlay); else overlays.delete(layer);
   };
   const fade = (layerId: string, opacity: number): void => { if (map.getLayer(layerId)) map.setPaintProperty(layerId, 'raster-opacity', opacity); };
+  const paint = (sourceId: string, t: FieldTexture): void => {
+    const image = typeof ImageData === 'function' ? new ImageData(t.data, t.width, t.height) : t as unknown as ImageData;
+    (map.getSource(sourceId) as MapLibre.ImageSource | undefined)?.updateImage({image, coordinates: t.coordinates});
+  };
   map.on('style.load', () => {
     const pending = early;
     early = null;
@@ -180,6 +195,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     pending?.visible.forEach((visible, layerId) => show(layerId, visible));
     pending?.data.forEach((data, sourceId) => fill(sourceId, data));
     pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
+    pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
   });
 
   return {
@@ -210,6 +226,10 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     setRasterOpacity(layerId, opacity) {
       if (early && !map.getLayer(layerId)) early.opacity.set(layerId, opacity);
       else { early?.opacity.delete(layerId); fade(layerId, opacity); }
+    },
+    setImage(sourceId, texture) {
+      if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
+      else { early?.images.delete(sourceId); paint(sourceId, texture); }
     },
     destroy() { resize?.disconnect(); map.remove(); },
   };

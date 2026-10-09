@@ -147,6 +147,10 @@ export interface CurrentsOptions {
   now?: () => Date;
   /** The drawn frame was withdrawn (off, another source or hour, its deadline, or the Chart left): a reading of it is stale. */
   onHide?: () => void;
+  /** The source to draw; by default the rail's `?current=`. The landing's night map (FE-25) picks its own. */
+  source?: () => CurrentChoice;
+  /** Whether the overlay may show; by default while the Chart presentation of the Coast view is on screen. */
+  shown?: () => boolean;
 }
 export interface Currents {reading(at: {lon: number; lat: number}): ChartMark | null; destroy(): void}
 
@@ -168,12 +172,14 @@ export function createCurrents(o: CurrentsOptions): Currents {
   const motion = o.motion !== undefined ? o.motion : typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   const frames = o.frames ?? {request: step => requestAnimationFrame(step), cancel: id => cancelAnimationFrame(id)};
   const tick = signal(0), hidden = signal(!!doc?.hidden), reduced = signal(!!motion?.matches);
+  // Re-chosen on the same clock as the frame, so a picked source that goes stale gives way.
+  const choice = computed(() => { void tick.value; return o.source ? o.source() : current.value; });
   const status = computed(() => {
     void tick.value;
     const at = terrainHour(hour.value, now(), day.value, zone()), known = o.place?.() !== null;
-    return currentsStatus(current.value, known ? data.coastStatus.value.ocean : 'loading', data.coastOcean.value?.data ?? null, at, now(), zone());
+    return currentsStatus(choice.value, known ? data.coastStatus.value.ocean : 'loading', data.coastOcean.value?.data ?? null, at, now(), zone());
   });
-  const shown = computed(() => status.value.drawn !== null && shownPresentation.value === 'chart' && appView.value === 'coast');
+  const shown = computed(() => status.value.drawn !== null && (o.shown ? o.shown() : shownPresentation.value === 'chart' && appView.value === 'coast'));
   const drawnKey = computed(() => { const d = status.value.drawn; return d ? `${d.field.id}|${d.field.fetchedAt}|${d.frame.validAt}` : ''; });
 
   let base: HTMLCanvasElement | null = null, dash: HTMLCanvasElement | null = null, paths: FlowPath[] = [];
@@ -240,8 +246,8 @@ export function createCurrents(o: CurrentsOptions): Currents {
   const disposers = [
     // Request the packet only while a source is chosen, for the region's place once it is known.
     effect(() => {
-      const choice = current.value, place = o.place?.() ?? null;
-      if (choice === 'off' || choice === UNSUPPORTED || !place) return;
+      const chosen = choice.value, place = o.place?.() ?? null;
+      if (chosen === 'off' || chosen === UNSUPPORTED || !place) return;
       data.setPlace(place);
       void data.load('ocean');
     }),
@@ -250,7 +256,7 @@ export function createCurrents(o: CurrentsOptions): Currents {
     effect(() => {
       const s = status.value, t = now().getTime();
       clearTimeout(timer);
-      if (current.value === 'off') return;
+      if (choice.value === 'off') return;
       const due = Math.min(s.drawn ? s.drawn.expiresAt : Infinity, (Math.floor(t / HOUR_MS) + 1) * HOUR_MS);
       timer = setTimeout(() => { tick.value++; }, Math.min(Math.max(1000, due - t + 1000), 2 ** 31 - 1));
     }),

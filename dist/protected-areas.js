@@ -12,16 +12,17 @@ export function validMPAs(data) {
   return data?.type === "FeatureCollection" && !data.exceededTransferLimit && data.features?.length >= getRegion().mpa.minimum_features && data.features.every(f=>typeof f.properties?.NAME === "string" && ["Polygon","MultiPolygon"].includes(f.geometry?.type));
 }
 const sourceFor = (name) => !["Buchon","Morro","Piedras","Cambria"].some(x=>name.includes(x)) ? "https://wildlife.ca.gov/Conservation/Marine/MPAs" : "https://wildlife.ca.gov/Conservation/Marine/MPAs/" + (name.includes("Buchon") ? "Point-Buchon" : name.includes("Morro") ? "Morro-Bay" : name.includes("Piedras") ? "Piedras-Blancas" : "Cambria");
+// FE-51: `map` null is the screen alone (the v2 trip planner, web/trip.ts): nothing is drawn and the Chart draws the outlines itself.
 export async function initProtectedAreas(map, onChange) {
-  const layer=L.layerGroup().addTo(map);
-  const status=document.getElementById("mpa-status");
+  const layer=map?L.layerGroup().addTo(map):null;
+  const status=document.getElementById("mpa-status")||document.createElement("p");
   let data=null, checked=null, live=false, extra=null, extraChecked=null;
   const extraFresh=()=>!assetURL("closures") || !!extra && Date.now()-Date.parse(extraChecked)>=-300000 && Date.now()-Date.parse(extraChecked)<=36*3600000;
   const freshEnough=()=>extraFresh() && !!data && Number.isFinite(Date.parse(checked)) && Date.now()-Date.parse(checked) >= -300000 && Date.now()-Date.parse(checked) <= 36*3600000;
-  map.createPane("protectedAreas").style.zIndex=440;
+  if(map)map.createPane("protectedAreas").style.zIndex=440;
   function draw() {
-    layer.clearLayers();
-    for (const f of [...(data?.features || []),...(extra?.features||[])]) {
+    layer?.clearLayers();
+    if(layer)for (const f of [...(data?.features || []),...(extra?.features||[])]) {
       const p=f.properties;
       L.geoJSON(f,{pane:"protectedAreas",style:{color:"#bd3869",weight:2.5,fillColor:"#bd3869",fillOpacity:0.13,dashArray:p.Type==="SMR"?null:"7 4"}})
         .bindTooltip(esc(p.NAME),{permanent:map.getZoom()>=13,className:"mpa-label",direction:"center"})

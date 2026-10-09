@@ -11,8 +11,9 @@
 // always on; the host's `data-mpa`, `data-mpa-drawn` and `data-mpa-labels`
 // report their state and what MapLibre drew in view. Habitat, geology, reef
 // marks and the selection (FE-18) come from web/map/marks.ts.
-// Registry layers with run-time sources (FE-22's clouds) are created with the
-// Chart and draw through its engine (`layers`, Engine.setOverlay).
+// Registry layers with run-time sources (FE-22's clouds, FE-16's water
+// temperature) are created with the Chart and draw through its engine
+// (`layers`, Engine.setOverlay); a click on open water asks them for a reading.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -27,12 +28,12 @@ import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSource
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
-import {BASEMAP_SOURCE, basemapStyle} from './style.ts';
+import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, type Camera} from './stage.ts';
 
-/** FE-10's pointer to the current basemap archive, under the page's /feeds/ route. */
-export const BASEMAP_MANIFEST = 'feeds/tiles/basemap/manifest.json';
-const ARCHIVE_KEY = /^tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
+/** FE-10's manifest reader moved to style.ts with the basemap (FE-25 reads it on the landing without the Chart). */
+export {BASEMAP_MANIFEST, basemapArchive};
+
 /** NOAA's chart display WMS (the v1 chart's service and its fishing layer set). */
 export const ENC_WMS = 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer'
   + '?service=WMS&request=GetMap&version=1.3.0&layers=0,1,2,6&styles=&format=image/png&transparent=false&crs=EPSG:3857&width=512&height=512&bbox={bbox-epsg-3857}';
@@ -46,16 +47,6 @@ export const chartMark = signal<ChartMark | null>(null);
 export const unavailable = signal<readonly string[]>([]);
 /** True when MapLibre could not start (no WebGL); the stage then shows its "Map unavailable." panel. */
 export const chartFailed = signal(false);
-
-/** The basemap archive's absolute URL from the manifest, or null when there is no valid manifest. */
-export async function basemapArchive(fetchFn: typeof fetch, page: string): Promise<string | null> {
-  try {
-    const response = await fetchFn(new URL(BASEMAP_MANIFEST, page).href, {signal: AbortSignal.timeout(15000)});
-    if (!response.ok) return null;
-    const manifest = await response.json() as {key?: unknown};
-    return typeof manifest.key === 'string' && ARCHIVE_KEY.test(manifest.key) ? new URL(`feeds/${manifest.key}`, page).href : null;
-  } catch { return null; }
-}
 
 export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string}
 /** The whole Chart style in § 9 order: the token basemap (or only its water without an archive), the ENC base, the protected areas, habitat, the seafloor (hidden), marks, then the coastline on top. */
@@ -81,8 +72,11 @@ export function markUnavailable(layer: string, error?: unknown): void {
   unavailable.value = [...unavailable.peek(), layer];
 }
 
-/** A registry layer the Chart draws at run time (FE-22's clouds): created with the Chart, handed its engine once MapLibre is up. */
-export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {destroy(): void};
+/**
+ * A registry layer the Chart draws at run time (FE-22's clouds, FE-16's water temperature): created
+ * with the Chart, handed its engine once MapLibre is up. A field layer reads itself at a click on open water.
+ */
+export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {destroy(): void; reading?(at: {lon: number; lat: number}): ChartMark | null};
 
 export interface ChartOptions {
   host: HTMLElement;
@@ -139,8 +133,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
             : layer === MPA_FILL ? mpaMark(properties) : null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
-          // A click on nothing else reads the drawn surface current, if any (FE-15).
-          chartMark.value = chartPick(layer, properties, other ?? (at && currents?.reading(at) || null));
+          // A click on nothing else reads the drawn surface current (FE-15), else the drawn water temperature (FE-16).
+          chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
         },
         onIdle: () => { host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL)); },
       });
@@ -197,6 +191,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   }
 
   const drawn = layers.map(create => create(engine));
+  const fieldReading = (at: {lon: number; lat: number}): ChartMark | null =>
+    currents?.reading(at) ?? drawn.map(l => l.reading?.(at) ?? null).find(m => m !== null) ?? null;
   return {
     destroy() {
       if (!alive) return;
