@@ -66,6 +66,11 @@ python -m skippercast.pipeline.goes_frames --output var/live-published/goes-time
 if ! python -m skippercast.pipeline.coast_snapshots --root var/live-published; then
   echo "::warning title=Coast ocean packet::assembly failed; the Worker falls back to the Fish bridge once it is 3 h old"
 fi
+# The coast report base (FE-87): NWS area forecasts and alerts, CO-OPS tides, this cycle's buoys, the daily feed's
+# catches and spatial layers. With no usable forecast or buoy reading it keeps the last report (2 h limit at the Worker).
+if ! python -m skippercast.pipeline.coast_report --root var/live-published; then
+  echo "::warning title=Coast report::nothing usable or assembly failed; the Worker falls back to the Fish bridge once the last report is 2 h old"
+fi
 # One parentless commit, force-pushed with a lease: the branch never grows history.
 bash scripts/publish_branch_snapshot.sh conditions var/live-published 'Refresh regional ocean evidence and forecast archive'
 echo "published"

@@ -1078,6 +1078,10 @@ Already in SkipperCast, so no ingest task: Port San Luis tides (`noaa-tides`),
 HFR and WCOFS currents, MUR surface temperature, MPAs, NWS forecast and
 alerts, landing reports (the catch cards use the existing feed with the
 same facts-only review), Natural Earth is replaced by the basemap.
+Corrected 2026-10-08 (FE-87): the report's NWS gridpoint forecasts, the active
+alerts it filters by area and the 6-minute tide curve had no SkipperCast
+collector, so `coast_report.py` ports them from `fish`; Morro Bay's
+sea-surface temperature is NOAA Geo-Polar Blended (`noaa-blended-sst`), not MUR.
 
 CSP changes (each in the task that needs it, with
 `tests/test_security_headers.mjs` updated): `IMAGE_ORIGINS` gains
