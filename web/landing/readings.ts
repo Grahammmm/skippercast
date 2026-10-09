@@ -10,6 +10,8 @@
 export const DEFAULT_REGION = 'morro-bay';
 /** The default region's name (its region.json `name`, equal by test), shown until that loads: the readout names the place it reads (#422). */
 export const DEFAULT_PLACE = 'Morro Bay & Avila';
+/** "Morro Bay & Avila area"; a name that already ends in "area" is kept as it is. */
+export const placeLabel = (name: string): string => /\barea$/i.test(name.trim()) ? name.trim() : `${name.trim()} area`;
 /** v1's rule (dist/live-conditions.js): a feed generated more than 90 minutes ago is late. */
 export const FEED_LATE_MIN = 90;
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';

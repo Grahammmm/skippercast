@@ -14,7 +14,8 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_landing_shoreline.mjs';
-import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, tideReading, tideURL} from '../web/landing/readings.ts';
+import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, placeLabel, tideReading, tideURL} from '../web/landing/readings.ts';
+import {saveData} from '../web/landing/save-data.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -208,6 +209,8 @@ test('every readout tile shows a source and an age, a stale one says stale, and 
   assert.match(html, /<p class="landing-fresh ui-eyebrow" data-state="ok">Buoy feed updated 12 min ago<\/p>/);
   assert.match(html, /aria-labelledby="landing-readout-title"[^>]*><h2 id="landing-readout-title" class="landing-readout-title ui-eyebrow">Latest readings · Morro Bay &amp; Avila area<\/h2>/, 'the strip names the place, not the visitor\'s launch (#422)');
   assert.match(render(h(Readout, {data: {...readout, place: 'Cambria'}})), />Latest readings · Cambria area</);
+  assert.match(render(h(Readout, {data: {...readout, place: 'Santa Barbara Area'}})), />Latest readings · Santa Barbara Area</, 'no second "area"');
+  assert.deepEqual(['Morro Bay & Avila', ' Bay Area ', 'Greater area', 'Areas'].map(placeLabel), ['Morro Bay & Avila area', 'Bay Area', 'Greater area', 'Areas area']);
   assert.doesNotMatch(html, /landing-more/, 'no link without an address');
   assert.match(render(h(Readout, {data: readout, conditions: '/map?region=morro-bay&view=conditions'})), /<a class="landing-more" href="\/map\?region=morro-bay&amp;view=conditions">Hour by hour on the map<\/a>/);
   assert.doesNotMatch(html, /data-fleet/);
@@ -232,7 +235,7 @@ async function loadNight() {
   const out = join(await mkdtemp(join(tmpdir(), 'night-')), 'night.mjs');
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {NIGHT_SOURCES, NightCredit, nightCamera, nightCoastline, nightRegion, nightSource, nightState, nightStyle} from './web/landing/NightMap.tsx';
+      export {NIGHT_SOURCES, NightCredit, NightMap, nightCamera, nightCoastline, nightRegion, nightSource, nightState, nightStyle} from './web/landing/NightMap.tsx';
       export {currentsState} from './web/map/currents.ts';
       export {readPalette} from './web/map/palette.ts';
       export {render} from 'preact-render-to-string';
@@ -303,7 +306,27 @@ test('MapLibre and the night map load only by dynamic import, after first paint 
   assert.match(main, /import\('\.\/NightMap\.tsx'\)/);
   assert.doesNotMatch(main, /from '\.\/NightMap/, 'main.tsx never imports the night map statically');
   assert.match(main, /afterFirstPaint\(nightMap\)/);
-  assert.match(main, /if \(!webgl2\(\)\) return;/, 'no WebGL2: MapLibre is never fetched and the shoreline stays');
+  assert.match(main, /if \(saveData\(navigator\) \|\| !webgl2\(\)\) return;/, 'Save-Data or no WebGL2: MapLibre is never fetched and the shoreline stays');
   assert.match(map, /import\('\.\.\/map\/maplibre\.js'\)/);
   assert.doesNotMatch(map.replace(/^import type [^;]+;$/gm, ''), /from '[^']*(?:maplibre|pmtiles|three|coast3d|embed)[^']*'/, 'MapLibre types only; no renderer');
+});
+
+test('Save-Data keeps the landing to the static shoreline (FE-25 review)', () => {
+  assert.equal(saveData({connection: {saveData: true}}), true);
+  for (const nav of [{connection: {saveData: false}}, {connection: null}, {connection: {}}, {}, null, undefined, {connection: {saveData: 'true'}}]) assert.equal(saveData(nav), false, JSON.stringify(nav));
+});
+
+test('the Currents preview dims the map only while streamlines are drawn (FE-25 review)', async () => {
+  const {NightMap, currentsState, render, h} = await loadNight();
+  const props = {page: 'https://s.test/', region: 'morro-bay'};
+  const before = currentsState.value;
+  try {
+    currentsState.value = {...before, drawn: null};
+    assert.doesNotMatch(render(h(NightMap, props)), /data-currents/);
+    currentsState.value = {...before, drawn: {}};
+    assert.match(render(h(NightMap, props)), /<div class="landing-night" data-state="loading" data-currents="drawn" aria-hidden="true"><\/div>/);
+  } finally { currentsState.value = before; }
+  const css = readFileSync(join(ROOT, 'web/landing/landing.css'), 'utf8');
+  const dims = [...css.matchAll(/^([^{}\n]*maplibregl-canvas[^{}\n]*)\{[^}]*opacity:\s*0\.45/gm)].map(m => m[1].trim());
+  assert.deepEqual(dims, ['.landing[data-preview="currents"] .landing-night[data-currents="drawn"] .maplibregl-canvas'], 'the only dimming rule needs drawn streamlines');
 });

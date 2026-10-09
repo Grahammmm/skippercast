@@ -4,7 +4,8 @@
 // this first module does it and the hero shows for the moment before. Every
 // other visit renders the landing's parts into their hosts beside the
 // static hero. FE-25: once the page has loaded and painted, and only where
-// WebGL2 works (MapLibre 6 needs it), the live night map (NightMap.tsx) loads
+// WebGL2 works (MapLibre 6 needs it) and the visitor has not asked to save
+// data (save-data.ts), the live night map (NightMap.tsx) loads
 // by dynamic import, so neither MapLibre nor the map's modules count against
 // the first paint (design § 13); the static shoreline stays until it draws.
 import {render, type ComponentChild} from 'preact';
@@ -13,6 +14,7 @@ import {loadPorts, portURL, savedPortId, type Port} from '../ports.ts';
 import {LandingApp, LandingHead} from './Landing.tsx';
 import {LayerDots} from './LayerDots.tsx';
 import {DEFAULT_REGION} from './readings.ts';
+import {saveData} from './save-data.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
@@ -53,7 +55,7 @@ const landing = document.querySelector<HTMLElement>('.landing');
 /** `data-night` (the night map's state) and `data-preview` (the hovered layer dot) on the page, for landing.css. */
 const mark = (key: 'night' | 'preview', value: string | null) => { if (landing) { if (value) landing.dataset[key] = value; else delete landing.dataset[key]; } };
 function nightMap(): void {
-  if (!webgl2()) return;
+  if (saveData(navigator) || !webgl2()) return;
   import('./NightMap.tsx').then(({NightMap, NightCredit}) => {
     mount('landing-night', <NightMap page={location.href} region={DEFAULT_REGION} onState={state => mark('night', state)} />);
     mount('landing-credit', <><ShorelineCredit /><NightCredit /></>);

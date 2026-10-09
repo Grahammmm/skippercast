@@ -4,11 +4,12 @@
 // Conditions view for the hour-by-hour detail; and the fleet line, drawn only
 // when the page is given one (the fleet flag is on and a public fleet summary
 // exists). Readings come from readings.ts; nothing is shown before they load.
-// The strip names the region it reads ("Morro Bay area"), not the visitor's
-// launch: the landing reads the default region until it follows the port input.
+// The strip names the region it reads ("Morro Bay & Avila area", from its
+// region.json name), not the visitor's launch: the landing reads the default
+// region until it follows the port input.
 import {Tile, type TileHue} from '../ui/Tile.tsx';
 import type {IconName} from '../ui/icons.tsx';
-import {DEFAULT_PLACE, type Readout as Data, type ReadingId} from './readings.ts';
+import {DEFAULT_PLACE, placeLabel, type Readout as Data, type ReadingId} from './readings.ts';
 
 const LOOK: Readonly<Record<ReadingId, {hue: TileHue; icon: IconName}>> = {
   wind: {hue: 'mint', icon: 'wind'}, swell: {hue: 'blue', icon: 'wave'}, water: {hue: 'coral', icon: 'temperature'}, tide: {hue: 'amber', icon: 'tide'},
@@ -17,7 +18,7 @@ const LOOK: Readonly<Record<ReadingId, {hue: TileHue; icon: IconName}>> = {
 export function Readout({data, fleet, conditions}: {data: Data | null; fleet?: string | null; /** The app's Conditions view for the region. */ conditions?: string}) {
   return (
     <section class="landing-readout" aria-labelledby="landing-readout-title" aria-busy={data ? undefined : 'true'}>
-      <h2 id="landing-readout-title" class="landing-readout-title ui-eyebrow">Latest readings · {data?.place ?? DEFAULT_PLACE} area</h2>
+      <h2 id="landing-readout-title" class="landing-readout-title ui-eyebrow">Latest readings · {placeLabel(data?.place ?? DEFAULT_PLACE)}</h2>
       <ul class="landing-tiles">
         {data ? data.readings.map(r => (
           <li key={r.id} data-reading={r.id}>

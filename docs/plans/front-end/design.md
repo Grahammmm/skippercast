@@ -820,7 +820,8 @@ renders only when the page is given one; no public fleet summary exists
 yet, so it stays hidden.
 
 As built by FE-25 (2026-10-09): once the page has loaded and painted, and
-only where WebGL2 works, `web/landing/main.tsx` imports
+only where WebGL2 works and the browser does not ask to save data
+(`navigator.connection.saveData`), `web/landing/main.tsx` imports
 `web/landing/NightMap.tsx`, which loads MapLibre by dynamic import as the
 Chart does. The map is FE-11's engine in a `still` mode (no gesture, key,
 control or label fade) over FE-72's night variant, framed so the region's

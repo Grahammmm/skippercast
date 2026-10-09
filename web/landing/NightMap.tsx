@@ -148,7 +148,7 @@ export function NightMap({page, region, onState, load = loadLibrary, fetchFn = (
     })();
     return () => { alive = false; stop(); };
   }, []);
-  return <div class="landing-night" ref={host} data-state={nightState.value} aria-hidden="true" />;
+  return <div class="landing-night" ref={host} data-state={nightState.value} data-currents={currentsState.value.drawn ? 'drawn' : undefined} aria-hidden="true" />;
 }
 
 /** The footer's credit for what the night map draws, once it has drawn: the basemap, and the drawn currents' basis (source, age and what the motion means). */
