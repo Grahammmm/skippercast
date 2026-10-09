@@ -5,7 +5,7 @@
 // The features cover each gate of web/map/seafloor.ts: a ranked candidate split
 // across both tiles (one id), a deep candidate, a search area, an interpreted
 // area, a held candidate, a candidate of a held reach, one without rights, and
-// cells of tier 1, tier 0 and a held reach.
+// cells of tier 1, tier 0, a held reach and a reach with cells only.
 // PMTiles v3, uncompressed. Run: node tests/fixtures/seafloor/build-chart.mjs
 import {readFileSync, writeFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -80,6 +80,7 @@ const CELLS = {
     [[1800, 1800, 2600, 2600], cell('3310:fx:1', 'morro-bay-fx1', 1)],
     [[3000, 200, 3800, 900], cell('3310:fx:0', 'morro-bay-fx1', 0)],
     [[2600, 2600, 3400, 3300], cell('3310:fx:2', 'morro-bay-fx2', 1)],
+    [[200, 1200, 900, 1900], cell('3310:fx:3', 'morro-bay-fx3', 1)],
   ],
   [EAST]: [],
 };

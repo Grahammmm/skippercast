@@ -249,15 +249,16 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   const clearTimer = o.clearTimer ?? (t => clearTimeout(t as ReturnType<typeof setTimeout>));
   let state: SeafloorStatus = 'off', enabling = 0, loading = 0, attempt = 0, timer: unknown = null, alive = true, shown = false;
   let manifest: Gate['manifest'] | null = null, pub: Publication | null = null, archive: ArchiveReader | null = null, header: ArchiveHeader | null = null;
-  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), view = 'terrain';
+  // `drawn` holds the selectable features; `filled` says whether the source holds anything, cells included.
+  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), view = 'terrain', filled = false;
   const tiles = new Map<string, Promise<Tile>>();
   const publish = (s: Partial<SeafloorState>) => { seafloorState.value = {...OFF, ...s}; };
   const cancel = () => { if (timer !== null) clearTimer(timer); timer = null; };
   const schedule = (ms: number) => { cancel(); timer = setTimer(() => { timer = null; void enable(true); }, ms); };
   function hide(): void {
     if (shown) for (const id of SEAFLOOR_LAYERS) engine.setVisible(id, false);
-    if (shown || drawn.size) { engine.setData(SEAFLOOR_SOURCE, EMPTY); o.onHide?.(); }
-    shown = false; drawn = new Map();
+    if (shown || filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); o.onHide?.(); }
+    shown = false; filled = false; drawn = new Map();
   }
   function drop(): void { archive = null; header = null; archiveKey = ''; tiles.clear(); }
   function fail(status: SeafloorStatus, reason: string, retry: boolean): void {
@@ -320,7 +321,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const at = camera.peek(), head = header, reader = archive, admit = pub;
     if (!at || !head || !reader || !admit) return;
     const ready = (note: string, more: Partial<SeafloorState> = {}) => publish({status: 'ready', note, ...more});
-    const clear = (note: string) => { if (drawn.size) { engine.setData(SEAFLOOR_SOURCE, EMPTY); drawn = new Map(); o.onHide?.(); } ready(note); };
+    const clear = (note: string) => { if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); o.onHide?.(); } ready(note); };
     if (at.zoom < MIN_VIEW_ZOOM) return clear('Zoom in to see seafloor candidates');
     const {width, height} = o.size();
     const [w, s, e, n] = viewBounds(at, width, height);
@@ -345,6 +346,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     view = seafloorView.peek() === 'fit' && fit ? fit : 'terrain';
     drawn = new Map(habitat.map(f => [f.id, f]));
     engine.setData(SEAFLOOR_SOURCE, collection([...cells, ...habitat], view));
+    filled = cells.length + habitat.length > 0;
     const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - habitat.length;
     ready([`${ranked} candidate${ranked === 1 ? '' : 's'} · ${habitat.length - ranked} unranked in view`,
       deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : ''].filter(Boolean).join(' · '), {

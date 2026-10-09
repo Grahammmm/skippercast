@@ -43,10 +43,15 @@ export interface EngineOptions {
   attribution?: string;
 }
 
+/** What a GeoJSON source accepts: a URL or GeoJSON. */
+export type SourceData = Parameters<MapLibre.GeoJSONSource['setData']>[0];
+
 export interface Engine {
   setCamera(camera: EngineCamera): void;
+  /** Show or hide a style layer; before the style has loaded, the latest call per layer waits for it. */
   setVisible(layerId: string, visible: boolean): void;
-  setData(sourceId: string, data: Parameters<MapLibre.GeoJSONSource['setData']>[0]): void;
+  /** Replace a GeoJSON source's data; before the style has loaded, the latest data per source waits for it. */
+  setData(sourceId: string, data: SourceData): void;
   destroy(): void;
 }
 
@@ -101,17 +106,31 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   }
   const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map.resize()) : null;
   resize?.observe(host);
-  // Layers and sources exist once the style has loaded: earlier calls wait for it, in order.
-  let waiting: (() => void)[] | null = [];
-  map.on('style.load', () => { const run = waiting ?? []; waiting = null; for (const fn of run) fn(); });
-  const styled = (ready: unknown, fn: () => void): void => { if (ready || !waiting) fn(); else waiting.push(fn); };
+  // The style gate (FE-14), this file's one deferral: a style's layers and sources exist only
+  // once MapLibre fires `style.load`. Until then setVisible keeps the latest visibility per
+  // layer and setData the latest data per source; both apply once when it fires. Afterwards
+  // (or for a layer or source that already exists) every call applies at once. Layers route
+  // their visibility and data through setVisible and setData rather than adding a deferral.
+  let early: {visible: Map<string, boolean>; data: Map<string, SourceData>} | null = {visible: new Map(), data: new Map()};
+  const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
+  const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
+  map.on('style.load', () => {
+    const pending = early;
+    early = null;
+    pending?.visible.forEach((visible, layerId) => show(layerId, visible));
+    pending?.data.forEach((data, sourceId) => fill(sourceId, data));
+  });
 
   return {
     setCamera(c) { map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
     setVisible(layerId, visible) {
-      styled(map.getLayer(layerId), () => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); });
+      if (early && !map.getLayer(layerId)) early.visible.set(layerId, visible);
+      else { early?.visible.delete(layerId); show(layerId, visible); }
     },
-    setData(sourceId, data) { styled(map.getSource(sourceId), () => (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data)); },
+    setData(sourceId, data) {
+      if (early && !map.getSource(sourceId)) early.data.set(sourceId, data);
+      else { early?.data.delete(sourceId); fill(sourceId, data); }
+    },
     destroy() { resize?.disconnect(); map.remove(); },
   };
 }

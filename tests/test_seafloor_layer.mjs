@@ -219,9 +219,10 @@ import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
-const fixtureReader = (hold = null) => {
+/** The fixture archive; `bounds` widens its header (a region larger than the two tiles it holds). */
+const fixtureReader = (hold = null, bounds = null) => {
   const archive = new PMTiles({getKey: () => 'fixture', getBytes: async (offset, length) => ({data: FIXTURE.buffer.slice(FIXTURE.byteOffset + offset, FIXTURE.byteOffset + offset + length)})});
-  return {getHeader: () => archive.getHeader(), async getZxy(z, x, y) { if (hold) await hold.promise; return archive.getZxy(z, x, y); }};
+  return {async getHeader() { return {...await archive.getHeader(), ...bounds}; }, async getZxy(z, x, y) { if (hold) await hold.promise; return archive.getZxy(z, x, y); }};
 };
 async function fixtureFeatures() {
   const reader = fixtureReader(), habitat = [], cells = [];
@@ -265,7 +266,7 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
     ['no screen', {screen: undefined}], ['hold reason', {hold_reasons: '["overlap-cdfw-mpa"]'}], ['no hold list', {hold_reasons: undefined}],
     ['quality hold', {habitat_quality_hold: true}], ['no rights', {source_rights: '[]'}], ['bad rights', {source_rights: '[{"source_id":"x"}]'}],
     ['held status', {status: 'held'}], ['prototype status', {status: 'constructor'}], ['no id', {id: ''}]]) assert.equal(as(change), null, name);
-  assert.deepEqual(cells.map(f => admitCell(f, PUB)?.id ?? null), ['cell:3310:fx:1', null, null], 'tier-0 water stays blank; a held reach\'s cells never draw');
+  assert.deepEqual(cells.map(f => admitCell(f, PUB)?.id ?? null), ['cell:3310:fx:1', null, null, null], 'tier-0 water stays blank; held and unscreened reaches\' cells never draw');
   const cell = admitCell(cells[0], PUB);
   assert.deepEqual(cell.rights.map(r => r.credit), ['Fixture Survey Lab']);
   assert.match(cell.basis, /coverage only, with no habitat rank\.$/);
@@ -325,7 +326,7 @@ test('v2: view bounds follow web-mercator spans for a north-up camera', () => {
 const PAGE_V2 = 'https://s.test/map';
 const settle = () => new Promise(resolve => setTimeout(resolve, 25));
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
-function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = ''} = {}) {
+function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null} = {}) {
   configureStore({v2: true, storage: null});
   const url = layers => `${PAGE_V2}?region=morro-bay&profile=${profile}&layers=${layers}${target ? `&target=${target}` : ''}`;
   syncFromURL(url(layers));
@@ -339,7 +340,7 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
   };
   rig.layer = createSeafloor({
     engine: {setVisible: (id, on) => rig.calls.push(['visible', id, on]), setData: (id, data) => { rig.calls.push(['data', id, data.features.length]); rig.data = data; }},
-    open: url => { rig.opened.push(url); return fixtureReader(rig.tileHold); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
+    open: url => { rig.opened.push(url); return fixtureReader(rig.tileHold, bounds); }, size: () => ({width: 1000, height: 700}), page: () => PAGE_V2, now: () => rig.clock,
     setTimer: (fn, delay) => { const id = ++rig.next; rig.timers.set(id, {fn, delay}); return id; }, clearTimer: id => rig.timers.delete(id),
     fetchFn: async url => {
       rig.requests.push(url);
@@ -391,6 +392,31 @@ test('v2: toggling Seafloor adds and removes exactly its layers; held reaches an
   assert.equal(rig.layer.mark('fixture-candidate-a'), null);
   assert.equal(seafloorState.value.status, 'off');
   assert.equal(rig.timers.size, 0, 'off cancels the expiry check');
+});
+
+test('v2: a view with cells and no candidates empties the source when it zooms out, leaves the archive or needs too many tiles', async t => {
+  const onlyCells = LEDGER.replace('"morro-bay-fx1","region":"morro-bay","status":"habitat-screened"', '"morro-bay-fx1","region":"morro-bay","status":"terrain-pending"')
+    .replace('"morro-bay-fx3","region":"morro-bay","status":"unassessed"', '"morro-bay-fx3","region":"morro-bay","status":"habitat-screened"');
+  assert.notEqual(onlyCells, LEDGER);
+  const rig = seafloorRig({ledger: onlyCells, bounds: {minLon: -122, minLat: 34.5, maxLon: -120, maxLat: 36}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.deepEqual(drawnIds(rig), ['cell:3310:fx:3'], 'only the screened reach\'s cell');
+  assert.equal(seafloorState.value.note, '0 candidates · 0 unranked in view');
+  for (const [move, note] of [
+    [{latitude: 35.353, longitude: -120.948, zoom: 9}, 'Zoom in to see seafloor candidates'],
+    [{latitude: 35.0, longitude: -122.5, zoom: 13}, 'No published seafloor survey in this view; the rest of the coast is unassessed'],
+    [{latitude: 35.353, longitude: -120.948, zoom: 10.5}, 'Zoom in to load seafloor candidates'],
+  ]) {
+    camera.value = {latitude: 35.353, longitude: -120.948, zoom: 13};
+    await settle();
+    assert.deepEqual(drawnIds(rig), ['cell:3310:fx:3'], 'drawn again');
+    rig.calls.length = 0;
+    camera.value = move;
+    await settle();
+    assert.deepEqual(rig.calls, [['data', SEAFLOOR_SOURCE, 0]], `${note}: the cells leave the map`);
+    assert.equal(seafloorState.value.note, note);
+  }
 });
 
 test('v2: Spear leaves out candidates deeper than its limit; a target without published fit draws terrain grade', async t => {
