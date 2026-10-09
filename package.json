@@ -22,7 +22,7 @@
     "hono": "4.13.11",
     "maplibre-gl": "6.11.2",
     "pmtiles": "4.5.0",
-    "preact": "10.29.8",
+    "preact": "11.0.0",
     "three": "0.180.0",
     "suncalc": "2.1.0"
   },
