@@ -3,7 +3,12 @@
    rules give it the tokens, 44 px targets and focus rings, and lay out the
    offline section. Loaded after web/app/account.css. Every value is a token. */
 
-.app-trip { width: min(720px, calc(100% - var(--space-6))); overflow: auto; font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
+.app-trip {
+  width: min(720px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); overflow: auto; padding: var(--space-4) var(--space-5) var(--space-5);
+  border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3);
+  font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans);
+}
+.app-trip::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
 .app-trip h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* The region comes from the command bar; v1's region list has no entries in the app. */
 .app-trip label:has(> #export-region) { display: none; }

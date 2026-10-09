@@ -120,7 +120,7 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   // Escape closes the plan and drops #export.
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
-  expect(new URL(page.url()).hash).toBe('');
+  await expect.poll(() => new URL(page.url()).hash, 'the dialog\'s close event drops the hash').toBe('');
   expect(pageErrors).toEqual([]);
 });
 

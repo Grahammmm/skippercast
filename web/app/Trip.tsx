@@ -41,7 +41,7 @@ function TripDialog() {
     if (!open) { if (dialog.open) dialog.close(); delete document.body.dataset.view; }
   }, [open]);
   return (
-    <dialog ref={ref} id="export-panel" class="port-dialog app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
+    <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
       <div class="port-dialog-head">
         <h2 id="export-heading" tabIndex={-1}>Trip plan and GPX</h2>
         <IconButton icon="close" label="Close the trip plan" onClick={closeTrip} />
@@ -134,15 +134,17 @@ function CoastalReadings() {
   );
 }
 
-/** Both dialogs, mounted once at the app's root so a layout change keeps the planner's markup. */
+/** Both dialogs at the app's root: the plan's stays mounted, so a layout change keeps the planner's markup; the offline one mounts while open. */
 export function Trip() {
   return (
     <>
       <TripDialog />
-      <PortDialog open={offlineOpen.value} onClose={() => { offlineOpen.value = false; }} title="Save for offline">
-        <ChartPack />
-        <CoastalReadings />
-      </PortDialog>
+      {offlineOpen.value ? (
+        <PortDialog open onClose={() => { offlineOpen.value = false; }} title="Save for offline">
+          <ChartPack />
+          <CoastalReadings />
+        </PortDialog>
+      ) : null}
     </>
   );
 }
