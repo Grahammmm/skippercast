@@ -13,10 +13,20 @@
 // their registry roles from the token palette; a pick of one opens the mark
 // card as the same pick on the Chart does (a reef mark selects its `?spot=`).
 //
+// FE-80: the renderer mounts with host chrome (FE-79), so its own panels leave
+// the scene. The Seafloor rail entry sets the terrain options (terrainOptions:
+// relief, water, contours, source coverage, reefs and pins) through the
+// handle's setters; readings and habitat evidence arrive as data for the mark
+// card (terrainReading, terrainDetail); the source inventory (terrainCoverage)
+// keys the legend; terrainActions gives the stage's zoom, reset and top-view
+// buttons and the sources sheet behind the basis links.
+//
 // Erasable syntax only: tests/test_map_stage.mjs imports this file by type
 // stripping and passes a fake terrain module, so no GPU or three is needed.
 import {computed, effect, signal} from '@preact/signals';
-import type {CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
+import type {
+  CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastSourceCoverage, CoastTargetDetail,
+} from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
 import type {ChartMark} from './coastline.ts';
 import {LAYERS, drapeStyle, terrainLayers, type TerrainLayer} from './layers.ts';
@@ -25,7 +35,7 @@ import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from
 import {dockTime} from '../hour.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from '../profile.ts';
 import {
-  appView, current, day, habitat, hour, navigate, parseHour, presentation, profile, region, selection, setParams, species,
+  appView, current, day, habitat, hour, layers, navigate, parseHour, presentation, profile, region, selection, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
 
@@ -149,6 +159,44 @@ export const terrainDetail = signal<CoastTargetDetail | null>(null);
 export const terrainPick = signal<ChartMark | null>(null);
 const pageHidden = signal(false);
 
+/** The terrain's display options (FE-80), starting from the native panel's defaults; the Seafloor rail entry sets them. */
+export interface TerrainOptions {
+  /** Seabed relief exaggeration, 1 (true scale) to 12. */
+  readonly relief: number;
+  readonly water: boolean;
+  /** Opacity of the illustrative water surface, 0 to 0.8. */
+  readonly waterOpacity: number;
+  readonly contours: boolean;
+  readonly sourceCoverage: boolean;
+  /** Reefs and species pins; they also need the Seafloor entry on. */
+  readonly habitat: boolean;
+}
+export const TERRAIN_DEFAULTS: TerrainOptions = Object.freeze({relief: 5, water: true, waterOpacity: 0.5, contours: true, sourceCoverage: false, habitat: true});
+export const terrainOptions = signal<TerrainOptions>(TERRAIN_DEFAULTS);
+export function setTerrainOption<K extends keyof TerrainOptions>(name: K, value: TerrainOptions[K]): void {
+  terrainOptions.value = {...terrainOptions.peek(), [name]: value};
+}
+/** The last terrain inspection, with the renderer's measured or modelled label and source clock verbatim; null when it clears. */
+export const terrainReading = signal<CoastReading | null>(null);
+/** The renderer's terrain sources and its source-coverage key, once the reviewed release loads. */
+export const terrainCoverage = signal<CoastSourceCoverage | null>(null);
+/** The mounted renderer's view buttons and sources sheet; null while no terrain is mounted. */
+export interface TerrainActions {zoom(direction: 'in' | 'out'): void; reset(): void; top(): void; sources(): void}
+export const terrainActions = signal<TerrainActions | null>(null);
+
+const SETTERS: {[K in keyof TerrainOptions]: (h: CoastHandle, value: TerrainOptions[K]) => void} = {
+  relief: (h, v) => h.setRelief(v), water: (h, v) => h.setWaterVisible(v), waterOpacity: (h, v) => h.setWaterOpacity(v),
+  contours: (h, v) => h.setContours(v), sourceCoverage: (h, v) => h.setSourceCoverage(v), habitat: (h, v) => h.setHabitatVisible(v),
+};
+/** Tell the renderer the options that differ from what it shows; returns what it shows now. */
+export function applyOptions(h: CoastHandle, wanted: TerrainOptions, seafloorOn: boolean, shown: TerrainOptions): TerrainOptions {
+  const next: TerrainOptions = {...wanted, habitat: wanted.habitat && seafloorOn};
+  for (const name of Object.keys(SETTERS) as (keyof TerrainOptions)[]) {
+    if (next[name] !== shown[name]) (SETTERS[name] as (h: CoastHandle, value: unknown) => void)(h, next[name]);
+  }
+  return next;
+}
+
 export interface Stage {destroy(): void}
 
 const key = (value: unknown): string => JSON.stringify(value);
@@ -190,6 +238,8 @@ export function createStage(options: StageOptions): Stage {
   const handle = signal<CoastHandle | null>(null);
   let applied: Partial<Record<keyof TerrainState, string>> = {};
   let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
+  // The native controls start at TERRAIN_DEFAULTS, so a fresh mount needs only the differences.
+  let shownOptions: TerrainOptions = {...TERRAIN_DEFAULTS};
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, clockTimer: ReturnType<typeof setTimeout> | undefined;
   // Without ?hour= the terrain shows the current whole hour; this clock moves it on at each hour boundary.
   const clock = signal(now());
@@ -226,6 +276,7 @@ export function createStage(options: StageOptions): Stage {
   const release = (): void => {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
+    shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null;
     h?.destroy();
   };
   const fail = (error: unknown): void => {
@@ -239,6 +290,11 @@ export function createStage(options: StageOptions): Stage {
     const c = options.center?.();
     return c ? {latitude: c[0], longitude: c[1], zoom: HOME_ZOOM} : null;
   };
+  // The host decides where home is: the region's centre, written to ?view=.
+  const reset = (): void => {
+    const next = home();
+    if (next) setParams({view: cameraParam(next)});
+  };
 
   async function mount(): Promise<void> {
     if (mounting || handle.peek() || terrainFailed.peek()) return;
@@ -249,16 +305,19 @@ export function createStage(options: StageOptions): Stage {
       const state = wanted.peek();
       overlayPalette = options.overlayPalette?.();
       const h = terrain.mountCoast(host, {
-        styles: terrain.styles, hostCurrents: true, palette: options.palette?.(), overlayPalette,
+        styles: terrain.styles, chrome: 'host', hostCurrents: true, palette: options.palette?.(), overlayPalette,
         // A registry overlay's pick is the Chart's pick of the same feature (one selection at a time).
         onOverlayPick: ({overlay, feature}) => {
           const layer = terrainLayers.peek()[overlay];
+          terrainReading.value = null;
           if (layer) terrainPick.value = layer.pick(feature);
         },
+        onReading: reading => { terrainReading.value = reading; if (reading) terrainPick.value = null; },
+        onSourceCoverage: coverage => { terrainCoverage.value = coverage; },
         forecastHref: withParams(location.href, {view: 'conditions'}),
         initial: {...state, location: state.location ?? undefined},
         onSelection: picked => {
-          terrainMark.value = picked;
+          terrainMark.value = picked; terrainReading.value = null;
           if (!picked.id || picked.id === habitat.peek()) return;
           applied.habitat = key(picked.id);
           navigate(habitatHref(location.href, picked.id));
@@ -272,10 +331,7 @@ export function createStage(options: StageOptions): Stage {
           handle.peek()?.selectHabitat(null);
           setParams({habitat: null});
         },
-        onReset: () => {
-          const next = home();
-          if (next) setParams({view: cameraParam(next)});
-        },
+        onReset: reset,
         onCurrentStatus: text => { if (current.peek() !== UNSUPPORTED) currentStatus.value = text; },
         onView: seen => {
           if (appView.peek() !== 'coast') return;
@@ -295,6 +351,7 @@ export function createStage(options: StageOptions): Stage {
       for (const name of ORDER) applied[name] = key(state[name]);
       markHour(state.hour);
       handle.value = h;
+      terrainActions.value = {zoom: direction => h.zoom(direction), reset, top: () => h.topView(), sources: () => h.openSources()};
       const ready = await h.load();
       if (alive && !ready) fail(new Error('Coastal terrain did not load'));
     } catch (error) {
@@ -314,9 +371,10 @@ export function createStage(options: StageOptions): Stage {
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),
+    effect(() => { const h = handle.value, wanted = terrainOptions.value, on = layers.value.includes('seafloor'); if (h) shownOptions = applyOptions(h, wanted, on, shownOptions); }),
     effect(() => { const h = handle.value, feeds = terrainLayers.value; if (h && overlayPalette) draped = drape(h, feeds, overlayPalette, draped); }),
     // A link selection (a mark, a terrain habitat, Back) or a new region replaces a picked overlay's card.
-    effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; }),
+    effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; terrainReading.value = null; }),
     effect(() => { if (current.value === UNSUPPORTED) currentStatus.value = UNSUPPORTED_CURRENT; else if (current.value === 'off') currentStatus.value = ''; }),
   ];
   const renderers = (options.renderers ?? []).map(create => create());

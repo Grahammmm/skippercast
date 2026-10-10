@@ -7,8 +7,11 @@
 // run-time layers (FE-17's swell, FE-16's water temperature, FE-22's clouds, FE-23's
 // aerial base, FE-21's charter grounds and commercial AIS, FE-24's admin fleet activity) are created with it; the swell reads a click first, since it draws above
 // the water temperature.
+// FE-80: in 2D and 3D the terrain's zoom, reset and top view are the stage's own
+// buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
 import type {ComponentChildren} from 'preact';
 import {useEffect, useRef} from 'preact/hooks';
+import {IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
@@ -21,7 +24,7 @@ import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createSwell} from '../map/swell.ts';
-import {choosePresentation, createStage, shownPresentation, terrainBlocked} from '../map/stage.ts';
+import {choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {profile, region, species} from '../state.ts';
 import {regionInfo, zone} from './App.tsx';
 
@@ -45,6 +48,20 @@ export function PresentationToggle() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** The terrain's view buttons (FE-80), in the Chart's zoom-control group; absent until the renderer mounts. */
+export function TerrainControls() {
+  const a = terrainActions.value;
+  if (!a || shownPresentation.value === 'chart') return null;
+  return (
+    <div class="app-terrain-controls" role="group" aria-label="Terrain view">
+      <IconButton icon="plus" label="Zoom in" onClick={() => a.zoom('in')} />
+      <IconButton icon="minus" label="Zoom out" onClick={() => a.zoom('out')} />
+      <IconButton icon="target" label="Reset map view" onClick={() => a.reset()} />
+      <IconButton icon="compass" label="View from above" onClick={() => a.top()} />
     </div>
   );
 }
@@ -74,6 +91,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
         {chartFailed.value ? <span>Map unavailable.</span> : null}
       </div>
       <div class="app-terrain" ref={terrainHost} hidden={shown === 'chart'} data-coast-theme="tokens" />
+      <TerrainControls />
       <PresentationToggle />
       {children}
     </section>

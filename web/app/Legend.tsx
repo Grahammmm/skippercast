@@ -32,6 +32,9 @@
 // FE-82: protected areas, reef marks and charter grounds also drape on the
 // terrain, so the protected areas' row and the Charter fleet row show there too;
 // commercial AIS still draws on the Chart only and says so.
+// FE-80: in 2D and 3D the Seafloor row is the terrain's: its depth ramp, the
+// terrain basis, the screened candidates as "Chart only", and while Source
+// coverage is on the renderer's colour key and its sources with their dates, verbatim.
 import {IconButton} from '../ui/Button.tsx';
 import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
@@ -48,7 +51,7 @@ import {waterTempState} from '../map/sst.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
-import {currentStatus, shownPresentation} from '../map/stage.ts';
+import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES, railOn} from './rail.ts';
@@ -72,6 +75,22 @@ function SeafloorRow() {
         </div>
       ) : null}
       {s.note ? <p class="app-legend-note" data-reason="seafloor">{s.note}</p> : null}
+    </li>
+  );
+}
+
+/** The Seafloor row in 2D and 3D (FE-80): what the terrain draws, and the source key while Source coverage is on. */
+function TerrainSeafloorRow() {
+  const coverage = terrainCoverage.value, shown = terrainOptions.value.sourceCoverage;
+  return (
+    <li class="app-legend-seafloor">
+      <span class="app-swatch" data-layer="seafloor" aria-hidden="true"></span>Seafloor · shallow to deep
+      <Popover iconOnly summary="Terrain basis">
+        <p>{layerEntry('relief').basis}</p>
+        {coverage?.sources.map(s => <p key={s.id}><a href={s.url} target="_blank" rel="noopener">{s.label} · {s.sourceDate}</a></p>)}
+      </Popover>
+      {shown && coverage?.key ? <p class="app-legend-note" data-key="source-coverage">{coverage.key}</p> : null}
+      <p class="app-legend-note" data-reason="seafloor">Screened candidates: {CHART_ONLY}</p>
     </li>
   );
 }
@@ -207,7 +226,7 @@ export function Legend() {
       <span class="ui-eyebrow">Legend</span>
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
-          : e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
+          : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
           : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
