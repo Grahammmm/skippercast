@@ -1,9 +1,10 @@
 // Command bar (FE-05, design § 6 and § 8): the Boat / Shore / Spear switch
 // (FE-20: a switch restores that profile's own layers, stored or default),
 // the target species, the area and the time window, each bound to the store.
-// The target list is the profile's defaults until FE-31 wires the region's
-// search plans; the area list is the current choice until FE-31 reads
-// coasts.json. Both menus keep whatever the link names so nothing is lost.
+// The target list (FE-30, web/species.ts) is the profile's species, the
+// region's search plans fitting its method and the coast targets; the area
+// list is the current choice until FE-31 reads coasts.json. Both menus keep
+// whatever the link names so nothing is lost.
 // The area group also holds the port (FE-08, § 7): a button that opens the
 // port chooser with search, "Use my location" and "Explore the coast"; a
 // choice saves the port for v1 and v2 and navigates in place.
@@ -12,7 +13,8 @@ import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
-import {PROFILES, PROFILE_TABLE, speciesForProfile, type Profile} from '../profile.ts';
+import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
+import {regionPlans, targetsFor, type TargetOption} from '../species.ts';
 import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
 import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
@@ -22,11 +24,12 @@ import {titleCase} from './Masthead.tsx';
 
 const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id].label, icon: id} as const));
 
-/** The profile's target list, plus the link's target when it is not in it. */
-export function targetOptions(p: Profile, current: string | null): string[] {
-  const ids = speciesForProfile({}, p);
-  return current && !ids.includes(current) ? [current, ...ids] : ids;
+/** The profile's target list in the current region, plus the link's target when it is not in it. */
+export function targetList(p: Profile, current: string | null): TargetOption[] {
+  const r = region.value, loaded = regionPlans.value;
+  return targetsFor(p, r, loaded && loaded.region === r ? loaded.plans : {}, current);
 }
+export const targetOptions = (p: Profile, current: string | null): string[] => targetList(p, current).map(t => t.id);
 
 /** "Today · 2 pm" or "Tue · 6 am": the time window the dock has selected. */
 export function windowText(now: Date, tz: string): string {
@@ -44,7 +47,7 @@ export function TargetSelect() {
   return (
     <label>Target
       <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
-        {targetOptions(p, species.value).map(id => <option key={id} value={id}>{titleCase(id)}</option>)}
+        {targetList(p, species.value).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
       </select>
     </label>
   );

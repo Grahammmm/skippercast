@@ -138,7 +138,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /href="[^"]*[?&]view=history[^"]*" data-view="history"/);
   assert.doesNotMatch(html.match(/<a href="([^"]*)" data-view="coast"/)[1], /view=/, 'coast is the default and drops ?view=');
   // Target and area menus show the link's values.
-  assert.match(html, /<label>Target<select><option value="surfperch">Surfperch<\/option><option selected value="halibut">Halibut<\/option><\/select>/);
+  assert.match(html, /<label>Target<select><option value="surfperch">Barred surfperch<\/option><option selected value="halibut">California halibut<\/option><\/select>/, 'the coast targets\' names (FE-30)');
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
   // Rail and legend: swell and water temp on, the rest off; the protected areas always draw on the Chart (FE-19).
   const rail = Object.fromEntries([...html.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
