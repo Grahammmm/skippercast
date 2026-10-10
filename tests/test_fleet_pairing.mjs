@@ -163,8 +163,13 @@ test('a report pairs with one trip: two same-day trips and one report give one r
     // An earlier trip with the same fishing time takes both reports over; the sweep leaves one row each.
     await call(db, windowBody([W(A)], [long, short, twin]));
     await call(db, PROCESSED);
-    assert.deepEqual(rows().filter(r => r[0] === 'advisor'), [['advisor', 'r-one', twin.id]]);
+    assert.deepEqual(rows(), [['advisor', 'r-one', twin.id], ['landing', 'land0001', twin.id]]);
     assert.equal(pairs(sql).filter(p => p.report_kind === 'advisor').length, 1);
+    assert.equal(sql.prepare("SELECT COUNT(DISTINCT trip_id) n FROM fleet_trip_reports WHERE report_kind='landing'").get().n, 1, 'the landing report is not double-counted');
+    // A feed that cannot be read keeps its pairings: the prune only judges reports it can see.
+    feed = new Error('feed down');
+    await call(db, PROCESSED);
+    assert.deepEqual(rows(), [['advisor', 'r-one', twin.id], ['landing', 'land0001', twin.id]]);
   } finally { sql.close(); }
 });
 

@@ -36,7 +36,7 @@ import {recordFleetAis} from '../analytics.ts';
 import {sha256} from '../advisor/ids.ts';
 import type {Env} from '../env.ts';
 import {FLEET_ENUMS, MAX_PARAMS, REGION, RUN_ID} from './registry.ts';
-import {advisorPairs, advisorPrune, landingPairs, landingRows, SWEEP_DAYS} from './pairing.ts';
+import {advisorPairs, advisorPrune, landingPairs, landingPrune, landingRows, SWEEP_DAYS} from './pairing.ts';
 
 export const MAX_ACTIVITY_BYTES = 1024 * 1024;
 export const LIMITS = {windows: 50, trips: 200, segments: 4000, events: 2000, cells: 1000, hours: 72} as const;
@@ -239,7 +239,7 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
       UNION SELECT return_port_id FROM fleet_trips t WHERE ${recent.sql}) WHERE p IS NOT NULL`).bind(...recent.args, ...recent.args).all<{p: string}>()).results.map(r => r.p);
     const landing = await landingRows(ports, recent.args[1] as string);
     feeds = {read: landing.feeds - landing.unavailable, unavailable: landing.unavailable, reports: landing.rows.length};
-    add('unpaired', [advisorPrune(db, recent)]);
+    add('unpaired', [advisorPrune(db, recent), ...landingPrune(db, region, recent, landing.rows)]);
     add('paired_advisor', [advisorPairs(db, recent, now)]);
     add('paired_landing', landingPairs(db, region, recent, landing.rows, now));
     add('processed', [db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')

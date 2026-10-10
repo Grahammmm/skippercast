@@ -19,7 +19,9 @@
 // SWEEP_DAYS days (the daily feed keeps 30 days of reports), so a report published after
 // its trip was written still pairs. Feeds come from R2 when bound (readFeed); a feed that
 // cannot be read skips only its ports' landing pairs. Every write is INSERT OR IGNORE on
-// (trip_id, report_kind, report_ref), so a re-run leaves the same rows. Pairing never
+// (trip_id, report_kind, report_ref), so a re-run leaves the same rows; before pairing, the sweep
+// removes advisor and landing rows whose report now pairs with another trip, so a report keeps one
+// row when a better same-day trip arrives later. Pairing never
 // changes the trips or their events: species attribution is a later step.
 import homePorts from '../../catalog/home-ports.json' with {type: 'json'};
 import portAliases from '../../catalog/advisor/port-aliases.json' with {type: 'json'};
@@ -100,20 +102,32 @@ export const advisorPrune = (db: D1Database, scope: TripScope): D1PreparedStatem
 
 const LANDING_CHUNK = 2000;   // feed rows per statement (one JSON parameter, well under D1's 2 MB value limit)
 
-/** Statements pairing the trips of `region` in `scope` with `rows`; a name that fits two of the region's vessels pairs nothing, and a report pairs with one trip. */
-export function landingPairs(db: D1Database, region: string, scope: TripScope, rows: LandingRow[], now: string): D1PreparedStatement[] {
-  const out: D1PreparedStatement[] = [];
-  for (let i = 0; i < rows.length; i += LANDING_CHUNK) out.push(db.prepare(`${INSERT}
-    WITH l AS (SELECT json_extract(value,'$.id') id, json_extract(value,'$.norm') norm, json_extract(value,'$.port') port,
+// The feed rows of one chunk (bound as JSON, then the region twice), the region's vessel names, and each
+// report's ranked trips: a name that fits two of the region's vessels ranks nothing.
+const LANDING_WITH = `WITH l AS (SELECT json_extract(value,'$.id') id, json_extract(value,'$.norm') norm, json_extract(value,'$.port') port,
         json_extract(value,'$.date') date FROM json_each(?)),
       names AS (SELECT id vessel_id, name_norm norm FROM fleet_vessels WHERE region=?
         UNION SELECT a.vessel_id, a.alias_norm FROM fleet_aliases a JOIN fleet_vessels v ON v.id=a.vessel_id WHERE v.region=?),
       hits AS (SELECT l.id, l.port, l.date, n.vessel_id FROM l JOIN names n ON n.norm=l.norm),
-      sole AS (SELECT id FROM hits GROUP BY id HAVING COUNT(DISTINCT vessel_id)=1)
-    SELECT x.trip_id,'landing',x.id,'alias-port-date',?,? FROM (
-      SELECT t.id trip_id, h.id, ROW_NUMBER() OVER (PARTITION BY h.id ${ONE_TRIP}) rn
-      FROM hits h JOIN sole s ON s.id=h.id
-      JOIN fleet_trips t ON t.vessel_id=h.vessel_id AND t.local_date=h.date AND h.port IN (t.depart_port_id,t.return_port_id)) x
-    WHERE x.rn=1 AND x.trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})`).bind(JSON.stringify(rows.slice(i, i + LANDING_CHUNK)), region, region, CONFIDENCE.landing, now, ...scope.args));
+      sole AS (SELECT id FROM hits GROUP BY id HAVING COUNT(DISTINCT vessel_id)=1),
+      ranked AS (SELECT t.id trip_id, h.id, ROW_NUMBER() OVER (PARTITION BY h.id ${ONE_TRIP}) rn
+        FROM hits h JOIN sole s ON s.id=h.id
+        JOIN fleet_trips t ON t.vessel_id=h.vessel_id AND t.local_date=h.date AND h.port IN (t.depart_port_id,t.return_port_id))`;
+const chunks = (rows: LandingRow[]): string[] => {
+  const out: string[] = [];
+  for (let i = 0; i < rows.length; i += LANDING_CHUNK) out.push(JSON.stringify(rows.slice(i, i + LANDING_CHUNK)));
   return out;
-}
+};
+
+/** Statements pairing the trips of `region` in `scope` with `rows`; a name that fits two of the region's vessels pairs nothing, and a report pairs with one trip. */
+export const landingPairs = (db: D1Database, region: string, scope: TripScope, rows: LandingRow[], now: string): D1PreparedStatement[] =>
+  chunks(rows).map(json => db.prepare(`${INSERT} ${LANDING_WITH}
+    SELECT x.trip_id,'landing',x.id,'alias-port-date',?,? FROM ranked x
+    WHERE x.rn=1 AND x.trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})`).bind(json, region, region, CONFIDENCE.landing, now, ...scope.args));
+
+/** Statements removing landing pairings of the trips in `scope` whose report is one of `rows` but no longer pairs with that trip (another trip outranks it, or its name became ambiguous). Reports missing from `rows`, such as those of a feed that could not be read, keep their pairings. */
+export const landingPrune = (db: D1Database, region: string, scope: TripScope, rows: LandingRow[]): D1PreparedStatement[] =>
+  chunks(rows).map(json => db.prepare(`${LANDING_WITH}
+    DELETE FROM fleet_trip_reports WHERE report_kind='landing' AND trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})
+      AND report_ref IN (SELECT id FROM l)
+      AND NOT EXISTS (SELECT 1 FROM ranked x WHERE x.rn=1 AND x.trip_id=fleet_trip_reports.trip_id AND x.id=fleet_trip_reports.report_ref)`).bind(json, region, region, ...scope.args));
