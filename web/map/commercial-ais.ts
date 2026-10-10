@@ -14,7 +14,7 @@
 import {computed, effect, signal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {layers, region} from '../state.ts';
-import {AIS_HEAT, AIS_LINE, assetLoader, fleetBefore, screened, type Collection, type FleetLayerOptions} from './charter-grounds.ts';
+import {AIS_HEAT, AIS_LINE, aisBefore, assetLoader, screened, type Collection, type FleetLayerOptions} from './charter-grounds.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
 import type {MarkScreen} from './habitat.ts';
@@ -110,8 +110,8 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
       if (!e) return;
       if (!list.length) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
       const data = cellCollection(list);
-      // § 9 draw order: above the charter grounds, under the cloud frames and the marks.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data), fleetBefore());
+      // § 9 draw order: above the charter grounds, under the fleet activity layers, the cloud frames and the marks.
+      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data), aisBefore());
       e.setData(AIS_SOURCE, data);
       drawn = true; drawnOn = e;
     }),

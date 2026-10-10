@@ -111,8 +111,14 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-swatch[data-layer="commercial-ais"] { box-sizing: border-box; border: 1px solid var(--fleet); background: linear-gradient(90deg, color-mix(in srgb, var(--fleet) 15%, transparent), color-mix(in srgb, var(--fleet) 45%, transparent)); }
 .app-legend-fleet { flex-wrap: wrap; }
 .app-legend-sub { display: flex; align-items: center; gap: var(--space-2); color: var(--text); }
-.app-rail-option { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); padding: 0 var(--space-2); color: var(--muted); font-size: var(--text-11); cursor: pointer; }
+/* FE-24: the Charter fleet options take the rail's width, never set it (contain), so four wrapped options do not widen the rail. */
+.app-rail-options { flex-basis: 100%; contain: inline-size; }
+.app-rail-option { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); padding: 0 var(--space-2); color: var(--muted); font-size: var(--text-11); cursor: pointer; }
 .app-rail-option input { width: var(--space-4); height: var(--space-4); margin: 0; accent-color: var(--fleet); }
+/* FE-24: the admin fleet activity keys, all --fleet: heat cells, a trip track, a stop. */
+.app-swatch[data-layer="fleet-heat"] { background: color-mix(in srgb, var(--fleet) 45%, transparent); }
+.app-swatch[data-layer="fleet-tracks"] { height: var(--space-1); background: var(--fleet); }
+.app-swatch[data-layer="fleet-events"] { width: var(--space-3); height: var(--space-3); box-sizing: border-box; border: 2px solid var(--fleet); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--fleet) 55%, transparent); }
 .app-swatch[data-layer="clouds"] { background: var(--text); }
 /* Seafloor (FE-14): the depth ramp ranks grade and fit, strongest brightest; unranked areas are dashed outlines; cells are the deepest step. */
 .app-legend-seafloor { flex-wrap: wrap; }

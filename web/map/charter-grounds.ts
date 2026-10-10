@@ -48,8 +48,12 @@ export const BROAD = 'Broad regional name';
 export const AIS_HEAT = 'commercial-ais-heat';
 export const AIS_LINE = 'commercial-ais-line';
 export const AIS_LAYERS = [AIS_HEAT, AIS_LINE] as const;
+/** The admin fleet activity layers (web/map/fleet.ts, FE-24), bottom to top: heat, tracks, dashed tracks, events. */
+export const ACTIVITY_LAYERS = ['fleet-heat', 'fleet-tracks', 'fleet-tracks-dashed', 'fleet-events'] as const;
 /** § 9: fleet layers draw under the cloud frames, the marks, the selection and the coastline. */
 export const fleetBefore = (): string[] => [...cloudLayerIds(), MARK_PICK];
+/** Commercial AIS draws under the fleet activity layers (§ 9: grounds, AIS, heat, tracks, events). */
+export const aisBefore = (): string[] => [...ACTIVITY_LAYERS, ...fleetBefore()];
 
 /** v1's lines (dist/charter-grounds.js) for what is not drawn. */
 export const NOTES = {
@@ -199,7 +203,7 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
       if (!list.length) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
       const data = groundCollections(list);
       // § 9 draw order: above the seafloor, under commercial AIS, the cloud frames and the marks.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, groundsOverlay(palette(), data), [...AIS_LAYERS, ...fleetBefore()]);
+      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, groundsOverlay(palette(), data), [...AIS_LAYERS, ...aisBefore()]);
       e.setData(GROUNDS_SOURCE, data.outlines); e.setData(HATCH_SOURCE, data.hatch);
       drawn = true; drawnOn = e;
     }),

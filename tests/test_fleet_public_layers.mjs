@@ -9,7 +9,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {
-  AIS_LAYERS, BROAD, GROUNDS_FILL, GROUNDS_HATCH, GROUNDS_LABEL, GROUNDS_LINE, GROUNDS_SOURCE, HATCH_SOURCE, NOTES, createCharterGrounds,
+  ACTIVITY_LAYERS, AIS_LAYERS, BROAD, GROUNDS_FILL, GROUNDS_HATCH, GROUNDS_LABEL, GROUNDS_LINE, GROUNDS_SOURCE, HATCH_SOURCE, NOTES, createCharterGrounds,
   groundCollections, groundMark, groundsOverlay, groundsState, hatchLines, shownGrounds,
 } from '../web/map/charter-grounds.ts';
 import {AIS_CREDIT, AIS_HEAT, AIS_LINE, AIS_SOURCE, aisMark, aisOn, aisOverlay, aisState, aisSummary, cellCollection, createCommercialAis, shownCells} from '../web/map/commercial-ais.ts';
@@ -92,7 +92,7 @@ test('Accept 1: both layers render from the committed files, offline, in the --f
   await flush(); await flush();
   assert.deepEqual(asked, ['data/charter-grounds.json'], 'commercial AIS waits for its option');
   assert.deepEqual(calls.filter(c => c[1] === 'charter-grounds' || c[1] === GROUNDS_SOURCE || c[1] === HATCH_SOURCE).slice(-3), [
-    ['overlay', 'charter-grounds', [GROUNDS_FILL, GROUNDS_HATCH, GROUNDS_LINE, GROUNDS_LABEL], [...AIS_LAYERS, MARK_PICK]],
+    ['overlay', 'charter-grounds', [GROUNDS_FILL, GROUNDS_HATCH, GROUNDS_LINE, GROUNDS_LABEL], [...AIS_LAYERS, ...ACTIVITY_LAYERS, MARK_PICK]],
     ['data', GROUNDS_SOURCE, 2], ['data', HATCH_SOURCE, 2]]);
   assert.deepEqual(groundsState.value, {drawn: 2, note: '', audit: GROUNDS.audit_date});
   assert.equal(railNotes.value.fleet, '2 charter grounds');
@@ -101,7 +101,7 @@ test('Accept 1: both layers render from the committed files, offline, in the --f
   aisOn.value = true;
   await flush(); await flush();
   assert.deepEqual(asked, ['data/charter-grounds.json', 'data/commercial-ais-effort.geojson']);
-  assert.deepEqual(calls.slice(-2), [['overlay', 'commercial-ais', [AIS_HEAT, AIS_LINE], [MARK_PICK]], ['data', AIS_SOURCE, 3]]);
+  assert.deepEqual(calls.slice(-2), [['overlay', 'commercial-ais', [AIS_HEAT, AIS_LINE], [...ACTIVITY_LAYERS, MARK_PICK]], ['data', AIS_SOURCE, 3]]);
   assert.deepEqual(aisState.value, {offered: true, drawn: 3, note: aisSummary(3)});
   assert.equal(aisSummary(3), '3 historical grid cells · Jul & Sep 2024 · depth unknown');
   // The cards.
