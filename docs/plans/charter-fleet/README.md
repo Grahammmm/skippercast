@@ -191,3 +191,53 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   runbooks (`FLEET_ENABLED`, `ENABLE_FLEET`, `AISSTREAM_API_KEY`, the
   subscription token on Hermes, linger), then the staging run, the first
   registry run, the listener install and the first OSINT run.
+- 2026-10-10: Layer 0 baseline (read from public Actions run metadata and
+  logs, counts only, no registry or AIS contents; `main` at `cb0b0ed`). Pending
+  CF-62 is partly done: the first CA runs happened on 2026-10-05/06 on the
+  data runner, although [#458](https://github.com/Grahammmm/skippercast/issues/458)
+  still shows every owner box unticked (it was last edited 2026-10-08 and is
+  out of date). Prompts A and B are
+  [#468](https://github.com/Grahammmm/skippercast/issues/468) and
+  [#469](https://github.com/Grahammmm/skippercast/issues/469) (both open);
+  [#459](https://github.com/Grahammmm/skippercast/issues/459) is closed and
+  superseded by them.
+  - Has run: *Fleet registry* CA, `worker` sink, one successful run
+    ([run](https://github.com/Grahammmm/skippercast/actions/runs/37367387546)),
+    status `partial` (28 bindings, 1 failed; 267 vessels created, 64 reviews
+    opened; `GOOGLE_PLACES_API_KEY` empty, so Places enrichment skipped).
+    *Fleet OSINT* CA: two failed dispatches
+    ([run](https://github.com/Grahammmm/skippercast/actions/runs/37368164296),
+    [run](https://github.com/Grahammmm/skippercast/actions/runs/37371281783))
+    then one success ([run](https://github.com/Grahammmm/skippercast/actions/runs/37414628981)):
+    14 of 14 batches done, 267 profiles planned, ingest `partial` (257
+    ingested, 10 refused, 198 reviews open). *Fleet AIS listener* installed
+    once ([run](https://github.com/Grahammmm/skippercast/actions/runs/37367390065)):
+    the heartbeat showed messages within 90 seconds, so the aisstream secret
+    is set. *Fleet AIS processor* has run on schedule (21 runs since
+    2026-10-08; latest [success](https://github.com/Grahammmm/skippercast/actions/runs/38061790792)).
+    `regions/CA/fleet.json` exists with `status: active`; `regions/OR/fleet.json`
+    is `dry-run`.
+  - Not run: no first activity map or fishing classification (Prompt B,
+    #469); no labelled trips; `FLEET_MAP_ENABLED` work; no CDFW CPRA request
+    evidence; MMSI identification is 0 for every CA charter-identity region in
+    the coverage report of the registry run.
+  - Failing now: *Fleet AIS health* failed on 2026-10-10 at 06:21 and 13:01
+    UTC (heartbeat and processor stale more than 3 hours, which is the alert
+    working); issue [#508](https://github.com/Grahammmm/skippercast/issues/508)
+    is open. The listener needs the owner-step restart in
+    `docs/operations/runbooks/fleet-ais-down.md`.
+  - Checks on `main`: `PYTHONPATH=src python -m pytest -q -x -m "not gis" -k fleet`
+    exit 0, 453 passed, 939 deselected, 199 subtests passed;
+    `node --test tests/test_fleet_*.mjs` exit 0, 130 pass, 0 fail, 0 skipped;
+    `python scripts/check_repository.py` exit 0.
+  - Open defects: [#339](https://github.com/Grahammmm/skippercast/issues/339)
+    (refresh retires offerings in a partial run),
+    [#340](https://github.com/Grahammmm/skippercast/issues/340)
+    (teck-reports and directories facts never win a column),
+    [#345](https://github.com/Grahammmm/skippercast/issues/345)
+    (`fleet_trip_reports` never populated; 55% of the lead score).
+  - Owner steps outstanding in
+    [#458](https://github.com/Grahammmm/skippercast/issues/458): Google Places
+    key, Hermes subscription token and linger, workflow review (CODEOWNERS),
+    CDFW CPRA request, 30 labelled trips (or approve an agent-labelled set),
+    Q16 terms review, paid AIS history decision. Tick the boxes already done.
