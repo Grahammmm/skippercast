@@ -24,12 +24,12 @@ const SENTINELS = new Set(Object.values(sentinel));
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
 const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'swell', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
-  'clouds', 'marks', 'selection', 'coastline'];
+  'clouds', 'marks', 'selection', 'trip-ranked', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
   assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
-  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell\s+field, MPAs, habitat polygons, shore runs, seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), marks, selection, coastline glow\./, 'the design states the order this test pins');
+  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell\s+field, MPAs, habitat polygons, shore runs, seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), marks, selection, ranked trip spots, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);

@@ -12,11 +12,13 @@
 // reloads the page, as v1 does. Erasable syntax only (Node tests import this).
 import {signal} from '@preact/signals';
 import type {Source} from 'pmtiles';
+import {loadManifest} from '../dist/seafloor-data.js';
 import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
 import {shorelineURL} from './map/coastline.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
-import {camera, cameraParam, zoomForSpan, type Camera} from './map/stage.ts';
+import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
+import {camera, cameraParam, type Camera} from './map/stage.ts';
 import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
 
 /** The v2 app's page key in a pack (dist/sw.js `V2_SHELL`). */
@@ -100,6 +102,9 @@ async function startPlanner(id: string): Promise<Planner> {
   const path = regions.assetURL('atlas');
   const atlas = (path ? await json(path) : {targets: [], areas: [], drifts: []}) as {targets: {id: string}[]};
   const screen = await initProtectedAreas(null, () => {});
+  // The ranked pins are screened by the planner's own screen, as v1's are (#495).
+  rankedScreen = screen as RankedScreen;
+  drawRanked();
   const api = initExport({atlas, screen, map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
     getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
     navigation: {showView(name: string) {
@@ -115,13 +120,23 @@ async function startPlanner(id: string): Promise<Planner> {
 export async function addToTrip(id: string): Promise<void> { (await loadPlanner())?.add(id); refreshIds(); }
 export async function reviewTrip(id: string): Promise<void> { (await loadPlanner())?.review(id); refreshIds(); }
 
-/** "Show ranked spots on map": the Chart moves to the ranked set's extent (drawing their pins: #495). */
-export function fitCamera(targets: readonly {latitude: number; longitude: number}[]): Camera | null {
-  if (!targets.length) return null;
-  const lat = targets.map(t => t.latitude), lon = targets.map(t => t.longitude);
-  const latitude = (Math.min(...lat) + Math.max(...lat)) / 2, longitude = (Math.min(...lon) + Math.max(...lon)) / 2;
-  const span = Math.max((Math.max(...lon) - Math.min(...lon)) * 111320 * Math.cos(latitude * Math.PI / 180), (Math.max(...lat) - Math.min(...lat)) * 110540);
-  return {latitude, longitude, zoom: zoomForSpan(span * 1.3)};
+/** "Show ranked spots on map" moves the Chart to the ranked set's extent (web/map/ranked.ts draws their pins). */
+export {fitCamera};
+
+// The ranked plan the Chart draws (#495): the planner's latest event, screened as v1's
+// dist/trip-ranking-layer.js screens it; a publication found changed is held until verified again.
+let ranked: RankedPlan = NO_PLAN, rankedScreen: RankedScreen | null = null;
+const rejected = new Map<string, number>();
+const drawRanked = (): void => { rankedSpots.value = screenRanked(ranked, rankedScreen, rejected, region.peek()); };
+/** Each minute, as v1 does: the screen's age and the publication's expiry again, and the manifest still the plan's. */
+async function recheckRanked(): Promise<void> {
+  drawRanked();
+  const current = ranked, hash = current.publication?.export_sha256;
+  if (!current.targets.length || !hash) return;
+  const gate = await loadManifest(current.publication?.region);
+  if (ranked !== current) return;
+  const next = recheckPlan(current, gate, rejected, Date.now());
+  if (next !== current) { ranked = next; drawRanked(); }
 }
 
 // The offline pack.
@@ -206,7 +221,7 @@ export function registerOffline(): void {
   navigator.serviceWorker.register('/sw.js').catch((error: Error) => console.warn('SkipperCast service worker not registered:', error.message));
 }
 
-/** From main.tsx: the dialog follows `#export`, the ranked set moves the Chart, and a saved pack keeps the worker current. */
+/** From main.tsx: the dialog follows `#export`, the ranked set draws on and moves the Chart, and a saved pack keeps the worker current. */
 export function startTrip(): void {
   const sync = () => { tripOpen.value = location.hash === TRIP_HASH; if (tripOpen.peek()) void loadPlanner(); };
   addEventListener('hashchange', sync);
@@ -214,9 +229,14 @@ export function startTrip(): void {
   sync();
   region.subscribe(refreshIds);
   document.addEventListener('skippercast:trip-ranked', event => {
-    const detail = (event as CustomEvent<{fit?: boolean; targets?: {latitude: number; longitude: number}[]}>).detail;
-    const at = detail?.fit ? fitCamera(detail.targets ?? []) : null;
+    const detail = (event as CustomEvent<RankedPlan | null>).detail;
+    ranked = detail?.targets ? detail : NO_PLAN;
+    drawRanked();
+    const at = detail?.fit ? fitCamera(ranked.targets) : null;
     if (at) go({view: cameraParam(at)});
   });
+  document.addEventListener('skippercast:boundaries', drawRanked);
+  region.subscribe(drawRanked);
+  setInterval(() => { void recheckRanked(); }, 60000);
   void globalThis.caches?.keys().then(names => { if (names.some(n => n.startsWith('sc-pack-') || n.startsWith('sc-coastal-'))) registerOffline(); }, () => {});
 }

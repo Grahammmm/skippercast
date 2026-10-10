@@ -1,7 +1,7 @@
 // The v2 trip planner, GPX export and offline pack (FE-51, docs/plans/front-end/dev-plan.md).
 // The planner is v1's (web/trip.ts wraps dist/export-ui.js), so the ranked-export flow of
-// e2e/ranked-export.spec.ts runs here against the v2 app with the same synthetic reefs; the
-// same selection downloads the same GPX bytes from both shells (only the creation time
+// e2e/ranked-export.spec.ts runs here against the v2 app with the same synthetic reefs, pin 01
+// on the Chart included (#495); the same selection downloads the same GPX bytes from both shells (only the creation time
 // differs); a mark card adds its spot; and a region saved from v2 opens offline from the
 // pack, the app's page and files included.
 import {createHash} from 'node:crypto';
@@ -41,6 +41,15 @@ async function rankedReefs(page: Page) {
     return r.fulfill({contentType: 'application/gzip', body: gzipSync(bytes)});
   });
   return {gate, change() { features[0]!.properties.terrain.score = 89; bytes = JSON.stringify({type: 'FeatureCollection', region: 'morro-bay', expires_at, features}); }};
+}
+
+/** Click where a point draws on the Chart, from `?view=` (Web Mercator, 256 px tiles at that zoom, the map centred in its canvas). */
+async function clickChart(page: Page, at: {latitude: number; longitude: number}) {
+  const [lat, lon, zoom] = new URL(page.url()).searchParams.get('view')!.split(',').map(Number) as [number, number, number];
+  const world = 256 * 2 ** zoom, x = (l: number) => (l + 180) / 360 * world;
+  const y = (l: number) => { const s = Math.sin(l * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * world; };
+  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2 + x(at.longitude) - x(lon), box.y + box.height / 2 + y(at.latitude) - y(lat));
 }
 
 /** The account button: in the masthead, or (phone) in the sheet's footer with the sheet lifted to full (e2e/v2-account.spec.ts). */
@@ -108,12 +117,26 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeVisible();
   await expect(page.locator('#export-scope-status')).toContainText('Saved ranked reefs restored');
   await expect(page.locator('#export-selection-count')).toHaveText('20 selected');
-  // "Show ranked spots on map" closes the plan and moves the Chart to the ranked reefs.
+  // "Show ranked spots on map" closes the plan, moves the Chart to the ranked reefs and draws them as numbered pins (#495).
   await page.locator('#export-map').click();
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
   await expect.poll(() => new URL(page.url()).searchParams.get('view')).toMatch(/^35\.43\d*,-121\.1\d*,1[01](?:\.\d+)?$/);
   expect(new URL(page.url()).hash).toBe('');
-  await openPlan(page, isMobile);
+  const chart = page.locator('.app-chart');
+  await expect(chart).toHaveAttribute('data-ranked', '20');
+  await expect(chart, 'MapLibre drew the pins in view').toHaveAttribute('data-ranked-drawn', /^[1-9]\d*$/);
+  // Pin 01, as ranked-export.spec.ts clicks it: a pin holding nearby spots zooms in until 01 stands alone and opens its card.
+  const card = page.getByRole('region', {name: 'Selected mark'});
+  await expect(async () => {
+    await clickChart(page, {latitude: 35.431, longitude: -121.169});
+    await expect(card.getByRole('heading')).toHaveText('#1 · 01 LR H3 C90% 90-120ft', {timeout: 1000});
+  }).toPass({timeout: 30_000, intervals: [1000]});  // a second apart, never a double-click zoom
+  await expect(card.locator('.ui-reading')).toHaveText('Habitat 3/3 · 90% evidence confidence');
+  await v2.a11y('v2-trip-ranked');
+  await card.getByRole('button', {name: 'Review & export'}).click();
+  await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeVisible();
+  await expect(page.locator('#export-heading')).toBeFocused();
+  expect(new URL(page.url()).hash).toBe('#export');
   reefs.change();
   await page.locator('#export-download').click();
   await expect(page.locator('#export-action-status')).toHaveText('Reef data changed. Select Best available again before exporting.');

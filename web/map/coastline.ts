@@ -45,6 +45,8 @@ export interface ChartMark {
   readonly rules?: string;
   /** An atlas mark the run-time screen withholds (#489): the card offers no trip actions. */
   readonly withheld?: boolean;
+  /** The trip plan's spot this card reviews in the planner (a ranked trip spot, #495). */
+  readonly trip?: string;
 }
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';

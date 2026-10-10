@@ -11,7 +11,8 @@
 // the card's heading; the close button, or Escape with no basis open, clears
 // the selection and returns focus to where it was (the chart, after a click).
 // FE-51: an atlas mark's "Add to trip" and "GPX" go to the trip planner
-// (web/trip.ts), as v1's spot sheet does; other selections have no trip action.
+// (web/trip.ts), as v1's spot sheet does; a ranked trip spot's pin (#495) opens
+// it in the plan with v1's "Review & export"; other selections have no trip action.
 import {computed} from '@preact/signals';
 import {useEffect, useRef} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
@@ -74,8 +75,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
     heading.current.focus();
   }, [request, selected?.id]);
   if (!selected) return null;
-  // Only an atlas mark joins a trip: v1's planner exports atlas targets. A mark the run-time screen withholds (#489) never does.
-  const spot = selected === spotCard.value && !selected.withheld ? selection.value : null;
+  // Only an atlas mark or a ranked spot joins a trip: v1's planner exports those. A mark the run-time screen withholds (#489) never does.
+  const spot = selected === spotCard.value && !selected.withheld ? selection.value : selected.trip ?? null;
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : document.querySelector<HTMLElement>('.app-chart canvas');
@@ -101,7 +102,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       <div class="app-mark-actions">
         <Button size="sm" icon={spot && tripIds.value.includes(spot) ? 'check' : 'plus'} disabled={!spot} onClick={() => { if (spot) void addToTrip(spot); }}>
           {spot && tripIds.value.includes(spot) ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
-        <Button size="sm" icon="download" disabled={!spot} onClick={() => { if (spot) void reviewTrip(spot); }}>GPX</Button>
+        <Button size="sm" icon="download" disabled={!spot} onClick={() => { if (spot) void reviewTrip(spot); }}>{selected.trip ? 'Review & export' : 'GPX'}</Button>
         {selected.regulations ? (
           <a class="ui-button ui-button--ghost ui-button--sm" href={selected.regulations.href} target="_blank" rel="noopener"
             aria-label={`Regulations: ${selected.regulations.label} (official page, opens in a new tab)`}>
