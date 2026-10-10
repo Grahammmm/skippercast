@@ -6,14 +6,18 @@ import assert from 'node:assert/strict';
 import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, layerEntry, layersIn, railLayers, sourceLayer} from '../web/map/layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
+import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
+import {groundsOverlay} from '../web/map/charter-grounds.ts';
+import {markScreen, markStyle} from '../web/map/marks.ts';
+import {assessScreen} from '../web/map/habitat.ts';
 import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL} from '../web/map/coastline.ts';
 import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
-import {mpaQuery} from '../web/map/mpa.ts';
+import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
-import {camera, cameraParam, choosePresentation, createStage, terrainFailed, zoomForSpan} from '../web/map/stage.ts';
+import {camera, cameraParam, choosePresentation, createStage, drape, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map';
@@ -214,10 +218,11 @@ function browser(href) {
 }
 const doc = () => ({hidden: false, addEventListener() {}, removeEventListener() {}});
 
-/** A fake terrain whose renderer reports a camera through onView. */
+/** A fake terrain whose renderer reports a camera through onView and keeps the overlays it is given. */
 function terrain() {
-  const fake = {options: null};
-  const handle = {load: async () => true, destroy() {}};
+  const fake = {options: null, overlays: new Map(), sets: 0};
+  const handle = {load: async () => true, destroy() {},
+    setOverlay(id, overlay) { fake.sets++; fake.overlays.set(id, overlay); }, removeOverlay: id => fake.overlays.delete(id)};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible']) handle[name] = () => true;
   fake.module = {styles: [], mountCoast(_host, options) { fake.options = options; return handle; }};
   return fake;
@@ -229,7 +234,7 @@ function serveDist(url) {
   return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
 }
 
-function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}} = {}) {
+function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
@@ -239,8 +244,8 @@ function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}
     return manifest ? {ok: true, json: async () => manifest} : {ok: false, json: async () => ({})};
   };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
-  const stage = createStage({host: {shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
-    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
+  const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
+    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
   return {fake, land, host, stage, fetches};
 }
 
@@ -347,4 +352,83 @@ test('a shoreline click fills the mark card; empty water clears it; no WebGL fai
   assert.equal(chartFailed.value, true, 'the stage shows "Map unavailable."');
   assert.equal(terrainFailed.value, false, 'the terrain is unaffected');
   second.stage.destroy();
+});
+
+// FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
+const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : `token(${name})`));
+
+test('FE-82: protected areas, reef marks and charter grounds drape on the terrain in their Chart style\'s token roles', () => {
+  assert.deepEqual(LAYERS.filter(e => e.terrain).map(e => e.id), ['mpas', 'charter-grounds', 'marks']);
+  for (const e of LAYERS.filter(x => x.terrain)) {
+    assert.ok(e.presentations.includes('chart') && e.presentations.includes('terrain'), `${e.id} draws in both`);
+    for (const role of [e.terrain.color, e.terrain.outline].filter(Boolean)) assert.ok(COAST_OVERLAY_COLORS.includes(role), `${e.id}: ${role} is an overlay role`);
+  }
+  // The same tokens as the Chart's layers.
+  const [mpaFill, mpaLine] = mpaLayers(sentinel), mpas = layerEntry('mpas').terrain;
+  assert.deepEqual([sentinel[mpas.color], sentinel[mpas.outline], mpas.opacity], [mpaFill.paint['fill-color'], mpaLine.paint['line-color'], 'mpaFillOpacity']);
+  assert.deepEqual(mpaFill.paint['fill-opacity'], ['to-number', sentinel.mpaFillOpacity], 'both read --mpa-fill-opacity');
+  const ring = markStyle(sentinel).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
+  assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
+  assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
+  const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});
+  const charter = layerEntry('charter-grounds').terrain;
+  assert.deepEqual([sentinel[charter.color], sentinel[charter.outline]], [grounds.layers.find(l => l.id === 'charter-grounds-line').paint['line-color'], sentinel.amber]);
+  // "Chart only" leaves the entries the terrain now draws: the Charter fleet rail entry (its grounds).
+  assert.equal(drawsIn('fleet', '3d'), true);
+  assert.equal(drawsIn('fleet', '2d'), true);
+  assert.deepEqual(drapeStyle(mpas, OVERLAY_PALETTE), {color: 'mpaFill', opacity: 0.18, outline: 'mpaLine'}, 'roles stay roles; the opacity token is a number');
+  assert.deepEqual(drapeStyle(marks, OVERLAY_PALETTE), {color: 'bg', opacity: 0.75, outline: 'mint', size: 18});
+});
+
+test('FE-82: the stage drapes each feed in § 9 order, replaces what changed, removes what went and survives a refusal', t => {
+  const warn = t.mock.method(console, 'warn', () => {});
+  const calls = [];
+  const h = {setOverlay: (id, o) => { calls.push(['set', id, o.order, o.features.length]); if (id === 'charter-grounds' && o.features.length > 1) throw new Error('too big'); },
+    removeOverlay: id => { calls.push(['remove', id]); return true; }};
+  const point = id => ({id, geometry: {type: 'Point', coordinates: [-120.9, 35.4]}});
+  const marks = {features: [point('a')], pick: () => null}, mpas = {features: [point(0)], pick: () => null};
+  let draped = drape(h, {marks, mpas, swell: marks}, OVERLAY_PALETTE);
+  const order = id => LAYERS.findIndex(e => e.id === id);
+  assert.deepEqual(calls, [['set', 'mpas', order('mpas'), 1], ['set', 'marks', order('marks'), 1]], 'bottom to top; an entry without a drape is ignored');
+  calls.length = 0;
+  draped = drape(h, {marks, mpas}, OVERLAY_PALETTE, draped);
+  assert.deepEqual(calls, [], 'an unchanged feed is not sent again');
+  draped = drape(h, {marks: {...marks}, mpas: {features: [], pick: () => null}, 'charter-grounds': {features: [point('x'), point('y')], pick: () => null}}, OVERLAY_PALETTE, draped);
+  assert.deepEqual(calls, [['remove', 'mpas'], ['set', 'charter-grounds', order('charter-grounds'), 2], ['set', 'marks', order('marks'), 1]]);
+  assert.equal(warn.mock.callCount(), 1, 'the refusal is logged');
+  assert.deepEqual([...draped.keys()], ['marks'], 'the refused overlay is not counted as draped');
+});
+
+test('FE-82: in Terrain the protected areas and reef marks drape without the Chart, and a pick selects what the Chart\'s would', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const nav = browser(`${PAGE}?region=morro-bay&presentation=3d`);
+  const {fake, land, stage} = chartStage({overlayPalette: () => OVERLAY_PALETTE});
+  t.after(() => stage.destroy());
+  for (let i = 0; i < 8; i++) await tick();
+  assert.equal(fake.maps.length, 0, 'MapLibre never loads for a terrain-only visit');
+  assert.equal(land.options.overlayPalette, OVERLAY_PALETTE, 'the overlay roles resolve from the token palette');
+  const mpas = land.overlays.get('mpas');
+  assert.deepEqual([mpas.kind, mpas.style, mpas.order], ['fill', {color: 'mpaFill', opacity: 0.18, outline: 'mpaLine'}, LAYERS.findIndex(e => e.id === 'mpas')]);
+  assert.equal(mpas.features.length, 8, 'the same checked areas the Chart draws');
+  // A protected area: the card the Chart's click opens for the same feature.
+  const cambria = mpas.features.findIndex(f => f.properties.NAME === 'Cambria SMCA');
+  land.options.onOverlayPick({overlay: 'mpas', feature: cambria, kind: 'fill', latitude: 35.5, longitude: -121.1});
+  assert.deepEqual(terrainPick.value, mpaMark(mpas.features[cambria].properties));
+  assert.equal(terrainPick.value.name, 'Cambria State Marine Conservation Area');
+  // A reef mark: the pick selects its spot, as the Chart's click does. The fake network fails the live boundary
+  // checks, so the run-time screen withholds the marks until a current check (the committed snapshot, this hour) passes.
+  assert.equal(land.overlays.has('marks'), false, 'withheld marks never drape');
+  const snapshot = JSON.parse(readFileSync(new URL('../dist/data/protected-areas.geojson', import.meta.url), 'utf8'));
+  markScreen.value = assessScreen({areas: snapshot.features, checkedAt: new Date(Date.now() - 3_600_000).toISOString(), live: false, closures: undefined}, Date.now());
+  const marks = land.overlays.get('marks');
+  assert.equal(marks.kind, 'point');
+  assert.deepEqual(marks.features.map(f => f.id), terrainLayers.value.marks.features.map(f => f.id));
+  assert.ok(marks.features.length > 0, 'Morro Bay has reef marks for the boat default target');
+  const spot = marks.features[0].id;
+  land.options.onOverlayPick({overlay: 'marks', feature: spot, kind: 'point', latitude: 35.4, longitude: -120.9});
+  assert.equal(nav.params().get('spot'), spot);
+  assert.equal(terrainPick.value, null, 'one selection at a time');
+  // A feed that goes leaves the terrain.
+  setTerrainLayer('marks', null);
+  assert.equal(land.overlays.has('marks'), false);
 });

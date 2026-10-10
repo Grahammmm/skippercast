@@ -8,16 +8,24 @@
 // stage while it is mounted and reads the signals exported here. One stage
 // exists at a time (the shell renders either the desktop or the mobile layout).
 //
+// The registry's terrain layers (FE-82: protected areas, reef marks, charter
+// grounds) drape through the handle's setOverlay in § 9 draw order, styled by
+// their registry roles from the token palette; a pick of one opens the mark
+// card as the same pick on the Chart does (a reef mark selects its `?spot=`).
+//
 // Erasable syntax only: tests/test_map_stage.mjs imports this file by type
 // stripping and passes a fake terrain module, so no GPU or three is needed.
 import {computed, effect, signal} from '@preact/signals';
 import type {CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
+import type {ChartMark} from './coastline.ts';
+import {LAYERS, drapeStyle, terrainLayers, type TerrainLayer} from './layers.ts';
+import type {Palette} from './palette.ts';
 import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from '../coast-context.ts';
 import {dockTime} from '../hour.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from '../profile.ts';
 import {
-  appView, current, day, habitat, hour, navigate, parseHour, presentation, profile, region, setParams, species,
+  appView, current, day, habitat, hour, navigate, parseHour, presentation, profile, region, selection, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
 
@@ -101,6 +109,8 @@ export interface StageOptions {
   load?: TerrainLoader;
   /** Renderer colours read from the tokens (web/map/palette.ts). */
   palette?: () => Partial<CoastPalette> | undefined;
+  /** The token palette the registry's terrain overlays resolve their roles from (FE-82); without it nothing drapes. */
+  overlayPalette?: () => Palette | undefined;
   /** The region's centre; a signal read here is followed. */
   center?: () => readonly [number, number] | null;
   now?: () => Date;
@@ -135,6 +145,8 @@ export const currentStatus = signal('');
 export const terrainMark = signal<CoastSelection | null>(null);
 /** The renderer's evidence lines for that selection (onTargetDetail), which the mark card shows on the Chart (FE-18). */
 export const terrainDetail = signal<CoastTargetDetail | null>(null);
+/** The card for a registry overlay picked on the terrain (a protected area, a charter ground); a reef mark selects `?spot=` instead. */
+export const terrainPick = signal<ChartMark | null>(null);
 const pageHidden = signal(false);
 
 export interface Stage {destroy(): void}
@@ -152,10 +164,32 @@ export function habitatHref(href: string, id: string): string {
 /** Go to a presentation, with a history entry (v2 writes `presentation=chart` explicitly). */
 export const choosePresentation = (next: Presentation): void => { navigate(withParams(location.href, {presentation: next})); };
 
+/** Hand the registry's terrain layers to the renderer: set what changed, remove what went, in § 9 order; returns what is draped. */
+export function drape(h: Pick<CoastHandle, 'setOverlay' | 'removeOverlay'>, feeds: Readonly<Record<string, TerrainLayer>>, p: Palette,
+  draped: ReadonlyMap<string, TerrainLayer> = new Map()): Map<string, TerrainLayer> {
+  const next = new Map<string, TerrainLayer>();
+  LAYERS.forEach((e, order) => {
+    const feed = feeds[e.id];
+    if (!e.terrain || !e.presentations.includes('terrain')) return;
+    if (!feed?.features.length) { if (draped.has(e.id)) h.removeOverlay(e.id); return; }
+    if (draped.get(e.id) !== feed) {
+      try { h.setOverlay(e.id, {kind: e.terrain.kind, features: feed.features, style: drapeStyle(e.terrain, p), order}); } catch (error) {
+        // The renderer refuses an overlay it cannot fit or read; the other layers still drape.
+        console.warn(`Terrain overlay ${e.id} refused`, error);
+        if (draped.has(e.id)) h.removeOverlay(e.id);
+        return;
+      }
+    }
+    next.set(e.id, feed);
+  });
+  return next;
+}
+
 export function createStage(options: StageOptions): Stage {
   const {host, load = loadTerrain, now = () => new Date(), doc = document, viewDelay = 400} = options;
   const handle = signal<CoastHandle | null>(null);
   let applied: Partial<Record<keyof TerrainState, string>> = {};
+  let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, clockTimer: ReturnType<typeof setTimeout> | undefined;
   // Without ?hour= the terrain shows the current whole hour; this clock moves it on at each hour boundary.
   const clock = signal(now());
@@ -191,7 +225,7 @@ export function createStage(options: StageOptions): Stage {
 
   const release = (): void => {
     const h = handle.peek();
-    handle.value = null; applied = {}; terrainMark.value = null; terrainDetail.value = null;
+    handle.value = null; applied = {}; draped = new Map(); terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
     h?.destroy();
   };
   const fail = (error: unknown): void => {
@@ -213,8 +247,14 @@ export function createStage(options: StageOptions): Stage {
       const terrain = await load();
       if (!alive) return;
       const state = wanted.peek();
+      overlayPalette = options.overlayPalette?.();
       const h = terrain.mountCoast(host, {
-        styles: terrain.styles, hostCurrents: true, palette: options.palette?.(),
+        styles: terrain.styles, hostCurrents: true, palette: options.palette?.(), overlayPalette,
+        // A registry overlay's pick is the Chart's pick of the same feature (one selection at a time).
+        onOverlayPick: ({overlay, feature}) => {
+          const layer = terrainLayers.peek()[overlay];
+          if (layer) terrainPick.value = layer.pick(feature);
+        },
         forecastHref: withParams(location.href, {view: 'conditions'}),
         initial: {...state, location: state.location ?? undefined},
         onSelection: picked => {
@@ -274,6 +314,9 @@ export function createStage(options: StageOptions): Stage {
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),
+    effect(() => { const h = handle.value, feeds = terrainLayers.value; if (h && overlayPalette) draped = drape(h, feeds, overlayPalette, draped); }),
+    // A link selection (a mark, a terrain habitat, Back) or a new region replaces a picked overlay's card.
+    effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; }),
     effect(() => { if (current.value === UNSUPPORTED) currentStatus.value = UNSUPPORTED_CURRENT; else if (current.value === 'off') currentStatus.value = ''; }),
   ];
   const renderers = (options.renderers ?? []).map(create => create());

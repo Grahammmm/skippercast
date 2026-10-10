@@ -695,11 +695,13 @@ test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle
   await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
   await expect(page.locator('.app-terrain')).toBeVisible();
   await showLayers(page);
-  for (const name of ['Seafloor', 'Water temp', 'Swell', 'Charter fleet', 'Clouds']) {
+  for (const name of ['Seafloor', 'Water temp', 'Swell', 'Clouds']) {
     await expect(railToggle(page, name), name).toBeDisabled();
     await expect(page.locator('.ui-rail-item', {hasText: name}).locator('.ui-rail-note'), name).toHaveText('Chart only');
   }
   await expect(railToggle(page, 'Currents'), 'Currents draw in the terrain too').toBeEnabled();
+  await expect(railToggle(page, 'Charter fleet'), 'FE-82: the charter grounds drape on the terrain').toBeEnabled();
+  await expect(page.locator('.app-legend-mpa'), 'FE-82: the protected areas drape on the terrain').toBeVisible();
   await expect(baseSelect(page)).toBeDisabled();
   await expect(page.locator('#app-rail-base-note')).toHaveText('Chart only');
   await expect(page.locator('.app-legend [data-reason="seafloor"]')).toHaveText('Chart only');

@@ -13,6 +13,9 @@
 // FE-51: an atlas mark's "Add to trip" and "GPX" go to the trip planner
 // (web/trip.ts), as v1's spot sheet does; a ranked trip spot's pin (#495) opens
 // it in the plan with v1's "Review & export"; other selections have no trip action.
+// FE-82: in 2D and 3D a protected area or charter ground picked on the terrain
+// (stage.ts `terrainPick`) gets the card the Chart's click gives it; a reef mark
+// picked there selects `?spot=`, as on the Chart.
 import {computed} from '@preact/signals';
 import {useEffect, useRef} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
@@ -21,7 +24,7 @@ import {Popover} from '../ui/Popover.tsx';
 import {chartMark} from '../map/chart.ts';
 import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
-import {shownPresentation, terrainDetail, terrainMark} from '../map/stage.ts';
+import {shownPresentation, terrainDetail, terrainMark, terrainPick} from '../map/stage.ts';
 import {navigate, selection, setParams} from '../state.ts';
 import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
 
@@ -33,12 +36,12 @@ export const placeholderMark = (id: string): Mark => ({id, name: id, kind: 'Mark
 
 /**
  * What the card shows: on the Chart, its own selection, then the terrain's; in
- * 2D and 3D the renderer's panel speaks for the terrain's. The link's atlas mark
- * shows in every presentation.
+ * 2D and 3D an overlay picked on the terrain, while the renderer's panel speaks
+ * for its own habitat selection. The link's atlas mark shows in every presentation.
  */
 export const currentMark = computed<Mark | null>(() => {
   const chart = shownPresentation.value === 'chart', spot = spotCard.value;
-  return (chart ? chartMark.value ?? habitatCard.value : null) ?? (spot === undefined ? placeholderMark(selection.value!) : spot);
+  return (chart ? chartMark.value ?? habitatCard.value : terrainPick.value) ?? (spot === undefined ? placeholderMark(selection.value!) : spot);
 });
 
 /** Drop the selection from the address (?spot= and ?focus= are read, never written, by the store). */
@@ -51,6 +54,7 @@ export function clearSelection(href: string): string {
 /** Clear whichever selection the card shows. */
 function clearMark(mark: Mark): void {
   if (mark === chartMark.peek()) { chartMark.value = null; return; }
+  if (mark === terrainPick.peek()) { terrainPick.value = null; return; }
   if (mark.id.startsWith('habitat:')) {
     // The stage then tells the renderer (selectHabitat(null)), as the scene's own close button does.
     terrainMark.value = null; terrainDetail.value = null;

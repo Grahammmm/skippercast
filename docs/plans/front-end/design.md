@@ -457,10 +457,14 @@ the stage's own clock moves it on at each hour boundary.
 **Layers.** Every registry entry (§ 9) declares the presentations it draws
 in. Terrain-native layers (relief, water, contours, ranked habitat pins,
 shore features) are options of the Seafloor rail entry in terrain (FE-80,
-on Codex's host-chrome mode FE-79). SkipperCast layers the renderer lacks
-(MPAs, atlas marks, charter grounds, fleet) draw in Chart; in terrain their
-rail entries read "Chart only" until Codex's overlay API (FE-81) lets the
-registry drape them (FE-82). No layer has two rail entries.
+on Codex's host-chrome mode FE-79). SkipperCast layers the renderer lacks draw in Chart. MPAs, atlas reef marks
+and charter grounds also drape on the terrain through the overlay API (FE-81):
+their registry entries declare `terrain` with their Chart style's token roles,
+the stage forwards their features to `setOverlay` in § 9 order, and a pick on
+the terrain selects what the same pick on the Chart selects (FE-82). The
+drape has no line pattern or label, so charter grounds read as an outline over
+a faint fill. Entries with nothing on the terrain (the fields, clouds,
+commercial AIS) read "Chart only" there. No layer has two rail entries.
 
 **Brief, Conditions, History, Reports.** v2 reuses `packages/coast` code,
 never a fork:
