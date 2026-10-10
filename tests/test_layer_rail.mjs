@@ -31,6 +31,8 @@ async function load() {
       export {waterTempState} from './web/map/sst.ts';
       export {swellState} from './web/map/swell.ts';
       export {cloudStamp} from './web/map/clouds.ts';
+      export {groundsState} from './web/map/charter-grounds.ts';
+      export {aisOn, aisState} from './web/map/commercial-ais.ts';
       export {currentStatus} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {PROFILE_TABLE, RAIL_IDS} from './web/profile.ts';
@@ -119,7 +121,7 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   t.after(() => {
     for (const [signal, value] of reset) signal.value = value;
   });
-  const reset = [m.seafloorState, m.currentsState, m.waterTempState, m.swellState, m.cloudStamp, m.currentStatus].map(signal => [signal, signal.value]);
+  const reset = [m.seafloorState, m.currentsState, m.waterTempState, m.swellState, m.cloudStamp, m.currentStatus, m.groundsState, m.aisOn, m.aisState].map(signal => [signal, signal.value]);
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor,currents,water-temp,swell,fleet,clouds`);
   m.swellState.value = {...m.swellState.value, drawn: null, reason: 'Swell unavailable: no forecast grid for this region.'};
@@ -127,7 +129,7 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   m.waterTempState.value = {...m.waterTempState.value, drawn: null, reason: 'Water temp unavailable: no analysis for this region.'};
   let html = m.render(m.h(m.Legend));
   assert.deepEqual(swatches(html), ['mpas'], 'nothing draws: only the protected areas\' outline, which the Chart always draws');
-  assert.equal(reasons(html).fleet, 'Not drawn yet.');
+  assert.equal(reasons(html)['charter-grounds'], 'Loading charter grounds.', 'FE-21: the grounds say why they do not draw');
   assert.equal(reasons(html).currents, 'Loading the surface-current packet.');
   assert.match(reasons(html)['water-temp'], /^Water temp unavailable/);
   assert.match(reasons(html).swell, /^Swell unavailable/);
@@ -137,9 +139,17 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   m.waterTempState.value = {...m.waterTempState.value, drawn: {range: [57, 65], product: 'Synthetic analysis', stamp: 'Oct 8'}, reason: ''};
   m.swellState.value = {...m.swellState.value, drawn: {key: 'k', validAt: 0, issuedAt: 0, step: [0.25, 0.25], height: [3, 5], period: [11, 13], from: 290, stamp: 'run Oct 8'}, reason: ''};
   m.cloudStamp.value = {at: '2026-10-08T20:00:00Z', label: 'observed 1:00 pm · 5 min ago', canLoop: false};
+  m.groundsState.value = {drawn: 2, note: '', audit: '2026-09-21'};
+  m.aisOn.value = true;
+  m.aisState.value = {offered: true, drawn: 3, note: '3 historical grid cells · Jul & Sep 2024 · depth unknown'};
   html = m.render(m.h(m.Legend));
-  assert.deepEqual(swatches(html), ['seafloor', 'currents', 'currents-fast', 'water-temp', 'swell', 'swell', 'clouds', 'mpas'], 'the swell row\'s key and its scale');
-  assert.equal(reasons(html).fleet, 'Not drawn yet.', 'the fleet layers are not drawn yet (FE-21, FE-24)');
+  assert.deepEqual(swatches(html), ['seafloor', 'currents', 'currents-fast', 'water-temp', 'swell', 'swell', 'charter-grounds', 'commercial-ais', 'clouds', 'mpas'], 'the swell row\'s key and its scale');
+  assert.equal(reasons(html)['charter-grounds'], undefined, 'FE-21: drawn grounds give no reason');
+  assert.equal(reasons(html)['commercial-ais'], '3 historical grid cells · Jul &amp; Sep 2024 · depth unknown', 'v1\'s status line (HTML-escaped)');
+  // The Charter fleet entry offers v1's commercial AIS layer as an option where the region has it, off by default.
+  assert.match(m.render(m.h(m.LayerRail)), /<label class="app-rail-option"><input type="checkbox" checked\/?>Commercial AIS 2024<\/label>/);
+  m.aisState.value = {offered: false, drawn: 0, note: ''};
+  assert.doesNotMatch(m.render(m.h(m.LayerRail)), /app-rail-option/);
   // In 3D the Chart's layers draw nothing: no key at all, chart-only rows say so, Currents gives the renderer's status.
   m.currentStatus.value = 'Surface currents: NOAA WCOFS forecast.';
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,currents,water-temp,swell,fleet,clouds`);

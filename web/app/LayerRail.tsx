@@ -9,6 +9,8 @@
 // In Terrain 2D and 3D an entry none of whose layers draws there (layers.ts
 // drawsIn) reads "Chart only" and is disabled, so it never toggles a hidden
 // layer (FE-20); Currents draws in both.
+// Charter fleet (FE-21): the public charter grounds draw while it is on; its
+// option adds v1's commercial AIS 2024 cells, off by default as in v1.
 // The base (§ 8, one at a time) is one select: Night (the token basemap alone),
 // Chart detail (the ENC display from zoom 10) and Aerial where the region's
 // package offers it (FE-23), so a link's `?base=chart` can be chosen again.
@@ -18,6 +20,7 @@ import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
 import {ENC_MIN_ZOOM} from '../map/chart.ts';
+import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
@@ -42,6 +45,16 @@ function CurrentSource() {
         {CURRENT_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         {value === UNSUPPORTED ? <option value={UNSUPPORTED}>Unsupported source</option> : null}
       </select>
+    </label>
+  );
+}
+
+/** The Charter fleet entry's option (FE-21): v1's commercial AIS layer, off by default. */
+function AisOption() {
+  return (
+    <label class="app-rail-option">
+      <input type="checkbox" checked={aisOn.value} onChange={event => { aisOn.value = (event.currentTarget as HTMLInputElement).checked; }} />
+      {layerEntry('commercial-ais').label}
     </label>
   );
 }
@@ -95,7 +108,9 @@ export function LayerRail() {
         ) : (
           <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} disabled={!here}
             note={!here ? CHART_ONLY : railNotes.value[e.id] || undefined}
-            onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})} />
+            onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
+            {e.id === 'fleet' && active && here && aisState.value.offered ? <AisOption /> : null}
+          </RailItem>
         );
       })}
     </Rail>

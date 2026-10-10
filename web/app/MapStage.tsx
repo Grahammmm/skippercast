@@ -12,7 +12,9 @@ import {useEffect, useRef} from 'preact/hooks';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
+import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {chartFailed, createChart} from '../map/chart.ts';
+import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createClouds} from '../map/clouds.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
@@ -57,7 +59,8 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
     const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
-          engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null})]})]});
+          engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),
+          engine => createCharterGrounds({engine}), engine => createCommercialAis({engine})]})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;

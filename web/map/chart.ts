@@ -83,8 +83,11 @@ export function markUnavailable(layer: string, error?: unknown): void {
 export type ChartLayer = (engine: ReadonlySignal<Engine | null>) => {
   destroy(): void;
   reading?(at: {lon: number; lat: number}): ChartMark | null;
-  /** Its own clickable map layers (FE-27's nearshore rings), asked before the Chart's, and the card for a feature of them. */
-  pick?: {readonly layers: readonly string[]; mark(layer: string, properties: Record<string, unknown> | null): ChartMark | null};
+  /**
+   * Its own clickable map layers and the card for a feature of them: asked before the Chart's (FE-27's nearshore
+   * rings), or with `ordered` among them, the topmost drawn feature winning (FE-21's fleet areas, under the marks).
+   */
+  pick?: {readonly layers: readonly string[]; readonly ordered?: boolean; mark(layer: string, properties: Record<string, unknown> | null): ChartMark | null};
 };
 
 export interface ChartOptions {
@@ -136,8 +139,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
         host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
-        pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL],
-        pickFirst: () => drawn.flatMap(l => l.pick?.layers ?? []),
+        pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
+        pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
         onPick: (layer, properties, at) => {
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).

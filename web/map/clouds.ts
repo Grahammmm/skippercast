@@ -83,6 +83,10 @@ export async function cloudIndex(fetchFn: typeof fetch, page: string): Promise<C
   } catch { return null; }
 }
 
+/** The cloud frames drawn now, bottom to top, so layers under the sky (FE-21's fleet layers) can be added beneath them. */
+let drawnFrames: readonly string[] = [];
+export const cloudLayerIds = (): readonly string[] => drawnFrames;
+
 /** One frame's source and layer id. */
 export const frameId = (at: string): string => `clouds:${at}`;
 
@@ -181,7 +185,7 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
       const e = engine.value, o = overlay.value, at = shown.value;
       if (!e) return;
       // § 9 draw order: above the fields, under the marks, the selection and the coastline glow.
-      if (o !== drawn || e !== drawnOn) { e.setOverlay(REGISTRY_ID, o, MARK_PICK); drawn = o; drawnOn = e; }
+      if (o !== drawn || e !== drawnOn) { e.setOverlay(REGISTRY_ID, o, MARK_PICK); drawn = o; drawnOn = e; drawnFrames = o?.layers.map(l => l.id) ?? []; }
       for (const l of o?.layers ?? []) e.setRasterOpacity(l.id, at !== null && l.id === frameId(at) ? CLOUD_OPACITY : 0);
     }),
     effect(() => {
@@ -204,7 +208,7 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
       for (const dispose of disposers) dispose();
       doc.removeEventListener('visibilitychange', visibility);
       motion?.removeEventListener('change', motionChange);
-      cloudStamp.value = null; setRailNote(REGISTRY_ID, '');
+      cloudStamp.value = null; setRailNote(REGISTRY_ID, ''); drawnFrames = [];
     },
   };
 }

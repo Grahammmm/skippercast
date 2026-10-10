@@ -106,6 +106,13 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-ring { display: inline-block; width: var(--space-3); height: var(--space-3); margin-right: var(--space-1); border: 2px solid var(--blue); border-radius: var(--radius-pill); vertical-align: middle; }
 .app-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .app-swatch[data-layer="fleet"] { background: var(--fleet); }
+/* FE-21: charter grounds as hatched dashed outlines; commercial AIS as a heat fill; the AIS option under the Charter fleet entry. */
+.app-swatch[data-layer="charter-grounds"] { box-sizing: border-box; border: 1px dashed var(--fleet); background: repeating-linear-gradient(135deg, var(--fleet) 0 1px, transparent 1px 4px); }
+.app-swatch[data-layer="commercial-ais"] { box-sizing: border-box; border: 1px solid var(--fleet); background: linear-gradient(90deg, color-mix(in srgb, var(--fleet) 15%, transparent), color-mix(in srgb, var(--fleet) 45%, transparent)); }
+.app-legend-fleet { flex-wrap: wrap; }
+.app-legend-sub { display: flex; align-items: center; gap: var(--space-2); color: var(--text); }
+.app-rail-option { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); padding: 0 var(--space-2); color: var(--muted); font-size: var(--text-11); cursor: pointer; }
+.app-rail-option input { width: var(--space-4); height: var(--space-4); margin: 0; accent-color: var(--fleet); }
 .app-swatch[data-layer="clouds"] { background: var(--text); }
 /* Seafloor (FE-14): the depth ramp ranks grade and fit, strongest brightest; unranked areas are dashed outlines; cells are the deepest step. */
 .app-legend-seafloor { flex-wrap: wrap; }

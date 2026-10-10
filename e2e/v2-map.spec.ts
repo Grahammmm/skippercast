@@ -614,6 +614,41 @@ test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, lab
   expect(pageErrors).toEqual([]);
 });
 
+// FE-21: inside the Pecho Rock outline, 352 m from the nearest reef mark (45 px at zoom 14, clear of its 44 px target).
+const PECHO_VIEW = '35.17586,-120.82186,14';
+test('Charter fleet draws the charter grounds from the committed file, opens a ground\'s card, offers commercial AIS 2024 and leaves when off', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'lingcod', view: PECHO_VIEW, layers: 'fleet'});
+  const chart = page.locator('.app-chart'), row = page.locator('.app-legend-fleet'), attribution = page.locator('.app-chart .maplibregl-ctrl-attrib');
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  const card = page.getByRole('region', {name: 'Selected mark'});
+  await expect(async () => {
+    await clickCentre(page);
+    await expect(card.getByRole('heading', {name: 'Pecho Rock'})).toBeVisible({timeout: 1000});
+  }).toPass({timeout: 20_000, intervals: [1000]});
+  await expect(card.locator('.app-mark-kind')).toHaveText('Charter-reported ground · Named landmark vicinity');
+  await card.getByRole('button', {name: 'Clear selection'}).click();
+
+  // The phone's rail and legend are the sheet's layers panel; the full sheet shows both.
+  await showLayers(page);
+  if (narrow(page)) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('End'); }
+  await expect(row.locator('[data-stamp="charter-grounds"]')).toHaveText('2 named vicinities · no verified charter AIS');
+  await expect(row.locator('.app-swatch[data-layer="charter-grounds"]')).toHaveCount(1);
+  const option = page.getByRole('checkbox', {name: 'Commercial AIS 2024'});
+  await expect(option).not.toBeChecked();
+  await expect(attribution).not.toContainText('Global Fishing Watch');
+  await option.check();
+  await expect(row.locator('[data-reason="commercial-ais"]')).toHaveText('3 historical grid cells · Jul & Sep 2024 · depth unknown');
+  await expect(attribution).toContainText('Global Fishing Watch · CC BY-NC 4.0');
+  await v2.a11y('v2-map-fleet');
+
+  await page.getByRole('button', {name: /^Charter fleet/}).click();
+  await expect.poll(() => params(page).layers ?? '').not.toContain('fleet');
+  await expect(row).toHaveCount(0);
+  await expect(attribution).not.toContainText('Global Fishing Watch');
+  expect(pageErrors).toEqual([]);
+});
+
 test('a region without basemap.aerial offers no Aerial base, whatever ?base= says', async ({page, v2}) => {
   const requested: string[] = [];
   await page.route('https://imagery.nationalmap.gov/**', route => { requested.push(route.request().url()); return route.abort(); });
