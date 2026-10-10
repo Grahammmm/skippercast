@@ -39,7 +39,10 @@ Columns are computed from the vessel's non-superseded facts (the snapshot's,
 when it carries them, plus this run's; this run's facts replace the stored ones
 of the same field and source): the first source in the field's priority
 (``catalog/fleet/resolver.json`` merged with the region's
-``resolver_overrides``), then the highest confidence, then the latest
+``resolver_overrides``), which names adapter kinds: a fact whose ``source_id``
+is a binding id (``teck-reports`` and ``directories`` emit those) ranks as its
+binding's adapter, and the stored ``source_id`` keeps the binding. Then the
+highest confidence, then the latest
 ``retrieved_at``; facts below the rule's ``min_confidence`` never win. A
 winning admin fact whose value is null means "no value": the column is
 cleared and no lower source fills it. Pinned columns are never sent (the name
@@ -73,7 +76,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from . import ops
 from .adapters.base import Candidate, Fact
@@ -112,12 +115,19 @@ class ResolverConfig:
     review_min: float
     ports: Mapping[str, str]                         # port id -> name
     landings: Mapping[str, tuple[str, str]]          # landing id -> (name, port id)
+    adapters: Mapping[str, str] = field(default_factory=dict)  # binding id -> adapter kind (#340)
 
     @classmethod
     def from_region(cls, region) -> "ResolverConfig":
         match = region.thresholds["match"]
         return cls(region.id, region.resolver, float(match["auto_merge"]), float(match["review_min"]),
-                   {p.id: p.name for p in region.ports}, {x.id: (x.name, x.port) for x in region.landings})
+                   {p.id: p.name for p in region.ports}, {x.id: (x.name, x.port) for x in region.landings},
+                   {b.id: b.adapter for b in region.sources})
+
+    def kind(self, source_id: str) -> str:
+        """The source kind resolver priorities name: a binding's adapter (``socalfishreports`` -> ``teck-reports``),
+        else the id itself (adapters that emit their own id, ``admin``, ``operator``, ``osint``)."""
+        return self.adapters.get(source_id, source_id)
 
     def port_id(self, hint: Any) -> str | None:
         landing = self.landing_id(hint)
@@ -337,13 +347,15 @@ def _float(value: Any) -> float | None:
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
 
-def winner(facts: Iterable, rule) -> Any:
-    """The winning fact of one field under ``rule`` (priority, then confidence, then latest), or None."""
-    eligible = [f for f in facts if f.source_id in rule.priority
+def winner(facts: Iterable, rule, kind: Callable[[str], str] = str) -> Any:
+    """The winning fact of one field under ``rule`` (priority, then confidence, then latest), or None.
+
+    ``kind`` maps a fact's ``source_id`` (a binding id for some adapters) to the kind ``rule.priority`` lists."""
+    eligible = [f for f in facts if kind(f.source_id) in rule.priority
                 and (f.source_id == "admin" or f.confidence >= rule.min_confidence)]
     eligible.sort(key=lambda f: (f.value_key, f.id))
     eligible.sort(key=lambda f: f.retrieved_at, reverse=True)
-    eligible.sort(key=lambda f: (rule.priority.index(f.source_id), -f.confidence))
+    eligible.sort(key=lambda f: (rule.priority.index(kind(f.source_id)), -f.confidence))
     return eligible[0] if eligible else None
 
 
@@ -578,14 +590,14 @@ class _Resolver:
         winners: dict[str, _Fact] = {}
         for field_, col in COLUMNS.items():
             rule = self.config.rules.get(field_)
-            best = winner(by_field.get(field_, ()), rule) if rule else None
+            best = winner(by_field.get(field_, ()), rule, self.config.kind) if rule else None
             if best is None or best.value is STORED:
                 continue  # no fact, or the stored winner keeps the stored value
             ok, value = _column_value(col, best.value)
             if ok:
                 cols[col], winners[col] = value, best
         rule = self.config.rules.get("operator")
-        best = winner(by_field.get("operator", ()), rule) if rule else None
+        best = winner(by_field.get("operator", ()), rule, self.config.kind) if rule else None
         if (best is not None and isinstance(best.value, str) and name_norm(best.value)
                 and not {"*", "operator_id"} & vessel.pinned):
             cols["operator_id"] = self.operator(best.value.strip()[:120].strip())
@@ -597,7 +609,7 @@ class _Resolver:
             cols.setdefault("landing_id", vessel.landing)
         status = None
         scope_rule = self.config.rules.get("scope")
-        scope = winner(by_field.get("scope", ()), scope_rule) if scope_rule else None
+        scope = winner(by_field.get("scope", ()), scope_rule, self.config.kind) if scope_rule else None
         if scope is not None and isinstance(scope.value, Mapping) and isinstance(scope.value.get("in_scope"), bool):
             if not scope.value["in_scope"]:
                 status = "excluded"
@@ -634,7 +646,7 @@ class _Resolver:
             vessel.aliases.pop(norm, None)
         for cand, _score in sorted(vessel.cands, key=lambda c: c[0].fp):
             if cand.norm != norm and cand.url:
-                self.alias(vessel, cand.name, cand.norm, ALIAS_KIND.get(cand.raw.source_id, "spelling"), cand.url)
+                self.alias(vessel, cand.name, cand.norm, ALIAS_KIND.get(self.config.kind(cand.raw.source_id), "spelling"), cand.url)
         self.class_review(vessel, by_field.get("vessel_class", ()), winners.get("vessel_class"))
         for fact in fresh:
             self.fact(vessel, fact)
@@ -654,8 +666,9 @@ class _Resolver:
 
     def best_name(self, vessel: _Vessel) -> str:
         rule = self.config.rules.get("name")
+        kinds = {c.fp: self.config.kind(c.raw.source_id) for c, _score in vessel.cands}
         ranked = sorted(vessel.cands, key=lambda c: (
-            rule.priority.index(c[0].raw.source_id) if rule and c[0].raw.source_id in rule.priority else 99, c[0].fp))
+            rule.priority.index(kinds[c[0].fp]) if rule and kinds[c[0].fp] in rule.priority else 99, c[0].fp))
         return ranked[0][0].name if ranked else vessel.name
 
     def alias_url(self, vessel: _Vessel) -> str | None:

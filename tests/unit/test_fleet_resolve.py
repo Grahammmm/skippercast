@@ -235,6 +235,24 @@ class ResolveCases(unittest.TestCase):
                          (None, "active", "hidden"))
         self.assertEqual(len(of(result, "fact.upsert")), 6)
 
+    def test_a_binding_id_ranks_as_its_adapter(self):
+        # Issue #340: teck-reports and directories facts carry the binding id; priorities list adapter kinds.
+        config = replace(CONFIG, adapters={"socalfishreports": "teck-reports", "uscg-psix": "uscg-psix"})
+        report = Candidate("socalfishreports", "Sea Example", "morro-bay", None, {"uscg_doc": "1234567"},
+                           (Fact("name", "Sea Example", "socalfishreports", "https://reports.example.com/boat/sea",
+                                 "page", 0.8, "facts-only", NOW),), record_id="sea")
+        registry = cand("SEA EXAMPLE INC", "uscg-psix", "1234567", keys={"uscg_doc": "1234567"})
+        for c in (config, CONFIG):
+            with self.subTest(mapped=c is config):
+                result = resolve(Snapshot(), [registry, report], c, NOW)
+                (op,) = of(result, "vessel.upsert")
+                self.assertEqual(op["name"], "Sea Example" if c is config else "SEA EXAMPLE INC")
+                self.assertIn("socalfishreports", {f["source_id"] for f in of(result, "fact.upsert")},
+                              "the stored source_id keeps the binding")
+        losing = replace(report, facts=(replace(report.facts[0], field="length_ft", value=42),))  # psix names it
+        aliases = of(resolve(Snapshot(), [registry, losing], config, NOW), "alias.upsert")
+        self.assertEqual([(a["alias"], a["kind"]) for a in aliases], [("Sea Example", "report-name")])
+
     def test_class_disagreement_opens_a_class_review(self):
         candidates = [cand("Sea Example", "landing-pages", facts=[fact("vessel_class", "inspected-party")]),
                       cand("Sea Example", "uscg-psix", "1234567", keys={"uscg_doc": "1234567"},
