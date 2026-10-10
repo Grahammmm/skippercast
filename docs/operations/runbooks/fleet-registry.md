@@ -52,7 +52,8 @@ Order (design.md § 16): Worker flag, then the workflow switch, then the first r
 
 - **`ok`**: every step ran and every discovery binding succeeded.
 - **`partial`**: one or more discovery bindings failed (`steps.discover.counts.failed`). The others' boats were still ingested. A partial run never counts towards `vanished`. On the box: `jq '.bindings | map_values(.status)' <run dir>/discover.json`, then `jq '.bindings["<binding>"]' <run dir>/discover.json` for the error. A source that fails every week needs an adapter fix PR (a changed page layout) or an owner decision (a blocked or retired source).
-  Known gap, [#339](https://github.com/Grahammmm/skippercast/issues/339): `refresh` retires a boat's offerings that this run's sources did not list without checking that discovery was `complete`, so in a `partial` run offerings only the failed source listed are retired (a `schedule` change) and come back as added in the next good run. Read `schedule` changes from a partial run with that in mind.
+  `refresh` retires a boat's offerings that this run's sources did not list only when discovery was `complete` ([#339](https://github.com/Grahammmm/skippercast/issues/339)), so a `partial` run records no `schedule` change for the failed source's trips.
+  Facts from the `teck-reports` and `directories` bindings keep the binding id (`socalfishreports`, `ggfa`, ...) as `source_id`; the resolver ranks them as their adapter kind under `catalog/fleet/resolver.json` ([#340](https://github.com/Grahammmm/skippercast/issues/340)). Runs before that fix stored those facts without letting them set a column; the next run of a boat re-ranks them.
 - **Failed** (the job is red): the step that failed and its error are in the log and in `state.json`. Common causes, in order:
   - `fleet run: region ... is dry-run: only the staging sink is allowed`: a `dry-run` region dispatched with `sink=worker`. Use `sink=staging` until the region is promoted.
   - `HTTPError: HTTP Error 404` reading `/api/fleet/jobs/snapshot` (at `resolve`, the first Worker call): `FLEET_ENABLED` is off or not yet deployed (first run, step 1).
@@ -110,6 +111,4 @@ The summary's `charter-identity coverage` block is `coverage-status`'s output fo
 
 ## Known gaps
 
-- [#339](https://github.com/Grahammmm/skippercast/issues/339): offering retirement in `refresh.py` does not yet gate on discovery being `complete` (see *Reading a run*).
-- [#340](https://github.com/Grahammmm/skippercast/issues/340): the `teck-reports` and `directories` adapters record the binding id (`socalfishreports`, `ggfa`, ...) as `source_id`, but `catalog/fleet/resolver.json` ranks adapter kinds (`teck-reports`, `directories`), so their facts are stored but never win a column. Boats known only from those sources get no resolved values from them until it is fixed.
 - design.md § 9 "Known gaps, CF-17 scope": the staging sink writes no `<run_id>:registry.<batch>` row, so a staging run's `fleet_runs` has the step rows only.
