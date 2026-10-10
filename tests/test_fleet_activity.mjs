@@ -90,11 +90,11 @@ test('reprocessing a window twice leaves identical rows', {skip}, async () => {
     const body = replaceBody([W(A)], [trip(A, '2026-10-01T08:00:00.000Z'), trip(A, '2026-10-02T08:00:00.000Z', {status: 'open'})]);
     const first = await call(db, 'activity', body);
     assert.equal(first.status, 200, JSON.stringify(first.body));
-    assert.deepEqual(first.body.changes, {deleted_events: 0, deleted_segments: 0, deleted_trips: 0, trips: 2, segments: 6, events: 2});
+    assert.deepEqual(first.body.changes, {unpaired: 0, deleted_events: 0, deleted_segments: 0, deleted_trips: 0, trips: 2, segments: 6, events: 2, paired_advisor: 0});
     const before = dump(sql);
     const second = await call(db, 'activity', body);
     assert.equal(second.status, 200);
-    assert.deepEqual(second.body.changes, {deleted_events: 2, deleted_segments: 6, deleted_trips: 2, trips: 2, segments: 6, events: 2});
+    assert.deepEqual(second.body.changes, {unpaired: 0, deleted_events: 2, deleted_segments: 6, deleted_trips: 2, trips: 2, segments: 6, events: 2, paired_advisor: 0});
     assert.deepEqual(dump(sql), before);
     // A window recomputed with fewer trips (the open one went away) drops it with its children.
     const third = await call(db, 'activity', replaceBody([W(A)], [trip(A, '2026-10-01T08:00:00.000Z')]));
@@ -126,7 +126,7 @@ test('replace-window touches only the given MMSIs, source and window', {skip}, a
     const recomputed = trip(A, '2026-10-02T08:00:00.000Z', {distance: 20.25});
     const result = await call(db, 'activity', replaceBody([W(A)], [recomputed]));
     assert.equal(result.status, 200, JSON.stringify(result.body));
-    assert.deepEqual(result.body.changes, {deleted_events: 1, deleted_segments: 3, deleted_trips: 1, trips: 1, segments: 3, events: 1});
+    assert.deepEqual(result.body.changes, {unpaired: 0, deleted_events: 1, deleted_segments: 3, deleted_trips: 1, trips: 1, segments: 3, events: 1, paired_advisor: 0});
     assert.equal(sql.prepare('SELECT distance_nm FROM fleet_trips WHERE id=?').get(inside.trip.id).distance_nm, 20.25);
     assert.deepEqual(others(), untouched);
     assert.deepEqual(ids(sql, 'fleet_trips').sort(), [inside, outside, otherMmsi, backfill].map(p => p.trip.id).sort());
