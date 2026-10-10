@@ -1,0 +1,180 @@
+{
+ "_note": "Synthetic subset of a SkipperCast regional daily feed (regions/<id>/latest.json shape) for FE-31 tests; values are invented.",
+ "schema_version": 1,
+ "generated_at": "2026-10-08T12:00:00Z",
+ "region_id": "monterey-point-sur",
+ "sources": {
+  "buoy-46042": {
+   "id": "buoy-46042",
+   "name": "NOAA NDBC 46042 observations",
+   "kind": "observation",
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/46042.txt",
+   "checked_at": "2026-10-08T20:45:00Z",
+   "max_age_hours": 6,
+   "status": "ok",
+   "data": {
+    "station": "46042",
+    "sample_at": "2026-10-08T20:40:00Z",
+    "observations": [
+     {
+      "time": "2026-10-08T20:40:00Z",
+      "WDIR": null,
+      "WSPD": 4.0,
+      "GST": 6.0,
+      "WVHT": 1.1,
+      "DPD": 11.0,
+      "APD": 7.0,
+      "MWD": 295.0,
+      "PRES": null,
+      "ATMP": null,
+      "WTMP": 14.5,
+      "DEWP": null,
+      "VIS": null,
+      "PTDY": null,
+      "TIDE": null
+     },
+     {
+      "time": "2026-10-08T20:10:00Z",
+      "WDIR": null,
+      "WSPD": 4.0,
+      "GST": 6.0,
+      "WVHT": 1.1,
+      "DPD": 11.0,
+      "APD": 7.0,
+      "MWD": 295.0,
+      "PRES": null,
+      "ATMP": null,
+      "WTMP": 14.5,
+      "DEWP": null,
+      "VIS": null,
+      "PTDY": null,
+      "TIDE": null
+     },
+     {
+      "time": "2026-10-08T19:40:00Z",
+      "WDIR": null,
+      "WSPD": 4.0,
+      "GST": 6.0,
+      "WVHT": 1.1,
+      "DPD": 11.0,
+      "APD": 7.0,
+      "MWD": 295.0,
+      "PRES": null,
+      "ATMP": null,
+      "WTMP": 14.5,
+      "DEWP": null,
+      "VIS": null,
+      "PTDY": null,
+      "TIDE": null
+     }
+    ]
+   }
+  },
+  "tides": {
+   "id": "tides",
+   "name": "NOAA Monterey reference tide predictions",
+   "kind": "prediction",
+   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&station=9413450&datum=MLLW",
+   "checked_at": "2026-10-08T12:00:00Z",
+   "max_age_hours": 36,
+   "status": "ok",
+   "data": {
+    "station": "9413450",
+    "datum": "MLLW",
+    "units": "ft",
+    "predictions": [
+     {
+      "time": "2026-10-08T01:10:00Z",
+      "height_ft": 4.9,
+      "type": "H"
+     },
+     {
+      "time": "2026-10-08T07:22:00Z",
+      "height_ft": 0.6,
+      "type": "L"
+     },
+     {
+      "time": "2026-10-08T13:34:00Z",
+      "height_ft": 4.9,
+      "type": "H"
+     },
+     {
+      "time": "2026-10-08T19:46:00Z",
+      "height_ft": 0.6,
+      "type": "L"
+     },
+     {
+      "time": "2026-10-09T01:58:00Z",
+      "height_ft": 4.9,
+      "type": "H"
+     },
+     {
+      "time": "2026-10-09T08:10:00Z",
+      "height_ft": 0.6,
+      "type": "L"
+     },
+     {
+      "time": "2026-10-09T14:22:00Z",
+      "height_ft": 4.9,
+      "type": "H"
+     },
+     {
+      "time": "2026-10-09T20:34:00Z",
+      "height_ft": 0.6,
+      "type": "L"
+     },
+     {
+      "time": "2026-10-10T02:46:00Z",
+      "height_ft": 4.9,
+      "type": "H"
+     },
+     {
+      "time": "2026-10-10T08:58:00Z",
+      "height_ft": 0.6,
+      "type": "L"
+     }
+    ],
+    "note": "Reference water level."
+   }
+  },
+  "alerts-PZZ535": {
+   "id": "alerts-PZZ535",
+   "name": "NWS PZZ535 advisories",
+   "kind": "advisory",
+   "url": "https://api.weather.gov/alerts/active/zone/PZZ535",
+   "checked_at": "2026-10-08T12:00:00Z",
+   "max_age_hours": 36,
+   "status": "ok",
+   "data": {
+    "alerts": []
+   }
+  }
+ },
+ "reports": [
+  {
+   "date": "2026-10-07",
+   "boat": "Fixture Gull",
+   "port": "Monterey"
+  },
+  {
+   "date": "2026-10-05",
+   "boat": "Fixture Tern",
+   "port": "Monterey"
+  },
+  {
+   "date": "2026-10-04",
+   "boat": "Fixture Gull",
+   "port": "Monterey"
+  },
+  {
+   "date": "2026-09-20",
+   "boat": "Fixture Old",
+   "port": "Monterey"
+  },
+  {
+   "date": "2026-10-07",
+   "boat": "Fixture Elsewhere",
+   "port": "Santa Cruz"
+  }
+ ]
+}

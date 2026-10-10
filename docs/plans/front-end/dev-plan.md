@@ -333,6 +333,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - Files: `web/brief/model.ts`, `web/brief/types.ts`, `tests/test_brief_model.mjs`, `tests/fixtures/brief/*` (synthetic regional forecast, tides, buoy).
 - Build: § 10 fields: where `coastReport` binds, map `buildDaily` output (headline, deck, tiles, windows, caveats, beach notice) to the brief type; elsewhere build the same fields from SkipperCast's regional forecast, tides and buoy feeds, with the local-report line marked unavailable; fleet line from the landing-reports feed; tile freshness limits.
 - Accept: 1. Morro Bay fixture output equals `buildDaily`'s for the same inputs (no reimplementation). 2. A Monterey fixture yields the regional brief and the unavailable line. 3. A tile past its limit is stale. 4. Each profile yields its § 8 caveat.
+- Note (FE-31 PR): the headline and deck are `buildDaily`'s (`headline`, `summary`); the § 10 headline rule list is not in `daily.ts`, so it is not applied here. Elsewhere the adapter converts the regional feeds into the coast `Report` shape and runs the same `buildDaily`; the caller supplies forecast rows already sampled at the place (FE-32's `web/conditions.ts`). The tide trend is FE-33's.
 
 ### FE-37 · Brief column and mobile sheet · M
 - Status: CHANGED (renders the adapter). Agent: Claude.
