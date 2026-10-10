@@ -284,7 +284,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 ### FE-82 · Registry layers on the terrain · S
 - Status: NEW. Agent: Claude.
 - Depends: FE-81, FE-20
-- Files: `web/map/layers.ts`, `web/map/stage.ts`, `tests/test_map_layers.mjs`.
+- Files: `web/map/layers.ts`, `web/map/stage.ts`, `tests/test_map_layers.mjs`; as built also the publishers (`web/map/chart.ts` loads the protected areas with the region, `web/map/marks.ts`, `web/map/charter-grounds.ts`), `web/app/MapStage.tsx` (overlay palette), `web/app/MarkCard.tsx` (terrain pick card) and `web/app/Legend.tsx` (protected-area row and Charter fleet in terrain).
 - Build: registry entries for MPAs, reef marks and charter grounds declare `terrain`; the stage forwards them to `setOverlay`; picks open the mark card.
 - Accept: 1. MPAs and reef marks show in Terrain with the same styling tokens. 2. "Chart only" disappears from those rail entries. 3. A pick selects the same mark as in Chart.
 

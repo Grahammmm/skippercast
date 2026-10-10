@@ -51,13 +51,15 @@ export function PresentationToggle() {
 
 /** Token colours for the renderer; without web/tokens.css the embed keeps its defaults. */
 const palette = () => { try { return coastPalette(readPalette()); } catch { return undefined; } };
+/** The token palette the registry's terrain overlays take their roles from (FE-82). */
+const overlayPalette = () => { try { return readPalette(); } catch { return undefined; } };
 
 /** The map stage with whatever chrome the layout puts over it. */
 export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const place = () => regionPlace(regionInfo.value, profile.value, species.value ?? '');
-    const stage = createStage({host: terrainHost.current!, palette, center: () => regionInfo.value?.center ?? null, zone,
+    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => regionInfo.value?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),

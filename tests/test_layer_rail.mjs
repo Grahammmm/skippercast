@@ -150,30 +150,39 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   assert.match(m.render(m.h(m.LayerRail)), /<label class="app-rail-option"><input type="checkbox" checked\/?>Commercial AIS 2024<\/label>/);
   m.aisState.value = {offered: false, drawn: 0, note: ''};
   assert.doesNotMatch(m.render(m.h(m.LayerRail)), /app-rail-option/);
-  // In 3D the Chart's layers draw nothing: no key at all, chart-only rows say so, Currents gives the renderer's status.
+  // In 3D the Chart's layers draw nothing: chart-only rows say so, Currents gives the renderer's status, and
+  // the layers the terrain drapes (FE-82: charter grounds, protected areas) keep their keys.
   m.currentStatus.value = 'Surface currents: NOAA WCOFS forecast.';
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,currents,water-temp,swell,fleet,clouds`);
   html = m.render(m.h(m.Legend));
-  assert.deepEqual(swatches(html), []);
+  assert.deepEqual(swatches(html), ['charter-grounds', 'mpas']);
   const why = reasons(html);
-  for (const id of ['seafloor', 'water-temp', 'swell', 'fleet', 'clouds']) assert.equal(why[id], m.CHART_ONLY, id);
+  for (const id of ['seafloor', 'water-temp', 'swell', 'clouds']) assert.equal(why[id], m.CHART_ONLY, id);
+  assert.equal(why.fleet, undefined, 'the charter grounds drape on the terrain');
   assert.equal(why.currents, 'Surface currents: NOAA WCOFS forecast.');
-  assert.doesNotMatch(html, /app-legend-mpa/, 'the protected areas draw on the Chart only');
+  assert.match(html, /app-legend-mpa/, 'the protected areas drape on the terrain');
+  // Commercial AIS has no drape: its option says so in the terrain and shows no key.
+  m.aisState.value = {offered: true, drawn: 3, note: '3 historical grid cells · Jul & Sep 2024 · depth unknown'};
+  html = m.render(m.h(m.Legend));
+  assert.equal(reasons(html)['commercial-ais'], m.CHART_ONLY);
+  assert.deepEqual(swatches(html), ['charter-grounds', 'mpas']);
+  m.aisState.value = {offered: false, drawn: 0, note: ''};
 });
 
 test('in Terrain, chart-only entries and the base read "Chart only" and cannot be switched (Accept 4)', async () => {
   const m = await load(), s = m.state;
   for (const id of m.RAIL_IDS) assert.equal(m.drawsIn(id, 'chart'), true, `${id} draws on the Chart`);
-  assert.deepEqual(m.RAIL_IDS.filter(id => m.drawsIn(id, '3d')), ['currents'], 'only Currents draws in the terrain (setCurrentLayer)');
+  assert.deepEqual(m.RAIL_IDS.filter(id => m.drawsIn(id, '3d')).sort(), ['currents', 'fleet'], 'Currents (setCurrentLayer) and the charter grounds (FE-82 setOverlay) draw in the terrain');
   assert.deepEqual([m.drawsIn('base', 'chart'), m.drawsIn('base', '2d')], [true, false]);
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,water-temp`);
   let html = m.render(m.h(m.LayerRail)), items = railItems(html);
-  for (const label of ['Seafloor', 'Water temp', 'Swell', 'Charter fleet', 'Clouds']) {
+  for (const label of ['Seafloor', 'Water temp', 'Swell', 'Clouds']) {
     assert.deepEqual([items[label].disabled, items[label].note], [true, m.CHART_ONLY], label);
   }
   assert.deepEqual(pressed(items), ['Seafloor', 'Water temp'], 'the choice is kept for the Chart');
   assert.equal(items.Currents.disabled, false);
+  assert.deepEqual([items['Charter fleet'].disabled, items['Charter fleet'].note], [false, ''], 'FE-82: no "Chart only" on an entry the terrain drapes');
   assert.match(baseChoice(html), /<select disabled aria-describedby="app-rail-base-note">.*<span id="app-rail-base-note" class="ui-rail-note ui-mono">Chart only<\/span>/s);
   // On the Chart, and wherever the stage falls back to it, every entry can be switched.
   for (const href of [`${ORIGIN}?region=morro-bay&presentation=chart`, `${ORIGIN}?region=santa-cruz-monterey-bay&presentation=3d`]) {

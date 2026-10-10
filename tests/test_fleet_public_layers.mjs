@@ -14,7 +14,7 @@ import {
 } from '../web/map/charter-grounds.ts';
 import {AIS_CREDIT, AIS_HEAT, AIS_LINE, AIS_SOURCE, aisMark, aisOn, aisOverlay, aisState, aisSummary, cellCollection, createCommercialAis, shownCells} from '../web/map/commercial-ais.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
-import {layerEntry, railNotes} from '../web/map/layers.ts';
+import {layerEntry, railNotes, terrainLayers} from '../web/map/layers.ts';
 import {MARK_PICK, markData, markScreen} from '../web/map/marks.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
@@ -111,6 +111,12 @@ test('Accept 1: both layers render from the committed files, offline, in the --f
   assert.match(card.basis, /Reported area, exact stops unknown\. Captains named “Pecho Rock”; they did not publish GPS positions or fishing depths\./);
   for (const boat of GROUNDS.grounds[0].boats) assert.ok(!JSON.stringify(card).includes(boat), 'no boat names on the card');
   assert.equal(grounds.pick.mark(GROUNDS_FILL, {id: 'CHARTER-MORRO'}), null, 'the broad name is not drawn');
+  // FE-82: the same grounds drape on the terrain, and a terrain pick opens the same card.
+  const drape = terrainLayers.value['charter-grounds'];
+  assert.deepEqual(drape.features.map(f => [f.id, f.geometry.type]), groundCollections(shownGrounds(GROUNDS, 'lingcod', 'boat', READY)).outlines.features.map(f => [f.properties.id, f.geometry.type]));
+  assert.equal(drape.features.length, 2);
+  assert.deepEqual(drape.pick('CHARTER-PECHO'), card, 'the card the Chart\'s click gives');
+  assert.equal(drape.pick('CHARTER-MORRO'), null);
   const cell = ais.pick.mark(AIS_HEAT, {id: 'AIS-COMM-003'});
   assert.equal(cell.name, 'Offshore Morro Bay · Trawler activity');
   assert.match(cell.reading, /Apparent fishing activity, not a verified catch spot\.$/);
@@ -120,6 +126,7 @@ test('Accept 1: both layers render from the committed files, offline, in the --f
   await flush();
   assert.deepEqual(calls.slice(-2).map(c => [c[0], c[1], c[2]]).sort(), [['overlay', 'charter-grounds', null], ['overlay', 'commercial-ais', null]]);
   assert.equal(groundsState.value.drawn, 0);
+  assert.equal(terrainLayers.value['charter-grounds'], undefined, 'and leave the terrain');
 });
 
 test('the grounds\' row says why nothing draws', async t => {

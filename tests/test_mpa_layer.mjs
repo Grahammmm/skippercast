@@ -43,10 +43,10 @@ const serveDist = url => {
 /** Words that would read the map as a statement of what the rules allow, or as an absence of protection. */
 const VERDICT = /\b(?:allowed|prohibited|permitted|illegal|legal to|you may|you can|open to fishing|no (?:protected|mpa)|not protected|clear of)\b/i;
 
-test('the registry entry is always on in Chart, has no rail entry, owns its source and carries the ds582 credit', () => {
+test('the registry entry is always on in Chart and on the terrain, has no rail entry, owns its source and carries the ds582 credit', () => {
   const e = layerEntry('mpas');
   assert.equal(e.control, 'always');
-  assert.deepEqual(e.presentations, ['chart']);
+  assert.deepEqual(e.presentations, ['chart', 'terrain']);
   assert.deepEqual(e.time, ['static']);
   assert.ok(!RAIL_IDS.includes('mpas') && !RAIL_IDS.includes(e.control), 'no rail entry');
   for (const profile of Object.values(PROFILE_TABLE)) assert.ok(!profile.defaultLayers.includes('mpas'), 'drawn whatever the profile');
@@ -353,10 +353,10 @@ async function components() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {Legend, MpaRow} from './web/app/Legend.tsx';
-      export {MarkCard} from './web/app/MarkCard.tsx';
+      export {MarkCard, currentMark} from './web/app/MarkCard.tsx';
       export {mpaState, LOADING, NOTES} from './web/map/mpa.ts';
       export {chartFailed, unavailable} from './web/map/chart.ts';
-      export {shownPresentation} from './web/map/stage.ts';
+      export {shownPresentation, terrainPick} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
@@ -404,6 +404,25 @@ test('the legend row says what the drawing covers, links the official rules and 
   assert.match(legend, /<ul><li class="app-legend-mpa" data-mpa="unavailable">/, 'no "No layers on." while the areas draw');
   assert.match(legend, /Boundaries did not load, so none are drawn; an area without an outline may still be protected\./);
   assert.doesNotMatch(legend, /data-unavailable="mpas"/);
+  // FE-82: in Terrain the areas drape too, so the row stays; the Chart's own failure does not speak for the drape.
+  store.syncFromURL(`${PAGE}?region=morro-bay&layers=none&presentation=3d`);
+  chartFailed.value = true;
+  state.value = {status: 'complete', note: 'CDFW ds582 snapshot for this region, checked 2026-09-21.', detail: '', checked: '2026-09-21', count: 8};
+  assert.match(render(h(Legend, {})), /<ul><li class="app-legend-mpa" data-mpa="complete">/);
+  chartFailed.value = false;
+});
+
+test('FE-82: an area picked on the terrain fills the mark card in 2D and 3D, never on the Chart', async () => {
+  const {MarkCard, currentMark, terrainPick, render, h, state: store} = await components();
+  store.configureStore({v2: true, storage: null});
+  store.syncFromURL(`${PAGE}?region=morro-bay&presentation=3d`);
+  const area = mpaMark({NAME: 'Cambria SMCA', FULLNAME: 'Cambria State Marine Conservation Area', Type: 'SMCA', CCR: 'Section 632 (b) (95)', source: 'cdfw', checked: '2026-09-21'});
+  terrainPick.value = area;
+  assert.equal(currentMark.value, area);
+  assert.match(render(h(MarkCard, {})), /<h2 tabindex="-1">Cambria State Marine Conservation Area<\/h2>/);
+  store.syncFromURL(`${PAGE}?region=morro-bay&presentation=chart`);
+  assert.equal(currentMark.value, null, 'the Chart shows its own selection');
+  terrainPick.value = null;
 });
 
 test('the mark card turns Regulations into a link to the official page for an area, and keeps it disabled otherwise', async () => {

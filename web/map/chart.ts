@@ -26,9 +26,9 @@ import {appView, base, habitat, region, selection, setParams} from '../state.ts'
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry} from './layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
-import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState} from './mpa.ts';
+import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {RANKED_PICK, RANKED_PIN, drawnSpots, rankedFeatures, rankedMark, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
@@ -110,6 +110,7 @@ const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 export function createChart(options: ChartOptions): {destroy(): void} {
   const {host, layers = [], load = loadLibrary, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
   const engine = signal<Engine | null>(null);
+  const mpas = signal<{region: string; data: MpaResult['data']} | null>(null);
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   let currents: Currents | null = null;
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
@@ -187,8 +188,10 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       e.setData(COASTLINE_SOURCE, new URL(shorelineURL(id), page()).href);
     }),
     effect(() => { engine.value?.setVisible(ENC_LAYER, base.value === 'chart'); }),
-    // The region's protected areas, checked before they draw; a region change replaces them.
-    effect(() => { const e = engine.value, id = region.value; if (e && id) void drawMpas(e, id); }),
+    // The region's protected areas, checked before they draw; a region change replaces them. They load with the
+    // region, whatever the presentation, because the terrain drapes the same areas (FE-82).
+    effect(() => { const id = region.value; if (id) void loadRegionMpas(id); }),
+    effect(() => { const e = engine.value, m = mpas.value; if (e && m && m.region === region.value) e.setData(MPA_SOURCE, m.data); }),
     effect(() => { host.dataset.mpa = mpaState.value.status; }),
     // A new link selection (a mark, a terrain pick, Back) replaces the Chart's own: one selection at a time.
     effect(() => { if (selection.value || habitat.value) chartMark.value = null; }),
@@ -207,14 +210,18 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (shown && !spots.some(s => s.id === shown)) chartMark.value = null;
     }),
   ];
-  async function drawMpas(e: Engine, id: string): Promise<void> {
+  async function loadRegionMpas(id: string): Promise<void> {
     mpaState.value = LOADING;
     unavailable.value = unavailable.peek().filter(layer => layer !== 'mpas');
+    setTerrainLayer('mpas', null);
     const {state, data} = await loadMpas(id, fetchFn, page());
-    if (!alive || engine.peek() !== e || region.peek() !== id) return;
-    e.setData(MPA_SOURCE, data);
+    if (!alive || region.peek() !== id) return;
+    mpas.value = {region: id, data};
     mpaState.value = state;
     if (state.status === 'unavailable') markUnavailable('mpas', new Error(state.detail));
+    // A terrain pick of an area opens the same card as the Chart's click (mpaMark of the same feature).
+    setTerrainLayer('mpas', {features: overlayFeatures(data.features, (_f, i) => i),
+      pick: i => { const mark = mpaMark(data.features[Number(i)]?.properties as Record<string, unknown> | undefined); return mark && chartPick(null, null, mark); }});
   }
 
   const drawn = layers.map(create => create(engine));
@@ -235,6 +242,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       chartMark.value = null;
       unavailable.value = [];
       mpaState.value = IDLE;
+      setTerrainLayer('mpas', null);
     },
   };
 }
