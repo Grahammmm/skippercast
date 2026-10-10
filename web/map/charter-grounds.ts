@@ -26,8 +26,8 @@ import type {ChartMark} from './coastline.ts';
 import {cloudLayerIds} from './clouds.ts';
 import type {Engine, Overlay} from './engine.ts';
 import type {MarkScreen} from './habitat.ts';
-import {layerEntry, setRailNote} from './layers.ts';
-import {MARK_PICK, markData, markScreen} from './marks.ts';
+import {layerEntry, overlayFeatures, setRailNote, setTerrainLayer} from './layers.ts';
+import {MARK_PICK, chartPick, markData, markScreen} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {LABEL_FONT} from './style.ts';
 
@@ -203,12 +203,19 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
       e.setData(GROUNDS_SOURCE, data.outlines); e.setData(HATCH_SOURCE, data.hatch);
       drawn = true; drawnOn = e;
     }),
+    // FE-82: the same grounds drape on the terrain (outline and a faint fill; the drape has no hatch); a pick opens the ground's card.
+    effect(() => {
+      const list = on.value ? shown.value : [];
+      setTerrainLayer(REGISTRY_ID, list.length ? {features: overlayFeatures(groundCollections(list).outlines.features, f => f.properties.id as string),
+        pick: id => { const mark = groundPick(id); return mark && chartPick(null, null, mark); }} : null);
+    }),
   ];
+  const groundPick = (id: unknown): ChartMark | null => {
+    const e = evidence.peek(), g = shown.peek().find(x => x.id === id);
+    return g && e?.data ? groundMark(g, e.data) : null;
+  };
   return {
-    destroy() { for (const dispose of disposers) dispose(); groundsState.value = {drawn: 0, note: '', audit: null}; setRailNote('fleet', ''); },
-    pick: {layers: [GROUNDS_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
-      const e = evidence.peek(), g = shown.peek().find(x => x.id === properties?.id);
-      return g && e?.data ? groundMark(g, e.data) : null;
-    }},
+    destroy() { for (const dispose of disposers) dispose(); setTerrainLayer(REGISTRY_ID, null); groundsState.value = {drawn: 0, note: '', audit: null}; setRailNote('fleet', ''); },
+    pick: {layers: [GROUNDS_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => groundPick(properties?.id)},
   };
 }

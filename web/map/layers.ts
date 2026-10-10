@@ -5,12 +5,18 @@
 // entries it has a drawing for, and a source error marks only the entry that
 // owns the source unavailable (sourceLayer). Later tasks fill in the entries
 // whose `task` is theirs; the order and the presentations are fixed here.
+// An entry that also draws on the terrain (FE-82: MPAs, reef marks, charter
+// grounds) names its `terrain` drape in the same palette roles as its Chart
+// style; the layer that loads its features publishes them (setTerrainLayer)
+// and web/map/stage.ts hands them to the renderer's setOverlay.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import {signal} from '@preact/signals';
+import type {CoastOverlayColor, CoastOverlayFeature, CoastOverlayKind} from '../../packages/coast/src/embed-types.ts';
 import type {Presentation} from '../coast-context.ts';
 import type {RailId} from '../profile.ts';
-import type {PaletteKey} from './palette.ts';
+import type {ChartMark} from './coastline.ts';
+import type {Palette, PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
@@ -20,6 +26,21 @@ export type TimeBehaviour = 'static' | 'hour' | 'observed';
 /** A rail entry, a base (one at a time, under the fields), or always drawn where its gate allows. */
 export type LayerControl = RailId | 'base' | 'always';
 export interface LegendRow {readonly label: string; readonly swatch?: PaletteKey}
+/** Palette keys the terrain's overlays accept (packages/coast COAST_OVERLAY_COLORS). */
+export type OverlayRole = CoastOverlayColor & PaletteKey;
+/**
+ * How an entry drapes on the terrain (packages/coast `setOverlay`): its Chart style's palette roles, never a colour.
+ * `opacity` is a number or the palette key that carries it as CSS text (the protected-area fill's token).
+ */
+export interface TerrainDrape {
+  readonly kind: CoastOverlayKind;
+  readonly color: OverlayRole;
+  readonly opacity?: number | 'mpaFillOpacity';
+  readonly outline?: OverlayRole;
+  readonly outlineOpacity?: number;
+  /** A point's diameter in CSS pixels. */
+  readonly size?: number;
+}
 
 export interface LayerEntry {
   readonly id: string;
@@ -38,6 +59,8 @@ export interface LayerEntry {
   readonly gate?: string;
   /** The dev-plan task that draws it. */
   readonly task: string;
+  /** Its drape on the terrain, for an entry whose presentations include `terrain` and that the registry drapes (FE-82). */
+  readonly terrain?: TerrainDrape;
 }
 
 export const COASTLINE_SOURCE = 'coastline';
@@ -83,7 +106,8 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'Half-degree Fahrenheit contours of the same analysis, labelled at whole degrees.', task: 'FE-16'}),
   entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],
     basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
-  entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart'], sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
+  entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart', 'terrain'],
+    terrain: {kind: 'fill', color: 'mpaFill', opacity: 'mpaFillOpacity', outline: 'mpaLine'}, sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
     legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
     basis: 'CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page.', task: 'FE-19'}),
   entry({id: 'habitat', label: 'Habitat', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [SURVEY_SOURCE, GEOLOGY_SOURCE],
@@ -95,7 +119,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     legend: [{label: 'Strongest grade or fit', swatch: 'depth0'}, {label: 'Weakest grade or fit', swatch: 'depth2'}, {label: 'Surveyed cell', swatch: 'depth3'}],
     basis: 'Terrain screening of original seafloor surveys (grids of 16 m or finer, 250 m coverage cells) at nominal 25–300 ft in each survey\'s own vertical datum, drawn only while its 35-day legal screen is current.', task: 'FE-14'}),
   // FE-21: v1's own sentences, verbatim (dist/charter-grounds.js; dist/commercial-ais.html), pinned by tests/test_fleet_public_layers.mjs.
-  entry({id: 'charter-grounds', label: 'Charter grounds', control: 'fleet', presentations: ['chart'], sources: ['charter-grounds', 'charter-grounds-hatch'],
+  // On the terrain the hatch reads as a faint fill of the same colour: the drape has no line pattern.
+  entry({id: 'charter-grounds', label: 'Charter grounds', control: 'fleet', presentations: ['chart', 'terrain'],
+    terrain: {kind: 'fill', color: 'amber', opacity: 0.15, outline: 'amber'}, sources: ['charter-grounds', 'charter-grounds-hatch'],
     legend: [{label: 'Charter ground', swatch: 'amber'}],
     basis: 'These are named areas from published trip records, not AIS-confirmed fishing positions. Only lingcod and rockfish are supported by this layer. The outlines are our survey-depth-screened search windows, not published charter boundaries.', task: 'FE-21'}),
   entry({id: 'commercial-ais', label: 'Commercial AIS 2024', control: 'fleet', presentations: ['chart'], sources: ['commercial-ais'], attribution: 'Global Fishing Watch · CC BY-NC 4.0',
@@ -111,7 +137,8 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'WCOFS surface forecast at about 4 km, or HF radar observed within 6 hours at 1 or 6 km; arrows follow the toward-bearing and their motion is illustrative.', task: 'FE-15'}),
   entry({id: 'clouds', label: 'Clouds', control: 'clouds', presentations: ['chart'], time: ['observed'],
     basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.', task: 'FE-22'}),
-  entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [MARKS_SOURCE],
+  entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart', 'terrain'],
+    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: 'zoom ≥ 10', sources: [MARKS_SOURCE],
     legend: [{label: 'Reef mark; badge: habitat fit, 3 strongest', swatch: 'mint'}],
     basis: 'Atlas reef marks, each with its source survey.', task: 'FE-18'}),
   entry({id: 'selection', label: 'Selection', control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
@@ -162,4 +189,37 @@ export const layersIn = (presentation: LayerPresentation): LayerEntry[] => LAYER
 /** The legend's attribution row for the drawn layers, in draw order, without repeats. */
 export function attributionFor(drawn: readonly string[]): string {
   return [...new Set(LAYERS.filter(e => e.attribution && drawn.includes(e.id)).map(e => e.attribution as string))].join(' · ');
+}
+
+/** A registry layer's features for the terrain, and what a pick of one of them selects. */
+export interface TerrainLayer {
+  readonly features: readonly CoastOverlayFeature[];
+  /** The card for a picked feature, or null when the pick selects through the link (a reef mark's `?spot=`), as the Chart's pick does. */
+  pick(feature: string | number): ChartMark | null;
+}
+/** GeoJSON features as overlay features, each under the id `id` gives it (the Chart's feature id, so a pick names the same feature). */
+export function overlayFeatures<F extends {readonly geometry?: unknown; readonly properties?: unknown}>(
+  features: readonly F[], id: (feature: F, index: number) => string | number): CoastOverlayFeature[] {
+  return features.map((f, i) => ({id: id(f, i), geometry: f.geometry as CoastOverlayFeature['geometry'], properties: (f.properties ?? null) as CoastOverlayFeature['properties']}));
+}
+/** Each draped entry's current features, published by the layer that loads them; stage.ts drapes them. */
+export const terrainLayers = signal<Readonly<Record<string, TerrainLayer>>>({});
+export function setTerrainLayer(id: string, layer: TerrainLayer | null): void {
+  const now = terrainLayers.peek();
+  if (!layer && !(id in now)) return;
+  const next = {...now};
+  if (layer) next[id] = layer; else delete next[id];
+  terrainLayers.value = next;
+}
+
+/** The overlay style for `drape`, its roles left as roles (the renderer resolves them from the overlay palette) and its opacity resolved from `p`. */
+export function drapeStyle(drape: TerrainDrape, p: Pick<Palette, 'mpaFillOpacity'>) {
+  const opacity = drape.opacity === 'mpaFillOpacity' ? Number(p.mpaFillOpacity) : drape.opacity;
+  return {
+    color: drape.color,
+    ...(opacity !== undefined && Number.isFinite(opacity) ? {opacity} : {}),
+    ...(drape.outline ? {outline: drape.outline} : {}),
+    ...(drape.outlineOpacity !== undefined ? {outlineOpacity: drape.outlineOpacity} : {}),
+    ...(drape.size !== undefined ? {size: drape.size} : {}),
+  };
 }

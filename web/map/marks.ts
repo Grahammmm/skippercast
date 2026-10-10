@@ -21,7 +21,7 @@ import {
   surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
   type Atlas, type Collection, type DailyRecord, type Geology, type HabitatReceipt, type MarkData, type MarkScreen, type RegionData, type ScreenInputs, type Survey,
 } from './habitat.ts';
-import {GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE} from './layers.ts';
+import {GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {loadMpas, mpaQuery, validMpas} from './mpa.ts';
 import type {Palette} from './palette.ts';
 import {LABEL_FONT} from './style.ts';
@@ -238,12 +238,17 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
         expiry = setTimeout(() => { if (habitatReceipt.peek() === receipt) habitatReceipt.value = null; }, Math.min(left, 2 ** 31 - 1));
       }, () => {});
     }),
+    // FE-82: the same screened marks drape on the terrain; a pick selects the spot as the Chart's click does.
+    effect(() => {
+      const features = overlayFeatures(markSources[MARKS_SOURCE]!.value.features, f => f.properties.id as string);
+      setTerrainLayer('marks', {features, pick: id => chartPick(MARK_PICK, {id})});
+    }),
   ];
   return {
     destroy() {
       run++; controller?.abort(); clearTimeout(expiry); clearTimeout(recheck);
       for (const dispose of disposers) dispose();
-      markData.value = null; habitatReceipt.value = null; markScreen.value = CHECKING;
+      markData.value = null; habitatReceipt.value = null; markScreen.value = CHECKING; setTerrainLayer('marks', null);
     },
   };
 }

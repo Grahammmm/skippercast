@@ -6,7 +6,7 @@
 // target's species fit, switchable here), the surveys and years drawn, the
 // credits in its basis, and why nothing draws when the publication is held,
 // updating or expired.
-// Protected areas (FE-19) are always drawn on the Chart: their row says what
+// Protected areas (FE-19) are always drawn (on the terrain too since FE-82): their row says what
 // the drawing covers (MpaRow), links the official rules page and carries the
 // ds582 credit in its basis. Where the region has reef marks for the target,
 // the basis also says what the marks' run-time screen checked (#489,
@@ -27,6 +27,9 @@
 // "Chart only", and Currents gives the renderer's status (it keys its own).
 // Charter fleet (FE-21) keys the charter grounds and, with its option on, the
 // commercial AIS cells, with v1's basis sentences and status lines.
+// FE-82: protected areas, reef marks and charter grounds also drape on the
+// terrain, so the protected areas' row and the Charter fleet row show there too;
+// commercial AIS still draws on the Chart only and says so.
 import {IconButton} from '../ui/Button.tsx';
 import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
@@ -76,7 +79,9 @@ function SeafloorRow() {
  * MapLibre failed to draw the checked data.
  */
 export function MpaRow() {
-  const s = shownMpaState(mpaState.value, {sourceFailed: unavailable.value.includes('mpas'), mapFailed: chartFailed.value});
+  // The Chart's own failures say nothing about the terrain's drape (FE-82).
+  const chart = shownPresentation.value === 'chart';
+  const s = shownMpaState(mpaState.value, {sourceFailed: chart && unavailable.value.includes('mpas'), mapFailed: chart && chartFailed.value});
   const marks = markNote.value, withheld = !!marks && (markScreen.value.status === 'stale' || markScreen.value.status === 'unavailable');
   return (
     <li class="app-legend-mpa" data-mpa={s.status}>
@@ -165,7 +170,7 @@ function CloudsLegendRow({label}: {label: string}) {
  * commercial AIS option's heat key and v1's status line while it is on; each with v1's basis sentences.
  */
 function FleetRow() {
-  const g = groundsState.value, a = aisState.value, ais = aisOn.value && a.offered;
+  const g = groundsState.value, a = aisState.value, ais = aisOn.value && a.offered, chart = shownPresentation.value === 'chart';
   return (
     <li class="app-legend-fleet">
       {g.drawn ? <span class="app-swatch" data-layer="charter-grounds" aria-hidden="true"></span> : null}{layerEntry('charter-grounds').label}
@@ -173,9 +178,9 @@ function FleetRow() {
       {g.drawn ? <p class="app-legend-note ui-mono" data-stamp="charter-grounds">{g.drawn} named vicinit{g.drawn === 1 ? 'y' : 'ies'} · no verified charter AIS</p> : null}
       {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds">{g.note || NOTES.loading}</p> : null}
       {ais ? <>
-        <p class="app-legend-note app-legend-sub">{a.drawn ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerEntry('commercial-ais').label}
+        <p class="app-legend-note app-legend-sub">{a.drawn && chart ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerEntry('commercial-ais').label}
           <Popover iconOnly summary="Commercial AIS basis">{layerEntry('commercial-ais').basis} {AIS_CREDIT}</Popover></p>
-        {a.note ? <p class="app-legend-note" data-reason="commercial-ais">{a.note}</p> : null}
+        {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{CHART_ONLY}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais">{a.note}</p> : null}
       </> : null}
     </li>
   );
@@ -187,21 +192,19 @@ const PlainRow = ({id, label, reason}: {id: string; label: string; reason: strin
 );
 
 export function Legend() {
-  const shown = shownPresentation.value, chart = shown === 'chart';
+  const shown = shownPresentation.value;
   const on = RAIL_ENTRIES.filter(e => railOn(e.id, layers.value, current.value));
   return (
     <section class="app-legend" aria-label="Legend">
       <span class="ui-eyebrow">Legend</span>
-      {on.length || chart ? (
-        <ul>
-          {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
-            : e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
-            : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
-            : e.id === 'fleet' ? <FleetRow key={e.id} />
-            : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
-          {chart ? <MpaRow /> : null}
-        </ul>
-      ) : <p class="app-empty">No layers on.</p>}
+      <ul>
+        {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
+          : e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
+          : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
+          : e.id === 'fleet' ? <FleetRow key={e.id} />
+          : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
+        <MpaRow />
+      </ul>
       {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}
     </section>
   );
