@@ -83,7 +83,7 @@ function astro(date:string,county:County,area:Area) {
  const iso=(value:Date|null)=>value&&Number.isFinite(value.getTime())&&dateKey(value,county.timezone)===date?value.toISOString():null;
  const lunar=getMoonIllumination(noon);
  const names=['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'];
- return {sunrise:iso(times.sunrise),sunset:iso(times.sunset),moon:{fraction:finite(lunar.fraction)?lunar.fraction:null,label:finite(lunar.phase)?names[Math.round(lunar.phase*8)%8]:'Unknown'}};
+ return {sunrise:iso(times.sunrise),sunset:iso(times.sunset),moon:{fraction:finite(lunar.fraction)?lunar.fraction:null,label:finite(lunar.phase)?names[Math.round(lunar.phase*8)%8]!:'Unknown'}};
 }
 
 export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:string,now=new Date()):DailyBrief {
@@ -117,7 +117,7 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
   if(hours.some(hour=>!finite(hour[field])))missing.push(`${label} missing for some forecast hours`);
  }
  if(!tides.length)missing.push('Tide curve unavailable for this date');
- else if(Date.parse(tides[0].at)>start+HOUR||Date.parse(tides[tides.length-1].at)<end-HOUR||tides.some((point,index)=>index>0&&Date.parse(point.at)-Date.parse(tides[index-1].at)>HOUR))missing.push('Tide curve covers only part of this date');
+ else if(Date.parse(tides[0]!.at)>start+HOUR||Date.parse(tides[tides.length-1]!.at)<end-HOUR||tides.some((point,index)=>index>0&&Date.parse(point.at)-Date.parse(tides[index-1]!.at)>HOUR))missing.push('Tide curve covers only part of this date');
  if(!tideEvents.length)missing.push('High and low tide events unavailable');
  if(isToday&&!tempObservation)missing.push('Fresh sea temperature observation unavailable');
  if(!isToday)missing.push('Sea temperature forecast unavailable');
@@ -131,11 +131,11 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  });
  const status:DailyBrief['status']=alerts.length?'Caution':!forecast||!hours.length||!alertCheckFresh||!complete||mode==='spear'?'Unknown':mode==='shore'||windows.length?'Mixed':'Caution';
  const conditions=[textRange(wind,'kt winds'),textRange(seas,'ft offshore seas')].filter((item):item is string=>item!==null);
- const headline=alerts.length?alerts[0].event:conditions.length?conditions.join(' · '):'Local forecast unavailable';
+ const headline=alerts.length?alerts[0]!.event:conditions.length?conditions.join(' · '):'Local forecast unavailable';
  const summaryParts:string[]=[];
  if(conditions.length)summaryParts.push(`${conditions.join('; ')}${wind.gust!==null?`, gusting to ${Number(wind.gust.toFixed(1))} kt`:''}.`);
  if(seas.period!==null)summaryParts.push(seas.period>=15?`Long-period waves reach ${seas.period} seconds; check local surge and breaking surf.`:`Wave periods reach ${seas.period} seconds.`);
- if(alerts.length)summaryParts.push(alerts[0].headline);
+ if(alerts.length)summaryParts.push(alerts[0]!.headline);
  if(!alertCheckFresh)summaryParts.push('The current marine alert check is unavailable; conditions windows are withheld.');
  if(!forecast||!hours.length)summaryParts.push('A fresh forecast covering this date is needed.');
  if(mode==='boat')summaryParts.push('Check your harbor entrance, route and return conditions separately.');
