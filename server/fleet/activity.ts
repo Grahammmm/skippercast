@@ -16,6 +16,11 @@
 //       the listed cell ids of that season, and with `prune` (a computed_at) deletes that
 //       module's cells of the season computed at any other time (a full rebuild).
 //     processed: {run_id, counts}: job_state fleet.ais.<region>.processed = {at, run_id, counts}.
+//     Catch-log pairing (server/fleet/pairing.ts, fleet_trip_reports): each window drops the
+//       pairings of its trips the request does not re-insert (trip ids are derived, so a
+//       re-run keeps them) and pairs the window's trips with advisor reports; `processed`
+//       (sent once at the end of a scheduled run) also sweeps the region's last SWEEP_DAYS
+//       days: advisor pairings re-checked, landing reports from the daily feeds paired.
 //   POST /api/fleet/jobs/heartbeat {region, heartbeat, hours, messages_24h}
 //     heartbeat (the listener's heartbeat.json, selected fields, or null): job_state
 //     fleet.ais.<region>.heartbeat = {...heartbeat, received_at, messages_24h}. hours
@@ -31,6 +36,7 @@ import {recordFleetAis} from '../analytics.ts';
 import {sha256} from '../advisor/ids.ts';
 import type {Env} from '../env.ts';
 import {FLEET_ENUMS, MAX_PARAMS, REGION, RUN_ID} from './registry.ts';
+import {advisorPairs, advisorPrune, landingPairs, landingRows, SWEEP_DAYS} from './pairing.ts';
 
 export const MAX_ACTIVITY_BYTES = 1024 * 1024;
 export const LIMITS = {windows: 50, trips: 200, segments: 4000, events: 2000, cells: 1000, hours: 72} as const;
@@ -191,8 +197,10 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
   const statements: D1PreparedStatement[] = [], kinds: string[] = [];
   const add = (kind: string, items: D1PreparedStatement[]) => { statements.push(...items); kinds.push(...items.map(() => kind)); };
   const inWindow = 'SELECT id FROM fleet_trips WHERE region=? AND source=? AND mmsi=? AND departed_at>=? AND departed_at<?';
+  const keep = (w: Row): string => JSON.stringify(trips.filter(t => t.mmsi === w.mmsi && w.from! <= t.departed_at! && t.departed_at! < w.to!).map(t => t.id));
   for (const w of windows) {
     const args = [region, source as string, w.mmsi, w.from, w.to];
+    add('unpaired', [db.prepare(`DELETE FROM fleet_trip_reports WHERE trip_id IN (${inWindow}) AND trip_id NOT IN (SELECT value FROM json_each(?))`).bind(...args, keep(w))]);
     add('deleted_events', [db.prepare(`DELETE FROM fleet_events WHERE trip_id IN (${inWindow})`).bind(...args)]);
     add('deleted_segments', [db.prepare(`DELETE FROM fleet_segments WHERE trip_id IN (${inWindow})`).bind(...args)]);
     add('deleted_trips', [db.prepare('DELETE FROM fleet_trips WHERE region=? AND source=? AND mmsi=? AND departed_at>=? AND departed_at<?').bind(...args)]);
@@ -200,6 +208,10 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
   add('trips', inserts(db, 'fleet_trips', Object.keys(TRIP), trips));
   add('segments', inserts(db, 'fleet_segments', Object.keys(SEGMENT), segments));
   add('events', inserts(db, 'fleet_events', Object.keys(EVENT), events));
+  const now = activityDeps.now().toISOString();
+  for (const w of windows) add('paired_advisor', [advisorPairs(db, {sql: 't.region=? AND t.source=? AND t.mmsi=? AND t.departed_at>=? AND t.departed_at<?',
+    args: [region, source as string, w.mmsi!, w.from!, w.to!]}, now)]);
+  let feeds: {read: number; unavailable: number; reports: number} | undefined;
 
   if (aggregates !== undefined) {
     if (!aggregates || typeof aggregates !== 'object' || Array.isArray(aggregates)) throw new Invalid('aggregates must be an object');
@@ -222,14 +234,21 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
     const {run_id: runId, counts, ...more} = (processed && typeof processed === 'object' && !Array.isArray(processed) ? processed : {bad: 1}) as Record<string, unknown>;
     const text = JSON.stringify(counts ?? null);
     if (Object.keys(more).length || typeof runId !== 'string' || !RUN_ID.test(runId) || text.length > 4000) throw new Invalid('invalid processed');
-    const at = activityDeps.now().toISOString();
+    const at = now, recent = {sql: 't.region=? AND t.local_date>=?', args: [region, new Date(Date.parse(now) - SWEEP_DAYS * 86400e3).toISOString().slice(0, 10)]};
+    const ports = (await db.prepare(`SELECT DISTINCT p FROM (SELECT depart_port_id p FROM fleet_trips t WHERE ${recent.sql}
+      UNION SELECT return_port_id FROM fleet_trips t WHERE ${recent.sql}) WHERE p IS NOT NULL`).bind(...recent.args, ...recent.args).all<{p: string}>()).results.map(r => r.p);
+    const landing = await landingRows(ports, recent.args[1] as string);
+    feeds = {read: landing.feeds - landing.unavailable, unavailable: landing.unavailable, reports: landing.rows.length};
+    add('unpaired', [advisorPrune(db, recent)]);
+    add('paired_advisor', [advisorPairs(db, recent, now)]);
+    add('paired_landing', landingPairs(db, region, recent, landing.rows, now));
     add('processed', [db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
       .bind(processedKey(region), JSON.stringify({at, run_id: runId, counts: counts ?? null}), at)]);
   }
   const results = statements.length ? await db.batch(statements) : [];
   const changes: Record<string, number> = {};
   results.forEach((r, i) => { changes[kinds[i]!] = (changes[kinds[i]!] ?? 0) + Number(r.meta?.changes ?? 0); });
-  return {status: 200, body: {ok: true, windows: windows.length, changes}};
+  return {status: 200, body: {ok: true, windows: windows.length, changes, ...(feeds ? {feeds} : {})}};
 }
 
 /** POST /api/fleet/jobs/heartbeat. */

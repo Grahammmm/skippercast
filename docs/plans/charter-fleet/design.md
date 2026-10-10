@@ -406,7 +406,7 @@ Other registry tables:
   `created_at`; index `label_trip (trip_id)`.
 - **`fleet_ais_hours`**: PK `(region, hour)`; `messages`,
   `watched_messages`, `vessels`, `reconnects`, `max_gap_s`, `dropped`.
-- **`fleet_trip_reports`** (catch-log pairing, filled later): PK
+- **`fleet_trip_reports`** (catch-log pairing, filled by `server/fleet/pairing.ts` from the activity job: advisor pairs on each window, landing pairs in the `processed` sweep over the last 31 days of the daily feeds; #345): PK
   `(trip_id, report_kind, report_ref)`; `report_kind` (`advisor`, `landing`),
   `report_ref` (`advisor_reports.id`, or the landing report `id` in the daily
   feed), `match` (`boat-date`, `alias-port-date`), `confidence`, `created_at`.
