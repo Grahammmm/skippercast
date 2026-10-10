@@ -66,6 +66,6 @@ test('acceptance 2: at the half detent the sheet shows the headline, tiles, top 
   // Compact tiles keep the stale state and the age.
   const water = sheet.locator('.ui-tile', {hasText: 'Water'});
   await expect(water).toHaveAttribute('data-state', 'stale');
-  await expect(water.locator('.ui-tile-source')).toContainText('5 h old');
+  await expect(water.locator('.ui-tile-source')).toContainText('NDBC 46011 · 5 h');
   expect(pageErrors).toEqual([]);
 });
