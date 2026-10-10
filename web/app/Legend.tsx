@@ -25,10 +25,14 @@
 // key only while its layer draws, so an inactive ramp never shows; otherwise it
 // says why (Clouds in its rail note). In Terrain 2D and 3D an entry that draws only on the Chart reads
 // "Chart only", and Currents gives the renderer's status (it keys its own).
+// Charter fleet (FE-21) keys the charter grounds and, with its option on, the
+// commercial AIS cells, with v1's basis sentences and status lines.
 import {IconButton} from '../ui/Button.tsx';
 import {current, layers} from '../state.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
+import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
+import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
 import {currentsState} from '../map/currents.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {markNote, markScreen} from '../map/marks.ts';
@@ -156,6 +160,27 @@ function CloudsLegendRow({label}: {label: string}) {
   );
 }
 
+/**
+ * The Charter fleet row (FE-21): the charter grounds' hatched key while they draw, else why not, and the
+ * commercial AIS option's heat key and v1's status line while it is on; each with v1's basis sentences.
+ */
+function FleetRow() {
+  const g = groundsState.value, a = aisState.value, ais = aisOn.value && a.offered;
+  return (
+    <li class="app-legend-fleet">
+      {g.drawn ? <span class="app-swatch" data-layer="charter-grounds" aria-hidden="true"></span> : null}{layerEntry('charter-grounds').label}
+      <Popover iconOnly summary="Charter grounds basis">{layerEntry('charter-grounds').basis}{g.audit ? ` Research checked ${g.audit}.` : ''}</Popover>
+      {g.drawn ? <p class="app-legend-note ui-mono" data-stamp="charter-grounds">{g.drawn} named vicinit{g.drawn === 1 ? 'y' : 'ies'} · no verified charter AIS</p> : null}
+      {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds">{g.note || NOTES.loading}</p> : null}
+      {ais ? <>
+        <p class="app-legend-note app-legend-sub">{a.drawn ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerEntry('commercial-ais').label}
+          <Popover iconOnly summary="Commercial AIS basis">{layerEntry('commercial-ais').basis} {AIS_CREDIT}</Popover></p>
+        {a.note ? <p class="app-legend-note" data-reason="commercial-ais">{a.note}</p> : null}
+      </> : null}
+    </li>
+  );
+}
+
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
 const PlainRow = ({id, label, reason}: {id: string; label: string; reason: string}) => (
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
@@ -172,6 +197,7 @@ export function Legend() {
           {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
             : e.id === 'seafloor' ? <SeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
             : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
+            : e.id === 'fleet' ? <FleetRow key={e.id} />
             : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
           {chart ? <MpaRow /> : null}
         </ul>
