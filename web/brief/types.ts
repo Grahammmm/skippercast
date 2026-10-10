@@ -60,6 +60,8 @@ export interface Brief {
   readonly missing: readonly string[];
   readonly tides: readonly TidePoint[];
   readonly tideEvents: readonly TideEvent[];
+  /** The tide heights' reference level (MLLW unless the station says otherwise). */
+  readonly tideDatum: string;
   readonly sunrise: string | null;
   readonly sunset: string | null;
 }
