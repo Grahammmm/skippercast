@@ -2,7 +2,8 @@
 // a top strip over it holds the brand and location card, the layers button
 // and the Boat / Shore / Spear switch; one bottom sheet with three detents
 // holds the brief (peek: the time window, freshness and headline; half: the
-// four tiles and the top pick; full: the whole brief with the day, target
+// four tiles and the top pick; full: the whole brief (FE-37: deck, the
+// lower-exposure window, caveat, notice, fleet and local lines) with the day, target
 // and area menus, the area group holding the port and locate controls as on
 // the desktop, FE-08) with the hour slider pinned at its top edge; a four-tab
 // nav sits under the sheet. The layers button swaps the sheet's content for
@@ -16,7 +17,8 @@ import {Sheet, type Detent} from '../ui/Sheet.tsx';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, Caveat, Headline, Picks, TideSpark, Tiles, type Pick} from './Desktop.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {Picks, TideSpark, type Pick} from './Desktop.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -50,22 +52,24 @@ export function HourEdge({now}: {now: Date}) {
   );
 }
 
-/** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. */
-export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: readonly Pick[]; onFocus?: () => void}) {
-  const tz = zone(), state = dockState(now, tz);
+/** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
+export function SheetBrief({now, picks = [], onFocus, detent = 'full'}: {now: Date; picks?: readonly Pick[]; onFocus?: () => void; detent?: Detent}) {
+  const tz = zone(), state = dockState(now, tz), brief = currentBrief(now);
   return (
-    <div class="app-sheet-brief" onFocusIn={onFocus}>
+    <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value ? <MarkCard /> : (
         <>
           <div class="app-sheet-head">
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
             <FreshnessDot />
           </div>
-          <Headline />
+          <Headline brief={brief} />
         </>
       )}
-      <Tiles />
+      <BriefTiles brief={brief} compact={detent !== 'full'} />
       <Picks picks={picks} />
+      <Deck brief={brief} />
+      <LowerExposure brief={brief} />
       <TideSpark />
       <div class="app-sheet-menus">
         <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
@@ -75,7 +79,8 @@ export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: reado
           <PortControl />
         </div>
       </div>
-      <Caveat />
+      <Caveat brief={brief} />
+      <BriefLinks brief={brief} />
       <BriefFooter><AccountMenu inline /></BriefFooter>
     </div>
   );
@@ -115,7 +120,7 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
       </header>
       <Sheet label={layersOpen ? 'Layers' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
-        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : <SheetBrief now={now} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
+        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>
       <ViewNav icons class="app-tabs" />
     </div>

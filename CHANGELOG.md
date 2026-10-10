@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- In the new map preview (`?ui=v2`), the brief column and the phone sheet now show the day's brief from the region's daily feed: the headline and summary, the Wind, Swell, Water and Tide tiles with their source and age (a reading past its limit is marked stale and says how old it is; a missing one reads unavailable), the lower-exposure window, the profile's caveat, a beach notice and fleet line when there is one, and whether a local coast report covers the area.
+
 - In the new map preview (`?ui=v2`), Terrain 2D and 3D no longer show the classic terrain panels: seabed relief, water, depth contours, source coverage and reefs and pins are options of the Seafloor layer, a tapped terrain reading or reef opens the shared card with its measured or modelled label and source date and a link to the terrain sources, and zoom, reset and top view sit with the map's zoom buttons.
 - Charter fleet admin: the outreach lead score's landing-report volume and reporting-frequency inputs now fill in, because each AIS processing run pairs a boat's trips with its published skipper reports and with the daily landing reports for the same boat, port and day (#345).
 - In the new map preview (`?ui=v2`), an admin whose fleet flags are on gets the classic map's fleet activity layers under Charter fleet (activity stops, trip tracks and heat cells, each off by default and loaded for the map's view); every card and the legend's status line say the activity is inferred from movement. Nobody else sees the options.
