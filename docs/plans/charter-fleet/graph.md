@@ -95,7 +95,7 @@ commands). A unit that fails twice moves up one tier.
 - Output: a PR with per-mode aggregates (1 km bottom, coarser pelagic), a public heat route and the owner layers (fishing segments only).
 - Check: a test (`node --test tests/test_fleet_public_heat.mjs`, new) proves the public route returns only cell geometry, mode, season or month, dwell and distinct-vessel count: no `vessel`, `mmsi`, `port`, `class`, `trip`, `event` or `track` key in any response, no route under it returns events or tracks, every cell has ≥ 3 distinct vessels, nothing newer than 72 h, and `noaa-planning-only` cells are absent from paid surfaces; plus `pytest tests/unit/test_fleet_events.py` and `node --test tests/test_fleet_map.mjs` pass.
 - Runs: Large builds, a second Large reviews.
-- Depends on: N5. Reuses: CF-44 (`aggregate/grid.py`, privacy knobs), CF-50 (`server/fleet/map.ts`), CF-51 (`dist/fleet-activity.js`).
+- Depends on: N5. Reuses: CF-44 (`src/skippercast/fleet/ais/aggregate/grid.py`, privacy knobs), CF-50 (`server/fleet/map.ts`), CF-51 (`dist/fleet-activity.js`).
 
 ### N7 · Labelled validation set
 
@@ -113,7 +113,7 @@ commands). A unit that fails twice moves up one tier.
 - Output: a PR adding `skills/skippercast-charter-fleet/SKILL.md` (modes from #468 `cycle`/`discover`/`match`/`review`/`report` and #469 `cycle`/`backfill`/`reprocess`/`validate`/`tune`/`report`, guardrails, stop conditions, end-of-run report) and `skills/skippercast-charter-fleet/agents/openai.yaml`.
 - Check: `python scripts/check_repository.py` exit 0; the SKILL.md front matter has `name` and `description`; every command the skill names exists (`python -m skippercast.fleet --help` and `python -m skippercast.fleet.ais` list them); a separate Large reviewer approves.
 - Runs: Large writes, a second Large reviews.
-- Depends on: N7. Reuses: CF-61 report, the runbooks `fleet-registry.md`, `fleet-osint.md`, `fleet-ais-down.md`.
+- Depends on: N6, N7. Reuses: CF-61 report, the runbooks `fleet-registry.md`, `fleet-osint.md`, `fleet-ais-down.md`.
 
 ### N9 · Skill dry run
 
