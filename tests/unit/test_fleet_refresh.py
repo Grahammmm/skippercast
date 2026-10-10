@@ -82,6 +82,27 @@ class RefreshTests(unittest.TestCase):
         retired = [op for op in out if op["op"] == "offering.upsert"]
         self.assertEqual([(op["id"], op["status"]) for op in retired], [("b" * 32, "retired")])
 
+    def test_a_partial_run_retires_no_offering_of_the_failed_source(self):
+        # Issue #339: "b" came from a source that failed this run; "d" from one that still lists it unchanged.
+        def offering(ident, name):
+            return {"id": ident, "name": name, "trip_type": "half-day", "status": "active",
+                    "price_cents": 9500, "departs_local": "06:30", "days": ["sat"]}
+        old = {"id": "a" * 32, "slug": "sea-example", "name": "Sea Example", "status": "active", "port_id": "morro-bay",
+               "landing_id": None, "operator_id": None, "mmsi": None, "vessel_class": None,
+               "last_seen_at": "2026-09-28T09:47:00.000Z",
+               "offerings": [offering("b" * 32, "Half Day"), offering("d" * 32, "Twilight")]}
+        sent = [{"op": "vessel.upsert", "id": "a" * 32, "slug": "sea-example", "name": "Sea Example",
+                 "port_id": "morro-bay"},
+                {"op": "offering.upsert", "id": "d" * 32, "vessel_id": "a" * 32, "name": "Twilight",
+                 "price_cents": 9500, "departs_local": "06:30", "days_json": ["sat"]}]
+        args = dict(history=["2026-09-28T09:47:00.000Z"], vanished_runs=3, vanished_days=45)
+        partial = detect(Snapshot([old]), sent, "2026-10-05T09:47:00.000Z", complete=False, **args)
+        self.assertEqual([op for op in partial if op["op"] == "offering.upsert"], [], "no retire op")
+        self.assertEqual([op for op in partial if op.get("kind") == "schedule"], [], "no schedule change")
+        complete = detect(Snapshot([old]), sent, "2026-10-05T09:47:00.000Z", complete=True, **args)
+        self.assertEqual([(op["id"], op["status"]) for op in complete if op["op"] == "offering.upsert"],
+                         [("b" * 32, "retired")], "a complete run still retires it")
+
 
 if __name__ == "__main__":
     unittest.main()
