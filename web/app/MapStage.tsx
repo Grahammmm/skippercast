@@ -5,7 +5,7 @@
 // creates one stage while it is mounted and destroys it when it unmounts (a
 // layout change), which releases the terrain's WebGL context. The Chart's
 // run-time layers (FE-17's swell, FE-16's water temperature, FE-22's clouds, FE-23's
-// aerial base) are created with it; the swell reads a click first, since it draws above
+// aerial base, FE-21's charter grounds and commercial AIS, FE-24's admin fleet activity) are created with it; the swell reads a click first, since it draws above
 // the water temperature.
 import type {ComponentChildren} from 'preact';
 import {useEffect, useRef} from 'preact/hooks';
@@ -16,6 +16,7 @@ import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {chartFailed, createChart} from '../map/chart.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createClouds} from '../map/clouds.ts';
+import {createFleetActivity} from '../map/fleet.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {createWaterTemp} from '../map/sst.ts';
@@ -62,7 +63,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),
-          engine => createCharterGrounds({engine}), engine => createCommercialAis({engine})]})]});
+          engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone})]})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;
