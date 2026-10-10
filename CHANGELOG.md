@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- In the new map preview (`?ui=v2`), the brief column and the phone sheet now show the day's brief from the region's daily feed: the headline and summary, the Wind, Swell, Water and Tide tiles with their source and age (a reading past its limit is marked stale and says how old it is; a missing one reads unavailable), the lower-exposure window, the profile's caveat, a beach notice and fleet line when there is one, and whether a local coast report covers the area.
+
 - In the new map preview (`?ui=v2`), the Shore profile draws Morro Bay's NOAA ESI 2006 sandy-shore runs on the Chart with their public access points. Each run is ranked by its access and rules review clocks, the protected-area check and whether a fresh nearshore model sample covers its area; an expired review holds it, a run inside a protected area is blocked, and its card shows the review dates, method guidance and the official CDFW rules link. The ranking orders places to check; fish presence is unverified.
 - In the new map preview (`?ui=v2`), Terrain 2D and 3D no longer show the classic terrain panels: seabed relief, water, depth contours, source coverage and reefs and pins are options of the Seafloor layer, a tapped terrain reading or reef opens the shared card with its measured or modelled label and source date and a link to the terrain sources, and zoom, reset and top view sit with the map's zoom buttons.
 - Charter fleet admin: the outreach lead score's landing-report volume and reporting-frequency inputs now fill in, because each AIS processing run pairs a boat's trips with its published skipper reports and with the daily landing reports for the same boat, port and day (#345).

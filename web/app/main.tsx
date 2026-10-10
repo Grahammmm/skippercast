@@ -12,6 +12,7 @@ import {savedHomeURL} from '../ports.ts';
 import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
+import {dailyFeed, loadDailyFeed} from '../brief/Brief.tsx';
 
 configureStore({v2: true});
 startURLSync();
@@ -29,6 +30,7 @@ effect(() => {
   const id = region.value;
   if (id && regionInfo.peek()?.id !== id) void loadRegion(id);
   if (id && regionPlans.peek()?.region !== id) void loadPlans(id);
+  if (id && dailyFeed.peek()?.region_id !== id) void loadDailyFeed(id);
 });
 const online = () => { freshness.value = navigator.onLine ? {state: 'unknown', age: null} : {state: 'offline', age: null}; };
 addEventListener('online', online);
