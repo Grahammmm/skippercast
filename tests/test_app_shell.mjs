@@ -15,7 +15,7 @@ import {build} from 'esbuild';
 import {lintFile} from '../scripts/check_tokens.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const APP_FILES = readdirSync(join(ROOT, 'web/app')).map(name => `web/app/${name}`);
+const APP_FILES = ['web/app', 'web/app/views'].flatMap(dir => readdirSync(join(ROOT, dir)).filter(name => name.includes('.')).map(name => `${dir}/${name}`));
 const ORIGIN = 'https://s.test/map';
 const TZ = 'America/Los_Angeles';
 /** The shell's clock in every render: Monday 2026-10-05, 1 pm Pacific, so chips and windows read the same whatever day the tests run. */
@@ -48,7 +48,12 @@ async function load() {
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
     // The terrain and MapLibre modules (FE-71, FE-11: Vite `?url` assets, three, maplibre-gl) are dynamic imports that rendering never reaches.
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    // The Conditions view's CoastMarkup (FE-32) imports its stylesheets as Vite `?url` assets; they bundle as their path.
+    plugins: [{name: 'renderers', setup: b => {
+      b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}));
+      b.onResolve({filter: /\?url$/}, args => ({path: args.path, namespace: 'url'}));
+      b.onLoad({filter: /.*/, namespace: 'url'}, args => ({contents: `export default ${JSON.stringify(args.path)};`, loader: 'js'}));
+    }}],
   });
   shell = await import(pathToFileURL(out).href);
   return shell;
@@ -127,7 +132,12 @@ test('the brief invents no number: every tile reads "—" and keeps its source l
 });
 
 test('every control reflects the address: profile, view, day, hour, layers and the selection', async () => {
-  const html = await renderShell(`${ORIGIN}?region=morro-bay&profile=shore&view=conditions&layers=swell,water-temp&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&target=halibut&area=estero`);
+  const link = `${ORIGIN}?region=morro-bay&profile=shore&view=conditions&layers=swell,water-temp&spot=r12&day=2026-10-06&hour=${encodeURIComponent(TUE_2PM)}&target=halibut&area=estero`;
+  const html = await renderShell(link);
+  // The Conditions view (FE-32) covers the map: its section shows and the map chrome's rail, legend and card do not; the dock stays.
+  assert.match(html, /<section class="app-conditions" aria-labelledby="app-conditions-title">/);
+  assert.equal(count(html, /class="ui-rail-item"/g), 0);
+  const coastView = await renderShell(link.replace('&view=conditions', ''));
   // Profile switch: exactly Shore is on, and the shore caveat and swell source follow.
   const chips = [...html.matchAll(/<button[^>]*class="ui-button ui-button--ghost ui-button--sm ui-chip"[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/svg>(Boat|Shore|Spear)/gs)].map(m => [m[2], m[1]]);
   assert.deepEqual(chips, [['Boat', 'false'], ['Shore', 'true'], ['Spear', 'false']]);
@@ -141,10 +151,10 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /<label>Target<select><option value="surfperch">Barred surfperch<\/option><option selected value="halibut">California halibut<\/option><\/select>/, 'the coast targets\' names (FE-30)');
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
   // Rail and legend: swell and water temp on, the rest off; the protected areas always draw on the Chart (FE-19).
-  const rail = Object.fromEntries([...html.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
+  const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
   assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
-  assert.match(html, /class="app-legend-water-temp"/);
-  assert.deepEqual(attrs(html, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no colour key until a layer draws (FE-20)');
+  assert.match(coastView, /class="app-legend-water-temp"/);
+  assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
@@ -152,9 +162,9 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /class="app-dock-zone ui-mono">P[DS]T</, 'the zone shows once in the dock');
   assert.match(html, /aria-label="Time window">Tue · 2 pm<\/output>/);
   // Selection: the mark card names the spot with blank reading and source.
-  assert.match(html, /<section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
-  assert.match(html, /<p class="ui-reading">—<\/p><p class="app-mark-source ui-mono">Source —<\/p>/);
-  assert.match(html, /aria-label="Clear selection"/);
+  assert.match(coastView, /<section class="app-mark" aria-label="Selected mark"><div class="app-mark-head"><h2 tabindex="-1">r12<\/h2>/);
+  assert.match(coastView, /<p class="ui-reading">—<\/p><p class="app-mark-source ui-mono">Source —<\/p>/);
+  assert.match(coastView, /aria-label="Clear selection"/);
 });
 
 test('the helpers behind the controls round-trip through the store keys', async () => {

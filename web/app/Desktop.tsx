@@ -4,7 +4,8 @@
 // window, the caveat, the notice, fleet and local-report lines and the
 // footer; before a brief is in hand it shows its empty state. The tide
 // sparkline (FE-33) and the ranking (FE-34) are still placeholders. The map
-// is MapStage.tsx (FE-71). Mobile.tsx (FE-06) composes the same pieces into
+// is MapStage.tsx (FE-71); in the Conditions view (FE-32) the view covers the
+// map above the time dock, and the map stays mounted. Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order.
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
 import {LayerRail} from './LayerRail.tsx';
@@ -12,6 +13,8 @@ import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
+import {Conditions} from './views/Conditions.tsx';
+import {appView} from '../state.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
 export {DISCLAIMER} from '../brief/Brief.tsx';
@@ -64,8 +67,7 @@ export function Desktop({now = new Date()}: {now?: Date} = {}) {
     <main class="app-main">
       <Brief now={now} />
       <MapStage>
-        <div class="app-chrome-left"><MarkCard /><Legend /></div>
-        <LayerRail />
+        {appView.value === 'conditions' ? <Conditions now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
         <TimeDock now={now} />
       </MapStage>
     </main>
