@@ -320,6 +320,10 @@ pages remain the MMSI sources.
 **Plan assumes:** option 1.
 **Blocks:** nothing; MMSI coverage from the OSINT step is lower until decided.
 
+## Packaging: two skills (owner, 2026-10-10)
+
+**Resolved.** The charter-fleet run is packaged as two skills, `skippercast-fleet-registry` (#468) and `skippercast-fleet-activity` (#469), not one combined `skippercast-charter-fleet` skill. Reason: they run on separate schedules and fail independently; the only hand-off is the watch list, which the registry skill writes and the activity skill reads.
+
 ## Appendix: CPRA request text
 
 Submit at <https://wildlife.ca.gov/General-Counsel/Public-Records-Requests>

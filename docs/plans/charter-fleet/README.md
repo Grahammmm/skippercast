@@ -231,14 +231,18 @@ Append a dated line when a phase starts or finishes; keep the older lines.
     exit 0, 453 passed, 939 deselected, 199 subtests passed;
     `node --test tests/test_fleet_*.mjs` exit 0, 130 pass, 0 fail, 0 skipped;
     `python scripts/check_repository.py` exit 0.
-  - Open defects: [#339](https://github.com/Grahammmm/skippercast/issues/339)
-    (refresh retires offerings in a partial run),
+  - Fixed by [#515](https://github.com/Grahammmm/skippercast/pull/515)
+    (2026-10-10): [#339](https://github.com/Grahammmm/skippercast/issues/339)
+    (refresh retired offerings in a partial run) and
     [#340](https://github.com/Grahammmm/skippercast/issues/340)
-    (teck-reports and directories facts never win a column),
-    [#345](https://github.com/Grahammmm/skippercast/issues/345)
+    (teck-reports and directories facts never won a column).
+  - Open defect: [#345](https://github.com/Grahammmm/skippercast/issues/345)
     (`fleet_trip_reports` never populated; 55% of the lead score).
   - Owner steps outstanding in
     [#458](https://github.com/Grahammmm/skippercast/issues/458): Google Places
     key, Hermes subscription token and linger, workflow review (CODEOWNERS),
     CDFW CPRA request, 30 labelled trips (or approve an agent-labelled set),
     Q16 terms review, paid AIS history decision. Tick the boxes already done.
+- 2026-10-10: owner decision: the run is packaged as two skills
+  (`skippercast-fleet-registry`, `skippercast-fleet-activity`), as #468 and
+  #469 specify. Recorded in `open-questions.md`; N8 and N9 in `graph.md` updated.

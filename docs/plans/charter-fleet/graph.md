@@ -110,17 +110,17 @@ commands). A unit that fails twice moves up one tier.
 
 - Purpose: make the run repeatable, unattended, on Hermes.
 - Input: N2–N7 merged, issues #468 and #469 (which superseded #459), the format of `skills/skippercast-build-coastal-map/`.
-- Output: a PR adding `skills/skippercast-charter-fleet/SKILL.md` (modes from #468 `cycle`/`discover`/`match`/`review`/`report` and #469 `cycle`/`backfill`/`reprocess`/`validate`/`tune`/`report`, guardrails, stop conditions, end-of-run report) and `skills/skippercast-charter-fleet/agents/openai.yaml`.
-- Check: `python scripts/check_repository.py` exit 0; the SKILL.md front matter has `name` and `description`; every command the skill names exists (`python -m skippercast.fleet --help` and `python -m skippercast.fleet.ais` list them); a separate Large reviewer approves.
+- Output: a PR adding two skill folders (owner decision 2026-10-10: two skills, not one). `skills/skippercast-fleet-registry/` (`SKILL.md` and `agents/openai.yaml`; modes from #468 `cycle`/`discover`/`match`/`review`/`report`; owns the watch list and the AgentOrange foundation) and `skills/skippercast-fleet-activity/` (`SKILL.md` and `agents/openai.yaml`; modes from #469 `cycle`/`backfill`/`reprocess`/`validate`/`tune`/`report`; reads the watch list only). Each has guardrails, stop conditions and an end-of-run report.
+- Check (applies to both skills): `python scripts/check_repository.py` exit 0; each SKILL.md front matter has `name` and `description`; every command the skill names exists (`python -m skippercast.fleet --help` and `python -m skippercast.fleet.ais` list them); a separate Large reviewer approves.
 - Runs: Large writes, a second Large reviews.
 - Depends on: N6, N7. Reuses: CF-61 report, the runbooks `fleet-registry.md`, `fleet-osint.md`, `fleet-ais-down.md`.
 
 ### N9 · Skill dry run
 
 - Purpose: show the skill runs end to end without touching production data.
-- Input: the N8 skill, `regions/OR/fleet.json` (`dry-run`) and the staging sink.
-- Output: a counts-only dry-run report in the PR and Status log.
-- Check: `skill cycle --region OR` exits 0 on staging; `--sink worker` is refused for OR (existing CF-60 test); `git status --porcelain` is empty after the run (nothing private written into the checkout); the report has no phone, email, handle or operator URL (`check_repository.py` scan).
+- Input: the two N8 skills, `regions/OR/fleet.json` (`dry-run`) and the staging sink.
+- Output: a counts-only dry-run report in the PR and Status log, covering both skills; dry-run `skippercast-fleet-registry` first, then `skippercast-fleet-activity` (it reads the registry's watch list).
+- Check: `cycle --region OR` exits 0 for each skill on staging; `--sink worker` is refused for OR (existing CF-60 test); `git status --porcelain` is empty after the run (nothing private written into the checkout); the report has no phone, email, handle or operator URL (`check_repository.py` scan).
 - Runs: Mid runs it; Small polls; Orchestrator gates.
 - Depends on: N8. Reuses: CF-60 dry run, CF-61 report.
 
