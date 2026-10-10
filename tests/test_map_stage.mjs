@@ -6,7 +6,7 @@ import test from 'node:test';
 import {
   HOME_ZOOM, NO_TERRAIN, UNAVAILABLE, UNSUPPORTED_CURRENT, camera, cameraParam, choosePresentation, coastSpecies, createStage,
   currentStatus, locationFor, parseCamera, shownPresentation, spanForZoom, terrainBlocked, terrainFailed, terrainHour, terrainMark,
-  terrainState, zoomForSpan,
+  terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 
@@ -37,7 +37,8 @@ function browser(href) {
 function terrain({ready = true, throws = false} = {}) {
   const fake = {calls: [], mounts: 0, destroyed: 0, options: null};
   const handle = {};
-  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible']) {
+  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible',
+    'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
     handle[name] = value => { fake.calls.push([name, value]); return true; };
   }
   handle.load = async () => ready;
@@ -276,4 +277,46 @@ test('without ?hour= the terrain hour moves on at each hour boundary, not frozen
   t.mock.timers.tick(60 * 60 * 1000);
   assert.deepEqual(fake.last('setHour'), new Date('2026-10-06T03:00:00Z'), 'a chosen hour stays chosen');
   s.destroy();
+});
+
+test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readings and sources arrive as data, the view buttons drive the handle', async () => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor`);
+  terrainOptions.value = TERRAIN_DEFAULTS;
+  const fake = terrain();
+  const {stage: s} = stage(fake);
+  await tick();
+  const o = fake.options;
+  assert.equal(o.chrome, 'host', 'the renderer\'s own panels leave the scene');
+  const setters = ['setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible'];
+  assert.deepEqual(setters.map(n => fake.count(n)), [0, 0, 0, 0, 0, 0], 'the defaults are the native controls\' own: nothing to send');
+
+  setTerrainOption('relief', 9); setTerrainOption('water', false); setTerrainOption('waterOpacity', 0.3);
+  setTerrainOption('contours', false); setTerrainOption('sourceCoverage', true);
+  assert.deepEqual(setters.slice(0, 5).map(n => fake.last(n)), [9, false, 0.3, false, true]);
+  setTerrainOption('relief', 9);
+  assert.equal(fake.count('setRelief'), 1, 'an unchanged option is not sent again');
+  setParams({layers: 'currents'});
+  assert.equal(fake.last('setHabitatVisible'), false, 'turning Seafloor off hides the reefs and pins');
+  setParams({layers: 'seafloor,currents'});
+  assert.equal(fake.last('setHabitatVisible'), true);
+
+  const reading = {latitude: 35.37, longitude: -120.86, heightM: -12, spacingM: 2, label: 'MEASURED LIDAR · NAVD88', value: '39 ft depth', location: '35.37000° N · 120.86000° W',
+    detail: 'NOAA lidar · 2022-06-14 · 2 m display spacing.', source: {id: 1, label: 'NOAA lidar', kind: 'lidar', resolutionM: 1, datum: 'NAVD88', sourceDate: '2022-06-14', url: 'https://example.test'}};
+  terrainPick.value = {id: 'mpa:x', name: 'x', kind: 'x', reading: '', source: '', basis: ''};
+  o.onReading(reading);
+  assert.equal(terrainReading.value, reading, 'the reading arrives verbatim');
+  assert.equal(terrainPick.value, null, 'a reading replaces a picked overlay\'s card');
+  o.onReading(null);
+  assert.equal(terrainReading.value, null);
+  o.onSourceCoverage({sources: [reading.source], key: 'Mint: lidar'});
+  assert.equal(terrainCoverage.value.key, 'Mint: lidar');
+
+  const a = terrainActions.value;
+  a.zoom('in'); a.zoom('out'); a.top(); a.sources();
+  assert.deepEqual([fake.calls.filter(([n]) => n === 'zoom').map(([, v]) => v), fake.count('topView'), fake.count('openSources')], [['in', 'out'], 1, 1]);
+  a.reset();
+  assert.equal(nav.params().get('view'), '35.37000,-120.86000,12', 'reset is the stage\'s home, as the scene\'s own button');
+  s.destroy();
+  assert.equal(terrainActions.value, null, 'no view buttons without a renderer');
+  terrainOptions.value = TERRAIN_DEFAULTS;
 });

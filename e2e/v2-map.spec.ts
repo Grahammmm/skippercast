@@ -739,7 +739,7 @@ test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle
   await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
   await expect(page.locator('.app-terrain')).toBeVisible();
   await showLayers(page);
-  for (const name of ['Seafloor', 'Water temp', 'Swell', 'Clouds']) {
+  for (const name of ['Water temp', 'Swell', 'Clouds']) {
     await expect(railToggle(page, name), name).toBeDisabled();
     await expect(page.locator('.ui-rail-item', {hasText: name}).locator('.ui-rail-note'), name).toHaveText('Chart only');
   }
@@ -748,7 +748,8 @@ test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle
   await expect(page.locator('.app-legend-mpa'), 'FE-82: the protected areas drape on the terrain').toBeVisible();
   await expect(baseSelect(page)).toBeDisabled();
   await expect(page.locator('#app-rail-base-note')).toHaveText('Chart only');
-  await expect(page.locator('.app-legend [data-reason="seafloor"]')).toHaveText('Chart only');
+  await expect(railToggle(page, 'Seafloor'), 'FE-80: Seafloor holds the terrain options').toBeEnabled();
+  await expect(page.locator('.app-legend [data-reason="seafloor"]')).toHaveText('Screened candidates: Chart only');
   await railToggle(page, 'Water temp').click({force: true});
   await page.waitForTimeout(300);
   expect(params(page).layers, 'a disabled entry changes nothing').toBe('seafloor');
@@ -944,4 +945,45 @@ test('Swell draws nothing for a stale run or points that form no grid, and says 
   await openLayers(page);
   await expect(page.locator('.ui-rail-item', {hasText: 'Swell'}).locator('.ui-rail-note')).toHaveText('no forecast grid for this region');
   await expect(page.locator('[data-reason="swell"]')).toHaveText('Swell unavailable: this region\'s forecast points do not form a grid, so no field is drawn.');
+});
+
+// FE-80: the renderer mounts with host chrome; its options live in the Seafloor entry and its view buttons in the stage.
+test('in 3D the terrain options sit in the Seafloor entry and the view buttons in the stage; keyboard reaches each and axe is clean', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
+  const host = page.locator('.app-terrain');
+  await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene'))).toBe(true);
+  expect(await host.evaluate(el => ['.layers', '.view-controls', '#reading', '#target-detail'].filter(q => el.shadowRoot!.querySelector(q))),
+    'no native panel in the root').toEqual([]);
+  await showLayers(page);
+  const options = page.locator('.app-rail-terrain');
+  const summary = options.locator('summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(options).toHaveAttribute('open', '');
+  const relief = options.getByRole('slider', {name: /Seabed relief/});
+  await relief.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(relief).toHaveValue('6');
+  await expect(options.getByText('×6')).toBeVisible();
+  for (const name of ['Water & channels', 'Depth contours · 10 / 30 / 500 ft', 'Source coverage', 'Reefs & species pins']) {
+    const box = options.getByRole('checkbox', {name});
+    await box.focus();
+    await expect(box, name).toBeFocused();
+  }
+  await options.getByRole('checkbox', {name: 'Source coverage'}).press('Space');
+  await expect(options.getByRole('checkbox', {name: 'Source coverage'})).toBeChecked();
+  await expect(options.getByRole('slider', {name: /Water opacity/})).toBeVisible();
+  await v2.a11y('v2-map-terrain-options');
+  await hideLayers(page);
+  const view = page.getByRole('group', {name: 'Terrain view'});
+  for (const name of ['Zoom in', 'Zoom out', 'Reset map view', 'View from above']) {
+    await view.getByRole('button', {name}).focus();
+    await expect(view.getByRole('button', {name}), name).toBeFocused();
+  }
+  await view.getByRole('button', {name: 'View from above'}).press('Enter');
+  await expect.poll(() => new URL(page.url()).searchParams.get('presentation')).toBe('2d');
+  await toggle(page, 'Chart').click();
+  await expect(view).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 });

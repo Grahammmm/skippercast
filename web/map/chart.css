@@ -1,7 +1,7 @@
 /* The Chart presentation's MapLibre chrome (FE-11), loaded with web/map/maplibre.js
    after maplibre-gl.css: token colours and type, 44 px zoom buttons, and the
    bottom-right corner (zoom, nautical scale, attribution) placed clear of the
-   stage's own chrome as web/map/terrain.css places the terrain's view controls:
+   stage's own chrome, where web/app/app.css places the terrain's view buttons (FE-80):
    above the presentation toggle on the desktop, under it on mobile. */
 .app-chart.maplibregl-map { font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-sans); color: var(--text); }
 .app-chart .maplibregl-ctrl-bottom-right { bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); right: var(--space-4); display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }

@@ -33,7 +33,7 @@ async function load() {
       export {cloudStamp} from './web/map/clouds.ts';
       export {groundsState} from './web/map/charter-grounds.ts';
       export {aisOn, aisState} from './web/map/commercial-ais.ts';
-      export {currentStatus} from './web/map/stage.ts';
+      export {currentStatus, terrainOptions, TERRAIN_DEFAULTS} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {PROFILE_TABLE, RAIL_IDS} from './web/profile.ts';
       export {render} from 'preact-render-to-string';
@@ -155,9 +155,10 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   m.currentStatus.value = 'Surface currents: NOAA WCOFS forecast.';
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,currents,water-temp,swell,fleet,clouds`);
   html = m.render(m.h(m.Legend));
-  assert.deepEqual(swatches(html), ['charter-grounds', 'mpas']);
+  assert.deepEqual(swatches(html), ['seafloor', 'charter-grounds', 'mpas'], 'FE-80: the Seafloor row keys the terrain\'s depth ramp');
   const why = reasons(html);
-  for (const id of ['seafloor', 'water-temp', 'swell', 'clouds']) assert.equal(why[id], m.CHART_ONLY, id);
+  for (const id of ['water-temp', 'swell', 'clouds']) assert.equal(why[id], m.CHART_ONLY, id);
+  assert.equal(why.seafloor, `Screened candidates: ${m.CHART_ONLY}`, 'the screened candidates still draw on the Chart only');
   assert.equal(why.fleet, undefined, 'the charter grounds drape on the terrain');
   assert.equal(why.currents, 'Surface currents: NOAA WCOFS forecast.');
   assert.match(html, /app-legend-mpa/, 'the protected areas drape on the terrain');
@@ -165,21 +166,23 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   m.aisState.value = {offered: true, drawn: 3, note: '3 historical grid cells · Jul & Sep 2024 · depth unknown'};
   html = m.render(m.h(m.Legend));
   assert.equal(reasons(html)['commercial-ais'], m.CHART_ONLY);
-  assert.deepEqual(swatches(html), ['charter-grounds', 'mpas']);
+  assert.deepEqual(swatches(html), ['seafloor', 'charter-grounds', 'mpas']);
   m.aisState.value = {offered: false, drawn: 0, note: ''};
 });
 
 test('in Terrain, chart-only entries and the base read "Chart only" and cannot be switched (Accept 4)', async () => {
   const m = await load(), s = m.state;
   for (const id of m.RAIL_IDS) assert.equal(m.drawsIn(id, 'chart'), true, `${id} draws on the Chart`);
-  assert.deepEqual(m.RAIL_IDS.filter(id => m.drawsIn(id, '3d')).sort(), ['currents', 'fleet'], 'Currents (setCurrentLayer) and the charter grounds (FE-82 setOverlay) draw in the terrain');
+  assert.deepEqual(m.RAIL_IDS.filter(id => m.drawsIn(id, '3d')).sort(), ['currents', 'fleet', 'seafloor'],
+    'Currents (setCurrentLayer), the charter grounds (FE-82 setOverlay) and the terrain itself (FE-80, the Seafloor entry\'s options) draw in the terrain');
   assert.deepEqual([m.drawsIn('base', 'chart'), m.drawsIn('base', '2d')], [true, false]);
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,water-temp`);
   let html = m.render(m.h(m.LayerRail)), items = railItems(html);
-  for (const label of ['Seafloor', 'Water temp', 'Swell', 'Clouds']) {
+  for (const label of ['Water temp', 'Swell', 'Clouds']) {
     assert.deepEqual([items[label].disabled, items[label].note], [true, m.CHART_ONLY], label);
   }
+  assert.deepEqual([items.Seafloor.disabled, items.Seafloor.note], [false, ''], 'FE-80: Seafloor holds the terrain\'s options');
   assert.deepEqual(pressed(items), ['Seafloor', 'Water temp'], 'the choice is kept for the Chart');
   assert.equal(items.Currents.disabled, false);
   assert.deepEqual([items['Charter fleet'].disabled, items['Charter fleet'].note], [false, ''], 'FE-82: no "Chart only" on an entry the terrain drapes');
@@ -208,4 +211,23 @@ test('the base choice: Night and Chart detail everywhere, Aerial where offered, 
   assert.match(html, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Base basis">/);
   assert.match(html, /Chart detail: NOAA electronic navigational chart display service, drawn from zoom 10; for planning, never for navigation\./);
   assert.match(html, /class="ui-rail-note ui-mono">from zoom 10</);
+});
+
+test('FE-80: in 2D and 3D the Seafloor entry holds the terrain\'s options with labelled controls; the Chart shows none', async () => {
+  const m = await load(), s = m.state;
+  s.configureStore({v2: true, storage: null});
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=2d&layers=seafloor`);
+  m.terrainOptions.value = m.TERRAIN_DEFAULTS;
+  let html = m.render(m.h(m.LayerRail));
+  const terrain = html.match(/<details class="app-rail-options app-rail-terrain"><summary class="app-rail-option">Terrain options<\/summary>.*?<\/details>/s)[0];
+  assert.match(terrain, /<label for="terrain-relief">Seabed relief <b class="ui-mono">×5<\/b><\/label><input id="terrain-relief" type="range" min="1" max="12" step="1" value="5" aria-valuetext="×5"/);
+  assert.match(terrain, /<label for="terrain-water">Water opacity <b class="ui-mono">50%<\/b>/);
+  assert.match(terrain, /Illustrative \+0\.8 m water surface\. Not a live tide\./, 'the native note, verbatim');
+  const boxes = [...terrain.matchAll(/<label class="app-rail-option"><input type="checkbox"([^>]*)\/?>([^<]+)<\/label>/g)].map(x => [x[2], /checked/.test(x[1]), /disabled/.test(x[1])]);
+  assert.deepEqual(boxes, [['Water &amp; channels', true, false], ['Depth contours · 10 / 30 / 500 ft', true, false], ['Source coverage', false, false], ['Reefs &amp; species pins', true, false]]);
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=currents`);
+  html = m.render(m.h(m.LayerRail));
+  assert.match(html, /<input type="checkbox" disabled\/?>Reefs &amp; species pins/, 'with Seafloor off the reefs and pins are off and fixed');
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor`);
+  assert.doesNotMatch(m.render(m.h(m.LayerRail)), /app-rail-terrain/);
 });

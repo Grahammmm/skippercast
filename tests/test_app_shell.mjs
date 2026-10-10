@@ -36,9 +36,9 @@ async function load() {
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
-      export {MarkCard, clearSelection, currentMark, placeholderMark, terrainCard} from './web/app/MarkCard.tsx';
+      export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
-      export {terrainMark} from './web/map/stage.ts';
+      export {terrainMark, terrainReading} from './web/map/stage.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
       export {dragDetent, DRAG_MIN} from './web/ui/Sheet.tsx';
@@ -336,6 +336,26 @@ test('the mark card shows a Chart selection, then the terrain\'s on the Chart, t
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
     assert.equal(currentMark.value, null);
   } finally { chartMark.value = null; terrainMark.value = null; }
+});
+
+test('FE-80: in 2D and 3D a terrain reading is the card, with the renderer\'s label and source clock verbatim, then its habitat', async () => {
+  const {MarkCard, currentMark, readingCard, terrainCard, terrainMark, terrainReading, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const reading = {latitude: 35.37, longitude: -120.86, heightM: -12, spacingM: 2, label: 'ORIGINAL SURVEY SAMPLE', value: '39 ft depth', location: '35.37000° N · 120.86000° W',
+    detail: 'USGS survey · 2008-05-01 · 2 m display spacing. Nominal. Original spacing 2 m. Vertical references have not been reconciled.',
+    source: {id: 2, label: 'USGS survey', kind: 'survey', resolutionM: 2, datum: 'Nominal', sourceDate: '2008-05-01', url: 'https://example.test'}};
+  const reef = {latitude: 35.38, longitude: -120.88, id: 'reef:r1'};
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&habitat=reef:r1`);
+    terrainMark.value = reef;
+    assert.deepEqual(currentMark.value, terrainCard(reef), 'the terrain\'s habitat shows in 2D and 3D too');
+    terrainReading.value = reading;
+    assert.deepEqual(currentMark.value, readingCard(reading));
+    const html = render(h(MarkCard, {}));
+    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-reading">35\.37000° N · 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&habitat=reef:r1`);
+    assert.deepEqual(currentMark.value, terrainCard(reef), 'the Chart has no terrain reading');
+  } finally { terrainMark.value = null; terrainReading.value = null; }
 });
 
 test('the shell files keep the token and copy rules, and app.html mounts the entry', async () => {

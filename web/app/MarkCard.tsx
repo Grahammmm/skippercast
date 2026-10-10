@@ -4,8 +4,10 @@
 // segment); FE-18 adds the atlas reef marks (`?spot=`, in every presentation),
 // survey habitat and geology outlines, and the terrain's habitat (`?habitat=`)
 // with the renderer's own evidence lines, or restored without graphics, while
-// the Chart shows (in 2D and 3D the renderer's panel speaks for its own
-// selection until FE-80 moves that panel here). A mark that names its rules
+// the Chart shows. FE-80: in 2D and 3D the renderer has no panels of its own
+// (host chrome), so a terrain reading (its measured or modelled label, value,
+// place and source line with its date, verbatim) and the selected habitat's
+// evidence show here, with a link that opens the renderer's sources sheet. A mark that names its rules
 // page (a protected area, FE-19; an atlas mark or outline, FE-18) links that
 // official page; the card never states the rules itself. A pick moves focus to
 // the card's heading; the close button, or Escape with no basis open, clears
@@ -24,7 +26,8 @@ import {Popover} from '../ui/Popover.tsx';
 import {chartMark} from '../map/chart.ts';
 import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
-import {shownPresentation, terrainDetail, terrainMark, terrainPick} from '../map/stage.ts';
+import type {CoastReading} from '../../packages/coast/src/embed-types.ts';
+import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
 import {navigate, selection, setParams} from '../state.ts';
 import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
 
@@ -34,14 +37,23 @@ export {terrainCard} from '../map/habitat.ts';
 /** The card's placeholder while the region's marks load. */
 export const placeholderMark = (id: string): Mark => ({id, name: id, kind: 'Mark', reading: '—', source: 'Source —', basis: 'The mark loads with the map engine; its source and age show here.'});
 
+/** The id prefix of a terrain reading's card. */
+export const READING = 'reading:';
+/** A terrain inspection as a card: the renderer's strings verbatim (label as the kind, its source line with the date). */
+export const readingCard = (r: CoastReading): Mark => ({
+  id: `${READING}${r.latitude.toFixed(5)},${r.longitude.toFixed(5)}`, name: r.value, kind: r.label, reading: r.location, source: r.detail,
+  basis: `${r.source.label}, ${r.source.kind}, dated ${r.source.sourceDate}. The reading is the original nearest displayed sample; not for navigation.`,
+});
+
 /**
  * What the card shows: on the Chart, its own selection, then the terrain's; in
- * 2D and 3D an overlay picked on the terrain, while the renderer's panel speaks
- * for its own habitat selection. The link's atlas mark shows in every presentation.
+ * 2D and 3D an overlay picked on the terrain, a terrain reading, then the
+ * terrain's habitat selection. The link's atlas mark shows in every presentation.
  */
 export const currentMark = computed<Mark | null>(() => {
-  const chart = shownPresentation.value === 'chart', spot = spotCard.value;
-  return (chart ? chartMark.value ?? habitatCard.value : terrainPick.value) ?? (spot === undefined ? placeholderMark(selection.value!) : spot);
+  const chart = shownPresentation.value === 'chart', spot = spotCard.value, reading = terrainReading.value;
+  return (chart ? chartMark.value ?? habitatCard.value : terrainPick.value ?? (reading ? readingCard(reading) : null) ?? habitatCard.value)
+    ?? (spot === undefined ? placeholderMark(selection.value!) : spot);
 });
 
 /** Drop the selection from the address (?spot= and ?focus= are read, never written, by the store). */
@@ -55,6 +67,7 @@ export function clearSelection(href: string): string {
 function clearMark(mark: Mark): void {
   if (mark === chartMark.peek()) { chartMark.value = null; return; }
   if (mark === terrainPick.peek()) { terrainPick.value = null; return; }
+  if (mark.id.startsWith(READING)) { terrainReading.value = null; return; }
   if (mark.id.startsWith('habitat:')) {
     // The stage then tells the renderer (selectHabitat(null)), as the scene's own close button does.
     terrainMark.value = null; terrainDetail.value = null;
@@ -79,6 +92,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
     heading.current.focus();
   }, [request, selected?.id]);
   if (!selected) return null;
+  // A terrain reading or habitat links the renderer's sources and assumptions sheet beside its basis.
+  const sources = shownPresentation.value !== 'chart' && /^(?:reading|habitat):/.test(selected.id) ? terrainActions.value : null;
   // Only an atlas mark or a ranked spot joins a trip: v1's planner exports those. A mark the run-time screen withholds (#489) never does.
   const spot = selected === spotCard.value && !selected.withheld ? selection.value : selected.trip ?? null;
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
@@ -114,7 +129,10 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
           </a>
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
-      <Popover>{selected.basis}</Popover>
+      <div class="app-mark-basis">
+        <Popover>{selected.basis}</Popover>
+        {sources ? <Button variant="quiet" size="sm" icon="info" onClick={() => sources.sources()}>Terrain sources</Button> : null}
+      </div>
     </section>
   );
 }

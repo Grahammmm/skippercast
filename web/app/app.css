@@ -68,6 +68,22 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
 .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
 .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
+/* FE-80: the terrain's zoom, reset and top view as one group styled and placed as the Chart's MapLibre zoom control (web/map/chart.css). */
+.app-terrain-controls { position: absolute; right: var(--space-4); bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); overflow: hidden; }
+.app-terrain-controls .ui-button { width: var(--touch-min); height: var(--touch-min); border: 0; border-radius: 0; color: var(--text); }
+.app-terrain-controls .ui-button + .ui-button { border-top: 1px solid var(--line); }
+@media (max-width: 1023px) { .app-terrain-controls { top: calc(var(--app-strip, 84px) + 2 * var(--touch-min) + var(--space-5) + var(--space-4)); bottom: auto; } }
+/* FE-80: the Seafloor entry's terrain options: sliders with their value and ends, the water note. */
+.app-rail-range { display: flex; flex-direction: column; padding: var(--space-1) var(--space-2); color: var(--muted); font-size: var(--text-11); }
+.app-rail-range label { display: flex; justify-content: space-between; color: var(--text); }
+.app-rail-range input { width: 100%; min-height: var(--touch-min); margin: 0; accent-color: var(--depth-1); }
+.app-rail-ends { display: flex; justify-content: space-between; }
+.app-rail-hint { margin: 0; padding: 0 var(--space-2); color: var(--muted); font-size: var(--text-11); }
+.app-rail-terrain .app-rail-option input { accent-color: var(--depth-1); }
+.app-rail-terrain > summary { color: var(--text); list-style-position: inside; }
+.app-rail-terrain > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--radius-sm); }
+.app-rail-terrain-body { max-height: 40vh; overflow-y: auto; }
+.app-mark-basis { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 /* FE-51: on the desktop map the selected card and the legend share one left column, so neither covers the
    other's controls; on a short map the card scrolls. */
 .app-chrome-left { position: absolute; left: var(--space-4); top: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-3); width: min(320px, calc(100% - var(--space-6))); pointer-events: none; }

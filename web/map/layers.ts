@@ -97,8 +97,8 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'USGS/USDA NAIP natural-colour mosaic, dated imagery.', task: 'FE-23'}),
   entry({id: 'chart', label: 'Chart detail', control: 'base', presentations: ['chart'], sources: [ENC_SOURCE], attribution: ENC_ATTRIBUTION, gate: 'zoom ≥ 10',
     basis: 'NOAA electronic navigational chart display service, drawn from zoom 10; for planning, never for navigation.', task: 'FE-11'}),
-  // The renderer draws relief whatever the rail says; FE-80 moves its options into the Seafloor entry.
-  entry({id: 'relief', label: 'Terrain relief', control: 'always', presentations: ['terrain'],
+  // The renderer always draws the terrain itself; the Seafloor entry holds its options and its reefs and pins (FE-80).
+  entry({id: 'relief', label: 'Terrain relief', control: 'seafloor', presentations: ['terrain'],
     basis: 'Reviewed regional terrain and imagery, checked by hash in the browser before it draws.', task: 'FE-80'}),
   entry({id: 'water-temp', label: 'Water temp', control: 'water-temp', presentations: ['chart'], time: ['observed'], legend: [{label: 'Cold to warm', swatch: 'sst0'}],
     basis: 'The bound coast report\'s daily sea-surface temperature analysis, named with its product, grid and age where it draws and withheld 72 hours after analysis; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),

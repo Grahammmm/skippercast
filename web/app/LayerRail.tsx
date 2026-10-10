@@ -8,12 +8,16 @@
 // (web/map/layers.ts railNotes; Clouds, FE-22: the newest observed frame).
 // In Terrain 2D and 3D an entry none of whose layers draws there (layers.ts
 // drawsIn) reads "Chart only" and is disabled, so it never toggles a hidden
-// layer (FE-20); Currents draws in both.
+// layer (FE-20); Currents draws in both, and Seafloor holds the terrain's options (FE-80).
 // Charter fleet (FE-21): the public charter grounds draw while it is on; its
 // option adds v1's commercial AIS 2024 cells, off by default as in v1. For an
 // admin whose session v1's `fleetAccess` admits (both fleet flags on, FE-24) it
 // also offers the three activity layers, off by default as in v1; for anyone
 // else they are absent, not disabled.
+// FE-80: in Terrain 2D and 3D the Seafloor entry holds the renderer's own options
+// (FE-79's host chrome): seabed relief, water and its opacity, depth contours,
+// source coverage, and reefs and species pins, which the entry's toggle also
+// hides. They draw only in the terrain, so the Chart shows none of them.
 // The base (§ 8, one at a time) is one select: Night (the token basemap alone),
 // Chart detail (the ENC display from zoom 10) and Aerial where the region's
 // package offers it (FE-23), so a link's `?base=chart` can be chosen again.
@@ -27,7 +31,7 @@ import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
-import {currentStatus, shownPresentation} from '../map/stage.ts';
+import {currentStatus, setTerrainOption, shownPresentation, terrainOptions} from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, isBase, layers, layersParam, setParams, UNSUPPORTED, type Base} from '../state.ts';
 import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
 
@@ -84,6 +88,51 @@ function FleetOptions() {
   );
 }
 
+/** A checkbox option under a rail entry. */
+function Option({label, checked, disabled, onChange}: {label: string; checked: boolean; disabled?: boolean; onChange: (on: boolean) => void}) {
+  return (
+    <label class="app-rail-option">
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange((event.currentTarget as HTMLInputElement).checked)} />
+      {label}
+    </label>
+  );
+}
+
+/** A range option: its label and value above the slider, then what each end means. */
+function Range({id, label, value, text, min, max, step, ends, onInput}: {
+  id: string; label: string; value: number; text: string; min: number; max: number; step: number; ends?: readonly [string, string]; onInput: (value: number) => void;
+}) {
+  return (
+    <div class="app-rail-range">
+      <label for={id}>{label} <b class="ui-mono">{text}</b></label>
+      <input id={id} type="range" min={min} max={max} step={step} value={value} aria-valuetext={text}
+        onInput={event => onInput(Number((event.currentTarget as HTMLInputElement).value))} />
+      {ends ? <span class="app-rail-ends" aria-hidden="true"><span>{ends[0]}</span><span>{ends[1]}</span></span> : null}
+    </div>
+  );
+}
+
+/** The terrain's options under the Seafloor entry (FE-80), with the native panel's labels and notes, in a disclosure so the rail stays short. */
+export function TerrainOptions({on}: {on: boolean}) {
+  const o = terrainOptions.value;
+  return (
+    <details class="app-rail-options app-rail-terrain">
+      <summary class="app-rail-option">Terrain options</summary>
+      <div class="app-rail-terrain-body">
+      <Range id="terrain-relief" label="Seabed relief" value={o.relief} text={`×${o.relief}`} min={1} max={12} step={1} ends={['True scale', 'Emphasized']}
+        onInput={v => setTerrainOption('relief', v)} />
+      <Option label="Water & channels" checked={o.water} onChange={v => setTerrainOption('water', v)} />
+      {o.water ? <Range id="terrain-water" label="Water opacity" value={o.waterOpacity} text={`${Math.round(o.waterOpacity * 100)}%`} min={0} max={0.8} step={0.05}
+        onInput={v => setTerrainOption('waterOpacity', v)} /> : null}
+      <p class="app-rail-hint">Illustrative +0.8 m water surface. Not a live tide.</p>
+      <Option label="Depth contours · 10 / 30 / 500 ft" checked={o.contours} onChange={v => setTerrainOption('contours', v)} />
+      <Option label="Source coverage" checked={o.sourceCoverage} onChange={v => setTerrainOption('sourceCoverage', v)} />
+      <Option label="Reefs & species pins" checked={o.habitat && on} disabled={!on} onChange={v => setTerrainOption('habitat', v)} />
+      </div>
+    </details>
+  );
+}
+
 /** The bases offered here: Night and Chart detail everywhere, Aerial where the region's package names one. */
 export function baseOptions(offer: AerialBase | null): {value: Base; label: string}[] {
   return [{value: 'night', label: 'Night'}, {value: 'chart', label: 'Chart detail'}, ...(offer ? [{value: 'aerial' as const, label: 'Aerial'}] : [])];
@@ -132,9 +181,10 @@ export function LayerRail() {
           </RailItem>
         ) : (
           <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} disabled={!here}
-            note={!here ? CHART_ONLY : railNotes.value[e.id] || undefined}
+            note={!here ? CHART_ONLY : e.id === 'seafloor' && shown !== 'chart' ? undefined : railNotes.value[e.id] || undefined}
             onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
             {e.id === 'fleet' && active && here ? <FleetOptions /> : null}
+            {e.id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
           </RailItem>
         );
       })}
