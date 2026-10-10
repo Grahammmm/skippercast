@@ -26,7 +26,9 @@
 // says why (Clouds in its rail note). In Terrain 2D and 3D an entry that draws only on the Chart reads
 // "Chart only", and Currents gives the renderer's status (it keys its own).
 // Charter fleet (FE-21) keys the charter grounds and, with its option on, the
-// commercial AIS cells, with v1's basis sentences and status lines.
+// commercial AIS cells, with v1's basis sentences and status lines; for an
+// admin (FE-24) each activity layer that is on, with v1's status line, which
+// says the activity is inferred from movement.
 // FE-82: protected areas, reef marks and charter grounds also drape on the
 // terrain, so the protected areas' row and the Charter fleet row show there too;
 // commercial AIS still draws on the Chart only and says so.
@@ -36,6 +38,7 @@ import {chartFailed, unavailable} from '../map/chart.ts';
 import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
+import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {markNote, markScreen} from '../map/marks.ts';
@@ -182,6 +185,11 @@ function FleetRow() {
           <Popover iconOnly summary="Commercial AIS basis">{layerEntry('commercial-ais').basis} {AIS_CREDIT}</Popover></p>
         {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{CHART_ONLY}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais">{a.note}</p> : null}
       </> : null}
+      {activityAccess.value ? ACTIVITY.filter(name => activityOn.value.includes(name)).map(name => {
+        const entry = layerEntry(ACTIVITY_ENTRY[name]);
+        return <p key={name} class="app-legend-note app-legend-sub"><span class="app-swatch" data-layer={entry.id} aria-hidden="true"></span>{entry.legend[0]?.label ?? entry.label}</p>;
+      }) : null}
+      {activityAccess.value && activityStatus.value ? <p class="app-legend-note" data-reason="fleet-activity">{activityStatus.value}</p> : null}
     </li>
   );
 }

@@ -636,6 +636,7 @@ test('Charter fleet draws the charter grounds from the committed file, opens a g
   await expect(row.locator('.app-swatch[data-layer="charter-grounds"]')).toHaveCount(1);
   const option = page.getByRole('checkbox', {name: 'Commercial AIS 2024'});
   await expect(option).not.toBeChecked();
+  await expect(page.getByRole('checkbox', {name: /· admin$/}), 'FE-24: no activity layers for a visitor').toHaveCount(0);
   await expect(attribution).not.toContainText('Global Fishing Watch');
   await option.check();
   await expect(row.locator('[data-reason="commercial-ais"]')).toHaveText('3 historical grid cells · Jul & Sep 2024 · depth unknown');
@@ -646,6 +647,49 @@ test('Charter fleet draws the charter grounds from the committed file, opens a g
   await expect.poll(() => params(page).layers ?? '').not.toContain('fleet');
   await expect(row).toHaveCount(0);
   await expect(attribution).not.toContainText('Global Fishing Watch');
+  expect(pageErrors).toEqual([]);
+});
+
+// FE-24: v1's access check answered as for an admin with both fleet flags on; one synthetic stop at the view's centre.
+test('an admin gets the fleet activity layers under Charter fleet; a stop opens a card that says it is inferred from movement', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  const asked: string[] = [];
+  await page.route('**/api/session', route => route.fulfill({json: {signedIn: true, is_admin: true}}));
+  await page.route('**/api/fleet/map/**', route => {
+    const url = new URL(route.request().url());
+    asked.push(url.pathname);
+    if (url.pathname.endsWith('/filters')) return route.fulfill({json: {region: url.searchParams.get('region')}});
+    const [lat, lon] = PECHO_VIEW.split(',').map(Number);
+    const features = url.pathname.endsWith('/events') ? [{type: 'Feature', id: 'ev-1', geometry: {type: 'Point', coordinates: [lon, lat]}, properties: {
+      layer: 'event', id: 'ev-1', vessel_name: 'Test Boat', kind: 'drift-anchor', dwell_min: 49, local_date: '2026-09-01', started_at: '2026-09-01T16:00:00Z',
+      ended_at: '2026-09-01T16:49:00Z', port_id: 'morro-bay', basis: 'inferred-from-movement', rights: 'internal', planning_only: false}}] : [];
+    return route.fulfill({json: {type: 'FeatureCollection', features, meta: {next: null, trips: 0, ignored: []}}});
+  });
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'lingcod', view: PECHO_VIEW, layers: 'fleet'});
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await showLayers(page);
+  if (narrow(page)) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('End'); }
+  const events = page.getByRole('checkbox', {name: 'Fleet events · admin'});
+  await expect(events).not.toBeChecked();
+  await expect(page.getByRole('checkbox', {name: /· admin$/})).toHaveCount(3);
+  expect(asked, 'no layer loads until one is on').toEqual(['/api/fleet/map/filters']);
+  await events.check();
+  const row = page.locator('.app-legend-fleet');
+  await expect(row.locator('[data-reason="fleet-activity"]')).toHaveText('1 stops · inferred from movement.');
+  await expect(row.locator('.app-swatch[data-layer="fleet-events"]')).toHaveCount(1);
+  await v2.a11y('v2-map-fleet-admin');
+  await hideLayers(page);
+  if (narrow(page)) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('Home'); }
+  const card = page.getByRole('region', {name: 'Selected mark'});
+  await expect(async () => {
+    await clickCentre(page);
+    await expect(card.getByRole('heading', {name: 'Test Boat'})).toBeVisible({timeout: 1000});
+  }).toPass({timeout: 20_000, intervals: [1000]});
+  await expect(card).toContainText('Inferred from movement (speed and track shape). Not a confirmed fishing stop or catch.');
+  await card.getByRole('button', {name: 'Clear selection'}).click();
+  await showLayers(page);
+  await events.uncheck();
+  await expect(row.locator('[data-reason="fleet-activity"]')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
 

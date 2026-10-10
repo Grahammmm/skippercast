@@ -10,7 +10,10 @@
 // drawsIn) reads "Chart only" and is disabled, so it never toggles a hidden
 // layer (FE-20); Currents draws in both.
 // Charter fleet (FE-21): the public charter grounds draw while it is on; its
-// option adds v1's commercial AIS 2024 cells, off by default as in v1.
+// option adds v1's commercial AIS 2024 cells, off by default as in v1. For an
+// admin whose session v1's `fleetAccess` admits (both fleet flags on, FE-24) it
+// also offers the three activity layers, off by default as in v1; for anyone
+// else they are absent, not disabled.
 // The base (§ 8, one at a time) is one select: Night (the token basemap alone),
 // Chart detail (the ENC display from zoom 10) and Aerial where the region's
 // package offers it (FE-23), so a link's `?base=chart` can be chosen again.
@@ -22,6 +25,7 @@ import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
 import {ENC_MIN_ZOOM} from '../map/chart.ts';
 import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
+import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
 import {currentStatus, shownPresentation} from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, isBase, layers, layersParam, setParams, UNSUPPORTED, type Base} from '../state.ts';
@@ -56,6 +60,27 @@ function AisOption() {
       <input type="checkbox" checked={aisOn.value} onChange={event => { aisOn.value = (event.currentTarget as HTMLInputElement).checked; }} />
       {layerEntry('commercial-ais').label}
     </label>
+  );
+}
+
+/**
+ * The Charter fleet entry's options: commercial AIS where the region has it (FE-21) and, once v1's access check has
+ * answered for this viewer, the admin activity layers (FE-24). Their box takes no width of its own (app.css), so
+ * wrapped options never widen the rail.
+ */
+function FleetOptions() {
+  const ais = aisState.value.offered, admin = activityAccess.value, on = activityOn.value;
+  if (!ais && !admin) return null;
+  return (
+    <div class="app-rail-options">
+      {ais ? <AisOption /> : null}
+      {admin ? ACTIVITY.map(name => (
+        <label key={name} class="app-rail-option">
+          <input type="checkbox" checked={on.includes(name)} onChange={event => toggleActivity(name, (event.currentTarget as HTMLInputElement).checked)} />
+          {layerEntry(ACTIVITY_ENTRY[name]).label} · admin
+        </label>
+      )) : null}
+    </div>
   );
 }
 
@@ -109,7 +134,7 @@ export function LayerRail() {
           <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} disabled={!here}
             note={!here ? CHART_ONLY : railNotes.value[e.id] || undefined}
             onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
-            {e.id === 'fleet' && active && here && aisState.value.offered ? <AisOption /> : null}
+            {e.id === 'fleet' && active && here ? <FleetOptions /> : null}
           </RailItem>
         );
       })}
