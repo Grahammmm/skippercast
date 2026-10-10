@@ -24,6 +24,7 @@ conversation that produced it.
 | [design.md](design.md) | Decisions, research findings, architecture, data model, region config, source adapters, the OSINT contract and re-run design, the AIS pipeline, activity classification, map layers, retention, monthly cost estimate and risks |
 | [dev-plan.md](dev-plan.md) | Phases P0–P6 and PR-sized tasks with ids, dependencies, files touched and acceptance criteria |
 | [open-questions.md](open-questions.md) | Decisions waiting on the owner, with ranked options, the pick the plan assumes meanwhile, and the CPRA request text |
+| [graph.md](graph.md) | The remaining run (CF-62, Prompts A and B) as nine nodes, each with one input, one output and one deterministic check, plus owner-only steps |
 
 ## How to use this plan
 
