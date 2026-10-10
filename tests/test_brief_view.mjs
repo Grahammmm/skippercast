@@ -58,7 +58,8 @@ test('acceptance 1: a tile past its limit renders the stale state and its age', 
   assert.match(html, /Shown as stale after 3 h\./);
   const compact = render(h(Tiles, {tiles: [stale], compact: true}));
   assert.match(compact, /data-state="stale"/);
-  assert.match(compact, /<span class="ui-mono">5 h old<\/span>/, 'the compact sheet tile keeps the age');
+  assert.match(compact, /<span class="ui-mono">[^<]* · 5 h<\/span>/, 'the compact sheet tile keeps the age');
+  assert.ok(compact.includes(`${stale.source} · 5 h`), 'the compact sheet tile keeps its short source with the age');
   assert.doesNotMatch(compact, /ui-popover|ui-tile-detail/, 'detail and basis wait for the full sheet');
 });
 

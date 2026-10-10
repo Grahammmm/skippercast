@@ -35,7 +35,7 @@ export function sourceLine(tile: BriefTile): string {
 
 /**
  * One model tile as the shared Tile's props. Compact (the mobile sheet below
- * full) keeps the reading, its age and the stale state, and leaves the detail
+ * full) keeps the reading, its short source with the age ("NDBC 46042 · 5 h") and the stale state, and leaves the detail
  * line and basis for the full sheet, so the four tiles fit the half detent.
  */
 export function tileProps(tile: BriefTile, compact = false): TileProps {
@@ -43,7 +43,7 @@ export function tileProps(tile: BriefTile, compact = false): TileProps {
   const name = tile.sourceUrl ? <a href={tile.sourceUrl} target="_blank" rel="noopener">{tile.source}</a> : tile.source;
   if (compact) {
     return {label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit,
-      source: tile.state === 'unavailable' || tile.ageMs === null ? 'unavailable' : `${ageText(tile.ageMs)} old`, stale: tile.state === 'stale'};
+      source: tile.state === 'unavailable' || tile.ageMs === null ? `${tile.source} · unavailable` : `${tile.source} · ${ageText(tile.ageMs)}`, stale: tile.state === 'stale'};
   }
   return {
     label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit, detail: tile.detail,
