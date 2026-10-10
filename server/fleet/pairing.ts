@@ -83,20 +83,24 @@ export async function landingRows(ports: Iterable<string>, from: string): Promis
 const ADVISOR_JOIN = `JOIN advisor_boats b ON b.fleet_vessel_id=t.vessel_id
   JOIN advisor_reports r ON r.boat_id=b.id AND r.report_date=t.local_date AND r.status='published'`;
 const INSERT = 'INSERT OR IGNORE INTO fleet_trip_reports(trip_id,report_kind,report_ref,match,confidence,created_at)';
+// One report pairs with at most one trip: of the vessel's trips that day, the one with the most fishing time, then the earliest.
+const ONE_TRIP = 'ORDER BY t.fishing_min DESC, t.departed_at, t.id';
+const ADVISOR_RANKED = `SELECT t.id trip_id, r.id report_id, ROW_NUMBER() OVER (PARTITION BY r.id ${ONE_TRIP}) rn FROM fleet_trips t ${ADVISOR_JOIN}`;
 
-/** The statement pairing the trips in `scope` with published advisor reports of their linked boat and day. */
+/** The statement pairing the trips in `scope` with published advisor reports of their linked boat and day (each report to one trip). */
 export const advisorPairs = (db: D1Database, scope: TripScope, now: string): D1PreparedStatement =>
-  db.prepare(`${INSERT} SELECT t.id,'advisor',r.id,'boat-date',?,? FROM fleet_trips t ${ADVISOR_JOIN} WHERE ${scope.sql}`)
+  db.prepare(`${INSERT} SELECT x.trip_id,'advisor',x.report_id,'boat-date',?,? FROM (${ADVISOR_RANKED}) x
+    WHERE x.rn=1 AND x.trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})`)
     .bind(CONFIDENCE.advisor, now, ...scope.args);
 
-/** The statement removing advisor pairings of the trips in `scope` whose report is unpublished or whose boat link changed. */
+/** The statement removing advisor pairings of the trips in `scope` whose report is unpublished, whose boat link changed or whose report now pairs with another trip. */
 export const advisorPrune = (db: D1Database, scope: TripScope): D1PreparedStatement =>
   db.prepare(`DELETE FROM fleet_trip_reports WHERE report_kind='advisor' AND trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})
-    AND NOT EXISTS (SELECT 1 FROM fleet_trips t ${ADVISOR_JOIN} WHERE t.id=fleet_trip_reports.trip_id AND r.id=fleet_trip_reports.report_ref)`).bind(...scope.args);
+    AND NOT EXISTS (SELECT 1 FROM (${ADVISOR_RANKED}) x WHERE x.rn=1 AND x.trip_id=fleet_trip_reports.trip_id AND x.report_id=fleet_trip_reports.report_ref)`).bind(...scope.args);
 
 const LANDING_CHUNK = 2000;   // feed rows per statement (one JSON parameter, well under D1's 2 MB value limit)
 
-/** Statements pairing the trips of `region` in `scope` with `rows`; a name that fits two of the region's vessels pairs nothing. */
+/** Statements pairing the trips of `region` in `scope` with `rows`; a name that fits two of the region's vessels pairs nothing, and a report pairs with one trip. */
 export function landingPairs(db: D1Database, region: string, scope: TripScope, rows: LandingRow[], now: string): D1PreparedStatement[] {
   const out: D1PreparedStatement[] = [];
   for (let i = 0; i < rows.length; i += LANDING_CHUNK) out.push(db.prepare(`${INSERT}
@@ -106,8 +110,10 @@ export function landingPairs(db: D1Database, region: string, scope: TripScope, r
         UNION SELECT a.vessel_id, a.alias_norm FROM fleet_aliases a JOIN fleet_vessels v ON v.id=a.vessel_id WHERE v.region=?),
       hits AS (SELECT l.id, l.port, l.date, n.vessel_id FROM l JOIN names n ON n.norm=l.norm),
       sole AS (SELECT id FROM hits GROUP BY id HAVING COUNT(DISTINCT vessel_id)=1)
-    SELECT t.id,'landing',h.id,'alias-port-date',?,? FROM hits h JOIN sole s ON s.id=h.id
-      JOIN fleet_trips t ON t.vessel_id=h.vessel_id AND t.local_date=h.date AND h.port IN (t.depart_port_id,t.return_port_id)
-    WHERE ${scope.sql}`).bind(JSON.stringify(rows.slice(i, i + LANDING_CHUNK)), region, region, CONFIDENCE.landing, now, ...scope.args));
+    SELECT x.trip_id,'landing',x.id,'alias-port-date',?,? FROM (
+      SELECT t.id trip_id, h.id, ROW_NUMBER() OVER (PARTITION BY h.id ${ONE_TRIP}) rn
+      FROM hits h JOIN sole s ON s.id=h.id
+      JOIN fleet_trips t ON t.vessel_id=h.vessel_id AND t.local_date=h.date AND h.port IN (t.depart_port_id,t.return_port_id)) x
+    WHERE x.rn=1 AND x.trip_id IN (SELECT t.id FROM fleet_trips t WHERE ${scope.sql})`).bind(JSON.stringify(rows.slice(i, i + LANDING_CHUNK)), region, region, CONFIDENCE.landing, now, ...scope.args));
   return out;
 }

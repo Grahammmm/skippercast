@@ -146,6 +146,28 @@ test('advisor reports pair on the window when published and linked, and the swee
   } finally { sql.close(); }
 });
 
+test('a report pairs with one trip: two same-day trips and one report give one row (most fishing time, then earliest)', {skip}, async () => {
+  const {sql, db} = database();
+  try {
+    const long = trip(A, '2026-10-01T15:00:00.000Z'), short = {...trip(A, '2026-10-01T08:00:00.000Z'), fishing_min: 30};
+    const twin = trip(A, '2026-10-01T10:00:00.000Z');   // same fishing time as `long`, earlier: wins the tie
+    sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,status,created_at,updated_at,fleet_vessel_id) VALUES('boat-linked','example-star-adv','Example Star','morro-bay','morro-bay','verified',?,?,?)`).run(NOW, NOW, STAR);
+    sql.prepare(`INSERT INTO advisor_reports(id,boat_id,region,port,report_date,counts_json,source,status,created_at,updated_at) VALUES('r-one','boat-linked','morro-bay','morro-bay','2026-10-01','{}','sms','published',?,?)`).run(NOW, NOW);
+    await call(db, windowBody([W(A)], [long, short]));
+    feed = {reports: [landing('land0001', 'Example Star')]};
+    await call(db, PROCESSED);
+    const rows = () => pairs(sql).map(p => [p.report_kind, p.report_ref, p.trip_id]);
+    assert.deepEqual(rows(), [['advisor', 'r-one', long.id], ['landing', 'land0001', long.id]]);
+    const volume = sql.prepare("SELECT COUNT(DISTINCT trip_id) n FROM fleet_trip_reports WHERE report_kind='landing'").get().n;
+    assert.equal(volume, 1);
+    // An earlier trip with the same fishing time takes both reports over; the sweep leaves one row each.
+    await call(db, windowBody([W(A)], [long, short, twin]));
+    await call(db, PROCESSED);
+    assert.deepEqual(rows().filter(r => r[0] === 'advisor'), [['advisor', 'r-one', twin.id]]);
+    assert.equal(pairs(sql).filter(p => p.report_kind === 'advisor').length, 1);
+  } finally { sql.close(); }
+});
+
 test('nameNorm matches the Python name_norm (tests/unit/test_fleet_resolve.py cases)', () => {
   for (const [raw, expected] of [['Sea Example', 'SEAEXAMPLE'], ['The Sea Example', 'SEAEXAMPLE'], ['F/V Sea-Example', 'SEAEXAMPLE'],
     ['M/V sea example ii', 'SEAEXAMPLE2'], ['Example Star IV', 'EXAMPLESTAR4'], ['New Example Star', 'NEWEXAMPLESTAR'],
