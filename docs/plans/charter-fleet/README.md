@@ -214,7 +214,7 @@ Append a dated line when a phase starts or finishes; keep the older lines.
     once ([run](https://github.com/Grahammmm/skippercast/actions/runs/37367390065)):
     the heartbeat showed messages within 90 seconds, so the aisstream secret
     is set. *Fleet AIS processor* has run on schedule (21 runs since
-    2026-10-08; latest [success](https://github.com/Grahammmm/skippercast/actions/runs/38061790792)).
+    2026-10-05, 17 successful and 4 cancelled; latest [success](https://github.com/Grahammmm/skippercast/actions/runs/38061790792)).
     `regions/CA/fleet.json` exists with `status: active`; `regions/OR/fleet.json`
     is `dry-run`.
   - Not run: no first activity map or fishing classification (Prompt B,
