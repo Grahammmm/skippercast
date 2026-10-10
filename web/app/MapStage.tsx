@@ -16,6 +16,7 @@ import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
 import {createAerial} from '../map/aerial.ts';
 import {createCharterGrounds} from '../map/charter-grounds.ts';
+import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart} from '../map/chart.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createClouds} from '../map/clouds.ts';
@@ -80,7 +81,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),
-          engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone})]})]});
+          engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone})]})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;
