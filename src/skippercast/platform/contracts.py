@@ -151,6 +151,25 @@ def load_region(ident, root=REPO):
     return region
 
 
+def validate_station_roles(region):
+    chains = {}
+    for stations in [region["stations"], *[c["stations"] for c in region.get("contexts", {}).values()]]:
+        roles = stations.get("roles", {})
+        if not isinstance(roles, dict) or set(roles) - {"nearshore_buoy", "offshore_buoy", "tide"}:
+            raise ValueError("Unknown station role")
+        for role, config in roles.items():
+            ids = config.get("stations") if isinstance(config, dict) else None
+            pattern = r"\d{7}" if role == "tide" else r"[A-Za-z0-9]{5}"
+            if (not isinstance(ids, list) or not 1 <= len(ids) <= 4 or
+                    any(not isinstance(s, str) or not re.fullmatch(pattern, s) for s in ids) or
+                    len(set(ids)) != len(ids) or ids[0] != stations[role]):
+                raise ValueError("Station priorities require distinct IDs with the legacy primary first")
+            key = (role == "tide", ids[0])
+            if key in chains and chains[key] != ids:
+                raise ValueError("Shared station roles require the same priority order")
+            chains[key] = ids
+
+
 def _region_shape(region):
     """Shape checks that schemas/region.schema.json also expresses.
 
@@ -236,6 +255,7 @@ def validate_region(region, needs, sources, root=REPO):
     express: bounding-box ordering, time zones, catalog targets, ecology dossiers,
     legal notices, forecast points, stations, source bindings and assets."""
     check_region_shape(region)
+    validate_station_roles(region)
     bounds = bbox(region["bounds"])
     ZoneInfo(region["timezone"])
     targets = read_json(Path(root) / 'catalog/targets.json')['targets']

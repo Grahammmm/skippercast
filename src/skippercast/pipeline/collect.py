@@ -311,7 +311,25 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
         url, loader = model_loader(model, points)
         jobs.append(("model-" + model, model + " (SkipperCast NOAA/ECMWF tiles)", "forecast", url, 36, loader))
     def run(job):
-        return source(*job, now=now, previous=old_sources.get(job[0]))
+        from .failover import station_chain, ordered_source
+        role = "tide" if job[0] == "tides" else next((r for r in ("nearshore_buoy", "offshore_buoy")
+                if job[0] in ("buoy-" + stations[r], "buoy-" + stations[r] + "-swell")), None)
+        if role not in stations.get("roles", {}):
+            return source(*job, now=now, previous=old_sources.get(job[0]))
+        def read_station(used, old):
+            if role == "tide":
+                params = {**tide_params, "station": used}
+                url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?" + urlencode(params)
+                def load(client):
+                    return parsers.tides(client.get(url, True), used, stations["tide_note"])
+            else:
+                spectral = job[0].endswith("-swell")
+                url = f"https://www.ndbc.noaa.gov/data/realtime2/{used}.{'spec' if spectral else 'txt'}"
+                def load(client):
+                    return parsers.ndbc(client.get(url), used, spectral)
+            return source(job[0], job[1] if used == stations[role] else f"NOAA {used}",
+                          job[2], url, job[4], load, now, old)
+        return ordered_source(station_chain(stations, role), read_station, now, old_sources.get(job[0]))
     with ThreadPoolExecutor(max_workers=4) as pool:
         for result in pool.map(run, jobs):
             sources[result["id"]] = result
@@ -352,7 +370,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     last_seven = [sources.get("catches-" + (local_day - timedelta(days=i)).isoformat(), {}) for i in range(1, 8)]
     coverage = sum(s.get("status") == "ok" for s in last_seven)
     critical = (coverage >= 5 if region["landing_names"] else True) and any(sources[k]["status"] == "ok" for k in ("buoy-" + stations["nearshore_buoy"], "buoy-" + stations["offshore_buoy"]))
-    issues = [s["id"] for s in sources.values() if s["status"] != "ok"]
+    issues = [s["id"] for s in sources.values() if s["status"] != "ok" or s.get("fallback_for")]
     snapshot["health"] = {"status": "ok" if not issues else "degraded" if critical else "failed",
                           "critical_available": critical, "recent_report_days_ok": coverage,
                           "sources_ok": sum(s["status"] == "ok" for s in sources.values()),
