@@ -737,7 +737,7 @@ map 0, chrome 10, dock 20, sheet 30, modal 40, toast 50; `--touch-min` 44 px.
 
 - **Masthead** (`Masthead.tsx`): brand, location in mono (port name and
   coordinates from the region), view links (Coast, Conditions, History,
-  Fleet) as `?view=`, the freshness dot (mint when every tile's source is
+  Fleet, Reports) as `?view=`, the freshness dot (mint when every tile's source is
   within its limit, amber when any is stale, muted when offline) with the
   oldest age in mono, sign in (existing passkey flow).
 - **Command bar** (`CommandBar.tsx`): profile switch (§ 8), target species
@@ -759,7 +759,8 @@ switch; a bottom sheet (`Sheet` in `web/ui`) with three detents (peek: the
 headline and freshness; half: the four tiles and the top pick; full: the
 whole brief, with the day, target and area menus at its end and sign in in
 its footer) and the hour slider pinned at the sheet's top edge; a four-tab
-nav (Coast, Conditions, History, Fleet) under the sheet. The layer rail
+nav (Coast, Conditions, History, Fleet) under the sheet; Reports opens from
+the sheet's footer and replaces the sheet with its page. The layer rail
 collapses to a single button in the top strip that swaps the sheet's content
 for the rail with the legend under it. The mark card replaces the sheet's
 peek content while a mark is selected. The sheet moves by drag on its

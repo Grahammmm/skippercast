@@ -8,13 +8,17 @@
 // The area group also holds the port (FE-08, § 7): a button that opens the
 // port chooser with search, "Use my location" and "Explore the coast"; a
 // choice saves the port for v1 and v2 and navigates in place.
+// FE-54 (§ 6 "Species select, filters, Find a spot search"): the target menu
+// groups the search plans, the profile's own species and the coast habitat
+// targets under their own headings, never merging their scores, and a search
+// field narrows it by name; the chosen target always stays listed.
 // The switch and the menus are exported for the mobile shell (FE-06).
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
-import {regionPlans, targetsFor, type TargetOption} from '../species.ts';
+import {regionPlans, targetGroups, targetsFor, type TargetOption} from '../species.ts';
 import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
 import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
@@ -44,12 +48,21 @@ export function ProfileSwitch({class: cls}: {class?: string} = {}) {
 
 export function TargetSelect() {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const list = targetList(p, species.value).filter(t => !q || t.id === target || t.label.toLowerCase().includes(q));
   return (
-    <label>Target
-      <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
-        {targetList(p, species.value).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-      </select>
-    </label>
+    <div class="app-target" role="group" aria-label="Target species">
+      <input type="search" class="app-target-search" aria-label="Find a target" placeholder="Find a target" value={query}
+        onInput={event => setQuery((event.currentTarget as HTMLInputElement).value)} />
+      <label>Target
+        <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
+          {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
+            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>
+          ))}
+        </select>
+      </label>
+    </div>
   );
 }
 

@@ -319,7 +319,7 @@ test('the legend row stays one line while marks show; a withheld screen adds its
   // Current: the screen's line sits in the row's basis, so the row keeps its height (one .app-mpa-note at most).
   screen.value = assess({areas: MPAS.features, checkedAt: iso(Date.now() - HOUR), live: true}, Date.now());
   const ready = render(h(MpaRow, {}));
-  assert.match(ready, /<div class="ui-popover-body">.*<p data-reason="marks">Reef marks inside protected areas are withheld · boundaries checked this session<\/p><\/div><\/details>/s);
+  assert.match(ready, /<div class="ui-popover-body">.*<p data-reason="marks">Reef marks inside protected areas are withheld · boundaries checked this session<\/p><p class="ui-popover-sources"><a href="\/sources">How it’s built<\/a><\/p><\/div><\/details>/s);
   assert.doesNotMatch(ready, /app-mpa-marks/);
   assert.match(render(h(MarkCard, {})), /<div class="app-mark-actions"><button type="button" class="ui-button ui-button--ghost ui-button--sm">(?:(?!<\/button>).)*(?:Add to trip|Save research reference)<\/button>/s, 'a mark that shows joins a trip');
   // Stale: a visible line of its own, outside .app-mpa-note.

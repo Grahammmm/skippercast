@@ -55,6 +55,24 @@ test('the shell lays out the brief beside the map (laptop) or under a sheet (pho
   expect(pageErrors).toEqual([]);
 });
 
+test('FE-52: Reports opens from the masthead (laptop) or the sheet footer (phone) as a page over the map; axe is clean', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', AREA);
+  if (isMobile) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+    await page.locator('.app-reports-link').click();
+  } else await page.locator('nav[aria-label="Views"] a[data-view="reports"]').click();
+  await expect(page).toHaveURL(/[?&]view=reports/);
+  const reports = page.locator('article.app-reports');
+  await expect(reports.locator('h1')).toHaveText('Reports');
+  await expect(reports.locator('a[href="/feed.xml"]')).toBeVisible();
+  await expect(page.locator('section.app-stage')).toHaveCount(1);
+  await v2.a11y(isMobile ? 'v2-reports-mobile' : 'v2-reports');
+  const width = page.viewportSize()!.width;
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  expect(pageErrors).toEqual([]);
+});
+
 test('view links, the profile switch, the rail and the hour slider update the address without a reload', async ({page, pageErrors, v2, isMobile}) => {
   await v2.open('app', AREA);
   await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
