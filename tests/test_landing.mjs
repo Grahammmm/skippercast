@@ -176,7 +176,7 @@ test('the landing page holds the hero and footer statically; its parts render th
   const head = render(h(LandingHead, {href: 'https://s.test/?ui=v2'}));
   assert.match(head, /href="\/\?ui=v2">SkipperCast</);
   assert.match(head, /href="\/map\?region=morro-bay&amp;view=fleet&amp;ui=v2">Fleet</);
-  assert.match(head, /href="\/report">Reports</);
+  assert.match(head, /href="\/map\?region=morro-bay&amp;view=reports&amp;ui=v2">Reports</);
   assert.match(head, /href="\/sources">How it’s built</); // served by shellFor (#475, tests/test_worker_routes.mjs)
   assert.match(head, /href="\/\?ui=v1#account">Sign in</);
   assert.equal(NAV.length, 3);

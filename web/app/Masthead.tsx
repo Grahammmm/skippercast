@@ -1,6 +1,6 @@
 // Masthead (FE-05, design § 6): brand, the location in mono (port name and
-// centre from the region), the four views as ?view= links that navigate in
-// place, the freshness dot with the oldest age, and the account menu (FE-50:
+// centre from the region), the views as ?view= links that navigate in
+// place (FE-52 adds Reports), the freshness dot with the oldest age, and the account menu (FE-50:
 // sign in through v1's passkey dialog, the boat, trip alerts, downloads).
 // The pieces are exported so the mobile shell (FE-06) composes the same
 // brand, location, views and freshness into its top strip, sheet and tabs.
@@ -17,8 +17,10 @@ import {AccountMenu} from './AccountMenu.tsx';
 export const VIEW_LABELS: Readonly<Record<AppView, string>> = {coast: 'Coast', conditions: 'Conditions', history: 'History', fleet: 'Fleet', reports: 'Reports'};
 /** The tab icons of the mobile nav (§ 6 mobile). */
 export const VIEW_ICONS: Readonly<Record<AppView, IconName>> = {coast: 'map', conditions: 'wind', history: 'history', fleet: 'fleet', reports: 'chart'};
-/** The masthead's views; Reports is a Phase 4 page and is not listed. */
-export const MASTHEAD_VIEWS: readonly AppView[] = APP_VIEWS.filter(v => v !== 'reports');
+/** The masthead's views: all five (FE-52 adds Reports). */
+export const MASTHEAD_VIEWS: readonly AppView[] = APP_VIEWS;
+/** The mobile nav's four tabs (§ 6 mobile); Reports opens from the sheet's footer. */
+export const TAB_VIEWS: readonly AppView[] = APP_VIEWS.filter(v => v !== 'reports');
 const FRESHNESS_LABEL = {ok: 'Every reading is fresh', stale: 'A reading is stale', offline: 'Offline', unknown: 'No readings yet'} as const;
 
 /** The ?view= value for a masthead view: coast is the default and is not written. */
@@ -49,14 +51,14 @@ export function Location() {
   );
 }
 
-/** The views as ?view= links; `icons` adds each view's tab icon (the mobile nav). */
+/** The views as ?view= links; `icons` adds each view's tab icon and lists the four tabs (the mobile nav). */
 export function ViewNav({href, icons = false, class: cls}: {href?: string; icons?: boolean; class?: string} = {}) {
   const current = appView.value;
   const base = href ?? (typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href);
   return (
     <nav aria-label="Views" class={cls}>
       <ul class="app-views">
-        {MASTHEAD_VIEWS.map(v => (
+        {(icons ? TAB_VIEWS : MASTHEAD_VIEWS).map(v => (
           <li key={v}>
             <a href={withParams(base, {view: viewParam(v)})} aria-current={v === current ? 'page' : undefined} data-view={v}
               onClick={event => { event.preventDefault(); setParams({view: viewParam(v)}); }}>

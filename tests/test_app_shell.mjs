@@ -33,7 +33,7 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export * from './web/app/App.tsx';
-      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, advisorOn, checkAdvisor, ChatEntry} from './web/app/Masthead.tsx';
+      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry} from './web/app/Masthead.tsx';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
@@ -75,7 +75,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<nav aria-label="Views">/);
   assert.match(html, /<section class="app-command" aria-label="Command bar">/);
   assert.match(html, /<main class="app-main"><aside/);
-  assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet']);
+  assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet', 'reports']);
   assert.match(html, /class="app-fresh" role="status" data-state="unknown" aria-label="Freshness: No readings yet"/);
   // FE-50: sign in is the account menu's button, closed until pressed.
   assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)">.*?Sign in<\/button><div id="\1" class="app-account-panel" hidden/);
@@ -164,7 +164,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
 });
 
 test('the helpers behind the controls round-trip through the store keys', async () => {
-  const {localParts, dayOptions, dockState, hourText, readout, toggled, targetOptions, coordinates, titleCase, viewParam, clearSelection, windowText, RAIL_ENTRIES, RAIL_IDS, state, MASTHEAD_VIEWS} = await load();
+  const {localParts, dayOptions, dockState, hourText, readout, toggled, targetOptions, coordinates, titleCase, viewParam, clearSelection, windowText, RAIL_ENTRIES, RAIL_IDS, state, MASTHEAD_VIEWS, TAB_VIEWS} = await load();
   assert.deepEqual([localParts(new Date(TUE_2PM), TZ).day, localParts(new Date(TUE_2PM), TZ).hour], ['2026-10-06', 14]);
   assert.deepEqual([hourText(0), hourText(12), hourText(14)], ['12 am', '12 pm', '2 pm']);
   // Day chips: the horizon's eight local days; a selected day outside the horizon is kept.
@@ -189,7 +189,8 @@ test('the helpers behind the controls round-trip through the store keys', async 
   // Targets: the profile's list, with the link's target kept first when it is not in it.
   assert.deepEqual(targetOptions('shore', null), ['surfperch', 'halibut']);
   assert.deepEqual(targetOptions('boat', 'vermilion'), ['vermilion', 'lingcod']);
-  assert.deepEqual(MASTHEAD_VIEWS, ['coast', 'conditions', 'history', 'fleet']);
+  assert.deepEqual(MASTHEAD_VIEWS, ['coast', 'conditions', 'history', 'fleet', 'reports']);
+  assert.deepEqual(TAB_VIEWS, ['coast', 'conditions', 'history', 'fleet']);
   assert.deepEqual([viewParam('coast'), viewParam('fleet')], [null, 'fleet']);
   assert.equal(coordinates([35.34, -120.965]), '35.34N 120.97W');
   assert.equal(titleCase('cabezon-shallow-reef'), 'Cabezon Shallow Reef');
