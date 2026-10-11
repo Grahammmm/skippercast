@@ -249,3 +249,45 @@ test.describe('phone', () => {
     expect(pageErrors).toEqual([]);
   });
 });
+
+// FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The
+// contexts are the app at /map (Chart) and /coast, which moves to the app's 3D terrain (FE-78): the terrain lives
+// inside the same stage and its in-scene place and target controls stay hidden, and no v1 Leaflet map mounts.
+test('FE-60: no duplicate map, picker or timeline for one context (/map and /coast)', async ({page, pageErrors, v2, isMobile}) => {
+  await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered: the terrain stays loading, offline */ });
+  const contexts: Array<[string, string, 'chart' | 'terrain']> = [
+    ['/map', v2.url('app', {...AREA, presentation: 'chart'}), 'chart'],
+    ['/coast', `/coast?${new URLSearchParams({...AREA, ui: 'v2'})}`, 'terrain'],
+  ];
+  for (const [name, url, surface] of contexts) {
+    await page.goto(url);
+    await expect(page).toHaveURL(/\/map\?/);
+    await expect(page.locator('.app-location'), name).toContainText('Morro Bay');
+    // One map: one stage, one visible surface, at most one MapLibre canvas, no v1 map.
+    await expect(page.locator('section.app-stage'), name).toHaveCount(1);
+    await expect(page.locator(surface === 'chart' ? '.app-map' : '.app-terrain'), name).toBeVisible();
+    await expect(page.locator(surface === 'chart' ? '.app-terrain' : '.app-map'), name).toBeHidden();
+    expect(await page.locator('canvas.maplibregl-canvas').count(), `${name}: MapLibre canvases`).toBeLessThanOrEqual(1);
+    await expect(page.locator('.leaflet-container, #map'), `${name}: no v1 map`).toHaveCount(0);
+    // One of each picker: area and port, target, profile, presentation.
+    for (const label of ['Area and port', 'Target species', 'Profile', 'Map presentation'])
+      expect(await page.getByRole('group', {name: label, exact: true}).count(), `${name}: ${label}`).toBeLessThanOrEqual(1);
+    expect(await page.locator('button.app-port').count(), `${name}: port button`).toBeLessThanOrEqual(1);
+    await expect(page.getByRole('group', {name: 'Profile', exact: true}), name).toHaveCount(1);
+    await expect(page.getByRole('group', {name: 'Map presentation', exact: true}), name).toHaveCount(1);
+    if (!isMobile) await expect(page.getByRole('group', {name: 'Area and port', exact: true}), name).toHaveCount(1);
+    // One timeline: one hour slider and at most one day picker.
+    await expect(page.locator('input[aria-label="Hour"]'), `${name}: hour slider`).toHaveCount(1);
+    expect(await page.getByRole('group', {name: 'Day', exact: true}).count(), `${name}: day picker`).toBeLessThanOrEqual(1);
+    if (surface === 'terrain') {
+      const host = page.locator('.app-terrain');
+      await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene')), name).toBe(true);
+      // The host owns place, target and time: the embed's own species picker is hidden and it draws no timeline.
+      expect(await host.evaluate(el => {
+        const root = el.shadowRoot!, species = root.getElementById('species') as HTMLElement | null;
+        return {species: !species || species.hidden, timeline: root.querySelectorAll('input[type="range"][aria-label="Hour"], .time-dock-center').length};
+      }), name).toEqual({species: true, timeline: 0});
+    }
+  }
+  expect(pageErrors).toEqual([]);
+});

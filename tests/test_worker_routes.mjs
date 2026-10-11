@@ -79,11 +79,11 @@ test('every method and path reaches the same handler as before the Hono router',
 
 // FE-01 (docs/plans/front-end/design.md § 14): the v2 shells behind UI_V2 and the ?ui= switch.
 // ASSETS answers 299 with the fetched path, so the chosen shell is visible in the body.
-test('UI_V2 off: / is the v1 shell as before and /map is 404; ?ui=v2 previews; UI_V2=true serves v2 and ?ui=v1 forces v1', async () => {
+test('UI_V2=false: / is the v1 shell as before and /map is 404; ?ui=v2 previews; v2 by default (FE-60) and ?ui=v1 forces v1', async () => {
   const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status]; };
   const v1 = [299, '/index.0123456789', 'no-store'], landing = [299, '/landing.0123456789', 'no-store'], app = [299, '/app.0123456789', 'no-store'];
-  // 1. Flag unset, no switch: byte-identical v1 (the same fingerprinted file, no-store, query stripped); the v2 paths are dark.
-  for (const env of [{}, {UI_V2: ''}, {UI_V2: 'false'}, {UI_V2: 'yes'}, {UI_V2: '1'}]) {
+  // 1. Flag off, no switch: byte-identical v1 (the same fingerprinted file, no-store, query stripped); the v2 paths are dark.
+  for (const env of [{UI_V2: 'false'}, {UI_V2: ' FALSE '}]) {
     assert.deepEqual(await shell('/', env), v1, JSON.stringify(env));
     assert.deepEqual(await shell('/?region=morro-bay&view=tomorrow', env), v1);
     assert.deepEqual(await shell('/index.html', env), v1);
@@ -94,16 +94,17 @@ test('UI_V2 off: / is the v1 shell as before and /map is 404; ?ui=v2 previews; U
   for (const query of ['region=morro-bay', 'coast=central', 'view=tomorrow', 'spot=x', 'target=lingcod', 'focus=y']) assert.deepEqual(await shell(`/?${query}&ui=v2`, {}), app, query);
   assert.deepEqual(await shell('/map?ui=v2', {}), app);
   assert.deepEqual(await shell('/landing.html?ui=v2', {}), landing); assert.deepEqual(await shell('/app.html?ui=v2', {}), app);
-  // 3. UI_V2=true: v2 by default (any case, trimmed); ?ui=v1 forces the v1 shell and darkens /map.
-  for (const env of [{UI_V2: 'true'}, {UI_V2: ' TRUE '}]) {
+  // 3. FE-60: v2 by default (flag unset or not a boolean, deployments/production.json ui_v2) and with UI_V2=true
+  // (any case, trimmed); ?ui=v1 forces the v1 shell and darkens /map for the release that keeps the switch.
+  for (const env of [{}, {UI_V2: ''}, {UI_V2: 'yes'}, {UI_V2: '1'}, {UI_V2: 'true'}, {UI_V2: ' TRUE '}]) {
     assert.deepEqual(await shell('/', env), landing); assert.deepEqual(await shell('/?region=morro-bay', env), app); assert.deepEqual(await shell('/map', env), app);
     assert.deepEqual(await shell('/?ui=v1', env), v1); assert.deepEqual(await shell('/?region=morro-bay&ui=v1', env), v1);
     assert.deepEqual(await shell('/map?ui=v1', env), [404]); assert.deepEqual(await shell('/index.html', env), v1);
   }
   // An unknown switch value is no switch; other pages and assets are untouched by the flag.
-  assert.deepEqual(await shell('/?ui=v3', {UI_V2: 'true'}), landing); assert.deepEqual(await shell('/?ui=v3', {}), v1);
+  assert.deepEqual(await shell('/?ui=v3', {UI_V2: 'true'}), landing); assert.deepEqual(await shell('/?ui=v3', {UI_V2: 'false'}), v1);
   assert.deepEqual(await shell('/sources.html?ui=v2', {}), [299, '/sources.0123456789', 'no-store']);
-  const dark = await call('/map', {});
+  const dark = await call('/map', {env: {UI_V2: 'false'}});
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(dark.headers.get(name), value, `404 /map: ${name}`);
 });
 
@@ -131,13 +132,14 @@ test('FE-78: coast and Fish keys open the v2 app; /coast is the app at presentat
   const v1 = [299, '/index.0123456789', 'no-store'], app = [299, '/app.0123456789', 'no-store'], coastPage = [299, '/coast.0123456789', 'no-store'];
   const keys = ['place=morro', 'mode=shore', 'species=lingcod', 'presentation=3d', 'habitat=reef:1', 'current=wcofs'];
   // 1. v2 off: /coast still serves coast.html, / and every Fish or coast link is the v1 shell byte for byte.
-  for (const env of [{}, {UI_V2: 'false'}, {UI_V2: 'true', ui: 'v1'}]) {
+  for (const env of [{UI_V2: 'false'}, {ui: 'v1'}, {UI_V2: 'true', ui: 'v1'}]) {
     const off = env.ui ? '&ui=v1' : '', e = {UI_V2: env.UI_V2};
     assert.deepEqual(await shell(`/coast?${off.slice(1)}`, e), coastPage, JSON.stringify(env));
     assert.deepEqual(await shell(`/coast?place=morro&mode=shore${off}`, e), coastPage);
     for (const query of ['', ...keys, 'place=morro&mode=shore']) assert.deepEqual(await shell(`/?${query}${off}`, e), v1, `${query} ${JSON.stringify(env)}`);
   }
-  assert.equal(await (await call('/', {})).text(), await (await call('/?place=morro&mode=shore', {})).text(), '/ is byte-identical with v2 off');
+  const off = {env: {UI_V2: 'false'}};
+  assert.equal(await (await call('/', off)).text(), await (await call('/?place=morro&mode=shore', off)).text(), '/ is byte-identical with v2 off');
   // 2. v2 on (the flag or ?ui=v2): each key opens the app at /; /coast moves to the app at presentation=3d, query kept.
   for (const query of keys) {
     assert.deepEqual(await shell(`/?${query}`, {UI_V2: 'true'}), app, query);

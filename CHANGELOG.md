@@ -8,6 +8,13 @@
 
 ## Unreleased
 
+### Release notes: the new map is the default (FE-60)
+
+- skippercast.com now opens the rebuilt app: `/` is the landing (the day's readings with their station and age, the profile choice and the layer links), `/map` is the map with the brief, Conditions, History, Reports, Fleet and Trip views, and `/coast` opens the map's 3D terrain. The entries below that say "In the new map preview (`?ui=v2`)" describe what is now the default; `?ui=v2` is no longer needed.
+- Shared links keep working: a link to `/` that names a region, spot, coast, view, target, Fish place or coast key opens the map there, and `/coast` links keep their query.
+- The classic map stays one more release at `/?ui=v1` (and offline at `/?ui=v1` once the service worker has installed); the next release removes it (FE-61). The site-wide switch back is the `UI_V2=false` repository variable, without a rebuild.
+- The deploy's smoke test now also opens `/map` and `/coast`.
+
 - In the new map preview (`?ui=v2`), the brief shows the day's tide curve as a small chart with night shaded and the high and low predictions under it, with their reference level (MLLW). Where a local coast report covers the area, the curve is that report's station prediction and the Tide tile says whether the tide is rising, falling or turning; elsewhere the brief says the tide series is unavailable and still lists the day's highs and lows. Dragging the curve moves the hour.
 - In the new map preview (`?ui=v2`), the History view shows the recorded buoy history for Morro Bay and Cambria (NOAA NDBC 46028 and 46215): recent hourly means over the monthly 10th–90th percentile bands, with sample counts and coverage. The station, measurement and day-range choices are in the address, so Back and Forward and shared links keep them; other regions say recorded history is unavailable there.
 - In the new map preview (`?ui=v2`), a Reports page (`?view=reports`, from the masthead, the landing's Reports link or the phone sheet's footer) gathers the dated evidence: the fleet's recent trip cards with their reported, retained and released counts (eight at most), recent fishing evidence, recent discussion links, the seasonal watch and the charter-reported grounds, each with its date and source link, plus the coast report feed.

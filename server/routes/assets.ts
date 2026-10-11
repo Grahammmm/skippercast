@@ -75,7 +75,8 @@ export const serveAsset: Handler<AppEnv> = async c => {
   if (c.var.path === '/sources/') return new Response(null, {status: 301, headers: {Location: `/sources${new URL(request.url).search}`, 'Cache-Control': 'no-store'}});
   const page = shellFor(c.var.path, search, c.env ?? {});
   if (page === null) return new Response('Not found', {status: 404});
-  const current = SHELLS[page ?? c.var.path];
+  // A page path stays no-store even if the build's SHELLS lacks it: fetch the page itself.
+  const current = SHELLS[page ?? c.var.path] ?? page;
   if (!current) return assets.fetch(request);
   const assetUrl = new URL(request.url); assetUrl.pathname = current.replace(/\.html$/, ''); assetUrl.search = ''; // hosts serve pages without .html
   const response = await assets.fetch(new Request(assetUrl, request));

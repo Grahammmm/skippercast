@@ -273,7 +273,7 @@ test('ui vars: UI_V2 only is copied (trimmed, non-empty), beside the fleet vars;
   const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
   assert.match(workflow, /^ {10}UI_V2: \$\{\{ vars\.UI_V2 \}\}$/m, 'deploy-cloudflare.yml passes UI_V2');
   const deployment = JSON.parse(readFileSync(new URL('../deployments/production.json', import.meta.url), 'utf8'));
-  assert.equal(deployment.ui_v2, false, 'the v2 shell stays off by default until FE-60');
+  assert.equal(deployment.ui_v2, true, 'FE-60: the v2 shell is on by default; UI_V2=false or ?ui=v1 serves v1 for one release');
 });
 
 // FE-84: the coast snapshot switch is a plain var too; unset keeps every source on the Fish Worker bridge.
