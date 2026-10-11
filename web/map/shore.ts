@@ -8,10 +8,10 @@
 // the method guidance and the official rules link.
 //
 // Expiry is honoured: a run past its source review is not drawn (the terrain's
-// rule, packages/coast viewer `loadShore`); an expired access review,
-// or a protected-area check that is not current, holds the run; a run or
+// rule, packages/coast viewer `loadShore`); only a protected-area check that is
+// not current holds guidance; a run or
 // access point inside a protected area is blocked and draws muted without pins.
-// Rules-review age does not set priority; its dates remain visible on the card.
+// Review age does not set priority; all original dates remain visible on the card.
 // The terrain draws its own shore features (packages/coast), so this is Chart only.
 //
 // Erasable syntax only: tests/test_shore.mjs imports it by type stripping.
@@ -42,10 +42,10 @@ export const RUNS_HIT = 'shore-runs-hit';
 export const ACCESS_PIN = 'shore-access-pin';
 /** A transparent 44 px circle under each pin. */
 export const ACCESS_HIT = 'shore-access-hit';
-/** Line opacity by priority: 0.6 for a current run (§ 9), fainter as the clocks age; Hold and Blocked draw muted. */
-export const PRIORITY_OPACITY = [0.5, 0.3, 0.45, 0.6] as const;
+/** Line opacity by model coverage: 0.6 with a fresh sample; Hold and Blocked draw muted. */
+export const PRIORITY_OPACITY = {0: 0.5, 2: 0.45, 3: 0.6} as const;
 
-/** How often the runs are re-ranked against their review clocks. */
+/** How often model coverage and source visibility are refreshed. */
 export const RECHECK_MS = 10 * 60_000;
 export const shoreURL = (id: string): string => `regions/${id}/shore-habitat.geojson`;
 
@@ -98,7 +98,7 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
       {id: RUNS_LINE, type: 'line', source: RUNS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {
         'line-color': ['case', held, p.muted, p.amber], 'line-blur': 3,
         'line-width': ['interpolate', ['linear'], ['zoom'], 8, 4, 13, 12],
-        'line-opacity': ['match', ['get', 'priority'], 3, PRIORITY_OPACITY[3], 2, PRIORITY_OPACITY[2], 1, PRIORITY_OPACITY[1], PRIORITY_OPACITY[0]]}},
+        'line-opacity': ['match', ['get', 'priority'], 3, PRIORITY_OPACITY[3], 2, PRIORITY_OPACITY[2], PRIORITY_OPACITY[0]]}},
       {id: ACCESS_HIT, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.amber, 'circle-opacity': 0}},
       {id: ACCESS_PIN, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 5, 'circle-color': p.bg, 'circle-stroke-color': p.amber, 'circle-stroke-width': 2}},
     ] as MapLibre.LayerSpecification[],
@@ -132,7 +132,7 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   report = computed(() => coastData.coastReport.value?.data ?? null)}: ShoreOptions) {
   const pkg = signal<{region: string; data: ShorePackage | null} | null>(null);
   const load = assetLoader<ShorePackage>(fetchFn, page, d => validPackage(d, (d as ShorePackage | null)?.regionId ?? ''));
-  // Review clocks expire during a session: re-rank every RECHECK_MS.
+  // Refresh model coverage and source visibility every RECHECK_MS.
   const tick = signal(0);
   const timer = setInterval(() => { tick.value++; }, RECHECK_MS);
   const on = computed(() => profile.value === 'shore');

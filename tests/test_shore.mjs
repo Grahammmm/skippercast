@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {CDFW_RULES_URL, RECHECK_WINDOW_MS, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
+import {CDFW_RULES_URL, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 import {layerEntry} from '../web/map/layers.ts';
 import {markScreen} from '../web/map/marks.ts';
@@ -23,7 +23,7 @@ const PACKAGE = json('dist/regions/morro-bay/shore-habitat.geojson');
 const REGION = json('dist/regions/morro-bay/region.json');
 const SNAPSHOT = json(`dist/${REGION.assets.protected_areas}`);
 const HOUR = 3_600_000;
-const NOW = Date.parse('2026-10-09T18:00:00Z');
+const NOW = Date.parse('2026-10-11T00:00:00Z');
 const iso = ms => new Date(ms).toISOString();
 const sentinel = readPalette(name => `token(${name})`);
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -33,72 +33,65 @@ const READY = screenAt(SNAPSHOT.features, NOW);
 const clocks = now => ({reviewExpiresAt: iso(now + 30 * 24 * HOUR), accessReviewedAt: iso(now - 24 * HOUR), accessReviewExpiresAt: iso(now + 30 * 24 * HOUR),
   legalReviewedAt: iso(now - 24 * HOUR), legalReviewExpiresAt: iso(now + 30 * 24 * HOUR), checkedAt: iso(now - 24 * HOUR)});
 
-test('priority: Current, No surf model, Recheck soon, Hold and Blocked from the clocks, the protected-area check and the nearshore model', () => {
+test('priority: Current, No surf model, Hold and Blocked from protected areas and model coverage', () => {
   const run = clocks(NOW);
   assert.deepEqual(shoreStatus(run, {now: NOW, inside: [], conditions: true}).label, 'Current');
   assert.equal(shoreStatus(run, {now: NOW, inside: [], conditions: true}).priority, 3);
   assert.equal(shoreStatus(run, {now: NOW, inside: [], conditions: false}).label, 'No surf model');
-  const soon = {...run, accessReviewExpiresAt: iso(NOW + RECHECK_WINDOW_MS - HOUR)};
-  assert.deepEqual(shoreStatus(soon, {now: NOW, inside: [], conditions: true}), {priority: 1, label: 'Recheck soon', reasons: ['Access review ends within 24 h']});
   assert.deepEqual(shoreStatus(run, {now: NOW, inside: null, conditions: true}), {priority: 0, label: 'Hold', reasons: ['Protected-area check not current']});
-  assert.equal(shoreStatus({...run, accessReviewExpiresAt: 'not a date'}, {now: NOW, inside: [], conditions: true}).label, 'Hold', 'an unreadable clock holds');
   assert.equal(shoreShown(run, NOW), true);
   assert.equal(shoreShown({reviewExpiresAt: iso(NOW - 1)}, NOW), false, 'past its source review a run is not shown');
   const ranked = rankRuns([{name: 'B', status: {priority: 0}}, {name: 'C', status: {priority: 3}}, {name: 'A', status: {priority: 0}}]);
   assert.deepEqual(ranked.map(r => r.name), ['C', 'A', 'B']);
 });
 
-test('rules-review age alone does not set priority or claim all reviews are current', () => {
+test('review dates never set guidance priority or imply current reviews', () => {
   const run = clocks(NOW);
-  const expected = shoreStatus(run, {now: NOW, inside: [], conditions: true});
-  for (const end of [iso(NOW - 30 * 24 * HOUR), iso(NOW), iso(NOW + HOUR), 'not a date']) {
-    const dated = {...run, legalReviewExpiresAt: end};
-    assert.deepEqual(shoreStatus(dated, {now: NOW, inside: [], conditions: true}), expected, end);
-    assert.equal(shoreStatus(dated, {now: NOW, inside: [], conditions: false}).label, 'No surf model');
-    assert.deepEqual(shoreStatus(dated, {now: NOW, inside: ['Synthetic SMR'], conditions: true}),
-      {priority: 0, label: 'Blocked', reasons: ['Inside Synthetic SMR']});
-    assert.equal(shoreStatus(dated, {now: NOW, inside: null, conditions: true}).label, 'Hold');
-    assert.equal(shoreStatus({...dated, accessReviewExpiresAt: iso(NOW)}, {now: NOW, inside: [], conditions: true}).label, 'Hold');
-    assert.equal(shoreStatus({...dated, reviewExpiresAt: iso(NOW)}, {now: NOW, inside: [], conditions: true}).label, 'Hold');
+  const expected = {priority: 3, label: 'Current', reasons: ['Protected-area check current; a fresh nearshore model sample covers this area']};
+  for (const field of ['accessReviewExpiresAt', 'legalReviewExpiresAt', 'reviewExpiresAt']) {
+    for (const end of [iso(NOW - 30 * 24 * HOUR), iso(NOW), iso(NOW + HOUR), 'not a date']) {
+      const dated = {...run, [field]: end};
+      assert.deepEqual(shoreStatus(dated, {now: NOW, inside: [], conditions: true}), expected, field + end);
+      assert.equal(shoreStatus(dated, {now: NOW, inside: [], conditions: false}).label, 'No surf model');
+      assert.deepEqual(shoreStatus(dated, {now: NOW, inside: ['Synthetic SMR'], conditions: true}),
+        {priority: 0, label: 'Blocked', reasons: ['Inside Synthetic SMR']});
+      assert.deepEqual(shoreStatus(dated, {now: NOW, inside: null, conditions: true}),
+        {priority: 0, label: 'Hold', reasons: ['Protected-area check not current']});
+    }
   }
-  assert.match(expected.reasons[0], /^Access and source reviews current;/);
-  assert.doesNotMatch(expected.reasons[0], /^Reviews current/);
+  const allExpired = {...run, accessReviewExpiresAt: iso(NOW - HOUR), legalReviewExpiresAt: iso(NOW - HOUR), reviewExpiresAt: iso(NOW - HOUR)};
+  assert.deepEqual(shoreStatus(allExpired, {now: NOW, inside: [], conditions: true}), expected);
+  assert.doesNotMatch(expected.reasons[0], /reviews current/i);
 });
 
-test('committed expired rules dates remain visible without blanket Hold', () => {
+test('committed expired access and rules dates remain visible without blanket Hold', () => {
   const runs = shownRuns(PACKAGE, READY, null, NOW);
   assert.equal(runs.length, PACKAGE.features.length);
   const unblocked = runs.filter(r => r.status.label !== 'Blocked');
   assert.ok(unblocked.length > 0);
   for (const r of unblocked) {
     assert.ok(Date.parse(r.run.properties.legalReviewExpiresAt) < NOW);
-    assert.ok(['Recheck soon', 'No surf model'].includes(r.status.label), r.name);
+    assert.ok(Date.parse(r.run.properties.accessReviewExpiresAt) < NOW);
+    assert.equal(r.status.label, 'No surf model', r.name);
     const card = runMark(r, 'surfperch');
     assert.match(card.reading, /rules checked Oct 2, 2026, review until Oct 3, 2026/);
     assert.match(card.basis, /check the current CDFW rules/);
-    assert.match(card.basis, /Rules-review dates are context only/);
+    assert.match(card.basis, /Review dates remain historical context/);
+    assert.match(card.reading, /Access checked Oct 2, 2026, review until Oct 9, 2026/);
     assert.match(card.basis, /Ranking does not establish legal permission/);
     assert.doesNotMatch(card.basis, /held when a review expires/);
   }
 });
 
-test('Accept 1: an expired access review drops the run to "Hold"', () => {
-  const pkg = PACKAGE;
+test('Accept 1: access expiry does not hold guidance; source publication visibility stays enforced', () => {
   const access = Date.parse(PACKAGE.features[0].properties.accessReviewExpiresAt);
-  const before = shownRuns(pkg, screenAt(SNAPSHOT.features, access - 2 * HOUR), null, access - 2 * HOUR);
-  assert.ok(before.length > 0);
-  for (const r of before) assert.ok(['Recheck soon', 'Blocked'].includes(r.status.label), `${r.name} is not held before its access review ends`);
-  const after = shownRuns(pkg, screenAt(SNAPSHOT.features, access + HOUR), null, access + HOUR);
-  const held = after.filter(r => r.status.label !== 'Blocked');
-  assert.ok(held.length > 0);
-  for (const r of held) {
-    assert.equal(r.status.label, 'Hold', r.name);
-    assert.equal(r.status.priority, 0);
-    assert.ok(r.status.reasons.includes('Access review expired'));
+  for (const now of [access - 2 * HOUR, access, access + HOUR]) {
+    const runs = shownRuns(PACKAGE, screenAt(SNAPSHOT.features, now), null, now);
+    assert.equal(runs.length, PACKAGE.features.length);
+    for (const r of runs) assert.ok(['No surf model', 'Blocked'].includes(r.status.label), r.name);
   }
-  // Past the source review the run is not drawn at all.
   const late = Date.parse(PACKAGE.features[0].properties.reviewExpiresAt) + HOUR;
-  assert.deepEqual(shownRuns(pkg, screenAt(SNAPSHOT.features, late), null, late), []);
+  assert.deepEqual(shownRuns(PACKAGE, screenAt(SNAPSHOT.features, late), null, late), [], 'source publication visibility remains separate from guidance priority');
 });
 
 test('Accept 2: a run inside a protected area is blocked and loses its access pins', () => {
@@ -136,7 +129,7 @@ test('a protected access point blocks a run even with an expired rules review', 
 test('the card shows review dates, method guidance and the official rules link, and never promises fish', () => {
   const [r] = shownRuns(PACKAGE, READY, null, NOW);
   const card = runMark(r, 'surfperch');
-  assert.match(card.kind, /^Shore run · (No surf model|Recheck soon|Blocked)$/);
+  assert.match(card.kind, /^Shore run · (No surf model|Blocked)$/);
   assert.match(card.reading, /Access checked .+, review until .+ · rules checked .+ · source review until/);
   assert.equal(shoreReviewLines(r.run.properties).includes('Oct'), true);
   assert.deepEqual(card.regulations, {href: CDFW_RULES_URL, label: 'Official CDFW regional rules'});
