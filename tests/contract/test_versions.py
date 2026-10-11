@@ -1,4 +1,4 @@
-"""The Python package, web package and changelog must name the same release."""
+"""The Python package, web package, health endpoint and changelog must name the same release."""
 import json
 import re
 import unittest
@@ -12,7 +12,8 @@ class VersionAlignmentTests(unittest.TestCase):
         web = json.loads((ROOT / "package.json").read_text())["version"]
         py = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M).group(1)
         latest = re.search(r"^## (?!Unreleased)(\S+)", (ROOT / "CHANGELOG.md").read_text(), re.M).group(1)
-        self.assertEqual({web, py, __version__, latest}, {latest})
+        server = re.search(r"version: '([^']+)'", (ROOT / "server/routes/public.ts").read_text()).group(1)
+        self.assertEqual({web, py, __version__, server, latest}, {latest})
 
 
 if __name__ == "__main__":

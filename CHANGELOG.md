@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+## 0.8.0 — 2026-10-11
+
 - Suggested windows in the brief no longer run through an hour that a hazard rule flags or that the profile grades Rough, for every profile and whatever your limits say: a hazardous harbour bar at any hour of a boat window (not only departure and return), sneaker-wave swell for Shore when the surf is the offshore estimate, long-period swell under a kayak, and Rough Shore or Spear hours. Some windows are shorter or gone as a result. Occasionally a boat window the brief used to drop because its departure or return crossed a hazardous bar now appears as its clean remaining hours (#551).
 - "Your limits": set your own highest wind, gust and seas (surf for Shore, plus the highest surge for Spear) for each profile, from beside the profile switch. They stay on this device. The brief's suggested windows use them, a stricter limit marks an otherwise calmer hour marginal and says which limit did it, and when a limit is looser than the default the brief says it is using your limits. Marine alerts, long-period swell, a hazardous bar, kayak offshore wind and launch surf, and daylight still rule hours out whatever you set. Reset to defaults clears them (#542).
 - The Boat profile now checks the harbour bar at the four bars the Coast Guard regulates on this coast (Morro Bay, Humboldt Bay, Noyo River and Crescent City): each hour reads No bar flag, Caution, Hazardous or Unknown from the tide stage (the middle of the ebb counts most), swell height and period (the nearshore model where fresh, else a labelled offshore estimate) and, at Morro Bay only (using a shoreline bearing as a proxy), wind blowing in against the ebb. A hazardous hour sets the brief to Caution and leads the headline, windows that leave or return then are not suggested, the Tide tile shows the hour's ebb and bar band, and the brief always says this is an estimate rather than an official bar report and to check the Coast Guard bar status or harbor patrol (#542).
@@ -14,8 +18,6 @@
 - Extend the reviewed San Simeon bedrock outlines across the remaining eligible native SCC03 footprint, retaining uncertain terrain and nonexportable area labels.
 
 - Separate measured reef trip exports from research-coordinate references with explicit session opt-in and per-point evidence labels; preserve saved selections and all spatial/publication checks.
-
-## Unreleased
 
 - Brief fixes on the map: a beach notice shows only for a beach under an advisory, closure or warning (no longer for open beaches whose county line says there are no advisory notes); where a coast report covers the area (Morro Bay, Cambria) the brief loads it whichever layers are on, so the tide curve and local-report line appear on first load; and the fleet line ("2 boats reported from Morro Bay & Avila Beach in the last 7 days") now appears, read from the daily feed's landing reports at the region's own landings.
 - Choosing Chart while the map shows 2D now opens the Chart; it used to switch to 3D because the terrain's report of its own camera change was written back over the choice.
