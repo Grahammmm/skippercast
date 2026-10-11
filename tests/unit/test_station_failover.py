@@ -23,7 +23,8 @@ class MemoryClient:
     def get(self, url, *args):
         from urllib.parse import parse_qs, urlsplit
         station = parse_qs(urlsplit(url).query).get("station", [url.split("/")[-1].split(".")[0]])[0]
-        response = self.responses[station]
+        key = station + ".spec" if url.endswith(".spec") and station + ".spec" in self.responses else station
+        response = self.responses[key]
         self.requests.append({"url": url})
         if isinstance(response, Exception):
             raise response
@@ -90,6 +91,8 @@ class StationFailoverTests(TestCase):
         self.assertEqual(row["data"], old["data"])
         self.assertEqual(row["station"], "46299")
         self.assertEqual(row["data_retrieved_at"], old["data_retrieved_at"])
+        self.assertIn("46299", row["name"])
+        self.assertIn("46299", row["url"])
 
     def test_error_primary_retains_inside_max_age_then_falls_back(self):
         old = {"station": "46215", "data": {"station": "46215", "sample_at": NOW.isoformat()}}
@@ -127,6 +130,7 @@ class StationFailoverTests(TestCase):
         for ident in ("buoy-46215", "buoy-46215-swell"):
             row = feed["sources"][ident]
             self.assertEqual((row["station"], row["fallback_for"]), ("46299", "46215"))
+            self.assertIn("swell components" if ident.endswith("-swell") else "observations", row["name"])
 
     def test_tide_fresh_primary(self):
         row = self.tide(predictions())
@@ -139,6 +143,8 @@ class StationFailoverTests(TestCase):
             row = self.tide(primary, predictions())
             self.assertEqual((row["station"], row["fallback_for"]), ("9412999", "9412110"))
             self.assertEqual(row["data"]["station"], "9412999")
+            self.assertIn("9412999", row["data"]["note"])
+            self.assertNotIn("Reference only", row["data"]["note"])
 
     def test_tide_all_stale_retains(self):
         old = {"data": {"station": "9412110", "predictions": [], "coverage_end": "2026-09-27T00:00:00Z"},
@@ -211,3 +217,26 @@ class LegacyStationBytesTests(TestCase):
             actual = (json.dumps(feed, separators=(",", ":"), allow_nan=False) + "\n").encode()
             self.assertEqual(actual, (FIXTURES / "station-failover" / filename).read_bytes())
             self.assertTrue(all("station" not in s and "fallback_for" not in s for s in feed["sources"].values()))
+
+
+    def test_mixed_legacy_results_are_byte_identical(self):
+        previous = legacy_mixed_previous()
+        MemoryClient.responses = {"46215": ValueError("synthetic outage"), "46215.spec": buoy(), "46028": buoy(8)}
+        with patch.object(live, "settings", return_value=legacy_config()), \
+             patch.object(live, "source", side_effect=fixed_source), \
+             patch.object(live, "stamp", return_value=NOW.isoformat()), \
+             patch.object(daily, "stamp", return_value=NOW.isoformat()), \
+             patch.dict(os.environ, {"GITHUB_RUN_ID": ""}):
+            feed = live.collect(NOW, previous)
+        actual = (json.dumps(feed, separators=(",", ":"), allow_nan=False) + "\n").encode()
+        self.assertEqual(actual, (FIXTURES / "station-failover" / "legacy-live-mixed.json").read_bytes())
+        self.assertEqual(feed["sources"]["diablo"]["status"], "retained")
+        self.assertEqual(feed["sources"]["diablo-spectrum"]["status"], "ok")
+        self.assertEqual(feed["sources"]["offshore"]["status"], "stale")
+        self.assertTrue(all("station" not in s and "fallback_for" not in s for s in feed["sources"].values()))
+
+
+def legacy_mixed_previous():
+    from skippercast.pipeline.parsers import ndbc
+    return {"schema_version": 1, "sources": {"diablo": {
+            "data": ndbc(buoy(), "46215"), "last_success_at": NOW.isoformat(), "data_retrieved_at": NOW.isoformat()}}}

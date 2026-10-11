@@ -322,13 +322,19 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                 params = {**tide_params, "station": used}
                 url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?" + urlencode(params)
                 def load(client):
-                    return parsers.tides(client.get(url, True), used, stations["tide_note"])
+                    note = stations["tide_note"] if used == stations["tide"] else (
+                        f"NOAA {used} station-specific backup water-level predictions (MLLW). "
+                        "Heights and times apply to this station. Not a local current, slack-water, "
+                        "bottom-drift or entrance-clearance prediction.")
+                    return parsers.tides(client.get(url, True), used, note)
             else:
                 spectral = job[0].endswith("-swell")
                 url = f"https://www.ndbc.noaa.gov/data/realtime2/{used}.{'spec' if spectral else 'txt'}"
                 def load(client):
                     return parsers.ndbc(client.get(url), used, spectral)
-            return source(job[0], job[1] if used == stations[role] else f"NOAA {used}",
+            backup_name = (f"NOAA {used} tide predictions" if role == "tide" else
+                           f"NOAA NDBC {used}" + (" swell components" if spectral else " observations"))
+            return source(job[0], job[1] if used == stations[role] else backup_name,
                           job[2], url, job[4], load, now, old)
         return ordered_source(station_chain(stations, role), read_station, now, old_sources.get(job[0]))
     with ThreadPoolExecutor(max_workers=4) as pool:

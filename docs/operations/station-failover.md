@@ -28,7 +28,8 @@ A failed check can retain the last served data inside its original max_age;
 when those data age out, try backups in order. Successful tide responses must
 cover the current day (high/low predictions may begin later today) and not
 have expired. If all candidates are stale or fail, preserve the previous data
-and station as retained; without previous data, preserve the primary's result.
+and station as retained, with the corresponding station name and URL; without
+previous data, preserve the primary's result.
 The normal source status keeps its meaning: an available backup is `ok`, while
 feed health and the freshness checker report degraded service and name it.
 A retained or stale backup is still subject to normal outage checks.

@@ -47,7 +47,8 @@ def collect(now=None, previous=None, region_id="morro-bay"):
                     data = ndbc(client.get(url), used, spectral)
                     data["observations"] = sorted(data["observations"], key=lambda r: r["time"], reverse=True)[:24]
                     return data
-                return source(ident, name if used == primary else f"NOAA NDBC {used}",
+                backup_name = f"NOAA NDBC {used}" + (" swell and wind waves" if spectral else " observations")
+                return source(ident, name if used == primary else backup_name,
                               "observation", url, 2, load, now, old)
             row = ordered_source(role_chains[station], read_station, now, previous.get("sources", {}).get(ident))
             row["station_url"] = f"https://www.ndbc.noaa.gov/station_page.php?station={row['station']}"

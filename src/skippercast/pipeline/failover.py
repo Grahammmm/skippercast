@@ -35,13 +35,14 @@ def ordered_source(chain, read, now, previous=None):
     """
     previous = previous or {}
     previous_station = previous.get("station") or (previous.get("data") or {}).get("station") or chain[0]
-    attempts, first = [], None
+    attempts, rows, first = [], {}, None
     for station in chain:
         row = read(station, previous if previous_station == station else None)
         attempts.extend(row.get("requests", []))
         usable = fresh(row, now)
         if row.get("status") == "ok" and not usable:
             row.update(status="stale", issue="Source data is outside this product's freshness or prediction coverage window")
+        rows[station] = row
         first = first or row
         if usable:
             row["station"] = station
@@ -49,7 +50,7 @@ def ordered_source(chain, read, now, previous=None):
                 row["fallback_for"] = chain[0]
             row["requests"] = attempts
             return row
-    row = first
+    row = rows.get(previous_station, first) if previous.get("data") else first
     if previous.get("data"):
         row.update(status="retained", data=previous["data"],
                    last_success_at=previous.get("last_success_at"),
