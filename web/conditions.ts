@@ -12,12 +12,18 @@
 // - Local rows (Nearshore, Tide) come from the coast report only where
 //   web/coast-data.ts admits one (Morro Bay and Cambria today), each with its
 //   own clock. They never fill or shorten the forecast's horizon.
+// - The brief (web/brief/Brief.tsx) reads the same feed at the same point:
+//   `briefForecast` turns the NOAA family's hours into the RegionalForecast
+//   that buildRegionalBrief takes, so the regional Wind and Swell tiles carry
+//   the model run's clock (issue #542). The app loads the feed once per region
+//   (`ensureRegionalForecast` in Brief.tsx) for the brief and this view.
 // - The horizon is the time dock's (web/hour.ts): 169 whole hours from the
 //   current one, set by the clock alone.
 //
 // Erasable syntax only: tests/test_conditions_rows.mjs imports it by type stripping.
 import type {Point, Series} from '../packages/coast/src/charts/series.ts';
-import type {Report} from '../packages/coast/src/types.ts';
+import type {ForecastHour, Report} from '../packages/coast/src/types.ts';
+import type {RegionalForecast} from './brief/types.ts';
 import {sample} from './map/forecast-grid.ts';
 import {freshNearshore} from './map/nearshore-model.js';
 
@@ -71,6 +77,38 @@ export async function loadConditionsForecast(region: string, near: readonly [num
     const response = await fetchFn(new URL(`/api/forecast?region=${encodeURIComponent(region)}`, page).href, {signal: AbortSignal.timeout(15000)});
     return response.ok ? parseConditionsForecast(await response.json(), region, near) : null;
   } catch { return null; }
+}
+
+/**
+ * The brief's forecast from the feed at its chosen point: `family`'s wind and
+ * wave models sampled at every hour the wind model lists (v1's rules: gusts
+ * below the sustained wind and seas with no positive period stay null). The
+ * clock is the older of the two runs, so a stale run never reads fresh; null
+ * when there is no feed or no run clock to measure it by.
+ */
+export function briefForecast(f: ConditionsForecast | null, family: Family = 'gfs'): RegionalForecast | null {
+  const {label, wind: windId, wave: waveId} = FAMILIES[family];
+  const wind = f?.models[windId], wave = f?.models[waveId];
+  const issued = [wind?.issued, wave?.issued].filter(finite);
+  if (!f || !wind || !wave || issued.length < 2) return null;
+  const times = (wind.data as {hourly?: {time?: unknown}} | null)?.hourly?.time;
+  if (!Array.isArray(times)) return null;
+  const at = (run: ModelRun, variable: string, unit: string, epoch: number) => sample(run.data, variable, epoch, unit, run.end ? {data_end_time: run.end} : null);
+  const hours: ForecastHour[] = times.filter(finite).map(epoch => {
+    const speed = at(wind, 'wind_speed_10m', 'kn', epoch), gust = at(wind, 'wind_gusts_10m', 'kn', epoch);
+    const period = at(wave, 'wave_period', 's', epoch), swellPeriod = at(wave, 'swell_wave_period', 's', epoch);
+    return {
+      at: new Date(epoch * 1000).toISOString(), windKnots: speed, gustKnots: gust !== null && speed !== null && gust >= speed ? gust : null,
+      windDirectionDeg: at(wind, 'wind_direction_10m', '°', epoch),
+      waveFt: period !== null && period > 0 ? at(wave, 'wave_height', 'ft', epoch) : null, wavePeriodS: period !== null && period > 0 ? period : null,
+      swellFt: swellPeriod !== null && swellPeriod > 0 ? at(wave, 'swell_wave_height', 'ft', epoch) : null, swellPeriodS: swellPeriod !== null && swellPeriod > 0 ? swellPeriod : null,
+      airTempF: at(wind, 'temperature_2m', '°F', epoch), cloudCoverPct: at(wind, 'cloud_cover', '%', epoch),
+    };
+  });
+  return {
+    label: `${label} ${family === 'gfs' ? 'GFS ' : ''}model · ${f.point.id}`, url: '/sources',
+    issuedAt: new Date(Math.min(...issued) * 1000).toISOString(), fetchedAt: new Date(f.retrieved).toISOString(), hours,
+  };
 }
 
 /** The chart's span: the current whole hour to 168 hours later (ISO), whatever the sources cover. */
