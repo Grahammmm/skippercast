@@ -1,10 +1,11 @@
 """Resolve provider bindings and jurisdictions before starting network jobs."""
-from ..platform.contracts import REPO, ID, load_region, load_catalogs, read_json, within, public_url
+from ..platform.contracts import REPO, ID, load_region, load_catalogs, read_json, within, public_url, validate_station_roles
 from .regulations import validate_bindings, validate_region_binding, regional_source_ids
 
 
 def settings(region_id="morro-bay", root=REPO):
     region=load_region(region_id,root)
+    validate_station_roles(region)
     _, sources=load_catalogs(root)
     grids={}
     needs={"sst":"sea-temperature","chlorophyll":"chlorophyll","currents":"surface-currents"}

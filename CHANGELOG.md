@@ -2,10 +2,13 @@
 
 ## Unreleased
 
+- Configured buoy and tide roles can serve a reviewed fresh backup when their primary ages out. Source entries name the station used and its primary; feed health reports backup service as degraded without declaring an outage (#553). Legacy single-station feeds keep their existing format.
+
 - When a backup station serves a buoy or tide reading, the landing, brief, Live card and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
 - The new home page and map can be added to a home screen with the SkipperCast name, icon and colour.
 - The map at `/map` downloads about 2.2 MB less data when it opens: the region's shoreline, its region file and its protected areas were each fetched twice and now load once (#473).
 - The map at `/map` downloads about 1.25 MB less when it opens: the published Morro Bay shoreline is 0.61 MB instead of 1.87 MB, with the same lines and the same source date, method and stated accuracy on every segment's card.
+- The new home page and map now send the site's anonymous usage statistics: uncaught error reports (scrubbed message, script file name, line and column, build, hashed request id) and three visit steps, each with the region, build and `s` visit source: `port_selected` (a port chosen in the map's port chooser), `spot_saved` (a spot added to the trip) and `offline_saved` (a region saved for offline). The new home page sends error reports only. No cookies or identifiers, and nothing under Do Not Track or Global Privacy Control. The privacy notice now describes exactly what is collected, where it is stored (Cloudflare Workers Analytics Engine, kept three months) and that the daily operations report copies step counts and the top scrubbed errors into public GitHub Actions run summaries. The v1 About text no longer says there is no analytics.
 
 ### Internal
 
