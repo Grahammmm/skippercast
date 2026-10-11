@@ -94,7 +94,7 @@ test('FE-61: / is the landing, the app with an area key, /map the app; UI_V2 and
   }
   assert.deepEqual(await shell('/sources.html?ui=v2', {}), [299, '/sources.0123456789', 'no-store']);
   const gone = await call('/coast.html', {});
-  assert.deepEqual([gone.status, await gone.text(), gone.headers.get('Cache-Control')], [299, '/coast.html', null], 'the v1 coast page is gone: not a shell path');
+  assert.deepEqual([gone.status, gone.headers.get('Location'), gone.headers.get('Cache-Control')], [302, '/map?presentation=3d', 'no-store'], 'the v1 coast page is gone: old bookmarks move to the app (FE-78 test below)');
   const map = await call('/map', {});
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal(map.headers.get(name), value, `/map: ${name}`);
 });
@@ -127,6 +127,8 @@ test('FE-78: coast and Fish keys open the v2 app; /coast is the app at presentat
     assert.deepEqual(await shell('/?place=morro&mode=shore', env), app);
     assert.deepEqual(await shell('/coast', env), [302, '/map?presentation=3d', 'no-store']);
     assert.deepEqual(await shell('/coast?place=morro&mode=shore', env), [302, '/map?place=morro&mode=shore&presentation=3d', 'no-store']);
+    assert.deepEqual(await shell('/coast.html', env), [302, '/map?presentation=3d', 'no-store'], 'old bookmarks');
+    assert.deepEqual(await shell('/coast.html?place=morro', env), [302, '/map?place=morro&presentation=3d', 'no-store']);
     assert.deepEqual(await shell('/coast?ui=v1', env), [302, '/map?ui=v1&presentation=3d', 'no-store'], 'the old switch no longer keeps the v1 coast page');
     assert.deepEqual(await shell('/coast?presentation=2d', env), [302, '/map?presentation=2d', 'no-store'], 'a link that names a presentation keeps it');
   }

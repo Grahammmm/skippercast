@@ -37,8 +37,8 @@ export function isJSON(url, contentType = '') {
   return /json/i.test(contentType) || /\.(geo)?json$/i.test(path);
 }
 
-/** Whether a same-origin path is a live feed or API rather than a committed file. */
-export const isLive = path => /^\/(?:api|feeds)\//.test(path);
+/** Whether a same-origin path is a live feed or API (incl. the /coast-data/ bridge to the Fish upstream) rather than a committed file. */
+export const isLive = path => /^\/(?:api|feeds|coast-data)\//.test(path);
 
 /** Group, total and sort recorded responses; `static` is the budgeted total. */
 export function summarise(entries) {
@@ -92,6 +92,8 @@ export async function stubLiveFeeds(page, {id = 'morro-bay', feeds = true} = {})
   const head = () => ({schema_version: 1, region_id: region.id, generated_at: now(), catch_probability: null, bite_score: null});
   await page.route(url => url.hostname === 'services2.arcgis.com', route => json(route, mpas));
   if (!feeds) return;
+  // /coast-data/* is the Worker's bridge to the live Fish upstream: answer 404 (the habitat loader treats it as unavailable) so the e2e never reaches the network.
+  await page.route(url => url.pathname.startsWith('/coast-data/'), route => json(route, {error: 'Not stubbed'}, 404));
   await page.route(url => /^\/(?:api|feeds)\//.test(url.pathname) && !url.pathname.startsWith('/api/session'), route => {
     const url = new URL(route.request().url()), path = url.pathname;
     if (path === '/api/forecast') return json(route, stubForecast(region));

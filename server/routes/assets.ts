@@ -17,7 +17,7 @@ export const AREA_PARAMS: readonly string[] = Object.freeze(['region', 'coast', 
 
 /**
  * FE-78: `/coast` is the app at the 3D terrain presentation. The old standalone
- * page's link (query kept, so Fish keys carry over) moves to `/map` with
+ * page's link (also bookmarked as `/coast.html`) (query kept, so Fish keys carry over) moves to `/map` with
  * `presentation=3d` unless the link names one.
  */
 export function coastRedirect(search: URLSearchParams): string {
@@ -48,7 +48,7 @@ export const serveAsset: Handler<AppEnv> = async c => {
     fresh.headers.set('Cache-Control', 'no-cache'); return fresh;
   }
   const search = new URL(request.url).searchParams;
-  if (c.var.path === '/coast') return new Response(null, {status: 302, headers: {Location: coastRedirect(search), 'Cache-Control': 'no-store'}});
+  if (c.var.path === '/coast' || c.var.path === '/coast.html') return new Response(null, {status: 302, headers: {Location: coastRedirect(search), 'Cache-Control': 'no-store'}});
   // #475: the page's links are relative, so /sources/ moves to /sources rather than serving the shell there.
   if (c.var.path === '/sources/') return new Response(null, {status: 301, headers: {Location: `/sources${new URL(request.url).search}`, 'Cache-Control': 'no-store'}});
   const page = shellFor(c.var.path, search);

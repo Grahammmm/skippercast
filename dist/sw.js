@@ -1,6 +1,6 @@
 // SkipperCast service worker: trip-alert notifications and the offline trip pack.
 //
-// A classic script, not a module: trip-alerts.js and offline.js register the
+// A classic script, not a module: trip-alerts.js and offline-pack.js register the
 // same stable '/sw.js' without {type:'module'} (the type is part of a
 // registration, and classic workers run on every browser that has web push).
 // The logic is plain top-level functions so tests/test_sw.mjs loads this exact
@@ -161,7 +161,7 @@ async function trimCache(name, limit) {
   for (const key of keys.slice(0, Math.max(0, keys.length - limit))) await cache.delete(key);
 }
 
-// Per page (client id): the oldest saved-at it has been shown. offline.js asks
+// Per page (client id): the oldest saved-at it has been shown. offline-pack.js asks
 // for it once it loads, because messages sent before it listens are lost.
 const servedFromCache = new Map();
 async function tellClient(clientId, savedAt, url) {
@@ -317,7 +317,7 @@ async function shellReady() {
 
 async function install() {
   // Push must keep working even if the precache cannot be fetched right now, so a
-  // failed precache does not fail the install; offline.js asks again on the next load.
+  // failed precache does not fail the install; offline-pack.js asks again on the next load.
   try { await precacheShell(); } catch (error) { console.warn('SkipperCast offline shell not stored:', error?.message || error); }
 }
 

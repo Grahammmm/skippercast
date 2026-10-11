@@ -14,6 +14,7 @@
 ### Internal
 
 - FE-61: MapLibre and PMTiles build into their own chunk, tests of deleted v1 code are removed (v1 parity oracles pinned by digest), and `tests/test_no_v1_map_library.mjs` keeps the retired map library out.
+- The startup measurement (`scripts/measure_startup.mjs`) counts `/coast-data/*` (the Worker bridge to the live Fish upstream) as live and stubs it, so the offline budget test no longer reaches the network or sometimes counts the habitat GeoJSON; `/coast.html` now redirects like `/coast`.
 - `web/station-label.ts` holds the shared backup-station label logic, with unit tests and phone and laptop browser tests for primary, backup, retained-backup, missing-field and shared-station feeds.
 - Test the v2 pages' head tags (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
 - `e2e/startup.spec.ts` now measures the v2 app at `/map` (`node scripts/measure_startup.mjs`; FE-61 removed the v1 measurement and its `--v2` flag): each committed startup file is requested once. Its total is printed and now budgeted (see the shoreline bullet below).
