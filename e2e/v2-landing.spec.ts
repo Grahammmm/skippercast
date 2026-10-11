@@ -227,6 +227,32 @@ test('with the feeds unavailable every tile still names its source, says unavail
   expect(pageErrors).toEqual([]);
 });
 
+// #554: a backup station is named as itself and "backup for" the primary; when it is also the
+// other role's station the readout says so; a retained backup stays stale.
+const backupSource = (status = 'ok') => ({station: '46011', fallback_for: '46215', status});
+const BACKUP_FEED = {...FEED, sources: {
+  offshore: {...FEED.sources.offshore, data: {...FEED.sources.offshore.data, station: '46011'}, station: '46011'},
+  'diablo-spectrum': {...FEED.sources['diablo-spectrum'], name: 'NOAA NDBC 46011 swell and wind waves', ...backupSource(), data: {...FEED.sources['diablo-spectrum'].data, station: '46011'}},
+  diablo: {...FEED.sources.diablo, name: 'NOAA NDBC 46011 observations', ...backupSource('retained'), data: {...FEED.sources.diablo.data, station: '46011'}},
+}};
+
+test('backup buoys name their own station, say when two tiles share it, and a retained one stays stale', async ({page, pageErrors, v2}) => {
+  await landingFeeds(page, BACKUP_FEED);
+  await v2.open('landing');
+  await expect(page.locator('[data-reading="swell"] .ui-tile-source')).toHaveText('NDBC 46011 (backup for 46215) · 34 min');
+  await expect(page.locator('[data-reading="water"] .ui-tile-source')).toHaveText('NDBC 46011 (backup for 46215) · 3 hstale');
+  await expect(page.locator('[data-reading="water"] .ui-tile')).toHaveAttribute('data-state', 'stale');
+  await expect(page.locator('[data-reading="wind"] .ui-tile-source')).toHaveText('NDBC 46011 · 20 min');
+  await page.locator('[data-reading="swell"] summary').click();
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('NDBC buoy 46011');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('the backup for 46215');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('Same station as the wind reading, not a separate measurement.');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).not.toContainText('Diablo Canyon');
+  // Nothing overflows the phone width.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
 test('a saved port and no parameters open the app there with the stored profile; any other parameter keeps the landing', async ({page, context, pageErrors}) => {
   await context.addInitScript(([port, profile]) => { try { localStorage.setItem(port, 'morro-bay'); localStorage.setItem(profile, 'spear'); } catch { /* storage blocked */ } }, [PORT_KEY, PROFILE_KEY]);
   await page.goto('/?ui=v2&from=newsletter');

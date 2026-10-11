@@ -2,10 +2,12 @@
 
 ## Unreleased
 
+- When a backup station serves a buoy or tide reading, the landing, brief, Live card and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
 - The new home page and map can be added to a home screen with the SkipperCast name, icon and colour.
 
 ### Internal
 
+- `web/station-label.ts` holds the shared backup-station label logic, with unit tests and phone and laptop browser tests for primary, backup, retained-backup, missing-field and shared-station feeds.
 - Test the v2 pages' head tags (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
 
 ## 0.8.0 — 2026-10-11
