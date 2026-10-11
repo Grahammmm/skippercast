@@ -1,16 +1,18 @@
 // Shore-run priority and guidance (FE-36, docs/plans/front-end/design.md § 8
 // "Where to look" for Shore, § 9 Shore runs). This restates the role of
 // `fish`'s src/opportunity.ts from the design's description of it: an ESI
-// sandy-shore run is ranked 0–3 by its review clocks (source, access, rules),
+// sandy-shore run is ranked 0–3 by its source and access review clocks,
 // the run-time protected-area check and whether a fresh nearshore model sample
 // covers its area. The rank orders places to check; it never says fish are
 // there, and no label or line here predicts a catch.
 //
 // - Blocked (0): the protected-area check is current and the run or one of its
 //   access points lies in a protected area.
-// - Hold (0): the access or rules review has expired, or the protected-area
+// - Hold (0): the access review has expired, or the protected-area
 //   check is not current. A run past its source review is not shown at all.
-// - Recheck soon (1): every clock is current but one expires within 24 hours.
+// - Recheck soon (1): source and access reviews are current but one expires within 24 hours.
+// Rules-review dates remain visible context; their age does not set priority.
+// A rank or Current label does not establish legal permission to fish.
 // - No surf model (2): current, but no fresh nearshore model sample for its area.
 // - Current (3): current, with a fresh nearshore model sample for its area.
 //
@@ -62,7 +64,6 @@ export function shoreStatus(run: ShoreRunClocks, {now, inside, conditions}: Shor
   if (inside && inside.length) return {priority: 0, label: 'Blocked', reasons: [`Inside ${inside.join('; ')}`]};
   const clocks = [
     {name: 'Access review', end: time(run.accessReviewExpiresAt)},
-    {name: 'Rules review', end: time(run.legalReviewExpiresAt)},
     {name: 'Source review', end: time(run.reviewExpiresAt)},
   ];
   const expired = clocks.filter(c => c.end <= now).map(c => `${c.name} expired`);
@@ -71,7 +72,7 @@ export function shoreStatus(run: ShoreRunClocks, {now, inside, conditions}: Shor
   const ending = clocks.filter(c => c.end - now <= RECHECK_WINDOW_MS).map(c => `${c.name} ends within 24 h`);
   if (ending.length) return {priority: 1, label: 'Recheck soon', reasons: ending};
   if (!conditions) return {priority: 2, label: 'No surf model', reasons: ['No fresh nearshore model sample for this area']};
-  return {priority: 3, label: 'Current', reasons: ['Reviews current; a fresh nearshore model sample covers this area']};
+  return {priority: 3, label: 'Current', reasons: ['Access and source reviews current; a fresh nearshore model sample covers this area']};
 }
 
 /** The review dates the card shows. */

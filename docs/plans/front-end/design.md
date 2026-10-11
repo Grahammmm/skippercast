@@ -918,7 +918,7 @@ keeps the reload until FE-61.
 | Default target | lingcod | surfperch | cabezon (shallow reef) |
 | Depth limit | 300 ft | none (shore runs) | 60 ft |
 | Species list | region species whose plans have a boat method | surfperch, halibut and region species with a shore method | region species with a dive method within 60 ft |
-| "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by access, rules and conditions clocks (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first |
+| "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by source/access review clocks, the protected-area check and conditions; rules-review dates are context only (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first |
 | Swell tile | offshore buoy / forecast | nearest fresh nearshore model site | nearest fresh nearshore model site |
 | Default layers | Seafloor, Currents | Swell, Water temp | Seafloor, Swell |
 | Caveat | "Habitat describes a place to look; fish presence is unverified." | "Offshore seas do not measure breakers at your beach; check surf, access and water quality." | "In-water visibility is unverified; surface currents cannot clear a dive." |

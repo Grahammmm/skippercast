@@ -8,9 +8,10 @@
 // the method guidance and the official rules link.
 //
 // Expiry is honoured: a run past its source review is not drawn (the terrain's
-// rule, packages/coast viewer `loadShore`); an expired access or rules review,
+// rule, packages/coast viewer `loadShore`); an expired access review,
 // or a protected-area check that is not current, holds the run; a run or
 // access point inside a protected area is blocked and draws muted without pins.
+// Rules-review age does not set priority; its dates remain visible on the card.
 // The terrain draws its own shore features (packages/coast), so this is Chart only.
 //
 // Erasable syntax only: tests/test_shore.mjs imports it by type stripping.
