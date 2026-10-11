@@ -19,10 +19,13 @@ import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
+// Reads and feed answers still in flight (not counting ones a test holds on purpose); settle() waits for them.
+let inflight = 0;
+const tracked = async work => { inflight++; try { return await work(); } finally { inflight--; } };
 /** The fixture archive; `bounds` widens its header (a region larger than the two tiles it holds). */
 const fixtureReader = (hold = null, bounds = null) => {
   const archive = new PMTiles({getKey: () => 'fixture', getBytes: async (offset, length) => ({data: FIXTURE.buffer.slice(FIXTURE.byteOffset + offset, FIXTURE.byteOffset + offset + length)})});
-  return {async getHeader() { return {...await archive.getHeader(), ...bounds}; }, async getZxy(z, x, y) { if (hold) await hold.promise; return archive.getZxy(z, x, y); }};
+  return {async getHeader() { return tracked(async () => ({...await archive.getHeader(), ...bounds})); }, async getZxy(z, x, y) { if (hold) await hold.promise; return tracked(() => archive.getZxy(z, x, y)); }};
 };
 async function fixtureFeatures() {
   const reader = fixtureReader(), habitat = [], cells = [];
@@ -124,8 +127,12 @@ test('v2: view bounds follow web-mercator spans for a north-up camera', () => {
 });
 
 const PAGE_V2 = 'https://s.test/map';
-// 100 ms: the first rig loads its modules cold (before FE-61 the v1 tests above warmed them).
-const settle = () => new Promise(resolve => setTimeout(resolve, 100));
+// Until no tracked read is in flight and a few macrotask turns pass with none starting (a loaded
+// machine can need longer than any fixed delay; before FE-61 the v1 tests above warmed the modules).
+const turn = () => new Promise(resolve => setTimeout(resolve, 5));
+async function settle() {
+  for (let quiet = 0, limit = Date.now() + 10_000; quiet < 4 && Date.now() < limit;) { await turn(); quiet = inflight ? 0 : quiet + 1; }
+}
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
 function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null} = {}) {
   configureStore({v2: true, storage: null});
@@ -147,9 +154,11 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
       rig.requests.push(url);
       await null;  // the test may change the feeds right after creating the layer
       if (rig.hold) await rig.hold.promise;
-      if (url === '/feeds/tiles/seafloor/manifest-morro-bay.json') return rig.manifest === 404 ? new Response('{}', {status: 404}) : Response.json(rig.manifest);
-      if (url === '/feeds/tiles/seafloor/regions/morro-bay/ledger.json') return new Response(rig.ledger);
-      return new Response('{}', {status: 404});
+      return tracked(async () => {
+        if (url === '/feeds/tiles/seafloor/manifest-morro-bay.json') return rig.manifest === 404 ? new Response('{}', {status: 404}) : Response.json(rig.manifest);
+        if (url === '/feeds/tiles/seafloor/regions/morro-bay/ledger.json') return new Response(rig.ledger);
+        return new Response('{}', {status: 404});
+      });
     },
   });
   return rig;
