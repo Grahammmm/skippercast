@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Import owner-supplied fleet scout CSV leads with public-page provenance and safe website handoff; preserve licence imports and keep unverified classes out of registry claims.
+
 ### Release notes: the new map is the default (FE-60)
 
 - skippercast.com now opens the rebuilt app: `/` is the landing (the day's readings with their station and age, the profile choice and the layer links), `/map` is the map with the brief, Conditions, History, Reports, Fleet and Trip views, and `/coast` opens the map's 3D terrain. The entries below that say "In the new map preview (`?ui=v2`)" describe what is now the default; `?ui=v2` is no longer needed.
