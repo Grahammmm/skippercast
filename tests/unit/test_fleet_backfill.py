@@ -372,7 +372,7 @@ class RetentionTests(BackfillTestCase):
 
 def event(trip, source, start_min, end_min, vessel="v1"):
     return Event(id=f"{trip}-e", trip_id=trip, segment_id=f"{trip}-s", vessel_id=vessel, region="CA",
-                 kind="fishing-drift", lat=10.0, lon=-150.0, radius_m=10.0, started_at=T0 + start_min * 60_000,
+                 kind="drift-anchor", lat=10.0, lon=-150.0, radius_m=10.0, started_at=T0 + start_min * 60_000,
                  ended_at=T0 + end_min * 60_000, dwell_min=end_min - start_min, port_id=None, vessel_class=None,
                  trip_type=None, season="2026", season_part=None, source=source,
                  rights=process.SOURCE_RIGHTS[source], classifier_version="test")

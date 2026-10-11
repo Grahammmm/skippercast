@@ -1,7 +1,8 @@
 """Fishing events and segment geometry from a classified trip (design.md sections 5 and 11).
 
-One event per fishing segment: ``fishing-drift`` becomes a ``drift-anchor``
-event, ``fishing-troll`` a ``troll`` event. Its point is the component-wise
+One event per fishing segment (``drift-anchor``, ``troll-slow`` or
+``troll-pelagic``), of the segment's own kind; ``uncertain`` segments are not
+fishing and yield none. Its point is the component-wise
 median of the segment's fixes and its ``radius_m`` the 90th-percentile
 (nearest-rank) distance from that point. Fixes inside any harbor geofence are
 left out of both: ``classify`` merges a short dip into a geofence into the
@@ -14,8 +15,10 @@ until catch-log pairing.
 
 Segment geometry is the segment's fixes simplified with Douglas-Peucker at
 ``thresholds.activity.simplify_tolerance_m`` and encoded as a Google polyline
-(``simplify``); every segment kind keeps its geometry except ``gap``, which has
-no fixes.
+(``simplify``). ``transit`` keeps statistics only (minutes, point count, mean
+and p90 SOG, distance) and no geometry (#469 D20: transit is dropped from every
+view); ``gap`` has no fixes. Every other kind, ``uncertain`` included, keeps its
+geometry for the labelling view.
 
 Ids follow design.md section 5: trips ``sha256(mmsi|departed_at|source)``,
 segments ``sha256(trip_id|seq)``, events ``sha256(trip_id|started_at|kind)``,
@@ -32,7 +35,7 @@ from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
 from ..ops import id32
-from .classify import Classification, Segment
+from .classify import FISHING_KINDS, Classification, Segment
 from .segment import BASIS, ActivityThresholds, Geofence, distance_nm, port_at
 from .simplify import simplify_encode
 
@@ -40,7 +43,7 @@ __all__ = ["BASIS", "EVENT_KINDS", "Event", "TripContext", "build_events", "even
            "median_point", "p90_radius_m", "season_of", "segment_geometry", "segment_id", "simplify_tolerance_m",
            "trip_id"]
 
-EVENT_KINDS = {"fishing-drift": "drift-anchor", "fishing-troll": "troll"}
+EVENT_KINDS = FISHING_KINDS
 METRES_PER_NM = 1852.0
 
 
@@ -90,7 +93,9 @@ def simplify_tolerance_m(thresholds: ActivityThresholds) -> float:
 # ---------------------------------------------------------------- geometry
 
 def segment_geometry(segment: Segment, tolerance_m: float) -> str | None:
-    """Encoded polyline (precision 5) of the segment's fixes after Douglas-Peucker; None for a ``gap``."""
+    """Encoded polyline (precision 5) of the segment's fixes after Douglas-Peucker; None for ``transit`` and ``gap``."""
+    if segment.kind == "transit":
+        return None
     return simplify_encode([(p.lat, p.lon) for p in segment.positions], tolerance_m)
 
 
@@ -172,8 +177,8 @@ def build_events(classification: Classification, ports: Sequence[Geofence], cont
     """One event per fishing segment of the classified trip (module docstring)."""
     events = []
     for segment in classification.segments:
-        kind = EVENT_KINDS.get(segment.kind)
-        if kind is None:
+        kind = segment.kind
+        if kind not in EVENT_KINDS:
             continue
         points = [(p.lat, p.lon) for p in segment.positions if port_at(ports, p.lat, p.lon) is None]
         if not points:

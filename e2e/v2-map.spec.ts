@@ -737,7 +737,7 @@ test('the Fleet view: grounds and AIS for a visitor; an admin\'s filters reach t
     const url = new URL(route.request().url());
     asked.push(url.pathname + url.search);
     if (url.pathname.endsWith('/filters')) return route.fulfill({json: {region: url.searchParams.get('region'), vessels: [{id: 'v1', name: 'Test Boat'}], ports: ['morro-bay'],
-      classes: [], trip_types: [], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: [], dates: {min: '2026-06-01', max: '2026-09-30'}}});
+      classes: [], trip_types: [], kinds: ['drift-anchor', 'troll-slow', 'troll-pelagic'], seasons: ['2026'], season_parts: [], dates: {min: '2026-06-01', max: '2026-09-30'}}});
     return route.fulfill({json: {type: 'FeatureCollection', features: [], meta: {next: null, trips: 0, ignored: []}}});
   });
   await page.reload();
@@ -745,9 +745,9 @@ test('the Fleet view: grounds and AIS for a visitor; an admin\'s filters reach t
   await expect(view.getByRole('heading', {name: 'Fleet activity · admin'})).toBeVisible();
   await expect(view).toContainText('Inferred from movement; filters in the Fleet view.');
   await view.getByLabel('Port').selectOption('morro-bay');
-  await view.getByLabel('Activity type').selectOption('troll');
+  await view.getByLabel('Activity type').selectOption('troll-slow');
   await view.getByRole('button', {name: 'Show on map'}).click();
-  await expect.poll(() => asked.find(a => a.startsWith('/api/fleet/map/events')) ?? '').toContain('kind=troll');
+  await expect.poll(() => asked.find(a => a.startsWith('/api/fleet/map/events')) ?? '').toContain('kind=troll-slow');
   const events = new URL(asked.find(a => a.startsWith('/api/fleet/map/events'))!, 'https://s.test');
   expect(events.searchParams.get('port')).toBe('morro-bay');
   expect(events.searchParams.has('vessel'), 'empty filters are left out').toBe(false);

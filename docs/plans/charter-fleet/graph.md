@@ -79,7 +79,7 @@ commands). A unit that fails twice moves up one tier.
 - Runs: Large builds `schedule-correlation`; Orchestrator gates; Small polls runs.
 - Depends on: N3, and the listener healthy (#508). Reuses: CF-46 (`ais/match.py`, `server/fleet/watch.ts`), CF-47 backfill, CF-45 processor.
 
-### N5 · Activity classifier
+### N5 · Activity classifier · **in review**
 
 - Purpose: turn watched boats' positions into fishing modes and drop transit.
 - Input: positions of `watched` MMSIs (raw store on Hermes, or MarineCadastre backfill), thresholds in `regions/CA/fleet.json` `thresholds.activity`.
@@ -87,6 +87,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: `pytest tests/unit/test_fleet_classify.py` passes on synthetic tracks: harbor shuffle → no trip; 1 kn drift 30 min → `drift-anchor`; 2.5 kn salmon troll → `troll-slow`; straight 7 kn offshore search with paddy stops → one `troll-pelagic` run; straight 7 kn inshore run → transit; night drift offshore → fishing; changing any threshold changes `classifier_version`; transit segments carry no geometry.
 - Runs: Large researches and builds (`references/classification.md` with sources), a second Large reviews.
 - Depends on: N4 (needs watched boats to reprocess; code can start in parallel on synthetic tracks). Reuses: CF-43 (`segment.py`, `classify.py`), CF-44 events, CF-45 processor, CF-47 backfill.
+- Status: code and synthetic-track checks are in the `claude/n5-classifier` PR (#570). Rules and sources are in [references/classification.md](references/classification.md). Live reprocessing follows the merge.
 
 ### N6 · Heat-map aggregate
 

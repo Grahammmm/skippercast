@@ -39,7 +39,7 @@ import type {AppEnv} from '../env.ts';
 export const CAPS = {events: 2000, tracks: 300, heat: 5000} as const;
 export const LAYERS = ['filters', 'events', 'tracks', 'heat'] as const;
 export type Layer = typeof LAYERS[number];
-export const KINDS = ['drift-anchor', 'troll'] as const;
+export const KINDS = ['drift-anchor', 'troll-slow', 'troll-pelagic'] as const;
 export const SOURCES = ['aisstream', 'marinecadastre', 'datalastic'] as const;
 export const BASIS = 'inferred-from-movement';
 export const PLANNING_ONLY = 'noaa-planning-only';

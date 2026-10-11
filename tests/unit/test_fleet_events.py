@@ -87,7 +87,7 @@ class SimplifyTest(unittest.TestCase):
         for segment in result.segments:
             raw = [(p.lat, p.lon) for p in segment.positions]
             geometry = segment_geometry(segment, tolerance)
-            if segment.kind == 'gap':
+            if segment.kind in ('gap', 'transit'):
                 self.assertIsNone(geometry)
                 continue
             line = decode_polyline(geometry)
@@ -149,11 +149,10 @@ class EventTest(unittest.TestCase):
         trips = split_trips(fishing_trip(activity), PORTS, TH, vessel_class='six-pack')
         result = classify_trip(trips[0], PORTS, TH)
         events = build_events(result, PORTS, ctx())
-        fishing = [s for s in result.segments if s.kind in ('fishing-drift', 'fishing-troll')]
-        self.assertEqual([e.kind for e in events],
-                         [{'fishing-drift': 'drift-anchor', 'fishing-troll': 'troll'}[s.kind] for s in fishing])
+        fishing = [s for s in result.segments if s.kind in ('drift-anchor', 'troll-slow', 'troll-pelagic')]
+        self.assertEqual([e.kind for e in events], [s.kind for s in fishing])
         self.assertIn('drift-anchor', [e.kind for e in events])
-        self.assertIn('troll', [e.kind for e in events])
+        self.assertIn('troll-pelagic', [e.kind for e in events])
         for e, s in zip(events, fishing):
             self.assertEqual(e.basis, BASIS)
             self.assertEqual(e.basis, 'inferred-from-movement')
@@ -170,7 +169,7 @@ class EventTest(unittest.TestCase):
 
     def test_median_and_p90_radius(self):
         positions = [fix(T0 + k * MIN, 10.0 + k * 1e-4, -149.85) for k in range(10)]
-        segment = Segment(3, 'fishing-drift', T0, T0 + 30 * MIN, tuple(positions), 0.5, 0.2, 0.1)
+        segment = Segment(3, 'drift-anchor', T0, T0 + 30 * MIN, tuple(positions), 0.5, 0.2, 0.1)
         [e] = build_events(Classification(None, (segment,), 'c1-x'), PORTS, ctx())
         self.assertAlmostEqual(e.lat, 10.00045, places=6)
         self.assertAlmostEqual(e.lon, -149.85, places=6)
@@ -183,13 +182,13 @@ class EventTest(unittest.TestCase):
         outside = [fix(T0 + k * MIN, 10.03 + k * 1e-5, -150.0) for k in range(10)]
         dip = [fix(T0 + (10 + k) * MIN, 10.0, -150.0) for k in range(8)]   # inside port A's geofence
         self.assertTrue(PORT_A.contains(10.0, -150.0))
-        segment = Segment(0, 'fishing-troll', T0, T0 + 18 * MIN, tuple(outside + dip), 5.0, 0.4, 0.5)
+        segment = Segment(0, 'troll-slow', T0, T0 + 18 * MIN, tuple(outside + dip), 5.0, 0.4, 0.5)
         [e] = build_events(Classification(None, (segment,), 'c1-x'), PORTS, ctx())
         clean = ev.median_point([(p.lat, p.lon) for p in outside])
         self.assertEqual((e.lat, e.lon), (round(clean[0], 6), round(clean[1], 6)))
         self.assertFalse(PORT_A.contains(e.lat, e.lon))
         self.assertLess(e.radius_m, 20)
-        self.assertEqual(e.kind, 'troll')
+        self.assertEqual(e.kind, 'troll-slow')
         # Only in-geofence fixes: no event at all.
         only_dip = replace(segment, positions=tuple(dip))
         self.assertEqual(build_events(Classification(None, (only_dip,), 'c1-x'), PORTS, ctx()), [])
@@ -198,7 +197,8 @@ class EventTest(unittest.TestCase):
         positions = (fix(T0, 10.03, -150.0, 6.0), fix(T0 + MIN, 10.04, -150.0, 6.0))
         segments = (Segment(0, 'transit', T0, T0 + MIN, positions, 6.0, 1.0, 0.0),
                     Segment(1, 'gap', T0 + MIN, T0 + 60 * MIN, (), None, None, None),
-                    Segment(2, 'in-port', T0 + 60 * MIN, T0 + 61 * MIN, positions, 0.0, None, None))
+                    Segment(2, 'in-port', T0 + 60 * MIN, T0 + 61 * MIN, positions, 0.0, None, None),
+                    Segment(3, 'uncertain', T0 + 61 * MIN, T0 + 62 * MIN, positions, 4.2, 0.5, 0.3))
         self.assertEqual(build_events(Classification(None, segments, 'c1-x'), PORTS, ctx()), [])
 
     def test_rows_round_trip(self):
@@ -267,8 +267,8 @@ class AggregateTest(unittest.TestCase):
         self.assertEqual(parts, {'summer': 30, 'fall': 45})
         self.assertEqual(len({c.id for c in cells}), len(cells))
         # Per kind: a troll in the same cell gets its own whole-season cell.
-        cells = compute(events + [event('v1', self.lat, self.lon, kind='troll')], self.p, now_ms=T0 + 10 * HOUR)
-        self.assertEqual(sorted(c.kind for c in cells if c.season_part is None), ['drift-anchor', 'troll'])
+        cells = compute(events + [event('v1', self.lat, self.lon, kind='troll-pelagic')], self.p, now_ms=T0 + 10 * HOUR)
+        self.assertEqual(sorted(c.kind for c in cells if c.season_part is None), ['drift-anchor', 'troll-pelagic'])
 
     def test_rights_are_most_restrictive_input(self):
         self.assertEqual(most_restrictive(['public-domain', 'noaa-planning-only', 'facts-only']), 'noaa-planning-only')

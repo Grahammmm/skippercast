@@ -43,8 +43,10 @@ const [HEAT, TRACKS, TRACKS_DASHED, EVENTS] = ACTIVITY_LAYERS;
 export {HEAT as FLEET_HEAT, TRACKS as FLEET_TRACKS, TRACKS_DASHED as FLEET_TRACKS_DASHED, EVENTS as FLEET_EVENTS};
 export const FLEET_SOURCE = {heat: 'fleet-heat', tracks: 'fleet-tracks', events: 'fleet-events'} as const;
 /** Line width and opacity by segment kind: fishing bold, transit and port faint, gaps dashed. */
-export const SEGMENT_WIDTH: Readonly<Record<string, number>> = {'in-port': 1.5, transit: 2, 'fishing-drift': 4, 'fishing-troll': 4, gap: 2};
-export const SEGMENT_OPACITY: Readonly<Record<string, number>> = {'in-port': 0.35, transit: 0.55, 'fishing-drift': 0.9, 'fishing-troll': 0.9, gap: 0.55};
+export const SEGMENT_WIDTH: Readonly<Record<string, number>> = {'in-port': 1.5, transit: 2, 'drift-anchor': 4, 'troll-slow': 4, 'troll-pelagic': 4,
+  uncertain: 2, gap: 2};
+export const SEGMENT_OPACITY: Readonly<Record<string, number>> = {'in-port': 0.35, transit: 0.55, 'drift-anchor': 0.9, 'troll-slow': 0.9,
+  'troll-pelagic': 0.9, uncertain: 0.45, gap: 0.55};
 
 type Props = Record<string, unknown>;
 interface Feature {type: 'Feature'; geometry: {type: string; coordinates: unknown}; properties: Props}
@@ -84,7 +86,7 @@ export function activityCollections(v1: V1, results: Partial<Record<Activity, La
     heat: out('heat', p => ({opacity: v1.heatOpacity(p.dwell_min, most), planning: !!p.planning_only})),
     tracks: out('tracks', p => ({width: SEGMENT_WIDTH[String(p.segment_kind)] ?? 2, opacity: SEGMENT_OPACITY[String(p.segment_kind)] ?? 0.55,
       dashed: p.segment_kind === 'gap' || !!p.planning_only})),
-    events: out('events', p => ({radius: v1.eventRadius(p.dwell_min), drift: p.kind !== 'troll', planning: !!p.planning_only})),
+    events: out('events', p => ({radius: v1.eventRadius(p.dwell_min), drift: p.kind === 'drift-anchor', planning: !!p.planning_only})),
   };
 }
 
