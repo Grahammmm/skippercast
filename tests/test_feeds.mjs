@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {feedKey, rangeResponse, readBucketJSON, serveFeed, useBucket} from '../server/feeds.ts';
-import {CRITICAL_DEGRADED_HOURS, criticalDegraded, dataAgeHours, degradedSources, feedAgeMinutes, watchdog} from '../server/watchdog.ts';
+import {CRITICAL_DEGRADED_HOURS, criticalDegraded, dataAgeHours, degradedSources, failingKinds, feedAgeMinutes, watchdog} from '../server/watchdog.ts';
 import {feedURL, withFeeds} from '../dist/feeds.js';
 
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
@@ -105,14 +105,27 @@ test('watchdog reports critical sources degraded past the shared limit, as the f
   assert.deepEqual(criticalDegraded(feed).map(row => row.id), ['alerts', 'offshore']);
   assert.deepEqual(criticalDegraded({sources: {}}), []);
   assert.deepEqual(criticalDegraded(null), []);
-  useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify(feed)})});
+  // Only a kind whose every source is past the limit fails: the sole alert source does, but
+  // offshore is one of two buoys (diablo is 6 h old), so observations are a partial outage.
+  assert.deepEqual(failingKinds(feed), ['advisory']);
+  assert.deepEqual(failingKinds({...feed, sources: {...feed.sources, diablo: src('diablo', 'observation', 'stale', '2026-09-27T13:40:00Z')}}),
+    ['advisory', 'observation']);
+  assert.deepEqual(failingKinds(null), []);
+  const partial = {...feed, sources: {diablo: feed.sources.diablo, offshore: feed.sources.offshore, harbor: feed.sources.harbor}};
+  assert.deepEqual(failingKinds(partial), []);
   const warn = console.warn; const warned = [];
   console.warn = (...args) => warned.push(args);
   try {
+    useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify(feed)})});
     const result = await watchdog({}, Date.parse('2026-09-28T14:00:00Z'));
     assert.equal(result.action, 'none');
     assert.deepEqual(result.degraded, ['alerts', 'offshore']);
-    assert.match(warned[0][0], /critical sources degraded/);
+    assert.deepEqual(result.failing_kinds, ['advisory']);
+    assert.match(warned[0][0], /critical kind out/);
+    useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify(partial)})});
+    const quieter = await watchdog({}, Date.parse('2026-09-28T14:00:00Z'));
+    assert.deepEqual([quieter.degraded, quieter.failing_kinds], [['offshore'], []]);
+    assert.match(warned[1][0], /critical sources degraded \(partial\)/);
   } finally { console.warn = warn; useBucket({}); }
 });
 

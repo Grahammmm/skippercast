@@ -1,9 +1,11 @@
 name: Live feed freshness
 
-# Opens (or updates) a GitHub issue when the public conditions or daily data
-# feed stops refreshing, and another when a critical source (buoys, alerts,
-# tides, forecast models) has served degraded data past its limit; closes each
-# once it recovers. Limits: catalog/feed-health.json.
+# Opens (or updates) a GitHub issue when the public conditions, daily data or a
+# region's live feed stops refreshing, and another when a critical source (buoys,
+# alerts, tides, forecast models) has served degraded data past its limit; closes
+# each once it recovers. The run is red only when a feed is stale or every source
+# of a critical kind in one feed is out; a partial outage keeps the issue current
+# and stays green. Limits: catalog/feed-health.json.
 on:
   schedule:
     - cron: "52 * * * *"
@@ -21,7 +23,7 @@ concurrency:
 jobs:
   check:
     runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       # The site that serves /feeds/ (falls back to the workers.dev host when unset).
       FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}
@@ -34,17 +36,24 @@ jobs:
         id: age
         run: |
           set +e
-          # Exit bits: 1 = a feed is stale or unreadable, 2 = a critical source is degraded too long.
-          message="$(python scripts/check_feed_freshness.py)"
-          status=$?
+          # Exit bits: 1 = a feed is stale or unreadable, 2 = every source of a critical kind in a
+          # feed is degraded too long. A partial outage (one buoy of several) exits 0 and is
+          # reported through --report so its issue stays current.
+          report="$RUNNER_TEMP/feed-health.json"
+          message="$(python scripts/check_feed_freshness.py --report "$report")"
           echo "$message"
           echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          flag() {  # fail closed: a crash before the report counts as stale
+            python -c 'import json,sys; print(str(json.load(open(sys.argv[1]))[sys.argv[2]]).lower())' "$report" "$1" 2>/dev/null \
+              || { [ "$1" = stale ] && echo true || echo false; }
+          }
           {
             echo "message<<EOF"
             echo "$message"
             echo "EOF"
-            echo "stale=$([ $((status & 1)) -ne 0 ] && echo true || echo false)"
-            echo "degraded=$([ $((status & 2)) -ne 0 ] && echo true || echo false)"
+            echo "stale=$(flag stale)"
+            echo "degraded=$(flag degraded)"
+            echo "partial=$(flag partial)"
           } >> "$GITHUB_OUTPUT"
       # The live job chains itself every ~5.5 hours; if the chain broke, restart it
       # long before the 3-hour issue threshold.
@@ -60,6 +69,34 @@ jobs:
               echo "Restarted the live loop." >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
+      # The issue steps never fail the job themselves, so a stale feed cannot skip the
+      # degraded-source refresh; the last step decides the job's result.
+      # One open issue whose body tracks the current report, so a long source outage
+      # does not post a comment every hour. Partial outages keep it current too.
+      - name: Open or refresh the degraded-source issue
+        if: steps.age.outputs.degraded == 'true' || steps.age.outputs.partial == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ steps.age.outputs.message }}
+        run: |
+          gh label create feed-source-degraded --color D93F0B --description "A critical feed source is serving old data" 2>/dev/null || true
+          existing="$(gh issue list --label feed-source-degraded --state open --json number --jq '.[0].number')"
+          runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/feed-stale.md"
+          body="$MESSAGE"$'\n\n'"Updated by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"$'\n\n'"Runbook: $runbook"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body "$body"
+          else
+            gh issue create --label feed-source-degraded --title "Critical feed source degraded" --body "$body"
+          fi
+      - name: Close the degraded-source issue after recovery
+        if: steps.age.outputs.stale == 'false' && steps.age.outputs.degraded == 'false' && steps.age.outputs.partial == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ steps.age.outputs.message }}
+        run: |
+          for number in $(gh issue list --label feed-source-degraded --state open --json number --jq '.[].number'); do
+            gh issue close "$number" --comment "Recovered. $MESSAGE"
+          done
       - name: Open or update the stale-feed issue
         if: steps.age.outputs.stale == 'true'
         env:
@@ -76,7 +113,6 @@ jobs:
             gh issue create --label feed-stale --title "Published feed is stale" \
               --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"$'\n\n'"Runbook: $runbook"
           fi
-          exit 1
       - name: Close the stale-feed issue after recovery
         if: steps.age.outputs.stale == 'false'
         env:
@@ -86,30 +122,9 @@ jobs:
           for number in $(gh issue list --label feed-stale --state open --json number --jq '.[].number'); do
             gh issue close "$number" --comment "Recovered. $MESSAGE"
           done
-      # One open issue whose body tracks the current report, so a long source outage
-      # does not post a comment every hour.
-      - name: Open or refresh the degraded-source issue
-        if: steps.age.outputs.degraded == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MESSAGE: ${{ steps.age.outputs.message }}
+      # Red only for a stale feed or a whole critical kind out; a partial outage stays green.
+      - name: Fail when a feed is stale or a critical kind is out
+        if: steps.age.outputs.stale == 'true' || steps.age.outputs.degraded == 'true'
         run: |
-          gh label create feed-source-degraded --color D93F0B --description "A critical feed source is serving old data" 2>/dev/null || true
-          existing="$(gh issue list --label feed-source-degraded --state open --json number --jq '.[0].number')"
-          runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/feed-stale.md"
-          body="$MESSAGE"$'\n\n'"Updated by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"$'\n\n'"Runbook: $runbook"
-          if [ -n "$existing" ]; then
-            gh issue edit "$existing" --body "$body"
-          else
-            gh issue create --label feed-source-degraded --title "Critical feed source degraded" --body "$body"
-          fi
+          echo "::error title=Feed freshness::stale=${{ steps.age.outputs.stale }} degraded=${{ steps.age.outputs.degraded }} (see the step summary)"
           exit 1
-      - name: Close the degraded-source issue after recovery
-        if: steps.age.outputs.stale == 'false' && steps.age.outputs.degraded == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MESSAGE: ${{ steps.age.outputs.message }}
-        run: |
-          for number in $(gh issue list --label feed-source-degraded --state open --json number --jq '.[].number'); do
-            gh issue close "$number" --comment "Recovered. $MESSAGE"
-          done

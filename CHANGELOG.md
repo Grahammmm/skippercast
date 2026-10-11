@@ -8,7 +8,7 @@
 
 ## Unreleased
 
-- The brief's Water and Tide tiles now read a source that served its last good data after a failed check as stale and say so ("last good 5 h old") instead of showing it as current. The hourly feed check now also lists each degraded source by name with its age, fails when a buoy, alert, tide or forecast-model source has been degraded past its limit, and checks that the daily data feed is under 30 hours old.
+- The brief's Water and Tide tiles now read a source that served its last good data after a failed check as stale and say so ("last good 5 h old") instead of showing it as current. The hourly feed check now also lists each degraded source by name with its age in the live, daily and every region's live feed, fails when every source of one critical kind (buoys, alerts, tides or forecast models) in a feed has been degraded past its limit (a single buoy outage is reported in an issue without failing the run), and checks the daily data feed against its own 36-hour schedule.
 
 ### Release notes: the new map is the default (FE-60)
 

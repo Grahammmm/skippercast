@@ -3,7 +3,8 @@
 // feed is more than 45 minutes old and no refresh is running, dispatch one.
 // It also logs critical sources (buoys, alerts, tides, models) that have served
 // degraded data past the limit scripts/check_feed_freshness.py uses
-// (catalog/feed-health.json); a new run would not fix those, so it only warns.
+// (catalog/feed-health.json), naming any kind whose every source is out (the
+// check's failure condition); a new run would not fix those, so it only warns.
 // Needs GITHUB_TOKEN (fine-grained, Actions: read and write on this repo).
 import health from '../catalog/feed-health.json' with {type: 'json'};
 import {readBucketJSON, RAW} from './feeds.ts';
@@ -49,9 +50,23 @@ export function degradedSources(feed: ExternalJSON): DegradedSource[] {
     .sort((a, b) => Number(b.critical) - Number(a.critical) || a.id.localeCompare(b.id));
 }
 
-/** Critical sources degraded past the limit (or with no data time): the ones that fail the freshness check. */
+/** Critical sources degraded past the limit (or with no data time): every one the freshness check reports. */
 export function criticalDegraded(feed: ExternalJSON, limitHours = CRITICAL_DEGRADED_HOURS): DegradedSource[] {
   return degradedSources(feed).filter(row => row.critical && (row.age_hours === null || row.age_hours > limitHours));
+}
+
+/**
+ * Critical kinds whose every source in the feed is degraded past the limit: the ones that fail
+ * the freshness check (failing_kinds in check_feed_freshness.py). One buoy out while another
+ * (or its spectrum, also kind observation) reports is a partial outage, not a failing kind.
+ */
+export function failingKinds(feed: ExternalJSON, limitHours = CRITICAL_DEGRADED_HOURS): string[] {
+  const over = new Map<string, number>();
+  for (const row of criticalDegraded(feed, limitHours)) over.set(row.kind, (over.get(row.kind) || 0) + 1);
+  const totals = new Map<string, number>();
+  const sources = feed?.sources && typeof feed.sources === 'object' ? Object.values<ExternalJSON>(feed.sources) : [];
+  for (const source of sources) if (source && typeof source === 'object') totals.set(source.kind, (totals.get(source.kind) || 0) + 1);
+  return [...over].filter(([kind, count]) => totals.get(kind) === count).map(([kind]) => kind).sort();
 }
 
 async function github(env: WatchdogEnv, path: string, init: RequestInit & {headers?: Record<string, string>} = {}): Promise<Response> {
@@ -87,13 +102,15 @@ export async function liveFeed(): Promise<ExternalJSON> {
   return feed;
 }
 
-export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Promise<ExternalJSON> = liveFeed()): Promise<{age_minutes: number | null; action: string; degraded: string[]}> {
+export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Promise<ExternalJSON> = liveFeed()): Promise<{age_minutes: number | null; action: string; degraded: string[]; failing_kinds: string[]}> {
   const feed = await feedRead;
   const age = feedAgeMinutes(feed, now);
   const degraded = criticalDegraded(feed);
-  if (degraded.length) console.warn('Live feed critical sources degraded', {limit_hours: CRITICAL_DEGRADED_HOURS,
-    sources: degraded.map(row => `${row.id} ${row.status} ${row.age_hours === null ? 'no data time' : `${row.age_hours.toFixed(1)} h`}`)});
-  const result = {age_minutes: Number.isFinite(age) ? Math.round(age) : null, action: 'none', degraded: degraded.map(row => row.id)};
+  const failing = failingKinds(feed);
+  if (degraded.length) console.warn(failing.length ? 'Live feed critical kind out' : 'Live feed critical sources degraded (partial)',
+    {limit_hours: CRITICAL_DEGRADED_HOURS, failing_kinds: failing,
+      sources: degraded.map(row => `${row.id} ${row.status} ${row.age_hours === null ? 'no data time' : `${row.age_hours.toFixed(1)} h`}`)});
+  const result = {age_minutes: Number.isFinite(age) ? Math.round(age) : null, action: 'none', degraded: degraded.map(row => row.id), failing_kinds: failing};
   if (age <= STALE_MINUTES) return result;
   if (!env.GITHUB_TOKEN) { console.warn('Live feed stale; GITHUB_TOKEN not set, cannot restart', result); return {...result, action: 'no-token'}; }
   for (const status of ['in_progress', 'queued']) {
