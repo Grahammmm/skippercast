@@ -2,7 +2,10 @@
 // (dist/regions/<id>/shoreline.geojson, built by FE-10) drawn as a blurred line
 // under a crisp one, as fish's map drew it, with colours from the palette. A
 // click on the line selects that segment: the mark card shows its source date
-// and stated accuracy, because every feature keeps them.
+// and stated accuracy, because every feature keeps them. In the published form
+// (schema_version 2, src/skippercast/platform/shoreline.py) a feature is one
+// MultiLineString per distinct set of source properties, so each line still
+// reads its own fields from the feature it belongs to.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import type {Palette} from './palette.ts';

@@ -116,6 +116,7 @@ export async function stubLiveFeeds(page, {id = 'morro-bay', feeds = true} = {})
  * Record JSON responses while `page` opens `path`; resolves once the network
  * has been quiet for QUIET_MS after `ready` (the app's map canvas) is visible.
  */
+/** The v2 app's map canvas (/map). */
 export const MAP_READY = '.app-chart canvas.maplibregl-canvas';
 export async function measureStartup(page, {path = '/map?region=morro-bay', ready = MAP_READY, timeout = 60_000} = {}) {
   const entries = [];

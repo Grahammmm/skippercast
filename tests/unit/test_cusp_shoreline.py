@@ -1,13 +1,14 @@
 """The NOAA CUSP shoreline import and its platform-build gate (FE-10, design § 11)."""
 import gzip
 import json
+import math
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from scripts.shoreline import import_cusp as cusp
-from skippercast.platform.shoreline import check_shoreline, publish_shoreline
+from skippercast.platform.shoreline import check_shoreline, feature_lines, publish_shoreline, slim_shoreline
 from tests._support import ROOT, NOW
 
 
@@ -147,16 +148,53 @@ class ExtractTests(unittest.TestCase):
 
 
 class PlatformGateTests(unittest.TestCase):
-    def test_committed_imports_pass_the_gate_and_ship_unchanged(self):
+    def test_committed_imports_pass_the_gate_and_ship_in_the_published_form(self):
         imports = sorted((ROOT / 'catalog/shoreline').glob('*.geojson'))
         self.assertTrue(imports, 'the Morro Bay import is the reference extract')
         for path in imports:
             region = json.loads((ROOT / 'regions' / path.stem / 'region.json').read_text())
-            check_shoreline(json.loads(path.read_text()), region)
-            self.assertEqual((ROOT / 'dist/regions' / path.stem / 'shoreline.geojson').read_bytes(), path.read_bytes())
+            source = json.loads(path.read_text())
+            check_shoreline(source, region)
+            published = json.loads((ROOT / 'dist/regions' / path.stem / 'shoreline.geojson').read_text())
+            self.assertEqual(published, slim_shoreline(source))
+            self.assertEqual(published['schema_version'], 2)
+            check_shoreline(published, region)
             manifest = json.loads((ROOT / 'dist/regions' / path.stem / 'manifest.json').read_text())
             self.assertNotIn('shoreline', manifest['assets'])  # v1 offline packs save every manifest asset
             self.assertNotIn('shoreline', region['assets'])
+
+    def test_every_import_line_keeps_its_own_properties_in_the_published_form(self):
+        for path in sorted((ROOT / 'catalog/shoreline').glob('*.geojson')):
+            source = json.loads(path.read_text())
+            published = json.loads((ROOT / 'dist/regions' / path.stem / 'shoreline.geojson').read_text())
+            rounded = lambda line: tuple((round(x, 5), round(y, 5)) for x, y in line)
+            expected = sorted((rounded(line), json.dumps(f['properties'], sort_keys=True))
+                              for f in source['features'] for line in feature_lines(f['geometry']))
+            actual = sorted((tuple(map(tuple, line)), json.dumps(f['properties'], sort_keys=True))
+                            for f in published['features'] for line in feature_lines(f['geometry']))
+            self.assertEqual(actual, expected)
+            self.assertEqual(published['provenance']['source_features'], len(source['features']))
+            self.assertEqual(len({f['id'] for f in published['features']}), len(published['features']))
+            self.assertLess((ROOT / 'dist/regions' / path.stem / 'shoreline.geojson').stat().st_size, path.stat().st_size / 2)
+
+    def test_five_decimals_keep_every_tile_vertex_on_its_own_grid_position(self):
+        # A zoom-12 CUSP tile has 4096 units a side; rounding to 5 decimals must not move a vertex to a neighbouring unit.
+        units = 2 ** cusp.ZOOM * 4096
+        grid = lambda lon, lat: ((lon + 180) / 360 * units,
+                                 (1 - math.log(math.tan(math.radians(lat)) + 1 / math.cos(math.radians(lat))) / math.pi) / 2 * units)
+        checked = total = 0
+        for path in sorted((ROOT / 'catalog/shoreline').glob('*.geojson')):
+            for feature in json.loads(path.read_text())['features']:
+                for line in feature_lines(feature['geometry']):
+                    for lon, lat in line:
+                        total += 1
+                        u, v = grid(lon, lat)
+                        if abs(u - round(u)) > 0.05 or abs(v - round(v)) > 0.05:
+                            continue  # a clip point on the tile or region edge, not a tile vertex
+                        u5, v5 = grid(round(lon, 5), round(lat, 5))
+                        self.assertEqual((round(u5), round(v5)), (round(u), round(v)), (lon, lat))
+                        checked += 1
+        self.assertGreater(checked, 0.99 * total, 'nearly every import vertex is a tile vertex')
 
     def test_undated_or_outside_features_are_refused(self):
         region = {'id': 'test-region', 'bounds': BOX}

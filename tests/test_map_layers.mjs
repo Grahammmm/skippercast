@@ -90,6 +90,33 @@ test('a shoreline click becomes a mark with its own source date and stated accur
   assert.equal(coastlineMark({source_date: '1994-02-28'}).reading, 'Accuracy not stated');
 });
 
+test('every import line reads the same mark from the published shoreline (schema_version 2)', () => {
+  // The platform build merges import features with identical properties into one MultiLineString
+  // and rounds coordinates to 5 decimals; a click on any line must still give its old mark card.
+  const source = JSON.parse(readFileSync(new URL('../catalog/shoreline/morro-bay.geojson', import.meta.url), 'utf8'));
+  const published = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline.geojson', import.meta.url), 'utf8'));
+  assert.equal(published.type, 'FeatureCollection');
+  assert.equal(published.schema_version, 2);
+  const key = p => JSON.stringify(Object.keys(p).sort().map(k => [k, p[k]]));
+  const lines = g => g.type === 'LineString' ? [g.coordinates] : g.coordinates;
+  const byProps = new Map(published.features.map(f => [key(f.properties), f]));
+  assert.equal(byProps.size, published.features.length, 'one published feature per property set');
+  let matched = 0;
+  for (const feature of source.features) {
+    const merged = byProps.get(key(feature.properties));
+    assert.ok(merged, `${feature.id} has a published feature`);
+    assert.deepEqual(merged.properties, feature.properties);
+    assert.deepEqual(coastlineMark(merged.properties), coastlineMark(feature.properties));
+    assert.ok(coastlineMark(merged.properties), `${feature.id} stays selectable`);
+    for (const line of lines(feature.geometry)) {
+      const same = lines(merged.geometry).some(c => c.length === line.length && c.every(([x, y], i) => Math.abs(x - line[i][0]) <= 6e-6 && Math.abs(y - line[i][1]) <= 6e-6));
+      assert.ok(same, `${feature.id}: its line is in ${merged.id}`);
+      matched++;
+    }
+  }
+  assert.equal(published.features.reduce((n, f) => n + lines(f.geometry).length, 0), matched, 'no line added or lost');
+});
+
 test('the basemap archive comes from FE-10\'s manifest, and only a tiles/basemap/*.pmtiles key is accepted', async () => {
   const reply = (body, ok = true) => async url => { assert.equal(url, `https://s.test/${BASEMAP_MANIFEST}`); return {ok, json: async () => body}; };
   assert.equal(await basemapArchive(reply({key: 'tiles/basemap/ca-coast-20261008.pmtiles'}), PAGE), 'https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles');
@@ -266,6 +293,11 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  // The startup budget: the style's own source loads the shoreline once (it is not set again for the
+  // region the Chart opened on), and the marks and protected areas share each region file.
+  assert.deepEqual((map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE), [], 'the shoreline is not requested twice');
+  const statics = fetches.filter(url => url.startsWith('https://s.test/regions/') || url.startsWith('https://s.test/data/'));
+  assert.deepEqual(statics, [...new Set(statics)], 'each committed region file is requested once');
   assert.deepEqual(map.options.center, [-120.86, 35.37], 'the region centre');
   assert.equal(host.dataset.view, '35.37000,-120.86000,12');
 

@@ -18,6 +18,7 @@ import {resolveReportBinding, type CoastReportContext} from '../../packages/coas
 import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
 import {profileSemantics, type Profile} from '../profile.ts';
 import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
+import {ndbcStationURL, sourceStation, stationText, tidePredictionURL} from '../station-label.ts';
 import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
@@ -58,7 +59,9 @@ function nearest<T extends {at: string}>(points: readonly T[], at: number): T | 
   return best;
 }
 
-export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[]; tideDatum?: string};
+export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[]; tideDatum?: string;
+  /** The primary buoy's id when the regional feed's buoy reading came from a backup station (#554). */
+  buoyBackupFor?: string | null};
 
 /** Map buildDaily's output to the brief, adding tiles, caveat, notice and fleet line. */
 export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: BriefContext): Brief {
@@ -104,8 +107,9 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
 
   const observation = report.observations.filter(item => item.stationId === county.temperatureStationId && finite(item.waterTempF))
     .sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt))[0];
-  const water = tile('water', 'Water', observation?.waterTempF ?? null, '°F', observation ? `buoy ${observation.stationId}` : 'no fresh buoy',
-    observation ? {label: `NDBC ${observation.stationId}`, url: observation.url} : null, observation?.observedAt ?? null, TILE_LIMIT_MS.water, now,
+  const buoyName = observation ? stationText({id: observation.stationId, backupFor: context.buoyBackupFor ?? null}) : '';
+  const water = tile('water', 'Water', observation?.waterTempF ?? null, '°F', observation ? `buoy ${buoyName}` : 'no fresh buoy',
+    observation ? {label: `NDBC ${buoyName}`, url: observation.url} : null, observation?.observedAt ?? null, TILE_LIMIT_MS.water, now,
     !!observation && report.sources.some(item => item.kind === 'observation' && item.url === observation.url && item.outcome === 'error'));
 
   const tideSource = report.sources.find(item => item.kind === 'prediction') ?? null;
@@ -224,14 +228,22 @@ const sourceOk = (source: RegionalSource | undefined) => source?.status === 'ok'
 const sourceClock = (source: RegionalSource) => source.status === 'retained' ? source.data_retrieved_at ?? source.last_success_at ?? source.checked_at : source.checked_at;
 
 /** Convert SkipperCast's regional feeds to the coast Report shape so buildDaily runs unchanged. */
-export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForecast | null, place: RegionalPlace): {report: Report; county: County; area: Area; tideDatum: string} {
+export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForecast | null, place: RegionalPlace): {report: Report; county: County; area: Area; tideDatum: string; buoyBackupFor: string | null} {
   const entries = Object.values(daily.sources).filter((item): item is RegionalSource => !!item);
   const buoy = entries.find(item => item.kind === 'observation' && typeof item.data?.station === 'string');
   const tides = daily.sources.tides;
   const advisories = entries.filter(item => item.kind === 'advisory');
-  const station = (buoy?.data?.station as string | undefined) ?? '';
+  // A backup (#554) is named by its own station, "backup for" the primary, and links to its own official page;
+  // without the fields, names and links stay as the feed gave them.
+  const buoyStation = sourceStation(buoy, buoy?.data?.station as string | undefined);
+  const station = buoyStation?.backupFor ? buoyStation.id : (buoy?.data?.station as string | undefined) ?? '';
+  const buoyUrl = buoyStation?.backupFor ? ndbcStationURL(buoyStation.id) : buoy?.url ?? '';
+  const tideStation = sourceStation(tides, tides?.data?.station as string | undefined);
+  const tideBackup = tideStation?.backupFor ? tideStation : null;
+  const tideName = tideBackup ? `NOAA ${stationText(tideBackup)}` : tides?.name;
+  const tideUrl = tideBackup ? tidePredictionURL(tideBackup.id) : tides?.url;
   const observations: Observation[] = ((buoy?.data?.observations as Record<string, unknown>[] | undefined) ?? []).map(row => ({
-    stationId: station, observedAt: String(row.time), url: buoy!.url,
+    stationId: station, observedAt: String(row.time), url: buoyUrl,
     waveFt: num(row.WVHT, M_TO_FT), wavePeriodS: num(row.DPD), waterTempF: finite(row.WTMP) ? row.WTMP * 9 / 5 + 32 : null,
     windKnots: num(row.WSPD, MS_TO_KT), gustKnots: num(row.GST, MS_TO_KT), directionDeg: num(row.MWD),
   }));
@@ -245,30 +257,30 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   const alertCheck = advisories.length ? advisories.reduce((a, b) => Date.parse(a.checked_at) <= Date.parse(b.checked_at) ? a : b) : undefined;
   const sources: SourceStatus[] = [];
   if (forecast) sources.push({id: 'regional-forecast', label: forecast.label, url: forecast.url, kind: 'forecast', outcome: 'ok', fetchedAt: forecast.fetchedAt, issuedAt: forecast.issuedAt});
-  if (buoy) sources.push({id: buoy.id, label: buoy.name, url: buoy.url, kind: 'observation', outcome: sourceOk(buoy) ? 'ok' : 'error', fetchedAt: sourceClock(buoy)});
-  if (tides) sources.push({id: tides.id, label: tides.name, url: tides.url, kind: 'prediction', outcome: sourceOk(tides) ? 'ok' : 'error', fetchedAt: sourceClock(tides)});
+  if (buoy) sources.push({id: buoy.id, label: buoyStation?.backupFor ? `NDBC ${stationText(buoyStation)}` : buoy.name, url: buoyUrl, kind: 'observation', outcome: sourceOk(buoy) ? 'ok' : 'error', fetchedAt: sourceClock(buoy)});
+  if (tides) sources.push({id: tides.id, label: tideName ?? tides.name, url: tideUrl ?? tides.url, kind: 'prediction', outcome: sourceOk(tides) ? 'ok' : 'error', fetchedAt: sourceClock(tides)});
   // The oldest advisory check stands for all: buildDaily withholds windows unless it is fresh.
   if (alertCheck) sources.push({id: 'nws-alerts', label: alertCheck.name, url: alertCheck.url, kind: 'forecast', outcome: advisories.every(sourceOk) ? 'ok' : 'error', fetchedAt: alertCheck.checked_at});
   const area: Area = {id: place.id, name: place.name, coast: place.name, mapLabel: place.name, lat: place.lat, lon: place.lon, landLat: place.lat, landLon: place.lon,
     modes: ['boat', 'shore', 'spear'], exposure: '', accessNote: '', targets: {boat: [], shore: [], spear: []}, waterQualityUrl: ''};
   const county: County = {id: daily.region_id, name: place.name, shortName: place.name, brand: 'SkipperCast', brandPrefix: '', defaultAreaId: place.id,
     temperatureStationId: station, domain: '', timezone: place.timezone, center: [place.lon, place.lat], bounds: [[place.lon, place.lat], [place.lon, place.lat]], areas: [area],
-    tideStation: {id: String(tides?.data?.station ?? ''), name: tides?.name ?? 'Tide station', url: tides?.url ?? '', note: String(tides?.data?.note ?? '')},
+    tideStation: {id: String(tides?.data?.station ?? ''), name: tideName ?? 'Tide station', url: tideUrl ?? '', note: String(tides?.data?.note ?? '')},
     buoys: [], ruleLinks: [], catchLinks: []};
   const report: Report = {schemaVersion: 1, countyId: daily.region_id, generatedAt: forecast?.fetchedAt ?? alertCheck?.checked_at ?? new Date(0).toISOString(),
     forecasts: forecast ? [{id: place.id, hours: [...forecast.hours], sourceId: 'regional-forecast', issuedAt: forecast.issuedAt}] : [],
     observations, tides: [], tideEvents, alerts, sources, catches: [], catchStatus: 'unavailable',
     visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}, habitatStatus: 'unavailable', chlorophyll: chlorophyllNear(daily, place.lat, place.lon)};
-  return {report, county, area, tideDatum: String(tides?.data?.datum ?? 'MLLW')};
+  return {report, county, area, tideDatum: String(tides?.data?.datum ?? 'MLLW'), buoyBackupFor: buoyStation?.backupFor ?? null};
 }
 
 export type RegionalBriefInput = {daily: RegionalDailyFeed; forecast: RegionalForecast | null; place: RegionalPlace; profile: Profile; date: string; now: Date; at?: string; limits?: ComfortLimits | null};
 
 /** The regional brief: buildDaily over the converted regional feeds; the local-report line is unavailable. */
 export function buildRegionalBrief(input: RegionalBriefInput): Brief {
-  const {report, county, area, tideDatum} = regionalReport(input.daily, input.forecast, input.place);
+  const {report, county, area, tideDatum, buoyBackupFor} = regionalReport(input.daily, input.forecast, input.place);
   const daily = buildDaily(report, county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum});
+  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum, buoyBackupFor});
 }
 
 export type BriefInput = {

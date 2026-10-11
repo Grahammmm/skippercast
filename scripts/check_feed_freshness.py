@@ -135,17 +135,19 @@ def degraded_sources(feed, critical_kinds=None):
     critical_kinds = set(HEALTH["critical_kinds"] if critical_kinds is None else critical_kinds)
     rows = []
     for key, source in feed_sources(feed):
-        if source.get("status") == "ok":
+        if source.get("status") == "ok" and not source.get("fallback_for"):
             continue
         rows.append({"id": source.get("id") or key, "status": source.get("status") or "unknown",
                      "kind": source.get("kind") or "unknown", "critical": source.get("kind") in critical_kinds,
-                     "age_hours": data_age_hours(source, feed)})
+                     "age_hours": data_age_hours(source, feed),
+                     **({"station": source.get("station"), "fallback_for": source["fallback_for"]}
+                        if source.get("fallback_for") else {})})
     return sorted(rows, key=lambda row: (not row["critical"], row["id"]))
 
 
 def past_limit(row, limit_hours):
     """A critical source degraded past the limit, or with no data time at all."""
-    return row["critical"] and (row["age_hours"] is None or row["age_hours"] > limit_hours)
+    return row["status"] != "ok" and row["critical"] and (row["age_hours"] is None or row["age_hours"] > limit_hours)
 
 
 def failing_kinds(feed, limit_hours, critical_kinds=None):
@@ -182,7 +184,8 @@ def source_verdict(feed, limit_hours, label, critical_kinds=None):
         age_text = "no data time" if age is None else f"data {age:.1f} h old"
         role = f"critical, limit {limit_hours:g} h" if row["critical"] else "advisory"
         mark = "FAIL" if row["kind"] in failing else "over" if over else "warn"
-        lines.append(f"- {mark} {row['id']} ({row['kind']}): {row['status']}, {age_text} ({role})")
+        backup = f", backup {row['station']} for {row['fallback_for']} (degraded service)" if row.get("fallback_for") else ""
+        lines.append(f"- {mark} {row['id']} ({row['kind']}): {row['status']}{backup}, {age_text} ({role})")
     if failing:
         head = f"{label}: every {', '.join(sorted(failing))} source degraded past {limit_hours:g} h."
     elif partial:
