@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-06",
+  "localChecks": {
+    "nodeTests": 212,
+    "typeChecks": "passed",
+    "productionBuild": "passed",
+    "nativeLidarComparisons": 87,
+    "nativeSurveyComparisons": 15,
+    "finiteBackgroundGrids": 3469,
+    "screenedReefFootprints": 2868,
+    "retainedCanonicalOutlines": 3
+  },
+  "browserChecks": {
+    "desktop": "1280x720",
+    "mobile": "390x844",
+    "perspectivePreservesSelectedEvidence": true,
+    "maxHabitatDepthFilter": {
+      "selectedFt": 100,
+      "lingcodCandidates": 564
+    },
+    "originalChannelBand": {
+      "displayDepthFt": 9,
+      "originalBandFt": [
+        6,
+        12
+      ],
+      "method": "bounded sounding interpolation",
+      "perspectivePreserved": true
+    },
+    "originalLidarInspection": {
+      "nativeElevationM": 0.9,
+      "sourceDate": "2022-06-14",
+      "datum": "NAVD88 / GEOID12B",
+      "displaySpacingM": 4
+    },
+    "shoreContext": {
+      "segments": 5,
+      "species": "surfperch",
+      "reefScoresInferred": false,
+      "expiredLegalReviewDisclosed": true
+    },
+    "placesChecked": [
+      "Morro Bay Harbor",
+      "Monterey Bay",
+      "Point Conception",
+      "entire coast"
+    ],
+    "sourceCoverageToggle": true,
+    "currentLayerToggle": true,
+    "browserErrorsObserved": 0
+  },
+  "scopeLimits": [
+    "Detailed fishing habitat remains in the screened SLO packages, not invented for the newly displayed corridor",
+    "Deeper ocean and unmapped terrain use identified regional model context",
+    "Water plane is illustrative, not live tide; vertical references remain unreconciled",
+    "Dated aerial mosaics are geographic context, not live imagery"
+  ],
+  "publication": "Verified live; mapping milestone complete",
+  "initialPublication": {
+    "commit": "6ef48dd3da5929ba058abafa1d4a571ebdf8b95c",
+    "githubActionsRun": 37545633744,
+    "cloudflareVersion": "56ecafd6-a7da-4621-bf7f-bcca5ce0274d",
+    "liveAssetChecks": "release clean and exact commit; terrain manifest, reef context, overview and overview imagery match byte counts and SHA-256",
+    "liveHabitat": "1853 screened lingcod candidates; complete context; 84 streamed terrain tiles",
+    "browserErrors": 0
+  },
+  "seamCorrection": {
+    "reason": "coarse parent coverage edges and adjacent display LODs exposed gaps on distant inland terrain",
+    "method": "noninspectable skirts on both sides of the display boundary; original data and source classes unchanged",
+    "localVisualCheck": "no white gaps remain; neutral shading avoids dark edge shadows",
+    "chartRecheck": "9ft estimate retains original 6\u201312ft band",
+    "checks": "212 tests, types and build passed",
+    "publication": {
+      "commit": "a3a0f7776c02f98387d7188ceeca55cad89203f4",
+      "githubActionsRun": 37547874331,
+      "cloudflareVersion": "3f1ff04f-36fc-493d-aab3-844f4ffb2105",
+      "liveRelease": "exact clean commit verified",
+      "liveBrowser": "desktop and 390x844 phone; complete habitat admitted; controls and perspective toggle work; no observed browser errors"
+    }
+  }
+}

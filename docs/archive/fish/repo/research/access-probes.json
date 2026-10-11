@@ -1,0 +1,364 @@
+{
+  "review_date": "2026-10-01",
+  "maximum_bytes_per_response": 1000000,
+  "timeout_seconds": 18,
+  "results": [
+    {
+      "id": "nws_morro_land",
+      "url": "https://api.weather.gov/points/35.365,-120.85",
+      "status": 200,
+      "content_type": "application/geo+json",
+      "bytes": 3919,
+      "capped": false,
+      "seconds": 0.56,
+      "cache_control": "public, max-age=86400, s-maxage=120",
+      "snippet": "{\n    \"@context\": [\n        \"https://geojson.org/geojson-ld/geojson-context.jsonld\",\n        {\n            \"@version\": \""
+    },
+    {
+      "id": "nws_morro_sea",
+      "url": "https://api.weather.gov/points/35.35,-120.95",
+      "status": 200,
+      "content_type": "application/geo+json",
+      "bytes": 3746,
+      "capped": false,
+      "seconds": 0.68,
+      "cache_control": "public, max-age=86400, s-maxage=120",
+      "snippet": "{\n    \"@context\": [\n        \"https://geojson.org/geojson-ld/geojson-context.jsonld\",\n        {\n            \"@version\": \""
+    },
+    {
+      "id": "nws_avila",
+      "url": "https://api.weather.gov/points/35.17,-120.76",
+      "status": 200,
+      "content_type": "application/geo+json",
+      "bytes": 3932,
+      "capped": false,
+      "seconds": 0.69,
+      "cache_control": "public, max-age=86400, s-maxage=120",
+      "snippet": "{\n    \"@context\": [\n        \"https://geojson.org/geojson-ld/geojson-context.jsonld\",\n        {\n            \"@version\": \""
+    },
+    {
+      "id": "nws_alerts",
+      "url": "https://api.weather.gov/alerts/active?area=CA",
+      "status": 200,
+      "content_type": "application/geo+json",
+      "bytes": 59419,
+      "capped": false,
+      "seconds": 0.75,
+      "cache_control": "public, max-age=5, s-maxage=5",
+      "snippet": "{\n    \"@context\": [\n        \"https://geojson.org/geojson-ld/geojson-context.jsonld\",\n        {\n            \"@version\": \""
+    },
+    {
+      "id": "ndbc_46215",
+      "url": "https://www.ndbc.noaa.gov/data/realtime2/46215.txt",
+      "status": 200,
+      "content_type": "text/plain; charset=ISO-8859-1",
+      "bytes": 206048,
+      "capped": false,
+      "seconds": 0.74,
+      "cache_control": "max-age=600, must-revalidate",
+      "snippet": "#YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE\n#yr  mo dy hr mn degT m/s "
+    },
+    {
+      "id": "ndbc_46028",
+      "url": "https://www.ndbc.noaa.gov/data/realtime2/46028.txt",
+      "status": 200,
+      "content_type": "text/plain; charset=ISO-8859-1",
+      "bytes": 610812,
+      "capped": false,
+      "seconds": 1.1,
+      "cache_control": "max-age=600, must-revalidate",
+      "snippet": "#YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE\n#yr  mo dy hr mn degT m/s "
+    },
+    {
+      "id": "coops_9412110_metadata",
+      "url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9412110.json?expand=details,sensors,products",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6984,
+      "capped": false,
+      "seconds": 0.69,
+      "cache_control": null,
+      "snippet": "{\n  \"count\": 1,\n  \"units\": null,\n  \"stations\": [\n    {\n      \"tidal\": true,\n      \"greatlakes\": false,\n      \"shefcode\":"
+    },
+    {
+      "id": "coops_9412298_metadata",
+      "url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9412298.json?expand=details,products",
+      "error": "HTTP Error 404: Not Found",
+      "seconds": 0.62
+    },
+    {
+      "id": "coops_predictions",
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=SLOFishReportResearch&begin_date=20261001&end_date=20261003&datum=MLLW&station=9412110&time_zone=gmt&units=metric&interval=hilo&format=json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8",
+      "bytes": 623,
+      "capped": false,
+      "seconds": 0.66,
+      "cache_control": "no-cache, no-store, must-revalidate, max-age=0",
+      "snippet": "{ \"predictions\" : [\n{\"t\":\"2026-10-01 03:02\", \"v\":\"0.019\", \"type\":\"L\"},{\"t\":\"2026-10-01 09:52\", \"v\":\"1.075\", \"type\":\"H\"},"
+    },
+    {
+      "id": "coops_water_level",
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SLOFishReportResearch&date=latest&datum=MLLW&station=9412110&time_zone=gmt&units=metric&format=json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8",
+      "bytes": 172,
+      "capped": false,
+      "seconds": 0.66,
+      "cache_control": "no-cache, no-store, must-revalidate, max-age=0",
+      "snippet": "\n{\"metadata\":{\"id\":\"9412110\",\"name\":\"Port San Luis\",\"lat\":\"35.1689\",\"lon\":\"-120.7542\"},\"data\":[{\"t\":\"2026-10-01 18:18\", "
+    },
+    {
+      "id": "cdip_metadata",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/076p1_rt.nc.das",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 27124,
+      "capped": false,
+      "seconds": 0.61,
+      "cache_control": null,
+      "snippet": "Attributes {\n    sourceFilename {\n        String long_name \"source file name\";\n        String _FillValue \"_\";\n        DO"
+    },
+    {
+      "id": "mur_metadata",
+      "url": "https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8",
+      "bytes": 13031,
+      "capped": false,
+      "seconds": 0.62,
+      "cache_control": null,
+      "snippet": "{\n  \"table\": {\n    \"columnNames\": [\"Row Type\", \"Variable Name\", \"Attribute Name\", \"Data Type\", \"Value\"],\n    \"columnType"
+    },
+    {
+      "id": "hfr_metadata",
+      "url": "https://dods.ndbc.noaa.gov/thredds/dodsC/hfradar_uswc_6km.das",
+      "status": 200,
+      "content_type": "text/plain; charset=UTF-8",
+      "bytes": 13182,
+      "capped": false,
+      "seconds": 1.68,
+      "cache_control": null,
+      "snippet": "Attributes {\n    lat {\n        String standard_name \"latitude\";\n        String units \"degrees_north\";\n        UInt32 _Ch"
+    },
+    {
+      "id": "wcofs_catalog",
+      "url": "https://opendap.co-ops.nos.noaa.gov/thredds/catalog/NOAA/WCOFS/MODELS/2026/10/01/catalog.xml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8",
+      "bytes": 53286,
+      "capped": false,
+      "seconds": 1.02,
+      "cache_control": null,
+      "snippet": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<catalog xmlns=\"http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0\" "
+    },
+    {
+      "id": "mpa_metadata",
+      "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0?f=pjson",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 22941,
+      "capped": false,
+      "seconds": 0.58,
+      "cache_control": "public, max-age=30, s-maxage=30",
+      "snippet": "{\r\n  \"currentVersion\" : 12, \r\n  \"id\" : 0, \r\n  \"name\" : \"California Marine Protected Areas [ds582]\", \r\n  \"type\" : \"Featur"
+    },
+    {
+      "id": "mpa_count",
+      "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.4%2C34.95%2C-120.4%2C35.8&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnCountOnly=true&f=json",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 11,
+      "capped": false,
+      "seconds": 0.49,
+      "cache_control": "private, max-age=30, s-maxage=30",
+      "snippet": "{\"count\":8}"
+    },
+    {
+      "id": "virgs_counts",
+      "url": "https://www.virgslanding.com/fish-counts.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 17148,
+      "capped": false,
+      "seconds": 0.91,
+      "cache_control": null,
+      "snippet": "<!DOCTYPE html>\n<html lang=\"en\">\n\n<head>\n  <title>Virg's Landing Fish Counts</title>\n  <meta name=\"Author\" content=\"Chad"
+    },
+    {
+      "id": "landing_daily",
+      "url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-30",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 16357,
+      "capped": false,
+      "seconds": 0.71,
+      "cache_control": null,
+      "snippet": "<!doctype html>\n<html lang=\"en\">\n<head>\n<!-- Google tag (gtag.js) -->\n<script async src=\"https://www.googletagmanager.co"
+    },
+    {
+      "id": "cdfw_central",
+      "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 87812,
+      "capped": false,
+      "seconds": 1.04,
+      "cache_control": "no-cache,public, max-age=31536000, immutable",
+      "snippet": "<!DOCTYPE html>\r\n<html  lang=\"en-US\">\r\n<head id=\"Head\"><!-- Google tag (gtag.js) --> \n<script async src=\"https://www.goo"
+    },
+    {
+      "id": "nws_marine_grid",
+      "url": "https://api.weather.gov/gridpoints/LOX/68,119",
+      "status": 200,
+      "bytes": 161639
+    },
+    {
+      "id": "nws_land_hourly",
+      "url": "https://api.weather.gov/gridpoints/LOX/72,119/forecast/hourly",
+      "status": 200,
+      "bytes": 162146
+    },
+    {
+      "id": "nws_zone",
+      "url": "https://api.weather.gov/zones/forecast/PZZ645/forecast",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "id": "coops_morro_predictions",
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=SLOFishReportResearch&begin_date=20261001&end_date=20261003&datum=MLLW&station=9412298&time_zone=gmt&units=metric&interval=hilo&format=json",
+      "status": 200,
+      "bytes": 99
+    },
+    {
+      "id": "cdip_mop_catalog",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/catalog/cdip/model/MOP_alongshore/catalog.xml",
+      "error": "The read operation timed out"
+    },
+    {
+      "id": "cdip_mop_sl345_metadata",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL345_forecast.nc.das",
+      "status": 200,
+      "bytes": 15178
+    },
+    {
+      "id": "cdip_mop_sl345_axes",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL345_forecast.nc.ascii?waveTime,waveHs,waveTp,waveDp",
+      "status": 200,
+      "bytes": 3820
+    },
+    {
+      "id": "wcofs_metadata",
+      "url": "https://opendap.co-ops.nos.noaa.gov/thredds/dodsC/NOAA/WCOFS/MODELS/2026/10/01/wcofs.t03z.20261001.regulargrid.f018.nc.das",
+      "status": 200,
+      "bytes": 7157
+    },
+    {
+      "id": "wcofs_dds",
+      "url": "https://opendap.co-ops.nos.noaa.gov/thredds/dodsC/NOAA/WCOFS/MODELS/2026/10/01/wcofs.t03z.20261001.regulargrid.f018.nc.dds",
+      "status": 200,
+      "bytes": 654
+    },
+    {
+      "id": "mur_small_subset",
+      "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(35.20):10:(35.60)][(-121.10):10:(-120.70)],analysis_error[(last)][(35.20):10:(35.60)][(-121.10):10:(-120.70)],mask[(last)][(35.20):10:(35.60)][(-121.10):10:(-120.70)]",
+      "status": 200,
+      "bytes": 1265
+    },
+    {
+      "id": "mpa_rights",
+      "url": "https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS0582.html",
+      "status": 200,
+      "bytes": 95897
+    },
+    {
+      "id": "coops_temp",
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_temperature&application=SLOFishReportResearch&date=latest&station=9412110&time_zone=gmt&units=metric&format=json",
+      "status": 200,
+      "bytes": 147
+    },
+    {
+      "id": "coops_wind",
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=wind&application=SLOFishReportResearch&date=latest&station=9412110&time_zone=gmt&units=metric&format=json",
+      "status": 200,
+      "bytes": 116
+    },
+    {
+      "id": "beach_dashboard_data",
+      "url": "https://slocounty.maps.arcgis.com/sharing/rest/content/items/0693b6f43f444995afc3f90d29b81432/data?f=json",
+      "status": 200,
+      "bytes": 28946
+    },
+    {
+      "id": "cdip_mop_sl097",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL097_forecast.nc.das",
+      "status": 200,
+      "bytes": 15176
+    },
+    {
+      "id": "cdip_mop_sl165",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL165_forecast.nc.das",
+      "status": 200,
+      "bytes": 15178
+    },
+    {
+      "id": "cdip_mop_sl400",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL400_forecast.nc.das",
+      "status": 200,
+      "bytes": 15178
+    },
+    {
+      "id": "cdip_mop_sl552",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL552_forecast.nc.das",
+      "status": 200,
+      "bytes": 15178
+    },
+    {
+      "id": "landing_recent28",
+      "url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-28",
+      "status": 200,
+      "bytes": 15879
+    },
+    {
+      "id": "landing_recent27",
+      "url": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-09-27",
+      "status": 200,
+      "bytes": 28129
+    },
+    {
+      "id": "landing_robots",
+      "url": "https://www.socalfishreports.com/robots.txt",
+      "status": 200,
+      "bytes": 81
+    },
+    {
+      "id": "beach_webmap_data",
+      "url": "https://slocounty.maps.arcgis.com/sharing/rest/content/items/e5f0aab1f2394fa4aee831013b1b380d/data?f=json",
+      "status": 200,
+      "bytes": 42581
+    },
+    {
+      "id": "beach_layer_metadata",
+      "url": "https://services6.arcgis.com/M6e56DqzbdJf20YO/arcgis/rest/services/SurfSafeSLO_Public_View/FeatureServer/0?f=pjson",
+      "status": 200,
+      "bytes": 18771
+    },
+    {
+      "id": "beach_layer_records",
+      "url": "https://services6.arcgis.com/M6e56DqzbdJf20YO/arcgis/rest/services/SurfSafeSLO_Public_View/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json",
+      "status": 200,
+      "bytes": 10836
+    },
+    {
+      "id": "beach_item_terms",
+      "url": "https://slocounty.maps.arcgis.com/sharing/rest/content/items/e89a2b9a38da41138bde41ad00365310?f=json",
+      "status": 200,
+      "bytes": 1339
+    },
+    {
+      "id": "beach_item_terms",
+      "url": "https://slocounty.maps.arcgis.com/sharing/rest/content/items/e89a2b9a38da41138bde41ad00365310?f=json",
+      "error": "'NoneType' object is not subscriptable"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "reviewedAt": "2026-10-02T17:48:10Z",
+  "reviewer": "Independent source_registry agent",
+  "method": "Bounded read-only public requests; original publisher, normalized feed and pinned source catalog returned HTTP 200. No upstream files changed.",
+  "feedUrl": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+  "publisherUrl": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-10-01",
+  "reviewedScopeUrl": "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json",
+  "scope": "Selected linked factual counts; no articles, photographs, precise locations or catch probabilities.",
+  "feedGeneratedAt": "2026-10-02T16:38:50Z",
+  "originalDayCheckedAt": "2026-10-02T16:38:50Z",
+  "latestTripDate": "2026-10-01",
+  "priorTripIdsWithUnchangedDates": 19,
+  "trips": [
+    {
+      "id": "6331ec9bdd1c3ab7",
+      "boat": "Flying Fish",
+      "anglers": 12,
+      "tripType": "1/2 Day AM",
+      "importedCountsMatchPublisher": true,
+      "publisherCategoriesMissingFromNormalizedFeed": [
+        {"category": "Yellowtail", "count": 1},
+        {"category": "Whitefish", "count": 1},
+        {"category": "Bonito", "count": 2}
+      ]
+    },
+    {
+      "id": "ec3ab66884748631",
+      "boat": "Sunny Day",
+      "anglers": 4,
+      "tripType": "3/4 Day",
+      "importedCountsMatchPublisher": true,
+      "publisherCategoriesMissingFromNormalizedFeed": [
+        {"category": "Cabezon", "count": 1}
+      ]
+    }
+  ],
+  "resolution": "The display explicitly labels imported values as selected reported catch categories and states that original reports can include additional species. Original dated publisher links remain on every trip. No absent category is inferred as zero, and no catch total or catch probability is derived. Upstream data and source clocks remain intact."
+}

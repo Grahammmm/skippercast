@@ -1,0 +1,125 @@
+{
+  "verifiedAt": "2026-10-07T01:37:17.260949+00:00",
+  "originalTerrainManifestPreserved": true,
+  "originalWideImageryPreserved": true,
+  "validatedImageCount": 497,
+  "requestedImageCount": 512,
+  "imageBytes": 299714394,
+  "imageShape": [
+    2048,
+    2048
+  ],
+  "sceneDisplaySpacingM": 2,
+  "catalogYears": [
+    2022
+  ],
+  "sourceCatalogRecords": 1424,
+  "failures": [
+    {
+      "tile": [
+        28672,
+        69632
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        28672,
+        73728
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        28672,
+        86016
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        28672,
+        94208
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        28672,
+        90112
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        69632
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        73728
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        77824
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        81920
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        90112
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        86016
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        32768,
+        94208
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        36864,
+        69632
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        36864,
+        98304
+      ],
+      "reason": "No imagery support"
+    },
+    {
+      "tile": [
+        -28672,
+        -28672
+      ],
+      "reason": "HTTP Error 400: Bad Request"
+    }
+  ],
+  "notice": "Dates describe original intersecting NAIP catalog records, not one acquisition date for every pixel. Display spacing does not establish native positional accuracy. Unsupported detail falls back to original imagery."
+}

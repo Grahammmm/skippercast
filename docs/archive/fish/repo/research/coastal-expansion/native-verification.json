@@ -1,0 +1,203 @@
+{
+  "checks": {
+    "nativeLidarOriginalValueComparisons": 87,
+    "nativeSurveyOriginalValueComparisons": 15,
+    "backgroundFiniteTiles": 3469,
+    "completeOriginalLidarTiles": 96,
+    "horizontalOnlyProjection": true,
+    "projectionComparisonRule": "Original value must exist within one 1m cell of independent nearest-coordinate lookup; GDAL and PROJ horizontal operation choices may differ at cell boundaries",
+    "nativeMasksPreserved": true
+  },
+  "examples": [
+    {
+      "x": 10234,
+      "z": 6854,
+      "nativeNearestM": 109.4000015258789,
+      "displaySampleM": 109.4000015258789,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 10082,
+      "z": 6968,
+      "nativeNearestM": 3.369999885559082,
+      "displaySampleM": 3.369999885559082,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 10036,
+      "z": 7070,
+      "nativeNearestM": 5.769999980926514,
+      "displaySampleM": 5.769999980926514,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 10854,
+      "z": 6310,
+      "nativeNearestM": 8.289999961853027,
+      "displaySampleM": 8.289999961853027,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 10928,
+      "z": 6768,
+      "nativeNearestM": -0.18000000715255737,
+      "displaySampleM": -0.18000000715255737,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 11140,
+      "z": 6986,
+      "nativeNearestM": 0.47999998927116394,
+      "displaySampleM": 0.47999998927116394,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 11264,
+      "z": 6590,
+      "nativeNearestM": 4.980000019073486,
+      "displaySampleM": 4.980000019073486,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 11438,
+      "z": 6770,
+      "nativeNearestM": 13.680000305175781,
+      "displaySampleM": 13.680000305175781,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 11458,
+      "z": 6962,
+      "nativeNearestM": 4.019999980926514,
+      "displaySampleM": 4.050000190734863,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 9998,
+      "z": 7168,
+      "nativeNearestM": 0.23000000417232513,
+      "displaySampleM": 0.23000000417232513,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 10000,
+      "z": 7252,
+      "nativeNearestM": 1.75,
+      "displaySampleM": 1.75,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    },
+    {
+      "x": 10084,
+      "z": 7348,
+      "nativeNearestM": -2.809999942779541,
+      "displaySampleM": -2.809999942779541,
+      "originalValueWithinOneNativeCell": true,
+      "sourceId": 7
+    }
+  ],
+  "surveyExamples": [
+    {
+      "sourceId": 4,
+      "nativeDepthM": 14.48000431060791,
+      "displayHeightM": -14.48000431060791,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 4,
+      "nativeDepthM": 15.050142288208008,
+      "displayHeightM": -15.050142288208008,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 4,
+      "nativeDepthM": 23.6299991607666,
+      "displayHeightM": -23.6299991607666,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 4,
+      "nativeDepthM": 70.48999786376953,
+      "displayHeightM": -70.48999786376953,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 4,
+      "nativeDepthM": 67.93000030517578,
+      "displayHeightM": -67.93000030517578,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 5,
+      "nativeDepthM": 68.72000122070312,
+      "displayHeightM": -68.72000122070312,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 5,
+      "nativeDepthM": 49.44000244140625,
+      "displayHeightM": -49.44000244140625,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 5,
+      "nativeDepthM": 5.449987411499023,
+      "displayHeightM": -5.449987411499023,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 5,
+      "nativeDepthM": 97.88999938964844,
+      "displayHeightM": -97.88999938964844,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 5,
+      "nativeDepthM": 10.919891357421875,
+      "displayHeightM": -10.919891357421875,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 6,
+      "nativeDepthM": 45.090003967285156,
+      "displayHeightM": -45.090003967285156,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 6,
+      "nativeDepthM": 36.62008285522461,
+      "displayHeightM": -36.62008285522461,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 6,
+      "nativeDepthM": 68.35999298095703,
+      "displayHeightM": -68.35999298095703,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 6,
+      "nativeDepthM": 68.18499755859375,
+      "displayHeightM": -68.18499755859375,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 6,
+      "nativeDepthM": 17.3299560546875,
+      "displayHeightM": -17.3299560546875,
+      "originalValueWithinOneNativeCell": true
+    }
+  ],
+  "assetFiles": 3883,
+  "totalBytes": 118652315
+}

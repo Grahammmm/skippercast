@@ -1,0 +1,86 @@
+{
+  "verifiedAt": "2026-10-07T02:31:34.461Z",
+  "implementationCommit": "a6863e8537fe0d8939f536c50303856d57bfe072",
+  "ciRun": 37562247580,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "de740023a4d109add175d80315ef24c79b04a769baeac76c363cb969aa46578a"
+    },
+    {
+      "path": "/coast-3d",
+      "sha256": "de740023a4d109add175d80315ef24c79b04a769baeac76c363cb969aa46578a"
+    },
+    {
+      "path": "/assets/coast3d.js",
+      "sha256": "1c5719b985d378253604dd04125b471401d28e0b803d5b9e019b24ec29c2f215"
+    },
+    {
+      "path": "/assets/coast3d.css",
+      "sha256": "87367de6ccd8146164d6309c80b2b68e3d9049f629b02c23509ca8ecb4f774c5"
+    }
+  ],
+  "checks": [
+    "Shared static HTML; original security headers and conditional304 preserved.",
+    "Preference cookie does not vary or personalize server-cached HTML.",
+    "Live privacy page describes preference fields, duration and removal.",
+    "/api/health200",
+    "/api/report200",
+    "/report200"
+  ],
+  "release": {
+    "commit": "a6863e8537fe0d8939f536c50303856d57bfe072",
+    "dirty": false,
+    "builtAt": "2026-10-07T02:29:43.874Z"
+  },
+  "cloudflareVersion": "4dd172ce-e3c5-4235-9c06-494c4864a9e1",
+  "localChecks": {
+    "testsPassed": 229,
+    "typeChecks": "both configurations passed",
+    "productionBuild": "passed",
+    "desktop": [
+      1280,
+      800
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "cases": [
+      "first visit before map canvas starts",
+      "Avila / spear save and bare homepage return",
+      "mobile edit to Monterey / shore with honest geographic coverage",
+      "cookie removal and first-visit entry restoration",
+      "Morro / shore defaults and method-specific summary",
+      "shared link retains saved home",
+      "map home button changes actual place, URL and report"
+    ],
+    "consoleWarningsAndErrors": []
+  },
+  "liveBrowserChecks": {
+    "desktop": [
+      1280,
+      800
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "cases": [
+      "first arrival displayed setup with zero map canvases",
+      "Avila / spear save; Cabezon default and60ft depth",
+      "bare homepage returned directly to Avila / spear",
+      "spear visibility unknown and dated buoy reading",
+      "mobile edit to Morro / boat; Lingcod and300ft depth",
+      "boat wind/seas/tide summary and no horizontal overflow",
+      "remove saved home then bare root returns to first-visit setup"
+    ],
+    "consoleWarningsAndErrors": [],
+    "testPreferencesRemoved": true
+  },
+  "screenshots": [
+    "artifacts/corridor/onboarding-live-desktop.jpg",
+    "artifacts/corridor/onboarding-live-mobile.jpg",
+    "artifacts/corridor/personalized-home-live-mobile.jpg"
+  ]
+}

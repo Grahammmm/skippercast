@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "noaa-enc-morro-bay-chart-context",
+  "name": "NOAA ENC Morro Bay harbor and nearshore chart depth context",
+  "region_ids": [
+    "morro-bay"
+  ],
+  "need_ids": [
+    "bathymetry"
+  ],
+  "documentation_url": "https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html",
+  "access_url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer",
+  "access_status": "accessible",
+  "rights": {
+    "license": "public-domain-us-gov / CC0-1.0",
+    "terms_url": "https://www.nauticalcharts.noaa.gov/data/data-licensing.html",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [
+      -121.13,
+      35.31,
+      -120.79,
+      35.55
+    ],
+    "resolution_m": null,
+    "horizontal_crs": "EPSG:4326 (returned geometry)",
+    "vertical_datum": null,
+    "footprint_kind": "unknown",
+    "resolution_basis": "unknown"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-10-06T21:49:28.899776+00:00",
+    "update_cadence": "Service refreshed weekly; chart and original survey dates vary"
+  },
+  "evidence": [
+    {
+      "url": "https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html",
+      "supports": "Official NOAA chart feature download service"
+    },
+    {
+      "url": "https://nauticalcharts.noaa.gov/updates/introducing-new-enc-direct-to-gis/",
+      "supports": "ENC Direct soundings are in metres"
+    },
+    {
+      "url": "https://www.nauticalcharts.noaa.gov/data/data-licensing.html",
+      "supports": "NOAA public chart products have no use restrictions; not a grant for privately acquired raw surveys"
+    }
+  ],
+  "limitations": [
+    "Chart products are generalized; display mesh spacing is not native survey resolution.",
+    "Local vertical datum metadata absent; no transformation applied.",
+    "Quality attributes include historical surveys; collection date is not survey date.",
+    "Only bounded water-clipped interpolation and depth-band midpoint estimates; do not infer rocks, habitat, catch probability or navigation clearance."
+  ],
+  "producer": {
+    "name": "NOAA Office of Coast Survey",
+    "url": "https://www.nauticalcharts.noaa.gov/"
+  },
+  "variables": [
+    "charted_depth",
+    "charted_depth_range",
+    "charted_land_mask",
+    "survey_quality"
+  ],
+  "units": {
+    "charted_depth": "metres",
+    "charted_depth_range": "metres"
+  },
+  "provenance": {
+    "access_service": "NOAA ENC Direct ArcGIS REST",
+    "raw_sha256": "c7b1a2e85b8d5521c3cb99ef2f550f13331f7873f2564d713a24efef3a1faed1",
+    "transformations": [
+      "Complete bounded query pagination with raw extract hashes",
+      "Local projected coordinates",
+      "Wet-area constrained inverse-distance interpolation, 750 m maximum reach",
+      "Range-only midpoint when no valid nearby sounding",
+      "Full triangle water clipping; native survey samples excluded"
+    ]
+  }
+}

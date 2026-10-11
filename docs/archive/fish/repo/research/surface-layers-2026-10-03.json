@@ -1,0 +1,179 @@
+{
+  "checkedAt": "2026-10-03T04:22:32.665970+00:00",
+  "baseCommit": "9cf9db7952beb98daf7532b074ef485d35dd3f20",
+  "scope": "Actual local rendering and reviewed snapshot verification; no production deployment claim",
+  "references": [
+    "https://mite-shiru.co.jp/maps/labo/relief_fiddler/",
+    "https://relief.bertspaan.nl/world?lang=en"
+  ],
+  "checks": {
+    "tests": 195,
+    "typeScriptConfigurations": 2,
+    "productionBuild": "passed",
+    "desktopViewport": [
+      1440,
+      1000
+    ],
+    "mobileViewports": [
+      [
+        390,
+        844
+      ],
+      [
+        320,
+        780
+      ]
+    ],
+    "layers": [
+      "currents",
+      "temperature",
+      "clouds"
+    ],
+    "nativeInteractions": [
+      "Layer selection",
+      "Close and wide zooms",
+      "Temperature and current click readings with original clocks",
+      "Recenter",
+      "Motion on/off",
+      "Observed satellite loop and pause",
+      "Clouds withheld on future dates",
+      "HF radar field admitted for present and withdrawn on future dates",
+      "Boat filter and original habitat release restoration"
+    ],
+    "horizontalOverflowAt320": false
+  },
+  "independentReview": {
+    "blockingFindingsResolved": [
+      "Rejected new SST field cannot reveal prior image with new timestamp"
+    ],
+    "inwardFeatherCheck": {
+      "unsupportedPixelsRemainingTransparent": 131072,
+      "supportedEdgePixelsFeathered": 29696
+    },
+    "vectorDirection": "Components blended before deriving bearing; no angular interpolation",
+    "gapPolicy": "Complete adjacent quads only; no missing-cell or missing-column bridge"
+  },
+  "runtime": {
+    "checkedAt": "2026-10-03T04:20:29.763Z",
+    "checks": [
+      {
+        "path": "/api/report",
+        "status": 200,
+        "generatedAt": "2026-10-03T03:45:49.236Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/ocean",
+        "status": 200,
+        "generatedAt": "2026-10-03T03:45:47.919Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/history",
+        "status": 200,
+        "generatedAt": "2026-10-03T02:42:56.767Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/health",
+        "status": 200,
+        "generatedAt": "2026-10-03T03:45:49.236Z"
+      }
+    ],
+    "originalDataClocks": {
+      "cloudObservedAt": "2026-10-03T03:43:00.000Z",
+      "currents": [
+        {
+          "id": "wcofs",
+          "kind": "forecast",
+          "issuedAt": "2026-10-02T03:00:00.000Z",
+          "sampleAt": null,
+          "fetchedAt": "2026-10-03T02:42:03.000Z"
+        },
+        {
+          "id": "hfr-1",
+          "kind": "observation",
+          "issuedAt": null,
+          "sampleAt": "2026-10-02T23:00:00.000Z",
+          "fetchedAt": "2026-10-03T02:41:52.000Z"
+        },
+        {
+          "id": "hfr-6",
+          "kind": "observation",
+          "issuedAt": null,
+          "sampleAt": "2026-10-02T22:00:00.000Z",
+          "fetchedAt": "2026-10-03T02:41:52.000Z"
+        }
+      ]
+    },
+    "originalMURClocksPreserved": true,
+    "all65AnnualBaselinesPreserved": true,
+    "retainedTripFactsPreserved": true
+  },
+  "limitations": [
+    "Display interpolation adds no native marine resolution",
+    "Current paths illustrate direction, not trajectories or travel speed",
+    "Overview land clip remains overview geometry",
+    "Satellite infrared does not measure in-water visibility",
+    "Last retained MUR analysis remains September 30 with original receipt; failed retrieval was not relabeled"
+  ],
+  "verifiedAt": "2026-10-03T04:26:16.311343+00:00",
+  "screenshots": [
+    {
+      "path": "research/surface-layers-2026-10-03/clouds-desktop.jpg",
+      "bytes": 115312,
+      "sha256": "15432edf278551064bb8b4e7349a9c367c45a20afafc97ed4d0ae85740cfecb0",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "research/surface-layers-2026-10-03/clouds-mobile-320.jpg",
+      "bytes": 29718,
+      "sha256": "8402ea678371b3dc9751ba3aa548f34c72de8c6aff4ddeeeced31df82248cb25",
+      "dimensions": [
+        320,
+        780
+      ]
+    },
+    {
+      "path": "research/surface-layers-2026-10-03/currents-desktop.jpg",
+      "bytes": 128449,
+      "sha256": "e3b0ac434c548d0cc011e43efb46921bad1de2952e9c8f222772d17803912531",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "research/surface-layers-2026-10-03/currents-mobile.jpg",
+      "bytes": 35940,
+      "sha256": "9e222a6ba544dc2fbcda22bd65b1dc9119601b86deebccac16e690f09a6532ef",
+      "dimensions": [
+        390,
+        844
+      ]
+    },
+    {
+      "path": "research/surface-layers-2026-10-03/temperature-desktop.jpg",
+      "bytes": 107997,
+      "sha256": "3567b34786f78f33f45401867879dafe4269a997930da16bf89d5b40c94e173f",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "research/surface-layers-2026-10-03/temperature-mobile-320.jpg",
+      "bytes": 31204,
+      "sha256": "506ef192c01cdbf731900bd211e8607b76507f3d449da7bf44a93bc81c1f761c",
+      "dimensions": [
+        320,
+        780
+      ]
+    }
+  ],
+  "browserErrorsAtFinalCheck": [],
+  "habitatReleaseUnchanged": "a48f2a24f5f0f12748dbeacbf25e5612fb0295840ddc87590b9bcc6bb9a7a05d"
+}
