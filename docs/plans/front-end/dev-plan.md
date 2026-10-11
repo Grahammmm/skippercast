@@ -53,7 +53,7 @@ Rules for every task:
 | Status | Count | Tasks |
 | --- | --- | --- |
 | DONE on `main` | 64 | every task except the two below and the two dropped |
-| CHANGED, not started | 2 | FE-61 (after v0.8.0, the release that carries the flip), FE-62 (after the owner confirms deleting the fish repo) |
+| CHANGED, not started | 2 | FE-61 (after v0.8.0, the release that carries the flip), FE-62 (part a, the archive, built 2026-10-11; part b, the bridge, pending; then the owner deletes the fish repo) |
 | DROPPED | 2 | FE-13, FE-26 |
 
 Earlier summaries went stale as PRs merged; the per-task Status lines are the record.
@@ -550,7 +550,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: approve (`server/`).
 
 ### FE-62 · Archive `fish` receipts and retire the repository · M
-- Status: CHANGED (blocked on the bridge's retirement). Agent: Claude, with Codex for the data receipts.
+- Status: CHANGED, in two parts (#570). Part a, the archive: built 2026-10-11 (`claude/fe-62-archive`; [docs/archive/fish/](../../archive/fish/README.md)). Part b, retiring the bridge's Fish Worker fallback in `server/coast-data.ts` and completing `docs/FISH-MERGE-STATUS.md`: pending (`claude/fe-62-bridge`). Agent: Claude, with Codex for the data receipts.
 - Depends: FE-60, FE-84, FE-85, FE-87; FE-40 … FE-45 merged and run
 - Files: `docs/archive/fish/README.md`, `docs/archive/fish/**` (the § 15 item 9 list), `docs/plans/front-end/README.md` (status), `docs/data-sources.md`.
 - Build: copy the listed docs and receipts with the historical-note prefix; tick § 15's checklist with links; list the Cloudflare resources, including the Fish Worker the bridge used.

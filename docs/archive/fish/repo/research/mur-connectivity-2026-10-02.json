@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-02T03:58:03Z",
+  "scope": "Read-only connectivity diagnosis from the Codex execution environment. No provider or public data changes.",
+  "timingNote": "Per-request UTC start/end and elapsed durations were not captured. ReviewedAt is the clock reading immediately after the four authorized MUR requests completed, not an analysis or source issue time. Requests used a 15-second abort; Node reported a connection timeout before any HTTP response.",
+  "requestedBounds": [-121.79, 34.92, -120.51, 35.82],
+  "sampling": {"nativeSpacingDeg": 0.01, "requestedStride": 2, "expectedRowsIncludingMasks": 2990},
+  "probes": [
+    {
+      "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],analysis_error[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],mask[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)]",
+      "environment": "default network sandbox",
+      "httpStatus": null,
+      "error": "fetch failed",
+      "cause": {"code": "ENOTFOUND", "syscall": "getaddrinfo", "hostname": "coastwatch.pfeg.noaa.gov"}
+    },
+    {
+      "url": "https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.csv",
+      "environment": "authorized network access",
+      "httpStatus": null,
+      "error": "fetch failed",
+      "cause": {"name": "ConnectTimeoutError", "code": "UND_ERR_CONNECT_TIMEOUT"}
+    },
+    {
+      "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],analysis_error[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],mask[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)]",
+      "environment": "authorized network access",
+      "httpStatus": null,
+      "error": "fetch failed",
+      "cause": {"name": "ConnectTimeoutError", "code": "UND_ERR_CONNECT_TIMEOUT"}
+    },
+    {
+      "url": "https://upwell.pfeg.noaa.gov/erddap/info/jplMURSST41/index.csv",
+      "environment": "authorized network access",
+      "httpStatus": null,
+      "error": "fetch failed",
+      "cause": {"name": "ConnectTimeoutError", "code": "UND_ERR_CONNECT_TIMEOUT"}
+    },
+    {
+      "url": "https://upwell.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],analysis_error[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],mask[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)]",
+      "environment": "authorized network access",
+      "httpStatus": null,
+      "error": "fetch failed",
+      "cause": {"name": "ConnectTimeoutError", "code": "UND_ERR_CONNECT_TIMEOUT"}
+    }
+  ],
+  "dnsControl": {
+    "environment": "authorized network access",
+    "coastwatch.pfeg.noaa.gov": ["161.55.160.15", "2610:20:90a3:3bcc::15"],
+    "upwell.pfeg.noaa.gov": ["161.55.160.6"],
+    "conclusion": "Both MUR hosts resolved in the authorized environment; failure was establishing the connection, not parsing an HTTP payload."
+  },
+  "positiveControl": {
+    "url": "https://www.ndbc.noaa.gov/data/realtime2/46215.txt",
+    "environment": "authorized network access",
+    "httpStatus": 200,
+    "decodedCharacters": 203322,
+    "requestAbortMs": 12000,
+    "header": "#YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE",
+    "timingNote": "Executed after the reviewedAt clock reading. Exact request time and duration were not captured."
+  },
+  "mirrorDocumentation": {
+    "url": "https://upwell.pfeg.noaa.gov/erddap/info/jplMURSST41/index.html",
+    "access": "Web retrieval returned indexed NOAA metadata, crawled the preceding week; this is identity/terms evidence, not proof of current live connectivity or latest analysis availability.",
+    "publisher": "NOAA NMFS SWFSC ERD",
+    "datasetId": "jplMURSST41",
+    "productId": "MUR-JPL-L4-GLOB-v04.1",
+    "producer": "NASA JPL",
+    "producerUrl": "https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1",
+    "variables": ["analysed_sst", "analysis_error", "mask"],
+    "units": {"analysed_sst": "degree_C", "analysis_error": "degree_C"},
+    "nativeSpacingDeg": 0.01,
+    "timeMeaning": "Nominal time of analyzed fields; not an issue/publication time.",
+    "rights": "Metadata permits free use and redistribution under JPL PO.DAAC data policy; acknowledge JPL and NASA MEaSUREs.",
+    "limitation": "No fallback was implemented because live access to this mirror also failed."
+  },
+  "verification": {"command": "node --import tsx --test tests/spatial.test.ts", "passed": 8, "failed": 0},
+  "conclusion": "The exact existing MUR request and a documented NOAA mirror failed before HTTP responses from this environment while another NOAA host succeeded. No adapter/schema defect was demonstrated. These observations do not establish a global NOAA outage. Leave the source failure explicit and retain the previously validated September 30 analysis only within existing age gates, preserving its original analysis/fetch clocks."
+}

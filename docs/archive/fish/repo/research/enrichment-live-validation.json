@@ -1,0 +1,121 @@
+{
+  "checkedAt": "2026-10-01T20:17:31.104Z",
+  "nearshore": [
+    {
+      "id": "SL097",
+      "availability": "available",
+      "freshness": "current",
+      "issuedAt": "2026-10-01T19:46:17.000Z",
+      "fetchedAt": "2026-10-01T20:17:31.073Z",
+      "sampleCount": 25,
+      "firstSampleAt": "2026-10-01T18:00:00.000Z",
+      "lastSampleAt": "2026-10-04T18:00:00.000Z"
+    },
+    {
+      "id": "SL165",
+      "availability": "available",
+      "freshness": "current",
+      "issuedAt": "2026-10-01T19:46:24.000Z",
+      "fetchedAt": "2026-10-01T20:17:31.056Z",
+      "sampleCount": 25,
+      "firstSampleAt": "2026-10-01T18:00:00.000Z",
+      "lastSampleAt": "2026-10-04T18:00:00.000Z"
+    },
+    {
+      "id": "SL345",
+      "availability": "available",
+      "freshness": "current",
+      "issuedAt": "2026-10-01T19:46:45.000Z",
+      "fetchedAt": "2026-10-01T20:17:31.095Z",
+      "sampleCount": 25,
+      "firstSampleAt": "2026-10-01T18:00:00.000Z",
+      "lastSampleAt": "2026-10-04T18:00:00.000Z"
+    },
+    {
+      "id": "SL400",
+      "availability": "available",
+      "freshness": "current",
+      "issuedAt": "2026-10-01T19:46:50.000Z",
+      "fetchedAt": "2026-10-01T20:17:31.080Z",
+      "sampleCount": 25,
+      "firstSampleAt": "2026-10-01T18:00:00.000Z",
+      "lastSampleAt": "2026-10-04T18:00:00.000Z"
+    },
+    {
+      "id": "SL552",
+      "availability": "available",
+      "freshness": "current",
+      "issuedAt": "2026-10-01T19:47:04.000Z",
+      "fetchedAt": "2026-10-01T20:17:31.081Z",
+      "sampleCount": 25,
+      "firstSampleAt": "2026-10-01T18:00:00.000Z",
+      "lastSampleAt": "2026-10-04T18:00:00.000Z"
+    }
+  ],
+  "beachCount": 19,
+  "beachStatusCounts": {
+    "Beach Health Advisory": 1,
+    "Beach Open": 18
+  },
+  "sampleDatesAvailable": 0,
+  "sources": [
+    {
+      "id": "slo-beach-water-quality",
+      "label": "SLO County beach water-contact status",
+      "url": "https://services6.arcgis.com/M6e56DqzbdJf20YO/arcgis/rest/services/SurfSafeSLO_Public_View/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=json",
+      "kind": "observation",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:17:30.985Z"
+    },
+    {
+      "id": "cdip-SL165",
+      "label": "CDIP nearshore · Port San Luis",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL165_forecast.nc.ascii?waveTime,waveHs,waveTp,waveDp,waveFlagPrimary,waveFlagSecondary,metaLatitude,metaLongitude,metaWaterDepth,metaSiteLabel",
+      "kind": "forecast",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:17:31.056Z",
+      "issuedAt": "2026-10-01T19:46:24.000Z",
+      "validThrough": "2026-10-07T21:00:00.000Z"
+    },
+    {
+      "id": "cdip-SL097",
+      "label": "CDIP nearshore · Pismo Beach Pier",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL097_forecast.nc.ascii?waveTime,waveHs,waveTp,waveDp,waveFlagPrimary,waveFlagSecondary,metaLatitude,metaLongitude,metaWaterDepth,metaSiteLabel",
+      "kind": "forecast",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:17:31.073Z",
+      "issuedAt": "2026-10-01T19:46:17.000Z",
+      "validThrough": "2026-10-07T21:00:00.000Z"
+    },
+    {
+      "id": "cdip-SL400",
+      "label": "CDIP nearshore · Cayucos Pier",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL400_forecast.nc.ascii?waveTime,waveHs,waveTp,waveDp,waveFlagPrimary,waveFlagSecondary,metaLatitude,metaLongitude,metaWaterDepth,metaSiteLabel",
+      "kind": "forecast",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:17:31.080Z",
+      "issuedAt": "2026-10-01T19:46:50.000Z",
+      "validThrough": "2026-10-07T21:00:00.000Z"
+    },
+    {
+      "id": "cdip-SL552",
+      "label": "CDIP nearshore · San Simeon Beach",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL552_forecast.nc.ascii?waveTime,waveHs,waveTp,waveDp,waveFlagPrimary,waveFlagSecondary,metaLatitude,metaLongitude,metaWaterDepth,metaSiteLabel",
+      "kind": "forecast",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:17:31.081Z",
+      "issuedAt": "2026-10-01T19:47:04.000Z",
+      "validThrough": "2026-10-07T21:00:00.000Z"
+    },
+    {
+      "id": "cdip-SL345",
+      "label": "CDIP nearshore · Morro Rock",
+      "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/SL345_forecast.nc.ascii?waveTime,waveHs,waveTp,waveDp,waveFlagPrimary,waveFlagSecondary,metaLatitude,metaLongitude,metaWaterDepth,metaSiteLabel",
+      "kind": "forecast",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:17:31.095Z",
+      "issuedAt": "2026-10-01T19:46:45.000Z",
+      "validThrough": "2026-10-07T21:00:00.000Z"
+    }
+  ]
+}

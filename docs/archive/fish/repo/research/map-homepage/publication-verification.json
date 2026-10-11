@@ -1,0 +1,162 @@
+{
+  "verifiedAt": "2026-10-07T02:14:32.260Z",
+  "implementationCommit": "036375d6998463e10556446ae55bb5ea26ecc87f",
+  "cloudflareVersion": "e7e24079-73ca-4743-972f-3d4f93afef2f",
+  "ciRun": 37560510258,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "e5331496ca3b56b6faa1866b80ba5ccc765bafa500400f655c6f5e00fdbe0987",
+      "bytes": 11997
+    },
+    {
+      "path": "/coast-3d",
+      "sha256": "e5331496ca3b56b6faa1866b80ba5ccc765bafa500400f655c6f5e00fdbe0987",
+      "bytes": 11997
+    },
+    {
+      "path": "/assets/coast3d.js",
+      "sha256": "af344d042cf8330ac8b9008e070fa821d0fbe6160d9ab173e7da65f817211393",
+      "bytes": 637823
+    },
+    {
+      "path": "/assets/coast3d.css",
+      "sha256": "b70bfd2f1b281f0abcfd2c351f10178083fb458ca450df5114efbeb09f22696a",
+      "bytes": 18208
+    },
+    {
+      "path": "/data/coast-wide/manifest.json",
+      "sha256": "e61fc7f1c29ba59dd943a3492acad0117bc7c769ab7f59547538955f5918bfd8",
+      "bytes": 1784654
+    },
+    {
+      "path": "/data/coast-wide/detail-imagery-provenance.json",
+      "sha256": "12dcbfa8ed3e3d18f1145d48d827a0b0d26aa7e7f34df32caad87502f5718abd",
+      "bytes": 1186948
+    }
+  ],
+  "imagery": [
+    {
+      "url": "/data/coast-wide/detail--81920--131072.jpg",
+      "sha256": "f2f628b86990d0fa657daa58d8ec1150a91d85351fbc8bd1bf074ff564b8ff43",
+      "bytes": 784808,
+      "bounds": [
+        -81920,
+        -131072,
+        -77824,
+        -126976
+      ]
+    },
+    {
+      "url": "/data/coast-wide/detail-12288-8192.jpg",
+      "sha256": "a0a17a349c95ca9d96e917b69e8953b8046e04154bdb5e60794de34cfc26ee14",
+      "bytes": 629420,
+      "bounds": [
+        12288,
+        8192,
+        16384,
+        12288
+      ]
+    },
+    {
+      "url": "/data/coast-wide/detail-61440-98304.jpg",
+      "sha256": "6dbbf42a4bfa30c605cde5b7dbc5501b6ffbca5b3f483a02a606fba1b9d65ee3",
+      "bytes": 710226,
+      "bounds": [
+        61440,
+        98304,
+        65536,
+        102400
+      ]
+    }
+  ],
+  "habitat": [
+    {
+      "regionId": "morro-bay",
+      "status": 200,
+      "archiveBytes": 15285607,
+      "etag": "\"sha256-1eac589849c92625a64c5ef521f2e22c66cc93eabf2d739919f0008421d34f8a\""
+    },
+    {
+      "regionId": "cambria-san-simeon",
+      "status": 200,
+      "archiveBytes": 627276,
+      "etag": "\"sha256-7e8cb47eec10b7b3587663ad2dbc43a6164de544f82eaf3feac14b2829dfe284\""
+    },
+    {
+      "regionId": "monterey-point-sur",
+      "status": 200,
+      "archiveBytes": 3527515,
+      "etag": "\"sha256-35ac91937ea8d65c1172142e96768bd88f9f6635c8f41964572f30d54e60014f\""
+    },
+    {
+      "regionId": "point-arguello-conception",
+      "status": 200,
+      "archiveBytes": 6226239,
+      "etag": "\"sha256-22bf843b9480a016bdd9d5d8623345ef626123f7c44a5a5e0028127c675dcfc4\""
+    }
+  ],
+  "api": [
+    {
+      "path": "/api/health",
+      "generatedAt": "2026-10-07T01:17:19.117Z",
+      "dataState": "fresh"
+    },
+    {
+      "path": "/api/report",
+      "generatedAt": "2026-10-07T01:17:19.117Z"
+    },
+    {
+      "path": "/api/ocean",
+      "generatedAt": "2026-10-07T01:17:03.378Z"
+    },
+    {
+      "path": "/api/history",
+      "generatedAt": "2026-10-07T01:17:03.378Z"
+    }
+  ],
+  "release": {
+    "commit": "036375d6998463e10556446ae55bb5ea26ecc87f",
+    "dirty": false,
+    "builtAt": "2026-10-07T02:07:43.356Z"
+  },
+  "homepageSecurityHeaders": true,
+  "observations": [
+    {
+      "stationId": "46215",
+      "observedAt": "2026-10-07T00:26:00.000Z"
+    },
+    {
+      "stationId": "46028",
+      "observedAt": "2026-10-07T00:50:00.000Z"
+    }
+  ],
+  "latestTrip": "2026-10-05",
+  "conditionalHomepage": {
+    "status": 304,
+    "initialETag": "W/\"3a10a8387b7752cd8d8c83f5d5820301\"",
+    "conditionalETag": "\"3a10a8387b7752cd8d8c83f5d5820301\"",
+    "preservesSharedMap": true,
+    "note": "Conditional GET uses weak ETag comparison (RFC9110 section13.1.2); compressed200 and bodyless304 preserve the same opaque identifier. Habitat If-Match gates remain exact."
+  },
+  "fullReportAvailable": true,
+  "verificationNote": "Compare the selected private consumer release and exact archive/export bindings, not the bundled preparation manifest release ID.",
+  "habitatReleaseId": "4c24f963f09bf300ff51014affa680ef522bdf4444c9f3567c588b5e5f33740b",
+  "browserVerification": {
+    "verifiedAt": "2026-10-07T02:16:30.927344+00:00",
+    "desktopViewport": [
+      1280,
+      800
+    ],
+    "mobileViewport": [
+      390,
+      844
+    ],
+    "repeatVisitSharedHomepage": true,
+    "reefGeographyAndPerspectiveFactsVerified": true,
+    "mobileMethodDayForecastChartsAndHistoryVerified": true,
+    "consoleWarningsAndErrors": 0,
+    "desktopScreenshot": "artifacts/corridor/map-homepage-live-desktop.jpg",
+    "mobileScreenshot": "artifacts/corridor/map-homepage-live-mobile.jpg"
+  }
+}
