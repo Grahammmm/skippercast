@@ -90,6 +90,33 @@ test('a shoreline click becomes a mark with its own source date and stated accur
   assert.equal(coastlineMark({source_date: '1994-02-28'}).reading, 'Accuracy not stated');
 });
 
+test('every import line reads the same mark from the published shoreline (schema_version 2)', () => {
+  // The platform build merges import features with identical properties into one MultiLineString
+  // and rounds coordinates to 5 decimals; a click on any line must still give its old mark card.
+  const source = JSON.parse(readFileSync(new URL('../catalog/shoreline/morro-bay.geojson', import.meta.url), 'utf8'));
+  const published = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline.geojson', import.meta.url), 'utf8'));
+  assert.equal(published.type, 'FeatureCollection');
+  assert.equal(published.schema_version, 2);
+  const key = p => JSON.stringify(Object.keys(p).sort().map(k => [k, p[k]]));
+  const lines = g => g.type === 'LineString' ? [g.coordinates] : g.coordinates;
+  const byProps = new Map(published.features.map(f => [key(f.properties), f]));
+  assert.equal(byProps.size, published.features.length, 'one published feature per property set');
+  let matched = 0;
+  for (const feature of source.features) {
+    const merged = byProps.get(key(feature.properties));
+    assert.ok(merged, `${feature.id} has a published feature`);
+    assert.deepEqual(merged.properties, feature.properties);
+    assert.deepEqual(coastlineMark(merged.properties), coastlineMark(feature.properties));
+    assert.ok(coastlineMark(merged.properties), `${feature.id} stays selectable`);
+    for (const line of lines(feature.geometry)) {
+      const same = lines(merged.geometry).some(c => c.length === line.length && c.every(([x, y], i) => Math.abs(x - line[i][0]) <= 6e-6 && Math.abs(y - line[i][1]) <= 6e-6));
+      assert.ok(same, `${feature.id}: its line is in ${merged.id}`);
+      matched++;
+    }
+  }
+  assert.equal(published.features.reduce((n, f) => n + lines(f.geometry).length, 0), matched, 'no line added or lost');
+});
+
 test('the basemap archive comes from FE-10\'s manifest, and only a tiles/basemap/*.pmtiles key is accepted', async () => {
   const reply = (body, ok = true) => async url => { assert.equal(url, `https://s.test/${BASEMAP_MANIFEST}`); return {ok, json: async () => body}; };
   assert.equal(await basemapArchive(reply({key: 'tiles/basemap/ca-coast-20261008.pmtiles'}), PAGE), 'https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles');

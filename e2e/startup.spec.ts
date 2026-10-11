@@ -20,16 +20,17 @@ test('Morro Bay startup JSON from committed files stays within its budget', asyn
   expect(pageErrors).toEqual([]);
 });
 
-// The v2 app at /map (FE-60 made it the default), measured the same way. It reads each committed
-// file once. Its static total is printed but not yet held to the budget: the region's shoreline
-// (1.9 MB, the Chart's always-on coastline glow) keeps it over, pending an owner decision (#563).
-test('the v2 app reads each committed startup file once', async ({page, pageErrors}, info) => {
+// The v2 app at /map (FE-60 made it the default), measured the same way: it reads each committed
+// file once and stays within the same budget. The Chart's always-on coastline glow reads the
+// region's shoreline in its published form (schema_version 2, src/skippercast/platform/shoreline.py).
+test('the v2 app reads each committed startup file once, within the budget', async ({page, pageErrors}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
   await stubLiveFeeds(page, {id: 'morro-bay'});
   const result = await measureStartup(page, {path: '/map?region=morro-bay&ui=v2', ready: MAP_READY});
   console.log(formatTable(result));
   const repeated = result.rows.filter(r => !r.live && r.requests > 1).map(r => `${r.path} × ${r.requests}`);
   expect(repeated, 'each committed static file is requested once').toEqual([]);
+  expect(result.static, `static startup JSON ${result.static} bytes; budget ${budget.max_bytes} (scripts/startup-budget.json)`).toBeLessThanOrEqual(budget.max_bytes);
   expect(pageErrors).toEqual([]);
 });
 
