@@ -1,0 +1,13 @@
+{
+  "size": 1025,
+  "dx": 204.0,
+  "dz": 272.0,
+  "finite": true,
+  "ids": [
+    1,
+    19,
+    20
+  ],
+  "sha256": "be32531e5a7fd0c9c461ab1e7b4a77bddb1a19ccfe72e47bd1a66311f1f310d2",
+  "notice": "Regional display parent uses the same original NOAA model and dated USGS land inputs. ETOPO remains the broad background. No habitat scores or original native readings change."
+}
