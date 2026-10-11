@@ -29,9 +29,14 @@
    as not fishing) and per label, a
    confusion table in minutes, trips scored and missing, labels by labeller kind
    (a person's ``users.id`` or ``agent:<name>``), and the target before any public
-   use: at least 30 trips, fishing precision >= 0.8 and recall >= 0.7.
-   ``validation/report.json`` and ``report.md`` hold it; the Markdown (printed
-   too) carries aggregates only, no MMSI, trip id or labeller id.
+   use: at least 30 trips, fishing precision >= 0.8 and recall >= 0.7, and the same
+   precision and recall for each fishing mode (``target.per_mode``; N7).
+   ``transit_lost`` counts the labelled fishing minutes the classifier called
+   ``transit``, which discarding transit would have lost, in all and per mode;
+   ``coverage`` counts scored trips by dominant labelled mode (the fishing label
+   with the most minutes, else ``none``), by departure port and by local month
+   of departure. ``validation/report.json`` and ``report.md`` hold it; both
+   carry aggregates only, no MMSI, trip id or labeller id.
 
 ``--offline`` skips the sync and scores the copies and ``labels.json`` already
 on disk; ``--labeller admin|agent`` scores one kind of labeller's labels, so the
@@ -58,6 +63,7 @@ import sys
 import tempfile
 import time
 from typing import Any, Iterable, Mapping, Sequence
+from zoneinfo import ZoneInfo
 
 from ..config import FleetConfigError, load_region
 from ..sinks import worker_base
@@ -68,13 +74,14 @@ from .segment import BASIS, ActivityThresholds, prepare, split_trips
 from .sources.base import AisPosition
 from .store import ais_root
 
-__all__ = ["LABELS", "PREDICTIONS", "TARGET", "Interval", "LabelledTrip", "confusion", "fetch_labels", "main",
-           "markdown", "metrics", "predict", "report", "score", "sync", "validation_dir"]
+__all__ = ["LABELS", "PREDICTIONS", "TARGET", "Interval", "LabelledTrip", "confusion", "dominant_mode", "fetch_labels",
+           "job_worker", "main", "markdown", "metrics", "predict", "report", "score", "sync", "target", "transit_lost",
+           "validation_dir"]
 
 LABELS = ("in-port", "transit", "drift-anchor", "troll-slow", "troll-pelagic")
 PREDICTIONS = LABELS + ("uncertain", "gap", "none")
 UNSCORED = ("gap",)
-TARGET = {"trips": 30, "fishing_precision": 0.8, "fishing_recall": 0.7}
+TARGET = {"trips": 30, "fishing_precision": 0.8, "fishing_recall": 0.7}   # also each mode's precision and recall
 LEAD_MS = TAIL_MS = HOUR          # positions copied around a trip, so its departure and return are seen in port
 LABELS_FILE, REPORT_JSON, REPORT_MD = "labels.json", "report.json", "report.md"
 TRIP_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -159,6 +166,35 @@ def score(labels: Iterable[Interval], predictions: Iterable[Interval]) -> dict[s
     return metrics(confusion(labels, predictions))
 
 
+def _passes(v: Mapping) -> bool:
+    return (v["precision"] is not None and v["recall"] is not None and v["precision"] >= TARGET["fishing_precision"]
+            and v["recall"] >= TARGET["fishing_recall"])
+
+
+def target(result: Mapping, trips: int) -> dict[str, Any]:
+    """The overall gate (trips, fishing precision and recall) and the same ratios per fishing mode; ``met`` needs all."""
+    overall = trips >= TARGET["trips"] and _passes(result["fishing"])
+    modes = {m: {"precision": result["kinds"][m]["precision"], "recall": result["kinds"][m]["recall"],
+                 "met": _passes(result["kinds"][m])} for m in FISHING_KINDS}
+    return {**TARGET, "overall_met": overall, "per_mode": modes, "met": overall and all(v["met"] for v in modes.values())}
+
+
+def transit_lost(table: Mapping[str, Mapping[str, int]]) -> dict[str, Any]:
+    """Labelled fishing minutes predicted ``transit``: what discarding transit would have lost."""
+    modes = {m: table[m]["transit"] for m in FISHING_KINDS}
+    labelled = sum(table[m][p] for m in FISHING_KINDS for p in PREDICTIONS if p not in UNSCORED)
+    return {"minutes": sum(modes.values()), "share": _ratio(sum(modes.values()), labelled), "modes": modes}
+
+
+def dominant_mode(labels: Iterable[Interval]) -> str:
+    """The fishing label with the most labelled minutes (earlier mode on a tie), else ``none``."""
+    minutes = Counter()
+    for x in labels:
+        if x.kind in FISHING_KINDS:
+            minutes[x.kind] += len(_minutes(x))
+    return max(FISHING_KINDS, key=lambda m: (minutes[m], -FISHING_KINDS.index(m))) if minutes else "none"
+
+
 def predict(positions: Iterable[AisPosition], ports: Sequence, thresholds: ActivityThresholds) -> list[Interval]:
     """The processor's segments for one MMSI's positions (one fix a minute, trips, classification)."""
     rows = downsample(prepare(positions))
@@ -208,6 +244,13 @@ def _ms(iso: str) -> int:
 
 def _labeller_kind(labeller) -> str:
     return "agent" if str(labeller or "").startswith("agent:") else "admin"
+
+
+def job_worker(instead: str) -> Worker:
+    """The Worker client; a one-line error outside a ``fleet-ais.yml`` job, which alone has the GitHub OIDC token."""
+    if not all(os.environ.get(k) for k in ("ACTIONS_ID_TOKEN_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_TOKEN")):
+        raise WorkerError(f"no job token here: run it through fleet-ais.yml, or {instead}")
+    return Worker(worker_base())
 
 
 def validation_dir(root: Path) -> Path:
@@ -303,6 +346,8 @@ def report(region, root: Path | None = None, *, thresholds: ActivityThresholds |
         document = {"trips": []}
     table = {label: {kind: 0 for kind in PREDICTIONS} for label in LABELS}
     scored, missing, by_labeller, ports = 0, 0, Counter(), set()
+    coverage = {"modes": Counter(), "ports": Counter(), "months": Counter()}
+    zone = ZoneInfo(region.timezone)
     for row in document.get("trips") or []:
         trip = LabelledTrip.from_row(row)
         labels = trip.intervals(labeller)
@@ -320,23 +365,29 @@ def report(region, root: Path | None = None, *, thresholds: ActivityThresholds |
         add(table, confusion(labels, predict(positions, region.ports, th)))
         scored += 1
         ports.add(trip.depart_port_id)
+        coverage["modes"][dominant_mode(labels)] += 1
+        coverage["ports"][trip.depart_port_id or "unknown"] += 1
+        coverage["months"]["unknown" if trip.departed_ms is None
+                           else datetime.fromtimestamp(trip.departed_ms / 1000, zone).strftime("%Y-%m")] += 1
     result = metrics(table)
-    fishing = result["fishing"]
-    met = (scored >= TARGET["trips"] and fishing["precision"] is not None and fishing["recall"] is not None
-           and fishing["precision"] >= TARGET["fishing_precision"] and fishing["recall"] >= TARGET["fishing_recall"])
     return {"region": region.id, "computed_at": iso_utc(round(time.time() * 1000) if now_ms is None else now_ms),
             "classifier_version": classifier_version(th), "basis": BASIS, "labeller": labeller,
             "trips": {"scored": scored, "missing": missing, "ports": len(ports - {None})},
-            "labels": dict(sorted(by_labeller.items())), **result, "target": {**TARGET, "met": met}}
+            "labels": dict(sorted(by_labeller.items())), **result, "transit_lost": transit_lost(table),
+            "coverage": {k: dict(sorted(v.items())) for k, v in coverage.items()}, "target": target(result, scored)}
 
 
 def _pct(value) -> str:
     return "—" if value is None else f"{value:.3f}"
 
 
+def _counts(counts: Mapping[str, int]) -> str:
+    return ", ".join(f"{k} {n}" for k, n in counts.items()) or "none"
+
+
 def markdown(r: Mapping) -> str:
     """The report as Markdown: aggregates only (no MMSI, trip id or labeller id)."""
-    f, t = r["fishing"], r["target"]
+    f, t, lost, cov = r["fishing"], r["target"], r["transit_lost"], r["coverage"]
     lines = [f"## AIS classification validation, {r['region']}", "",
              f"Classifier `{r['classifier_version']}`, scored {r['computed_at']}. Segment kinds are inferred from "
              "movement (speed and track shape), never confirmed fishing; hand labels are the reference.", "",
@@ -347,7 +398,14 @@ def markdown(r: Mapping) -> str:
              f"- Minutes: {r['minutes']['labelled']} labelled, {r['minutes']['scored']} scored, "
              f"{r['minutes']['gap_unscored']} in gaps (not scored)",
              f"- **Fishing precision {_pct(f['precision'])}, recall {_pct(f['recall'])}** "
-             f"(target {t['fishing_precision']} and {t['fishing_recall']}): {'met' if t['met'] else 'not met'}", "",
+             f"(target {t['fishing_precision']} and {t['fishing_recall']}, overall and per mode): "
+             f"{'met' if t['met'] else 'not met'}",
+             "- Per mode: " + "; ".join(f"{m} {_pct(v['precision'])} / {_pct(v['recall'])} {'met' if v['met'] else 'not met'}"
+                                         for m, v in t["per_mode"].items()),
+             f"- Transit lost: {lost['minutes']} labelled fishing minutes called transit (share {_pct(lost['share'])}; "
+             f"{_counts(lost['modes'])})",
+             f"- Trips by dominant labelled mode: {_counts(cov['modes'])}; by port: {_counts(cov['ports'])}; "
+             f"by month: {_counts(cov['months'])}", "",
              "| Label | Precision | Recall | Labelled min | Predicted min |", "| --- | --- | --- | --- | --- |"]
     lines += [f"| {k} | {_pct(v['precision'])} | {_pct(v['recall'])} | {v['labelled_min']} | {v['predicted_min']} |"
               for k, v in r["kinds"].items()]
@@ -386,7 +444,7 @@ def main(argv=None) -> int:
         region = load_region(args.region)
         root = ais_root(region.id)
         if not args.offline:
-            counts = sync(region, Worker(worker_base()), root)
+            counts = sync(region, job_worker("use --offline to score the last sync"), root)
             print(json.dumps({"sync": counts}, sort_keys=True))
             if args.sync_only:
                 return 0

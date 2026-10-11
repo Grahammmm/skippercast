@@ -106,6 +106,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: **owner approves** the set (or labels it), recorded in `labeller`; then `python -m skippercast.fleet.ais validate` reports fishing precision ≥ 0.8 and recall ≥ 0.7, overall and per mode, and the fishing minutes transit discarding would have lost.
 - Runs: Large proposes labels; owner approves; Small runs `validate`.
 - Depends on: N5 (N6 public go-live waits on N7 and Q1). Reuses: CF-48 (`validate.py`, `server/fleet/admin/labels.ts`).
+- Status: in progress. N7a (`claude/n7-validate`): per-mode gate, transit-lost minutes, coverage counts, and `label export`/`label import` with the [labelling runbook](../../operations/runbooks/fleet-labelling.md). N7b (`claude/n7-labels-approve`) adds the job route, owner approval and the workflow input. The labelling run follows both.
 
 ### N8 · Skill packaging
 
