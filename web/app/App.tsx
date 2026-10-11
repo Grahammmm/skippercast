@@ -25,6 +25,8 @@ export interface RegionInfo {
   readonly localAreas?: readonly ReportLocalArea[];
   /** The aerial base the region's package offers (region.json `basemap.aerial`, FE-23); absent where none is. */
   readonly aerial?: AerialBase;
+  /** The region's published charter grounds (region.json `assets.charters`), read by the Reports view; absent where none are published. */
+  readonly charters?: string;
 }
 export const regionInfo = signal<RegionInfo | null>(null);
 /** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
@@ -40,13 +42,13 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = fetch): Pro
   try {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`);
     if (!response.ok) return null;
-    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string};
+    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}};
     const center = json.map?.center;
     if (typeof json.name !== 'string' || !center || center.length !== 2) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
     const aerial = aerialBase(json);
     const info: RegionInfo = {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
-      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}};
+      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}, ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {}};
     regionInfo.value = info;
     return info;
   } catch { return null; }

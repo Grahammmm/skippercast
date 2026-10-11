@@ -8,7 +8,8 @@
 // the view covers the map above the time dock, and the map stays mounted. The
 // Fleet view (FE-53) takes the brief column's place, so the map it drives stays
 // in view. Mobile.tsx (FE-06) composes the same pieces into
-// the sheet in its own order.
+// the sheet in its own order. The Reports view (FE-52) covers the brief and
+// the map; the stage stays mounted beneath it.
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {LayerRail} from './LayerRail.tsx';
@@ -18,6 +19,7 @@ import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
+import {Reports} from './views/Reports.tsx';
 import {appView} from '../state.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
@@ -51,6 +53,7 @@ export function Desktop({now = new Date()}: {now?: Date} = {}) {
         {appView.value === 'conditions' ? <Conditions now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
         <TimeDock now={now} />
       </MapStage>
+      {appView.value === 'reports' ? <div class="app-page"><Reports now={now} /></div> : null}
     </main>
   );
 }

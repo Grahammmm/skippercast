@@ -487,7 +487,7 @@ test('Currents draw the bound forecast as animated streamlines, read on click an
   await openLayers(page);
   const entry = page.locator('.ui-rail-item', {hasText: 'Currents'});
   await expect(entry.locator('.ui-rail-note')).toHaveText(/^forecast \w{3} \d{1,2} [ap]m$/);
-  await expect(page.locator('.app-legend-currents .ui-popover-body')).toHaveText(/^NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.$/);
+  await expect(page.locator('.app-legend-currents .ui-popover-body')).toHaveText(/^NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.How it’s built$/);
   await v2.a11y('v2-map-currents');
 
   const source = entry.getByRole('combobox', {name: 'Source'});
@@ -866,7 +866,7 @@ test('Water temp draws the bound analysis as a field with contours, names it, re
   const row = page.locator('.app-legend-water-temp');
   await expect(row.locator('[data-range="water-temp"]')).toHaveText('57–65 °F');
   await expect(row.locator('[data-stamp="water-temp"]')).toHaveText(/^NASA JPL MUR · analysis \w{3} \d{1,2} · 30 h old$/);
-  await expect(row.locator('.ui-popover-body')).toHaveText(/^NASA JPL MUR daily analysis on a 0\.01° grid sampled every 0\.02°, for \w{3} \d{1,2} \(30 h old\), with an analysis error of 0\.6 °F\. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank\.$/);
+  await expect(row.locator('.ui-popover-body')).toHaveText(/^NASA JPL MUR daily analysis on a 0\.01° grid sampled every 0\.02°, for \w{3} \d{1,2} \(30 h old\), with an analysis error of 0\.6 °F\. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank\.How it’s built$/);
   await expect(entry.locator('.ui-rail-note')).toHaveText(/^analysis \w{3} \d{1,2} · 30 h old$/);
   await expect(page.locator('[data-unavailable="water-temp"]')).toHaveCount(0);
   await v2.a11y('v2-map-water-temp');

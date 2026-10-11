@@ -4,20 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Sources & methods · SkipperCast</title>
-    <link rel="stylesheet" href="tokens.css" />
-    <link rel="stylesheet" href="styles.css" />
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3C/svg%3E"
-    />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="app-icon.svg" />
+    <!-- FE-54: the v2 tokens and the readable pages' sheet (FE-86); coast-readable.css reads only token names. -->
+    <link rel="stylesheet" href="../web/tokens.css" />
+    <link rel="stylesheet" href="coast-readable.css" />
   </head>
-  <body>
-    <header class="masthead">
-      <a class="brand" href="./">⌁ SkipperCast</a
-      ><a class="download" href="./">Back to the map</a>
+  <body class="coast-readable">
+    <a class="skip-link" href="#sources-content">Skip to sources</a>
+    <header>
+      <a class="brand" href="./">SkipperCast</a>
+      <nav aria-label="Public information"><a href="./">Back to the map</a><a href="/report">Readable report</a><a href="/methodology">Methods</a><a href="/about">About</a></nav>
     </header>
-    <main class="source-page">
+    <main id="sources-content">
       <h1>Sources &amp; methods</h1>
       <p>
         The map is a place to investigate habitat and compare forecast evidence.
@@ -153,7 +152,7 @@
         score rounded to a whole number. Relief and cover use the original 210-m
         local neighborhood; unevenness and habitat area use a 250-m radius. The
         analysis grid was 10 m (about 33 ft). These weights are a research
-        heuristic, not a model validated against catches. Larger habitat area
+        heuristic, never validated against catches. Larger habitat area
         alone cannot earn an A, and the analysis does not measure individual
         boulder sizes or establish fish presence.
       </p>
@@ -203,8 +202,8 @@
         windows are geographic interpretations: 1.25 nautical miles around the
         Pecho Rock landmark and two nautical miles around the Diablo Canyon
         reference. The displayed water is clipped to fully covered survey depths
-        of 25–195 ft in the original source raster, whose output datum is unverified, and buffered dated closures. This is not a chart-depth screen. These planning windows
-        are not reported charter footprints; overlap with a reef candidate does
+        of 25–195 ft in the original source raster, whose output datum is unverified, and buffered dated closures. This is not a chart-depth screen; these planning windows
+        are not reported charter footprints, and overlap with a reef candidate does
         not establish a visit.
       </p>
       <p>
@@ -233,7 +232,7 @@
         344 trips have no ground label; 164 say only “Out Front.” Other named
         grounds fall outside Avila–Cambria, and nine multi-ground reports are
         not assigned to one location. Incidental salmon or halibut in a mixed
-        trip does not turn the outline into a species-specific hotspot. This
+        trip never turns the outline into a species-specific hotspot. This
         first charter layer is shown only for lingcod and rockfish.
       </p>
       <p>
@@ -280,8 +279,8 @@
           >2026 daily index</a
         >
         listed broadcast dates through June 30; later file modification dates
-        are not later vessel observations. This is the limit of that checked
-        index, not every NOAA product. Credit NOAA Office for Coastal Management
+        are not later vessel observations. This limit applies to that checked
+        index rather than every NOAA product. Credit NOAA Office for Coastal Management
         and the U.S. Coast Guard Navigation Center. The
         <a href="https://github.com/ocm-marinecadastre/ais-vessel-traffic"
           >official archive documentation</a
@@ -317,8 +316,8 @@
         vessel’s identity and sportfishing role, then examine full trips,
         reporting gaps, and repeated slow bouts over suitable legal habitat. The
         proposed research screen is at least three distinct dates and 15 minutes
-        per bout, without a reporting gap over 10 minutes. It is not yet
-        implemented or validated. Slow movement can also be waiting,
+        per bout, without a reporting gap over 10 minutes. It remains
+        unimplemented and unvalidated. Slow movement can also be waiting,
         sightseeing, or work; even repeated charter visits do not prove catches.
       </p>
       <p>
@@ -338,7 +337,7 @@
         >
         provides ECMWF WAM and NOAA GFS Wave. Open-Meteo is a delivery service,
         not an additional independent model. These are coarse offshore model
-        samples, not observations at a specific rock or the Morro Bay entrance.
+        samples rather than observations at a specific rock or the Morro Bay entrance.
       </p>
       <p>
         Forecast data are requested when you press “Load latest forecast.” Times
@@ -371,7 +370,7 @@
         >, ODbL. Standard tiles follow the
         <a href="https://operations.osmfoundation.org/policies/tiles/"
           >OpenStreetMap tile policy</a
-        >; this app does not bulk-download them. The base map is not a nautical
+        >, and this app never bulk-downloads them. The base map is not a nautical
         chart.
       </p>
       <p>
@@ -443,5 +442,6 @@
         </p>
       </section>
     </main>
+    <footer><p>Forecasts, observations and habitat carry separate clocks; check the rules before you fish.</p></footer>
   </body>
 </html>

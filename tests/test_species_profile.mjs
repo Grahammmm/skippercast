@@ -87,6 +87,26 @@ test('Shore hides reef marks and lists surfperch first, on the Chart and in the 
   m.regionPlans.value = null;
 });
 
+test('FE-54: the target menu groups plans by the profile\'s method, its own species and the coast targets, with search', async () => {
+  const groups = html => [...html.matchAll(/<optgroup label="([^"]+)">(.*?)<\/optgroup>/g)].map(g => [g[1].replace(/&amp;/g, '&'), options(g[2])]);
+  const m = await loadMenu();
+  m.state.configureStore({v2: true, storage: null});
+  m.regionPlans.value = {region: 'morro-bay', plans: PLANS};
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&profile=boat`);
+  assert.deepEqual(groups(m.render(m.h(m.TargetSelect))), [
+    ['Boat targets', ['lingcod']],
+    ['Search plans · Boat', ['reef', 'halibut', 'salmon', 'albacore', 'bluefin', 'dungeness']],
+    ['Coast habitat targets', ['rockfish-reef', 'gopher-rockfish', 'cabezon-shallow-reef']],
+  ], 'boat: every plan whose method is boat, never merged with the coast targets');
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&profile=spear`);
+  assert.deepEqual(groups(m.render(m.h(m.TargetSelect))).map(g => g[0]), ['Spear targets', 'Search plans · Spear', 'Coast habitat targets']);
+  assert.deepEqual(groups(m.render(m.h(m.TargetSelect)))[1][1], ['reef'], 'spear lists only the dive-method plan');
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&profile=boat&target=vermilion`);
+  assert.deepEqual(groups(m.render(m.h(m.TargetSelect)))[0], ['From the link', ['vermilion']], 'the link\'s own target heads the menu');
+  assert.match(m.render(m.h(m.TargetSelect)), /<input type="search" class="app-target-search" aria-label="Find a target"/);
+  m.regionPlans.value = null;
+});
+
 test('Spear limits marks to 60 ft on the Chart and in the terrain; Boat to 300 ft (Accept 2)', () => {
   assert.deepEqual(ids(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', READY)), ['m45']);
   assert.deepEqual(ids(markFeatures(ATLAS, 'lingcod', 'boat', READY)), ['m45', 'm90', 'm250']);

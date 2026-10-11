@@ -2,7 +2,8 @@
 // Boat / Shore / Spear switch changes the Chart's reef marks, the target menu (shared by the
 // Chart and the terrain) and the terrain's species and depth limit; the link's ?profile= and
 // Fish's ?mode= win over the stored profile. The coast data bridge is held open, so the terrain
-// mounts and waits; marks come from the committed Morro Bay atlas.
+// mounts and waits; marks come from the committed Morro Bay atlas. FE-54: the menu groups the
+// search plans, the profile's own species and the coast targets, and its search field narrows it.
 import {readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 import {expect, test} from './fixtures.ts';
@@ -68,5 +69,24 @@ test('?profile= and Fish ?mode= win over the stored profile; an unsupported targ
   await expect.poll(() => targets(page)).toEqual(['yellowtail', 'surfperch', 'halibut']);
   await expect(page.locator('label:has-text("Target") select')).toHaveValue('yellowtail');
   expect(params(page).target).toBe('yellowtail');
+  expect(pageErrors).toEqual([]);
+});
+
+test('the target menu groups plans by method and coast targets, and search narrows it (FE-54)', async ({page, pageErrors, v2}) => {
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'lingcod'});
+  const select = page.locator('label:has-text("Target") select');
+  const groups = () => select.locator('optgroup').evaluateAll(gs => gs.map(g => [(g as HTMLOptGroupElement).label, [...(g as HTMLOptGroupElement).children].map(o => (o as HTMLOptionElement).value)]));
+  await expect.poll(groups).toEqual([
+    ['Boat targets', ['lingcod']],
+    ['Search plans · Boat', ['reef', 'halibut', 'salmon', 'albacore', 'bluefin', 'dungeness']],
+    ['Coast habitat targets', ['rockfish-reef', 'gopher-rockfish', 'cabezon-shallow-reef']],
+  ]);
+  await page.getByRole('searchbox', {name: 'Find a target'}).fill('salm');
+  await expect.poll(() => targets(page)).toEqual(['lingcod', 'salmon']);
+  await expect(select, 'the chosen target stays listed and chosen').toHaveValue('lingcod');
+  await select.selectOption('salmon');
+  await expect.poll(() => params(page).target).toBe('salmon');
+  await page.getByRole('searchbox', {name: 'Find a target'}).fill('');
+  await expect.poll(async () => (await targets(page)).length).toBe(10);
   expect(pageErrors).toEqual([]);
 });

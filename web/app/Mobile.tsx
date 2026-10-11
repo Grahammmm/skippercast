@@ -10,7 +10,8 @@
 // the rail and the legend; a selected mark replaces the peek content with
 // its card. In the Conditions view (FE-32) and the Fleet view (FE-53) the
 // sheet holds that view instead of the brief. Every piece is the desktop's,
-// composed in this order.
+// composed in this order. The Reports view (FE-52) opens from the sheet's
+// footer and replaces the sheet with its page over the map.
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -29,7 +30,8 @@ import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
-import {appView} from '../state.ts';
+import {Reports} from './views/Reports.tsx';
+import {appView, setParams, withParams} from '../state.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
@@ -87,10 +89,15 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
       </div>
       <Caveat brief={brief} />
       <BriefLinks brief={brief} />
-      <BriefFooter><AccountMenu inline /></BriefFooter>
+      <BriefFooter><ReportsLink /><AccountMenu inline /></BriefFooter>
     </div>
   );
 }
+
+/** The sheet footer's way into the Reports view (the four tabs leave it out). */
+export const ReportsLink = () =>
+  <a href={withParams(typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href, {view: 'reports'})} class="app-reports-link"
+    onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>Reports</a>;
 
 /** The layer rail and the legend as the sheet's content. */
 export function LayersPanel({onClose}: {onClose: () => void}) {
@@ -124,11 +131,11 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      <Sheet label={layersOpen ? 'Layers' : conditions ? 'Conditions' : fleet ? 'Fleet' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' ? <main class="app-mobile-page"><Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : conditions ? 'Conditions' : fleet ? 'Fleet' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : conditions ? <Conditions now={now} />
           : fleet ? <Fleet onShowMap={() => setDetent('peek')} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
-      </Sheet>
+      </Sheet>}
       <ViewNav icons class="app-tabs" />
     </div>
   );
