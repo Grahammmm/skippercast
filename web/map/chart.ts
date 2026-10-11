@@ -161,7 +161,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
         },
       });
-      // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 1.9 MB request).
+      // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).
       drawnRegion = id;
       engine.value = e;
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
