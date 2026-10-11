@@ -260,3 +260,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
 .app-conditions a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+/* FE-35: the History view takes the Conditions view's place over the map; historyView's own pickers and charts scroll inside it. */
+.app-history { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; color: var(--text); font-size: var(--text-13); }
+.app-stage > .app-history { position: absolute; inset: 0 0 calc(var(--touch-min) + var(--space-7)) 0; z-index: var(--z-map-chrome); padding: var(--space-4); overflow: auto; background: var(--panel); }
+.app-history h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
