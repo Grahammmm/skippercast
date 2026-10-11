@@ -1,5 +1,7 @@
 # Changelog
 
+- The Spear profile now gives a spearfishing reading instead of always reading Unknown: surge from swell height and period (long-period swell counts more; a fresh nearshore model is preferred over offshore swell), a clarity estimate (likely good, fair or likely poor) from satellite chlorophyll, recent rain chance, recent swell and wind, with its drivers named and the missing inputs said when it cannot be estimated, and chop from wind. The brief's headline, summary, status, lower-exposure windows and Swell tile use it; clarity is always labelled an estimate, never a visibility measurement (#542).
+
 - Preserve original classified-habitat source files in per-reach recovery so a clean publishing worker can verify them; report publication failures with code locations without logging data or exception payloads.
 
 - Extend the reviewed San Simeon bedrock outlines across the remaining eligible native SCC03 footprint, retaining uncertain terrain and nonexportable area labels.

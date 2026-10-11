@@ -95,7 +95,7 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
   const date = dateKey(new Date(pivot ?? now), info.timezone);
   try {
     const county = coast ? counties[coast.report.countyId] : undefined;
-    if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: info.name});
+    if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: info.name, daily: feed});
     const [lat, lon] = info.center;
     return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone, port: info.name}, profile: p, date, now, at: pivot});
   } catch { return null; }
