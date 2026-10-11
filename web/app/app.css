@@ -44,7 +44,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-brief h1 { margin: 0; font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
 .app-brief h2 { margin: 0; }
 .app-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
-.app-spark { display: grid; place-items: center; min-height: 72px; margin: 0; border: 1px dashed var(--line); border-radius: var(--radius-md); color: var(--muted); font-size: var(--text-13); }
+.app-spark { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); color: var(--muted); font-size: var(--text-13); }
+.app-spark-empty { display: grid; place-items: center; min-height: 72px; }
+.app-spark-events { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding: 0; list-style: none; }
 .app-picks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
 .app-where { display: flex; flex-direction: column; gap: var(--space-2); }
 .app-where-head { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }

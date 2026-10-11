@@ -2,9 +2,11 @@
 // CoastMarkup (FE-75, docs/plans/front-end/design.md § 3A.2): the v2 host for
 // the escaped HTML and SVG strings that packages/coast renders. v2 reuses those
 // renderers and never forks them, so their output has to reach the DOM as
-// markup. The allow-list starts with charts/series.ts `chart`. `tideChart`,
-// `historyView`, `catchSheet` and `fleetBrief` join it with the task that
-// first mounts them (FE-33, FE-35, Reports): their modules do not yet
+// markup. The allow-list starts with charts/series.ts `chart`; the brief's
+// tide sparkline (FE-33) calls `chart` with briefing.ts `tideChart`'s
+// arguments (web/tides.ts) rather than adding `tideChart`. `historyView`,
+// `catchSheet` and `fleetBrief` join it with the task that first mounts
+// them (FE-35, Reports): their modules do not yet
 // type-check under web/tsconfig.json's noUncheckedIndexedAccess, and fixing
 // that is a packages/coast change announced on issue #413.
 //
