@@ -7,9 +7,12 @@
 // file in node:vm with a fake `self`, rather than testing an exported copy.
 //
 // Caches (Cache Storage; nothing here uses localStorage):
-//   sc-shell-<build>  the app shell '/' and this build's fingerprinted assets,
-//                     listed by the build in /precache.json. Older builds are
-//                     deleted on activate.
+//   sc-shell-<build>  the shells '/' and '/?ui=v1' and this build's fingerprinted
+//                     assets, listed by the build in /precache.json. '/' is
+//                     whichever page the UI_V2 switch serves there (the v1 shell,
+//                     or the landing, whose first paint is listed too: #497);
+//                     '/?ui=v1' keeps the v1 shell offline while the switch
+//                     exists. Older builds are deleted on activate.
 //   sc-data           the latest public data responses seen online (bounded).
 //   sc-pack-<region>  an explicit "Save for offline" trip pack (offline-pack.js).
 //                     A pack saved from the v2 app (web/trip.ts, FE-51) also
@@ -46,6 +49,8 @@ const DATA_HOSTS = new Set(['api.tidesandcurrents.noaa.gov', 'api.weather.gov'])
 const FINGERPRINTED = /\.[0-9a-f]{10}\.(?:js|css)$/;
 // FE-51: the v2 app's page as a pack saves it, and its basemap archive (offline-core.js BASEMAP_ARCHIVE).
 const V2_SHELL = '/map';
+// #497: the v1 shell's key once '/' may be the landing; /index.html is always the v1 shell.
+const V1_SHELL = '/?ui=v1';
 const BASEMAP_ARCHIVE = /^\/feeds\/tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
 
 /** Which strategy answers this request, or null to leave it to the network. */
@@ -228,11 +233,13 @@ async function shell(event) {
   try {
     return await fetch(event.request);
   } catch (error) {
-    const path = new URL(event.request.url).pathname;
+    const url = new URL(event.request.url), path = url.pathname;
     // The v2 app opens offline only from a pack that saved it (FE-51).
     if (path === V2_SHELL) return fromPack(event.request, error, self.location.origin + V2_SHELL);
     if (!/^\/(?:index\.html)?$/.test(path)) throw error;
-    const saved = await (await caches.open(SHELL_CACHE)).match('/', {ignoreSearch: true});
+    const cache = await caches.open(SHELL_CACHE);
+    const v1 = path === '/index.html' || url.searchParams.get('ui') === 'v1';
+    const saved = await cache.match(v1 ? V1_SHELL : '/');
     if (!saved) throw error;
     return saved;
   }

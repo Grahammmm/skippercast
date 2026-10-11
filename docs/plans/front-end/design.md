@@ -271,10 +271,13 @@ escape every value (`esc`, `escapeHTML`) (§ 3A.2).
 - `scripts/build-worker.mjs` adds `app.html` and `landing.html` to `SHELLS`.
   `server/routes/assets.ts` decides which shell answers `/` and `/map`
   (§ 7, flag rules in § 14).
-- The service worker's install precache keeps v1's shell; the v2 entries
-  are stored only inside an offline pack saved from v2 (FE-51), which also
-  holds the basemap tiles for the saved region's bounds at zooms 8–12 under
-  the pack's tile cap (budget in § 13; dev-plan FE-51 records the decision).
+- The service worker's install precache keeps v1's shell and, since #497,
+  the landing's first paint (its static graph, no MapLibre) with the shells
+  `/` and `/?ui=v1`, so `/` opens offline whichever page `UI_V2` serves; the
+  app's entries are stored only inside an offline pack saved from v2 (FE-51),
+  which also holds the basemap tiles for the saved region's bounds at zooms
+  8–12 under the pack's tile cap (budget in § 13; dev-plan FE-51 and FE-60
+  record the decisions).
 
 ### Keeping Leaflet alive during the migration
 

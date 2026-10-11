@@ -11,7 +11,8 @@
 // - index.html modulepreloads the boot chain (scripts/vite-preload.mjs).
 // - sw.js stays at /sw.js, unhashed, and carries the build id; precache.json
 //   lists exactly this build's hashed scripts and styles, less those only the
-//   v2 pages load (FE-51), and its `v2` offline list resolves.
+//   v2 pages load (FE-51), plus the landing's first-paint graph and the
+//   shells `/` and `/?ui=v1` (#497), never MapLibre; its `v2` offline list resolves.
 // - The v2 pages stay within their gzipped JavaScript and CSS budgets
 //   (scripts/startup-budget.json "bundles"; FE-09, front-end design § 13).
 //   Usage: node scripts/check_client.mjs [client-dir] [source-dir] [budget-file]
@@ -19,7 +20,7 @@ import {readdir, readFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {MANIFEST, STABLE} from './client-build.mjs';
-import {FINGERPRINTED, v2Only} from './precache.mjs';
+import {installAssets, SHELLS} from './precache.mjs';
 import {bootPreloadRoots} from './vite-preload.mjs';
 
 const dir = process.argv[2] || 'dist/client';
@@ -114,12 +115,13 @@ if (index && Object.keys(manifest).length) {
 // 6. Stable service worker and the precache list.
 if (precache) {
   const listed = [...(precache.assets || [])].sort();
-  const only = v2Only(manifest);
-  const expected = assets.filter(n => FINGERPRINTED.test(n)).map(n => `/${n}`).filter(n => !only.has(n)).sort();
-  if (JSON.stringify(listed) !== JSON.stringify(expected)) problems.push('precache.json assets differ from the hashed scripts and styles the v1 pages can load');
+  const expected = installAssets(manifest, assets.map(n => n.replace(/^assets\//, '')));
+  if (JSON.stringify(listed) !== JSON.stringify(expected)) problems.push('precache.json assets differ from the hashed scripts and styles the v1 pages can load plus the landing\'s first paint');
+  for (const path of listed) if (!await exists(path.slice(1))) problems.push(`precache.json -> ${path} (missing)`);
+  for (const path of listed) if (/maplibre/i.test(path)) problems.push(`precache.json installs ${path}; MapLibre is stored only in a v2 pack (FE-51)`);
   if (manifest['app.html'] && !precache.v2?.assets?.length) problems.push('precache.json lists no v2 offline shell');
   for (const path of [...precache.v2?.assets || [], ...precache.v2?.static || []]) if (!await exists(path.slice(1))) problems.push(`precache.json v2 -> ${path} (missing)`);
-  if (JSON.stringify(precache.shells) !== JSON.stringify(['/'])) problems.push('precache.json must list the app shell "/"');
+  if (JSON.stringify(precache.shells) !== JSON.stringify(SHELLS)) problems.push(`precache.json must list the shells ${SHELLS.join(' and ')} (#497)`);
   for (const path of precache.static || []) if (!await exists(path.slice(1))) problems.push(`precache.json -> ${path} (missing)`);
   const sw = await readFile(join(dir, 'sw.js'), 'utf8').catch(() => '');
   if (!sw) problems.push('sw.js missing at the site root');

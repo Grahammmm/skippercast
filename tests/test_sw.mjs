@@ -190,22 +190,48 @@ test('chart tiles come from a trip pack offline, marked with their saved time', 
 
 test('install precaches the build manifest; navigation falls back to the cached shell offline', async () => {
   let online = true;
-  const manifest = {schema_version: 1, build: 'dev', shells: ['/'], assets: ['/app.0123456789.js'], static: ['/vendor/leaflet.js']};
+  const manifest = {schema_version: 1, build: 'dev', shells: ['/', '/?ui=v1'], assets: ['/app.0123456789.js'], static: ['/vendor/leaflet.js']};
   const worker = loadWorker({network: request => {
     if (!online) throw new TypeError('offline');
-    const path = new URL(request.url).pathname;
-    if (path === '/precache.json') return Response.json(manifest);
-    return new Response(`body of ${path}`);
+    const url = new URL(request.url);
+    if (url.pathname === '/precache.json') return Response.json(manifest);
+    return new Response(`body of ${url.pathname}${url.search}`);
   }});
   const waits = [];
   worker.listeners.install.forEach(fn => fn({waitUntil: p => waits.push(p)}));
   await Promise.all(waits);
   const shell = await worker.storage.open('sc-shell-dev');
-  assert.deepEqual((await shell.keys()).map(r => new URL(r.url).pathname).sort(), ['/', '/app.0123456789.js', '/vendor/leaflet.js']);
+  assert.deepEqual((await shell.keys()).map(r => { const u = new URL(r.url); return u.pathname + u.search; }).sort(), ['/', '/?ui=v1', '/app.0123456789.js', '/vendor/leaflet.js']);
   online = false;
   assert.equal(await (await dispatch(worker, nav('/?region=morro-bay'))).text(), 'body of /');
   assert.equal(await (await dispatch(worker, get('/app.0123456789.js'))).text(), 'body of /app.0123456789.js');
   await assert.rejects(dispatch(worker, nav('/sources.html')), 'only the app shell has an offline fallback');
+});
+
+// #497: once UI_V2 is on, '/' stores the landing; the v1 shell stays offline at ?ui=v1 for the release that keeps the switch.
+test('with v2 the default, offline / opens the landing and its first paint, ?ui=v1 and /index.html the v1 shell', async () => {
+  let online = true;
+  const manifest = {schema_version: 1, build: 'dev', shells: ['/', '/?ui=v1'], assets: ['/assets/index.0123456789.js', '/assets/landing.1111111111.js'], static: []};
+  const worker = loadWorker({network: request => {
+    if (!online) throw new TypeError('offline');
+    const url = new URL(request.url);
+    if (url.pathname === '/precache.json') return Response.json(manifest);
+    // The Worker with UI_V2 on: '/' is the landing, '?ui=v1' forces the v1 shell.
+    if (url.pathname === '/') return new Response(url.searchParams.get('ui') === 'v1' ? 'v1 shell' : 'landing');
+    return new Response(`body of ${url.pathname}`);
+  }});
+  const waits = [];
+  worker.listeners.install.forEach(fn => fn({waitUntil: p => waits.push(p)}));
+  await Promise.all(waits);
+  online = false;
+  assert.equal(await (await dispatch(worker, nav('/'))).text(), 'landing');
+  assert.equal(await (await dispatch(worker, nav('/?ui=v2'))).text(), 'landing');
+  assert.equal(await (await dispatch(worker, get('/assets/landing.1111111111.js'))).text(), 'body of /assets/landing.1111111111.js', 'the landing paints offline');
+  assert.equal(await (await dispatch(worker, nav('/?ui=v1&region=morro-bay'))).text(), 'v1 shell');
+  assert.equal(await (await dispatch(worker, nav('/index.html'))).text(), 'v1 shell');
+  assert.equal(await (await dispatch(worker, get('/assets/index.0123456789.js'))).text(), 'body of /assets/index.0123456789.js');
+  await assert.rejects(dispatch(worker, nav('/map?region=morro-bay')), /offline/, 'the app opens offline only from a pack');
+  await assert.rejects(dispatch(worker, get('/assets/maplibre.2222222222.js')), /offline/, 'MapLibre is never installed');
 });
 
 test('a failed precache does not fail the install (push must still work)', async () => {
