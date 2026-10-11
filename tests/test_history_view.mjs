@@ -98,5 +98,13 @@ test('a bundle whose unescaped numbers are not numbers never reaches the DOM', (
   const counts = structuredClone(bundle);
   counts.stations[0].baseline.months = [{month: 10, metric: 'waterTempF', unit: '°F', count: 5, rawSampleCount: 5, expectedHours: '<b>', coverageFraction: 1, yearsWithData: [2025], p10: 1, median: 2, p90: 3, min: 1, max: 3, mean: 2}];
   assert.equal(v.isRenderableHistory(counts), false);
+  const archive = structuredClone(bundle);
+  archive.stations[0].archive.availableYears = {length: '<img src=x onerror=alert(1)>'};
+  assert.equal(v.isRenderableHistory(archive), false, 'archive years are counted unescaped');
+  assert.throws(() => v.coastMarkup('historyView', [{county: {id: 'slo', timezone: 'UTC'}, now: NOW}, archive, v.historySelection(null, null, null)]), TypeError);
+  archive.stations[0].archive.availableYears = [2024, 2025.5];
+  assert.equal(v.isRenderableHistory(archive), false);
+  delete archive.stations[0].archive;
+  assert.equal(v.isRenderableHistory(archive), false);
   assert.equal(v.isRenderableHistory(null), true, 'null renders the unavailable state');
 });

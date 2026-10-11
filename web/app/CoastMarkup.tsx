@@ -48,11 +48,16 @@ export const isCoastColour = (value: unknown): value is string => typeof value =
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const isYears = (value: unknown): boolean => Array.isArray(value) && value.every(Number.isInteger);
-/** Whether every number `historyView` interpolates without escaping is a finite number (years are integers). */
+/**
+ * Whether every feed value `historyView` interpolates without escaping is safe: the window and month counts are
+ * finite numbers, and each year list it prints or counts (archive.availableYears, baseline.years,
+ * months[].yearsWithData) is a real array of integers. Everything else it writes raw is a constant or passes
+ * through value()/time()/toFixed or a computed length.
+ */
 export function isRenderableHistory(bundle: HistoryBundle | null): boolean {
   if (bundle === null) return true;
   return isNumber(bundle.recentWindowDays) && Array.isArray(bundle.stations) && bundle.stations.every(station =>
-    isYears(station?.baseline?.years) && Array.isArray(station.baseline.months) && station.baseline.months.every(m =>
+    isYears(station?.archive?.availableYears) && isYears(station.baseline?.years) && Array.isArray(station.baseline.months) && station.baseline.months.every(m =>
       isYears(m?.yearsWithData) && isNumber(m.count) && isNumber(m.rawSampleCount) && isNumber(m.expectedHours)));
 }
 
