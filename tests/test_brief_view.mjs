@@ -24,6 +24,7 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export * from './web/brief/Brief.tsx';
+      export {parseConditionsForecast} from './web/conditions.ts';
       export {Tiles, tileProps, ageText, sourceLine} from './web/brief/Tiles.tsx';
       export {Brief} from './web/app/Desktop.tsx';
       export {regionInfo} from './web/app/App.tsx';
@@ -36,6 +37,18 @@ async function load() {
   return mod;
 }
 const sources = (over = {}) => ({info: INFO, feed: montereyDaily, coast: null, profile: 'boat', hour: null, ...over});
+
+/** A synthetic /api/forecast answer for Monterey (values invented): NOAA wind and waves hourly for eight days from `start`, the runs issued `runAgeH` before NOW. */
+function forecastFeed({runAgeH = 6, region = INFO.id} = {}) {
+  const start = Date.parse('2026-10-08T07:00:00Z') / 1000, issued = NOW.getTime() / 1000 - runAgeH * 3600;
+  const time = Array.from({length: 8 * 24}, (_, i) => start + i * 3600);
+  const series = values => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(values).map(([k, [, u]]) => [k, u]))},
+    hourly: {time, ...Object.fromEntries(Object.entries(values).map(([k, [v]]) => [k, time.map(() => v)]))}});
+  const meta = {last_run_initialisation_time: issued, data_end_time: time.at(-1)};
+  return {region_id: region, retrieved: NOW.getTime() - 20 * 60_000, requested_points: [['monterey-bay', 36.7, -121.95], ['offshore-0-0', 36.5, -122.25]],
+    models: {gfs_global: {meta, data: [0, 1].map(() => series({wind_speed_10m: [9, 'kn'], wind_gusts_10m: [14, 'kn'], wind_direction_10m: [300, '°'], temperature_2m: [60, '°F'], cloud_cover: [30, '%']}))},
+      ncep_gfswave016: {meta, data: [0, 1].map(() => series({wave_height: [5.1, 'ft'], wave_period: [12, 's']}))}}};
+}
 
 test('ageText and the source line: minutes, hours, days; no reading says unavailable', async () => {
   const {ageText, sourceLine} = await load();
@@ -100,4 +113,56 @@ test('a feed for another region, or no region, leaves the brief empty', async ()
   assert.equal(await loadDailyFeed('morro-bay', fetchFn), null, 'identity check: region_id must match');
   assert.equal((await loadDailyFeed('monterey-point-sur', fetchFn))?.region_id, 'monterey-point-sur');
   dailyFeed.value = null;
+});
+
+test('#542: the sampled regional forecast fills the wind and swell tiles, fresh within its run limit', async () => {
+  const {briefFrom, parseConditionsForecast, Tiles, render, h} = await load();
+  const forecast = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
+  const brief = briefFrom(sources({forecast}), NOW);
+  const wind = brief.tiles.find(t => t.id === 'wind'), swell = brief.tiles.find(t => t.id === 'swell');
+  assert.deepEqual([wind.value, wind.state, wind.source, wind.detail], [9, 'fresh', 'NOAA forecast · monterey-bay', 'gust 14 kt · from WNW']);
+  assert.deepEqual([swell.value, swell.state, swell.detail], [5.1, 'fresh', '12 s · offshore forecast']);
+  assert.equal(wind.ageMs, 6 * 3_600_000, 'the age runs from the model run');
+  assert.ok(!brief.missing.includes('Fresh local forecast unavailable'));
+  const html = render(h(Tiles, {tiles: brief.tiles}));
+  assert.match(html, /NOAA forecast · monterey-bay · 6 h old/);
+  assert.equal((html.match(/<span class="ui-reading">—<\/span>/g) || []).length, 0);
+});
+
+test('#542: an old run reads stale with its age, never as fresh', async () => {
+  const {briefFrom, parseConditionsForecast, Tiles, render, h} = await load();
+  const brief = briefFrom(sources({forecast: parseConditionsForecast(forecastFeed({runAgeH: 30}), INFO.id, INFO.center)}), NOW);
+  for (const id of ['wind', 'swell']) {
+    const t = brief.tiles.find(x => x.id === id);
+    assert.equal(t.state, 'stale', `${id} is stale`);
+    assert.notEqual(t.value, null, `${id} still shows its reading`);
+  }
+  assert.ok(brief.missing.includes('Fresh local forecast unavailable'), 'buildDaily does not plan on the old run');
+  assert.equal(brief.status, 'Unknown');
+  const html = render(h(Tiles, {tiles: brief.tiles}));
+  assert.equal((html.match(/NOAA forecast · monterey-bay · 30 h old/g) || []).length, 2);
+});
+
+test('#542: a missing forecast, or one for another region, leaves wind and swell unavailable', async () => {
+  const {briefFrom, parseConditionsForecast} = await load();
+  const other = {...parseConditionsForecast(forecastFeed({region: 'morro-bay'}), 'morro-bay', null)};
+  for (const forecast of [null, undefined, other]) {
+    const brief = briefFrom(sources({forecast}), NOW);
+    assert.deepEqual(brief.tiles.filter(t => t.id === 'wind' || t.id === 'swell').map(t => [t.value, t.state]), [[null, 'unavailable'], [null, 'unavailable']]);
+  }
+});
+
+test('#542: the forecast loads once per region and point, and a failed load is tried again', async () => {
+  const {ensureRegionalForecast, regionalForecast} = await load();
+  let calls = 0, fail = true;
+  const fetchFn = async url => { calls++; assert.match(String(url), /\/api\/forecast\?region=monterey-point-sur$/); return fail ? new Response('', {status: 503}) : new Response(JSON.stringify(forecastFeed()), {status: 200}); };
+  const page = 'https://skippercast.test/map';
+  assert.equal(await ensureRegionalForecast(INFO.id, INFO.center, fetchFn, page), null);
+  fail = false;
+  const f = await ensureRegionalForecast(INFO.id, INFO.center, fetchFn, page);
+  assert.equal(f.point.id, 'monterey-bay');
+  assert.equal(regionalForecast.value, f);
+  await ensureRegionalForecast(INFO.id, INFO.center, fetchFn, page);
+  assert.equal(calls, 2, 'the brief and the Conditions view share one request');
+  regionalForecast.value = null;
 });
