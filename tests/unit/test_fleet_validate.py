@@ -35,7 +35,7 @@ def label(start_min, end_min, kind, labeller="admin-test", basis="track shape"):
 
 # How the synthetic track was built (test_fleet_process.track): in port to 30 min, transit to 55, drift to 95,
 # troll to 125, then home. A person who knew that would label it so.
-LABELS = [label(30, 55, "transit"), label(55, 95, "fishing-drift"), label(95, 125, "fishing-troll", "agent:test", "skipper's log")]
+LABELS = [label(30, 55, "transit"), label(55, 95, "drift-anchor"), label(95, 125, "troll-pelagic", "agent:test", "skipper's log")]
 
 
 def trip_row(trip_id=TRIP, labels=LABELS, returned=T0 + 140 * M, source="aisstream"):
@@ -72,37 +72,37 @@ class ScoringTests(unittest.TestCase):
         fishing: agree 30 + 20 = 50; predicted 30 + 20 (transit labelled) + 20 = 70; labelled 40 + 25 = 65
                  P = 50 / 70 = 0.714, R = 50 / 65 = 0.769
         """
-        labels = [Interval(0, 40 * M, "fishing-drift"), Interval(40 * M, 60 * M, "transit"),
-                  Interval(60 * M, 90 * M, "fishing-troll"), Interval(90 * M, 100 * M, "in-port")]
-        predictions = [Interval(0, 10 * M, "transit"), Interval(10 * M, 50 * M, "fishing-drift"),
-                       Interval(50 * M, 80 * M, "fishing-troll"), Interval(80 * M, 85 * M, "gap"),
+        labels = [Interval(0, 40 * M, "drift-anchor"), Interval(40 * M, 60 * M, "transit"),
+                  Interval(60 * M, 90 * M, "troll-slow"), Interval(90 * M, 100 * M, "in-port")]
+        predictions = [Interval(0, 10 * M, "transit"), Interval(10 * M, 50 * M, "drift-anchor"),
+                       Interval(50 * M, 80 * M, "troll-slow"), Interval(80 * M, 85 * M, "gap"),
                        Interval(85 * M, 90 * M, "transit")]
         r = score(labels, predictions)
-        self.assertEqual(r["confusion"]["fishing-drift"], {"in-port": 0, "transit": 10, "fishing-drift": 30, "fishing-troll": 0, "gap": 0, "none": 0})
-        self.assertEqual(r["confusion"]["transit"], {"in-port": 0, "transit": 0, "fishing-drift": 10, "fishing-troll": 10, "gap": 0, "none": 0})
-        self.assertEqual(r["confusion"]["fishing-troll"], {"in-port": 0, "transit": 5, "fishing-drift": 0, "fishing-troll": 20, "gap": 5, "none": 0})
-        self.assertEqual(r["confusion"]["in-port"], {"in-port": 0, "transit": 0, "fishing-drift": 0, "fishing-troll": 0, "gap": 0, "none": 10})
+        self.assertEqual(r["confusion"]["drift-anchor"], {"in-port": 0, "transit": 10, "drift-anchor": 30, "troll-slow": 0, "troll-pelagic": 0, "uncertain": 0, "gap": 0, "none": 0})
+        self.assertEqual(r["confusion"]["transit"], {"in-port": 0, "transit": 0, "drift-anchor": 10, "troll-slow": 10, "troll-pelagic": 0, "uncertain": 0, "gap": 0, "none": 0})
+        self.assertEqual(r["confusion"]["troll-slow"], {"in-port": 0, "transit": 5, "drift-anchor": 0, "troll-slow": 20, "troll-pelagic": 0, "uncertain": 0, "gap": 5, "none": 0})
+        self.assertEqual(r["confusion"]["in-port"], {"in-port": 0, "transit": 0, "drift-anchor": 0, "troll-slow": 0, "troll-pelagic": 0, "uncertain": 0, "gap": 0, "none": 10})
         self.assertEqual(r["minutes"], {"labelled": 100, "scored": 95, "gap_unscored": 5})
         self.assertEqual(r["fishing"], {"labelled_min": 65, "predicted_min": 70, "agree_min": 50, "precision": 0.714, "recall": 0.769})
         k = r["kinds"]
-        self.assertEqual((k["fishing-drift"]["precision"], k["fishing-drift"]["recall"]), (0.75, 0.75))
-        self.assertEqual((k["fishing-troll"]["precision"], k["fishing-troll"]["recall"]), (0.667, 0.8))
+        self.assertEqual((k["drift-anchor"]["precision"], k["drift-anchor"]["recall"]), (0.75, 0.75))
+        self.assertEqual((k["troll-slow"]["precision"], k["troll-slow"]["recall"]), (0.667, 0.8))
         self.assertEqual((k["transit"]["precision"], k["transit"]["recall"]), (0.0, 0.0))
         self.assertEqual((k["in-port"]["precision"], k["in-port"]["recall"]), (None, 0.0))
 
     def test_whole_minutes_inside_a_label_count_once(self):
         # 00:30 to 03:00 holds the minutes starting 01:00 and 02:00; a second label over 02:00 does not count it again.
-        table = confusion([Interval(30_000, 3 * M, "transit"), Interval(2 * M, 4 * M, "fishing-drift")],
+        table = confusion([Interval(30_000, 3 * M, "transit"), Interval(2 * M, 4 * M, "drift-anchor")],
                           [Interval(0, 10 * M, "transit")])
         self.assertEqual(table["transit"]["transit"], 2)
-        self.assertEqual(table["fishing-drift"]["transit"], 1)
+        self.assertEqual(table["drift-anchor"]["transit"], 1)
         with self.assertRaises(ValueError):
             confusion([Interval(0, M, "fishing")], [])
 
     def test_a_drift_minute_predicted_troll_is_still_fishing(self):
-        r = score([Interval(0, 10 * M, "fishing-drift")], [Interval(0, 10 * M, "fishing-troll")])
+        r = score([Interval(0, 10 * M, "drift-anchor")], [Interval(0, 10 * M, "troll-slow")])
         self.assertEqual((r["fishing"]["precision"], r["fishing"]["recall"]), (1.0, 1.0))
-        self.assertEqual(r["kinds"]["fishing-drift"]["recall"], 0.0)
+        self.assertEqual(r["kinds"]["drift-anchor"]["recall"], 0.0)
 
     def test_no_labels_give_no_ratios(self):
         r = metrics(confusion([], [Interval(0, M, "transit")]))
@@ -201,16 +201,16 @@ class ReportTests(SyncTestCase):
     def test_one_labeller_kind_and_other_thresholds(self):
         agent = validate.report(REGION, self.root, labeller="agent", now_ms=T0)
         self.assertEqual(agent["labels"], {"agent": 1})
-        self.assertEqual(agent["kinds"]["fishing-drift"]["labelled_min"], 0)
+        self.assertEqual(agent["kinds"]["drift-anchor"]["labelled_min"], 0)
         self.assertEqual(agent["minutes"]["labelled"], 30)
         override = Path(self.tmp.name) / "th.json"
         override.write_text(json.dumps({"drift": {"max_sog_kn": 0.1}}))
         th = validate._thresholds(REGION, str(override))
         self.assertEqual(th.drift_max_sog_kn, 0.1)
-        self.assertEqual(th.troll_max_sog_kn, ActivityThresholds.from_region(REGION).troll_max_sog_kn)
+        self.assertEqual(th.troll_pelagic_max_sog_kn, ActivityThresholds.from_region(REGION).troll_pelagic_max_sog_kn)
         retested = validate.report(REGION, self.root, thresholds=th, now_ms=T0)
         self.assertNotEqual(retested["classifier_version"], validate.report(REGION, self.root, now_ms=T0)["classifier_version"])
-        self.assertEqual(retested["kinds"]["fishing-drift"]["agree_min"], 0, "no fix drifts under 0.1 kn")
+        self.assertEqual(retested["kinds"]["drift-anchor"]["agree_min"], 0, "no fix drifts under 0.1 kn")
 
     def test_a_trip_without_a_copy_is_missing(self):
         self.copy.unlink()

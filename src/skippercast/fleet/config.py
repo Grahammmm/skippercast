@@ -379,10 +379,12 @@ def _region_problems(doc, catalogs, root: Path) -> list[str]:
         problems.append(f"thresholds.match: mmsi_auto is below the watched floor {WATCHED_MIN_CONFIDENCE}")
     if match["schedule"]["min_days"] > match["schedule"]["min_span_days"]:
         problems.append("thresholds.match.schedule: min_days is above min_span_days")
-    if activity["troll"]["min_sog_kn"] >= activity["troll"]["max_sog_kn"]:
-        problems.append("thresholds.activity.troll: min_sog_kn must be below max_sog_kn")
-    if activity["drift"]["max_sog_kn"] >= activity["troll"]["min_sog_kn"]:
-        problems.append("thresholds.activity: drift max_sog_kn must be below troll min_sog_kn")
+    slow, pelagic = activity["troll_slow"], activity["troll_pelagic"]
+    speeds = (activity["drift"]["max_sog_kn"], slow["min_sog_kn"], slow["max_sog_kn"], pelagic["min_sog_kn"],
+              pelagic["max_sog_kn"])
+    if any(a >= b for a, b in zip(speeds, speeds[1:])):
+        problems.append("thresholds.activity: speeds must rise strictly: drift max_sog_kn < troll_slow min_sog_kn"
+                        " < troll_slow max_sog_kn < troll_pelagic min_sog_kn < troll_pelagic max_sog_kn")
 
     catalog_fields = catalogs["resolver"]["fields"]
     for key, override in doc["resolver_overrides"].items():

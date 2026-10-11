@@ -330,7 +330,8 @@ def derive(positions: Iterable, mmsi: int, ref: VesselRef, region, *, source: st
                 "id": segment_id(tid, seg.seq), "trip_id": tid, "seq": seg.seq, "kind": seg.kind,
                 "started_at": iso_utc(seg.started_at), "ended_at": iso_utc(seg.ended_at),
                 "geometry": segment_geometry(seg, tolerance), "points_n": seg.points_n, "mean_sog": seg.mean_sog,
-                "straightness": seg.straightness, "heading_var": seg.heading_var})
+                "p90_sog": seg.p90_sog, "distance_nm": seg.distance_nm, "straightness": seg.straightness,
+                "heading_var": seg.heading_var})
         context = TripContext(tid, ref.vessel_id, region.id, source, rights, season, part,
                               trip.depart_port_id or ref.port_id, ref.vessel_class, None)
         events.extend(build_events(result, region.ports, context))

@@ -48,9 +48,13 @@ BASE = {
                      'gap_unknown_min': 30, 'gap_split_hours': 12,
                      'max_open_trip_hours': {'six-pack': 18, 'inspected-party': 40, 'long-range': 480},
                      'window_min': 20, 'min_segment_minutes': 5, 'simplify_tolerance_m': 25,
+                     'offshore_min_nm': 5.0,
                      'drift': {'max_sog_kn': 2.0, 'min_minutes': 15},
-                     'troll': {'min_sog_kn': 4.0, 'max_sog_kn': 9.0, 'max_straightness': 0.6,
-                               'min_heading_variance': 0.35, 'min_minutes': 15}},
+                     'troll_slow': {'min_sog_kn': 2.2, 'max_sog_kn': 3.5, 'max_straightness': 0.9,
+                                    'min_heading_variance': 0.05, 'min_minutes': 15},
+                     'troll_pelagic': {'min_sog_kn': 5.0, 'max_sog_kn': 9.0, 'stop_max_minutes': 30,
+                                       'min_minutes': 30},
+                     'transit': {'min_straightness': 0.8}},
         'match': {'auto_merge': 0.9, 'review_min': 0.6, 'mmsi_auto': 0.85,
                   'schedule': {'min_days': 5, 'min_span_days': 14, 'min_lead': 3, 'max_contradictions': 1, 'lapse_days': 30}},
         'refresh': {'vanished_after_runs': 3, 'vanished_after_days': 45, 'osint_stale_days': 60, 'fact_stale_days': 120},
@@ -189,7 +193,15 @@ class LoadRegion(unittest.TestCase):
             doc['thresholds']['activity']['drift']['max_sog_kn'] = 5.0
         found = self.problems(mutate)
         self.assertIn('review_min is above auto_merge', found)
-        self.assertIn('drift max_sog_kn must be below troll min_sog_kn', found)
+        self.assertIn('speeds must rise strictly', found)
+
+    def test_speed_bands_must_not_overlap(self):
+        for block, key, value in (('troll_slow', 'max_sog_kn', 5.5), ('troll_pelagic', 'min_sog_kn', 10.0),
+                                  ('troll_slow', 'min_sog_kn', 2.0)):
+            def mutate(doc):
+                doc['thresholds']['activity'][block][key] = value
+            with self.subTest(block=block, key=key):
+                self.assertIn('speeds must rise strictly', self.problems(mutate))
 
     def test_resolver_override_must_name_a_catalog_field_and_known_sources(self):
         def mutate(doc):

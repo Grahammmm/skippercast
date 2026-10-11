@@ -12,7 +12,7 @@
 //   GET  /api/fleet/jobs/labels        ?region= &cursor=   labelled trips with their labels, by trip id, for
 //                                      `python -m skippercast.fleet.ais validate` (src/skippercast/fleet/ais/validate.py)
 //
-// A label is a time range of one trip marked in-port, transit, fishing-drift or fishing-troll,
+// A label is a time range of one trip marked in-port, transit, drift-anchor, troll-slow or troll-pelagic,
 // with its basis (what the labeller went on: the track's shape, a skipper's log, a landing
 // report...). `labeller` records who: the admin's users.id; an agent-labelled set carries
 // `agent:<name>` and is counted apart so the owner can review and approve it. Ranges of one
@@ -27,7 +27,7 @@
 import {decodePolyline} from '../map.ts';
 import type {AdminOutcome} from '../../advisor/admin/skippers.ts';
 
-export const LABELS = ['in-port', 'transit', 'fishing-drift', 'fishing-troll'] as const;
+export const LABELS = ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic'] as const;
 export type TripLabel = typeof LABELS[number];
 export const BASIS = 'inferred-from-movement';
 export const TARGET_TRIPS = 30;

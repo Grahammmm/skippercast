@@ -373,16 +373,26 @@
       "window_min": 20,
       "min_segment_minutes": 5,
       "simplify_tolerance_m": 25,
+      "offshore_min_nm": 5.0,
       "drift": {
         "max_sog_kn": 2.0,
         "min_minutes": 15
       },
-      "troll": {
-        "min_sog_kn": 4.0,
-        "max_sog_kn": 9.0,
-        "max_straightness": 0.6,
-        "min_heading_variance": 0.35,
+      "troll_slow": {
+        "min_sog_kn": 2.2,
+        "max_sog_kn": 3.5,
+        "max_straightness": 0.9,
+        "min_heading_variance": 0.05,
         "min_minutes": 15
+      },
+      "troll_pelagic": {
+        "min_sog_kn": 5.0,
+        "max_sog_kn": 9.0,
+        "stop_max_minutes": 30,
+        "min_minutes": 30
+      },
+      "transit": {
+        "min_straightness": 0.8
       }
     },
     "match": {

@@ -122,7 +122,11 @@ class DeriveTests(ProcessTestCase):
         self.assertEqual((trip["rights"], trip["season"], trip["local_date"]), ("internal-only", "2026", "2026-10-05"))
         self.assertEqual(trip["vessel_id"], VESSEL)
         kinds = [s["kind"] for s in d.segments]
-        self.assertIn("fishing-drift", kinds)
+        self.assertIn("drift-anchor", kinds)
+        for seg in d.segments:
+            self.assertEqual(seg["geometry"] is None, seg["kind"] in ("transit", "gap"), seg["kind"])
+            self.assertIn("p90_sog", seg)
+            self.assertIn("distance_nm", seg)
         for seg in d.segments:
             self.assertEqual(seg["id"], id32(trip["id"], str(seg["seq"])))
         self.assertTrue(d.events)

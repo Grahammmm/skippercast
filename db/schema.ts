@@ -373,15 +373,16 @@ export const fleetTrips=sqliteTable('fleet_trips',{
 },t=>[index('trip_vessel_date').on(t.vesselId,t.localDate),index('trip_region_season').on(t.region,t.season),
   index('trip_source_time').on(t.source,t.departedAt)]);
 
-// A classified stretch of a trip (in-port, transit, fishing-drift, fishing-troll, gap).
-// id sha256(trip_id|seq)[:32]; geometry is an encoded polyline (precision 5).
+// A classified stretch of a trip (in-port, transit, drift-anchor, troll-slow, troll-pelagic,
+// uncertain, gap). id sha256(trip_id|seq)[:32]; geometry is an encoded polyline (precision 5),
+// null for transit (statistics only, #469 D20) and gap.
 export const fleetSegments=sqliteTable('fleet_segments',{
   id:text('id').primaryKey(),tripId:text('trip_id').notNull(),seq:integer('seq').notNull(),kind:text('kind').notNull(),
   startedAt:text('started_at').notNull(),endedAt:text('ended_at').notNull(),geometry:text('geometry'),
-  pointsN:integer('points_n'),meanSog:real('mean_sog'),straightness:real('straightness'),headingVar:real('heading_var'),
+  pointsN:integer('points_n'),meanSog:real('mean_sog'),p90Sog:real('p90_sog'),distanceNm:real('distance_nm'),straightness:real('straightness'),headingVar:real('heading_var'),
 },t=>[index('seg_trip').on(t.tripId,t.seq)]);
 
-// One event per fishing segment (drift-anchor or troll): median point, p90 radius.
+// One event per fishing segment (drift-anchor, troll-slow or troll-pelagic): median point, p90 radius.
 // id sha256(trip_id|started_at|kind)[:32]. basis is always inferred-from-movement: a
 // place the boat stopped or trolled, never a catch location. species_json stays null
 // until catch-log pairing (attribution "report-paired").

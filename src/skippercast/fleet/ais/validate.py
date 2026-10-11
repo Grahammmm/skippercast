@@ -24,8 +24,9 @@
    one labelled minute; its prediction is the segment covering it, or ``none``
    when no derived trip covers it. Minutes the classifier marks ``gap`` (no
    positions) are reported but not scored.
-3. **report**: precision and recall for fishing (drift and troll together: a
-   drift minute predicted troll still counts as fishing) and per label, a
+3. **report**: precision and recall for fishing (the three fishing modes together:
+   a drift minute predicted troll still counts as fishing; ``uncertain`` counts
+   as not fishing) and per label, a
    confusion table in minutes, trips scored and missing, labels by labeller kind
    (a person's ``users.id`` or ``agent:<name>``), and the target before any public
    use: at least 30 trips, fishing precision >= 0.8 and recall >= 0.7.
@@ -70,8 +71,8 @@ from .store import ais_root
 __all__ = ["LABELS", "PREDICTIONS", "TARGET", "Interval", "LabelledTrip", "confusion", "fetch_labels", "main",
            "markdown", "metrics", "predict", "report", "score", "sync", "validation_dir"]
 
-LABELS = ("in-port", "transit", "fishing-drift", "fishing-troll")
-PREDICTIONS = LABELS + ("gap", "none")
+LABELS = ("in-port", "transit", "drift-anchor", "troll-slow", "troll-pelagic")
+PREDICTIONS = LABELS + ("uncertain", "gap", "none")
 UNSCORED = ("gap",)
 TARGET = {"trips": 30, "fishing_precision": 0.8, "fishing_recall": 0.7}
 LEAD_MS = TAIL_MS = HOUR          # positions copied around a trip, so its departure and return are seen in port
