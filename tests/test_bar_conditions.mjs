@@ -45,7 +45,7 @@ test('entrances: only the four regulated bars of 33 CFR 165.1196', () => {
   assert.equal(entranceFor('humboldt-bay-cape-mendocino', 'humboldt-bay-cape-mendocino').name, 'Humboldt Bay entrance');
   assert.equal(entranceFor('fort-bragg-point-arena', 'fort-bragg-point-arena').name, 'Noyo River entrance');
   assert.equal(entranceFor('crescent-city', 'crescent-city').name, 'Crescent City Harbor entrance');
-  // Unvetted entrance bearings stay null: wind against the ebb is not judged there.
+  // Entrances with no bearing stay null: wind against the ebb is not judged there.
   assert.equal(entranceFor('crescent-city', 'crescent-city').seawardDeg, null);
   // Cambria, Avila, Monterey, unknown and inherited keys get no bar check.
   assert.deepEqual([entranceFor('slo', 'north'), entranceFor('slo', 'south'), entranceFor('monterey-point-sur', 'monterey-point-sur'), entranceFor(undefined, 'central'),
@@ -73,30 +73,30 @@ test('swell: nearshore wins, offshore seas are an estimate, long period from any
   assert.equal(barSwell(undefined).heightFt, null);
 });
 
-test('wind against the ebb: an ebb, a vetted bearing, enough wind, blowing in', () => {
+test('wind against the ebb: an ebb, a bearing, enough wind, blowing in', () => {
   const ebb = barTide(at('19:00'), events), flood = barTide(at('23:00'), events);
   assert.equal(windAgainstEbb({windKnots: 12, windDirectionDeg: 280}, ebb, 260), true);
   assert.equal(windAgainstEbb({windKnots: 12, windDirectionDeg: 280}, flood, 260), false, 'flood');
   assert.equal(windAgainstEbb({windKnots: 8, windDirectionDeg: 280}, ebb, 260), false, 'below 10 kt');
   assert.equal(windAgainstEbb({windKnots: 12, windDirectionDeg: 80}, ebb, 260), false, 'offshore wind runs with the ebb');
   assert.equal(windAgainstEbb({windKnots: 12, windDirectionDeg: null}, ebb, 260), false, 'no direction');
-  assert.equal(windAgainstEbb({windKnots: 12, windDirectionDeg: 280}, ebb, null), false, 'no vetted bearing');
+  assert.equal(windAgainstEbb({windKnots: 12, windDirectionDeg: 280}, ebb, null), false, 'no bearing');
 });
 
-test('band: each driver, and never better than Likely workable', () => {
+test('band: each driver, and never better than No bar flag', () => {
   const mid = barTide(at('19:00'), events), early = barTide(at('17:00'), events), flood = barTide(at('23:00'), events), none = barTide(at('19:00'), []);
   const near = (heightFt, periodS = 10, longPeriodS = null) => ({heightFt, periodS, basis: 'nearshore', longPeriodS});
   const off = heightFt => ({heightFt, periodS: 10, basis: 'offshore', longPeriodS: null});
   const band = (tide, swell, wind = false) => barBand(tide, swell, wind).band;
   // Height alone.
-  assert.equal(band(flood, near(1.5)), 'Likely workable');
+  assert.equal(band(flood, near(1.5)), 'No bar flag');
   assert.equal(band(flood, near(4)), 'Caution');
   assert.equal(band(flood, near(8)), 'Hazardous');
   // Ebb steepening: a caution from 2 ft on any ebb; mid-ebb against the caution height is hazardous.
   assert.equal(band(early, near(2)), 'Caution');
   assert.equal(band(early, near(4)), 'Caution');
   assert.equal(band(mid, near(4)), 'Hazardous');
-  assert.equal(band(mid, near(1.5)), 'Likely workable');
+  assert.equal(band(mid, near(1.5)), 'No bar flag');
   // Long-period swell: a caution on any tide; on an ebb with the caution height, hazardous.
   assert.equal(band(flood, near(2, 15, 15)), 'Caution');
   assert.equal(band(early, near(4, 15, 15)), 'Hazardous');
@@ -104,7 +104,7 @@ test('band: each driver, and never better than Likely workable', () => {
   // Wind blowing in against the ebb.
   assert.equal(band(early, near(1.5), true), 'Caution');
   // Offshore estimate: its own, higher scale, labelled in the reasons.
-  assert.equal(band(flood, off(5)), 'Likely workable');
+  assert.equal(band(flood, off(5)), 'No bar flag');
   assert.equal(band(flood, off(6)), 'Caution');
   assert.equal(band(mid, off(6)), 'Hazardous');
   assert.equal(band(flood, off(10)), 'Hazardous');
@@ -121,8 +121,8 @@ test('band: each driver, and never better than Likely workable', () => {
 test('day roll-up and crossing hours', () => {
   const hours = barHours({hours: [17, 18, 19, 20, 21, 22, 23].map(h => ({at: iso(at(`${h}:00`)), windKnots: 5, gustKnots: 8, waveFt: 4, wavePeriodS: 10})), site: undefined, entrance: morro, tideEvents: events});
   const day = barDay(morro, hours);
-  // 4 ft offshore: caution on the ebb (17Z, 22Z), hazardous nowhere (offshore caution is 6 ft), flood at 23Z below 6 ft is workable.
-  assert.deepEqual(hours.map(h => h.band), ['Caution', 'Caution', 'Caution', 'Caution', 'Caution', 'Caution', 'Likely workable']);
+  // 4 ft offshore: caution on the ebb (17Z, 22Z), hazardous nowhere (offshore caution is 6 ft), flood at 23Z below 6 ft has no bar flag.
+  assert.deepEqual(hours.map(h => h.band), ['Caution', 'Caution', 'Caution', 'Caution', 'Caution', 'Caution', 'No bar flag']);
   assert.equal(day.worst, 'Caution');
   assert.equal(day.basis, 'offshore');
   assert.equal(day.tideUnknown, false);
@@ -163,19 +163,19 @@ test('buildDaily boat at Morro Bay: a hazardous bar caps status, names the hours
   assert.match(reportPanel(report({site: true, nearFt: 4}), slo, area, 'boat', date, now), /The bar sets the terms\. Check the bar status\./);
 });
 
-test('buildDaily boat: wind against the ebb, offshore estimate and missing tide listed, workable never safe', () => {
+test('buildDaily boat: wind against the ebb, offshore estimate and missing tide listed, no bar flag never safe', () => {
   // Offshore 2 ft with a 12 kt westerly: the ebb hours read caution for wind blowing in.
   const windy = buildDaily(report({wave: 2, wind: 12, gust: 14, dir: 280}), slo, area, 'boat', date, now);
   assert.equal(windy.bar.basis, 'offshore');
   assert.ok(windy.bar.hours.filter(h => h.tide.stage === 'ebb').every(h => h.windAgainst && h.band === 'Caution'));
   assert.ok(windy.missing.includes('Bar swell is an offshore estimate where no fresh nearshore model covers the hour'));
-  // Offshore 2 ft, light wind: every hour reads Likely workable, and the deck still says that is not a safe bar.
+  // Offshore 2 ft, light wind: every hour reads No bar flag, and the deck still says that is not a safe bar.
   const calm = buildDaily(report({wave: 2}), slo, area, 'boat', date, now);
-  assert.equal(calm.bar.worst, 'Likely workable');
+  assert.equal(calm.bar.worst, 'No bar flag');
   assert.match(calm.summary, /no hour reads hazardous or caution on this rough check, which does not mean the bar is safe\./);
   assert.ok(calm.summary.includes(BAR_CHECK));
   assert.ok(!calm.headline.startsWith('Bar'));
-  // No tide events: listed, and small swell reads Unknown rather than workable.
+  // No tide events: listed, and small swell reads Unknown rather than no bar flag.
   const noTide = report({wave: 2});
   noTide.tideEvents = [];
   const blind = buildDaily(noTide, slo, area, 'boat', date, now);
@@ -195,7 +195,7 @@ test('brief rendering for boat: bar band in the tide tile, carried on the brief;
   assert.match(brief.tiles.find(t => t.id === 'tide').detail, /mid-ebb · bar hazardous \(estimate\) · Port San Luis/);
   assert.match(brief.deck, /check the Coast Guard bar status \(VHF 16 or 22A\) or the harbor patrol/);
   const flood = buildCoastBrief({report: report({site: true, nearFt: 1}), county: slo, areaId: 'central', profile: 'boat', date, now, at: iso(at('23:00'))});
-  assert.match(flood.tiles.find(t => t.id === 'tide').detail, /flood · bar likely workable \(estimate\)/);
+  assert.match(flood.tiles.find(t => t.id === 'tide').detail, /flood · no bar flag \(estimate\)/);
   const place = {id: 'monterey-point-sur', name: 'Monterey', lat: 36.62, lon: -121.9, timezone: 'America/Los_Angeles', port: 'Monterey'};
   const monterey = buildRegionalBrief({daily: montereyDaily, forecast: montereyForecast, place, profile: 'boat', date: '2026-10-08', now});
   assert.equal(monterey.bar, null);

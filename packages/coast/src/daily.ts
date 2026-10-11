@@ -169,7 +169,7 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
    &&!(bar&&crossingHours(bar,window.start,window.end).some(hour=>hour.band==='Hazardous'));
  }).map(window=>{
   const crossing=bar?crossingHours(bar,window.start,window.end):[];
-  return bar&&crossing.some(hour=>hour.band!=='Likely workable')?{...window,reasons:[...window.reasons,`${bar.entrance.name}: bar caution or unknown at departure or return (estimate); check the bar status`]}:window;
+  return bar&&crossing.some(hour=>hour.band!=='No bar flag')?{...window,reasons:[...window.reasons,`${bar.entrance.name}: bar caution or unknown at departure or return (estimate); check the bar status`]}:window;
  });
  // Shore reads Caution when long-period swell is running or no daylight hour reads calmer or marginal.
  const shoreCaution=!!shore&&(shore.sneakerPeriodS!==null||(shore.hours.length>0&&!shore.best));
@@ -210,11 +210,11 @@ function barSummary(bar:BarDay,station:string,tz:string):string[] {
  const parts:string[]=[],name=bar.entrance.name;
  if(bar.hazardous.length)parts.push(`${name} bar (estimate): hazardous ${spans(bar.hazardous,tz)} (${bar.hazardous[0]!.reasons.join(', ')}). Windows that leave or return then are not suggested.`);
  else if(bar.caution.length)parts.push(`${name} bar (estimate): caution ${spans(bar.caution,tz)} (${bar.caution[0]!.reasons.join(', ')}).`);
- else if(bar.worst==='Likely workable')parts.push(`${name} bar (estimate): no hour reads hazardous or caution on this rough check, which does not mean the bar is safe.`);
- else parts.push(`${name} bar: not judged (${bar.hours[0]!.reasons.join(', ')}).`);
+ else if(bar.worst==='No bar flag')parts.push(`${name} bar (estimate): no hour reads hazardous or caution on this rough check, which does not mean the bar is safe.`);
+ else parts.push(`${name} bar: not judged (${(bar.hours.find(hour=>hour.band==='Unknown')??bar.hours[0]!).reasons.join(', ')}).`);
  if(bar.hazardous.length||bar.caution.length){const unknown=bar.hours.filter(hour=>hour.band==='Unknown');if(unknown.length)parts.push(`Bar not judged ${spans(unknown,tz)}.`);}
  if(!bar.tideUnknown)parts.push(`Ebb timing is from ${station} tide predictions; the current at the entrance can turn earlier or later.`);
- if(bar.entrance.seawardDeg===null)parts.push('This entrance has no vetted bearing, so wind against the ebb is left out.');
+ if(bar.entrance.seawardDeg===null)parts.push('This entrance has no bearing, so wind against the ebb is left out.');
  parts.push(BAR_CHECK);
  return parts;
 }

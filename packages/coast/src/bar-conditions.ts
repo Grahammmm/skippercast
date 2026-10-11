@@ -17,7 +17,7 @@
 //
 // This is a rough screening estimate from forecasts and tide predictions,
 // not an official bar report. It never says a bar is safe: the best band is
-// "Likely workable", and every reading tells the skipper to check the Coast
+// "No bar flag", and every reading tells the skipper to check the Coast
 // Guard bar status or harbor patrol. Every threshold lives in BAR below with
 // its reasoning; they are rules of thumb, not measurements at the bar.
 //
@@ -34,8 +34,8 @@ export type Entrance = {
   /** Display name, e.g. "Morro Bay entrance". */
   name: string;
   /**
-   * The direction the entrance opens to sea (degrees true), or null when it
-   * has not been vetted. Used only to tell when wind blows in against the
+   * The direction the entrance opens to sea (degrees true), or null when
+   * there is none (Morro Bay's is a shoreline proxy, not a vetted channel bearing). Used only to tell when wind blows in against the
    * ebb; null means that driver is not judged and the brief says so.
    */
   seawardDeg: number | null;
@@ -54,13 +54,12 @@ export const BAR = {
    * list gets a bar check.
    */
   entrances: {
-    // Morro Bay: the entrance opens west past Morro Rock, the same open-ocean
-    // side as Morro Strand (shore-conditions.ts SHORE.wind.seawardDeg 260,
-    // read from NOAA chart 18700).
+    // Morro Bay: 260 is a shoreline proxy, not a vetted channel or entrance
+    // bearing. It is the open-ocean side of Morro Strand (shore-conditions.ts
+    // SHORE.wind.seawardDeg 260, read from NOAA chart 18700).
     slo: {central: {name: 'Morro Bay entrance', seawardDeg: 260}},
     'morro-bay': {'morro-bay': {name: 'Morro Bay entrance', seawardDeg: 260}},
-    // The other three: the entrance channel's seaward bearing has not been
-    // vetted, so wind against the ebb is not judged there.
+    // The other three: no bearing, so wind against the ebb is not judged there.
     'humboldt-bay-cape-mendocino': {'humboldt-bay-cape-mendocino': {name: 'Humboldt Bay entrance', seawardDeg: null}},
     'fort-bragg-point-arena': {'fort-bragg-point-arena': {name: 'Noyo River entrance', seawardDeg: null}},
     'crescent-city': {'crescent-city': {name: 'Crescent City Harbor entrance', seawardDeg: null}},
@@ -102,8 +101,8 @@ export const BAR = {
   windAgainst: {deg: 60, knots: 10},
 } as const;
 
-export type BarBand = 'Likely workable' | 'Caution' | 'Hazardous' | 'Unknown';
-export const BAR_RANK: Readonly<Record<BarBand, number>> = {'Likely workable': 0, Caution: 1, Unknown: 2, Hazardous: 3};
+export type BarBand = 'No bar flag' | 'Caution' | 'Hazardous' | 'Unknown';
+export const BAR_RANK: Readonly<Record<BarBand, number>> = {'No bar flag': 0, Caution: 1, Unknown: 2, Hazardous: 3};
 
 /** Where the hour sits in the tide: ebb (high to low), flood (low to high), or unknown without events either side. */
 export type BarTide = {stage: 'ebb' | 'flood' | null; midEbb: boolean; fraction: number | null};
@@ -156,7 +155,7 @@ export function windAgainstEbb(hour: Pick<ForecastHour, 'windKnots' | 'windDirec
 
 const ft = (value: number) => `${round(value)} ft`;
 
-/** The bar band from tide, swell and wind, with plain reasons. Never better than "Likely workable". */
+/** The bar band from tide, swell and wind, with plain reasons. Never better than "No bar flag". */
 export function barBand(tide: BarTide, swell: BarSwell, windAgainst: boolean): {band: BarBand; reasons: string[]} {
   const reasons: string[] = [];
   const tideText = tide.stage === 'ebb' ? (tide.midEbb ? 'mid-ebb' : 'ebb') : tide.stage === 'flood' ? 'flood' : null;
@@ -176,8 +175,8 @@ export function barBand(tide: BarTide, swell: BarSwell, windAgainst: boolean): {
   if (hazardous) return {band: 'Hazardous', reasons};
   const caution = h >= t.caution || (ebb && h >= t.ebbCaution) || long || windAgainst || (tide.stage === null && h >= t.ebbCaution);
   if (caution) return {band: 'Caution', reasons};
-  // Small swell but no tide phase: the ebb cannot be ruled out, so no "Likely workable".
-  return {band: tide.stage === null ? 'Unknown' : 'Likely workable', reasons};
+  // Small swell but no tide phase: the ebb cannot be ruled out, so no "No bar flag".
+  return {band: tide.stage === null ? 'Unknown' : 'No bar flag', reasons};
 }
 
 export type BarInputs = {

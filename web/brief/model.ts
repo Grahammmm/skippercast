@@ -73,7 +73,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const shoreHour = daily.shore && hour ? daily.shore.hours.find(item => item.at === hour.at) : undefined;
   // Boat at a regulated bar adds the hour's ebb and bar band to the tide tile (packages/coast bar-conditions.ts).
   const barHour = daily.bar && hour ? daily.bar.hours.find(item => item.at === hour.at) : undefined;
-  const barText = barHour ? [barHour.tide.midEbb ? 'mid-ebb' : barHour.tide.stage, `bar ${barHour.band.toLowerCase()} (estimate)`].filter(Boolean).join(' · ') : null;
+  const barText = barHour ? [barHour.tide.midEbb ? 'mid-ebb' : barHour.tide.stage, `${barHour.band === 'No bar flag' ? '' : 'bar '}${barHour.band.toLowerCase()} (estimate)`].filter(Boolean).join(' · ') : null;
   const wind = tile('wind', 'Wind', hour?.windKnots ?? null, 'kt',
     [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null, shoreHour?.wind.side ?? null].filter(Boolean).join(' · '),
     forecastSource, issued, TILE_LIMIT_MS.wind, now);
