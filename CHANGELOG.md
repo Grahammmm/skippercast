@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Configured buoy and tide roles can serve a reviewed fresh backup when their primary ages out. Source entries name the station used and its primary; feed health reports backup service as degraded without declaring an outage (#553). Legacy single-station feeds keep their existing format.
+
 - When a backup station serves a buoy or tide reading, the landing, brief, Live card and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
 - The new home page and map can be added to a home screen with the SkipperCast name, icon and colour.
 - The map at `/map` downloads about 2.2 MB less data when it opens: the region's shoreline, its region file and its protected areas were each fetched twice and now load once (#473).
