@@ -19,8 +19,8 @@ Other kinds only warn.
 Besides the top-level live feed (the default region's alias) and the daily
 feed, each published region's live feed (`conditions/regions/<id>/latest.json`,
 ids from dist/regions/index.json) is checked the same way, per region. A stale
-or unreadable feed for a region that is not the default or `active` is a
-partial outage too.
+or unreadable feed, or a wholly degraded critical kind, for a region that is not the
+default or `active` is a partial outage too.
 
 The public route (`<FEEDS_PUBLIC_BASE>/feeds/<branch>/latest.json`) is what
 users get, so it decides the result. The GitHub branch copy is fetched second
@@ -287,7 +287,8 @@ def check_region(region, critical, base, now, fetch=fetch_json, health=None):
     bits, lines = 0 if ok else STALE if critical else PARTIAL, [line]
     if isinstance(feed, dict):
         source_bits, source_lines = source_verdict(feed, config["critical_degraded_hours"], label, health["critical_kinds"])
-        bits |= source_bits
+        # A preview region's whole-kind outage is reported like its stale feed: a partial outage.
+        bits |= source_bits if critical else (PARTIAL if source_bits else 0)
         lines += source_lines
     return bits, "\n".join(lines)
 

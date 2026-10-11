@@ -257,6 +257,8 @@ class RunAllTests(unittest.TestCase):
         self.assertIn("Public Live regional feed big-sur-coast is fresh", message)
         self.assertIn("over buoy-46028", message)
         status, message = self.run_all(feeds, [("big-sur-coast", False), ("crescent-city", False)])
+        self.assertEqual(status, PARTIAL, message)  # preview regions never fail the run
+        status, message = self.run_all(feeds, [("big-sur-coast", False), ("crescent-city", True)])
         self.assertEqual(status, DEGRADED | PARTIAL, message)
         self.assertIn("Live regional feed crescent-city: every observation source degraded past 12 h", message)
         # Grouping is per region: one region's healthy buoy does not rescue another's.
@@ -278,7 +280,8 @@ class RunAllTests(unittest.TestCase):
         public, github = self.region_urls("big-sur-coast")
         feeds.update({public: OSError("503"), github: feed_of(source("alerts", "advisory", "failed"))})
         status, message = self.run_all(feeds, [("big-sur-coast", False)])
-        self.assertEqual(status, PARTIAL | DEGRADED)
+        self.assertEqual(status, PARTIAL)
+        self.assertEqual(self.run_all(feeds, [("big-sur-coast", True)])[0], STALE | DEGRADED)
         self.assertIn("big-sur-coast could not be fetched", message)
         self.assertIn("Live regional feed big-sur-coast (GitHub copy): every advisory source", message)
 

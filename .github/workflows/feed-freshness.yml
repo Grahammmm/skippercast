@@ -40,6 +40,7 @@ jobs:
           # feed is degraded too long. A partial outage (one buoy of several) exits 0 and is
           # reported through --report so its issue stays current.
           report="$RUNNER_TEMP/feed-health.json"
+          rm -f "$report"  # the fail-closed fallback must never read an old report
           message="$(python scripts/check_feed_freshness.py --report "$report")"
           echo "$message"
           echo "$message" >> "$GITHUB_STEP_SUMMARY"
@@ -47,10 +48,11 @@ jobs:
             python -c 'import json,sys; print(str(json.load(open(sys.argv[1]))[sys.argv[2]]).lower())' "$report" "$1" 2>/dev/null \
               || { [ "$1" = stale ] && echo true || echo false; }
           }
+          delim="EOF_$(openssl rand -hex 8)"
           {
-            echo "message<<EOF"
+            echo "message<<$delim"
             echo "$message"
-            echo "EOF"
+            echo "$delim"
             echo "stale=$(flag stale)"
             echo "degraded=$(flag degraded)"
             echo "partial=$(flag partial)"
@@ -74,7 +76,7 @@ jobs:
       # One open issue whose body tracks the current report, so a long source outage
       # does not post a comment every hour. Partial outages keep it current too.
       - name: Open or refresh the degraded-source issue
-        if: steps.age.outputs.degraded == 'true' || steps.age.outputs.partial == 'true'
+        if: always() && (steps.age.outputs.degraded == 'true' || steps.age.outputs.partial == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
           MESSAGE: ${{ steps.age.outputs.message }}
@@ -89,7 +91,7 @@ jobs:
             gh issue create --label feed-source-degraded --title "Critical feed source degraded" --body "$body"
           fi
       - name: Close the degraded-source issue after recovery
-        if: steps.age.outputs.stale == 'false' && steps.age.outputs.degraded == 'false' && steps.age.outputs.partial == 'false'
+        if: always() && steps.age.outputs.stale == 'false' && steps.age.outputs.degraded == 'false' && steps.age.outputs.partial == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           MESSAGE: ${{ steps.age.outputs.message }}
@@ -98,7 +100,7 @@ jobs:
             gh issue close "$number" --comment "Recovered. $MESSAGE"
           done
       - name: Open or update the stale-feed issue
-        if: steps.age.outputs.stale == 'true'
+        if: always() && steps.age.outputs.stale == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           MESSAGE: ${{ steps.age.outputs.message }}
@@ -114,7 +116,7 @@ jobs:
               --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"$'\n\n'"Runbook: $runbook"
           fi
       - name: Close the stale-feed issue after recovery
-        if: steps.age.outputs.stale == 'false'
+        if: always() && steps.age.outputs.stale == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           MESSAGE: ${{ steps.age.outputs.message }}
@@ -124,7 +126,10 @@ jobs:
           done
       # Red only for a stale feed or a whole critical kind out; a partial outage stays green.
       - name: Fail when a feed is stale or a critical kind is out
-        if: steps.age.outputs.stale == 'true' || steps.age.outputs.degraded == 'true'
+        if: always() && (steps.age.outputs.stale == 'true' || steps.age.outputs.degraded == 'true')
+        env:
+          STALE: ${{ steps.age.outputs.stale }}
+          DEGRADED: ${{ steps.age.outputs.degraded }}
         run: |
-          echo "::error title=Feed freshness::stale=${{ steps.age.outputs.stale }} degraded=${{ steps.age.outputs.degraded }} (see the step summary)"
+          echo "::error title=Feed freshness::stale=$STALE degraded=$DEGRADED (see the step summary)"
           exit 1
