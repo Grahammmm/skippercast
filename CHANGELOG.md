@@ -13,6 +13,7 @@
 
 ### Internal
 
+- `e2e/d1.ts` is the one `d1()` helper for `e2e/admin.spec.ts` and `e2e/fleet-admin.spec.ts`: it retries `wrangler d1 execute --local` up to five times with a growing pause when the running Worker holds the SQLite file (`SQLITE_BUSY` or "database is locked") and rethrows any other failure unchanged (#579).
 - FE-62 part a: the retired `fish` repository's docs and research receipts are archived read-only in `docs/archive/fish/`, with the design § 15 retirement checklist and the Cloudflare resources the owner deletes; two identifiers were redacted and Fish's data, code and configuration were not copied.
 - `scripts/smoke_test.sh` reads the deployed build id from any stamped page in `dist/client`, since FE-61 removed `index.html`. Before this, `ls` failing under `pipefail` exited the script with code 2, which failed the smoke test for the dabb9c24 deploy even though the site was healthy.
 - The charter-fleet activity classifier (admin only) labels fishing as drift or anchor, slow troll (salmon speeds) or offshore pelagic troll. Paddy stops inside a pelagic search join it into one run. Stretches it cannot decide are marked uncertain and never count as fishing. Transit keeps only statistics (minutes, points, mean and p90 speed, distance) and no track. All thresholds live in `regions/<id>/fleet.json`, and `classifier_version` moves to `c2`. The rules and their public sources are in `docs/plans/charter-fleet/references/classification.md`. A D1 migration adds `fleet_segments.p90_sog` and `distance_nm` (#570).
