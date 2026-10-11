@@ -134,3 +134,37 @@ test('FE-33: where a coast report binds, the sparkline draws its tide curve in t
   await v2.a11y(isMobile ? 'v2-brief-spark-sheet' : 'v2-brief-spark');
   expect(pageErrors).toEqual([]);
 });
+
+/** The daily feed with its buoy and tide served by backup stations (#554 failover), optionally retained after a failed check. */
+function backupFeed(retained = false) {
+  const daily = feed();
+  const status = retained ? 'retained' : 'ok';
+  Object.assign(daily.sources['buoy-46011'], {station: '46028', fallback_for: '46011', name: 'NOAA NDBC 46028 observations', status, data: {...daily.sources['buoy-46011'].data, station: '46028'}});
+  Object.assign(daily.sources.tides, {station: '9412340', fallback_for: '9412110', name: 'NOAA 9412340 tide predictions', status,
+    data: {...daily.sources.tides.data, station: '9412340', note: 'NOAA 9412340 station-specific backup water-level predictions (MLLW).'}});
+  return daily;
+}
+
+for (const retained of [false, true]) {
+  test(`a ${retained ? 'retained ' : ''}backup buoy and tide are named and linked as themselves, never as the primary`, async ({page, pageErrors, v2, isMobile}) => {
+    await v2.feed('**/feeds/conditions/regions/morro-bay/latest.json', backupFeed(retained));
+    await v2.open('app', {region: 'morro-bay'});
+    const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
+    await expect(root).toHaveAttribute('data-basis', 'regional');
+    if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
+    const water = root.locator('.ui-tile', {hasText: 'Water'}), tide = root.locator('.ui-tile', {hasText: 'Tide'});
+    await expect(water.locator('.ui-tile-source')).toContainText('NDBC 46028 (backup for 46011)');
+    // The basis names the source and links to the actual station's official page.
+    await water.locator('summary').click();
+    await expect(water.locator('.ui-popover-body a[target="_blank"]')).toHaveAttribute('href', 'https://www.ndbc.noaa.gov/station_page.php?station=46028');
+    await water.locator('summary').click();
+    await expect(water).toHaveAttribute('data-state', 'stale');
+    await expect(tide.locator('.ui-tile-detail')).toContainText('NOAA 9412340 (backup for 9412110)');
+    await tide.locator('summary').click();
+    await expect(tide.locator('.ui-popover-body a[target="_blank"]')).toHaveAttribute('href', 'https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=9412340');
+    await expect(tide.locator('.ui-popover-body')).toContainText(retained ? 'last good reading' : 'Source:');
+    await expect(tide).toHaveAttribute('data-state', retained ? 'stale' : 'ok');
+    await expect(root).not.toContainText('NDBC 46011');
+    expect(pageErrors).toEqual([]);
+  });
+}

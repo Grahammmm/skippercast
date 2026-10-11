@@ -101,6 +101,10 @@ export interface RegionalSource {
   readonly data_retrieved_at?: string;
   readonly last_success_at?: string;
   readonly data?: Record<string, unknown>;
+  /** The station actually read, on configured buoy and tide roles (#554). */
+  readonly station?: string;
+  /** The primary station's id, present only when a backup station served the data (#554). */
+  readonly fallback_for?: string;
 }
 
 /** Hourly rows of SkipperCast's regional forecast at the selected place, already sampled by the caller. */
