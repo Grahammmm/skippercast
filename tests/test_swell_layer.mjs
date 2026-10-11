@@ -15,6 +15,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {sample as v1Sample} from '../dist/marine-data.js';
 import {fieldColor} from '../packages/coast/src/map/surface-field.ts';
 import {FILES, luminance, themes} from '../scripts/check_contrast.mjs';
@@ -344,7 +345,7 @@ test('the legend gives the hour\'s reading, the fixed scale and the model run as
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   const m = await import(pathToFileURL(out).href);
   m.state.configureStore({v2: true, storage: null});

@@ -45,7 +45,8 @@ export function chooseCurrent(value: string): void {
 /** The Currents entry's note: the Chart's frame state, or the terrain renderer's own status line. */
 const currentsNote = (): string => shownPresentation.value === 'chart' ? currentsState.value.note : currentStatus.value;
 
-function CurrentSource() {
+/** The one `?current=` control, shared by the Currents rail entry and the Conditions view (FE-32). */
+export function CurrentSource() {
   const value = current.value;
   return (
     <label class="app-rail-source">Source

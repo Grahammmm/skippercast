@@ -12,6 +12,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {chartMark} from '../web/map/chart.ts';
 import {WAVE_MODEL} from '../web/map/forecast-grid.ts';
 import {createEngine} from '../web/map/engine.ts';
@@ -240,7 +241,7 @@ test('the legend names the rings\' model, run age and scale, and its basis says 
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   const m = await import(pathToFileURL(out).href);
   m.state.configureStore({v2: true, storage: null});

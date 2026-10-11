@@ -13,6 +13,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {
   CLOUD_INDEX, CLOUD_OPACITY, FRAME_MS, HOLD_MS, INDEX_REFRESH_MS, MAX_FRAMES, NO_FRAMES, OTHER_DAY,
   cloudHeld, cloudIndex, cloudOverlay, cloudStamp, cloudStatus, createClouds, frameId, frameLabel,
@@ -300,7 +301,7 @@ test('the legend labels the frame on screen with a loop toggle; the rail names t
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   const m = await import(pathToFileURL(out).href);
   m.state.configureStore({v2: true, storage: null});

@@ -62,6 +62,11 @@ test('view links, the profile switch, the rail and the hour slider update the ad
   await page.locator('nav[aria-label="Views"] a[data-view="conditions"]').click();
   await expect(page).toHaveURL(/[?&]view=conditions/);
   await expect(page.locator('a[data-view="conditions"]')).toHaveAttribute('aria-current', 'page');
+  // The Conditions view (FE-32) covers the map chrome and holds the phone sheet; the brief and the rail are the map view's, so go back to it.
+  await expect(page.locator('section.app-conditions')).toBeVisible();
+  await page.locator('nav[aria-label="Views"] a[data-view="coast"]').click();
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  await expect(page.locator('a[data-view="coast"]')).toHaveAttribute('aria-current', 'page');
   await page.locator('[aria-label="Profile"] button', {hasText: 'Spear'}).click();
   await expect(page).toHaveURL(/[?&]profile=spear/);
   await expect(page.locator('.app-caveat')).toContainText('In-water visibility is unverified');

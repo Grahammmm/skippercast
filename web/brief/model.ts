@@ -103,7 +103,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, sunrise: daily.sunrise, sunset: daily.sunset,
+    alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 

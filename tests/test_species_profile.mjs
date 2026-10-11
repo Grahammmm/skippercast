@@ -12,6 +12,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {coastTargetsFor, loadPlans, regionPlans, targetsFor} from '../web/species.ts';
 import {markFeatures} from '../web/map/habitat.ts';
 import {terrainState} from '../web/map/stage.ts';
@@ -43,7 +44,7 @@ async function loadMenu() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   menu = await import(pathToFileURL(out).href);
   return menu;

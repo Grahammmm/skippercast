@@ -13,6 +13,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {validDailyPart as v1DailyPart} from '../dist/daily-feed.js';
 import {MPA_QUERY, initProtectedAreas, validMPAs} from '../dist/protected-areas.js';
 import {acceptsFeed as v1Accepts, getRegion, setRegion} from '../dist/region.js';
@@ -304,7 +305,7 @@ async function components() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   ui = await import(pathToFileURL(out).href);
   return ui;

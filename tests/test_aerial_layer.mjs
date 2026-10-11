@@ -14,6 +14,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 import {
   AERIAL_CATALOG_ID, AERIAL_OPACITY, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, flownText,
@@ -179,7 +180,7 @@ test('the rail\'s base choice offers Aerial only where the region has it, labell
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   const m = await import(pathToFileURL(out).href);
   // FE-20 replaced FE-23's Aerial toggle with the rail's one base select (Night, Chart detail, Aerial where offered).
