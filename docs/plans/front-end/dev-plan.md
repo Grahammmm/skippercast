@@ -463,11 +463,12 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ## Phase 4: the remaining features in the new shell
 
 ### FE-50 · Account, boat profile and alerts in the masthead · M
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE. Merged as [#420](https://github.com/Grahammmm/skippercast/pull/420); FE-51 ([#498](https://github.com/Grahammmm/skippercast/pull/498)) added the trip and offline entries. Agent: Claude.
 - Depends: —
 - Files: `web/app/AccountMenu.tsx`, `web/account.ts` (wraps `account.js`, `boat-profile.js`, `trip-alerts.js`), `e2e/v2-account.spec.ts`.
 - Build: sign in (passkeys), boat presets from `first-run.js`, alerts, downloads and offline pack entry, in tokens.
 - Accept: 1. `tests/test_accounts.mjs` unchanged and green. 2. Sign-in flow completes in e2e with the fixture. 3. The menu is keyboard operable.
+- As built: `web/app/AccountMenu.tsx` is one disclosure in the masthead (on the phone, the sheet footer, `inline`): a real button with `aria-expanded`; opening moves focus in, arrows and Home/End move and wrap, Escape or a click outside closes and returns focus. `web/account.ts` wraps v1 unchanged and loads each module on first use: `account.js` (the passkey dialog, so the session cookie, the reload after sign in and every `/api/` call stay v1's; no server change), `first-run.js` presets with `boat-handling.js` `savedBoat`, `boat-profile.js` (the exact-boat sheet) and `trip-alerts.js` (mounted in the app's dialog). Downloads are the "Take it with you" section (spot notes; FE-51's trip and offline entries). `e2e/v2-account.spec.ts` signs in with stubbed auth routes and a Chromium virtual authenticator's synthetic credential, and walks the menu by keyboard; `tests/test_account_menu.mjs` covers the session reading, the return hash and the boat-sheet export. Also touched: `web/app/{Masthead,Mobile}.tsx`, `web/app/account.css`, `dist/app.html`, `dist/boat-profile.js` (one added export, `openBoatProfile`, so v2 opens the sheet without v1's `#boat-button`).
 
 ### FE-51 · Trip planner, GPX export and offline pack · L
 - Status: PARTLY on `main`: coastal snapshot save and delete ([#405](https://github.com/Grahammmm/skippercast/pull/405), `dist/coastal-offline-core.js`, `dist/sw.js`). Remaining: the v2 trip, GPX and offline entry. Agent: Claude. Hot spot: `dist/sw.js`.
