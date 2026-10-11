@@ -461,7 +461,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ## Phase 4: the remaining features in the new shell
 
 ### FE-50 · Account, boat profile and alerts in the masthead · M
-- Status: DONE (#420 (trip and offline entries #498)). Agent: Claude.
+- Status: DONE (#420). Agent: Claude.
 - Depends: —
 - Files: `web/app/AccountMenu.tsx`, `web/account.ts` (wraps `account.js`, `boat-profile.js`, `trip-alerts.js`), `e2e/v2-account.spec.ts`.
 - Build: sign in (passkeys), boat presets from `first-run.js`, alerts, downloads and offline pack entry, in tokens.
