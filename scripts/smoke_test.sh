@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # Smoke-test a deployed SkipperCast site. Usage: scripts/smoke_test.sh https://site [build-id]
-# Pass "" as the build id to skip the build match. The build id defaults to the one in dist/client (the build just deployed); the
+# Pass "" as the build id to skip the build match. The build id defaults to the one stamped on dist/client's pages (the build just deployed); the
 # test waits up to two minutes for that build to be served, then checks pages (/, /map, /coast),
 # feeds, the service worker and that forged identity headers are refused.
 set -euo pipefail
 SITE=${1:?usage: smoke_test.sh <site-url> [build-id]}
 SITE=${SITE%/}
-BUILD=${2-$(ls dist/client/index.*.html 2>/dev/null | sed -E 's#.*/index\.([0-9a-f]{10})\.html#\1#' | head -1)}
+# Every page is stamped NAME.<build>.html (FE-61 removed index.html). A glob, not ls: under pipefail a failed ls aborts the script.
+if [ "$#" -lt 2 ]; then
+  BUILD=
+  for page in dist/client/*.*.html; do
+    [[ $page =~ \.([0-9a-f]{10})\.html$ ]] && { BUILD=${BASH_REMATCH[1]}; break; }
+  done
+else
+  BUILD=$2
+fi
 fail() { echo "::error::Smoke test: $*"; exit 1; }
 get() { curl -fsS --max-time 20 "$@"; }
 has() { case "$1" in *"$2"*) return 0;; *) return 1;; esac; }
