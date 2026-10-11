@@ -14,6 +14,7 @@
 ### Internal
 
 - `scripts/smoke_test.sh` reads the deployed build id from any stamped page in `dist/client`, since FE-61 removed `index.html`. Before this, `ls` failing under `pipefail` exited the script with code 2, which failed the smoke test for the dabb9c24 deploy even though the site was healthy.
+- A deploy whose smoke test fails now rolls the Worker back to the version that was live before it (recorded by `scripts/cloudflare_deploy.sh`) and, when `CLOUDFLARE_SITE_URL` is set, checks `/api/health` no longer serves the failed build. A bare `wrangler rollback` had landed on the failed commit's own code version, because the secrets upload makes a second deployment (#568). The manual rollback takes an optional version id and otherwise picks the version live before the current commit's deploy (`scripts/worker_versions.mjs`).
 - FE-61: MapLibre and PMTiles build into their own chunk, tests of deleted v1 code are removed (v1 parity oracles pinned by digest), and `tests/test_no_v1_map_library.mjs` keeps the retired map library out.
 - The startup measurement (`scripts/measure_startup.mjs`) counts `/coast-data/*` (the Worker bridge to the live Fish upstream) as live and stubs it, so the offline budget test no longer reaches the network or sometimes counts the habitat GeoJSON; `/coast.html` now redirects like `/coast`.
 - `web/station-label.ts` holds the shared backup-station label logic, with unit tests and phone and laptop browser tests for primary, backup, retained-backup, missing-field and shared-station feeds.
