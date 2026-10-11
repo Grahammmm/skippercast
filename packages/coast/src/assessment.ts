@@ -10,7 +10,9 @@ export function freshForecast(report:Report,area:Area,now=new Date()){
  if(!Number.isFinite(issueAge)||!Number.isFinite(fetchAge)||issueAge>18*3600000||issueAge<-3600000||fetchAge>2*3600000||fetchAge<-3600000)return undefined;
  return forecast;
 }
-export function assess(report:Report,area:Area,mode:Mode,now=new Date(),timezone='America/Los_Angeles'):Assessment{
+/** waveOk replaces the generic wave rule for an hour when it returns a boolean (spear surge from a nearshore model); label names such windows. */
+export type AssessOptions={waveOk?:(h:ForecastHour)=>boolean|undefined;label?:string};
+export function assess(report:Report,area:Area,mode:Mode,now=new Date(),timezone='America/Los_Angeles',options:AssessOptions={}):Assessment{
  const forecast=freshForecast(report,area,now);
  const hours=(forecast?.hours??[]).filter(x=>Date.parse(x.at)>=now.getTime()-3600000 && Date.parse(x.at)<now.getTime()+72*3600000);
  const source=report.sources.find(x=>x.id===forecast?.sourceId);
@@ -27,13 +29,15 @@ export function assess(report:Report,area:Area,mode:Mode,now=new Date(),timezone
   const sun=getTimes(new Date(localDate+'T20:00:00Z'),area.lat,area.lon);
   const at=Date.parse(h.at);
   if(!sun.sunrise||!sun.sunset)return false;
-  return at>=sun.sunrise.getTime()&&at+3600000<=sun.sunset.getTime()&&h.windKnots<=limits.wind&&h.gustKnots<=limits.gust&&h.waveFt<=limits.wave && !(h.waveFt>=2.5&&h.wavePeriodS>=15);
+  const custom=options.waveOk?.(h);
+  const wave=custom===undefined?h.waveFt<=limits.wave && !(h.waveFt>=2.5&&h.wavePeriodS>=15):custom;
+  return at>=sun.sunrise.getTime()&&at+3600000<=sun.sunset.getTime()&&h.windKnots<=limits.wind&&h.gustKnots<=limits.gust&&wave;
  };
  const groups:ForecastHour[][]=[];
  for(const h of hours){if(!pass(h))continue;const g=groups.at(-1);if(g&&Date.parse(h.at)-Date.parse(g.at(-1)!.at)===3600000)g.push(h);else groups.push([h]);}
- const windows:Window[]=groups.filter(g=>g.length>=3).map(g=>({start:g[0]!.at,end:new Date(Date.parse(g.at(-1)!.at)+3600000).toISOString(),label:mode==='boat'?'Lower wind & offshore seas':'Lower offshore exposure',confidence:'Low',reasons:[mode==='boat'?'Harbor entrance and full return route need a separate check':'Breaking surf and exact entry conditions are not measured',...(mode==='spear'?['Underwater visibility is unknown']:[])],wind:Math.max(...g.map(x=>x.windKnots!)),gust:Math.max(...g.map(x=>x.gustKnots!)),wave:Math.max(...g.map(x=>x.waveFt!)),period:Math.max(...g.map(x=>x.wavePeriodS!))}));
+ const windows:Window[]=groups.filter(g=>g.length>=3).map(g=>({start:g[0]!.at,end:new Date(Date.parse(g.at(-1)!.at)+3600000).toISOString(),label:options.label??(mode==='boat'?'Lower wind & offshore seas':'Lower offshore exposure'),confidence:'Low',reasons:[mode==='boat'?'Harbor entrance and full return route need a separate check':'Breaking surf and exact entry conditions are not measured',...(mode==='spear'?['Underwater visibility is not measured']:[])],wind:Math.max(...g.map(x=>x.windKnots!)),gust:Math.max(...g.map(x=>x.gustKnots!)),wave:Math.max(...g.map(x=>x.waveFt!)),period:Math.max(...g.map(x=>x.wavePeriodS!))}));
  const caution=alerts.length>0;
- const status=caution?'Caution':mode==='spear'?'Unknown':mode==='shore'?'Mixed':windows.length?'Mixed':'Caution';
+ const status=caution?'Caution':mode==='shore'?'Mixed':windows.length?'Mixed':'Caution';
  return {status,headline:caution?'Marine alert in effect':mode==='spear'?'Visibility still needs a local check':windows.length?'A lower-exposure window to investigate':'Conditions need a closer look',summary:caution?alerts[0]!.headline:mode==='boat'?'Compare the lower-wind periods below with your route, harbor entrance, and return. Offshore forecasts alone cannot clear a trip.':mode==='shore'?'Use the coastal outlook to narrow your timing, then check breaking surf, beach access, and water quality at the exact shore.':'Wind, swell, water quality, entry and exit matter. No current in-water visibility observation is available for these areas.',windows:caution?[]:windows,reasons:[...alerts.map(x=>x.event),area.accessNote],hours};
 }
 export function freshObservation(at:string,now=new Date()){const delta=age(at,now);return delta>=-3600000&&delta<3*3600000;}

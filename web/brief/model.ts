@@ -14,7 +14,7 @@
 // Erasable syntax only: Node tests import this file by type stripping.
 import {buildDaily, dateKey, type DailyBrief} from '../../packages/coast/src/daily.ts';
 import {resolveReportBinding, type CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
-import type {Alert, Area, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
+import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
 import {profileSemantics, type Profile} from '../profile.ts';
 import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
@@ -81,7 +81,10 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     const site = (report.nearshore ?? []).filter(item => item.areaId === area.id && item.availability === 'available')
       .sort((a, b) => Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt))[0];
     const point = site && nearest(site.hours.filter(item => finite(item.waveFt)), pivot);
-    swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', site ? `${finite(point?.periodS) ? `${point.periodS} s · ` : ''}${site.name}` : 'No nearshore model site',
+    // Spear adds the surge band of the selected hour (packages/coast spear.ts).
+    const surgeHour = daily.spear && hour ? daily.spear.hours.find(item => item.at === hour.at) : undefined;
+    const surge = surgeHour && surgeHour.surge.band !== 'Unknown' ? ` · ${surgeHour.surge.band.toLowerCase()} surge` : '';
+    swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${point.periodS} s · ` : ''}${site.name}` : 'No nearshore model site') + surge,
       site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now);
   }
 
@@ -105,7 +108,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 
@@ -123,14 +126,40 @@ export function fleetLine(reports: readonly LandingReport[], port: string, timez
   return {count: boats.size, port, text: `${boats.size} boat${boats.size === 1 ? '' : 's'} reported from ${port} in the last ${FLEET_WINDOW_DAYS} days`, href: '/report'};
 }
 
-export type CoastBriefInput = {report: Report; county: County; areaId: string; profile: Profile; date: string; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string};
+/** Cells within this many degrees (about 15 km) of the place feed its chlorophyll reading. */
+export const CHLOROPHYLL_RADIUS_DEG = 0.15;
 
-/** The bound brief: buildDaily over the coast report, mapped without change. */
+/**
+ * The daily feed's satellite chlorophyll near a point: the median of valid
+ * cells within CHLOROPHYLL_RADIUS_DEG, or null when the grid is missing,
+ * failed or has no valid cell nearby. Gaps stay gaps; nothing is filled.
+ */
+export function chlorophyllNear(daily: RegionalDailyFeed | null | undefined, lat: number, lon: number): ChlorophyllReading | null {
+  const source = daily?.sources.chlorophyll;
+  const data = source?.data;
+  if (!source || !sourceOk(source) || !data || typeof data.sample_at !== 'string') return null;
+  const values = ((data.samples as Record<string, unknown>[] | undefined) ?? [])
+    .filter(row => finite(row.chlorophyll) && finite(row.latitude) && finite(row.longitude)
+      && Math.hypot((row.latitude as number) - lat, ((row.longitude as number) - lon) * Math.cos(lat * Math.PI / 180)) <= CHLOROPHYLL_RADIUS_DEG)
+    .map(row => row.chlorophyll as number).sort((a, b) => a - b);
+  if (!values.length) return null;
+  const mid = Math.floor(values.length / 2);
+  const median = values.length % 2 ? values[mid]! : (values[mid - 1]! + values[mid]!) / 2;
+  return {mgM3: median, sampleAt: data.sample_at, cells: values.length, label: source.name, url: source.url};
+}
+
+export type CoastBriefInput = {report: Report; county: County; areaId: string; profile: Profile; date: string; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string;
+  /** The region's daily feed, read for satellite chlorophyll near the area. */
+  daily?: RegionalDailyFeed};
+
+/** The bound brief: buildDaily over the coast report (with the feed's chlorophyll near the area), mapped without change. */
 export function buildCoastBrief(input: CoastBriefInput): Brief {
   const area = input.county.areas.find(item => item.id === input.areaId);
   if (!area) throw new RangeError(`No coast area ${input.areaId}`);
-  const daily = buildDaily(input.report, input.county, area, input.profile, input.date, input.now);
-  return briefFromDaily(daily, 'coast-report', {...input, area});
+  const chlorophyll = chlorophyllNear(input.daily, area.lat, area.lon);
+  const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
+  const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now);
+  return briefFromDaily(daily, 'coast-report', {...input, report, area});
 }
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
@@ -174,7 +203,7 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   const report: Report = {schemaVersion: 1, countyId: daily.region_id, generatedAt: forecast?.fetchedAt ?? alertCheck?.checked_at ?? new Date(0).toISOString(),
     forecasts: forecast ? [{id: place.id, hours: [...forecast.hours], sourceId: 'regional-forecast', issuedAt: forecast.issuedAt}] : [],
     observations, tides: [], tideEvents, alerts, sources, catches: [], catchStatus: 'unavailable',
-    visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}, habitatStatus: 'unavailable'};
+    visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}, habitatStatus: 'unavailable', chlorophyll: chlorophyllNear(daily, place.lat, place.lon)};
   return {report, county, area, tideDatum: String(tides?.data?.datum ?? 'MLLW')};
 }
 
@@ -200,6 +229,6 @@ export type BriefInput = {
 export function buildBrief(input: BriefInput): Brief {
   const {profile, date, now, at, regional} = input;
   const binding = input.coast ? resolveReportBinding(input.context) : null;
-  if (input.coast && binding) return buildCoastBrief({...input.coast, areaId: binding.areaId, profile, date, now, at, reports: regional.daily.reports ?? [], port: regional.place.port});
+  if (input.coast && binding) return buildCoastBrief({...input.coast, areaId: binding.areaId, profile, date, now, at, reports: regional.daily.reports ?? [], port: regional.place.port, daily: regional.daily});
   return buildRegionalBrief({...regional, profile, date, now, at});
 }
