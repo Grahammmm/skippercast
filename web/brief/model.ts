@@ -71,6 +71,9 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const direction = compass(hour?.windDirectionDeg);
   // Shore adds the surf, wind side and tide phase of the selected hour (packages/coast shore-conditions.ts).
   const shoreHour = daily.shore && hour ? daily.shore.hours.find(item => item.at === hour.at) : undefined;
+  // Boat at a regulated bar adds the hour's ebb and bar band to the tide tile (packages/coast bar-conditions.ts).
+  const barHour = daily.bar && hour ? daily.bar.hours.find(item => item.at === hour.at) : undefined;
+  const barText = barHour ? [barHour.tide.midEbb ? 'mid-ebb' : barHour.tide.stage, `${barHour.band === 'No bar flag' ? '' : 'bar '}${barHour.band.toLowerCase()} (estimate)`].filter(Boolean).join(' · ') : null;
   const wind = tile('wind', 'Wind', hour?.windKnots ?? null, 'kt',
     [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null, shoreHour?.wind.side ?? null].filter(Boolean).join(' · '),
     forecastSource, issued, TILE_LIMIT_MS.wind, now);
@@ -102,8 +105,8 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const curvePoint = nearest(daily.tides, pivot);
   const nextEvent: TideEvent | undefined = curvePoint ? undefined : [...report.tideEvents].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).find(item => Date.parse(item.at) >= pivot);
   const tide = tile('tide', 'Tide', curvePoint?.heightFt ?? nextEvent?.heightFt ?? null, 'ft',
-    curvePoint ? [tideTrend(daily.tides, pivot), shoreHour?.tide.veryLow ? 'very low' : null, county.tideStation.name, datum].filter(Boolean).join(' · ')
-      : nextEvent ? `next ${nextEvent.type === 'H' ? 'high' : 'low'} · ${county.tideStation.name} · ${datum}` : TIDE_UNAVAILABLE,
+    curvePoint ? [tideTrend(daily.tides, pivot), shoreHour?.tide.veryLow ? 'very low' : null, barText, county.tideStation.name, datum].filter(Boolean).join(' · ')
+      : nextEvent ? [`next ${nextEvent.type === 'H' ? 'high' : 'low'}`, barText, county.tideStation.name, datum].filter(Boolean).join(' · ') : TIDE_UNAVAILABLE,
     tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now);
 
   return {
@@ -112,7 +115,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, shore: daily.shore, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, bar: daily.bar, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 

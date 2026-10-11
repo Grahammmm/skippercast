@@ -60,6 +60,8 @@ export interface Brief {
   readonly spear: DailyBrief['spear'];
   /** The shore reading (surf, wind side, tide phase, verdict per hour); null for boat and spear. */
   readonly shore: DailyBrief['shore'];
+  /** The harbour bar reading (ebb, swell, bar band per hour) for a boat brief at a regulated bar; null otherwise. */
+  readonly bar: DailyBrief['bar'];
   readonly alerts: readonly Alert[];
   readonly missing: readonly string[];
   readonly tides: readonly TidePoint[];

@@ -65,12 +65,13 @@ test('the trend equals briefing.ts tideAt over a whole day of the curve', () => 
 });
 
 test('the tide tile leads its detail with the trend, then the station and reference level', () => {
-  const brief = at => buildCoastBrief({report, county: slo, areaId: 'central', profile: 'boat', date, now, at});
+  // Cambria (north) has no harbour bar, so the detail carries no bar band (tests/test_bar_conditions.mjs covers Morro Bay).
+  const brief = at => buildCoastBrief({report, county: slo, areaId: 'north', profile: 'boat', date, now, at});
   const tile = at => brief(at).tiles.find(t => t.id === 'tide');
   assert.equal(tile('2026-10-08T18:06:00.000Z').detail, `Turning · ${slo.tideStation.name} · MLLW`);
   assert.match(tile('2026-10-08T08:00:00.000Z').detail, new RegExp(`^(Rising|Falling) · ${slo.tideStation.name} · MLLW$`));
   // The fixture's own curve is hourly: no trend, the detail keeps the station and datum.
-  assert.equal(buildCoastBrief({report: fixture, county: slo, areaId: 'central', profile: 'boat', date, now, at: '2026-10-08T21:00:00.000Z'}).tiles.find(t => t.id === 'tide').detail, `${slo.tideStation.name} · MLLW`);
+  assert.equal(buildCoastBrief({report: fixture, county: slo, areaId: 'north', profile: 'boat', date, now, at: '2026-10-08T21:00:00.000Z'}).tiles.find(t => t.id === 'tide').detail, `${slo.tideStation.name} · MLLW`);
 });
 
 test('the sparkline is tideChart: chart() in mini mode over the day with night shading', () => {
