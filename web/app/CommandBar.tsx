@@ -109,8 +109,11 @@ export function PortControl() {
 export function CommandBar({now = new Date()}: {now?: Date} = {}) {
   return (
     <section class="app-command" aria-label="Command bar">
-      <ProfileSwitch />
-      <LimitsControl />
+      {/* The limits trigger is an icon beside the switch, so the bar stays one row on a 1280 px laptop. */}
+      <div class="app-profile-limits">
+        <ProfileSwitch />
+        <LimitsControl compact />
+      </div>
       <TargetSelect />
       <div class="app-area" role="group" aria-label="Area and port">
         <AreaSelect />

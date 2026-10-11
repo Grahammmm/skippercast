@@ -5,6 +5,7 @@
 // panel (web/app/LimitsPanel.tsx) rendered to a string.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -195,6 +196,58 @@ test('storage failure: limits still hold for the page, and a fresh load starts f
   assert.deepEqual(limitsStore.loadLimits(), {}, 'nothing was stored');
   configureStore({storage: null});
 });
+const DEFAULT_DIGEST = 'df988f95f8f1dbb9f985583c681a630f6206e1e7169d2d3def2f9ab6a72c1634';
+
+/** report() with hour-to-hour variation, so a day mixes Rough and gentler hours. */
+function varied(opts) {
+  const out = report(opts);
+  const f = out.forecasts.find(x => x.id === 'central');
+  f.hours = f.hours.map((h, i) => ({...h, windKnots: h.windKnots + (i % 5), gustKnots: h.gustKnots + (i % 7), waveFt: h.waveFt + (i % 3) * 0.5}));
+  if (out.nearshore) out.nearshore[0].hours = out.nearshore[0].hours.map((h, i) => ({...h, waveFt: h.waveFt + (i % 3)}));
+  return out;
+}
+const GRID = [];
+for (const site of [false, true]) for (const [wind, gust] of [[2, 5], [6, 10], [10, 16], [14, 22]]) for (const wave of [1, 3, 5]) for (const period of [8, 16])
+  GRID.push({site, wind, gust, wave, period, dir: 0, nearFt: wave, nearS: period});
+const windowHours = (brief, profileHours) => brief.windows.flatMap(w => profileHours.filter(h => Date.parse(h.at) >= Date.parse(w.start) && Date.parse(h.at) < Date.parse(w.end)));
+
+test('default-limit windows are unchanged by the Rough-hour rule for looser limits', () => {
+  // A digest of every default window over a grid of shore, spear, kayak and boat days, recorded before
+  // looser limits learned to skip Rough shore and spear hours. Defaults must not move.
+  const rows = [];
+  for (const mode of ['boat', 'shore', 'spear', 'kayak']) for (const opts of GRID) {
+    const brief = buildDaily(varied(opts), slo, area, mode, date, now);
+    rows.push([mode, brief.status, brief.windows.map(w => [w.start, w.end, w.label, w.reasons])]);
+  }
+  assert.ok(rows.some(row => row[2].length), 'the grid has default windows');
+  assert.equal(createHash('sha256').update(JSON.stringify(rows)).digest('hex'), DEFAULT_DIGEST);
+});
+
+test('looser limits never put a shore or spear window over an hour that profile grades Rough', () => {
+  let rough = 0, windows = 0;
+  for (const [mode, limits] of [['shore', loosest('shore')], ['shore', {wind: 15, gust: 20}], ['spear', loosest('spear')], ['spear', {...loosest('spear'), surge: 'Strong'}], ['spear', {wind: 14, gust: 20}]]) for (const opts of GRID) {
+    const brief = buildDaily(varied(opts), slo, area, mode, date, now, limits);
+    const hours = brief[mode].hours;
+    rough += hours.filter(h => h.verdict === 'Rough').length;
+    windows += brief.windows.length;
+    for (const h of windowHours(brief, hours)) assert.notEqual(h.verdict, 'Rough', `${mode} ${JSON.stringify(limits)} ${JSON.stringify(opts)} ${h.at}: ${h.reasons.join(', ')}`);
+  }
+  assert.ok(rough > 0 && windows > 0, 'the grid has Rough hours and windows');
+  // The reported case: Shore at wind 15, gusts 20 with surf from the offshore estimate.
+  const shore = buildDaily(varied({wind: 10, gust: 14, wave: 3, period: 16, dir: 0}), slo, area, 'shore', date, now, {wind: 15, gust: 20});
+  for (const h of windowHours(shore, shore.shore.hours)) assert.notEqual(h.verdict, 'Rough', h.at);
+});
+
+test("a stricter kayak seas limit is checked against the kayak verdict's own seas figure", () => {
+  const day = buildDaily(report({wave: 2}), slo, area, 'kayak', date, now);
+  assert.ok(day.windows.length > 0);
+  const seas = day.kayak.hours.find(h => h.seas.heightFt !== null)?.seas.heightFt;
+  assert.ok(Number.isFinite(seas), 'the kayak profile grades a seas figure');
+  const under = buildDaily(report({wave: 2}), slo, area, 'kayak', date, now, {seas: Math.ceil(seas * 2) / 2});
+  assert.ok(under.windows.length > 0, 'a limit at the kayak seas figure keeps the windows');
+  const over = buildDaily(report({wave: 2}), slo, area, 'kayak', date, now, {seas: Math.floor(seas * 2) / 2 - 0.5});
+  assert.deepEqual(over.windows, [], 'a limit under the kayak seas figure removes them');
+});
 
 let mod;
 async function load() {
@@ -204,6 +257,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {LimitsForm, LimitsControl, fieldLabel} from './web/app/LimitsPanel.tsx';
       export {saveLimits, resetLimits} from './web/limits.ts';
+      export {LowerExposure} from './web/brief/Brief.tsx';
       export {configureStore, profile} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
@@ -251,4 +305,17 @@ test('panel: labelled number fields with default and range, surge for spear only
   assert.match(render(h(LimitsControl, {compact: true})), /Your limits for Kayak \(set\)/);
   resetLimits('kayak');
   profile.value = 'boat';
+});
+
+test('Lower exposure keeps the safety caveat visible beside the "using your limits" note', async () => {
+  const {LowerExposure, render, h} = await load();
+  const windy = report({wind: 12, gust: 17});
+  const mine = buildCoastBrief({report: windy, county: slo, areaId: 'central', profile: 'boat', date, now, limits: {wind: 14, gust: 20}});
+  assert.match(mine.windows[0].reasons[0], /^Using your limits/);
+  const html = render(h(LowerExposure, {brief: mine}));
+  assert.match(html, /Harbor entrance and full return route need a separate check\. Using your limits \(wind 14 kt/);
+  const plain = buildCoastBrief({report: report(), county: slo, areaId: 'central', profile: 'boat', date, now});
+  const text = render(h(LowerExposure, {brief: plain}));
+  assert.match(text, /Harbor entrance and full return route need a separate check/);
+  assert.ok(!text.includes('Using your limits'));
 });

@@ -37,8 +37,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-command label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
 /* FE-54: the target menu's search field sits beside the grouped list. */
 .app-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.app-target-search { width: 10rem; min-width: 0; font-weight: var(--weight-regular); }
+.app-target-search { width: 8rem; min-width: 0; font-weight: var(--weight-regular); }
 .app-target-search::placeholder { color: var(--muted); }
+.app-profile-limits { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-area { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-window { margin-left: auto; color: var(--text); font-size: var(--text-13); }
 

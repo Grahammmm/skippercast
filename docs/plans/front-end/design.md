@@ -1024,8 +1024,9 @@ Your limits (issue #542, `packages/coast/src/limits.ts`, `web/limits.ts`,
 limits: highest sustained wind, highest gust, highest seas (surf for shore)
 and, for spear, the highest surge band. They are kept on the device only
 (`localStorage` `skippercast-limits-v1`, per profile), apart from the
-signed-in preferences, and are opened from "Your limits" beside the profile
-switch (an icon button in the phone's top bar) in the shared native dialog
+signed-in preferences, and are opened from the "Your limits" icon button
+beside the profile switch (in the phone's top bar on a phone; an icon so the
+laptop command bar stays one row) in the shared native dialog
 with Reset to defaults. Defaults are the window limits the brief already uses
 (`assess` `WINDOW_LIMITS`: boat 10 kt, 15 kt gust, 4 ft; the others 8 kt,
 12 kt, 3 ft; spear surge up to `SPEAR.windowMaxSurge`). Values are clamped to
@@ -1041,7 +1042,10 @@ limits the brief screens the day once more with the defaults: a window the
 defaults would not suggest in full leads its reasons with "Using your limits
 (...)", the deck says "Using your limits: ..." (and that they are looser
 than the defaults, when one is), and counts hours the defaults would suggest
-that the user's limits leave out.
+that the user's limits leave out. A looser limit never puts a shore or spear
+window over an hour that profile grades Rough (kayak windows already skip
+Rough hours); the defaults' windows are unchanged. The Lower exposure line
+shows the window's safety caveat and the "Using your limits" note together.
 
 ## 9. Map layers
 

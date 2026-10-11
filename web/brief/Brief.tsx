@@ -124,10 +124,12 @@ const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hou
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
   const tz = regionInfo.value?.timezone ?? 'America/Los_Angeles', w = brief.windows[0];
+  // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
+  const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
   return (
     <p class="app-window">
       <span class="ui-eyebrow">Lower exposure</span>{' '}
-      {w ? <><span class="ui-mono">{clock(w.start, tz)}–{clock(w.end, tz)}</span> · {w.label}. {w.reasons[0] ?? ''}</> : brief.limits?.custom ? 'No lower-exposure window within your limits for this day.' : 'No lower-exposure window screened for this day.'}
+      {w ? <><span class="ui-mono">{clock(w.start, tz)}–{clock(w.end, tz)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : brief.limits?.custom ? 'No lower-exposure window within your limits for this day.' : 'No lower-exposure window screened for this day.'}
     </p>
   );
 }
