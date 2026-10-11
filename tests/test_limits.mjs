@@ -196,7 +196,9 @@ test('storage failure: limits still hold for the page, and a fresh load starts f
   assert.deepEqual(limitsStore.loadLimits(), {}, 'nothing was stored');
   configureStore({storage: null});
 });
-const DEFAULT_DIGEST = 'df988f95f8f1dbb9f985583c681a630f6206e1e7169d2d3def2f9ab6a72c1634';
+// Re-recorded for #551: default windows lost only hours a hazard rule flags (a hazardous bar mid-window, offshore-estimate
+// sneaker swell for shore, long-period swell under a kayak, Rough shore or spear hours) and the short pieces those split off.
+const DEFAULT_DIGEST = '5e76d4c141f11c062b2dccef887b2691b493d2dd001687de5f946c44bd3c9f32';
 
 /** report() with hour-to-hour variation, so a day mixes Rough and gentler hours. */
 function varied(opts) {
@@ -211,9 +213,9 @@ for (const site of [false, true]) for (const [wind, gust] of [[2, 5], [6, 10], [
   GRID.push({site, wind, gust, wave, period, dir: 0, nearFt: wave, nearS: period});
 const windowHours = (brief, profileHours) => brief.windows.flatMap(w => profileHours.filter(h => Date.parse(h.at) >= Date.parse(w.start) && Date.parse(h.at) < Date.parse(w.end)));
 
-test('default-limit windows are unchanged by the Rough-hour rule for looser limits', () => {
-  // A digest of every default window over a grid of shore, spear, kayak and boat days, recorded before
-  // looser limits learned to skip Rough shore and spear hours. Defaults must not move.
+test('default-limit windows match the recorded digest', () => {
+  // A digest of every default window over a grid of shore, spear, kayak and boat days. A change here moves the
+  // defaults: re-record it only on purpose, and say in the commit which hours moved and why.
   const rows = [];
   for (const mode of ['boat', 'shore', 'spear', 'kayak']) for (const opts of GRID) {
     const brief = buildDaily(varied(opts), slo, area, mode, date, now);

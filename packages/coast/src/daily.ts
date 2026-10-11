@@ -2,9 +2,9 @@ import {getMoonIllumination, getTimes} from 'suncalc';
 import {assess, freshForecast, freshObservation} from './assessment.ts';
 import type {Alert, Area, Assessment, BriefMode, County, ForecastHour, Observation, Report, TideEvent, TidePoint, Window} from './types.ts';
 import {freshNearshore, nearshoreAt} from './nearshore.ts';
-import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay, type SurgeBand} from './spear.ts';
-import {KAYAK_WIND_RANK, kayakDay, kayakHours, kayakWindText, kayakWindowOk, type KayakDay} from './kayak.ts';
-import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay} from './shore-conditions.ts';
+import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay, type SpearHour, type SurgeBand} from './spear.ts';
+import {KAYAK_WIND_RANK, kayakDay, kayakHours, kayakWindText, kayakWindowOk, type KayakDay, type KayakHour} from './kayak.ts';
+import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay, type ShoreHour} from './shore-conditions.ts';
 import {BAR_CHECK, barDay, barHours, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
 import {clampLimits, defaultLimits, limitsText, looserFields, sameLimits, stricterFields, type ComfortLimits} from './limits.ts';
 
@@ -105,10 +105,38 @@ function astro(date:string,county:County,area:Area) {
  return {sunrise:iso(times.sunrise),sunset:iso(times.sunset),moon:{fraction:finite(lunar.fraction)?lunar.fraction:null,label:finite(lunar.phase)?names[Math.round(lunar.phase*8)%8]!:'Unknown'}};
 }
 
+/** What one hour of a brief window is checked against: the forecast hour, the day's light and each profile reading present. */
+export type WindowHourInput = {
+ hour:ForecastHour;sunrise:string|null;sunset:string|null;
+ /** True when a spear or shore profile judges this hour's surge or surf from a fresh nearshore model instead of offshore seas. */
+ nearJudged:boolean;
+ bar?:BarHour|undefined;shore?:ShoreHour|undefined;spear?:SpearHour|undefined;kayak?:KayakHour|undefined;
+};
+/**
+ * Why an hour can never sit inside a suggested window, whatever the comfort limits (issue #551); empty when nothing rules it out.
+ * One rule for every profile: darkness, long-period swell (offshore unless a spear or shore nearshore model judges the hour),
+ * a Hazardous harbour bar, shore sneaker-wave swell on either surf basis, Heavy surge, kayak offshore wind or launch surf,
+ * and any hour the profile itself grades Rough. Marine alerts withhold every window (buildDaily) and are not per hour.
+ */
+export function windowHourHazards({hour,sunrise,sunset,nearJudged,bar,shore,spear,kayak}:WindowHourInput):string[] {
+ const out:string[]=[],at=Date.parse(hour.at),rise=sunrise?Date.parse(sunrise):NaN,set=sunset?Date.parse(sunset):NaN;
+ if(!Number.isFinite(at)||!Number.isFinite(rise)||!Number.isFinite(set)||at<rise||at+HOUR>set)out.push('darkness');
+ const longPeriod=finite(hour.waveFt)&&hour.waveFt>=2.5&&((finite(hour.wavePeriodS)&&hour.wavePeriodS>=15)||(finite(hour.swellPeriodS)&&hour.swellPeriodS>=15));
+ if(longPeriod&&!nearJudged)out.push('long-period swell');
+ if(bar?.band==='Hazardous')out.push('hazardous bar');
+ if(shore?.surf.sneaker)out.push('sneaker-wave swell');
+ if(shore?.verdict==='Rough')out.push('shore Rough');
+ if(spear?.surge.band==='Heavy')out.push('heavy surge');
+ if(spear?.verdict==='Rough')out.push('spear Rough');
+ if(kayak&&!kayakWindowOk(kayak))out.push(kayak.wind.side==='offshore'?'offshore wind':kayak.launchCaution?'launch surf':`kayak ${kayak.verdict}`);
+ return out;
+}
+
 /**
  * The daily brief. `limits` are the user's own comfort limits (limits.ts); they are clamped to the profile's
  * bounds and change only the window rule's wind, gust, seas and surge limits. A stricter limit also caps a
- * Calmer hour at Marginal. Alerts, long-period swell, the bar, offshore wind, launch surf and daylight never move.
+ * Calmer hour at Marginal. Alerts and windowHourHazards (long-period swell, the bar, Rough hours, offshore wind,
+ * launch surf, daylight) never move.
  */
 export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,date:string,now=new Date(),limits?:Partial<ComfortLimits>|null):DailyBrief {
  const defaults=defaultLimits(mode),mine=limits?clampLimits(mode,limits):defaults,custom=!sameLimits(mode,mine,defaults);
@@ -121,7 +149,8 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
  // Spear and shore windows judge surge or surf from a fresh nearshore model where one covers the hour, not the generic 3 ft rule.
  // Kayak reads the launch beach's surf from the same model.
  const site=mode==='spear'||mode==='shore'||mode==='kayak'?freshNearshore(report,area.id,now)[0]:undefined;
- const nearJudged=(hour:ForecastHour)=>{const near=site?nearshoreAt(site,hour.at):undefined;return !!near&&(mode==='spear'?surge(hour,near).basis==='nearshore':surf(hour,near).basis==='nearshore');};
+ // Only spear and shore judge the place itself from the model; a kayak's nearshore sample is the launch, not the paddle.
+ const nearJudged=(hour:ForecastHour)=>{const near=site?nearshoreAt(site,hour.at):undefined;return !!near&&(mode==='spear'?surge(hour,near).basis==='nearshore':mode==='shore'&&surf(hour,near).basis==='nearshore');};
  const astronomy=astro(date,county,area);
  const hours=(forecast?.hours??[]).filter(hour=>{
   const at=Date.parse(hour.at);
@@ -155,15 +184,21 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   return hour=>{const s=surf(hour,nearshoreAt(site,hour.at)),ok=surfWindowOk(s);return ok&&over(s.heightFt)?false:ok;};
  };
  const label=mode==='spear'?'Lower surge & wind':mode==='kayak'?'Lower wind & seas':'Lower surf & wind';
- // A looser limit never puts a shore or spear window over an hour that profile grades Rough (kayakWindowOk already
- // excludes Rough kayak hours). The defaults keep their rule unchanged.
- const roughAt=new Set([...(shore?.hours??[]),...(spear?.hours??[])].filter(hour=>hour.verdict==='Rough').map(hour=>hour.at));
- const loosens=(lim:ComfortLimits)=>{const l=looserFields(mode,lim);return l.fields.length>0||l.surge;};
+ // Boat at a regulated bar (33 CFR 165.1196): the bar check per hour, from the fresh nearshore model where one covers the hour.
+ const entrance=mode==='boat'?entranceFor(county.id,area.id):null;
+ const bar=entrance?barDay(entrance,barHours({hours,site:freshNearshore(report,area.id,now)[0],entrance,tideEvents:report.tideEvents})):null;
+ // One per-hour hazard check for every profile and every set of limits: an hour it flags is never inside a window.
+ const readings=<T extends {at:string}>(list:T[]|undefined)=>new Map((list??[]).map(hour=>[hour.at,hour]));
+ const barAt=readings(bar?.hours),shoreAt=readings(shore?.hours),spearAt=readings(spear?.hours);
+ const hazardsAt=new Map(hours.map(hour=>[hour.at,windowHourHazards({hour,sunrise:astronomy.sunrise,sunset:astronomy.sunset,nearJudged:nearJudged(hour),
+  bar:barAt.get(hour.at),shore:shoreAt.get(hour.at),spear:spearAt.get(hour.at),kayak:kayakAt.get(hour.at)})]));
+ // An hour outside this day (the assessment reads 72 h) is left to the window's day; screen keeps windows inside the day.
+ const blocked=(hour:ForecastHour)=>!!hazardsAt.get(hour.at)?.length;
  // Assess with the real clock, not tomorrow's timestamp. Limit warnings to this day's interval.
  const assessWith=(lim:ComfortLimits)=>{
   const base=waveOkFor(lim);
-  const waveOk=roughAt.size&&loosens(lim)?(hour:ForecastHour)=>roughAt.has(hour.at)?false:base?.(hour):base;
-  return assess({...report,alerts},area,mode,now,county.timezone,{...(waveOk?{waveOk}:{}),...(base?{label}:{}),limits:{wind:lim.wind,gust:lim.gust,wave:lim.seas}});
+  const waveOk=(hour:ForecastHour)=>blocked(hour)?false:base?.(hour);
+  return assess({...report,alerts},area,mode,now,county.timezone,{waveOk,...(base?{label}:{}),limits:{wind:lim.wind,gust:lim.gust,wave:lim.seas}});
  };
  const assessment=assessWith(mine);
  const wind={...range(hours.map(hour=>hour.windKnots)),gust:maximum(hours.map(hour=>hour.gustKnots))};
@@ -205,9 +240,6 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   else if(shore.windSpeedOnly)missing.push('Onshore or offshore wind unknown for some hours (no wind direction); wind judged on speed only');
   if(shore.tideUnknown)missing.push('Tide phase unknown: high and low tide events unavailable');
  }
- // Boat at a regulated bar (33 CFR 165.1196): the bar check per hour, from the fresh nearshore model where one covers the hour.
- const entrance=mode==='boat'?entranceFor(county.id,area.id):null;
- const bar=entrance?barDay(entrance,barHours({hours,site:freshNearshore(report,area.id,now)[0],entrance,tideEvents:report.tideEvents})):null;
  if(bar&&hours.length){
   if(bar.basis!=='nearshore')missing.push('Bar swell is an offshore estimate where no fresh nearshore model covers the hour');
   if(bar.tideUnknown)missing.push('Tide phase unknown: the bar check cannot time the ebb');
@@ -221,8 +253,9 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
  const complete=hours.length>0&&hours.every(hour=>finite(hour.windKnots)&&finite(hour.gustKnots)&&finite(hour.waveFt)&&finite(hour.wavePeriodS));
  const screen=(assessed:Assessment):Window[]=>assessed.status==='Unknown'||alerts.length||!alertCheckFresh||!complete?[]:assessed.windows.filter(window=>{
   const from=Date.parse(window.start),to=Date.parse(window.end);
-  return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&!nearJudged(hour)&&finite(hour.waveFt)&&hour.waveFt>=2.5&&finite(hour.swellPeriodS)&&hour.swellPeriodS>=15)
-   // A window that leaves or returns in a hazardous bar hour is not suggested.
+  // Every window hour passes the per-hour hazard check (assess already skips flagged hours; this keeps the rule in one place),
+  // and a window whose return hour [end - 1 h, end] reads a hazardous bar is not suggested either.
+  return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&blocked(hour))
    &&!(bar&&crossingHours(bar,window.start,window.end).some(hour=>hour.band==='Hazardous'));
  }).map(window=>{
   const crossing=bar?crossingHours(bar,window.start,window.end):[];
@@ -283,7 +316,7 @@ function spans(hours:BarHour[],tz:string):string {
 /** The bar deck: the worst hours and why, the tide basis, what is not judged, and the standing check line. Never says the bar is safe. */
 function barSummary(bar:BarDay,station:string,tz:string):string[] {
  const parts:string[]=[],name=bar.entrance.name;
- if(bar.hazardous.length)parts.push(`${name} bar (estimate): hazardous ${spans(bar.hazardous,tz)} (${bar.hazardous[0]!.reasons.join(', ')}). Windows that leave or return then are not suggested.`);
+ if(bar.hazardous.length)parts.push(`${name} bar (estimate): hazardous ${spans(bar.hazardous,tz)} (${bar.hazardous[0]!.reasons.join(', ')}). No window leaves, returns or runs through those hours.`);
  else if(bar.caution.length)parts.push(`${name} bar (estimate): caution ${spans(bar.caution,tz)} (${bar.caution[0]!.reasons.join(', ')}).`);
  else if(bar.worst==='No bar flag')parts.push(`${name} bar (estimate): no hour reads hazardous or caution on this rough check, which does not mean the bar is safe.`);
  else parts.push(`${name} bar: not judged (${(bar.hours.find(hour=>hour.band==='Unknown')??bar.hours[0]!).reasons.join(', ')}).`);
