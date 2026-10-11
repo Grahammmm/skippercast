@@ -317,6 +317,13 @@ class ClassifyTest(unittest.TestCase):
         self.assertGreater(run.straightness, 0.9)
         self.assertAlmostEqual(result.fishing_min, run.minutes)
 
+    def test_transit_sprint_between_pelagic_runs_is_not_bridged(self):
+        def search(track):
+            track.step(90, 7.0, 40).step(90, 12.0, 25).step(90, 7.0, 40)
+        _, (result,) = classified(fishing_trip(search))
+        self.assertEqual(fishing(result), ['troll-pelagic', 'troll-pelagic'])
+        self.assertIn('transit', [s.kind for s in result.segments[1:-1]])
+
     def test_long_stop_splits_a_pelagic_search(self):
         def search(track):
             track.step(90, 7.0, 40).circle(TH.troll_pelagic_stop_max_minutes + 30).step(90, 7.0, 40)

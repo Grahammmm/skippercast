@@ -296,17 +296,22 @@ def _merge_short(runs: list[_Run], minimum: float) -> list[_Run]:
         runs[:] = _coalesce(runs)
 
 
+_BRIDGEABLE = ("drift-anchor", "uncertain", "troll-slow")
+
+
 def _bridge_stops(runs: list[_Run], rows: Sequence[AisPosition], ports: Sequence[Geofence],
                   th: ActivityThresholds) -> list[_Run]:
     """Runs between two ``troll-pelagic`` runs, together short and wholly offshore, join them (a paddy stop).
 
     Each side must last at least ``window_min``: a shorter one may be only the centred window blending a
-    fast run into a stop, which would otherwise pull a drift into a pelagic run.
+    fast run into a stop, which would otherwise pull a drift into a pelagic run. Only stop-like kinds
+    bridge, plus a ``transit`` run shorter than ``window_min`` (the window blending a fast run into a stop):
+    a real ``transit`` sprint between two pelagic runs stays transit.
     """
     pelagic = [k for k, r in enumerate(runs) if r.kind == "troll-pelagic" and r.minutes >= th.window_min]
     for a, b in zip(pelagic, pelagic[1:]):
         between = runs[a + 1:b]
-        if (all(r.kind not in ("gap", "in-port") for r in between)
+        if (all(r.kind in _BRIDGEABLE or (r.kind == "transit" and r.minutes < th.window_min) for r in between)
                 and runs[b].start - runs[a].end <= th.troll_pelagic_stop_max_minutes * MINUTE_MS
                 and all(offshore_nm(ports, p.lat, p.lon) >= th.offshore_min_nm
                         for p in rows[runs[a].last + 1:runs[b].first])):
