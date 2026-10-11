@@ -18,6 +18,10 @@
 // FE-82: in 2D and 3D a protected area or charter ground picked on the terrain
 // (stage.ts `terrainPick`) gets the card the Chart's click gives it; a reef mark
 // picked there selects `?spot=`, as on the Chart.
+// FE-54: a habitat card (reef mark, survey or geology outline, terrain habitat,
+// charter ground) adds the target's rules at a glance (web/regs.ts, v1's row):
+// the reviewed registry's own bag and size clauses, its check date and the
+// official page. A protected area or withheld mark keeps its own words instead.
 import {computed} from '@preact/signals';
 import {useEffect, useRef} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
@@ -28,7 +32,11 @@ import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
 import type {CoastReading} from '../../packages/coast/src/embed-types.ts';
 import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
-import {navigate, selection, setParams} from '../state.ts';
+import {navigate, profile, selection, setParams, species} from '../state.ts';
+import {PROFILE_TABLE} from '../profile.ts';
+import {loadRegs, regsData, regulationState, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
+import {zone} from './App.tsx';
+import {dockState} from './TimeDock.tsx';
 import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
 
 export type Mark = ChartMark;
@@ -55,6 +63,28 @@ export const currentMark = computed<Mark | null>(() => {
   return (chart ? chartMark.value ?? habitatCard.value : terrainPick.value ?? (reading ? readingCard(reading) : null) ?? habitatCard.value)
     ?? (spot === undefined ? placeholderMark(selection.value!) : spot);
 });
+
+/** The cards that speak for a place to fish, so carry the target's rules. */
+const RULED = /^(?:spot|survey|geology|habitat|charter):/;
+
+/** The target's rules at a glance for the dock's hour, or nothing while the region loads. */
+export function RulesLine({mark}: {mark: Mark}) {
+  const region = markData.value?.region as RulesRegion | undefined, loaded = regsData.value;
+  useEffect(() => { if (region) void loadRegs(region); }, [region?.id]);
+  if (!region || !RULED.test(mark.id) || mark.withheld) return null;
+  const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
+  const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
+  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region);
+  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
+  const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono">{v}</dd>)}</div> : null;
+  return (
+    <div class="app-mark-regs" role="group" aria-label={`Rules at a glance: ${name}`}>
+      <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> <span class="ui-mono">{verifiedText(s)}</span></p>
+      <dl>{cell('Bag', s.bag)}{cell('Size', s.size)}{cell('Depth', s.depth ? [s.depth] : [])}</dl>
+      <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+    </div>
+  );
+}
 
 /** Drop the selection from the address (?spot= and ?focus= are read, never written, by the store). */
 export function clearSelection(href: string): string {
@@ -118,6 +148,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
           <a href={selected.regulations.href} target="_blank" rel="noopener" aria-label={`${selected.regulations.label} (official page, opens in a new tab)`}>{selected.regulations.label}</a>
         </> : null}</p>
       ) : null}
+      <RulesLine mark={selected} />
       <div class="app-mark-actions">
         <Button size="sm" icon={spot && tripIds.value.includes(spot) ? 'check' : 'plus'} disabled={!spot} onClick={() => { if (spot) void addToTrip(spot); }}>
           {spot && tripIds.value.includes(spot) ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>

@@ -49,6 +49,8 @@
   font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); letter-spacing: 0; text-transform: none;
 }
 .ui-popover[data-align="end"] .ui-popover-body { left: auto; right: 0; }
+.ui-popover-sources { margin: var(--space-2) 0 0; }
+.ui-popover-sources a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); font-size: var(--text-13); }
 
 /* Stat tile */
 .ui-tile { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); }
