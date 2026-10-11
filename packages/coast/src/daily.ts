@@ -3,6 +3,7 @@ import {assess, freshForecast, freshObservation} from './assessment.ts';
 import type {Alert, Area, County, ForecastHour, Mode, Observation, Report, TideEvent, TidePoint, Window} from './types.ts';
 import {freshNearshore, nearshoreAt} from './nearshore.ts';
 import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay} from './spear.ts';
+import {shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay} from './shore-conditions.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
@@ -13,6 +14,8 @@ export type DailyBrief = {
  sunrise:string|null;sunset:string|null;moon:{fraction:number|null;label:string};alerts:Alert[];missing:string[];issuedAt:string|null;
  /** The spear reading (spear.ts); null for the other profiles. */
  spear:SpearDay|null;
+ /** The shore reading (shore-conditions.ts); null for the other profiles. */
+ shore:ShoreDay|null;
 };
 const HOUR=3_600_000;
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value);
@@ -96,12 +99,14 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  const forecast=freshForecast(report,area,now);
  const source=report.sources.find(item=>item.id===forecast?.sourceId);
  const alerts=relevantAlerts(report,area,start,end,now);
- // Spear windows judge surge from a fresh nearshore model where one covers the hour, not the generic 3 ft rule.
- const site=mode==='spear'?freshNearshore(report,area.id,now)[0]:undefined;
- const surgeJudged=(hour:ForecastHour)=>!!site&&!!nearshoreAt(site,hour.at)&&surge(hour,nearshoreAt(site,hour.at)).basis==='nearshore';
- const waveOk=site?(hour:ForecastHour)=>surgeJudged(hour)?SURGE_RANK[surge(hour,nearshoreAt(site,hour.at)).band]<=SURGE_RANK[SPEAR.windowMaxSurge]:undefined:undefined;
+ // Spear and shore windows judge surge or surf from a fresh nearshore model where one covers the hour, not the generic 3 ft rule.
+ const site=mode==='spear'||mode==='shore'?freshNearshore(report,area.id,now)[0]:undefined;
+ const nearJudged=(hour:ForecastHour)=>{const near=site?nearshoreAt(site,hour.at):undefined;return !!near&&(mode==='spear'?surge(hour,near).basis==='nearshore':surf(hour,near).basis==='nearshore');};
+ const waveOk=!site?undefined:mode==='spear'
+  ?(hour:ForecastHour)=>nearJudged(hour)?SURGE_RANK[surge(hour,nearshoreAt(site,hour.at)).band]<=SURGE_RANK[SPEAR.windowMaxSurge]:undefined
+  :(hour:ForecastHour)=>surfWindowOk(surf(hour,nearshoreAt(site,hour.at)));
  // Assess with the real clock, not tomorrow's timestamp. Limit warnings to this day's interval.
- const assessment=assess({...report,alerts},area,mode,now,county.timezone,waveOk?{waveOk,label:'Lower surge & wind'}:{});
+ const assessment=assess({...report,alerts},area,mode,now,county.timezone,waveOk?{waveOk,label:mode==='spear'?'Lower surge & wind':'Lower surf & wind'}:{});
  const hours=(forecast?.hours??[]).filter(hour=>{
   const at=Date.parse(hour.at);
   return Number.isFinite(at)&&at>=Math.max(start,now.getTime()-HOUR)&&at<Math.min(end,now.getTime()+72*HOUR);
@@ -132,6 +137,12 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  if(mode==='boat')missing.push('Harbor entrance and full return route need a separate check');
  if(mode==='shore')missing.push('Breaking surf, beach access and water quality need a local check');
  const astronomy=astro(date,county,area);
+ const shore=mode==='shore'?shoreDay(shoreHours({hours,site,area,tideEvents:report.tideEvents,tides:report.tides,sunrise:astronomy.sunrise,sunset:astronomy.sunset}),astronomy.sunrise,astronomy.sunset):null;
+ if(shore&&hours.length){
+  if(shore.basis!=='nearshore')missing.push('Surf is an offshore estimate where no fresh nearshore model covers the hour');
+  if(shore.windSpeedOnly)missing.push('Onshore or offshore wind unknown for some hours (no wind direction or shoreline bearing); wind judged on speed only');
+  if(shore.tideUnknown)missing.push('Tide phase unknown: high and low tide events unavailable');
+ }
  const spear=mode==='spear'?spearDay(spearHours({hours,forecastHours:forecast?.hours??[],site,observations:report.observations.filter(observation=>observation.stationId===county.temperatureStationId),tideEvents:report.tideEvents,chlorophyll:report.chlorophyll??null}),astronomy.sunrise,astronomy.sunset):null;
  if(spear){
   missing.push('Underwater visibility is estimated, not measured; entry, exit and currents need a local check');
@@ -142,27 +153,53 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  const complete=hours.length>0&&hours.every(hour=>finite(hour.windKnots)&&finite(hour.gustKnots)&&finite(hour.waveFt)&&finite(hour.wavePeriodS));
  const windows=assessment.status==='Unknown'||alerts.length||!alertCheckFresh||!complete?[]:assessment.windows.filter(window=>{
   const from=Date.parse(window.start),to=Date.parse(window.end);
-  return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&!surgeJudged(hour)&&finite(hour.waveFt)&&hour.waveFt>=2.5&&finite(hour.swellPeriodS)&&hour.swellPeriodS>=15);
+  return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&!nearJudged(hour)&&finite(hour.waveFt)&&hour.waveFt>=2.5&&finite(hour.swellPeriodS)&&hour.swellPeriodS>=15);
  });
- const status:DailyBrief['status']=alerts.length?'Caution':!forecast||!hours.length||!alertCheckFresh||!complete?'Unknown':mode==='shore'||windows.length?'Mixed':'Caution';
+ // Shore reads Caution when long-period swell is running or no daylight hour reads calmer or marginal.
+ const shoreCaution=!!shore&&(shore.sneakerPeriodS!==null||(shore.hours.length>0&&!shore.best));
+ const status:DailyBrief['status']=alerts.length?'Caution':!forecast||!hours.length||!alertCheckFresh||!complete?'Unknown':shoreCaution?'Caution':mode==='shore'||windows.length?'Mixed':'Caution';
  const conditions=[textRange(wind,'kt winds'),textRange(seas,'ft offshore seas')].filter((item):item is string=>item!==null);
  const spearHeadline=spear?.surge?`${surgeText(spear.surge)} surge · ${clarityText(spear.clarity)}`:null;
- const headline=alerts.length?alerts[0]!.event:spearHeadline??(conditions.length?conditions.join(' · '):'Local forecast unavailable');
+ const shoreHeadline=shore?.surf?`${surfText(shore.surf)} surf${shore.basis==='nearshore'?'':' (offshore estimate)'} · ${shore.sneakerPeriodS!==null?'sneaker-wave risk':shore.best?`${shore.best.verdict.toLowerCase()} at ${hourText(shore.best.at,county.timezone)}`:'no calmer hour'}`:null;
+ const headline=alerts.length?alerts[0]!.event:spearHeadline??shoreHeadline??(conditions.length?conditions.join(' · '):'Local forecast unavailable');
  const summaryParts:string[]=[];
  if(conditions.length)summaryParts.push(`${conditions.join('; ')}${wind.gust!==null?`, gusting to ${Number(wind.gust.toFixed(1))} kt`:''}.`);
  if(spear)summaryParts.push(...spearSummary(spear,site?.name??null,county.timezone));
+ else if(shore&&shore.hours.length)summaryParts.push(...shoreSummary(shore,site?.name??null,county.timezone,tideEvents));
  else if(seas.period!==null)summaryParts.push(seas.period>=15?`Long-period waves reach ${seas.period} seconds; check local surge and breaking surf.`:`Wave periods reach ${seas.period} seconds.`);
  if(alerts.length)summaryParts.push(alerts[0]!.headline);
  if(!alertCheckFresh)summaryParts.push('The current marine alert check is unavailable; conditions windows are withheld.');
  if(!forecast||!hours.length)summaryParts.push('A fresh forecast covering this date is needed.');
  if(mode==='boat')summaryParts.push('Check your harbor entrance, route and return conditions separately.');
- if(mode==='shore')summaryParts.push('Offshore seas do not measure breakers at your beach; verify surf, access and water quality.');
+ if(mode==='shore')summaryParts.push(shore?.basis==='nearshore'?'A model point is not your beach; verify surf, access and water quality.':'Offshore seas do not measure breakers at your beach; verify surf, access and water quality.');
  if(mode==='spear')summaryParts.push('Check entry, exit, currents and water quality locally.');
  if(day.provisional)summaryParts.push('This outlook is provisional; check again closer to departure.');
- return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear};
+ return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore};
 }
 
 const lower=(text:string)=>text.charAt(0).toLowerCase()+text.slice(1);
+const hourText=(at:string,tz:string)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric'}).format(new Date(at));
+const clockText=(at:string,tz:string)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}).format(new Date(at));
+/** The shore deck: what sets the surf, the long-period caution, tide phase, wind side and the calmest daylight hour. */
+function shoreSummary(shore:ShoreDay,siteName:string|null,tz:string,tideEvents:TideEvent[]):string[] {
+ const parts:string[]=[];
+ const scale=(values:(number|null)[])=>{const v=values.filter(finite);return v.length?{min:Math.min(...v),max:Math.max(...v)}:{min:null,max:null};};
+ const judged=shore.hours.filter(hour=>hour.surf.basis!==null);
+ const feet=textRange(scale(judged.map(hour=>hour.surf.heightFt)),'ft'),secs=textRange(scale(judged.map(hour=>hour.surf.periodS)),'s');
+ if(shore.surf&&feet)parts.push(shore.basis==='nearshore'&&siteName?`Surf from the ${siteName} nearshore model: ${feet}${secs?` at ${secs}`:''}.`
+  :shore.basis==='mixed'&&siteName?`Surf from the ${siteName} nearshore model and, where it does not cover the hour, an offshore estimate: ${feet}${secs?` at ${secs}`:''}.`
+  :`Surf is an offshore estimate, judged against lower limits: ${feet} offshore seas${secs?` at ${secs}`:''}. Exposed beaches can see more.`);
+ if(shore.sneakerPeriodS!==null)parts.push(`Long-period swell (${shore.sneakerPeriodS} s) raises the risk of sneaker waves: sets can run far up the beach without warning. Stay off low rocks and keep the ocean in view.`);
+ const highs=tideEvents.filter(event=>event.type==='H');
+ if(highs.length)parts.push(`The rising tide and the two hours around high often fish better from the beach (an angler rule of thumb, not a guarantee): high at ${highs.map(event=>clockText(event.at,tz)).join(' and ')}.`);
+ if(shore.veryLow.length)parts.push(`Very low tide near ${clockText(shore.veryLow[0]!.at,tz)}: take care on exposed rock and watch the incoming water.`);
+ const sides=new Set(shore.hours.map(hour=>hour.wind.side).filter(side=>side!==null));
+ if(sides.size)parts.push(`Wind ${[...sides].join(' or ')}${sides.has('onshore')?'; onshore wind chops the surf and blows line back':''}.`);
+ else if(shore.hours.some(hour=>hour.wind.band!=='Unknown'))parts.push('Wind direction relative to the beach is unknown; wind is judged on speed only.');
+ if(shore.best)parts.push(`Calmest daylight hour: ${hourText(shore.best.at,tz)} (${shore.best.verdict.toLowerCase()}: ${shore.best.reasons.join(', ')}).`);
+ else parts.push('No daylight hour reads calmer or marginal.');
+ return parts;
+}
 /** The spear deck: what sets the surge, the clarity estimate and its drivers, and the calmest daylight hour. */
 function spearSummary(spear:SpearDay,siteName:string|null,tz:string):string[] {
  const parts:string[]=[];

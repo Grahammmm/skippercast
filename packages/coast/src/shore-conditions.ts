@@ -1,0 +1,292 @@
+// Shore-fishing conditions (issue #542): surf, wind direction, tide phase and
+// daylight scored per forecast hour into a verdict, rolled up per day for the
+// daily brief.
+//
+// Every threshold lives in SHORE below with the reasoning behind it. They are
+// coarse screening rules for an angler on a sandy beach or low rocks, not
+// measurements and not a promise that a beach is safe. A Calmer hour is only
+// calmer than the others: breaking surf, access and water quality still need a
+// look at the exact beach.
+//
+// Erasable syntax only: Node tests import this file by type stripping.
+import type {Area, ForecastHour, TideEvent, TidePoint} from './types.ts';
+import type {NearshoreHour, NearshoreSite} from './enrichment-types.ts';
+import {nearshoreAt} from './nearshore.ts';
+
+const HOUR = 3_600_000;
+const MINUTE = 60_000;
+const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+const round = (value: number, digits = 1) => Number(value.toFixed(digits));
+
+/**
+ * The shore thresholds. Units: feet, seconds, knots, degrees, minutes, feet
+ * above the tide station's datum (MLLW).
+ */
+export const SHORE = {
+  surf: {
+    /**
+     * Upper bounds (exclusive) of Small, Moderate and Large in significant
+     * height. Nearshore: a CDIP MOP model point in about 15 m of water, close
+     * to what reaches the beach. Most surf fishing is comfortable below 3 ft
+     * and workable to 5 ft; past 8 ft the beach itself is the hazard.
+     */
+    nearshore: {small: 3, moderate: 5, large: 8},
+    /**
+     * Offshore estimate: the regional forecast's combined seas. Exposed
+     * beaches can see more than the offshore number and sheltered ones less,
+     * so the bands are set lower to stay conservative.
+     */
+    offshore: {small: 2, moderate: 4, large: 6},
+  },
+  /**
+   * Long-period swell carries more energy for its height and arrives in sets
+   * that run far up the beach after quiet minutes (sneaker waves). From `fromS`
+   * seconds with at least `minFt` of that swell, the hour carries a caution
+   * and the score rises; the hour is never Calmer.
+   */
+  sneaker: {minFt: 1.5, steps: [{fromS: 17, score: 2.5}, {fromS: 14, score: 1.5}]},
+  wind: {
+    /** Speed bands on sustained wind and gust: Light up to `light`, Breezy up to `breezy`, Strong beyond. */
+    light: {wind: 10, gust: 15},
+    breezy: {wind: 15, gust: 22},
+    /**
+     * Onshore: wind blowing from within `onshoreDeg` of the seaward bearing
+     * (from the land point toward the water point of the area); offshore:
+     * from within `offshoreDeg` of the landward bearing. Between them is
+     * cross-shore. Onshore wind builds chop on the surf and blows line and
+     * spray back at the angler, so a Breezy or Strong onshore hour scores worse.
+     */
+    onshoreDeg: 60,
+    offshoreDeg: 60,
+  },
+  tide: {
+    /**
+     * A common surf angler rule of thumb, not a guarantee: the rising tide and
+     * the two hours around high (an hour either side) push water and food up
+     * the beach. Scored as a mild bonus.
+     */
+    highMinutes: 60,
+    /**
+     * Predicted height at or below this reads as a very low tide: rocks and
+     * reef are exposed and the incoming water can cut off a way back. A caution
+     * for rock access; not scored.
+     */
+    veryLowFt: 0,
+  },
+  /** Within this many minutes of sunrise or sunset: a mild dawn or dusk bonus (low light, many fish feed closer in). */
+  twilightMinutes: 60,
+  /** Verdict score: lower is calmer. Calmer up to `calmer`, Marginal up to `marginal`, Rough above. */
+  score: {
+    surf: {Small: 0, Moderate: 1, Large: 4, Heavy: 6},
+    wind: {Light: 0, Breezy: 1, Strong: 3},
+    onshore: 0.75,
+    tide: -0.5,
+    twilight: -0.25,
+    calmer: 1,
+    marginal: 3,
+  },
+  /** Shore windows from a nearshore model allow surf up to this band, with no long-period caution. */
+  windowMaxSurf: 'Moderate',
+} as const;
+
+export type SurfBand = 'Small' | 'Moderate' | 'Large' | 'Heavy' | 'Unknown';
+export type WindBand = 'Light' | 'Breezy' | 'Strong' | 'Unknown';
+export type WindSide = 'onshore' | 'offshore' | 'cross-shore' | null;
+export type TidePhase = 'rising' | 'falling' | 'high' | 'low' | null;
+export type ShoreVerdict = 'Calmer' | 'Marginal' | 'Rough' | 'Unknown';
+
+export const SURF_RANK: Readonly<Record<SurfBand, number>> = {Small: 0, Moderate: 1, Large: 2, Heavy: 3, Unknown: 4};
+
+export type Surf = {band: SurfBand; heightFt: number | null; periodS: number | null; basis: 'nearshore' | 'offshore' | null;
+  /** The longest period carrying at least SHORE.sneaker.minFt, or null. */
+  longPeriodS: number | null; sneaker: boolean; sneakerScore: number};
+export type ShoreWind = {band: WindBand; side: WindSide; windKnots: number | null; gustKnots: number | null; directionDeg: number | null};
+export type Tide = {phase: TidePhase; heightFt: number | null; veryLow: boolean; bonus: boolean};
+export type ShoreHour = {at: string; surf: Surf; wind: ShoreWind; tide: Tide; twilight: boolean; verdict: ShoreVerdict; score: number | null; reasons: string[]; cautions: string[]};
+
+function band(heightFt: number, basis: 'nearshore' | 'offshore'): Exclude<SurfBand, 'Unknown'> {
+  const t = SHORE.surf[basis];
+  return heightFt < t.small ? 'Small' : heightFt < t.moderate ? 'Moderate' : heightFt < t.large ? 'Large' : 'Heavy';
+}
+
+/** The sneaker step for a long period, or 0. */
+export function sneakerScore(periodS: number | null): number {
+  if (!finite(periodS)) return 0;
+  return SHORE.sneaker.steps.find(step => periodS >= step.fromS)?.score ?? 0;
+}
+
+/**
+ * Surf at one hour. A fresh nearshore model sample wins; otherwise the
+ * offshore forecast's combined seas are an estimate against the lower
+ * offshore bands. The long-period check reads every component with enough height.
+ */
+export function surf(hour: ForecastHour | undefined, near?: NearshoreHour): Surf {
+  const {minFt} = SHORE.sneaker;
+  const longest = (pairs: [number | null | undefined, number | null | undefined][]) => {
+    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && finite(p)).map(([, p]) => p as number);
+    return periods.length ? Math.max(...periods) : null;
+  };
+  const done = (b: SurfBand, heightFt: number | null, periodS: number | null, basis: Surf['basis'], longPeriodS: number | null): Surf => {
+    const score = sneakerScore(longPeriodS);
+    return {band: b, heightFt, periodS, basis, longPeriodS, sneaker: score > 0, sneakerScore: score};
+  };
+  if (near && finite(near.waveFt) && near.waveFt >= 0) {
+    return done(band(near.waveFt, 'nearshore'), near.waveFt, finite(near.periodS) ? near.periodS : null, 'nearshore', longest([[near.waveFt, near.periodS]]));
+  }
+  const height = finite(hour?.waveFt) && hour.waveFt >= 0 ? hour.waveFt : null;
+  if (height === null) return done('Unknown', null, null, null, longest([[hour?.swellFt, hour?.swellPeriodS]]));
+  const period = finite(hour?.wavePeriodS) ? hour.wavePeriodS : null;
+  return done(band(height, 'offshore'), height, period, 'offshore', longest([[hour?.waveFt, hour?.wavePeriodS], [hour?.swellFt, hour?.swellPeriodS]]));
+}
+
+/** Bearing in degrees true from one point to another. */
+export function bearing(fromLat: number, fromLon: number, toLat: number, toLon: number): number | null {
+  if (![fromLat, fromLon, toLat, toLon].every(finite) || (fromLat === toLat && fromLon === toLon)) return null;
+  const rad = Math.PI / 180, p1 = fromLat * rad, p2 = toLat * rad, dl = (toLon - fromLon) * rad;
+  const deg = Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / rad;
+  return (deg + 360) % 360;
+}
+
+/** The area's seaward bearing, from its land point toward its water point; null when they coincide. */
+export const seaward = (area: Pick<Area, 'lat' | 'lon' | 'landLat' | 'landLon'>): number | null => bearing(area.landLat, area.landLon, area.lat, area.lon);
+
+const angle = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
+
+/** Wind band from speed, and the side it blows from when its direction and the shoreline's bearing are known. */
+export function shoreWind(hour: Pick<ForecastHour, 'windKnots' | 'gustKnots' | 'windDirectionDeg'> | undefined, seawardDeg: number | null): ShoreWind {
+  const wind = finite(hour?.windKnots) ? hour.windKnots : null, gust = finite(hour?.gustKnots) ? hour.gustKnots : null;
+  const directionDeg = finite(hour?.windDirectionDeg) ? hour.windDirectionDeg : null;
+  if (wind === null) return {band: 'Unknown', side: null, windKnots: null, gustKnots: gust, directionDeg};
+  const g = gust ?? wind, {light, breezy, onshoreDeg, offshoreDeg} = SHORE.wind;
+  const b: WindBand = wind <= light.wind && g <= light.gust ? 'Light' : wind <= breezy.wind && g <= breezy.gust ? 'Breezy' : 'Strong';
+  let side: WindSide = null;
+  if (directionDeg !== null && seawardDeg !== null) {
+    const off = angle(directionDeg, seawardDeg);
+    side = off <= onshoreDeg ? 'onshore' : off >= 180 - offshoreDeg ? 'offshore' : 'cross-shore';
+  }
+  return {band: b, side, windKnots: wind, gustKnots: gust, directionDeg};
+}
+
+/** Predicted tide height at `at` from the curve (nearest point within an hour), or null. */
+function heightAt(at: number, curve: readonly TidePoint[]): number | null {
+  let best: TidePoint | undefined, gap = Infinity;
+  for (const point of curve) {const d = Math.abs(Date.parse(point.at) - at); if (Number.isFinite(d) && d < gap) {best = point; gap = d;}}
+  return best && gap <= HOUR && finite(best.heightFt) ? best.heightFt : null;
+}
+
+/**
+ * Tide phase from the high and low events around `at`: high within
+ * SHORE.tide.highMinutes of a high; otherwise rising before a high and falling
+ * before a low; low within the same span of a low. Null without events on both sides.
+ */
+export function tidePhase(at: number, events: readonly TideEvent[], curve: readonly TidePoint[] = []): Tide {
+  const sorted = events.filter(e => Number.isFinite(Date.parse(e.at))).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const span = SHORE.tide.highMinutes * MINUTE;
+  const near = (type: 'H' | 'L') => sorted.find(e => e.type === type && Math.abs(Date.parse(e.at) - at) <= span);
+  const nextEvent = sorted.find(e => Date.parse(e.at) > at), previous = [...sorted].reverse().find(e => Date.parse(e.at) <= at);
+  const high = near('H'), low = near('L');
+  const phase: TidePhase = high ? 'high' : low ? 'low' : nextEvent && previous ? (nextEvent.type === 'H' ? 'rising' : 'falling') : null;
+  const lowEvent = low && finite(low.heightFt) ? low.heightFt : null;
+  const heightFt = heightAt(at, curve) ?? (phase === 'low' ? lowEvent : null);
+  return {phase, heightFt, veryLow: heightFt !== null && heightFt <= SHORE.tide.veryLowFt, bonus: phase === 'rising' || phase === 'high'};
+}
+
+export function isTwilight(at: number, sunrise: string | null, sunset: string | null): boolean {
+  const span = SHORE.twilightMinutes * MINUTE;
+  return [sunrise, sunset].some(edge => {const t = edge ? Date.parse(edge) : NaN; return Number.isFinite(t) && Math.abs(at - t) <= span;});
+}
+
+const ft = (value: number) => `${round(value)} ft`;
+
+/** The verdict from surf, wind, tide and light, with plain reasons and cautions. */
+export function shoreVerdict(s: Surf, w: ShoreWind, t: Tide, twilight: boolean): {verdict: ShoreVerdict; score: number | null; reasons: string[]; cautions: string[]} {
+  const reasons: string[] = [], cautions: string[] = [];
+  if (s.sneaker) cautions.push(`Long-period swell (${s.longPeriodS} s): sneaker waves can run far up the beach without warning; stay off low rocks and keep the ocean in view`);
+  if (t.veryLow) cautions.push(`Very low tide (${t.heightFt === null ? 'below datum' : ft(t.heightFt)}): wet rock and reef are exposed; watch your footing and the incoming water if you walk out`);
+  if (s.band === 'Unknown') reasons.push('Surf height unknown');
+  if (w.band === 'Unknown') reasons.push('Wind unknown');
+  if (s.band === 'Unknown' || w.band === 'Unknown') return {verdict: 'Unknown', score: null, reasons, cautions};
+  const {score: p} = SHORE;
+  const onshore = w.side === 'onshore' && w.band !== 'Light';
+  const score = p.surf[s.band] + s.sneakerScore + p.wind[w.band] + (onshore ? p.onshore : 0) + (t.bonus ? p.tide : 0) + (twilight ? p.twilight : 0);
+  reasons.push(`${s.band} surf${s.heightFt !== null ? ` (${ft(s.heightFt)}${s.periodS !== null ? ` at ${s.periodS} s` : ''}${s.basis === 'offshore' ? ', offshore estimate' : ''})` : ''}`);
+  if (s.sneaker) reasons.push('long-period swell');
+  reasons.push(`${w.band.toLowerCase()} wind${w.side ? ` ${w.side}` : ''}`);
+  if (t.phase === 'rising') reasons.push('rising tide');
+  else if (t.phase === 'high') reasons.push('around high tide');
+  else if (t.phase) reasons.push(`${t.phase} tide`);
+  if (twilight) reasons.push('dawn or dusk');
+  // Long-period swell never reads Calmer, whatever else is in its favour.
+  const verdict: ShoreVerdict = score <= p.calmer && !s.sneaker ? 'Calmer' : score <= p.marginal ? 'Marginal' : 'Rough';
+  return {verdict, score, reasons, cautions};
+}
+
+export type ShoreInputs = {
+  hours: readonly ForecastHour[];
+  site: NearshoreSite | undefined;
+  area: Pick<Area, 'lat' | 'lon' | 'landLat' | 'landLon'>;
+  tideEvents: readonly TideEvent[];
+  tides: readonly TidePoint[];
+  sunrise: string | null;
+  sunset: string | null;
+};
+
+/** The shore reading for each forecast hour. */
+export function shoreHours(input: ShoreInputs): ShoreHour[] {
+  const sea = seaward(input.area);
+  return input.hours.map(hour => {
+    const at = Date.parse(hour.at);
+    const s = surf(hour, input.site ? nearshoreAt(input.site, hour.at) : undefined);
+    const w = shoreWind(hour, sea);
+    const t = tidePhase(at, input.tideEvents, input.tides);
+    const twilight = isTwilight(at, input.sunrise, input.sunset);
+    return {at: hour.at, surf: s, wind: w, tide: t, twilight, ...shoreVerdict(s, w, t, twilight)};
+  });
+}
+
+/** Whether an hour's surf, judged from a nearshore model, fits a shore window; undefined when no nearshore sample judged it. */
+export function surfWindowOk(s: Surf): boolean | undefined {
+  if (s.basis !== 'nearshore') return undefined;
+  return SURF_RANK[s.band] <= SURF_RANK[SHORE.windowMaxSurf] && !s.sneaker;
+}
+
+export type ShoreDay = {
+  hours: ShoreHour[];
+  /** Smallest and largest surf band over daylight hours (all hours when daylight is unknown). */
+  surf: {min: SurfBand; max: SurfBand} | null;
+  basis: 'nearshore' | 'offshore' | 'mixed' | null;
+  /** The longest swell period that triggered the sneaker caution, or null. */
+  sneakerPeriodS: number | null;
+  /** The calmest daylight hour that is not Rough, earliest first on a tie. */
+  best: ShoreHour | null;
+  /** True when wind direction or shoreline bearing is missing for some hour, so wind was judged on speed only. */
+  windSpeedOnly: boolean;
+  /** True when no hour has a tide phase. */
+  tideUnknown: boolean;
+  /** Times of very low tide among those hours. */
+  veryLow: ShoreHour[];
+};
+
+/** Roll the hours up for the day, over daylight when sunrise and sunset are known. */
+export function shoreDay(hours: ShoreHour[], sunrise: string | null, sunset: string | null): ShoreDay {
+  const rise = sunrise ? Date.parse(sunrise) : NaN, set = sunset ? Date.parse(sunset) : NaN;
+  const lit = Number.isFinite(rise) && Number.isFinite(set) ? hours.filter(h => {const t = Date.parse(h.at); return t >= rise && t + HOUR <= set;}) : hours;
+  const scope = lit.length ? lit : hours;
+  const known = scope.filter(h => h.surf.band !== 'Unknown');
+  const ranks = known.map(h => SURF_RANK[h.surf.band]);
+  const bands = Object.keys(SURF_RANK) as SurfBand[];
+  const surfRange = known.length ? {min: bands[Math.min(...ranks)]!, max: bands[Math.max(...ranks)]!} : null;
+  const bases = new Set(known.map(h => h.surf.basis));
+  const basis = !bases.size ? null : bases.size > 1 ? 'mixed' : (bases.has('nearshore') ? 'nearshore' : 'offshore');
+  const sneakers = scope.filter(h => h.surf.sneaker).map(h => h.surf.longPeriodS as number);
+  const best = scope.filter(h => h.verdict === 'Calmer' || h.verdict === 'Marginal')
+    .sort((a, b) => (a.score as number) - (b.score as number) || Date.parse(a.at) - Date.parse(b.at))[0] ?? null;
+  return {hours, surf: surfRange, basis, sneakerPeriodS: sneakers.length ? Math.max(...sneakers) : null, best,
+    windSpeedOnly: scope.some(h => h.wind.band !== 'Unknown' && h.wind.side === null),
+    tideUnknown: !scope.some(h => h.tide.phase !== null), veryLow: scope.filter(h => h.tide.veryLow)};
+}
+
+/** "Small", "Small to moderate". */
+export function surfText(range: {min: SurfBand; max: SurfBand}): string {
+  return range.min === range.max ? range.min : `${range.min} to ${range.max.toLowerCase()}`;
+}
