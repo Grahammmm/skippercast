@@ -259,7 +259,10 @@ const narrow = (page: Page) => page.viewportSize()!.width < 1024;
 /** The rail and legend: on a phone they are the sheet's Layers panel. */
 const showLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Layers', exact: true}).click(); };
 const hideLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click(); };
+// A phone sheet still sliding to peek (220 ms) covers the centre: a click there lands in the Brief, the sheet
+// moves to half and every later click hits the hour slider. Let the slide finish first.
 const clickCentre = async (page: Page) => {
+  await page.locator('.ui-sheet').evaluateAll(sheets => Promise.all(sheets.flatMap(sheet => sheet.getAnimations().map(slide => slide.finished.catch(() => undefined)))));
   const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 };
