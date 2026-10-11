@@ -48,17 +48,15 @@ Rules for every task:
   `CHANGELOG.md` (say "behind `UI_V2`" until FE-60). Append a dated line to
   [README.md](README.md)'s status log when a phase starts or ends.
 
-## Status summary (2026-10-07)
+## Status summary (2026-10-10)
 
 | Status | Count | Tasks |
 | --- | --- | --- |
-| DONE (Claude, Phase 0) | 8 | FE-01 … FE-06, FE-08, FE-09 |
-| DONE on `main` by Codex | 0 | none whole; Codex's pieces are listed under PARTLY |
-| PARTLY on `main` | 5 | FE-31, FE-35, FE-36, FE-51, FE-52 |
-| CHANGED (consume `packages/coast` or the bridge) | 27 | FE-10, FE-11, FE-12, FE-14, FE-15, FE-16, FE-18, FE-20, FE-22, FE-23, FE-25, FE-27, FE-30, FE-32, FE-33, FE-34, FE-37, FE-40 … FE-45, FE-54, FE-60, FE-61, FE-62 |
-| STILL NEEDED as written | 8 | FE-07, FE-17, FE-19, FE-21, FE-24, FE-50, FE-53, FE-55 |
+| DONE on `main` | 63 | every task except the three below and the two dropped |
+| CHANGED, not started | 3 | FE-60 (flip `UI_V2` on; all dependencies merged), FE-61 (one release later), FE-62 (after the owner confirms deleting the fish repo) |
 | DROPPED | 2 | FE-13, FE-26 |
-| NEW | 17 | FE-70 … FE-86 |
+
+Earlier summaries went stale as PRs merged; the per-task Status lines are the record.
 
 ## Phase 0: foundations behind `UI_V2`
 
@@ -82,7 +80,7 @@ Merged as [#359](https://github.com/Grahammmm/skippercast/pull/359). The map sta
 Merged as [#362](https://github.com/Grahammmm/skippercast/pull/362); Codex adjusted its e2e hour test in [#391](https://github.com/Grahammmm/skippercast/pull/391).
 
 ### FE-07 · Landing page (static shoreline) · L
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#421). Agent: Claude.
 - Depends: — (FE-05, FE-08 merged)
 - Files: `dist/landing.html`, `web/landing/{Landing,Readout,ProfilePills,LayerDots,Shoreline}.tsx`, `web/landing/landing.css`, `web/landing/main.tsx`, `e2e/v2-landing.spec.ts`, `scripts/startup-budget.json` (landing entry).
 - Build: § 7 layout with the static shoreline SVG (the region's shoreline GeoJSON drawn inline with the glow treatment; FE-25 adds the live map and keeps this as the fallback); readings from the default region's SkipperCast feeds with source and age; saved-port redirect; layer dots bound to the registry ids as links into `/map?layers=`; nav "Reports" links to the existing `/report` page (Codex, #395) until FE-52, "How it's built" to `/sources` (Q16).
@@ -179,7 +177,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: the source is the bound coast report's `spatial.surfaceTemperature` (FE-74 `coastReport`, requested only while Water temp is on, for the region's centre among its reviewed local areas as FE-15 does: Morro Bay and Cambria), not the habitat tiles. The client gets whichever analysis that report carries, so `web/map/sst.ts` names the product from the report's own status for the analysis's `sourceId`: NASA JPL MUR (0.01°, sampled every 0.02°) in Fish's report, which the bridge served on 2026-10-09, and NOAA Geo-Polar Blended (0.05°) in SkipperCast's own (FE-87). Other regions draw nothing and the rail says "no analysis for this region" ([#491](https://github.com/Grahammmm/skippercast/issues/491)). Gate: fish's rule (the analysis and its retrieval each under 72 h, at most 5 minutes ahead), the source's status `ok`, and the analysis no later than the dock's hour; otherwise the rail and legend give the reason and the analysis date. `web/map/field.ts` paints the field square in Web Mercator at about 8 px per sample on the long side (64 to 1,024 px), quad by quad with `field.sample`'s bilinear blend (the test compares every pixel), in colours from a 256-entry table of `fieldColor` on the `--sst-*` ramp, feathered inward at gaps (fish's `fieldImage`): Morro Bay's analysis paints 456 × 441 px in about 15 ms. The texture is a MapLibre 6 image source filled with pixels (`Engine.setImage`, `updateImage({image})`, through FE-14's style gate), so no data URL or request is made. Contours are `fieldContours` every 0.5 °F, joined into lines per level so whole degrees carry a label with the unit ("61 °F"); the texture, contours and labels sit under the MPA fill. The legend's row gives the range (`temperatureRange`, whole °F), the product, analysis date and age, and the basis with the analysis error's range; a click on the field reads °F with the analysis error there. A refused, stale or failed replacement removes the texture, the contours and a reading of them. Also touched: `web/map/engine.ts` (`setImage`), `web/map/chart.ts` (a run-time layer's `reading` on a click), `web/map/surface-field.{js,d.ts}` (re-exports `fieldColor`, `fieldContours`, `temperatureRange`), `web/map/layers.ts` (a product-neutral basis), `web/app/{MapStage,Legend}.tsx`, `web/app/rail.ts`, `web/app/app.css`.
 
 ### FE-17 · Swell as a field · M
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#502). Agent: Claude.
 - Depends: FE-16
 - Files: `web/map/swell.ts`, `web/map/forecast-grid.ts` (wraps the forecast matrix reader), `tests/test_swell_layer.mjs`, `e2e/v2-map.spec.ts`.
 - Build: § 9 Swell: height texture through `field.ts`, period isolines, direction strokes at low density; no circles, no per-cell arrows.
@@ -203,7 +201,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/map/marks.ts` loads the region's `assets` (`atlas`, `survey_habitat`, `geology` from `regions/<id>/region.json`) once per region in every presentation, so a shared `?spot=` names its mark in 2D and 3D; `web/map/habitat.ts` turns them into features and cards. It imports `dist/species-fit.js` and restates `matchesSpecies` (`dist/species.js`), `habitatMatches` (`dist/survey-habitat.js`) and geology's filter (`dist/geology.js`), because those modules import v1's region store; `tests/test_marks_layer.mjs` pins each to the v1 function over the committed data. `reef-trip-data.js` is not wrapped: it loads the ranked trip export, which v1's map never draws, so it moves to FE-51. Reef targets of v2 (lingcod, the rockfish, cabezon) read v1's reef marks and habitat; the fit uses v1's lingcod or rockfish screen, or both for `reef` (v1's combined fit), and is unrated otherwise; marks deeper than the profile's limit are left out (`withinDepth` on the deepest nearby depth). Geology is a dashed outline over a 0.06 fill, as v1's. One selection: a mark click writes `?spot=` and drops `?habitat=`, a terrain pick does the reverse (`stage.ts` `habitatHref`), an outline or shoreline pick drops both, each also drops `?focus=`, a link naming both a spot and a habitat keeps the spot (in place, no history entry), and Back restores the link's selection over the Chart's. On the Chart the card shows the terrain's selection with the renderer's `onTargetDetail` lines (its "species fit n/3" in § 12's wording) or, without a mounted terrain, the `resolveHabitatSelection` receipt until it expires (`web/map/coast-habitat.js`, a dynamic import without three); in 2D and 3D the renderer's own panel still speaks for its selection until FE-80. The regulations line says what the feature's own build screened (the atlas's "screened against protected areas with N m clearance", v1's wording; the survey's MPA margin; geology's MPA exclusion), to check current rules, and links the official CDFW page (the region's `regulations_url`, else CDFW's ocean regulations); FE-54 adds the rules. GeoJSON reaches the Chart through FE-14's `style.load` gate in `engine.ts`. A pick moves focus to the card's heading; the 44 px close button, or Escape, clears it and returns focus to the chart. v1's run-time re-screen is kept (#489): `marks.ts` reads the boundary snapshot and closures through FE-19's `loadMpas`, replaces the snapshot with v1's live ds582 query (else the daily feed's `mpa-boundaries` record) and renews the closures from the daily feed's `additional-closures` check of NOAA's file (a changed hash voids it), as `dist/protected-areas.js` `refresh` does; `habitat.ts` `assessScreen` and `withheld` apply v1's `freshEnough` and `pointAllowed` (36 h, 5 min ahead, `dist/geo-screen.js` with boundary contact inside), so a mark inside a protected area or closure, or every mark while a check is missing or stale, is withheld. A linked withheld mark's card says why in v1's words and links the CDFW or NOAA page, never the mark's position or fit; the legend's protected-area row carries the screen's line; `tests/test_mark_screen.mjs` pins parity with v1's screen over the same answers. The Chart still draws FE-19's reviewed snapshot, so a boundary newer than the snapshot withholds marks before its outline draws.
 
 ### FE-19 · Protected areas · S
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#486). Agent: Claude.
 - Depends: FE-11
 - Files: `web/map/mpa.ts` (wraps `protected-areas.js`), `tests/test_mpa_layer.mjs`.
 - Build: § 9 MPA fill and dashed outline, labels at zoom ≥ 11, the basis sentence.
@@ -219,7 +217,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/state.ts` keeps the stored rail list per profile (`skippercast-layers-v1` holds `{"boat": "…", …}`; FE-04's single list becomes the stored profile's own list on first read) and adds `profilePatch`, which the command bar's switch writes: it drops `?layers=`, `?current=` and the target, so the new profile's own list or its defaults apply. `resolveCurrent` ([open-questions Q17](open-questions.md#q17-the-boat-profiles-default-currents-layer), #482): in v2 a link with no `?current=` draws WCOFS when the rail list has Currents, so the boat default and Fish's `layer=currents` draw it and the terrain gets it through `stage.ts`; an explicit `current=off` stays off and v1 keeps `off`. The landing's Currents dot names `current=wcofs`. `web/map/layers.ts` `drawsIn(rail, presentation)` reads the registry (relief becomes `always`: the renderer draws it whatever the rail says until FE-80 puts its options in the Seafloor entry), so in 2D and 3D every entry but Currents, and the base, reads "Chart only" and is disabled with its choice kept (Q19). The base is one select under the entries (`web/ui/Rail.tsx` `footer`): Night, Chart detail ("from zoom 10") and Aerial where offered (its flown dates as the note), every offered base's basis in one popover; it replaces FE-23's Aerial toggle, so `?base=chart` can be chosen again, and `?base=aerial` with no offer shows Night (Q18). The legend's rows are the entries that are on (`rail.ts` `railOn`); a row shows its colour key only while its layer draws (seafloor ready, a drawn current frame, analysis, swell frame or cloud frame; FE-17's "Swell draws on the Chart." becomes the shared "Chart only") and otherwise its reason (Clouds keeps its reason in the rail note); in 2D and 3D chart-only rows read "Chart only" and Currents gives the renderer's status without the Chart's key; Charter fleet reads "Not drawn yet." until FE-21. The Seafloor view switch stays in the legend. Also touched: `web/app/{CommandBar.tsx,rail.ts,app.css}`, `tests/{test_state,test_app_shell,test_aerial_layer,test_landing}.mjs`, `e2e/v2-landing.spec.ts`.
 
 ### FE-21 · Charter grounds and commercial AIS · S
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#507). Agent: Claude.
 - Depends: FE-20
 - Files: `web/map/charter-grounds.ts`, `web/map/commercial-ais.ts`, `tests/test_fleet_public_layers.mjs`.
 - Build: § 9 hatched grounds and heat fill from the existing files under the Fleet rail entry (public part), with the existing basis sentences.
@@ -245,7 +243,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/map/aerial.ts` reads the region package's `basemap.aerial` (FE-45; `aerialBase` admits only `usgs-naip` with ordered `acquired` and `checked_at` dates, and `loadRegion` carries it as `RegionInfo.aerial`) and draws `naipSource()` unchanged as one raster overlay at 0.92 opacity and −0.4 saturation, above the basemap and directly under the ENC chart, through `Engine.setOverlay` and so FE-14's `style.load` gate. The source exists only while `?base=aerial` is chosen in a region that offers it, so nothing is requested otherwise; its id carries the acquisition window, so another region's dates replace the credit. The credit is `naipSource()`'s own followed by the window ("USGS / USDA · NAIP aerial imagery (dated mosaic) · flown 13–29 May 2022") in MapLibre's always-expanded attribution, which a phone shows with the layers sheet closed. The toggle: no task had built a base control, so the rail gains an Aerial entry after its six ids, only where the region offers the base (Accept 1), with the window as its note and the region's `note`, the coverage check date and the USGS request disclosure in its basis; on writes `?base=aerial` (one base at a time, § 8), off writes `?base=night`, so a `?base=chart` it replaced does not come back. A tile error marks Aerial unavailable in the legend; turning it off or on again retries. MapLibre 6 fetches raster tiles (`refreshExpiredTiles` on), so the USGS host joins `CONNECT_ORIGINS` only. Also touched: `web/app/{App,MapStage,LayerRail}.tsx`, `tests/test_aerial_layer.mjs`, `e2e/v2-map.spec.ts` (an Aerial test; the Clouds test's rail note is scoped to its entry, since Morro Bay's rail now has two notes).
 
 ### FE-24 · Charter fleet activity layers in v2 · M
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#511). Agent: Claude.
 - Depends: FE-20
 - Files: `web/map/fleet.ts` (ports `dist/fleet-activity.js` drawing; filters move to the Fleet view in FE-53), `tests/test_fleet_layers_v2.mjs`.
 - Build: § 9 events, tracks and heat in the `--amber` family, admin gated exactly as today (`/api/fleet/map/filters` answers for an admin with both flags).
@@ -328,7 +326,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/species.ts` builds the target list: the profile's default and fixed species, then the region's `search-plans.json` plans whose method fits (`speciesForProfile`, loaded per region by `main.tsx` and refused when the file names another region), then, where the region has coastal terrain, packages/coast's `speciesOptions` (shore: the sandy-shore species; boat and spear: the reef targets with a fit field) that no listed id already names through `coastTarget`. This is v1's `sharedTargetOptions` restated, because v2 may not import `dist/coast-targets.js`; labels are the plan's name or the renderer's. A link's target the list lacks stays first and explicit. The rest of § 8 was already on `main` and is now pinned by `tests/test_species_profile.mjs` and `e2e/v2-profile.spec.ts`: Shore's default target (surfperch) is not a reef family, so the Chart draws no reef mark and the terrain gets `surfperch`; the depth limit reaches the Chart's marks (`withinDepth`, FE-18) and the terrain handle (`terrainDepthLimitFt`, FE-71); layer defaults and the switch are FE-20's `profilePatch`; the caveat is `PROFILE_TABLE`'s (FE-05). Also touched: `web/app/{CommandBar,main}.tsx`, `tests/test_app_shell.mjs` (target labels).
 
 ### FE-31 · Daily brief model (adapter) · M
-- Status: PARTLY on `main`: the model is `packages/coast/src/daily.ts` with `state/experience.ts` and `presentation.ts` ([#385](https://github.com/Grahammmm/skippercast/pull/385), [#393](https://github.com/Grahammmm/skippercast/pull/393)), bound to SLO only. Remaining: the regional adapter. Agent: Claude.
+- Status: DONE (#522). Agent: Claude.
 - Depends: FE-30, FE-74, FE-12
 - Files: `web/brief/model.ts`, `web/brief/types.ts`, `tests/test_brief_model.mjs`, `tests/fixtures/brief/*` (synthetic regional forecast, tides, buoy).
 - Build: § 10 fields: where `coastReport` binds, map `buildDaily` output (headline, deck, tiles, windows, caveats, beach notice) to the brief type; elsewhere build the same fields from SkipperCast's regional forecast, tides and buoy feeds, with the local-report line marked unavailable; fleet line from the landing-reports feed; tile freshness limits.
@@ -336,7 +334,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - Note (FE-31 PR): the headline and deck are `buildDaily`'s (`headline`, `summary`); the § 10 headline rule list is not in `daily.ts`, so it is not applied here. Elsewhere the adapter converts the regional feeds into the coast `Report` shape and runs the same `buildDaily`; the caller supplies forecast rows already sampled at the place (FE-32's `web/conditions.ts`). The tide trend is FE-33's.
 
 ### FE-37 · Brief column and mobile sheet · M
-- Status: CHANGED (renders the adapter). Agent: Claude.
+- Status: DONE (#524). Agent: Claude.
 - Depends: FE-31, FE-75
 - Files: `web/brief/{Brief,Tiles}.tsx`, `web/app/Desktop.tsx`, `web/app/Mobile.tsx`, `e2e/v2-brief.spec.ts`.
 - Build: § 10 rendering of the FE-31 model in tokens: headline, deck, four tiles with basis popovers, lower-exposure window, caveat, notice link, fleet line, footer; the mobile sheet's peek, half and full content.
@@ -344,7 +342,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/brief/Brief.tsx` holds the pieces and the data: `loadDailyFeed` reads `/feeds/conditions/regions/<id>/latest.json` (started from `web/app/main.tsx`, a one-line addition beside the other per-region loads), and `currentBrief` runs FE-31's `buildCoastBrief` where `web/coast-data.ts` admits a report for a bound place, else `buildRegionalBrief` with no forecast, so Wind and Swell read unavailable until FE-32's `web/conditions.ts` supplies the sampled rows. `web/brief/Tiles.tsx` maps each model tile to `web/ui/Tile.tsx` (source and age, stale with its age, basis naming the source, the reference level and the limit); below the full detent the sheet's tiles are compact (reading, age, stale state) so the four tiles and the top pick fit the half detent at 390 × 844. The tide sparkline (FE-33) and the ranking (FE-34) stay placeholders; the freshness dot is not yet bound to the tiles. Also touched: `web/app/{main.tsx,app.css}`, `tests/test_brief_view.mjs`.
 
 ### FE-32 · Conditions view from `packages/coast` · L
-- Status: IN REVIEW (no series port; the v1 composition of #393 is the reference). Agent: Claude.
+- Status: DONE (#526). Agent: Claude.
 - Depends: FE-37, FE-75, FE-77
 - Files: `web/app/views/Conditions.tsx`, `web/conditions.ts` (rows from SkipperCast's dual-model forecast plus `coastReport` local rows), `tests/test_conditions_rows.mjs`, `e2e/v2-conditions.spec.ts`.
 - Build: § 10 Conditions: `packages/coast` `chart()` through `CoastMarkup`, cursor bound to `hour`, the `?current=` control shared with the map, per-source clocks, tide events, before-you-go notes.
@@ -352,7 +350,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/conditions.ts` samples `/api/forecast` (the feed v1's matrix and FE-17 read) at the inshore forecast point nearest the region centre with v1's unit-checked `sample`; a NOAA / ECMWF switch picks v1's two model families. Rows: Wind, Gusts, Offshore seas, then Nearshore (`freshNearshore`) and Tide (the report's curve) only where `coastReport` binds, then Air and Cloud; the span is the dock's 168 hours whatever the report covers. Desktop covers the map above the time dock (the map stays mounted); the phone sheet holds the view in place of the brief. The `?current=` control is LayerRail's `CurrentSource`, now exported. Not drawn: night shading (`chart()` takes one sunrise/sunset pair, which shades one day of seven) and a regional tide row (the daily feed has high/low events only; FE-33 brings the curve). The brief gains `tideDatum` for the tide event lines; feeding this forecast into the brief's wind and swell tiles is a follow-up. Also touched: `web/app/{Desktop,Mobile,LayerRail}.tsx`, `web/app/app.css`, `web/brief/{model,types}.ts`, `tests/test_app_shell.mjs`, `tests/test_brief_view.mjs`.
 
 ### FE-33 · Tide sparkline and tide tile · S
-- Status: CHANGED (`chart(…, {mini: true})` and `briefing.ts` `tideChart` where bound). Agent: Claude.
+- Status: DONE (#531). Agent: Claude.
 - Depends: FE-32
 - Files: `web/brief/TideSpark.tsx`, `web/tides.ts` (wraps the existing CO-OPS reader), `tests/test_tides.mjs`.
 - Build: § 10 sparkline with events and night shading through `CoastMarkup`; trend from the curve; reference level in the basis popover.
@@ -360,7 +358,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/tides.ts` does not wrap a CO-OPS reader: the curve is already the station's CO-OPS prediction series that packages/coast reads into the coast report and `buildDaily` cuts to the day (`Brief.tides`). It states `briefing.ts`'s two tide rules for v2, pinned against that module by `tests/test_tides.mjs`: `tideTrend` (`tideAt`: the point within 4 minutes of the selected time and the next one within 15 minutes; a change under 0.005 ft is Turning, no such pair is no trend) and `sparkArgs` (`tideChart`'s `chart(…, {mini: true})` arguments with the colour as `var(--coast-amber)`), so `CoastMarkup`'s allow-list stays `chart` and `briefing.ts` need not type-check under `web/tsconfig.json` yet. `web/brief/TideSpark.tsx` draws it in the brief column and the phone sheet with the day's high and low predictions and the reference level under it; a drag moves the hour. The tide tile's detail leads with the trend, and its basis names the rule and the reference level. Regional places (no coast report) have only the daily feed's high and low events, so their sparkline reads "Tide series unavailable" and lists the events; a regional curve is a follow-up. Also touched: `web/brief/model.ts`, `web/brief/Tiles.tsx`, `web/app/{Desktop,Mobile,CoastMarkup}.tsx`, `web/app/app.css`.
 
 ### FE-34 · "Where to look" ranking · M
-- Status: CHANGED (two sources in one list). Agent: Claude.
+- Status: DONE (#527). Agent: Claude.
 - Depends: FE-37, FE-18
 - Files: `web/brief/WhereToLook.tsx`, `web/ranking.ts` (wraps `spot-ranking.js`, `species-fit.js` and `packages/coast` `rankedHabitat`), `tests/test_ranking.mjs`.
 - Build: § 10 top four within the profile limit: coast ranked habitat where terrain exists, atlas spots elsewhere, never mixed scores; distance, depth band, fit badge, reason; selection syncs with both presentations.
@@ -368,7 +366,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: `web/ranking.ts` picks one source per region: packages/coast `rankedHabitat` over the reviewed reef release (`readReviewedHabitat`, loaded once through the dynamic `web/map/coast-ranking.js` shim, typed by its `.d.ts`, as `coast-habitat.js`) where `hasCoastTerrain` and the release loads unexpired, kept to the region and the profile's depth on `depth_max_ft` as the viewer keeps them; otherwise the atlas marks the Chart draws (`markShown`, the run-time screen's `withheld`) ordered by `markFit` (`dist/species-fit.js`), then `habitat_score`. `dist/spot-ranking.js` supplies `distanceNm` only: its `bestSpots` reads trip-export fields (`species_fit`, `evidence_confidence`) the published atlas lacks. A place without a depth band is never ranked, so unknown depth cannot slip past the limit. Distance is from region.json `harbor`. Each list carries its source label and a basis popover; the fit badge is § 12's wording (`fitLine`), "Screened reef habitat" for the all-reef target. A row is a button: an atlas mark selects `?spot=` (`spotHref`), a habitat `?habitat=` (`habitatHref`), counted as a pick so the card opens and takes focus; the row matching the address is pressed. Shore lists no place here (its runs rank on the Chart, FE-36). Also touched: `web/app/{Desktop,Mobile}.tsx` (the old `Picks` placeholder removed), `web/app/app.css`, `tests/test_app_shell.mjs`.
 
 ### FE-35 · History view · S
-- Status: PARTLY on `main`: `ui/history.ts` `historyView` over `/api/coast/history` renders in v1 Conditions ([#385](https://github.com/Grahammmm/skippercast/pull/385), [#393](https://github.com/Grahammmm/skippercast/pull/393)). Remaining: the v2 view. Agent: Claude.
+- Status: DONE (#530). Agent: Claude.
 - Depends: FE-32, FE-74
 - Files: `web/app/views/History.tsx`, `tests/test_history_view.mjs`.
 - Build: § 10 History: `historyView` through `CoastMarkup` with station, metric and range pickers bound to the store; the unavailable state outside a binding.
@@ -376,7 +374,7 @@ Superseded by Codex's bounded bridge `server/coast-data.ts` ([#381](https://gith
 - As built: the pickers are three new store keys, `?station=`, `?metric=` and `?range=` (`web/state.ts` `HISTORY_KEYS`, kept as written; the view falls back on any value `historyView` does not list), written with a history entry. `historyView` joins CoastMarkup's allow-list with a guard (`isRenderableHistory`) on the feed numbers it writes unescaped; `ui/history.ts` declares its context type from `County` instead of importing `state/experience.ts` and returns its unavailable state when the station lookup finds none, which is what type-checking it under `web/tsconfig.json` needed (announced on #413). The view loads the history snapshot through `web/coast-data.ts` for the region's place (`regionPlace`); outside a binding, while loading and after a failed read it says so in its own words. Also touched: `web/app/{Desktop,Mobile,CoastMarkup}.tsx`, `web/app/app.css`, `tests/test_state.mjs`, `tests/test_coast_markup.mjs`, `e2e/v2-history.spec.ts` (Back and Forward).
 
 ### FE-36 · Shore runs, access points and guidance · M
-- Status: PARTLY on `main`: the terrain draws shore features for surfperch and halibut and the bridge serves `slo-shore-habitat.geojson`. Remaining: Chart runs and access pins, and `fish`'s `opportunity.ts` guidance, which was not ported. Agent: Claude.
+- Status: DONE (#525 (#529)). Agent: Claude.
 - Depends: FE-30, FE-74
 - Files: `web/map/shore.ts`, `web/brief/shore.ts` (ported `fish/src/opportunity.ts` priority and guidance), `tests/test_shore.mjs`.
 - Build: § 8 and § 9 shore profile in Chart: runs with priority tint, access pins, guidance with the source link, review dates shown; source visibility expiry honoured; access/rules review age is context only; data through `coastFetch` until FE-43.
@@ -463,14 +461,14 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ## Phase 4: the remaining features in the new shell
 
 ### FE-50 · Account, boat profile and alerts in the masthead · M
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#420 (trip and offline entries #498)). Agent: Claude.
 - Depends: —
 - Files: `web/app/AccountMenu.tsx`, `web/account.ts` (wraps `account.js`, `boat-profile.js`, `trip-alerts.js`), `e2e/v2-account.spec.ts`.
 - Build: sign in (passkeys), boat presets from `first-run.js`, alerts, downloads and offline pack entry, in tokens.
 - Accept: 1. `tests/test_accounts.mjs` unchanged and green. 2. Sign-in flow completes in e2e with the fixture. 3. The menu is keyboard operable.
 
 ### FE-51 · Trip planner, GPX export and offline pack · L
-- Status: PARTLY on `main`: coastal snapshot save and delete ([#405](https://github.com/Grahammmm/skippercast/pull/405), `dist/coastal-offline-core.js`, `dist/sw.js`). Remaining: the v2 trip, GPX and offline entry. Agent: Claude. Hot spot: `dist/sw.js`.
+- Status: DONE (#498). Agent: Claude.
 - Depends: FE-18, FE-50
 - Files: `web/app/Trip.tsx`, `web/trip.ts` (wraps `export-ui.js`, `gpx.js`, `trip-export.js`, `offline-pack.js`, `coastal-offline-core.js`), `dist/sw.js` (v2 precache and basemap tiles at zooms 8–12 for the saved region), `e2e/v2-trip.spec.ts`.
 - Build: mark card actions, trip list in the account menu, GPX with the existing evidence labels, one offline section holding the chart pack and the coastal snapshots with their saved time and original clocks.
@@ -486,7 +484,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - As built: `web/reports.ts` wraps `recent-discussions.js`, `bite-evidence.js` (`validFeed`, `reportEvidence` over the `data` branch's `regions/<id>/latest.json`), `coasts.js` (the seasonal watch) and `charter-grounds.js` (`reportSummary`); `coastal-research-context.js` was dropped from the list because it holds Monterey's hard-bottom map context, not report evidence. The view (`web/app/views/Reports.tsx`) is a page over the map stage, which stays mounted so the coast report it loads feeds the catch cards; `web/reports.ts` loads by dynamic import on first open. `catchSheet` joined `CoastMarkup`'s allow-list behind `isSafeCatchState` (finite counts, https links); `packages/coast/src/ui/catches.ts` now takes a structural `CatchState` (`AppState` still satisfies it) so it type-checks under `web/tsconfig.json`. The masthead lists Reports; the phone keeps four tabs and opens Reports from the sheet footer. Also touched: `web/app/{App,CoastMarkup,Desktop,Mobile,Masthead}.tsx`, `web/app/app.css`, `web/landing/Landing.tsx`, `e2e/v2-shell.spec.ts`.
 
 ### FE-53 · Fleet view · M
-- Status: IN REVIEW. Agent: Claude.
+- Status: DONE (#532). Agent: Claude.
 - Depends: FE-24, FE-21
 - Files: `web/app/views/Fleet.tsx`, `web/fleet.ts`, `tests/test_fleet_view.mjs`.
 - Build: public part: charter grounds and the boat directory link (`/boats`) when `FLEET_ENABLED`; admin part: the filter form from `fleet-activity.js` driving the FE-24 layers.
@@ -494,7 +492,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - As built: the view takes the brief column's place on the desktop and the sheet's on a phone (`web/app/{Desktop,Mobile}.tsx`), so the map it drives stays in view; "Show on map" lowers the phone's sheet. Public part: "Show charter grounds" is the Charter fleet rail entry (`?layers=fleet`) with FE-21's status, audit date and basis sentence, then the entry's Commercial AIS 2024 option where the region has the file (turning it on turns the entry on) with its note and basis. The boat directory: there is no `/boats` index; the charter-fleet design's pick (§ 15, 1) lists boats on the public `/ports/<id>` pages, so the link is "Boats out of <port>" to `/ports/<id>#boats-title` for the region's active ports (the saved port first), shown only while one HEAD of that page answers (no cookie; it 404s while the page is off), so the client never assumes a flag. Admin part: only once FE-24's access check admitted the viewer, which now also runs while the Fleet view is open (`web/map/fleet.ts`; the server's `requireAdmin` on `/api/fleet/map/*` and the 404 gate decide): v1's form (`#fleet-filters`: boat, port, class, trip type, activity type, from, to, season, season part; the 500-boat note; the planning-only checkbox), the three activity layers, v1's status line and "How fleet activity is inferred". `web/fleet.ts` ports v1's `FILTERS`, `filterOptions` and `readFilters` as data (v1's module is not imported into the app entry; the test pins names and labels to v1's); "Apply filters" sets `activityFilters`, which FE-24's loader sends through v1's own `layerQuery`, and the planning-only checkbox (`hidePlanning`) redraws without a request. The probe's answer (`activityChoices`) is kept only for the admitted viewer, so no boat name reaches a visitor. Also touched: `web/app/app.css`, `tests/test_app_shell.mjs` (lints `web/app/views/`), `e2e/v2-map.spec.ts`.
 
 ### FE-54 · Species plans, regulations and the sources page · M
-- Status: CHANGED (coast targets in the menu; `/sources` canonical per Q16); built in the FE-54 PR. Agent: Claude.
+- Status: DONE (#534). Agent: Claude.
 - Depends: FE-30, FE-18
 - Files: `web/app/CommandBar.tsx` (target menu with search), `web/app/MarkCard.tsx` (regulations line), `dist/sources.html` (tokens restyle), `web/regs.ts` (wraps `regulations.js`), `tests/test_regs_wrapper.mjs`.
 - Build: § 6 table rows for species, filters, search, regulations; the menu groups SkipperCast plans and coast targets without merging their scores; the sources page in the visual system with every basis sentence linking into it.
@@ -502,7 +500,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - As built: `web/regs.ts` restates `dist/regulations.js`'s `ruleProfile`, `validRegulations`, `sourceIssues`, `officialURL`, `regulationState` (no method, no location: a latitude-band season reads "Choose fishing location", as v1's header does before a location is chosen), `firstClause`, `depthLimit` and `ruleSummary` with the region passed in, rather than importing it: that module reads v1's active region (`dist/region.js`) when it loads and brings v1's region graph into the app. `tests/test_regs_wrapper.mjs` pins state and row to v1's over the committed registry for every species, several dates and trip hours, synthetic opening-time, latitude-band, depth-line and restriction windows, stale and changed checks, and #396's own-key guard. It loads the region's committed registry, then the daily feed's `regulations` part when at least as recent (v1's full-feed fallback is not repeated); each must name the region's `jurisdiction_id`. `MarkCard.tsx` `RulesLine` shows v1's row (status, bag, size, depth, verified or last-check date, one official link from the region's authority hosts, else CDFW's ocean page) on reef mark, survey, geology, terrain habitat and charter ground cards for the dock's hour, never on a protected area or a withheld mark. The target menu stays one native `<select>` (the shell and e2e tests read it) with `<optgroup>`s: the link's target, the profile's own species with no plan here (default first, so Shore keeps surfperch first), "Search plans · <profile>" (plans whose method fits) and "Coast habitat targets", plus a "Find a target" search field that narrows it and keeps the chosen target. Every basis popover (`web/ui/Popover.tsx`) ends with a "How it’s built" link to `/sources`. `dist/sources.html` loads `web/tokens.css` and FE-86's `coast-readable.css` with the readable pages' header, skip link and § 12 footer line; seven sentence pairs are reworded without changing their meaning so the page leaves the copy-lint baseline. Also touched: `web/species.ts` (`TargetOption.group`, `targetGroups`), `web/app/app.css`, `web/ui/ui.css`, `tests/{test_app_shell,test_mark_screen,test_species_profile}.mjs`, `tests/fixtures/ui-snapshots.json`, `e2e/v2-profile.spec.ts` (groups and search), `e2e/v2-map.spec.ts` (two exact basis texts gain the link).
 
 ### FE-55 · Advisor entry and pages in the visual system · S
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#417). Agent: Claude.
 - Depends: —
 - Files: `web/advisor/copy.ts`, `server/advisor/pages/render.ts` (tokens link), `dist/chat.html`, `e2e/advisor-pages.spec.ts`.
 - Build: the chat entry in the masthead when `TEXT_ADVISOR_ENABLED`; advisor pages load `web/tokens.css`.
