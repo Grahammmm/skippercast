@@ -1,0 +1,136 @@
+{
+  "source": {
+    "checkedAt": "2026-10-02T15:49:50.156Z",
+    "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/intelligence.json",
+    "httpStatus": 200,
+    "generatedAt": "2026-10-02T09:37:09Z",
+    "regionId": "morro-bay",
+    "sources": {
+      "wcofs": {
+        "status": "ok",
+        "dataRetrievedAt": "2026-10-02T09:44:09Z",
+        "lastSuccessAt": "2026-10-02T09:44:09Z",
+        "issuedAt": "2026-10-02T03:00:00Z"
+      },
+      "hfr-1": {
+        "status": "ok",
+        "dataRetrievedAt": "2026-10-02T09:44:00Z",
+        "lastSuccessAt": "2026-10-02T09:44:00Z",
+        "sampleAt": "2026-10-02T06:00:00Z"
+      },
+      "hfr-6": {
+        "status": "ok",
+        "dataRetrievedAt": "2026-10-02T09:43:59Z",
+        "lastSuccessAt": "2026-10-02T09:43:59Z",
+        "sampleAt": "2026-10-02T05:00:00Z"
+      }
+    },
+    "consequence": "Existing six-hour feed and source-receipt gates withhold expired current fields. No source clocks were changed."
+  },
+  "runtime": {
+    "checkedAt": "2026-10-02T15:50:44.142Z",
+    "scope": "Local data API checks; actual browser verification unavailable.",
+    "checks": [
+      {
+        "path": "/api/health",
+        "status": 200,
+        "generatedAt": "2026-10-02T15:47:57.919Z"
+      },
+      {
+        "path": "/api/report",
+        "status": 200,
+        "generatedAt": "2026-10-02T15:47:57.919Z"
+      },
+      {
+        "path": "/api/ocean",
+        "status": 200,
+        "generatedAt": "2026-10-02T15:47:46.488Z"
+      },
+      {
+        "path": "/api/history",
+        "status": 200,
+        "generatedAt": "2026-10-02T15:48:33.702Z"
+      }
+    ],
+    "report": {
+      "latestTripDate": "2026-09-28",
+      "catchCount": 19,
+      "nwsIssuedAt": "2026-10-02T12:41:28.000Z",
+      "cdipIssuedAt": [
+        {
+          "id": "cdip-SL097",
+          "at": "2026-10-02T13:43:24.000Z"
+        },
+        {
+          "id": "cdip-SL165",
+          "at": "2026-10-02T13:43:31.000Z"
+        },
+        {
+          "id": "cdip-SL345",
+          "at": "2026-10-02T13:43:51.000Z"
+        },
+        {
+          "id": "cdip-SL400",
+          "at": "2026-10-02T13:43:56.000Z"
+        },
+        {
+          "id": "cdip-SL552",
+          "at": "2026-10-02T13:44:09.000Z"
+        }
+      ],
+      "priorMurLayerAndClocksPreserved": true,
+      "sourceErrors": [
+        "mur-surface-temperature",
+        "landing-reports"
+      ]
+    },
+    "ocean": {
+      "cloudObservedAt": "2026-10-02T15:43:00.000Z",
+      "currentProducts": [],
+      "withdrawnWcofs": {
+        "issuedAt": "2026-10-02T03:00:00.000Z",
+        "fetchedAt": "2026-10-02T09:44:09.000Z",
+        "reason": "Original source receipt exceeds six-hour freshness limit; upstream feed also expired."
+      },
+      "sources": [
+        {
+          "id": "skippercast-noaa-ocean",
+          "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/intelligence.json",
+          "fetchedAt": "2026-10-02T15:47:46.488Z",
+          "status": "error",
+          "error": "Invalid or stale regional ocean feed"
+        },
+        {
+          "id": "noaa-goes",
+          "url": "https://nowcoast.noaa.gov/geoserver/observations/satellite/ows?service=WMS&request=GetCapabilities&version=1.3.0",
+          "fetchedAt": "2026-10-02T15:47:46.488Z",
+          "status": "ok"
+        }
+      ]
+    },
+    "history": {
+      "baselineYears": [
+        22,
+        43
+      ],
+      "latestObservations": [
+        {
+          "id": "46215",
+          "at": "2026-10-02T14:56:00.000Z",
+          "stale": false
+        },
+        {
+          "id": "46028",
+          "at": "2026-10-02T15:10:00.000Z",
+          "stale": false
+        }
+      ],
+      "originalBaselinesCatalogsAndAnnualReceiptsPreserved": true
+    },
+    "habitat": {
+      "ready": false,
+      "error": "Reviewed habitat publication changed"
+    },
+    "coreDataPassed": true
+  }
+}

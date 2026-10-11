@@ -1,0 +1,392 @@
+{
+  "method": "Same-source fallback context filtering plus presentation-only fallback/native boundary joins; raw terrain and source masks remain untouched.",
+  "rules": {
+    "fallbackKinds": [
+      "model",
+      "land",
+      "estimate"
+    ],
+    "supportKinds": [
+      "survey",
+      "lidar"
+    ],
+    "maximumSupportNativeResolutionM": 8,
+    "boundaryJumpTriggerM": 8,
+    "maximumNewBandDistanceM": 32,
+    "distanceMetric": "Manhattan grid distance; never exceeds 32m physical distance",
+    "minimumSamplesAcrossBand": 2,
+    "coarseAndAnisotropicGrids": "No new transition morph",
+    "boundaryTarget": "Midrange of adjacent original fine samples; minimizes largest boundary gap",
+    "nativeVertices": "Exactly unchanged, including real cliffs and source seams",
+    "unsupportedInteriors": "Retain the same coarse-context source and coverage; same-source presentation filtering can soften stairs",
+    "sameSourceFilter": {
+      "kernel": "Tent: 1 - ManhattanDistance/32",
+      "maximumTotalInfluenceM": 32,
+      "input": "Original fallback values with exactly the same source ID; no native or different-source borrowing",
+      "output": "Only fallback display vertices",
+      "purpose": "Remove coarse nearest-neighbor stairs; display spacing does not become source accuracy"
+    },
+    "gentleBoundary": "Clamp filtered fallback context to preserve each adjacent native gap within8m when the original join was already <=8m."
+  },
+  "limits": [
+    "This is a display surface, not a physical terrain reconstruction or a new measured surface.",
+    "Only fallback values in the presentation copy are changed; underlying source identities and inspection readings remain original.",
+    "Unsupported coarse context and its provenance remain; filtering cannot establish true fine topography.",
+    "Native survey-to-survey datum mismatches remain unchanged."
+  ],
+  "verification": {
+    "focusedTestsPassed": 16,
+    "typecheckPassed": true
+  },
+  "results": [
+    {
+      "asset": "/data/coast-wide/h-10240-6144-16.bin",
+      "assetSha256": "b5166270e4b1f40b71e9922314f295fea89611a4df464a11daae5cac8dfe224f",
+      "spacingM": 16,
+      "maxRawFallbackNativeStepM": 45.760963439941406,
+      "maxDisplayFallbackNativeStepM": 12.330001831054688,
+      "boundaryPairs": 380,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 2275,
+      "unchangedFallback": 163,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 479,
+        "maxRawStepM": 64.18000221252441,
+        "maxDisplayStepM": 61.63429260253906,
+        "rawEdgesAbove20M": 51,
+        "displayEdgesAbove20M": 36
+      },
+      "displayCalculationMs": 2.41
+    },
+    {
+      "asset": "/data/coast-wide/h-10240-6144-4.bin",
+      "assetSha256": "b41aa5d7489d450e6d6ace0d89e02f4bd9374d20184518af904e737af895f397",
+      "spacingM": 4,
+      "maxRawFallbackNativeStepM": 42.23096466064453,
+      "maxDisplayFallbackNativeStepM": 8.580001831054688,
+      "boundaryPairs": 1624,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 37085,
+      "unchangedFallback": 782,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 7458,
+        "maxRawStepM": 64.18000221252441,
+        "maxDisplayStepM": 15.179336547851562,
+        "rawEdgesAbove20M": 206,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 21.58
+    },
+    {
+      "asset": "/data/coast-wide/h-10240-6144-2.bin",
+      "assetSha256": "a8dd7c7bdd4d65809d87b665b4bc7ebf35b4f1984609ab0dd946c776682ca171",
+      "spacingM": 2,
+      "maxRawFallbackNativeStepM": 42.04096221923828,
+      "maxDisplayFallbackNativeStepM": 8,
+      "boundaryPairs": 3299,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 148161,
+      "unchangedFallback": 2612,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 30061,
+        "maxRawStepM": 64.18000221252441,
+        "maxDisplayStepM": 11.6590576171875,
+        "rawEdgesAbove20M": 411,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 209.01
+    },
+    {
+      "asset": "/data/coast-wide/h-9216-6144-16.bin",
+      "assetSha256": "d7184b36589c941fa557f98cb24534be8014c559bc539f1dda6aa4d8304927ba",
+      "spacingM": 16,
+      "maxRawFallbackNativeStepM": 36.710960388183594,
+      "maxDisplayFallbackNativeStepM": 12.724998474121094,
+      "boundaryPairs": 133,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 785,
+      "unchangedFallback": 100,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 727,
+        "maxRawStepM": 75.77999877929688,
+        "maxDisplayStepM": 49.96333312988281,
+        "rawEdgesAbove20M": 139,
+        "displayEdgesAbove20M": 67
+      },
+      "displayCalculationMs": 0.07
+    },
+    {
+      "asset": "/data/coast-wide/h-9216-6144-4.bin",
+      "assetSha256": "9781bfb01e903c101ecda6eca6b7f9f271377f7ba3b0d2856f902688dd40f2b9",
+      "spacingM": 4,
+      "maxRawFallbackNativeStepM": 40.67819881439209,
+      "maxDisplayFallbackNativeStepM": 8,
+      "boundaryPairs": 562,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 13137,
+      "unchangedFallback": 623,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 12150,
+        "maxRawStepM": 75.77999877929688,
+        "maxDisplayStepM": 28.06999969482422,
+        "rawEdgesAbove20M": 549,
+        "displayEdgesAbove20M": 4
+      },
+      "displayCalculationMs": 4.8
+    },
+    {
+      "asset": "/data/coast-wide/h-9216-6144-2.bin",
+      "assetSha256": "ef981c03e1085c3f998f172fa0e4b899dd449c8aa5eee4fccef588e3cb0cd1a1",
+      "spacingM": 2,
+      "maxRawFallbackNativeStepM": 40.543381690979004,
+      "maxDisplayFallbackNativeStepM": 8.000007629394531,
+      "boundaryPairs": 1156,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 52728,
+      "unchangedFallback": 2061,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 48832,
+        "maxRawStepM": 75.77999877929688,
+        "maxDisplayStepM": 21.693727493286133,
+        "rawEdgesAbove20M": 1101,
+        "displayEdgesAbove20M": 1
+      },
+      "displayCalculationMs": 76.09
+    },
+    {
+      "asset": "/data/coast-wide/h-10240-7168-16.bin",
+      "assetSha256": "72a37bbbf8fbcc11a0be1886db0597e5e423e703bf4580f80dfecf5f6b2f522b",
+      "spacingM": 16,
+      "maxRawFallbackNativeStepM": 6.072985649108887,
+      "maxDisplayFallbackNativeStepM": 6.77604866027832,
+      "boundaryPairs": 271,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 856,
+      "unchangedFallback": 47,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 0,
+        "maxRawStepM": 0,
+        "maxDisplayStepM": 0,
+        "rawEdgesAbove20M": 0,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 0.07
+    },
+    {
+      "asset": "/data/coast-wide/h-10240-7168-4.bin",
+      "assetSha256": "ffb70525c38d583bdcbc1871185d74b073e3b65beb6c21656191084bf583b55c",
+      "spacingM": 4,
+      "maxRawFallbackNativeStepM": 4.938107371330261,
+      "maxDisplayFallbackNativeStepM": 4.848918199539185,
+      "boundaryPairs": 1449,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 13784,
+      "unchangedFallback": 250,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 0,
+        "maxRawStepM": 0,
+        "maxDisplayStepM": 0,
+        "rawEdgesAbove20M": 0,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 5.27
+    },
+    {
+      "asset": "/data/coast-wide/h-10240-7168-2.bin",
+      "assetSha256": "bd69b7fb5973d4ea987f4867669a3566bf6baf07e02fd8af5bab5258859129a8",
+      "spacingM": 2,
+      "maxRawFallbackNativeStepM": 4.808107256889343,
+      "maxDisplayFallbackNativeStepM": 4.788926959037781,
+      "boundaryPairs": 3065,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 55039,
+      "unchangedFallback": 795,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 0,
+        "maxRawStepM": 0,
+        "maxDisplayStepM": 0,
+        "rawEdgesAbove20M": 0,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 74.51
+    },
+    {
+      "asset": "/data/coast-wide/h-9216-7168-16.bin",
+      "assetSha256": "49de1b71a10e306cb36a3c487372d1ef3b9ddd97898fca140425d883927f8005",
+      "spacingM": 16,
+      "maxRawFallbackNativeStepM": 7.169999837875366,
+      "maxDisplayFallbackNativeStepM": 7.285967588424683,
+      "boundaryPairs": 149,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 339,
+      "unchangedFallback": 14,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 0,
+        "maxRawStepM": 0,
+        "maxDisplayStepM": 0,
+        "rawEdgesAbove20M": 0,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 0.05
+    },
+    {
+      "asset": "/data/coast-wide/h-9216-7168-4.bin",
+      "assetSha256": "6a542e2585afd6b0230a255b6cc9506c08fe3144f69988ee00705cea210edc2c",
+      "spacingM": 4,
+      "maxRawFallbackNativeStepM": 9.740161657333374,
+      "maxDisplayFallbackNativeStepM": 6.656091928482056,
+      "boundaryPairs": 728,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 5387,
+      "unchangedFallback": 50,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 0,
+        "maxRawStepM": 0,
+        "maxDisplayStepM": 0,
+        "rawEdgesAbove20M": 0,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 2.1
+    },
+    {
+      "asset": "/data/coast-wide/h-9216-7168-2.bin",
+      "assetSha256": "d528c2bcba0ce41f994c73c2fe63de99a330aa0624493a91f835f7bc766038d4",
+      "spacingM": 2,
+      "maxRawFallbackNativeStepM": 9.720158815383911,
+      "maxDisplayFallbackNativeStepM": 6.7031837701797485,
+      "boundaryPairs": 1582,
+      "remainingPairsOver20M": 0,
+      "fallbackChanged": 21476,
+      "unchangedFallback": 118,
+      "nativeDisplayValuesChanged": 0,
+      "rawHeightsAndMasksPreserved": true,
+      "sameSourceLandAtRock": {
+        "boundsLocalM": [
+          9900,
+          6350,
+          10450,
+          6950
+        ],
+        "edges": 0,
+        "maxRawStepM": 0,
+        "maxDisplayStepM": 0,
+        "rawEdgesAbove20M": 0,
+        "displayEdgesAbove20M": 0
+      },
+      "displayCalculationMs": 32.74
+    }
+  ],
+  "cachedLandComparison": {
+    "source2": {
+      "path": "artifacts/coast3d/land.tif",
+      "size": [
+        1024,
+        1024
+      ],
+      "webMercatorPixelM": 36.96154967745133,
+      "scenePixelM": 30.117171544508075,
+      "originalSha256": "2908e389dfd70c6a49f9f636df0b6286bec32acffe41e90d1f40f9be065ba29c"
+    },
+    "source19": {
+      "path": "artifacts/corridor/land/region-0-0.tif",
+      "receipt": "artifacts/corridor/land/region-0-0.json",
+      "size": [
+        2048,
+        2048
+      ],
+      "webMercatorPixelM": 19.6361332924389,
+      "scenePixelM": 16,
+      "sha256": "a1df89aa5cfe387af670bb0b76fbbbf1ef741ede9a31883cf14c2c7f03a1fea4",
+      "datum": "NAVD88; mixed acquisition dates"
+    },
+    "finding": "The corridor extension updates main tiles only. Harbor tiles retain original source2 land fallback. A reviewed harbor rebuild could use the already cached finer source19 context, preserving all existing lidar and bathymetry precedence. No dataset rebuild was performed."
+  }
+}

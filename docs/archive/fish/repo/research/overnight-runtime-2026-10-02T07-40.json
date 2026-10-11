@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-02T07:49:51.824Z",
+  "scope": "Local Worker data API and habitat-withdrawal verification; browser rendering and interaction acceptance remains blocked.",
+  "checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "generatedAt": "2026-10-02T07:40:17.177Z"
+    },
+    {
+      "path": "/api/report",
+      "status": 200,
+      "generatedAt": "2026-10-02T07:40:17.177Z"
+    },
+    {
+      "path": "/api/ocean",
+      "status": 200,
+      "generatedAt": "2026-10-02T07:40:51.930Z"
+    },
+    {
+      "path": "/api/history",
+      "status": 200,
+      "generatedAt": "2026-10-02T07:41:36.514Z"
+    }
+  ],
+  "report": {
+    "forecastAreas": 3,
+    "tides": 1200,
+    "catchCount": 19,
+    "latestTripDate": "2026-09-28",
+    "catchFeedGeneratedAt": "2026-10-01T00:37:50Z",
+    "nwsIssuedAt": "2026-10-02T06:26:33.000Z",
+    "sourceErrors": [
+      "mur-surface-temperature",
+      "landing-reports"
+    ]
+  },
+  "ocean": {
+    "cloudObservedAt": "2026-10-02T07:38:00.000Z",
+    "currentProducts": [
+      "wcofs",
+      "hfr-1",
+      "hfr-6"
+    ]
+  },
+  "history": {
+    "baselineYears": [
+      22,
+      43
+    ],
+    "priorBaselinesAndCatalogsPreserved": true
+  },
+  "habitat": {
+    "ready": false,
+    "error": "Reviewed habitat publication changed",
+    "headChecks": [
+      {
+        "region": "morro-bay",
+        "status": 503
+      },
+      {
+        "region": "cambria-san-simeon",
+        "status": 503
+      }
+    ]
+  },
+  "bathymetry": {
+    "status": 206,
+    "bytes": 16384,
+    "contentRange": "bytes 0-16383/12044691",
+    "etag": "\"sha256-f4a5910129f96da4a27f7b50f36bf215a1ab17b4959e933345b8ab5ed53447ec\""
+  },
+  "coreDataPassed": true
+}

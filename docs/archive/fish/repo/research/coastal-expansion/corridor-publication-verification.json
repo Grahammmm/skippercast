@@ -1,0 +1,127 @@
+{
+  "checkedAt": "2026-10-07T00:59:52.547Z",
+  "release": {
+    "commit": "36bcbdb8de4aa3c3f4861f585e6bf21e182172f6",
+    "dirty": false,
+    "builtAt": "2026-10-07T00:58:05.164Z"
+  },
+  "versionId": "558260dd-0ba9-4c9e-b2c6-1c533ba7325a",
+  "ciRun": 37554657515,
+  "checks": [
+    {
+      "path": "/assets/coast3d.js",
+      "bytes": 562175,
+      "sha256": "81351d522fa9cb198ba5ea22f95233b55942e195d89bd9e95789fd914506a6ce"
+    },
+    {
+      "path": "/coast-3d",
+      "bytes": 10855,
+      "sha256": "d771a7c217ac77a05af2b982d3b9b63207c17f3d30a9440ab90a77fb6da2b2b3"
+    },
+    {
+      "path": "/data/coast-wide/manifest.json",
+      "bytes": 1663314,
+      "sha256": "6b30e32d68d5e13e9f463e56e82fb24167fa170f3260a6eabee947cb4896e929"
+    }
+  ],
+  "habitat": {
+    "checkedAt": "2026-10-07T01:00:11.317Z",
+    "base": "https://fish-report.g4651.workers.dev",
+    "releaseId": "4c24f963f09bf300ff51014affa680ef522bdf4444c9f3567c588b5e5f33740b",
+    "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+    "featureCount": 4560,
+    "checks": [
+      {
+        "regionId": "morro-bay",
+        "head": 200,
+        "range": 206,
+        "rangeSha256": "6bdef1fa4aabe0647d78a4a9960c535ab9be3e55da983e5cab172a2c0739f4e3",
+        "ifMatch": 412,
+        "bounds": [
+          -121.131056,
+          35.02586,
+          -120.628229,
+          35.534685
+        ],
+        "archiveSha256": "1eac589849c92625a64c5ef521f2e22c66cc93eabf2d739919f0008421d34f8a",
+        "exportSha256": "5d5223fc17642da81ff9d91e50a0ea2c070a61d5aaeb36e459e3c9f5eb59735b"
+      },
+      {
+        "regionId": "cambria-san-simeon",
+        "head": 200,
+        "range": 206,
+        "rangeSha256": "1c766e50b6d6732c823a08ef2628db8236b40b03a7957496bdecd85e6a128ca4",
+        "ifMatch": 412,
+        "bounds": [
+          -121.28471,
+          35.500427,
+          -121.087333,
+          35.663462
+        ],
+        "archiveSha256": "7e8cb47eec10b7b3587663ad2dbc43a6164de544f82eaf3feac14b2829dfe284",
+        "exportSha256": "636c456c915b8076404b7c7a22902f6ec57502ca3d46edf2e7841015cba4063e"
+      },
+      {
+        "regionId": "monterey-point-sur",
+        "head": 200,
+        "range": 206,
+        "rangeSha256": "7872851c9c8c519f5231b2c0a10ddf91805a63807ad3597c030304a8098584ab",
+        "ifMatch": 412,
+        "bounds": [
+          -122.017978,
+          36.239091,
+          -121.890799,
+          36.616141
+        ],
+        "archiveSha256": "35ac91937ea8d65c1172142e96768bd88f9f6635c8f41964572f30d54e60014f",
+        "exportSha256": "c3c7c7d6901e7d5413e52a664eec83abaa9a176d08236c07663160ccfedf1f20"
+      },
+      {
+        "regionId": "point-arguello-conception",
+        "head": 200,
+        "range": 206,
+        "rangeSha256": "c520468312407e8543ce97cf4c0b9eed0885b33c6ae67b05c5d46b1298b7ce9f",
+        "ifMatch": 412,
+        "bounds": [
+          -120.836312,
+          34.412793,
+          -120.470817,
+          35.055696
+        ],
+        "archiveSha256": "22bf843b9480a016bdd9d5d8623345ef626123f7c44a5a5e0028127c675dcfc4",
+        "exportSha256": "37cda1024e491fefc97ac6807bbc0bc9a3e91b36ca58a98312245d892afb5256"
+      }
+    ],
+    "complete": true
+  },
+  "browser": {
+    "desktop": [
+      "Monterey rockfish pins and original evidence",
+      "2D/3D identical selected facts and evidence",
+      "Four-region ranked context",
+      "Tightened aerial tile fade"
+    ],
+    "mobileViewport": [
+      390,
+      844
+    ],
+    "mobile": [
+      "Direct Point Conception load with 63 streamed tiles",
+      "Rockfish pin",
+      "Location and species controls",
+      "Expandable layers panel",
+      "Source coverage toggle"
+    ],
+    "consoleWarningsOrErrors": 0,
+    "screenshots": [
+      "artifacts/corridor/live-monterey-2d-evidence.png",
+      "artifacts/corridor/live-conception-mobile.png"
+    ],
+    "limits": [
+      "Fine measured habitat gaps remain through parts of Big Sur and northern Arguello",
+      "Background and land context are separately labeled; vertical references remain unreconciled",
+      "Screening is historical and is not present fish or route/season/gear/security clearance"
+    ]
+  },
+  "complete": true
+}

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-03T02:59:11.251010+00:00",
+  "baseCommit": "6f574d8e3df4c934c326d66fe2e60504aca29e0b",
+  "scope": "Actual local browser visual and interaction acceptance; no cloud publication or formal accessibility certification",
+  "accessRecovery": "Supported reload of the user reopened Codex browser tab; no security-policy mutation or bypass",
+  "viewports": [
+    {
+      "cssWidth": 390,
+      "cssHeight": 844,
+      "devicePixelRatio": 1,
+      "documentWidth": 390
+    },
+    {
+      "cssWidth": 320,
+      "cssHeight": 675,
+      "devicePixelRatio": 1,
+      "documentWidth": 320,
+      "mapMinimumHeight": 500,
+      "internalVerticalScroll": "intentional"
+    },
+    {
+      "cssWidth": 1440,
+      "cssHeight": 900,
+      "devicePixelRatio": 1,
+      "documentWidth": 1440
+    },
+    {
+      "cssWidth": 1152,
+      "cssHeight": 720,
+      "devicePixelRatio": 1,
+      "documentWidth": 1152
+    }
+  ],
+  "fixes": [
+    "Prominent mobile map entry before metrics",
+    "44 CSS pixel method, select, play, slider, map, history and close targets",
+    "Map-focused view restores daily report or resets when switching views",
+    "View changes reset vertical scroll; chart scroll remains independently explorable",
+    "Map title, legend, tools, layer rail and attribution occupy separate regions",
+    "Desktop/tablet zoom and recenter positions separated; zoom ends at202px and layer rail begins210px at1440x900",
+    "Plain reef coverage/depth empty state",
+    "Current installed map attributions available through a labeled, tested source dialog",
+    "Temp label separates mobile rail"
+  ],
+  "interactions": [
+    "Boat/Shore/Spear modes and native county/species filters update URL/report/map together",
+    "Today/tomorrow native selection and after-dark tomorrow action; future sea temperature stays unknown",
+    "Forecast slider ArrowRight changed8AM to9AM and tide/air/time values",
+    "Play/Pause advances native hours and stops at day boundary",
+    "Actual Morro reef detail opens original2m/2008 nominal179\u2013195ft evidence; Escape returns focus",
+    "Depth slider Home20ft produces qualified empty state; End300ft restores reef choices",
+    "Actual Morro Strand detail opens forecast window, gear, official public approaches, source dates and limits",
+    "New Hearst Memorial Beach north detail opens8AM\u20139AM window, official CCC approach770, source2006 and fishing guidance",
+    "All five primary overlays selected; WCOFS and HF radar distinction displayed",
+    "Future HF radar and satellite blank with explicit notices",
+    "Today pinned GOES imagery displays original7:38PM acquisition; observed loop clock changes on playback",
+    "Motion off stops cloud loop and disables play while retaining the dated frame",
+    "NAIP base selection preserves dated-mosaic warning and attribution",
+    "History station, wind metric and45-day range update actual series/annual context",
+    "Mobile hourly chart keyboard scrollLeft50 on356px viewport/860px chart",
+    "Mobile recorded history scrollLeft416.25 on333px viewport/900px chart",
+    "Conditions/history navigation starts at scroll0 and restores filters from map-focused view",
+    "Source attribution modal native click/Escape works",
+    "Dated catch sheet preservesOct1 trip dates, selected categories and original links"
+  ],
+  "independentReview": {
+    "visualReviewer": "domain_distribution",
+    "verdict": "No remaining blocking layout conflict in final native390/320 screenshots and reviewed desktop/tablet CSS; screenshot/source scope",
+    "shoreReviewer": "source_registry",
+    "status": "Passed independent12-test, complete edge/vertex/access MPA, source clock/geometry/rights review"
+  },
+  "verification": {
+    "nodeTests": 182,
+    "typeChecks": "both configurations pass",
+    "build": "pass",
+    "runtimeReceipt": "research/visual-runtime-2026-10-03.json",
+    "historicalBaselines": "all65 preserved with original catalogs and annual receipts",
+    "unchangedScientificEvidence": "native raster/migrations/private complete-release range tests remain valid"
+  },
+  "limitations": [
+    "No controlled frame-rate benchmark or operating-system preference toggle; reduced-motion initialization is code/test reviewed and explicit motion controls were witnessed",
+    "No formal accessibility certification; actual named controls, keyboard slider/scroll, Escape and focus return checked",
+    "Government habitat remains in private local R2; public cloud release is a later provisioned launch",
+    "Source gaps and review expiries remain enforced; no catch probabilities, measured dive visibility or AIS-derived fishing positions invented"
+  ],
+  "captureNotes": "Final native screenshots. Earlier clip captures were excluded because zoom/viewport sizing differed. Final mobile captures have measured390x844 or320x675 CSS bounds at DPR1; desktop final is1440x900 at DPR1. Temporary viewport override reset.",
+  "images": [
+    {
+      "path": "research/visual-acceptance-2026-10-03/desktop-boat-final.jpg",
+      "sha256": "31a9f4e9ffdc28a9cfa29681444d227a8a051de9a6a439780917c2541bccaeda",
+      "bytes": 132951
+    },
+    {
+      "path": "research/visual-acceptance-2026-10-03/mobile-report-final.jpg",
+      "sha256": "4ae80d38c139d5851fbea9840f5e4e5ccdad4e8ba9ab1289dfdfad4627988b12",
+      "bytes": 39543
+    },
+    {
+      "path": "research/visual-acceptance-2026-10-03/mobile-map-final.jpg",
+      "sha256": "44646083ac43acd8fbe528624c648f21c2730529a420b851e4a2975bdcb68c26",
+      "bytes": 33657
+    },
+    {
+      "path": "research/visual-acceptance-2026-10-03/mobile-map-320-final.jpg",
+      "sha256": "b9f67ad3f07df7ad121ec4fe505d83dde94a2bb4e0e77aab0d70be42ad28ef94",
+      "bytes": 25726
+    },
+    {
+      "path": "research/visual-acceptance-2026-10-03/mobile-conditions-final.jpg",
+      "sha256": "ea966a3ab7991e04a2b032b18557d0397e6661d81d475f55b7852d21b52cab04",
+      "bytes": 31449
+    },
+    {
+      "path": "research/visual-acceptance-2026-10-03/mobile-history-final.jpg",
+      "sha256": "98dcd16544625bfae447312fab28981ba3d5d9b6c1b7ffc4f545ab06f91def7c",
+      "bytes": 35757
+    },
+    {
+      "path": "research/visual-acceptance-2026-10-03/north-shore-detail-final.jpg",
+      "sha256": "14978e270090691ff909a63398ecefc1a8f06dcb27a15b44f144b90bd38e2842",
+      "bytes": 73381
+    }
+  ],
+  "integratedUpstreamCommit": "6bf77e9660b3aa8b54eb3f6546d4cefadd71ba95"
+}

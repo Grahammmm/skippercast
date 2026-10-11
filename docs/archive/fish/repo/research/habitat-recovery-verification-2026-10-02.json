@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-02T05:57:25.474Z",
+  "scope": "Real local Worker habitat preflight and exact HTTP byte-range verification, not browser rendering.",
+  "featureCount": 2868,
+  "detailCount": 43,
+  "checks": [
+    {
+      "region": "morro-bay",
+      "status": 206,
+      "bytes": 16384,
+      "etag": "\"17b57e1ebe17c5d13a40c8474585e3ac\"",
+      "contentRange": "bytes 0-16383/15285861",
+      "archiveSha256": "8bc605746245657b9c519e97e617bd526cbce8cf8f9744be38bf0ee0cfc98a93"
+    },
+    {
+      "region": "cambria-san-simeon",
+      "status": 206,
+      "bytes": 16384,
+      "etag": "\"644c6bc4ac8b53a2a1e1110611f608e6\"",
+      "contentRange": "bytes 0-16383/627400",
+      "archiveSha256": "455847b6e1beca9d80236de7a948aabdb2d4bf415c3568a804c88685499d860f"
+    }
+  ],
+  "passed": true
+}

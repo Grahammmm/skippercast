@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-06T22:10:32.152746+00:00",
+  "release": {
+    "commit": "3dd5c95dfa6a2493d0fa8150f0158e6d6df84331",
+    "dirty": false,
+    "builtAt": "2026-10-06T22:08:09.209Z"
+  },
+  "cloudflareVersion": "836857e8-2956-4d0c-a296-60ec87150f05",
+  "githubActionsRun": 37538608224,
+  "ci": "success",
+  "localNodeTests": 204,
+  "localGisTests": 4,
+  "checks": [
+    {
+      "url": "/data/coast3d/chart-model.json",
+      "sha256": "c7fc0f472eb78a310ed3d586da66de6a7a72059739366cb008b46d9e49e59ec4",
+      "matchesLocal": true
+    },
+    {
+      "url": "/data/coast3d/manifest.json",
+      "sha256": "86fb2c30394c0e7e425af18db345f4d3b22351e3c1387c482e32ccaa8bd44cce",
+      "matchesLocal": true
+    },
+    {
+      "url": "/data/coast3d/chart-provenance.json",
+      "sha256": "e409f09083e4e809893b3c0d4a354440fd7c3e2223188aed547e0fb006ae7c8b",
+      "matchesLocal": true
+    },
+    {
+      "url": "/data/coast3d/chart-10240-6144-64.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-ranges-10240-6144-64.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-kind-10240-6144-64.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-index-10240-6144-64.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-10240-6144-16.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-ranges-10240-6144-16.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-kind-10240-6144-16.bin",
+      "matchesHash": true
+    },
+    {
+      "url": "/data/coast3d/chart-index-10240-6144-16.bin",
+      "matchesHash": true
+    }
+  ],
+  "browserChecks": [
+    "desktop home, chart estimated depth, native reef reading",
+    "2D/3D selected pin, reading, species and current layer retained",
+    "390x844 layer controls and species selection",
+    "no browser console warnings/errors"
+  ],
+  "sourceLimits": [
+    "Chart surface is estimated context with original bands; not a new survey",
+    "Unknown shared vertical datum; no fitted offsets",
+    "Species pins are physical habitat evidence, not verified fish presence",
+    "Daily report dashboard remains a separate page; full repository merger is future work"
+  ]
+}

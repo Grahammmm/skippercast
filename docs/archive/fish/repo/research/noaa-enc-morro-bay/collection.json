@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "bounds": [
+    -121.13,
+    35.31,
+    -120.79,
+    35.55
+  ],
+  "sources": [
+    {
+      "id": "noaa-enc-harbor-76",
+      "name": "soundings",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/76",
+      "extractSha256": "c7b1a2e85b8d5521c3cb99ef2f550f13331f7873f2564d713a24efef3a1faed1",
+      "featureCount": 1499,
+      "pages": [
+        {
+          "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/76/query?f=json&geometry=-121.13%2C35.31%2C-120.79%2C35.55&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&returnZ=true&orderByFields=OBJECTID+ASC&resultOffset=0&resultRecordCount=1000",
+          "sha256": "309fcf4fc8ffe8dd7fd94c6ba65ea16f5309d21d00221f1a5edd5133d0f95714",
+          "count": 1000,
+          "retrievedAt": "2026-10-06T21:49:24.490862+00:00"
+        },
+        {
+          "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/76/query?f=json&geometry=-121.13%2C35.31%2C-120.79%2C35.55&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&returnZ=true&orderByFields=OBJECTID+ASC&resultOffset=1000&resultRecordCount=1000",
+          "sha256": "3cf269e7ab4a74c43e7eaa8118c772ec23ed26f5931ced0b702dd40c1fbe7a18",
+          "count": 499,
+          "retrievedAt": "2026-10-06T21:49:25.173092+00:00"
+        }
+      ]
+    },
+    {
+      "id": "noaa-enc-harbor-227",
+      "name": "depth-areas",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/227",
+      "extractSha256": "c21202bc0cb73f8086bfae98f2825f5a32a94147f8a7f50f984670f9c0412f83",
+      "featureCount": 144,
+      "pages": [
+        {
+          "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/227/query?f=json&geometry=-121.13%2C35.31%2C-120.79%2C35.55&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&returnZ=true&orderByFields=OBJECTID+ASC&resultOffset=0&resultRecordCount=1000",
+          "sha256": "805026dc5c0066262115bdf90934b744ca33acc9eff4c9d96e734b9c86b967f7",
+          "count": 144,
+          "retrievedAt": "2026-10-06T21:49:26.564050+00:00"
+        }
+      ]
+    },
+    {
+      "id": "noaa-enc-harbor-233",
+      "name": "land-areas",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/233",
+      "extractSha256": "ab1b77bda7ea297e492a53af385d4f4c81975db9822acd0832758fb4ad9510d8",
+      "featureCount": 229,
+      "pages": [
+        {
+          "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/233/query?f=json&geometry=-121.13%2C35.31%2C-120.79%2C35.55&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&returnZ=true&orderByFields=OBJECTID+ASC&resultOffset=0&resultRecordCount=1000",
+          "sha256": "2ababeca2fea33e312afd6e61799798689c3ac77091695ea5783c3b05447e79f",
+          "count": 229,
+          "retrievedAt": "2026-10-06T21:49:27.565290+00:00"
+        }
+      ]
+    },
+    {
+      "id": "noaa-enc-harbor-223",
+      "name": "quality",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/223",
+      "extractSha256": "24f7e837d6d32a74c39a9bba92ba81798ebd2911a39beb9765d31d428e8ecc41",
+      "featureCount": 18,
+      "pages": [
+        {
+          "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/223/query?f=json&geometry=-121.13%2C35.31%2C-120.79%2C35.55&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&returnZ=true&orderByFields=OBJECTID+ASC&resultOffset=0&resultRecordCount=1000",
+          "sha256": "3352ba95a2e085d9bb846f8095c82e5ed81e110d2959298e88fc0dddb6dbe266",
+          "count": 18,
+          "retrievedAt": "2026-10-06T21:49:28.488917+00:00"
+        }
+      ]
+    },
+    {
+      "id": "noaa-enc-harbor-224",
+      "name": "datums",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/224",
+      "extractSha256": "934f8a8bbf195955568fb74fe136bae3f99a4a73ae6785cddc110ea76e3f4056",
+      "featureCount": 0,
+      "pages": [
+        {
+          "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer/224/query?f=json&geometry=-121.13%2C35.31%2C-120.79%2C35.55&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&returnZ=true&orderByFields=OBJECTID+ASC&resultOffset=0&resultRecordCount=1000",
+          "sha256": "b39804cfc302794dbf52956359d51af21c40de93fc5483e800766f85f8ad3d13",
+          "count": 0,
+          "retrievedAt": "2026-10-06T21:49:28.899776+00:00"
+        }
+      ]
+    }
+  ],
+  "publisher": "NOAA Office of Coast Survey",
+  "kind": "charted depth context; not native multibeam",
+  "depthUnit": "metres",
+  "unitEvidence": "https://nauticalcharts.noaa.gov/updates/introducing-new-enc-direct-to-gis/",
+  "rights": "NOAA chart product; public domain / CC0-1.0",
+  "rightsEvidence": "https://www.nauticalcharts.noaa.gov/data/data-licensing.html",
+  "serviceEvidence": "https://www.nauticalcharts.noaa.gov/data/gis-data-and-services.html",
+  "sourceDates": "SORDAT, SURSTA and SUREND retained; retrieval is not survey date",
+  "verticalDatum": "unknown in returned local feature metadata; no transformation applied",
+  "use": "Estimated display context only. Do not use for navigation or infer reef geometry/species abundance."
+}
