@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke-test a deployed SkipperCast site. Usage: scripts/smoke_test.sh https://site [build-id]
 # Pass "" as the build id to skip the build match. The build id defaults to the one in dist/client (the build just deployed); the
-# test waits up to two minutes for that build to be served, then checks pages,
+# test waits up to two minutes for that build to be served, then checks pages (/, /map, /coast),
 # feeds, the service worker and that forged identity headers are refused.
 set -euo pipefail
 SITE=${1:?usage: smoke_test.sh <site-url> [build-id]}
@@ -26,6 +26,18 @@ echo "health ok (build ${served:-unknown})"
 home=$(get "$SITE/") || fail "home page not served"
 case "$home" in *'<title>'*) ;; *) fail "home page has no <title>";; esac
 echo "home page ok"
+
+# FE-60: /map and /coast. With the v2 shell on (the default) / is the landing,
+# /map the app and /coast redirects to it; with UI_V2=false or a rolled-back
+# Worker / is the v1 shell, /map is dark and answers only with ?ui=v2, and
+# /coast is the standalone page. Either way each must end at a page.
+if has "$home" 'class="landing-body"'; then map_path=/map; else map_path='/map?ui=v2'; fi
+map=$(get "$SITE$map_path") || fail "$map_path not served"
+has "$map" '<title>' || fail "$map_path has no <title>"
+echo "map page ok ($map_path)"
+coast=$(get -L "$SITE/coast") || fail "/coast not served"
+has "$coast" '<title>' || fail "/coast has no <title>"
+echo "coast page ok"
 
 sw=$(curl -fsS -D - -o /dev/null --max-time 20 "$SITE/sw.js") || fail "/sw.js not served"
 # Either the Worker's no-cache or Cloudflare static assets'
