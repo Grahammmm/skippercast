@@ -1,6 +1,7 @@
 import { getRegion, acceptsFeed, localContext, assetURL } from "./region.js";
 import { fetchJSON, compass } from "./forecast.js";
 import { esc, num, local, from } from "./marine-charts.js";
+import { sharedStation, sourceStation, stationText } from "../web/station-label.ts";
 
 export const OBSERVATION_REFRESH = 5 * 60 * 1000;
 export const FORECAST_REFRESH = 30 * 60 * 1000;
@@ -110,6 +111,27 @@ export async function loadObservations(fetcher = fetchJSON, now = Date.now(), co
     alertError: coastal.error || offshore.error, retrieved: Date.now() };
 }
 
+/**
+ * The station behind one live buoy source ("diablo", "diablo-spectrum" or "offshore") and how to name it.
+ * Legacy and primary sources keep the region's name and NOAA link; a backup (source.fallback_for, #554)
+ * is named by its own station, "backup for" the primary, and links to its own NDBC page.
+ */
+export function buoyStation(feed, id, stations = getRegion().stations) {
+  const offshore = id === "offshore";
+  const configured = offshore ? stations?.offshore_buoy : stations?.nearshore_buoy;
+  const name = offshore ? stations?.offshore_buoy_name : stations?.nearshore_buoy_name;
+  const source = feed?.schema_version === 1 ? feed.sources?.[id] : null;
+  const station = sourceStation(source, configured);
+  const backup = !!station?.backupFor;
+  return { station, backup, label: backup ? "NDBC " + stationText(station) : null,
+    title: backup ? "NDBC " + stationText(station) : name + " · " + configured,
+    url: STATION + (backup ? encodeURIComponent(station.id) : configured) };
+}
+/** True when the nearshore and offshore readings come from one station because a backup is in use. */
+export function sharedBuoy(feed, stations = getRegion().stations) {
+  return sharedStation(buoyStation(feed, "diablo", stations).station, buoyStation(feed, "offshore", stations).station);
+}
+
 function stamp(epoch, state) {
   return `<span class="observation-age ${state.fresh ? "fresh" : "stale"}">${esc(state.label)}</span><span class="small">Observed ${measuredAt(epoch)}</span>`;
 }
@@ -117,14 +139,18 @@ function spectrumHTML(feed, now) {
   const s = feed?.sources?.["diablo-spectrum"], d = s?.data, r = d?.observations?.[0], u = d?.units || {};
   const epoch = time(r?.time), state = freshness(epoch, now, sourceCurrent(feed, s, now));
   const field = (key, unit, factor = 1) => u[key] === unit && finite(r?.[key]) && r[key] >= 0 ? num(r[key] * factor) : "—";
-  return `<details class="observed-components" data-live-disclosure="components"><summary>Measured swell &amp; wind waves</summary><p>Swell ${field("SwH", "m", 3.28084)} ft · ${field("SwP", "sec")} s · from ${esc(r?.SwD || "—")}</p><p>Wind waves ${field("WWH", "m", 3.28084)} ft · ${field("WWP", "sec")} s · from ${esc(r?.WWD || "—")}</p>${stamp(epoch, state)}<p class="small">NOAA’s spectral separation; components do not add directly to total wave height.</p></details>`;
+  // The spectrum fails over on its own: name its station when it is a backup or differs from the card's.
+  const sp = sourceStation(s), ob = sourceStation(feed?.sources?.diablo);
+  const where = sp && (sp.backupFor || (ob && ob.id !== sp.id)) ? `<p class="small">Spectrum from NDBC ${esc(stationText(sp))}.</p>` : "";
+  return `<details class="observed-components" data-live-disclosure="components"><summary>Measured swell &amp; wind waves</summary><p>Swell ${field("SwH", "m", 3.28084)} ft · ${field("SwP", "sec")} s · from ${esc(r?.SwD || "—")}</p><p>Wind waves ${field("WWH", "m", 3.28084)} ft · ${field("WWP", "sec")} s · from ${esc(r?.WWD || "—")}</p>${stamp(epoch, state)}<p class="small">NOAA’s spectral separation; components do not add directly to total wave height.</p>${where}</details>`;
 }
 
 export function observedDock(observations, offshore = false, now = Date.now()) {
   const stations=observations?.stations||getRegion().stations;
   const r = buoyReading(observations?.buoys, offshore ? "offshore" : "diablo", now);
   if (!r.waveState.fresh || r.height === null) return null;
-  return `<strong>Observed · ${num(r.height)} ft <span>@ ${num(r.period)} s</span></strong><span>${offshore ? stations.offshore_buoy_name + " reference" : stations.nearshore_buoy_name + " buoy reference"} · ${local(r.waveTime / 1000, { hour: "numeric", minute: "2-digit" })} PT</span>`;
+  const backup = buoyStation(observations?.buoys, offshore ? "offshore" : "diablo", stations).label;
+  return `<strong>Observed · ${num(r.height)} ft <span>@ ${num(r.period)} s</span></strong><span>${backup ? esc(backup) : offshore ? stations.offshore_buoy_name + " reference" : stations.nearshore_buoy_name + " buoy reference"} · ${local(r.waveTime / 1000, { hour: "numeric", minute: "2-digit" })} PT</span>`;
 }
 
 export function observationsHTML(data, offshore = false, now = Date.now()) {
@@ -139,12 +165,15 @@ export function observationsHTML(data, offshore = false, now = Date.now()) {
     alerts = data.alerts?.[offshore ? "offshore" : "coastal"],
     active = alerts?.filter((a) => (!Number.isFinite(a.starts) || a.starts <= now / 1000) && (!Number.isFinite(a.ends) || a.ends >= now / 1000)),
     alertFresh = now - data.retrieved <= 10 * 60000;
+  const card = buoyStation(data.buoys, offshore ? "offshore" : "diablo", stations), outerStation = buoyStation(data.buoys, "offshore", stations);
+  const shared = sharedBuoy(data.buoys, stations);
+  const sharedHTML = shared ? `<p class="small" data-shared-station>Same station as the ${offshore ? "nearshore" : "offshore"} reading (NDBC ${esc(card.station.id)}), not a separate measurement.</p>` : "";
   const alertHTML = !alertFresh || !Array.isArray(alerts)
     ? '<p class="live-alert">Current marine advisories could not be confirmed. Check the official forecast.</p>'
     : active.length ? `<div class="live-alert" role="status"><strong>Active marine alert</strong>${active.map((a) => `<p>${esc(a.title)}</p>`).join("")}</div>` : "";
   return `<div class="live-check"><span>Latest measurements</span><span>Checked ${local(data.retrieved / 1000, { hour: "numeric", minute: "2-digit" })} PT</span></div>${alertHTML}
-    <div class="live-cards"><section class="live-card"><div class="live-card-title"><h3>${offshore ? stations.offshore_buoy_name + " · " + stations.offshore_buoy : stations.nearshore_buoy_name + " · " + stations.nearshore_buoy}</h3><a href="${STATION}${offshore ? stations.offshore_buoy : stations.nearshore_buoy}" target="_blank" rel="noopener">NOAA ↗</a></div><strong class="observed-number">${num(seas.height)}<small> ft</small></strong><p>${num(seas.period)} s dominant period · from ${from(seas.from)}</p><div class="observation-stamp">${stamp(seas.waveTime, seas.waveState)}</div>${!seas.waveState.fresh ? `<p class="small">${esc(data.buoyError || seas.issue || "No recent wave reading available.")}</p>` : ""}${offshore ? `<p class="small">${esc(stations.offshore_buoy_note || "Regional offshore reference; see station position.")}</p>` : spectrumHTML(data.buoys, now)}</section>
+    <div class="live-cards"><section class="live-card"><div class="live-card-title"><h3>${card.backup ? esc(card.title) : card.title}</h3><a href="${card.url}" target="_blank" rel="noopener">NOAA ↗</a></div><strong class="observed-number">${num(seas.height)}<small> ft</small></strong><p>${num(seas.period)} s dominant period · from ${from(seas.from)}</p><div class="observation-stamp">${stamp(seas.waveTime, seas.waveState)}</div>${!seas.waveState.fresh ? `<p class="small">${esc(data.buoyError || seas.issue || "No recent wave reading available.")}</p>` : ""}${sharedHTML}${offshore ? `<p class="small">${esc(stations.offshore_buoy_note || "Regional offshore reference; see station position.")}</p>` : spectrumHTML(data.buoys, now)}</section>
     <section class="live-card"><div class="live-card-title"><h3>Reference weather · ${esc(stations.airport_name)}</h3><a href="${AIRPORT}" target="_blank" rel="noopener">NWS ↗</a></div><strong class="observed-number">${num(air.air, 0)}<small> °F</small></strong><p>${esc(air.description)} · ${num(air.visibility)} mi visibility</p><p>Wind ${num(air.wind, 0)} kt from ${compass(air.from)}${air.gust === null ? " · gust not reported" : ` · gust ${num(air.gust, 0)} kt`}</p><div class="observation-stamp">${stamp(air.epoch, air.state)}</div><p class="small">${esc(stations.airport)} airport is on land. Wind and fog can differ at sea and at the entrance.</p></section>
     <section class="live-card water-observation"><div class="live-card-title"><h3>${esc(stations.tide_name)} reference level</h3><a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=${stations.tide}" target="_blank" rel="noopener">NOAA ↗</a></div><strong class="observed-number">${Number.isFinite(height) ? num(height) : "—"}<small> ft MLLW</small></strong><div class="observation-stamp">${stamp(waterTime, waterState)}</div><p class="small">Measured water level. ${esc(stations.tide_note)}</p></section></div>
-    <details class="live-more" data-live-disclosure="sources"><summary>Offshore wind &amp; source details</summary><p>Buoy ${esc(stations.offshore_buoy)} · wind ${num(outer.wind)} kt, gust ${num(outer.gust)} kt from ${compass(outer.windFrom)}.</p><div class="observation-stamp">${stamp(outer.windTime, outer.windState)}</div><p class="small">${esc(stations.offshore_buoy_note || "Regional offshore reference; not harbor wind.")} Buoys update through a cloud job scheduled every 30 minutes; NOAA and scheduler delays are possible. This page checks for new observations and marine alerts every 5 minutes while open. Readings over 2 hours old are marked stale.</p><p class="small">${alertFresh && Array.isArray(alerts) && !active.length ? "No active issued marine alerts returned for " + (offshore ? zones.offshore : zones.coastal) + ". " : ""}Observations do not confirm a future forecast or entrance safety.</p><a href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=${offshore ? zones.offshore : zones.coastal}" target="_blank" rel="noopener">Official marine forecast ↗</a> · <a href="https://github.com/Grahammmm/skippercast/actions/workflows/live-conditions.yml" target="_blank" rel="noopener">Buoy feed status ↗</a></details>`;
+    <details class="live-more" data-live-disclosure="sources"><summary>Offshore wind &amp; source details</summary><p>Buoy ${esc(outerStation.backup ? stationText(outerStation.station) : stations.offshore_buoy)}${shared && !offshore ? " (same station as the card above)" : ""} · wind ${num(outer.wind)} kt, gust ${num(outer.gust)} kt from ${compass(outer.windFrom)}.</p><div class="observation-stamp">${stamp(outer.windTime, outer.windState)}</div><p class="small">${esc(stations.offshore_buoy_note || "Regional offshore reference; not harbor wind.")} Buoys update through a cloud job scheduled every 30 minutes; NOAA and scheduler delays are possible. This page checks for new observations and marine alerts every 5 minutes while open. Readings over 2 hours old are marked stale.</p><p class="small">${alertFresh && Array.isArray(alerts) && !active.length ? "No active issued marine alerts returned for " + (offshore ? zones.offshore : zones.coastal) + ". " : ""}Observations do not confirm a future forecast or entrance safety.</p><a href="https://forecast.weather.gov/MapClick.php?TextType=2&amp;zoneid=${offshore ? zones.offshore : zones.coastal}" target="_blank" rel="noopener">Official marine forecast ↗</a> · <a href="https://github.com/Grahammmm/skippercast/actions/workflows/live-conditions.yml" target="_blank" rel="noopener">Buoy feed status ↗</a></details>`;
 }

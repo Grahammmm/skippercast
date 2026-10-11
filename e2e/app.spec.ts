@@ -196,3 +196,36 @@ test('a model outage leaves the forecast explicitly unavailable', async ({page, 
   await expect(page.locator('#meteogram .meteogram-plot svg')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+// #554 station failover: the v1 Live card names a backup buoy as itself, links to its own NDBC
+// page, says when it is also the offshore station, and keeps a retained reading's stale stamp.
+test('the Live card names a backup buoy and its shared station, and keeps a retained one stale', async ({page, pageErrors}) => {
+  const now = Date.now(), at = (min: number) => new Date(now - min * 60_000).toISOString();
+  const units = {WVHT: 'm', DPD: 'sec', MWD: 'degT', WSPD: 'm/s', GST: 'm/s', WDIR: 'degT', SwH: 'm', SwP: 'sec', SwD: '-', WWH: 'm', WWP: 'sec', WWD: '-'};
+  const row = {time: at(25), WVHT: 1.5, DPD: 12, MWD: 290, WSPD: 7, GST: 9, WDIR: 310, SwH: 1.2, SwP: 12, SwD: 'WNW', WWH: 0.5, WWP: 5, WWD: 'NW'};
+  const source = (extra: Record<string, unknown>) => ({status: 'ok', max_age_hours: 2, ...extra, data: {station: '46028', units, observations: [row]}});
+  const backup = {name: 'NOAA NDBC 46028 observations', station: '46028', fallback_for: '46215', station_url: 'https://www.ndbc.noaa.gov/station_page.php?station=46028'};
+  const feed = (status: string) => ({schema_version: 1, region_id: 'morro-bay', generated_at: at(5), sources: {
+    diablo: source({...backup, status, issue: status === 'retained' ? 'NDBC 46215 and 46028 checks failed' : undefined}),
+    'diablo-spectrum': source({...backup, status}),
+    offshore: source({name: 'Cape San Martin offshore', station: '46028'}),
+  }});
+  let status = 'ok';
+  await page.route(/\/conditions\/regions\/morro-bay\/latest\.json/, route => route.fulfill({json: feed(status)}));
+  await openMap(page);
+  await page.locator('[data-nav="forecast"]').click();
+  const card = page.locator('#live-conditions .live-card').first();
+  await expect(card.locator('h3')).toHaveText('NDBC 46028 (backup for 46215)', {timeout: 30_000});
+  await expect(card.locator('.live-card-title a')).toHaveAttribute('href', 'https://www.ndbc.noaa.gov/station_page.php?station=46028');
+  await expect(card.locator('[data-shared-station]')).toHaveText('Same station as the offshore reading (NDBC 46028), not a separate measurement.');
+  await expect(page.locator('#live-conditions')).not.toContainText('Diablo Canyon');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // A retained backup keeps its label and reads as not current.
+  status = 'retained';
+  await page.reload();
+  await page.locator('[data-nav="forecast"]').click();
+  await expect(card.locator('h3')).toHaveText('NDBC 46028 (backup for 46215)', {timeout: 30_000});
+  await expect(card.locator('.observation-age').first()).toHaveText('Update unavailable');
+  await expect(card).toContainText('NDBC 46215 and 46028 checks failed');
+  expect(pageErrors).toEqual([]);
+});
