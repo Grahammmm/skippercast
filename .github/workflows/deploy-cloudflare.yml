@@ -182,7 +182,7 @@ jobs:
             exit 1
           fi
           node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
-          if ! $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Deployment of ${GITHUB_SHA} ${reason} (run ${GITHUB_RUN_ID})"; then
+          if ! $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Smoke test or deploy failed for ${GITHUB_SHA} (run ${GITHUB_RUN_ID})"; then
             echo "::error::Deployment of ${GITHUB_SHA} ${reason} and the rollback to Worker version ${PREVIOUS} FAILED; roll back by hand (docs/operations/runbooks/rollback-release.md)."
             exit 1
           fi
