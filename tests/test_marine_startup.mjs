@@ -21,10 +21,9 @@ test('eager confidence import cannot capture Morro forecast points before a diff
 test('pure unit extraction retains exact direction and hour behavior',()=>{
  assert.equal(HOUR,3600);for(const value of [0,90,180,270,360,-30,999])assert.equal(directionTo(value),(value+180)%360);for(const value of [null,undefined,NaN,Infinity,'90'])assert.equal(directionTo(value),null);
 });
-test('all authored eager index entry static imports exclude regional marine-data',()=>{
- const html=readFileSync(resolve(root,'dist/index.html'),'utf8');
- const entries=[...html.matchAll(/<script\b[^>]*type="module"[^>]*src="([^"]+)"/g)].map(match=>resolve(root,'dist',match[1]));
- assert.ok(entries.length>=5);
+test('all authored eager app and landing entry static imports exclude regional marine-data',()=>{
+ const entries=['app.html','landing.html'].flatMap(page=>[...readFileSync(resolve(root,'dist',page),'utf8').matchAll(/<script\b[^>]*type="module"[^>]*src="([^"]+)"/g)].map(match=>resolve(root,'dist',match[1])));
+ assert.equal(entries.length,2);
  const visit=(path,chain,seen)=>{if(seen.has(path))return;seen.add(path);assert.notEqual(path,resolve(root,'dist/marine-data.js'),chain.join(' → '));const source=readFileSync(path,'utf8');
   for(const match of source.matchAll(/^\s*import\s+(?!type\b)(?:[^;]*?\sfrom\s*)?["']([^"']+)["']/gm)){const id=match[1];if(!id.startsWith('.')||id.includes('?')||! /\.(?:js|ts|tsx)$/.test(id))continue;const next=resolve(dirname(path),id);visit(next,[...chain,id],seen);}
  };

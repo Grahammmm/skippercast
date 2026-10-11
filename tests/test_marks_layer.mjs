@@ -8,8 +8,6 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {speciesFit} from '../dist/species-fit.js';
-import {matchesSpecies} from '../dist/species.js';
-import {habitatMatches} from '../dist/survey-habitat.js';
 import {
   CDFW_REGULATIONS, EMPTY, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
   receiptCard, regulationsLink, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
@@ -41,19 +39,13 @@ const SENTINELS = new Set(Object.values(sentinel));
 /** Words § 12 keeps off every card: no count, chance or promise of fish. */
 const PROMISE = /\b(?:hotspot|chance|odds|probab\w*|productive|best spot|catch rate|bite|guarantee\w*)\b/i;
 
+// FE-61 deleted v1's dist/species.js and dist/survey-habitat.js, which these rules were pinned to target by target.
 test('v1\'s rules are kept: marks per target, survey outlines per family and the geology kinds', () => {
-  for (const atlas of [ATLAS, SOCAL_ATLAS]) {
-    for (const id of ['reef', 'rockfish', 'lingcod', 'halibut', 'salmon', 'dungeness']) {
-      for (const t of atlas.targets) assert.equal(markShown(t, id), matchesSpecies(t, id), `${t.id} for ${id}`);
-    }
-  }
   assert.ok(ATLAS.targets.some(t => !markShown(t, 'lingcod')) && ATLAS.targets.some(t => markShown(t, 'lingcod')), 'lingcod keeps v1\'s rough-relief screen');
   assert.equal(markShown(ATLAS.targets[0], 'cabezon-shallow-reef'), true, 'a v2 reef target reads the reef marks');
-  for (const [region, survey] of [[CAMBRIA, SURVEY], [SOCAL, read('regions/southern-california/survey-habitat.geojson')]]) {
-    for (const option of region.target_options) {
-      for (const f of survey.features) assert.equal(surveyMatches(f.properties, option.id, region), habitatMatches(f, option.id, region), `${f.properties.id} for ${option.id}`);
-    }
-  }
+  const shown = CAMBRIA.target_options.flatMap(o => SURVEY.features.filter(f => surveyMatches(f.properties, o.id, CAMBRIA)).map(f => [o.id, f.properties]));
+  assert.ok(shown.length > 0 && shown.length < CAMBRIA.target_options.length * SURVEY.features.length, 'survey outlines show for some families only');
+  for (const [id, p] of shown.slice(0, 20)) assert.equal(surveyMatches({...p, military_access: 'unverified'}, id, CAMBRIA), false, 'unverified military access hides it');
   assert.equal(habitatFamily('lingcod'), 'reef');
   assert.equal(habitatFamily('kelp-bass'), 'kelp-bass', 'a target with its own habitat kinds keeps them');
   // dist/geology.js: rock and mixed for reef targets, sediment for halibut and dungeness, nothing else.
@@ -82,7 +74,7 @@ test('fit is v1\'s ordinal, 3 the strongest, in the one wording "fits <species> 
 
 test('marks are points with their fit badge, inside the profile\'s depth limit', () => {
   const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
-  assert.equal(boat.features.length, ATLAS.targets.filter(t => matchesSpecies(t, 'lingcod')).length);
+  assert.equal(boat.features.length, ATLAS.targets.filter(t => markShown(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
   assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3'}});
   const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);

@@ -28,8 +28,9 @@ test('coast and chart links carry actual location and do not substitute Morro fo
 test('shared hour serialization does not select a different forecast hour',()=>{
  const hours=[{at:'2026-10-06T12:00:00.000Z'}];assert.equal(matchingHour(hours,'2026-10-06T12:00Z'),hours[0].at);assert.equal(matchingHour(hours,'2026-10-06T13:00Z'),null);
 });
-test('the coastal shell is addressable without switching the incomplete v2 homepage',()=>{
- assert.equal(shellFor('/coast',new URLSearchParams(),{}),'/coast.html');assert.equal(shellFor('/',new URLSearchParams(),{}),'/');assert.equal(shellFor('/map',new URLSearchParams(),{}),null);
+// FE-61: the standalone coast shell is gone; /coast redirects to the app (FE-78), so it is not a shell path.
+test('the coast opens in the v2 app: /coast is no shell, / the landing and /map the app',()=>{
+ assert.equal(shellFor('/coast',new URLSearchParams()),undefined);assert.equal(shellFor('/',new URLSearchParams()),'/landing.html');assert.equal(shellFor('/map',new URLSearchParams()),'/app.html');
 });
 test('canonical geography wins over conflicting aliases and never falls back for unsupported places',()=>{
  assert.equal(coastURL('https://skippercast.com/coast?region=monterey-point-sur&place=avila').searchParams.get('place'),'monterey');

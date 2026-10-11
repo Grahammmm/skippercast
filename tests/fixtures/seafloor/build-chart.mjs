@@ -11,7 +11,7 @@ import {readFileSync, writeFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 const sandbox = {};
-vm.runInNewContext(readFileSync(new URL('../../../dist/vendor/pmtiles-4.5.0/pmtiles.js', import.meta.url), 'utf8') + ';this.pmtiles = pmtiles;', sandbox);
+vm.runInNewContext(readFileSync(new URL('../../../node_modules/pmtiles/dist/pmtiles.js', import.meta.url), 'utf8') + ';this.pmtiles = pmtiles;', sandbox);
 const Z = 12, Y = 1617, WEST = 671, EAST = 672;
 
 const varint = n => { const out = []; do { out.push((n % 128) | (n >= 128 ? 128 : 0)); n = Math.floor(n / 128); } while (n); return out; };

@@ -36,7 +36,7 @@ export function LandingHead({href}: {href: string}) {
       <nav aria-label="Site">
         <ul class="landing-nav">
           {NAV.map(item => <li key={item.label}><a href={item.href.startsWith('/map') ? keepUI(href, item.href) : item.href}>{item.label}</a></li>)}
-          <li><a href="/?ui=v1#account">Sign in</a></li>
+          <li><a href="/map#account">Sign in</a></li>
         </ul>
       </nav>
     </header>

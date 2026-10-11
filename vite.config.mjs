@@ -15,7 +15,6 @@
 import {readdirSync} from 'node:fs';
 import {basename, resolve} from 'node:path';
 import {defineConfig} from 'vite';
-import {bootPreload} from './scripts/vite-preload.mjs';
 
 /** Every page (NAME.html) directly in `root` is an entry. */
 export const pages = root => readdirSync(root).filter(name => name.endsWith('.html')).sort();
@@ -27,6 +26,11 @@ const output = {
   chunkFileNames: 'assets/[name].[hash:10].js',
   assetFileNames: 'assets/[name].[hash:10][extname]',
   hashCharacters: 'hex',
+  // FE-61: MapLibre GL and PMTiles get a chunk of their own. Without the v1
+  // pages' shared chunks, Rolldown put its runtime helpers in the MapLibre
+  // chunk (the libraries are CommonJS), so the app's and the landing's first
+  // paint statically imported MapLibre (about 290 KB gzipped).
+  codeSplitting: {groups: [{name: 'maplibre-gl', test: /[\\/]node_modules[\\/].*(?:maplibre-gl|pmtiles)[\\/]/}]},
 };
 
 // Tags Vite must leave alone: vendor/ files, the web manifest and image icons.
@@ -83,7 +87,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     base: './',
     publicDir: false,
     logLevel: 'warn',
-    plugins: [staticRefs(), pageStyles(root), bootPreload({root})],
+    plugins: [staticRefs(), pageStyles(root)],
     // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
     oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {
@@ -92,11 +96,10 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
       manifest: true,
       // Every supported browser has native modulepreload; skip the polyfill.
       modulePreload: {polyfill: false},
-      // CSS is concatenated, not minified: the minifier merges repeated
-      // selectors across the ~20 authored sheets and dropped a later
-      // !important override (.leaflet-control-zoom a), changing the page.
-      // Revisit when P4-02 consolidates the stylesheets.
-      cssMinify: false,
+      // FE-61: minified. It stayed off while the v1 shell's ~20 sheets were
+      // built: merging their repeated selectors dropped a later !important
+      // override and changed the page.
+      cssMinify: true,
       // No data: URLs for small files: every asset stays a hashed file.
       assetsInlineLimit: 0,
       sourcemap: false,

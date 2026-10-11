@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The classic map is gone: `/` is always the landing (or the app when a link names an area), `/map` the app, and `/coast` opens the app's 3D view; `?ui=v1` and the `UI_V2` switch no longer change anything. The v1 shell, its coastal page and modules, Leaflet and the vendored map-test copies are deleted, and stylesheets are now minified (FE-61, part 1 of 3).
+
 ## 0.8.0 — 2026-10-11
 
 - Suggested windows in the brief no longer run through an hour that a hazard rule flags or that the profile grades Rough, for every profile and whatever your limits say: a hazardous harbour bar at any hour of a boat window (not only departure and return), sneaker-wave swell for Shore when the surf is the offshore estimate, long-period swell under a kayak, and Rough Shore or Spear hours. Some windows are shorter or gone as a result. Occasionally a boat window the brief used to drop because its departure or return crossed a hazardous bar now appears as its clean remaining hours (#551).

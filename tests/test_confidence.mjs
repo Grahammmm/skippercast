@@ -80,15 +80,10 @@ test('terrain is always an estimate and fish presence is always unknown', () => 
   assert.equal(terrainBadge({}).state, 'unknown');
 });
 
-test('the moved spot-sheet caveats keep their wording and leave app.js', () => {
+test('the moved spot-sheet caveats keep their wording', () => {
   assert.equal(RESEARCH_ONLY_LOCATION.lead, 'Research-only location.');
   assert.equal(RESEARCH_ONLY_LOCATION.text, 'Source raster output vertical datum and product uncertainty are unverified. The displayed depths are not chart depths or a verified 200-foot fishing screen. Check your official chart and sounder.');
   assert.equal(FISH_UNVERIFIED.text, 'Fish presence is unverified; no verified charter AIS visits at this target.');
-  const app = read('dist/app.js');
-  assert.doesNotMatch(app, /Research-only location/);
-  assert.doesNotMatch(app, /Fish presence is unverified/);
-  assert.doesNotMatch(app, /class="evidence-note"><p><strong>Mapped habitat candidate/);
-  assert.match(app, /spotBadges\(t,/);
 });
 
 const iso = epoch => new Date(epoch).toISOString();
@@ -126,35 +121,4 @@ test('a pill left on screen ages: the same observation turns stale and the feed 
   assert.deepEqual(freshnessPill(o, loaded + 86 * 60000), {state: 'unavailable', label: 'Buoy update unavailable'});
   // Past two hours old the reading itself is stale.
   assert.deepEqual(freshnessPill(o, loaded + 101 * 60000), {state: 'stale', label: 'Buoy stale 2 h'});
-});
-
-test('the pill ticks every 60 s and shows only the spot\'s own buoy', () => {
-  const pill = read('web/components/FreshnessPill.tsx');
-  assert.match(pill, /FRESHNESS_TICK_MS = 60_000/);
-  assert.match(pill, /setInterval\(\(\) => setNow\(Date\.now\(\)\), FRESHNESS_TICK_MS\)/);
-  assert.match(pill, /clearInterval\(timer\)/);
-  const row = read('web/components/SpotConfidence.tsx');
-  assert.match(row, /const observation = buoy \? latest\[buoy\] \?\? null : null;/);
-  const weather = read('dist/weather-ui.js');
-  assert.doesNotMatch(weather, /buoyReadingStatus/);
-  assert.match(weather, /nearshoreBuoy\(p\) \{\n\s+return localContext\(nearestPoint\(p\)\)\.stations\?\.nearshore_buoy \|\| null;/);
-  assert.match(read('dist/app.js'), /buoy:weather\?\.nearshoreBuoy\(t\)\?\?null/);
-});
-
-test('every path that replaces the spot sheet without a spot clears spotConfidence', () => {
-  const app = read('dist/app.js');
-  const writes = [...app.matchAll(/\$\("detail"\)\.innerHTML\s*=/g)];
-  assert.ok(writes.length >= 3, `found ${writes.length} writes to #detail`);
-  for (const {index} of writes) {
-    // The function body up to this write.
-    const start = app.lastIndexOf('\nfunction ', index);
-    const body = app.slice(start, app.indexOf('\n}\n', index));
-    const before = app.slice(Math.max(start, index - 200), index);
-    const setsSpot = /spotConfidence\.value=\{id:t\.id,/.test(body);
-    assert.ok(setsSpot || /spotConfidence\.value = null;\s*$/.test(before),
-      `#detail replaced without clearing spotConfidence near: ${app.slice(index - 80, index + 40)}`);
-  }
-  // The research-only answer line: marker and estimated depth come from the shared helpers.
-  assert.match(app, /<span class="research-marker">\$\{RESEARCH_ONLY_MARKER\}<\/span>/);
-  assert.match(app, /depth=depthText\(t,badges\[0\]\)/);
 });

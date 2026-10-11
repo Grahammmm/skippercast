@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {setRegion,localContext,pointBundle} from '../dist/region.js';
 import {geometryIntersects} from '../dist/geo-screen.js';
 import {buildContext} from '../research/scripts/build_reef_context.mjs';
-import {regulationState} from '../dist/regulations.js';
+import {regulationState} from '../web/regs.ts';
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const r=read('regions/southern-california/region.json');
 const reef=read('regions/southern-california/reef-records.json');
@@ -44,9 +44,9 @@ test('historical complex envelopes exclude full MPA/GEA geometry and cannot beco
 test('Southern fall windows never become an unrestricted reef opening even with fresh matching checks',()=>{
  const d=read('dist/'+r.assets.regulations),now=Date.parse(d.reviewed_at)+60_000;
  for(const [id,s] of Object.entries(d.sources)){s.approved_content_sha256='a'.repeat(64);d.checks[id]={url:s.url,normalization:s.normalization,status:'unchanged',source_status:'ok',content_sha256:s.approved_content_sha256,data_retrieved_at:new Date(now).toISOString()};}
- for(const id of ['lingcod','rockfish','reef']){const state=regulationState(d,id,now,'2026-10-10');assert.equal(state.status,'restricted');assert.match(state.reason,/seaward/);}
- assert.equal(regulationState(d,'halibut',now,'2026-10-10').status,'open');
- d.checks['rules-southern'].status='changed';assert.equal(regulationState(d,'reef',now,'2026-10-10').status,'unknown');
+ for(const id of ['lingcod','rockfish','reef']){const state=regulationState(d,id,r,now,'2026-10-10');assert.equal(state.status,'restricted');assert.match(state.reason,/seaward/);}
+ assert.equal(regulationState(d,'halibut',r,now,'2026-10-10').status,'open');
+ d.checks['rules-southern'].status='changed';assert.equal(regulationState(d,'reef',r,now,'2026-10-10').status,'unknown');
 });
 
 test('zero combined-wave period is unavailable rather than a calm sea',async()=>{

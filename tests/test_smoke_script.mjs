@@ -91,5 +91,5 @@ for (const broken of ['/map', '/coast']) test(`smoke test fails when ${broken} i
 test('the smoke test tells the shells apart by the landing body class, which only dist/landing.html carries', async () => {
   const {readFileSync} = await import('node:fs');
   assert.match(readFileSync('dist/landing.html', 'utf8'), /<body class="landing-body">/);
-  for (const page of ['dist/index.html', 'dist/app.html']) assert.doesNotMatch(readFileSync(page, 'utf8'), /class="landing-body"/, page);
+  for (const page of ['dist/app.html']) assert.doesNotMatch(readFileSync(page, 'utf8'), /class="landing-body"/, page);
 });

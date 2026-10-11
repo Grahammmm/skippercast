@@ -89,7 +89,7 @@ export function recheckPlan(plan: RankedPlan, gate: PublicationGate, rejected: M
   return {...plan, invalid: true};
 }
 
-/** Web Mercator in `?view=` pixels (256 px tiles), as v1's Leaflet measures its pins. */
+/** Web Mercator in `?view=` pixels (256 px tiles), as v1's 2D map measured its pins. */
 const pixel = (t: {latitude: number; longitude: number}, zoom: number) => {
   const world = 256 * 2 ** zoom, sin = Math.sin(t.latitude * Math.PI / 180);
   return {x: (t.longitude + 180) / 360 * world, y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * world};

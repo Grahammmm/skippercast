@@ -8,7 +8,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
 import type {Page} from '@playwright/test';
-import {test, expect, openMap, checkA11y} from './fixtures.ts';
+import {test, expect, checkA11y} from './fixtures.ts';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const WRANGLER = ['--yes', 'wrangler@4.142.0'];   // the pin e2e/serve.mjs uses
@@ -40,10 +40,14 @@ async function signInAsAdmin(page: Page): Promise<string> {
   await cdp.send('WebAuthn.enable');
   await cdp.send('WebAuthn.addVirtualAuthenticator', {options: {protocol: 'ctap2', transport: 'internal', hasResidentKey: true,
     hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true}});
-  await openMap(page, '/?region=morro-bay#guide');
-  await page.locator('#account-entry').click();
+  // FE-61: the app's #account link opens the account dialog (web/account.ts), as the v1 Guide's button did;
+  // a chosen profile keeps the first-run card from covering it.
+  await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
+  await page.goto('/map?region=morro-bay#account');
+  await expect(page.locator('.account-card')).toBeVisible({timeout: 30_000});
+  const reloaded = page.waitForEvent('load');   // the app reloads signed in
   await page.locator('#account-create').click();
-  await expect(page.locator('#map .leaflet-marker-icon').first()).toBeAttached({timeout: 30_000});
+  await reloaded;
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);
   const userId = word((await (await page.request.get('/api/session')).json()).user.id);
   d1(`UPDATE users SET role='admin' WHERE id='${userId}';`);

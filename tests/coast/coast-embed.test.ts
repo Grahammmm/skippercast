@@ -3,18 +3,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {embedPalette,mountCoast,type CoastHandle,type CoastMountOptions} from '../../packages/coast/src/embed.ts';
 import {coastEmbedTemplate,coastSceneMarkup,coastSourcesMarkup} from '../../packages/coast/src/embed-template.ts';
 import {DEFAULT_COAST_PALETTE} from '../../packages/coast/src/palette.ts';
 import {coastPath} from '../../packages/coast/src/transport.ts';
 
-const page=readFileSync(new URL('../../dist/coast.html',import.meta.url),'utf8');
 const viewerSource=readFileSync(new URL('../../packages/coast/src/coast3d/viewer.ts',import.meta.url),'utf8');
-const slice=(open:string,close:string)=>{const start=page.indexOf(open);assert.ok(start>=0,open);return page.slice(start,page.indexOf(close,start)+close.length);};
+const sha256=(text:string)=>createHash('sha256').update(text).digest('hex');
 
+// FE-61 deleted the standalone dist/coast.html; these are the sha256 digests of its
+// <main id="scene"> and <dialog id="sources"> markup on main before the deletion.
 test('the embed template is the standalone page\'s scene and sources markup, verbatim',()=>{
- assert.equal(coastSceneMarkup,slice('<main id="scene"','</main>'));
- assert.equal(coastSourcesMarkup,slice('<dialog id="sources">','</dialog>'));
+ assert.ok(coastSceneMarkup.startsWith('<main id="scene"')&&coastSceneMarkup.endsWith('</main>'));
+ assert.ok(coastSourcesMarkup.startsWith('<dialog id="sources">')&&coastSourcesMarkup.endsWith('</dialog>'));
+ assert.equal(sha256(coastSceneMarkup),'b3a1435dd60739023d2785f669aa299444ee5d69ac3c4224266a15d5a653e6a5');
+ assert.equal(sha256(coastSourcesMarkup),'086cd7e125c6555bb8681d03af90eee29ce073ec2d00a943c6baa29bde2ebc5c');
  assert.equal(coastEmbedTemplate,coastSceneMarkup+coastSourcesMarkup);
 });
 

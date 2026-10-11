@@ -113,7 +113,7 @@ function evaluate(expr, feature) {
 test('every basemap layer matches a feature of the synthetic Protomaps fixture', async () => {
   const sandbox = {TextDecoder, DecompressionStream, Response, Uint8Array, DataView, ArrayBuffer, Promise, console};
   vm.createContext(sandbox);
-  vm.runInContext(read('dist/vendor/pmtiles-4.5.0/pmtiles.js').toString() + ';globalThis.pmtiles = pmtiles;', sandbox);
+  vm.runInContext(read('node_modules/pmtiles/dist/pmtiles.js').toString() + ';globalThis.pmtiles = pmtiles;', sandbox);
   const buf = read('tests/fixtures/basemap/tiny.pmtiles');
   const archive = new sandbox.pmtiles.PMTiles({getKey: () => 'tiny', getBytes: async (offset, length) => ({data: buf.buffer.slice(buf.byteOffset + offset, buf.byteOffset + offset + length)})});
   const header = await archive.getHeader();
