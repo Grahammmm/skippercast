@@ -48,7 +48,8 @@ Never download exports to a shared machine or attach them to issues: they contai
 ## Verify
 
 - `bash scripts/smoke_test.sh "$CLOUDFLARE_SITE_URL" ""` passes.
-- `/api/health` shows the expected build id, and not the build of the commit you rolled back from.
+- The rollback run confirms the live Worker version from Cloudflare (`wrangler deployments list`) and fails if it is not the one you asked for.
+- `/api/health` shows the expected build id. The build id can stay the same after a rollback when the commit you rolled back from changed no client files, so it identifies the pages served, not the Worker version.
 
 ## Afterwards
 

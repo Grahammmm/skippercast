@@ -192,25 +192,34 @@ jobs:
             echo "::error::Deployment of ${GITHUB_SHA} ${reason} and the rollback to Worker version ${PREVIOUS} FAILED; roll back by hand (docs/operations/runbooks/rollback-release.md)."
             exit 1
           fi
-          if [ -z "$SITE" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS} (not verified: CLOUDFLARE_SITE_URL is unset). D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          # Confirm by the version Cloudflare reports live, not by the build id: a commit that
+          # changed no client files has the same build id as the version it replaced.
+          mkdir -p var
+          if ! $WRANGLER deployments list --json --config wrangler.rollback.jsonc > var/deployments.json; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; rollback reported success by Wrangler but the live version could not be confirmed. Check by hand; see docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
+          live=$(node scripts/worker_versions.mjs live var/deployments.json || true)
+          if [ "$live" != "$PREVIOUS" ]; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: Cloudflare reports version ${live:-unknown} live. See docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
+          # The site's build id is only reported, never a reason to fail.
           served=""
-          for attempt in 1 2 3 4 5 6; do
-            served=$(curl -fsS --max-time 15 "$SITE/api/health" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('build',''))" 2>/dev/null || true)
-            if [ -n "$served" ] && [ "$served" != "$FAILED_BUILD" ]; then break; fi
-            sleep 10
-          done
-          if [ -z "$served" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} was sent but could not be verified (/api/health did not answer). Check the site by hand; see the runbook."
-            exit 1
+          note=""
+          if [ -n "$SITE" ]; then
+            for attempt in 1 2 3; do
+              served=$(curl -fsS --max-time 15 "$SITE/api/health" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('build',''))" 2>/dev/null || true)
+              if [ -n "$served" ]; then break; fi
+              sleep 5
+            done
+            if [ -z "$served" ]; then
+              note=" (/api/health did not answer; the Cloudflare side confirms the rollback)"
+            elif [ -n "$FAILED_BUILD" ] && [ "$served" = "$FAILED_BUILD" ]; then
+              note=" (the failed deploy had the same build id ${FAILED_BUILD}, so the pages are unchanged)"
+            fi
           fi
-          if [ -n "$FAILED_BUILD" ] && [ "$served" = "$FAILED_BUILD" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: the site still serves build ${FAILED_BUILD}. See docs/operations/runbooks/rollback-release.md."
-            exit 1
-          fi
-          echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS} (site serves build ${served}). D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS}, now live (site serves build ${served:-unknown})${note}. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
           exit 1
 
   rollback:
@@ -241,6 +250,13 @@ jobs:
           commit=$(node scripts/worker_versions.mjs commit var/versions.json "$target" 2>/dev/null || echo "unknown")
           echo "Rolling back to Worker version $target (commit $commit)"
           $WRANGLER rollback "$target" --config wrangler.rollback.jsonc --yes --message "Manual rollback by ${GITHUB_ACTOR} (run ${GITHUB_RUN_ID})"
+          $WRANGLER deployments list --json --config wrangler.rollback.jsonc > var/deployments.json
+          live=$(node scripts/worker_versions.mjs live var/deployments.json || true)
+          if [ "$live" != "$target" ]; then
+            echo "::error::The rollback to Worker version ${target} did not take effect: Cloudflare reports version ${live:-unknown} live. See docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
+          echo "Worker version ${live} is live."
       - name: Smoke-test after rollback
         env:
           SITE: ${{ vars.CLOUDFLARE_SITE_URL }}

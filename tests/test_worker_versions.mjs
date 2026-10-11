@@ -126,6 +126,12 @@ test('the deploy workflow never runs a bare wrangler rollback', () => {
   for (const args of rollbacks) assert.match(args, /^"\$(PREVIOUS|target)" --config /, `rollback without a version id: ${args}`);
   assert.doesNotMatch(workflow, /wrangler(@[\d.]+)? rollback --config/);
   assert.match(workflow, /steps\.deploy\.outputs\.previous_version/);
+  // Each rollback is followed by a check of the live Worker version, not of the build id.
+  const parts = workflow.split(/\$WRANGLER rollback\b/).slice(1);
+  assert.equal(parts.length, 2);
+  for (const part of parts) {
+    assert.match(part, /deployments list --json[^\n]*> var\/deployments\.json[\s\S]*?worker_versions\.mjs live var\/deployments\.json/);
+  }
   const deploy = readFileSync(new URL('../scripts/cloudflare_deploy.sh', import.meta.url), 'utf8');
   assert.match(deploy, /previous_version=\$previous_version" >> "\$GITHUB_OUTPUT"/);
   assert.match(deploy, /build=\$build" >> "\$GITHUB_OUTPUT"/);
