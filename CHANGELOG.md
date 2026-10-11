@@ -6,7 +6,7 @@
 
 ### Internal
 
-- `e2e/startup.spec.ts` now measures the v2 app at `/map` too (`node scripts/measure_startup.mjs --v2`): each committed startup file is requested once, and everything but the region's shoreline stays within the startup budget until the shoreline gets a lighter published form.
+- `e2e/startup.spec.ts` now measures the v2 app at `/map` too (`node scripts/measure_startup.mjs --v2`): each committed startup file is requested once. Its total is printed but not yet budgeted: the region's shoreline keeps it over the startup budget pending an owner decision.
 
 ## 0.8.0 — 2026-10-11
 
