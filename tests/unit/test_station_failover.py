@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import timedelta
 import json
+import os
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -99,7 +100,7 @@ class StationFailoverTests(TestCase):
         self.assertNotIn("fallback_for", row)
 
     def tide(self, primary, backup=None, previous=None):
-        config = deepcopy(settings())
+        config = legacy_config()
         config["region"]["stations"]["roles"] = {"tide": {"stations": ["9412110", "9412999"]}}
         MemoryClient.responses = {"9412110": primary, "9412999": backup}
         def read(*args, **kwargs):
@@ -188,7 +189,8 @@ class LegacyStationBytesTests(TestCase):
                  patch.object(module, "source", side_effect=legacy_source), \
                  patch.object(module, "stamp", return_value=NOW.isoformat()), \
                  patch("skippercast.pipeline.collect.stamp", return_value=NOW.isoformat()), \
-                 patch.object(daily, "regulatory_snapshot", return_value={}):
+                 patch.object(daily, "regulatory_snapshot", return_value={}), \
+                 patch.dict(os.environ, {"GITHUB_RUN_ID": ""}):
                 feed = module.collect(NOW, days=0) if module is daily else module.collect(NOW)
             actual = (json.dumps(feed, separators=(",", ":"), allow_nan=False) + "\n").encode()
             self.assertEqual(actual, (FIXTURES / "station-failover" / filename).read_bytes())
