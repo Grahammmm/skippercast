@@ -1,36 +1,38 @@
-# Coastal data service during the Fish merge
+# Coastal data service
 
-SkipperCast reads selected public datasets from the existing owner-operated
-Fish Worker through a bounded same-origin bridge. This preserves Fish's running
-report/history/ocean collectors and its private government-habitat publication
-checks while the common map is integrated. It does not transfer or expose the
-Fish database or private R2 storage, approve new contributors or change original
-source times. No new refresh schedule is created.
+`server/coast-data.ts` serves the coast map's public datasets from SkipperCast's
+own storage: the report, ocean and history snapshots from the feeds SkipperCast's
+collectors publish to the `FEEDS` R2 bucket (FE-84, FE-87), and the terrain,
+imagery and habitat assets from the hashed R2 release (FE-85). Until FE-62 it
+was a bounded bridge to the Fish Worker; that bridge is retired, and the Worker
+reads no other origin. A dataset that is not published, valid and current is
+unavailable (503), never filled from elsewhere.
 
-- `/api/coast/report`, `/api/coast/ocean`, `/api/coast/history`: original SLO
-  payloads, validated for schema, county and assembly-clock identity. Optional
+- `/api/coast/report`, `/api/coast/ocean`, `/api/coast/history`: SLO packets,
+  validated for schema, county and assembly-clock identity. Optional
   regional bindings are limited to Morro/Avila and Cambria/San Simeon. Other
   regions do not inherit these forecasts or observations.
-- `/api/coast/habitat/release` and `/api/coast/habitat/tiles`: preserve the
-  original upstream live release, producer rights, screening, hash and expiry
-  gates. The common client must still validate the returned manifests and
-  per-archive HEAD identity before displaying habitat.
-- `/coast-data/data/...`: only enumerated public habitat/shore files and
-  flat coastal terrain/chart-model filenames. Private archives, receipts,
-  percent-encoded aliases, traversal and arbitrary URLs are refused.
+- `/api/coast/habitat/release` and `/api/coast/habitat/tiles`: the published
+  habitat release with its producer rights, hash and expiry gates. The common
+  client must still validate the returned manifests and per-archive HEAD
+  identity before displaying habitat.
+- `/coast-data/data/...`: only enumerated public habitat files and flat coastal
+  terrain/chart-model filenames. Private archives, receipts, percent-encoded
+  aliases, traversal and arbitrary URLs are refused.
 
-Only GET/HEAD are supported. Cookies, identity, authorization, origin and
-referrer headers are not forwarded. Upstream redirects are refused. Snapshot
-reads and geometry reads have bounded byte budgets; range requests require
-exact offsets, length and a 206 response. Original ETags and release headers
-survive. Responses are not cached by this bridge, so expiry and replacement
-checks remain effective. The existing feed rate limit applies.
+Only GET/HEAD are supported, and no request leaves the Worker, so client
+cookies, identity, authorization, origin and referrer headers go nowhere.
+Snapshot and geometry reads have bounded byte budgets; range requests require
+exact offsets and length. Responses carry the asset's SHA-256 ETag and habitat
+release header and are not cached, so expiry and replacement checks remain
+effective. The existing feed rate limit applies.
 
 ## Assets in SkipperCast storage (FE-85)
 
 `scripts/coast/publish_assets.py`, run only by the dispatch workflow
 `.github/workflows/coast-assets.yml` on the owner's runner, copies two asset
-groups from the Fish Worker into the `FEEDS` R2 bucket:
+groups from the Fish Worker into the `FEEDS` R2 bucket (the copy is the one step
+that still reads Fish, so it must run before the owner deletes the Fish Worker):
 
 - `terrain`: everything the coast-wide terrain manifest and the chart model
   reference under `/data/coast-wide/` and `/data/coast3d/` (terrain, NAIP
@@ -43,9 +45,10 @@ groups from the Fish Worker into the `FEEDS` R2 bucket:
   `"sha256-<archiveSha256>"`, or whose public copy differs from the live
   release, refuses the run.
 
-The shore files (`/data/slo-shore-habitat.geojson`,
-`/data/slo-shoreline.geojson`) belong to no group and stay on the bridge until
-FE-10 and FE-43 publish SkipperCast's own.
+The Fish shore files (`/data/slo-shore-habitat.geojson`,
+`/data/slo-shoreline.geojson`) belonged to no group and were dropped with the
+bridge (FE-62); the app draws shore runs from FE-43's
+`dist/regions/<id>/shore-habitat.geojson`.
 
 Each source behind a group must be an approved `catalog/sources.json` row with
 `commercial_use: allowed`, matched by DOI or documented URL. An unknown source
@@ -65,7 +68,7 @@ last after every object and the manifest read back. `/feeds/` cannot read the
 releases are kept; content addressing means an unchanged asset is stored once.
 
 The Worker reads `coast/current.json` on every request for a grouped asset.
-With no pointer it uses the bridge as before. With one, each group the release
+With no pointer every grouped asset is unavailable (503). With one, each group the release
 lists is served only from R2: the manifest must hash to its release id, a path
 missing from the manifest is 404, a `release` parameter other than the entry's
 habitat release is 404, an expired entry is 503, and the object's whole bytes
@@ -75,16 +78,17 @@ one read) and then pins that R2 version's etag for range reads; a replaced
 object is hashed again. Responses carry `ETag: "sha256-<digest>"` and the
 original `X-Fish-Habitat-Release`, so the renderer's own SHA, ETag and HEAD
 checks are unchanged. A pointer with any status other than `ready` makes every
-grouped asset route 503; deleting it returns to the bridge. An R2 error (a
-failed read, an unreadable pointer or manifest) is also 503: a published group
-never falls back to the bridge. Groups left out of
-a run return to the bridge, so publish together the groups that should stay in
-R2. Snapshots (`report`, `ocean`, `history`) follow the FE-84 switch below.
+grouped asset route 503, and so does deleting it. An R2 error (a
+failed read, an unreadable pointer or manifest) is also 503. Groups left out of a run are
+unavailable, so publish together every group the map needs. Snapshots
+(`report`, `ocean`, `history`) come from the feeds below.
 
 Habitat entries carry the release's expiry. A published habitat group serves
 503 after that date until the workflow runs again on the newer Fish release, so
 the owner re-runs it whenever Fish publishes one, and before the current
-release's `expiresAt`.
+release's `expiresAt`. Once the Fish Worker is deleted no newer release can be
+copied, so the habitat group serves 503 after the last copied release's
+`expiresAt` until SkipperCast publishes a habitat release of its own.
 
 On October 8, 2026 the rights check refused both groups: the USGS Morro Bay,
 Point Buchon and Point Estero rows are `permission-required` (CSUMB
@@ -99,11 +103,11 @@ passed the renderer's `verifiedAsset` and `readReviewedHabitat` checks.
 
 ## Snapshots from SkipperCast feeds (FE-84)
 
-The Worker var `COAST_FEEDS` (a repository variable, copied at deploy) lists the
-snapshot sources served from SkipperCast's own published feeds in the `FEEDS`
-bucket instead of the Fish Worker. Unset or empty, every snapshot comes from
-the bridge exactly as before. The SLO county's feeds live under the Morro Bay
-region:
+Every snapshot source is served from SkipperCast's own published feed in the
+`FEEDS` bucket. Until FE-62 the Worker var `COAST_FEEDS` switched them one by
+one from the Fish Worker; with the bridge retired nothing reads it (the deploy
+workflow still copies it until that step is removed). The SLO county's feeds
+live under the Morro Bay region:
 
 | Name | Feed (R2 key) | Written by | Age limit | Replaces |
 | --- | --- | --- | --- | --- |
@@ -116,8 +120,9 @@ region:
 A switched feed is used only while it is present, readable, shaped as the
 `packages/coast` type it stands for and inside its age limit, measured by the
 Worker against its own clock (a feed more than five minutes in the future is
-stale too). Otherwise that one source comes from the Fish Worker as before;
-this fallback is dated and goes when FE-62 retires the bridge. The server makes
+stale too). Otherwise that one source is unavailable: the `ocean` and `history`
+packets and the report's base answer 503, and the report is served without the
+nearshore or beach rows whose feed is not used. The server makes
 the age check itself because a collector that fails for a whole region keeps
 its last published file: a region-wide CDIP failure re-publishes the previous
 `nearshore.json`, whose sites still say `current`.
@@ -130,27 +135,26 @@ whose model issue is 48 h old or more is `stale`, and a history station whose
 last observation is more than 3 h old has `recent.stale` set (the weekly pass
 publishes it as current). Until the recent pass runs more often than weekly,
 a switched History view shows the recent series as stale most of the week; on
-October 8, 2026 Fish's recent series was under an hour old. Unless `report`
-is switched (FE-87, below), the rest of the report (forecasts, observations,
-tides, alerts, catches and spatial layers) still comes from Fish, so a Fish
-failure keeps `/api/coast/report` unavailable; the ocean and history packets
-need no bridge once switched. Every switched response names its upstream per
-source in `X-Coast-Upstream`, for example `nearshore=skippercast,
-water-quality=fish (stale)`. A history bundle without a positive
+October 8, 2026 Fish's recent series was under an hour old. Every snapshot
+response names each source's state in `X-Coast-Upstream`, for example
+`report=skippercast, nearshore=skippercast, water-quality=unavailable (stale)`;
+the reasons are `unbound` (no `FEEDS` binding), `missing`, `unreadable`,
+`invalid`, `stale` and `refused` (below). A history bundle without a positive
 `recentWindowDays` is invalid, and a packet whose merged rows exceed the route's
 byte limit (8 MB for the report) is refused with 503, as the service worker
 would refuse it.
 
-A name in `COAST_FEEDS` is honoured only while none of the `catalog/sources.json`
-rows behind it is refused by the rights register: a missing row, a
-`restricted` or `unavailable` review status, or `commercial_use` of
-`prohibited` or `permission-required` drops that name, and its snapshot stays
-on the bridge. The rows are `cdip-mop` (nearshore), `slo-beach-water-quality`
+A feed is read only while none of the `catalog/sources.json` rows behind it is
+refused by the rights register: a missing row, a `restricted` or `unavailable`
+review status, or `commercial_use` of `prohibited` or `permission-required`
+makes that source `refused`, so it is unavailable. The rows are `cdip-mop` (nearshore), `slo-beach-water-quality`
 (water quality), `noaa-wcofs`, `noaa-hfr-thredds` and `noaa-goes-nowcoast`
 (ocean), `ndbc-history` (history), and `nws-weather`, `ndbc-buoys`,
 `noaa-tides`, `landing-reports`, `noaa-blended-sst` and `cdfw-mpas` (report).
 A `candidate` row or `unknown` commercial use is not a refusal: the owner
-confirms those register rows before setting the var.
+confirms those register rows (on October 11, 2026 `cdip-mop`,
+`noaa-goes-nowcoast` and `ndbc-history` were `candidate`, and
+`slo-beach-water-quality` and `landing-reports` had `unknown` commercial use).
 
 `python -m skippercast.pipeline.coast_snapshots --root var/live-published` runs
 in `scripts/live_cycle.sh` after the GOES index. It builds `OceanData` from the
@@ -182,31 +186,30 @@ times, a buoy's live-feed retrieval, the daily feed's retrieval and analysis
 times, a trip's receipt time. A failed source is an `error` status with no
 rows. As `fish` did, a run with no populated forecast area and no buoy
 observation under three hours old writes nothing; the last report then ages out
-of the Worker's 2 h limit and the bridge serves Fish's. On October 8, 2026 a
+of the Worker's 2 h limit and `/api/coast/report` is unavailable until a run
+writes one. On October 8, 2026 a
 dry run outside the repository matched Fish's live report: identical forecast
 hours for all three areas over the 168 common hours, identical tide curve (1,200
 points) and events (19), the same two alerts with the same areas, and the same
 20 catch trips and catch status; the buoys differed only by Fish's newer fetch.
 
-With `report` switched and current, `/api/coast/report` is SkipperCast's report
-with the switched nearshore and beach feeds merged in; a source whose own feed
-is not used still takes Fish's rows (one Fish request). With every source
-switched and published, no snapshot reads Fish. If Fish does not answer, the
-report is served without those rows and the header adds `fish=unavailable`.
+With a current report feed, `/api/coast/report` is SkipperCast's report with
+the nearshore and beach feeds merged in. A nearshore or beach feed that is not
+used leaves its rows and source statuses out of the report (the `Report` type
+makes both optional), and the header says why; Fish's rows are never read.
 
-The upstream origin is fixed in `server/coast-data.ts`. The bridge is transport
-for an existing reviewed publication, not an independent claim that every
-underlying product is commercially reusable or locally complete. Producer
-attribution, measurement dates, masks, datum limits and reuse restrictions remain
-in the original manifest and Fish source receipts. SkipperCast's deployment
-policy and private account/fleet routes remain unchanged.
+## Retiring the Fish bridge (FE-62)
 
-Later retirement of the Fish service requires moving its collectors, source
-registrations, immutable assets and publication checks into SkipperCast and
-witnessing persisted refreshes. Until then, deleting the Fish Worker, database
-or private archive would break this dependency.
+FE-62 removed the Fish Worker origin and every fallback to it from
+`server/coast-data.ts`; `tests/test_coast_data.mjs` fails if `server/` names a
+Fish origin again. The readable `/report` and `/feed.xml` pages read the same
+report through the `FEEDS` binding. Producer attribution, measurement dates,
+masks, datum limits and reuse restrictions remain in each feed's source
+statuses, the asset manifests and `catalog/sources.json`. The `fish` repository's
+historical receipts are archived under `docs/archive/fish/` (FE-62a).
 
-Independent bounded-module review accepted October 6, 2026 after range metadata
-and upstream cancellation findings were resolved. Eight focused offline tests
-passed. This acceptance does not establish UI parity, live source freshness or
-collector migration; those remain separate verification steps.
+The retirement needs every dataset published in SkipperCast's storage: the five
+feeds above, current, and the FE-85 asset groups in R2. A dataset that is not is
+unavailable rather than served from Fish. `scripts/coast/publish_assets.py`
+still copies the assets from the Fish Worker, so the owner runs its first
+publish before deleting that Worker.

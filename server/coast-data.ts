@@ -1,59 +1,52 @@
-// Read-only bridge to the owner's reviewed Fish public service during the
-// product merge. Original bytes/clocks and publication gates remain upstream;
-// this is not an arbitrary proxy or a new source/rights approval. Asset groups
-// copied to R2 by scripts/coast/publish_assets.py are served from there instead,
-// each object hashed against its manifest entry before any byte leaves.
+// SkipperCast's public coastal data: the report, ocean and history snapshots from
+// SkipperCast's own published feeds, and the terrain, imagery and habitat assets
+// copied to R2 by scripts/coast/publish_assets.py, each object hashed against its
+// manifest entry before any byte leaves. FE-62 retired the Fish Worker bridge:
+// nothing here reads another origin, and what is not published is unavailable.
 import {json} from './http.ts';
 import catalog from '../catalog/sources.json' with {type: 'json'};
 
-const ORIGIN = 'https://fish-report.g4651.workers.dev';
 const MB = 1024 * 1024;
 const SLO_REGIONS = new Set(['morro-bay', 'cambria-san-simeon']);
 const HABITAT_REGIONS = new Set([...SLO_REGIONS, 'monterey-point-sur', 'point-arguello-conception']);
 const SNAPSHOTS = new Set(['report', 'ocean', 'history']);
+// The Fish shore files (slo-shore-habitat, slo-shoreline) belonged to no R2 group and left with the bridge;
+// the app draws shore runs from the platform build's dist/regions/<id>/shore-habitat.geojson (FE-43).
 const DATA_FILES = new Set([
-  '/data/skippercast-manifest.json', '/data/skippercast-habitat.geojson', '/data/skippercast-species.json',
-  '/data/slo-shore-habitat.geojson', '/data/slo-shoreline.geojson', '/data/coast3d/chart-model.json',
+  '/data/skippercast-manifest.json', '/data/skippercast-habitat.geojson', '/data/skippercast-species.json', '/data/coast3d/chart-model.json',
 ]);
-const RESPONSE_HEADERS = ['Content-Type', 'ETag', 'Last-Modified', 'Content-Range', 'Accept-Ranges',
-  'X-Fish-Habitat-Release', 'X-Fish-Habitat-Source', 'X-Fish-Bathymetry-Source'];
 
-/** Strict raw paths: percent escapes, traversal, private prefixes and URLs are never forwarded. */
-export function coastTarget(input: URL): {url: URL; max: number; snapshot: string | null; asset: string | null; release: string | null} | null {
+/** Strict raw paths: percent escapes, traversal, private prefixes and URLs are never read. */
+export function coastTarget(input: URL): {max: number; snapshot: string | null; asset: string | null; release: string | null} | null {
   const path = input.pathname;
   if (/%|\\|\/\/|(?:^|\/)\.{1,2}(?:\/|$)/.test(path)) return null;
-  let upstream: string, max = 8 * MB, snapshot: string | null = null, asset: string | null = null;
-  const params = new URLSearchParams();
+  let max = 8 * MB, snapshot: string | null = null, asset: string | null = null, release: string | null = null;
   if (path.startsWith('/api/coast/')) {
     const name = path.slice('/api/coast/'.length);
     if (SNAPSHOTS.has(name)) {
       if ((input.searchParams.has('county') && input.searchParams.get('county') !== 'slo') ||
           (input.searchParams.has('region') && !SLO_REGIONS.has(input.searchParams.get('region')!))) return null;
       if ([...input.searchParams.keys()].some(k => !['county', 'region'].includes(k))) return null;
-      upstream = '/api/' + name; snapshot = name; max = name === 'history' ? 16 * MB : 8 * MB;
+      snapshot = name; max = name === 'history' ? 16 * MB : 8 * MB;
     } else if (name === 'habitat/release') {
       if (input.search) return null;
-      upstream = asset = '/api/habitat/release'; max = 512 * 1024;
+      asset = '/api/habitat/release'; max = 512 * 1024;
     } else if (name === 'habitat/tiles') {
-      const region = input.searchParams.get('region'), release = input.searchParams.get('release');
+      const region = input.searchParams.get('region'); release = input.searchParams.get('release');
       if (!region || !HABITAT_REGIONS.has(region) || (release !== null && !/^[a-f0-9]{64}$/.test(release))) return null;
       if ([...input.searchParams.keys()].some(k => !['region', 'release'].includes(k))) return null;
-      params.set('region', region); if (release) params.set('release', release);
-      upstream = '/api/habitat/tiles'; asset = upstream + '?region=' + region; max = 2 * MB;
+      asset = '/api/habitat/tiles?region=' + region; max = 2 * MB;
     } else return null;
   } else if (path.startsWith('/coast-data/')) {
-    upstream = path.slice('/coast-data'.length);
-    const terrain = /^\/data\/(?:coast-wide|coast3d)\/[a-zA-Z0-9_.-]+\.(?:json|bin|png|jpg)$/.test(upstream);
-    if (!terrain && !DATA_FILES.has(upstream)) return null;
-    asset = upstream;
-    const release = input.searchParams.get('release');
+    asset = path.slice('/coast-data'.length);
+    const terrain = /^\/data\/(?:coast-wide|coast3d)\/[a-zA-Z0-9_.-]+\.(?:json|bin|png|jpg)$/.test(asset);
+    if (!terrain && !DATA_FILES.has(asset)) return null;
+    release = input.searchParams.get('release');
     if (release !== null && !/^[a-f0-9]{64}$/.test(release)) return null;
     if ([...input.searchParams.keys()].some(k => k !== 'release')) return null;
-    if (release) params.set('release', release);
   } else return null;
   for (const key of new Set(input.searchParams.keys())) if (input.searchParams.getAll(key).length !== 1) return null;
-  const url = new URL(upstream, ORIGIN); url.search = params.toString();
-  return {url, max, snapshot, asset, release: params.get('release')};
+  return {max, snapshot, asset, release: release || null};
 }
 
 // R2 layout written by scripts/coast/publish_assets.py: content-addressed objects, a
@@ -66,7 +59,7 @@ const releases = new Map<string, Release>(); // immutable: keyed by the manifest
 const verified = new Map<string, string>();  // object key -> R2 etag whose full bytes matched
 const hashing = new Map<string, Promise<Uint8Array<ArrayBuffer>>>(); // one whole-object read per key at a time
 const hex = async (bytes: Uint8Array<ArrayBuffer>) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
-/** Same grouping as publish_assets.py group_of: a group is served from R2 only once it is published; null stays on the bridge. */
+/** Same grouping as publish_assets.py group_of: a group is served only once its R2 release lists it. */
 export const assetGroup = (asset: string) => /^\/(?:api\/habitat\/|data\/skippercast-|data\/coast-wide\/reef-context\.)/.test(asset) ? 'habitat'
   : /^\/data\/(?:coast-wide|coast3d)\//.test(asset) ? 'terrain' : null;
 const validEntry = (e: Entry | undefined): e is Entry => !!e && typeof e === 'object' && SHA.test(e.sha256) && Number.isSafeInteger(e.bytes) && e.bytes > 0 &&
@@ -79,7 +72,7 @@ async function small(store: CoastStore, key: string, max: number): Promise<Uint8
   return new Uint8Array(await object.arrayBuffer());
 }
 
-/** The verified current release, or null when nothing is published (the bridge stays the source). */
+/** The verified current release, or null when nothing is published (every asset is then unavailable). */
 async function currentRelease(store: CoastStore): Promise<Release | null> {
   const raw = await small(store, 'coast/current.json', 4096); if (!raw) return null;
   const pointer = JSON.parse(new TextDecoder().decode(raw)) as {schemaVersion?: number; status?: string; releaseId?: string};
@@ -143,10 +136,9 @@ async function fromStore(store: CoastStore, target: {asset: string; release: str
   return new Response(bytes, {status: range ? 206 : 200, headers: out});
 }
 
-// FE-84: snapshot sources from SkipperCast's own published feeds, switched one by one with the
-// COAST_FEEDS var. A switched feed is used only while it is present, valid and inside its age
-// limit; otherwise that source comes from the Fish Worker exactly as before. That fallback is dated:
-// it goes when FE-62 retires the bridge. Values keep their original clocks and outcomes.
+// FE-84: snapshot sources from SkipperCast's own published feeds. A feed is used only while it is
+// present, valid and inside its age limit; otherwise that source is unavailable (FE-62: no Fish
+// fallback). Values keep their original clocks and outcomes.
 // FE-87: `report` is the report's base (forecasts, buoys, tides, alerts, catches, spatial layers).
 export type CoastFeed = 'nearshore' | 'water-quality' | 'ocean' | 'history' | 'report';
 type Json = Record<string, any>;
@@ -185,12 +177,12 @@ type CatalogRow = {id: string; review_status?: string; rights?: {commercial_use?
 const refused = (row: CatalogRow | undefined) => !row || ['restricted', 'unavailable'].includes(row.review_status ?? '') ||
   ['prohibited', 'permission-required'].includes(row.rights?.commercial_use ?? '');
 
-/** The sources COAST_FEEDS moves to SkipperCast feeds. Unset, unknown or rights-refused names: none, so those snapshots stay Fish's. */
-export function coastFeeds(value: string | undefined, sources: readonly CatalogRow[] = catalog.sources): Set<CoastFeed> {
+/** The feeds the rights register lets the Worker serve: a feed with any refused catalog row is never read (its snapshot or rows are unavailable). */
+export function coastFeeds(sources: readonly CatalogRow[] = catalog.sources): Set<CoastFeed> {
   const byId = new Map(sources.map(s => [s.id, s]));
-  return new Set((value ?? '').split(',').map(s => s.trim().toLowerCase()).filter((s): s is CoastFeed =>
-    Object.hasOwn(FEEDS, s) && !FEED_SOURCES[s as CoastFeed].some(id => refused(byId.get(id)))));
+  return new Set((Object.keys(FEEDS) as CoastFeed[]).filter(name => !FEED_SOURCES[name].some(id => refused(byId.get(id)))));
 }
+const ALLOWED_FEEDS: ReadonlySet<CoastFeed> = coastFeeds();  // the committed register, read once per isolate
 
 /** A published feed, or why it is not used: missing, unreadable, invalid or stale (its own clock against this request's). */
 async function ownFeed(store: CoastStore | null, name: CoastFeed, now: number): Promise<Json | string> {
@@ -210,7 +202,7 @@ const nearshoreNow = (s: Json, now: number) => s.freshness === 'current' && !(no
 /** A recorded series whose last observation is over 3 h old is stale now, though it was current when published (weekly). */
 const historyNow = (d: Json, now: number) => ({...d, stations: d.stations.map((s: Json) =>
   ({...s, recent: {...s.recent, stale: s.recent.stale === true || !(now - clock(s.recent.lastObservedAt) <= 3 * HOUR)}}))});
-/** Fish's report with the switched enrichment rows and their source statuses replaced by SkipperCast's. */
+/** SkipperCast's report with the nearshore and beach rows and their source statuses from their own feeds, where those are used. */
 function overlay(report: Json, own: Partial<Record<CoastFeed, Json>>, now: number): Json {
   let out: Json = {...report, sources: Array.isArray(report.sources) ? report.sources : []};
   const nearshore = own.nearshore, water = own['water-quality'];
@@ -220,22 +212,6 @@ function overlay(report: Json, own: Partial<Record<CoastFeed, Json>>, now: numbe
     sources: [...out.sources.filter((s: Json) => s?.id !== 'slo-beach-water-quality'), ...water.sources]};
   return out;
 }
-/** Fish's nearshore and beach rows and statuses, kept in SkipperCast's report where their own feeds are not used. */
-function fishEnrichment(report: Json, fish: Json | null): Json {
-  if (!fish) return report;
-  const enrichment = (s: Json) => String(s?.id).startsWith('cdip-') || s?.id === 'slo-beach-water-quality';
-  return {...report, nearshore: Array.isArray(fish.nearshore) ? fish.nearshore : [], waterQuality: Array.isArray(fish.waterQuality) ? fish.waterQuality : [],
-    sources: [...report.sources, ...(Array.isArray(fish.sources) ? fish.sources.filter(enrichment) : [])]};
-}
-/** The Fish report as JSON for its enrichment rows, or null when it is unavailable or not the SLO snapshot. */
-async function fishReport(fetcher: typeof fetch, url: URL): Promise<Json | null> {
-  try {
-    const upstream = await fetcher(new Request(url, {method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(20000)}));
-    if (upstream.status !== 200 || !/^application\/json\b/i.test(upstream.headers.get('Content-Type') ?? '')) { await upstream.body?.cancel(); return null; }
-    const data = JSON.parse(new TextDecoder().decode(await bounded(upstream, 8 * MB))) as Json;
-    return data?.schemaVersion === 1 && data.countyId === 'slo' && isClock(data.generatedAt) && Array.isArray(data.sources) ? data : null;
-  } catch { return null; }
-}
 /** A SkipperCast packet, re-checked against the route's byte limit after any merge (as the service worker does). */
 function ownResponse(data: Json, method: string, upstream: string, max: number): Response {
   const bytes = new TextEncoder().encode(JSON.stringify(data));
@@ -244,105 +220,44 @@ function ownResponse(data: Json, method: string, upstream: string, max: number):
     'Content-Length': String(bytes.byteLength), 'X-Content-Type-Options': 'nosniff', 'X-Coast-Upstream': upstream}});
 }
 
-async function bounded(response: Response, max: number): Promise<Uint8Array<ArrayBuffer>> {
-  const length = response.headers.get('Content-Length');
-  if (length !== null && (!/^\d+$/.test(length) || Number(length) > max)) { await response.body?.cancel(); throw Error('Byte limit'); }
-  const reader = response.body?.getReader(); if (!reader) throw Error('Missing data');
-  const parts: Uint8Array[] = []; let size = 0;
-  try {
-    for (;;) {
-      const {done, value} = await reader.read(); if (done) break;
-      size += value.byteLength; if (size > max) throw Error('Byte limit');
-      parts.push(value);
-    }
-  } catch (error) { await reader.cancel(); throw error; }
-  finally { reader.releaseLock(); }
-  const bytes = new Uint8Array(size); let offset = 0;
-  for (const part of parts) { bytes.set(part, offset); offset += part.byteLength; }
-  return bytes;
+/** A snapshot whose feed is not published, valid and current: unavailable, never filled from elsewhere. */
+function unavailable(notes: string[]): Response {
+  const out = json({error: 'Coast source unavailable'}, 503);
+  if (notes.length) out.headers.set('X-Coast-Upstream', notes.join(', '));
+  return out;
 }
 
-/** Cookie/identity/auth headers never leave SkipperCast. Only bounded public GET/HEAD requests.
- * `feeds` (COAST_FEEDS) moves snapshot sources to SkipperCast's feeds; empty keeps every path as before FE-84. */
-export async function serveCoastData(request: Request, fetcher: typeof fetch = fetch, store: CoastStore | null = null,
-  feeds: ReadonlySet<CoastFeed> = new Set()): Promise<Response> {
+/** Only bounded public GET/HEAD requests; nothing is fetched from another origin, so client identity never leaves.
+ * `feeds` (coastFeeds()) are the snapshot feeds the rights register allows. */
+export async function serveCoastData(request: Request, store: CoastStore | null = null,
+  feeds: ReadonlySet<CoastFeed> = ALLOWED_FEEDS): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status: 405, headers: {Allow: 'GET, HEAD'}});
   const target = coastTarget(new URL(request.url)); if (!target) return json({error: 'Unknown coast dataset'}, 404);
-  const headers = new Headers();
   const range = request.headers.get('Range');
+  let wanted: {start: number; end: number} | null = null;
   if (range) {
     const match = /^bytes=(\d+)-(\d+)$/.exec(range);
     if (!match || !Number.isSafeInteger(Number(match[1])) || !Number.isSafeInteger(Number(match[2])) ||
         Number(match[2]) < Number(match[1]) || Number(match[2]) - Number(match[1]) + 1 > target.max || target.snapshot) return json({error: 'Invalid coast range'}, 416);
-    headers.set('Range', range);
+    wanted = {start: Number(match[1]), end: Number(match[2])};
   }
-  if (store && target.asset) {
+  if (target.asset) {
+    if (!store) return json({error: 'Coast source unavailable'}, 503);
     try {
-      const wanted = range ? /^bytes=(\d+)-(\d+)$/.exec(range)! : null;
-      const local = await fromStore(store, {asset: target.asset, release: target.release, max: target.max}, request.method,
-        wanted ? {start: Number(wanted[1]), end: Number(wanted[2])} : null);
-      if (local) return local;
+      return await fromStore(store, {asset: target.asset, release: target.release, max: target.max}, request.method, wanted)
+        ?? json({error: 'Coast source unavailable'}, 503);  // its group is not published in R2
     } catch { return json({error: 'Coast source unavailable'}, 503); }
   }
-  // FE-84: switched snapshot sources from SkipperCast's feeds; the rest of a report stays on the bridge.
+  // FE-84, FE-87: each snapshot source from its own feed; one that is refused, missing, invalid or stale is unavailable.
   const own: Partial<Record<CoastFeed, Json>> = {}, notes: string[] = [], now = Date.now();
-  if (target.snapshot) {
-    for (const name of SNAPSHOT_FEEDS[target.snapshot]!.filter(n => feeds.has(n))) {
-      const result = await ownFeed(store, name, now);
-      if (typeof result === 'string') notes.push(`${name}=fish (${result})`);
-      else { own[name] = result; notes.push(`${name}=skippercast`); }
-    }
-    if (own.ocean) return ownResponse(own.ocean, request.method, notes.join(', '), target.max);
-    if (own.history) return ownResponse(historyNow(own.history, now), request.method, notes.join(', '), target.max);
-    if (own.report) {  // FE-87: an enrichment source not taken from its own feed still comes from Fish's report
-      const fish = own.nearshore && own['water-quality'] ? null : await fishReport(fetcher, target.url);
-      if (!fish && !(own.nearshore && own['water-quality'])) notes.push('fish=unavailable');
-      return ownResponse(overlay(fishEnrichment(own.report, fish), own, now), request.method, notes.join(', '), target.max);
-    }
+  for (const name of SNAPSHOT_FEEDS[target.snapshot!]!) {
+    const result = feeds.has(name) ? await ownFeed(store, name, now) : 'refused';
+    if (typeof result === 'string') notes.push(`${name}=unavailable (${result})`);
+    else { own[name] = result; notes.push(`${name}=skippercast`); }
   }
-  const overlaid = Object.keys(own).length > 0;
-  // Do not forward client cookies, Origin, Referer, Authorization or arbitrary headers.
-  try {
-    const upstream = await fetcher(new Request(target.url, {method: request.method, headers,
-      redirect: 'manual', signal: AbortSignal.timeout(20000)}));
-    if (![200, 206].includes(upstream.status)) {
-      await upstream.body?.cancel();
-      return json({error: 'Coast source unavailable'}, upstream.status === 404 ? 404 : 503);
-    }
-    if (upstream.status !== (range ? 206 : 200)) { await upstream.body?.cancel(); return json({error: 'Coast range unavailable'}, 503); }
-    let rangeLength: number | null = null;
-    if (range) {
-      const match = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(upstream.headers.get('Content-Range') ?? '');
-      const wanted = /^bytes=(\d+)-(\d+)$/.exec(range)!;
-      if (!match || match[1] !== wanted[1] || match[2] !== wanted[2] || !Number.isSafeInteger(Number(match[3])) || Number(match[3]) <= Number(match[2])) {
-        await upstream.body?.cancel(); return json({error: 'Coast range unavailable'}, 503);
-      }
-      rangeLength = Number(match[2]) - Number(match[1]) + 1;
-    }
-    const out = new Headers({'Cache-Control': 'no-store'});
-    for (const key of RESPONSE_HEADERS) { const value = upstream.headers.get(key); if (value !== null) out.set(key, value); }
-    if (notes.length) out.set('X-Coast-Upstream', notes.join(', '));
-    if (request.method === 'HEAD') {
-      const size = upstream.headers.get('Content-Length');
-      if (size !== null) {
-        if (!/^\d+$/.test(size) || !Number.isSafeInteger(Number(size)) || (rangeLength !== null && Number(size) !== rangeLength)) {
-          await upstream.body?.cancel(); return json({error: 'Coast range unavailable'}, 503);
-        }
-        if (!overlaid) out.set('Content-Length', size);  // an overlaid report's length differs from Fish's
-      }
-      await upstream.body?.cancel();
-      return new Response(null, {status: upstream.status, headers: out});
-    }
-    let bytes: Uint8Array = await bounded(upstream, target.max);
-    if (target.snapshot) {
-      if (!/^application\/json\b/i.test(upstream.headers.get('Content-Type') ?? '')) throw Error('Unexpected format');
-      const data = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
-      if (!data || data.schemaVersion !== 1 || data.countyId !== 'slo' || typeof data.generatedAt !== 'string' || !Number.isFinite(Date.parse(data.generatedAt))) throw Error('Wrong snapshot identity');
-      if (overlaid) bytes = new TextEncoder().encode(JSON.stringify(overlay(data, own, now)));
-      if (bytes.byteLength > target.max) throw Error('Byte limit');  // merged rows can outgrow Fish's bytes
-    }
-    if (rangeLength !== null && bytes.byteLength !== rangeLength) throw Error('Invalid returned range');
-    out.set('Content-Length', String(bytes.byteLength));
-    return new Response(bytes, {status: upstream.status, headers: out});
-  } catch { return json({error: 'Coast source unavailable'}, 503); }
+  if (own.ocean) return ownResponse(own.ocean, request.method, notes.join(', '), target.max);
+  if (own.history) return ownResponse(historyNow(own.history, now), request.method, notes.join(', '), target.max);
+  // The report is served without the nearshore or beach rows whose own feed is not used; the header names which.
+  if (own.report) return ownResponse(overlay(own.report, own, now), request.method, notes.join(', '), target.max);
+  return unavailable(notes);
 }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The coast map's report, surface currents, history, terrain and habitat now come only from SkipperCast's own published data; the old SLO Fish Report service is no longer read. When one of SkipperCast's feeds is missing or out of date, that part is shown as unavailable instead of being filled from the old service, and the report leaves out nearshore wave or beach rows it cannot vouch for (FE-62, part b).
 - The classic map is gone: `/` is always the landing (or the app when a link names an area), `/map` the app, and `/coast` opens the app's 3D view; `?ui=v1` and the `UI_V2` switch no longer change anything. The v1 shell, its coastal page and modules, Leaflet and the vendored map-test copies are deleted, and stylesheets are now minified (FE-61, part 1 of 3).
 - Configured buoy and tide roles can serve a reviewed fresh backup when their primary ages out. Source entries name the station used and its primary; feed health reports backup service as degraded without declaring an outage (#553). Legacy single-station feeds keep their existing format.
 

@@ -550,7 +550,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - **Owner**: approve (`server/`).
 
 ### FE-62 · Archive `fish` receipts and retire the repository · M
-- Status: CHANGED (blocked on the bridge's retirement). Agent: Claude, with Codex for the data receipts.
+- Status: CHANGED (part b, the bridge's retirement, in review 2026-10-11 (#570): the merge waits on the history feed's first publish and the FE-85 first asset publish, see [the acceptance matrix](../../FISH-MERGE-STATUS.md#retirement-acceptance-matrix-fe-62); part a, the archive, is separate). Agent: Claude, with Codex for the data receipts.
 - Depends: FE-60, FE-84, FE-85, FE-87; FE-40 … FE-45 merged and run
 - Files: `docs/archive/fish/README.md`, `docs/archive/fish/**` (the § 15 item 9 list), `docs/plans/front-end/README.md` (status), `docs/data-sources.md`.
 - Build: copy the listed docs and receipts with the historical-note prefix; tick § 15's checklist with links; list the Cloudflare resources, including the Fish Worker the bridge used.

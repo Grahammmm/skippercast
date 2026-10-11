@@ -6,6 +6,29 @@ One live SkipperCast product. Preserve every working capability from Fish and
 SkipperCast, combine overlapping controls, and preserve the refined Fish coast
 map. The owner's October 6 request is the product acceptance standard.
 
+## Retirement acceptance matrix (FE-62)
+
+What must hold before the `fish` repository and its Cloudflare resources go
+(design § 15 item 8; FE-62b, #570). Checked October 11, 2026 against the live
+site (`skippercast.com`), the `conditions` and `data` branches and the merged
+PRs. GitHub Actions logs were not readable from the checking session, so a
+collector run is evidenced by its published output and its age.
+
+| Requirement | Evidence (2026-10-11) | State |
+| --- | --- | --- |
+| Nearshore collector (FE-40, #466) publishes `nearshore.json` | `/feeds/conditions/regions/morro-bay/nearshore.json` 200, `generated_at` 21:37:10Z, five `cdip-*` sources `ok` | Met |
+| Beach collector (FE-41, #460) publishes `beach-health.json` | `/feeds/conditions/regions/morro-bay/beach-health.json` 200, `generatedAt` 21:06:54Z, 19 beaches, `slo-beach-water-quality` `ok` | Met |
+| Ocean packet (FE-84, #478) publishes `coast-ocean.json` | `/feeds/conditions/regions/morro-bay/coast-ocean.json` 200, `generatedAt` 21:37:19Z | Met |
+| Report base (FE-87, #481) publishes `coast-report.json` | `/feeds/conditions/regions/morro-bay/coast-report.json` 200, `generatedAt` 21:37:23Z, 11 sources, 3 forecast areas, 30 catch trips | Met |
+| History (FE-42, #423) publishes `data/regions/morro-bay/history.json` | `/feeds/data/regions/morro-bay/history.json` 404; not on the `data` branch | **Not met**: the History view is unavailable without the bridge until `buoy-history.yml` publishes |
+| Shore runs (FE-43, #463), clouds (FE-44, #471), imagery hosts (FE-45, #465) | Served from the platform build and SkipperCast feeds, not the bridge | Met |
+| Terrain, imagery and habitat in R2 (FE-85, #462) | Code merged; the first publish waits on the rights rows ([coastal-service.md](coastal-service.md#assets-in-skippercast-storage-fe-85)). Live `/api/coast/habitat/release` and `/coast-data/data/coast-wide/manifest.json` still carry Fish ETags, not `sha256-` ones | **Not met**: Terrain 2D/3D and habitat marks are unavailable without the bridge until the first publish |
+| The Worker reads SkipperCast feeds instead of Fish (FE-84, FE-87) | Code merged; live `/api/coast/report` has no `X-Coast-Upstream` header, so `COAST_FEEDS` is unset and production still reads Fish | Met on FE-62b's merge, which uses every feed the rights register allows |
+| Distinct persisted refresh runs witnessed | One live cycle observed (21:37Z); see the FE-62b PR for the re-check | Partly met |
+| No Fish Worker origin in `server/` (FE-62 acceptance 3) | FE-62b; `tests/test_coast_data.mjs` greps `server/` | Met on FE-62b's merge |
+| Fish docs and receipts archived (§ 15 item 9) | FE-62a, `docs/archive/fish/` | Separate PR |
+| Register rows behind the feeds confirmed | `cdip-mop`, `noaa-goes-nowcoast`, `ndbc-history` `candidate`; `slo-beach-water-quality`, `landing-reports` commercial use `unknown` | **Owner** |
+
 ## Active increment — shared coastal overview (October 7)
 
 - Objective: connect the continuous Central Coast discovery map to native terrain,

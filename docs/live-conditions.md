@@ -123,7 +123,7 @@ which writes `regions/morro-bay/coast-ocean.json` (served at
 and the cloud record keep their own fetch, issue, sample and observation
 clocks; a field that fails a check is left out, and an input that yields
 nothing is an `error` source. The Worker serves it at `/api/coast/ocean` only
-when `COAST_FEEDS` lists `ocean` and the packet is under three hours old
+while the packet is under three hours old, and answers 503 otherwise
 ([coastal-service.md](coastal-service.md#snapshots-from-skippercast-feeds-fe-84)).
 
 ## Coast report base (FE-87)
@@ -135,7 +135,7 @@ them, CO-OPS Port San Luis tides, this cycle's 46215 and 46028 buoy readings, an
 the daily feed's catch facts, sea-surface temperature and protected areas. Each
 source keeps its own status and clocks. A run with no populated forecast and no
 buoy reading under three hours old keeps the last file; the Worker serves it
-only when `COAST_FEEDS` lists `report` and it is under two hours old
+only while it is under two hours old, and answers 503 otherwise
 ([coastal-service.md](coastal-service.md#report-base-from-skippercast-collectors-fe-87)).
 
 ## Nearshore model sites (FE-40)

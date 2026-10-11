@@ -1,4 +1,4 @@
-import {serveCoastData} from './coast-data.ts';
+import {serveCoastData,type CoastStore} from './coast-data.ts';
 import {secure} from './security-headers.ts';
 import {fishLink,canonicalHour,FISH_REGIONS} from '../web/fish-links.ts';
 import {resolveReportBinding,type ManagedReportContext,type ReportLocalArea} from '../packages/coast/src/state/report-binding.ts';
@@ -8,7 +8,7 @@ import type {Report,ForecastHour,SourceStatus} from '../packages/coast/src/types
 import type {NearshoreSite,NearshoreHour} from '../packages/coast/src/enrichment-types.ts';
 
 export type CoastPageRegion={id:string;map?:{center?:readonly number[];local_areas?:readonly ReportLocalArea[]}};
-export type CoastPageOptions={template?:string;regions:Readonly<Record<string,CoastPageRegion>>;fetcher?:typeof fetch;now?:Date;publicOrigin?:string};
+export type CoastPageOptions={template?:string;regions:Readonly<Record<string,CoastPageRegion>>;store?:CoastStore|null;readReport?:(request:Request)=>Promise<Response>;now?:Date;publicOrigin?:string};
 export type ReadableSelection={context:ManagedReportContext|null;workspace:string;reference:boolean;reason:string|null};
 const STATE_KEYS=['region','coast','view','target','hour','profile','day','layers','area','base','spot','focus','presentation','current','habitat','ui','place','mode','species'];
 const AREA_PLACES:Readonly<Record<string,string>>={north:'cambria',central:'morro',south:'avila'};
@@ -87,7 +87,7 @@ function reportMarkup(report:Report,selection:ReadableSelection,now:Date):string
 }
 function gapMarkup(selection:ReadableSelection):string{return `<h1>Readable coastal report</h1><p class="gap">${esc(selection.reason??'The local source report is unavailable.')}</p><p>The selected geography, profile and hour have not been replaced with Morro Bay or today. Missing local coverage stays missing.</p><p><a href="${esc(selection.workspace)}">Open the preserved selection in the shared workspace</a></p>`;}
 function validReport(value:unknown):value is Report{if(!value||typeof value!=='object')return false;const report=value as Record<string,unknown>;return report.schemaVersion===1&&report.countyId==='slo'&&Number.isFinite(fieldClock(report.generatedAt))&&['forecasts','observations','tides','tideEvents','alerts','sources','catches'].every(key=>Array.isArray(report[key]));}
-async function publicReport(request:Request,fetcher:typeof fetch):Promise<Report|null>{try{const url=new URL('/api/coast/report',request.url),response=await serveCoastData(new Request(url,{method:'GET'}),fetcher);if(!response.ok)return null;const report:unknown=await response.json();return validReport(report)?report:null;}catch{return null;}}
+async function publicReport(request:Request,options:CoastPageOptions):Promise<Report|null>{try{const url=new URL('/api/coast/report',request.url),read=options.readReport??(req=>serveCoastData(req,options.store??null)),response=await read(new Request(url,{method:'GET'}));if(!response.ok)return null;const report:unknown=await response.json();return validReport(report)?report:null;}catch{return null;}}
 function rss(report:Report,origin:string):string{
  const root=new URL('/',origin),reportURL=new URL('/report',root).href,date=new Intl.DateTimeFormat('en-CA',{timeZone:slo.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(report.generatedAt));
  const item=(title:string,guid:string,at:string,description:string)=>`<item><title>${esc(title)}</title><link>${esc(reportURL)}</link><guid isPermaLink="false">${esc(guid)}</guid><pubDate>${esc(new Date(at).toUTCString())}</pubDate><description>${esc(description)}</description></item>`;
@@ -100,11 +100,11 @@ export async function serveCoastPage(request:Request,options:CoastPageOptions):P
  if(!['GET','HEAD'].includes(request.method))return secure(new Response('Method not allowed',{status:405,headers:{Allow:'GET, HEAD'}}));
  const url=new URL(request.url),path=url.pathname;if(!['/report','/feed.xml','/methodology','/about'].includes(path))return response(request,'Not found',404,'text/plain;charset=utf-8');
  const now=options.now??new Date(),workspace=workspaceURL(fishLink(url.href));
- if(path==='/feed.xml'){const report=await publicReport(request,options.fetcher??fetch);if(report)try{return response(request,rss(report,options.publicOrigin??'https://skippercast.com'),200,'application/rss+xml;charset=utf-8');}catch{/* An unreadable source cannot become a fresh feed. */}return response(request,'Source feed unavailable. No new publication time is fabricated.',503,'text/plain;charset=utf-8');}
+ if(path==='/feed.xml'){const report=await publicReport(request,options);if(report)try{return response(request,rss(report,options.publicOrigin??'https://skippercast.com'),200,'application/rss+xml;charset=utf-8');}catch{/* An unreadable source cannot become a fresh feed. */}return response(request,'Source feed unavailable. No new publication time is fabricated.',503,'text/plain;charset=utf-8');}
  const template=options.template;if(!template||template.split('<!--COAST_REPORT-->').length!==2)return response(request,'Readable page shell unavailable. Open the shared workspace.',503,'text/plain;charset=utf-8');
  let content:string,title:string,status=200;
  if(path==='/methodology'||path==='/about'){const info=informationContent(path==='/methodology'?'methodology':'about');content=`<h1>${esc(info.title)}</h1>${info.html}<p><a href="${esc(workspace)}">Open this selection in the shared workspace</a></p>`;title=info.title;}
- else{const selection=readableSelection(url,options.regions,now);title='Readable coastal report';if(!selection.context)content=gapMarkup(selection);else{const report=await publicReport(request,options.fetcher??fetch);if(!report){status=503;content=gapMarkup({...selection,reason:'Current public coastal source report unavailable. No calm conditions or fresh source clock is assumed.'});}else try{content=reportMarkup(report,selection,now);}catch{status=503;content=gapMarkup({...selection,reason:'The public source record could not be read. Unsupported fields are not replaced with estimates.'});}}}
+ else{const selection=readableSelection(url,options.regions,now);title='Readable coastal report';if(!selection.context)content=gapMarkup(selection);else{const report=await publicReport(request,options);if(!report){status=503;content=gapMarkup({...selection,reason:'Current public coastal source report unavailable. No calm conditions or fresh source clock is assumed.'});}else try{content=reportMarkup(report,selection,now);}catch{status=503;content=gapMarkup({...selection,reason:'The public source record could not be read. Unsupported fields are not replaced with estimates.'});}}}
  const query=new URL(workspace,url.origin).search;
  const shell=template.replace(/href="(\/report|\/methodology|\/about)"/g,(_match,path:string)=>`href="${esc(path+query)}"`);
  const body=shell.replace('<!--COAST_REPORT-->',()=>content).replace(/<title>[^<]*<\/title>/,()=>`<title>${esc(title)} · SkipperCast</title>`);return response(request,body,status);
