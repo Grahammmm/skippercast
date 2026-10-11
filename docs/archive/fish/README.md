@@ -82,11 +82,11 @@ repository.
    Fish links open the app (FE-78,
    [#424](https://github.com/Grahammmm/skippercast/pull/424)). Since FE-61
    part 1 ([#561](https://github.com/Grahammmm/skippercast/pull/561)) the v2
-   app is the only shell.
+   app is the only shell. Dated record: [FE-60 live check of 2026-10-11](../../FISH-MERGE-STATUS.md) (`docs/FISH-MERGE-STATUS.md`, line 57).
 2. **Boat, Shore and Spear.** Profiles across the app (FE-30); covered by the
-   FE-60 live check of 2026-10-11 (item 1).
+   [FE-60 live check of 2026-10-11](../../FISH-MERGE-STATUS.md) (item 1).
 3. **Brief.** Tiles, tide curve, lower-exposure window and fleet line (FE-31,
-   FE-33, FE-37); covered by the FE-60 live check of 2026-10-11.
+   FE-33, FE-37); covered by the [FE-60 live check of 2026-10-11](../../FISH-MERGE-STATUS.md).
 4. **Conditions and History.** FE-32 and FE-35; History reads 46028 and 46215
    from the SkipperCast history feed (FE-42,
    [#423](https://github.com/Grahammmm/skippercast/pull/423)); covered by the
@@ -95,10 +95,12 @@ repository.
    [#463](https://github.com/Grahammmm/skippercast/pull/463)) and beach water
    quality (FE-41, [#460](https://github.com/Grahammmm/skippercast/pull/460));
    review dates are described in [data sources](../../data-sources.md#shore-runs-and-beach-approaches).
-   Covered by the FE-60 live check of 2026-10-11.
+   Covered by the [FE-60 live check of 2026-10-11](../../FISH-MERGE-STATUS.md).
 6. **Cloud loop.** FE-22 ([#484](https://github.com/Grahammmm/skippercast/pull/484))
    and the cloud collector (FE-44, [#471](https://github.com/Grahammmm/skippercast/pull/471));
-   covered by the FE-60 live check of 2026-10-11.
+   the [FE-60 live check of 2026-10-11](../../FISH-MERGE-STATUS.md) covers the
+   loop playing within the age gate; withholding on future days awaits the
+   owner's confirmation on this checklist.
 7. **Every § 11 source catalogued, registered and collected.** Collectors and
    catalog entries: FE-40 ([#466](https://github.com/Grahammmm/skippercast/pull/466)),
    FE-41, FE-42, FE-43, FE-44 (above) and FE-45
