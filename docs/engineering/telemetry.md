@@ -11,6 +11,8 @@ visitor, session or device id.
 | --- | --- |
 | Browser module: batching, opt-out, error capture | `web/telemetry.ts` |
 | Funnel call sites | `dist/home-port.js`, `dist/navigation.js`, `dist/export-ui.js`, `dist/offline-pack.js`, `dist/offline.js`; started in `dist/boot.js` |
+| v2 pages | started in `web/landing/main.tsx` and `web/app/main.tsx` (pinned, with the event set below, by `tests/test_v2_telemetry.mjs`); `port_selected` from `web/app/CommandBar.tsx`, and through `web/trip.ts` v1's `spot_saved` (`dist/export-ui.js`) and `offline_saved` (`dist/offline-pack.js`) |
+| Advisor pages | started and tracked in `web/advisor/pages.ts` |
 | Endpoint `POST /api/telemetry` | `server/routes/telemetry.ts` |
 | Validation and Analytics Engine columns | `server/telemetry.ts` |
 | Daily report tables | `scripts/ops_report.py` |
@@ -36,6 +38,8 @@ visitor, session or device id.
 | `install` | The browser reports the app was installed (`appinstalled`) |
 | `advisor_port_view`, `advisor_species_view`, `advisor_boat_view` | A Text Advisor port, species or boat page is opened (`web/advisor/pages.ts`; [08 · Telemetry](../plans/text-advisor/08-website.md)) |
 | `advisor_cta` | The "Text SkipperCast" link on one of those pages is followed (sent at once) |
+
+The v2 pages (`landing.html`, `app.html`) start the same module as v1's `dist/boot.js`, so they report errors. Of the funnel steps the v2 app sends `port_selected` (the command bar's port chooser), `spot_saved` (a mark card's add to the trip, through v1's planner) and `offline_saved` (the trip panel's save for offline, through v1's region pack); the v2 landing sends no funnel event. `tests/test_v2_telemetry.mjs` finds this set by following every import from each entry to its `track()` calls.
 
 Each carries the region id when one is shown. The server records a region it does not publish as `other`. An event may also carry `source`, the page URL's `s` parameter when it is one of `txt` (a link in an advisor text), `ig`, `fb` (Instagram and Facebook posts) or `qr` (the printed QR code); any other value is not sent, and the server rejects it. It says where the visit came from, never who made it.
 
@@ -91,8 +95,8 @@ The Text Advisor admin's **Funnel** view (`GET /api/admin/funnel`, `server/advis
 
 ## Retention
 
-Analytics Engine's default: Cloudflare stores data points for three months ([limits](https://developers.cloudflare.com/analytics/analytics-engine/limits/), checked 2026-09-29). SkipperCast sets no other retention and keeps no copy; the daily report exists only as a GitHub Actions run summary.
+Analytics Engine's default: Cloudflare stores data points for three months ([limits](https://developers.cloudflare.com/analytics/analytics-engine/limits/), checked 2026-09-29). SkipperCast sets no other retention. The daily report (below) copies the last day's funnel counts and the top 10 client errors (scrubbed message, file, line, kind, build) into a GitHub Actions run summary; the repository is public, so anyone can read those, and GitHub keeps them under its workflow-run retention. The privacy notice says so.
 
 ## Adding an event
 
-Add the name to `FUNNEL` in `web/telemetry.ts`, `FUNNEL_EVENTS` in `server/telemetry.ts` and `FUNNEL` in `scripts/ops_report.py`, call `track('<name>')` at the call site, update the tables above and the tests. An event carries no fields beyond its name, region and visit source; anything more needs a review of this page and of the privacy policy. (The advisor page events are not in `scripts/ops_report.py`'s `FUNNEL` while the advisor is dark; the report lists unknown names after the steps.)
+Add the name to `FUNNEL` in `web/telemetry.ts`, `FUNNEL_EVENTS` in `server/telemetry.ts` and `FUNNEL` in `scripts/ops_report.py`, call `track('<name>')` at the call site, update the tables above and the tests. An event carries no fields beyond its name, region and visit source; anything more needs a review of this page and of the privacy notice (`dist/privacy.html#analytics`, which lists every event name). (The advisor page events are not in `scripts/ops_report.py`'s `FUNNEL` while the advisor is dark; the report lists unknown names after the steps.)

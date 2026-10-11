@@ -16,6 +16,7 @@ import {LayerDots} from './LayerDots.tsx';
 import {DEFAULT_REGION} from './readings.ts';
 import {saveData} from './save-data.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
+import {initTelemetry} from '../telemetry.ts';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
 export const PROFILE_KEY = 'skippercast-profile-v1';
@@ -62,6 +63,8 @@ function nightMap(): void {
   }, error => console.warn('Night map unavailable; the static shoreline stays.', error));
 }
 
+// Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
+initTelemetry();
 const profile = storedProfile();
 // A returning visitor goes on to the app; everyone else gets the night map after first paint.
 void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else afterFirstPaint(nightMap); });
