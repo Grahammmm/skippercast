@@ -200,26 +200,33 @@ jobs:
             exit 1
           fi
           live=$(node scripts/worker_versions.mjs live var/deployments.json || true)
+          if [ -z "$live" ]; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} could not be confirmed: no live version found in Cloudflare's deployment list. Check by hand; see docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
           if [ "$live" != "$PREVIOUS" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: Cloudflare reports version ${live:-unknown} live. See docs/operations/runbooks/rollback-release.md."
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: Cloudflare reports version ${live} live. See docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           # The site's build id is only reported, never a reason to fail.
           served=""
-          note=""
+          note=" (site build not checked: CLOUDFLARE_SITE_URL is unset)"
           if [ -n "$SITE" ]; then
-            for attempt in 1 2 3; do
+            # Keep polling while the failed build is still served (edge caches lag), up to 6 tries 10 s apart.
+            for attempt in 1 2 3 4 5 6; do
               served=$(curl -fsS --max-time 15 "$SITE/api/health" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('build',''))" 2>/dev/null || true)
-              if [ -n "$served" ]; then break; fi
-              sleep 5
+              if [ -n "$served" ] && [ "$served" != "$FAILED_BUILD" ]; then break; fi
+              if [ "$attempt" -lt 6 ]; then sleep 10; fi
             done
             if [ -z "$served" ]; then
               note=" (/api/health did not answer; the Cloudflare side confirms the rollback)"
             elif [ -n "$FAILED_BUILD" ] && [ "$served" = "$FAILED_BUILD" ]; then
-              note=" (the failed deploy had the same build id ${FAILED_BUILD}, so the pages are unchanged)"
+              note=" (the site still serves build ${FAILED_BUILD}, the failed deploy's build id; expected when that commit changed no client files)"
+            else
+              note=" (site serves build ${served})"
             fi
           fi
-          echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS}, now live (site serves build ${served:-unknown})${note}. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS}, now live${note}. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
           exit 1
 
   rollback:
@@ -250,10 +257,17 @@ jobs:
           commit=$(node scripts/worker_versions.mjs commit var/versions.json "$target" 2>/dev/null || echo "unknown")
           echo "Rolling back to Worker version $target (commit $commit)"
           $WRANGLER rollback "$target" --config wrangler.rollback.jsonc --yes --message "Manual rollback by ${GITHUB_ACTOR} (run ${GITHUB_RUN_ID})"
-          $WRANGLER deployments list --json --config wrangler.rollback.jsonc > var/deployments.json
+          if ! $WRANGLER deployments list --json --config wrangler.rollback.jsonc > var/deployments.json; then
+            echo "::error::Rollback to ${target} reported success by Wrangler but the live version could not be confirmed."
+            exit 1
+          fi
           live=$(node scripts/worker_versions.mjs live var/deployments.json || true)
+          if [ -z "$live" ]; then
+            echo "::error::The rollback to Worker version ${target} could not be confirmed: no live version found in Cloudflare's deployment list. Check by hand; see docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
           if [ "$live" != "$target" ]; then
-            echo "::error::The rollback to Worker version ${target} did not take effect: Cloudflare reports version ${live:-unknown} live. See docs/operations/runbooks/rollback-release.md."
+            echo "::error::The rollback to Worker version ${target} did not take effect: Cloudflare reports version ${live} live. See docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           echo "Worker version ${live} is live."
