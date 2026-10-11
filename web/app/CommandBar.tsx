@@ -13,6 +13,8 @@
 // targets under their own headings, never merging their scores, and a search
 // field narrows it by name; the chosen target always stays listed.
 // The switch and the menus are exported for the mobile shell (FE-06).
+// #542: "Your limits" beside the switch opens the active profile's own comfort
+// limits (web/app/LimitsPanel.tsx).
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -25,6 +27,7 @@ import {track} from '../telemetry.ts';
 import {zone} from './App.tsx';
 import {dayOptions, dockState, readout} from './TimeDock.tsx';
 import {titleCase} from './Masthead.tsx';
+import {LimitsControl} from './LimitsPanel.tsx';
 
 const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id].label, icon: id} as const));
 
@@ -107,6 +110,7 @@ export function CommandBar({now = new Date()}: {now?: Date} = {}) {
   return (
     <section class="app-command" aria-label="Command bar">
       <ProfileSwitch />
+      <LimitsControl />
       <TargetSelect />
       <div class="app-area" role="group" aria-label="Area and port">
         <AreaSelect />

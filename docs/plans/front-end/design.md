@@ -1019,6 +1019,30 @@ bar (Morro Bay in this region) the deck adds one line saying so, with the bar
 module's estimate wording and the pointer to the Coast Guard bar status.
 All thresholds are in the `KAYAK` table with their reasoning.
 
+Your limits (issue #542, `packages/coast/src/limits.ts`, `web/limits.ts`,
+`web/app/LimitsPanel.tsx`): each profile can carry the user's own comfort
+limits: highest sustained wind, highest gust, highest seas (surf for shore)
+and, for spear, the highest surge band. They are kept on the device only
+(`localStorage` `skippercast-limits-v1`, per profile), apart from the
+signed-in preferences, and are opened from "Your limits" beside the profile
+switch (an icon button in the phone's top bar) in the shared native dialog
+with Reset to defaults. Defaults are the window limits the brief already uses
+(`assess` `WINDOW_LIMITS`: boat 10 kt, 15 kt gust, 4 ft; the others 8 kt,
+12 kt, 3 ft; spear surge up to `SPEAR.windowMaxSurge`). Values are clamped to
+`LIMIT_BOUNDS` per profile; kayak seas can only be tightened, and Heavy surge
+is never offered. The limits replace the window rule's wind, gust and seas
+numbers; a stricter seas or surge limit also caps the height a nearshore
+model judged, and a stricter limit caps a Calmer hour at Marginal with the
+limit named in its reasons. A looser limit never lifts an hour's verdict.
+Hazard rules never read the limits: marine alerts, the long-period swell
+rule, the shore long-period caution, hazardous bar hours, kayak offshore
+wind and launch surf, and daylight still rule hours out. With the user's
+limits the brief screens the day once more with the defaults: a window the
+defaults would not suggest in full leads its reasons with "Using your limits
+(...)", the deck says "Using your limits: ..." (and that they are looser
+than the defaults, when one is), and counts hours the defaults would suggest
+that the user's limits leave out.
+
 ## 9. Map layers
 
 `web/map/layers.ts` registers each layer with: id, rail entry (or base, or

@@ -23,6 +23,7 @@ import {Range} from '../ui/Dock.tsx';
 import {Sheet, type Detent} from '../ui/Sheet.tsx';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
+import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
@@ -133,6 +134,7 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
             <Location />
           </div>
           <IconButton icon="layers" label="Layers" variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />
+          <LimitsControl compact />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
