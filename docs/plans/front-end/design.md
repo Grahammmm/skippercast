@@ -932,6 +932,22 @@ keeps the reload until FE-61.
 DOM. Species search plans (`search-plans.js`) are filtered by method in the
 wrapper, not edited.
 
+Spear conditions (issue #542, `packages/coast/src/spear.ts`): the spear
+brief scores each forecast hour for surge (H² · T from the nearshore model
+sample when fresh, else the offshore forecast, with long-period swell
+weighted up), chop (wind and gust) and a clarity estimate (satellite
+chlorophyll near the place from the daily feed, the highest rain chance in
+the prior 72 h, the largest swell in the prior 48 h, wind). Clarity reads
+"likely good", "fair", "likely poor" or "unknown" with the missing inputs
+named, and is always labelled an estimate. A high tide within 90 minutes is
+a mild bonus; water temperature is shown, not scored. The headline is the
+day's surge range and clarity estimate; spear windows use surge rather than
+the 3 ft offshore rule where a fresh nearshore model covers the hour. When
+fewer than 36 h of the swell look-back are sampled, clarity is capped at
+"fair" and the gap is listed; the chlorophyll value is an offshore area
+average and the brief says so. All
+thresholds are in the `SPEAR` table with their reasoning.
+
 ## 9. Map layers
 
 `web/map/layers.ts` registers each layer with: id, rail entry (or base, or
@@ -1009,7 +1025,7 @@ profile. Outputs:
 - **Headline** by the first matching rule: active marine alert → its event
   name; after sunset today → "One last look. Plan the morning."; max seas
   ≥ 5 ft → "Swell sets the terms today."; max wind ≥ 12 kt → "Find your
-  water before the wind."; spear → "Read the swell. Check the visibility.";
+  water before the wind."; spear → the day's surge range and clarity estimate ("Low surge · Clarity estimate: fair");
   otherwise "A clearer picture of your coast." Rules are data in
   `daily.ts` with a table test.
 - **Deck** sentence: wind range, seas range and period, plus the

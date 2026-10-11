@@ -58,6 +58,8 @@ export interface Brief {
   readonly fleet: BriefFleet | null;
   /** The local coast report line; unavailable outside a binding. */
   readonly localReport: {readonly available: boolean; readonly text: string};
+  /** The spear reading (surge, clarity estimate, verdict per hour); null for boat and shore. */
+  readonly spear: DailyBrief['spear'];
   readonly alerts: readonly Alert[];
   readonly missing: readonly string[];
   readonly tides: readonly TidePoint[];
