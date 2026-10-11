@@ -120,12 +120,12 @@ test('#542: the sampled regional forecast fills the wind and swell tiles, fresh 
   const forecast = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
   const brief = briefFrom(sources({forecast}), NOW);
   const wind = brief.tiles.find(t => t.id === 'wind'), swell = brief.tiles.find(t => t.id === 'swell');
-  assert.deepEqual([wind.value, wind.state, wind.source, wind.detail], [9, 'fresh', 'NOAA forecast · monterey-bay', 'gust 14 kt · from WNW']);
+  assert.deepEqual([wind.value, wind.state, wind.source, wind.detail], [9, 'fresh', 'NOAA GFS model · monterey-bay', 'gust 14 kt · from WNW']);
   assert.deepEqual([swell.value, swell.state, swell.detail], [5.1, 'fresh', '12 s · offshore forecast']);
   assert.equal(wind.ageMs, 6 * 3_600_000, 'the age runs from the model run');
   assert.ok(!brief.missing.includes('Fresh local forecast unavailable'));
   const html = render(h(Tiles, {tiles: brief.tiles}));
-  assert.match(html, /NOAA forecast · monterey-bay · 6 h old/);
+  assert.match(html, /NOAA GFS model · monterey-bay · 6 h old/);
   assert.equal((html.match(/<span class="ui-reading">—<\/span>/g) || []).length, 0);
 });
 
@@ -140,7 +140,7 @@ test('#542: an old run reads stale with its age, never as fresh', async () => {
   assert.ok(brief.missing.includes('Fresh local forecast unavailable'), 'buildDaily does not plan on the old run');
   assert.equal(brief.status, 'Unknown');
   const html = render(h(Tiles, {tiles: brief.tiles}));
-  assert.equal((html.match(/NOAA forecast · monterey-bay · 30 h old/g) || []).length, 2);
+  assert.equal((html.match(/NOAA GFS model · monterey-bay · 30 h old/g) || []).length, 2);
 });
 
 test('#542: a missing forecast, or one for another region, leaves wind and swell unavailable', async () => {
@@ -165,4 +165,34 @@ test('#542: the forecast loads once per region and point, and a failed load is t
   await ensureRegionalForecast(INFO.id, INFO.center, fetchFn, page);
   assert.equal(calls, 2, 'the brief and the Conditions view share one request');
   regionalForecast.value = null;
+});
+
+test('#542: a visible page reloads a forecast older than 30 minutes and retries a failed load, with one listener and no timer', async () => {
+  const {ensureRegionalForecast, refreshForecastIfStale, regionalForecast, FORECAST_MAX_AGE_MS} = await load();
+  const listeners = [];
+  const doc = {visibilityState: 'hidden', addEventListener: (type, fn) => listeners.push([type, fn])};
+  globalThis.document = doc;
+  try {
+    let calls = 0, fail = false;
+    const fetchFn = async () => { calls++; return fail ? new Response('', {status: 503}) : new Response(JSON.stringify(forecastFeed()), {status: 200}); };
+    const page = 'https://skippercast.test/map';
+    await ensureRegionalForecast(INFO.id, [36.7, -121.9], fetchFn, page);
+    await ensureRegionalForecast(INFO.id, [36.7, -121.9], fetchFn, page);
+    assert.deepEqual(listeners.map(l => l[0]), ['visibilitychange'], 'one listener only');
+    const before = calls, now = Date.now();
+    assert.equal(refreshForecastIfStale(now + FORECAST_MAX_AGE_MS - 60_000), null, 'a recent forecast is kept');
+    assert.equal(calls, before);
+    fail = true;
+    await refreshForecastIfStale(now + FORECAST_MAX_AGE_MS + 60_000);
+    assert.equal(calls, before + 1, 'an old forecast is fetched again');
+    assert.equal(regionalForecast.value, null, 'the failed reload leaves no forecast');
+    fail = false;
+    doc.visibilityState = 'visible';
+    listeners[0][1]();
+    await new Promise(r => setTimeout(r, 50));
+    assert.equal(calls, before + 2, 'the next visibility change retries after a failure');
+    assert.ok(regionalForecast.value);
+    listeners[0][1]();
+    assert.equal(calls, before + 2, 'a fresh forecast is not fetched again');
+  } finally { delete globalThis.document; regionalForecast.value = null; }
 });

@@ -101,7 +101,7 @@ test('nearshore joins only from a fresh site for the bound area, with its own cl
 test('#542: briefForecast gives the brief the NOAA hours at the chosen point, clocked by the older run', () => {
   const f = parseConditionsForecast(feed({hole: [3], holeVariable: 'wave_period'}), 'morro-bay', [35.34, -120.965]);
   const brief = briefForecast(f);
-  assert.equal(brief.label, 'NOAA forecast · central');
+  assert.equal(brief.label, 'NOAA GFS model · central');
   assert.equal(brief.issuedAt, new Date((t0 - 6 * 3600) * 1000).toISOString());
   assert.equal(brief.fetchedAt, new Date(f.retrieved).toISOString());
   assert.equal(brief.hours.length, 8 * 24, 'every hour the wind model lists');

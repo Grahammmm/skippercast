@@ -106,7 +106,7 @@ export function briefForecast(f: ConditionsForecast | null, family: Family = 'gf
     };
   });
   return {
-    label: `${label} forecast · ${f.point.id}`, url: '/sources',
+    label: `${label} ${family === 'gfs' ? 'GFS ' : ''}model · ${f.point.id}`, url: '/sources',
     issuedAt: new Date(Math.min(...issued) * 1000).toISOString(), fetchedAt: new Date(f.retrieved).toISOString(), hours,
   };
 }

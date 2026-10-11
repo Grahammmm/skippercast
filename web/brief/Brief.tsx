@@ -46,19 +46,44 @@ export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): 
 /** The region's forecast feed at its chosen point once loaded; null before, when it failed, or for another region. */
 export const regionalForecast = signal<ConditionsForecast | null>(null);
 let forecastKey: string | null = null;
+let forecastRequest: {id: string; near: readonly [number, number] | null; fetchFn: typeof fetch; page: string} | null = null;
+let forecastLoadedAt = 0, forecastPending = false, visibilityBound = false;
+/** A loaded forecast older than this is fetched again when the page becomes visible. */
+export const FORECAST_MAX_AGE_MS = 30 * 60_000;
 
 /** Load the forecast for region `id` at the point nearest `near`, once per region and point; the brief and the Conditions view share it. */
 export function ensureRegionalForecast(id: string, near: readonly [number, number] | null, fetchFn: typeof fetch = fetch, page = location.href): Promise<ConditionsForecast | null> {
   const key = `${id}|${near?.join(',') ?? ''}`;
+  bindVisibility();
   if (forecastKey === key) return Promise.resolve(regionalForecast.peek());
   forecastKey = key;
+  forecastRequest = {id, near, fetchFn, page};
+  forecastPending = true;
   if (regionalForecast.peek()?.region !== id) regionalForecast.value = null;
   return loadConditionsForecast(id, near, fetchFn, page).then(f => {
     if (forecastKey !== key) return regionalForecast.peek();
+    forecastPending = false;
     regionalForecast.value = f;
+    forecastLoadedAt = Date.now();
     if (!f) forecastKey = null; // a failed load is tried again on the next call
     return f;
   });
+}
+
+/** Reload the forecast when it failed or was loaded over 30 minutes before `now`; no timer, only called as the page becomes visible. */
+export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsForecast | null> | null {
+  const req = forecastRequest;
+  if (!req || forecastPending) return null;
+  if (regionalForecast.peek() && now - forecastLoadedAt <= FORECAST_MAX_AGE_MS) return null;
+  forecastKey = null;
+  return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
+}
+
+// One listener for the page's life, bound on the first load.
+function bindVisibility() {
+  if (visibilityBound || typeof document === 'undefined') return;
+  visibilityBound = true;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshForecastIfStale(); });
 }
 
 export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null};
