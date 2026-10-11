@@ -17,10 +17,12 @@
 //   POST /api/fleet/jobs/activity, /heartbeat, GET /health         CF-45 (server/fleet/activity.ts)
 //   GET|POST /api/fleet/jobs/watch                                  CF-46 (server/fleet/watch.ts)
 //   GET /api/fleet/jobs/labels                                      CF-48 (server/fleet/admin/labels.ts labelledTrips)
+//   POST /api/fleet/jobs/labels                                     N7: an agent's proposed labels (labels.ts importAgentLabels)
 //   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 //   /api/admin/fleet/operators*, /api/admin/fleet/outreach/:id      CF-32, registered in routes/admin.ts (fleet/admin/operators.ts)
 //   GET /api/admin/fleet/coverage, GET /api/admin/fleet/ais/health   CF-35, registered in routes/admin.ts (fleet/admin/coverage.ts, ais-health.ts)
 //   /api/admin/fleet/trips*, /api/admin/fleet/labels/:id/delete      CF-48, registered in routes/admin.ts (fleet/admin/labels.ts)
+//   POST /api/admin/fleet/trips/:id/approve                          N7, registered in routes/admin.ts (fleet/admin/labels.ts)
 //   GET /api/fleet/map/:layer  registered in adminRoutes (routes/admin.ts, CF-50, server/fleet/map.ts)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
@@ -29,13 +31,14 @@ import {registry, snapshot} from '../fleet/jobs.ts';
 import {verifyJobToken} from '../job-auth.ts';
 import type {JobClaims, JobScope} from '../job-auth.ts';
 import {deployment} from '../config.ts';
-import {json, budget} from '../http.ts';
+import {json, budget, body} from '../http.ts';
 import type {AppEnv} from '../env.ts';
 import {rateLimit} from '../middleware/rate-limit.ts';
 import {fleetGo} from '../fleet/go.ts';
 import {activity, health, heartbeat} from '../fleet/activity.ts';
 import {watchList, watchUpdate} from '../fleet/watch.ts';
-import {labelledTrips} from '../fleet/admin/labels.ts';   // CF-48
+import {labelledTrips, importAgentLabels} from '../fleet/admin/labels.ts';   // CF-48, N7
+import {ClientError} from '../errors.ts';
 
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 
@@ -123,5 +126,17 @@ fleetRouter.post('/api/fleet/jobs/watch', async c => {
 fleetRouter.get('/api/fleet/jobs/labels', async c => {   // CF-48
   if (!c.env.DB) return UNAVAILABLE();
   const result = await labelledTrips(c.env.DB, c.req.query('region'), c.req.query('cursor'));
+  return json(result.body, result.status);
+});
+const MAX_LABEL_BYTES = 256 * 1024;   // a trip's MAX_LABELS labels with their basis
+fleetRouter.post('/api/fleet/jobs/labels', async c => {   // N7: one trip's agent labels, replacing that agent's
+  if (!c.env.DB) return UNAVAILABLE();
+  let input: Record<string, unknown>;
+  try { input = await body(c.req.raw, MAX_LABEL_BYTES); }
+  catch (error) {
+    if (error instanceof ClientError && error.message === 'body too large') return json({error: 'body too large'}, 413);
+    throw error;
+  }
+  const result = await importAgentLabels(c.env.DB, input, new Date().toISOString());
   return json(result.body, result.status);
 });
