@@ -2,9 +2,10 @@
 
 ## Unreleased
 
+- The classic map is gone: `/` is always the landing (or the app when a link names an area), `/map` the app, and `/coast` opens the app's 3D view; `?ui=v1` and the `UI_V2` switch no longer change anything. The v1 shell, its coastal page and modules, Leaflet and the vendored map-test copies are deleted, and stylesheets are now minified (FE-61, part 1 of 3).
 - Configured buoy and tide roles can serve a reviewed fresh backup when their primary ages out. Source entries name the station used and its primary; feed health reports backup service as degraded without declaring an outage (#553). Legacy single-station feeds keep their existing format.
 
-- When a backup station serves a buoy or tide reading, the landing, brief, Live card and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
+- When a backup station serves a buoy or tide reading, the landing, brief and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
 - The new home page and map can be added to a home screen with the SkipperCast name, icon and colour.
 - The map at `/map` downloads about 2.2 MB less data when it opens: the region's shoreline, its region file and its protected areas were each fetched twice and now load once (#473).
 - The map at `/map` downloads about 1.25 MB less when it opens: the published Morro Bay shoreline is 0.61 MB instead of 1.87 MB, with the same lines and the same source date, method and stated accuracy on every segment's card.
@@ -12,9 +13,11 @@
 
 ### Internal
 
+- FE-61: MapLibre and PMTiles build into their own chunk, tests of deleted v1 code are removed (v1 parity oracles pinned by digest), and `tests/test_no_v1_map_library.mjs` keeps the retired map library out.
+- The startup measurement (`scripts/measure_startup.mjs`) counts `/coast-data/*` (the Worker bridge to the live Fish upstream) as live and stubs it, so the offline budget test no longer reaches the network or sometimes counts the habitat GeoJSON; `/coast.html` now redirects like `/coast`.
 - `web/station-label.ts` holds the shared backup-station label logic, with unit tests and phone and laptop browser tests for primary, backup, retained-backup, missing-field and shared-station feeds.
 - Test the v2 pages' head tags (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
-- `e2e/startup.spec.ts` now measures the v2 app at `/map` too (`node scripts/measure_startup.mjs --v2`): each committed startup file is requested once. Its total is printed and now budgeted (see the shoreline bullet below).
+- `e2e/startup.spec.ts` now measures the v2 app at `/map` (`node scripts/measure_startup.mjs`; FE-61 removed the v1 measurement and its `--v2` flag): each committed startup file is requested once. Its total is printed and now budgeted (see the shoreline bullet below).
 - `dist/regions/<id>/shoreline.geojson` is schema_version 2: the platform build merges import features with identical source properties into one MultiLineString each and rounds coordinates to 5 decimals (under half a zoom-12 CUSP tile unit, so every tile vertex keeps its grid position). The v2 `/map` startup test now holds its static JSON to the unchanged budget (2,529,983 of 2,795,531 bytes).
 
 ## 0.8.0 — 2026-10-11

@@ -13,7 +13,7 @@ import {pathToFileURL} from 'node:url';
 import test from 'node:test';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
-import * as v1 from '../dist/regulations.js';
+import {createHash} from 'node:crypto';
 import {CDFW_OCEAN, loadRegs, officialURL, regsData, regulationState, ruleProfile, ruleSummary, validRegulations, verifiedText} from '../web/regs.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -45,29 +45,32 @@ function edited(at = NOW) {
 const IDS = [...Object.keys(ORIGINAL.species), 'reef'];
 const INHERITED = ['constructor', 'toString', '__proto__', 'hasOwnProperty', '', 'unsupported-target'];
 const fields = s => ({status: s.status, label: s.label, today: s.today, reason: s.reason, issues: s.issues});
+// FE-61 deleted dist/regulations.js with the v1 shell. Its output over these cases is
+// pinned by digest (state fields and row, in loop order), computed from v1 before the deletion.
+const V1_DIGEST = {grid: '2a00529fc1145ddaf4d3b74ee98130a4ccb7274b3f579e7301e7eba85a2d2a7b', evidence: '9845ca291ad962d581d162241d51f0cd41dcf147405a061ea8fd05806235586b'};
+const digest = rows => createHash('sha256').update(JSON.stringify(rows)).digest('hex');
 
 test('state and row equal dist/regulations.js for every species, date and trip hour', () => {
   assert.ok(validRegulations(data(), MORRO), 'the committed registry passes for Morro Bay');
   const dates = ['2026-09-21T18:00:00Z', '2026-09-21T11:00:00Z', '2026-09-21T13:00:00Z', '2026-10-01T06:59:00Z', '2026-10-01T07:00:00Z', '2026-11-07T08:00:00Z', '2027-01-01T08:00:00Z'];
-  let compared = 0;
+  const rows = [];
   for (const build of [data, edited]) {
     for (const when of dates) {
       const at = Date.parse(when), d = build(at);
       for (const id of [...IDS, ...INHERITED]) {
         for (const [tripDate, tripInstant] of [[null, null], ['2026-09-21', null], ['2026-09-21', Date.parse('2026-09-21T11:30:00Z')], ['2026-09-21', Date.parse('2026-09-21T13:00:00Z')], ['2026-12-31', null]]) {
-          const mine = regulationState(d, id, MORRO, at, tripDate, tripInstant), theirs = v1.regulationState(d, id, at, tripDate, null, tripInstant, null);
-          const label = `${build.name} ${when} ${id} ${tripDate} ${tripInstant}`;
-          assert.deepEqual(fields(mine), fields(theirs), label);
-          assert.deepEqual(ruleSummary(d, id, mine, MORRO), v1.ruleSummary(d, id, theirs), label);
-          compared++;
+          const mine = regulationState(d, id, MORRO, at, tripDate, tripInstant);
+          rows.push([fields(mine), ruleSummary(d, id, mine, MORRO)]);
         }
       }
     }
   }
-  assert.ok(compared > 500);
+  assert.equal(rows.length, 980);
+  assert.equal(digest(rows), V1_DIGEST.grid);
 });
 
 test('stale, changed, unreviewed and out-of-period evidence withholds open exactly as v1 does', () => {
+  const rows = [];
   for (const edit of [
     d => { d.checks['rules-salmon'].status = 'changed'; }, d => { delete d.checks['rules-groundfish']; }, d => { d.checks['rules-salmon'].source_status = 'retained'; },
     d => { d.sources['rules-salmon'].approved_content_sha256 = null; }, d => { d.checks['rules-salmon'].data_retrieved_at = '2026-09-19T00:00:00Z'; },
@@ -75,11 +78,11 @@ test('stale, changed, unreviewed and out-of-period evidence withholds open exact
   ]) {
     const d = data(); edit(d);
     for (const id of IDS) {
-      const mine = regulationState(d, id, MORRO, NOW), theirs = v1.regulationState(d, id, NOW);
-      assert.deepEqual(fields(mine), fields(theirs), `${edit} ${id}`);
-      assert.deepEqual(ruleSummary(d, id, mine, MORRO), v1.ruleSummary(d, id, theirs), `${edit} ${id}`);
+      const mine = regulationState(d, id, MORRO, NOW);
+      rows.push([fields(mine), ruleSummary(d, id, mine, MORRO)]);
     }
   }
+  assert.equal(digest(rows), V1_DIGEST.evidence);
 });
 
 test('#396: an inherited or unsupported target never borrows a record; the row links CDFW', () => {
@@ -93,12 +96,12 @@ test('#396: an inherited or unsupported target never borrows a record; the row l
   const inherited = Object.create({borrowed: d.species.lingcod});
   Object.assign(inherited, d.species);
   assert.equal(regulationState({...d, species: inherited}, 'borrowed', MORRO, NOW).status, 'unknown');
-  assert.equal(v1.regulationState({...d, species: inherited}, 'borrowed', NOW).status, 'unknown', 'v1 agrees');
 });
 
 test('every link is an official page: the region\'s authority hosts over https, else CDFW', () => {
-  for (const value of ['https://wildlife.ca.gov/x', 'http://wildlife.ca.gov/x', 'https://user@wildlife.ca.gov/x', 'https://example.com/x', 'not a url', 'https://www.ecfr.gov/y'])
-    assert.equal(officialURL(value, MORRO), v1.officialURL(value), value);
+  for (const [value, v1] of [['https://wildlife.ca.gov/x', 'https://wildlife.ca.gov/x'], ['http://wildlife.ca.gov/x', CDFW_OCEAN], ['https://user@wildlife.ca.gov/x', CDFW_OCEAN],
+    ['https://example.com/x', CDFW_OCEAN], ['not a url', CDFW_OCEAN], ['https://www.ecfr.gov/y', 'https://www.ecfr.gov/y']])
+    assert.equal(officialURL(value, MORRO), v1, value);
   const d = data();
   for (const id of IDS) assert.ok(MORRO.regulatory_authority_hosts.includes(new URL(ruleSummary(d, id, regulationState(d, id, MORRO, NOW), MORRO).link).hostname), id);
   assert.equal(ruleSummary(null, 'lingcod', regulationState(null, 'lingcod', MORRO, NOW), MORRO).link, CDFW_OCEAN, 'nothing loaded: CDFW\'s page');
@@ -140,7 +143,7 @@ test('the card\'s line shows v1\'s row: status, bag, size, check date and the of
   m.regsData.value = {region: 'morro-bay', data: d};
   const mark = {id: 'spot:x', name: 'x', kind: 'Reef mark', reading: '', source: '', basis: ''};
   const html = m.render(m.h(m.RulesLine, {mark}));
-  const row = v1.ruleSummary(d, 'reef', v1.regulationState(d, 'reef', Date.now(), null, null, null, null));
+  const row = ruleSummary(d, 'reef', regulationState(d, 'reef', MORRO, Date.now()), MORRO);
   const text = html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
   for (const part of [row.label, ...row.bag, ...row.size, verifiedText(row), row.linkLabel]) assert.ok(text.includes(part), `${part} in ${text}`);
   assert.match(html, new RegExp(`<a href="${row.link.replace(/[.?]/g, '\\$&')}" target="_blank" rel="noopener"`), 'the official link');

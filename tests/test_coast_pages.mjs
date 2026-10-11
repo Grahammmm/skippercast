@@ -98,7 +98,7 @@ test('legacy area aliases must agree with the reviewed binding at explicit map p
 
 test('Fish privacy path serves the complete existing notice under either UI switch',async()=>{
  const {shellFor}=await import('../server/routes/assets.ts');
- for(const UI_V2 of ['true','false'])assert.equal(shellFor('/privacy',new URLSearchParams(),{UI_V2}),'/privacy.html');
+ assert.equal(shellFor('/privacy',new URLSearchParams()),'/privacy.html');
  assert.match(readFileSync(new URL('../dist/privacy.html',import.meta.url),'utf8'),/Privacy|privacy/);
 });
 

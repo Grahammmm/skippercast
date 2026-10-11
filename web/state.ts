@@ -5,7 +5,7 @@
 // (through the dist/*.js modules that use it) by type stripping.
 //
 // Region changes and reloads. The app's modules still read the region once at
-// start (region.js, app.js and everything they load), so once boot.js has
+// start (region.js, app.js and everything they load), so once the app entry has
 // loaded them (lockRegion()), a change of region or coast is a full page load.
 // Before that, and for any change that keeps the region (a port in the same
 // region, a map view, a target, an hour), navigate() updates the URL with the
@@ -257,7 +257,7 @@ export function syncFromURL(href: string = location.href): UrlState {
   return state;
 }
 
-/** Called by boot.js once region-bound modules load; region changes reload after this. A v2 store ignores it. */
+/** Called by the app entry once region-bound modules load; region changes reload after this. A v2 store ignores it. */
 export function lockRegion(href: string = location.href): void {
   if (options.v2) return;
   const {region: r, coast: c} = readURL(href);

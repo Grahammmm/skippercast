@@ -47,7 +47,7 @@ export function savedIds(id: string | null, storage: Pick<Storage, 'getItem'> | 
 }
 const refreshIds = (): void => { tripIds.value = savedIds(region.peek()); };
 
-/** The Leaflet calls the planner makes (`getSize`, `getBounds`), answered from the shared camera and the map's size. */
+/** The 2D-map calls the planner makes (`getSize`, `getBounds`), answered from the shared camera and the map's size. */
 export function mapView(c: Camera | null, size: {width: number; height: number}) {
   const world = c ? 256 * 2 ** c.zoom : Infinity, mercator = (lat: number) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2;
   const latitude = (y: number) => 360 / Math.PI * Math.atan(Math.exp(Math.PI * (1 - 2 * y))) - 90;
@@ -169,7 +169,7 @@ async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds
   const page = location.href, origin = location.origin, misses: string[] = [];
   const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
   const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
-  const files: [string, string, RequestInit][] = [[`${origin}${V2_SHELL}?ui=v2`, origin + V2_SHELL, {}],
+  const files: [string, string, RequestInit][] = [[origin + V2_SHELL, origin + V2_SHELL, {}],
     ...[BASEMAP_MANIFEST, shorelineURL(id)].map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
     ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
   let done = 0;

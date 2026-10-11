@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // Measure the JSON a region's map downloads at startup (P4-05).
-// Usage: pnpm build && node scripts/measure_startup.mjs [--region morro-bay] [--v2] [--stub | --stub-mpa] [--json]
-// --v2 measures the v2 app at /map?region=<id>&ui=v2 instead of v1's /?region=<id>#map.
+// Usage: pnpm build && node scripts/measure_startup.mjs [--region morro-bay] [--stub | --stub-mpa] [--json]
 //
-// Loads /?region=<id>#map in Chromium against the built site under
+// Loads the app at /map?region=<id> in Chromium against the built site under
 // `wrangler dev` (e2e/serve.mjs, started here unless E2E_URL points at a
 // running one), with every other origin blocked as in the browser tests.
 // Records each JSON or GeoJSON response body and prints a table, split in two:
@@ -21,8 +20,9 @@
 // what upstream published today. Without --stub the live sizes are real;
 // --stub-mpa answers only the ArcGIS MPA query (which the tests' origin block
 // would otherwise fail), so the live feeds are real and the path is production's.
-// "Before interactive" counts bytes received before the first survey marker
-// is visible. Sizes are decoded body bytes, not compressed transfer sizes.
+// "Before interactive" counts bytes received before the map's canvas is
+// visible (FE-61: v1's map markers went with the v1 shell). Sizes are
+// decoded body bytes, not compressed transfer sizes.
 import {spawn} from 'node:child_process';
 import {existsSync, readdirSync, readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -37,8 +37,8 @@ export function isJSON(url, contentType = '') {
   return /json/i.test(contentType) || /\.(geo)?json$/i.test(path);
 }
 
-/** Whether a same-origin path is a live feed or API rather than a committed file. */
-export const isLive = path => /^\/(?:api|feeds)\//.test(path);
+/** Whether a same-origin path is a live feed or API (incl. the /coast-data/ bridge to the Fish upstream) rather than a committed file. */
+export const isLive = path => /^\/(?:api|feeds|coast-data)\//.test(path);
 
 /** Group, total and sort recorded responses; `static` is the budgeted total. */
 export function summarise(entries) {
@@ -92,6 +92,8 @@ export async function stubLiveFeeds(page, {id = 'morro-bay', feeds = true} = {})
   const head = () => ({schema_version: 1, region_id: region.id, generated_at: now(), catch_probability: null, bite_score: null});
   await page.route(url => url.hostname === 'services2.arcgis.com', route => json(route, mpas));
   if (!feeds) return;
+  // /coast-data/* is the Worker's bridge to the live Fish upstream: answer 404 (the habitat loader treats it as unavailable) so the e2e never reaches the network.
+  await page.route(url => url.pathname.startsWith('/coast-data/'), route => json(route, {error: 'Not stubbed'}, 404));
   await page.route(url => /^\/(?:api|feeds)\//.test(url.pathname) && !url.pathname.startsWith('/api/session'), route => {
     const url = new URL(route.request().url()), path = url.pathname;
     if (path === '/api/forecast') return json(route, stubForecast(region));
@@ -114,13 +116,11 @@ export async function stubLiveFeeds(page, {id = 'morro-bay', feeds = true} = {})
 
 /**
  * Record JSON responses while `page` opens `path`; resolves once the network
- * has been quiet for QUIET_MS after `ready` (v1: the first marker; v2 at
- * /map: MAP_READY, the map canvas) is visible.
+ * has been quiet for QUIET_MS after `ready` (the app's map canvas) is visible.
  */
-export const V1_READY = '#map .leaflet-marker-icon';
 /** The v2 app's map canvas (/map). */
 export const MAP_READY = '.app-chart canvas.maplibregl-canvas';
-export async function measureStartup(page, {path = '/?region=morro-bay#map', ready = V1_READY, timeout = 60_000} = {}) {
+export async function measureStartup(page, {path = '/map?region=morro-bay', ready = MAP_READY, timeout = 60_000} = {}) {
   const entries = [];
   let interactive = false, last = Date.now(), origin = null;
   // Requests still waiting for a response. A request counts as answered at its
@@ -187,7 +187,6 @@ async function waitFor(url, ms) {
 async function main() {
   const args = process.argv.slice(2);
   const region = args.includes('--region') ? args[args.indexOf('--region') + 1] : 'morro-bay';
-  const v2 = args.includes('--v2');
   const asJSON = args.includes('--json'), stub = args.includes('--stub'), mpaOnly = args.includes('--stub-mpa');
   const port = process.env.E2E_PORT || '8787';
   let base = process.env.E2E_URL, server;
@@ -206,9 +205,7 @@ async function main() {
     await context.addInitScript(() => { try { localStorage.setItem('skippercast-first-run-v1', 'done'); } catch { /* storage blocked */ } });
     const page = await context.newPage();
     if (stub || mpaOnly) await stubLiveFeeds(page, {id: region, feeds: stub});
-    const result = await measureStartup(page, v2
-      ? {path: `/map?region=${encodeURIComponent(region)}&ui=v2`, ready: MAP_READY}
-      : {path: `/?region=${encodeURIComponent(region)}#map`});
+    const result = await measureStartup(page, {path: `/map?region=${encodeURIComponent(region)}`});
     console.log(asJSON ? JSON.stringify({region, stub, ...result}, null, 1) : `Region: ${region}${stub ? ' (live feeds stubbed)' : ''}\n${formatTable(result)}`);
   } finally {
     await browser.close();

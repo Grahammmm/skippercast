@@ -1,7 +1,7 @@
 // Account sheet: create a SkipperCast account or sign in with a passkey, add or
 // remove passkeys, sign out, delete the account. Opens from the Guide entry or
 // any #account link. Passkey ceremonies use the vendored @simplewebauthn/browser
-// (window.SimpleWebAuthnBrowser, loaded with SRI in index.html).
+// (window.SimpleWebAuthnBrowser, loaded with SRI in app.html).
 const RETURN_KEY = 'skippercast-account-return';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';

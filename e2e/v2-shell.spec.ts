@@ -252,7 +252,7 @@ test.describe('phone', () => {
 
 // FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The
 // contexts are the app at /map (Chart) and /coast, which moves to the app's 3D terrain (FE-78): the terrain lives
-// inside the same stage and its in-scene place and target controls stay hidden, and no v1 Leaflet map mounts.
+// inside the same stage and its in-scene place and target controls stay hidden, and no v1 map mounts.
 test('FE-60: no duplicate map, picker or timeline for one context (/map and /coast)', async ({page, pageErrors, v2, isMobile}) => {
   await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered: the terrain stays loading, offline */ });
   const contexts: Array<[string, string, 'chart' | 'terrain']> = [
@@ -268,7 +268,7 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     await expect(page.locator(surface === 'chart' ? '.app-map' : '.app-terrain'), name).toBeVisible();
     await expect(page.locator(surface === 'chart' ? '.app-terrain' : '.app-map'), name).toBeHidden();
     expect(await page.locator('canvas.maplibregl-canvas').count(), `${name}: MapLibre canvases`).toBeLessThanOrEqual(1);
-    await expect(page.locator('.leaflet-container, #map'), `${name}: no v1 map`).toHaveCount(0);
+    await expect(page.locator('#map'), `${name}: no v1 map`).toHaveCount(0);
     // One of each picker: area and port, target, profile, presentation.
     for (const label of ['Area and port', 'Target species', 'Profile', 'Map presentation'])
       expect(await page.getByRole('group', {name: label, exact: true}).count(), `${name}: ${label}`).toBeLessThanOrEqual(1);

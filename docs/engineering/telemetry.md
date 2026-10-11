@@ -10,8 +10,8 @@ visitor, session or device id.
 | Piece | File |
 | --- | --- |
 | Browser module: batching, opt-out, error capture | `web/telemetry.ts` |
-| Funnel call sites | `dist/home-port.js`, `dist/navigation.js`, `dist/export-ui.js`, `dist/offline-pack.js`, `dist/offline.js`; started in `dist/boot.js` |
-| v2 pages | started in `web/landing/main.tsx` and `web/app/main.tsx` (pinned, with the event set below, by `tests/test_v2_telemetry.mjs`); `port_selected` from `web/app/CommandBar.tsx`, and through `web/trip.ts` v1's `spot_saved` (`dist/export-ui.js`) and `offline_saved` (`dist/offline-pack.js`) |
+| Funnel call sites | `dist/home-port.js` (`port_selected`), `dist/export-ui.js` (`spot_saved`) and `dist/offline-pack.js` (`offline_saved`), reached from the v2 app; `web/app/CommandBar.tsx` (`port_selected`) |
+| v2 pages | started in `web/landing/main.tsx` and `web/app/main.tsx` (pinned, with the event set below, by `tests/test_v2_telemetry.mjs`) |
 | Advisor pages | started and tracked in `web/advisor/pages.ts` |
 | Endpoint `POST /api/telemetry` | `server/routes/telemetry.ts` |
 | Validation and Analytics Engine columns | `server/telemetry.ts` |
@@ -31,15 +31,15 @@ visitor, session or device id.
 | Event | Sent when |
 | --- | --- |
 | `port_selected` | A port is chosen in the home-port picker (sent at once, because the page may reload) |
-| `map_viewed` | The Map view is shown |
-| `forecast_viewed` | The Forecast view is shown |
+| `map_viewed` | Not sent since FE-61 (v1's Map view was shown) |
+| `forecast_viewed` | Not sent since FE-61 (v1's Forecast view was shown) |
 | `spot_saved` | A spot is added to the day plan (Export); the plan is kept in this browser |
 | `offline_saved` | "Save for offline" finishes a region pack |
-| `install` | The browser reports the app was installed (`appinstalled`) |
+| `install` | Not sent since FE-61 (v1 reported `appinstalled`) |
 | `advisor_port_view`, `advisor_species_view`, `advisor_boat_view` | A Text Advisor port, species or boat page is opened (`web/advisor/pages.ts`; [08 · Telemetry](../plans/text-advisor/08-website.md)) |
 | `advisor_cta` | The "Text SkipperCast" link on one of those pages is followed (sent at once) |
 
-The v2 pages (`landing.html`, `app.html`) start the same module as v1's `dist/boot.js`, so they report errors. Of the funnel steps the v2 app sends `port_selected` (the command bar's port chooser), `spot_saved` (a mark card's add to the trip, through v1's planner) and `offline_saved` (the trip panel's save for offline, through v1's region pack); the v2 landing sends no funnel event. `tests/test_v2_telemetry.mjs` finds this set by following every import from each entry to its `track()` calls.
+The v2 pages (`landing.html`, `app.html`) start the module in `web/landing/main.tsx` and `web/app/main.tsx`, so they report errors. Of the funnel steps the v2 app sends `port_selected` (the command bar's port chooser), `spot_saved` (a mark card's add to the trip, through `dist/export-ui.js`) and `offline_saved` (the trip panel's save for offline, through `dist/offline-pack.js`); the v2 landing sends no funnel event. `map_viewed`, `forecast_viewed` and `install` were sent only by v1's map, which FE-61 removed: the endpoint still accepts them and the report still lists them, at zero. `tests/test_v2_telemetry.mjs` finds the sent set by following every import from each entry to its `track()` calls.
 
 Each carries the region id when one is shown. The server records a region it does not publish as `other`. An event may also carry `source`, the page URL's `s` parameter when it is one of `txt` (a link in an advisor text), `ig`, `fb` (Instagram and Facebook posts) or `qr` (the printed QR code); any other value is not sent, and the server rejects it. It says where the visit came from, never who made it.
 
@@ -80,7 +80,7 @@ Every telemetry request also writes the usual `request` point for route `/api/te
 
 The daily **Operations report** (`.github/workflows/ops-report.yml`) adds two tables for the last 24 hours:
 
-- **Client funnel:** events per step, in visit order (`port_selected` → `map_viewed` → `forecast_viewed` → `spot_saved`, then `offline_saved` and `install`), with zero for steps not seen. These are page-load counts, not people: there are no visitor ids, and people who opt out are not counted, so ratios between steps are indicative only.
+- **Client funnel:** events per step, in visit order (`port_selected` → `map_viewed` → `forecast_viewed` → `spot_saved`, then `offline_saved` and `install`), with zero for steps not seen (`map_viewed`, `forecast_viewed` and `install` read zero since FE-61). These are page-load counts, not people: there are no visitor ids, and people who opt out are not counted, so ratios between steps are indicative only.
 - **Top client errors:** the 10 most reported message, file, line, kind and build combinations. Message and file are printed as code spans with backticks removed, so text from a browser cannot render as a link, image or HTML in the summary.
 
 Ad-hoc queries use the same SQL API, for example:

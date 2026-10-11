@@ -1,7 +1,8 @@
 // The Vite client build contract (P4-01a): hashed assets from the Vite
 // manifest, pages served from stable paths, a stable /sw.js, vendored files
-// with SRI left in place, and the boot chain modulepreloaded. Replaces the
-// tests of the retired scripts/fingerprint.mjs.
+// with SRI left in place. Replaces the tests of the retired
+// scripts/fingerprint.mjs. FE-61 retired the v1 shell's boot-chain preload
+// (scripts/vite-preload.mjs) with the shell; the fixture page stands in for a v2 page.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {execFile} from 'node:child_process';
@@ -11,7 +12,6 @@ import {join} from 'node:path';
 import {promisify} from 'node:util';
 import {buildClient, hashName} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
-import {bootPreloadRoots, preloadChunks} from '../scripts/vite-preload.mjs';
 import {STATIC_REF} from '../vite.config.mjs';
 
 const run = promisify(execFile);
@@ -23,26 +23,27 @@ async function site({app = 'export const ready = true;'} = {}) {
   const root = await mkdtemp(join(tmpdir(), 'client-src-'));
   await mkdir(join(root, 'vendor'), {recursive: true});
   await mkdir(join(root, 'data'), {recursive: true});
-  await writeFile(join(root, 'index.html'), `<!doctype html><html><head>
+  await writeFile(join(root, 'landing.html'), `<!doctype html><html><head>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="vendor/leaflet.css" integrity="${SRI}">
-<script src="vendor/leaflet.js" integrity="${SRI}" defer></script>
+<link rel="stylesheet" href="vendor/lib.css" integrity="${SRI}">
+<script src="vendor/lib.js" integrity="${SRI}" defer></script>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
-<script type="module" src="boot.js"></script></head><body><a href="about.html">About</a></body></html>`);
+<script type="module" src="main.js"></script></head><body><a href="about.html">About</a></body></html>`);
+  // check_client requires both v2 pages.
+  await writeFile(join(root, 'app.html'), '<!doctype html><html><head><link rel="stylesheet" href="styles.css"><script type="module" src="app.js"></script></head><body>app</body></html>');
   await writeFile(join(root, 'about.html'), '<!doctype html><html><head><link rel="stylesheet" href="styles.css"></head><body>About</body></html>');
-  await writeFile(join(root, 'boot.js'), "void (async()=>{await import('./app.js');void import('./coastal-discovery.js');})();");
+  await writeFile(join(root, 'main.js'), "void (async()=>{await import('./app.js');})();");
   await writeFile(join(root, 'app.js'), `import {helper} from './helper.js';\n${app}\nhelper();\nnavigator.serviceWorker?.register('/sw.js');`);
   await writeFile(join(root, 'helper.js'), 'export function helper() { return 1; }');
-  await writeFile(join(root, 'coastal-discovery.js'), 'export const coast = 1;');
   await writeFile(join(root, 'styles.css'), 'body{color:#082e3b}');
   await writeFile(join(root, 'sw.js'), `${BUILD_PLACEHOLDER}\nself.addEventListener('push',()=>{});`);
   await writeFile(join(root, 'manifest.webmanifest'), '{}');
   await writeFile(join(root, 'app-icon-192.png'), 'png');
   await writeFile(join(root, 'apple-touch-icon.png'), 'png');
   await writeFile(join(root, 'data/regulations.json'), '{}');
-  await writeFile(join(root, 'vendor/leaflet.js'), '');
-  await writeFile(join(root, 'vendor/leaflet.css'), '');
+  await writeFile(join(root, 'vendor/lib.js'), '');
+  await writeFile(join(root, 'vendor/lib.css'), '');
   return root;
 }
 
@@ -59,39 +60,33 @@ test('hashName inserts the build id before the extension', () => {
 test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor files and data stable', async () => {
   const {out, buildId, shells} = await built();
   const top = (await readdir(out)).sort();
-  assert.ok(top.includes(`index.${buildId}.html`) && top.includes(`about.${buildId}.html`));
-  assert.ok(!top.includes('index.html') && !top.includes('app.js') && !top.includes('styles.css'), 'no authored source is published raw');
-  assert.deepEqual(shells, {'/': `/index.${buildId}.html`, '/index.html': `/index.${buildId}.html`, '/about.html': `/about.${buildId}.html`});
+  assert.ok(top.includes(`landing.${buildId}.html`) && top.includes(`about.${buildId}.html`));
+  assert.ok(!top.includes('landing.html') && !top.includes('app.js') && !top.includes('styles.css'), 'no authored source is published raw');
+  // '/' and '/map' are chosen by server/routes/assets.ts; the build maps each page's own path.
+  assert.deepEqual(shells, {'/about.html': `/about.${buildId}.html`, '/app.html': `/app.${buildId}.html`, '/landing.html': `/landing.${buildId}.html`});
   for (const name of await readdir(join(out, 'assets'))) assert.match(name, /^[\w.-]+\.[0-9a-f]{10}\.(?:js|css)$/);
   assert.equal(await readFile(join(out, 'data/regulations.json'), 'utf8'), '{}');
   assert.ok((await readFile(join(out, 'sw.js'), 'utf8')).startsWith(`const BUILD = '${buildId}';`));
   assert.equal(await readFile(join(out, '.assetsignore'), 'utf8'), '.vite\n');
   assert.equal(await readFile(join(out, '_headers'), 'utf8'), '/*\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n');
-  const html = await readFile(join(out, `index.${buildId}.html`), 'utf8');
+  const html = await readFile(join(out, `landing.${buildId}.html`), 'utf8');
   // Vendored files keep their stable path and SRI; the manifest and icons are not hashed.
-  assert.match(html, new RegExp(`<script\\s+src="vendor/leaflet\\.js" integrity="${SRI.replace(/[+/]/g, '\\$&')}" defer>`));
-  assert.match(html, /<link\s+rel="stylesheet" href="vendor\/leaflet\.css" integrity=/);
+  assert.match(html, new RegExp(`<script\\s+src="vendor/lib\\.js" integrity="${SRI.replace(/[+/]/g, '\\$&')}" defer>`));
+  assert.match(html, /<link\s+rel="stylesheet" href="vendor\/lib\.css" integrity=/);
   assert.match(html, /<link\s+rel="manifest" href="manifest\.webmanifest"\/>/);
   assert.match(html, /<link\s+rel="apple-touch-icon" href="apple-touch-icon\.png"\/>/);
   assert.doesNotMatch(html, /vite-ignore/);
   assert.ok(html.includes(`<meta name="skippercast-build" content="${buildId}">\n</head>`), 'the page names its build for error reports');
-  assert.match(html, /<script type="module" crossorigin src="\.\/assets\/index\.[0-9a-f]{10}\.js">/);
+  assert.match(html, /<script type="module" crossorigin src="\.\/assets\/landing\.[0-9a-f]{10}\.js">/);
   // The page link stays a stable path; the Worker maps it to the hashed page.
   assert.match(html, /href="about\.html"/);
   const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
   assert.equal(precache.build, buildId);
-  assert.ok(precache.assets.length >= 3 && precache.assets.every(a => /^\/assets\/[\w.-]+\.[0-9a-f]{10}\.(?:js|css)$/.test(a)));
+  assert.ok(precache.assets.length >= 2 && precache.assets.every(a => /^\/assets\/[\w.-]+\.[0-9a-f]{10}\.(?:js|css)$/.test(a)));
+  // #497 and FE-51: the landing's first paint is installed; the app's own chunks are not.
+  assert.ok(precache.assets.some(a => a.startsWith('/assets/landing.')), 'the landing entry');
+  assert.ok(!precache.assets.some(a => a.startsWith('/assets/app.')), 'the app opens offline only from a saved pack');
   assert.ok(!JSON.stringify(precache).includes('regulations.json'), 'data is never precached; it is network-first');
-});
-
-test('the boot chain is modulepreloaded, except ?coast= discovery', async () => {
-  const {out, buildId, manifest} = await built();
-  const html = await readFile(join(out, `index.${buildId}.html`), 'utf8');
-  const preloaded = [...html.matchAll(/rel="modulepreload"[^>]*href="\.\/([^"]+)"/g)].map(m => m[1]);
-  assert.ok(preloaded.includes(manifest['app.js'].file), 'app.js chunk');
-  for (const key of manifest['app.js'].imports || []) assert.ok(preloaded.includes(manifest[key].file), key);
-  assert.ok(!preloaded.includes(manifest['coastal-discovery.js'].file));
-  assert.equal(new Set(preloaded).size, preloaded.length, 'duplicate modulepreload');
 });
 
 test('the build id changes when any module changes', async () => {
@@ -118,13 +113,11 @@ test('check_client passes a good build and fails on missing chunks, raw sources,
   await assert.rejects(run(process.execPath, [CHECK, out, root]), /sw\.js does not carry the precache build id/);
   await writeFile(join(out, 'sw.js'), sw);
 
-  const page = join(out, `index.${buildId}.html`), html = await readFile(page, 'utf8');
+  const page = join(out, `landing.${buildId}.html`), html = await readFile(page, 'utf8');
   await writeFile(page, html.replace(/ integrity="[^"]+"/, ''));
   await assert.rejects(run(process.execPath, [CHECK, out, root]), /without an integrity attribute/);
   await writeFile(page, html.replace('</head>', '<script type="module" src="plain.js"></script></head>'));
   await assert.rejects(run(process.execPath, [CHECK, out, root]), /plain\.js \(missing\)/);
-  await writeFile(page, html.replace(/<link rel="modulepreload"[^>]*>/, ''));
-  await assert.rejects(run(process.execPath, [CHECK, out, root]), /does not modulepreload/);
   await writeFile(page, html);
 
   const [chunk] = (await readdir(join(out, 'assets'))).filter(n => n.startsWith('helper.') || n.startsWith('app.'));
@@ -189,25 +182,12 @@ test('the real site builds and passes the client check (static data directories 
   await rm(out, {recursive: true, force: true});
 });
 
-test('boot preload roots are boot.js dynamic imports without coastal discovery', async () => {
-  const roots = bootPreloadRoots(await readFile(join(DIST, 'boot.js'), 'utf8'));
-  assert.ok(roots.includes('app.js') && roots.includes('home-port.js') && roots.includes('first-run.js'));
-  assert.ok(!roots.includes('coastal-discovery.js'));
-  const bundle = {
-    'a.js': {type: 'chunk', fileName: 'a.js', facadeModuleId: '/r/a.js', moduleIds: ['/r/a.js'], imports: ['s.js']},
-    's.js': {type: 'chunk', fileName: 's.js', facadeModuleId: null, moduleIds: ['/r/b.js', '/r/c.js'], imports: []},
-    'b.js': {type: 'chunk', fileName: 'b.js', facadeModuleId: '/r/b.js', moduleIds: [], imports: ['s.js']},
-  };
-  assert.deepEqual(preloadChunks(bundle, ['/r/a.js', '/r/b.js', '/r/c.js']), ['a.js', 's.js', 'b.js']);
-  assert.deepEqual(preloadChunks(bundle, ['/r/a.js'], new Set(['s.js'])), ['a.js']);
-});
-
 test('only vendor files, the web manifest and icons are left out of the Vite build', () => {
   const mark = html => html.replace(STATIC_REF, '<$1 vite-ignore');
-  assert.match(mark('<script src="vendor/leaflet.js" integrity="x" defer></script>'), /^<script vite-ignore src=/);
-  assert.match(mark('<link rel="stylesheet" href="vendor/maplibre-5.24.0/maplibre-gl.css" />'), /^<link vite-ignore /);
+  assert.match(mark('<script src="vendor/simplewebauthn-browser-14.0.0/index.umd.min.js" integrity="x" defer></script>'), /^<script vite-ignore src=/);
+  assert.match(mark('<link rel="stylesheet" href="vendor/lib/lib.css" />'), /^<link vite-ignore /);
   assert.match(mark('<link rel="manifest" href="manifest.webmanifest"/>'), /vite-ignore/);
   assert.match(mark('<link rel="apple-touch-icon" href="apple-touch-icon.png"/>'), /vite-ignore/);
   assert.doesNotMatch(mark('<link rel="stylesheet" href="tokens.css" />'), /vite-ignore/);
-  assert.doesNotMatch(mark('<script type="module" src="boot.js"></script>'), /vite-ignore/);
+  assert.doesNotMatch(mark('<script type="module" src="../web/app/main.tsx"></script>'), /vite-ignore/);
 });

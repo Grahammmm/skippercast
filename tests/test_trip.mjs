@@ -23,7 +23,7 @@ test('the account menu and mark card read the region\'s v1 draft, whatever it ho
   assert.deepEqual(trip.savedIds('morro-bay', {getItem() { throw new Error('blocked'); }}), []);
 });
 
-test('the planner\'s Leaflet calls come from the shared camera and the chart\'s size', () => {
+test('the planner\'s map calls come from the shared camera and the chart\'s size', () => {
   // ?view= zoom 10 (256 px convention): 262,144 px around the world, so 512 px span 0.703° of longitude.
   const view = trip.mapView({latitude: 35.37, longitude: -120.86, zoom: 10}, {width: 512, height: 512});
   assert.deepEqual(view.getSize(), {x: 512, y: 512});

@@ -70,10 +70,9 @@ test('the port chooser matches by name, Enter navigates in place, and v1 reads t
   expect(await stayed(page), 'no reload').toBe(true);
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('san-diego');
   await expect(page.locator('.app-port')).toContainText('San Diego');
-  // v1 (shared key): a bare visit opens the port v2 saved instead of its chooser.
-  await page.goto('/?ui=v1');
-  await expect(page).toHaveURL(/[?&]region=southern-california/);
-  await expect(page.locator('.home-port-card')).toHaveCount(0);
+  // A later bare visit to the app opens the saved port (FE-61: v1's chooser that shared the key is gone).
+  await page.goto('/map');
+  await expect(page).toHaveURL(/\/map\?[^#]*region=southern-california/);
   expect(pageErrors).toEqual([]);
 });
 
@@ -120,8 +119,8 @@ test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast
   expect(await page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [PORT_KEY, PLACE_KEY, PROFILE_KEY])).toEqual([null, null, null]);
   expect((await context.cookies()).some(c => c.name === 'skippercast_home')).toBe(false);
   await expect(page).toHaveURL(/[?&]place=cambria/);   // this visit stays where it is
-  await page.goto('/?ui=v1');
-  await expect(page.locator('.home-port-card')).toBeVisible();   // v1 has no home either
+  await page.goto('/map');
+  await expect(page.locator('h1')).toContainText('Know the water');   // no home: a bare visit opens the landing
   expect(pageErrors).toEqual([]);
 });
 

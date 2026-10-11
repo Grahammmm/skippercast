@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // After `pnpm build`: manifest-integrity check of dist/client (P4-01a).
-// Usage: node scripts/check_client.mjs [client-dir] [source-dir]
+// Usage: node scripts/check_client.mjs [client-dir] [source-dir, unused since FE-61] [budget-file]
 //
 // - Every script and stylesheet is a hashed file in assets/ (NAME.<10 hex>.ext)
 //   named by .vite/manifest.json, or a vendored file under vendor/ loaded with
@@ -8,23 +8,19 @@
 // - Every page is NAME.<buildId>.html (served by the Worker from its stable
 //   path), and every <script>, <link> and <img> reference in it resolves.
 // - Every relative import and asset URL inside the hashed scripts resolves.
-// - index.html modulepreloads the boot chain (scripts/vite-preload.mjs).
 // - sw.js stays at /sw.js, unhashed, and carries the build id; precache.json
 //   lists exactly this build's hashed scripts and styles, less those only the
 //   v2 pages load (FE-51), plus the landing's first-paint graph and the
-//   shells `/` and `/?ui=v1` (#497), never MapLibre; its `v2` offline list resolves.
+//   shell `/` (#497), never MapLibre; its `v2` offline list resolves.
 // - The v2 pages stay within their gzipped JavaScript and CSS budgets
 //   (scripts/startup-budget.json "bundles"; FE-09, front-end design § 13).
-//   Usage: node scripts/check_client.mjs [client-dir] [source-dir] [budget-file]
 import {readdir, readFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {MANIFEST, STABLE} from './client-build.mjs';
 import {installAssets, SHELLS} from './precache.mjs';
-import {bootPreloadRoots} from './vite-preload.mjs';
 
 const dir = process.argv[2] || 'dist/client';
-const source = process.argv[3] || join(dir, '..');
 const budgetFile = process.argv[4] || new URL('./startup-budget.json', import.meta.url).pathname;
 const problems = [];
 const exists = path => readFile(join(dir, path)).then(() => true, () => false);
@@ -54,7 +50,7 @@ const top = (await readdir(dir, {withFileTypes: true})).filter(e => e.isFile()).
 const pages = top.filter(n => n.endsWith('.html'));
 for (const name of top.filter(n => /\.(?:js|css)$/.test(n) && !STABLE.has(n))) problems.push(`${name} (unbundled script or stylesheet at the site root)`);
 for (const name of pages) if (!build || !name.endsWith(`.${build}.html`)) problems.push(`${name} (page not named NAME.<build>.html)`);
-if (!pages.some(n => n.startsWith('index.'))) problems.push('index page missing');
+for (const name of ['landing', 'app']) if (!pages.some(n => n.startsWith(`${name}.`))) problems.push(`${name} page missing`);
 
 // 3. Every page reference resolves; scripts and styles are hashed or vendored with SRI.
 const attr = (tag, name) => tag.match(new RegExp(`\\s${name}\\s*=\\s*"([^"]*)"`))?.[1];
@@ -93,30 +89,11 @@ for (const file of assets.filter(n => n.endsWith('.js'))) {
   }
 }
 
-// 5. The index page preloads the boot chain and everything it imports statically.
-const index = pages.find(n => n.startsWith('index.'));
-if (index && Object.keys(manifest).length) {
-  const html = await readFile(join(dir, index), 'utf8');
-  const preloaded = new Set([...html.matchAll(/<link\b[^>]*rel="modulepreload"[^>]*>/g)].map(([tag]) => clean(attr(tag, 'href') || '')));
-  const entry = manifest['index.html'];
-  const bootSource = await readFile(join(source, 'boot.js'), 'utf8').catch(() => '');
-  if (!bootSource) problems.push(`${join(source, 'boot.js')} not found (pass the source directory as the second argument)`);
-  const expected = new Set();
-  const walk = key => { const e = manifest[key]; if (!e || expected.has(e.file)) return; expected.add(e.file); (e.imports || []).forEach(walk); };
-  for (const root of bootPreloadRoots(bootSource)) {
-    if (!manifest[root]) problems.push(`boot.js imports ./${root}, which is not in the manifest`);
-    walk(root);
-  }
-  (entry?.imports || []).forEach(walk);
-  for (const file of expected) if (file !== entry?.file && !preloaded.has(file)) problems.push(`${index} does not modulepreload ${file}`);
-  for (const file of preloaded) if (!HASHED.test(file)) problems.push(`${index} preloads ${file} (not hashed)`);
-}
-
-// 6. Stable service worker and the precache list.
+// 5. Stable service worker and the precache list.
 if (precache) {
   const listed = [...(precache.assets || [])].sort();
   const expected = installAssets(manifest, assets.map(n => n.replace(/^assets\//, '')));
-  if (JSON.stringify(listed) !== JSON.stringify(expected)) problems.push('precache.json assets differ from the hashed scripts and styles the v1 pages can load plus the landing\'s first paint');
+  if (JSON.stringify(listed) !== JSON.stringify(expected)) problems.push('precache.json assets differ from the hashed scripts and styles the other pages can load plus the landing\'s first paint');
   for (const path of listed) if (!await exists(path.slice(1))) problems.push(`precache.json -> ${path} (missing)`);
   for (const path of listed) if (/maplibre/i.test(path)) problems.push(`precache.json installs ${path}; MapLibre is stored only in a v2 pack (FE-51)`);
   if (manifest['app.html'] && !precache.v2?.assets?.length) problems.push('precache.json lists no v2 offline shell');
@@ -129,7 +106,7 @@ if (precache) {
 }
 if (!(await readFile(join(dir, '.assetsignore'), 'utf8').catch(() => '')).includes('.vite')) problems.push('.assetsignore must keep .vite/ unpublished');
 
-// 7. v2 page budgets: the entry plus its static imports (what runs before first
+// 6. v2 page budgets: the entry plus its static imports (what runs before first
 // paint) and its stylesheets, gzipped; a page absent from this build is skipped.
 const budgets = JSON.parse(await readFile(budgetFile, 'utf8')).bundles || {};
 const gzipped = async file => gzipSync(await readFile(join(dir, file)), {level: 9}).length;
@@ -154,7 +131,7 @@ for (const [page, budget] of Object.entries(budgets)) {
   }
 }
 
-// 8. The v2 app loads three and the coast renderer only by dynamic import on the
+// 7. The v2 app loads three and the coast renderer only by dynamic import on the
 // first terrain choice (FE-71, front-end design § 3A.2): nothing the app entry
 // imports statically may come from three or packages/coast's renderer. Shared
 // chunks carry no `src` in the manifest, so each one is matched by its source

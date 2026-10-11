@@ -44,7 +44,7 @@ export async function initProtectedAreas(map, onChange) {
     }
   } catch { /* Without a boundary dataset, fail closed for target layers. */ }
   draw();
-  // Leaflet reprojects existing paths itself. Rebuild only when the boundary data changes.
+  // The map reprojects existing paths itself. Rebuild only when the boundary data changes.
   const revision=()=>`${checked}|${extraChecked}|${freshEnough()}`;
   const allowedGeometry=revisionCache(revision,g=>![...data.features,...(extra?.features||[])].some(f=>geometryIntersects(g,f.geometry)));
   const screen={

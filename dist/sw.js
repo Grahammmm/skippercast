@@ -1,24 +1,22 @@
 // SkipperCast service worker: trip-alert notifications and the offline trip pack.
 //
-// A classic script, not a module: trip-alerts.js and offline.js register the
+// A classic script, not a module: trip-alerts.js and offline-pack.js register the
 // same stable '/sw.js' without {type:'module'} (the type is part of a
 // registration, and classic workers run on every browser that has web push).
 // The logic is plain top-level functions so tests/test_sw.mjs loads this exact
 // file in node:vm with a fake `self`, rather than testing an exported copy.
 //
 // Caches (Cache Storage; nothing here uses localStorage):
-//   sc-shell-<build>  the shells '/' and '/?ui=v1' and this build's fingerprinted
-//                     assets, listed by the build in /precache.json. '/' is
-//                     whichever page the UI_V2 switch serves there (the v1 shell,
-//                     or the landing, whose first paint is listed too: #497);
-//                     '/?ui=v1' keeps the v1 shell offline while the switch
-//                     exists. Older builds are deleted on activate.
+//   sc-shell-<build>  the shell '/' (the landing, whose first paint is listed
+//                     too: #497) and this build's fingerprinted assets, listed
+//                     by the build in /precache.json. Older builds are deleted
+//                     on activate.
 //   sc-data           the latest public data responses seen online (bounded).
 //   sc-pack-<region>  an explicit "Save for offline" trip pack (offline-pack.js).
 //                     A pack saved from the v2 app (web/trip.ts, FE-51) also
 //                     holds that app's page, its hashed files and the basemap
 //                     byte ranges for the region at zoom 8–12; they answer
-//                     only when the network fails, never for v1 pages.
+//                     only when the network fails.
 // Data is network-first. A response answered from a cache always carries
 // X-SC-Offline: <saved-at ISO> and the page is told, so saved data is never
 // shown as if it were live.
@@ -49,8 +47,6 @@ const DATA_HOSTS = new Set(['api.tidesandcurrents.noaa.gov', 'api.weather.gov'])
 const FINGERPRINTED = /\.[0-9a-f]{10}\.(?:js|css)$/;
 // FE-51: the v2 app's page as a pack saves it, and its basemap archive (offline-core.js BASEMAP_ARCHIVE).
 const V2_SHELL = '/map';
-// #497: the v1 shell's key once '/' may be the landing; /index.html is always the v1 shell.
-const V1_SHELL = '/?ui=v1';
 const BASEMAP_ARCHIVE = /^\/feeds\/tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
 
 /** Which strategy answers this request, or null to leave it to the network. */
@@ -76,7 +72,7 @@ function routeFor(request, origin) {
 
 /**
  * Stable cache key for a WMS tile of the ENC chart: layer set, tile size and
- * Web Mercator tile index. Leaflet and offline-pack.js write the GetMap query
+ * Web Mercator tile index. A WMS tile layer and offline-pack.js write the GetMap query
  * differently (parameter order, float digits), so neither URL is the key.
  * Null for anything that is not a square EPSG:3857 tile on the tile grid.
  */
@@ -165,7 +161,7 @@ async function trimCache(name, limit) {
   for (const key of keys.slice(0, Math.max(0, keys.length - limit))) await cache.delete(key);
 }
 
-// Per page (client id): the oldest saved-at it has been shown. offline.js asks
+// Per page (client id): the oldest saved-at it has been shown. offline-pack.js asks
 // for it once it loads, because messages sent before it listens are lost.
 const servedFromCache = new Map();
 async function tellClient(clientId, savedAt, url) {
@@ -233,13 +229,11 @@ async function shell(event) {
   try {
     return await fetch(event.request);
   } catch (error) {
-    const url = new URL(event.request.url), path = url.pathname;
+    const path = new URL(event.request.url).pathname;
     // The v2 app opens offline only from a pack that saved it (FE-51).
     if (path === V2_SHELL) return fromPack(event.request, error, self.location.origin + V2_SHELL);
     if (!/^\/(?:index\.html)?$/.test(path)) throw error;
-    const cache = await caches.open(SHELL_CACHE);
-    const v1 = path === '/index.html' || url.searchParams.get('ui') === 'v1';
-    const saved = await cache.match(v1 ? V1_SHELL : '/');
+    const saved = await (await caches.open(SHELL_CACHE)).match('/');
     if (!saved) throw error;
     return saved;
   }
@@ -323,7 +317,7 @@ async function shellReady() {
 
 async function install() {
   // Push must keep working even if the precache cannot be fetched right now, so a
-  // failed precache does not fail the install; offline.js asks again on the next load.
+  // failed precache does not fail the install; offline-pack.js asks again on the next load.
   try { await precacheShell(); } catch (error) { console.warn('SkipperCast offline shell not stored:', error?.message || error); }
 }
 

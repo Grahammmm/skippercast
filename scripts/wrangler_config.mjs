@@ -121,9 +121,8 @@ function pickVars(names, environ = {}) {
 export function fleetVars(environ = {}) { return pickVars(FLEET_VARS, environ); }
 
 // FE-01: the front-end rebuild's switch (docs/plans/front-end/design.md § 14), no
-// bindings, an allowlist like the fleet's. "true" serves the v2 landing at / and the
-// app at /map (server/routes/assets.ts uiV2); unset means the default in
-// deployments/production.json (off); ?ui=v2 previews per request either way.
+// bindings, an allowlist like the fleet's. FE-61 removed the v1 shell, and the Worker
+// no longer reads UI_V2; it is still copied while the deploy workflow passes it.
 export const UI_VARS = ['UI_V2'];
 
 /** The front-end rebuild's plain vars from an environment: UI_VARS only, non-empty only. */

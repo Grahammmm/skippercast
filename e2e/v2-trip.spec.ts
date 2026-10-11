@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
 import {readFile} from 'node:fs/promises';
 import type {Page} from '@playwright/test';
-import {test, expect, openMap} from './fixtures.ts';
+import {test, expect} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const AREA = {region: 'morro-bay', presentation: 'chart'};
@@ -147,21 +147,15 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   expect(pageErrors).toEqual([]);
 });
 
-test('the same ranked selection downloads the same GPX bytes from v2 and v1', async ({page, pageErrors, v2, isMobile}) => {
+// FE-61: v1's planner, which this compared byte for byte, is gone; the v2 file keeps v1's 20 ranked reef spots.
+test('the ranked selection downloads a GPX of the 20 ranked reef spots', async ({page, pageErrors, v2, isMobile}) => {
   const reefs = await rankedReefs(page);
   await v2.open('app', AREA);
   await openPlan(page, isMobile);
   await rankBest(page, reefs.gate);
   const fromV2 = await download(page);
-  // v1 reads the same draft (one per region in this browser), restores it, and ranks the same reefs again.
-  await openMap(page, '/?ui=v1&region=morro-bay#export');
-  await expect(page.locator('#export-scope-status')).toContainText('Saved ranked reefs restored');
-  await page.locator('#export-best').click();
-  await expect(page.locator('#export-scope-status')).toContainText('20 distinct reef spots');
-  const fromV1 = await download(page);
-  const created = /<time>[^<]+<\/time>/;
-  expect(fromV2).toMatch(created);
-  expect(fromV2.replace(created, '')).toBe(fromV1.replace(created, ''));
+  expect(fromV2).toMatch(/<time>[^<]+<\/time>/);
+  expect(fromV2.match(/<wpt\b/g)?.length).toBe(20);
   expect(pageErrors).toEqual([]);
 });
 

@@ -178,7 +178,7 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.match(head, /href="\/map\?region=morro-bay&amp;view=fleet&amp;ui=v2">Fleet</);
   assert.match(head, /href="\/map\?region=morro-bay&amp;view=reports&amp;ui=v2">Reports</);
   assert.match(head, /href="\/sources">How it’s built</); // served by shellFor (#475, tests/test_worker_routes.mjs)
-  assert.match(head, /href="\/\?ui=v1#account">Sign in</);
+  assert.match(head, /href="\/map#account">Sign in</, 'FE-61: the app opens the account dialog (web/account.ts)');
   assert.equal(NAV.length, 3);
   const app = render(h(LandingApp, {href: 'https://s.test/?ui=v2', navigate: () => {}, load: false}));
   assert.deepEqual([...app.matchAll(/data-profile="([a-z]+)"[^>]*>.*?<\/svg>([A-Za-z]+)<\/button>/g)].map(m => [m[1], m[2]]), [['boat', 'Boat'], ['shore', 'Shore'], ['spear', 'Spear'], ['kayak', 'Kayak']]);

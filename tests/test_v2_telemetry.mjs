@@ -1,5 +1,5 @@
-// The v2 pages start the same cookie-less telemetry as v1's dist/boot.js
-// (web/telemetry.ts; docs/engineering/telemetry.md), and the funnel events
+// The v2 pages start the cookie-less telemetry (web/telemetry.ts;
+// docs/engineering/telemetry.md) that v1's dist/boot.js started until FE-61, and the funnel events
 // they can send are exactly the ones the privacy notice
 // (dist/privacy.html#analytics), the telemetry doc and the CHANGELOG name.
 // The event set is found by following every relative static and dynamic
@@ -46,12 +46,6 @@ function reach(entry) {
   return {files: seen.size, events: [...events].sort(), dynamic};
 }
 
-test('v1 boot.js starts telemetry with a top-level initTelemetry() call (the pattern v2 follows)', () => {
-  const boot = source('dist/boot.js');
-  assert.match(boot, IMPORT);
-  assert.equal(boot.match(CALL)?.length, 1);
-});
-
 for (const entry of Object.keys(V2_EVENTS)) {
   test(`${entry} starts telemetry once, before it renders`, () => {
     const code = source(entry);
@@ -75,7 +69,7 @@ for (const entry of Object.keys(V2_EVENTS)) {
 test('the privacy notice, telemetry doc and CHANGELOG name every v2 event', () => {
   const all = [...new Set(Object.values(V2_EVENTS).flat())];
   const notice = source('dist/privacy.html'), doc = source('docs/engineering/telemetry.md');
-  const v2Notice = /The new\s+map\s+sends ([^.]+)\./.exec(notice)?.[1] ?? '';
+  const v2Notice = /The map\s+sends ([^.]+)\./.exec(notice)?.[1] ?? '';
   const v2Doc = /The v2 pages[^\n]+/.exec(doc)?.[0] ?? '';
   const changelog = source('CHANGELOG.md').split(/^## /m)[1].split('\n').find(line => line.includes('anonymous usage statistics')) ?? '';
   for (const event of all) {
@@ -83,5 +77,7 @@ test('the privacy notice, telemetry doc and CHANGELOG name every v2 event', () =
     assert.match(v2Doc, new RegExp(`\`${event}\``), `doc: ${event}`);
     assert.match(changelog, new RegExp(`\`${event}\``), `CHANGELOG: ${event}`);
   }
-  assert.match(notice, /new home page\s+sends error reports only/);
+  assert.match(notice, /The home page\s+sends error reports only/);
+  // FE-61: v1's map was the only sender of these; the notice no longer lists them.
+  for (const gone of ['map_viewed', 'forecast_viewed', 'install']) assert.doesNotMatch(notice, new RegExp(`<code>${gone}</code>`), gone);
 });

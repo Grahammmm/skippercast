@@ -8,8 +8,6 @@ import {
   trackCardHTML, heatCardHTML, filterOptions, readFilters, fleetAccess, fetchLayer, statusText, visibleFeatures, featureArea,
 } from '../dist/fleet-activity.js';
 
-const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
-const app = readFileSync(new URL('../dist/app.js', import.meta.url), 'utf8');
 const source = readFileSync(new URL('../dist/fleet-activity.js', import.meta.url), 'utf8');
 
 const event = (over = {}) => ({type: 'Feature', id: 'e1', geometry: {type: 'Point', coordinates: [-120.95, 35.3]}, properties: {
@@ -30,26 +28,6 @@ const page = (features, meta = {}) => ({type: 'FeatureCollection', features, met
 const reply = (status, body) => ({ok: status >= 200 && status < 300, status, json: async () => body});
 const FILTERS = {region: 'CA', vessels: [{id: 'v1', name: 'Sea <b>Example</b>'}], truncated: false, ports: ['morro-bay'], classes: ['six-pack'],
   trip_types: ['half-day'], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
-
-// ---- Toggles: shipped hidden, inside one admin section ----
-
-test('index.html ships the three toggles hidden inside the admin-only fleet section', () => {
-  const section = html.match(/<details id="fleet-layers"[^>]*>[\s\S]*?<\/form>/)?.[0];
-  assert.ok(section, 'fleet section present');
-  assert.match(section, /^<details id="fleet-layers" class="fleet-layers" hidden>/);
-  for (const name of LAYERS) {
-    assert.equal(html.split(`id="layer-fleet-${name}"`).length, 2, `one ${name} toggle`);
-    assert.ok(section.includes(`id="layer-fleet-${name}"`), `${name} toggle inside the hidden section`);
-  }
-  for (const name of ['vessel', 'port', 'class', 'trip_type', 'kind', 'from', 'to', 'season', 'season_part'])
-    assert.match(section, new RegExp(`name="${name}"`), `${name} filter`);
-});
-
-test('app.js wires the layer with the optional guard; plain module names only', () => {
-  assert.match(app, /import \{ initFleetActivity \} from "\.\/fleet-activity\.js";/);
-  assert.match(app, /optional\("Fleet activity",\(\)=>initFleetActivity\(map,\{onSelect:\(html,area\)=>showAreaDetails\(html,area,"fleet-weather"\)/);
-  for (const text of [app, html, source]) assert.doesNotMatch(text, /fleet-activity[^"'\s]*-v\d+|fleet-activity\.js\?v=|modulepreload[^>]*fleet-activity/);
-});
 
 // ---- Access: admin and both flags, decided by the server ----
 
@@ -99,13 +77,14 @@ function dom() {
   const controls = Object.fromEntries(['vessel', 'port', 'class', 'trip_type', 'kind', 'from', 'to', 'season', 'season_part'].map(n => [n, {value: '', innerHTML: '', min: '', max: ''}]));
   const form = make('fleet-filters', {elements: controls});
   for (const id of ['fleet-activity-status', 'fleet-hide-planning', 'fleet-show', 'fleet-vessels-note', 'map-options']) make(id);
-  // Removing the section removes everything inside it (index.html nests them all).
+  // Removing the section removes everything inside it (the page nests them all).
   const inside = [...elements.keys()].filter(id => id !== 'map-options');
   section.remove = function () { this.removed = true; for (const id of inside) elements.delete(id); };
   return {elements, section, toggles, controls, form, get: id => elements.get(id)};
 }
 
-function leaflet() {
+/** A stand-in for the 2D map library's layer groups, circle markers and GeoJSON shapes. */
+function mapLibrary() {
   const drawn = {circles: [], shapes: []};
   const group = () => ({items: [], on: false, addTo() { this.on = true; return this; }, clearLayers() { this.items = []; }});
   const item = (kind, args) => ({kind, args, handlers: {}, on(name, fn) { this.handlers[name] = fn; return this; }, bindTooltip(t) { this.tooltip = t; return this; },
@@ -119,7 +98,7 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
 async function start(t, fetcher) {
   const {initFleetActivity} = await import('../dist/fleet-activity.js');
-  const d = dom(), {drawn, L} = leaflet();
+  const d = dom(), {drawn, L} = mapLibrary();
   const saved = {document: globalThis.document, L: globalThis.L};
   t.after(() => { for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete globalThis[k]; else globalThis[k] = v; } });
   globalThis.document = {getElementById: id => d.get(id)};

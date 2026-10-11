@@ -3,11 +3,10 @@
 // names (scripts/fingerprint.mjs). Stable page paths resolve here, uncached.
 import {Hono} from 'hono';
 import type {Context, Handler} from 'hono';
-import {deployment} from '../config.ts';
-import type {AppEnv, Env} from '../env.ts';
+import type {AppEnv} from '../env.ts';
 
-// FE-01: the front-end rebuild's pages, served only behind the UI_V2 switch
-// (docs/plans/front-end/design.md § 14) until FE-60 turns it on by default.
+// The v2 pages. FE-61 removed the v1 shell and the UI_V2 / `?ui=` switch: `/`
+// is the landing, or the app when the link names an area, and `/map` is the app.
 export const V2_SHELLS = Object.freeze({landing: '/landing.html', app: '/app.html'});
 /**
  * Parameters that name an area: with one of them `/` serves the app, so every shared
@@ -17,47 +16,27 @@ export const V2_SHELLS = Object.freeze({landing: '/landing.html', app: '/app.htm
 export const AREA_PARAMS: readonly string[] = Object.freeze(['region', 'coast', 'view', 'spot', 'target', 'focus', 'place', 'mode', 'species', 'presentation', 'habitat', 'current']);
 
 /**
- * FE-78: with v2 on, `/coast` is the app at the 3D terrain presentation. The
- * standalone page's link (query kept, so `?ui=v2` and Fish keys carry over) moves
- * to `/map` with `presentation=3d` unless the link names one. `null`: `/coast`
- * still serves coast.html.
+ * FE-78: `/coast` is the app at the 3D terrain presentation. The old standalone
+ * page's link (also bookmarked as `/coast.html`) (query kept, so Fish keys carry over) moves to `/map` with
+ * `presentation=3d` unless the link names one.
  */
-export function coastRedirect(search: URLSearchParams, env: Pick<Env, 'UI_V2'>): string | null {
-  if (!uiV2(env, search)) return null;
+export function coastRedirect(search: URLSearchParams): string {
   const query = new URLSearchParams(search);
   if (!query.has('presentation')) query.set('presentation', '3d');
   return `/map?${query}`;
 }
 
 /**
- * Whether the request gets the v2 shell. `?ui=v2` and `?ui=v1` win (a shareable
- * preview; never a cookie, so the choice never persists silently), then the
- * UI_V2 Worker var ("true" or "false", any case; anything else keeps the
- * default, like the fleet flags), then deployments/production.json `ui_v2` (off).
+ * The SHELLS key that answers `path`, if it is a page path: `/` (and the old v1
+ * shell's `/index.html`) is the landing, or the app when an area parameter is
+ * present, and `/map` is the app. `undefined`: not a page path this function decides.
  */
-export function uiV2(env: Pick<Env, 'UI_V2'>, search: URLSearchParams): boolean {
-  const choice = search.get('ui');
-  if (choice === 'v2') return true;
-  if (choice === 'v1') return false;
-  const v = typeof env.UI_V2 === 'string' ? env.UI_V2.trim().toLowerCase() : '';
-  return v === 'true' ? true : v === 'false' ? false : deployment.ui_v2 === true;
-}
-
-/**
- * The SHELLS key that answers `path`, if it is a page path: with v2 off, `/` is
- * the v1 shell exactly as before and the v2-only paths answer `null` (404);
- * with v2 on, `/` is the landing, or the app when an area parameter is present,
- * and `/map` is the app. `undefined`: not a page path this function decides.
- */
-export function shellFor(path: string, search: URLSearchParams, env: Pick<Env, 'UI_V2'>): string | null | undefined {
-  if(path === '/coast') return '/coast.html';
+export function shellFor(path: string, search: URLSearchParams): string | undefined {
   if(path === '/privacy') return '/privacy.html'; // Fish compatibility uses the complete existing notice.
   if(path === '/sources') return '/sources.html'; // #475: the canonical sources page (open-questions Q16).
-  const v2Only = path === '/map' || path === V2_SHELLS.landing || path === V2_SHELLS.app;
-  if (path !== '/' && !v2Only) return undefined;
-  if (!uiV2(env, search)) return v2Only ? null : '/';
-  if (path === '/') return AREA_PARAMS.some(name => search.has(name)) ? V2_SHELLS.app : V2_SHELLS.landing;
-  return path === '/map' ? V2_SHELLS.app : path;
+  if (path === '/' || path === '/index.html') return AREA_PARAMS.some(name => search.has(name)) ? V2_SHELLS.app : V2_SHELLS.landing;
+  if (path === '/map') return V2_SHELLS.app;
+  return path === V2_SHELLS.landing || path === V2_SHELLS.app ? path : undefined;
 }
 
 export const serveAsset: Handler<AppEnv> = async c => {
@@ -69,12 +48,10 @@ export const serveAsset: Handler<AppEnv> = async c => {
     fresh.headers.set('Cache-Control', 'no-cache'); return fresh;
   }
   const search = new URL(request.url).searchParams;
-  const coast = c.var.path === '/coast' ? coastRedirect(search, c.env ?? {}) : null;
-  if (coast) return new Response(null, {status: 302, headers: {Location: coast, 'Cache-Control': 'no-store'}});
+  if (c.var.path === '/coast' || c.var.path === '/coast.html') return new Response(null, {status: 302, headers: {Location: coastRedirect(search), 'Cache-Control': 'no-store'}});
   // #475: the page's links are relative, so /sources/ moves to /sources rather than serving the shell there.
   if (c.var.path === '/sources/') return new Response(null, {status: 301, headers: {Location: `/sources${new URL(request.url).search}`, 'Cache-Control': 'no-store'}});
-  const page = shellFor(c.var.path, search, c.env ?? {});
-  if (page === null) return new Response('Not found', {status: 404});
+  const page = shellFor(c.var.path, search);
   // A page path stays no-store even if the build's SHELLS lacks it: fetch the page itself.
   const current = SHELLS[page ?? c.var.path] ?? page;
   if (!current) return assets.fetch(request);

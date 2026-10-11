@@ -98,13 +98,11 @@ test('install help: browser prompt when offered, Share hint on iOS Safari, nothi
   assert.equal(installHint({standalone: false, promptAvailable: true, userAgent: android, dismissed: {prompt: '2026-09-01'}}), null);
 });
 
-test('every page visit registers the stable /sw.js, and the Guide hosts the trip pack', () => {
-  const html = read('../dist/index.html'), offline = read('../dist/offline.js');
-  assert.match(html, /<script type="module" src="offline\.js"><\/script>/);
-  assert.match(html, /<link rel="stylesheet" href="offline\.css"\/>/);
-  assert.match(html, /id="offline-pack"/);
-  assert.match(offline, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
-  assert.doesNotMatch(offline, /type:\s*'module'/, 'the worker is classic; trip-alerts.js registers it the same way');
+// FE-61: v1's offline.js registered the worker on every visit; v2 registers it once something is saved (FE-51).
+test('the app registers the stable, classic /sw.js, as trip-alerts.js does', () => {
+  const trip = read('../web/trip.ts');
+  assert.match(trip, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
+  assert.doesNotMatch(trip, /register\('\/sw\.js',/, 'the worker is classic; trip-alerts.js registers it the same way');
   assert.match(read('../dist/trip-alerts.js'), /register\('\/sw\.js'\)/);
 });
 

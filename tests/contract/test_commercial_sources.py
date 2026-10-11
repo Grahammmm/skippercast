@@ -140,7 +140,7 @@ KNOWN_BLOCKERS = {
         'data/charter-grounds.json', 'data/daily-evidence.json',
     }),
     'osm-tiles': (REGISTER_ROW + 'b6--openstreetmap-tile-service', '2026-09-28', {
-        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js', 'runtime:server/security-headers.ts',
+        'runtime:dist/chart-map.js', 'runtime:server/security-headers.ts',
     }),
 }
 

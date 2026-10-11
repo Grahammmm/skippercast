@@ -1,9 +1,9 @@
 // Service-worker precache manifest for one build.
 //
 // After the Vite build, dist/client/precache.json lists what the offline shell
-// needs: the stable app shell '/', every hashed script and stylesheet of this
+// needs: the stable shell '/', every hashed script and stylesheet of this
 // build (dist/client/assets/), and the few unhashed static files the shell
-// loads (vendored Leaflet, icons, the web manifest). The worker (dist/sw.js) fetches it at
+// loads (icons, the web manifest). The worker (dist/sw.js) fetches it at
 // install, so no hashed name is ever hard-coded in sw.js. Fingerprinted pages
 // are not listed: the Worker serves them only from their stable paths.
 // The build id is written into sw.js so every deploy installs a new worker.
@@ -18,25 +18,22 @@
 // visit registered it) still adds each hashed file it loads to the build's
 // shell cache at run time (sw.js cacheFirst), as every page does.
 //
-// #497 (FE-60 prerequisite): `/` answers the v1 shell or the landing depending
-// on the runtime UI_V2 switch, which a build cannot know (and a rollback flips
-// without a rebuild). So the install list also holds the landing's first-paint
-// graph (its static imports, styles and fonts; about 105 KB gzipped, not the
-// night map, which loads MapLibre by dynamic import and leaves the static
-// shoreline in place when that fails), and `shells` adds `/?ui=v1`, the v1
-// shell for the release that keeps the switch. The app at /map stays out: it
-// opens offline only from a pack saved from it.
+// #497: `/` is the landing, so the install list also holds the landing's
+// first-paint graph (its static imports, styles and fonts; about 105 KB
+// gzipped, not the night map, which loads MapLibre by dynamic import and leaves
+// the static shoreline in place when that fails). FE-61 dropped the v1 shell
+// and its `/?ui=v1` key with the switch. The app at /map stays out: it opens
+// offline only from a pack saved from it.
 import {readdir, readFile, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 
 export const FINGERPRINTED = /\.[0-9a-f]{10}\.(?:js|css)$/;
 const STATIC = /^(?:app-icon[\w-]*\.(?:png|svg)|apple-touch-icon\.png|manifest\.webmanifest)$/;
-const VENDOR = ['vendor/leaflet.js', 'vendor/leaflet.css'];
 export const BUILD_PLACEHOLDER = "const BUILD = 'dev';";
 const HASHED = /\.[0-9a-f]{10}\.[a-z0-9]+$/;
 export const V2_PAGES = ['app.html', 'landing.html'];
 export const LANDING_PAGE = 'landing.html';
-export const SHELLS = ['/', '/?ui=v1'];
+export const SHELLS = ['/'];
 const OFFLINE_SKIP = new Set(['../web/map/terrain.js']);
 
 /** /assets/ paths of the hashed files `roots` load, statically or (unless `dynamic` is false) by dynamic import, skipping `skip`'s subtrees. */
@@ -67,15 +64,12 @@ export function landingShell(manifest) {
 /** The install list's hashed files: every script and style a non-v2 page can load, plus the landing's first paint. */
 export function installAssets(manifest, files) {
   const only = v2Only(manifest);
-  const v1 = files.filter(n => FINGERPRINTED.test(n)).map(n => `/assets/${n}`).filter(n => !only.has(n));
-  return [...new Set([...v1, ...landingShell(manifest)])].sort();
+  const shared = files.filter(n => FINGERPRINTED.test(n)).map(n => `/assets/${n}`).filter(n => !only.has(n));
+  return [...new Set([...shared, ...landingShell(manifest)])].sort();
 }
 
 export async function precacheManifest(dir, buildId) {
   const top = (await readdir(dir, {withFileTypes: true})).filter(e => e.isFile()).map(e => e.name).sort();
-  const images = await readdir(join(dir, 'vendor/images')).catch(() => []);
-  const vendor = [...VENDOR, ...images.sort().map(n => `vendor/images/${n}`)];
-  for (const path of vendor) await readFile(join(dir, path)); // fail the build if a listed file is missing
   const manifest = JSON.parse(await readFile(join(dir, '.vite/manifest.json'), 'utf8').catch(() => '{}'));
   const glyphs = await readdir(join(dir, 'basemap/glyphs'), {recursive: true}).catch(() => []);
   return {
@@ -83,7 +77,7 @@ export async function precacheManifest(dir, buildId) {
     build: buildId,
     shells: SHELLS,
     assets: installAssets(manifest, await readdir(join(dir, 'assets')).catch(() => [])),
-    static: [...top.filter(n => STATIC.test(n)), ...vendor].map(n => `/${n}`),
+    static: top.filter(n => STATIC.test(n)).map(n => `/${n}`),
     v2: {
       assets: [...reachable(manifest, ['app.html'], OFFLINE_SKIP)].sort(),
       static: glyphs.filter(n => n.endsWith('.pbf')).sort().map(n => `/basemap/glyphs/${n}`),

@@ -57,6 +57,11 @@ def check_page_references(path):
                 assert "if(path === '/privacy') return '/privacy.html';" in assets, (path, ref)
                 assert (WEB / "privacy.html").exists(), (path, ref)
                 continue
+            if navigation and url.path == "/map":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if (path === '/map') return V2_SHELLS.app;" in assets, (path, ref)
+                assert (WEB / "app.html").exists(), (path, ref)
+                continue
             if navigation and url.path == "/sources":
                 assets = (ROOT / "server/routes/assets.ts").read_text()
                 assert "if(path === '/sources') return '/sources.html';" in assets, (path, ref)
@@ -268,20 +273,24 @@ LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
 def check_legal_pages():
-    """Terms, privacy and licences exist, say they are drafts, and are reachable."""
+    """Terms, privacy and licences exist, say they are drafts, and are reachable.
+
+    FE-61: the v1 shell that linked them is gone; the landing's nav links the
+    sources page, and the sources page links all three.
+    """
     for name in LEGAL_PAGES:
         text = (WEB / name).read_text()
         assert "Draft — pending review by counsel" in text, name
         assert 'href="styles.css"' in text, name
-    for page in ("index.html", "sources.html"):
-        parser = AssetParser()
-        parser.feed((WEB / page).read_text())
-        missing = set(LEGAL_PAGES) - set(parser.refs)
-        assert not missing, (page, sorted(missing))
+    assert "href: '/sources'" in (ROOT / "web/landing/Landing.tsx").read_text(), "the landing links the sources page"
+    parser = AssetParser()
+    parser.feed((WEB / "sources.html").read_text())
+    missing = set(LEGAL_PAGES) - set(parser.refs)
+    assert not missing, ("sources.html", sorted(missing))
 
 
 def main():
-    assert (WEB / "index.html").is_file()
+    assert (WEB / "landing.html").is_file() and (WEB / "app.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
     sinks = markup_sinks()
