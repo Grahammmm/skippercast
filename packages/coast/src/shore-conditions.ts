@@ -32,11 +32,13 @@ export const SHORE = {
      */
     nearshore: {small: 3, moderate: 5, large: 8},
     /**
-     * Offshore estimate: the regional forecast's combined seas. Exposed
-     * beaches can see more than the offshore number and sheltered ones less,
-     * so the bands are set lower to stay conservative.
+     * Offshore estimate: the regional forecast's combined seas, always
+     * labelled "offshore estimate". Offshore seas overstate the surf at
+     * sheltered beaches and understate it at exposed ones, so no single scale
+     * fits; these sit a little above the nearshore bands so that typical
+     * Central Coast seas (4 to 7 ft) read Moderate to Large, not always Heavy.
      */
-    offshore: {small: 2, moderate: 4, large: 6},
+    offshore: {small: 3, moderate: 6, large: 9},
   },
   /**
    * Long-period swell carries more energy for its height and arrives in sets
@@ -50,14 +52,35 @@ export const SHORE = {
     light: {wind: 10, gust: 15},
     breezy: {wind: 15, gust: 22},
     /**
-     * Onshore: wind blowing from within `onshoreDeg` of the seaward bearing
-     * (from the land point toward the water point of the area); offshore:
+     * Onshore: wind blowing from within `onshoreDeg` of the shoreline's
+     * seaward bearing (`seawardDeg` below); offshore:
      * from within `offshoreDeg` of the landward bearing. Between them is
      * cross-shore. Onshore wind builds chop on the surf and blows line and
      * spray back at the angler, so a Breezy or Strong onshore hour scores worse.
      */
     onshoreDeg: 60,
     offshoreDeg: 60,
+    /**
+     * Vetted seaward bearings (degrees true, the direction the beach faces),
+     * keyed by county id then area id. Each is the approximate orientation of
+     * the coastline read from a chart (NOAA chart 18700), not a survey, and
+     * holds only for the open beaches of that stretch. An area missing here
+     * gets no wind side: speed only, and the brief says so. The area's
+     * forecast point and NWS lookup point (lat/lon, landLat/landLon) are not
+     * a shoreline direction and are never used for this.
+     */
+    seawardDeg: {
+      slo: {
+        // Morro Strand and the beaches either side of Morro Rock run roughly
+        // north-south and face a little south of west.
+        central: 260,
+        // Cambria to San Simeon the coast runs northwest-southeast, so the
+        // beaches face southwest; a northwest wind blows along the shore.
+        north: 230,
+        // south omitted: Avila faces south and Pismo faces west, so one
+        // bearing would be wrong for half the area.
+      },
+    } as Readonly<Record<string, Readonly<Record<string, number>>>>,
   },
   tide: {
     /**
@@ -118,7 +141,8 @@ export function sneakerScore(periodS: number | null): number {
 /**
  * Surf at one hour. A fresh nearshore model sample wins; otherwise the
  * offshore forecast's combined seas are an estimate against the lower
- * offshore bands. The long-period check reads every component with enough height.
+ * offshore bands. The long-period check reads every component with enough
+ * height, including the offshore swell partition on the nearshore path.
  */
 export function surf(hour: ForecastHour | undefined, near?: NearshoreHour): Surf {
   const {minFt} = SHORE.sneaker;
@@ -131,7 +155,9 @@ export function surf(hour: ForecastHour | undefined, near?: NearshoreHour): Surf
     return {band: b, heightFt, periodS, basis, longPeriodS, sneaker: score > 0, sneakerScore: score};
   };
   if (near && finite(near.waveFt) && near.waveFt >= 0) {
-    return done(band(near.waveFt, 'nearshore'), near.waveFt, finite(near.periodS) ? near.periodS : null, 'nearshore', longest([[near.waveFt, near.periodS]]));
+    // The nearshore peak period can be a short local sea while a long-period
+    // swell runs underneath; the offshore swell partition still raises the caution.
+    return done(band(near.waveFt, 'nearshore'), near.waveFt, finite(near.periodS) ? near.periodS : null, 'nearshore', longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]]));
   }
   const height = finite(hour?.waveFt) && hour.waveFt >= 0 ? hour.waveFt : null;
   if (height === null) return done('Unknown', null, null, null, longest([[hour?.swellFt, hour?.swellPeriodS]]));
@@ -139,16 +165,12 @@ export function surf(hour: ForecastHour | undefined, near?: NearshoreHour): Surf
   return done(band(height, 'offshore'), height, period, 'offshore', longest([[hour?.waveFt, hour?.wavePeriodS], [hour?.swellFt, hour?.swellPeriodS]]));
 }
 
-/** Bearing in degrees true from one point to another. */
-export function bearing(fromLat: number, fromLon: number, toLat: number, toLon: number): number | null {
-  if (![fromLat, fromLon, toLat, toLon].every(finite) || (fromLat === toLat && fromLon === toLon)) return null;
-  const rad = Math.PI / 180, p1 = fromLat * rad, p2 = toLat * rad, dl = (toLon - fromLon) * rad;
-  const deg = Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / rad;
-  return (deg + 360) % 360;
+/** The vetted seaward bearing for a county's area (SHORE.wind.seawardDeg), or null when that stretch has none. */
+export function seaward(countyId: string | undefined, areaId: string | undefined): number | null {
+  // finite() also rejects inherited keys such as "constructor".
+  const value = countyId && areaId ? SHORE.wind.seawardDeg[countyId]?.[areaId] : undefined;
+  return finite(value) ? value : null;
 }
-
-/** The area's seaward bearing, from its land point toward its water point; null when they coincide. */
-export const seaward = (area: Pick<Area, 'lat' | 'lon' | 'landLat' | 'landLon'>): number | null => bearing(area.landLat, area.landLon, area.lat, area.lon);
 
 const angle = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
 
@@ -224,7 +246,9 @@ export function shoreVerdict(s: Surf, w: ShoreWind, t: Tide, twilight: boolean):
 export type ShoreInputs = {
   hours: readonly ForecastHour[];
   site: NearshoreSite | undefined;
-  area: Pick<Area, 'lat' | 'lon' | 'landLat' | 'landLon'>;
+  /** The county and area ids that key SHORE.wind.seawardDeg; a regional place has none. */
+  countyId?: string;
+  area: Pick<Area, 'id'>;
   tideEvents: readonly TideEvent[];
   tides: readonly TidePoint[];
   sunrise: string | null;
@@ -233,7 +257,7 @@ export type ShoreInputs = {
 
 /** The shore reading for each forecast hour. */
 export function shoreHours(input: ShoreInputs): ShoreHour[] {
-  const sea = seaward(input.area);
+  const sea = seaward(input.countyId, input.area.id);
   return input.hours.map(hour => {
     const at = Date.parse(hour.at);
     const s = surf(hour, input.site ? nearshoreAt(input.site, hour.at) : undefined);
@@ -259,7 +283,9 @@ export type ShoreDay = {
   sneakerPeriodS: number | null;
   /** The calmest daylight hour that is not Rough, earliest first on a tie. */
   best: ShoreHour | null;
-  /** True when wind direction or shoreline bearing is missing for some hour, so wind was judged on speed only. */
+  /** False when this stretch of coast has no vetted seaward bearing: every hour's wind is speed only. */
+  bearingKnown: boolean;
+  /** True when the bearing is known but the forecast gives no wind direction for some hour, so that hour's wind is speed only. */
   windSpeedOnly: boolean;
   /** True when no hour has a tide phase. */
   tideUnknown: boolean;
@@ -268,7 +294,7 @@ export type ShoreDay = {
 };
 
 /** Roll the hours up for the day, over daylight when sunrise and sunset are known. */
-export function shoreDay(hours: ShoreHour[], sunrise: string | null, sunset: string | null): ShoreDay {
+export function shoreDay(hours: ShoreHour[], sunrise: string | null, sunset: string | null, seawardDeg: number | null): ShoreDay {
   const rise = sunrise ? Date.parse(sunrise) : NaN, set = sunset ? Date.parse(sunset) : NaN;
   const lit = Number.isFinite(rise) && Number.isFinite(set) ? hours.filter(h => {const t = Date.parse(h.at); return t >= rise && t + HOUR <= set;}) : hours;
   const scope = lit.length ? lit : hours;
@@ -281,8 +307,8 @@ export function shoreDay(hours: ShoreHour[], sunrise: string | null, sunset: str
   const sneakers = scope.filter(h => h.surf.sneaker).map(h => h.surf.longPeriodS as number);
   const best = scope.filter(h => h.verdict === 'Calmer' || h.verdict === 'Marginal')
     .sort((a, b) => (a.score as number) - (b.score as number) || Date.parse(a.at) - Date.parse(b.at))[0] ?? null;
-  return {hours, surf: surfRange, basis, sneakerPeriodS: sneakers.length ? Math.max(...sneakers) : null, best,
-    windSpeedOnly: scope.some(h => h.wind.band !== 'Unknown' && h.wind.side === null),
+  return {hours, surf: surfRange, basis, sneakerPeriodS: sneakers.length ? Math.max(...sneakers) : null, best, bearingKnown: seawardDeg !== null,
+    windSpeedOnly: seawardDeg !== null && scope.some(h => h.wind.band !== 'Unknown' && h.wind.side === null),
     tideUnknown: !scope.some(h => h.tide.phase !== null), veryLow: scope.filter(h => h.tide.veryLow)};
 }
 

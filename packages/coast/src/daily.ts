@@ -3,7 +3,7 @@ import {assess, freshForecast, freshObservation} from './assessment.ts';
 import type {Alert, Area, County, ForecastHour, Mode, Observation, Report, TideEvent, TidePoint, Window} from './types.ts';
 import {freshNearshore, nearshoreAt} from './nearshore.ts';
 import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay} from './spear.ts';
-import {shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay} from './shore-conditions.ts';
+import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay} from './shore-conditions.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
@@ -137,10 +137,11 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  if(mode==='boat')missing.push('Harbor entrance and full return route need a separate check');
  if(mode==='shore')missing.push('Breaking surf, beach access and water quality need a local check');
  const astronomy=astro(date,county,area);
- const shore=mode==='shore'?shoreDay(shoreHours({hours,site,area,tideEvents:report.tideEvents,tides:report.tides,sunrise:astronomy.sunrise,sunset:astronomy.sunset}),astronomy.sunrise,astronomy.sunset):null;
+ const shore=mode==='shore'?shoreDay(shoreHours({hours,site,countyId:county.id,area,tideEvents:report.tideEvents,tides:report.tides,sunrise:astronomy.sunrise,sunset:astronomy.sunset}),astronomy.sunrise,astronomy.sunset,seaward(county.id,area.id)):null;
  if(shore&&hours.length){
   if(shore.basis!=='nearshore')missing.push('Surf is an offshore estimate where no fresh nearshore model covers the hour');
-  if(shore.windSpeedOnly)missing.push('Onshore or offshore wind unknown for some hours (no wind direction or shoreline bearing); wind judged on speed only');
+  if(!shore.bearingKnown)missing.push('Wind side unknown for this stretch of coast; wind judged on speed only');
+  else if(shore.windSpeedOnly)missing.push('Onshore or offshore wind unknown for some hours (no wind direction); wind judged on speed only');
   if(shore.tideUnknown)missing.push('Tide phase unknown: high and low tide events unavailable');
  }
  const spear=mode==='spear'?spearDay(spearHours({hours,forecastHours:forecast?.hours??[],site,observations:report.observations.filter(observation=>observation.stationId===county.temperatureStationId),tideEvents:report.tideEvents,chlorophyll:report.chlorophyll??null}),astronomy.sunrise,astronomy.sunset):null;
@@ -188,7 +189,7 @@ function shoreSummary(shore:ShoreDay,siteName:string|null,tz:string,tideEvents:T
  const feet=textRange(scale(judged.map(hour=>hour.surf.heightFt)),'ft'),secs=textRange(scale(judged.map(hour=>hour.surf.periodS)),'s');
  if(shore.surf&&feet)parts.push(shore.basis==='nearshore'&&siteName?`Surf from the ${siteName} nearshore model: ${feet}${secs?` at ${secs}`:''}.`
   :shore.basis==='mixed'&&siteName?`Surf from the ${siteName} nearshore model and, where it does not cover the hour, an offshore estimate: ${feet}${secs?` at ${secs}`:''}.`
-  :`Surf is an offshore estimate, judged against lower limits: ${feet} offshore seas${secs?` at ${secs}`:''}. Exposed beaches can see more.`);
+  :`Surf is an offshore estimate: ${feet} offshore seas${secs?` at ${secs}`:''}. Sheltered beaches can see less and exposed beaches more.`);
  if(shore.sneakerPeriodS!==null)parts.push(`Long-period swell (${shore.sneakerPeriodS} s) raises the risk of sneaker waves: sets can run far up the beach without warning. Stay off low rocks and keep the ocean in view.`);
  const highs=tideEvents.filter(event=>event.type==='H');
  if(highs.length)parts.push(`The rising tide and the two hours around high often fish better from the beach (an angler rule of thumb, not a guarantee): high at ${highs.map(event=>clockText(event.at,tz)).join(' and ')}.`);

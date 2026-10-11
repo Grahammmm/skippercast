@@ -951,12 +951,15 @@ thresholds are in the `SPEAR` table with their reasoning.
 Shore conditions (issue #542, `packages/coast/src/shore-conditions.ts`):
 the shore brief scores each forecast hour for surf (significant height from
 the nearshore model sample when fresh, else the offshore forecast's seas as
-an "offshore estimate" against lower bands), a sneaker-wave caution when a
-swell of 1.5 ft or more runs at 14 s or longer (it raises the score and the
-hour is never "Calmer"), wind (speed band, and onshore, offshore or
-cross-shore from the forecast direction against the area's seaward bearing,
-land point to water point; speed only where either is missing, and the brief
-says so), tide phase (the rising tide and an hour either side of high are a
+an "offshore estimate" against its own 3/6/9 ft bands), a sneaker-wave caution when a
+swell of 1.5 ft or more runs at 14 s or longer, on the nearshore path too
+when the offshore swell partition qualifies though the nearshore peak period
+is short (it raises the score and the hour is never "Calmer"), wind (speed band, and onshore, offshore or
+cross-shore from the forecast direction against a vetted seaward bearing
+for that stretch of coast, read approximately from a chart: Morro Bay 260°,
+Cambria and San Simeon 230°, none for Avila and Pismo, which face south and
+west, or for regional places; speed only where the bearing or direction is
+missing, and the brief says so), tide phase (the rising tide and an hour either side of high are a
 mild bonus, an angler rule of thumb rather than a guarantee; a predicted
 height at or below 0 ft MLLW is flagged for rock access, not scored) and a
 mild dawn or dusk bonus. Each hour reads Calmer, Marginal, Rough or Unknown
