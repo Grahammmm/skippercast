@@ -4,6 +4,10 @@
 
 - The new home page and map can be added to a home screen with the SkipperCast name, icon and colour, and report the same cookie-less page counts and errors as the old map (nothing under Do Not Track or Global Privacy Control).
 
+### Internal
+
+- Test the v2 pages' head tags and telemetry start (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
+
 ## 0.8.0 — 2026-10-11
 
 - Suggested windows in the brief no longer run through an hour that a hazard rule flags or that the profile grades Rough, for every profile and whatever your limits say: a hazardous harbour bar at any hour of a boat window (not only departure and return), sneaker-wave swell for Shore when the surf is the offshore estimate, long-period swell under a kayak, and Rough Shore or Spear hours. Some windows are shorter or gone as a result. Occasionally a boat window the brief used to drop because its departure or return crossed a hazardous bar now appears as its clean remaining hours (#551).
