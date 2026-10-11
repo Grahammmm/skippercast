@@ -75,7 +75,7 @@ for (const entry of Object.keys(V2_EVENTS)) {
 test('the privacy notice, telemetry doc and CHANGELOG name every v2 event', () => {
   const all = [...new Set(Object.values(V2_EVENTS).flat())];
   const notice = source('dist/privacy.html'), doc = source('docs/engineering/telemetry.md');
-  const v2Notice = /The new map sends ([^.]+)\./.exec(notice)?.[1] ?? '';
+  const v2Notice = /The new\s+map\s+sends ([^.]+)\./.exec(notice)?.[1] ?? '';
   const v2Doc = /The v2 pages[^\n]+/.exec(doc)?.[0] ?? '';
   const changelog = source('CHANGELOG.md').split(/^## /m)[1].split('\n').find(line => line.includes('anonymous usage statistics')) ?? '';
   for (const event of all) {
