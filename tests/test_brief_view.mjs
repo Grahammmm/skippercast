@@ -229,6 +229,11 @@ test('#473: the brief reads the daily data feed (reports, tides) with the condit
     assert.deepEqual(feed.reports, montereyDaily.reports, 'the landing reports come from the daily feed');
     assert.equal(Object.keys(feed.sources)[0], 'diablo', 'the 30-minute buoy comes first');
     assert.ok(feed.sources.tides, 'the daily feed keeps its tides');
+    // Where both feeds name one buoy key, the 30-minute copy wins.
+    const stale = {...conditions.sources.diablo, name: 'NDBC 46042 daily', checked_at: '2026-01-01T00:00:00Z'};
+    const collide = await loadDailyFeed('monterey-point-sur', async path => new Response(JSON.stringify(String(path).startsWith('/feeds/data/')
+      ? {...montereyDaily, sources: {...montereyDaily.sources, diablo: stale}} : conditions), {status: 200}));
+    assert.equal(collide.sources.diablo.name, 'NDBC 46042 every 30 min', 'the newer conditions buoy is not overwritten');
     // Either feed stands alone when the other fails.
     const only = prefix => async path => String(path).startsWith(prefix) ? fetchFn(path) : new Response('no', {status: 503});
     assert.deepEqual((await loadDailyFeed('monterey-point-sur', only('/feeds/data/'))).sources, montereyDaily.sources);

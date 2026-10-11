@@ -53,7 +53,8 @@ async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promis
 export function mergeFeeds(daily: RegionalDailyFeed | null, conditions: RegionalDailyFeed | null): RegionalDailyFeed | null {
   if (!daily || !conditions) return daily ?? conditions;
   const buoys = Object.fromEntries(Object.entries(conditions.sources).filter(([, source]) => source?.kind === 'observation'));
-  return {...daily, sources: {...buoys, ...daily.sources}};
+  // Buoys first in key order, and the conditions copy wins where both feeds use one key.
+  return {...daily, sources: {...buoys, ...daily.sources, ...buoys}};
 }
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
