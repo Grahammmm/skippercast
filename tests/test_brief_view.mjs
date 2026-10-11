@@ -10,6 +10,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -29,12 +30,7 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    // The Conditions view's CoastMarkup (FE-32) imports its stylesheets as Vite `?url` assets; they bundle as their path.
-    plugins: [{name: 'renderers', setup: b => {
-      b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}));
-      b.onResolve({filter: /\?url$/}, args => ({path: args.path, namespace: 'url'}));
-      b.onLoad({filter: /.*/, namespace: 'url'}, args => ({contents: `export default ${JSON.stringify(args.path)};`, loader: 'js'}));
-    }}],
+    plugins: rendererPlugins,
   });
   mod = await import(pathToFileURL(out).href);
   return mod;

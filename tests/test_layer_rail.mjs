@@ -11,6 +11,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ORIGIN = 'https://s.test/map';
@@ -39,7 +40,7 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   bundle = await import(pathToFileURL(out).href);
   return bundle;

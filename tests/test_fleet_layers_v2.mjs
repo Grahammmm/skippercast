@@ -11,6 +11,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import * as v1 from '../dist/fleet-activity.js';
 import {ACTIVITY_LAYERS} from '../web/map/charter-grounds.ts';
 import {
@@ -177,7 +178,7 @@ test('Accept 1: the rail offers the activity layers only with access; the legend
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: [{name: 'renderers', setup: b => b.onResolve({filter: /^\.\/(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}))}],
+    plugins: rendererPlugins,
   });
   const m = await import(pathToFileURL(out).href);
   globalThis.location = {href: 'https://s.test/map?region=morro-bay&presentation=chart&layers=fleet'};
