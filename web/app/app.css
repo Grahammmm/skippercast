@@ -260,3 +260,20 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
 .app-conditions a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+/* FE-53: the Fleet view, in the brief column (desktop) or the sheet (phone); its checks reuse the rail's option style. */
+.app-fleet, .app-fleet-admin { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; font-size: var(--text-13); }
+.app-fleet h1 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.app-fleet h2 { margin: var(--space-3) 0 0; }
+.app-fleet-check { padding: 0; font-size: var(--text-13); color: var(--text); }
+.app-fleet-basis { margin: 0; color: var(--muted); font-size: var(--text-11); }
+.app-fleet-links { margin: 0; padding: 0; list-style: none; }
+.app-fleet-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+.app-fleet-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-2); }
+.app-fleet-form > .app-fleet-check, .app-fleet-form > .app-empty, .app-fleet-actions { grid-column: 1 / -1; }
+.app-fleet-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--muted); font-size: var(--text-11); }
+.app-fleet-field input { min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-13); }
+.app-fleet-field input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fleet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.app-fleet-how summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; color: var(--blue); }
+.app-fleet-how summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-fleet-how p { margin: 0; color: var(--muted); }

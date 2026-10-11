@@ -12,13 +12,16 @@
 // heat cells (opacity ∝ dwell), trip tracks (by segment kind, gaps and NOAA
 // planning-only rows dashed) and activity events (radius ∝ √dwell, drift filled,
 // troll ringed), all in the --fleet (--amber) family, for the map's bounds with
-// no filters: the filter form moves to the Fleet view in FE-53. Every card says
-// the activity is inferred from movement.
+// the filters the Fleet view's form sets (FE-53, `activityFilters`; none until it
+// is used). Every card says the activity is inferred from movement.
+// FE-53: the access check also runs while the Fleet view is open, so its admin
+// form appears without the rail entry; the probe's answer (the values the form
+// offers) is `activityChoices`, and is set only for a viewer the server admitted.
 //
 // Erasable syntax only: tests/test_fleet_layers_v2.mjs imports it by type stripping.
 import {computed, effect, signal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
-import {layers, region} from '../state.ts';
+import {appView, layers, region} from '../state.ts';
 import {ACTIVITY_LAYERS, fleetBefore, type Collection, type FleetLayerOptions} from './charter-grounds.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Engine, MapView, Overlay} from './engine.ts';
@@ -53,6 +56,12 @@ export const activityAccess = signal(false);
 export const activityOn = signal<readonly Activity[]>([]);
 /** v1's status line for what is drawn, or why nothing is; empty while no option is on. */
 export const activityStatus = signal('');
+/** The map API's filter values for the admitted viewer (GET /api/fleet/map/filters); null for anyone else. */
+export const activityChoices = signal<Record<string, unknown> | null>(null);
+/** The Fleet view's filters by v1's query names (`FILTERS`); empty values are left out. */
+export const activityFilters = signal<Readonly<Record<string, string>>>({});
+/** v1's "Leave out NOAA planning-only rows": a redraw, not a new request. */
+export const hidePlanning = signal(false);
 export function toggleActivity(name: Activity, on: boolean): void {
   activityOn.value = ACTIVITY.filter(a => a === name ? on : activityOn.peek().includes(a));
 }
@@ -137,30 +146,33 @@ export interface FleetActivityOptions extends FleetLayerOptions {zone?: () => st
 /** Draws the admin activity layers while the Fleet entry and an option are on; created with the Chart (web/map/chart.ts `layers`). */
 export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), zone = () => 'America/Los_Angeles'}: FleetActivityOptions) {
   const entryOn = computed(() => layers.value.includes('fleet'));
+  /** The access check runs once the entry is on or the Fleet view is open (FE-53). */
+  const asked = computed(() => entryOn.value || appView.value === 'fleet');
   /** The state-level fleet region for the loaded coastal region (v1's `fleetRegion`); null until both are known. */
   const coastal = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region : null; });
-  const access = signal<{region: string; fleet: string | null} | null>(null);
+  const access = signal<{region: string; fleet: string | null; choices: Record<string, unknown> | null} | null>(null);
   const bbox = signal<string>('');
   const results = signal<{key: string; data: Partial<Record<Activity, LayerResult>>} | null>(null);
   let v1: V1 | null = null, controller: AbortController | null = null, drawn = false, drawnOn: Engine | null = null, unwatch: (() => void) | null = null;
-  const checks = new Map<string, Promise<string | null>>();
+  const checks = new Map<string, Promise<{fleet: string; choices: Record<string, unknown>} | null>>();
 
   const disposers = [
     // v1's access check, once per region, and only once the entry is on.
     effect(() => {
       const r = coastal.value;
-      if (!entryOn.value || !r || access.peek()?.region === r.id) return;
+      if (!asked.value || !r || access.peek()?.region === r.id) return;
       let check = checks.get(r.id);
       if (!check) checks.set(r.id, check = loadV1().then(async m => {
         v1 = m;
-        const fleet = m.fleetRegion(r);
-        return fleet && await m.fleetAccess(fleet, fetchFn) ? fleet : null;
+        const fleet = m.fleetRegion(r), choices = fleet ? await m.fleetAccess(fleet, fetchFn) as Record<string, unknown> | null : null;
+        return fleet && choices ? {fleet, choices} : null;
       }, () => null));
-      void check.then(fleet => { if (coastal.peek()?.id === r.id) access.value = {region: r.id, fleet}; });
+      void check.then(a => { if (coastal.peek()?.id === r.id) access.value = {region: r.id, fleet: a?.fleet ?? null, choices: a?.choices ?? null}; });
     }),
     effect(() => {
       const a = access.value;
       activityAccess.value = !!a?.fleet && a.region === coastal.value?.id;
+      activityChoices.value = activityAccess.value ? a!.choices : null;
     }),
     // The map's bounds, after each settled move.
     effect(() => {
@@ -173,14 +185,14 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
     }),
     // Load the options that are on, for the bounds; a newer request aborts the older.
     effect(() => {
-      const wanted = entryOn.value && activityAccess.value ? activityOn.value : [], fleet = access.value?.fleet, box = bbox.value;
+      const wanted = entryOn.value && activityAccess.value ? activityOn.value : [], fleet = access.value?.fleet, box = bbox.value, filters = activityFilters.value;
       controller?.abort(); controller = null;
       if (!wanted.length || !fleet || !v1 || !box) { results.value = null; activityStatus.value = ''; return; }
-      const key = `${fleet}|${box}|${wanted.join(',')}`;
+      const key = `${fleet}|${box}|${wanted.join(',')}|${new URLSearchParams(filters as Record<string, string>)}`;
       if (results.peek()?.key === key) return;
       const mine = controller = new AbortController(), m = v1, fetchLayer = v1.fetchLayer as unknown as FetchLayer;
       activityStatus.value = 'Loading fleet activity…';
-      void Promise.all(wanted.map(name => fetchLayer(name, {}, {region: fleet, bbox: box.split(',').map(Number), fetcher: fetchFn, signal: mine.signal}))).then(loaded => {
+      void Promise.all(wanted.map(name => fetchLayer(name, {...filters}, {region: fleet, bbox: box.split(',').map(Number), fetcher: fetchFn, signal: mine.signal}))).then(loaded => {
         if (mine !== controller) return;
         results.value = {key, data: Object.fromEntries(wanted.map((name, i) => [name, loaded[i] as LayerResult]))};
         activityStatus.value = m.statusText(results.value.data);
@@ -194,7 +206,9 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
       const e = engine.value, r = results.value;
       if (!e) return;
       if (!r || !v1) { if (drawn || e !== drawnOn) e.setOverlay('fleet-activity', null); drawn = false; drawnOn = e; return; }
-      const data = activityCollections(v1, r.data);
+      const hide = hidePlanning.value, m = v1;
+      const shown = hide ? Object.fromEntries(Object.entries(r.data).map(([name, x]) => [name, {...x, features: m.visibleFeatures(x.features, true) as Feature[]}])) : r.data;
+      const data = activityCollections(v1, shown);
       // § 9 draw order: above the charter grounds and commercial AIS, under the cloud frames and the marks.
       if (!drawn || e !== drawnOn) e.setOverlay('fleet-activity', activityOverlay(palette(), data), fleetBefore());
       for (const name of ACTIVITY) e.setData(FLEET_SOURCE[name], data[name]);
@@ -206,7 +220,7 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
     destroy() {
       for (const dispose of disposers) dispose();
       unwatch?.(); controller?.abort();
-      activityAccess.value = false; activityStatus.value = '';
+      activityAccess.value = false; activityChoices.value = null; activityStatus.value = '';
     },
     pick: {layers: [EVENTS, TRACKS, TRACKS_DASHED, HEAT] as const, ordered: true, mark: (layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const name = owner[layer], f = name ? results.peek()?.data[name]?.features.find(x => String(x.properties.id) === properties?.key) : undefined;

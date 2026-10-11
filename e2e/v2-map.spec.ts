@@ -693,6 +693,48 @@ test('an admin gets the fleet activity layers under Charter fleet; a stop opens 
   expect(pageErrors).toEqual([]);
 });
 
+// FE-53: the Fleet view. A visitor sees the grounds and the AIS 2024 option only; an admin (v1's access check answered as for
+// both fleet flags on) gets v1's filter form, and a filter reaches the map API in v1's query.
+test('the Fleet view: grounds and AIS for a visitor; an admin\'s filters reach the map API', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  const query = {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'lingcod', view: 'fleet', layers: 'fleet'};
+  await v2.open('app', query);
+  const view = page.locator('.app-fleet');
+  const lift = async () => { if (narrow(page)) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('End'); } };
+  await lift();
+  await expect(view.getByRole('heading', {name: 'Fleet'})).toBeVisible();
+  await expect(view.getByRole('checkbox', {name: 'Show charter grounds'})).toBeChecked();
+  await expect(view.getByRole('checkbox', {name: 'Commercial AIS 2024'})).toBeVisible();
+  await expect(view.getByRole('checkbox')).toHaveCount(2);
+  await expect(view.locator('form, select')).toHaveCount(0);
+  await v2.a11y('v2-fleet-view');
+
+  const asked: string[] = [];
+  await page.route('**/api/session', route => route.fulfill({json: {signedIn: true, is_admin: true}}));
+  await page.route('**/api/fleet/map/**', route => {
+    const url = new URL(route.request().url());
+    asked.push(url.pathname + url.search);
+    if (url.pathname.endsWith('/filters')) return route.fulfill({json: {region: url.searchParams.get('region'), vessels: [{id: 'v1', name: 'Test Boat'}], ports: ['morro-bay'],
+      classes: [], trip_types: [], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: [], dates: {min: '2026-06-01', max: '2026-09-30'}}});
+    return route.fulfill({json: {type: 'FeatureCollection', features: [], meta: {next: null, trips: 0, ignored: []}}});
+  });
+  await page.reload();
+  await lift();
+  await expect(view.getByRole('heading', {name: 'Fleet activity · admin'})).toBeVisible();
+  await expect(view).toContainText('Inferred from movement; filters in the Fleet view.');
+  await view.getByLabel('Port').selectOption('morro-bay');
+  await view.getByLabel('Activity type').selectOption('troll');
+  await view.getByRole('button', {name: 'Show on map'}).click();
+  await expect.poll(() => asked.find(a => a.startsWith('/api/fleet/map/events')) ?? '').toContain('kind=troll');
+  const events = new URL(asked.find(a => a.startsWith('/api/fleet/map/events'))!, 'https://s.test');
+  expect(events.searchParams.get('port')).toBe('morro-bay');
+  expect(events.searchParams.has('vessel'), 'empty filters are left out').toBe(false);
+  await expect(view.getByRole('checkbox', {name: 'Fleet events'})).toBeChecked();
+  await expect(view.locator('.app-fleet-admin [role="status"]')).toHaveText('0 stops · inferred from movement.');
+  await v2.a11y('v2-fleet-view-admin');
+  expect(pageErrors).toEqual([]);
+});
+
 test('a region without basemap.aerial offers no Aerial base, whatever ?base= says', async ({page, v2}) => {
   const requested: string[] = [];
   await page.route('https://imagery.nationalmap.gov/**', route => { requested.push(route.request().url()); return route.abort(); });
