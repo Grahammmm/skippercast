@@ -260,3 +260,20 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
 .app-conditions a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+
+/* Reports view (FE-52): a page over the map stage, which stays mounted beneath it. */
+.app-main { position: relative; }
+.app-page { position: absolute; inset: 0; z-index: var(--z-sheet); overflow: auto; background: var(--bg); }
+.app-reports { box-sizing: border-box; max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); display: flex; flex-direction: column; gap: var(--space-4); }
+.app-reports h1 { margin: 0; font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
+.app-reports h2 { margin: 0 0 var(--space-2); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
+.app-reports p { margin: 0 0 var(--space-2); line-height: var(--leading-body); }
+.app-reports-section { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); }
+.app-reports-small { color: var(--muted); font-size: var(--text-13); }
+.app-reports-list { margin: 0 0 var(--space-2); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+.app-reports-list small { display: block; color: var(--muted); font-size: var(--text-13); }
+.app-reports a { color: var(--blue); }
+.app-reports-list a, .app-reports-section p a { display: inline-block; min-height: var(--touch-min); padding: var(--space-3) 0; box-sizing: border-box; }
+.app-reports-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.app-reports-footer a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+.app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
