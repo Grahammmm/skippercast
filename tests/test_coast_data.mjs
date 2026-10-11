@@ -365,7 +365,10 @@ test('the fixture report passes packages/coast readiness in every county area', 
       // missing shoreline bearing (#542).
       const shore = ['Breaking surf, beach access and water quality need a local check', 'Surf is an offshore estimate where no fresh nearshore model covers the hour',
         ...(area.id === 'south' ? ['Wind side unknown for this stretch of coast; wind judged on speed only'] : [])];
-      assert.deepEqual(brief.missing, mode === 'boat' ? ['Harbor entrance and full return route need a separate check'] : shore, area.id);
+      // Boat at Morro Bay (central) also lists the bar check's offshore swell estimate (#542).
+      const boat = ['Harbor entrance and full return route need a separate check',
+        ...(area.id === 'central' ? ['Bar swell is an offshore estimate where no fresh nearshore model covers the hour'] : [])];
+      assert.deepEqual(brief.missing, mode === 'boat' ? boat : shore, area.id);
       assert.ok(brief.hours.length && brief.tides.length && brief.tideEvents.length && brief.tempObservation, area.id);
     }
     assert.equal(assess(report, area, 'boat', now, slo.timezone).status, 'Caution', 'the active advisory, not missing data');
