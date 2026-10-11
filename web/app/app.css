@@ -11,11 +11,11 @@ html, body { margin: 0; min-height: 100%; }
 body { background: var(--bg); color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
 .app { display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; min-height: 100dvh; }
 .app-brief a, .app-sheet a { color: var(--blue); }
-.app select, .app-mobile select {
+.app select, .app-mobile select, .app-target-search {
   min-height: var(--touch-min); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-medium) var(--text-13) / var(--leading-heading) var(--font-sans);
 }
-.app select:focus-visible, .app-mobile select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app select:focus-visible, .app-mobile select:focus-visible, .app-target-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Masthead */
 .app-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -35,6 +35,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* Command bar */
 .app-command { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--bg); }
 .app-command label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
+/* FE-54: the target menu's search field sits beside the grouped list. */
+.app-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.app-target-search { width: 10rem; min-width: 0; font-weight: var(--weight-regular); }
+.app-target-search::placeholder { color: var(--muted); }
 .app-area { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-window { margin-left: auto; color: var(--text); font-size: var(--text-13); }
 
@@ -260,6 +264,17 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-conditions-caption, .app-conditions ul { margin: 0; color: var(--muted); }
 .app-conditions ul { padding-left: var(--space-4); }
 .app-conditions a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+/* FE-54: the target's rules at a glance on a habitat card (v1's row, web/regs.ts). */
+.app-mark-regs { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line); font-size: var(--text-13); }
+.app-mark-regs p { margin: 0; color: var(--muted); }
+.app-mark-regs-badge { display: inline-block; padding: 0 var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--text); font-weight: var(--weight-medium); }
+.app-mark-regs-badge[data-status="open"], .app-mark-regs-badge[data-status="restricted"] { border-color: var(--mint); }
+.app-mark-regs-badge[data-status="closed"], .app-mark-regs-badge[data-status="excluded"] { border-color: var(--coral); }
+.app-mark-regs-badge[data-status="unknown"], .app-mark-regs-badge[data-status="scheduled"] { border-color: var(--amber); }
+.app-mark-regs dl { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-1) 0; }
+.app-mark-regs dt { color: var(--muted); }
+.app-mark-regs dd { margin: 0; }
+.app-mark-regs a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 
 /* Reports view (FE-52): a page over the map stage, which stays mounted beneath it. */
 .app-main { position: relative; }
