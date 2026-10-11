@@ -56,12 +56,14 @@ export interface Brief {
   readonly fleet: BriefFleet | null;
   /** The local coast report line; unavailable outside a binding. */
   readonly localReport: {readonly available: boolean; readonly text: string};
-  /** The spear reading (surge, clarity estimate, verdict per hour); null for boat and shore. */
+  /** The spear reading (surge, clarity estimate, verdict per hour); null for the other profiles. */
   readonly spear: DailyBrief['spear'];
-  /** The shore reading (surf, wind side, tide phase, verdict per hour); null for boat and spear. */
+  /** The shore reading (surf, wind side, tide phase, verdict per hour); null for the other profiles. */
   readonly shore: DailyBrief['shore'];
   /** The harbour bar reading (ebb, swell, bar band per hour) for a boat brief at a regulated bar; null otherwise. */
   readonly bar: DailyBrief['bar'];
+  /** The kayak reading (wind band and side, seas, launch surf, verdict per hour); null for the other profiles. */
+  readonly kayak: DailyBrief['kayak'];
   readonly alerts: readonly Alert[];
   readonly missing: readonly string[];
   readonly tides: readonly TidePoint[];

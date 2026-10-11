@@ -1,7 +1,7 @@
-import type {Mode} from '../types.ts';
+import type {BriefMode} from '../types.ts';
 
 export type ReportLocalArea={id:string;bounds:readonly number[]};
-export type CoastReportContext={regionId:string;point:{latitude:number;longitude:number};localAreas:readonly ReportLocalArea[];localId?:string|null;profile:Mode;target:string;at:Date};
+export type CoastReportContext={regionId:string;point:{latitude:number;longitude:number};localAreas:readonly ReportLocalArea[];localId?:string|null;profile:BriefMode;target:string;at:Date};
 export type ManagedReportContext=CoastReportContext;
 export type ReportBinding={areaId:'north'|'central'|'south';localAreaId:string};
 // These identities translate reviewed package/local-area metadata. Bounds are

@@ -1,4 +1,4 @@
-// First run (FE-08, design § 7, D11): the Boat / Shore / Spear choice, shown
+// First run (FE-08, design § 7, D11): the Boat / Shore / Spear / Kayak choice, shown
 // once over the map and never modal. It appears when no profile is stored
 // and the address names none; choosing (or keeping Boat) writes ?profile=,
 // which the store persists, so it never shows again. v1's boat preset step
@@ -15,6 +15,7 @@ export const PROFILE_NOTES: Readonly<Record<Profile, string>> = {
   boat: 'Reef marks and seafloor to 300 ft; seafloor and currents on the map.',
   shore: 'Sandy-shore runs with access and rules; swell and water temp on the map.',
   spear: 'Reef within 60 ft, nearest fresh nearshore site first; seafloor and swell on the map.',
+  kayak: 'Reef marks within 120 ft, with a wind-first paddling reading; seafloor and currents on the map.',
 };
 
 function browserStorage(): StoreStorage | null {

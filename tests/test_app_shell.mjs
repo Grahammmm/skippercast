@@ -80,7 +80,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   // FE-50: sign in is the account menu's button, closed until pressed.
   assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)">.*?Sign in<\/button><div id="\1" class="app-account-panel" hidden/);
   assert.match(html, /role="group" aria-label="Profile"/);
-  assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
+  assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   assert.equal(count(html, /<label>Target<select/g), 1);
   assert.equal(count(html, /<label>Area<select/g), 1);
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
@@ -120,6 +120,12 @@ test('the brief invents no number: every tile reads "—" and keeps its source l
   assert.match(html, /Nearshore site —/, 'spear takes the nearshore swell source');
   assert.match(html, /<p class="app-empty">Ranked places load with the map.<\/p>/, 'no ranked place before the region\'s marks load');
   assert.match(html, /In-water visibility is unverified/);
+  // Kayak reads the offshore swell source and its own caveat.
+  state.syncFromURL(`${ORIGIN}?profile=kayak`);
+  const kayak = render(h(Brief, {}));
+  assert.match(kayak, /Offshore —/, 'kayak takes the offshore swell source');
+  assert.match(kayak, /a forecast cannot clear a paddle\./);
+  state.syncFromURL(`${ORIGIN}?profile=spear`);
   const picks = [{id: 'r1', kind: 'spot', name: 'North reef', distance: '3.2 nm', depth: '~60–90 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Hard bottom inside the limit.'}];
   const ranked = render(h(Brief, {ranking: {source: 'atlas', label: 'Survey reef atlas', basis: 'Basis.', picks, empty: ''}}));
   assert.match(ranked, /<ol class="app-picks"><li data-mark="r1"><button type="button" class="app-pick" aria-pressed="false">/);
@@ -135,8 +141,8 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.equal(count(html, /class="ui-rail-item"/g), 0);
   const coastView = await renderShell(link.replace('&view=conditions', ''));
   // Profile switch: exactly Shore is on, and the shore caveat and swell source follow.
-  const chips = [...html.matchAll(/<button[^>]*class="ui-button ui-button--ghost ui-button--sm ui-chip"[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/svg>(Boat|Shore|Spear)/gs)].map(m => [m[2], m[1]]);
-  assert.deepEqual(chips, [['Boat', 'false'], ['Shore', 'true'], ['Spear', 'false']]);
+  const chips = [...html.matchAll(/<button[^>]*class="ui-button ui-button--ghost ui-button--sm ui-chip"[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/svg>(Boat|Shore|Spear|Kayak)/gs)].map(m => [m[2], m[1]]);
+  assert.deepEqual(chips, [['Boat', 'false'], ['Shore', 'true'], ['Spear', 'false'], ['Kayak', 'false']]);
   assert.match(html, /Offshore seas do not measure breakers/);
   assert.match(html, /Nearshore site —/);
   // Views: the current one is aria-current and every link carries ?view= (coast drops it).
@@ -211,7 +217,7 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
   assert.match(html, /role="group" aria-label="Profile" class="ui-segmented app-profile"/);
-  assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
+  assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   // One sheet at peek with the hour slider at its edge, then the brief in sheet order.
   assert.equal(count(html, /class="ui-sheet /g), 1);
   assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);

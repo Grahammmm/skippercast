@@ -297,8 +297,8 @@ test('first run shows once: due without a stored profile, never with ?profile= i
   const html = render(h(FirstRun, {href, storage}));
   assert.match(html, /<section class="app-firstrun" role="dialog" aria-labelledby="first-run-title"/);
   assert.match(html, /<h2 id="first-run-title">How do you fish\?<\/h2>/);
-  assert.deepEqual([...html.matchAll(/data-profile="([a-z]+)"/g)].map(m => m[1]), ['boat', 'shore', 'spear']);
-  for (const p of ['boat', 'shore', 'spear']) assert.ok(html.includes(PROFILE_NOTES[p]), `${p} note`);
+  assert.deepEqual([...html.matchAll(/data-profile="([a-z]+)"/g)].map(m => m[1]), ['boat', 'shore', 'spear', 'kayak']);
+  for (const p of ['boat', 'shore', 'spear', 'kayak']) assert.ok(html.includes(PROFILE_NOTES[p]), `${p} note`);
   assert.doesNotMatch(html, /aria-modal/, 'never modal: the map is not blocked');
   assert.match(html, /Keep Boat for now<\/button>/);
   assert.doesNotMatch(html, /\b(?:best spot|productive|catch rate|bite|fish will)\b/i, 'promises no fish');

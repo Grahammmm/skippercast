@@ -181,7 +181,7 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.match(head, /href="\/\?ui=v1#account">Sign in</);
   assert.equal(NAV.length, 3);
   const app = render(h(LandingApp, {href: 'https://s.test/?ui=v2', navigate: () => {}, load: false}));
-  assert.deepEqual([...app.matchAll(/data-profile="([a-z]+)"[^>]*>.*?<\/svg>([A-Za-z]+)<\/button>/g)].map(m => [m[1], m[2]]), [['boat', 'Boat'], ['shore', 'Shore'], ['spear', 'Spear']]);
+  assert.deepEqual([...app.matchAll(/data-profile="([a-z]+)"[^>]*>.*?<\/svg>([A-Za-z]+)<\/button>/g)].map(m => [m[1], m[2]]), [['boat', 'Boat'], ['shore', 'Shore'], ['spear', 'Spear'], ['kayak', 'Kayak']]);
   assert.doesNotMatch(app, /aria-pressed="true"/, 'no pill pressed without a stored profile');
   assert.match(app, /Where are you launching\?/);
   assert.ok(app.indexOf('landing-readout') < app.indexOf('landing-pills'), 'the readings come before any choice (D4)');

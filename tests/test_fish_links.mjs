@@ -32,7 +32,7 @@ test('geography is explicit and an unknown place cannot inherit a SLO binding', 
   assert.equal(fishLink('https://s.test/map?mode=boat&area=north').searchParams.get('region'), 'cambria-san-simeon');
   assert.equal(fishLink('https://s.test/map?place=unknown&area=central').searchParams.get('region'), null);
   assert.equal(fishLink('https://s.test/map?coast=south&place=morro').searchParams.get('region'), null);
-  const unknown = fishLink('https://s.test/map?mode=kayak&layer=unknown&species=custom-fish');
+  const unknown = fishLink('https://s.test/map?mode=jetski&layer=unknown&species=custom-fish');
   assert.equal(unknown.searchParams.get('profile'), null);
   assert.equal(unknown.searchParams.get('layers'), null);
   assert.equal(unknown.searchParams.get('target'), 'custom-fish', 'never substitutes a known species');

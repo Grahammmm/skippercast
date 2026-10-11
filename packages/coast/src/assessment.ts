@@ -1,4 +1,4 @@
-import type {Report,Mode,Area,Assessment,ForecastHour,Window} from './types.ts';
+import type {Report,BriefMode,Area,Assessment,ForecastHour,Window} from './types.ts';
 import {getTimes} from 'suncalc';
 export const MODEL_VERSION='conditions-v1';
 const age=(at:string,now:Date)=>now.getTime()-Date.parse(at);
@@ -12,7 +12,7 @@ export function freshForecast(report:Report,area:Area,now=new Date()){
 }
 /** waveOk replaces the generic wave rule for an hour when it returns a boolean (spear surge from a nearshore model); label names such windows. */
 export type AssessOptions={waveOk?:(h:ForecastHour)=>boolean|undefined;label?:string};
-export function assess(report:Report,area:Area,mode:Mode,now=new Date(),timezone='America/Los_Angeles',options:AssessOptions={}):Assessment{
+export function assess(report:Report,area:Area,mode:BriefMode,now=new Date(),timezone='America/Los_Angeles',options:AssessOptions={}):Assessment{
  const forecast=freshForecast(report,area,now);
  const hours=(forecast?.hours??[]).filter(x=>Date.parse(x.at)>=now.getTime()-3600000 && Date.parse(x.at)<now.getTime()+72*3600000);
  const source=report.sources.find(x=>x.id===forecast?.sourceId);
