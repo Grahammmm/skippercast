@@ -147,6 +147,8 @@ function backupFeed(retained = false) {
 
 for (const retained of [false, true]) {
   test(`a ${retained ? 'retained ' : ''}backup buoy and tide are named and linked as themselves, never as the primary`, async ({page, pageErrors, v2, isMobile}) => {
+    // Buoys can come from the conditions feed; the tide is read from the daily feed, so both carry the backup.
+    await v2.feed('**/feeds/data/regions/morro-bay/latest.json', backupFeed(retained));
     await v2.feed('**/feeds/conditions/regions/morro-bay/latest.json', backupFeed(retained));
     await v2.open('app', {region: 'morro-bay'});
     const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
