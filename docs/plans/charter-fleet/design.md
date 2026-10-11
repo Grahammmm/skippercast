@@ -366,7 +366,8 @@ Other registry tables:
 - **`fleet_ais_watch`**: PK `(region, mmsi)`; `vessel_id` (a candidate carries
   the vessel it is proposed for, null only when two vessels match; only a
   `watched` row ties the MMSI to the vessel), `match_method` (`fcc-uls`, `call-sign`, `ais-static-name`,
-  `geofence-presence`, `admin`), `confidence`, `status` (`candidate`,
+  `geofence-presence`, `admin`, `schedule-correlation`; a `watched` row needs one of `fcc-uls`,
+  `geofence-presence`, `admin` or `schedule-correlation` and confidence ≥ 0.85), `confidence`, `status` (`candidate`,
   `watched`, `rejected`), `ais_name`, `ais_call_sign`, `ais_class`,
   `first_seen_at`, `last_seen_at`, `last_seen_source`, `positions_30d`,
   `updated_at`; index `watch_vessel (vessel_id)`.
@@ -945,7 +946,17 @@ vessel has no MMSI) with a ship type not outside 30/37/60/69 → `candidate`;
 (3) positions inside the vessel's own port geofence on ≥ 3 distinct days of the
 last 30 → `watched` at ≥ `mmsi_auto`, only with a *known* ship type of
 30/37/60/69 and a *known* length within 20%, and never for a vessel that already
-has a registry MMSI or when two vessels match. Anything weaker → `mmsi` review,
+has a registry MMSI or when two vessels match; (4) `schedule-correlation`
+(`ais/schedule.py`): a stage-2 candidate seen in its home port at least once,
+at sea (a position outside every port geofence) on ≥ `thresholds.match.schedule.min_days`
+(5) days that a landing report in the daily feed's `reports[]` named the vessel
+at its home port, spanning ≥ `min_span_days` (14) → `watched` at ≥ `mmsi_auto`;
+an unknown type or length does not block it, a contradicting length does, and
+another vessel of the same port reporting on 5 of those days is a rival → an
+`mmsi` review (`schedule-rival`), never watched. The watched gate: a `watched`
+row needs `fcc-uls`, `geofence-presence`, `admin` or `schedule-correlation` and
+confidence ≥ 0.85, checked by the matcher, the Worker and `python -m
+skippercast.fleet.ais watch-check`. Anything weaker → `mmsi` review,
 opened when the candidate cannot promote and has been seen in the vessel's home
 port, when it has been seen there without promoting for 7 days, after 7 days for
 a vessel without a home port, and for a registry MMSI whose statics agree on

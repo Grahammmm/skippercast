@@ -388,7 +388,11 @@
     "match": {
       "auto_merge": 0.9,
       "review_min": 0.6,
-      "mmsi_auto": 0.85
+      "mmsi_auto": 0.85,
+      "schedule": {
+        "min_days": 5,
+        "min_span_days": 14
+      }
     },
     "refresh": {
       "vanished_after_runs": 3,
