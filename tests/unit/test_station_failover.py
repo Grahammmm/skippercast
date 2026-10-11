@@ -112,6 +112,22 @@ class StationFailoverTests(TestCase):
              patch.object(daily, "stamp", return_value=NOW.isoformat()):
             return daily.collect(NOW, previous, days=0)["sources"]["tides"]
 
+    def test_daily_shared_primary_uses_the_configured_role_chain(self):
+        config = legacy_config()
+        stations = config["region"]["stations"]
+        stations["offshore_buoy"] = stations["nearshore_buoy"]
+        stations["roles"] = {"offshore_buoy": {"stations": ["46215", "46299"]}}
+        MemoryClient.responses = {"46215": ValueError("outage"), "46299": buoy()}
+        def read(*args, **kwargs):
+            return fixed_source(*args, **kwargs) if args[0].startswith("buoy-") else legacy_source(*args, **kwargs)
+        with patch.object(daily, "settings", return_value=config), patch.object(daily, "source", side_effect=read), \
+             patch.object(daily, "regulatory_snapshot", return_value={}), \
+             patch.object(daily, "stamp", return_value=NOW.isoformat()):
+            feed = daily.collect(NOW, days=0)
+        for ident in ("buoy-46215", "buoy-46215-swell"):
+            row = feed["sources"][ident]
+            self.assertEqual((row["station"], row["fallback_for"]), ("46299", "46215"))
+
     def test_tide_fresh_primary(self):
         row = self.tide(predictions())
         self.assertEqual(row["station"], "9412110")

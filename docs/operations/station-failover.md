@@ -15,7 +15,9 @@ To opt a role into ordered selection, add this inside its `stations` object
 
 Roles are `nearshore_buoy`, `offshore_buoy`, and `tide`. The first ID must match
 its legacy primary. At most four distinct IDs are allowed. Repeated primary
-roles within a region must share the same order. Unconfigured roles produce
+roles within a region must share the same order. When roles share a primary
+source ID, a priority list on either role applies to that shared observation
+source and its spectrum. Unconfigured roles produce
 exactly the legacy feed shape, with no optional source-level station fields.
 Configured roles name `station` even when using the primary; `fallback_for`
 exists only when the data actually came from a backup. Source IDs remain tied

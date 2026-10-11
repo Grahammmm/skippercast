@@ -313,7 +313,8 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     def run(job):
         from .failover import station_chain, ordered_source
         role = "tide" if job[0] == "tides" else next((r for r in ("nearshore_buoy", "offshore_buoy")
-                if job[0] in ("buoy-" + stations[r], "buoy-" + stations[r] + "-swell")), None)
+                if r in stations.get("roles", {}) and
+                job[0] in ("buoy-" + stations[r], "buoy-" + stations[r] + "-swell")), None)
         if role not in stations.get("roles", {}):
             return source(*job, now=now, previous=old_sources.get(job[0]))
         def read_station(used, old):
