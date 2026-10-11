@@ -5,6 +5,9 @@
 // footer; before a brief is in hand it shows its empty state. "Where to look"
 // is web/brief/WhereToLook.tsx (FE-34); the tide sparkline (FE-33) is still a
 // placeholder. The map is MapStage.tsx (FE-71); in the Conditions view (FE-32)
+// the view covers the map above the time dock, and the map stays mounted. The
+// Fleet view (FE-53) takes the brief column's place, so the map it drives stays
+// in view. Mobile.tsx (FE-06) composes the same pieces into
 // and the History view (FE-35) the view covers the map above the time dock,
 // and the map stays mounted.
 // Mobile.tsx (FE-06) composes the same pieces into
@@ -18,6 +21,7 @@ import {MapStage} from './MapStage.tsx';
 import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
 import {Conditions} from './views/Conditions.tsx';
+import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
 import {appView} from '../state.ts';
@@ -48,7 +52,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
 export function Desktop({now = new Date()}: {now?: Date} = {}) {
   return (
     <main class="app-main">
-      <Brief now={now} />
+      {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Fleet /></aside> : <Brief now={now} />}
       <MapStage>
         {appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'history' ? <History now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
         <TimeDock now={now} />
