@@ -5,12 +5,11 @@
 // chart's cursor is the store's `hour`: a drag on the chart writes it as the
 // time dock does, so the map's hour moves with it. The surface-current choice
 // is the Currents rail entry's own control (`?current=`), not a copy.
-import {signal} from '@preact/signals';
 import {useEffect, useState} from 'preact/hooks';
 import {Segmented} from '../../ui/Chip.tsx';
-import {currentBrief} from '../../brief/Brief.tsx';
+import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brief/Brief.tsx';
 import {coastBinding, coastReport} from '../../coast-data.ts';
-import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, loadConditionsForecast, readingsAt, sourceClocks, type ConditionsForecast, type Family} from '../../conditions.ts';
+import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, readingsAt, sourceClocks, type Family} from '../../conditions.ts';
 import {CDFW_REGULATIONS} from '../../map/habitat.ts';
 import {PROFILE_TABLE} from '../../profile.ts';
 import {profile, region} from '../../state.ts';
@@ -19,19 +18,10 @@ import {CoastMarkup} from '../CoastMarkup.tsx';
 import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
 
-/** The region's forecast at its chosen point; null before it loads, when it fails, or for another region. */
-export const conditionsForecast = signal<ConditionsForecast | null>(null);
-let requested: string | null = null;
-
-/** Load the forecast for the region shown, once per region. */
+/** Load the forecast for the region shown (shared with the brief, once per region). */
 function useForecast(): void {
   const id = region.value, near = regionInfo.value?.id === id ? regionInfo.value.center : null;
-  useEffect(() => {
-    const key = `${id}|${near?.join(',') ?? ''}`;
-    if (!id || requested === key) return;
-    requested = key;
-    void loadConditionsForecast(id, near, fetch, location.href).then(f => { if (requested === key) conditionsForecast.value = f; });
-  }, [id, near?.[0], near?.[1]]);
+  useEffect(() => { if (id) void ensureRegionalForecast(id, near); }, [id, near?.[0], near?.[1]]);
 }
 
 const FAMILY_OPTIONS = (Object.keys(FAMILIES) as Family[]).map(value => ({value, label: FAMILIES[value].label}));
@@ -42,7 +32,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
   useForecast();
   const [family, setFamily] = useState<Family>('gfs');
   const tz = zone(), state = dockState(now, tz), selected = new Date(state.at).toISOString();
-  const forecast = conditionsForecast.value?.region === region.value ? conditionsForecast.value : null;
+  const forecast = regionalForecast.value?.region === region.value ? regionalForecast.value : null;
   const report = coastReport.value?.data ?? null, binding = coastBinding.value;
   const span = conditionsSpan(now);
   const local = report && binding ? coastRows(report, binding.areaId, now) : {rows: [], site: null};
