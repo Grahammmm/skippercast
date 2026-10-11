@@ -48,12 +48,12 @@ Rules for every task:
   `CHANGELOG.md` (say "behind `UI_V2`" until FE-60). Append a dated line to
   [README.md](README.md)'s status log when a phase starts or ends.
 
-## Status summary (2026-10-10)
+## Status summary (2026-10-11)
 
 | Status | Count | Tasks |
 | --- | --- | --- |
-| DONE on `main` | 63 | every task except the three below and the two dropped |
-| CHANGED, not started | 3 | FE-60 (flip `UI_V2` on; all dependencies merged), FE-61 (one release later), FE-62 (after the owner confirms deleting the fish repo) |
+| DONE on `main` | 64 | every task except the two below and the two dropped |
+| CHANGED, not started | 2 | FE-61 (after v0.8.0, the release that carries the flip), FE-62 (after the owner confirms deleting the fish repo) |
 | DROPPED | 2 | FE-13, FE-26 |
 
 Earlier summaries went stale as PRs merged; the per-task Status lines are the record.
@@ -532,7 +532,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ## Phase 5: flip, delete, retire
 
 ### FE-60 · Flip `UI_V2` on by default · S
-- Status: CHANGED (dependencies and the one-map acceptance). Agent: Claude.
+- Status: DONE (#540; live fixes #556, #557; released as v0.8.0). Agent: Claude. Live check 2026-10-11 on desktop and phone: § 15 items 1–6 pass except the Chart basemap, which waits on the owner's first basemap publish (FE-10 publishing step on #474; the dry build passed).
 - Depends: FE-07, FE-11, FE-12, FE-14 … FE-25 (not FE-13), FE-27, FE-30 … FE-37, FE-50 … FE-55, FE-71 … FE-83, FE-86
 - Files: `deployments/production.json`, `.github/workflows/deploy-cloudflare.yml`, `CHANGELOG.md`, `docs/web-app.md`, `README.md` (status).
 - Build: default on; `?ui=v1` stays for one release; release notes.
