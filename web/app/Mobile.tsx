@@ -12,6 +12,10 @@
 // sheet holds that view instead of the brief. Every piece is the desktop's,
 // composed in this order. The Reports view (FE-52) opens from the sheet's
 // footer and replaces the sheet with its page over the map.
+// its card. In the Conditions (FE-32) and History (FE-35) views the sheet holds that view instead
+// of the brief. Every piece is the desktop's, composed in this order. The
+// Reports view (FE-52) opens from the sheet's footer and replaces the sheet
+// with its page over the map.
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -30,6 +34,7 @@ import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
+import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
 import {appView, setParams, withParams} from '../state.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
@@ -131,10 +136,9 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' ? <main class="app-mobile-page"><Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : conditions ? 'Conditions' : fleet ? 'Fleet' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' ? <main class="app-mobile-page"><Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
-        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : conditions ? <Conditions now={now} />
-          : fleet ? <Fleet onShowMap={() => setDetent('peek')} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
+        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />
     </div>

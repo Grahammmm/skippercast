@@ -17,7 +17,7 @@ test('every v2 key round-trips through withParams, readURL and syncFromURL', () 
   configureStore({storage: store});
   const patch = {region: 'morro-bay', coast: null, view: 'conditions', target: 'halibut', hour: '2026-09-30T15:00Z',
     profile: 'shore', day: '2026-10-06', layers: 'swell,water-temp', area: 'estero', base: 'chart',
-    presentation: '3d', current: 'hfr-1', habitat: 'reef:r12'};
+    presentation: '3d', current: 'hfr-1', habitat: 'reef:r12', station: '46215', metric: 'waveFt', range: '14'};
   assert.deepEqual(Object.keys(patch).sort(), [...URL_KEYS].sort(), 'the test covers every store key');
   const href = withParams(ORIGIN + '?focus=r12', patch);
   const read = readURL(href);

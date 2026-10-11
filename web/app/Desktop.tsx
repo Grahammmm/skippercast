@@ -8,6 +8,9 @@
 // the view covers the map above the time dock, and the map stays mounted. The
 // Fleet view (FE-53) takes the brief column's place, so the map it drives stays
 // in view. Mobile.tsx (FE-06) composes the same pieces into
+// and the History view (FE-35) the view covers the map above the time dock,
+// and the map stays mounted.
+// Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order. The Reports view (FE-52) covers the brief and
 // the map; the stage stays mounted beneath it.
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
@@ -19,6 +22,7 @@ import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
+import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
 import {appView} from '../state.ts';
 
@@ -50,7 +54,7 @@ export function Desktop({now = new Date()}: {now?: Date} = {}) {
     <main class="app-main">
       {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Fleet /></aside> : <Brief now={now} />}
       <MapStage>
-        {appView.value === 'conditions' ? <Conditions now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
+        {appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'history' ? <History now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
         <TimeDock now={now} />
       </MapStage>
       {appView.value === 'reports' ? <div class="app-page"><Reports now={now} /></div> : null}
