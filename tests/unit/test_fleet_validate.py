@@ -3,7 +3,7 @@
 Synthetic throughout: the processor tests' made-up MMSI (999xxxxxx) and square
 harbor drawn in open ocean, a raw store under a temporary FLEET_VAR, made-up
 labeller ids (``admin-test``, ``agent:test``) and a fake Worker serving the
-labels the admin view would have stored.
+labels the admin view would have stored and taking the labels ``label import`` posts.
 """
 import json
 import os
@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from skippercast.fleet.ais import validate
+from skippercast.fleet.ais import label as labelling, validate
 from skippercast.fleet.ais.events import iso_utc
 from skippercast.fleet.ais.process import HOUR, MINUTE
 from skippercast.fleet.ais.segment import ActivityThresholds
@@ -56,6 +56,11 @@ class LabelWorker:
         rest = [t for t in self.trips if t["id"] > params.get("cursor", "")]
         chunk = rest[:self.page]
         return {"region": params["region"], "trips": chunk, "next": chunk[-1]["id"] if len(rest) > self.page else None}
+
+    def post(self, path, body):
+        self.calls.append((path, body))
+        assert path == "labels", path
+        return {"trip_id": body["trip_id"], "labels": len(body["labels"])}
 
 
 class ScoringTests(unittest.TestCase):
@@ -107,6 +112,51 @@ class ScoringTests(unittest.TestCase):
     def test_no_labels_give_no_ratios(self):
         r = metrics(confusion([], [Interval(0, M, "transit")]))
         self.assertEqual((r["fishing"]["precision"], r["fishing"]["recall"]), (None, None))
+
+    def test_the_target_also_needs_each_fishing_mode(self):
+        labels = [Interval(0, 50 * M, "drift-anchor"), Interval(50 * M, 100 * M, "troll-slow"),
+                  Interval(100 * M, 150 * M, "troll-pelagic")]
+        # Slow troll called pelagic: still fishing, so the overall gate passes, but troll-slow's recall is 0
+        # and troll-pelagic's precision 0.5.
+        mixed = score(labels, [Interval(0, 50 * M, "drift-anchor"), Interval(50 * M, 150 * M, "troll-pelagic")])
+        t = validate.target(mixed, 30)
+        self.assertTrue(t["overall_met"])
+        self.assertFalse(t["met"])
+        self.assertEqual(t["per_mode"], {"drift-anchor": {"precision": 1.0, "recall": 1.0, "met": True},
+                                         "troll-slow": {"precision": None, "recall": 0.0, "met": False},
+                                         "troll-pelagic": {"precision": 0.5, "recall": 1.0, "met": False}})
+        right = score(labels, labels)
+        self.assertTrue(validate.target(right, 30)["met"])
+        short = validate.target(right, 29)
+        self.assertEqual((short["overall_met"], short["met"]), (False, False))
+        self.assertTrue(all(v["met"] for v in short["per_mode"].values()))
+        no_pelagic = score(labels[:2], labels[:2])
+        self.assertFalse(validate.target(no_pelagic, 30)["met"], "a mode never labelled cannot pass")
+
+    def test_transit_lost_counts_labelled_fishing_minutes_called_transit(self):
+        """Labels: drift 0-40, slow 40-70, pelagic 70-100, transit 100-120. Classifier: transit 0-10, drift 10-40,
+        slow 40-60, transit 60-70, gap 70-75, transit 75-80, pelagic 80-100, transit 100-120.
+
+        By hand: lost drift 10, slow 10, pelagic 5 = 25 (the labelled transit called transit is not lost);
+        labelled fishing minutes scored 40 + 30 + 30 - 5 (gap) = 95; share 25 / 95 = 0.263.
+        """
+        labels = [Interval(0, 40 * M, "drift-anchor"), Interval(40 * M, 70 * M, "troll-slow"),
+                  Interval(70 * M, 100 * M, "troll-pelagic"), Interval(100 * M, 120 * M, "transit")]
+        predictions = [Interval(0, 10 * M, "transit"), Interval(10 * M, 40 * M, "drift-anchor"),
+                       Interval(40 * M, 60 * M, "troll-slow"), Interval(60 * M, 70 * M, "transit"),
+                       Interval(70 * M, 75 * M, "gap"), Interval(75 * M, 80 * M, "transit"),
+                       Interval(80 * M, 100 * M, "troll-pelagic"), Interval(100 * M, 120 * M, "transit")]
+        lost = validate.transit_lost(confusion(labels, predictions))
+        self.assertEqual(lost, {"minutes": 25, "share": 0.263,
+                                "modes": {"drift-anchor": 10, "troll-slow": 10, "troll-pelagic": 5}})
+        self.assertEqual(validate.transit_lost(confusion([], []))["share"], None)
+
+    def test_a_trip_counts_under_its_dominant_labelled_mode(self):
+        self.assertEqual(validate.dominant_mode([Interval(0, 40 * M, "drift-anchor"), Interval(40 * M, 70 * M, "troll-pelagic"),
+                                                 Interval(70 * M, 200 * M, "transit")]), "drift-anchor")
+        self.assertEqual(validate.dominant_mode([Interval(0, 30 * M, "troll-pelagic"), Interval(30 * M, 60 * M, "troll-slow")]),
+                         "troll-slow", "a tie goes to the earlier mode")
+        self.assertEqual(validate.dominant_mode([Interval(0, 30 * M, "transit")]), "none")
 
 
 class SyncTestCase(unittest.TestCase):
@@ -197,10 +247,16 @@ class ReportTests(SyncTestCase):
         self.assertFalse(r["target"]["met"], "one trip is short of the 30-trip target")
         self.assertEqual((r["target"]["trips"], r["target"]["fishing_precision"], r["target"]["fishing_recall"]), (30, 0.8, 0.7))
         self.assertGreater(r["fishing"]["agree_min"], 0)
+        table = r["confusion"]
+        self.assertEqual(r["transit_lost"]["minutes"], sum(table[m]["transit"] for m in ("drift-anchor", "troll-slow", "troll-pelagic")))
+        # Drift 40 labelled minutes against pelagic 30: one drift trip, from port-a, departing in October 2026 (local).
+        self.assertEqual(r["coverage"], {"modes": {"drift-anchor": 1}, "ports": {"port-a": 1}, "months": {"2026-10": 1}})
+        self.assertEqual(set(r["target"]["per_mode"]), {"drift-anchor", "troll-slow", "troll-pelagic"})
 
     def test_one_labeller_kind_and_other_thresholds(self):
         agent = validate.report(REGION, self.root, labeller="agent", now_ms=T0)
         self.assertEqual(agent["labels"], {"agent": 1})
+        self.assertEqual(agent["coverage"]["modes"], {"troll-pelagic": 1})
         self.assertEqual(agent["kinds"]["drift-anchor"]["labelled_min"], 0)
         self.assertEqual(agent["minutes"]["labelled"], 30)
         override = Path(self.tmp.name) / "th.json"
@@ -222,8 +278,13 @@ class ReportTests(SyncTestCase):
         self.assertIn("Fishing precision", text)
         self.assertIn("inferred from movement", text)
         self.assertIn("never confirmed fishing", text)
+        self.assertIn("Transit lost:", text)
+        self.assertIn("Trips by dominant labelled mode: drift-anchor 1", text)
+        self.assertIn("Per mode: drift-anchor", text)
+        document = json.dumps(validate.report(REGION, self.root, now_ms=T0))
         for secret in (str(MMSI), TRIP, "admin-test", "agent:test", VESSEL):
             self.assertNotIn(secret, text)
+            self.assertNotIn(secret, document)
 
     def test_the_command_line_scores_offline_and_writes_the_report(self):
         var = Path(self.tmp.name) / "var"
@@ -242,6 +303,135 @@ class WiringTests(unittest.TestCase):
         self.assertLess(process, text.index("--sync-only"))
         from skippercast.fleet.ais.__main__ import COMMANDS
         self.assertIn("validate", COMMANDS)
+        self.assertIn("label", COMMANDS)
+
+
+class LabelExportTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.var = Path(self.tmp.name) / "var"
+        self.root = self.var / "CA" / "ais"
+        AisStore(self.root).write(positions=track())
+        env = mock.patch.dict(os.environ, {"SKIPPERCAST_FLEET_VAR": str(self.var)})
+        env.start()
+        self.addCleanup(env.stop)
+
+    def export(self, out="labelling/2026-10", **kw):
+        return labelling.export(REGION, out, source="aisstream", root=self.root, now_ms=T0 + 8 * HOUR, **kw)
+
+    def test_each_unlabelled_trip_gets_a_minute_summary_under_fleet_var(self):
+        self.assertEqual(self.export(), {"vessels": 1, "trips": 1, "labelled": 0, "written": 1})
+        path = self.root / "labelling" / "2026-10" / f"{TRIP}.json"
+        self.assertTrue(path.resolve().is_relative_to(self.var.resolve()))
+        doc = json.loads(path.read_text())
+        self.assertEqual(doc["trip_id"], TRIP)
+        self.assertEqual((doc["depart_port_id"], doc["return_port_id"], doc["status"]), ("port-a", "port-a", "closed"))
+        self.assertEqual(doc["window"], {"from": doc["departed_at"], "to": doc["returned_at"]})
+        self.assertEqual(doc["columns"], ["t", "sog_kn", "course_change_deg", "port_nm", "local_hour", "classifier_hint"])
+        self.assertIn("do not copy", doc["hint"])
+        self.assertEqual(doc["basis"], "inferred-from-movement")
+        rows = doc["minutes"]
+        self.assertEqual(rows[0][0], doc["departed_at"])
+        self.assertEqual(len({r[0] for r in rows}), len(rows), "one row a minute")
+        self.assertIsNone(rows[0][2], "no course change before the second fix")
+        self.assertEqual(rows[0][4], 2, "09:39Z is 02:39 in Pacific daylight time")
+        self.assertGreater(max(r[3] for r in rows), 1.0)
+        self.assertLessEqual({r[5] for r in rows}, set(validate.PREDICTIONS))
+        self.assertTrue({"drift-anchor", "transit"} <= {r[5] for r in rows})
+        for secret in (str(MMSI), VESSEL):
+            self.assertNotIn(secret, path.read_text())
+
+    def test_trips_already_labelled_or_outside_the_window_are_left_out(self):
+        validate.sync(REGION, LabelWorker([trip_row()]), self.root, now_ms=T0 + 8 * HOUR)
+        self.assertEqual(self.export(), {"vessels": 1, "trips": 1, "labelled": 1, "written": 0})
+        self.assertEqual(self.export(out="next", window=(T0 + HOUR, T0 + 2 * HOUR))["trips"], 0)
+        self.assertFalse((self.root / "next").exists())
+
+    def test_the_export_never_writes_outside_fleet_var_or_into_the_checkout(self):
+        for out in (str(Path(self.tmp.name) / "elsewhere"), "../../../elsewhere"):
+            with self.assertRaises(ValueError):
+                self.export(out=out)
+        self.assertFalse((Path(self.tmp.name) / "elsewhere").exists())
+        with mock.patch.dict(os.environ, {"SKIPPERCAST_FLEET_VAR": str(ROOT / "docs")}):
+            with self.assertRaises(ValueError):
+                labelling.export(REGION, str(ROOT / "docs" / "labelling"), source="aisstream", root=self.root, now_ms=T0)
+        self.assertFalse((ROOT / "docs" / "labelling").exists())
+
+
+class LabelImportTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        var = Path(self.tmp.name) / "var"
+        self.root = var / "CA" / "ais"
+        AisStore(self.root).write(positions=track())
+        with mock.patch.dict(os.environ, {"SKIPPERCAST_FLEET_VAR": str(var)}):
+            labelling.export(REGION, "labelling", source="aisstream", root=self.root, now_ms=T0 + 8 * HOUR)
+        self.dir = self.root / "labelling"
+
+    def proposal(self, labels=None, labeller="agent:test", trip=TRIP):
+        if labels is None:
+            labels = [self.label(40, 55, "transit"), self.label(55, 95, "drift-anchor"), self.label(95, 125, "troll-pelagic")]
+        return {"trip_id": trip, "labeller": labeller, "labels": labels}
+
+    @staticmethod
+    def label(start, end, kind, basis="  slow wandering track  "):
+        return {"started_at": iso_utc(T0 + start * M).replace(".000Z", "Z"), "ended_at": iso_utc(T0 + end * M),
+                "label": kind, "basis": basis}
+
+    def write(self, *entries):
+        path = self.dir / "proposals.json"
+        path.write_text(json.dumps(list(entries)))
+        return path
+
+    def errors(self, *entries):
+        worker = LabelWorker([])
+        with self.assertRaises(ValueError) as caught:
+            labelling.import_labels(self.write(*entries), worker)
+        self.assertEqual(worker.calls, [], "nothing is posted when any entry fails")
+        return str(caught.exception)
+
+    def test_a_valid_file_is_posted_one_trip_a_request(self):
+        worker = LabelWorker([])
+        counts = labelling.import_labels(self.write(self.proposal()), worker)
+        self.assertEqual(counts, {"trips": 1, "labels": 3, "posted": 1})
+        (path, body), = worker.calls
+        self.assertEqual(path, "labels")
+        self.assertEqual(body["trip_id"], TRIP)
+        self.assertEqual(body["labeller"], "agent:test")
+        self.assertEqual(body["labels"][0], {"started_at": iso_utc(T0 + 40 * M), "ended_at": iso_utc(T0 + 55 * M),
+                                             "label": "transit", "basis": "slow wandering track"})
+
+    def test_a_dry_run_checks_and_makes_no_request(self):
+        path = self.write(self.proposal())
+        with mock.patch.object(labelling, "Worker", side_effect=AssertionError("no Worker on a dry run")):
+            self.assertEqual(labelling.main(["import", str(path), "--dry-run"]), 0)
+            self.assertEqual(labelling.import_labels(path), {"trips": 1, "labels": 3, "posted": 0})
+
+    def test_invalid_proposals_are_refused_and_nothing_is_posted(self):
+        cases = {
+            "labels overlap": [self.label(40, 60, "transit"), self.label(55, 95, "drift-anchor")],
+            "within the trip": [self.label(30, 55, "transit")],   # before the departure at 39 min
+            "label must be one of": [self.label(55, 95, "fishing")],
+            "at least one minute": [self.label(55, 55, "drift-anchor")],
+            "basis is required": [self.label(55, 95, "drift-anchor", basis=" ")],
+            "unknown field": [{**self.label(55, 95, "drift-anchor"), "hint": "drift-anchor"}],
+            "ISO UTC": [{**self.label(55, 95, "drift-anchor"), "started_at": "2026-10-05 10:35"}],
+        }
+        for message, labels in cases.items():
+            with self.subTest(message):
+                self.assertIn(message, self.errors(self.proposal(labels)))
+        for labeller in ("admin-test", "agent:", "agent:a b", None):
+            self.assertIn("labeller must be agent:<name>", self.errors(self.proposal(labeller=labeller)))
+        self.assertIn("no export file", self.errors(self.proposal(trip=OTHER)))
+        self.assertIn("once per file", self.errors(self.proposal(), self.proposal()))
+        self.assertIn("1 to 200 labels", self.errors(self.proposal(labels=[])))
+        message = self.errors(self.proposal(), self.proposal(labeller="admin-test", trip=OTHER))
+        self.assertTrue(message.startswith("entry 2: "), message)
+        self.assertNotIn(TRIP, message)
+        self.assertNotIn(OTHER, message)
+        self.assertEqual(labelling.main(["import", str(self.dir / "proposals.json"), "--dry-run"]), 2)
 
 
 if __name__ == "__main__":
