@@ -74,6 +74,25 @@ test('3D shows the terrain; switching to 2D keeps place, target, profile, hour a
   expect(pageErrors).toEqual([]);
 });
 
+test('from 2D, Chart selects the Chart and 2D comes back, keeping the place', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {...PLACE, presentation: '2d'});
+  const host = page.locator('.app-terrain');
+  const perspective = () => host.evaluate(el => el.shadowRoot?.getElementById('scene')?.dataset.perspective ?? null);
+  await expect.poll(perspective).toBe('2d');
+  // The stage's own setPerspective is reported back through onPerspective; Chart must not read that as a 3D choice.
+  await toggle(page, 'Chart').click();
+  await expect(toggle(page, 'Chart')).toHaveAttribute('aria-pressed', 'true');
+  await expect(host).toBeHidden();
+  await expect(page.locator('.app-map')).toBeVisible();
+  expect(params(page)).toMatchObject({...PLACE, presentation: 'chart'});
+  await toggle(page, '2D').click();
+  await expect(host).toBeVisible();
+  await expect.poll(perspective).toBe('2d');
+  expect(params(page)).toMatchObject({...PLACE, presentation: '2d'});
+  expect(pageErrors).toEqual([]);
+});
+
 test('the terrain chrome sits clear of the stage chrome and axe is clean', async ({page, v2}) => {
   await holdCoastData(page);
   await v2.open('app', {...PLACE, presentation: '3d'});

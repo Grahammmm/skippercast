@@ -261,6 +261,10 @@ export function createStage(options: StageOptions): Stage {
     for (const name of ORDER) {
       const value = state[name], k = key(value);
       if (applied[name] === k) continue;
+      // Chart (or a hidden page) has no camera mode: Chart maps to 3d, and the renderer reports every
+      // setPerspective through onPerspective, which would write that 3d over the Chart choice. The mode
+      // waits until the terrain shows again.
+      if (name === 'perspective' && !state.visible) continue;
       applied[name] = k;
       if (name === 'currentLayer') h.setCurrentLayer(state.currentLayer);
       else if (name === 'species') h.setSpecies(state.species);
@@ -344,6 +348,8 @@ export function createStage(options: StageOptions): Stage {
           viewTimer = setTimeout(() => { if (alive && appView.peek() === 'coast') setParams({view: cameraParam(next)}); }, viewDelay);
         },
         onPerspective: mode => {
+          // The report of the stage's own setPerspective, or a change while Chart shows, is not a choice.
+          if (applied.perspective === key(mode) || shownPresentation.peek() === 'chart') return;
           applied.perspective = key(mode);
           if (presentation.peek() !== mode) setParams({presentation: mode});
         },

@@ -41,6 +41,8 @@ function terrain({ready = true, throws = false} = {}) {
     'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
     handle[name] = value => { fake.calls.push([name, value]); return true; };
   }
+  // As packages/coast's viewer does: setPerspective reports the new mode through onPerspective, synchronously.
+  handle.setPerspective = value => { fake.calls.push(['setPerspective', value]); fake.options?.onPerspective?.(value); return true; };
   handle.load = async () => ready;
   handle.destroy = () => { fake.destroyed++; };
   fake.module = {
@@ -221,6 +223,26 @@ test('renderer callbacks write the store: selection to ?habitat= (Back restores)
   assert.equal(fake.count('setPerspective'), 0, 'the renderer\'s own perspective change is not echoed');
   o.onCurrentStatus('WCOFS · 4 km source');
   assert.equal(currentStatus.value, 'WCOFS · 4 km source');
+  s.destroy();
+});
+
+test('Chart, 2D and 3D each select themselves from any other; the renderer\'s perspective echo never overrides the choice', async () => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=2d&profile=spear&target=rockfish&hour=2026-10-06T03:00Z&habitat=reef:r1&view=35.5,-121,10`);
+  const fake = terrain();
+  const {stage: s} = stage(fake);
+  await tick();
+  assert.equal(fake.mounts, 1);
+  let from = '2d';
+  for (const next of ['chart', '2d', '3d', 'chart', '3d', '2d', 'chart', '2d']) {
+    choosePresentation(next);
+    assert.equal(nav.params().get('presentation'), next, `${from} → ${next}: the address keeps the choice`);
+    assert.equal(shownPresentation.value, next, `${from} → ${next}: the stage shows it`);
+    for (const key of ['region', 'profile', 'target', 'hour', 'habitat', 'view']) assert.ok(nav.params().get(key), `${from} → ${next}: ${key} kept`);
+    assert.equal(fake.last('setVisible') ?? true, next !== 'chart', `${from} → ${next}: terrain visibility`);
+    if (next !== 'chart') assert.equal(fake.last('setPerspective') ?? '2d', next, `${from} → ${next}: the camera mode`);
+    from = next;
+  }
+  assert.equal(fake.mounts, 1, 'mounted once');
   s.destroy();
 });
 
