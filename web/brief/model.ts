@@ -74,14 +74,19 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   // Boat at a regulated bar adds the hour's ebb and bar band to the tide tile (packages/coast bar-conditions.ts).
   const barHour = daily.bar && hour ? daily.bar.hours.find(item => item.at === hour.at) : undefined;
   const barText = barHour ? [barHour.tide.midEbb ? 'mid-ebb' : barHour.tide.stage, `${barHour.band === 'No bar flag' ? '' : 'bar '}${barHour.band.toLowerCase()} (estimate)`].filter(Boolean).join(' · ') : null;
+  // Kayak adds the wind band and side, seas band, chop and launch surf of the selected hour (packages/coast kayak.ts).
+  const kayakHour = daily.kayak && hour ? daily.kayak.hours.find(item => item.at === hour.at) : undefined;
+  const kayakWind = kayakHour && kayakHour.wind.band !== 'Unknown' ? `${kayakHour.wind.band.toLowerCase()}${kayakHour.wind.side ? ` ${kayakHour.wind.side}` : ''}` : null;
   const wind = tile('wind', 'Wind', hour?.windKnots ?? null, 'kt',
-    [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null, shoreHour?.wind.side ?? null].filter(Boolean).join(' · '),
+    [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null, shoreHour?.wind.side ?? kayakWind].filter(Boolean).join(' · '),
     forecastSource, issued, TILE_LIMIT_MS.wind, now);
 
   let swell: BriefTile;
   if (profileSemantics(profile).swellTile === 'offshore') {
     const period = hour?.wavePeriodS ?? hour?.swellPeriodS ?? null;
-    swell = tile('swell', 'Swell', hour?.waveFt ?? null, 'ft', finite(period) ? `${period} s · offshore forecast` : 'offshore forecast', forecastSource, issued, TILE_LIMIT_MS.swell, now);
+    const kayakSeas = kayakHour && kayakHour.seas.band !== 'Unknown'
+      ? ` · ${kayakHour.seas.band.toLowerCase()} seas${kayakHour.seas.chop ? ' · short-period chop' : ''}${kayakHour.launchCaution ? ` · surf at the launch${kayakHour.launch.basis === 'offshore' ? ' (offshore estimate)' : ''}` : ''}` : '';
+    swell = tile('swell', 'Swell', hour?.waveFt ?? null, 'ft', (finite(period) ? `${period} s · offshore forecast` : 'offshore forecast') + kayakSeas, forecastSource, issued, TILE_LIMIT_MS.swell, now);
   } else {
     const site = (report.nearshore ?? []).filter(item => item.areaId === area.id && item.availability === 'available')
       .sort((a, b) => Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt))[0];
@@ -115,7 +120,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, shore: daily.shore, bar: daily.bar, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 

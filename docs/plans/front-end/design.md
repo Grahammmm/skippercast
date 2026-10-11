@@ -917,16 +917,16 @@ keeps the reload until FE-61.
 
 ### Profile semantics (ported from `fish` `experience.ts`, `daily.ts`, `opportunity.ts`)
 
-| | Boat | Shore | Spear |
-| --- | --- | --- | --- |
-| Default target | lingcod | surfperch | cabezon (shallow reef) |
-| Depth limit | 300 ft | none (shore runs) | 60 ft |
-| Species list | region species whose plans have a boat method | surfperch, halibut and region species with a shore method | region species with a dive method within 60 ft |
-| "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by the protected-area check and conditions; review dates do not set guidance priority; source publication visibility still applies (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first |
-| Swell tile | offshore buoy / forecast | nearest fresh nearshore model site, with the hour's surf band (shore conditions below) | nearest fresh nearshore model site, with the hour's surge band |
-| Default layers | Seafloor, Currents | Swell, Water temp | Seafloor, Swell |
-| Caveat | "Habitat describes a place to look; fish presence is unverified." | "Offshore seas do not measure breakers at your beach; check surf, access and water quality." | "In-water visibility is unverified; surface currents cannot clear a dive." |
-| Search plans | plans with boat methods | plans with shore methods | plans with dive methods |
+| | Boat | Shore | Spear | Kayak |
+| --- | --- | --- | --- | --- |
+| Default target | lingcod | surfperch | cabezon (shallow reef) | lingcod |
+| Depth limit | 300 ft | none (shore runs) | 60 ft | 120 ft (a screening choice for how deep a paddler usually fishes; depth is not distance from the launch) |
+| Species list | region species whose plans have a boat method | surfperch, halibut and region species with a shore method | region species with a dive method within 60 ft | region species whose plans have a boat method |
+| "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by the protected-area check and conditions; review dates do not set guidance priority; source publication visibility still applies (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first | reef marks and seafloor candidates by habitat fit within 120 ft |
+| Swell tile | offshore buoy / forecast | nearest fresh nearshore model site, with the hour's surf band (shore conditions below) | nearest fresh nearshore model site, with the hour's surge band | offshore forecast, with the hour's seas band, chop and launch surf (kayak conditions below) |
+| Default layers | Seafloor, Currents | Swell, Water temp | Seafloor, Swell | Seafloor, Currents |
+| Caveat | "Habitat describes a place to look; fish presence is unverified." | "Offshore seas do not measure breakers at your beach; check surf, access and water quality." | "In-water visibility is unverified; surface currents cannot clear a dive." | "Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle." |
+| Search plans | plans with boat methods | plans with shore methods | plans with dive methods | plans with boat methods |
 
 `web/profile.ts` exports these as data so that tests cover them without the
 DOM. Species search plans (`search-plans.js`) are filtered by method in the
@@ -989,6 +989,31 @@ bar status (VHF 16 or 22A) or the harbor patrol; it never calls a bar safe.
 All thresholds are in the `BAR` table with their reasoning. Headwind or
 following sea for a common run is not judged: it would need run bearings
 the data does not carry.
+
+Kayak conditions (issue #542, `packages/coast/src/kayak.ts`): kayak is a
+client-only profile (the legacy coast experience, saved /coast homes and the
+server keep boat, shore and spear; a kayak choice lives in the browser's
+stored profile and the address). The kayak brief scores each forecast hour
+for wind first (Light, Moderate, Fresh or Strong on sustained wind and gust;
+Calmer needs 10 kt sustained and 15 kt gusts at most, stricter than the boat
+rule, as a screening choice), offshore wind (from the forecast direction
+against the same vetted shoreline bearings as shore conditions; any offshore
+hour carries a caution and above Light it scores past Marginal; where the
+stretch of coast has no bearing, wind is speed only and the brief says so),
+combined seas (2/3/4.5 ft bands) with short-period chop (2 ft or more at 8 s
+or less) scored on top, and surf at the launch beach (the shore surf
+estimate: the fresh nearshore model, else the offshore seas labelled an
+estimate; at 3 ft or more the hour carries a launch caution). Hours outside
+daylight and hours under a fog or visibility marine alert are capped at
+Rough; the brief's inputs carry no visibility forecast, so the brief says
+fog is read only from alerts. Each hour reads Calmer, Marginal, Rough or
+Unknown with reasons. The headline is the day's wind range and the calmest
+daylight hour, or "offshore wind at times"; status is Caution with offshore
+wind, launch surf, a fog alert or no calmer or marginal daylight hour, and
+Mixed otherwise; kayak windows take hours that are not Rough, have no
+offshore wind and no launch caution. The Morro Bay harbor entrance bar is not
+scored: kayakers who cross the bar need a separate bar check before they go.
+All thresholds are in the `KAYAK` table with their reasoning.
 
 ## 9. Map layers
 
@@ -1070,6 +1095,7 @@ profile. Outputs:
   water before the wind."; spear → the day's surge range and clarity estimate ("Low surge · Clarity estimate: fair");
   shore → the day's surf range and calmest daylight hour ("Small surf · calmer at 7 AM", "(offshore estimate)" without a nearshore model, "sneaker-wave risk" with long-period swell);
   boat at a regulated bar with a hazardous hour → the bar hours, then the wind and seas ("Bar hazardous 11 AM–3 PM (estimate) · 5–9 kt winds · 3–4 ft offshore seas");
+  kayak → the day's wind range and calmest daylight hour ("Light to moderate wind · calmer at 8 AM", "offshore wind at times" when the wind blows off the shore);
   otherwise "A clearer picture of your coast." Rules are data in
   `daily.ts` with a table test.
 - **Deck** sentence: wind range, seas range and period, plus the

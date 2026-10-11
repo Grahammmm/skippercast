@@ -77,7 +77,7 @@ test('stored profile, layers and base restore when the URL omits them; layers ar
 
 test('without storage or parameters the profile defaults to boat with its layers; junk is ignored', () => {
   configureStore({storage: null});
-  syncFromURL(ORIGIN + '?profile=kayak&view=35.36000,-120.94000,10&day=2026-02-30&layers=,Bad!,&base=sepia&focus=estero');
+  syncFromURL(ORIGIN + '?profile=jetski&view=35.36000,-120.94000,10&day=2026-02-30&layers=,Bad!,&base=sepia&focus=estero');
   assert.equal(profile.value, 'boat');
   assert.deepEqual(layers.value, PROFILE_TABLE.boat.defaultLayers);
   assert.equal(base.value, 'night');

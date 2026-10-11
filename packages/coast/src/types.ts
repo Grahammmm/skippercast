@@ -1,6 +1,11 @@
 import type {NearshoreSite,BeachWaterQuality} from './enrichment-types.ts';
 import type {SpatialData} from './spatial-types.ts';
 export type Mode = 'boat' | 'shore' | 'spear';
+/**
+ * The modes the daily brief scores: Mode plus the client-only kayak profile
+ * (kayak.ts). Area targets, saved preferences and the coast report keep Mode.
+ */
+export type BriefMode = Mode | 'kayak';
 export type SourceStatus = { id: string; label: string; url: string; kind: 'forecast'|'observation'|'prediction'|'report'|'rule'|'analysis'; outcome: 'ok'|'error'|'pending'; fetchedAt: string; issuedAt?: string; validThrough?: string; error?: string };
 export type ForecastHour = { at: string; windKnots: number|null; gustKnots: number|null; waveFt: number|null; wavePeriodS: number|null; swellFt?: number|null; swellPeriodS?: number|null; windWaveFt?: number|null; windDirectionDeg?: number|null; airTempF?: number|null; precipPct?: number|null; cloudCoverPct?: number|null; relativeHumidityPct?: number|null; daylight?: boolean };
 export type Area = { id: string; name: string; coast: string; mapLabel: string; lat: number; lon: number; landLat: number; landLon: number; modes: Mode[]; exposure: string; accessNote: string; targets: Record<Mode,string[]>; forecastZone?: string; waterQualityUrl: string };
