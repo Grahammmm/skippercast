@@ -11,7 +11,7 @@
 
 - `web/station-label.ts` holds the shared backup-station label logic, with unit tests and phone and laptop browser tests for primary, backup, retained-backup, missing-field and shared-station feeds.
 - Test the v2 pages' head tags (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
-- `e2e/startup.spec.ts` now measures the v2 app at `/map` too (`node scripts/measure_startup.mjs --v2`): each committed startup file is requested once. Its total is printed but not yet budgeted: the region's shoreline keeps it over the startup budget pending an owner decision.
+- `e2e/startup.spec.ts` now measures the v2 app at `/map` too (`node scripts/measure_startup.mjs --v2`): each committed startup file is requested once. Its total is printed and now budgeted (see the shoreline bullet below).
 - `dist/regions/<id>/shoreline.geojson` is schema_version 2: the platform build merges import features with identical source properties into one MultiLineString each and rounds coordinates to 5 decimals (under half a zoom-12 CUSP tile unit, so every tile vertex keeps its grid position). The v2 `/map` startup test now holds its static JSON to the unchanged budget (2,529,983 of 2,795,531 bytes).
 
 ## 0.8.0 — 2026-10-11
