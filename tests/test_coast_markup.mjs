@@ -46,12 +46,12 @@ async function load() {
 
 test('only allow-listed packages/coast renderers produce markup', async () => {
   const {COAST_RENDERERS, coastMarkup} = await load();
-  assert.deepEqual(Object.keys(COAST_RENDERERS), ['chart']);
+  assert.deepEqual(Object.keys(COAST_RENDERERS), ['chart', 'historyView']);
   assert.ok(Object.isFrozen(COAST_RENDERERS));
   const args = [ROWS, START, END, '2026-10-05T12:00:00Z', 'UTC'];
   assert.equal(coastMarkup('chart', args), chart(...args), 'the string is chart()\'s own, unchanged');
   assert.match(coastMarkup('chart', args), /Wind &lt;gust&gt;/, 'feed-derived text arrives escaped by packages/coast');
-  for (const name of ['historyView', 'toString', 'constructor', '__proto__', '']) assert.throws(() => coastMarkup(name, args), TypeError, name);
+  for (const name of ['tideChart', 'catchSheet', 'toString', 'constructor', '__proto__', '']) assert.throws(() => coastMarkup(name, args), TypeError, name);
 });
 
 test('a chart series colour is a CSS colour, never markup', async () => {
