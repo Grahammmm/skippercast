@@ -969,6 +969,27 @@ calmer or marginal daylight hour; shore windows use surf rather than the 3 ft
 offshore rule where a fresh nearshore model covers the hour. All thresholds
 are in the `SHORE` table with their reasoning.
 
+Harbour bar check (issue #542, `packages/coast/src/bar-conditions.ts`): the
+boat brief at one of the four bars regulated by 33 CFR 165.1196 (Morro Bay,
+Humboldt Bay, Noyo River, Crescent City Harbor; no other port) reads each
+forecast hour as Likely workable, Caution, Hazardous or Unknown from the tide
+stage (ebb from high to low water, with the middle half of the ebb as the
+strongest), swell height and period (the nearshore model when fresh, else
+the offshore seas as a labelled estimate on a higher scale) and, at Morro
+Bay only, where the entrance bearing is vetted, wind blowing in against the
+ebb. Mid-ebb against swell at the caution height, an ebb with long-period
+swell, or swell at the hazardous height is Hazardous; small swell without a
+tide stage is Unknown, never workable. A Hazardous hour makes the status
+Caution and leads the headline ("Bar hazardous 11 AM–3 PM (estimate)"); a
+window whose departure or return hour is Hazardous is not suggested, and one
+crossing in a caution or unknown hour says so in its reasons. The Tide tile
+adds the hour's ebb and bar band. The deck always says the reading is an
+estimate rather than an official bar report and to check the Coast Guard
+bar status (VHF 16 or 22A) or the harbor patrol; it never calls a bar safe.
+All thresholds are in the `BAR` table with their reasoning. Headwind or
+following sea for a common run is not judged: it would need run bearings
+the data does not carry.
+
 ## 9. Map layers
 
 `web/map/layers.ts` registers each layer with: id, rail entry (or base, or
@@ -1048,6 +1069,7 @@ profile. Outputs:
   ≥ 5 ft → "Swell sets the terms today."; max wind ≥ 12 kt → "Find your
   water before the wind."; spear → the day's surge range and clarity estimate ("Low surge · Clarity estimate: fair");
   shore → the day's surf range and calmest daylight hour ("Small surf · calmer at 7 AM", "(offshore estimate)" without a nearshore model, "sneaker-wave risk" with long-period swell);
+  boat at a regulated bar with a hazardous hour → the bar hours, then the wind and seas ("Bar hazardous 11 AM–3 PM (estimate) · 5–9 kt winds · 3–4 ft offshore seas");
   otherwise "A clearer picture of your coast." Rules are data in
   `daily.ts` with a table test.
 - **Deck** sentence: wind range, seas range and period, plus the

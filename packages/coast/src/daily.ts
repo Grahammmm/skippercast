@@ -4,6 +4,7 @@ import type {Alert, Area, County, ForecastHour, Mode, Observation, Report, TideE
 import {freshNearshore, nearshoreAt} from './nearshore.ts';
 import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay} from './spear.ts';
 import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay} from './shore-conditions.ts';
+import {BAR_CHECK, barDay, barHours, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
@@ -16,6 +17,8 @@ export type DailyBrief = {
  spear:SpearDay|null;
  /** The shore reading (shore-conditions.ts); null for the other profiles. */
  shore:ShoreDay|null;
+ /** The harbour bar reading (bar-conditions.ts) for a boat brief at a regulated bar; null otherwise. */
+ bar:BarDay|null;
 };
 const HOUR=3_600_000;
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value);
@@ -144,6 +147,13 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
   else if(shore.windSpeedOnly)missing.push('Onshore or offshore wind unknown for some hours (no wind direction); wind judged on speed only');
   if(shore.tideUnknown)missing.push('Tide phase unknown: high and low tide events unavailable');
  }
+ // Boat at a regulated bar (33 CFR 165.1196): the bar check per hour, from the fresh nearshore model where one covers the hour.
+ const entrance=mode==='boat'?entranceFor(county.id,area.id):null;
+ const bar=entrance?barDay(entrance,barHours({hours,site:freshNearshore(report,area.id,now)[0],entrance,tideEvents:report.tideEvents})):null;
+ if(bar&&hours.length){
+  if(bar.basis!=='nearshore')missing.push('Bar swell is an offshore estimate where no fresh nearshore model covers the hour');
+  if(bar.tideUnknown)missing.push('Tide phase unknown: the bar check cannot time the ebb');
+ }
  const spear=mode==='spear'?spearDay(spearHours({hours,forecastHours:forecast?.hours??[],site,observations:report.observations.filter(observation=>observation.stationId===county.temperatureStationId),tideEvents:report.tideEvents,chlorophyll:report.chlorophyll??null}),astronomy.sunrise,astronomy.sunset):null;
  if(spear){
   missing.push('Underwater visibility is estimated, not measured; entry, exit and currents need a local check');
@@ -154,15 +164,21 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  const complete=hours.length>0&&hours.every(hour=>finite(hour.windKnots)&&finite(hour.gustKnots)&&finite(hour.waveFt)&&finite(hour.wavePeriodS));
  const windows=assessment.status==='Unknown'||alerts.length||!alertCheckFresh||!complete?[]:assessment.windows.filter(window=>{
   const from=Date.parse(window.start),to=Date.parse(window.end);
-  return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&!nearJudged(hour)&&finite(hour.waveFt)&&hour.waveFt>=2.5&&finite(hour.swellPeriodS)&&hour.swellPeriodS>=15);
+  return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&!nearJudged(hour)&&finite(hour.waveFt)&&hour.waveFt>=2.5&&finite(hour.swellPeriodS)&&hour.swellPeriodS>=15)
+   // A window that leaves or returns in a hazardous bar hour is not suggested.
+   &&!(bar&&crossingHours(bar,window.start,window.end).some(hour=>hour.band==='Hazardous'));
+ }).map(window=>{
+  const crossing=bar?crossingHours(bar,window.start,window.end):[];
+  return bar&&crossing.some(hour=>hour.band!=='Likely workable')?{...window,reasons:[...window.reasons,`${bar.entrance.name}: bar caution or unknown at departure or return (estimate); check the bar status`]}:window;
  });
  // Shore reads Caution when long-period swell is running or no daylight hour reads calmer or marginal.
  const shoreCaution=!!shore&&(shore.sneakerPeriodS!==null||(shore.hours.length>0&&!shore.best));
- const status:DailyBrief['status']=alerts.length?'Caution':!forecast||!hours.length||!alertCheckFresh||!complete?'Unknown':shoreCaution?'Caution':mode==='shore'||windows.length?'Mixed':'Caution';
+ const status:DailyBrief['status']=alerts.length?'Caution':!forecast||!hours.length||!alertCheckFresh||!complete?'Unknown':shoreCaution||!!bar?.hazardous.length?'Caution':mode==='shore'||windows.length?'Mixed':'Caution';
  const conditions=[textRange(wind,'kt winds'),textRange(seas,'ft offshore seas')].filter((item):item is string=>item!==null);
  const spearHeadline=spear?.surge?`${surgeText(spear.surge)} surge · ${clarityText(spear.clarity)}`:null;
  const shoreHeadline=shore?.surf?`${surfText(shore.surf)} surf${shore.basis==='nearshore'?'':' (offshore estimate)'} · ${shore.sneakerPeriodS!==null?'sneaker-wave risk':shore.best?`${shore.best.verdict.toLowerCase()} at ${hourText(shore.best.at,county.timezone)}`:'no calmer hour'}`:null;
- const headline=alerts.length?alerts[0]!.event:spearHeadline??shoreHeadline??(conditions.length?conditions.join(' · '):'Local forecast unavailable');
+ const barHeadline=bar?.hazardous.length?`Bar hazardous ${spans(bar.hazardous,county.timezone)} (estimate)`:null;
+ const headline=alerts.length?alerts[0]!.event:spearHeadline??shoreHeadline??(barHeadline?[barHeadline,...conditions].join(' · '):null)??(conditions.length?conditions.join(' · '):'Local forecast unavailable');
  const summaryParts:string[]=[];
  if(conditions.length)summaryParts.push(`${conditions.join('; ')}${wind.gust!==null?`, gusting to ${Number(wind.gust.toFixed(1))} kt`:''}.`);
  if(spear)summaryParts.push(...spearSummary(spear,site?.name??null,county.timezone));
@@ -171,16 +187,37 @@ export function buildDaily(report:Report,county:County,area:Area,mode:Mode,date:
  if(alerts.length)summaryParts.push(alerts[0]!.headline);
  if(!alertCheckFresh)summaryParts.push('The current marine alert check is unavailable; conditions windows are withheld.');
  if(!forecast||!hours.length)summaryParts.push('A fresh forecast covering this date is needed.');
+ if(bar&&bar.hours.length)summaryParts.push(...barSummary(bar,county.tideStation.name,county.timezone));
  if(mode==='boat')summaryParts.push('Check your harbor entrance, route and return conditions separately.');
  if(mode==='shore')summaryParts.push(shore?.basis==='nearshore'?'A model point is not your beach; verify surf, access and water quality.':'Offshore seas do not measure breakers at your beach; verify surf, access and water quality.');
  if(mode==='spear')summaryParts.push('Check entry, exit, currents and water quality locally.');
  if(day.provisional)summaryParts.push('This outlook is provisional; check again closer to departure.');
- return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore};
+ return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore,bar};
 }
 
 const lower=(text:string)=>text.charAt(0).toLowerCase()+text.slice(1);
 const hourText=(at:string,tz:string)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric'}).format(new Date(at));
 const clockText=(at:string,tz:string)=>new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}).format(new Date(at));
+/** Consecutive hours as spans: "6 AM–9 AM, 1 PM–2 PM and 6 PM–7 PM" (each span ends an hour after its last hour). */
+function spans(hours:BarHour[],tz:string):string {
+ const groups:BarHour[][]=[];
+ for(const hour of hours){const last=groups.at(-1);if(last&&Date.parse(hour.at)-Date.parse(last.at(-1)!.at)<=HOUR)last.push(hour);else groups.push([hour]);}
+ const texts=groups.map(group=>`${hourText(group[0]!.at,tz)}–${hourText(new Date(Date.parse(group.at(-1)!.at)+HOUR).toISOString(),tz)}`);
+ return texts.length>1?`${texts.slice(0,-1).join(', ')} and ${texts.at(-1)}`:texts[0]??'';
+}
+/** The bar deck: the worst hours and why, the tide basis, what is not judged, and the standing check line. Never says the bar is safe. */
+function barSummary(bar:BarDay,station:string,tz:string):string[] {
+ const parts:string[]=[],name=bar.entrance.name;
+ if(bar.hazardous.length)parts.push(`${name} bar (estimate): hazardous ${spans(bar.hazardous,tz)} (${bar.hazardous[0]!.reasons.join(', ')}). Windows that leave or return then are not suggested.`);
+ else if(bar.caution.length)parts.push(`${name} bar (estimate): caution ${spans(bar.caution,tz)} (${bar.caution[0]!.reasons.join(', ')}).`);
+ else if(bar.worst==='Likely workable')parts.push(`${name} bar (estimate): no hour reads hazardous or caution on this rough check, which does not mean the bar is safe.`);
+ else parts.push(`${name} bar: not judged (${bar.hours[0]!.reasons.join(', ')}).`);
+ if(bar.hazardous.length||bar.caution.length){const unknown=bar.hours.filter(hour=>hour.band==='Unknown');if(unknown.length)parts.push(`Bar not judged ${spans(unknown,tz)}.`);}
+ if(!bar.tideUnknown)parts.push(`Ebb timing is from ${station} tide predictions; the current at the entrance can turn earlier or later.`);
+ if(bar.entrance.seawardDeg===null)parts.push('This entrance has no vetted bearing, so wind against the ebb is left out.');
+ parts.push(BAR_CHECK);
+ return parts;
+}
 /** The shore deck: what sets the surf, the long-period caution, tide phase, wind side and the calmest daylight hour. */
 function shoreSummary(shore:ShoreDay,siteName:string|null,tz:string,tideEvents:TideEvent[]):string[] {
  const parts:string[]=[];
