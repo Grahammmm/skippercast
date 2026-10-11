@@ -6,9 +6,10 @@
 // WINDOW_LIMITS (boat 10 kt, 15 kt gusts, 4 ft seas; shore, spear and kayak
 // 8 kt, 12 kt, 3 ft) and spear.ts SPEAR.windowMaxSurge. A user may set a
 // comfort limit lower or higher within LIMIT_BOUNDS. Hazard rules never read
-// these numbers, so no limit can relax them: marine alerts, the long-period
-// (sneaker) swell rule, the shore long-period caution, a hazardous bar hour,
-// offshore wind and launch surf for a kayak, daylight, and Heavy surge.
+// these numbers, so no limit can relax them: marine alerts, and the per-hour
+// check in daily.ts windowHourHazards (the long-period swell rule, the shore
+// sneaker-wave caution, a hazardous bar hour, offshore wind and launch surf for
+// a kayak, daylight, Heavy surge, and any hour the profile grades Rough).
 // Kayak seas can only be tightened: the kayak verdict (kayak.ts) sets the
 // window above 3 ft whatever the limit says.
 //

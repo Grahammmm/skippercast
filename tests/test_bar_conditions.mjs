@@ -139,7 +139,7 @@ test('buildDaily boat at Morro Bay: a hazardous bar caps status, names the hours
   assert.deepEqual(daily.bar.hazardous.map(h => h.at), [...['07', '08', 18, 19, 20, 21].map(h => iso(at(`${h}:00`))), '2026-10-10T06:00:00.000Z']);
   assert.equal(daily.status, 'Caution');
   assert.match(daily.headline, /^Bar hazardous 12 AM–2 AM, 11 AM–3 PM and 11 PM–12 AM \(estimate\) · 5 kt winds · 3 ft offshore seas$/);
-  assert.match(daily.summary, /Morro Bay entrance bar \(estimate\): hazardous .*\(4 ft at 10 s swell, mid-ebb tide\)\. Windows that leave or return then are not suggested\./);
+  assert.match(daily.summary, /Morro Bay entrance bar \(estimate\): hazardous .*\(4 ft at 10 s swell, mid-ebb tide\)\. No window leaves, returns or runs through those hours\./);
   assert.match(daily.summary, /Ebb timing is from Port San Luis tide predictions/);
   assert.ok(daily.summary.includes(BAR_CHECK));
   assert.ok(!/\bsafe\b/.test(daily.summary), 'never calls the bar safe');
