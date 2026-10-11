@@ -266,6 +266,11 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  // The startup budget: the style's own source loads the shoreline once (it is not set again for the
+  // region the Chart opened on), and the marks and protected areas share each region file.
+  assert.deepEqual((map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE), [], 'the shoreline is not requested twice');
+  const statics = fetches.filter(url => url.startsWith('https://s.test/regions/') || url.startsWith('https://s.test/data/'));
+  assert.deepEqual(statics, [...new Set(statics)], 'each committed region file is requested once');
   assert.deepEqual(map.options.center, [-120.86, 35.37], 'the region centre');
   assert.equal(host.dataset.view, '35.37000,-120.86000,12');
 

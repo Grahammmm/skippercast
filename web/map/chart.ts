@@ -23,6 +23,7 @@
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams} from '../state.ts';
+import {shareStatic, sharedFetch} from '../shared-fetch.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
@@ -108,7 +109,9 @@ export interface ChartOptions {
 const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 
 export function createChart(options: ChartOptions): {destroy(): void} {
-  const {host, layers = [], load = loadLibrary, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
+  const {host, layers = [], load = loadLibrary, palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
+  // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
+  const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);
   const mpas = signal<{region: string; data: MpaResult['data']} | null>(null);
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
@@ -158,13 +161,14 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
         },
       });
+      // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 1.9 MB request).
+      drawnRegion = id;
       engine.value = e;
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
       currents = createCurrents({view: e.view, palette, zone: options.zone, place: options.place,
         onHide: () => { if (chartMark.peek()?.id.startsWith('current:')) chartMark.value = null; }});
-      drawnRegion = id;
       show(start);
     } catch (error) {
       console.error('Chart unavailable', error);

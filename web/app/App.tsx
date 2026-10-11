@@ -13,6 +13,7 @@ import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
+import {sharedFetch} from '../shared-fetch.ts';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
 export const NARROW_QUERY = '(max-width: 1023px)';
@@ -38,7 +39,8 @@ export type Freshness = {state: 'ok' | 'stale' | 'offline' | 'unknown'; /** The 
 export const freshness = signal<Freshness>({state: 'unknown', age: null});
 
 /** Load the region's name, centre and zone for `id`; a failed fetch leaves the masthead's placeholders. */
-export async function loadRegion(id: string, fetchFn: typeof fetch = fetch): Promise<RegionInfo | null> {
+/** `fetchFn` defaults to the shared static read, so the masthead and the Chart ask for region.json once. */
+export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch): Promise<RegionInfo | null> {
   try {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`);
     if (!response.ok) return null;
