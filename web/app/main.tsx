@@ -12,7 +12,7 @@ import {savedHomeURL} from '../ports.ts';
 import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {dailyFeed, loadDailyFeed} from '../brief/Brief.tsx';
+import {dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
 
 configureStore({v2: true});
 startURLSync();
@@ -31,6 +31,11 @@ effect(() => {
   if (id && regionInfo.peek()?.id !== id) void loadRegion(id);
   if (id && regionPlans.peek()?.region !== id) void loadPlans(id);
   if (id && dailyFeed.peek()?.region_id !== id) void loadDailyFeed(id);
+});
+// The brief's Wind and Swell tiles (#542): the region's forecast at the point nearest its centre, once the region's centre is known.
+effect(() => {
+  const id = region.value, info = regionInfo.value;
+  if (id && info?.id === id) void ensureRegionalForecast(id, info.center);
 });
 const online = () => { freshness.value = navigator.onLine ? {state: 'unknown', age: null} : {state: 'offline', age: null}; };
 addEventListener('online', online);

@@ -4,17 +4,21 @@
 // full: everything).
 //
 // Data: the region's daily feed (/feeds/conditions/regions/<id>/latest.json,
-// loaded by loadDailyFeed) and, where web/coast-data.ts admits a coast report
-// for a bound place, that report. Without a regional forecast (FE-32 brings
-// web/conditions.ts) the wind and swell tiles read unavailable rather than
-// guessed. Before the feed loads, or when it fails, the brief keeps its empty
-// state.
+// loaded by loadDailyFeed), the regional forecast (/api/forecast?region=<id>,
+// edge-cached, loaded once per region by ensureRegionalForecast and shared
+// with the Conditions view; web/conditions.ts briefForecast samples it at the
+// forecast point nearest the region centre) and, where web/coast-data.ts
+// admits a coast report for a bound place, that report. Without the forecast
+// the wind and swell tiles read unavailable rather than guessed; with an old
+// run they read stale with its age. Before the feed loads, or when it fails,
+// the brief keeps its empty state.
 import type {ComponentChildren} from 'preact';
 import {signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
 import {dateKey} from '../../packages/coast/src/daily.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {coastBinding, coastReport} from '../coast-data.ts';
+import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
 import {hour, profile} from '../state.ts';
@@ -39,10 +43,53 @@ export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): 
   return dailyFeed.peek();
 }
 
-export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null};
+/** The region's forecast feed at its chosen point once loaded; null before, when it failed, or for another region. */
+export const regionalForecast = signal<ConditionsForecast | null>(null);
+let forecastKey: string | null = null;
+let forecastRequest: {id: string; near: readonly [number, number] | null; fetchFn: typeof fetch; page: string} | null = null;
+let forecastLoadedAt = 0, forecastPending = false, visibilityBound = false;
+/** A loaded forecast older than this is fetched again when the page becomes visible. */
+export const FORECAST_MAX_AGE_MS = 30 * 60_000;
+
+/** Load the forecast for region `id` at the point nearest `near`, once per region and point; the brief and the Conditions view share it. */
+export function ensureRegionalForecast(id: string, near: readonly [number, number] | null, fetchFn: typeof fetch = fetch, page = location.href): Promise<ConditionsForecast | null> {
+  const key = `${id}|${near?.join(',') ?? ''}`;
+  bindVisibility();
+  if (forecastKey === key) return Promise.resolve(regionalForecast.peek());
+  forecastKey = key;
+  forecastRequest = {id, near, fetchFn, page};
+  forecastPending = true;
+  if (regionalForecast.peek()?.region !== id) regionalForecast.value = null;
+  return loadConditionsForecast(id, near, fetchFn, page).then(f => {
+    if (forecastKey !== key) return regionalForecast.peek();
+    forecastPending = false;
+    regionalForecast.value = f;
+    forecastLoadedAt = Date.now();
+    if (!f) forecastKey = null; // a failed load is tried again on the next call
+    return f;
+  });
+}
+
+/** Reload the forecast when it failed or was loaded over 30 minutes before `now`; no timer, only called as the page becomes visible. */
+export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsForecast | null> | null {
+  const req = forecastRequest;
+  if (!req || forecastPending) return null;
+  if (regionalForecast.peek() && now - forecastLoadedAt <= FORECAST_MAX_AGE_MS) return null;
+  forecastKey = null;
+  return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
+}
+
+// One listener for the page's life, bound on the first load.
+function bindVisibility() {
+  if (visibilityBound || typeof document === 'undefined') return;
+  visibilityBound = true;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshForecastIfStale(); });
+}
+
+export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null};
 
 /** The brief for these sources at `now`, or null when the region's feed is not in hand. */
-export function briefFrom({info, feed, coast, profile: p, hour: at}: BriefSources, now: Date): BriefModel | null {
+export function briefFrom({info, feed, forecast = null, coast, profile: p, hour: at}: BriefSources, now: Date): BriefModel | null {
   if (!info || !feed || feed.region_id !== info.id) return null;
   const pivot = at && Number.isFinite(Date.parse(at)) ? at : undefined;
   const date = dateKey(new Date(pivot ?? now), info.timezone);
@@ -50,14 +97,14 @@ export function briefFrom({info, feed, coast, profile: p, hour: at}: BriefSource
     const county = coast ? counties[coast.report.countyId] : undefined;
     if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: info.name});
     const [lat, lon] = info.center;
-    return buildRegionalBrief({daily: feed, forecast: null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone, port: info.name}, profile: p, date, now, at: pivot});
+    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone, port: info.name}, profile: p, date, now, at: pivot});
   } catch { return null; }
 }
 
 /** The brief the shell shows now, read from the signals so a component re-renders when they change. */
 export function currentBrief(now: Date): BriefModel | null {
   const report = coastReport.value, binding = coastBinding.value;
-  return briefFrom({info: regionInfo.value, feed: dailyFeed.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value}, now);
+  return briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value}, now);
 }
 
 export const Headline = ({brief}: {brief: BriefModel | null}) => <h1>{brief?.headline ?? 'Waiting for readings.'}</h1>;

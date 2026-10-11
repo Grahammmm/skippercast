@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import report from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 
 const {chart} = await import('../packages/coast/src/charts/series.ts');
-const {coastRows, conditionsRows, conditionsSpan, forecastRows, parseConditionsForecast, readingsAt, sourceClocks, SPAN_HOURS} = await import('../web/conditions.ts');
+const {briefForecast, coastRows, conditionsRows, conditionsSpan, forecastRows, parseConditionsForecast, readingsAt, sourceClocks, SPAN_HOURS} = await import('../web/conditions.ts');
 
 const HOUR = 3_600_000;
 const now = new Date(Date.parse(report.generatedAt) + 10 * 60_000);
@@ -96,4 +96,25 @@ test('nearshore joins only from a fresh site for the bound area, with its own cl
   assert.equal(clocks[0].at, new Date((t0 - 6 * 3600) * 1000).toISOString());
   const rows = conditionsRows(forecastRows(f, 'gfs', span.start), local.rows);
   assert.deepEqual(readingsAt(rows, span.start).map(r => [r.label, r.value]).slice(0, 4), [['Wind', 8], ['Gusts', 12], ['Offshore seas', 4.2], ['Nearshore', 3]]);
+});
+
+test('#542: briefForecast gives the brief the NOAA hours at the chosen point, clocked by the older run', () => {
+  const f = parseConditionsForecast(feed({hole: [3], holeVariable: 'wave_period'}), 'morro-bay', [35.34, -120.965]);
+  const brief = briefForecast(f);
+  assert.equal(brief.label, 'NOAA GFS model · central');
+  assert.equal(brief.issuedAt, new Date((t0 - 6 * 3600) * 1000).toISOString());
+  assert.equal(brief.fetchedAt, new Date(f.retrieved).toISOString());
+  assert.equal(brief.hours.length, 8 * 24, 'every hour the wind model lists');
+  assert.deepEqual(brief.hours[0], {at: span.start, windKnots: 8, gustKnots: 12, windDirectionDeg: null, waveFt: 4.2, wavePeriodS: 11, swellFt: null, swellPeriodS: null, airTempF: 61, cloudCoverPct: 40});
+  assert.equal(brief.hours[3].waveFt, null, 'seas without a positive period stay null, not filled');
+  assert.equal(briefForecast(f, 'ecmwf').hours[0].windKnots, 10, 'the ECMWF family reads its own wind');
+  // The clock is the older run: a fresh wind run never makes an old wave run read fresh.
+  const raw = feed();
+  raw.models.ncep_gfswave016 = {...raw.models.ncep_gfswave016, meta: {...raw.models.ncep_gfswave016.meta, last_run_initialisation_time: t0 - 30 * 3600}};
+  assert.equal(briefForecast(parseConditionsForecast(raw, 'morro-bay', null)).issuedAt, new Date((t0 - 30 * 3600) * 1000).toISOString());
+  // No feed, or a run without its clock: no forecast, so the tiles read unavailable.
+  assert.equal(briefForecast(null), null);
+  const unclocked = feed();
+  unclocked.models.gfs_global = {...unclocked.models.gfs_global, meta: {}};
+  assert.equal(briefForecast(parseConditionsForecast(unclocked, 'morro-bay', null)), null);
 });
