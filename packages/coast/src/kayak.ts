@@ -35,8 +35,9 @@ export const KAYAK = {
    * out and the paddle back is upwind. Read from the forecast direction
    * against the vetted shoreline bearing in SHORE.wind.seawardDeg; where that
    * stretch of coast has none, wind is judged on speed only and the brief says
-   * so. Any offshore hour carries a caution; above Light it scores `penalty`,
-   * which puts a Moderate offshore hour past Marginal.
+   * so. Any offshore hour carries a caution and is capped at Marginal, so it
+   * is never the calmest hour; above Light it scores `penalty`, which puts a
+   * Moderate offshore hour past Marginal.
    */
   offshore: {penalty: 2.5, lightPenalty: 0.5},
   /**
@@ -155,8 +156,8 @@ export function kayakVerdict(w: KayakWind, s: KayakSeas, launch: Surf, daylight:
   if (atLaunch) reasons.push('surf at the launch');
   if (fog) reasons.push('fog alert');
   if (daylight === false) reasons.push('outside daylight');
-  // Fog and darkness cap the hour at Rough, whatever the wind and seas.
-  const verdict: KayakVerdict = fog || daylight === false ? 'Rough' : score <= p.calmer ? 'Calmer' : score <= p.marginal ? 'Marginal' : 'Rough';
+  // Fog and darkness cap the hour at Rough, whatever the wind and seas; offshore wind of any strength caps it at Marginal.
+  const verdict: KayakVerdict = fog || daylight === false ? 'Rough' : score <= p.calmer && !offshore ? 'Calmer' : score <= p.marginal ? 'Marginal' : 'Rough';
   return {verdict, score, reasons, cautions};
 }
 
@@ -205,7 +206,7 @@ export type KayakDay = {
   fog: boolean;
   /** True when some hour's seas are short-period chop. */
   chop: boolean;
-  /** The calmest daylight hour that is not Rough, earliest first on a tie. */
+  /** The calmest daylight hour that is not Rough and has no offshore wind, earliest first on a tie. */
   best: KayakHour | null;
   /** False when this stretch of coast has no vetted shoreline bearing: offshore wind cannot be told apart. */
   bearingKnown: boolean;
@@ -225,7 +226,7 @@ export function kayakDay(hours: KayakHour[], seawardDeg: number | null): KayakDa
   const ranks = known.map(h => KAYAK_WIND_RANK[h.wind.band]);
   const launch = scope.filter(h => h.launchCaution);
   const bases = new Set(scope.map(h => h.launch.basis).filter(basis => basis !== null));
-  const best = scope.filter(h => h.daylight !== false && (h.verdict === 'Calmer' || h.verdict === 'Marginal'))
+  const best = scope.filter(h => h.daylight !== false && h.wind.side !== 'offshore' && (h.verdict === 'Calmer' || h.verdict === 'Marginal'))
     .sort((a, b) => (a.score as number) - (b.score as number) || Date.parse(a.at) - Date.parse(b.at))[0] ?? null;
   return {
     hours, wind: known.length ? {min: bands[Math.min(...ranks)]!, max: bands[Math.max(...ranks)]!} : null,

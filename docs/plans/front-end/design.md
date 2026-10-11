@@ -998,7 +998,8 @@ for wind first (Light, Moderate, Fresh or Strong on sustained wind and gust;
 Calmer needs 10 kt sustained and 15 kt gusts at most, stricter than the boat
 rule, as a screening choice), offshore wind (from the forecast direction
 against the same vetted shoreline bearings as shore conditions; any offshore
-hour carries a caution and above Light it scores past Marginal; where the
+hour carries a caution and is capped at Marginal, so it is never the calmest
+daylight hour, and above Light it scores past Marginal; where the
 stretch of coast has no bearing, wind is speed only and the brief says so),
 combined seas (2/3/4.5 ft bands) with short-period chop (2 ft or more at 8 s
 or less) scored on top, and surf at the launch beach (the shore surf
@@ -1011,8 +1012,11 @@ Unknown with reasons. The headline is the day's wind range and the calmest
 daylight hour, or "offshore wind at times"; status is Caution with offshore
 wind, launch surf, a fog alert or no calmer or marginal daylight hour, and
 Mixed otherwise; kayak windows take hours that are not Rough, have no
-offshore wind and no launch caution. The Morro Bay harbor entrance bar is not
-scored: kayakers who cross the bar need a separate bar check before they go.
+offshore wind and no launch caution, and they must also fit the shared
+non-boat limits in `assess` (8 kt wind, 12 kt gust), as shore and spear
+windows do. The harbor entrance bar is not scored for a kayak: at a regulated
+bar (Morro Bay in this region) the deck adds one line saying so, with the bar
+module's estimate wording and the pointer to the Coast Guard bar status.
 All thresholds are in the `KAYAK` table with their reasoning.
 
 ## 9. Map layers

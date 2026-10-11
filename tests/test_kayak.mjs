@@ -70,12 +70,12 @@ test('verdict: wind leads, offshore wind penalised and cautioned, fog and darkne
   assert.equal(kayakVerdict(w(10, 15), calm, noSurf, true, false).verdict, 'Calmer');
   assert.equal(kayakVerdict(w(12, 18), calm, noSurf, true, false).verdict, 'Marginal');
   assert.equal(kayakVerdict(w(16, 22), calm, noSurf, true, false).verdict, 'Rough');
-  // Offshore: a Moderate offshore breeze is Rough, and even a light one carries a caution.
+  // Offshore: a Moderate offshore breeze is Rough, and even a light one is capped at Marginal with a caution.
   const off = kayakVerdict(w(10, 15, 80), calm, noSurf, true, false);
   assert.equal(off.verdict, 'Rough');
   assert.match(off.cautions[0], /^Offshore wind: it carries a kayak away from shore/);
   const lightOff = kayakVerdict(w(5, 8, 80), calm, noSurf, true, false);
-  assert.equal(lightOff.verdict, 'Calmer');
+  assert.equal(lightOff.verdict, 'Marginal', 'offshore wind of any strength is never Calmer');
   assert.ok(lightOff.cautions.some(c => c.startsWith('Offshore wind')));
   // Seas and chop: 2.5 ft at 7 s with light wind scores Moderate seas plus chop.
   const chop = kayakVerdict(w(5, 8), kayakSeas({waveFt: 2.5, wavePeriodS: 7}), surf({waveFt: 2.5, wavePeriodS: 7}), true, false);
@@ -123,6 +123,9 @@ test('buildDaily kayak: wind headline, Mixed status, kayak windows and missing i
   assert.equal(daily.windows[0].label, 'Lower wind & seas');
   assert.match(daily.summary, /Calmest daylight hour:/);
   assert.match(daily.summary, /leave your plan with someone ashore\.$/);
+  // Morro Bay: the bar is not scored for a kayak; the deck points at the bar check.
+  assert.ok(daily.summary.includes('Crossing the Morro Bay entrance bar by kayak is not scored here. This is a rough estimate rather than an official bar report: check the Coast Guard bar status'));
+  assert.equal(daily.bar, null, 'kayak carries no bar reading');
   assert.ok(daily.missing.includes('Launch and landing surf, drift and the paddle back need a local check'));
   assert.ok(daily.missing.includes('Launch surf is an offshore estimate where no fresh nearshore model covers the hour'));
   assert.ok(daily.missing.includes('Fog and visibility are read only from marine alerts; check the marine forecast'));
@@ -132,6 +135,8 @@ test('buildDaily kayak: wind headline, Mixed status, kayak windows and missing i
   assert.equal(off.status, 'Caution');
   assert.match(off.summary, /Offshore wind from \d{1,2} (AM|PM): it carries a kayak away from shore/);
   assert.deepEqual(off.windows, []);
+  assert.equal(off.kayak.best, null, 'an offshore hour is never the calmest hour');
+  assert.match(off.summary, /No daylight hour without offshore wind reads calmer or marginal\./);
   // A breeze a boat would accept (10 kt, gust 15) still gives a kayak no window, and fresh wind none calmer.
   assert.deepEqual(buildDaily(report({wind: 10, gust: 15}), slo, area, 'kayak', date, now).windows, []);
   const fresh = buildDaily(report({wind: 16, gust: 22}), slo, area, 'kayak', date, now);
@@ -162,6 +167,7 @@ test('buildDaily kayak: speed only where the stretch of coast has no vetted bear
   assert.ok(avila.kayak.hours.every(h => h.wind.side === null));
   assert.ok(avila.missing.includes('Offshore wind cannot be told apart for this stretch of coast; wind judged on speed only'));
   assert.match(avila.summary, /Whether the wind blows offshore here is unknown; wind is judged on speed only\./);
+  assert.doesNotMatch(avila.summary, /bar by kayak/, 'no bar line away from a regulated bar');
 });
 
 test('brief rendering for kayak: headline, caveat, wind side and seas in the tiles, regional brief', () => {

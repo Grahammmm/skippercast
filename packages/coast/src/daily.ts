@@ -210,6 +210,9 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
  if(mode==='boat')summaryParts.push('Check your harbor entrance, route and return conditions separately.');
  if(mode==='shore')summaryParts.push(shore?.basis==='nearshore'?'A model point is not your beach; verify surf, access and water quality.':'Offshore seas do not measure breakers at your beach; verify surf, access and water quality.');
  if(mode==='spear')summaryParts.push('Check entry, exit, currents and water quality locally.');
+ // Kayak at a regulated bar: the bar is not scored for a kayak, so point paddlers who cross it at the bar check.
+ const kayakEntrance=mode==='kayak'?entranceFor(county.id,area.id):null;
+ if(kayakEntrance)summaryParts.push(`Crossing the ${kayakEntrance.name} bar by kayak is not scored here. ${BAR_CHECK}`);
  if(mode==='kayak')summaryParts.push('Check your launch, landing, drift and the paddle back locally, and leave your plan with someone ashore.');
  if(day.provisional)summaryParts.push('This outlook is provisional; check again closer to departure.');
  return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore,bar,kayak};
@@ -271,7 +274,7 @@ function kayakSummary(kayak:KayakDay,siteName:string|null,tz:string):string[] {
  }
  if(kayak.fog)parts.push('A fog or visibility alert is in force: a kayak is hard to see and the way back is hard to find.');
  if(kayak.best)parts.push(`Calmest daylight hour: ${hourText(kayak.best.at,tz)} (${kayak.best.verdict.toLowerCase()}: ${kayak.best.reasons.join(', ')}).`);
- else parts.push('No daylight hour reads calmer or marginal.');
+ else parts.push(kayak.offshore.length?'No daylight hour without offshore wind reads calmer or marginal.':'No daylight hour reads calmer or marginal.');
  return parts;
 }
 /** The spear deck: what sets the surge, the clarity estimate and its drivers, and the calmest daylight hour. */
