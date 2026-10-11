@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {execFile} from 'node:child_process';
+import {mkdtempSync, mkdirSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 // Runs scripts/smoke_test.sh against a local fake site. The home page is large
 // so a "curl | grep -q" pipeline would hit SIGPIPE under pipefail (the bug that
@@ -35,12 +39,12 @@ function site({forgedSignedIn=false, swCache='public, max-age=0, must-revalidate
     res.writeHead(404); res.end();
   });
 }
-async function smoke(options) {
+async function smoke(options, {args = ['abcdef0123'], cwd} = {}) {
   const server = site(options);
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${server.address().port}`;
   try {
-    return await new Promise(resolve => execFile('bash', ['scripts/smoke_test.sh', url, 'abcdef0123'], {env: {...process.env, HTTPS_PROXY: '', https_proxy: '', HTTP_PROXY: '', http_proxy: '', NO_PROXY: '*'}},
+    return await new Promise(resolve => execFile('bash', [fileURLToPath(new URL('../scripts/smoke_test.sh', import.meta.url)), url, ...args], {cwd, env: {...process.env, HTTPS_PROXY: '', https_proxy: '', HTTP_PROXY: '', http_proxy: '', NO_PROXY: '*'}},
       (error, stdout, stderr) => resolve({code: error ? error.code : 0, out: stdout + stderr})));
   } finally { server.close(); }
 }
@@ -92,4 +96,22 @@ test('the smoke test tells the shells apart by the landing body class, which onl
   const {readFileSync} = await import('node:fs');
   assert.match(readFileSync('dist/landing.html', 'utf8'), /<body class="landing-body">/);
   for (const page of ['dist/app.html']) assert.doesNotMatch(readFileSync(page, 'utf8'), /class="landing-body"/, page);
+});
+
+// FE-61 removed index.html: the default build id comes from any stamped page, and no dist/client
+// must not abort the script (the ls-under-pipefail exit 2 that failed the dabb9c24 deploy).
+test('smoke test reads the build id from a stamped page when none is passed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'smoke-'));
+  mkdirSync(join(dir, 'dist/client'), {recursive: true});
+  writeFileSync(join(dir, 'dist/client/app.abcdef0123.html'), '');
+  writeFileSync(join(dir, 'dist/client/landing.abcdef0123.html'), '');
+  const {code, out} = await smoke({}, {args: [], cwd: dir});
+  assert.equal(code, 0, out);
+  assert.match(out, /health ok \(build abcdef0123\)/);
+});
+
+test('smoke test without a build id or dist/client skips the build match instead of exiting', async () => {
+  const {code, out} = await smoke({}, {args: [], cwd: mkdtempSync(join(tmpdir(), 'smoke-'))});
+  assert.equal(code, 0, out);
+  assert.match(out, /Smoke test passed/);
 });

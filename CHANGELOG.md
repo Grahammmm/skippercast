@@ -13,6 +13,7 @@
 
 ### Internal
 
+- `scripts/smoke_test.sh` reads the deployed build id from any stamped page in `dist/client`, since FE-61 removed `index.html`. Before this, `ls` failing under `pipefail` exited the script with code 2, which failed the smoke test for the dabb9c24 deploy even though the site was healthy.
 - FE-61: MapLibre and PMTiles build into their own chunk, tests of deleted v1 code are removed (v1 parity oracles pinned by digest), and `tests/test_no_v1_map_library.mjs` keeps the retired map library out.
 - The startup measurement (`scripts/measure_startup.mjs`) counts `/coast-data/*` (the Worker bridge to the live Fish upstream) as live and stubs it, so the offline budget test no longer reaches the network or sometimes counts the habitat GeoJSON; `/coast.html` now redirects like `/coast`.
 - `web/station-label.ts` holds the shared backup-station label logic, with unit tests and phone and laptop browser tests for primary, backup, retained-backup, missing-field and shared-station feeds.
