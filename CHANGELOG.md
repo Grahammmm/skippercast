@@ -9,6 +9,7 @@
 ## Unreleased
 
 - The brief's Water and Tide tiles now read a source that served its last good data after a failed check as stale and say so ("last good 5 h old") instead of showing it as current. The hourly feed check now also lists each degraded source by name with its age in the live, daily and every region's live feed, fails when every source of one critical kind (buoys, alerts, tides or forecast models) in a feed has been degraded past its limit (a single buoy outage is reported in an issue without failing the run), and checks the daily data feed against its own 36-hour schedule.
+- Import owner-supplied fleet scout CSV leads with public-page provenance and safe website handoff; preserve licence imports and keep unverified classes out of registry claims.
 
 ### Release notes: the new map is the default (FE-60)
 

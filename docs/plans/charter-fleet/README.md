@@ -246,3 +246,4 @@ Append a dated line when a phase starts or finishes; keep the older lines.
 - 2026-10-10: owner decision: the run is packaged as two skills
   (`skippercast-fleet-registry`, `skippercast-fleet-activity`), as #468 and
   #469 specify. Recorded in `open-questions.md`; N8 and N9 in `graph.md` updated.
+- 2026-10-11: [Fleet seed #521](https://github.com/Grahammmm/skippercast/issues/521): 347 scout rows across 28 ports transferred to AgentOrange with matching SHA-256. The draft importer's offline check yields 342 candidates and five skips for missing usable provenance. Gate (d) remains pending; no Worker registry job has been dispatched. The eight unscouted ports remain separate backlog.
