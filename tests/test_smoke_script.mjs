@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {execFile} from 'node:child_process';
-import {mkdtempSync, mkdirSync, writeFileSync} from 'node:fs';
+import {mkdtempSync, mkdirSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -105,13 +105,18 @@ test('smoke test reads the build id from a stamped page when none is passed', as
   mkdirSync(join(dir, 'dist/client'), {recursive: true});
   writeFileSync(join(dir, 'dist/client/app.abcdef0123.html'), '');
   writeFileSync(join(dir, 'dist/client/landing.abcdef0123.html'), '');
-  const {code, out} = await smoke({}, {args: [], cwd: dir});
-  assert.equal(code, 0, out);
-  assert.match(out, /health ok \(build abcdef0123\)/);
+  try {
+    const {code, out} = await smoke({}, {args: [], cwd: dir});
+    assert.equal(code, 0, out);
+    assert.match(out, /health ok \(build abcdef0123\)/);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 
 test('smoke test without a build id or dist/client skips the build match instead of exiting', async () => {
-  const {code, out} = await smoke({}, {args: [], cwd: mkdtempSync(join(tmpdir(), 'smoke-'))});
-  assert.equal(code, 0, out);
-  assert.match(out, /Smoke test passed/);
+  const dir = mkdtempSync(join(tmpdir(), 'smoke-'));
+  try {
+    const {code, out} = await smoke({}, {args: [], cwd: dir});
+    assert.equal(code, 0, out);
+    assert.match(out, /Smoke test passed/);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
 });
