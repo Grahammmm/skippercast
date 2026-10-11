@@ -36,8 +36,10 @@ import {
 /** Keys v1's coastal modules write; readURL reports one only when the URL names it, so v1 readers see the shape they had. */
 export const COAST_KEYS = ['presentation', 'current', 'habitat'] as const;
 export type CoastKey = typeof COAST_KEYS[number];
+/** The History view's pickers (FE-35): station id, measurement and day range, kept as written; packages/coast historyView falls back on anything it does not list. */
+export const HISTORY_KEYS = ['station', 'metric', 'range'] as const;
 /** URL parameters the store owns. `target` is the species/target id. */
-export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base', ...COAST_KEYS] as const;
+export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base', ...HISTORY_KEYS, ...COAST_KEYS] as const;
 export type UrlKey = typeof URL_KEYS[number];
 export type UrlState = Record<Exclude<UrlKey, CoastKey>, string | null> & Partial<Record<CoastKey, string>> & {selection: string | null};
 export type Units = 'nautical';
@@ -85,6 +87,10 @@ export const presentation = signal<Presentation>('chart');
 export const current = signal<CurrentChoice>('off');
 /** Coast habitat id (?habitat=), independent of the atlas spot in `selection`. */
 export const habitat = signal<string | null>(null);
+/** History view pickers (?station=, ?metric=, ?range=) as written; null means the view's default. */
+export const historyStation = signal<string | null>(null);
+export const historyMetric = signal<string | null>(null);
+export const historyRange = signal<string | null>(null);
 
 /** Terrain presentations fall back to chart where the region has no coast terrain; the URL keeps the request. */
 export function presentationFor(requested: Presentation, regionId: string | null): Presentation {
@@ -119,6 +125,7 @@ export function readURL(href: string): UrlState {
     target: params.get('target'), hour: params.get('hour'),
     profile: params.get('profile'), day: params.get('day'), layers: params.get('layers'),
     area: params.get('area') || params.get('focus'), base: params.get('base'),
+    station: params.get('station'), metric: params.get('metric'), range: params.get('range'),
     selection: params.get('spot') || params.get('focus'),
   };
   for (const key of COAST_KEYS) {
@@ -240,6 +247,7 @@ export function syncFromURL(href: string = location.href): UrlState {
     appView.value = isAppView(state.view) ? state.view : 'coast';
     day.value = parseDay(state.day); area.value = state.area;
     presentation.value = shown; current.value = resolveCurrent(state, kept.layers); habitat.value = parseHabitat(state.habitat);
+    historyStation.value = state.station; historyMetric.value = state.metric; historyRange.value = state.range;
   });
   return state;
 }
