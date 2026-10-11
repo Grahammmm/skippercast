@@ -15,10 +15,6 @@ import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './Ap
 import {loadPlans, regionPlans} from '../species.ts';
 import {bindBriefReport, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
-import {initTelemetry} from '../telemetry.ts';
-
-// Cookie-less funnel and error reporting, started first as v1's dist/boot.js does; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-initTelemetry();
 
 configureStore({v2: true});
 startURLSync();

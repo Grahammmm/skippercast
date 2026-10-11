@@ -1,8 +1,6 @@
-// v2 head and telemetry parity with v1 (before FE-61 removes dist/index.html):
-// the landing (/) and the app (/map) carry v1's web manifest link, theme
-// colour, favicon and Apple touch icon, and their entries start the same
-// cookie-less telemetry v1's dist/boot.js starts (web/telemetry.ts; nothing
-// is sent under Do Not Track or GPC, docs/engineering/telemetry.md).
+// v2 head parity with v1 (before FE-61 removes dist/index.html): the landing
+// (/) and the app (/map) carry v1's web manifest link, theme colour, favicon
+// and Apple touch icon. Telemetry stays off on v2 until the owner decides (#562).
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {existsSync, readFileSync} from 'node:fs';
@@ -39,16 +37,3 @@ test('the v2 pages carry v1\'s manifest link, theme colour, favicon and touch ic
   for (const icon of manifest.icons) assert.ok(existsSync(new URL(icon.src.slice(1), dist)), icon.src);
 });
 
-test('the v2 entries start telemetry the way v1 boot.js does', () => {
-  const v1 = read('boot.js');
-  assert.match(v1, /import \{initTelemetry\} from '\.\.\/web\/telemetry\.ts';/);
-  assert.match(v1, /^initTelemetry\(\);$/m);
-  for (const [page, entry] of Object.entries(V2)) {
-    assert.ok(read(page).includes(`<script type="module" src="${entry}"></script>`), `${page} mounts ${entry}`);
-    const source = read(entry);
-    assert.match(source, /^import \{initTelemetry\} from '\.\.\/telemetry\.ts';$/m, `${entry} imports the shared module`);
-    // At the top level and before anything else runs, so early errors are reported (and nothing at all under DNT or GPC).
-    const firstStatement = source.split('\n').find(line => line && !/^(?:\/\/|import\b|\s)/.test(line));
-    assert.equal(firstStatement, 'initTelemetry();', `${entry} starts telemetry first`);
-  }
-});

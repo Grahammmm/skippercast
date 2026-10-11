@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-- The new home page and map can be added to a home screen with the SkipperCast name, icon and colour, and report the same cookie-less page counts and errors as the old map (nothing under Do Not Track or Global Privacy Control).
+- The new home page and map can be added to a home screen with the SkipperCast name, icon and colour.
 
 ### Internal
 
-- Test the v2 pages' head tags and telemetry start (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
+- Test the v2 pages' head tags (`tests/test_v2_head.mjs`) so removing the v1 shell cannot drop them.
 
 ## 0.8.0 — 2026-10-11
 

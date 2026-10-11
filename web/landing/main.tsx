@@ -16,10 +16,6 @@ import {LayerDots} from './LayerDots.tsx';
 import {DEFAULT_REGION} from './readings.ts';
 import {saveData} from './save-data.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
-import {initTelemetry} from '../telemetry.ts';
-
-// Cookie-less funnel and error reporting, started first as v1's dist/boot.js does; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-initTelemetry();
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
 export const PROFILE_KEY = 'skippercast-profile-v1';
