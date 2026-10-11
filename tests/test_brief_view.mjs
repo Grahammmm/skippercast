@@ -28,6 +28,8 @@ async function load() {
       export {Tiles, tileProps, ageText, sourceLine} from './web/brief/Tiles.tsx';
       export {Brief} from './web/app/Desktop.tsx';
       export {regionInfo} from './web/app/App.tsx';
+      export {createCoastData} from './web/coast-data.ts';
+      export {regionPlace} from './web/map/currents.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -207,4 +209,65 @@ test('#542: a visible page reloads a forecast older than 30 minutes and retries 
     listeners[0][1]();
     assert.equal(calls, before + 2, 'a fresh forecast is not fetched again');
   } finally { delete globalThis.document; regionalForecast.value = null; }
+});
+
+// FE-60 live check (#473): defects found on /map?region=morro-bay.
+const MORRO_INFO = {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: 'America/Los_Angeles',
+  localAreas: [{id: 'estero-bay', name: 'Estero Bay', bounds: [-121.05, 35.32, -120.78, 35.47]}]};
+
+test('#473: the brief reads the daily data feed (reports, tides) with the conditions feed\'s newer buoys first', async () => {
+  const {loadDailyFeed, dailyFeed} = await load();
+  const conditions = {schema_version: 1, region_id: 'monterey-point-sur', sources: {diablo: {id: 'diablo', name: 'NDBC 46042 every 30 min', kind: 'observation', url: 'https://example.test/46042', checked_at: NOW.toISOString(), status: 'ok', data: {station: '46042', observations: []}}}};
+  const paths = [];
+  const fetchFn = async path => {
+    paths.push(String(path));
+    return new Response(JSON.stringify(String(path).startsWith('/feeds/data/') ? montereyDaily : conditions), {status: 200});
+  };
+  try {
+    const feed = await loadDailyFeed('monterey-point-sur', fetchFn);
+    assert.deepEqual(paths.sort(), ['/feeds/conditions/regions/monterey-point-sur/latest.json', '/feeds/data/regions/monterey-point-sur/latest.json']);
+    assert.deepEqual(feed.reports, montereyDaily.reports, 'the landing reports come from the daily feed');
+    assert.equal(Object.keys(feed.sources)[0], 'diablo', 'the 30-minute buoy comes first');
+    assert.ok(feed.sources.tides, 'the daily feed keeps its tides');
+    // Where both feeds name one buoy key, the 30-minute copy wins.
+    const stale = {...conditions.sources.diablo, name: 'NDBC 46042 daily', checked_at: '2026-01-01T00:00:00Z'};
+    const collide = await loadDailyFeed('monterey-point-sur', async path => new Response(JSON.stringify(String(path).startsWith('/feeds/data/')
+      ? {...montereyDaily, sources: {...montereyDaily.sources, diablo: stale}} : conditions), {status: 200}));
+    assert.equal(collide.sources.diablo.name, 'NDBC 46042 every 30 min', 'the newer conditions buoy is not overwritten');
+    // Either feed stands alone when the other fails.
+    const only = prefix => async path => String(path).startsWith(prefix) ? fetchFn(path) : new Response('no', {status: 503});
+    assert.deepEqual((await loadDailyFeed('monterey-point-sur', only('/feeds/data/'))).sources, montereyDaily.sources);
+    assert.deepEqual((await loadDailyFeed('monterey-point-sur', only('/feeds/conditions/'))).sources, conditions.sources);
+  } finally { dailyFeed.value = null; }
+});
+
+test('#473: the fleet line counts the region\'s trips by its landing names, not its display name', async () => {
+  const {briefFrom} = await load();
+  const feed = {...montereyDaily, region_id: 'morro-bay', landing_names: ['Morro Bay', 'Avila'],
+    reports: [{date: '2026-10-07', boat: 'Avenger', port: 'Morro Bay'}, {date: '2026-10-07', boat: 'Flying Fish', port: 'Avila Beach'}]};
+  const brief = briefFrom(sources({info: MORRO_INFO, feed}), NOW);
+  assert.equal(brief.fleet?.text, '2 boats reported from Morro Bay & Avila Beach in the last 7 days');
+});
+
+test('#473: the brief asks for the coast report where the region binds one, with no layer on, and only once', async t => {
+  const {bindBriefReport, createCoastData, regionPlace} = await load();
+  const calls = [], original = globalThis.fetch;
+  globalThis.fetch = async path => { calls.push(String(path)); return new Response('no', {status: 503}); };
+  const client = createCoastData({clockEvents: null});
+  t.after(() => { globalThis.fetch = original; client.destroy(); });
+  const place = () => regionPlace(MORRO_INFO, 'boat', '');
+  const stop = bindBriefReport(place, client);
+  t.after(stop);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const reports = () => calls.filter(path => path.includes('coast/report')).length;
+  assert.equal(reports(), 1, 'requested with no layer on');
+  // The Swell layer asks for the same place: no second request.
+  client.setPlace(place());
+  await client.load('report');
+  assert.equal(reports(), 1);
+  // Outside a binding nothing is requested.
+  const before = calls.length, other = createCoastData({clockEvents: null});
+  bindBriefReport(() => regionPlace({id: 'monterey-point-sur', center: [36.62, -121.9], localAreas: []}, 'boat', ''), other)();
+  other.destroy();
+  assert.equal(calls.length, before);
 });

@@ -31,6 +31,8 @@ function forecast() {
 test.beforeEach(async ({page}) => {
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
   await page.route('**/api/forecast?*', route => route.fulfill({json: forecast()}));
+  // The shell asks for Morro Bay's coast report on load (#473); none here, so the view reads the regional forecast alone.
+  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
 });
 
 test('acceptance 1, 3 and 4: the chart breaks at the hole, its cursor moves the hour, and it scrolls sideways at 390 px', async ({page, pageErrors, v2, isMobile}) => {

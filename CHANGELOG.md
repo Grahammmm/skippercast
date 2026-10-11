@@ -17,6 +17,7 @@
 
 ## Unreleased
 
+- Brief fixes on the map: a beach notice shows only for a beach under an advisory, closure or warning (no longer for open beaches whose county line says there are no advisory notes); where a coast report covers the area (Morro Bay, Cambria) the brief loads it whichever layers are on, so the tide curve and local-report line appear on first load; and the fleet line ("2 boats reported from Morro Bay & Avila Beach in the last 7 days") now appears, read from the daily feed's landing reports at the region's own landings.
 - Choosing Chart while the map shows 2D now opens the Chart; it used to switch to 3D because the terrain's report of its own camera change was written back over the choice.
 - The brief's Water and Tide tiles now read a source that served its last good data after a failed check as stale and say so ("last good 5 h old") instead of showing it as current. The hourly feed check now also lists each degraded source by name with its age in the live, daily and every region's live feed, fails when every source of one critical kind (buoys, alerts, tides or forecast models) in a feed has been degraded past its limit (a single buoy outage is reported in an issue without failing the run), and checks the daily data feed against its own 36-hour schedule.
 - Import owner-supplied fleet scout CSV leads with public-page provenance and safe website handoff; preserve licence imports and keep unverified classes out of registry claims.

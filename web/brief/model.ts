@@ -58,7 +58,7 @@ function nearest<T extends {at: string}>(points: readonly T[], at: number): T | 
   return best;
 }
 
-export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string; tideDatum?: string};
+export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[]; tideDatum?: string};
 
 /** Map buildDaily's output to the brief, adding tiles, caveat, notice and fleet line. */
 export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: BriefContext): Brief {
@@ -121,23 +121,53 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     basis, profile, date: daily.date, label: daily.label, provisional: daily.confidence.includes('provisional'),
     headline: daily.headline, deck: daily.summary, status: daily.status, confidence: daily.confidence,
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
-    notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
+    notice: beachNotice(report, area, now), fleet: fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
     spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 
-export function beachNotice(report: Report, area: Area): BriefNotice | null {
-  const notice = (report.waterQuality ?? []).find(item => item.areaId === area.id && item.advisory);
-  return notice?.advisory ? {name: notice.name, advisory: notice.advisory, url: notice.url} : null;
+/** The county beach-health source the notice reads (packages/coast enrichment). */
+export const BEACH_HEALTH_SOURCE = 'slo-beach-water-quality';
+/** A published status that is a notice; "Beach Open" is not. The v1 rule (packages/coast presentation.ts reportPanel, ui/briefing.ts). */
+export const BEACH_NOTICE_STATUS = /advisory|closed|warning/i;
+const BEACH_HEALTH_MAX_AGE_MS = 3 * HOUR, BEACH_HEALTH_SKEW_MS = 5 * 60_000;
+
+/**
+ * The area's first beach under an advisory, closure or warning, decided as v1 does: from the
+ * status, and only while the county source fetched cleanly within 3 h. The advisory text is not
+ * the test: the county writes one for open beaches too ("There are no advisory notes at this time.").
+ */
+export function beachNotice(report: Report, area: Area, now: Date): BriefNotice | null {
+  const health = report.sources.find(item => item.id === BEACH_HEALTH_SOURCE);
+  const age = health ? now.getTime() - Date.parse(health.fetchedAt) : NaN;
+  if (health?.outcome !== 'ok' || !(age >= -BEACH_HEALTH_SKEW_MS && age < BEACH_HEALTH_MAX_AGE_MS)) return null;
+  const notice = (report.waterQuality ?? []).find(item => item.areaId === area.id && BEACH_NOTICE_STATUS.test(item.status));
+  return notice ? {name: notice.name, advisory: notice.advisory ?? notice.status, url: notice.url} : null;
 }
 
-/** "3 boats reported from Morro Bay in the last 7 days"; null when none is within the window. */
-export function fleetLine(reports: readonly LandingReport[], port: string, timezone: string, now: Date): BriefFleet | null {
-  if (!port) return null;
+/**
+ * A trip's port is one of `names` when it equals a name or starts with it as whole words: the
+ * region's landing names are short ("Avila") where the publisher's port is longer ("Avila Beach").
+ */
+const atPort = (port: unknown, names: readonly string[]): port is string =>
+  typeof port === 'string' && names.some(name => port === name || port.startsWith(name + ' '));
+
+/**
+ * "3 boats reported from Morro Bay & Avila Beach in the last 7 days"; null when none is within the
+ * window. `ports` is one port or the region's landing names (the daily feed's `landing_names`):
+ * every region's feed carries the same publisher's trips, so only those at its own landings count.
+ */
+export function fleetLine(reports: readonly LandingReport[], ports: string | readonly string[], timezone: string, now: Date): BriefFleet | null {
+  const names = (typeof ports === 'string' ? [ports] : ports).filter(Boolean);
+  if (!names.length) return null;
   const today = dateKey(now, timezone), first = dateKey(new Date(now.getTime() - (FLEET_WINDOW_DAYS - 1) * DAY), timezone);
-  const boats = new Set(reports.filter(item => item.port === port && item.date >= first && item.date <= today && item.boat).map(item => item.boat));
+  const trips = reports.filter(item => atPort(item.port, names) && item.date >= first && item.date <= today && item.boat);
+  const boats = new Set(trips.map(item => item.boat));
   if (!boats.size) return null;
+  // The ports that reported, in the order of the region's landing names.
+  const rank = (port: string) => names.findIndex(name => atPort(port, [name]));
+  const port = [...new Set(trips.map(item => item.port))].sort((a, b) => rank(a) - rank(b)).join(' & ');
   return {count: boats.size, port, text: `${boats.size} boat${boats.size === 1 ? '' : 's'} reported from ${port} in the last ${FLEET_WINDOW_DAYS} days`, href: '/report'};
 }
 
@@ -168,7 +198,7 @@ export function chlorophyllNear(daily: RegionalDailyFeed | null | undefined, lat
   return {mgM3: median, sampleAt: data.sample_at, cells: values.length, label: source.name, url: source.url};
 }
 
-export type CoastBriefInput = {report: Report; county: County; areaId: string; profile: Profile; date: string; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string;
+export type CoastBriefInput = {report: Report; county: County; areaId: string; profile: Profile; date: string; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[];
   /** The region's daily feed, read for satellite chlorophyll near the area. */
   daily?: RegionalDailyFeed;
   /** The user's own comfort limits for the profile (web/limits.ts); the defaults when absent. */
@@ -238,7 +268,7 @@ export type RegionalBriefInput = {daily: RegionalDailyFeed; forecast: RegionalFo
 export function buildRegionalBrief(input: RegionalBriefInput): Brief {
   const {report, county, area, tideDatum} = regionalReport(input.daily, input.forecast, input.place);
   const daily = buildDaily(report, county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.place.port, tideDatum});
+  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum});
 }
 
 export type BriefInput = {
@@ -255,6 +285,6 @@ export type BriefInput = {
 export function buildBrief(input: BriefInput): Brief {
   const {profile, date, now, at, regional, limits} = input;
   const binding = input.coast ? resolveReportBinding(input.context) : null;
-  if (input.coast && binding) return buildCoastBrief({...input.coast, areaId: binding.areaId, profile, date, now, at, reports: regional.daily.reports ?? [], port: regional.place.port, daily: regional.daily, limits});
+  if (input.coast && binding) return buildCoastBrief({...input.coast, areaId: binding.areaId, profile, date, now, at, reports: regional.daily.reports ?? [], port: regional.daily.landing_names ?? regional.place.port, daily: regional.daily, limits});
   return buildRegionalBrief({...regional, profile, date, now, at, limits});
 }

@@ -14,7 +14,7 @@
 import {test, expect} from './fixtures.ts';
 import {forecastFixture} from './forecast-fixture.ts';
 
-const HOUR = 3_600_000;
+const HOUR = 3_600_000, DAY = 24 * HOUR;
 
 /** Midday in Morro Bay on the Pacific date of `now` (PDT or PST, whichever holds at noon). */
 function pacificNoon(now: number): number {
@@ -41,6 +41,10 @@ function feed() {
         data: {station: '9412110', datum: 'MLLW', predictions: [{time: iso(2 * HOUR), height_ft: 4.1, type: 'H'}, {time: iso(8 * HOUR), height_ft: 0.6, type: 'L'}]}},
       'nws-alerts': {id: 'nws-alerts', name: 'NWS marine alerts', kind: 'advisory', url: 'https://api.weather.gov/alerts/active?zone=PZZ670', checked_at: checked, status: 'ok', data: {alerts: []}},
     },
+    // Every region's feed carries the publisher's trips; the landing names pick this region's (the Santa Cruz boat is not counted).
+    landing_names: ['Morro Bay', 'Avila'],
+    reports: [{date: iso(-DAY).slice(0, 10), boat: 'Fixture Gull', port: 'Morro Bay'}, {date: iso(-DAY).slice(0, 10), boat: 'Fixture Tern', port: 'Avila Beach'},
+      {date: iso(-DAY).slice(0, 10), boat: 'Fixture Elsewhere', port: 'Santa Cruz'}],
   };
 }
 
@@ -49,7 +53,10 @@ test.beforeEach(async ({page, v2}) => {
   await page.clock.setFixedTime(BASE);
   await page.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()), BASE)}));
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
-  await v2.feed('**/feeds/conditions/regions/morro-bay/latest.json', feed());
+  // The daily feed (data branch); the conditions feed stays unstubbed (404), so the brief reads the daily feed alone.
+  await v2.feed('**/feeds/data/regions/morro-bay/latest.json', feed());
+  // No coast report unless a test answers one: the brief stays regional.
+  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
 });
 
 test('acceptance 1 and 3: a stale tile shows the stale state and its age; the brief renders the model and axe is clean', async ({page, pageErrors, v2, isMobile}) => {
@@ -69,6 +76,7 @@ test('acceptance 1 and 3: a stale tile shows the stale state and its age; the br
   await expect(root.locator('.ui-tile', {hasText: 'Tide'}).locator('.ui-tile-detail')).toContainText('MLLW');
   await expect(root.locator('h1')).not.toHaveText('Waiting for readings.');
   await expect(root.locator('.app-local')).toContainText('Local coast report unavailable here');
+  await expect(root.locator('.app-brief-links')).toContainText('2 boats reported from Morro Bay & Avila Beach in the last 7 days');
   const spark = root.locator('figure.app-spark');
   await expect(spark.locator('.app-spark-empty')).toHaveText('Tide series unavailable');
   // The day's events only, in time order: the high at 2:00 pm comes first.
@@ -106,8 +114,8 @@ function coastReport() {
 test('FE-33: where a coast report binds, the sparkline draws its tide curve in token colours under the events', async ({page, pageErrors, v2, isMobile}) => {
   await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* held: only the report answers */ });
   await page.route('**/api/coast/report', route => route.fulfill({json: coastReport()}));
-  // The coast report is requested for the place while a layer that reads it (Swell) is on.
-  await v2.open('app', {region: 'morro-bay', layers: 'swell'});
+  // #473: the brief requests the coast report for the bound place with no layer on.
+  await v2.open('app', {region: 'morro-bay'});
   const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
   await expect(root).toHaveAttribute('data-basis', 'coast-report');
   if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }

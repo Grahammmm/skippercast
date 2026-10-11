@@ -7,13 +7,14 @@
 // itself never opens on its own.
 import {render} from 'preact';
 import {effect} from '@preact/signals';
-import {configureStore, coast, region, startURLSync} from '../state.ts';
+import {configureStore, coast, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
 import {loadLimits} from '../limits.ts';
 import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
+import {bindBriefReport, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
+import {regionPlace} from '../map/currents.ts';
 
 configureStore({v2: true});
 startURLSync();
@@ -40,6 +41,9 @@ effect(() => {
   const id = region.value, info = regionInfo.value;
   if (id && info?.id === id) void ensureRegionalForecast(id, info.center);
 });
+// The brief's coast report where the region binds one, whichever layers are on: the same place the
+// Swell and Water temp layers ask for (web/app/MapStage.tsx), so the client requests it once.
+bindBriefReport(() => { const info = regionInfo.value; return info?.id === region.value ? regionPlace(info, profile.value, species.value ?? '') : null; });
 const online = () => { freshness.value = navigator.onLine ? {state: 'unknown', age: null} : {state: 'offline', age: null}; };
 addEventListener('online', online);
 addEventListener('offline', online);
