@@ -6,6 +6,9 @@
 // 2. The mobile sheet shows the headline, tiles, top pick and hour slider at
 //    the half detent.
 // 3. axe is clean at both widths (the phone and laptop projects).
+// FE-33: the tide sparkline draws the bound coast report's curve through
+// CoastMarkup in token colours; the regional brief (high and low events only)
+// says "Tide series unavailable" and still lists the events.
 import {test, expect} from './fixtures.ts';
 
 const HOUR = 3_600_000;
@@ -50,6 +53,10 @@ test('acceptance 1 and 3: a stale tile shows the stale state and its age; the br
   await expect(root.locator('.ui-tile', {hasText: 'Tide'}).locator('.ui-tile-detail')).toContainText('MLLW');
   await expect(root.locator('h1')).not.toHaveText('Waiting for readings.');
   await expect(root.locator('.app-local')).toContainText('Local coast report unavailable here');
+  const spark = root.locator('figure.app-spark');
+  await expect(spark.locator('.app-spark-empty')).toHaveText('Tide series unavailable');
+  // The day's events only: the low falls on tomorrow late in the day.
+  await expect(spark.locator('.app-spark-events li').first()).toHaveText(/^High \d{1,2}:\d\d [ap]m · 4\.1 ft MLLW$/);
   await v2.a11y(isMobile ? 'v2-brief-sheet' : 'v2-brief');
   expect(pageErrors).toEqual([]);
 });
@@ -67,5 +74,39 @@ test('acceptance 2: at the half detent the sheet shows the headline, tiles, top 
   const water = sheet.locator('.ui-tile', {hasText: 'Water'});
   await expect(water).toHaveAttribute('data-state', 'stale');
   await expect(water.locator('.ui-tile-source')).toContainText('NDBC 46011 · 5 h');
+  expect(pageErrors).toEqual([]);
+});
+
+/** A synthetic coast report (values invented) with a six-minute tide curve from three hours ago to nine hours ahead, as the bridge serves it. */
+function coastReport() {
+  const now = Date.now(), t0 = Math.floor(now / HOUR) * HOUR - 3 * HOUR;
+  const tides = Array.from({length: 121}, (_, i) => ({at: new Date(t0 + i * 360_000).toISOString(), heightFt: +(2.5 + 2 * Math.sin(i / 20)).toFixed(3)}));
+  const source = {id: 'coops-9412110', label: 'NOAA CO-OPS 9412110 predictions', url: 'https://tidesandcurrents.noaa.gov/stationhome.html?id=9412110', kind: 'prediction', outcome: 'ok', fetchedAt: iso(-HOUR)};
+  return {schemaVersion: 1, countyId: 'slo', generatedAt: iso(-600_000), forecasts: [], observations: [], tides,
+    tideEvents: [{at: tides[40]!.at, heightFt: 4.4, type: 'H'}], alerts: [], catches: [], catchStatus: '', habitatStatus: '', sources: [source],
+    visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}};
+}
+
+test('FE-33: where a coast report binds, the sparkline draws its tide curve in token colours under the events', async ({page, pageErrors, v2, isMobile}) => {
+  await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* held: only the report answers */ });
+  await page.route('**/api/coast/report', route => route.fulfill({json: coastReport()}));
+  // The coast report is requested for the place while a layer that reads it (Swell) is on.
+  await v2.open('app', {region: 'morro-bay', layers: 'swell'});
+  const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
+  await expect(root).toHaveAttribute('data-basis', 'coast-report');
+  if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
+  const spark = root.locator('figure.app-spark');
+  const chart = spark.locator('svg.series-chart');
+  await expect(chart).toHaveAttribute('aria-label', /^Tide in ft MLLW\./);
+  expect(await chart.locator('path').evaluate(el => getComputedStyle(el).stroke)).toBe(await page.evaluate(() => {
+    const probe = Object.assign(document.createElement('i'), {style: 'color: var(--amber)'});
+    document.body.append(probe);
+    const colour = getComputedStyle(probe).color;
+    probe.remove();
+    return colour;
+  }));
+  await expect(spark.locator('.app-spark-events li')).toHaveText([/^High \d{1,2}:\d\d [ap]m · 4\.4 ft MLLW$/]);
+  await expect(root.locator('.ui-tile', {hasText: 'Tide'}).locator('.ui-tile-detail')).toHaveText(/^(Rising|Falling|Turning) · .+ · MLLW$/);
+  await v2.a11y(isMobile ? 'v2-brief-spark-sheet' : 'v2-brief-spark');
   expect(pageErrors).toEqual([]);
 });
