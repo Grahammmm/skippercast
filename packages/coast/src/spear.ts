@@ -26,7 +26,7 @@ export type {ChlorophyllReading};
  */
 export const SPEAR = {
   surge: {
-    /** Upper bounds of each band in ft²·s. 2 ft at 10 s = 40; 3 ft at 12 s = 108; 4 ft at 15 s = 240. */
+    /** Upper bounds of each band in ft²·s. 2 ft at 10 s = 40; 3 ft at 12 s = 108; 4 ft at 15 s = 4² · 15 · 1.5 = 360 (Heavy). */
     low: 40,
     moderate: 110,
     strong: 250,
@@ -47,8 +47,12 @@ export const SPEAR = {
     chlorophyll: {fair: 1.5, poor: 4, maxAgeHours: 96},
     /** Highest rain chance in the prior 72 h: runoff carries silt and nutrients to the coast. */
     rain: {windowHours: 72, fair: 30, poor: 60},
-    /** Largest surge energy in the prior 48 h: big swell stirs bottom sediment that takes days to settle. */
-    swell: {windowHours: 48, fair: 110, poor: 250},
+    /**
+     * Largest surge energy in the prior 48 h: big swell stirs bottom sediment that takes days to settle.
+     * With fewer than `minCoveredHours` of that window sampled (the forecast starts at the current hour and
+     * buoys give only the latest reading), yesterday's swell is unchecked and the band is capped at Fair.
+     */
+    swell: {windowHours: 48, fair: 110, poor: 250, minCoveredHours: 36},
     /** Wind at the hour: chop and surface mixing cloud the top of the water. */
     wind: {fair: 10, poor: 15},
     /** Three fair drivers together read as likely poor. */
@@ -124,8 +128,9 @@ export type ClarityInputs = {
   /** Highest rain chance in the prior window, and the hours of that window the forecast covers. */
   rainPct: number | null;
   rainHoursCovered: number;
-  /** Largest surge energy in the prior window, or null with no sample. */
+  /** Largest surge energy in the prior window, or null with no sample, and the hours of that window with a sample. */
   recentEnergy: number | null;
+  recentHoursCovered: number;
   windKnots: number | null;
 };
 
@@ -147,10 +152,13 @@ export function clarity(input: ClarityInputs): Clarity {
     if (chl.mgM3 > c.chlorophyll.poor) {poor++; drivers.push(`chlorophyll ${value} mg/m³: green water likely`);}
     else if (chl.mgM3 > c.chlorophyll.fair) {fair++; drivers.push(`chlorophyll ${value} mg/m³: some green water`);}
     else drivers.push(`chlorophyll ${value} mg/m³: low`);
+    gaps.push('Clarity estimate: satellite chlorophyll is an offshore area average and may read clearer than the shoreline');
   }
   if (input.recentEnergy === null) missing.push('recent swell');
   else if (input.recentEnergy >= c.swell.poor) {poor++; drivers.push('large swell in the past 2 days: stirred sediment likely');}
   else if (input.recentEnergy >= c.swell.fair) {fair++; drivers.push('moderate swell in the past 2 days');}
+  const swellUnchecked = input.recentEnergy !== null && input.recentHoursCovered < c.swell.minCoveredHours;
+  if (swellUnchecked) gaps.push('Clarity estimate: swell before the forecast began is unchecked');
   if (input.rainPct === null) gaps.push('Clarity estimate: recent rain unknown');
   else {
     if (input.rainPct >= c.rain.poor) {poor++; drivers.push(`rain chance up to ${Math.round(input.rainPct)}% in the past 3 days: runoff likely`);}
@@ -161,7 +169,8 @@ export function clarity(input: ClarityInputs): Clarity {
   else if (input.windKnots >= c.wind.poor) {poor++; drivers.push(`wind ${Math.round(input.windKnots)} kt: surface chop`);}
   else if (input.windKnots >= c.wind.fair) {fair++; drivers.push(`wind ${Math.round(input.windKnots)} kt: some chop`);}
   if (missing.length) return {band: 'Unknown', drivers, missing, gaps};
-  const band: ClarityBand = poor || fair >= c.fairToPoor ? 'Likely poor' : fair ? 'Fair' : 'Likely good';
+  // Without most of the swell look-back, a recent big swell may be missed: never read Likely good.
+  const band: ClarityBand = poor || fair >= c.fairToPoor ? 'Likely poor' : fair || swellUnchecked ? 'Fair' : 'Likely good';
   return {band, drivers, missing, gaps};
 }
 
@@ -188,16 +197,27 @@ export type SpearInputs = {
   chlorophyll: ChlorophyllReading | null;
 };
 
-/** Largest surge energy over the window before `at` from forecast, nearshore model and buoy samples. */
-function recentEnergy(at: number, input: SpearInputs): number | null {
-  const from = at - SPEAR.clarity.swell.windowHours * HOUR;
-  const inside = (time: string) => {const t = Date.parse(time); return Number.isFinite(t) && t >= from && t <= at;};
-  const energies = [
-    ...input.forecastHours.filter(h => inside(h.at)).flatMap(h => [surgeEnergy(h.waveFt, h.wavePeriodS), surgeEnergy(h.swellFt, h.swellPeriodS)]),
-    ...(input.site?.hours ?? []).filter(h => inside(h.at)).map(h => surgeEnergy(h.waveFt, h.periodS)),
-    ...input.observations.filter(o => inside(o.observedAt)).map(o => surgeEnergy(o.waveFt, o.wavePeriodS)),
-  ].filter(finite);
-  return energies.length ? Math.max(...energies) : null;
+/**
+ * Largest surge energy over the window before `at` from forecast, nearshore
+ * model and buoy samples, and how many hours of that window carry a sample.
+ * A sample covers its own hour; a nearshore model sample covers its interval
+ * (three hours by default).
+ */
+export function recentEnergy(at: number, input: Pick<SpearInputs, 'forecastHours' | 'site' | 'observations'>): {energy: number | null; covered: number} {
+  const windowHours = SPEAR.clarity.swell.windowHours, from = at - windowHours * HOUR;
+  const energies: number[] = [], hours = new Set<number>();
+  const add = (time: string, values: (number | null)[], spanHours = 1) => {
+    const t = Date.parse(time), known = values.filter(finite);
+    if (!Number.isFinite(t) || t < from || t > at || !known.length) return;
+    energies.push(...known);
+    const centre = Math.floor((at - t) / HOUR), half = Math.floor(spanHours / 2);
+    for (let i = centre - half; i <= centre + half; i++) if (i >= 0 && i < windowHours) hours.add(i);
+  };
+  for (const h of input.forecastHours) add(h.at, [surgeEnergy(h.waveFt, h.wavePeriodS), surgeEnergy(h.swellFt, h.swellPeriodS)]);
+  const siteSpan = Math.max(1, Math.round((input.site?.temporalResolutionMinutes ?? 180) / 60));
+  for (const h of input.site?.hours ?? []) add(h.at, [surgeEnergy(h.waveFt, h.periodS)], siteSpan);
+  for (const o of input.observations) add(o.observedAt, [surgeEnergy(o.waveFt, o.wavePeriodS)]);
+  return {energy: energies.length ? Math.max(...energies) : null, covered: hours.size};
 }
 
 function recentRain(at: number, hours: readonly ForecastHour[]): {pct: number | null; covered: number} {
@@ -213,7 +233,8 @@ export function spearHours(input: SpearInputs): SpearHour[] {
     const s = surge(hour, input.site ? nearshoreAt(input.site, hour.at) : undefined);
     const w = chop(hour.windKnots, hour.gustKnots);
     const rain = recentRain(at, input.forecastHours);
-    const k = clarity({chlorophyll: input.chlorophyll, at: hour.at, rainPct: rain.pct, rainHoursCovered: rain.covered, recentEnergy: recentEnergy(at, input), windKnots: hour.windKnots});
+    const swell = recentEnergy(at, input);
+    const k = clarity({chlorophyll: input.chlorophyll, at: hour.at, rainPct: rain.pct, rainHoursCovered: rain.covered, recentEnergy: swell.energy, recentHoursCovered: swell.covered, windKnots: hour.windKnots});
     const highTide = input.tideEvents.some(e => e.type === 'H' && Math.abs(Date.parse(e.at) - at) <= SPEAR.highTideMinutes * 60_000);
     const {verdict, reasons} = spearVerdict(s, w, k, highTide);
     return {at: hour.at, surge: s, chop: w, clarity: k, highTide, verdict, reasons};

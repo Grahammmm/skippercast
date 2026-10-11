@@ -126,7 +126,12 @@ export function fleetLine(reports: readonly LandingReport[], port: string, timez
   return {count: boats.size, port, text: `${boats.size} boat${boats.size === 1 ? '' : 's'} reported from ${port} in the last ${FLEET_WINDOW_DAYS} days`, href: '/report'};
 }
 
-/** Cells within this many degrees (about 15 km) of the place feed its chlorophyll reading. */
+/**
+ * Cells within this many degrees (about 15 km) of the place feed its chlorophyll reading.
+ * The grid is about 4 km (0.0375°) and the satellite masks most cells against the
+ * shore, so a tighter radius would often find none. The clarity estimate says the
+ * value is an offshore area average that may read clearer than the shoreline.
+ */
 export const CHLOROPHYLL_RADIUS_DEG = 0.15;
 
 /**

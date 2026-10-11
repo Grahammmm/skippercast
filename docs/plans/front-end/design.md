@@ -942,7 +942,10 @@ the prior 72 h, the largest swell in the prior 48 h, wind). Clarity reads
 named, and is always labelled an estimate. A high tide within 90 minutes is
 a mild bonus; water temperature is shown, not scored. The headline is the
 day's surge range and clarity estimate; spear windows use surge rather than
-the 3 ft offshore rule where a fresh nearshore model covers the hour. All
+the 3 ft offshore rule where a fresh nearshore model covers the hour. When
+fewer than 36 h of the swell look-back are sampled, clarity is capped at
+"fair" and the gap is listed; the chlorophyll value is an offshore area
+average and the brief says so. All
 thresholds are in the `SPEAR` table with their reasoning.
 
 ## 9. Map layers

@@ -6,7 +6,7 @@ import fixture from './fixtures/coast/skippercast-report.json' with {type: 'json
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import montereyForecast from './fixtures/brief/monterey-forecast.json' with {type: 'json'};
 
-const {SPEAR, surgeEnergy, surgeBand, surge, chop, clarity, spearVerdict, spearHours, spearDay} = await import('../packages/coast/src/spear.ts');
+const {SPEAR, surgeEnergy, surgeBand, surge, chop, clarity, recentEnergy, spearVerdict, spearHours, spearDay} = await import('../packages/coast/src/spear.ts');
 const {buildDaily} = await import('../packages/coast/src/daily.ts');
 const {reportPanel} = await import('../packages/coast/src/presentation.ts');
 const {slo} = await import('../packages/coast/src/counties.ts');
@@ -66,11 +66,12 @@ test('chop bands follow wind and gust', () => {
 
 const at = '2026-10-09T18:00:00Z';
 const chl = mgM3 => ({mgM3, sampleAt: '2026-10-08T12:00:00Z', cells: 4, label: 'chl', url: 'https://example.com'});
-const base = {chlorophyll: chl(0.8), at, rainPct: 0, rainHoursCovered: 72, recentEnergy: 30, windKnots: 5};
+const base = {chlorophyll: chl(0.8), at, rainPct: 0, rainHoursCovered: 72, recentEnergy: 30, recentHoursCovered: 48, windKnots: 5};
+const CHL_NOTE = 'Clarity estimate: satellite chlorophyll is an offshore area average and may read clearer than the shoreline';
 
 test('clarity: each driver moves the band, and the estimate stays labelled', () => {
   assert.equal(clarity(base).band, 'Likely good');
-  assert.deepEqual(clarity(base).gaps, []);
+  assert.deepEqual(clarity(base).gaps, [CHL_NOTE]);
   const cases = [
     [{chlorophyll: chl(2.5)}, 'Fair', /some green water/],
     [{chlorophyll: chl(6)}, 'Likely poor', /green water likely/],
@@ -101,8 +102,38 @@ test('clarity: missing chlorophyll or recent swell says Unknown and names what i
   // Rain and wind gaps are listed but do not blank the band.
   const gaps = clarity({...base, rainPct: null, windKnots: null});
   assert.equal(gaps.band, 'Likely good');
-  assert.deepEqual(gaps.gaps, ['Clarity estimate: recent rain unknown', 'Clarity estimate: wind unknown']);
+  assert.deepEqual(gaps.gaps, [CHL_NOTE, 'Clarity estimate: recent rain unknown', 'Clarity estimate: wind unknown']);
   assert.ok(clarity({...base, rainHoursCovered: 18}).gaps.includes('Clarity estimate: rain before the forecast began is unchecked'));
+});
+
+test('clarity: a mostly unchecked swell look-back caps the band at Fair and says so', () => {
+  const SWELL_GAP = 'Clarity estimate: swell before the forecast began is unchecked';
+  const covered = clarity({...base, recentHoursCovered: 36});
+  assert.equal(covered.band, 'Likely good');
+  assert.ok(!covered.gaps.includes(SWELL_GAP));
+  const short = clarity({...base, recentHoursCovered: 6});
+  assert.equal(short.band, 'Fair');
+  assert.ok(short.gaps.includes(SWELL_GAP));
+  // The cap never improves a worse band.
+  assert.equal(clarity({...base, recentHoursCovered: 6, recentEnergy: 300}).band, 'Likely poor');
+});
+
+test('recentEnergy counts the covered hours of the 48 h look-back', () => {
+  const t = Date.parse(at);
+  const hourly = n => Array.from({length: n}, (_, i) => ({at: iso(t - i * HOUR), waveFt: 2, wavePeriodS: 10}));
+  assert.deepEqual(recentEnergy(t, {forecastHours: hourly(49), site: undefined, observations: []}), {energy: 40, covered: 48});
+  // Forecast from the current hour only, plus the latest buoy reading.
+  const fresh = recentEnergy(t, {forecastHours: hourly(1), site: undefined, observations: [{observedAt: iso(t - 3 * HOUR), waveFt: 6, wavePeriodS: 12}]});
+  assert.deepEqual(fresh, {energy: 432, covered: 2});
+  // A three-hour nearshore model sample covers its interval.
+  const site = {temporalResolutionMinutes: 180, hours: Array.from({length: 16}, (_, i) => ({at: iso(t - i * 3 * HOUR), waveFt: 1, periodS: 10}))};
+  assert.equal(recentEnergy(t, {forecastHours: [], site, observations: []}).covered, 47);
+  assert.deepEqual(recentEnergy(t, {forecastHours: [], site: undefined, observations: []}), {energy: null, covered: 0});
+  // spearHours wires it through: the forecast alone starts at this hour, so Likely good is withheld.
+  const hours = [{at, windKnots: 5, gustKnots: 8, waveFt: 1.8, wavePeriodS: 10, precipPct: 0}];
+  const out = spearHours({hours, forecastHours: hours, site: undefined, observations: [], tideEvents: [], chlorophyll: chl(0.8)});
+  assert.equal(out[0].clarity.band, 'Fair');
+  assert.ok(out[0].clarity.gaps.includes('Clarity estimate: swell before the forecast began is unchecked'));
 });
 
 test('verdict: surge and chop decide, clarity weighs in, high tide is a mild bonus', () => {
@@ -180,6 +211,7 @@ test('brief rendering for spear: headline, deck, surge in the swell tile, clarit
   assert.match(html, /<span>Clarity<\/span>/);
   assert.match(html, /<span class="data-kind">Estimate<\/span>/);
   assert.match(html, /Lower surge\. Confirm the visibility\./);
+  assert.match(html, /Lower surge &amp; wind\. Local checks required\./);
 });
 
 const chlorophyllFeed = (samples, status = 'ok') => ({...montereyDaily, sources: {...montereyDaily.sources, chlorophyll: {id: 'chlorophyll', name: 'NOAA VIIRS chlorophyll', kind: 'grid', url: 'https://coastwatch.noaa.gov', checked_at: now.toISOString(), status,
