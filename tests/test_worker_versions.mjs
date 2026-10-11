@@ -55,13 +55,20 @@ test('a version\'s commit comes from its deploy message', () => {
   assert.equal(commitOf(undefined), null);
 });
 
-test('the rollback target is the previous commit\'s version, not the failed commit\'s code', () => {
-  assert.equal(rollbackTarget(DEPLOYMENTS, VERSIONS), PREV_CODE);
+test('the rollback target is the version live before the failed commit\'s deploy', () => {
+  // The previous commit's secrets upload carries its final secrets; its code version does not.
+  assert.equal(rollbackTarget(DEPLOYMENTS, VERSIONS), PREV_SECRETS);
   assert.notEqual(rollbackTarget(DEPLOYMENTS, VERSIONS), CUR_CODE);
+  assert.notEqual(rollbackTarget(DEPLOYMENTS, VERSIONS), PREV_CODE);
   // Live on the code version itself (no secrets upload): same answer.
-  assert.equal(rollbackTarget(DEPLOYMENTS.slice(0, 3), VERSIONS), PREV_CODE);
-  // An explicit commit to skip.
-  assert.equal(rollbackTarget(DEPLOYMENTS, VERSIONS, {excludeCommit: PREV_SHA}), CUR_CODE);
+  assert.equal(rollbackTarget(DEPLOYMENTS.slice(0, 3), VERSIONS), PREV_SECRETS);
+  // An explicit commit to skip: nothing is older than the previous commit here.
+  assert.equal(rollbackTarget(DEPLOYMENTS, VERSIONS, {excludeCommit: PREV_SHA}), '');
+});
+
+test('a previous commit with only a code version (no secrets upload) is the target', () => {
+  const versions = [VERSIONS[0], VERSIONS[2], VERSIONS[3]];
+  assert.equal(rollbackTarget(DEPLOYMENTS, versions), PREV_CODE);
 });
 
 test('no target when there is no earlier version from a different commit', () => {
@@ -87,7 +94,7 @@ test('the CLI prints the live version and the rollback target', () => {
   assert.equal(run.stdout.trim(), CUR_SECRETS);
   run = cli(DEPLOYMENTS, VERSIONS, 'rollback-target', '@deployments.json', '@versions.json');
   assert.equal(run.status, 0, run.stderr);
-  assert.equal(run.stdout.trim(), PREV_CODE);
+  assert.equal(run.stdout.trim(), PREV_SECRETS);
   run = cli(DEPLOYMENTS, VERSIONS, 'commit', '@versions.json', PREV_CODE);
   assert.equal(run.stdout.trim(), PREV_SHA);
 });
@@ -97,6 +104,15 @@ test('the CLI exits 1 with a message when there is nothing to roll back to', () 
   assert.equal(run.status, 1);
   assert.equal(run.stdout, '');
   assert.match(run.stderr, /no earlier Worker version/);
+  // Live version missing from the (cut-off) listing.
+  run = cli(DEPLOYMENTS, VERSIONS.slice(0, 3), 'rollback-target', '@deployments.json', '@versions.json');
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, new RegExp(`live version ${CUR_SECRETS} is not in the versions listing; pass an explicit version id`));
+  // Gradual deployment: no version at 100%.
+  const gradual = [{id: 'g', created_on: '2026-10-11T10:00:00Z', versions: [{version_id: CUR_CODE, percentage: 50}, {version_id: PREV_SECRETS, percentage: 50}]}];
+  run = cli(gradual, VERSIONS, 'rollback-target', '@deployments.json', '@versions.json');
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /no version serves 100% of traffic; pass an explicit version id/);
   run = cli([], [], 'live', '@deployments.json');
   assert.equal(run.status, 1);
   assert.match(run.stderr, /no deployment/);

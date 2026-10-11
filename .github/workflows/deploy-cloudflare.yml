@@ -172,28 +172,39 @@ jobs:
           PREVIOUS: ${{ steps.deploy.outputs.previous_version }}
           FAILED_BUILD: ${{ steps.deploy.outputs.build }}
           SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
+          SMOKE: ${{ steps.smoke.outcome }}
         run: |
+          if [ "$SMOKE" = "failure" ]; then reason="failed its smoke test"; else reason="failed after the Worker was deployed (the deploy step did not finish)"; fi
           # The version live before this deploy, not a bare `wrangler rollback`: the secrets
           # upload adds a second deployment, so Wrangler's default is this commit's own code (#568).
           if [ -z "$PREVIOUS" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test and was NOT rolled back: the version live before it was not recorded. Roll back by hand; see docs/operations/runbooks/rollback-release.md."
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was NOT rolled back: the version live before it was not recorded. Roll back by hand; see docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
-          $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Smoke test failed for ${GITHUB_SHA} (run ${GITHUB_RUN_ID})"
-          served=""
-          if [ -n "$SITE" ]; then
-            for attempt in 1 2 3 4 5 6; do
-              served=$(curl -fsS --max-time 15 "$SITE/api/health" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('build',''))" 2>/dev/null || true)
-              if [ -n "$served" ] && [ "$served" != "$FAILED_BUILD" ]; then break; fi
-              sleep 10
-            done
-            if [ -n "$FAILED_BUILD" ] && [ "$served" = "$FAILED_BUILD" ]; then
-              echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test; the rollback to Worker version ${PREVIOUS} did not take effect: the site still serves build ${FAILED_BUILD}. See docs/operations/runbooks/rollback-release.md."
-              exit 1
-            fi
+          if ! $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Deployment of ${GITHUB_SHA} ${reason} (run ${GITHUB_RUN_ID})"; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason} and the rollback to Worker version ${PREVIOUS} FAILED; roll back by hand (docs/operations/runbooks/rollback-release.md)."
+            exit 1
           fi
-          echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test and was rolled back to Worker version ${PREVIOUS} (site serves build ${served:-unknown}). D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          if [ -z "$SITE" ]; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS} (not verified: CLOUDFLARE_SITE_URL is unset). D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
+          served=""
+          for attempt in 1 2 3 4 5 6; do
+            served=$(curl -fsS --max-time 15 "$SITE/api/health" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('build',''))" 2>/dev/null || true)
+            if [ -n "$served" ] && [ "$served" != "$FAILED_BUILD" ]; then break; fi
+            sleep 10
+          done
+          if [ -z "$served" ]; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} was sent but could not be verified (/api/health did not answer). Check the site by hand; see the runbook."
+            exit 1
+          fi
+          if [ -n "$FAILED_BUILD" ] && [ "$served" = "$FAILED_BUILD" ]; then
+            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: the site still serves build ${FAILED_BUILD}. See docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
+          echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS} (site serves build ${served}). D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
           exit 1
 
   rollback:

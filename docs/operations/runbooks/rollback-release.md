@@ -8,9 +8,9 @@
 
 - Only a `main` commit that passed **Offline checks** is deployed, and exactly that commit (`.github/workflows/deploy-cloudflare.yml`).
 - `scripts/cloudflare_deploy.sh` records a D1 Time Travel bookmark, exports D1 to the private R2 bucket `skippercast-backups` (`d1/<UTC stamp>-<sha>.sql`), applies migrations, records the Worker version live before the deploy ("Live Worker version before this deploy"), then deploys.
-- Each deploy makes **two** Worker deployments a few seconds apart: `wrangler deploy` (the code; its version's message is `<sha> run <run id>`) and `wrangler secret bulk` (a new version of the same code with no message). A bare `wrangler rollback` skips only the newest deployment, so it lands on the code version of the commit you are trying to leave and changes nothing (#568). Always roll back to an explicit version id.
+- Each deploy makes **two** Worker deployments a few seconds apart: `wrangler deploy` (the code; its version's message is `<sha> run <run id>`) and `wrangler secret bulk` (a new version of the same code with no message). A bare `wrangler rollback` skips only the newest deployment, so it lands on the code version of the commit you are trying to leave and stays on the same commit (only its secrets upload is undone) (#568). Always roll back to an explicit version id.
 - `scripts/smoke_test.sh` waits for the new build, then checks health, the home page, `/sw.js`, the live feed and that forged identity headers are refused.
-- **A failed smoke test rolls the Worker back automatically** to the recorded previous version, then checks `/api/health` no longer serves the failed build. The step stays red either way; its error says whether the rollback took effect. If no previous version was recorded (the first deploy, or the listing failed), it says the rollback was not performed. Migrations are not reverted.
+- **A failed smoke test rolls the Worker back automatically** to the recorded previous version, then, when `CLOUDFLARE_SITE_URL` is set, checks `/api/health` no longer serves the failed build. The step stays red either way; its error says whether the rollback took effect. If no previous version was recorded (the first deploy, or the listing failed), it says the rollback was not performed. Migrations are not reverted.
 
 ## Detect
 
@@ -21,14 +21,14 @@
 
 ## Fix: roll back the Worker code
 
-1. Actions → **Deploy to Cloudflare** → **Run workflow** → action **rollback**. Leave **version** empty to roll back to the newest Worker version deployed from a different commit than the live one, or give an explicit version id. The job prints the target and its commit, runs `wrangler rollback <version-id>` and smoke-tests the result.
+1. Actions → **Deploy to Cloudflare** → **Run workflow** → action **rollback**. Leave **version** empty to roll back to the version live before the current commit's deploy, or give an explicit version id. The job prints the target and its commit, runs `wrangler rollback <version-id>` and smoke-tests the result.
 2. Or locally, with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set:
    ```bash
    mkdir -p var
    node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
    npx --yes wrangler@4.142.0 deployments list --json --config wrangler.rollback.jsonc > var/deployments.json
    npx --yes wrangler@4.142.0 versions list --json --config wrangler.rollback.jsonc > var/versions.json
-   node scripts/worker_versions.mjs rollback-target var/deployments.json var/versions.json   # or pick an id whose message names a good commit
+   node scripts/worker_versions.mjs rollback-target var/deployments.json var/versions.json   # the version live before the current commit's deploy; or pick an id whose message names a good commit
    npx --yes wrangler@4.142.0 rollback <version-id> --config wrangler.rollback.jsonc --yes --message "why"
    ```
    Never run `wrangler rollback` without a version id (see "How deploys work").
