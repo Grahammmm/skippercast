@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"south-big-sur-san-simeon","layer_id":"chlorophyll-observation","bounds":[-122.5,35.5,-122.0,36.0],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1791374400,"cells":[[35.68125,-122.00625,0.312],[35.71875,-122.00625,0.30337],[35.75625,-122.00625,0.36415]],"valid_cells":3}]}
