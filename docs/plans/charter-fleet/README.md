@@ -247,3 +247,10 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   (`skippercast-fleet-registry`, `skippercast-fleet-activity`), as #468 and
   #469 specify. Recorded in `open-questions.md`; N8 and N9 in `graph.md` updated.
 - 2026-10-11: [Fleet seed #521](https://github.com/Grahammmm/skippercast/issues/521): 347 scout rows across 28 ports transferred to AgentOrange with matching SHA-256. The draft importer's offline check yields 342 candidates and five skips for missing usable provenance. Gate (d) remains pending; no Worker registry job has been dispatched. The eight unscouted ports remain separate backlog.
+- 2026-10-11: N5 activity classifier in review (#570, branch
+  `claude/n5-classifier`). It adds the modes `drift-anchor`, `troll-slow`,
+  `troll-pelagic` and `uncertain`, and keeps every threshold in `fleet.json`
+  `thresholds.activity`. Offshore distance is measured to the nearest port
+  geofence. Transit keeps statistics only, and `classifier_version` is now
+  `c2-…`. Live rows are rewritten when the CF-45 processor and CF-47 backfill
+  reprocess them after merge. The tests use synthetic tracks only.

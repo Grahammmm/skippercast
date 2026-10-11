@@ -21,7 +21,7 @@ import {configureStore, syncFromURL} from '../web/state.ts';
 const ROOT = new URL('..', import.meta.url);
 const until = async (ok, what) => { for (let i = 0; i < 200 && !ok(); i++) await new Promise(r => setTimeout(r, 5)); assert.ok(ok(), what); };
 const CHOICES = {region: 'CA', vessels: [{id: 'v1', name: 'Sea <b>Example</b>'}], truncated: true, ports: ['morro-bay'], classes: ['six-pack'],
-  trip_types: ['half-day'], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
+  trip_types: ['half-day'], kinds: ['drift-anchor', 'troll-slow'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
 const EVENT = (id, planning) => ({type: 'Feature', geometry: {type: 'Point', coordinates: [-120.9, 35.3]},
   properties: {id, vessel_name: 'Test Boat', kind: 'drift-anchor', dwell_min: 30, planning_only: planning}});
 
@@ -88,7 +88,7 @@ test('Accept 2: the admin\'s filters reach the map API exactly as v1 sends them;
   open(t, h, 'view=fleet&layers=fleet');
   await until(() => activityAccess.value, 'the probe answers');
   assert.equal(activityChoices.value.vessels[0].name, 'Sea <b>Example</b>');
-  const filters = readFilters({port: 'morro-bay', vessel: ' ', kind: 'troll', from: '2026-06-01', season_part: 'summer'});
+  const filters = readFilters({port: 'morro-bay', vessel: ' ', kind: 'troll-slow', from: '2026-06-01', season_part: 'summer'});
   activityFilters.value = filters;
   toggleActivity('events', true);
   await until(() => h.calls.some(c => c[0] === FLEET_SOURCE.events), 'events draw');
@@ -96,7 +96,7 @@ test('Accept 2: the admin\'s filters reach the map API exactly as v1 sends them;
   assert.equal(sent, v1.layerQuery('events', filters, {region: 'CA', bbox: [-121, 35.2, -120.6, 35.5]}));
   const u = new URL(sent, 'https://s.test');
   assert.equal(u.searchParams.get('port'), 'morro-bay');
-  assert.equal(u.searchParams.get('kind'), 'troll');
+  assert.equal(u.searchParams.get('kind'), 'troll-slow');
   assert.equal(u.searchParams.has('vessel'), false, 'empty filters are left out, as v1');
   assert.equal(h.calls.findLast(c => c[0] === FLEET_SOURCE.events)[1], 2);
   hidePlanning.value = true;

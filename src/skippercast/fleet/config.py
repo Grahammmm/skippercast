@@ -372,10 +372,12 @@ def _region_problems(doc, catalogs, root: Path) -> list[str]:
     match = doc["thresholds"]["match"]
     if match["review_min"] > match["auto_merge"]:
         problems.append("thresholds.match: review_min is above auto_merge")
-    if activity["troll"]["min_sog_kn"] >= activity["troll"]["max_sog_kn"]:
-        problems.append("thresholds.activity.troll: min_sog_kn must be below max_sog_kn")
-    if activity["drift"]["max_sog_kn"] >= activity["troll"]["min_sog_kn"]:
-        problems.append("thresholds.activity: drift max_sog_kn must be below troll min_sog_kn")
+    slow, pelagic = activity["troll_slow"], activity["troll_pelagic"]
+    speeds = (activity["drift"]["max_sog_kn"], slow["min_sog_kn"], slow["max_sog_kn"], pelagic["min_sog_kn"],
+              pelagic["max_sog_kn"])
+    if any(a >= b for a, b in zip(speeds, speeds[1:])):
+        problems.append("thresholds.activity: speeds must rise strictly: drift max_sog_kn < troll_slow min_sog_kn"
+                        " < troll_slow max_sog_kn < troll_pelagic min_sog_kn < troll_pelagic max_sog_kn")
 
     catalog_fields = catalogs["resolver"]["fields"]
     for key, override in doc["resolver_overrides"].items():

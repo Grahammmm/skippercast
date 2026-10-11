@@ -157,9 +157,12 @@ and San Diego is split into `san-diego` (Point Loma landings) and
       "gap_unknown_min": 30, "gap_split_hours": 12,
       "max_open_trip_hours": {"six-pack": 18, "inspected-party": 40, "long-range": 480},
       "window_min": 20, "min_segment_minutes": 5, "simplify_tolerance_m": 25,
+      "offshore_min_nm": 5.0,
       "drift": {"max_sog_kn": 2.0, "min_minutes": 15},
-      "troll": {"min_sog_kn": 4.0, "max_sog_kn": 9.0, "max_straightness": 0.6,
-                "min_heading_variance": 0.35, "min_minutes": 15}},
+      "troll_slow": {"min_sog_kn": 2.2, "max_sog_kn": 3.5, "max_straightness": 0.9,
+                     "min_heading_variance": 0.05, "min_minutes": 15},
+      "troll_pelagic": {"min_sog_kn": 5.0, "max_sog_kn": 9.0, "stop_max_minutes": 30, "min_minutes": 30},
+      "transit": {"min_straightness": 0.8}},
     "match": {"auto_merge": 0.9, "review_min": 0.6, "mmsi_auto": 0.85},
     "refresh": {"vanished_after_runs": 3, "vanished_after_days": 45,
                 "osint_stale_days": 60, "fact_stale_days": 120},
@@ -381,12 +384,13 @@ Other registry tables:
   local_date)`, `trip_region_season (region, season)`, `trip_source_time
   (source, departed_at)`.
 - **`fleet_segments`**: `id` `sha256(trip_id|seq)[:32]`, `trip_id`, `seq`,
-  `kind` (`in-port`, `transit`, `fishing-drift`, `fishing-troll`, `gap`),
-  `started_at`, `ended_at`, `geometry` (encoded polyline, precision 5),
-  `points_n`, `mean_sog`, `straightness`, `heading_var`; index `seg_trip (trip_id, seq)`.
+  `kind` (`in-port`, `transit`, `drift-anchor`, `troll-slow`, `troll-pelagic`,
+  `uncertain`, `gap`), `started_at`, `ended_at`, `geometry` (encoded polyline,
+  precision 5; null for `transit` and `gap`), `points_n`, `mean_sog`, `p90_sog`,
+  `distance_nm`, `straightness`, `heading_var`; index `seg_trip (trip_id, seq)`.
 - **`fleet_events`**: one per fishing segment. `id`
   `sha256(trip_id|started_at|kind)[:32]`, `trip_id`, `segment_id`,
-  `vessel_id`, `region`, `kind` (`drift-anchor`, `troll`), `lat`, `lon`
+  `vessel_id`, `region`, `kind` (`drift-anchor`, `troll-slow`, `troll-pelagic`), `lat`, `lon`
   (median), `radius_m` (p90 distance), `started_at`, `ended_at`, `dwell_min`,
   `port_id`, `vessel_class`, `trip_type`, `season`, `season_part`, `basis`
   (always `inferred-from-movement`), `source`, `rights`, `classifier_version`,
@@ -892,18 +896,29 @@ for derived speed, heading or straightness.
 
 **Classification (D10).** Over a centred `window_min` (20 min) window per
 position: mean SOG (reported, else derived), straightness = net displacement /
-path length, heading variance = 1 − mean resultant length of COG. In precedence
-order:
+path length, heading variance = 1 − mean resultant length of COG. Offshore
+distance is the distance to the nearest port geofence in `fleet.json` (the only
+coastline every region has offline). In precedence order (charter-fleet N5;
+sources in [references/classification.md](references/classification.md)):
 
 | Label | Rule |
 | --- | --- |
 | `in-port` | inside a geofence |
-| `fishing-drift` | SOG ≤ 2 kn sustained ≥ 15 min outside geofences |
-| `fishing-troll` | SOG 4–9 kn and (straightness ≤ 0.6 or heading variance ≥ 0.35), sustained ≥ 15 min |
-| `transit` | everything else at sea |
+| `drift-anchor` | SOG ≤ 2 kn, sustained ≥ 15 min |
+| `troll-slow` | SOG 2.2–3.5 kn and (straightness ≤ 0.9 or heading variance ≥ 0.05), sustained ≥ 15 min |
+| `troll-pelagic` | SOG 5–9 kn at least 5 nm from every geofence, straight or not, sustained ≥ 30 min |
+| `transit` | SOG above 9 kn, or above 3.5 kn with straightness ≥ 0.8 (so a straight run at trolling speed inshore) |
+| `uncertain` | everything else: between bands, the slow band without its shape, a turning run inshore at pelagic speed, no speed |
 
-Runs shorter than `min_segment_minutes` merge into the longer neighbour; a
-fishing run under its minimum becomes transit. Silences over `gap_unknown_min`
+`drift-anchor`, `troll-slow` and `troll-pelagic` are fishing. `uncertain` is
+not: it never feeds an aggregate and keeps its geometry for the labelling
+view. No rule reads the clock: a night drift offshore is `drift-anchor`.
+
+Runs shorter than `min_segment_minutes` merge into the longer neighbour. The
+runs between two `troll-pelagic` runs of at least `window_min` each, together
+at most `stop_max_minutes` (30) and wholly offshore, join them, so paddy stops
+do not split a pelagic search. A fishing run under its minimum then becomes
+`uncertain`. Silences over `gap_unknown_min`
 (including one before the return fix) are `gap` segments that never merge, so a
 run between two gaps may be shorter than `min_segment_minutes`. A short dip
 into a geofence inside a fishing run merges into that run, so CF-44 must drop
@@ -915,7 +930,8 @@ downsamples raw cadence to one fix per minute before classifying. Output carries
 **Events, tracks, aggregates.** One event per fishing segment (median point,
 p90 radius, `basis=inferred-from-movement`). Each segment's positions are
 simplified with Douglas-Peucker at 25 m on a local equirectangular projection
-and stored as an encoded polyline; transits are kept. Aggregates are a
+and stored as an encoded polyline. Transit keeps statistics only (minutes,
+point count, mean and p90 SOG, distance) and no geometry (#469 D20). Aggregates are a
 pluggable module (`ais/aggregate/base.py`: `compute(events, params) ->
 list[Cell]`); `grid` bins dwell into `resolution_m` cells. The privacy knobs
 `min_distinct_vessels` and `delay_hours` exist and are `null` for admin views;

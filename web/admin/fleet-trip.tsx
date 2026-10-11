@@ -2,7 +2,7 @@
 // Validation, § 13 Labelling, D10; CF-48). #fleet-labels lists trips (newest first, filter
 // labelled or not) with the progress toward the 30-trip target; #fleet-trip/<id> shows one
 // trip's segments on a small map with a speed strip, and labels a time range as in-port,
-// transit, fishing drift or fishing troll with the basis for it (server/fleet/admin/labels.ts).
+// transit, drift or anchor, slow troll or pelagic troll with the basis for it (server/fleet/admin/labels.ts).
 // The labeller is recorded server-side (the admin's id; an agent set carries agent:<name>).
 //
 // Everything shown of the trip except the hand labels is inferred from movement: segment
@@ -11,7 +11,8 @@ import {useEffect, useState} from 'preact/hooks';
 import {ApiError, getFleet, postFleet, when} from './api.ts';
 import {fleetHref, fleetTripHref, fleetVesselHref} from './route.ts';
 
-const LABELS = ['in-port', 'transit', 'fishing-drift', 'fishing-troll'] as const;
+const LABELS = ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic'] as const;
+const KINDS = ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic', 'uncertain', 'gap'] as const;
 const FILTERS = ['all', 'no', 'yes'] as const;
 export const TRIP_COPY = {
   heading: 'Labelling', tripHeading: 'Label a trip', loading: 'Loading…', failed: 'Could not load. Try again.', none: 'No trips match.', more: 'More',
@@ -33,13 +34,15 @@ export const TRIP_COPY = {
   straightness: 'Straightness', headingVar: 'Heading variance', use: 'Use range',
   formHeading: 'Add a label', start: 'Start', end: 'End', label: 'Label', basis: 'Basis', basisHint: 'What you went on, for example the track shape, a skipper’s log or a landing report.',
   add: 'Add label', labelsHeading: 'Labels', labelsNone: 'No labels yet.', labeller: 'Labeller', created: 'Added', remove: 'Delete', agent: 'agent',
-  kinds: {'in-port': 'In port', 'transit': 'Transit', 'fishing-drift': 'Fishing, drift or anchor', 'fishing-troll': 'Fishing, troll', 'gap': 'Gap (no positions)'} as Record<string, string>,
+  kinds: {'in-port': 'In port', 'transit': 'Transit (no track kept)', 'drift-anchor': 'Fishing, drift or anchor', 'troll-slow': 'Fishing, slow troll',
+    'troll-pelagic': 'Fishing, offshore troll', 'uncertain': 'Uncertain (not counted as fishing)', 'gap': 'Gap (no positions)'} as Record<string, string>,
   basisSuggestions: ['Track shape (speed and turns)', 'Skipper’s log', 'Landing report', 'Photo or video', 'On board'],
 };
 /** The nav and page-title label of the labelling views (web/admin/app.tsx FLEET_PAGES). */
 export const LABELS_LABEL = TRIP_COPY.heading;
 const COPY = TRIP_COPY;
-const KIND_COLOR: Record<string, string> = {'in-port': 'var(--ink-2)', 'transit': 'var(--brand)', 'fishing-drift': 'var(--kelp)', 'fishing-troll': 'var(--caution)', 'gap': 'var(--line)'};
+const KIND_COLOR: Record<string, string> = {'in-port': 'var(--ink-2)', 'transit': 'var(--brand)', 'drift-anchor': 'var(--kelp)', 'troll-slow': 'var(--caution)',
+  'troll-pelagic': 'var(--amber)', 'uncertain': 'var(--brand-tint)', 'gap': 'var(--line)'};
 
 interface TripRow {
   id: string; region: string; vessel_id: string; vessel_name: string | null; vessel_class: string | null; mmsi: string; depart_port_id: string | null;
@@ -122,7 +125,7 @@ export function FleetLabelsView({region}: {region: string}) {
 export function FleetTripView({id}: {id: string}) {
   const [detail, setDetail] = useState<TripDetail | null | 'failed'>(null);
   const [range, setRange] = useState<{from: string; to: string} | null>(null);
-  const [label, setLabel] = useState<string>('fishing-drift');
+  const [label, setLabel] = useState<string>('drift-anchor');
   const [basis, setBasis] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -229,7 +232,7 @@ export function FleetTripView({id}: {id: string}) {
 
 function Legend() {
   return (
-    <p class="admin-muted">{COPY.inferred}: {(['in-port', 'transit', 'fishing-drift', 'fishing-troll', 'gap'] as const).map(k => (
+    <p class="admin-muted">{COPY.inferred}: {KINDS.map(k => (
       <span key={k}> <svg width="12" height="12" aria-hidden="true"><rect width="12" height="12" fill={KIND_COLOR[k]} /></svg> {COPY.kinds[k]}</span>
     ))}</p>
   );

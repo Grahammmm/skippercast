@@ -50,27 +50,27 @@ function seed(sql) {
   trip.run(BARE, 'CA', V1, '999000481', 'port-a', 'port-a', at(-1440), at(-1300), '2026-10-04', '2026', 'closed', 5, 2, 0, 50, 0, 'aisstream', 'internal-only', 'c1-test', NOW);
   const seg = sql.prepare(`INSERT INTO fleet_segments(id,trip_id,seq,kind,started_at,ended_at,geometry,points_n,mean_sog,straightness,heading_var) VALUES(?,?,?,?,?,?,?,?,?,?,?)`);
   seg.run(hex('5'), TRIP, 0, 'transit', at(0), at(30), encode([[-150, 10], [-149.9, 10.05]]), 30, 8.1, 0.95, 0.02);
-  seg.run(hex('6'), TRIP, 1, 'fishing-drift', at(30), at(90), encode([[-149.9, 10.05], [-149.91, 10.06]]), 60, 0.6, 0.2, 0.7);
+  seg.run(hex('6'), TRIP, 1, 'drift-anchor', at(30), at(90), encode([[-149.9, 10.05], [-149.91, 10.06]]), 60, 0.6, 0.2, 0.7);
   seg.run(hex('7'), TRIP, 2, 'transit', at(90), at(120), null, 30, 7.9, 0.97, 0.01);
   seg.run(hex('8'), OPEN, 0, 'transit', at(300), at(340), null, 40, 7, 0.9, 0.05);
   const lab = sql.prepare('INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES(?,?,?,?,?,?,?,?)');
-  lab.run(hex('c'), OREGON, at(-590), at(-500), 'fishing-troll', 'agent:test', 'skipper log', NOW);
+  lab.run(hex('c'), OREGON, at(-590), at(-500), 'troll-slow', 'agent:test', 'skipper log', NOW);
 }
 const database = () => { const d = advisorDatabase(); seed(d.sql); return d; };
 const iso = (v, min) => ({started_at: at(v), ended_at: at(min)});
 
 test('acceptance 2: a label records its labeller and basis; ranges stay inside the trip and never overlap', {skip}, async () => {
   const {sql, db} = database();
-  const ok = await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'fishing-drift', basis: '  track shape  '}, ADMIN, NOW);
+  const ok = await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'drift-anchor', basis: '  track shape  '}, ADMIN, NOW);
   assert.equal(ok.status, 'ok');
   const stored = sql.prepare('SELECT * FROM fleet_segment_labels WHERE trip_id=?').get(TRIP);
-  assert.deepEqual({...stored}, {id: ok.value.label.id, trip_id: TRIP, started_at: at(30), ended_at: at(90), label: 'fishing-drift',
+  assert.deepEqual({...stored}, {id: ok.value.label.id, trip_id: TRIP, started_at: at(30), ended_at: at(90), label: 'drift-anchor',
     labeller: ADMIN, basis: 'track shape', created_at: NOW});
   assert.match(stored.id, /^[0-9a-f]{32}$/);
   // A second-precision time is normalised; an agent set carries agent:<name>.
   const agent = await labels.addLabel(db, TRIP, {started_at: '2026-10-05T09:00:00Z', ended_at: at(30), label: 'transit', basis: 'skipper log'}, 'agent:test', NOW);
   assert.equal(agent.status, 'ok');
-  assert.deepEqual(agent.value.labels.map(l => [l.label, l.labeller, l.started_at]), [['transit', 'agent:test', at(0)], ['fishing-drift', ADMIN, at(30)]]);
+  assert.deepEqual(agent.value.labels.map(l => [l.label, l.labeller, l.started_at]), [['transit', 'agent:test', at(0)], ['drift-anchor', ADMIN, at(30)]]);
 
   const bad = async (input, status = 'invalid', trip = TRIP) => {
     const r = await labels.addLabel(db, trip, input, ADMIN, NOW);
@@ -89,7 +89,7 @@ test('acceptance 2: a label records its labeller and basis; ranges stay inside t
   await bad({started_at: '2026-10-05 10:00', ended_at: at(100), label: 'transit', basis: 'track shape'});
   await bad({...iso(90, 120), label: 'transit', basis: 'track shape', labeller: 'someone-else'});   // the labeller is never the caller's to set
   const clash = await bad({...iso(80, 100), label: 'transit', basis: 'track shape'}, 'conflict');
-  assert.match(clash.error, /overlaps the fishing-drift label/);
+  assert.match(clash.error, /overlaps the drift-anchor label/);
   assert.equal((await labels.addLabel(db, hex('9'), {...iso(90, 120), label: 'transit', basis: 'x y'}, ADMIN, NOW)).status, 'not-found');
   assert.equal((await labels.addLabel(db, TRIP, {...iso(90, 120), label: 'transit', basis: 'x y'}, '', NOW)).status, 'invalid');
   // An open trip is labelled up to its last segment's end.
@@ -105,14 +105,14 @@ test('acceptance 2: a label records its labeller and basis; ranges stay inside t
 
 test('the trip list, progress and detail: tracks decoded, every AIS-derived value marked inferred from movement', {skip}, async () => {
   const {db} = database();
-  await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'fishing-drift', basis: 'track shape'}, ADMIN, NOW);
+  await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'drift-anchor', basis: 'track shape'}, ADMIN, NOW);
   await labels.addLabel(db, TRIP, {...iso(90, 120), label: 'transit', basis: 'track shape'}, ADMIN, NOW);
 
   const all = await labels.listTrips(db, {});
   assert.deepEqual(all.trips.map(t => [t.id, t.labels]), [[OPEN, 0], [TRIP, 2], [OREGON, 1], [BARE, 0]]);
   assert.equal(all.trips[1].vessel_name, 'Test Boat 1');
   assert.deepEqual(all.progress, {trips: 2, labels: 3, by_labeller: {admin: 2, agent: 1}, ports: 2,
-    minutes: {'in-port': 0, 'transit': 30, 'fishing-drift': 60, 'fishing-troll': 90}, target_trips: 30});
+    minutes: {'in-port': 0, 'transit': 30, 'drift-anchor': 60, 'troll-slow': 90, 'troll-pelagic': 0}, target_trips: 30});
   const ca = await labels.listTrips(db, {region: 'CA', labelled: 'no'});
   assert.deepEqual(ca.trips.map(t => t.id), [OPEN, BARE]);
   assert.deepEqual(ca.progress.by_labeller, {admin: 2, agent: 0});
@@ -127,11 +127,11 @@ test('the trip list, progress and detail: tracks decoded, every AIS-derived valu
   const detail = await labels.tripDetail(db, TRIP);
   assert.equal(detail.basis, 'inferred-from-movement');
   assert.deepEqual(detail.window, {from: at(0), to: at(120)});
-  assert.deepEqual(detail.label_kinds, ['in-port', 'transit', 'fishing-drift', 'fishing-troll']);
+  assert.deepEqual(detail.label_kinds, ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic']);
   assert.deepEqual(detail.segments.map(s => [s.kind, s.mean_sog, s.coordinates]),
-    [['transit', 8.1, [[-150, 10], [-149.9, 10.05]]], ['fishing-drift', 0.6, [[-149.9, 10.05], [-149.91, 10.06]]], ['transit', 7.9, []]]);
+    [['transit', 8.1, [[-150, 10], [-149.9, 10.05]]], ['drift-anchor', 0.6, [[-149.9, 10.05], [-149.91, 10.06]]], ['transit', 7.9, []]]);
   assert.ok(!('geometry' in detail.segments[0]));
-  assert.deepEqual(detail.labels.map(l => [l.label, l.labeller, l.basis]), [['fishing-drift', ADMIN, 'track shape'], ['transit', ADMIN, 'track shape']]);
+  assert.deepEqual(detail.labels.map(l => [l.label, l.labeller, l.basis]), [['drift-anchor', ADMIN, 'track shape'], ['transit', ADMIN, 'track shape']]);
   assert.deepEqual((await labels.tripDetail(db, OPEN)).window, {from: at(300), to: at(340)});
   assert.equal(await labels.tripDetail(db, 'nope'), null);
 
@@ -145,7 +145,7 @@ test('the trip list, progress and detail: tracks decoded, every AIS-derived valu
 
 test('acceptance 3 (Worker side): the job route lists labelled trips with their labels for the runner\'s copy', {skip}, async () => {
   const {sql, db} = database();
-  await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'fishing-drift', basis: 'track shape'}, ADMIN, NOW);
+  await labels.addLabel(db, TRIP, {...iso(30, 90), label: 'drift-anchor', basis: 'track shape'}, ADMIN, NOW);
   const saved = fleetJobs.verify;
   fleetJobs.verify = async token => token === 'good' ? {jti: 'run-48'} : false;
   try {
@@ -157,7 +157,7 @@ test('acceptance 3 (Worker side): the job route lists labelled trips with their 
     assert.equal((await call({region: 'CA', cursor: 'zz'})).status, 400);
     const ca = await (await call({region: 'CA'})).json();
     assert.deepEqual(ca.trips.map(t => [t.id, t.mmsi, t.source, t.departed_at, t.returned_at, t.labels.map(l => [l.label, l.labeller, l.basis])]),
-      [[TRIP, '999000481', 'aisstream', at(0), at(120), [['fishing-drift', ADMIN, 'track shape']]]]);
+      [[TRIP, '999000481', 'aisstream', at(0), at(120), [['drift-anchor', ADMIN, 'track shape']]]]);
     assert.equal(ca.next, null);
     const or = await (await call({region: 'OR'})).json();
     assert.deepEqual(or.trips.map(t => [t.id, t.source, t.labels[0].labeller]), [[OREGON, 'marinecadastre', 'agent:test']]);
@@ -196,7 +196,7 @@ test('the admin routes: 404 for non-admins and with the fleet off; the labeller 
   const get = (path, owner = ADMIN, extra = ON) => worker.fetch(new Request(ORIGIN + path, {headers: owner ? {'x-test-owner': owner} : {}}), {ASSETS, DB: db, ...extra});
   const post = (path, payload, owner = ADMIN, extra = ON) => worker.fetch(new Request(ORIGIN + path, {method: 'POST',
     headers: {'Content-Type': 'application/json', Origin: ORIGIN, ...(owner ? {'x-test-owner': owner} : {})}, body: JSON.stringify(payload)}), {ASSETS, DB: db, ...extra});
-  const body = {...iso(30, 90), label: 'fishing-drift', basis: 'track shape'};
+  const body = {...iso(30, 90), label: 'drift-anchor', basis: 'track shape'};
   for (const [path, run] of [['/api/admin/fleet/trips', p => get(p)], [`/api/admin/fleet/trips/${TRIP}`, p => get(p)]]) {
     assert.equal((await get(path, 'someone-else')).status, 404, `non-admin ${path}`);
     assert.equal((await get(path, ADMIN, {})).status, 404, `fleet off ${path}`);

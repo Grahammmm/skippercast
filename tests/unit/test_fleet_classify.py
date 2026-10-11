@@ -11,8 +11,11 @@ import math
 import random
 import unittest
 
+import pytest
+
 from skippercast.fleet.ais import classify, segment
-from skippercast.fleet.ais.classify import classifier_version, classify_trip, label_positions
+from skippercast.fleet.ais.classify import FISHING_KINDS, classifier_version, classify_trip, label_positions
+from skippercast.fleet.ais.events import segment_geometry
 from skippercast.fleet.ais.segment import ActivityThresholds, LATE_MS, is_suspect, split_trips
 from skippercast.fleet.ais.sources.base import AisPosition
 from skippercast.fleet.config import Port
@@ -30,6 +33,7 @@ def square(lat, lon, half_deg):
 
 PORT_A = Port('port-a', 'Port A', (10.0, -150.0), None, None, ('ocean',), square(10.0, -150.0, 0.02), 'drawn')
 PORT_B = Port('port-b', 'Port B', (10.0, -149.5), None, None, ('ocean',), square(10.0, -149.5, 0.02), 'drawn')
+PORT_C = Port('port-c', 'Port C', (10.1, -150.0), None, None, ('ocean',), square(10.1, -150.0, 0.02), 'drawn')
 PORTS = (PORT_A, PORT_B)
 
 
@@ -84,6 +88,18 @@ class Track:
             self.step(200 + 25 * math.sin(k / 4), sog)
         return self
 
+    def weave(self, minutes, sog=2.5, heading=90, swing=30):
+        """A salmon troll: slow, swinging either side of a course."""
+        for k in range(int(minutes)):
+            self.step(heading + swing * math.sin(k / 3), sog)
+        return self
+
+    def circle(self, minutes, sog=0.4):
+        """A stop at a kelp paddy: barely moving, all headings."""
+        for k in range(int(minutes)):
+            self.step((k * 60) % 360, sog)
+        return self
+
     def zigzag(self, minutes, sog=6.0, leg=3, headings=(30, 150)):
         for k in range(int(minutes)):
             self.step(headings[(k // leg) % 2], sog)
@@ -94,19 +110,24 @@ class Track:
         return self
 
 
-OFFSHORE = (10.0, -149.85)  # about 8.9 nm east of port A
+OFFSHORE = (10.0, -149.85)  # about 8.9 nm east of port A, beyond offshore_min_nm
+CRUISE = 12.0               # knots: a charter boat's run to the grounds, above every trolling band
 
 
 def fishing_trip(activity):
-    """Port A -> 6 kn out -> activity -> 6 kn back -> Port A."""
-    track = Track().stay(30).go_to(*OFFSHORE, 6.0)
+    """Port A -> 12 kn out -> activity -> 12 kn back -> Port A."""
+    track = Track().stay(30).go_to(*OFFSHORE, CRUISE)
     activity(track)
-    return track.go_to(10.0, -150.0, 6.0).stay(30).fixes
+    return track.go_to(10.0, -150.0, CRUISE).stay(30).fixes
 
 
-def classified(fixes, th=TH):
-    trips = split_trips(fixes, PORTS, th, vessel_class='six-pack')
-    return trips, [classify_trip(trip, PORTS, th) for trip in trips]
+def classified(fixes, th=TH, ports=PORTS):
+    trips = split_trips(fixes, ports, th, vessel_class='six-pack')
+    return trips, [classify_trip(trip, ports, th) for trip in trips]
+
+
+def fishing(result):
+    return [s.kind for s in result.segments if s.kind in FISHING_KINDS]
 
 
 def kinds(result):
@@ -118,7 +139,10 @@ class ThresholdTest(unittest.TestCase):
         activity = region_thresholds()['activity']
         self.assertEqual(TH.window_min, activity['window_min'])
         self.assertEqual(TH.drift_max_sog_kn, activity['drift']['max_sog_kn'])
-        self.assertEqual(TH.troll_min_heading_variance, activity['troll']['min_heading_variance'])
+        self.assertEqual(TH.troll_slow_min_heading_variance, activity['troll_slow']['min_heading_variance'])
+        self.assertEqual(TH.troll_pelagic_stop_max_minutes, activity['troll_pelagic']['stop_max_minutes'])
+        self.assertEqual(TH.offshore_min_nm, activity['offshore_min_nm'])
+        self.assertEqual(TH.transit_min_straightness, activity['transit']['min_straightness'])
         self.assertEqual(ActivityThresholds.from_mapping(activity), TH)
 
     def test_classifier_version_tracks_thresholds(self):
@@ -254,28 +278,86 @@ class ClassifyTest(unittest.TestCase):
     def test_drift_at_one_knot_for_thirty_minutes(self):
         _, (result,) = classified(fishing_trip(lambda t: t.drift(30, sog=1.0)))
         self.assert_tiles(result)
-        self.assertEqual(kinds(result), ['transit', 'fishing-drift', 'transit'])
-        drift = result.segments[1]
+        self.assertEqual(fishing(result), ['drift-anchor'])
+        # The centred window blends 12 kn into 1 kn: those minutes are uncertain, never fishing.
+        self.assertEqual(kinds(result), ['transit', 'uncertain', 'drift-anchor', 'uncertain', 'transit'])
+        drift = result.segments[2]
         self.assertGreaterEqual(drift.minutes, TH.drift_min_minutes)
         self.assertLessEqual(drift.mean_sog, TH.drift_max_sog_kn)
         self.assertAlmostEqual(result.fishing_min, drift.minutes)
         self.assertEqual(result.classifier_version, classifier_version(TH))
 
-    def test_short_drift_is_transit(self):
+    def test_short_drift_is_not_fishing(self):
         _, (result,) = classified(fishing_trip(lambda t: t.drift(8, sog=1.0)))
-        self.assertEqual(kinds(result), ['transit'])
+        self.assertEqual(fishing(result), [])
+        self.assertEqual(result.fishing_min, 0)
 
-    def test_six_knot_zigzag_is_troll(self):
-        _, (result,) = classified(fishing_trip(lambda t: t.zigzag(60)))
+    def test_salmon_troll_at_two_and_a_half_knots(self):
+        _, (result,) = classified(fishing_trip(lambda t: t.weave(60, sog=2.5)))
         self.assert_tiles(result)
-        self.assertEqual(kinds(result), ['transit', 'fishing-troll', 'transit'])
-        troll = result.segments[1]
+        self.assertEqual(fishing(result), ['troll-slow'])
+        troll = next(s for s in result.segments if s.kind == 'troll-slow')
         self.assertGreaterEqual(troll.minutes, 45)
-        self.assertTrue(troll.straightness <= TH.troll_max_straightness
-                        or troll.heading_var >= TH.troll_min_heading_variance)
+        self.assertTrue(TH.troll_slow_min_sog_kn <= troll.mean_sog <= TH.troll_slow_max_sog_kn)
 
-    def test_straight_six_knot_run_is_transit(self):
-        track = Track().stay(20).go_to(10.0, -149.5, 6.0).stay(20)
+    def test_straight_slow_run_is_uncertain(self):
+        # 2.5 kn dead straight: the speed of a troll without its shape is too little to decide.
+        _, (result,) = classified(fishing_trip(lambda t: t.step(90, 2.5, 60)))
+        self.assertEqual(fishing(result), [])
+        self.assertIn('uncertain', kinds(result))
+
+    def test_straight_seven_knot_search_offshore_with_paddy_stops_is_one_pelagic_run(self):
+        def search(track):
+            track.step(90, 7.0, 40).circle(10).step(90, 7.0, 40).circle(15).step(90, 7.0, 40)
+        _, (result,) = classified(fishing_trip(search))
+        self.assert_tiles(result)
+        self.assertEqual(kinds(result), ['transit', 'troll-pelagic', 'transit'])
+        run = result.segments[1]
+        self.assertGreaterEqual(run.minutes, 130)
+        self.assertGreater(run.straightness, 0.9)
+        self.assertAlmostEqual(result.fishing_min, run.minutes)
+
+    def test_long_stop_splits_a_pelagic_search(self):
+        def search(track):
+            track.step(90, 7.0, 40).circle(TH.troll_pelagic_stop_max_minutes + 30).step(90, 7.0, 40)
+        _, (result,) = classified(fishing_trip(search))
+        self.assertEqual(fishing(result), ['troll-pelagic', 'drift-anchor', 'troll-pelagic'])
+
+    def test_straight_seven_knot_run_inshore_is_transit(self):
+        # Port A to port C, 6 nm up the coast: never offshore_min_nm from a geofence.
+        track = Track().stay(20).go_to(10.1, -150.0, 7.0).stay(20)
+        _, (result,) = classified(track.fixes, ports=PORTS + (PORT_C,))
+        self.assert_tiles(result)
+        self.assertEqual(kinds(result), ['transit'])
+        self.assertEqual(result.fishing_min, 0)
+
+    def test_turning_at_pelagic_speed_inshore_is_uncertain(self):
+        track = Track().stay(20).go_to(10.0, -149.95, CRUISE).zigzag(60, sog=6.0).go_to(10.0, -150.0, CRUISE).stay(20)
+        _, (result,) = classified(track.fixes)
+        self.assertEqual(fishing(result), [])
+        self.assertIn('uncertain', kinds(result))
+
+    def test_six_knot_zigzag_offshore_is_pelagic(self):
+        _, (result,) = classified(fishing_trip(lambda t: t.zigzag(60)))
+        self.assertEqual(kinds(result), ['transit', 'troll-pelagic', 'transit'])
+
+    def test_between_bands_is_uncertain(self):
+        _, (result,) = classified(fishing_trip(lambda t: t.zigzag(60, sog=4.2)))
+        self.assertEqual(fishing(result), [])
+        self.assertIn('uncertain', kinds(result))
+
+    def test_night_drift_offshore_is_fishing(self):
+        # Three hours drifting from 02:00 local (UTC-8): no rule reads the clock.
+        night = 1_780_041_600_000 + 10 * 3_600_000      # 2026-05-29T10:00Z
+        track = Track(t=night).stay(30).go_to(*OFFSHORE, CRUISE).drift(180, sog=0.6)
+        fixes = track.go_to(10.0, -150.0, CRUISE).stay(30).fixes
+        _, (result,) = classified(fixes)
+        self.assertEqual(fishing(result), ['drift-anchor'])
+        drift = next(s for s in result.segments if s.kind == 'drift-anchor')
+        self.assertGreater(drift.minutes, 170)
+
+    def test_straight_cruise_is_transit(self):
+        track = Track().stay(20).go_to(10.0, -149.5, CRUISE).stay(20)
         _, (result,) = classified(track.fixes)
         self.assert_tiles(result)
         self.assertEqual(kinds(result), ['transit'])
@@ -283,10 +365,27 @@ class ClassifyTest(unittest.TestCase):
         self.assertLess(result.segments[0].heading_var, 0.01)
         self.assertEqual(result.fishing_min, 0)
 
+    def test_transit_segments_carry_no_geometry(self):
+        _, (result,) = classified(fishing_trip(lambda t: t.drift(30, sog=1.0)))
+        tolerance = TH.raw['simplify_tolerance_m']
+        transit = [s for s in result.segments if s.kind == 'transit']
+        self.assertEqual(len(transit), 2)
+        for seg in transit:
+            self.assertIsNone(segment_geometry(seg, tolerance))
+            # Statistics only: minutes, point count, mean and p90 SOG, distance.
+            self.assertGreater(seg.minutes, 0)
+            self.assertGreater(seg.points_n, 0)
+            self.assertAlmostEqual(seg.mean_sog, CRUISE)
+            self.assertAlmostEqual(seg.p90_sog, CRUISE)
+            self.assertGreater(seg.distance_nm, 5)
+        for seg in result.segments:
+            if seg.kind not in ('transit', 'gap'):
+                self.assertIsNotNone(segment_geometry(seg, tolerance), seg.kind)
+
     def test_three_hour_gap_at_sea(self):
-        track = Track().stay(20).go_to(*OFFSHORE, 6.0).step(0, 6.0, 30)
-        track.silence(180, 0, 6.0)
-        track.step(0, 6.0, 30).go_to(10.0, -150.0, 6.0).stay(20)
+        track = Track().stay(20).go_to(*OFFSHORE, CRUISE).step(0, CRUISE, 30)
+        track.silence(180, 0, CRUISE)
+        track.step(0, CRUISE, 30).go_to(10.0, -150.0, CRUISE).stay(20)
         (trip,), (result,) = classified(track.fixes)
         self.assertEqual(trip.status, 'closed')
         self.assert_tiles(result)
@@ -298,7 +397,7 @@ class ClassifyTest(unittest.TestCase):
 
     def test_silence_before_return_is_a_gap(self):
         # Drift 30 min, go dark for 3 h, next seen in port: the dark time is a gap, not more drift.
-        track = Track().stay(20).go_to(*OFFSHORE, 6.0).drift(30, sog=1.0)
+        track = Track().stay(20).go_to(*OFFSHORE, CRUISE).drift(30, sog=1.0)
         last_at_sea = track.t
         track.silence(180, 0, 0.0)
         track.lat, track.lon = 10.0, -150.0
@@ -307,8 +406,8 @@ class ClassifyTest(unittest.TestCase):
         (trip,), (result,) = classified(track.fixes)
         self.assertEqual(trip.status, 'closed')
         self.assert_tiles(result)
-        self.assertEqual(kinds(result)[-2:], ['fishing-drift', 'gap'])
-        self.assertIn(kinds(result)[:-2], ([], ['transit']))
+        self.assertEqual(kinds(result)[-2:], ['drift-anchor', 'gap'])
+        self.assertIn(kinds(result)[:-2], ([], ['transit'], ['transit', 'uncertain']))
         drift, gap = result.segments[-2:]
         self.assertTrue(20 <= drift.minutes <= 31, drift.minutes)
         self.assertEqual(drift.ended_at, last_at_sea)
@@ -316,38 +415,40 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(gap.points_n, 0)
 
     def test_short_silence_is_not_a_gap(self):
-        track = Track().stay(20).go_to(*OFFSHORE, 6.0).silence(20, 90, 6.0).step(90, 6.0, 10)
-        track.go_to(10.0, -150.0, 6.0).stay(20)
+        track = Track().stay(20).go_to(*OFFSHORE, CRUISE).silence(20, 90, CRUISE).step(90, CRUISE, 10)
+        track.go_to(10.0, -150.0, CRUISE).stay(20)
         _, (result,) = classified(track.fixes)
         self.assertNotIn('gap', kinds(result))
 
     def test_suspect_fixes_are_kept_out_of_heading_and_straightness(self):
-        # A straight 6 kn run whose every other fix is a late report placed two minutes behind,
-        # with no reported COG: counted, the path doubles back and looks like trolling.
+        # A straight 3 kn run whose every other fix is a late report placed two minutes behind,
+        # with no reported COG: counted, the path doubles back and looks like a slow troll.
+        sog = 3.0
+
         def build(late):
-            track = Track().stay(20).go_to(10.0, -149.97, 6.0)
+            track = Track().stay(20).go_to(10.0, -149.97, CRUISE)
             for k in range(60):
-                track.step(90, 6.0, report=False)
+                track.step(90, sog, report=False)
                 if k % 2:
-                    behind = AisPosition(MMSI, track.t, track.lat, track.lon - 2 * 0.1 / (60 * math.cos(math.radians(10))),
-                                         6.0, None, None, None, 'PositionReport', 'synthetic',
-                                         track.t + (LATE_MS + 5_000 if late else 2_000))
+                    back = 2 * sog / 60 / (60 * math.cos(math.radians(10)))
+                    behind = AisPosition(MMSI, track.t, track.lat, track.lon - back, sog, None, None, None,
+                                         'PositionReport', 'synthetic', track.t + (LATE_MS + 5_000 if late else 2_000))
                     track.fixes.append(behind)
                 else:
-                    track.emit(6.0, None)
-            return track.go_to(10.0, -149.5, 6.0).stay(20).fixes
+                    track.emit(sog, None)
+            return track.go_to(10.0, -149.5, CRUISE).stay(20).fixes
 
         honest = build(late=True)
         self.assertTrue(any(is_suspect(p) for p in honest))
         _, (result,) = classified(honest)
-        self.assertEqual(kinds(result), ['transit'])
+        self.assertEqual(fishing(result), [])
         _, (result,) = classified(build(late=False))
-        self.assertIn('fishing-troll', kinds(result))
+        self.assertIn('troll-slow', kinds(result))
 
     def test_derived_speed_when_sog_missing(self):
         fixes = [replace(p, sog=None, cog=None) for p in fishing_trip(lambda t: t.drift(30, sog=1.0))]
         _, (result,) = classified(fixes)
-        self.assertEqual(kinds(result), ['transit', 'fishing-drift', 'transit'])
+        self.assertEqual(fishing(result), ['drift-anchor'])
 
     def test_same_input_same_output(self):
         fixes = fishing_trip(lambda t: t.zigzag(40).drift(30))
@@ -356,12 +457,40 @@ class ClassifyTest(unittest.TestCase):
         first = classified(fixes)
         self.assertEqual(classified(fixes), first)
         self.assertEqual(classified(shuffled), first)
-        # The centred window blends 6 kn and 1 kn into a short transit stretch between the two.
-        self.assertEqual(kinds(first[1][0]), ['transit', 'fishing-troll', 'transit', 'fishing-drift', 'transit'])
+        # The centred window blends 6 kn and 1 kn into a short uncertain stretch between the two.
+        self.assertEqual(kinds(first[1][0]), ['transit', 'troll-pelagic', 'uncertain', 'drift-anchor', 'uncertain',
+                                              'transit'])
 
     def test_in_port_label_inside_geofence(self):
         fixes = Track().stay(5).fixes
         self.assertEqual(set(label_positions(fixes, PORTS, TH)), {'in-port'})
+
+
+
+def _leaves(node, path=()):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from _leaves(value, path + (key,))
+    else:
+        yield path
+
+
+@pytest.mark.parametrize('path', sorted(_leaves(region_thresholds()['activity'])), ids='.'.join)
+def test_any_activity_threshold_changes_classifier_version(path):
+    changed = region_thresholds()
+    node = changed['activity']
+    for key in path[:-1]:
+        node = node[key]
+    node[path[-1]] = node[path[-1]] * 2 + 1
+    assert classifier_version(ActivityThresholds.from_mapping(changed)) != classifier_version(TH)
+
+
+@pytest.mark.parametrize('block', [None, 'drift', 'troll_slow', 'troll_pelagic', 'transit'])
+def test_a_new_activity_key_changes_classifier_version(block):
+    changed = region_thresholds()
+    node = changed['activity'] if block is None else changed['activity'][block]
+    node['new_threshold'] = 1
+    assert classifier_version(ActivityThresholds.from_mapping(changed)) != classifier_version(TH)
 
 
 if __name__ == '__main__':
