@@ -8,6 +8,7 @@
 
 ## Unreleased
 
+- In the new map preview (`?ui=v2`), the brief's "Where to look" lists the top four places inside the profile's depth limit, with distance from the harbor, nominal depth range, habitat fit and one terrain reason: the reviewed coastal terrain habitat where it covers the region, else the survey reef atlas marks that pass the protected-area check, each list labelled by its source and never mixed. Tapping a place selects it on the map and opens its card. A ranked place is a place to look; fish presence is unverified.
 - In the new map preview (`?ui=v2`), the brief column and the phone sheet now show the day's brief from the region's daily feed: the headline and summary, the Wind, Swell, Water and Tide tiles with their source and age (a reading past its limit is marked stale and says how old it is; a missing one reads unavailable), the lower-exposure window, the profile's caveat, a beach notice and fleet line when there is one, and whether a local coast report covers the area.
 
 - In the new map preview (`?ui=v2`), the Shore profile draws Morro Bay's NOAA ESI 2006 sandy-shore runs on the Chart with their public access points. Each run is ranked by its access and rules review clocks, the protected-area check and whether a fresh nearshore model sample covers its area; an expired review holds it, a run inside a protected area is blocked, and its card shows the review dates, method guidance and the official CDFW rules link. The ranking orders places to check; fish presence is unverified.

@@ -18,7 +18,8 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
-import {Picks, TideSpark, type Pick} from './Desktop.tsx';
+import {TideSpark} from './Desktop.tsx';
+import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -53,7 +54,7 @@ export function HourEdge({now}: {now: Date}) {
 }
 
 /** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
-export function SheetBrief({now, picks = [], onFocus, detent = 'full'}: {now: Date; picks?: readonly Pick[]; onFocus?: () => void; detent?: Detent}) {
+export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date; ranking?: Ranking; onFocus?: () => void; detent?: Detent}) {
   const tz = zone(), state = dockState(now, tz), brief = currentBrief(now);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
@@ -67,7 +68,7 @@ export function SheetBrief({now, picks = [], onFocus, detent = 'full'}: {now: Da
         </>
       )}
       <BriefTiles brief={brief} compact={detent !== 'full'} />
-      <Picks picks={picks} />
+      <WhereToLook ranking={ranking} />
       <Deck brief={brief} />
       <LowerExposure brief={brief} />
       <TideSpark />
