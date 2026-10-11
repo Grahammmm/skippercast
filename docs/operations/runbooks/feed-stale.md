@@ -57,6 +57,10 @@ export RAW=https://raw.githubusercontent.com/Grahammmm/skippercast
 3. **Is GitHub fresh but the public route stale?** Then publication to GitHub works and the store the site reads is behind: R2 (Cloudflare) or an edge cache. Follow the [R2 outage runbook](r2-outage.md). Edge-cache TTLs are 60 seconds for `latest.json`, so a gap longer than a few minutes is not caching.
 4. **Is everything stale, including GitHub, with green runs?** Check the step summary of the latest run (`gh run view <run-id>`) for `0/N cycles published`, and the source warnings written by `scripts/report_conditions.py`. A provider outage shows as `stale`/`failed` sources with a published feed; that is expected fail-closed behaviour, not a stale feed.
 
+## Degraded sources
+
+The same check reads every source's status in the live and daily feeds and lists each one that is not `ok` (`stale`, `retained` = last good data after a failed check, `failed`, `missing`) with the age of its data when the feed was built. Buoys, alerts, tides and forecast models are critical: one degraded past 12 hours (live feed) or 48 hours (daily feed) fails the run and opens or refreshes a `feed-source-degraded` issue, whose body tracks the current report; other sources only warn. The daily feed itself fails past 30 hours. Limits live in `catalog/feed-health.json`, shared with the Worker watchdog, which logs the same critical sources. A degraded source is usually the provider (an NDBC buoy outage, an NWS API error): check the source's `issue` field in `latest.json` and the provider's status before changing the adapter.
+
 ## Fix
 
 1. **Restart the chain.**
@@ -75,7 +79,7 @@ export RAW=https://raw.githubusercontent.com/Grahammmm/skippercast
 
 ## Verify
 
-- `python3 scripts/check_feed_freshness.py --max-age-hours 3` exits 0.
+- `python3 scripts/check_feed_freshness.py` exits 0 (exit bit 1: a feed is stale or unreadable; bit 2: a critical source is degraded past its limit).
 - Both `latest.json` copies from Detect step 2 show the same, recent time.
 - The `feed-stale` issue closes on the next hourly freshness run; to close it sooner, run `gh workflow run feed-freshness.yml --ref main`.
 - The app's Live card shows a reading from the last hour.

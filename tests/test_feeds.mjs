@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {feedKey, rangeResponse, readBucketJSON, serveFeed, useBucket} from '../server/feeds.ts';
-import {feedAgeMinutes, watchdog} from '../server/watchdog.ts';
+import {CRITICAL_DEGRADED_HOURS, criticalDegraded, dataAgeHours, degradedSources, feedAgeMinutes, watchdog} from '../server/watchdog.ts';
 import {feedURL, withFeeds} from '../dist/feeds.js';
 
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
@@ -86,6 +86,34 @@ test('watchdog dispatches only for a stale feed with no refresh running', async 
   useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify({completed_at: '2026-09-28T12:00:00Z'})})});
   assert.equal((await watchdog({}, now)).action, 'no-token');
   useBucket({});
+});
+
+test('watchdog reports critical sources degraded past the shared limit, as the freshness check does', async () => {
+  assert.equal(CRITICAL_DEGRADED_HOURS, 12);
+  const built = '2026-09-28T13:40:00Z';
+  const src = (id, kind, status, sample_at) => ({id, kind, status, checked_at: built, data: sample_at ? {sample_at} : null});
+  const feed = {completed_at: built, generated_at: built, sources: {
+    diablo: src('diablo', 'observation', 'retained', '2026-09-28T07:40:00Z'),
+    offshore: src('offshore', 'observation', 'stale', '2026-09-27T13:40:00Z'),
+    alerts: src('alerts', 'advisory', 'failed'),
+    harbor: src('harbor', 'page-watch', 'retained', '2026-09-20T00:00:00Z'),
+    tides: src('tides', 'prediction', 'ok', '2026-09-28T13:00:00Z'),
+  }};
+  assert.equal(dataAgeHours(feed.sources.diablo, feed), 6);
+  assert.equal(dataAgeHours(feed.sources.alerts, feed), null);
+  assert.deepEqual(degradedSources(feed).map(row => [row.id, row.critical]), [['alerts', true], ['diablo', true], ['offshore', true], ['harbor', false]]);
+  assert.deepEqual(criticalDegraded(feed).map(row => row.id), ['alerts', 'offshore']);
+  assert.deepEqual(criticalDegraded({sources: {}}), []);
+  assert.deepEqual(criticalDegraded(null), []);
+  useBucket({FEEDS: fakeBucket({'conditions/latest.json': JSON.stringify(feed)})});
+  const warn = console.warn; const warned = [];
+  console.warn = (...args) => warned.push(args);
+  try {
+    const result = await watchdog({}, Date.parse('2026-09-28T14:00:00Z'));
+    assert.equal(result.action, 'none');
+    assert.deepEqual(result.degraded, ['alerts', 'offshore']);
+    assert.match(warned[0][0], /critical sources degraded/);
+  } finally { console.warn = warn; useBucket({}); }
 });
 
 test('seafloor archives require a fresh matching revision and never fall back to assets', async () => {

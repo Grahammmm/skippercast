@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- The brief's Water and Tide tiles now read a source that served its last good data after a failed check as stale and say so ("last good 5 h old") instead of showing it as current. The hourly feed check now also lists each degraded source by name with its age, fails when a buoy, alert, tide or forecast-model source has been degraded past its limit, and checks that the daily data feed is under 30 hours old.
+
 ### Release notes: the new map is the default (FE-60)
 
 - skippercast.com now opens the rebuilt app: `/` is the landing (the day's readings with their station and age, the profile choice and the layer links), `/map` is the map with the brief, Conditions, History, Reports, Fleet and Trip views, and `/coast` opens the map's 3D terrain. The entries below that say "In the new map preview (`?ui=v2`)" describe what is now the default; `?ui=v2` is no longer needed.

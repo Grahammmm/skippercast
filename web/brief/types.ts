@@ -27,6 +27,8 @@ export interface BriefTile {
   readonly ageMs: number | null;
   readonly limitMs: number;
   readonly state: TileState;
+  /** The source's latest check failed and this is its last good reading (a feed `retained` source); always stale. */
+  readonly lastGood?: boolean;
 }
 
 export interface BriefNotice {readonly name: string; readonly advisory: string; readonly url: string}
@@ -81,7 +83,11 @@ export interface RegionalSource {
   readonly kind: string;
   readonly url: string;
   readonly checked_at: string;
+  /** ok, or degraded: stale, retained (last good data after a failed check), failed, missing. */
   readonly status: string;
+  /** When the data shown was retrieved; for a retained source, its last good fetch. */
+  readonly data_retrieved_at?: string;
+  readonly last_success_at?: string;
   readonly data?: Record<string, unknown>;
 }
 

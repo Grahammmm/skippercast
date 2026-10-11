@@ -1,7 +1,9 @@
 name: Live feed freshness
 
-# Opens (or updates) a GitHub issue when the public conditions feed stops
-# refreshing, and closes it once publication resumes.
+# Opens (or updates) a GitHub issue when the public conditions or daily data
+# feed stops refreshing, and another when a critical source (buoys, alerts,
+# tides, forecast models) has served degraded data past its limit; closes each
+# once it recovers. Limits: catalog/feed-health.json.
 on:
   schedule:
     - cron: "52 * * * *"
@@ -28,11 +30,12 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - name: Check the published feed age
+      - name: Check the published feeds and their sources
         id: age
         run: |
           set +e
-          message="$(python scripts/check_feed_freshness.py --max-age-hours 3)"
+          # Exit bits: 1 = a feed is stale or unreadable, 2 = a critical source is degraded too long.
+          message="$(python scripts/check_feed_freshness.py)"
           status=$?
           echo "$message"
           echo "$message" >> "$GITHUB_STEP_SUMMARY"
@@ -40,7 +43,8 @@ jobs:
             echo "message<<EOF"
             echo "$message"
             echo "EOF"
-            echo "stale=$([ $status -ne 0 ] && echo true || echo false)"
+            echo "stale=$([ $((status & 1)) -ne 0 ] && echo true || echo false)"
+            echo "degraded=$([ $((status & 2)) -ne 0 ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
       # The live job chains itself every ~5.5 hours; if the chain broke, restart it
       # long before the 3-hour issue threshold.
@@ -48,7 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! python scripts/check_feed_freshness.py --max-age-hours 1.25; then
+          if ! python scripts/check_feed_freshness.py --live-only --max-age-hours 1.25; then
             running=$(gh run list --workflow live-conditions.yml --status in_progress --json databaseId --jq 'length')
             queued=$(gh run list --workflow live-conditions.yml --status queued --json databaseId --jq 'length')
             if [ "$running" = 0 ] && [ "$queued" = 0 ]; then
@@ -62,14 +66,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MESSAGE: ${{ steps.age.outputs.message }}
         run: |
-          gh label create feed-stale --color B60205 --description "Live conditions feed stopped refreshing" 2>/dev/null || true
+          gh label create feed-stale --color B60205 --description "A published feed stopped refreshing" 2>/dev/null || true
           existing="$(gh issue list --label feed-stale --state open --json number --jq '.[0].number')"
           runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/live-conditions.yml"
           runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/feed-stale.md"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$MESSAGE"
           else
-            gh issue create --label feed-stale --title "Live conditions feed is stale" \
+            gh issue create --label feed-stale --title "Published feed is stale" \
               --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"$'\n\n'"Runbook: $runbook"
           fi
           exit 1
@@ -80,5 +84,32 @@ jobs:
           MESSAGE: ${{ steps.age.outputs.message }}
         run: |
           for number in $(gh issue list --label feed-stale --state open --json number --jq '.[].number'); do
+            gh issue close "$number" --comment "Recovered. $MESSAGE"
+          done
+      # One open issue whose body tracks the current report, so a long source outage
+      # does not post a comment every hour.
+      - name: Open or refresh the degraded-source issue
+        if: steps.age.outputs.degraded == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ steps.age.outputs.message }}
+        run: |
+          gh label create feed-source-degraded --color D93F0B --description "A critical feed source is serving old data" 2>/dev/null || true
+          existing="$(gh issue list --label feed-source-degraded --state open --json number --jq '.[0].number')"
+          runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/feed-stale.md"
+          body="$MESSAGE"$'\n\n'"Updated by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"$'\n\n'"Runbook: $runbook"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body "$body"
+          else
+            gh issue create --label feed-source-degraded --title "Critical feed source degraded" --body "$body"
+          fi
+          exit 1
+      - name: Close the degraded-source issue after recovery
+        if: steps.age.outputs.stale == 'false' && steps.age.outputs.degraded == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ steps.age.outputs.message }}
+        run: |
+          for number in $(gh issue list --label feed-source-degraded --state open --json number --jq '.[].number'); do
             gh issue close "$number" --comment "Recovered. $MESSAGE"
           done

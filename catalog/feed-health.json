@@ -1,0 +1,8 @@
+{
+  "description": "Freshness limits for the published feeds, shared by scripts/check_feed_freshness.py and server/watchdog.ts. A source is degraded when its status is anything but ok (stale, retained, failed, missing). Its degraded age is how old its data was when the feed was built. Critical kinds fail the check past critical_degraded_hours; other kinds only warn.",
+  "critical_kinds": ["observation", "advisory", "prediction", "forecast"],
+  "feeds": {
+    "conditions": {"label": "Live conditions feed", "path": "conditions/latest.json", "max_age_hours": 3, "critical_degraded_hours": 12},
+    "data": {"label": "Daily data feed", "path": "data/latest.json", "max_age_hours": 30, "critical_degraded_hours": 48}
+  }
+}

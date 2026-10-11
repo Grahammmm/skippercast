@@ -41,6 +41,18 @@ test('ageText and the source line: minutes, hours, days; no reading says unavail
   const {ageText, sourceLine} = await load();
   assert.deepEqual([ageText(45 * 60_000), ageText(5 * 3_600_000), ageText(72 * 3_600_000), ageText(-1)], ['45 min', '5 h', '3 d', 'clock ahead']);
   assert.equal(sourceLine({source: 'NDBC 46042', state: 'unavailable', ageMs: null}), 'NDBC 46042 · unavailable');
+  assert.equal(sourceLine({source: 'NOAA tides', state: 'stale', ageMs: 5 * 3_600_000, lastGood: true}), 'NOAA tides · last good 5 h old');
+  assert.equal(sourceLine({source: 'NOAA tides', state: 'stale', ageMs: 5 * 3_600_000, lastGood: true}, true), 'NOAA tides · last good 5 h');
+});
+
+test('a last-good tile renders stale and says the latest check failed', async () => {
+  const {Tiles, render, h} = await load();
+  const tile = {id: 'tide', label: 'Tide', value: 3.2, unit: 'ft', detail: 'next high · Monterey · MLLW', source: 'NOAA tides', sourceUrl: null,
+    at: NOW.toISOString(), ageMs: 5 * 3_600_000, limitMs: 36 * 3_600_000, state: 'stale', lastGood: true};
+  const html = render(h(Tiles, {tiles: [tile]}));
+  assert.match(html, /data-state="stale"/);
+  assert.match(html, /NOAA tides · last good 5 h old/);
+  assert.match(html, /The latest check failed; this is the last good reading\./);
 });
 
 test('acceptance 1: a tile past its limit renders the stale state and its age', async () => {
