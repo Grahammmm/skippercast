@@ -444,16 +444,30 @@ class LabelImportTests(unittest.TestCase):
         refused = worker.post
 
         def post(path, body):
-            if body["trip_id"] == OTHER:
-                raise WorkerError("POST labels: HTTP 409 overlaps")
+            if body["trip_id"] == OTHER:   # the #581 route's detail names the clashing label's times
+                raise WorkerError('POST labels: HTTP 409 {"error":"labels[1] overlaps the transit label from '
+                                  '2026-10-05T09:40:00.000Z to 2026-10-05T09:55:00.000Z; delete it first"}')
             return refused(path, body)
         worker.post = post
         path = self.write(self.proposal(), self.proposal(trip=OTHER), self.proposal(trip=third))
         with self.assertRaises(WorkerError) as caught:
             labelling.import_labels(path, worker)
-        self.assertIn("at the trip of entry 2; 1 of 3 trips posted before it", str(caught.exception))
+        self.assertEqual(str(caught.exception), "the Worker refused the labels (HTTP 409, overlap, labels[1]) at entry 2; "
+                         "1 of 3 trips posted before it; fix and re-run: each post replaces that agent's labels")
         self.assertEqual([b["trip_id"] for _, b in worker.calls], [TRIP], "the import stops at the refused trip")
-        self.assertNotIn(OTHER, str(caught.exception))
+        self.assertNotIn("2026-", str(caught.exception), "no Worker detail, so no times, reach the Actions log")
+        err = io.StringIO()
+        with mock.patch.object(labelling, "job_worker", return_value=worker), redirect_stderr(err):
+            self.assertEqual(labelling.main(["import", str(path)]), 2)
+        self.assertNotIn("2026-", err.getvalue())
+        self.assertNotIn(OTHER, err.getvalue())
+        self.assertEqual(labelling.refusal("POST labels: HTTP 400 the range must fall within the trip (2026-...)"),
+                         "the Worker refused the labels (HTTP 400, window)")
+        self.assertEqual(labelling.refusal("POST labels: HTTP 404 not found"), "the Worker refused the labels (HTTP 404, not found)")
+        self.assertEqual(labelling.refusal("POST labels: HTTP 400 basis is required"),
+                         "the Worker refused the labels (HTTP 400, validation)")
+        self.assertEqual(labelling.refusal("POST labels: URLError: timed out"),
+                         "the Worker refused the labels (no response, transport)")
         worker.post = refused   # fixed: a re-run posts every trip again, replacing the agent's labels
         self.assertEqual(labelling.import_labels(path, worker)["posted"], 3)
 
@@ -466,6 +480,8 @@ class LabelImportTests(unittest.TestCase):
             "basis is required": [self.label(55, 95, "drift-anchor", basis=" ")],
             "unknown field": [{**self.label(55, 95, "drift-anchor"), "hint": "drift-anchor"}],
             "ISO UTC": [{**self.label(55, 95, "drift-anchor"), "started_at": "2026-10-05 10:35"}],
+            "label 1: started_at and ended_at must be ISO UTC times": [{**self.label(55, 95, "drift-anchor"),
+                                                                       "started_at": "2026-13-45T10:00Z"}],
         }
         for message, labels in cases.items():
             with self.subTest(message):

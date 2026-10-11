@@ -43,7 +43,7 @@ from .segment import BASIS, ActivityThresholds, offshore_nm, prepare, split_trip
 from .store import ais_root, fleet_var
 from .validate import LABELS, LABELS_FILE, TRIP_ID, _ms, _write_json, job_worker, validation_dir
 
-__all__ = ["COLUMNS", "check", "export", "import_labels", "main", "summary"]
+__all__ = ["COLUMNS", "check", "export", "import_labels", "main", "refusal", "summary"]
 
 COLUMNS = ("t", "sog_kn", "course_change_deg", "port_nm", "local_hour", "classifier_hint")
 HINT = "classifier_hint is the classifier's current kind: a hint, do not copy it as a label"
@@ -130,7 +130,10 @@ def _label(x, lo: int, hi: int) -> tuple[dict | None, str | None]:
         return None, f"unknown field {extra[0]}"
     if not all(isinstance(x.get(k), str) and ISO.match(x[k]) for k in ("started_at", "ended_at")):
         return None, "started_at and ended_at must be ISO UTC times"
-    s, e = _ms(x["started_at"]), _ms(x["ended_at"])
+    try:   # the pattern passes 2026-13-45T10:00Z; the calendar does not
+        s, e = _ms(x["started_at"]), _ms(x["ended_at"])
+    except ValueError:
+        return None, "started_at and ended_at must be ISO UTC times"
     if e - s < MIN_LABEL_MS:
         return None, "a label covers at least one minute"
     if x.get("label") not in LABELS:
@@ -187,6 +190,17 @@ def check(entries, exports: Path) -> tuple[list[dict], list[str]]:
     return bodies, errors
 
 
+def refusal(text: str) -> str:
+    """A Worker error reduced to its HTTP status, ``labels[i]`` and a reason class: the body can hold trip times."""
+    status = re.search(r"HTTP (\d{3})", text)
+    index = re.search(r"labels\[(\d+)\]", text)
+    lower = text.lower()
+    reason = ("overlap" if "overlap" in lower else "window" if "within the trip" in lower or "window" in lower
+              else "not found" if status and status[1] == "404" else "validation" if status else "transport")
+    return (f"the Worker refused the labels ({f'HTTP {status[1]}' if status else 'no response'}, {reason}"
+            + (f", labels[{index[1]}]" if index else "") + ")")
+
+
 def import_labels(path: Path, worker=None, exports: Path | None = None) -> dict:
     """Check the file; post each trip unless ``worker`` is None (a dry run). A failed local check posts nothing;
     a Worker refusal stops at that trip, with the trips before it imported (a re-run replaces them)."""
@@ -198,8 +212,8 @@ def import_labels(path: Path, worker=None, exports: Path | None = None) -> dict:
         try:
             worker.post("labels", body)
         except WorkerError as error:
-            raise WorkerError(f"{error} (at the trip of entry {posted + 1}; {posted} of {len(bodies)} trips posted "
-                              "before it; fix and re-run: each post replaces that agent's labels)") from None
+            raise WorkerError(f"{refusal(str(error))} at entry {posted + 1}; {posted} of {len(bodies)} trips posted "
+                              "before it; fix and re-run: each post replaces that agent's labels") from None
     return {"trips": len(bodies), "labels": sum(len(b["labels"]) for b in bodies),
             "posted": 0 if worker is None else len(bodies)}
 
