@@ -9,7 +9,8 @@ name: Deploy to Cloudflare
 #
 # Only a main commit that passed "Offline checks" is deployed, and exactly that
 # commit. After deploying, the site is smoke-tested; a failure rolls the Worker
-# back to the previous version automatically. D1 migrations are forward-only:
+# back to the version that was live before the deploy (recorded by the deploy
+# script) and checks the site no longer serves the failed build. D1 migrations are forward-only:
 # the deploy script backs up the database first (docs/operations/runbooks/rollback-release.md).
 on:
   workflow_run:
@@ -19,10 +20,15 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "deploy the current main, or roll back to the previous Worker version"
+        description: "deploy the current main, or roll back to an earlier Worker version (see version)"
         type: choice
         options: [deploy, rollback]
         default: deploy
+      version:
+        description: "Worker version id to roll back to; empty picks the newest version from a different commit"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -162,10 +168,33 @@ jobs:
           bash scripts/smoke_test.sh "$SITE"
       - name: Roll back after a failed smoke test
         if: failure() && steps.deploy.outputs.deployed == 'true'
+        env:
+          PREVIOUS: ${{ steps.deploy.outputs.previous_version }}
+          FAILED_BUILD: ${{ steps.deploy.outputs.build }}
+          SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
         run: |
+          # The version live before this deploy, not a bare `wrangler rollback`: the secrets
+          # upload adds a second deployment, so Wrangler's default is this commit's own code (#568).
+          if [ -z "$PREVIOUS" ]; then
+            echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test and was NOT rolled back: the version live before it was not recorded. Roll back by hand; see docs/operations/runbooks/rollback-release.md."
+            exit 1
+          fi
           node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
-          $WRANGLER rollback --config wrangler.rollback.jsonc --yes --message "Smoke test failed for ${GITHUB_SHA} (run ${GITHUB_RUN_ID})"
-          echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test and was rolled back. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Smoke test failed for ${GITHUB_SHA} (run ${GITHUB_RUN_ID})"
+          served=""
+          if [ -n "$SITE" ]; then
+            for attempt in 1 2 3 4 5 6; do
+              served=$(curl -fsS --max-time 15 "$SITE/api/health" 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('build',''))" 2>/dev/null || true)
+              if [ -n "$served" ] && [ "$served" != "$FAILED_BUILD" ]; then break; fi
+              sleep 10
+            done
+            if [ -n "$FAILED_BUILD" ] && [ "$served" = "$FAILED_BUILD" ]; then
+              echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test; the rollback to Worker version ${PREVIOUS} did not take effect: the site still serves build ${FAILED_BUILD}. See docs/operations/runbooks/rollback-release.md."
+              exit 1
+            fi
+          fi
+          echo "::error::Deployment of ${GITHUB_SHA} failed its smoke test and was rolled back to Worker version ${PREVIOUS} (site serves build ${served:-unknown}). D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          exit 1
 
   rollback:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
@@ -179,14 +208,27 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
-      - name: Roll back to the previous Worker version
+      - name: Roll back to a Worker version from a different commit
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
+          # Not a bare `wrangler rollback`: after a normal deploy it lands on the live commit's
+          # own code version, because the secrets upload made the newest deployment (#568).
+          mkdir -p var
           node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
-          $WRANGLER rollback --config wrangler.rollback.jsonc --yes --message "Manual rollback by ${GITHUB_ACTOR} (run ${GITHUB_RUN_ID})"
+          $WRANGLER deployments list --json --config wrangler.rollback.jsonc > var/deployments.json
+          $WRANGLER versions list --json --config wrangler.rollback.jsonc > var/versions.json
+          echo "Live Worker version: $(node scripts/worker_versions.mjs live var/deployments.json || echo unknown)"
+          target=$VERSION
+          if [ -z "$target" ]; then target=$(node scripts/worker_versions.mjs rollback-target var/deployments.json var/versions.json); fi
+          commit=$(node scripts/worker_versions.mjs commit var/versions.json "$target" 2>/dev/null || echo "unknown")
+          echo "Rolling back to Worker version $target (commit $commit)"
+          $WRANGLER rollback "$target" --config wrangler.rollback.jsonc --yes --message "Manual rollback by ${GITHUB_ACTOR} (run ${GITHUB_RUN_ID})"
       - name: Smoke-test after rollback
         env:
           SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
         run: |
           if [ -z "$SITE" ]; then exit 0; fi
           sleep 10
-          bash scripts/smoke_test.sh "$SITE"
+          # "" skips the build match: this job builds nothing, so dist/client is absent.
+          bash scripts/smoke_test.sh "$SITE" ""
