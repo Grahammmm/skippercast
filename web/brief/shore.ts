@@ -1,31 +1,22 @@
-// Shore-run priority and guidance (FE-36, docs/plans/front-end/design.md § 8
-// "Where to look" for Shore, § 9 Shore runs). This restates the role of
-// `fish`'s src/opportunity.ts from the design's description of it: an ESI
-// sandy-shore run is ranked 0–3 by its review clocks (source, access, rules),
-// the run-time protected-area check and whether a fresh nearshore model sample
-// covers its area. The rank orders places to check; it never says fish are
-// there, and no label or line here predicts a catch.
+// Shore-run priority and guidance (FE-36). Review dates are historical context:
+// they never set Hold or Recheck soon. Source publication visibility remains a
+// separate gate in shoreShown; the importer still rejects closed/nonpublic access.
 //
-// - Blocked (0): the protected-area check is current and the run or one of its
-//   access points lies in a protected area.
-// - Hold (0): the access or rules review has expired, or the protected-area
-//   check is not current. A run past its source review is not shown at all.
-// - Recheck soon (1): every clock is current but one expires within 24 hours.
-// - No surf model (2): current, but no fresh nearshore model sample for its area.
-// - Current (3): current, with a fresh nearshore model sample for its area.
+// - Blocked (0): a current protected-area check finds the run or an access point inside.
+// - Hold (0): the protected-area check is not current.
+// - No surf model (2): no fresh nearshore model sample covers the area.
+// - Current (3): the protected-area check and nearshore sample are current.
+// The rank orders places to check, not legal permission or a prediction of fish.
 //
 // Erasable syntax only: tests/test_shore.mjs imports it by type stripping.
 
-const HOUR = 3_600_000;
-/** A review clock that ends within this window drops the run to "Recheck soon". */
-export const RECHECK_WINDOW_MS = 24 * HOUR;
 /** The official CDFW regional rules map (the link packages/coast's methods page gives). */
 export const CDFW_RULES_URL = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map';
 
-export type ShorePriority = 0 | 1 | 2 | 3;
-export type ShoreLabel = 'Blocked' | 'Hold' | 'Recheck soon' | 'No surf model' | 'Current';
+export type ShorePriority = 0 | 2 | 3;
+export type ShoreLabel = 'Blocked' | 'Hold' | 'No surf model' | 'Current';
 
-/** The run properties the priority reads (schemas/shore-habitat.schema.json `run.properties`). */
+/** The original run review dates (schemas/shore-habitat.schema.json `run.properties`). */
 export interface ShoreRunClocks {
   readonly reviewExpiresAt: string;
   readonly accessReviewedAt: string;
@@ -46,7 +37,7 @@ export interface ShoreInputs {
 export interface ShoreStatus {
   readonly priority: ShorePriority;
   readonly label: ShoreLabel;
-  /** Plain reasons, one per clock or check that set the label. */
+  /** Plain reasons for the checks that set the label. */
   readonly reasons: readonly string[];
 }
 
@@ -58,20 +49,11 @@ const day = (s: string): string => Number.isFinite(Date.parse(s))
 export const shoreShown = (run: Pick<ShoreRunClocks, 'reviewExpiresAt'>, now: number): boolean => time(run.reviewExpiresAt) > now;
 
 /** The run's priority and label at `now`. */
-export function shoreStatus(run: ShoreRunClocks, {now, inside, conditions}: ShoreInputs): ShoreStatus {
+export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions}: ShoreInputs): ShoreStatus {
   if (inside && inside.length) return {priority: 0, label: 'Blocked', reasons: [`Inside ${inside.join('; ')}`]};
-  const clocks = [
-    {name: 'Access review', end: time(run.accessReviewExpiresAt)},
-    {name: 'Rules review', end: time(run.legalReviewExpiresAt)},
-    {name: 'Source review', end: time(run.reviewExpiresAt)},
-  ];
-  const expired = clocks.filter(c => c.end <= now).map(c => `${c.name} expired`);
-  if (!inside) expired.push('Protected-area check not current');
-  if (expired.length) return {priority: 0, label: 'Hold', reasons: expired};
-  const ending = clocks.filter(c => c.end - now <= RECHECK_WINDOW_MS).map(c => `${c.name} ends within 24 h`);
-  if (ending.length) return {priority: 1, label: 'Recheck soon', reasons: ending};
+  if (!inside) return {priority: 0, label: 'Hold', reasons: ['Protected-area check not current']};
   if (!conditions) return {priority: 2, label: 'No surf model', reasons: ['No fresh nearshore model sample for this area']};
-  return {priority: 3, label: 'Current', reasons: ['Reviews current; a fresh nearshore model sample covers this area']};
+  return {priority: 3, label: 'Current', reasons: ['Protected-area check current; a fresh nearshore model sample covers this area']};
 }
 
 /** The review dates the card shows. */
