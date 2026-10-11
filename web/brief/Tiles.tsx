@@ -16,7 +16,7 @@ const BASIS: Readonly<Record<TileId, string>> = {
   wind: 'Forecast hour nearest the selected time, in knots with the gust; the issue time sets the age.',
   swell: 'Significant height and period from the source named here.',
   water: 'Latest buoy water temperature with its observation time.',
-  tide: 'Tide prediction nearest the selected time, in feet.',
+  tide: 'Tide prediction nearest the selected time, in feet; the trend (Rising, Falling or Turning) compares it with the next prediction when that follows within 15 minutes.',
 };
 
 /** "45 min", "2 h", "3 d": how old a reading is; a clock ahead of this device says so. */

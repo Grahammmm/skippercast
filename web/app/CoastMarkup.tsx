@@ -4,10 +4,11 @@
 // renderers and never forks them, so their output has to reach the DOM as
 // markup. The allow-list holds charts/series.ts `chart`, ui/catches.ts
 // `catchSheet` (FE-52, the Reports view) and ui/history.ts `historyView`
-// (FE-35). `tideChart` and `fleetBrief` join it with the task that first
-// mounts them (FE-33): their modules do not yet type-check under
-// web/tsconfig.json's noUncheckedIndexedAccess, and fixing that is a
-// packages/coast change announced on issue #413.
+// (FE-35). The brief's tide sparkline (FE-33) calls `chart` with briefing.ts
+// `tideChart`'s arguments (web/tides.ts) rather than adding `tideChart`.
+// `fleetBrief` joins it with the task that first mounts it: its module does
+// not yet type-check under web/tsconfig.json's noUncheckedIndexedAccess, and
+// fixing that is a packages/coast change announced on issue #413.
 //
 // Trust boundary. This is the one file in web/ that may write markup into the
 // DOM (scripts/check_web.py fails on innerHTML and the other sinks anywhere
