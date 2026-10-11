@@ -1,5 +1,5 @@
 import type {HistoryBundle,HistoryMetric,StationHistory,MonthlyDistribution} from '../history-types.ts';
-import type {AppState} from '../state/experience.ts';
+import type {County} from '../types.ts';
 import {linePath} from '../charts/series.ts';
 import {escapeHTML as esc,time,value,ageLabel} from './format.ts';
 import {icon} from './icons.ts';
@@ -9,10 +9,11 @@ const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 export type HistorySelection={station:string;metric:HistoryMetric;days:number};
 const unavailable=()=>`<div class="view-heading"><div><span class="eyebrow">RECORDED OCEAN HISTORY</span><h2>A longer view of the coast.</h2><p>Historical observations are unavailable for this county.</p></div></div>`;
 const supportedSeason=(m:MonthlyDistribution|undefined):m is MonthlyDistribution=>!!m&&m.count>0&&finite(m.median)&&finite(m.p10)&&finite(m.p90)&&m.p10<=m.median&&m.median<=m.p90;
-export type HistoryViewContext=Pick<AppState,'county'|'now'>;
+// The fields of AppState this view reads; declared here so the view type-checks without state/experience.ts.
+export type HistoryViewContext={county:County;now:Date};
 export function historyView(s:HistoryViewContext,bundle:HistoryBundle|null,selection:HistorySelection){
  if(!bundle||bundle.countyId!==s.county.id||!Array.isArray(bundle.stations)||!bundle.stations.length)return unavailable();
- const station=bundle.stations.find(st=>st.stationId===selection.station)??bundle.stations[0];
+ const station=bundle.stations.find(st=>st.stationId===selection.station)??bundle.stations[0];if(!station)return unavailable();
  const selected:HistorySelection={station:station.stationId,metric:metrics[selection.metric]?selection.metric:'waterTempF',days:[7,14,45].includes(selection.days)?selection.days:45};
  const spec=metrics[selected.metric],cut=Math.floor(s.now.getTime()/HOUR)*HOUR-selected.days*86400000;
  const hours=station.recent.hours.filter(h=>Number.isFinite(Date.parse(h.at))&&Date.parse(h.at)>=cut&&Date.parse(h.at)<=s.now.getTime()).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));

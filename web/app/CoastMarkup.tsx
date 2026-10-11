@@ -2,13 +2,13 @@
 // CoastMarkup (FE-75, docs/plans/front-end/design.md § 3A.2): the v2 host for
 // the escaped HTML and SVG strings that packages/coast renders. v2 reuses those
 // renderers and never forks them, so their output has to reach the DOM as
-// markup. The allow-list starts with charts/series.ts `chart`; the brief's
-// tide sparkline (FE-33) calls `chart` with briefing.ts `tideChart`'s
-// arguments (web/tides.ts) rather than adding `tideChart`. `historyView`,
-// `catchSheet` and `fleetBrief` join it with the task that first mounts
-// them (FE-35, Reports): their modules do not yet
-// type-check under web/tsconfig.json's noUncheckedIndexedAccess, and fixing
-// that is a packages/coast change announced on issue #413.
+// markup. The allow-list holds charts/series.ts `chart`, ui/catches.ts
+// `catchSheet` (FE-52, the Reports view) and ui/history.ts `historyView`
+// (FE-35). The brief's tide sparkline (FE-33) calls `chart` with briefing.ts
+// `tideChart`'s arguments (web/tides.ts) rather than adding `tideChart`.
+// `fleetBrief` joins it with the task that first mounts it: its module does
+// not yet type-check under web/tsconfig.json's noUncheckedIndexedAccess, and
+// fixing that is a packages/coast change announced on issue #413.
 //
 // Trust boundary. This is the one file in web/ that may write markup into the
 // DOM (scripts/check_web.py fails on innerHTML and the other sinks anywhere
@@ -19,6 +19,12 @@
 // interpolates unescaped, `Series.color`, must pass `isCoastColour` (a hex,
 // rgb()/hsl() or var(--name) colour) or the call throws, so an attribute
 // break-out never reaches the DOM; pass a token such as 'var(--coast-blue)'.
+// `catchSheet` writes a trip's `anglers` and counts unescaped and its links'
+// URLs escaped but unchecked, so its state must pass `isSafeCatchState`
+// (finite numbers, https links) or the call throws.
+// `historyView` writes a few feed values unescaped (the archive and baseline
+// year lists, years with data, monthly hour counts, the recent window), so
+// `isRenderableHistory` must hold for its bundle or the call throws.
 // Adding a renderer here means reading it for unescaped values and guarding
 // them the same way.
 //
@@ -32,16 +38,40 @@ import {useLayoutEffect, useRef} from 'preact/hooks';
 import panelStyles from '../../packages/coast/panel.css?url';
 import bridgeStyles from '../../packages/coast/tokens-bridge.css?url';
 import {chart} from '../../packages/coast/src/charts/series.ts';
+import {catchSheet, type CatchState} from '../../packages/coast/src/ui/catches.ts';
+import {historyView} from '../../packages/coast/src/ui/history.ts';
+import type {HistoryBundle} from '../../packages/coast/src/history-types.ts';
 import {hourParam} from '../state.ts';
 
 /** The allow-list: the only functions whose output this host mounts. */
-export const COAST_RENDERERS = Object.freeze({chart});
+export const COAST_RENDERERS = Object.freeze({chart, catchSheet, historyView});
 export type CoastRendererName = keyof typeof COAST_RENDERERS;
 export type CoastArgs<K extends CoastRendererName> = Parameters<(typeof COAST_RENDERERS)[K]>;
 
 const COLOUR = /^(?:#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgb|hsl)a?\([\d\s.,%/+-]+\)|var\(--[\w-]+\))$/;
 /** A colour `chart()` may write into a `style` attribute: hex, rgb()/hsl() with numbers only, or var(--name). */
 export const isCoastColour = (value: unknown): value is string => typeof value === 'string' && COLOUR.test(value);
+
+const httpsURL = (value: unknown): boolean => { try { return new URL(String(value)).protocol === 'https:'; } catch { return false; } };
+const count = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value);
+/** A state `catchSheet` may render: every number it interpolates is a finite number and every link it writes is https. */
+export const isSafeCatchState = (s: CatchState): boolean =>
+  s.report.catches.every(t => (t.anglers === null || count(t.anglers)) && httpsURL(t.sourceUrl) && Array.isArray(t.species) && t.species.every(p => count(p.count)))
+  && (!s.report.catchContext || httpsURL(s.report.catchContext.rights?.sourceCatalogUrl)) && s.county.catchLinks.every(l => httpsURL(l.url));
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+const isYears = (value: unknown): boolean => Array.isArray(value) && value.every(Number.isInteger);
+/**
+ * Whether every feed value `historyView` interpolates without escaping is safe: the window and month counts are
+ * finite numbers, and each year list it prints or counts (archive.availableYears, baseline.years,
+ * months[].yearsWithData) is a real array of integers. Everything else it writes raw is a constant or passes
+ * through value()/time()/toFixed or a computed length.
+ */
+export function isRenderableHistory(bundle: HistoryBundle | null): boolean {
+  if (bundle === null) return true;
+  return isNumber(bundle.recentWindowDays) && Array.isArray(bundle.stations) && bundle.stations.every(station =>
+    isYears(station?.archive?.availableYears) && isYears(station.baseline?.years) && Array.isArray(station.baseline.months) && station.baseline.months.every(m =>
+      isYears(m?.yearsWithData) && isNumber(m.count) && isNumber(m.rawSampleCount) && isNumber(m.expectedHours)));
+}
 
 /** The markup an allow-listed renderer returns for `args`; any other name, or an unsafe colour, throws. */
 export function coastMarkup<K extends CoastRendererName>(renderer: K, args: CoastArgs<K>): string {
@@ -50,6 +80,8 @@ export function coastMarkup<K extends CoastRendererName>(renderer: K, args: Coas
     const rows: unknown = (args as CoastArgs<'chart'>)[0];
     if (!Array.isArray(rows) || !rows.every(row => isCoastColour((row as {color?: unknown} | null)?.color))) throw new TypeError('chart() series colours must be a hex, RGB, HSL or custom-property colour');
   }
+  if (renderer === 'catchSheet' && !isSafeCatchState((args as CoastArgs<'catchSheet'>)[0])) throw new TypeError('catchSheet() counts must be numbers and its links https');
+  if (renderer === 'historyView' && !isRenderableHistory((args as CoastArgs<'historyView'>)[1])) throw new TypeError('historyView() needs numeric years, counts and window');
   const render = COAST_RENDERERS[renderer] as (...input: CoastArgs<K>) => string;
   return render(...args);
 }
