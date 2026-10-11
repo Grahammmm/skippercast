@@ -10,11 +10,11 @@ visitor, session or device id.
 | Piece | File |
 | --- | --- |
 | Browser module: batching, opt-out, error capture | `web/telemetry.ts` |
-| Funnel call sites | `dist/home-port.js`, `dist/navigation.js`, `dist/export-ui.js`, `dist/offline-pack.js`, `dist/offline.js`; started in `dist/boot.js` |
+| Funnel call sites | `dist/home-port.js`, `dist/navigation.js`, `dist/export-ui.js`, `dist/offline-pack.js`, `dist/offline.js`; `web/app/CommandBar.tsx`; started in `dist/boot.js` (v1) and first thing in `web/landing/main.tsx` and `web/app/main.tsx` (v2) |
 | Endpoint `POST /api/telemetry` | `server/routes/telemetry.ts` |
 | Validation and Analytics Engine columns | `server/telemetry.ts` |
 | Daily report tables | `scripts/ops_report.py` |
-| Tests | `tests/test_telemetry.mjs`, `tests/contract/test_ops_report.py`, `e2e/telemetry.spec.ts` |
+| Tests | `tests/test_telemetry.mjs`, `tests/test_v2_head.mjs`, `tests/contract/test_ops_report.py`, `e2e/telemetry.spec.ts` |
 
 ## When nothing is sent
 
