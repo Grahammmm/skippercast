@@ -48,6 +48,34 @@ Order (design.md § 16): Worker flag, then the workflow switch, then the first r
 5. **First registry run.** `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast -f region=CA -f sink=worker`, then `gh run watch`. From an empty registry `refresh` records `new` for every boat. The schedule takes over from the next Monday.
 6. **Fill the gaps.** design.md § 9: `run`, then `fleet-osint` (CF-21, once it exists), then `run` again fills the registry; the review queue in the admin is the only human step.
 
+## Scout CSV input
+
+The CA binding `scout-candidates-2026-10-10` reads
+`<SKIPPERCAST_FLEET_VAR>/CA/inputs/candidates-2026-10-10.csv` (the default
+fleet var is `~/.local/share/skippercast/fleet`). Its column set is
+`scout-candidates-v1`, with all seven headers required:
+`port_id,boat,operator,class,landing,website,evidence_urls`.
+
+Keep the CSV private on the runner; never commit it. Port ids must match the
+region. Evidence URLs are pipe-separated public HTTPS pages; a safe HTTPS
+website is a fallback when the evidence list is empty. Invalid, plain HTTP
+and off-limits URLs are omitted. Rows without a name, known port or usable
+provenance are skipped and counted. Personal operator names are omitted;
+class labels remain unverified rather than asserting inspection or capacity.
+No scout fact asserts CDFW licence provenance. The CPRA column set is unchanged.
+
+Scout leads run during discovery, before resolve, so seed website facts can
+reach operator-site enrichment in the same run. Established website sources
+retain priority. `discover.json` and `enrich-code.json` record input and skip
+counts; a missing file is a reported skip. An enabled binding alone does not
+prove that a seed was imported: check those reports and the input hash.
+
+For #521, the 2026-10-11 offline check reads 347 rows across 28 ports and emits
+342 candidates, skipping five rows without usable provenance. This is a draft
+adapter check, not a Worker run or gate (d) completion. Dispatch from `main`
+only after the focused fix is reviewed, merged and its checks pass; the eight
+unscouted ports remain separate backlog.
+
 ## Reading a run
 
 - **`ok`**: every step ran and every discovery binding succeeded.

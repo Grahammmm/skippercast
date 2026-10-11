@@ -1035,6 +1035,17 @@
       }
     },
     {
+      "id": "scout-candidates-2026-10-10",
+      "adapter": "file-import",
+      "enabled": true,
+      "rights": "facts-only",
+      "params": {
+        "path": "inputs/candidates-2026-10-10.csv",
+        "columns": "scout-candidates-v1"
+      },
+      "note": "Owner-supplied public scout leads; missing input yields a reported skip. Class and licence claims require independent verification."
+    },
+    {
       "id": "cpra-cpfv",
       "adapter": "file-import",
       "enabled": false,
