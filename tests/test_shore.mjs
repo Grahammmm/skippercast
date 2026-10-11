@@ -32,8 +32,6 @@ const READY = screenAt(SNAPSHOT.features, NOW);
 /** Every clock current for 30 days from `now`. */
 const clocks = now => ({reviewExpiresAt: iso(now + 30 * 24 * HOUR), accessReviewedAt: iso(now - 24 * HOUR), accessReviewExpiresAt: iso(now + 30 * 24 * HOUR),
   legalReviewedAt: iso(now - 24 * HOUR), legalReviewExpiresAt: iso(now + 30 * 24 * HOUR), checkedAt: iso(now - 24 * HOUR)});
-/** The committed package with its rules review moved forward, so the access clock decides. */
-const withRules = until => ({...PACKAGE, features: PACKAGE.features.map(f => ({...f, properties: {...f.properties, legalReviewExpiresAt: iso(until)}}))});
 
 test('priority: Current, No surf model, Recheck soon, Hold and Blocked from the clocks, the protected-area check and the nearshore model', () => {
   const run = clocks(NOW);
@@ -43,7 +41,6 @@ test('priority: Current, No surf model, Recheck soon, Hold and Blocked from the 
   const soon = {...run, accessReviewExpiresAt: iso(NOW + RECHECK_WINDOW_MS - HOUR)};
   assert.deepEqual(shoreStatus(soon, {now: NOW, inside: [], conditions: true}), {priority: 1, label: 'Recheck soon', reasons: ['Access review ends within 24 h']});
   assert.deepEqual(shoreStatus(run, {now: NOW, inside: null, conditions: true}), {priority: 0, label: 'Hold', reasons: ['Protected-area check not current']});
-  assert.equal(shoreStatus({...run, legalReviewExpiresAt: iso(NOW - 1)}, {now: NOW, inside: [], conditions: true}).label, 'Hold');
   assert.equal(shoreStatus({...run, accessReviewExpiresAt: 'not a date'}, {now: NOW, inside: [], conditions: true}).label, 'Hold', 'an unreadable clock holds');
   assert.equal(shoreShown(run, NOW), true);
   assert.equal(shoreShown({reviewExpiresAt: iso(NOW - 1)}, NOW), false, 'past its source review a run is not shown');
@@ -51,8 +48,42 @@ test('priority: Current, No surf model, Recheck soon, Hold and Blocked from the 
   assert.deepEqual(ranked.map(r => r.name), ['C', 'A', 'B']);
 });
 
+test('rules-review age alone does not set priority or claim all reviews are current', () => {
+  const run = clocks(NOW);
+  const expected = shoreStatus(run, {now: NOW, inside: [], conditions: true});
+  for (const end of [iso(NOW - 30 * 24 * HOUR), iso(NOW), iso(NOW + HOUR), 'not a date']) {
+    const dated = {...run, legalReviewExpiresAt: end};
+    assert.deepEqual(shoreStatus(dated, {now: NOW, inside: [], conditions: true}), expected, end);
+    assert.equal(shoreStatus(dated, {now: NOW, inside: [], conditions: false}).label, 'No surf model');
+    assert.deepEqual(shoreStatus(dated, {now: NOW, inside: ['Synthetic SMR'], conditions: true}),
+      {priority: 0, label: 'Blocked', reasons: ['Inside Synthetic SMR']});
+    assert.equal(shoreStatus(dated, {now: NOW, inside: null, conditions: true}).label, 'Hold');
+    assert.equal(shoreStatus({...dated, accessReviewExpiresAt: iso(NOW)}, {now: NOW, inside: [], conditions: true}).label, 'Hold');
+    assert.equal(shoreStatus({...dated, reviewExpiresAt: iso(NOW)}, {now: NOW, inside: [], conditions: true}).label, 'Hold');
+  }
+  assert.match(expected.reasons[0], /^Access and source reviews current;/);
+  assert.doesNotMatch(expected.reasons[0], /^Reviews current/);
+});
+
+test('committed expired rules dates remain visible without blanket Hold', () => {
+  const runs = shownRuns(PACKAGE, READY, null, NOW);
+  assert.equal(runs.length, PACKAGE.features.length);
+  const unblocked = runs.filter(r => r.status.label !== 'Blocked');
+  assert.ok(unblocked.length > 0);
+  for (const r of unblocked) {
+    assert.ok(Date.parse(r.run.properties.legalReviewExpiresAt) < NOW);
+    assert.ok(['Recheck soon', 'No surf model'].includes(r.status.label), r.name);
+    const card = runMark(r, 'surfperch');
+    assert.match(card.reading, /rules checked Oct 2, 2026, review until Oct 3, 2026/);
+    assert.match(card.basis, /check the current CDFW rules/);
+    assert.match(card.basis, /Rules-review dates are context only/);
+    assert.match(card.basis, /Ranking does not establish legal permission/);
+    assert.doesNotMatch(card.basis, /held when a review expires/);
+  }
+});
+
 test('Accept 1: an expired access review drops the run to "Hold"', () => {
-  const pkg = withRules(NOW + 30 * 24 * HOUR);
+  const pkg = PACKAGE;
   const access = Date.parse(PACKAGE.features[0].properties.accessReviewExpiresAt);
   const before = shownRuns(pkg, screenAt(SNAPSHOT.features, access - 2 * HOUR), null, access - 2 * HOUR);
   assert.ok(before.length > 0);
@@ -65,15 +96,13 @@ test('Accept 1: an expired access review drops the run to "Hold"', () => {
     assert.equal(r.status.priority, 0);
     assert.ok(r.status.reasons.includes('Access review expired'));
   }
-  // The committed package as published: its rules review has expired, so every run holds today.
-  for (const r of shownRuns(PACKAGE, READY, null, NOW)) assert.ok(['Hold', 'Blocked'].includes(r.status.label), r.name);
   // Past the source review the run is not drawn at all.
   const late = Date.parse(PACKAGE.features[0].properties.reviewExpiresAt) + HOUR;
   assert.deepEqual(shownRuns(pkg, screenAt(SNAPSHOT.features, late), null, late), []);
 });
 
 test('Accept 2: a run inside a protected area is blocked and loses its access pins', () => {
-  const pkg = withRules(NOW + 30 * 24 * HOUR);
+  const pkg = PACKAGE;
   const target = pkg.features[0], [lon, lat] = target.geometry.coordinates[0][0];
   const d = 0.002, box = {type: 'Feature', properties: {NAME: 'Synthetic SMR'}, geometry: {type: 'Polygon', coordinates: [[[lon - d, lat - d], [lon + d, lat - d], [lon + d, lat + d], [lon - d, lat + d], [lon - d, lat - d]]]}};
   const screen = screenAt([box], NOW);
@@ -89,10 +118,25 @@ test('Accept 2: a run inside a protected area is blocked and loses its access pi
   assert.doesNotMatch(runMark(blocked, 'surfperch').reading, /Public access/);
 });
 
+test('a protected access point blocks a run even with an expired rules review', () => {
+  const target = PACKAGE.features[0];
+  const [lon, lat] = target.properties.access[0].coordinates;
+  const d = 0.00001;
+  const box = {type: 'Feature', properties: {NAME: 'Synthetic access restriction'}, geometry: {type: 'Polygon',
+    coordinates: [[[lon - d, lat - d], [lon + d, lat - d], [lon + d, lat + d], [lon - d, lat + d], [lon - d, lat - d]]]}};
+  const screen = screenAt([box], NOW);
+  assert.deepEqual(insideAreas({...target, properties: {...target.properties, access: []}}, screen), [], 'line is outside');
+  assert.deepEqual(insideAreas(target, screen), ['Synthetic access restriction']);
+  const runs = shownRuns(PACKAGE, screen, null, NOW);
+  const blocked = runs.find(r => r.run.id === target.id);
+  assert.equal(blocked.status.label, 'Blocked');
+  assert.equal(shoreCollections(runs).access.features.filter(f => f.properties.id === target.id).length, 0);
+});
+
 test('the card shows review dates, method guidance and the official rules link, and never promises fish', () => {
   const [r] = shownRuns(PACKAGE, READY, null, NOW);
   const card = runMark(r, 'surfperch');
-  assert.match(card.kind, /^Shore run · (Hold|Blocked)$/);
+  assert.match(card.kind, /^Shore run · (No surf model|Recheck soon|Blocked)$/);
   assert.match(card.reading, /Access checked .+, review until .+ · rules checked .+ · source review until/);
   assert.equal(shoreReviewLines(r.run.properties).includes('Oct'), true);
   assert.deepEqual(card.regulations, {href: CDFW_RULES_URL, label: 'Official CDFW regional rules'});
