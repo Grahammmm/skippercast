@@ -28,9 +28,10 @@ export function ageText(ms: number): string {
   return hours < 48 ? `${hours} h` : `${Math.floor(hours / 24)} d`;
 }
 
-/** The tile's source line: the source and its age, or that no reading is available. */
-export function sourceLine(tile: BriefTile): string {
-  return tile.state === 'unavailable' || tile.ageMs === null ? `${tile.source} · unavailable` : `${tile.source} · ${ageText(tile.ageMs)} old`;
+/** The tile's source line: the source and its age (marked last good after a failed check), or that no reading is available. */
+export function sourceLine(tile: BriefTile, compact = false): string {
+  if (tile.state === 'unavailable' || tile.ageMs === null) return `${tile.source} · unavailable`;
+  return `${tile.source} · ${tile.lastGood ? 'last good ' : ''}${ageText(tile.ageMs)}${compact ? '' : ' old'}`;
 }
 
 /**
@@ -43,12 +44,12 @@ export function tileProps(tile: BriefTile, compact = false): TileProps {
   const name = tile.sourceUrl ? <a href={tile.sourceUrl} target="_blank" rel="noopener">{tile.source}</a> : tile.source;
   if (compact) {
     return {label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit,
-      source: tile.state === 'unavailable' || tile.ageMs === null ? `${tile.source} · unavailable` : `${tile.source} · ${ageText(tile.ageMs)}`, stale: tile.state === 'stale'};
+      source: sourceLine(tile, true), stale: tile.state === 'stale'};
   }
   return {
     label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit, detail: tile.detail,
     source: sourceLine(tile), stale: tile.state === 'stale',
-    basis: <>{BASIS[tile.id]}{datum ? ` Reference level: ${datum}.` : ''} Source: {name}. Shown as stale after {Math.round(tile.limitMs / 3_600_000)} h.</>,
+    basis: <>{BASIS[tile.id]}{datum ? ` Reference level: ${datum}.` : ''} Source: {name}.{tile.lastGood ? ' The latest check failed; this is the last good reading.' : ''} Shown as stale after {Math.round(tile.limitMs / 3_600_000)} h.</>,
   };
 }
 

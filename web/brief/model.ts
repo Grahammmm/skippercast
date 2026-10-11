@@ -41,11 +41,12 @@ const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const compass = (deg: number | null | undefined) => finite(deg) ? COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]! : null;
 
-function tile(id: TileId, label: string, value: number | null, unit: string, detail: string, source: Pick<SourceStatus, 'label' | 'url'> | null, at: string | null, limitMs: number, now: Date): BriefTile {
+function tile(id: TileId, label: string, value: number | null, unit: string, detail: string, source: Pick<SourceStatus, 'label' | 'url'> | null, at: string | null, limitMs: number, now: Date, lastGood = false): BriefTile {
   const clock = at === null ? NaN : Date.parse(at);
   const ageMs = Number.isFinite(clock) ? now.getTime() - clock : null;
-  const state = value === null || ageMs === null ? 'unavailable' : ageMs > limitMs || ageMs < -HOUR ? 'stale' : 'fresh';
-  return {id, label, value: value === null ? null : round(value), unit, detail, source: source?.label ?? 'No source', sourceUrl: source?.url ?? null, at: ageMs === null ? null : at, ageMs, limitMs, state};
+  const state = value === null || ageMs === null ? 'unavailable' : lastGood || ageMs > limitMs || ageMs < -HOUR ? 'stale' : 'fresh';
+  return {id, label, value: value === null ? null : round(value), unit, detail, source: source?.label ?? 'No source', sourceUrl: source?.url ?? null, at: ageMs === null ? null : at, ageMs, limitMs, state,
+    ...(lastGood && state === 'stale' ? {lastGood: true} : {})};
 }
 
 function nearest<T extends {at: string}>(points: readonly T[], at: number): T | undefined {
@@ -104,7 +105,8 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const observation = report.observations.filter(item => item.stationId === county.temperatureStationId && finite(item.waterTempF))
     .sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt))[0];
   const water = tile('water', 'Water', observation?.waterTempF ?? null, '°F', observation ? `buoy ${observation.stationId}` : 'no fresh buoy',
-    observation ? {label: `NDBC ${observation.stationId}`, url: observation.url} : null, observation?.observedAt ?? null, TILE_LIMIT_MS.water, now);
+    observation ? {label: `NDBC ${observation.stationId}`, url: observation.url} : null, observation?.observedAt ?? null, TILE_LIMIT_MS.water, now,
+    !!observation && report.sources.some(item => item.kind === 'observation' && item.url === observation.url && item.outcome === 'error'));
 
   const tideSource = report.sources.find(item => item.kind === 'prediction') ?? null;
   const datum = context.tideDatum ?? 'MLLW';
@@ -113,7 +115,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const tide = tile('tide', 'Tide', curvePoint?.heightFt ?? nextEvent?.heightFt ?? null, 'ft',
     curvePoint ? [tideTrend(daily.tides, pivot), shoreHour?.tide.veryLow ? 'very low' : null, barText, county.tideStation.name, datum].filter(Boolean).join(' · ')
       : nextEvent ? [`next ${nextEvent.type === 'H' ? 'high' : 'low'}`, barText, county.tideStation.name, datum].filter(Boolean).join(' · ') : TIDE_UNAVAILABLE,
-    tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now);
+    tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now, tideSource?.outcome === 'error');
 
   return {
     basis, profile, date: daily.date, label: daily.label, provisional: daily.confidence.includes('provisional'),
@@ -186,7 +188,10 @@ export type RegionalPlace = {id: string; name: string; lat: number; lon: number;
 
 const M_TO_FT = 3.280839895, MS_TO_KT = 1.943844492;
 const num = (value: unknown, scale = 1): number | null => finite(value) ? value * scale : null;
-const sourceOk = (source: RegionalSource | undefined) => source?.status === 'ok' || source?.status === 'retained';
+// Only ok is ok: a retained source is last good data after a failed check, so it reads as an error
+// whose clock is that last good fetch.
+const sourceOk = (source: RegionalSource | undefined) => source?.status === 'ok';
+const sourceClock = (source: RegionalSource) => source.status === 'retained' ? source.data_retrieved_at ?? source.last_success_at ?? source.checked_at : source.checked_at;
 
 /** Convert SkipperCast's regional feeds to the coast Report shape so buildDaily runs unchanged. */
 export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForecast | null, place: RegionalPlace): {report: Report; county: County; area: Area; tideDatum: string} {
@@ -210,8 +215,8 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   const alertCheck = advisories.length ? advisories.reduce((a, b) => Date.parse(a.checked_at) <= Date.parse(b.checked_at) ? a : b) : undefined;
   const sources: SourceStatus[] = [];
   if (forecast) sources.push({id: 'regional-forecast', label: forecast.label, url: forecast.url, kind: 'forecast', outcome: 'ok', fetchedAt: forecast.fetchedAt, issuedAt: forecast.issuedAt});
-  if (buoy) sources.push({id: buoy.id, label: buoy.name, url: buoy.url, kind: 'observation', outcome: sourceOk(buoy) ? 'ok' : 'error', fetchedAt: buoy.checked_at});
-  if (tides) sources.push({id: tides.id, label: tides.name, url: tides.url, kind: 'prediction', outcome: sourceOk(tides) ? 'ok' : 'error', fetchedAt: tides.checked_at});
+  if (buoy) sources.push({id: buoy.id, label: buoy.name, url: buoy.url, kind: 'observation', outcome: sourceOk(buoy) ? 'ok' : 'error', fetchedAt: sourceClock(buoy)});
+  if (tides) sources.push({id: tides.id, label: tides.name, url: tides.url, kind: 'prediction', outcome: sourceOk(tides) ? 'ok' : 'error', fetchedAt: sourceClock(tides)});
   // The oldest advisory check stands for all: buildDaily withholds windows unless it is fresh.
   if (alertCheck) sources.push({id: 'nws-alerts', label: alertCheck.name, url: alertCheck.url, kind: 'forecast', outcome: advisories.every(sourceOk) ? 'ok' : 'error', fetchedAt: alertCheck.checked_at});
   const area: Area = {id: place.id, name: place.name, coast: place.name, mapLabel: place.name, lat: place.lat, lon: place.lon, landLat: place.lat, landLon: place.lon,

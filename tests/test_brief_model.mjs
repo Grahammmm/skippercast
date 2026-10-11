@@ -98,6 +98,27 @@ test('acceptance 3: a tile past its limit is stale and keeps its age', () => {
   assert.equal(tile(empty, 'wind').state, 'unavailable');
 });
 
+test('a retained source reads as degraded: its tile is last good data, stale, with the age of that data', () => {
+  const lastGood = new Date(now.getTime() - 5 * 3_600_000).toISOString();
+  const retain = source => ({...source, status: 'retained', checked_at: now.toISOString(), data_retrieved_at: lastGood, last_success_at: lastGood});
+  const s = montereyDaily.sources;
+  const daily = {...montereyDaily, sources: {...s, tides: retain(s.tides), 'buoy-46042': retain(s['buoy-46042']), 'alerts-PZZ535': retain(s['alerts-PZZ535'])}};
+  const {report: converted} = regionalReport(daily, montereyForecast, montereyPlace);
+  for (const id of ['tides', 'buoy-46042', 'nws-alerts']) assert.equal(converted.sources.find(item => item.id === id).outcome, 'error', id);
+  assert.equal(converted.sources.find(item => item.id === 'tides').fetchedAt, lastGood);
+  const brief = buildRegionalBrief({daily, forecast: montereyForecast, place: montereyPlace, profile: 'boat', date, now});
+  const tide = tile(brief, 'tide');
+  assert.equal(tide.state, 'stale');
+  assert.equal(tide.lastGood, true);
+  assert.equal(tide.ageMs, 5 * 3_600_000);
+  assert.notEqual(tide.value, null);
+  assert.equal(tile(brief, 'water').lastGood, true);
+  assert.equal(tile(brief, 'water').state, 'stale');
+  assert.ok(brief.missing.includes('Current marine alert check unavailable'));
+  // An ok source is not marked.
+  assert.equal(tile(buildRegionalBrief({...regional, profile: 'boat', date, now}), 'tide').lastGood, undefined);
+});
+
 test('acceptance 4: each profile yields its § 8 caveat; shore and spear read the nearshore swell', () => {
   for (const profile of PROFILES) {
     for (const brief of [buildCoastBrief({report, county: slo, areaId: 'central', profile, date, now}), buildRegionalBrief({...regional, profile, date, now})]) {
