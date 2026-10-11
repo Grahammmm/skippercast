@@ -7,7 +7,7 @@ import {cloudSource, mapSourceHosts, naipSource} from '../packages/coast/src/map
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/sources.html': '/sources.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/sources.html': '/sources.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 globalThis.BUILD_ID = 'test';
 const {default: worker} = await import('../server/index.ts');
 
@@ -83,7 +83,7 @@ test('page shells, assets, APIs, feeds and errors all carry the security headers
   class Immutable extends Headers { set() { throw new TypeError('immutable'); } }
   const ASSETS = {fetch: async request => {
     const path = new URL(request.url).pathname;requested.push(path);
-    const html = path.startsWith('/index.') || path.startsWith('/sources.');
+    const html = /^\/(index|sources|landing|app)\.\d+$/.test(path);
     const response = new Response(html ? '<!doctype html><title>x</title>' : 'x', {headers: {'Content-Type': html ? 'text/html' : 'text/javascript'}});
     Object.defineProperty(response, 'headers', {value: new Immutable(response.headers)});
     return response;
@@ -92,7 +92,7 @@ test('page shells, assets, APIs, feeds and errors all carry the security headers
   const shell = await worker.fetch(new Request('https://skippercast.com/'), env);
   assert.equal(shell.status, 200);assertSecured(shell, 'shell');
   assert.equal(shell.headers.get('Cache-Control'), 'no-store', 'shells stay uncached');
-  assert.deepEqual(requested, ['/index.0123456789']);
+  assert.deepEqual(requested, ['/landing.0123456789']);
   assertSecured(await worker.fetch(new Request('https://skippercast.com/sources.html'), env), 'sources shell');
   const asset = await worker.fetch(new Request('https://skippercast.com/app.0123456789.js'), env);
   assertSecured(asset, 'asset');assert.equal(asset.headers.get('Content-Type'), 'text/javascript');
