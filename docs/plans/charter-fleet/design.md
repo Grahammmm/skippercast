@@ -937,7 +937,8 @@ list[Cell]`); `grid` bins dwell into `resolution_m` cells, or a kind's coarser
 `resolution_by_kind` edge (troll-pelagic at 3 km; a whole multiple of
 `resolution_m`, N6), and the cell id `g<edge>:<row>:<col>` carries the edge the
 map draws. The map is part of `params_json`, so changing it changes every cell
-id and the processor's diff deletes the old cells. The privacy knobs
+id, and the next processor run replaces the old cells of the seasons it
+reprocesses (`push_aggregates` diffs the touched seasons). The privacy knobs
 `min_distinct_vessels` and `delay_hours` exist and are `null` for admin views;
 an `h3` module needs no schema change.
 
@@ -1130,7 +1131,7 @@ existing `optional(...)` guard.
 | Activity events | circles, radius ∝ √dwell (4–18 px), drift filled, troll ringed; card: boat, port, class, date, start/end, dwell, type, source and rights, and "Inferred from movement (speed and track shape). Not a confirmed fishing stop or catch." |
 | Trip tracks | decoded polylines of fishing segments only (drift-anchor, troll-slow, troll-pelagic), coloured by kind; in-port, transit, uncertain and gap segments never reach the layer (N6, #469 D20–D22); the admin trip view reads every segment through its own route |
 | Heat | aggregate cells as rectangles, opacity ∝ dwell, each drawn at the edge in its cell id (1 km, pelagic 3 km); no new vendored library |
-| Public heat (`GET /api/fleet/public/heat`, anonymous, N6) | cells only: Polygon features whose properties are exactly `kind`, `season`, `season_part`, `dwell_min`, `vessels_n`, `basis`, `computed_at`, and `meta` `region`, `cell_m`, `min_vessels`, `delay_hours`, `count`, `capped`, `next`. Query `region` (required), `kind`, `season`, `season_part` (omitted: whole-season cells), `limit`, `cursor`; module `grid`; 5,000 cells a page. The floors of section 15 are applied in SQL and checked again in code. No public page draws it yet |
+| Public heat (`GET /api/fleet/public/heat`, anonymous, N6) | whole-season cells only: Polygon features whose properties are exactly `kind`, `season`, `dwell_min`, `vessels_n`, `basis`, `computed_at`, and `meta` `region`, `cell_m`, `min_vessels`, `delay_hours`, `count`, `capped`, `next`. Query `region` (required), `kind`, `season`, `limit`, `cursor`; a `season_part` parameter is a 400; module `grid`; 5,000 cells a page. The floors of section 15 are applied in SQL and checked again in code. No public page draws it yet |
 
 One filter card, applied server-side: boat, port, vessel class, trip type,
 activity type, date range, season (year and part). Endpoints take `region,
@@ -1163,7 +1164,9 @@ Ranked; picks marked. Only the admin views and the flagged profile are built.
   `server/fleet/public-heat.ts`): `vessels_n` ≥ 3; `last_date` (a local
   calendar date) wholly at least 72 h old in any time zone, so the date must
   be at least 108 h past its UTC midnight; rights `public-domain`,
-  `public-record`, `facts-only` or `api-terms` only. The server has no paid
+  `public-record`, `facts-only` or `api-terms` only; whole-season cells only,
+  since a whole season minus its published part cells would reveal the dwell
+  of a part whose own cell fell under the floors. The server has no paid
   tier, so "off paid surfaces" is read as "off the public route": every
   `noaa-planning-only` and `internal-only` cell is withheld from it. (2) Plus
   per-trip tracks for opted-in operators. (3) Admin-only indefinitely.

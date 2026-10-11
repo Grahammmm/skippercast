@@ -69,7 +69,7 @@ function setup() {
   return {sql, db, call, get, names};
 }
 
-// Whole words in keys and strings: vessels_n and min_vessels are counts, not a vessel; season_part is not a port.
+// Whole words in keys and strings: vessels_n and min_vessels are counts, not a vessel.
 const FORBIDDEN = /(^|[^a-z])(vessel|mmsi|port|class|trip|event|track|name|slug|rights|id|source)([^a-z]|$)/i;
 // The paging cursor is opaque base64 (checked by shape instead), so its letters are not read as words.
 function walk(node, where, found) {
@@ -117,7 +117,7 @@ test('no route under /api/fleet/public/ returns events, tracks or anything but h
 });
 
 test('only cells with >= 3 vessels, >= 72 h old and allowed rights come back; noaa-planning-only never', skip, async () => {
-  const {sql, get, names} = setup();
+  const {sql, call, get, names} = setup();
   const q = `/api/fleet/public/heat?region=${REGION}`;
   try {
     const body = await get(q);
@@ -137,8 +137,11 @@ test('only cells with >= 3 vessels, >= 72 h old and allowed rights come back; no
     assert.deepEqual(await names(`${q}&kind=troll-pelagic`), ['pelagic3km']);
     assert.deepEqual(await names(`${q}&season=2025`), ['slow']);
     assert.deepEqual(await names(`${q}&season=2026&kind=troll-slow`), []);
-    // A part's cells only through its own query (the default never counts a dwell twice); another region's only through its region.
-    assert.deepEqual(await names(`${q}&season_part=summer`), ['summerPart']);
+    // Whole-season cells only: a part cell never comes back, so no reader can subtract published parts from a whole
+    // season to recover a withheld part's dwell. Asking for a part is refused rather than silently widened.
+    for (const part of ['summer', 'all', '']) assert.equal((await call(`${q}&season_part=${part}`)).status, 400, part);
+    assert.ok(!(await get(q)).features.some(f => nameOf(f.properties.dwell_min) === 'summerPart'));
+    // Another region's cells only through its region.
     assert.deepEqual(await names(`/api/fleet/public/heat?region=OR`), ['oregon']);
     // The code re-checks what SQL returned.
     assert.equal(publicCell({vessels_n: 2, last_date: '2020-01-01', rights: 'api-terms'}, cutoff), false);
@@ -165,7 +168,7 @@ test('cells only: exact feature and meta keys, and no vessel, mmsi, port, class,
         assert.deepEqual(Object.keys(f).sort(), ['geometry', 'properties', 'type'], 'no feature id');
         assert.equal(f.geometry.type, 'Polygon');
         assert.deepEqual(Object.keys(f.geometry).sort(), ['coordinates', 'type']);
-        assert.deepEqual(Object.keys(f.properties).sort(), ['basis', 'computed_at', 'dwell_min', 'kind', 'season', 'season_part', 'vessels_n']);
+        assert.deepEqual(Object.keys(f.properties).sort(), ['basis', 'computed_at', 'dwell_min', 'kind', 'season', 'vessels_n']);
         assert.equal(f.properties.basis, 'inferred-from-movement');
       }
       if (body.meta.next !== null) {
@@ -202,7 +205,7 @@ test('bad queries are 400', skip, async () => {
   const {sql, call} = setup();
   try {
     for (const query of ['', 'region=../x', `region=${REGION}&kind=transit`, `region=${REGION}&kind=uncertain`, `region=${REGION}&season=26`,
-      `region=${REGION}&season_part=%20x`, `region=${REGION}&limit=0`, `region=${REGION}&limit=5001`, `region=${REGION}&cursor=nope!`,
+      `region=${REGION}&season_part=summer`, `region=${REGION}&limit=0`, `region=${REGION}&limit=5001`, `region=${REGION}&cursor=nope!`,
       `region=${REGION}&cursor=${btoa('["x","y"]')}`])
       assert.equal((await call(`/api/fleet/public/heat?${query}`)).status, 400, query);
   } finally { sql.close(); }

@@ -120,7 +120,8 @@ def _resolution_by_kind(plain: Mapping[str, Any], base: float | None) -> dict[st
 @dataclass(frozen=True)
 class AggregateParams:
     """``thresholds.aggregate`` of a region. ``raw`` is the full mapping, stored as ``params_json`` and hashed into
-    every cell id, so a new ``resolution_by_kind`` gives new ids and the processor's diff deletes the old cells."""
+    every cell id, so a new ``resolution_by_kind`` gives new ids; the processor replaces the old cells of the
+    seasons it reprocesses."""
     module: str
     resolution_m: float | None
     min_distinct_vessels: int | None

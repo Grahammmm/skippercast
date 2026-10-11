@@ -257,8 +257,8 @@ Append a dated line when a phase starts or finishes; keep the older lines.
 - 2026-10-11: N6 heat-map aggregate in review (branch `claude/n6-heat-map`,
   #570). CA and OR bin troll-pelagic into 3 km cells (`resolution_by_kind`),
   other modes stay at 1 km; the new params change every cell id, so the next
-  processor run replaces the old cells. `GET /api/fleet/public/heat` returns
-  cells only, with at least 3 vessels, at least 72 h old and allowlisted
-  rights, behind `FLEET_PUBLIC_HEAT_ENABLED` (off); it is empty until Q1 moves
+  processor run replaces the old cells of the seasons it reprocesses.
+  `GET /api/fleet/public/heat` returns whole-season cells only, with at
+  least 3 vessels, at least 72 h old and allowlisted rights, behind `FLEET_PUBLIC_HEAT_ENABLED` (off); it is empty until Q1 moves
   aisstream to `api-terms`. The admin tracks layer now draws fishing segments
   only. Tests use synthetic cells only.

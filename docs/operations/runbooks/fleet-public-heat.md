@@ -7,7 +7,7 @@
 
 ## What the route serves
 
-Aggregate cells only, as GeoJSON polygons with `kind`, `season`, `season_part`, `dwell_min`, `vessels_n`, `basis` and `computed_at`. The floors are fixed in code (`PUBLIC_HEAT`): at least 3 distinct vessels, a last date wholly at least 72 h old, and rights `public-domain`, `public-record`, `facts-only` or `api-terms`. `internal-only` and `noaa-planning-only` (MarineCadastre) cells never appear. Nothing else exists under `/api/fleet/public/`.
+Whole-season aggregate cells only, as GeoJSON polygons with `kind`, `season`, `dwell_min`, `vessels_n`, `basis` and `computed_at`. Season-part cells are never served (a `season_part` parameter is a 400): subtracting published parts from a whole season would reveal a withheld part's dwell. The floors are fixed in code (`PUBLIC_HEAT`): at least 3 distinct vessels, a last date wholly at least 72 h old, and rights `public-domain`, `public-record`, `facts-only` or `api-terms`. `internal-only` and `noaa-planning-only` (MarineCadastre) cells never appear. Nothing else exists under `/api/fleet/public/`.
 
 ## Before the switch (all must hold)
 
@@ -27,7 +27,7 @@ curl -s 'https://skippercast.com/api/fleet/public/heat?region=CA' | jq '.meta, (
 curl -s -o /dev/null -w '%{http_code}\n' 'https://skippercast.com/api/fleet/public/events?region=CA'   # 404
 ```
 
-`meta.min_vessels` is 3, `meta.delay_hours` is 72, every feature's `vessels_n` is at least 3, and the property keys are exactly the seven above. No public page draws the layer yet: the map UI is a separate change.
+`meta.min_vessels` is 3, `meta.delay_hours` is 72, every feature's `vessels_n` is at least 3, and the property keys are exactly the six above. No public page draws the layer yet: the map UI is a separate change.
 
 ## Switch off
 
