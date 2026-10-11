@@ -118,12 +118,13 @@ test('the brief invents no number: every tile reads "—" and keeps its source l
   assert.equal(count(html, /<span class="ui-reading">—<\/span>/g), 4);
   assert.equal(count(html, /<details class="ui-popover"/g), 4, 'each tile has its basis in a <details>');
   assert.match(html, /Nearshore site —/, 'spear takes the nearshore swell source');
-  assert.match(html, /<p class="app-empty">No ranked places yet.<\/p>/);
+  assert.match(html, /<p class="app-empty">Ranked places load with the map.<\/p>/, 'no ranked place before the region\'s marks load');
   assert.match(html, /In-water visibility is unverified/);
-  const picks = [{id: 'r1', name: 'North reef', distance: '3.2 nm', depth: '60–90 ft', fit: 'fits habitat 3 of 3', reason: 'Hard bottom inside the limit.'}];
-  const ranked = render(h(Brief, {picks}));
-  assert.match(ranked, /<ol class="app-picks"><li class="app-pick" data-mark="r1">/);
-  assert.match(ranked, /class="app-fit ui-eyebrow">fits habitat 3 of 3</);
+  const picks = [{id: 'r1', kind: 'spot', name: 'North reef', distance: '3.2 nm', depth: '~60–90 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Hard bottom inside the limit.'}];
+  const ranked = render(h(Brief, {ranking: {source: 'atlas', label: 'Survey reef atlas', basis: 'Basis.', picks, empty: ''}}));
+  assert.match(ranked, /<ol class="app-picks"><li data-mark="r1"><button type="button" class="app-pick" aria-pressed="false">/);
+  assert.match(ranked, /class="app-where-source ui-mono">Survey reef atlas</, 'the ranking names its source');
+  assert.match(ranked, /class="app-fit ui-eyebrow">Fits lingcod habitat 3 of 3</);
 });
 
 test('every control reflects the address: profile, view, day, hour, layers and the selection', async () => {
