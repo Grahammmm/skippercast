@@ -953,8 +953,9 @@ at sea (a position outside every port geofence) on ≥ `thresholds.match.schedul
 at its home port, spanning ≥ `min_span_days` (14) → `watched` at ≥ `mmsi_auto`;
 an unknown type or length does not block it, a contradicting length does, and
 a vessel that does not lead every other vessel of its port by `min_lead` (3)
-matched days has a rival → an `mmsi` review (`schedule-rival`), as is one with
-more than `max_contradictions` (1) report days spent in port; a watched row with
+matched days has a rival (a same-port vessel sharing at least one at-sea day)
+→ an `mmsi` review (`schedule-rival`); one with more than `max_contradictions`
+(1) report days spent in port → an `mmsi` review (`schedule-contradicted`); a watched row with
 no matched day in the last `lapse_days` (30) lapses to candidate. The watched gate: a `watched`
 row needs `fcc-uls`, `geofence-presence`, `admin` or `schedule-correlation` and
 confidence ≥ 0.85, checked by the matcher, the Worker and `python -m

@@ -428,7 +428,7 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(self.rows(one)[CANDIDATE]["status"], "watched", "one contradiction is tolerated")
         two = run({"2026-10-01", "2026-10-02"})
         self.assertEqual((self.rows(two)[CANDIDATE]["status"], [r["proposal_json"]["reason"] for r in two.reviews]),
-                         ("candidate", ["schedule-rival"]))
+                         ("candidate", ["schedule-contradicted"]))
         # A day in port that was also a day at sea (arrived that day) is no contradiction.
         self.assertEqual(self.rows(run(set(TWO_WEEKS)))[CANDIDATE]["status"], "watched")
 
@@ -448,6 +448,10 @@ class ScheduleTests(unittest.TestCase):
         old = ["2026-08-20", "2026-08-25"]
         lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched})
         self.assertEqual(self.rows(lapsed)[CANDIDATE]["status"], "candidate")
+        # A same-port vessel that reports only on other days is no rival, even to a thin row.
+        stranger = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:3])},
+                               vessels=vessels, prior={CANDIDATE: watched})
+        self.assertEqual((self.rows(stranger)[CANDIDATE]["status"], stranger.reviews), ("watched", []))
         none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched})
         self.assertEqual(self.rows(none)[CANDIDATE]["status"], "candidate")
 
@@ -585,6 +589,17 @@ class ScheduleTests(unittest.TestCase):
         at_sea[HELD_MMSI] = set(TWO_WEEKS)
         counts = schedule.precision(REGION, vessels, [], [window], reports)
         self.assertEqual((counts["schedule_matches"], counts["rival_reviews"]), (1, 2))
+
+    def test_precision_applies_the_contradiction_rule(self):
+        vessels = [vessel(SEA, "Sea Example", mmsi=CANDIDATE)]
+        statics = {CANDIDATE: full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)}
+        seen = {CANDIDATE: Seen(T0 - 20 * DAY, T0, "aisstream", 100)}
+        reports = {SEA: set(TWO_WEEKS) | {"2026-10-01", "2026-10-02"}}
+        args = (statics, seen, {CANDIDATE: {"port-a": 9}}, {CANDIDATE: set(TWO_WEEKS)}, NOW)
+        plain = schedule.precision(REGION, vessels, [], [args], reports)
+        self.assertEqual(plain["schedule_matches"], 1)
+        held = schedule.precision(REGION, vessels, [], [args + ({CANDIDATE: {"2026-10-01", "2026-10-02"}},)], reports)
+        self.assertEqual((held["schedule_matches"], held["rival_reviews"]), (0, 0), "two contradictions: no match")
 
     def test_schedule_precision_command_over_a_store(self):
         directory = Path(self.tmp())

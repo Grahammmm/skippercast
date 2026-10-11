@@ -105,7 +105,9 @@ def correlate(vessel_id: str, at_sea: Iterable[str], reports: Mapping[str, Itera
               port_of: Mapping[str, str | None], rule: Rules, in_port: Iterable[str] = ()) -> Correlation:
     """One MMSI's at-sea days against ``vessel_id``'s report days (module docstring).
 
-    ``in_port`` are the days the MMSI was inside a port geofence. Rivals and
+    ``in_port`` are the days the MMSI was inside a port geofence. A rival is a
+    same-port vessel that shares at least one at-sea day and trails by less than
+    ``min_lead``; one that reports only on other days is no rival. Rivals and
     contradictions are judged whenever there is a matched day, so they can undo
     a watched row whose evidence has aged below ``min_days``.
     """
@@ -119,7 +121,7 @@ def correlate(vessel_id: str, at_sea: Iterable[str], reports: Mapping[str, Itera
     if matched and home:
         rivals = tuple(sorted(other for other, days in reports.items()
                               if other != vessel_id and port_of.get(other) == home
-                              and len(matched) - len(sea & set(days)) < rule.min_lead))
+                              and (shared := sea & set(days)) and len(matched) - len(shared) < rule.min_lead))
     contradictions = len(own & (set(in_port) - sea))
     return Correlation(vessel_id, matched, span, qualifies, rivals, contradictions,
                        contradictions > rule.max_contradictions)
@@ -202,8 +204,9 @@ def precision(region, vessels: list[Mapping], reviews: list[Mapping], windows: I
               reports: Mapping[str, Iterable[str]]) -> dict:
     """Score schedule promotions against registry MMSIs hidden from the matcher.
 
-    ``windows`` yields ``(statics, seen, presence, at_sea, now_ms)`` per 30-day
-    window, as ``match.decide`` takes them. Home-port presence is capped at one
+    ``windows`` yields ``(statics, seen, presence, at_sea, now_ms[, in_port])`` per
+    30-day window, as ``match.decide`` takes them; ``in_port`` feeds the
+    contradiction rule, as in production. Home-port presence is capped at one
     day, so ``geofence-presence`` cannot fire and every AIS-only promotion is a
     schedule match; a vessel that had no registry MMSI cannot be scored
     (``unverified``).
@@ -214,10 +217,11 @@ def precision(region, vessels: list[Mapping], reviews: list[Mapping], windows: I
     hidden = [{**v, "mmsi": None, "pinned": [p for p in v.get("pinned") or () if p != "mmsi"]} for v in vessels]
     counts = {"windows": 0, "schedule_matches": 0, "correct": 0, "false_matches": 0, "unverified": 0,
               "rival_reviews": 0}
-    for statics, seen, presence, at_sea, now_ms in windows:
+    for statics, seen, presence, at_sea, now_ms, *rest in windows:
         counts["windows"] += 1
         capped = {m: {p: min(n, 1) for p, n in ports.items()} for m, ports in presence.items()}
-        decision = decide(region, hidden, reviews, statics, seen, capped, {}, now_ms, at_sea=at_sea, reports=reports)
+        decision = decide(region, hidden, reviews, statics, seen, capped, {}, now_ms, at_sea=at_sea, reports=reports,
+                          in_port=rest[0] if rest else None)
         counts["rival_reviews"] += sum(1 for r in decision.reviews if r["proposal_json"].get("reason") == "schedule-rival")
         for row in decision.rows:
             if row["status"] != "watched" or row["match_method"] != SCHEDULE:
@@ -236,7 +240,7 @@ def precision(region, vessels: list[Mapping], reviews: list[Mapping], windows: I
 
 
 def _history_windows(region, store, first: date, last: date):
-    """``(statics, seen, presence, at_sea, now_ms)`` for consecutive 30-day windows of ``store``."""
+    """``(statics, seen, presence, at_sea, now_ms, in_port)`` for consecutive 30-day windows of ``store``."""
     from .match import SCAN_SLICE_MS, WINDOW_DAYS, MatchState   # lazy: match imports this module
 
     zone = ZoneInfo(region.timezone)
@@ -251,7 +255,7 @@ def _history_windows(region, store, first: date, last: date):
             positions = [p for table in ("positions", "discovery") for p in store.read_positions(k, z, table=table)]
             mstate.add(store.read_statics(k, z), positions, region.ports, zone)
         since = start.isoformat()
-        yield mstate.statics(), mstate.seen(since), mstate.presence(since), mstate.away(since), b
+        yield mstate.statics(), mstate.seen(since), mstate.presence(since), mstate.away(since), b, mstate.in_port(since)
         start = end + timedelta(days=1)
 
 

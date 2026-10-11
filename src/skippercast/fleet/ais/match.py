@@ -44,7 +44,7 @@ The processor (``process.py``) calls two hooks each scheduled run:
    the last ``lapse_days`` (30). The schedule is evidence of its own, so an unknown ship type or
    length does not block it; a contradicting length, a registry MMSI, two vessels
    of one name and a missing home port do. A rival -> an ``mmsi`` review
-   (``schedule-rival``, also for contradictions), never watched.
+   (``schedule-rival``); too many report days spent in port -> ``schedule-contradicted``; never watched.
 
 **The watched gate** (design § 11, #468 D18): a ``watched`` row needs a method in
 ``STRONG_METHODS`` (``fcc-uls``, ``geofence-presence``, ``admin``,
@@ -408,7 +408,8 @@ the days it was inside a port geofence (contradictions, schedule.py).
         waited = now_ms - min(first, _ms(before.get("first_seen_at")) or first) >= REVIEW_AFTER_DAYS * DAY
         matched = len(sched.matched) if sched is not None else None
         if rival:
-            review(v, mmsi, static, method, confidence, "schedule-rival", home_days, matched)
+            review(v, mmsi, static, method, confidence, "schedule-rival" if sched.rivals else "schedule-contradicted",
+                   home_days, matched)
         elif sched is not None and sched.qualifies and sched_blockers:
             review(v, mmsi, static, method, confidence, sched_blockers[0], home_days, matched)
         elif (blockers and home_days > 0) or (not v.port_id and waited) or (home_days > 0 and waited):
