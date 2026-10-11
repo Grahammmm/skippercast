@@ -86,6 +86,8 @@ export interface RegionalDailyFeed {
   readonly region_id: string;
   readonly sources: Readonly<Record<string, RegionalSource | undefined>>;
   readonly reports?: readonly LandingReport[];
+  /** The region's landing names (data branch feed); the fleet line counts only trips from these ports. */
+  readonly landing_names?: readonly string[];
 }
 export interface RegionalSource {
   readonly id: string;

@@ -3,21 +3,22 @@
 // the same pieces into the sheet (peek: headline; half: tiles and top pick;
 // full: everything).
 //
-// Data: the region's daily feed (/feeds/conditions/regions/<id>/latest.json,
-// loaded by loadDailyFeed), the regional forecast (/api/forecast?region=<id>,
-// edge-cached, loaded once per region by ensureRegionalForecast and shared
-// with the Conditions view; web/conditions.ts briefForecast samples it at the
+// Data: the region's daily feed (/feeds/data/regions/<id>/latest.json) with
+// the conditions feed's newer buoys first, both loaded by loadDailyFeed; the
+// regional forecast (/api/forecast?region=<id>, edge-cached, loaded once per
+// region by ensureRegionalForecast and shared with the Conditions view; web/conditions.ts briefForecast samples it at the
 // forecast point nearest the region centre) and, where web/coast-data.ts
 // admits a coast report for a bound place, that report. Without the forecast
 // the wind and swell tiles read unavailable rather than guessed; with an old
 // run they read stale with its age. Before the feed loads, or when it fails,
 // the brief keeps its empty state.
 import type {ComponentChildren} from 'preact';
-import {signal} from '@preact/signals';
+import {effect, signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
 import {dateKey} from '../../packages/coast/src/daily.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
-import {coastBinding, coastReport} from '../coast-data.ts';
+import {coastBinding, coastData, coastReport, type CoastData} from '../coast-data.ts';
+import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
@@ -33,15 +34,46 @@ export type {BriefModel};
 /** The region's daily feed once loaded; null before, or when it failed its identity check. */
 export const dailyFeed = signal<RegionalDailyFeed | null>(null);
 
-/** Load the daily feed for region `id`; a failed fetch or a feed for another region leaves the brief empty. */
-export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+/** The region's daily feed (`data` branch `regions/<id>/latest.json`): tides, advisories, chlorophyll, landing reports and their landing names. */
+export const dailyFeedPath = (id: string): string => `/feeds/data/regions/${encodeURIComponent(id)}/latest.json`;
+
+async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promise<RegionalDailyFeed | null> {
   try {
-    const response = await fetchFn(feedPath(undefined, id));
+    const response = await fetchFn(path);
     const json = response.ok ? await response.json() as Partial<RegionalDailyFeed> & {schema_version?: number} : null;
-    const ok = json?.schema_version === 1 && json.region_id === id && !!json.sources && typeof json.sources === 'object';
-    dailyFeed.value = ok ? json as RegionalDailyFeed : null;
-  } catch { dailyFeed.value = null; }
+    return json?.schema_version === 1 && json.region_id === id && !!json.sources && typeof json.sources === 'object' ? json as RegionalDailyFeed : null;
+  } catch { return null; }
+}
+
+/**
+ * The daily feed with the conditions feed's buoy observations first: the conditions run every 30
+ * minutes, the daily run once a day, so the regional brief's water tile reads the newer buoy
+ * (regionalReport takes the first observation source). Either feed alone stands when the other fails.
+ */
+export function mergeFeeds(daily: RegionalDailyFeed | null, conditions: RegionalDailyFeed | null): RegionalDailyFeed | null {
+  if (!daily || !conditions) return daily ?? conditions;
+  const buoys = Object.fromEntries(Object.entries(conditions.sources).filter(([, source]) => source?.kind === 'observation'));
+  return {...daily, sources: {...buoys, ...daily.sources}};
+}
+
+/** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
+export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+  const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
+  dailyFeed.value = mergeFeeds(daily, conditions);
   return dailyFeed.peek();
+}
+
+/**
+ * Ask the coast data client for the report wherever `place` binds one, whichever layers are on (the
+ * Swell and Water temp layers ask for the same place; the client requests once per place).
+ */
+export function bindBriefReport(place: () => CoastReportContext | null, data: Pick<CoastData, 'setPlace' | 'load'> = coastData): () => void {
+  return effect(() => {
+    const p = place();
+    if (!p) return;
+    data.setPlace(p);
+    void data.load('report');
+  });
 }
 
 /** The region's forecast feed at its chosen point once loaded; null before, when it failed, or for another region. */
@@ -98,9 +130,9 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
   const date = dateKey(new Date(pivot ?? now), info.timezone);
   try {
     const county = coast ? counties[coast.report.countyId] : undefined;
-    if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: info.name, daily: feed, limits});
+    if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: feed.landing_names ?? [], daily: feed, limits});
     const [lat, lon] = info.center;
-    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone, port: info.name}, profile: p, date, now, at: pivot, limits});
+    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone}, profile: p, date, now, at: pivot, limits});
   } catch { return null; }
 }
 

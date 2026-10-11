@@ -135,3 +135,32 @@ test('fleet line: absent with no report in seven days or no port', () => {
   assert.equal(fleetLine(montereyDaily.reports, '', 'America/Los_Angeles', now), null);
   assert.equal(fleetLine([{date: '2026-10-08', boat: 'A', port: 'Monterey'}], 'Monterey', 'America/Los_Angeles', now).text, '1 boat reported from Monterey in the last 7 days');
 });
+
+// FE-60 live check (#473): the county feed writes an advisory line for open beaches too.
+const beach = (status, advisory, fetchedAt = new Date(now.getTime() - 30 * 60_000).toISOString(), outcome = 'ok') => ({...report,
+  waterQuality: [{id: 'morro-rock', name: 'Morro Rock Beach', lat: 35.37, lon: -120.87, status, advisory, url: 'https://example.test/beach', areaId: 'central', fetchedAt, sampledAt: null}],
+  sources: [...report.sources, {id: 'slo-beach-water-quality', label: 'SLO County beach water quality', url: 'https://example.test/beach', kind: 'observation', outcome, fetchedAt}]});
+
+test('beach notice: an open beach with its "no advisory notes" line is no notice; an advisory, closure or warning is', () => {
+  const brief = r => buildCoastBrief({report: r, county: slo, areaId: 'central', profile: 'boat', date, now});
+  assert.equal(brief(beach('Beach Open', 'Beach Open · There are no advisory notes at this time.')).notice, null);
+  for (const status of ['Advisory', 'Beach Closed', 'Warning']) {
+    assert.deepEqual(brief(beach(status, `${status} · bacteria above state standards`)).notice,
+      {name: 'Morro Rock Beach', advisory: `${status} · bacteria above state standards`, url: 'https://example.test/beach'}, status);
+  }
+  // As v1: only while the county source fetched cleanly within 3 h.
+  assert.equal(brief(beach('Advisory', 'Advisory', new Date(now.getTime() - 4 * 3_600_000).toISOString())).notice, null);
+  assert.equal(brief(beach('Advisory', 'Advisory', undefined, 'error')).notice, null);
+});
+
+test('fleet line: the daily feed\'s landing names pick the region\'s own trips, short names matching the publisher\'s ports', () => {
+  const reports = [{date: '2026-10-07', boat: 'Avenger', port: 'Morro Bay'}, {date: '2026-10-06', boat: 'Flying Fish', port: 'Avila Beach'},
+    {date: '2026-10-07', boat: 'Elsewhere', port: 'Santa Cruz'}, {date: '2026-10-07', boat: 'Not Avila', port: 'Avilaville'}];
+  assert.deepEqual(fleetLine(reports, ['Morro Bay', 'Avila'], 'America/Los_Angeles', now),
+    {count: 2, port: 'Morro Bay & Avila Beach', text: '2 boats reported from Morro Bay & Avila Beach in the last 7 days', href: '/report'});
+  assert.equal(fleetLine(reports, ['Monterey', 'Carmel'], 'America/Los_Angeles', now), null, 'another region\'s landings take none of these trips');
+  const daily = {...montereyDaily, landing_names: ['Morro Bay', 'Avila'], reports};
+  const morro = {...montereyPlace, name: 'Morro Bay & Avila', port: undefined};
+  assert.equal(buildRegionalBrief({daily, forecast: montereyForecast, place: morro, profile: 'boat', date, now}).fleet?.count, 2);
+  assert.equal(buildBrief({context: morroContext, coast: {report, county: slo}, regional: {daily, forecast: montereyForecast, place: morro}, profile: 'boat', date, now}).fleet?.count, 2);
+});
