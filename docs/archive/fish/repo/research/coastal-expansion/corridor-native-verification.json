@@ -1,0 +1,417 @@
+{
+  "checkedAssets": 7149,
+  "finiteContext": true,
+  "originalSurveyComparisons": [
+    {
+      "sourceId": 14,
+      "sampleNominalDepthM": 157.552490234375,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 14,
+      "sampleNominalDepthM": 147.03118896484375,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 14,
+      "sampleNominalDepthM": 113.06239318847656,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 14,
+      "sampleNominalDepthM": 96.61919403076172,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 14,
+      "sampleNominalDepthM": 99.60039520263672,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 10,
+      "sampleNominalDepthM": 470.35418701171875,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 10,
+      "sampleNominalDepthM": 472.1709899902344,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 10,
+      "sampleNominalDepthM": 405.6492919921875,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 10,
+      "sampleNominalDepthM": 539.4276123046875,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 10,
+      "sampleNominalDepthM": 436.4906005859375,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 11,
+      "sampleNominalDepthM": 407.45599365234375,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 11,
+      "sampleNominalDepthM": 427.61199951171875,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 11,
+      "sampleNominalDepthM": 391.3695983886719,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 11,
+      "sampleNominalDepthM": 356.4435119628906,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 11,
+      "sampleNominalDepthM": 389.4562072753906,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 13,
+      "sampleNominalDepthM": 54.58384323120117,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 16,
+      "sampleNominalDepthM": 36.77165603637695,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 13,
+      "sampleNominalDepthM": 42.427093505859375,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 16,
+      "sampleNominalDepthM": 36.77165603637695,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 13,
+      "sampleNominalDepthM": 53.6757698059082,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 16,
+      "sampleNominalDepthM": 38.84689712524414,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 13,
+      "sampleNominalDepthM": 64.67404174804688,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 9,
+      "sampleNominalDepthM": 72.03600311279297,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 13,
+      "sampleNominalDepthM": 68.51614379882812,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 9,
+      "sampleNominalDepthM": 72.66471099853516,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 16,
+      "sampleNominalDepthM": 36.1754150390625,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 16,
+      "sampleNominalDepthM": 35.57058334350586,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 9,
+      "sampleNominalDepthM": 82.8408432006836,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 9,
+      "sampleNominalDepthM": 80.67684936523438,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 9,
+      "sampleNominalDepthM": 81.65916442871094,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 18,
+      "sampleNominalDepthM": 19.224924087524414,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 18,
+      "sampleNominalDepthM": 11.007393836975098,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 18,
+      "sampleNominalDepthM": 18.742708206176758,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 18,
+      "sampleNominalDepthM": 14.998283386230469,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 18,
+      "sampleNominalDepthM": 15.001890182495117,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 12,
+      "sampleNominalDepthM": 45.388973236083984,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 15,
+      "sampleNominalDepthM": 34.40397262573242,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 17,
+      "sampleNominalDepthM": 14.7839937210083,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 12,
+      "sampleNominalDepthM": 51.436153411865234,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 15,
+      "sampleNominalDepthM": 36.96610641479492,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 17,
+      "sampleNominalDepthM": 18.085893630981445,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 12,
+      "sampleNominalDepthM": 50.294681549072266,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 15,
+      "sampleNominalDepthM": 22.604759216308594,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 17,
+      "sampleNominalDepthM": 15.652639389038086,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 12,
+      "sampleNominalDepthM": 40.787353515625,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 15,
+      "sampleNominalDepthM": 36.59793472290039,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 17,
+      "sampleNominalDepthM": 9.470744132995605,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 12,
+      "sampleNominalDepthM": 40.20063400268555,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 15,
+      "sampleNominalDepthM": 31.137344360351562,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 17,
+      "sampleNominalDepthM": 12.423006057739258,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 8,
+      "sampleNominalDepthM": 83.12833404541016,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 8,
+      "sampleNominalDepthM": 83.98184204101562,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 8,
+      "sampleNominalDepthM": 85.32892608642578,
+      "displaySpacingM": 8,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 8,
+      "sampleNominalDepthM": 84.05693054199219,
+      "displaySpacingM": 128,
+      "originalValueWithinOneNativeCell": true
+    },
+    {
+      "sourceId": 8,
+      "sampleNominalDepthM": 81.68477630615234,
+      "displaySpacingM": 32,
+      "originalValueWithinOneNativeCell": true
+    }
+  ],
+  "maskChecks": [
+    {
+      "sourceId": 8,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 9,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 10,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 11,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 12,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 13,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 14,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 15,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 16,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 17,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    },
+    {
+      "sourceId": 18,
+      "nodataAndDatasetMaskAgree": true,
+      "finiteMaskedPixels": 0
+    }
+  ],
+  "originalSloChartSurveyLidarSamplesPreserved": 7622263,
+  "sourceIdsObserved": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "notice": "Display sampling preserves original normalized values within one native cell of independent horizontal projection. This is not a calibrated accuracy estimate."
+}

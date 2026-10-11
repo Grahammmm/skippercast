@@ -1,0 +1,51 @@
+{
+  "verifiedAt": "2026-10-07T01:40:02.722Z",
+  "localReportMatchesPublishedSnapshot": true,
+  "reportGeneratedAt": "2026-10-07T01:17:19.117Z",
+  "originalObservations": [
+    {
+      "stationId": "46215",
+      "observedAt": "2026-10-07T00:26:00.000Z"
+    },
+    {
+      "stationId": "46028",
+      "observedAt": "2026-10-07T00:50:00.000Z"
+    }
+  ],
+  "latestTrip": "2026-10-05",
+  "desktopChecks": [
+    "compact pin click opens original depth/score/fit",
+    "same selected facts in 2D and 3D",
+    "wide habitat areas hide unselected pins",
+    "local SLO metrics and forecast time slider",
+    "outside SLO geography explicitly unintegrated",
+    "forecast/tide charts",
+    "history metric change",
+    "dated fleet facts",
+    "source confidence navigation",
+    "ranked Monterey reef jump updates Point Sur title, URL and unsupported local forecast notice",
+    "Morro reset restores location URL and original SLO report binding",
+    "Hearst sandy-shore selection updates Cambria/San Simeon report geography"
+  ],
+  "mobileViewport": [
+    390,
+    844
+  ],
+  "mobileChecks": [
+    "method/day controls",
+    "spear depth default60ft",
+    "layers expand/collapse",
+    "buoy cards and original clocks",
+    "report dialog layout"
+  ],
+  "automatedTests": 225,
+  "typeScriptConfigurations": 2,
+  "shortWindow": {
+    "viewport": [
+      640,
+      360
+    ],
+    "sceneHeight": 440,
+    "pageHeight": 622
+  }
+}

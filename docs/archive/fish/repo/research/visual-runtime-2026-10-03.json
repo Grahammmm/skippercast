@@ -1,0 +1,104 @@
+{
+  "checkedAt": "2026-10-03T03:02:13.208Z",
+  "checks": [
+    {
+      "path": "/api/report",
+      "status": 200,
+      "generatedAt": "2026-10-03T02:42:57.869Z",
+      "snapshotMatch": true
+    },
+    {
+      "path": "/api/ocean",
+      "status": 200,
+      "generatedAt": "2026-10-03T02:42:57.908Z",
+      "snapshotMatch": true
+    },
+    {
+      "path": "/api/history",
+      "status": 200,
+      "generatedAt": "2026-10-03T02:42:56.767Z",
+      "snapshotMatch": true
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "generatedAt": "2026-10-03T02:42:57.869Z"
+    }
+  ],
+  "all65AnnualBaselinesCatalogsAndOriginalReceiptsPreserved": true,
+  "murOriginalLayerAndClocksPreserved": true,
+  "retainedCatchFactsAndTripDatesPreserved": true,
+  "omittedPriorTrips": [],
+  "verificationCorrection": "Initial same-edition assertion rejected an actual new upstream edition; independently reviewed omissions are recorded separately.",
+  "report": {
+    "catchCount": 19,
+    "catchContext": {
+      "feedUrl": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+      "feedGeneratedAt": "2026-10-03T00:56:02Z",
+      "receivedAt": "2026-10-03T02:42:56.796Z",
+      "windowStart": "2026-09-02",
+      "windowEnd": "2026-10-01",
+      "latestTripDate": "2026-10-01",
+      "rights": {
+        "scope": "linked-factual-counts",
+        "reviewedAt": "2026-09-21",
+        "sourceCatalogUrl": "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
+      }
+    },
+    "observations": [
+      {
+        "id": "46215",
+        "at": "2026-10-03T01:56:00.000Z"
+      },
+      {
+        "id": "46028",
+        "at": "2026-10-03T02:20:00.000Z"
+      }
+    ],
+    "nwsIssuedAt": [
+      {
+        "at": "2026-10-02T22:31:34.000Z"
+      },
+      {
+        "at": "2026-10-02T22:31:34.000Z"
+      },
+      {
+        "at": "2026-10-02T22:31:34.000Z"
+      }
+    ]
+  },
+  "ocean": {
+    "cloudObservedAt": "2026-10-03T02:38:00.000Z",
+    "currents": [
+      {
+        "id": "wcofs",
+        "kind": "forecast",
+        "issuedAt": "2026-10-02T03:00:00.000Z",
+        "sampleAt": null,
+        "fetchedAt": "2026-10-03T01:12:36.000Z"
+      },
+      {
+        "id": "hfr-1",
+        "kind": "observation",
+        "issuedAt": null,
+        "sampleAt": "2026-10-02T22:00:00.000Z",
+        "fetchedAt": "2026-10-03T01:12:33.000Z"
+      }
+    ]
+  },
+  "history": {
+    "stations": [
+      {
+        "id": "46215",
+        "baselineYears": 22,
+        "latestObservation": "2026-10-03T01:56:00.000Z"
+      },
+      {
+        "id": "46028",
+        "baselineYears": 43,
+        "latestObservation": "2026-10-03T02:20:00.000Z"
+      }
+    ]
+  },
+  "scope": "Actual local backend verification; no browser rendering or cloud publication claim"
+}
