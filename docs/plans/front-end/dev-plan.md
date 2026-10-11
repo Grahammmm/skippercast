@@ -52,11 +52,11 @@ Rules for every task:
 
 | Status | Count | Tasks |
 | --- | --- | --- |
-| DONE (Claude, Phase 0) | 8 | FE-01 … FE-06, FE-08, FE-09 |
+| DONE (Claude, Phase 0) | 9 | FE-01 … FE-09 |
 | DONE on `main` by Codex | 0 | none whole; Codex's pieces are listed under PARTLY |
 | PARTLY on `main` | 5 | FE-31, FE-35, FE-36, FE-51, FE-52 |
 | CHANGED (consume `packages/coast` or the bridge) | 27 | FE-10, FE-11, FE-12, FE-14, FE-15, FE-16, FE-18, FE-20, FE-22, FE-23, FE-25, FE-27, FE-30, FE-32, FE-33, FE-34, FE-37, FE-40 … FE-45, FE-54, FE-60, FE-61, FE-62 |
-| STILL NEEDED as written | 8 | FE-07, FE-17, FE-19, FE-21, FE-24, FE-50, FE-53, FE-55 |
+| STILL NEEDED as written | 7 | FE-17, FE-19, FE-21, FE-24, FE-50, FE-53, FE-55 |
 | DROPPED | 2 | FE-13, FE-26 |
 | NEW | 17 | FE-70 … FE-86 |
 
@@ -82,7 +82,7 @@ Merged as [#359](https://github.com/Grahammmm/skippercast/pull/359). The map sta
 Merged as [#362](https://github.com/Grahammmm/skippercast/pull/362); Codex adjusted its e2e hour test in [#391](https://github.com/Grahammmm/skippercast/pull/391).
 
 ### FE-07 · Landing page (static shoreline) · L
-- Status: STILL NEEDED. Agent: Claude.
+- Status: DONE (#421). Agent: Claude. Later work on the same files: FE-25 (#494, the night map over this SVG), FE-20 (#504, layer dots) and FE-52 (#533, nav "Reports" now opens the app's Reports view instead of `/report`).
 - Depends: — (FE-05, FE-08 merged)
 - Files: `dist/landing.html`, `web/landing/{Landing,Readout,ProfilePills,LayerDots,Shoreline}.tsx`, `web/landing/landing.css`, `web/landing/main.tsx`, `e2e/v2-landing.spec.ts`, `scripts/startup-budget.json` (landing entry).
 - Build: § 7 layout with the static shoreline SVG (the region's shoreline GeoJSON drawn inline with the glow treatment; FE-25 adds the live map and keeps this as the fallback); readings from the default region's SkipperCast feeds with source and age; saved-port redirect; layer dots bound to the registry ids as links into `/map?layers=`; nav "Reports" links to the existing `/report` page (Codex, #395) until FE-52, "How it's built" to `/sources` (Q16).
