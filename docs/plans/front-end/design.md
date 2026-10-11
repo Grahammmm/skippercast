@@ -923,7 +923,7 @@ keeps the reload until FE-61.
 | Depth limit | 300 ft | none (shore runs) | 60 ft |
 | Species list | region species whose plans have a boat method | surfperch, halibut and region species with a shore method | region species with a dive method within 60 ft |
 | "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by the protected-area check and conditions; review dates do not set guidance priority; source publication visibility still applies (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first |
-| Swell tile | offshore buoy / forecast | nearest fresh nearshore model site | nearest fresh nearshore model site |
+| Swell tile | offshore buoy / forecast | nearest fresh nearshore model site, with the hour's surf band (shore conditions below) | nearest fresh nearshore model site, with the hour's surge band |
 | Default layers | Seafloor, Currents | Swell, Water temp | Seafloor, Swell |
 | Caveat | "Habitat describes a place to look; fish presence is unverified." | "Offshore seas do not measure breakers at your beach; check surf, access and water quality." | "In-water visibility is unverified; surface currents cannot clear a dive." |
 | Search plans | plans with boat methods | plans with shore methods | plans with dive methods |
@@ -947,6 +947,27 @@ fewer than 36 h of the swell look-back are sampled, clarity is capped at
 "fair" and the gap is listed; the chlorophyll value is an offshore area
 average and the brief says so. All
 thresholds are in the `SPEAR` table with their reasoning.
+
+Shore conditions (issue #542, `packages/coast/src/shore-conditions.ts`):
+the shore brief scores each forecast hour for surf (significant height from
+the nearshore model sample when fresh, else the offshore forecast's seas as
+an "offshore estimate" against its own 3/6/9 ft bands), a sneaker-wave caution when a
+swell of 1.5 ft or more runs at 14 s or longer, on the nearshore path too
+when the offshore swell partition qualifies though the nearshore peak period
+is short (it raises the score and the hour is never "Calmer"), wind (speed band, and onshore, offshore or
+cross-shore from the forecast direction against a vetted seaward bearing
+for that stretch of coast, read approximately from a chart: Morro Bay 260°,
+Cambria and San Simeon 230°, none for Avila and Pismo, which face south and
+west, or for regional places; speed only where the bearing or direction is
+missing, and the brief says so), tide phase (the rising tide and an hour either side of high are a
+mild bonus, an angler rule of thumb rather than a guarantee; a predicted
+height at or below 0 ft MLLW is flagged for rock access, not scored) and a
+mild dawn or dusk bonus. Each hour reads Calmer, Marginal, Rough or Unknown
+with reasons. The headline is the day's surf range and the calmest daylight
+hour, or "sneaker-wave risk"; status is Caution with long-period swell or no
+calmer or marginal daylight hour; shore windows use surf rather than the 3 ft
+offshore rule where a fresh nearshore model covers the hour. All thresholds
+are in the `SHORE` table with their reasoning.
 
 ## 9. Map layers
 
@@ -1026,6 +1047,7 @@ profile. Outputs:
   name; after sunset today → "One last look. Plan the morning."; max seas
   ≥ 5 ft → "Swell sets the terms today."; max wind ≥ 12 kt → "Find your
   water before the wind."; spear → the day's surge range and clarity estimate ("Low surge · Clarity estimate: fair");
+  shore → the day's surf range and calmest daylight hour ("Small surf · calmer at 7 AM", "(offshore estimate)" without a nearshore model, "sneaker-wave risk" with long-period swell);
   otherwise "A clearer picture of your coast." Rules are data in
   `daily.ts` with a table test.
 - **Deck** sentence: wind range, seas range and period, plus the

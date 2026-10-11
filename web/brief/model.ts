@@ -69,8 +69,10 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     ?? nearest((forecast?.hours ?? []).filter(item => dateKey(item.at, county.timezone) === daily.date), pivot);
   const issued = forecastSource?.issuedAt ?? null;
   const direction = compass(hour?.windDirectionDeg);
+  // Shore adds the surf, wind side and tide phase of the selected hour (packages/coast shore-conditions.ts).
+  const shoreHour = daily.shore && hour ? daily.shore.hours.find(item => item.at === hour.at) : undefined;
   const wind = tile('wind', 'Wind', hour?.windKnots ?? null, 'kt',
-    [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null].filter(Boolean).join(' · '),
+    [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null, shoreHour?.wind.side ?? null].filter(Boolean).join(' · '),
     forecastSource, issued, TILE_LIMIT_MS.wind, now);
 
   let swell: BriefTile;
@@ -84,7 +86,9 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     // Spear adds the surge band of the selected hour (packages/coast spear.ts).
     const surgeHour = daily.spear && hour ? daily.spear.hours.find(item => item.at === hour.at) : undefined;
     const surge = surgeHour && surgeHour.surge.band !== 'Unknown' ? ` · ${surgeHour.surge.band.toLowerCase()} surge` : '';
-    swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${point.periodS} s · ` : ''}${site.name}` : 'No nearshore model site') + surge,
+    const surf = shoreHour && shoreHour.surf.band !== 'Unknown'
+      ? ` · ${shoreHour.surf.band.toLowerCase()} surf${shoreHour.surf.basis === 'offshore' ? ' (offshore estimate)' : ''}${shoreHour.surf.sneaker ? ' · long-period swell' : ''}` : '';
+    swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${point.periodS} s · ` : ''}${site.name}` : 'No nearshore model site') + surge + surf,
       site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now);
   }
 
@@ -98,7 +102,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const curvePoint = nearest(daily.tides, pivot);
   const nextEvent: TideEvent | undefined = curvePoint ? undefined : [...report.tideEvents].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).find(item => Date.parse(item.at) >= pivot);
   const tide = tile('tide', 'Tide', curvePoint?.heightFt ?? nextEvent?.heightFt ?? null, 'ft',
-    curvePoint ? [tideTrend(daily.tides, pivot), county.tideStation.name, datum].filter(Boolean).join(' · ')
+    curvePoint ? [tideTrend(daily.tides, pivot), shoreHour?.tide.veryLow ? 'very low' : null, county.tideStation.name, datum].filter(Boolean).join(' · ')
       : nextEvent ? `next ${nextEvent.type === 'H' ? 'high' : 'low'} · ${county.tideStation.name} · ${datum}` : TIDE_UNAVAILABLE,
     tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now);
 
@@ -108,7 +112,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 

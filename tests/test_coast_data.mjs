@@ -361,7 +361,11 @@ test('the fixture report passes packages/coast readiness in every county area', 
     assert.equal(days.length, 3, area.id);
     for (const mode of ['boat', 'shore']) {
       const brief = buildDaily(report, slo, area, mode, days[0].date, now);
-      assert.deepEqual(brief.missing, [mode === 'boat' ? 'Harbor entrance and full return route need a separate check' : 'Breaking surf, beach access and water quality need a local check'], area.id);
+      // Shore also lists its offshore surf estimate (the fixture carries no nearshore model) and, for Avila and Pismo, the
+      // missing shoreline bearing (#542).
+      const shore = ['Breaking surf, beach access and water quality need a local check', 'Surf is an offshore estimate where no fresh nearshore model covers the hour',
+        ...(area.id === 'south' ? ['Wind side unknown for this stretch of coast; wind judged on speed only'] : [])];
+      assert.deepEqual(brief.missing, mode === 'boat' ? ['Harbor entrance and full return route need a separate check'] : shore, area.id);
       assert.ok(brief.hours.length && brief.tides.length && brief.tideEvents.length && brief.tempObservation, area.id);
     }
     assert.equal(assess(report, area, 'boat', now, slo.timezone).status, 'Caution', 'the active advisory, not missing data');
