@@ -16,9 +16,16 @@ named the vessel at its home port:
   qualify when there are at least ``thresholds.match.schedule.min_days`` of them
   and the first and last are at least ``min_span_days`` apart, counting both
   ends (5 days over 14 in CA);
-- a *rival* is another vessel of the same home port with reports on at least
-  ``min_days`` of those matched days: the schedule cannot tell the two boats
-  apart, so the pair goes to an ``mmsi`` review and is never watched.
+- a *rival* is another vessel of the same home port whose own matched days
+  (its report days that are also at-sea days) come within ``min_lead`` of this
+  vessel's: the schedule cannot tell the two boats apart, so the pair goes to an
+  ``mmsi`` review and is never watched. Promotion needs a lead of at least
+  ``min_lead`` (3) over every other vessel of the port;
+- a *contradiction* is a day the vessel filed a report while the MMSI was in a
+  port geofence all day (in port, no position at sea). More than
+  ``max_contradictions`` (1) never promotes;
+- a watched schedule row lapses to candidate when none of its matched days falls
+  in the last ``lapse_days`` (30).
 
 ``match.decide`` applies the result; this module holds the pure parts, the feed
 loader the processor uses, and ``schedule-precision`` (``python -m
@@ -59,12 +66,16 @@ log = logging.getLogger("skippercast.fleet.ais.schedule")
 class Rules:
     min_days: int
     min_span_days: int
+    min_lead: int = 3
+    max_contradictions: int = 1
+    lapse_days: int = 30
 
 
 def rules(region) -> Rules:
     """``thresholds.match.schedule`` of a fleet region."""
     raw = region.thresholds["match"]["schedule"]
-    return Rules(int(raw["min_days"]), int(raw["min_span_days"]))
+    return Rules(int(raw["min_days"]), int(raw["min_span_days"]), int(raw["min_lead"]),
+                 int(raw["max_contradictions"]), int(raw["lapse_days"]))
 
 
 @dataclass(frozen=True)
@@ -73,11 +84,13 @@ class Correlation:
     matched: tuple[str, ...]      # region-local ISO days, sorted
     span_days: int
     qualifies: bool
-    rivals: tuple[str, ...]       # other vessels of the home port reporting on min_days of the matched days
+    rivals: tuple[str, ...]       # other vessels of the home port whose matched days come within min_lead of ours
+    contradictions: int = 0       # report days on which the MMSI was in port and not at sea
+    contradicted: bool = False    # more of them than max_contradictions
 
     @property
     def promotes(self) -> bool:
-        return self.qualifies and not self.rivals
+        return self.qualifies and not self.rivals and not self.contradicted
 
 
 def span_days(days: Iterable[str]) -> int:
@@ -89,18 +102,27 @@ def span_days(days: Iterable[str]) -> int:
 
 
 def correlate(vessel_id: str, at_sea: Iterable[str], reports: Mapping[str, Iterable[str]],
-              port_of: Mapping[str, str | None], rule: Rules) -> Correlation:
-    """One MMSI's at-sea days against ``vessel_id``'s report days (module docstring)."""
-    matched = tuple(sorted(set(at_sea) & set(reports.get(vessel_id, ()))))
+              port_of: Mapping[str, str | None], rule: Rules, in_port: Iterable[str] = ()) -> Correlation:
+    """One MMSI's at-sea days against ``vessel_id``'s report days (module docstring).
+
+    ``in_port`` are the days the MMSI was inside a port geofence. Rivals and
+    contradictions are judged whenever there is a matched day, so they can undo
+    a watched row whose evidence has aged below ``min_days``.
+    """
+    sea = set(at_sea)
+    own = set(reports.get(vessel_id, ()))
+    matched = tuple(sorted(sea & own))
     span = span_days(matched)
     qualifies = len(matched) >= rule.min_days and span >= rule.min_span_days
     home = port_of.get(vessel_id)
     rivals: tuple[str, ...] = ()
-    if qualifies and home:
+    if matched and home:
         rivals = tuple(sorted(other for other, days in reports.items()
                               if other != vessel_id and port_of.get(other) == home
-                              and len(set(days) & set(matched)) >= rule.min_days))
-    return Correlation(vessel_id, matched, span, qualifies, rivals)
+                              and len(matched) - len(sea & set(days)) < rule.min_lead))
+    contradictions = len(own & (set(in_port) - sea))
+    return Correlation(vessel_id, matched, span, qualifies, rivals, contradictions,
+                       contradictions > rule.max_contradictions)
 
 
 # ---------------------------------------------------------------- landing reports

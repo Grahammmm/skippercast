@@ -1099,7 +1099,10 @@
       "mmsi_auto": 0.85,
       "schedule": {
         "min_days": 5,
-        "min_span_days": 14
+        "min_span_days": 14,
+        "min_lead": 3,
+        "max_contradictions": 1,
+        "lapse_days": 30
       }
     },
     "refresh": {

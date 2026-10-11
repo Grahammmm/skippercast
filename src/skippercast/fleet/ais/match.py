@@ -36,13 +36,15 @@ The processor (``process.py``) calls two hooks each scheduled run:
 4. *Schedule* (``schedule.py``). A stage-2 candidate whose at-sea days coincide
    with landing reports naming its vessel at the vessel's home port on at least
    ``thresholds.match.schedule.min_days`` days spanning ``min_span_days`` (5 over
-   14 in CA), seen in that home port at least once, with no rival vessel of the
-   same port reporting on those days -> ``watched`` at ``mmsi_auto`` or more
-   (``schedule-correlation``); it stays watched while the name matches and no
-   rival appears. The schedule is evidence of its own, so an unknown ship type or
+   14 in CA), seen in that home port at least once, leading every other vessel
+   of the port by ``min_lead`` (3) matched days and with at most
+   ``max_contradictions`` (1) report days spent in port -> ``watched`` at
+   ``mmsi_auto`` or more (``schedule-correlation``); it stays watched while the
+   name matches, no rival or contradiction appears and a matched day falls in
+   the last ``lapse_days`` (30). The schedule is evidence of its own, so an unknown ship type or
    length does not block it; a contradicting length, a registry MMSI, two vessels
    of one name and a missing home port do. A rival -> an ``mmsi`` review
-   (``schedule-rival``), never watched.
+   (``schedule-rival``, also for contradictions), never watched.
 
 **The watched gate** (design § 11, #468 D18): a ``watched`` row needs a method in
 ``STRONG_METHODS`` (``fcc-uls``, ``geofence-presence``, ``admin``,
@@ -216,18 +218,21 @@ class _Vessel:
 def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], statics: Mapping[int, Static],
            seen: Mapping[int, Seen], presence: Mapping[int, Mapping[str, int]], prior: Mapping[int, Mapping],
            now_ms: int, *, at_sea: Mapping[int, Iterable[str]] | None = None,
-           reports: Mapping[str, Iterable[str]] | None = None) -> Decision:
+           reports: Mapping[str, Iterable[str]] | None = None,
+           in_port: Mapping[int, Iterable[str]] | None = None) -> Decision:
     """Watch rows, ``ais`` facts, ``mmsi`` reviews and targets for one run (module docstring).
 
     ``presence[mmsi][port_id]`` is the number of distinct region-local days in the
     last 30 the MMSI was inside that port's geofence; ``prior`` the Worker's rows by
     MMSI. Rows go out only for MMSIs heard on AIS. ``at_sea[mmsi]`` (region-local
     days at sea) and ``reports[vessel_id]`` (days a landing report named the vessel
-    at its home port) feed stage 4; without both there is no schedule evidence.
+    at its home port) feed stage 4; without both there is no schedule evidence. ``in_port[mmsi]`` are
+the days it was inside a port geofence (contradictions, schedule.py).
     """
     auto = float(region.thresholds["match"]["mmsi_auto"])
     rule = schedule_rules(region)
     now = _iso(now_ms)
+    lapse_day = _day(now_ms - rule.lapse_days * DAY, ZoneInfo(region.timezone))
     fleet = [_Vessel(v) for v in vessels if v.get("status") != "excluded"]
     by_id = {v.id: v for v in fleet}
     port_of = {v.id: v.port_id for v in fleet}
@@ -383,12 +388,16 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         # Stage 4: the schedule. Unknown statics do not block it; everything else that blocks stage 3 does.
         sched = None
         if at_sea is not None and reports is not None and v.port_id:
-            sched = correlate(v.id, at_sea.get(mmsi, ()), reports, port_of, rule)
+            sched = correlate(v.id, at_sea.get(mmsi, ()), reports, port_of, rule, (in_port or {}).get(mmsi, ()))
         sched_blockers = [b for b in blockers if b not in UNKNOWN_BLOCKERS]
         if sched is not None and home_days == 0:
             sched_blockers.append("never-in-home-port")
-        rival = sched is not None and bool(sched.rivals)
-        if not sched_blockers and not rival and ((sched is not None and sched.qualifies) or (sticky and by_schedule)):
+        held = sticky and by_schedule
+        if held and sched is not None and not any(d >= lapse_day for d in sched.matched):
+            held = False   # a watched schedule row with no matched day lately lapses to candidate
+        undone = sched is not None and (bool(sched.rivals) or sched.contradicted)   # also undoes a held row
+        rival = undone and (sched.qualifies or (sticky and by_schedule))
+        if not sched_blockers and not undone and ((sched is not None and sched.qualifies) or held):
             confidence = max(auto, CONFIDENCE[SCHEDULE])
             row(mmsi, v.id, SCHEDULE, confidence, "watched", static, sight)
             facts(v, mmsi, static, confidence, name_ok=v.names_agree(static), call_ok=v.call_agrees(static))
@@ -469,6 +478,13 @@ class MatchState:
         for mmsi, port, n in self.db.execute("SELECT mmsi, port_id, COUNT(*) FROM match_presence WHERE day>=? "
                                              "GROUP BY mmsi, port_id", (since_day,)):
             out.setdefault(mmsi, {})[port] = n
+        return out
+
+    def in_port(self, since_day: str) -> dict[int, set[str]]:
+        """Region-local days each MMSI was inside any port geofence."""
+        out: dict[int, set[str]] = {}
+        for mmsi, day in self.db.execute("SELECT mmsi, day FROM match_presence WHERE day>=?", (since_day,)):
+            out.setdefault(mmsi, set()).add(day)
         return out
 
     def away(self, since_day: str) -> dict[int, set[str]]:
@@ -637,7 +653,7 @@ def match(ctx) -> dict[int, VesselRef]:
                               before.get("last_seen_source"), int(before.get("positions_30d") or 0))
     reports = load_report_days(ctx.region, vessels)   # None when no feed could be read: no schedule evidence
     decision = decide(ctx.region, vessels, reviews, statics, seen, mstate.presence(since), prior, ctx.now_ms,
-                      at_sea=mstate.away(since), reports=reports)
+                      at_sea=mstate.away(since), reports=reports, in_port=mstate.in_port(since))
     pushed = push(ctx, decision)
     refreshed = refresh_watch(ctx)
     log.info("match: scanned %s; %s; watch.json %s", scanned, pushed, refreshed)

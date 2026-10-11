@@ -52,7 +52,7 @@ BASE = {
                      'troll': {'min_sog_kn': 4.0, 'max_sog_kn': 9.0, 'max_straightness': 0.6,
                                'min_heading_variance': 0.35, 'min_minutes': 15}},
         'match': {'auto_merge': 0.9, 'review_min': 0.6, 'mmsi_auto': 0.85,
-                  'schedule': {'min_days': 5, 'min_span_days': 14}},
+                  'schedule': {'min_days': 5, 'min_span_days': 14, 'min_lead': 3, 'max_contradictions': 1, 'lapse_days': 30}},
         'refresh': {'vanished_after_runs': 3, 'vanished_after_days': 45, 'osint_stale_days': 60, 'fact_stale_days': 120},
         'retention': {'raw_days': 30, 'discovery_days': 7, 'static_days': 90},
         'aggregate': {'module': 'grid', 'resolution_m': 1000, 'min_distinct_vessels': None, 'delay_hours': None},

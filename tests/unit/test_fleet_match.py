@@ -359,7 +359,7 @@ class ScheduleTests(unittest.TestCase):
         return {int(r["mmsi"]): r for r in decision.rows}
 
     def test_thresholds_come_from_the_region(self):
-        self.assertEqual(schedule.rules(REGION), schedule.Rules(5, 14))
+        self.assertEqual(schedule.rules(REGION), schedule.Rules(5, 14, 3, 1, 30))
         self.assertEqual(schedule.span_days(TWO_WEEKS), 14)
         self.assertEqual(schedule.span_days(ONE_WEEK), 5)
         self.assertEqual(schedule.span_days([]), 0)
@@ -404,13 +404,52 @@ class ScheduleTests(unittest.TestCase):
         again = self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS)}, reports=reports, vessels=vessels,
                             prior={CANDIDATE: watched})
         self.assertEqual(self.rows(again)[CANDIDATE]["status"], "candidate")
-        # Another port's boat on the same days is no rival; nor is one sharing fewer than min_days of them.
+        # Another port's boat on the same days is no rival.
         elsewhere = fleet() + [vessel(RIVAL, "Rival Example", port="port-b")]
         self.assertEqual(self.rows(self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS)}, reports=reports,
                                                vessels=elsewhere))[CANDIDATE]["status"], "watched")
-        few = {SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:4])}
-        self.assertEqual(self.rows(self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS)}, reports=few,
-                                               vessels=vessels))[CANDIDATE]["status"], "watched")
+        sea = {CANDIDATE: set(TWO_WEEKS)}
+        close = self.decide([boat], at_sea=sea, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:4])}, vessels=vessels)
+        self.assertEqual((self.rows(close)[CANDIDATE]["status"], [r["proposal_json"]["reason"] for r in close.reviews]),
+                         ("candidate", ["schedule-rival"]), "5 matched days against 4: a lead of 1 is no lead")
+        clear = self.decide([boat], at_sea=sea, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:2])}, vessels=vessels)
+        self.assertEqual((self.rows(clear)[CANDIDATE]["status"], clear.reviews), ("watched", []), "5 against 2: a lead of 3")
+
+    def test_days_in_port_with_a_report_count_against_the_match(self):
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        sea, reports = {CANDIDATE: set(TWO_WEEKS)}, {SEA: set(TWO_WEEKS) | {"2026-10-01", "2026-10-02"}}
+
+        def run(in_port):
+            statics = {boat.mmsi: boat}
+            seen = {boat.mmsi: Seen(T0 - 20 * DAY, T0, "aisstream", 400)}
+            return decide(REGION, fleet(), (), statics, seen, {CANDIDATE: {"port-a": 1}}, {}, NOW, at_sea=sea,
+                          reports=reports, in_port={CANDIDATE: in_port})
+        one = run({"2026-10-01"})
+        self.assertEqual(self.rows(one)[CANDIDATE]["status"], "watched", "one contradiction is tolerated")
+        two = run({"2026-10-01", "2026-10-02"})
+        self.assertEqual((self.rows(two)[CANDIDATE]["status"], [r["proposal_json"]["reason"] for r in two.reviews]),
+                         ("candidate", ["schedule-rival"]))
+        # A day in port that was also a day at sea (arrived that day) is no contradiction.
+        self.assertEqual(self.rows(run(set(TWO_WEEKS)))[CANDIDATE]["status"], "watched")
+
+    def test_a_watched_schedule_row_is_undone_by_a_late_rival_or_a_lapse(self):
+        vessels = fleet() + [vessel(RIVAL, "Rival Example")]
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        watched = {"mmsi": str(CANDIDATE), "vessel_id": SEA, "status": "watched", "match_method": "schedule-correlation",
+                   "confidence": 0.85}
+        # Evidence aged below min_days (2 matched days) while a rival reports on 2 of them: no longer qualifies, yet demoted.
+        aged = {CANDIDATE: set(TWO_WEEKS[3:])}
+        reports = {SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[3:])}
+        rival = self.decide([boat], at_sea=aged, reports=reports, vessels=vessels, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(rival)[CANDIDATE]["status"], "candidate")
+        alone = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS)}, vessels=vessels, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(alone)[CANDIDATE]["status"], "watched", "thin but recent evidence, no rival: stays")
+        # No matched day in the last lapse_days (30): the row lapses. NOW is 2026-10-05.
+        old = ["2026-08-20", "2026-08-25"]
+        lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(lapsed)[CANDIDATE]["status"], "candidate")
+        none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(none)[CANDIDATE]["status"], "candidate")
 
     def test_the_registry_mmsi_is_never_overwritten(self):
         rival = full_static(OTHER, "HELD EXAMPLE", ship_type=60, length_m=18.0)
