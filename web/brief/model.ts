@@ -13,6 +13,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {buildDaily, dateKey, type DailyBrief} from '../../packages/coast/src/daily.ts';
+import type {ComfortLimits} from '../../packages/coast/src/limits.ts';
 import {resolveReportBinding, type CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
 import {profileSemantics, type Profile} from '../profile.ts';
@@ -120,7 +121,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 
@@ -167,7 +168,9 @@ export function chlorophyllNear(daily: RegionalDailyFeed | null | undefined, lat
 
 export type CoastBriefInput = {report: Report; county: County; areaId: string; profile: Profile; date: string; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string;
   /** The region's daily feed, read for satellite chlorophyll near the area. */
-  daily?: RegionalDailyFeed};
+  daily?: RegionalDailyFeed;
+  /** The user's own comfort limits for the profile (web/limits.ts); the defaults when absent. */
+  limits?: ComfortLimits | null};
 
 /** The bound brief: buildDaily over the coast report (with the feed's chlorophyll near the area), mapped without change. */
 export function buildCoastBrief(input: CoastBriefInput): Brief {
@@ -175,7 +178,7 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
   if (!area) throw new RangeError(`No coast area ${input.areaId}`);
   const chlorophyll = chlorophyllNear(input.daily, area.lat, area.lon);
   const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
-  const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now);
+  const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now, input.limits);
   return briefFromDaily(daily, 'coast-report', {...input, report, area});
 }
 
@@ -224,12 +227,12 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   return {report, county, area, tideDatum: String(tides?.data?.datum ?? 'MLLW')};
 }
 
-export type RegionalBriefInput = {daily: RegionalDailyFeed; forecast: RegionalForecast | null; place: RegionalPlace; profile: Profile; date: string; now: Date; at?: string};
+export type RegionalBriefInput = {daily: RegionalDailyFeed; forecast: RegionalForecast | null; place: RegionalPlace; profile: Profile; date: string; now: Date; at?: string; limits?: ComfortLimits | null};
 
 /** The regional brief: buildDaily over the converted regional feeds; the local-report line is unavailable. */
 export function buildRegionalBrief(input: RegionalBriefInput): Brief {
   const {report, county, area, tideDatum} = regionalReport(input.daily, input.forecast, input.place);
-  const daily = buildDaily(report, county, area, input.profile, input.date, input.now);
+  const daily = buildDaily(report, county, area, input.profile, input.date, input.now, input.limits);
   return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.place.port, tideDatum});
 }
 
@@ -240,12 +243,13 @@ export type BriefInput = {
   coast: {report: Report; county: County} | null;
   regional: {daily: RegionalDailyFeed; forecast: RegionalForecast | null; place: RegionalPlace};
   profile: Profile; date: string; now: Date; at?: string;
+  limits?: ComfortLimits | null;
 };
 
 /** The coast report only where resolveReportBinding binds the place and a report is loaded; the regional brief elsewhere. */
 export function buildBrief(input: BriefInput): Brief {
-  const {profile, date, now, at, regional} = input;
+  const {profile, date, now, at, regional, limits} = input;
   const binding = input.coast ? resolveReportBinding(input.context) : null;
-  if (input.coast && binding) return buildCoastBrief({...input.coast, areaId: binding.areaId, profile, date, now, at, reports: regional.daily.reports ?? [], port: regional.place.port, daily: regional.daily});
-  return buildRegionalBrief({...regional, profile, date, now, at});
+  if (input.coast && binding) return buildCoastBrief({...input.coast, areaId: binding.areaId, profile, date, now, at, reports: regional.daily.reports ?? [], port: regional.place.port, daily: regional.daily, limits});
+  return buildRegionalBrief({...regional, profile, date, now, at, limits});
 }

@@ -22,6 +22,7 @@ import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '..
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
 import {hour, profile} from '../state.ts';
+import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/App.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';
@@ -86,25 +87,28 @@ function bindVisibility() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshForecastIfStale(); });
 }
 
-export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null};
+export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null;
+  /** The user's own comfort limits for the profile (web/limits.ts); null or absent uses the defaults. */
+  limits?: ComfortLimits | null};
 
 /** The brief for these sources at `now`, or null when the region's feed is not in hand. */
-export function briefFrom({info, feed, forecast = null, coast, profile: p, hour: at}: BriefSources, now: Date): BriefModel | null {
+export function briefFrom({info, feed, forecast = null, coast, profile: p, hour: at, limits = null}: BriefSources, now: Date): BriefModel | null {
   if (!info || !feed || feed.region_id !== info.id) return null;
   const pivot = at && Number.isFinite(Date.parse(at)) ? at : undefined;
   const date = dateKey(new Date(pivot ?? now), info.timezone);
   try {
     const county = coast ? counties[coast.report.countyId] : undefined;
-    if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: info.name, daily: feed});
+    if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: info.name, daily: feed, limits});
     const [lat, lon] = info.center;
-    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone, port: info.name}, profile: p, date, now, at: pivot});
+    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone, port: info.name}, profile: p, date, now, at: pivot, limits});
   } catch { return null; }
 }
 
 /** The brief the shell shows now, read from the signals so a component re-renders when they change. */
 export function currentBrief(now: Date): BriefModel | null {
   const report = coastReport.value, binding = coastBinding.value;
-  return briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value}, now);
+  return briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value,
+    limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
 }
 
 export const Headline = ({brief}: {brief: BriefModel | null}) => <h1>{brief?.headline ?? 'Waiting for readings.'}</h1>;
@@ -120,10 +124,12 @@ const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hou
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
   const tz = regionInfo.value?.timezone ?? 'America/Los_Angeles', w = brief.windows[0];
+  // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
+  const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
   return (
     <p class="app-window">
       <span class="ui-eyebrow">Lower exposure</span>{' '}
-      {w ? <><span class="ui-mono">{clock(w.start, tz)}–{clock(w.end, tz)}</span> · {w.label}. {w.reasons[0] ?? ''}</> : 'No lower-exposure window screened for this day.'}
+      {w ? <><span class="ui-mono">{clock(w.start, tz)}–{clock(w.end, tz)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : brief.limits?.custom ? 'No lower-exposure window within your limits for this day.' : 'No lower-exposure window screened for this day.'}
     </p>
   );
 }

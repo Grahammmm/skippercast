@@ -10,8 +10,14 @@ export function freshForecast(report:Report,area:Area,now=new Date()){
  if(!Number.isFinite(issueAge)||!Number.isFinite(fetchAge)||issueAge>18*3600000||issueAge<-3600000||fetchAge>2*3600000||fetchAge<-3600000)return undefined;
  return forecast;
 }
-/** waveOk replaces the generic wave rule for an hour when it returns a boolean (spear surge from a nearshore model); label names such windows. */
-export type AssessOptions={waveOk?:(h:ForecastHour)=>boolean|undefined;label?:string};
+/** The window rule's wind, gust and seas limits (knots, feet): boat, and the other profiles. */
+export type WindowLimits={wind:number;gust:number;wave:number};
+export const WINDOW_LIMITS:Readonly<Record<'boat'|'other',WindowLimits>>={boat:{wind:10,gust:15,wave:4},other:{wind:8,gust:12,wave:3}};
+/**
+ * waveOk replaces the generic wave rule for an hour when it returns a boolean (spear surge from a nearshore model); label names such windows.
+ * limits replaces the profile's WINDOW_LIMITS (the user's own limits, limits.ts); the long-period swell rule and daylight still apply.
+ */
+export type AssessOptions={waveOk?:(h:ForecastHour)=>boolean|undefined;label?:string;limits?:WindowLimits};
 export function assess(report:Report,area:Area,mode:BriefMode,now=new Date(),timezone='America/Los_Angeles',options:AssessOptions={}):Assessment{
  const forecast=freshForecast(report,area,now);
  const hours=(forecast?.hours??[]).filter(x=>Date.parse(x.at)>=now.getTime()-3600000 && Date.parse(x.at)<now.getTime()+72*3600000);
@@ -22,7 +28,7 @@ export function assess(report:Report,area:Area,mode:BriefMode,now=new Date(),tim
  const criticalSource=report.sources.find(x=>x.id==='nws-alerts');
  const alertAge=criticalSource?age(criticalSource.fetchedAt,now):NaN;
  if(!criticalSource||criticalSource.outcome!=='ok'||!Number.isFinite(alertAge)||alertAge>2*3600000||alertAge<-3600000)return {...empty,reasons:['Current marine alerts unavailable'],summary:'The current marine alert check is unavailable. Review the official forecast before planning.'};
- const limits=mode==='boat'?{wind:10,gust:15,wave:4}:{wind:8,gust:12,wave:3};
+ const limits=options.limits??WINDOW_LIMITS[mode==='boat'?'boat':'other'];
  const pass=(h:ForecastHour)=>{
   if(h.windKnots===null||h.gustKnots===null||h.waveFt===null||h.wavePeriodS===null)return false;
   const localDate=new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(h.at));

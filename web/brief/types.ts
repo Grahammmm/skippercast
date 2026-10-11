@@ -64,6 +64,8 @@ export interface Brief {
   readonly bar: DailyBrief['bar'];
   /** The kayak reading (wind band and side, seas, launch surf, verdict per hour); null for the other profiles. */
   readonly kayak: DailyBrief['kayak'];
+  /** The comfort limits the windows used: the profile's defaults, or the user's own (web/limits.ts) with a line saying so. */
+  readonly limits: DailyBrief['limits'];
   readonly alerts: readonly Alert[];
   readonly missing: readonly string[];
   readonly tides: readonly TidePoint[];

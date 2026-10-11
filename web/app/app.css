@@ -37,8 +37,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-command label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
 /* FE-54: the target menu's search field sits beside the grouped list. */
 .app-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.app-target-search { width: 10rem; min-width: 0; font-weight: var(--weight-regular); }
+.app-target-search { width: 8rem; min-width: 0; font-weight: var(--weight-regular); }
 .app-target-search::placeholder { color: var(--muted); }
+.app-profile-limits { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-area { display: inline-flex; align-items: center; gap: var(--space-2); }
 .app-window { margin-left: auto; color: var(--text); font-size: var(--text-13); }
 
@@ -315,3 +316,20 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-reports-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); }
 .app-reports-footer a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-mobile-page { position: absolute; left: 0; right: 0; top: calc(var(--app-strip) + var(--touch-min) + var(--space-3)); bottom: var(--app-tabs); z-index: var(--z-map-chrome); overflow: auto; border-top: 1px solid var(--line); background: var(--bg); }
+
+/* Your limits (#542): the profile's comfort limits form in its own modal dialog (the port dialog's look) */
+.app-limits-dialog { width: min(480px, calc(100% - var(--space-6))); max-height: calc(100% - var(--space-6)); padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); color: var(--text); box-shadow: var(--elev-3); }
+.app-limits-dialog::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
+.app-limits-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.app-limits-head h2 { flex: 1; margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.app-limits { display: flex; flex-direction: column; gap: var(--space-3); }
+.app-limits p { margin: 0; }
+.app-limits-status { color: var(--text); font-size: var(--text-15); }
+.app-limits-field { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; align-items: center; gap: var(--space-1) var(--space-3); }
+.app-limits-field label { color: var(--text); font-size: var(--text-13); }
+.app-limits-field input, .app-limits-field select { min-height: var(--touch-min); min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; font-size: var(--text-15); }
+.app-limits-field input:focus-visible, .app-limits-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-limits-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--text-11); }
+.app-limits-note { color: var(--muted); font-size: var(--text-13); }
+.app-limits-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.app-limits-trigger[data-own="true"] { color: var(--mint); }

@@ -1,11 +1,12 @@
 import {getMoonIllumination, getTimes} from 'suncalc';
 import {assess, freshForecast, freshObservation} from './assessment.ts';
-import type {Alert, Area, BriefMode, County, ForecastHour, Observation, Report, TideEvent, TidePoint, Window} from './types.ts';
+import type {Alert, Area, Assessment, BriefMode, County, ForecastHour, Observation, Report, TideEvent, TidePoint, Window} from './types.ts';
 import {freshNearshore, nearshoreAt} from './nearshore.ts';
-import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay} from './spear.ts';
+import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay, type SurgeBand} from './spear.ts';
 import {KAYAK_WIND_RANK, kayakDay, kayakHours, kayakWindText, kayakWindowOk, type KayakDay} from './kayak.ts';
 import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay} from './shore-conditions.ts';
 import {BAR_CHECK, barDay, barHours, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
+import {clampLimits, defaultLimits, limitsText, looserFields, sameLimits, stricterFields, type ComfortLimits} from './limits.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
@@ -22,6 +23,11 @@ export type DailyBrief = {
  bar:BarDay|null;
  /** The kayak reading (kayak.ts); null for the other profiles. */
  kayak:KayakDay|null;
+ /**
+  * The comfort limits the windows used (limits.ts): the profile's defaults unless the user set their own.
+  * `text` says so when they are the user's (null otherwise); `loosened` is true when one is above its default.
+  */
+ limits:{values:ComfortLimits;custom:boolean;loosened:boolean;text:string|null};
 };
 const HOUR=3_600_000;
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value);
@@ -99,7 +105,14 @@ function astro(date:string,county:County,area:Area) {
  return {sunrise:iso(times.sunrise),sunset:iso(times.sunset),moon:{fraction:finite(lunar.fraction)?lunar.fraction:null,label:finite(lunar.phase)?names[Math.round(lunar.phase*8)%8]!:'Unknown'}};
 }
 
-export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,date:string,now=new Date()):DailyBrief {
+/**
+ * The daily brief. `limits` are the user's own comfort limits (limits.ts); they are clamped to the profile's
+ * bounds and change only the window rule's wind, gust, seas and surge limits. A stricter limit also caps a
+ * Calmer hour at Marginal. Alerts, long-period swell, the bar, offshore wind, launch surf and daylight never move.
+ */
+export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,date:string,now=new Date(),limits?:Partial<ComfortLimits>|null):DailyBrief {
+ const defaults=defaultLimits(mode),mine=limits?clampLimits(mode,limits):defaults,custom=!sameLimits(mode,mine,defaults);
+ const strict=stricterFields(mode,mine),loose=looserFields(mode,mine),loosened=custom&&(loose.fields.length>0||loose.surge);
  const day=dayInfo(date,county,now),start=localInstant(date,county.timezone).getTime(),end=localInstant(addDay(date,1),county.timezone).getTime();
  const today=dateKey(now,county.timezone),isToday=date===today;
  const forecast=freshForecast(report,area,now);
@@ -114,14 +127,45 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   const at=Date.parse(hour.at);
   return Number.isFinite(at)&&at>=Math.max(start,now.getTime()-HOUR)&&at<Math.min(end,now.getTime()+72*HOUR);
  }).sort((a,b)=>Date.parse(a.at)-Date.parse(b.at));
- const kayak=mode==='kayak'?kayakDay(kayakHours({hours,site,seawardDeg:seaward(county.id,area.id),alerts,sunrise:astronomy.sunrise,sunset:astronomy.sunset}),seaward(county.id,area.id)):null;
+ // A stricter user limit caps a Calmer hour at Marginal and says which limit did it; a looser one never lifts a verdict.
+ const byAt=new Map(hours.map(hour=>[hour.at,hour]));
+ const overLimit=(at:string,seasFt:number|null|undefined,surgeBand?:SurgeBand):string|null=>{
+  if(!custom)return null;
+  const hour=byAt.get(at),over:string[]=[];
+  if(strict.fields.includes('wind')&&finite(hour?.windKnots)&&hour.windKnots>mine.wind)over.push(`wind over your ${mine.wind} kt`);
+  if(strict.fields.includes('gust')&&finite(hour?.gustKnots)&&hour.gustKnots>mine.gust)over.push(`gusts over your ${mine.gust} kt`);
+  if(strict.fields.includes('seas')&&finite(seasFt)&&seasFt>mine.seas)over.push(`${mode==='shore'?'surf':'seas'} over your ${mine.seas} ft`);
+  if(strict.surge&&mine.surge&&surgeBand&&surgeBand!=='Unknown'&&SURGE_RANK[surgeBand]>SURGE_RANK[mine.surge])over.push(`surge over your ${mine.surge.toLowerCase()} limit`);
+  return over.length?`${over.join(', ')} (your limits)`:null;
+ };
+ const cap=<T extends {verdict:string;reasons:string[]}>(hour:T,over:string|null):T=>over&&hour.verdict==='Calmer'?{...hour,verdict:'Marginal',reasons:[...hour.reasons,over]} as T:hour;
+ const kayak=mode==='kayak'?kayakDay(kayakHours({hours,site,seawardDeg:seaward(county.id,area.id),alerts,sunrise:astronomy.sunrise,sunset:astronomy.sunset}).map(hour=>cap(hour,overLimit(hour.at,hour.seas.heightFt))),seaward(county.id,area.id)):null;
  const kayakAt=new Map((kayak?.hours??[]).map(hour=>[hour.at,hour]));
+ const shore=mode==='shore'?shoreDay(shoreHours({hours,site,countyId:county.id,area,tideEvents:report.tideEvents,tides:report.tides,sunrise:astronomy.sunrise,sunset:astronomy.sunset}).map(hour=>cap(hour,overLimit(hour.at,hour.surf.heightFt))),astronomy.sunrise,astronomy.sunset,seaward(county.id,area.id)):null;
+ const spear=mode==='spear'?spearDay(spearHours({hours,forecastHours:forecast?.hours??[],site,observations:report.observations.filter(observation=>observation.stationId===county.temperatureStationId),tideEvents:report.tideEvents,chlorophyll:report.chlorophyll??null}).map(hour=>cap(hour,overLimit(hour.at,hour.surge.heightFt,hour.surge.band))),astronomy.sunrise,astronomy.sunset):null;
  // Kayak windows take the kayak verdict instead of the wave rule: not Rough, no offshore wind, no launch surf caution.
- const waveOk=kayak?(hour:ForecastHour)=>kayakWindowOk(kayakAt.get(hour.at)):!site?undefined:mode==='spear'
-  ?(hour:ForecastHour)=>nearJudged(hour)?SURGE_RANK[surge(hour,nearshoreAt(site,hour.at)).band]<=SURGE_RANK[SPEAR.windowMaxSurge]:undefined
-  :(hour:ForecastHour)=>surfWindowOk(surf(hour,nearshoreAt(site,hour.at)));
+ // A stricter seas or surf limit adds a cap on the judged height; spear's surge limit replaces SPEAR.windowMaxSurge (never Heavy).
+ const waveOkFor=(lim:ComfortLimits):((hour:ForecastHour)=>boolean|undefined)|undefined=>{
+  const tight=stricterFields(mode,lim).fields.includes('seas'),over=(ft:number|null|undefined)=>tight&&finite(ft)&&ft>lim.seas;
+  const surgeMax=lim.surge??SPEAR.windowMaxSurge;
+  // A stricter kayak seas limit is checked against the seas figure the kayak verdict grades on.
+  if(kayak)return hour=>{const k=kayakAt.get(hour.at),ok=kayakWindowOk(k);return ok&&over(k?.seas.heightFt)?false:ok;};
+  if(!site)return undefined;
+  if(mode==='spear')return hour=>{if(!nearJudged(hour))return undefined;const s=surge(hour,nearshoreAt(site,hour.at));return SURGE_RANK[s.band]<=SURGE_RANK[surgeMax]&&!over(s.heightFt);};
+  return hour=>{const s=surf(hour,nearshoreAt(site,hour.at)),ok=surfWindowOk(s);return ok&&over(s.heightFt)?false:ok;};
+ };
+ const label=mode==='spear'?'Lower surge & wind':mode==='kayak'?'Lower wind & seas':'Lower surf & wind';
+ // A looser limit never puts a shore or spear window over an hour that profile grades Rough (kayakWindowOk already
+ // excludes Rough kayak hours). The defaults keep their rule unchanged.
+ const roughAt=new Set([...(shore?.hours??[]),...(spear?.hours??[])].filter(hour=>hour.verdict==='Rough').map(hour=>hour.at));
+ const loosens=(lim:ComfortLimits)=>{const l=looserFields(mode,lim);return l.fields.length>0||l.surge;};
  // Assess with the real clock, not tomorrow's timestamp. Limit warnings to this day's interval.
- const assessment=assess({...report,alerts},area,mode,now,county.timezone,waveOk?{waveOk,label:mode==='spear'?'Lower surge & wind':mode==='kayak'?'Lower wind & seas':'Lower surf & wind'}:{});
+ const assessWith=(lim:ComfortLimits)=>{
+  const base=waveOkFor(lim);
+  const waveOk=roughAt.size&&loosens(lim)?(hour:ForecastHour)=>roughAt.has(hour.at)?false:base?.(hour):base;
+  return assess({...report,alerts},area,mode,now,county.timezone,{...(waveOk?{waveOk}:{}),...(base?{label}:{}),limits:{wind:lim.wind,gust:lim.gust,wave:lim.seas}});
+ };
+ const assessment=assessWith(mine);
  const wind={...range(hours.map(hour=>hour.windKnots)),gust:maximum(hours.map(hour=>hour.gustKnots))};
  const seas={...range(hours.map(hour=>hour.waveFt)),period:maximum(hours.flatMap(hour=>[hour.wavePeriodS,hour.swellPeriodS]))};
  const air=range(hours.map(hour=>hour.airTempF)),rainPct=maximum(hours.map(hour=>hour.precipPct));
@@ -155,7 +199,6 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   missing.push('Fog and visibility are read only from marine alerts; check the marine forecast');
   if(kayak.daylightUnknown)missing.push('Sunrise or sunset unknown; daylight not checked');
  }
- const shore=mode==='shore'?shoreDay(shoreHours({hours,site,countyId:county.id,area,tideEvents:report.tideEvents,tides:report.tides,sunrise:astronomy.sunrise,sunset:astronomy.sunset}),astronomy.sunrise,astronomy.sunset,seaward(county.id,area.id)):null;
  if(shore&&hours.length){
   if(shore.basis!=='nearshore')missing.push('Surf is an offshore estimate where no fresh nearshore model covers the hour');
   if(!shore.bearingKnown)missing.push('Wind side unknown for this stretch of coast; wind judged on speed only');
@@ -169,7 +212,6 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   if(bar.basis!=='nearshore')missing.push('Bar swell is an offshore estimate where no fresh nearshore model covers the hour');
   if(bar.tideUnknown)missing.push('Tide phase unknown: the bar check cannot time the ebb');
  }
- const spear=mode==='spear'?spearDay(spearHours({hours,forecastHours:forecast?.hours??[],site,observations:report.observations.filter(observation=>observation.stationId===county.temperatureStationId),tideEvents:report.tideEvents,chlorophyll:report.chlorophyll??null}),astronomy.sunrise,astronomy.sunset):null;
  if(spear){
   missing.push('Underwater visibility is estimated, not measured; entry, exit and currents need a local check');
   if(spear.clarity.missing.length)missing.push(`Clarity estimate needs ${spear.clarity.missing.join(' and ')}`);
@@ -177,7 +219,7 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   if(spear.basis!=='nearshore'&&hours.length)missing.push('Surge judged from offshore swell where no fresh nearshore model covers the hour');
  }
  const complete=hours.length>0&&hours.every(hour=>finite(hour.windKnots)&&finite(hour.gustKnots)&&finite(hour.waveFt)&&finite(hour.wavePeriodS));
- const windows=assessment.status==='Unknown'||alerts.length||!alertCheckFresh||!complete?[]:assessment.windows.filter(window=>{
+ const screen=(assessed:Assessment):Window[]=>assessed.status==='Unknown'||alerts.length||!alertCheckFresh||!complete?[]:assessed.windows.filter(window=>{
   const from=Date.parse(window.start),to=Date.parse(window.end);
   return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&!nearJudged(hour)&&finite(hour.waveFt)&&hour.waveFt>=2.5&&finite(hour.swellPeriodS)&&hour.swellPeriodS>=15)
    // A window that leaves or returns in a hazardous bar hour is not suggested.
@@ -186,6 +228,15 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   const crossing=bar?crossingHours(bar,window.start,window.end):[];
   return bar&&crossing.some(hour=>hour.band!=='No bar flag')?{...window,reasons:[...window.reasons,`${bar.entrance.name}: bar caution or unknown at departure or return (estimate); check the bar status`]}:window;
  });
+ // With the user's limits, screen once more with the defaults: a window the defaults would not suggest in full
+ // says the user's looser limit decided it, and hours the defaults would suggest but the user's limits leave out are counted.
+ const defaultWindows=custom?screen(assessWith(defaults)):[];
+ const inside=(window:Window)=>defaultWindows.some(base=>Date.parse(base.start)<=Date.parse(window.start)&&Date.parse(base.end)>=Date.parse(window.end));
+ const windows=screen(assessment).map(window=>loosened&&!inside(window)?{...window,reasons:[`Using your limits (${limitsText(mode,mine)}); the default limits would not suggest all of it`,...window.reasons]}:window);
+ const covered=(at:number,list:Window[])=>list.some(window=>at>=Date.parse(window.start)&&at<Date.parse(window.end));
+ const left=custom?hours.filter(hour=>{const at=Date.parse(hour.at);return covered(at,defaultWindows)&&!covered(at,windows);}).length:0;
+ const limitsLine=!custom?null:[loosened?`Using your limits: ${limitsText(mode,mine)}, looser than the defaults (${limitsText(mode,defaults)}).`:`Using your limits: ${limitsText(mode,mine)}.`,
+  left?`Your limits leave out ${left} hour${left===1?'':'s'} the default limits would suggest.`:null].filter(Boolean).join(' ');
  // Shore reads Caution when long-period swell is running or no daylight hour reads calmer or marginal.
  const shoreCaution=!!shore&&(shore.sneakerPeriodS!==null||(shore.hours.length>0&&!shore.best));
  // Kayak reads Caution with offshore wind, surf at the launch, a fog alert or no calmer or marginal daylight hour.
@@ -214,8 +265,9 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
  const kayakEntrance=mode==='kayak'?entranceFor(county.id,area.id):null;
  if(kayakEntrance)summaryParts.push(`Crossing the ${kayakEntrance.name} bar by kayak is not scored here. ${BAR_CHECK}`);
  if(mode==='kayak')summaryParts.push('Check your launch, landing, drift and the paddle back locally, and leave your plan with someone ashore.');
+ if(limitsLine)summaryParts.push(limitsLine);
  if(day.provisional)summaryParts.push('This outlook is provisional; check again closer to departure.');
- return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore,bar,kayak};
+ return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore,bar,kayak,limits:{values:mine,custom,loosened,text:limitsLine}};
 }
 
 const lower=(text:string)=>text.charAt(0).toLowerCase()+text.slice(1);

@@ -53,6 +53,8 @@ export type Base = typeof BASES[number];
 export const NO_LAYERS = 'none';
 export const STORAGE_KEYS = {
   profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1', presentation: 'skippercast-presentation-v1',
+  /** Your own comfort limits per profile (web/limits.ts); device only, never sent. */
+  limits: 'skippercast-limits-v1',
 } as const;
 /** `current` when ?current= names no listed source; the value stays in the URL (v1 rule, #402). */
 export const UNSUPPORTED = 'unsupported';
@@ -116,6 +118,9 @@ function storage(): StoreStorage | null {
 }
 function stored(key: string): string | null { try { return storage()?.getItem(key) ?? null; } catch { return null; } }
 function store(key: string, value: string): void { try { storage()?.setItem(key, value); } catch { /* the URL still carries it */ } }
+/** Read and write the store's storage (localStorage, or the one configureStore set); a failure reads null and writes nothing. */
+export const readStored = stored;
+export const writeStored = store;
 
 /** The store's parameters in `href`. */
 export function readURL(href: string): UrlState {

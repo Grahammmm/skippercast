@@ -9,6 +9,7 @@ import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {configureStore, coast, region, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
+import {loadLimits} from '../limits.ts';
 import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
@@ -16,6 +17,8 @@ import {dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.t
 
 configureStore({v2: true});
 startURLSync();
+// #542: the user's own comfort limits, kept on this device.
+loadLimits();
 // The shell shows "No port chosen" until the address changes.
 if (!region.peek() && !coast.peek()) void savedHomeURL(location.href).then(next => location.replace(next));
 const width = matchMedia(NARROW_QUERY);
