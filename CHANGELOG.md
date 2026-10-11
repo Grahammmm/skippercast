@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- When a backup station serves a buoy or tide reading, the landing, brief, Live card and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
+
 ## 0.8.0 — 2026-10-11
 
 - Suggested windows in the brief no longer run through an hour that a hazard rule flags or that the profile grades Rough, for every profile and whatever your limits say: a hazardous harbour bar at any hour of a boat window (not only departure and return), sneaker-wave swell for Shore when the surf is the offshore estimate, long-period swell under a kayak, and Rough Shore or Spear hours. Some windows are shorter or gone as a result. Occasionally a boat window the brief used to drop because its departure or return crossed a hazardous bar now appears as its clean remaining hours (#551).
@@ -21,7 +23,6 @@
 
 - Brief fixes on the map: a beach notice shows only for a beach under an advisory, closure or warning (no longer for open beaches whose county line says there are no advisory notes); where a coast report covers the area (Morro Bay, Cambria) the brief loads it whichever layers are on, so the tide curve and local-report line appear on first load; and the fleet line ("2 boats reported from Morro Bay & Avila Beach in the last 7 days") now appears, read from the daily feed's landing reports at the region's own landings.
 - Choosing Chart while the map shows 2D now opens the Chart; it used to switch to 3D because the terrain's report of its own camera change was written back over the choice.
-- When a backup station serves a buoy or tide reading, the landing, brief, Live card and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
 - The brief's Water and Tide tiles now read a source that served its last good data after a failed check as stale and say so ("last good 5 h old") instead of showing it as current. The hourly feed check now also lists each degraded source by name with its age in the live, daily and every region's live feed, fails when every source of one critical kind (buoys, alerts, tides or forecast models) in a feed has been degraded past its limit (a single buoy outage is reported in an issue without failing the run), and checks the daily data feed against its own 36-hour schedule.
 - Import owner-supplied fleet scout CSV leads with public-page provenance and safe website handoff; preserve licence imports and keep unverified classes out of registry claims.
 
