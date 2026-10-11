@@ -167,7 +167,7 @@ and San Diego is split into `san-diego` (Point Loma landings) and
     "refresh": {"vanished_after_runs": 3, "vanished_after_days": 45,
                 "osint_stale_days": 60, "fact_stale_days": 120},
     "retention": {"raw_days": 30, "discovery_days": 7, "static_days": 90},
-    "aggregate": {"module": "grid", "resolution_m": 1000,
+    "aggregate": {"module": "grid", "resolution_m": 1000, "resolution_by_kind": {"troll-pelagic": 3000},
                   "min_distinct_vessels": null, "delay_hours": null}
   },
   "seasons": {"parts": [{"id": "winter", "months": [12, 1, 2]}, {"id": "spring", "months": [3, 4, 5]},
@@ -933,7 +933,11 @@ simplified with Douglas-Peucker at 25 m on a local equirectangular projection
 and stored as an encoded polyline. Transit keeps statistics only (minutes,
 point count, mean and p90 SOG, distance) and no geometry (#469 D20). Aggregates are a
 pluggable module (`ais/aggregate/base.py`: `compute(events, params) ->
-list[Cell]`); `grid` bins dwell into `resolution_m` cells. The privacy knobs
+list[Cell]`); `grid` bins dwell into `resolution_m` cells, or a kind's coarser
+`resolution_by_kind` edge (troll-pelagic at 3 km; a whole multiple of
+`resolution_m`, N6), and the cell id `g<edge>:<row>:<col>` carries the edge the
+map draws. The map is part of `params_json`, so changing it changes every cell
+id and the processor's diff deletes the old cells. The privacy knobs
 `min_distinct_vessels` and `delay_hours` exist and are `null` for admin views;
 an `h3` module needs no schema change.
 
@@ -1025,6 +1029,10 @@ changes it to "advisor or fleet enabled", and each feature keeps its own check.
 
 **Map routes** (`FLEET_MAP_ENABLED`, admin only in this plan):
 `/api/fleet/map/filters`, `/events`, `/tracks`, `/heat` (section 14).
+
+**Public heat** (`FLEET_ENABLED` and `FLEET_PUBLIC_HEAT_ENABLED`, anonymous,
+per-IP `PUBLIC_LIMITER`): `GET /api/fleet/public/heat` (section 14). Every other
+path under `/api/fleet/public/` answers 404.
 
 **Public** (`FLEET_ENABLED`): `/boats/<slug>` (section 13) and
 `GET /go/<slug>?t=booking|website&p=profile|directory|map`. It redirects only
@@ -1120,8 +1128,9 @@ existing `optional(...)` guard.
 | Layer | Drawing |
 | --- | --- |
 | Activity events | circles, radius ∝ √dwell (4–18 px), drift filled, troll ringed; card: boat, port, class, date, start/end, dwell, type, source and rights, and "Inferred from movement (speed and track shape). Not a confirmed fishing stop or catch." |
-| Trip tracks | decoded polylines per segment coloured by kind (transit grey, drift and troll distinct, gap dashed) |
-| Heat | aggregate cells as rectangles, opacity ∝ dwell; no new vendored library |
+| Trip tracks | decoded polylines of fishing segments only (drift-anchor, troll-slow, troll-pelagic), coloured by kind; in-port, transit, uncertain and gap segments never reach the layer (N6, #469 D20–D22); the admin trip view reads every segment through its own route |
+| Heat | aggregate cells as rectangles, opacity ∝ dwell, each drawn at the edge in its cell id (1 km, pelagic 3 km); no new vendored library |
+| Public heat (`GET /api/fleet/public/heat`, anonymous, N6) | cells only: Polygon features whose properties are exactly `kind`, `season`, `season_part`, `dwell_min`, `vessels_n`, `basis`, `computed_at`, and `meta` `region`, `cell_m`, `min_vessels`, `delay_hours`, `count`, `capped`, `next`. Query `region` (required), `kind`, `season`, `season_part` (omitted: whole-season cells), `limit`, `cursor`; module `grid`; 5,000 cells a page. The floors of section 15 are applied in SQL and checked again in code. No public page draws it yet |
 
 One filter card, applied server-side: boat, port, vessel class, trip type,
 activity type, date range, season (year and part). Endpoints take `region,
@@ -1149,7 +1158,14 @@ Ranked; picks marked. Only the admin views and the flagged profile are built.
   directory. (3) Profiles only, reached from search and the map.
 - **Activity in the map and planner.** (1, **pick**) Aggregates only: an
   "inferred from movement" heat layer at ≥ 1 km cells, ≥ 3 distinct vessels,
-  ≥ 72 h delay, MarineCadastre-derived cells kept off paid tiers. (2) Plus
+  ≥ 72 h delay, MarineCadastre-derived cells kept off paid tiers. Built in N6
+  as `GET /api/fleet/public/heat` with fixed floors (`PUBLIC_HEAT` in
+  `server/fleet/public-heat.ts`): `vessels_n` ≥ 3; `last_date` (a local
+  calendar date) wholly at least 72 h old in any time zone, so the date must
+  be at least 108 h past its UTC midnight; rights `public-domain`,
+  `public-record`, `facts-only` or `api-terms` only. The server has no paid
+  tier, so "off paid surfaces" is read as "off the public route": every
+  `noaa-planning-only` and `internal-only` cell is withheld from it. (2) Plus
   per-trip tracks for opted-in operators. (3) Admin-only indefinitely.
 - **Charter data in trip planning.** (1, **pick**) "Boats from your port this
   week": registry offerings and departures for the trip's port and date, with
@@ -1163,6 +1179,7 @@ Ranked; picks marked. Only the admin views and the flagged profile are built.
 | --- | --- | --- |
 | `FLEET_ENABLED` | Worker var | admin fleet views, job routes, registry data on `/boats`, `/go/` |
 | `FLEET_MAP_ENABLED` | Worker var | map routes and layers (admin only) |
+| `FLEET_PUBLIC_HEAT_ENABLED` | Worker var | the anonymous `GET /api/fleet/public/heat` (with `FLEET_ENABLED`); off until the owner approves go-live after N7 and Q1 (runbook `fleet-public-heat.md`) |
 | `ENABLE_FLEET` | repo variable | the Hermes workflows run |
 
 `server/fleet/settings.ts` parses the Worker vars (default off) like
@@ -1199,7 +1216,10 @@ install → `FLEET_MAP_ENABLED`.
 - **TECK.net**: facts only; **Owner** asks before paid use.
 - **Google Places**: `place_id` only (latitude/longitude at most 30 days; rating and count never stored, CF-16); attribution where shown.
 - **aisstream.io**: no published terms; internal use only until written terms
-  exist (**Owner**); no live per-vessel display.
+  exist (**Owner**); no live per-vessel display. Its rows are `internal-only`
+  (`SOURCE_RIGHTS` in `ais/process.py`), so the public heat route returns no
+  aisstream cells. When Q1 settles, moving aisstream to `api-terms` is a
+  one-line change there, and the next processor run rewrites the cells' rights.
 - **Operators' wishes**: `hidden` and `do-not-contact` are honoured by every
   query; a removal request also deletes outreach rows.
 - `docs/legal/threat-model.md` gains a fleet section (`/go/` redirect, job

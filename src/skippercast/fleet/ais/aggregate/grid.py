@@ -1,11 +1,12 @@
-"""The ``grid`` aggregate module: events binned into ``resolution_m`` square cells.
+"""The ``grid`` aggregate module: events binned into ``resolution_m`` square cells, or the event kind's
+``resolution_by_kind`` edge where one is set (troll-pelagic at 3 km in CA).
 
 A fixed global grid, so a cell's id never depends on which events arrived: rows
 are ``resolution_m`` of latitude (``METRES_PER_DEG`` metres per degree), and
 within a row columns are ``resolution_m`` of longitude at the row's centre
 latitude. That matches how ``server/fleet/map.ts`` draws a cell (a square of
 ``resolution_m`` centred on the stored point, equirectangular), so the drawn
-square is the cell. ``cell_id`` is ``g<resolution_m>:<row>:<col>``.
+square is the cell. ``cell_id`` is ``g<edge>:<row>:<col>``, and map.ts reads the edge from it.
 """
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ class Grid:
     name = "grid"
 
     def bin(self, event: Event, params: AggregateParams) -> tuple[str, float, float]:
-        return grid_cell(event.lat, event.lon, params.resolution_m or DEFAULT_RESOLUTION_M)
+        return grid_cell(event.lat, event.lon, params.resolution_for(event.kind) or DEFAULT_RESOLUTION_M)
 
     def compute(self, events: Iterable[Event], params: AggregateParams, **options) -> list[Cell]:
         """Cells for ``events`` (``base.build_cells`` options: ``now_ms``, ``tz``, ``computed_at``)."""

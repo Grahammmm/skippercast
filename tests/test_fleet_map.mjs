@@ -58,11 +58,13 @@ const EVENTS = [
   ['e5', 't4', 'troll-slow', 35.45, -121.00, '2026-09-01T16:00:00Z', 30, 'six-pack', 'half-day'],
 ];
 // Segments per trip: kind and [lon, lat] points. Transit keeps statistics only, no geometry (#469 D20).
+// t4's uncertain and in-port segments and t1's gap carry geometry, and the tracks layer still drops them (N6).
 const SEGMENTS = {
   t1: [['transit', null], ['drift-anchor', [[-120.95, 35.40], [-120.951, 35.401], [-120.952, 35.399]]], ['gap', [[-120.952, 35.399], [-120.86, 35.37]]]],
   t2: [['transit', null], ['troll-slow', [[-120.80, 35.10], [-120.78, 35.12]]], ['in-port', null]],
   t3: [['transit', null], ['drift-anchor', [[-120.50, 34.50], [-120.501, 34.501]]]],
-  t4: [['troll-slow', [[-120.95, 35.42], [-121.00, 35.45]]]],
+  t4: [['troll-slow', [[-120.95, 35.42], [-121.00, 35.45]]], ['uncertain', [[-121.00, 35.45], [-120.99, 35.44]]],
+    ['in-port', [[-120.99, 35.44], [-120.98, 35.43]]]],
 };
 // Aggregate cells: id, cell, lat, lon, season, part, kind, vessels, events, dwell, first, last, rights.
 // c4 and c5 are whole-season cells (part null), which the aggregator writes beside the per-part ones; c5 is undated.
@@ -190,6 +192,11 @@ test('acceptance 1: each tracks filter narrows the seeded trips; segments decode
     const boxed = await get(`${q}&bbox=-121.1,35.4,-120.94,35.5`);
     assert.deepEqual([...new Set(boxed.features.map(f => f.properties.trip_id))].sort(), ['t1', 't4']);
     assert.deepEqual(boxed.features.map(f => f.id).sort(), ['t1-s1', 't4-s0']);
+    // Fishing segments only (N6): uncertain, in-port, gap and transit never reach the layer, geometry or not.
+    const every = await get(q);
+    assert.deepEqual(every.features.map(f => f.id).sort(), ['t1-s1', 't2-s1', 't3-s1', 't4-s0']);
+    assert.ok(every.features.every(f => ['drift-anchor', 'troll-slow', 'troll-pelagic'].includes(f.properties.segment_kind)));
+    assert.deepEqual((await get(`${q}&vessel=v-sea-example&season_part=fall`)).features.map(f => f.id), ['t4-s0']);
     const all = await get(`${q}&vessel=v-tide-runner`);
     // Transit and in-port segments without geometry are not drawn: no transit track reaches any view.
     assert.deepEqual(all.features.map(f => [f.id, f.properties.segment_kind]), [['t2-s1', 'troll-slow']]);

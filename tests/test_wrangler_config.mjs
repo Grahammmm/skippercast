@@ -239,7 +239,7 @@ test('the deploy script creates the advisor bucket and queues only with ENABLE_A
 });
 
 // CF-01: the charter fleet's switches have no bindings, so its allowlisted vars are copied whenever set.
-test('fleet vars: FLEET_ENABLED and FLEET_MAP_ENABLED only are copied (trimmed, non-empty) with or without ENABLE_ADVISOR; without them the config is unchanged', () => {
+test('fleet vars: FLEET_ENABLED, FLEET_MAP_ENABLED and FLEET_PUBLIC_HEAT_ENABLED only are copied (trimmed, non-empty) with or without ENABLE_ADVISOR; without them the config is unchanged', () => {
   const base = deployConfig(committed(), ID, 'skippercast-feeds');
   assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {PATH: '/usr/bin', FLEET_ENABLED: '', FLEET_MAP_ENABLED: '  '}}), base);
   const on = deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {FLEET_ENABLED: ' true ', FLEET_MAP_ENABLED: 'false', OTHER_FLEET: 'x'}});
@@ -248,12 +248,13 @@ test('fleet vars: FLEET_ENABLED and FLEET_MAP_ENABLED only are copied (trimmed, 
   const both = deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true, environ: {...ADVISOR_ENV, FLEET_ENABLED: 'true'}});
   assert.equal(both.vars.FLEET_ENABLED, 'true'); assert.equal(both.vars.TEXT_ADVISOR_ENABLED, 'true');
   assert.deepEqual(fleetVars({FLEET_ENABLED: 'true', ADVISOR_MODEL: 'm', GOOGLE_PLACES_API_KEY: 'k', AISSTREAM_API_KEY: 'k'}), {FLEET_ENABLED: 'true'});
-  assert.deepEqual(FLEET_VARS, ['FLEET_ENABLED', 'FLEET_MAP_ENABLED']);
+  assert.deepEqual(FLEET_VARS, ['FLEET_ENABLED', 'FLEET_MAP_ENABLED', 'FLEET_PUBLIC_HEAT_ENABLED']);
+  assert.deepEqual(fleetVars({FLEET_PUBLIC_HEAT_ENABLED: ' false '}), {FLEET_PUBLIC_HEAT_ENABLED: 'false'});
   // An allowlist, not a prefix: a FLEET_*-named secret is never published as a plain var.
   assert.deepEqual(fleetVars({FLEET_AIS_TOKEN: 'secret', FLEET_OTHER: 'x', FLEET_MAP_ENABLED: 'true'}), {FLEET_MAP_ENABLED: 'true'});
   assert.equal(JSON.stringify(deployConfig(committed(), ID, 'skippercast-feeds', '', {environ: {FLEET_AIS_TOKEN: 'secret'}})), JSON.stringify(base));
   const env = readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8');
-  for (const name of ['FLEET_ENABLED', 'FLEET_MAP_ENABLED']) assert.match(env, new RegExp(`^\\s+${name}\\?:`, 'm'), `server/env.ts declares ${name}`);
+  for (const name of FLEET_VARS) assert.match(env, new RegExp(`^\\s+${name}\\?:`, 'm'), `server/env.ts declares ${name}`);
   const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
   for (const name of ['FLEET_ENABLED', 'FLEET_MAP_ENABLED']) assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);
 });

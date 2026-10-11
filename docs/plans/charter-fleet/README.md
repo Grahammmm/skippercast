@@ -254,3 +254,11 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   geofence. Transit keeps statistics only, and `classifier_version` is now
   `c2-…`. Live rows are rewritten when the CF-45 processor and CF-47 backfill
   reprocess them after merge. The tests use synthetic tracks only.
+- 2026-10-11: N6 heat-map aggregate in review (branch `claude/n6-heat-map`,
+  #570). CA and OR bin troll-pelagic into 3 km cells (`resolution_by_kind`),
+  other modes stay at 1 km; the new params change every cell id, so the next
+  processor run replaces the old cells. `GET /api/fleet/public/heat` returns
+  cells only, with at least 3 vessels, at least 72 h old and allowlisted
+  rights, behind `FLEET_PUBLIC_HEAT_ENABLED` (off); it is empty until Q1 moves
+  aisstream to `api-terms`. The admin tracks layer now draws fishing segments
+  only. Tests use synthetic cells only.

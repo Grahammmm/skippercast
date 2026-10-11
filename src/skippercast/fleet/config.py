@@ -379,6 +379,12 @@ def _region_problems(doc, catalogs, root: Path) -> list[str]:
         problems.append("thresholds.activity: speeds must rise strictly: drift max_sog_kn < troll_slow min_sog_kn"
                         " < troll_slow max_sog_kn < troll_pelagic min_sog_kn < troll_pelagic max_sog_kn")
 
+    from .ais.aggregate import AggregateParams  # lazy: the AIS package imports this module
+    try:
+        AggregateParams.from_mapping(doc["thresholds"]["aggregate"])
+    except ValueError as exc:
+        problems.append(str(exc))
+
     catalog_fields = catalogs["resolver"]["fields"]
     for key, override in doc["resolver_overrides"].items():
         if key not in catalog_fields:

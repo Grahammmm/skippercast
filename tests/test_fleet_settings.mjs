@@ -35,10 +35,12 @@ const withVerifier = async (verify, fn) => { const saved = fleetJobs.verify; fle
 const accept = async token => token === 'good' ? {jti: 'run-1'} : false;
 const bearer = token => ({Authorization: `Bearer ${token}`});
 
-test('fleetSettings: both flags default off; only "true"/"false" (any case, trimmed) change them', () => {
-  assert.deepEqual(fleetSettings(), {enabled: false, mapEnabled: false});
+test('fleetSettings: every flag defaults off; only "true"/"false" (any case, trimmed) change them', () => {
+  assert.deepEqual(fleetSettings(), {enabled: false, mapEnabled: false, publicHeatEnabled: false});
   assert.deepEqual(fleetSettings({}), FLEET_DEFAULTS);
-  assert.deepEqual(fleetSettings({FLEET_ENABLED: ' TRUE ', FLEET_MAP_ENABLED: 'true'}), {enabled: true, mapEnabled: true});
+  assert.deepEqual(fleetSettings({FLEET_ENABLED: ' TRUE ', FLEET_MAP_ENABLED: 'true'}), {enabled: true, mapEnabled: true, publicHeatEnabled: false});
+  assert.deepEqual(fleetSettings({FLEET_PUBLIC_HEAT_ENABLED: 'True'}), {enabled: false, mapEnabled: false, publicHeatEnabled: true});
+  for (const value of ['', '1', 'yes', 'on', undefined]) assert.equal(fleetSettings({FLEET_PUBLIC_HEAT_ENABLED: value}).publicHeatEnabled, false, String(value));
   for (const value of ['', '1', 'yes', 'on', 'tru', undefined]) assert.equal(fleetSettings({FLEET_ENABLED: value}).enabled, false, String(value));
   assert.equal(fleetSettings({FLEET_ENABLED: 'false'}).enabled, false);
   assert.ok(Object.isFrozen(FLEET_DEFAULTS));

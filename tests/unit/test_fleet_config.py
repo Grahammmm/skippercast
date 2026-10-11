@@ -58,7 +58,8 @@ BASE = {
         'match': {'auto_merge': 0.9, 'review_min': 0.6, 'mmsi_auto': 0.85},
         'refresh': {'vanished_after_runs': 3, 'vanished_after_days': 45, 'osint_stale_days': 60, 'fact_stale_days': 120},
         'retention': {'raw_days': 30, 'discovery_days': 7, 'static_days': 90},
-        'aggregate': {'module': 'grid', 'resolution_m': 1000, 'min_distinct_vessels': None, 'delay_hours': None},
+        'aggregate': {'module': 'grid', 'resolution_m': 1000, 'resolution_by_kind': {'troll-pelagic': 3000},
+                      'min_distinct_vessels': None, 'delay_hours': None},
     },
     'seasons': {'parts': [{'id': 'cool', 'months': [11, 12, 1, 2, 3, 4]}, {'id': 'warm', 'months': [5, 6, 7, 8, 9, 10]}]},
     'resolver_overrides': {'mmsi': {'priority': ['admin', 'ais-static', 'fcc-uls']}},
@@ -193,6 +194,26 @@ class LoadRegion(unittest.TestCase):
         found = self.problems(mutate)
         self.assertIn('review_min is above auto_merge', found)
         self.assertIn('speeds must rise strictly', found)
+
+    def test_resolution_by_kind_is_a_whole_multiple_of_resolution_m(self):
+        for value, message in ((2500, 'whole multiple'), (500, 'whole multiple')):
+            def mutate(doc):
+                doc['thresholds']['aggregate']['resolution_by_kind'] = {'troll-pelagic': value}
+            with self.subTest(value=value):
+                self.assertIn(f'resolution_by_kind.troll-pelagic must be resolution_m (1000) or a {message}',
+                              self.problems(mutate))
+        for good in ({}, {'troll-pelagic': 1000}, {'troll-pelagic': 5000, 'drift-anchor': 2000}):
+            doc = deepcopy(BASE)
+            doc['thresholds']['aggregate']['resolution_by_kind'] = good
+            self.write(doc)
+            self.assertEqual(load_region('ZZ', self.root).thresholds['aggregate']['resolution_by_kind'], good)
+
+    def test_resolution_by_kind_names_fishing_kinds_only(self):
+        for kind in ('transit', 'in-port', 'uncertain'):
+            def mutate(doc):
+                doc['thresholds']['aggregate']['resolution_by_kind'] = {kind: 3000}
+            with self.subTest(kind=kind):
+                self.assertIn('resolution_by_kind', self.problems(mutate))
 
     def test_speed_bands_must_not_overlap(self):
         for block, key, value in (('troll_slow', 'max_sog_kn', 5.5), ('troll_pelagic', 'min_sog_kn', 10.0),

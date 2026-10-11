@@ -89,7 +89,7 @@ commands). A unit that fails twice moves up one tier.
 - Depends on: N4 (needs watched boats to reprocess; code can start in parallel on synthetic tracks). Reuses: CF-43 (`segment.py`, `classify.py`), CF-44 events, CF-45 processor, CF-47 backfill.
 - Status: code and synthetic-track checks are in the `claude/n5-classifier` PR (#570). Rules and sources are in [references/classification.md](references/classification.md). Live reprocessing follows the merge.
 
-### N6 · Heat-map aggregate
+### N6 · Heat-map aggregate · **in review**
 
 - Purpose: a general heat map for the public and an unsuppressed one for the owner.
 - Input: N5 fishing events, `thresholds.aggregate` in `regions/CA/fleet.json`.
@@ -97,6 +97,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: a test (`node --test tests/test_fleet_public_heat.mjs`, new) proves the public route returns only cell geometry, mode, season or month, dwell and distinct-vessel count: no `vessel`, `mmsi`, `port`, `class`, `trip`, `event` or `track` key in any response, no route under it returns events or tracks, every cell has ≥ 3 distinct vessels, nothing newer than 72 h, and `noaa-planning-only` cells are absent from paid surfaces; plus `pytest tests/unit/test_fleet_events.py` and `node --test tests/test_fleet_map.mjs` pass.
 - Runs: Large builds, a second Large reviews.
 - Depends on: N5. Reuses: CF-44 (`src/skippercast/fleet/ais/aggregate/grid.py`, privacy knobs), CF-50 (`server/fleet/map.ts`), CF-51 (`dist/fleet-activity.js`).
+- Status: in review on `claude/n6-heat-map` ([#570](https://github.com/Grahammmm/skippercast/issues/570)). `resolution_by_kind` gives troll-pelagic 3 km cells; `GET /api/fleet/public/heat` is behind `FLEET_PUBLIC_HEAT_ENABLED` (off) and empty while aisstream is `internal-only`; the admin tracks layer draws fishing segments only. Go-live: [fleet-public-heat.md](../../operations/runbooks/fleet-public-heat.md).
 
 ### N7 · Labelled validation set
 
