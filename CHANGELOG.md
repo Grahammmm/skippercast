@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The map at `/map` downloads about 2.2 MB less data when it opens: the region's shoreline, its region file and its protected areas were each fetched twice and now load once (#473).
+
+### Internal
+
+- `e2e/startup.spec.ts` now measures the v2 app at `/map` too (`node scripts/measure_startup.mjs --v2`): each committed startup file is requested once, and everything but the region's shoreline stays within the startup budget until the shoreline gets a lighter published form.
+
 ## 0.8.0 — 2026-10-11
 
 - Suggested windows in the brief no longer run through an hour that a hazard rule flags or that the profile grades Rough, for every profile and whatever your limits say: a hazardous harbour bar at any hour of a boat window (not only departure and return), sneaker-wave swell for Shore when the surf is the offshore estimate, long-period swell under a kayak, and Rough Shore or Spear hours. Some windows are shorter or gone as a result. Occasionally a boat window the brief used to drop because its departure or return crossed a hazardous bar now appears as its clean remaining hours (#551).

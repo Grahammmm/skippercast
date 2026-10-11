@@ -2,7 +2,7 @@
 // that now loads only when the screen using it opens.
 import {readFileSync} from 'node:fs';
 import {test, expect, openMap, checkA11y} from './fixtures.ts';
-import {measureStartup, formatTable, stubLiveFeeds} from '../scripts/measure_startup.mjs';
+import {MAP_READY, measureStartup, formatTable, stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const budget = JSON.parse(readFileSync(new URL('../scripts/startup-budget.json', import.meta.url), 'utf8'))['morro-bay'];
 
@@ -17,6 +17,24 @@ test('Morro Bay startup JSON from committed files stays within its budget', asyn
   expect(result.rows.filter(r => /arcgis/.test(r.path)).length, 'the live MPA check answered (production path)').toBe(1);
   expect(result.rows.filter(r => /\/api\/daily\?.*part=mpa-boundaries/.test(r.path)), 'no MPA fallback').toEqual([]);
   expect(result.static, `static startup JSON ${result.static} bytes; budget ${budget.max_bytes} (scripts/startup-budget.json)`).toBeLessThanOrEqual(budget.max_bytes);
+  expect(pageErrors).toEqual([]);
+});
+
+// The v2 app at /map (FE-60 made it the default), measured the same way against the same budget.
+// The region's shoreline (regions/morro-bay/shoreline.geojson, 1.9 MB, the Chart's coastline glow)
+// alone takes it over: it needs a lighter published form (the platform build, not web/). Until that
+// lands it is held to one request, and everything else the app reads at startup to the budget.
+const SHORELINE = '/regions/morro-bay/shoreline.geojson';
+test('the v2 app reads each committed startup file once, within the budget apart from the shoreline', async ({page, pageErrors}, info) => {
+  test.skip(info.project.name !== 'phone', 'measured once, at phone size');
+  await stubLiveFeeds(page, {id: 'morro-bay'});
+  const result = await measureStartup(page, {path: '/map?region=morro-bay&ui=v2', ready: MAP_READY});
+  console.log(formatTable(result));
+  const repeated = result.rows.filter(r => !r.live && r.requests > 1).map(r => `${r.path} × ${r.requests}`);
+  expect(repeated, 'each committed static file is requested once').toEqual([]);
+  const shoreline = result.rows.find(r => r.path === SHORELINE)?.bytes ?? 0;
+  expect(result.static - shoreline, `static startup JSON without the shoreline: ${result.static - shoreline} bytes; budget ${budget.max_bytes} (scripts/startup-budget.json)`)
+    .toBeLessThanOrEqual(budget.max_bytes);
   expect(pageErrors).toEqual([]);
 });
 
