@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
     <title>SkipperCast · Map</title>
+    <!-- v1 parity before FE-61: the web manifest, theme colour (v1's; design.md names none) and icons, as dist/index.html. -->
+    <meta name="theme-color" content="#082e3b" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <!-- FE-05: the v2 shell loads the v2 tokens (web/tokens.css), the primitives and its own sheet, in this order; web/app/main.tsx renders into #app. -->
     <link rel="stylesheet" href="../web/tokens.css" />
     <link rel="stylesheet" href="../web/ui/ui.css" />

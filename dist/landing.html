@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Wind, swell, water temperature and tide from fixed buoys and a tide gauge on the Central California coast, each with its station and age." />
     <title>SkipperCast · Know the water before you leave the dock</title>
+    <!-- v1 parity before FE-61: the web manifest, theme colour (v1's; design.md names none) and icons, as dist/index.html. -->
+    <meta name="theme-color" content="#082e3b" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <!-- FE-07: the v2 tokens, the primitives, the port chooser's sheet and the landing's, in this order. The hero text and the footer line are static so the
          largest paint waits for neither the module nor a re-render; web/landing/main.tsx renders the shoreline, nav, readout, pills, port input,
          layer dots and the shoreline's credit (from its generated module) into the hosts below (the CSP allows no inline script); after first
