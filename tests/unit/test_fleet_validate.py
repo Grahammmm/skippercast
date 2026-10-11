@@ -5,6 +5,8 @@ harbor drawn in open ocean, a raw store under a temporary FLEET_VAR, made-up
 labeller ids (``admin-test``, ``agent:test``) and a fake Worker serving the
 labels the admin view would have stored and taking the labels ``label import`` posts.
 """
+from contextlib import redirect_stderr
+import io
 import json
 import os
 from pathlib import Path
@@ -14,7 +16,7 @@ from unittest import mock
 
 from skippercast.fleet.ais import label as labelling, validate
 from skippercast.fleet.ais.events import iso_utc
-from skippercast.fleet.ais.process import HOUR, MINUTE
+from skippercast.fleet.ais.process import HOUR, MINUTE, WorkerError
 from skippercast.fleet.ais.segment import ActivityThresholds
 from skippercast.fleet.ais.store import AisStore, retention_limits
 from skippercast.fleet.ais.validate import Interval, confusion, metrics, score
@@ -286,6 +288,15 @@ class ReportTests(SyncTestCase):
             self.assertNotIn(secret, text)
             self.assertNotIn(secret, document)
 
+    def test_a_sync_outside_a_workflow_job_fails_in_one_line(self):
+        var = Path(self.tmp.name) / "var"
+        env = {k: v for k, v in os.environ.items() if not k.startswith("ACTIONS_ID_TOKEN_REQUEST")}
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {**env, "SKIPPERCAST_FLEET_VAR": str(var)}, clear=True), redirect_stderr(err):
+            self.assertEqual(validate.main(["--region", "CA", "--labeller", "admin"]), 2)
+        self.assertEqual(err.getvalue(), "fleet ais validate: no job token here: run it through fleet-ais.yml, "
+                                         "or use --offline to score the last sync\n")
+
     def test_the_command_line_scores_offline_and_writes_the_report(self):
         var = Path(self.tmp.name) / "var"
         with mock.patch.dict(os.environ, {"SKIPPERCAST_FLEET_VAR": str(var)}):
@@ -405,14 +416,51 @@ class LabelImportTests(unittest.TestCase):
 
     def test_a_dry_run_checks_and_makes_no_request(self):
         path = self.write(self.proposal())
-        with mock.patch.object(labelling, "Worker", side_effect=AssertionError("no Worker on a dry run")):
+        with mock.patch.object(labelling, "job_worker", side_effect=AssertionError("no Worker on a dry run")):
             self.assertEqual(labelling.main(["import", str(path), "--dry-run"]), 0)
             self.assertEqual(labelling.import_labels(path), {"trips": 1, "labels": 3, "posted": 0})
 
+    def test_posting_outside_a_workflow_job_fails_in_one_line(self):
+        path = self.write(self.proposal())
+        env = {k: v for k, v in os.environ.items() if not k.startswith("ACTIONS_ID_TOKEN_REQUEST")}
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, env, clear=True), redirect_stderr(err):
+            self.assertEqual(labelling.main(["import", str(path)]), 2)
+        self.assertEqual(err.getvalue(), "fleet ais label: no job token here: run it through fleet-ais.yml, "
+                                         "or use --dry-run to check only\n")
+
+    def test_an_empty_list_withdraws_the_agents_labels(self):
+        worker = LabelWorker([])   # OTHER has no export file: a withdrawal needs none
+        counts = labelling.import_labels(self.write(self.proposal(labels=[]), self.proposal(labels=[], trip=OTHER)), worker)
+        self.assertEqual(counts, {"trips": 2, "labels": 0, "posted": 2})
+        self.assertEqual([b for _, b in worker.calls], [{"trip_id": TRIP, "labeller": "agent:test", "labels": []},
+                                                        {"trip_id": OTHER, "labeller": "agent:test", "labels": []}])
+
+    def test_a_worker_refusal_stops_at_that_trip_and_says_how_many_were_posted(self):
+        (self.dir / f"{OTHER}.json").write_text((self.dir / f"{TRIP}.json").read_text())
+        third = "e" * 32
+        (self.dir / f"{third}.json").write_text((self.dir / f"{TRIP}.json").read_text())
+        worker = LabelWorker([])
+        refused = worker.post
+
+        def post(path, body):
+            if body["trip_id"] == OTHER:
+                raise WorkerError("POST labels: HTTP 409 overlaps")
+            return refused(path, body)
+        worker.post = post
+        path = self.write(self.proposal(), self.proposal(trip=OTHER), self.proposal(trip=third))
+        with self.assertRaises(WorkerError) as caught:
+            labelling.import_labels(path, worker)
+        self.assertIn("at the trip of entry 2; 1 of 3 trips posted before it", str(caught.exception))
+        self.assertEqual([b["trip_id"] for _, b in worker.calls], [TRIP], "the import stops at the refused trip")
+        self.assertNotIn(OTHER, str(caught.exception))
+        worker.post = refused   # fixed: a re-run posts every trip again, replacing the agent's labels
+        self.assertEqual(labelling.import_labels(path, worker)["posted"], 3)
+
     def test_invalid_proposals_are_refused_and_nothing_is_posted(self):
         cases = {
-            "labels overlap": [self.label(40, 60, "transit"), self.label(55, 95, "drift-anchor")],
-            "within the trip": [self.label(30, 55, "transit")],   # before the departure at 39 min
+            "labels 1 and 2 overlap": [self.label(40, 60, "transit"), self.label(55, 95, "drift-anchor")],
+            "within the trip's export window": [self.label(30, 55, "transit")],   # before the departure at 39 min
             "label must be one of": [self.label(55, 95, "fishing")],
             "at least one minute": [self.label(55, 55, "drift-anchor")],
             "basis is required": [self.label(55, 95, "drift-anchor", basis=" ")],
@@ -421,12 +469,15 @@ class LabelImportTests(unittest.TestCase):
         }
         for message, labels in cases.items():
             with self.subTest(message):
-                self.assertIn(message, self.errors(self.proposal(labels)))
+                error = self.errors(self.proposal(labels))
+                self.assertIn(message, error)
+                self.assertNotIn("2026-", error, "no trip times in errors (they reach the Actions log)")
         for labeller in ("admin-test", "agent:", "agent:a b", None):
             self.assertIn("labeller must be agent:<name>", self.errors(self.proposal(labeller=labeller)))
         self.assertIn("no export file", self.errors(self.proposal(trip=OTHER)))
         self.assertIn("once per file", self.errors(self.proposal(), self.proposal()))
-        self.assertIn("1 to 200 labels", self.errors(self.proposal(labels=[])))
+        many = [self.label(40 + k, 41 + k, "transit") for k in range(201)]
+        self.assertIn("at most 200 labels", self.errors(self.proposal(labels=many)))
         message = self.errors(self.proposal(), self.proposal(labeller="admin-test", trip=OTHER))
         self.assertTrue(message.startswith("entry 2: "), message)
         self.assertNotIn(TRIP, message)

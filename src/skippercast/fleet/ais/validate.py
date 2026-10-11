@@ -75,7 +75,7 @@ from .sources.base import AisPosition
 from .store import ais_root
 
 __all__ = ["LABELS", "PREDICTIONS", "TARGET", "Interval", "LabelledTrip", "confusion", "dominant_mode", "fetch_labels",
-           "main", "markdown", "metrics", "predict", "report", "score", "sync", "target", "transit_lost",
+           "job_worker", "main", "markdown", "metrics", "predict", "report", "score", "sync", "target", "transit_lost",
            "validation_dir"]
 
 LABELS = ("in-port", "transit", "drift-anchor", "troll-slow", "troll-pelagic")
@@ -244,6 +244,13 @@ def _ms(iso: str) -> int:
 
 def _labeller_kind(labeller) -> str:
     return "agent" if str(labeller or "").startswith("agent:") else "admin"
+
+
+def job_worker(instead: str) -> Worker:
+    """The Worker client; a one-line error outside a ``fleet-ais.yml`` job, which alone has the GitHub OIDC token."""
+    if not all(os.environ.get(k) for k in ("ACTIONS_ID_TOKEN_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_TOKEN")):
+        raise WorkerError(f"no job token here: run it through fleet-ais.yml, or {instead}")
+    return Worker(worker_base())
 
 
 def validation_dir(root: Path) -> Path:
@@ -437,7 +444,7 @@ def main(argv=None) -> int:
         region = load_region(args.region)
         root = ais_root(region.id)
         if not args.offline:
-            counts = sync(region, Worker(worker_base()), root)
+            counts = sync(region, job_worker("use --offline to score the last sync"), root)
             print(json.dumps({"sync": counts}, sort_keys=True))
             if args.sync_only:
                 return 0

@@ -14,9 +14,12 @@ checkout's tracked files.
 
 ``label import <file.json>`` checks a proposed-labels file, a list of
 ``{trip_id, labeller: "agent:<name>", labels: [{started_at, ended_at, label, basis}]}`` (the
-admin view's rules, ``server/fleet/admin/labels.ts``, plus each trip's export window), then
-posts each trip to ``POST /api/fleet/jobs/labels``, which replaces that agent's labels on the
-trip. ``--dry-run`` only checks. Errors and output name entries by position, never by trip id.
+admin view's rules, ``server/fleet/admin/labels.ts``, plus each trip's export window; an empty
+``labels`` list withdraws that agent's labels), then posts each trip to ``POST
+/api/fleet/jobs/labels``, which replaces that agent's labels on the trip. A failed local check
+posts nothing; a Worker refusal stops at that trip and leaves the earlier ones imported, and a
+re-run is safe. Posting needs ``fleet-ais.yml``'s job token; ``--dry-run`` only checks. Errors
+and output name entries and labels by position, never by trip id or time.
 """
 from __future__ import annotations
 
@@ -33,13 +36,12 @@ from zoneinfo import ZoneInfo
 
 from ...paths import repo_root
 from ..config import FleetConfigError, load_region
-from ..sinks import worker_base
 from .classify import classify_trip
 from .events import iso_utc, trip_id
-from .process import HOUR, STORES, Worker, WorkerError, downsample
+from .process import HOUR, STORES, WorkerError, downsample
 from .segment import BASIS, ActivityThresholds, offshore_nm, prepare, split_trips
 from .store import ais_root, fleet_var
-from .validate import LABELS, LABELS_FILE, TRIP_ID, _ms, _write_json, validation_dir
+from .validate import LABELS, LABELS_FILE, TRIP_ID, _ms, _write_json, job_worker, validation_dir
 
 __all__ = ["COLUMNS", "check", "export", "import_labels", "main", "summary"]
 
@@ -137,7 +139,7 @@ def _label(x, lo: int, hi: int) -> tuple[dict | None, str | None]:
     if not 2 <= len(basis) <= MAX_BASIS:
         return None, f"basis is required (2 to {MAX_BASIS} characters)"
     if s < lo or e > hi:
-        return None, f"the range must fall within the trip ({iso_utc(lo)} to {iso_utc(hi)})"
+        return None, "the range must fall within the trip's export window"
     return {"started_at": iso_utc(s), "ended_at": iso_utc(e), "label": x["label"], "basis": basis}, None
 
 
@@ -157,8 +159,11 @@ def check(entries, exports: Path) -> tuple[list[dict], list[str]]:
         if not isinstance(labeller, str) or not LABELLER.match(labeller):
             errors.append(f"{where}: labeller must be agent:<name>")
             continue
-        if not isinstance(labels, list) or not 1 <= len(labels) <= MAX_LABELS:
-            errors.append(f"{where}: labels must hold 1 to {MAX_LABELS} labels")
+        if not isinstance(labels, list) or len(labels) > MAX_LABELS:
+            errors.append(f"{where}: labels must be a list of at most {MAX_LABELS} labels")
+            continue
+        if not labels:   # a withdrawal of that agent's labels on the trip
+            bodies.append({"trip_id": tid, "labeller": labeller, "labels": []})
             continue
         try:
             window = json.loads((exports / f"{tid}.json").read_text(encoding="utf-8"))["window"]
@@ -173,23 +178,28 @@ def check(entries, exports: Path) -> tuple[list[dict], list[str]]:
             if error:
                 errors.append(f"{where} label {k}: {error}")
             else:
-                done.append(label)
-        done.sort(key=lambda x: x["started_at"])
-        errors += [f"{where}: labels overlap at {b['started_at']}" for a, b in zip(done, done[1:])
+                done.append((label, k))
+        done.sort(key=lambda x: x[0]["started_at"])
+        errors += [f"{where}: labels {j} and {k} overlap" for (a, j), (b, k) in zip(done, done[1:])
                    if b["started_at"] < a["ended_at"]]
         if len(errors) == found:
-            bodies.append({"trip_id": tid, "labeller": labeller, "labels": done})
+            bodies.append({"trip_id": tid, "labeller": labeller, "labels": [x for x, _ in done]})
     return bodies, errors
 
 
 def import_labels(path: Path, worker=None, exports: Path | None = None) -> dict:
-    """Check the file; post each trip unless ``worker`` is None (a dry run). Nothing is posted if any entry fails."""
+    """Check the file; post each trip unless ``worker`` is None (a dry run). A failed local check posts nothing;
+    a Worker refusal stops at that trip, with the trips before it imported (a re-run replaces them)."""
     path = Path(path)
     bodies, errors = check(json.loads(path.read_text(encoding="utf-8")), Path(exports or path.parent))
     if errors:
         raise ValueError("; ".join(errors))
-    for body in bodies if worker is not None else ():
-        worker.post("labels", body)
+    for posted, body in enumerate(bodies if worker is not None else ()):
+        try:
+            worker.post("labels", body)
+        except WorkerError as error:
+            raise WorkerError(f"{error} (at the trip of entry {posted + 1}; {posted} of {len(bodies)} trips posted "
+                              "before it; fix and re-run: each post replaces that agent's labels)") from None
     return {"trips": len(bodies), "labels": sum(len(b["labels"]) for b in bodies),
             "posted": 0 if worker is None else len(bodies)}
 
@@ -210,7 +220,8 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "import":
-            counts = import_labels(Path(args.file), None if args.dry_run else Worker(worker_base()), args.exports)
+            counts = import_labels(Path(args.file), None if args.dry_run else job_worker("use --dry-run to check only"),
+                                   args.exports)
         else:
             if (args.start is None) != (args.end is None) or (args.start and args.end < args.start):
                 parser.error("--from and --to go together, --to on or after --from")
