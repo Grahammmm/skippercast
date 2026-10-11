@@ -126,7 +126,7 @@ test('acceptance 4: each profile yields its § 8 caveat; shore and spear read th
       assert.equal(brief.profile, profile);
     }
   }
-  assert.equal(tile(buildRegionalBrief({...regional, profile: 'shore', date, now}), 'swell').detail, 'No nearshore model site');
+  assert.equal(tile(buildRegionalBrief({...regional, profile: 'shore', date, now}), 'swell').detail, 'No nearshore model site · moderate surf (offshore estimate)');
   assert.equal(tile(buildRegionalBrief({...regional, profile: 'spear', date, now}), 'swell').state, 'unavailable');
 });
 

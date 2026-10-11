@@ -60,6 +60,8 @@ export interface Brief {
   readonly localReport: {readonly available: boolean; readonly text: string};
   /** The spear reading (surge, clarity estimate, verdict per hour); null for boat and shore. */
   readonly spear: DailyBrief['spear'];
+  /** The shore reading (surf, wind side, tide phase, verdict per hour); null for boat and spear. */
+  readonly shore: DailyBrief['shore'];
   readonly alerts: readonly Alert[];
   readonly missing: readonly string[];
   readonly tides: readonly TidePoint[];
