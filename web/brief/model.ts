@@ -16,6 +16,7 @@ import {buildDaily, dateKey, type DailyBrief} from '../../packages/coast/src/dai
 import {resolveReportBinding, type CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import type {Alert, Area, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
 import {profileSemantics, type Profile} from '../profile.ts';
+import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
@@ -94,7 +95,8 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const curvePoint = nearest(daily.tides, pivot);
   const nextEvent: TideEvent | undefined = curvePoint ? undefined : [...report.tideEvents].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).find(item => Date.parse(item.at) >= pivot);
   const tide = tile('tide', 'Tide', curvePoint?.heightFt ?? nextEvent?.heightFt ?? null, 'ft',
-    curvePoint ? `${county.tideStation.name} · ${datum}` : nextEvent ? `next ${nextEvent.type === 'H' ? 'high' : 'low'} · ${county.tideStation.name} · ${datum}` : 'Tide series unavailable',
+    curvePoint ? [tideTrend(daily.tides, pivot), county.tideStation.name, datum].filter(Boolean).join(' · ')
+      : nextEvent ? `next ${nextEvent.type === 'H' ? 'high' : 'low'} · ${county.tideStation.name} · ${datum}` : TIDE_UNAVAILABLE,
     tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now);
 
   return {
@@ -103,7 +105,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area), fleet: fleetLine(context.reports ?? [], context.port ?? '', county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, sunrise: daily.sunrise, sunset: daily.sunset,
+    alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 

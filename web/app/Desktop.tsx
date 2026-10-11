@@ -3,22 +3,24 @@
 // web/brief/Brief.tsx (FE-37): headline, deck, four tiles, the lower-exposure
 // window, the caveat, the notice, fleet and local-report lines and the
 // footer; before a brief is in hand it shows its empty state. "Where to look"
-// is web/brief/WhereToLook.tsx (FE-34); the tide sparkline (FE-33) is still a
-// placeholder. The map
-// is MapStage.tsx (FE-71). Mobile.tsx (FE-06) composes the same pieces into
+// is web/brief/WhereToLook.tsx (FE-34); the tide sparkline is
+// web/brief/TideSpark.tsx (FE-33). The map is MapStage.tsx (FE-71); in the Conditions view
+// (FE-32) the view covers the map above the time dock, and the map stays
+// mounted. Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order.
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {MarkCard} from './MarkCard.tsx';
 import {TimeDock} from './TimeDock.tsx';
+import {Conditions} from './views/Conditions.tsx';
+import {appView} from '../state.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
 export {DISCLAIMER} from '../brief/Brief.tsx';
-
-export const TideSpark = () => <figure class="app-spark" aria-label="Tide curve"><span>—</span></figure>;
 
 export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Date} = {}) {
   const brief = currentBrief(now);
@@ -28,7 +30,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
       <Headline brief={brief} />
       <Deck brief={brief} />
       <BriefTiles brief={brief} />
-      <TideSpark />
+      <TideSpark brief={brief} now={now} />
       <WhereToLook ranking={ranking} />
       <LowerExposure brief={brief} />
       <Caveat brief={brief} />
@@ -43,8 +45,7 @@ export function Desktop({now = new Date()}: {now?: Date} = {}) {
     <main class="app-main">
       <Brief now={now} />
       <MapStage>
-        <div class="app-chrome-left"><MarkCard /><Legend /></div>
-        <LayerRail />
+        {appView.value === 'conditions' ? <Conditions now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
         <TimeDock now={now} />
       </MapStage>
     </main>
