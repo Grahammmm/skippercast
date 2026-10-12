@@ -4,6 +4,10 @@
 // passes the active profile's limits to buildDaily. Separate from the
 // signed-in preferences (server/preferences.ts) on purpose.
 //
+// The cruise speed the Boat brief's run times use (web/brief/run.ts) is kept
+// the same way, under its own key. It has no default: until the user types
+// one, the brief asks for it.
+//
 // When storage fails (private mode, quota, blocked) the limits still hold for
 // the page's life in the signal, and a fresh page starts from the defaults.
 //
@@ -70,4 +74,33 @@ export function resetLimits(profile: Profile): void {
   const next: SavedLimits = {...savedLimits.peek()};
   delete next[profile];
   persist(next);
+}
+
+/** The range a cruise speed may take (knots); outside it, nothing is saved. */
+export const CRUISE_BOUNDS = Object.freeze({min: 2, max: 60, step: 0.5});
+
+/** The cruise speed the user typed on this device, in knots; null until they do. */
+export const cruiseSpeed = signal<number | null>(null);
+
+/** A cruise speed inside CRUISE_BOUNDS rounded to its step, else null. A blank or unreadable value is null, never a default. */
+export function parseCruise(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n < CRUISE_BOUNDS.min || n > CRUISE_BOUNDS.max) return null;
+  return Math.round(n / CRUISE_BOUNDS.step) * CRUISE_BOUNDS.step;
+}
+
+/** Load the stored cruise speed into the signal. */
+export function loadCruise(): number | null {
+  let raw: unknown = null;
+  try { raw = (JSON.parse(readStored(STORAGE_KEYS.cruise) ?? 'null') as {knots?: unknown} | null)?.knots; } catch { /* unreadable: no speed */ }
+  cruiseSpeed.value = parseCruise(raw);
+  return cruiseSpeed.peek();
+}
+
+/** Save a cruise speed; a blank or out-of-range value clears it. Returns what was saved. */
+export function saveCruise(value: unknown): number | null {
+  const knots = parseCruise(value);
+  cruiseSpeed.value = knots;
+  writeStored(STORAGE_KEYS.cruise, JSON.stringify({knots}));
+  return knots;
 }

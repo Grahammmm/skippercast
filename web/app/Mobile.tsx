@@ -28,6 +28,7 @@ import {AccountMenu} from './AccountMenu.tsx';
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
+import {RunLine} from '../brief/Run.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -84,6 +85,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
       <WhereToLook ranking={ranking} />
       <Deck brief={brief} />
       <LowerExposure brief={brief} />
+      <RunLine brief={brief} ranking={ranking} now={now} />
       <TideSpark brief={brief} now={now} />
       <div class="app-sheet-menus">
         <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />

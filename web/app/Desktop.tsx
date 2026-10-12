@@ -21,6 +21,7 @@
 import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
+import {RunLine} from '../brief/Run.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -46,6 +47,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
       <TideSpark brief={brief} now={now} />
       <WhereToLook ranking={ranking} />
       <LowerExposure brief={brief} />
+      <RunLine brief={brief} ranking={ranking} now={now} />
       <Caveat brief={brief} />
       <BriefLinks brief={brief} />
       <BriefFooter />

@@ -6,12 +6,15 @@
 // The brief's windows use the saved limits at once; Reset to defaults clears
 // them for the profile. Each field shows its default and its range; values
 // outside the range are clamped on save (packages/coast/src/limits.ts).
+// Boat adds the cruise speed the brief's run times use (web/brief/run.ts):
+// blank until the user types one, with no default, and kept apart from the
+// limits so Reset to defaults leaves it alone.
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {defaultLimits, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
-import {hasOwnLimits, limitsFor, resetLimits, saveLimits} from '../limits.ts';
+import {CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
 import {profile} from '../state.ts';
 
 const fmt = (n: number) => Number(n.toFixed(1)).toString();
@@ -26,16 +29,18 @@ export function fieldLabel(p: Profile, field: LimitField): {label: string; unit:
 type Draft = Record<LimitField, string> & {surge?: LimitSurge};
 const draftOf = (limits: ComfortLimits): Draft => ({wind: fmt(limits.wind), gust: fmt(limits.gust), seas: fmt(limits.seas), ...(limits.surge ? {surge: limits.surge} : {})});
 
-/** The form: one number field per limit (and the surge band for spear), Save and Reset to defaults. */
-export function LimitsForm({profile: p, onDone}: {profile: Profile; onDone?: () => void}) {
+/** The form: one number field per limit (and the surge band for spear, the cruise speed for boat), Save and Reset to defaults. `focusCruise` marks the cruise speed autofocus, so the modal opens on it. */
+export function LimitsForm({profile: p, onDone, focusCruise = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean}) {
   const id = useId();
   const [draft, setDraft] = useState<Draft>(() => draftOf(limitsFor(p)));
+  const [cruise, setCruise] = useState(() => cruiseSpeed.peek() === null ? '' : fmt(cruiseSpeed.peek()!));
   useEffect(() => setDraft(draftOf(limitsFor(p))), [p]);
   const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p);
   const set = (field: keyof Draft, value: string) => setDraft(prev => ({...prev, [field]: value}));
   const submit = (event: Event) => {
     event.preventDefault();
     saveLimits(p, draft);
+    if (p === 'boat') saveCruise(cruise);
     onDone?.();
   };
   const reset = () => { resetLimits(p); setDraft(draftOf(base)); };
@@ -62,6 +67,14 @@ export function LimitsForm({profile: p, onDone}: {profile: Profile; onDone?: () 
           <span id={`${id}-surge-hint`} class="app-limits-hint ui-mono">Default {base.surge}</span>
         </div>
       ) : null}
+      {p === 'boat' ? (
+        <div class="app-limits-field">
+          <label for={`${id}-cruise`}>Cruise speed <span class="ui-mono">(kt)</span></label>
+          <input id={`${id}-cruise`} autoFocus={focusCruise} name="cruise" type="number" inputMode="decimal" min={CRUISE_BOUNDS.min} max={CRUISE_BOUNDS.max} step={CRUISE_BOUNDS.step}
+            value={cruise} onInput={event => setCruise((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-cruise-hint`} />
+          <span id={`${id}-cruise-hint`} class="app-limits-hint ui-mono">No default · {fmt(CRUISE_BOUNDS.min)}–{fmt(CRUISE_BOUNDS.max)} · run times only · blank clears it</span>
+        </div>
+      ) : null}
       <p id={`${id}-note`} class="app-limits-note">
         Kept on this device only. Suggested windows use these limits. Marine alerts, long-period swell, a hazardous bar, offshore wind and launch surf for a kayak, and daylight still rule hours out whatever you set.
       </p>
@@ -74,7 +87,7 @@ export function LimitsForm({profile: p, onDone}: {profile: Profile; onDone?: () 
 }
 
 /** A native modal dialog with a heading and Close, open while `open` is true. */
-function LimitsDialog({open, onClose, title, children}: {open: boolean; onClose: () => void; title: string; children: ComponentChildren}) {
+export function LimitsDialog({open, onClose, title, children}: {open: boolean; onClose: () => void; title: string; children: ComponentChildren}) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
