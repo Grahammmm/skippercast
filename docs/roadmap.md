@@ -5,7 +5,7 @@ This separates what ships now from future work. The domain **skippercast.com** i
 ## What ships now (version 0.8)
 
 - A landing page at `/` and a map app at `/map` with five views: Coast, Conditions, History, Fleet and Reports (`web/app/`).
-- A brief for a port and a profile (Boat, Shore or Spear): wind, swell, water and tide tiles, a lower-exposure window, where to look, and a caveat. It never gives a go/no-go or promises a catch (`web/brief/`).
+- A brief for a port and a profile (Boat, Shore, Spear or Kayak): wind, swell, water and tide tiles, a lower-exposure window, where to look, and a caveat. It never gives a go/no-go or promises a catch (`web/brief/`).
 - For a Boat brief, run time at your own cruise speed, a turn-back time and the fishing time left. The distance is straight-line, not a charted route (`web/brief/run.ts`).
 - One disclosed conditions model behind the brief and the advisor's comfort words ([conditions model](conditions-model.md)).
 - A MapLibre Chart on a self-hosted basemap, and 2D and 3D terrain views loaded on demand (`web/map/`, `packages/coast/`).
