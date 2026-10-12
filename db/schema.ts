@@ -347,7 +347,8 @@ export const fleetRuns=sqliteTable('fleet_runs',{
 // MarineCadastre), so paid surfaces can filter it out in code.
 
 // MMSIs the listener watches, and candidates still being matched. vessel_id is null
-// while a candidate; match_method fcc-uls/call-sign/ais-static-name/geofence-presence/admin.
+// while a candidate; match_method fcc-uls/call-sign/ais-static-name/geofence-presence/admin/
+// schedule-correlation (a watched row: not call-sign or ais-static-name, confidence >= 0.85).
 export const fleetAisWatch=sqliteTable('fleet_ais_watch',{
   region:text('region').notNull(),mmsi:text('mmsi').notNull(),vesselId:text('vessel_id'),
   matchMethod:text('match_method').notNull(),confidence:real('confidence').notNull(),status:text('status').notNull().default('candidate'),
