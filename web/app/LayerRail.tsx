@@ -24,12 +24,12 @@
 // The bases draw on the Chart only; `?base=aerial` where no aerial is offered
 // shows Night, which is what draws.
 // Walkthrough slice 3 (#620): the rail opens with what to look for, the target
-// species (the command bar's list, bound to the same `?target=`) and the terrain
+// species ("Look for": the command bar's list, bound to the same `?target=`) and the terrain
 // grade filter (`?grade=`, web/grade.ts), which narrows the reef marks, their
 // density below zoom 10 and the seafloor candidates together.
 import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam} from '../grade.ts';
 import {PROFILE_TABLE} from '../profile.ts';
-import {regionPlans, targetGroups, targetsFor} from '../species.ts';
+import {regionTargets, targetGroups} from '../species.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
@@ -185,11 +185,12 @@ function BaseChoice() {
 
 /** What to look for: the target species and the terrain grade filter, at the head of the rail (#620). */
 export function LookFor() {
-  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, r = region.value, loaded = regionPlans.value;
-  const list = targetsFor(p, r, loaded && loaded.region === r ? loaded.plans : {}, species.value);
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
+  const list = regionTargets(p, region.value, species.value);
   return (
     <div class="app-rail-look" role="group" aria-label="Where to look">
-      <label class="app-rail-source">Target
+      {/* "Look for", not "Target": the command bar's Target select stays the one control by that name. */}
+      <label class="app-rail-source">Look for
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
           {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
             <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>

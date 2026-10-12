@@ -17,7 +17,7 @@ import {
   FIT_STYLE, GRADE_STYLE, HABITAT_LABEL, archiveURL, decodeTile, dedupeById, habitatDetails, ledgerURL, loadManifest,
   sourceRightsDetails, tileFeatures, tilesForBounds,
 } from '../../dist/seafloor-data.js';
-import {GRADE_LABELS, gradeAllows, type GradeFilter} from '../grade.ts';
+import {gradeAllows, type GradeFilter} from '../grade.ts';
 import {PROFILE_TABLE, withinDepth, type Profile} from '../profile.ts';
 import {grade, layers, profile, region, species} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
@@ -360,7 +360,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - inDepth.length, graded = inDepth.length - habitat.length;
     ready([`${ranked} candidate${ranked === 1 ? '' : 's'} · ${habitat.length - ranked} unranked in view`,
       deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : '',
-      graded ? `${graded} outside grade ${GRADE_LABELS[g]} left out` : ''].filter(Boolean).join(' · '), {
+      graded ? `${graded} below grade ${g === 'a' ? 'A' : 'B'} or unranked left out` : ''].filter(Boolean).join(' · '), {
       view: view === 'terrain' ? 'terrain' : 'fit', fit: fit ? fitName(fit) : null, drawn: habitat.length + cells.length,
       surveys: [...new Set(habitat.map(f => `${f.survey.id} (${f.survey.year})`))].sort(),
       credits: [...new Set([...habitat, ...cells].flatMap(f => f.rights.map(r => r.credit)))],

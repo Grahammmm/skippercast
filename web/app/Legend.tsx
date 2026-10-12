@@ -223,7 +223,7 @@ export function DensityRow() {
   return (
     <li class="app-legend-density">
       {n ? <span class="app-swatch" data-layer="marks-density" aria-hidden="true"></span> : null}
-      {n ? `${label} habitat candidates, denser here` : `No mapped reef marks for ${label.toLowerCase()} here`}
+      {n ? `${label} habitat candidates, denser here` : g === 'all' ? `No mapped reef marks for ${label.toLowerCase()} in this region` : `No grade ${GRADE_LABELS[g]} reef marks for ${label.toLowerCase()}; choose All to see the rest`}
       <Popover iconOnly summary="Habitat candidate density basis">
         <p>{layerEntry('marks').basis} {GRADE_MEANING} Density shows where mapped candidates cluster, not where fish are; it is drawn only around surveyed marks.</p>
       </Popover>
