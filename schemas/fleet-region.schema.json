@@ -226,9 +226,12 @@
         },
         "aggregate": {
           "type": "object", "additionalProperties": false,
-          "required": ["module", "resolution_m", "min_distinct_vessels", "delay_hours"],
+          "required": ["module", "resolution_m", "resolution_by_kind", "min_distinct_vessels", "delay_hours"],
           "properties": {"module": {"enum": ["grid", "h3"]},
                          "resolution_m": {"$ref": "#/$defs/positive"},
+                         "resolution_by_kind": {"description": "A coarser cell edge for a fishing kind, a whole multiple of resolution_m (checked by fleet.config); other kinds use resolution_m.",
+                                                "type": "object", "propertyNames": {"enum": ["drift-anchor", "troll-slow", "troll-pelagic"]},
+                                                "additionalProperties": {"$ref": "#/$defs/positive"}},
                          "min_distinct_vessels": {"description": "null turns the privacy floor off (admin views).", "oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
                          "delay_hours": {"description": "null turns the publication delay off (admin views).", "oneOf": [{"type": "number", "minimum": 0}, {"type": "null"}]}}
         }

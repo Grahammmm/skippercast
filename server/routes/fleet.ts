@@ -24,6 +24,8 @@
 //   /api/admin/fleet/trips*, /api/admin/fleet/labels/:id/delete      CF-48, registered in routes/admin.ts (fleet/admin/labels.ts)
 //   POST /api/admin/fleet/trips/:id/approve                          N7, registered in routes/admin.ts (fleet/admin/labels.ts)
 //   GET /api/fleet/map/:layer  registered in adminRoutes (routes/admin.ts, CF-50, server/fleet/map.ts)
+//   GET /api/fleet/public/heat  anonymous, registered in routes/public.ts ahead of this router with its own
+//                               gate (FLEET_ENABLED and FLEET_PUBLIC_HEAT_ENABLED; N6, server/fleet/public-heat.ts)
 import {Hono} from 'hono';
 import type {MiddlewareHandler} from 'hono';
 import {fleetSettings} from '../fleet/settings.ts';

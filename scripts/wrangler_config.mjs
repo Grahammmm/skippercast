@@ -17,7 +17,7 @@
 //                     errors and exceptions are still kept.
 // With ENABLE_ADVISOR, TEXT_ADVISOR_ENABLED and every ADVISOR_* variable set in
 // the environment are copied into the Worker's vars (never a secret). The charter
-// fleet has no bindings, so its FLEET_VARS (FLEET_ENABLED, FLEET_MAP_ENABLED) are copied whenever set
+// fleet has no bindings, so its FLEET_VARS (FLEET_ENABLED, FLEET_MAP_ENABLED, FLEET_PUBLIC_HEAT_ENABLED) are copied whenever set
 // (docs/plans/charter-fleet/design.md § 16), and so is the front-end rebuild's UI_V2
 // (UI_VARS; docs/plans/front-end/design.md § 14), and the coast snapshots' COAST_FEEDS (COAST_VARS; FE-84).
 // Comments are removed by a string-aware scanner, so "//" inside a value (the
@@ -105,7 +105,7 @@ export function advisorVars(environ = {}) {
 
 // The charter fleet's plain vars, by name: an allowlist, not a prefix, so a future
 // FLEET_* secret can never be published as a plain var.
-export const FLEET_VARS = ['FLEET_ENABLED', 'FLEET_MAP_ENABLED'];
+export const FLEET_VARS = ['FLEET_ENABLED', 'FLEET_MAP_ENABLED', 'FLEET_PUBLIC_HEAT_ENABLED'];
 
 /** The allowlisted `names` from an environment, trimmed, non-empty only. */
 function pickVars(names, environ = {}) {

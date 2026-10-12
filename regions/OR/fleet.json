@@ -421,6 +421,7 @@
     "aggregate": {
       "module": "grid",
       "resolution_m": 1000,
+      "resolution_by_kind": {"troll-pelagic": 3000},
       "min_distinct_vessels": null,
       "delay_hours": null
     }
