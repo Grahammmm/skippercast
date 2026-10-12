@@ -118,6 +118,7 @@ commands). A unit that fails twice moves up one tier.
 - Check (applies to both skills): `python scripts/check_repository.py` exit 0; each SKILL.md front matter has `name` and `description`; every command the skill names exists (`python -m skippercast.fleet --help` and `python -m skippercast.fleet.ais` list them); a separate Large reviewer approves.
 - Runs: Large writes, a second Large reviews.
 - Depends on: N6, N7. Reuses: CF-61 report, the runbooks `fleet-registry.md`, `fleet-osint.md`, `fleet-ais-down.md`.
+- Status: in review on `claude/n8-fleet-skills` ([#570](https://github.com/Grahammmm/skippercast/issues/570)): both skill folders and `tests/contract/test_fleet_skills.py`, which checks every command, flag, workflow input and runbook the skills name. The skills run on request over the existing GitHub schedules; the host check, `check_registry.py`, `check_activity.py`, Hermes scheduling, Telegram alerts and the archive backup are named as gaps of #468 and #469, as is a workflow that runs `watch-check` and `report` with the job identity.
 
 ### N9 · Skill dry run
 
