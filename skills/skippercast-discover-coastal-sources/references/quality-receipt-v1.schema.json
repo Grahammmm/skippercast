@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skippercast:coastal-quality:v1",
+  "type": "object",
+  "required": ["schema", "quality_method", "mode", "source_id", "source_metadata_sha256", "metadata_response_sha256", "region", "assigned_bbox", "source_revision", "policy_revision", "discovery_method", "checked_at", "expires_at", "sample", "binding", "observations", "blockers", "unknowns", "limitations", "status", "accepted", "selected_slice_ids", "usefulness", "next_action", "metadata_context", "review"],
+  "properties": {
+    "schema": {"const": "coastal-quality-v1"},
+    "quality_method": {"const": "format-native-observation-v4"},
+    "mode": {"enum": ["metadata", "native_sample"]},
+    "source_id": {"type": "string", "minLength": 1},
+    "source_metadata_sha256": {"$ref": "#/$defs/hash"},
+    "metadata_response_sha256": {"$ref": "#/$defs/hash"},
+    "assigned_bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+    "checked_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "accepted": {"const": false},
+    "selected_slice_ids": {"type": "array", "maxItems": 0},
+    "status": {"enum": ["metadata_only", "reader_blocked", "sample_blocked", "sample_observed"]},
+    "sample": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["path", "sha256", "bytes", "url", "request_id"], "properties": {"sha256": {"$ref": "#/$defs/hash"}, "bytes": {"type": "integer", "minimum": 0}, "url": {"type": "string", "pattern": "^https://"}}}]},
+    "observations": {"type": "object"},
+    "scan_hold": {"enum": [null, "scan_limit_before_first_ping", "eof_without_pings", "no_navigation_selected_pings_eof", "no_navigation_selected_pings_partial_scan", "selected_pings_without_valid_depths"]},
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "unknowns": {"type": "array", "items": {"type": "string"}},
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "usefulness": {"type": "object", "required": ["private_terrain", "habitat", "render"], "properties": {"private_terrain": {"enum": ["acquisition_lead", "reader_blocked", "nonoverlap", "held_for_sample_issue", "bounded_window_candidate_for_qualification", "inspection_blocked"]}, "habitat": {"const": "unassessed"}, "render": {"const": "blocked"}}},
+    "next_action": {"type": "string", "minLength": 1},
+    "metadata_context": {"type": "object", "required": ["rights_accepted", "age_days", "age_range_days", "age_basis", "vertical_datum", "z_units"], "properties": {"rights_accepted": {"const": false}, "age_days": {"type": ["number", "null"], "minimum": 0}, "age_range_days": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["youngest", "oldest"], "additionalProperties": false, "properties": {"youngest": {"type": "number", "minimum": 0}, "oldest": {"type": "number", "minimum": 0}}}]}, "age_basis": {"type": ["string", "null"]}}},
+    "review": {"type": "object", "required": ["requested_model", "observed_model", "input_tokens", "cached_input_tokens", "output_tokens", "decision", "scope"], "properties": {"decision": {"const": "not_reviewed"}, "scope": {"const": "bounded sample only"}}}
+  },
+  "allOf": [
+    {"if": {"properties": {"mode": {"const": "metadata"}}}, "then": {"properties": {"status": {"const": "metadata_only"}, "sample": {"type": "null"}, "observations": {"maxProperties": 0}}}},
+    {"if": {"properties": {"mode": {"const": "native_sample"}}}, "then": {"properties": {"sample": {"type": "object"}, "binding": {"type": "object"}}}},
+    {"if": {"properties": {"status": {"const": "sample_observed"}}}, "then": {"properties": {"mode": {"const": "native_sample"}, "blockers": {"maxItems": 0}, "observations": {"required": ["header", "window", "values"], "properties": {"values": {"type": "object", "required": ["count", "valid_count", "valid_fraction"], "properties": {"valid_count": {"type": "integer", "minimum": 1}, "valid_fraction": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}}}}}}}}
+  ],
+  "$defs": {"hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+}
