@@ -15,6 +15,7 @@
 
 ### Internal
 
+- `/api/health` reads its version from `package.json` at build time instead of a literal that had to be bumped by hand with each release.
 - `e2e/d1.ts` is the one `d1()` helper for `e2e/admin.spec.ts` and `e2e/fleet-admin.spec.ts`: it retries `wrangler d1 execute --local` up to five attempts with a growing pause when the running Worker holds the SQLite file (`SQLITE_BUSY` or "database is locked") and rethrows any other failure at once, with wrangler's stdout appended (#579).
 - One conditions model: the text advisor's comfort word and the brief's lower-exposure windows now read `web/score.ts` instead of their own copies of its numbers, with no change to any rating. `docs/conditions-model.md` records why the graded score and the window rule stay separate and the four golden hours where they disagree (#542 C7).
 - Charter fleet (dark): AIS matching can watch a boat by `schedule-correlation`, when an MMSI broadcasting its name was at sea on at least 5 days, spanning 14, on which a landing report named the boat at its home port and no other boat of that port reported on those days (`thresholds.match.schedule`). The Worker and the matcher now refuse a watched row with a candidate-only method (`call-sign`, `ais-static-name`) or confidence under 0.85; `python -m skippercast.fleet.ais watch-check` checks stored rows and `schedule-precision` measures the method on a supplied report history (N4, #570).
