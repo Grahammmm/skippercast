@@ -14,6 +14,7 @@ import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
+import {region, setRegionDefaultBase} from '../state.ts';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
 export const NARROW_QUERY = '(max-width: 1023px)';
@@ -52,6 +53,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
     const info: RegionInfo = {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}, ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {}};
     regionInfo.value = info;
+    if (id === region.peek()) setRegionDefaultBase(aerial?.byDefault ? 'aerial' : 'night');
     return info;
   } catch { return null; }
 }

@@ -10,7 +10,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Page, Route} from '@playwright/test';
-import {expect, test} from './fixtures.ts';
+import {expect, PIXEL, test} from './fixtures.ts';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
@@ -556,7 +556,6 @@ test('Currents in a region no packet covers draw nothing and say so', async ({pa
 
 // FE-22: the cloud loop over a synthetic GOES index (goes-times.json's shape, times relative to now).
 // nowCOAST answers with a 1×1 PNG; the CSP must let MapLibre fetch it, and only listed times are asked for.
-const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 test('Clouds loops over the listed GOES frames only, each labelled with its time and age', async ({page, pageErrors, v2}) => {
   const MIN = 60_000, newest = Math.floor(Date.now() / MIN) * MIN - 7 * MIN;
   const times = Array.from({length: 24}, (_, i) => new Date(newest - (23 - i) * 5 * MIN).toISOString());
@@ -600,6 +599,7 @@ test('Clouds loops over the listed GOES frames only, each labelled with its time
 
 // FE-23: the aerial base where the region's package offers it (region.json basemap.aerial). USGS answers with
 // the 1×1 PNG; the CSP must let MapLibre fetch it, only the fixed NAIP service is asked, and only while it is on.
+// Morro Bay opens on Aerial by default (basemap.default), so the link names Night first.
 test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, labelled with its dates', async ({page, pageErrors, v2}) => {
   const requested: string[] = [], blocked: string[] = [];
   await page.route('https://imagery.nationalmap.gov/**', route => {
@@ -608,7 +608,7 @@ test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, lab
   });
   page.on('console', message => { if (/Content Security Policy/i.test(message.text())) blocked.push(message.text()); });
   await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,12'});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,12', base: 'night'});
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   await openLayers(page);
   // FE-20: the rail's one base select; Aerial is listed where the region's package offers it.
@@ -1030,7 +1030,7 @@ test('in 3D the terrain options sit in the Seafloor entry and the view buttons i
   await page.keyboard.press('ArrowRight');
   await expect(relief).toHaveValue('6');
   await expect(options.getByText('×6')).toBeVisible();
-  for (const name of ['Water & channels', 'Depth contours · 10 / 30 / 500 ft', 'Source coverage', 'Reefs & species pins']) {
+  for (const name of ['Water & channels', 'Depth contours · adapt to view', 'Fixed depth colours', 'Source coverage', 'Reefs & species pins']) {
     const box = options.getByRole('checkbox', {name});
     await box.focus();
     await expect(box, name).toBeFocused();

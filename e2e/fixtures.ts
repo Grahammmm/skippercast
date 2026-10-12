@@ -22,6 +22,11 @@ export type V2Page = 'app' | 'landing';
 /** Lighthouse's mobile profile: 4× slower CPU, 1.6 Mb/s down, 750 kb/s up, 150 ms round trip. */
 export const THROTTLED_MOBILE = {cpu: 4, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8};
 export const LCP_BUDGET_MS = 2500;
+/** The app opening on the Aerial base (region.json `basemap.default`): the owner accepted on 12 Oct 2026 that on the throttled
+ * profile the NAIP tiles queue behind the bundle and basemap, so the imagery credit (the largest paint) lands near 8 s. */
+export const AERIAL_LCP_BUDGET_MS = 10000;
+/** A 1×1 transparent PNG: what the stubbed NAIP service answers with. */
+export const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
 export interface V2 {
   /** Path of a v2 page with `ui=v2`: the app at `/map` and the landing at `/` (design § 14). */
@@ -40,6 +45,10 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
   context: async ({context, baseURL}, use) => {
     const origin = new URL(baseURL!).origin;
     await context.route(url => url.origin !== origin && url.protocol !== 'data:' && url.protocol !== 'blob:', route => route.abort('blockedbyclient'));
+    // Aerial opens by default where the region's package names it (region.json basemap.default), so the fixed
+    // NAIP service answers with the pixel: the base counts as drawn and no test reaches USGS. A spec that
+    // watches those requests routes the host itself on its page, which takes precedence.
+    await context.route('https://imagery.nationalmap.gov/**', route => route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}));
     // Block the shared live feed too: browser-origin blocking cannot stop the
     // local Worker from fetching remote models. Exercise the direct fallback
     // with synthetic, unit-checked hourly responses instead of live services.

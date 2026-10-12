@@ -1,7 +1,7 @@
 // Renderer colours as data (docs/plans/front-end/design.md § 3A.4 item 3).
 // The only file in packages/coast where colour literals are allowed
 // (scripts/check_tokens.mjs); CSS and SVG strings use var(--coast-…, literal)
-// instead. These are the CoastViewer's v1 values, unchanged; a v2 host will
+// instead. These are the CoastViewer's v1 values (the shader's former literals for the ramp, land, water and contours); a v2 host will
 // pass values read through web/map/palette.ts to mountCoast (src/embed.ts).
 export type CoastPalette={
  /** Clear colour and 3D fog. */
@@ -18,10 +18,22 @@ export type CoastPalette={
  habitatArea:string;
  /** Surface-current arrows. */
  current:string;
+ /** 3D sky gradient top; it fades to `ground` (the fog colour) at the horizon. */
+ skyTop:string;
+ // sRGB hex like every role; three hands the shader linear values, which for the
+ // defaults below equal v1's former shader constants to within hex rounding.
+ /** Depth ramp, shallow to deep. The fixed ramp uses shallow, channel and deep at v1's 8 m, 100 m and 1800 m; the view ramp spans all four across the depths in view. */
+ depthShallow:string;depthMid:string;depthChannel:string;depthDeep:string;
+ /** Land without imagery, low to high (by 600 m), and the illustrative water surface's tint. */
+ landLow:string;landHigh:string;waterTint:string;
+ /** Depth contour lines. */
+ contour:string;
 };
 export const DEFAULT_COAST_PALETTE:Readonly<CoastPalette>=Object.freeze({
  ground:'#dce8e7',sky:'#effbff',groundLight:'#4b655d',sun:'#fff2d4',surface:'#ffffff',
  gradeA:'#f8d69a',gradeB:'#afd7ba',gradeOther:'#abcad8',habitatArea:'#69e6c3',current:'#fcfaf0',
+ skyTop:'#8fb3bd',depthShallow:'#99d8d0',depthMid:'#4b9baf',depthChannel:'#3590a8',depthDeep:'#215779',
+ landLow:'#bdc5a6',landHigh:'#dddbc0',waterTint:'#73c7d4',contour:'#3f8190',
 });
 
 // Host overlay colours (FE-81, src/coast3d/overlays.ts). An overlay style names

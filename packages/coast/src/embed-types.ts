@@ -31,6 +31,13 @@ export type CoastReading={latitude:number;longitude:number;heightM:number;spacin
 export type CoastTargetDetail={id:string;kind:'reef'|'shore';title:string;facts:string;evidence:string};
 /** The terrain sources behind the source-coverage colours, with the native key verbatim. */
 export type CoastSourceCoverage={sources:readonly Readonly<CoastTerrainSource>[];key:string};
+/**
+ * The terrain's presentation-only shading in view: the depth window (metres below
+ * the water reference) the colour ramp spans, null until seabed is in view; the
+ * contour spacing in metres; and `readout`, the native panel's line verbatim.
+ * None of it changes a measured value or what inspection returns.
+ */
+export type CoastShading={readout:string;rampMinM:number|null;rampMaxM:number|null;contourMinorM:number;contourIndexM:number;fixedRamp:boolean;relief:number};
 /** An admitted habitat selection in WGS84 degrees, with its public id. */
 export type CoastSelection={latitude:number;longitude:number;region?:string;id?:string};
 /** The renderer camera: centre in WGS84 degrees and visible span in metres. */
@@ -83,6 +90,8 @@ export type CoastMountOptions={
  onTargetDetail?:(detail:CoastTargetDetail|null)=>void;
  /** The terrain source inventory, once the reviewed release loads. */
  onSourceCoverage?:(coverage:CoastSourceCoverage)=>void;
+ /** The depth ramp window and contour spacing, after each view refinement or shading change. */
+ onShading?:(shading:CoastShading)=>void;
  /** Host handlers for the scene's own buttons; each replaces the renderer's. */
  onTop?:()=>void;
  onCloseSelection?:()=>void;
@@ -125,6 +134,12 @@ export interface CoastHandle{
  setWaterOpacity(opacity:number):void;
  setWaterVisible(visible:boolean):void;
  setContours(visible:boolean):void;
+ /** Sun azimuth for lighting and hillshade, degrees clockwise from north, 0 to 360 in steps of 5. */
+ setSunAzimuth(degrees:number):void;
+ /** Land imagery against shaded relief: 0 relief, 1 photo (default), in 0.05 steps. */
+ setPhotoMix(mix:number):void;
+ /** True restores v1's fixed depth colours; false (default) spans the ramp across the depths in view. */
+ setFixedRamp(fixed:boolean):void;
  /** Colours the terrain by the source behind each sample (lidar, survey, chart estimate, model). */
  setSourceCoverage(visible:boolean):void;
  /** Reef areas, outlines and species pins. */
