@@ -10,6 +10,7 @@
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import type {Palette} from './palette.ts';
 import {COASTLINE_SOURCE, layerEntry} from './layers.ts';
+import {ZOOM_OFFSET} from './engine.ts';
 
 export const COASTLINE_GLOW = 'coastline-glow';
 export const COASTLINE_LINE = 'coastline';
@@ -23,11 +24,11 @@ export const shorelineURL = (region: string): string => `regions/${encodeURIComp
  * 10 m, single rocks under 20 m left out; same features and properties), about a fifth of the bytes.
  */
 export const shorelineOverviewURL = (region: string): string => `regions/${encodeURIComponent(region)}/shoreline-overview.geojson`;
-/** The MapLibre zoom the full shoreline loads from (shoreline.py OVERVIEW_MAX_ZOOM); `?view=` zooms are one more. */
+/** The MapLibre zoom the full shoreline loads from (shoreline.py OVERVIEW_MAX_ZOOM); `?view=` zooms are ZOOM_OFFSET more. */
 export const SHORELINE_DETAIL_ZOOM = 12;
 /** The shoreline file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded. */
 export const shorelineFor = (region: string, viewZoom: number, detail = false): string =>
-  detail || viewZoom - 1 >= SHORELINE_DETAIL_ZOOM ? shorelineURL(region) : shorelineOverviewURL(region);
+  detail || viewZoom - ZOOM_OFFSET >= SHORELINE_DETAIL_ZOOM ? shorelineURL(region) : shorelineOverviewURL(region);
 
 export interface LineLayer {
   id: string; type: 'line'; source: string;

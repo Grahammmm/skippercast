@@ -24,7 +24,7 @@ import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams} from '../state.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
-import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineURL, type ChartMark} from './coastline.ts';
+import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineOverviewURL, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
 import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
@@ -146,7 +146,15 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!archive) markUnavailable('basemap', new Error(`No basemap archive at ${BASEMAP_MANIFEST}`));
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
-        host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
+        host, camera: start, onMove,
+        // #617: an overview shoreline that fails falls back to the full one; any other failure marks its layer.
+        onLayerError: (layer, error) => {
+          const id = region.peek();
+          if (layer === 'coastline' && id && drawnShore === shorelineOverviewURL(id)) {
+            console.warn('Overview shoreline unavailable; loading the full shoreline', error);
+            detailRegion = id; drawnShore = shorelineURL(id); engine.peek()?.setData(COASTLINE_SOURCE, new URL(drawnShore, page()).href);
+          } else markUnavailable(layer, error);
+        }, attribution: archive ? attributionFor(['basemap']) : undefined,
         pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
         pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = shorelineFor(id, start.zoom)}),

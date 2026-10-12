@@ -24,12 +24,14 @@ first paint (scripts/startup-budget.json):
 
 The overview form (#617, shoreline-overview.geojson, written by
 skippercast.platform.startup_forms) is what the map draws below
-OVERVIEW_MAX_ZOOM, where it opens: each line simplified (Douglas-Peucker) to
+OVERVIEW_MAX_ZOOM: each line simplified (Douglas-Peucker) to
 OVERVIEW_TOLERANCE_M, and the closed rings narrower than OVERVIEW_MIN_RING_M
-(single rocks, most under 10 m across) left out. At MapLibre zoom 11 one pixel
-is about 31 m here, so the tolerance moves the drawn line under a third of a
-pixel and a dropped ring is under one pixel. Features, ids and properties are
-the published form's, so a click reads the same source fields.
+(single rocks, most under 10 m across) left out. At MapLibre zoom 11, where
+the map opens, one pixel is about 31 m here: the tolerance moves the drawn line
+under a third of a pixel and a dropped ring is under one pixel. Just below
+zoom 12 (about 15.6 m a pixel, the worst case) those are about 0.6 and 1.3
+pixels. Features, ids and properties are the published form's, so a click
+reads the same source fields.
 """
 from pathlib import Path
 import json

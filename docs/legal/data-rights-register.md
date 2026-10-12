@@ -13,6 +13,7 @@ It was built from `catalog/sources.json`, [`NOTICE.md`](../../NOTICE.md), [`docs
 `tests/contract/test_commercial_sources.py` collects every *usage*:
 
 - every asset bound in a non-draft `regions/*/region.json` (`assets.*`), mapped to catalog sources in the test's `ASSET_SOURCES` table. Empty placeholders (no targets, areas or views) carry no third-party data; search plans inherit the sources of their recorded `input_receipts`; `protected_areas` files must point at CDFW ds582; species ecology dossiers are original SkipperCast summaries that cite agency pages;
+- the map's startup copies the platform build writes beside each region package (#617: `atlas-marks.json`, `search-plan-index.json`, `shoreline-overview.geojson`, `poster.svg`), each carrying the sources of the published file it derives from (the copy's `derived_from.path`); they add no data their originals do not already hold;
 - every runtime provider binding (`intelligence.providers.*`, `pipeline_sources.*`, and the wind/wave forecast bindings the scheduled pipeline samples);
 - every runtime call to a known third-party service host in `src/`, `server/` and `dist/*.js` (Open-Meteo APIs, OpenStreetMap tiles, the NOAA chart display service).
 
@@ -46,14 +47,14 @@ Every item here must be closed, licensed or removed before SkipperCast charges m
 
 - **Sources:** `usgs-point-buchon`, `usgs-morro-bay`, `usgs-point-estero`, `usgs-csmp-seafloor-character` (and the already-withheld `csumb-cambria`).
 - **Terms:** the USGS release metadata for these products state U.S. public domain, but the surveys were produced with the CSUMB Seafloor Mapping Lab, whose [data-library policy](https://csumb.edu/undersea/sfml-data-library/) permits non-profit use with acknowledgment and requires express permission for for-profit use (noted in `docs/archive/statewide-buildout.md`). Which terms govern a USGS-published release is unresolved, so these are recorded as *needs permission* rather than cleared.
-- **Where:** the whole Morro Bay habitat product (`data/atlas.json`, `data/habitat-regions.json`, `regions/morro-bay/bottom/index.json`, `regions/morro-bay/search-plans.json`, charter search outlines in `data/charter-grounds.json`), Cambria survey habitat, and the Monterey, Santa Cruz, Point Conception, Point Reyes/Bodega and Fort Ross survey-habitat context.
+- **Where:** the whole Morro Bay habitat product (`data/atlas.json`, `data/habitat-regions.json`, `regions/morro-bay/bottom/index.json`, `regions/morro-bay/search-plans.json`, charter search outlines in `data/charter-grounds.json`, and the map's startup copies of those plans and the atlas: `regions/*/search-plan-index.json`, `regions/morro-bay/atlas-marks.json`), Cambria survey habitat, and the Monterey, Santa Cruz, Point Conception, Point Reyes/Bodega and Fort Ross survey-habitat context.
 - **Action:** one email to CSUMB SFML asking for written permission for commercial use of derivatives of the named USGS/CSMP releases (or confirmation that the USGS public-domain release governs); counsel to review the answer.
 - **Owner:** Owner.
 
 ### B4 — PMEP habitat compilation (terms unreviewed)
 
 - **Source:** `pmep-hapc` — PMEP West Coast nearshore rocky-reef HAPC via PSMFC's map service.
-- **Where:** `regions/big-sur-coast/survey-habitat.geojson`, `regions/south-big-sur-san-simeon/survey-habitat.geojson` and their search plans.
+- **Where:** `regions/big-sur-coast/survey-habitat.geojson`, `regions/south-big-sur-san-simeon/survey-habitat.geojson` and their search plans (with their startup copies, `search-plan-index.json`).
 - **Action:** find and record PMEP/PSMFC terms of use; if they are not clearly open, ask PSMFC or unbind the two layers.
 - **Owner:** Owner (terms check) · Engineering (catalog update).
 
