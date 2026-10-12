@@ -73,6 +73,13 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-run-times { color: var(--text); }
 .app-run-note { color: var(--amber); }
 .app-run-detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--muted); }
+/* Roadmap P5: what the brief is missing and why; sources that are not ok stay visible, unchecked items fold away. */
+.app-gaps { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
+.app-gaps ul { margin: 0; padding: 0; list-style: none; }
+.app-gaps-list li { color: var(--amber); }
+.app-gaps-more { color: var(--muted); }
+.app-gaps-more summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); cursor: pointer; }
+.app-gaps-more li + li { margin-top: var(--space-1); }
 .app-brief-links { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
 .app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-local { color: var(--muted); }

@@ -19,7 +19,8 @@ import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation,
 import {profileSemantics, type Profile} from '../profile.ts';
 import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import {ndbcStationURL, sourceStation, stationText, tidePredictionURL} from '../station-label.ts';
-import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
+import {ageText} from '../confidence.ts';
+import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, SourceGap, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -61,7 +62,9 @@ function nearest<T extends {at: string}>(points: readonly T[], at: number): T | 
 
 export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[]; tideDatum?: string;
   /** The primary buoy's id when the regional feed's buoy reading came from a backup station (#554). */
-  buoyBackupFor?: string | null};
+  buoyBackupFor?: string | null;
+  /** The feed sources behind the brief that are not ok (sourceGaps); none when absent. */
+  gaps?: readonly SourceGap[]};
 
 /** Map buildDaily's output to the brief, adding tiles, caveat, notice and fleet line. */
 export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: BriefContext): Brief {
@@ -127,7 +130,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area, now), fleet: fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, gaps: context.gaps ?? [], tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 
@@ -215,7 +218,7 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
   const chlorophyll = chlorophyllNear(input.daily, area.lat, area.lon);
   const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
   const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'coast-report', {...input, report, area});
+  return briefFromDaily(daily, 'coast-report', {...input, report, area, gaps: reportGaps(report, input.county, area, input.now)});
 }
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
@@ -280,7 +283,95 @@ export type RegionalBriefInput = {daily: RegionalDailyFeed; forecast: RegionalFo
 export function buildRegionalBrief(input: RegionalBriefInput): Brief {
   const {report, county, area, tideDatum, buoyBackupFor} = regionalReport(input.daily, input.forecast, input.place);
   const daily = buildDaily(report, county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum, buoyBackupFor});
+  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum, buoyBackupFor,
+    gaps: sourceGaps(input.daily, input.now)});
+}
+
+/** The station a feed source reads: its configured station, its data's, else the NDBC file its URL names. */
+function stationOf(source: RegionalSource): string {
+  const data = typeof source.data?.station === 'string' ? source.data.station : null;
+  return source.station ?? data ?? source.url.match(/\/([A-Za-z0-9]+)\.(?:txt|spec)$/)?.[1] ?? source.id;
+}
+
+/**
+ * The data's own clock, as failover.py data_age reads it: a buoy's newest row, the data's sample or
+ * issue time, or a prediction's coverage end. Retrieval time only when the data carries no clock,
+ * and then said as such.
+ */
+function dataClock(source: RegionalSource): {at: string; what: 'reading' | 'issued' | 'ended' | 'retrieved'} | null {
+  const data = source.data ?? {};
+  const rows = data.observations;
+  const times = Array.isArray(rows) ? rows.map(row => Date.parse(String((row as {time?: unknown})?.time))).filter(Number.isFinite) : [];
+  if (times.length) return {at: new Date(Math.max(...times)).toISOString(), what: 'reading'};
+  if (typeof data.sample_at === 'string') return {at: data.sample_at, what: 'reading'};
+  if (typeof data.issued_at === 'string') return {at: data.issued_at, what: 'issued'};
+  if (typeof data.coverage_end === 'string') return {at: data.coverage_end, what: 'ended'};
+  const retrieved = source.data_retrieved_at ?? source.last_success_at;
+  return retrieved ? {at: retrieved, what: 'retrieved'} : null;
+}
+
+function clockText(source: RegionalSource, now: Date): string | null {
+  const clock = dataClock(source);
+  const ms = clock ? now.getTime() - Date.parse(clock.at) : NaN;
+  if (!clock || !Number.isFinite(ms)) return null;
+  if (clock.what === 'ended') return ms >= 0 ? `coverage ended ${ageText(ms)} ago` : `coverage runs ${ageText(-ms)} more`;
+  return clock.what === 'reading' ? `newest reading ${ageText(ms)} old` : `${clock.what} ${ageText(ms)} ago`;
+}
+
+function feedGap(source: RegionalSource, now: Date): SourceGap {
+  const station = sourceStation(source);
+  const label = station?.backupFor ? `${source.kind === 'prediction' ? 'NOAA' : 'NDBC'} ${stationText(station)}` : source.name;
+  const clock = clockText(source, now);
+  const text = source.status === 'stale' ? `stale${clock ? `, ${clock}` : ''}`
+    : source.status === 'retained' ? `latest check failed; showing the last good data${clock ? `, ${clock}` : ''}`
+    : source.status === 'failed' ? 'latest check failed; nothing earlier on hand'
+    : source.status === 'missing' ? 'not published in this feed'
+    : source.status;
+  return {id: source.id, label, status: source.status, text: `${label}: ${text}.`};
+}
+
+/**
+ * The regional brief's sources that are not ok, one line per station, named by the station it
+ * describes and why: stale or retained with the data's own age, failed with nothing on hand, or
+ * missing from the feed. Only what the tiles and windows read: the water buoy (the feed's first
+ * observation source, as regionalReport picks it, with its spectrum and the daily copy folded into
+ * the same station), the tide predictions and the marine alert checks. A station any copy of
+ * which is ok is no gap, and a backup serving ok is none either; its tile already names it.
+ */
+export function sourceGaps(feed: RegionalDailyFeed, now: Date): SourceGap[] {
+  const entries = Object.values(feed.sources).filter((item): item is RegionalSource => !!item);
+  // The buoy regionalReport reads for the Water tile: the first with a station in its data, else the first at all.
+  const first = entries.find(item => item.kind === 'observation' && typeof item.data?.station === 'string') ?? entries.find(item => item.kind === 'observation');
+  const buoyStation = first ? stationOf(first) : null;
+  const read = entries.filter(item => (item.kind === 'observation' && stationOf(item) === buoyStation) || item === feed.sources.tides || item.kind === 'advisory');
+  const groups = new Map<string, RegionalSource[]>();
+  for (const item of read) {
+    const key = item.kind === 'advisory' ? `advisory:${item.url || item.id}` : `${item.kind}:${stationOf(item)}`;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return [...groups.values()].filter(copies => copies.every(item => item.status !== 'ok')).map(copies => feedGap(copies[0]!, now));
+}
+
+/**
+ * The coast report's sources behind this area's tiles whose latest check failed: the area's
+ * forecast, the water buoy, the tide predictions (one line) and the marine alert check. The report
+ * keeps no stale or retained status, only the outcome and when it was fetched, so the line says
+ * exactly that.
+ */
+export function reportGaps(report: Report, county: County, area: Area, now: Date): SourceGap[] {
+  const forecastId = report.forecasts.find(item => item.id === area.id)?.sourceId;
+  const buoyUrls = new Set(report.observations.filter(item => item.stationId === county.temperatureStationId).map(item => item.url));
+  const read = report.sources.filter(item => item.id === forecastId || item.id === 'nws-alerts' || item.kind === 'prediction'
+    || (item.kind === 'observation' && (item.id === `ndbc-${county.temperatureStationId}` || buoyUrls.has(item.url))));
+  const failed = read.filter(item => item.outcome === 'error');
+  // The tide curve and its events are one station; one line, and none while either still answers.
+  const tides = read.filter(item => item.kind === 'prediction');
+  const shown = failed.filter(item => item.kind !== 'prediction').concat(tides.length && tides.every(item => item.outcome === 'error') ? [tides[0]!] : []);
+  return shown.map(item => {
+    const ms = now.getTime() - Date.parse(item.fetchedAt);
+    const when = Number.isFinite(ms) ? `; last fetched ${ageText(ms)} ago` : '';
+    return {id: item.id, label: item.label, status: 'failed', text: `${item.label}: latest check failed${when}.`};
+  });
 }
 
 export type BriefInput = {
