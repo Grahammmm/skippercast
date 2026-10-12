@@ -1,15 +1,14 @@
 // Trip planner, GPX export and the offline pack in the v2 app (FE-51, design
-// § 6 and § 9). A wrapper, not a rewrite: v1's day planner (dist/export-ui.js
-// over trip-export.js and gpx.js) renders into the app's trip dialog with the
-// same draft (one per region in this browser), protected-area screen and GPX,
-// so a plan exports the same bytes from either shell; v1's pack
-// (dist/offline-pack.js over offline-core.js) saves the region and this app's
-// shell and basemap tiles join it; the coastal snapshots are
-// dist/coastal-offline-core.js unchanged. Every v1 module loads on first use.
+// § 6 and § 9). The day planner is v2's (web/planner.ts, rendered by
+// web/app/Planner.tsx, #602) over the shared export contract (trip-export.js
+// and gpx.js), with v1's draft (one per region in this browser), protected-area
+// screen and GPX bytes; v1's pack (dist/offline-pack.js over offline-core.js)
+// saves the region and this app's shell and basemap tiles join it; the coastal
+// snapshots are dist/coastal-offline-core.js unchanged. Each loads on first use.
 //
-// export-ui.js and the screen read v1's region store once, so the planner
-// stays bound to the region it opened for; opening it after a region change
-// reloads the page, as v1 does. Erasable syntax only (Node tests import this).
+// The protected-area screen and the pack read v1's region store once, so the
+// planner stays bound to the region it opened for; opening it after a region
+// change reloads the page, as v1 does. Erasable syntax only (Node tests import this).
 import {signal} from '@preact/signals';
 import type {Source} from 'pmtiles';
 import {loadManifest} from '../dist/seafloor-data.js';
@@ -26,8 +25,12 @@ export const V2_SHELL = '/map';
 export const TRIP_HASH = '#export';
 const sessionStart = Date.now();
 
-/** dist/export-ui.js `initExport`'s answer. */
+/** The planner's actions the app calls (web/planner.ts `createPlanner`). */
 export interface Planner {open(): void; add(id: string): void; review(id: string): void}
+type PlannerModel = import('./planner.ts').Planner;
+type PlannerView = typeof import('./app/Planner.tsx').Planner;
+/** The started planner and its view, which the trip dialog renders; null until first use. */
+export const plannerView = signal<{model: PlannerModel; View: PlannerView} | null>(null);
 export const tripOpen = signal(false);
 export const offlineOpen = signal(false);
 /** The planner has drawn into the dialog; why it could not start, if it failed. */
@@ -38,7 +41,7 @@ export const tripIds = signal<readonly string[]>([]);
 
 /** trip-export.js `draftKey`, restated so the app's first paint loads no planner code (tests/test_trip.mjs pins it). */
 export const draftKey = (id: string): string => `skippercast.export.v1.${id}`;
-/** The draft's ids for `id` as v1 saved them (export-ui.js `persist`); the planner screens them again. */
+/** The draft's ids for `id` as the planner saved them (web/planner.ts `persist`); the planner screens them again. */
 export function savedIds(id: string | null, storage: Pick<Storage, 'getItem'> | undefined = globalThis.localStorage): string[] {
   try {
     const ids = id ? (JSON.parse(storage?.getItem(draftKey(id)) ?? 'null') as {ids?: unknown} | null)?.ids : null;
@@ -60,7 +63,7 @@ export function mapView(c: Camera | null, size: {width: number; height: number})
 }
 const chartSize = () => { const r = document.querySelector('.app-chart')?.getBoundingClientRect(); return {width: r?.width ?? 0, height: r?.height ?? 0}; };
 
-/** The v1 modules' option bags, which their JavaScript types too narrowly to pass a callback with arguments. */
+/** v1's pack's option bag, which its JavaScript types too narrowly to pass a callback with arguments. */
 type Loose<T> = (options: Record<string, unknown>) => T;
 const plain = (): string => location.href.split('#')[0]!;
 const go = (patch: Partial<Record<UrlKey, string | null>>): void => { navigate(withParams(plain(), patch)); };
@@ -97,24 +100,24 @@ export async function loadPlanner(): Promise<Planner | null> {
 async function startPlanner(id: string): Promise<Planner> {
   const regions = await v1Region(id);
   // protected-areas.js builds its live query from the region store when it loads, so it loads after setRegion.
-  const [{initProtectedAreas}, v1] = await Promise.all([import('../dist/protected-areas.js'), import('../dist/export-ui.js')]);
-  const initExport = v1.initExport as unknown as Loose<Planner>;
+  const [{initProtectedAreas}, {createPlanner}, {Planner: View}] = await Promise.all([import('../dist/protected-areas.js'), import('./planner.ts'), import('./app/Planner.tsx')]);
   const path = regions.assetURL('atlas');
-  const atlas = (path ? await json(path) : {targets: [], areas: [], drifts: []}) as {targets: {id: string}[]};
+  const atlas = (path ? await json(path) : {targets: [], areas: [], drifts: []}) as import('./planner.ts').Atlas;
   const screen = await initProtectedAreas(null, () => {});
   // The ranked pins are screened by the planner's own screen, as v1's are (#495).
   rankedScreen = screen as RankedScreen;
   drawRanked();
-  const api = initExport({atlas, screen, map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
+  const model = createPlanner({atlas, screen, region: regions.getRegion() as import('./planner.ts').PlannerDeps['region'],
+    map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
     getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
-    navigation: {showView(name: string) {
-      if (name === 'export') { openTrip(); return; }
-      closeTrip();
-      if (name === 'forecast') go({view: 'conditions'}); else if (appView.peek() !== 'coast') go({view: null});
-    }},
-    onConditions: ({date}: {date: string}) => { closeTrip(); go({view: 'conditions', day: date}); }});
+    nav: {
+      open: openTrip,
+      showMap() { closeTrip(); if (appView.peek() !== 'coast') go({view: null}); },
+      conditions(date: string) { closeTrip(); go({view: 'conditions', day: date}); },
+    }});
+  plannerView.value = {model, View};
   void screen.refresh();
-  return api;
+  return model;
 }
 
 export async function addToTrip(id: string): Promise<void> { (await loadPlanner())?.add(id); refreshIds(); }

@@ -1,6 +1,6 @@
 /* Account menu (FE-50, docs/plans/front-end/design.md § 6) and the v1 dialogs
-   it opens: dist/account.js (passkeys), dist/boat-profile.js (exact boat) and
-   dist/trip-alerts.js (inside the app's dialog) keep their markup; these rules
+   it opens: dist/account.js (passkeys) and dist/boat-profile.js (exact boat)
+   keep their markup, and web/app/TripAlerts.tsx shares their classes; these rules
    give it the tokens. Loaded after web/ui/ui.css. Every value is a token. */
 
 .app-account { position: relative; }
@@ -62,7 +62,7 @@
 .boat-ai { color: var(--amber); font-size: var(--text-11); }
 .boat-match { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-13); }
 
-/* Trip alerts inside the app dialog (trip-alerts.js's insight cards) */
+/* Trip alerts inside the app dialog (web/app/TripAlerts.tsx) */
 .app-alerts { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-alerts .insight-card { display: flex; flex-direction: column; gap: var(--space-3); }
 .app-alerts .insight-card[open] > summary { color: var(--text); font-weight: var(--weight-semibold); }
