@@ -16,10 +16,19 @@ export const isBusy = (e: unknown): boolean => {
   return LOCKED.test(`${text(x.stderr)}\n${text(x.stdout)}\n${text(x.message)}`);
 };
 
+/** Append the last ~500 characters of wrangler's trimmed stdout to the error message, so a failure shows its reason. */
+const withStdout = (e: unknown): unknown => {
+  const x = e as Error & {stdout?: unknown};
+  const out = text(x?.stdout).trim();
+  if (x instanceof Error && out) x.message += `\nwrangler stdout: ${out.slice(-500)}`;
+  return e;
+};
+
 /**
  * Run SQL against the local D1 the dev server uses; the parsed rows of the last statement.
  * The running Worker (and a parallel project's test) holds the same SQLite file, so a busy or
- * locked database is retried up to five times with a growing pause (500 ms, 1 s, ...); any other failure is rethrown unchanged.
+ * locked database is retried up to five attempts with a growing pause (500 ms, 1 s, ...); any other failure is rethrown at once.
+ * Every rethrow carries the tail of wrangler's stdout, so a failure shows its reason.
  */
 export function d1(sql: string): Record<string, unknown>[] {
   for (let attempt = 1; ; attempt++) {
@@ -29,12 +38,7 @@ export function d1(sql: string): Record<string, unknown>[] {
       const parsed = JSON.parse(out) as {results: Record<string, unknown>[]}[];
       return parsed.at(-1)?.results ?? [];
     } catch (e) {
-      if (!isBusy(e)) throw e;
-      if (attempt >= ATTEMPTS) {
-        const x = e as Error & {stdout?: unknown};
-        if (x instanceof Error && text(x.stdout)) x.message += `\nwrangler stdout: ${text(x.stdout).trim().slice(0, 2000)}`;
-        throw e;
-      }
+      if (!isBusy(e) || attempt >= ATTEMPTS) throw withStdout(e);
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500 * attempt);
     }
   }
