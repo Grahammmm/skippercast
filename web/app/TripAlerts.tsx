@@ -186,7 +186,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         {feedback ? (
           <div id="comfort-history">
             <p class="small">{feedback.length} private reports. These describe your experience; they do not automatically alter public ratings or assert a boat-motion model.</p>
-            {feedback.slice(0, 5).map(f => <p key={f.observed_at}>{new Date(f.observed_at).toLocaleDateString()} · {f.rating}/10 · {feedbackPhase(f)}</p>)}
+            {feedback.slice(0, 5).map((f, i) => <p key={i}>{new Date(f.observed_at).toLocaleDateString()} · {f.rating}/10 · {feedbackPhase(f)}</p>)}
           </div>
         ) : null}
       </details>

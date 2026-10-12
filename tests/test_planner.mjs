@@ -147,6 +147,10 @@ test('the export re-checks the publication: changed reef data blocks the file', 
   const file = await p.exportFile('gpx');
   assert.equal(file.name, 'SkipperCast-test-coast-2026-10-16-5wp.gpx');
   assert.match(await file.text(), /<wpt /);
+  const notes = await p.exportFile('notes');
+  assert.equal(notes.name, 'SkipperCast-test-coast-2026-10-16-5wp.html');
+  assert.equal(notes.type, 'text/html');
+  assert.match(await notes.text(), /^<!doctype html>/);
   sha = 'c'.repeat(64);
   await assert.rejects(p.exportFile('gpx'), /Reef data changed\. Select Best available again before exporting\./);
   p.dispose();
@@ -167,6 +171,21 @@ test('adding an unranked spot clears the ranked set; research references need th
   assert.equal(p.summary.value.ok, true, JSON.stringify(p.summary.value));
   p.add('missing');
   assert.equal(p.draft.value.ids.includes('missing'), false);
+  p.dispose();
+});
+
+test('a plan name keystroke neither re-runs the counts nor redraws the Chart; filtered research needs the opt-in', async () => {
+  const {planner: p, emitted, saved} = harness();
+  await settle();
+  await p.selectBest();
+  const before = emitted.length, counts = p.summary.value;
+  p.edit({name: 'Sunday'});
+  assert.equal(saved().name, 'Sunday', 'the name is still saved as typed');
+  assert.equal(p.summary.value, counts);
+  assert.equal(emitted.length, before);
+  p.preset('filtered');
+  assert.equal(p.scopeStatus.value, 'Enable Research-coordinate export to use filtered research references.');
+  assert.equal(p.ranked.value, true, 'a refused preset changes nothing');
   p.dispose();
 });
 

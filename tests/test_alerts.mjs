@@ -16,7 +16,7 @@ test('a saved trip posts v1\'s body: the form, the region, the species and the b
   assert.deepEqual(alerts.tripBody(form, 'morro-bay', 'reef', boat), {...form, region: 'morro-bay', species: 'reef', boat});
 });
 
-test('comfort feedback carries no forecast context, as the v2 dialog always sent', () => {
+test('comfort feedback carries no forecast context (null, which the server stores as v1\'s omitted values were)', () => {
   assert.deepEqual(alerts.comfortBody('morro-bay', 7, 'fishing'), {region: 'morro-bay', rating: 7, phase: 'fishing', wind: null, sea: null, period: null, heading: null, point: null});
 });
 

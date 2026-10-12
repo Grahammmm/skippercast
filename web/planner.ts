@@ -10,7 +10,7 @@
 // or a restore loads wins over that call's answer, as in v1.
 //
 // Erasable syntax only: the node tests import this file by type stripping.
-import {batch, computed, effect, signal} from '@preact/signals';
+import {batch, computed, effect, signal, untracked} from '@preact/signals';
 import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, readDraft} from '../dist/trip-export.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
@@ -134,9 +134,11 @@ export function createPlanner(deps: PlannerDeps) {
       bounds: d.avoidScope === 'region' ? region.mpa.bounds : [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]};
   }
 
+  /** What the counts depend on: a plan name or date keystroke never re-runs the screen or redraws the Chart. */
+  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope]); });
   const summary = computed<Summary>(() => {
-    void tick.value;
-    try { return {ok: true, counts: (buildExport(request()) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
+    void tick.value; void exportKey.value;
+    try { return {ok: true, counts: (buildExport(request(draft.peek())) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
   });
   const spots = computed<Target[]>(() => {
     const q = search.value.trim().toLowerCase(), r = ranked.value, ids = draft.value.ids, research = allowResearch.value;
@@ -145,7 +147,7 @@ export function createPlanner(deps: PlannerDeps) {
       .sort((a, b) => r ? (a.trip_rank ?? 0) - (b.trip_rank ?? 0) : 0);
   });
   /** While ranked, every valid change redraws the ranked set on the Chart. */
-  const stopRanked = effect(() => { if (ranked.value && summary.value.ok) emit(rankedDetail()); });
+  const stopRanked = effect(() => { if (ranked.value && summary.value.ok) emit(untracked(rankedDetail)); });
 
   const portsLoaded = (deps.loadPorts ?? fetchPorts)().then(d => {
     const list = (d?.ports ?? []).filter(p => p.region === region.id);
@@ -174,7 +176,8 @@ export function createPlanner(deps: PlannerDeps) {
   function preset(scope: Preset): void {
     if (scope === 'filtered' && !allowResearch.value) { scopeStatus.value = 'Enable Research-coordinate export to use filtered research references.'; return; }
     revision++;
-    batch(() => { filtersDirty.value = false; restorePending.value = false; unrank(); persist({...draft.value, rankedPlan: null}); });
+    // The ranked plan is dropped in the page; storage keeps it until the next save, so a reload after "selection is retained" still restores it, as in v1.
+    batch(() => { filtersDirty.value = false; restorePending.value = false; unrank(); draft.value = {...draft.value, rankedPlan: null}; });
     if (scope === 'map' && !map.getSize().x) { scopeStatus.value = 'Open the map to choose an area first. Your selection is retained.'; return; }
     const targets = presetTargets({scope, targets: tripAtlas.value.targets, visible: deps.getVisible(), allowResearch: allowResearch.value,
       contains: (t: Target) => map.getBounds().contains([t.latitude, t.longitude])});

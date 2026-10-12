@@ -80,12 +80,12 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
                 <option value="reef">Lingcod + rockfish</option><option value="lingcod">Lingcod</option><option value="rockfish">Rockfish</option></select></label>
               <label>Maximum spots<select id="export-limit" value={String(f.limit)} onChange={filter('limit', Number)}>
                 {[10, 20, 30, 50].map(n => <option key={n} value={String(n)}>{n}</option>)}</select></label>
-              <label>Maximum depth (ft)<input id="export-depth" type="number" min="25" max="300" value={f.depth} onChange={filter('depth', Number)} /></label>
+              <label>Maximum depth (ft)<input id="export-depth" type="number" min="25" max="300" defaultValue={String(f.depth)} onChange={filter('depth', Number)} /></label>
               <label>Search area<select id="export-best-scope" value={f.scope} onChange={filter('scope', v => v as Filters['scope'])}>
                 <option value="region">Selected region</option><option value="map">Current map view</option></select></label>
               <label>From port<select id="export-port" value={f.port} onChange={filter('port', String)}>
                 <option value="">No distance limit</option>{m.ports.value.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-              <label>Maximum one-way distance (nm)<input id="export-distance" type="number" min="1" max="100" value={f.distance} onChange={filter('distance', Number)} /></label>
+              <label>Maximum one-way distance (nm)<input id="export-distance" type="number" min="1" max="100" defaultValue={String(f.distance)} onChange={filter('distance', Number)} /></label>
             </div>
             <p class="export-note">Distance is straight-line reference only. Habitat ranks stay fixed; check the selected day’s conditions separately.</p>
           </details>
