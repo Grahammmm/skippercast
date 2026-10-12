@@ -101,7 +101,7 @@ test('without a regional forecast the wind and swell tiles read "—" and unavai
   assert.match(html, /Reference level: MLLW\./, 'the tide basis names the reference level');
 });
 
-test('the column renders the model: headline, deck, lower-exposure line, caveat, local-report line', async () => {
+test('the column renders the model: verdict and limit first, Details with readings, deck and caveat, lower-exposure line, local-report line', async () => {
   const {Brief, briefFrom, dailyFeed, regionInfo, render, h} = await load();
   const expected = briefFrom(sources(), NOW);
   regionInfo.value = INFO;
@@ -109,7 +109,13 @@ test('the column renders the model: headline, deck, lower-exposure line, caveat,
   try {
     const html = render(h(Brief, {now: NOW}));
     assert.match(html, /<aside class="app-brief" aria-label="Brief" data-basis="regional">/);
-    assert.ok(html.includes(`<h1>${expected.headline}</h1>`));
+    // #616: without this region's forecast the verdict is Unknown and says why; the readings line moves into Details.
+    assert.match(html, /<div class="app-verdict" data-verdict="unknown"><div class="app-verdict-head"><h1><span class="app-verdict-word">Unknown<\/span>/);
+    assert.match(html, /<p class="app-verdict-limit">No forecast for this day yet\.<\/p>/);
+    assert.ok(html.indexOf('app-verdict-limit') < html.indexOf('class="ui-tile"'), 'verdict and limit come before the tiles');
+    assert.match(html, /<details class="app-details"><summary>Details/);
+    assert.ok(html.includes(`<p class="app-readings ui-mono">${expected.headline}</p>`));
+    assert.match(html, /<div class="app-tiles app-tiles--dense">/);
     assert.match(html, /<p class="app-deck">/);
     assert.match(html, /class="ui-eyebrow">Lower exposure</);
     assert.ok(html.includes(expected.caveat));
@@ -117,6 +123,22 @@ test('the column renders the model: headline, deck, lower-exposure line, caveat,
     assert.equal((html.match(/class="ui-tile"/g) || []).length, 4);
     assert.doesNotMatch(html, /best bite|hotspot/i);
   } finally { regionInfo.value = null; dailyFeed.value = null; }
+});
+
+test('#616: with this region\'s forecast the verdict word and its limit lead the column, with the basis named', async () => {
+  const {Brief, dailyFeed, regionInfo, regionalForecast, parseConditionsForecast, render, h} = await load();
+  regionInfo.value = INFO;
+  dailyFeed.value = montereyDaily;
+  regionalForecast.value = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
+  const tomorrow = new Date('2026-10-09T12:00:00Z'); // 5 am PDT, the morning still ahead
+  try {
+    const html = render(h(Brief, {now: tomorrow}));
+    const verdict = /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>/.exec(html);
+    assert.ok(verdict, 'a rated word, not Unknown');
+    assert.match(html, /<p class="app-verdict-limit">[^<]+\.(?: Held at Marginal: [^<]+\.)?<\/p>/);
+    assert.match(html, /reference 23 ft boat, not a bite forecast or a safety clearance/);
+    assert.doesNotMatch(html, /best bite|hotspot|safe passage/i);
+  } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; }
 });
 
 test('a feed for another region, or no region, leaves the brief empty', async () => {

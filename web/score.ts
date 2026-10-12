@@ -107,6 +107,36 @@ export function controlModeFor(species: string, configured?: string | null): Con
 
 const finite = (v: number | null | undefined): number => (Number.isFinite(v as number) ? (v as number) : 0);
 
+/** What each input costs an hour's comfort score, in points out of 10, before the wind and wave burdens overlap. */
+export interface ComfortCosts {wind: number; seas: number; chop: number; crossing: number; short: number}
+
+/**
+ * The comfort score's charges for one full-detail hour, each input on its own:
+ * hourScores sums them, and the brief names the largest as the day's limit.
+ */
+export function comfortCosts(
+  c: HourConditions,
+  other: {wind: number | null; sea: {height: number | null}},
+  checkedGust: number,
+  boat: BoatFactors,
+): {wind: number; gust: number; sea: number; chop: number; costs: ComfortCosts} {
+  const T = THRESHOLDS, S = boat.sea, W = boat.wind;
+  const wind = Math.max(finite(c.wind), finite(other.wind));
+  const gust = checkedGust;
+  const sea = Math.max(finite(c.sea.height), finite(other.sea.height));
+  const chop = finite(c.chop.height);
+  const crossing =
+    finite(c.secondary.height) >= T.crossingSecondaryHeight * S && (angleBetween(c.swell.from, c.secondary.from) ?? -1) >= T.crossingAngle
+      ? T.crossingPenalty : 0;
+  const short = chop >= T.shortChopHeight * S && finite(c.chop.period) <= boat.chopPeriod ? T.shortChopPenalty : 0;
+  return {wind, gust, sea, chop, costs: {
+    wind: Math.max(0, wind - T.comfortWindStart * W) * T.comfortWindSlope / W + Math.max(0, gust - T.comfortGustStart * W) * T.comfortGustSlope / W,
+    seas: Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S,
+    chop: Math.max(0, chop - T.comfortChopStart * S) * T.comfortChopSlope / S,
+    crossing, short,
+  }};
+}
+
 /**
  * Full-detail scores for one hour from two models: the rougher wind and seas of
  * the two, the checked gust, and the first model's chop and swell partitions.
@@ -119,21 +149,9 @@ export function hourScores(
   boat: BoatFactors,
 ): Scores {
   const T = THRESHOLDS, S = boat.sea, W = boat.wind;
-  const wind = Math.max(finite(c.wind), finite(other.wind));
-  const gust = checkedGust;
-  const sea = Math.max(finite(c.sea.height), finite(other.sea.height));
-  const chop = finite(c.chop.height);
-  const crossing =
-    finite(c.secondary.height) >= T.crossingSecondaryHeight * S && (angleBetween(c.swell.from, c.secondary.from) ?? -1) >= T.crossingAngle
-      ? T.crossingPenalty : 0;
-  const short = chop >= T.shortChopHeight * S && finite(c.chop.period) <= boat.chopPeriod ? T.shortChopPenalty : 0;
-  const wavePenalty = Math.max(
-    Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S,
-    Math.max(0, chop - T.comfortChopStart * S) * T.comfortChopSlope / S,
-  );
-  const comfortWind = Math.max(0, wind - T.comfortWindStart * W) * T.comfortWindSlope / W
-    + Math.max(0, gust - T.comfortGustStart * W) * T.comfortGustSlope / W;
-  const comfort = clamp(10 - combinedBurden(comfortWind, wavePenalty) - crossing - short);
+  const {wind, gust, sea, chop, costs} = comfortCosts(c, other, checkedGust, boat);
+  const {crossing, short} = costs;
+  const comfort = clamp(10 - combinedBurden(costs.wind, Math.max(costs.seas, costs.chop)) - crossing - short);
   const bottom = mode === 'bottom';
   const controlWavePenalty = Math.max(
     Math.max(0, sea - T.controlSeaStart * S) * T.controlSeaSlope / S,
@@ -212,4 +230,64 @@ export function withinWindowLimits(h: WindowHour, limits: WindowLimits, waveOk?:
   const wave = (h.wave as number), period = (h.period as number);
   const seasOk = waveOk ?? (wave <= limits.wave && !(wave >= LONG_PERIOD_SWELL.height && period >= LONG_PERIOD_SWELL.period));
   return (h.wind as number) <= limits.wind && (h.gust as number) <= limits.gust && seasOk;
+}
+
+/** The reference boat every threshold was tuned on: dist/boat-handling.js factors with no saved boat. */
+export const REFERENCE_BOAT: Readonly<BoatFactors> = Object.freeze({sea: 1, wind: 1, chopPeriod: 6});
+
+/**
+ * One hour of the dual-model forecast feed, flattened: NOAA GFS wind and the
+ * GFS-Wave partitions, with ECMWF IFS wind and WAM seas as the second opinion.
+ * Units: knots, feet, seconds, degrees true (from). Nulls are unknown.
+ */
+export interface FeedHour {
+  wind: number | null; gust: number | null; wind_from: number | null;
+  sea: number | null; sea_period: number | null; chop: number | null; chop_period: number | null;
+  swell: number | null; swell_period: number | null; swell_from: number | null;
+  secondary: number | null; secondary_from: number | null;
+  other_wind: number | null; other_sea: number | null; other_gust: number | null;
+}
+
+/** A feed hour's comfort rating, with what it charged so a caller can name the limit. */
+export interface ComfortRating {
+  /** The score as rated: a limited estimate is capped at THRESHOLDS.capLimited. */
+  score: number;
+  /** The same score before the limited cap. */
+  uncapped: number;
+  /** Built from the wind and combined seas only: a partition, the second model or a consistent gust is missing. */
+  limited: boolean;
+  /** The rougher of the two models' wind and seas, the checked gust (null when neither is consistent), and the first model's chop. */
+  wind: number; gust: number | null; sea: number; chop: number | null;
+  costs: ComfortCosts;
+}
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/**
+ * The comfort score for one feed hour, as every surface rates it: the full
+ * rubric when both models and every partition are there, otherwise the limited
+ * one on the wind and seas actually forecast, capped. Null without a wind and a
+ * seas forecast. Gusts below their sustained wind are dropped, never raised.
+ */
+export function rateComfort(h: FeedHour, boat: BoatFactors = REFERENCE_BOAT): ComfortRating | null {
+  const winds = [h.wind, h.other_wind].filter(isNum), seas = [h.sea, h.other_sea].filter(isNum);
+  if (!winds.length || !seas.length) return null;
+  const gusts = ([[h.wind, h.gust], [h.other_wind, h.other_gust]] as const).filter(([w, g]) => isNum(w) && isNum(g) && g >= w).map(([, g]) => g as number);
+  const complete = [h.wind, h.sea, h.sea_period, h.chop, h.swell, h.swell_from, h.other_wind, h.other_sea].every(isNum) && gusts.length === 2;
+  if (complete) {
+    const c: HourConditions = {wind: h.wind, gust: h.gust, sea: {height: h.sea}, chop: {height: h.chop, period: h.chop_period},
+      swell: {height: h.swell, from: h.swell_from}, secondary: {height: h.secondary, from: h.secondary_from}};
+    const other = {wind: h.other_wind, sea: {height: h.other_sea}}, gust = Math.max(...gusts);
+    const score = hourScores(c, other, 'boat-comfort', gust, boat).comfort;
+    const parts = comfortCosts(c, other, gust, boat);
+    return {score, uncapped: score, limited: false, wind: parts.wind, gust, sea: parts.sea, chop: parts.chop, costs: parts.costs};
+  }
+  const wind = Math.max(...winds), sea = Math.max(...seas), gust = gusts.length ? Math.max(...gusts) : null;
+  const uncapped = limitedScores(wind, sea, gust, 'boat-comfort', boat).comfort;
+  const T = THRESHOLDS, S = boat.sea, W = boat.wind;
+  const costs: ComfortCosts = {
+    wind: Math.max(0, wind - T.comfortWindStart * W) * T.comfortWindSlope / W + (gust === null ? 0 : Math.max(0, gust - T.comfortGustStart * W) * T.comfortGustSlope / W),
+    seas: Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S, chop: 0, crossing: 0, short: 0,
+  };
+  return {score: Math.min(T.capLimited, uncapped), uncapped, limited: true, wind, gust, sea, chop: null, costs};
 }
