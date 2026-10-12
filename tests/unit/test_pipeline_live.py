@@ -9,7 +9,7 @@ class LiveObservationsTests(TestCase):
     def test_all_sources_keep_station_identity_and_original_times(self):
         now = datetime(2026, 9, 21, 19, tzinfo=timezone.utc)
         def fake_source(ident, name, kind, url, max_age, loader, collected, previous):
-            return {'id': ident, 'status': 'ok', 'url': url,
+            return {'id': ident, 'status': 'ok', 'url': url, 'max_age_hours': max_age,
                     'data': {'sample_at': '2026-09-21T18:26:00Z'}}
         with patch('skippercast.pipeline.live.source', side_effect=fake_source):
             data = collect(now)
@@ -18,6 +18,8 @@ class LiveObservationsTests(TestCase):
         self.assertEqual(data['sources']['diablo']['data']['sample_at'], '2026-09-21T18:26:00Z')
         self.assertIn('46215', data['sources']['diablo']['station_url'])
         self.assertIn('46028', data['sources']['offshore']['station_url'])
+        self.assertEqual(data['sources']['offshore']['station'], '46028', 'the configured chain names its primary')
+        self.assertNotIn('fallback_for', data['sources']['offshore'])
 
     def test_retained_source_is_degraded_not_relabelled_current(self):
         previous = {'schema_version': 1, 'sources': {'diablo': {'status': 'ok', 'data': {'sample_at': 'old'}}}}
