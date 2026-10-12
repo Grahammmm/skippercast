@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {THRESHOLDS, hourScores, limitedScores, verdictFor, worseVerdict, controlModeFor, angleBetween} from '../web/score.ts';
+import {THRESHOLDS, hourScores, limitedScores, verdictFor, worseVerdict, controlModeFor, angleBetween, WINDOW_LIMITS, LONG_PERIOD_SWELL, withinWindowLimits} from '../web/score.ts';
 import {hourScores as legacyHourScores} from '../dist/morning-outlook.js';
 import {verdictFor as legacyVerdict, GO, NO_GO} from '../dist/tomorrow.js';
 
@@ -105,4 +105,34 @@ test('control mode comes from the region when configured, else from the species'
   assert.equal(controlModeFor('reef', 'nonsense'), 'bottom');
   assert.equal(angleBetween(350, 10), 20);
   assert.equal(angleBetween(null, 10), null);
+});
+
+test('the window rule: limits inclusive, unknowns never fit, the long-period swell rule, and a nearshore judgement replaces seas', () => {
+  const ok = {wind: 10, gust: 15, wave: 4, period: 10};
+  assert.equal(withinWindowLimits(ok, WINDOW_LIMITS.boat), true);
+  assert.equal(withinWindowLimits(ok, WINDOW_LIMITS.other), false);
+  for (const field of ['wind', 'gust', 'wave', 'period']) assert.equal(withinWindowLimits({...ok, [field]: null}, WINDOW_LIMITS.boat), false, field);
+  for (const field of ['wind', 'gust', 'wave']) assert.equal(withinWindowLimits({...ok, [field]: ok[field] + 0.1}, WINDOW_LIMITS.boat), false, field);
+  const long = {wind: 5, gust: 7, wave: LONG_PERIOD_SWELL.height, period: LONG_PERIOD_SWELL.period};
+  assert.equal(withinWindowLimits(long, WINDOW_LIMITS.boat), false);
+  assert.equal(withinWindowLimits({...long, period: 14.9}, WINDOW_LIMITS.boat), true);
+  assert.equal(withinWindowLimits(long, WINDOW_LIMITS.boat, true), true, 'a nearshore surge judgement replaces the offshore seas rule');
+  assert.equal(withinWindowLimits({...ok, wave: 9}, WINDOW_LIMITS.boat, true), true);
+  assert.equal(withinWindowLimits({...ok, wind: 11}, WINDOW_LIMITS.boat, true), false, 'never relaxes wind or gusts');
+  assert.deepEqual([WINDOW_LIMITS.boat, WINDOW_LIMITS.other], [{wind: 10, gust: 15, wave: 4}, {wind: 8, gust: 12, wave: 3}]);
+  assert.ok(Object.isFrozen(WINDOW_LIMITS) && Object.isFrozen(WINDOW_LIMITS.boat));
+});
+
+// docs/conditions-model.md records where the two questions part: change a
+// threshold or a default limit and this count moves, so update the page with it.
+test('the default boat window and the reference boat\'s go verdict agree on 65 of 69 golden hours', () => {
+  const differ = [];
+  const cases = golden.cases.filter(c => c.factors.sea === 1 && c.factors.wind === 1 && Number.isFinite(c.c.sea.period));
+  for (const c of cases) {
+    const go = verdictFor(hourScores(c.c, c.other, 'boat-comfort', c.gust, c.factors)) === 'go';
+    const hour = {wind: Math.max(c.c.wind ?? 0, c.other.wind ?? 0), gust: c.gust, wave: Math.max(c.c.sea.height ?? 0, c.other.sea.height ?? 0), period: c.c.sea.period};
+    if (go !== withinWindowLimits(hour, WINDOW_LIMITS.boat)) differ.push({go, ...hour});
+  }
+  assert.equal(cases.length, 69);
+  assert.deepEqual([differ.length, differ.filter(d => !d.go).length], [4, 1], JSON.stringify(differ));
 });

@@ -1,5 +1,6 @@
 import type {Report,BriefMode,Area,Assessment,ForecastHour,Window} from './types.ts';
 import {getTimes} from 'suncalc';
+import {WINDOW_LIMITS,withinWindowLimits,type WindowLimits} from '../../../web/score.ts';
 export const MODEL_VERSION='conditions-v1';
 const age=(at:string,now:Date)=>now.getTime()-Date.parse(at);
 export function freshForecast(report:Report,area:Area,now=new Date()){
@@ -10,9 +11,8 @@ export function freshForecast(report:Report,area:Area,now=new Date()){
  if(!Number.isFinite(issueAge)||!Number.isFinite(fetchAge)||issueAge>18*3600000||issueAge<-3600000||fetchAge>2*3600000||fetchAge<-3600000)return undefined;
  return forecast;
 }
-/** The window rule's wind, gust and seas limits (knots, feet): boat, and the other profiles. */
-export type WindowLimits={wind:number;gust:number;wave:number};
-export const WINDOW_LIMITS:Readonly<Record<'boat'|'other',WindowLimits>>={boat:{wind:10,gust:15,wave:4},other:{wind:8,gust:12,wave:3}};
+/** The window rule and its default limits live in the one conditions model (web/score.ts). */
+export {WINDOW_LIMITS,type WindowLimits};
 /**
  * waveOk replaces the generic wave rule for an hour when it returns a boolean (spear surge from a nearshore model); label names such windows.
  * limits replaces the profile's WINDOW_LIMITS (the user's own limits, limits.ts); the long-period swell rule and daylight still apply.
@@ -35,9 +35,7 @@ export function assess(report:Report,area:Area,mode:BriefMode,now=new Date(),tim
   const sun=getTimes(new Date(localDate+'T20:00:00Z'),area.lat,area.lon);
   const at=Date.parse(h.at);
   if(!sun.sunrise||!sun.sunset)return false;
-  const custom=options.waveOk?.(h);
-  const wave=custom===undefined?h.waveFt<=limits.wave && !(h.waveFt>=2.5&&h.wavePeriodS>=15):custom;
-  return at>=sun.sunrise.getTime()&&at+3600000<=sun.sunset.getTime()&&h.windKnots<=limits.wind&&h.gustKnots<=limits.gust&&wave;
+  return at>=sun.sunrise.getTime()&&at+3600000<=sun.sunset.getTime()&&withinWindowLimits({wind:h.windKnots,gust:h.gustKnots,wave:h.waveFt,period:h.wavePeriodS},limits,options.waveOk?.(h));
  };
  const groups:ForecastHour[][]=[];
  for(const h of hours){if(!pass(h))continue;const g=groups.at(-1);if(g&&Date.parse(h.at)-Date.parse(g.at(-1)!.at)===3600000)g.push(h);else groups.push([h]);}

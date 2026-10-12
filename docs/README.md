@@ -19,6 +19,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [regional-intelligence.md](regional-intelligence.md) | Regional forecast comparison, ensembles, currents and saved-trip alerts |
 | [boat-profile.md](boat-profile.md) | Entering your boat and how comfort and drift ratings scale to it |
 | [assessment-rubric.md](assessment-rubric.md) | The fixed 1–10 comfort and fishing-conditions rubric for reviewed assessments |
+| [conditions-model.md](conditions-model.md) | The one conditions model (`web/score.ts`): the graded score, the window rule, and where they differ |
 | [forecast-workflow.md](forecast-workflow.md) | Operator or agent review from forecast evidence to an assessment |
 | [species-search-plans.md](species-search-plans.md) | Per-species map shortlists and how they are built |
 | [fishing-strategies.md](fishing-strategies.md) | Reviewed starter methods for each target species |
