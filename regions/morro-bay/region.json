@@ -100,7 +100,6 @@
     }
   },
   "basemap": {
-    "default": "aerial",
     "aerial": {
       "source": "usgs-naip",
       "checked_at": "2026-10-08",
