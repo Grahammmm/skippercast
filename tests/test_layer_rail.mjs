@@ -34,7 +34,7 @@ async function load() {
       export {cloudStamp} from './web/map/clouds.ts';
       export {groundsState} from './web/map/charter-grounds.ts';
       export {aisOn, aisState} from './web/map/commercial-ais.ts';
-      export {currentStatus, terrainOptions, TERRAIN_DEFAULTS} from './web/map/stage.ts';
+      export {currentStatus, terrainOptions, terrainShading, TERRAIN_DEFAULTS} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {PROFILE_TABLE, RAIL_IDS} from './web/profile.ts';
       export {render} from 'preact-render-to-string';
@@ -225,7 +225,13 @@ test('FE-80: in 2D and 3D the Seafloor entry holds the terrain\'s options with l
   assert.match(terrain, /<label for="terrain-water">Water opacity <b class="ui-mono">50%<\/b>/);
   assert.match(terrain, /Illustrative \+0\.8 m water surface\. Not a live tide\./, 'the native note, verbatim');
   const boxes = [...terrain.matchAll(/<label class="app-rail-option"><input type="checkbox"([^>]*)\/?>([^<]+)<\/label>/g)].map(x => [x[2], /checked/.test(x[1]), /disabled/.test(x[1])]);
-  assert.deepEqual(boxes, [['Water &amp; channels', true, false], ['Depth contours · 10 / 30 / 500 ft', true, false], ['Source coverage', false, false], ['Reefs &amp; species pins', true, false]]);
+  assert.deepEqual(boxes, [['Water &amp; channels', true, false], ['Depth contours · adapt to view', true, false], ['Fixed depth colours', false, false], ['Source coverage', false, false], ['Reefs &amp; species pins', true, false]]);
+  assert.match(terrain, /<label for="terrain-sun">Sun direction <b class="ui-mono">305°<\/b><\/label><input id="terrain-sun" type="range" min="0" max="360" step="5" value="305"/);
+  assert.match(terrain, /<label for="terrain-photo">Land <b class="ui-mono">Photo<\/b><\/label><input id="terrain-photo" type="range" min="0" max="1" step="0.05" value="1"/);
+  assert.doesNotMatch(terrain, /contours \d+ ft/, 'no readout before the renderer reports one');
+  m.terrainShading.value = {readout: 'Ramp 61–142 ft in view · contours 10 ft, index 50 ft', rampMinM: 18.6, rampMaxM: 43.3, contourMinorM: 3.048, contourIndexM: 15.24, fixedRamp: false, relief: 5};
+  assert.match(m.render(m.h(m.LayerRail)), /<p class="app-rail-hint" role="status">Ramp 61–142 ft in view · contours 10 ft, index 50 ft<\/p>/, 'the renderer\'s readout, verbatim');
+  m.terrainShading.value = null;
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=currents`);
   html = m.render(m.h(m.LayerRail));
   assert.match(html, /<input type="checkbox" disabled\/?>Reefs &amp; species pins/, 'with Seafloor off the reefs and pins are off and fixed');

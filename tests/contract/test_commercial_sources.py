@@ -220,7 +220,10 @@ def usages():
             found.add((f'region.json:intelligence.providers.{role}', ident))
         for role, ident in region.get('pipeline_sources', {}).items():
             found.add((f'region.json:pipeline_sources.{role}', ident))
+        # `basemap.default` names which base opens, not a source; the bound layers carry the source ids.
         for layer, binding in region.get('basemap', {}).items():
+            if layer == 'default':
+                continue
             found.add((f'region.json:basemap.{layer}', binding['source']))
         for need in ('wind-forecast', 'wave-forecast'):
             # Mirrors the scheduled pipeline's model selection (settings.model_ids).

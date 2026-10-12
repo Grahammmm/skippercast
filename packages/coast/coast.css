@@ -37,3 +37,4 @@ body[data-setup=pending]>header,body[data-setup=pending]>#report-bar,body[data-s
 @media(max-width:850px){.layers #full-report-link{display:block;margin-top:10px;padding:10px 0;border-top:1px solid var(--coast-line,#cfdbd6);font-size:11px;text-decoration:none;min-height:44px}.layers:not(.expanded){max-height:calc(100% - 210px)}}
 /* Keep map controls clear of the species panel on narrow tablets. */
 @media(min-width:501px) and (max-width:850px){.view-controls{left:16px;right:auto;top:190px;bottom:auto}}
+.relief-chip{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:1;padding:4px 10px;border-radius:999px;font-size:11px;line-height:1.4;white-space:nowrap;color:var(--coast-text,#123b3a);background:var(--coast-panel-glass,#fff9);border:1px solid var(--coast-line,#dce5df);pointer-events:none}

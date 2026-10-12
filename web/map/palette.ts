@@ -57,7 +57,7 @@ export function ramps(p: Palette): {depth: string[]; sst: string[]; swell: strin
 export function coastPalette(p: Palette): Record<string, string> {
   const chart = basemapRoles(p, 'day');
   return {
-    ground: p.bg, panel: p.panel, panel2: p.panel2, line: p.line, text: p.text, muted: p.muted,
+    ground: p.bg, skyTop: p.bgDeep, panel: p.panel, panel2: p.panel2, line: p.line, text: p.text, muted: p.muted,
     mint: p.mint, blue: p.blue, coral: p.coral, amber: p.amber,
     water: chart.water, land: chart.land, label: chart.label,
   };

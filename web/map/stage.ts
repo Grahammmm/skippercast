@@ -25,7 +25,7 @@
 // stripping and passes a fake terrain module, so no GPU or three is needed.
 import {computed, effect, signal} from '@preact/signals';
 import type {
-  CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastSourceCoverage, CoastTargetDetail,
+  CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastShading, CoastSourceCoverage, CoastTargetDetail,
 } from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
 import type {ChartMark} from './coastline.ts';
@@ -167,11 +167,17 @@ export interface TerrainOptions {
   /** Opacity of the illustrative water surface, 0 to 0.8. */
   readonly waterOpacity: number;
   readonly contours: boolean;
+  /** Sun azimuth for lighting and hillshade, degrees clockwise from north. */
+  readonly sunAzimuth: number;
+  /** Land imagery against shaded relief: 0 relief, 1 photo. */
+  readonly photoMix: number;
+  /** v1's fixed depth colours instead of the ramp spanning the depths in view. */
+  readonly fixedRamp: boolean;
   readonly sourceCoverage: boolean;
   /** Reefs and species pins; they also need the Seafloor entry on. */
   readonly habitat: boolean;
 }
-export const TERRAIN_DEFAULTS: TerrainOptions = Object.freeze({relief: 5, water: true, waterOpacity: 0.5, contours: true, sourceCoverage: false, habitat: true});
+export const TERRAIN_DEFAULTS: TerrainOptions = Object.freeze({relief: 5, water: true, waterOpacity: 0.5, contours: true, sunAzimuth: 305, photoMix: 1, fixedRamp: false, sourceCoverage: false, habitat: true});
 export const terrainOptions = signal<TerrainOptions>(TERRAIN_DEFAULTS);
 export function setTerrainOption<K extends keyof TerrainOptions>(name: K, value: TerrainOptions[K]): void {
   terrainOptions.value = {...terrainOptions.peek(), [name]: value};
@@ -180,13 +186,16 @@ export function setTerrainOption<K extends keyof TerrainOptions>(name: K, value:
 export const terrainReading = signal<CoastReading | null>(null);
 /** The renderer's terrain sources and its source-coverage key, once the reviewed release loads. */
 export const terrainCoverage = signal<CoastSourceCoverage | null>(null);
+/** The renderer's depth ramp window and contour spacing in view (presentation only), for the rail's readout. */
+export const terrainShading = signal<CoastShading | null>(null);
 /** The mounted renderer's view buttons and sources sheet; null while no terrain is mounted. */
 export interface TerrainActions {zoom(direction: 'in' | 'out'): void; reset(): void; top(): void; sources(): void}
 export const terrainActions = signal<TerrainActions | null>(null);
 
 const SETTERS: {[K in keyof TerrainOptions]: (h: CoastHandle, value: TerrainOptions[K]) => void} = {
   relief: (h, v) => h.setRelief(v), water: (h, v) => h.setWaterVisible(v), waterOpacity: (h, v) => h.setWaterOpacity(v),
-  contours: (h, v) => h.setContours(v), sourceCoverage: (h, v) => h.setSourceCoverage(v), habitat: (h, v) => h.setHabitatVisible(v),
+  contours: (h, v) => h.setContours(v), sunAzimuth: (h, v) => h.setSunAzimuth(v), photoMix: (h, v) => h.setPhotoMix(v), fixedRamp: (h, v) => h.setFixedRamp(v),
+  sourceCoverage: (h, v) => h.setSourceCoverage(v), habitat: (h, v) => h.setHabitatVisible(v),
 };
 /** Tell the renderer the options that differ from what it shows; returns what it shows now. */
 export function applyOptions(h: CoastHandle, wanted: TerrainOptions, seafloorOn: boolean, shown: TerrainOptions): TerrainOptions {
@@ -280,7 +289,7 @@ export function createStage(options: StageOptions): Stage {
   const release = (): void => {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
-    shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null;
+    shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
     h?.destroy();
   };
   const fail = (error: unknown): void => {
@@ -318,6 +327,7 @@ export function createStage(options: StageOptions): Stage {
         },
         onReading: reading => { terrainReading.value = reading; if (reading) terrainPick.value = null; },
         onSourceCoverage: coverage => { terrainCoverage.value = coverage; },
+        onShading: shading => { terrainShading.value = shading; },
         forecastHref: withParams(location.href, {view: 'conditions'}),
         initial: {...state, location: state.location ?? undefined},
         onSelection: picked => {

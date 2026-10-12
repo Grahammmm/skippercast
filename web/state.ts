@@ -85,6 +85,8 @@ export const layers = signal<readonly string[]>(PROFILE_TABLE[DEFAULT_PROFILE].d
 /** Coast or focus id for the command bar (?area=, else ?focus=). */
 export const area = signal<string | null>(null);
 export const base = signal<Base>('night');
+/** The base the region's package opens on when neither the link nor storage names one (region.json `basemap.default`); night until the region loads. */
+export const regionDefaultBase = signal<Base>('night');
 /** The presentation the link or (v2) the last choice asks for; see stagePresentation for what the stage shows. */
 export const presentation = signal<Presentation>('chart');
 /** Surface-current source; UNSUPPORTED for an unlisted ?current=; without the key, see resolveCurrent. */
@@ -197,8 +199,15 @@ export function resolveStored(state: UrlState): {profile: Profile; layers: reado
   const p = first(isProfile, DEFAULT_PROFILE, state.profile, stored(STORAGE_KEYS.profile));
   const saved = storedLayers()[p];
   const l = parseLayers(state.layers) ?? parseLayers(typeof saved === 'string' ? saved : null) ?? PROFILE_TABLE[p].defaultLayers;
-  const b = first(isBase, 'night', state.base, stored(STORAGE_KEYS.base));
+  const b = first(isBase, regionDefaultBase.peek(), state.base, stored(STORAGE_KEYS.base));
   return {profile: p, layers: l, base: b};
+}
+
+/** The region's package names `next` as its default base: it applies now unless the link or a saved choice names one. */
+export function setRegionDefaultBase(next: Base): void {
+  if (regionDefaultBase.peek() === next) return;
+  regionDefaultBase.value = next;
+  if (typeof location !== 'undefined') base.value = resolveStored(readURL(location.href)).base;
 }
 
 /**

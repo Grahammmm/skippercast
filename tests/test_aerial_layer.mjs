@@ -17,7 +17,7 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 import {
-  AERIAL_CATALOG_ID, AERIAL_OPACITY, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, flownText,
+  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, flownText,
 } from '../web/map/aerial.ts';
 import {ENC_LAYER, chartStyle, unavailable} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
@@ -33,7 +33,8 @@ const origin = template => new URL(template.replace('{bbox-epsg-3857}', '0,0,1,1
 
 test('the aerial base is read from the region package, only where it names usgs-naip with ordered dates', () => {
   const config = json('regions/morro-bay/region.json').basemap.aerial;
-  assert.deepEqual(MORRO, {source: AERIAL_CATALOG_ID, first: config.acquired.first, last: config.acquired.last, checkedAt: config.checked_at, note: config.note});
+  assert.deepEqual(MORRO, {source: AERIAL_CATALOG_ID, first: config.acquired.first, last: config.acquired.last, checkedAt: config.checked_at, note: config.note, byDefault: json('regions/morro-bay/region.json').basemap.default === 'aerial'});
+  assert.equal(MORRO.byDefault, true, 'Morro Bay opens on Aerial (owner decision, 12 Oct 2026)');
   assert.deepEqual(aerialBase(json('regions/morro-bay/region.json')), MORRO, 'the published package carries the source record');
   for (const id of regionIds.filter(id => id !== 'morro-bay')) assert.equal(aerialBase(json(`regions/${id}/region.json`)), null, `${id} offers no aerial base`);
   const aerial = patch => ({basemap: {aerial: {...config, ...patch}}});
@@ -54,15 +55,23 @@ test('the label is the acquisition window, and the credit is naipSource()\'s own
   for (const text of [flownText(MORRO), aerialAttribution(MORRO), MORRO.note]) assert.doesNotMatch(text, /\b(?:live|current|today|now|latest|real-time)\b/i, 'dated imagery, never current conditions');
 });
 
-test('the overlay is naipSource()\'s one raster source at the fixed USGS host, at 0.92 opacity and desaturated', () => {
-  const {sources, layers} = aerialOverlay(MORRO), id = aerialId(MORRO);
+test('the overlay is naipSource()\'s one raster source at the fixed USGS host; full opacity and lightly desaturated where it is the default, 0.92 and -0.4 where optional', () => {
+  const optional = aerialOverlay({...MORRO, byDefault: false}).layers[0].paint;
+  assert.deepEqual(optional, {'raster-opacity': AERIAL_OPACITY, 'raster-saturation': AERIAL_SATURATION});
+  assert.equal(AERIAL_OPACITY, 0.92);
+  assert.equal(AERIAL_SATURATION, -0.4);
+  const DEFAULT = {...MORRO, byDefault: true};
+  const {sources, layers} = aerialOverlay(DEFAULT), id = aerialId(DEFAULT);
+  assert.equal(id, aerialId(MORRO), 'opening on it changes the paint, not the source');
   assert.deepEqual(Object.keys(sources), [id]);
   assert.deepEqual(sources[id], {...naipSource(), attribution: aerialAttribution(MORRO)}, 'the template, zooms and tile size are packages/coast\'s');
   assert.deepEqual(sources[id].tiles.map(origin), ['https://imagery.nationalmap.gov']);
   assert.ok(sources[id].tiles.every(t => mapSourceHosts.includes(origin(t))));
   assert.deepEqual(layers.map(l => [l.id, l.type, l.source]), [[id, 'raster', id]]);
-  assert.equal(layers[0].paint['raster-opacity'], AERIAL_OPACITY);
-  assert.ok(layers[0].paint['raster-saturation'] < 0);
+  assert.equal(layers[0].paint['raster-opacity'], AERIAL_DEFAULT_OPACITY);
+  assert.equal(layers[0].paint['raster-saturation'], AERIAL_DEFAULT_SATURATION);
+  assert.equal(AERIAL_DEFAULT_OPACITY, 1);
+  assert.equal(AERIAL_DEFAULT_SATURATION, -0.15);
   assert.notEqual(aerialId({...MORRO, first: '2024-06-01', last: '2024-06-09'}), id, 'another window replaces the source and its credit');
 });
 
@@ -200,4 +209,34 @@ test('the rail\'s base choice offers Aerial only where the region has it, labell
   assert.match(item, /<option selected value="aerial">Aerial<\/option>/);
   assert.match(item, /<span id="app-rail-base-note" class="ui-rail-note ui-mono">flown 13–29 May 2022<\/span>/);
   m.aerialOffer.value = null;
+});
+
+test('a region whose package defaults to Aerial opens on it unless the link or a saved choice names a base', async () => {
+  const {base, regionDefaultBase, setRegionDefaultBase, configureStore, syncFromURL, setParams} = await import('../web/state.ts');
+  const memory = new Map();
+  const storage = {getItem: k => memory.get(k) ?? null, setItem: (k, v) => memory.set(k, String(v)), removeItem: k => memory.delete(k)};
+  const open = href => {
+    globalThis.location = {href};
+    globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
+    globalThis.dispatchEvent = () => true;
+    configureStore({v2: true, storage});
+    regionDefaultBase.value = 'night';
+    syncFromURL(href);
+  };
+  open(`${PAGE}?region=morro-bay`);
+  assert.equal(base.value, 'night', 'before the region loads');
+  setRegionDefaultBase('aerial');
+  assert.equal(base.value, 'aerial', 'the package default applies once it is known');
+  setParams({base: 'night'});
+  assert.equal(base.value, 'night', 'the dark vector base stays one tap away');
+  open(`${PAGE}?region=morro-bay&base=night`);
+  setRegionDefaultBase('aerial');
+  assert.equal(base.value, 'night', 'a linked base wins');
+  open(`${PAGE}?region=morro-bay`);
+  setRegionDefaultBase('aerial');
+  assert.equal(base.value, 'night', 'a saved choice (from the linked visit) wins over the package default');
+  memory.clear();
+  open(`${PAGE}?region=southern-california`);
+  setRegionDefaultBase('night');
+  assert.equal(base.value, 'night', 'a region without the flag behaves as before');
 });
