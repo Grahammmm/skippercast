@@ -163,6 +163,13 @@ test('without an identity provider /api/auth/ is unavailable and private routes 
   assert.equal(trips.status, 401);
 });
 
+test('/api/health reports the package.json version, not a literal', async () => {
+  const {version} = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  const body = await (await deployed.fetch(new Request(ORIGIN + '/api/health'), {})).json();
+  assert.equal(body.version, version);
+  assert.doesNotMatch(readFileSync(new URL('../server/routes/public.ts', import.meta.url), 'utf8'), /version: '\d/);
+});
+
 test('HEAD is answered as GET without a body (Hono), including for the site', async () => {
   const health = await deployed.fetch(new Request(ORIGIN + '/api/health', {method: 'HEAD'}), {});
   assert.equal(health.status, 200);assert.equal(await health.text(), '');

@@ -8,6 +8,11 @@ const bytes=(s:string):Uint8Array<ArrayBuffer>=>{if(!/^[A-Za-z0-9_-]+$/.test(s))
 const decode=(s:string):ExternalJSON=>JSON.parse(new TextDecoder().decode(bytes(s)));
 type JobPolicy = Pick<Deployment,'scheduler'|'public_origin'>;
 type Fetcher = (url:string,init:RequestInit)=>Promise<Response>;
+/** The validated GitHub key set is reused for an hour; an unknown kid (key rotation) may force one refetch a minute. Seconds, like `now`. */
+const JWKS_TTL_S=3_600,JWKS_REFETCH_COOLDOWN_S=60;
+let jwksCache:{keys:ExternalJSON[];at:number}|undefined,lastForcedRefetch=-Infinity;
+/** Test hook: forget the cached key set and the refetch cooldown. */
+export function resetJwksCacheForTests():void{jwksCache=undefined;lastForcedRefetch=-Infinity;}
 /**
  * Which job a token may act as (TA-M1): the audience path its token was
  * requested for and the workflow files allowed to hold it. A workflow must also
@@ -49,10 +54,18 @@ export async function verifyJobToken(token:unknown,policy:JobPolicy,...rest:[Fet
     const header=decode(parts[0]),claims=decode(parts[1]);
     if(header.alg!=='RS256'||header.typ!=='JWT'||typeof header.kid!=='string'||header.kid.length>200)return false;
     if(!validJobClaims(claims,policy,now,scope)){console.warn('Scheduler identity policy mismatch');return false;}
-    // Fixed GitHub endpoint: no jku, x5u, issuer or key URL supplied by the token is fetched.
-    stage='jwks-fetch';const response=await fetcher(issuer+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'manual'});
-    if(!response.ok){console.warn('Scheduler key discovery failed',{status:response.status});return false;}const text=await response.text();if(text.length>50000)return false;
-    stage='jwks-key';const jwk=JSON.parse(text).keys.find((k:ExternalJSON)=>k.kid===header.kid&&k.kty==='RSA'&&k.use==='sig'&&k.alg==='RS256');if(!jwk){console.warn('Scheduler signing key unavailable');return false;}
+    // Fixed GitHub endpoint: no jku, x5u, issuer or key URL supplied by the token is fetched. Only a successful, size-checked, parsed key set is cached.
+    const load=async():Promise<ExternalJSON[]|false>=>{
+      stage='jwks-fetch';const response=await fetcher(issuer+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'manual'});
+      if(!response.ok){console.warn('Scheduler key discovery failed',{status:response.status});return false;}const text=await response.text();if(text.length>50000)return false;
+      stage='jwks-key';const keys=JSON.parse(text).keys;if(!Array.isArray(keys))throw Error('Key set has no keys array');jwksCache={keys,at:now};return keys;
+    };
+    const pick=(keys:ExternalJSON[])=>keys.find((k:ExternalJSON)=>k.kid===header.kid&&k.kty==='RSA'&&k.use==='sig'&&k.alg==='RS256');
+    let keys=jwksCache&&now>=jwksCache.at&&now-jwksCache.at<JWKS_TTL_S?jwksCache.keys:undefined,fetched=false;
+    if(!keys){const loaded=await load();if(!loaded)return false;keys=loaded;fetched=true;}
+    stage='jwks-key';let jwk=pick(keys);
+    if(!jwk&&!fetched&&now-lastForcedRefetch>=JWKS_REFETCH_COOLDOWN_S){lastForcedRefetch=now;const loaded=await load();if(!loaded)return false;jwk=pick(loaded);}
+    stage='jwks-key';if(!jwk){console.warn('Scheduler signing key unavailable');return false;}
     stage='signature';
     const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
     return await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,bytes(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1]))?claims:false;
