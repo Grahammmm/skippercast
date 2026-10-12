@@ -154,7 +154,7 @@ test('a page path missing from SHELLS is fetched directly and still served no-st
     return new Response('page', {headers: {'Content-Type': 'text/html', 'Cache-Control': 'public, max-age=31536000'}}); }};
   delete globalThis.SHELLS['/landing.html'];
   try {
-    const shell = await worker.fetch(new Request(origin + '/?utm=x'), {ASSETS, UI_V2: 'true'});
+    const shell = await worker.fetch(new Request(origin + '/?utm=x'), {ASSETS});
     assert.equal(shell.status, 200);assert.equal(shell.headers.get('Cache-Control'), 'no-store');
     assert.deepEqual(requested, ['/landing'], 'the page path itself, without .html or the visitor query');
   } finally { globalThis.SHELLS['/landing.html'] = saved; }

@@ -78,12 +78,13 @@ test('every method and path reaches the same handler as before the Hono router',
 });
 
 // FE-01 (docs/plans/front-end/design.md § 14) and FE-61: `/` is the landing, or the app when the link names an area;
-// `/map` is the app. FE-61 removed the v1 shell and the UI_V2 / ?ui= switch, so neither changes the answer.
+// `/map` is the app. FE-61 removed the v1 shell and the front-end switch, so `?ui=` does not change the answer.
 // ASSETS answers 299 with the fetched path, so the chosen shell is visible in the body.
-test('FE-61: / is the landing, the app with an area key, /map the app; UI_V2 and ?ui= change nothing', async () => {
+test('FE-61: / is the landing, the app with an area key, /map the app; ?ui= changes nothing', async () => {
   const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status]; };
   const landing = [299, '/landing.0123456789', 'no-store'], app = [299, '/app.0123456789', 'no-store'];
-  for (const env of [{}, {UI_V2: 'false'}, {UI_V2: ' FALSE '}, {UI_V2: 'true'}, {UI_V2: 'yes'}]) for (const ui of ['', 'ui=v1', 'ui=v2', 'ui=v3']) {
+  const env = {};
+  for (const ui of ['', 'ui=v1', 'ui=v2', 'ui=v3']) {
     const label = `${ui} ${JSON.stringify(env)}`, q = ui ? `?${ui}` : '', and = ui ? `&${ui}` : '';
     assert.deepEqual(await shell(`/${q}`, env), landing, `/ ${label}`);
     assert.deepEqual(await shell(`/index.html${q}`, env), landing, `/index.html ${label}`);
@@ -104,7 +105,8 @@ test('FE-61: / is the landing, the app with an area key, /map the app; UI_V2 and
 test('#475: /sources serves the sources shell, /sources/ redirects to it and /sources.html still works', async () => {
   const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status, r.headers.get('Location'), r.headers.get('Cache-Control')]; };
   const sources = [299, '/sources.0123456789', 'no-store'];
-  for (const env of [{}, {UI_V2: 'false'}, {UI_V2: 'true'}]) for (const ui of ['', '?ui=v1', '?ui=v2']) {
+  const env = {};
+  for (const ui of ['', '?ui=v1', '?ui=v2']) {
     const label = `${ui} ${JSON.stringify(env)}`;
     assert.deepEqual(await shell(`/sources${ui}`, env), sources, `/sources${label}`);
     assert.deepEqual(await shell(`/sources.html${ui}`, env), sources, `/sources.html${label}`);
@@ -122,7 +124,8 @@ test('FE-78: coast and Fish keys open the v2 app; /coast is the app at presentat
   const shell = async (path, env) => { const r = await call(path, {env}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status, r.headers.get('Location'), r.headers.get('Cache-Control')]; };
   const app = [299, '/app.0123456789', 'no-store'];
   const keys = ['place=morro', 'mode=shore', 'species=lingcod', 'presentation=3d', 'habitat=reef:1', 'current=wcofs'];
-  for (const env of [{}, {UI_V2: 'false'}]) {
+  {
+    const env = {};
     for (const query of keys) assert.deepEqual(await shell(`/?${query}`, env), app, `${query} ${JSON.stringify(env)}`);
     assert.deepEqual(await shell('/?place=morro&mode=shore', env), app);
     assert.deepEqual(await shell('/coast', env), [302, '/map?presentation=3d', 'no-store']);
@@ -144,7 +147,6 @@ test('FE-78: coast and Fish keys open the v2 app; /coast is the app at presentat
       const read = async (p, env) => { const r = await call(p, {env}); return [r.status, r.headers.get('Content-Type'), r.headers.get('Location'), await r.text()]; };
       const before = await read(path, {});
       assert.notEqual(before[0], 302, path);
-      assert.deepEqual(await read(path, {UI_V2: 'false'}), before, `${path} UI_V2=false`);
       assert.deepEqual(await read(`${path}?ui=v2`, {}), await read(`${path}?ui=v1`, {}), `${path} ?ui=`);
     }
   } finally { globalThis.fetch = real; }

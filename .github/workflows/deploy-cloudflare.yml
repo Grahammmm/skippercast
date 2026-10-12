@@ -143,10 +143,6 @@ jobs:
           # unset means off (server/fleet/settings.ts). docs/plans/charter-fleet/design.md § 16.
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           FLEET_MAP_ENABLED: ${{ vars.FLEET_MAP_ENABLED }}
-          # Front-end rebuild switch, copied into the Worker's vars whenever set: "true" serves the new
-          # landing at / and app at /map, "false" the v1 shell; unset means the default in
-          # deployments/production.json (on since FE-60). ?ui=v1 forces v1 per request for one release (FE-61 removes it).
-          UI_V2: ${{ vars.UI_V2 }}
           # FE-84: coast snapshot sources served from SkipperCast's feeds (nearshore, water-quality, ocean, history),
           # copied whenever set; unset keeps all of them on the Fish Worker bridge. docs/coastal-service.md.
           COAST_FEEDS: ${{ vars.COAST_FEEDS }}
