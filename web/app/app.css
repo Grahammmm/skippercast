@@ -78,7 +78,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-gaps ul { margin: 0; padding: 0; list-style: none; }
 .app-gaps-list li { color: var(--amber); }
 .app-gaps-more { color: var(--muted); }
-.app-gaps-more summary { display: flex; align-items: center; min-height: var(--touch-min); cursor: pointer; }
+.app-gaps-more summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); cursor: pointer; }
 .app-gaps-more li + li { margin-top: var(--space-1); }
 .app-brief-links { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
 .app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }

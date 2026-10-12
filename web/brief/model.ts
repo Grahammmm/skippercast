@@ -218,7 +218,7 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
   const chlorophyll = chlorophyllNear(input.daily, area.lat, area.lon);
   const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
   const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'coast-report', {...input, report, area, gaps: input.daily ? sourceGaps(input.daily, input.now) : []});
+  return briefFromDaily(daily, 'coast-report', {...input, report, area, gaps: reportGaps(report, input.now)});
 }
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
@@ -287,39 +287,80 @@ export function buildRegionalBrief(input: RegionalBriefInput): Brief {
     gaps: sourceGaps(input.daily, input.now)});
 }
 
-/** The feed kinds the brief reads: buoys, tide predictions and marine alerts. Map layers (grids) and rule-page watches report their own gaps. */
-const BRIEF_KINDS: ReadonlySet<string> = new Set(['observation', 'prediction', 'advisory']);
-
-/** The data's own clock: a buoy's newest row, else when the data shown was retrieved. Never the check time. */
-function dataClock(source: RegionalSource): string | null {
-  const rows = source.data?.observations;
-  const times = Array.isArray(rows) ? rows.map(row => Date.parse(String((row as {time?: unknown})?.time))).filter(Number.isFinite) : [];
-  if (times.length) return new Date(Math.max(...times)).toISOString();
-  return source.data_retrieved_at ?? source.last_success_at ?? null;
+/** The station a feed source reads: its configured station, its data's, else the NDBC file its URL names. */
+function stationOf(source: RegionalSource): string {
+  const data = typeof source.data?.station === 'string' ? source.data.station : null;
+  return source.station ?? data ?? source.url.match(/\/([A-Za-z0-9]+)\.(?:txt|spec)$/)?.[1] ?? source.id;
 }
 
 /**
- * Each brief source that is not ok, named by the station it describes and why: stale with its
- * data's age, retained (last good after a failed check), failed with nothing on hand, or missing
- * from the feed. A backup serving ok is not a gap; its tile already names it. Statuses stay
- * distinct and nothing is filled in.
+ * The data's own clock, as failover.py data_age reads it: a buoy's newest row, the data's sample or
+ * issue time, or a prediction's coverage end. Retrieval time only when the data carries no clock,
+ * and then said as such.
+ */
+function dataClock(source: RegionalSource): {at: string; what: 'reading' | 'issued' | 'ended' | 'retrieved'} | null {
+  const data = source.data ?? {};
+  const rows = data.observations;
+  const times = Array.isArray(rows) ? rows.map(row => Date.parse(String((row as {time?: unknown})?.time))).filter(Number.isFinite) : [];
+  if (times.length) return {at: new Date(Math.max(...times)).toISOString(), what: 'reading'};
+  if (typeof data.sample_at === 'string') return {at: data.sample_at, what: 'reading'};
+  if (typeof data.issued_at === 'string') return {at: data.issued_at, what: 'issued'};
+  if (typeof data.coverage_end === 'string') return {at: data.coverage_end, what: 'ended'};
+  const retrieved = source.data_retrieved_at ?? source.last_success_at;
+  return retrieved ? {at: retrieved, what: 'retrieved'} : null;
+}
+
+function clockText(source: RegionalSource, now: Date): string | null {
+  const clock = dataClock(source);
+  const ms = clock ? now.getTime() - Date.parse(clock.at) : NaN;
+  if (!clock || !Number.isFinite(ms)) return null;
+  if (clock.what === 'ended') return ms >= 0 ? `coverage ended ${ageText(ms)} ago` : `coverage runs ${ageText(-ms)} more`;
+  return clock.what === 'reading' ? `newest reading ${ageText(ms)} old` : `${clock.what} ${ageText(ms)} ago`;
+}
+
+function feedGap(source: RegionalSource, now: Date): SourceGap {
+  const station = sourceStation(source);
+  const label = station?.backupFor ? `${source.kind === 'prediction' ? 'NOAA' : 'NDBC'} ${stationText(station)}` : source.name;
+  const clock = clockText(source, now);
+  const text = source.status === 'stale' ? `stale${clock ? `, ${clock}` : ''}`
+    : source.status === 'retained' ? `latest check failed; showing the last good data${clock ? `, ${clock}` : ''}`
+    : source.status === 'failed' ? 'latest check failed; nothing earlier on hand'
+    : source.status === 'missing' ? 'not published in this feed'
+    : source.status;
+  return {id: source.id, label, status: source.status, text: `${label}: ${text}.`};
+}
+
+/**
+ * The regional brief's sources that are not ok, one line per station, named by the station it
+ * describes and why: stale or retained with the data's own age, failed with nothing on hand, or
+ * missing from the feed. Only what the tiles and windows read: the water buoy (the feed's first
+ * observation source, as regionalReport picks it, with its spectrum and the daily copy folded into
+ * the same station), the tide predictions and the marine alert checks. A station any copy of
+ * which is ok is no gap, and a backup serving ok is none either; its tile already names it.
  */
 export function sourceGaps(feed: RegionalDailyFeed, now: Date): SourceGap[] {
-  const gaps: SourceGap[] = [];
-  for (const source of Object.values(feed.sources)) {
-    if (!source || source.status === 'ok' || !BRIEF_KINDS.has(source.kind)) continue;
-    const station = sourceStation(source);
-    const label = station?.backupFor ? `${source.kind === 'prediction' ? 'NOAA' : 'NDBC'} ${stationText(station)}` : source.name;
-    const clock = dataClock(source), ageMs = clock ? now.getTime() - Date.parse(clock) : NaN;
-    const age = Number.isFinite(ageMs) ? ageText(ageMs) : null;
-    const text = source.status === 'stale' ? `stale, newest reading ${age ? `${age} old` : 'of unknown age'}`
-      : source.status === 'retained' ? `latest check failed; showing the last good reading${age ? `, ${age} old` : ''}`
-      : source.status === 'failed' ? 'latest check failed; no earlier reading on hand'
-      : source.status === 'missing' ? 'not published in this feed'
-      : source.status;
-    gaps.push({id: source.id, label, status: source.status, text: `${label}: ${text}.`});
+  const entries = Object.values(feed.sources).filter((item): item is RegionalSource => !!item);
+  const first = entries.find(item => item.kind === 'observation');
+  const buoyStation = first ? stationOf(first) : null;
+  const read = entries.filter(item => (item.kind === 'observation' && stationOf(item) === buoyStation) || item === feed.sources.tides || item.kind === 'advisory');
+  const groups = new Map<string, RegionalSource[]>();
+  for (const item of read) {
+    const key = item.kind === 'advisory' ? `advisory:${item.url || item.id}` : `${item.kind}:${stationOf(item)}`;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
   }
-  return gaps;
+  return [...groups.values()].filter(copies => copies.every(item => item.status !== 'ok')).map(copies => feedGap(copies[0]!, now));
+}
+
+/**
+ * The coast report's sources whose latest check failed. The report keeps no stale or retained
+ * status, only the outcome and when it was fetched, so the line says exactly that.
+ */
+export function reportGaps(report: Report, now: Date): SourceGap[] {
+  return report.sources.filter(item => item.outcome === 'error').map(item => {
+    const ms = now.getTime() - Date.parse(item.fetchedAt);
+    const when = Number.isFinite(ms) ? `; last fetched ${ageText(ms)} ago` : '';
+    return {id: item.id, label: item.label, status: 'failed', text: `${item.label}: latest check failed${when}.`};
+  });
 }
 
 export type BriefInput = {

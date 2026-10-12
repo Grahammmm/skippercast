@@ -44,9 +44,11 @@ export const dailyFeedPath = (id: string): string => `/feeds/data/regions/${enco
  */
 export const feedGaps = signal<readonly string[]>([]);
 
+let feedLoad = 0;
+
 export const FEED_GAP = {
   both: 'Conditions feeds could not be read: no buoy, tide or marine alert readings. The map, rules and trip tools still work.',
-  daily: 'Daily feed could not be read: tides and marine alerts are missing.',
+  daily: 'Daily feed could not be read',
   conditions: 'Live buoy feed could not be read: buoy readings come from the once-a-day run.',
 } as const;
 
@@ -70,11 +72,21 @@ export function mergeFeeds(daily: RegionalDailyFeed | null, conditions: Regional
   return {...daily, sources: {...buoys, ...daily.sources, ...buoys}};
 }
 
+/** The daily feed's line: what the brief lost with it, judged by what the conditions feed still carries. */
+function dailyGap(conditions: RegionalDailyFeed): string {
+  const kinds = new Set(Object.values(conditions.sources).map(source => source?.kind));
+  const lost = [kinds.has('prediction') ? null : 'tide predictions', kinds.has('advisory') ? null : 'marine alert checks'].filter(Boolean);
+  return `${FEED_GAP.daily}${lost.length ? `: ${lost.join(' and ')} are missing` : ''}.`;
+}
+
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
 export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+  const load = ++feedLoad;
+  feedGaps.value = [];
   const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
+  // A later load (another region) owns the gap lines; this one's feed still lands as before.
+  if (load === feedLoad) feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
   dailyFeed.value = mergeFeeds(daily, conditions);
-  feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [FEED_GAP.daily] : !conditions ? [FEED_GAP.conditions] : [];
   return dailyFeed.peek();
 }
 

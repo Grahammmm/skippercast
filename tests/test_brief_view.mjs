@@ -278,6 +278,17 @@ test('P5 gaps: an unreadable feed says so and the headline stops waiting; unread
   await loadDailyFeed('monterey-point-sur', daily);
   assert.deepEqual(feedGaps.value, [FEED_GAP.conditions]);
   assert.match(render(h(BriefGaps, {brief: null})), /Live buoy feed could not be read/);
+  const conditionsOnly = {schema_version: 1, region_id: 'monterey-point-sur', sources: {diablo: {id: 'diablo', name: 'Monterey Bay', kind: 'observation', url: '', checked_at: NOW.toISOString(), status: 'ok'}}};
+  await loadDailyFeed('monterey-point-sur', async path => path.startsWith('/feeds/data/') ? new Response('', {status: 404}) : new Response(JSON.stringify(conditionsOnly), {status: 200}));
+  assert.deepEqual(feedGaps.value, ['Daily feed could not be read: tide predictions and marine alert checks are missing.']);
+  // A slower load for a region no longer selected does not write its gap lines over the newer one's.
+  const pending = [];
+  const release = () => pending.forEach(resolve => resolve(new Response('', {status: 503})));
+  const slow = loadDailyFeed('monterey-point-sur', () => new Promise(resolve => pending.push(resolve)));
+  assert.deepEqual(feedGaps.value, [], 'a new load starts with no gap lines');
+  await loadDailyFeed('monterey-point-sur', async () => new Response(JSON.stringify(montereyDaily), {status: 200}));
+  release(); await slow;
+  assert.deepEqual(feedGaps.value, []);
   await loadDailyFeed('monterey-point-sur', async () => new Response('', {status: 503}));
   assert.deepEqual(feedGaps.value, [FEED_GAP.both]);
   assert.match(render(h(Headline, {brief: null})), /Readings unavailable\./);
