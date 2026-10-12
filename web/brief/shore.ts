@@ -57,7 +57,8 @@ export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions}: Sho
 }
 
 /** "review until Oct 10, 2026", or "review expired Oct 10, 2026" once that date has passed: a lapsed review is said, never shown as current. */
-const until = (expires: string, now: number): string => `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires)}`;
+const until = (expires: string, now: number): string =>
+  Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires)}` : 'review date unknown';
 
 /** The review dates the card shows at `now`. */
 export function shoreReviewLines(run: ShoreRunClocks, now = Date.now()): string {
