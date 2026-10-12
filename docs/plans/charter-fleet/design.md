@@ -1023,6 +1023,7 @@ D1's statement and bound-parameter limits.
 | `POST /api/fleet/jobs/activity` | replace-window trips/segments/events; aggregates |
 | `POST /api/fleet/jobs/heartbeat` | heartbeat, hourly counters |
 | `GET /api/fleet/jobs/labels` | labels for validation |
+| `POST /api/fleet/jobs/labels` | one trip's agent-proposed labels, `{trip_id, labeller: "agent:<name>", labels}`; replaces that agent's labels on the trip, checked as the admin POST is (`label import`, `fleet-ais.yml` `label_import`; N7) |
 | `GET /api/fleet/jobs/health` | staleness booleans and ages only |
 
 **Admin routes** (`requireAdmin`, 404 unless `FLEET_ENABLED`):
@@ -1034,7 +1035,12 @@ D1's statement and bound-parameter limits.
 `GET|POST /api/admin/fleet/operators/:id/outreach`,
 `POST /api/admin/fleet/outreach/:id` (approve, discard, log as sent by owner);
 `GET /api/admin/fleet/coverage`, `/ais/health`, `/clicks`;
-`GET|POST /api/admin/fleet/labels`. A review decision (CF-30,
+`GET /api/admin/fleet/trips` (`labelled=all|yes|no|agent|approved`),
+`GET /api/admin/fleet/trips/:id`, `POST /api/admin/fleet/trips/:id/labels`,
+`POST /api/admin/fleet/labels/:id/delete`,
+`POST /api/admin/fleet/trips/:id/approve` (N7: the trip's `agent:*` labels
+take the approving admin's `users.id` as `labeller`, and `basis` gains the
+prefix `approved from agent:<name>: `). A review decision (CF-30,
 `server/fleet/admin/reviews.ts`) is `{action, ...}` stored canonically in
 `decision_json`: `same-vessel` (merge, advisor-link; `vessel_id`, and for
 advisor-link `boat_id`, which sets `advisor_boats.fleet_vessel_id`),
@@ -1084,8 +1090,12 @@ New hash routes in `web/admin/` (same patterns as `queue.tsx` and
 - **Coverage** (`#fleet-coverage`): boats by port and class; completeness by
   field group; % with MMSI and % seen in 30 days by port and class; sources per
   boat and single-source boats; run history.
-- **Labelling** (`#fleet-trip/<id>`): segments on a small map with a speed
-  strip; select a time range, label it, give the basis.
+- **Labelling** (`#fleet-labels`, `#fleet-trip/<id>`): segments on a small map
+  with a speed strip; select a time range, label it, give the basis. A trip
+  with agent labels shows *Awaiting approval* in the list and on the trip;
+  **Approve agent labels** records the owner as labeller (N7), and rejecting a
+  label is its delete. The list filters trips awaiting approval and trips
+  with approved agent labels.
 
 **Public profile.** `/boats/<slug>` stays one page
 (`server/advisor/pages/boat.ts`); the route moves behind a gate that passes
