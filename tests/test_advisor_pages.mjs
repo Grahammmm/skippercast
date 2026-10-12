@@ -370,7 +370,7 @@ dbTest('the sitemap lists active ports, every species and verified boats only; r
 
   const robots = await get('/robots.txt', {...ON, DB: db});
   assert.equal(robots.status, 200);
-  assert.equal(await robots.text(), 'User-agent: *\nAllow: /\n\nSitemap: https://skippercast.com/sitemap-advisor.xml\n');
+  assert.equal(await robots.text(), 'User-agent: *\nAllow: /\n\nSitemap: https://skippercast.com/sitemap.xml\nSitemap: https://skippercast.com/sitemap-advisor.xml\n');
   assert.equal((await get('/robots.txt', {DB: db})).status, 299, 'dark: robots.txt is the static site\'s, as before');
   for (const path of ['/sitemap-advisor.xml', '/ports/morro-bay', '/species/lingcod', '/boats/sea-example']) assert.equal((await get(path, {DB: db})).status, 404, `${path} is gated`);
   assert.equal((await get('/ports/morro-bay', ON)).status, 503, 'no D1');
