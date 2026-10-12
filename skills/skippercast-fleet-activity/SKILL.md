@@ -120,8 +120,9 @@ its description. Never apply a change silently; after the merge,
 
 ### `report`
 
-Status with no side effects beyond the report files `report` writes under
-`SKIPPERCAST_FLEET_VAR`:
+Status with no side effects beyond the files `report` writes under
+`SKIPPERCAST_FLEET_VAR` (its report files, and the staging SQLite registry
+when it is absent):
 `python -m skippercast.fleet report --region <id> --sink staging --status-line`
 *on the runner* for a staging registry; for the live registry it needs the job
 identity (see the gaps), so report from the run summaries instead.

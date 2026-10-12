@@ -15,8 +15,11 @@ for the match methods and the watched gate.
 
 ## What runs today, and what does not
 
-The work itself runs as GitHub Actions jobs on the self-hosted data runner,
-on GitHub's schedules, only from `main` and only while `ENABLE_FLEET` is set:
+The work itself runs as GitHub Actions jobs on GitHub's schedules, only while
+`ENABLE_FLEET` is set. The registry, OSINT and AIS jobs run on the self-hosted
+data runner; `fleet-health.yml` runs on GitHub's hosted runner. The registry
+and OSINT jobs run only from `main`; `fleet-ais.yml` and `fleet-health.yml`
+carry no branch condition and rely on the Worker's job policy instead:
 
 | Job | Schedule | Runbook |
 | --- | --- | --- |
@@ -99,14 +102,18 @@ Identity matching only, counts only.
    `schedule-correlation` on that window:
    `python -m skippercast.fleet.ais schedule-precision --region <id> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --reports <json>`.
    Without `--vessels <json>` it reads the registry from the Worker and needs
-   the job identity. The January–June 2026 report history is not in the
-   repository; if no file exists, say so.
+   the job identity. By default it reads the MarineCadastre backfill store
+   (`--source`), so the window's months must be backfilled first. The
+   January–June 2026 report history is not in the repository; if no file
+   exists, say so.
 
 ### `review`
 
 A counts-only summary of the review queue: open reviews by kind, as the owner
 or the admin view gives them, passed to
-`python -m skippercast.fleet report --region <id> --sink <sink> --open-reviews <n> --status-line`,
+`python -m skippercast.fleet report --region <id> --sink <sink> --open-reviews <n> --status-line`
+(with `--sink worker` this needs the job identity, so from a session take the
+counts from the last `fleet-registry.yml` run log, as `report` below says),
 plus the queue link `https://skippercast.com/admin.html#fleet-review?region=<id>`.
 Only the owner decides reviews, in that queue. This skill never decides a
 review, never contacts a captain or operator, and never writes
@@ -115,8 +122,9 @@ registry only as an owner decision (`admin` method).
 
 ### `report`
 
-Status with no side effects beyond the report files `report` writes under
-`SKIPPERCAST_FLEET_VAR`:
+Status with no side effects beyond the files `report` writes under
+`SKIPPERCAST_FLEET_VAR`: its report files, and with `--sink staging` the
+staging SQLite registry when it is absent:
 
 - `python -m skippercast.fleet report --region <id> --sink <sink> --status-line`;
 - `python -m skippercast.fleet coverage-status --region <id> --sink <sink>`,
