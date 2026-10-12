@@ -71,7 +71,7 @@ jobs:
           python research/scripts/build_monterey_300_review_matrix.py --closure var/review/monterey-300-closure-review.json --enc var/review/monterey-300-enc-review.json --output var/review/monterey-300-evidence-matrix.json
       - name: Upload research-only source receipts even on failure
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: monterey-original-300-source-screen
           path: |
@@ -184,7 +184,7 @@ jobs:
         run: python -m unittest research.tests.test_claims_monterey_1995_overlap_stays_research_only research.tests.test_claims_monterey_1998_multibeam_overlap_is_not_a_spot research.tests.test_monterey_2013_merge_lineage research.tests.test_monterey_2013_merge_asset_access research.tests.gis.test_monterey_coned_source_footprints research.tests.test_claims_monterey_acoustic_points_keep_depth_unqualified research.tests.test_monterey_ncei_trackline_leads research.tests.test_monterey_2009_ncei_valid_beams research.tests.test_monterey_2009_producer_metadata research.tests.test_monterey_2009_project_raster_metadata research.tests.gis.test_monterey_2009_beam_usgs_cells research.tests.test_monterey_2009_beam_video_proximity -v
       - name: Upload historical source receipts even on failure
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: monterey-original-multibeam-crosssurvey
           path: |
@@ -347,7 +347,7 @@ jobs:
           cmp var/review/central-300ft-qualification-plan.json research/receipts/central-300ft-qualification-plan.json
       - name: Upload source-gap review even on failure
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: central-coast-source-gaps
           path: |
@@ -453,7 +453,7 @@ jobs:
           --output var/review/san-pedro-rca-screen.json
       - name: Upload unpublished source-change and candidate receipt
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-ds552-san-pedro-review
           path: |
@@ -479,7 +479,7 @@ jobs:
           --verify catalog/usgs-ds781-source-leads.json
       - name: Upload unpublished catalog-change receipt
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-ds781-source-leads
           path: var/review/usgs-ds781-source-leads.json
@@ -492,7 +492,7 @@ jobs:
           --verify catalog/usgs-ds781-metadata-review.json
       - name: Upload unpublished FGDC metadata-change receipt
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-ds781-fgdc-metadata
           path: var/review/usgs-ds781-metadata-review.json
@@ -514,7 +514,7 @@ jobs:
           --output var/review/noaa-seabed-samples-sector-review.json
       - name: Upload aggregate source-change receipt without original point locations
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nos-historical-seabed-samples
           path: var/review/noaa-seabed-samples-sector-review.json
@@ -542,7 +542,7 @@ jobs:
           --output var/review/reefcheck/statewide-observation-audit.json
       - name: Upload unpublished observation review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: reefcheck-historical-observations
           path: var/review/reefcheck/statewide-observation-audit.json
@@ -660,7 +660,7 @@ jobs:
           --output var/review/bodega-native-enc-scope-review.json
       - name: Upload unpublished chart-danger research receipts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: original-hard-context-enc-review
           path: |
@@ -718,7 +718,7 @@ jobs:
           --output var/review/central-bluetopo-upstream-source-leads.json
       - name: Upload unpublished BlueTopo source review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bluetopo-source-leads
           path: |
@@ -751,7 +751,7 @@ jobs:
           --output var/review/usgs-caldig-v2-native-review.json
       - name: Upload deepwater source review, not fishing targets
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-caldig-v2-source-review
           path: var/review/usgs-caldig-v2-native-review.json
@@ -780,7 +780,7 @@ jobs:
           --output var/review/noaa-central-multibeam-footprint-leads.json
       - name: Upload unpublished source-lead review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ncei-multibeam-discovery
           path: |
@@ -928,7 +928,7 @@ jobs:
           --verify research/receipts/bss03-original-vessel-tpu-inputs.json
       - name: Upload unpublished source review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: csumb-scc-native-review
           path: |
@@ -979,7 +979,7 @@ jobs:
           --verify dist/data/noaa-central-deepwater-native-depth-screen.json
       - name: Upload unpublished native-depth receipt
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: noaa-central-deepwater-native-depth-screen
           path: var/review/noaa-central-deepwater-native-depth-screen.json
@@ -1039,7 +1039,7 @@ jobs:
           --verify research/receipts/san-miguel-original-habitat-vr-review.json
       - name: Upload unpublished source review
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: san-miguel-original-habitat-review
           path: |
@@ -1259,7 +1259,7 @@ jobs:
           --verify research/receipts/usgs-offshore-aptos-noaa-mllw-overlap-review.json
       - name: Upload unpublished Aptos native and measured-depth receipts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-aptos-original-and-noaa-depth-review
           path: |
@@ -1419,7 +1419,7 @@ jobs:
           --output-dir var/review
       - name: Upload source audit and unpublished review layers
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cdfw-ds3091-review
           path: var/review/
@@ -1457,7 +1457,7 @@ jobs:
           --output var/review/nbs-hard-footprint-depth-audit.json
       - name: Upload unpublished native-depth source receipts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nbs-hard-footprint-native-depth-review
           path: |
@@ -1483,7 +1483,7 @@ jobs:
           --output var/review/usgs-sur-arguello-sediment-audit.json
       - name: Upload unpublished geologic-context source audit
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-sur-arguello-sediment-source
           path: var/review/usgs-sur-arguello-sediment-audit.json
@@ -1512,7 +1512,7 @@ jobs:
           --output var/review/csumb-bss-source-leads.json
       - name: Upload unpublished survey-source receipt
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: csumb-scc-source-leads
           path: |
@@ -1615,7 +1615,7 @@ jobs:
           --verify research/receipts/noaa-h11983-native-source-review.json
       - name: Upload only coordinate-free review receipts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: h11983-original-source-review
           path: |
@@ -1655,7 +1655,7 @@ jobs:
           --verify dist/data/usgs-ds781-character-semantics.json
       - name: Upload unpublished source-change receipt
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: usgs-ds781-native-character-review
           path: |
