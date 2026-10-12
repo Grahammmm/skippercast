@@ -58,7 +58,8 @@ update this page in the same pull request.
 The brief's first line (`web/brief/verdict.ts`, #616) turns the score into one
 word for the morning window: the whole hours starting at or after sunrise and
 before noon on the brief's date (from the current hour when that is today;
-once noon has passed, the hours starting before sunset). It is a comfort rating for the reference boat, not a bite or catch
+once noon has passed, the hours ending by sunset). An hour that straddles
+sunrise or sunset is left out, as the profile graders score it dark. It is a comfort rating for the reference boat, not a bite or catch
 forecast and not a safety clearance.
 
 - **Boat.** Each hour is rated by `rateComfort` over the regional dual-model
@@ -70,9 +71,9 @@ forecast and not a safety clearance.
   chop, or a crossing swell) and a second charge when it costs a point or more.
 - **Shore, Spear and Kayak.** Their own hourly grades (`shore-conditions.ts`,
   `spear.ts`, `kayak.ts` in `packages/coast`), the roughest hour in the same
-  window; Calmer reads Comfortable. The sentence leads with the hour's decisive
-  or worst-band reasons (launch surf, fog, daylight, offshore wind before the
-  wind and seas bands).
+  window; Calmer reads Comfortable. The sentence names the hour's reasons that
+  cost it most in the grader's own score table (fog or darkness for a kayak
+  first); bonuses such as dawn, dusk or the tide are never named as a limit.
 - **Never reassuring on thin evidence.** An active marine alert makes the day
   Rough. A Comfortable window is held at Marginal, with a sentence saying why,
   when any hour is a limited estimate, hours have no forecast, a model run is

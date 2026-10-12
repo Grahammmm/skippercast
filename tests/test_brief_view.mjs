@@ -111,7 +111,7 @@ test('the column renders the model: verdict and limit first, Details with readin
     assert.match(html, /<aside class="app-brief" aria-label="Brief" data-basis="regional">/);
     // #616: without this region's forecast the verdict is Unknown and says why; the readings line moves into Details.
     assert.match(html, /<div class="app-verdict" data-verdict="unknown"><div class="app-verdict-head"><h1><span class="app-verdict-word">Unknown<\/span>/);
-    assert.match(html, /<p class="app-verdict-limit">No forecast for this morning yet\.<\/p>/);
+    assert.match(html, /<p class="app-verdict-limit">No forecast for this day yet\.<\/p>/);
     assert.ok(html.indexOf('app-verdict-limit') < html.indexOf('class="ui-tile"'), 'verdict and limit come before the tiles');
     assert.match(html, /<details class="app-details"><summary>Details/);
     assert.ok(html.includes(`<p class="app-readings ui-mono">${expected.headline}</p>`));
