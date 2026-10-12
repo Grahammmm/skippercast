@@ -1,9 +1,25 @@
 ---
 name: skippercast-map-coast
-description: Expand measured 0–300 ft coastal habitat coverage using original survey qualification, cached physical mapping, rankings and final-screen publication. Use for new survey batches, stalled mapping or regional rollout; distinguish maintenance from geographic expansion.
+description: Map reviewed coastal terrain or measured 0–300 ft habitat using original survey qualification and cached physical outputs. Choose private terrain, habitat or publication scope explicitly; distinguish maintenance from geographic expansion.
 ---
 
 # Execute measured coastal habitat expansion
+
+## Private terrain and source preparation
+
+Choose private terrain, habitat or publication scope before selecting gates.
+For explicitly assigned private terrain, require native qualification, retained
+support masks, source and vertical semantics, geographic support, artifact
+identity and independent review. Missing imagery or habitat interpretation does
+not hold that terrain lane; it still cannot establish website, habitat, rankings
+or fishing-export acceptance. Use the reviewed terrain-only contract for that
+lane and retain its private-use labels. Normal science, rights and security
+gates still apply.
+
+Read [source preparation and real trial acceptance](references/source-preparation-and-trials.md)
+when preparing a release integration or a timed end-to-end trial. Source tests,
+a wheel inspection and a static preview have distinct acceptance scopes. Do not
+start native work or browser execution merely because preparation passed.
 
 Map bottom features suitable for lingcod and rockfish, initially Monterey–Point
 Conception at nominal 0–91.44 m. Habitat suitability does not require proof that
