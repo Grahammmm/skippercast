@@ -1030,7 +1030,7 @@ test('in 3D the terrain options sit in the Seafloor entry and the view buttons i
   await page.keyboard.press('ArrowRight');
   await expect(relief).toHaveValue('6');
   await expect(options.getByText('×6')).toBeVisible();
-  for (const name of ['Water & channels', 'Depth contours · 10 / 30 / 500 ft', 'Source coverage', 'Reefs & species pins']) {
+  for (const name of ['Water & channels', 'Depth contours · adapt to view', 'Fixed depth colours', 'Source coverage', 'Reefs & species pins']) {
     const box = options.getByRole('checkbox', {name});
     await box.focus();
     await expect(box, name).toBeFocused();

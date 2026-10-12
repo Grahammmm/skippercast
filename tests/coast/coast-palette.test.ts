@@ -7,10 +7,16 @@ import {DEFAULT_COAST_PALETTE} from '../../packages/coast/src/palette.ts';
 import {chart} from '../../packages/coast/src/charts/series.ts';
 
 const HEX=/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g;
-test('DEFAULT_COAST_PALETTE pins the viewer\'s ten v1 colours',()=>{
+// The shader's former literals (linear working-space values) as sRGB hex: three converts them back.
+const V1_SHADER={depthShallow:[.32,.69,.63],depthChannel:[.035,.28,.39],depthDeep:[.015,.095,.19],landLow:[.51,.56,.38],landHigh:[.72,.71,.53],waterTint:[.17,.57,.66],contour:[.05,.22,.28]} as const;
+test('DEFAULT_COAST_PALETTE pins the viewer\'s v1 colours, the shader ramp and the 3D sky',()=>{
  assert.deepEqual({...DEFAULT_COAST_PALETTE},{ground:'#dce8e7',sky:'#effbff',groundLight:'#4b655d',sun:'#fff2d4',surface:'#ffffff',
-  gradeA:'#f8d69a',gradeB:'#afd7ba',gradeOther:'#abcad8',habitatArea:'#69e6c3',current:'#fcfaf0'});
- assert.equal(new Set(Object.values(DEFAULT_COAST_PALETTE)).size,10);
+  gradeA:'#f8d69a',gradeB:'#afd7ba',gradeOther:'#abcad8',habitatArea:'#69e6c3',current:'#fcfaf0',
+  skyTop:'#8fb3bd',depthShallow:'#99d8d0',depthMid:'#4b9baf',depthChannel:'#3590a8',depthDeep:'#215779',
+  landLow:'#bdc5a6',landHigh:'#dddbc0',waterTint:'#73c7d4',contour:'#3f8190'});
+ assert.equal(new Set(Object.values(DEFAULT_COAST_PALETTE)).size,19);
+ const linear=(hex:string)=>[1,3,5].map(i=>{const c=parseInt(hex.slice(i,i+2),16)/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});
+ for(const [role,values] of Object.entries(V1_SHADER))linear(DEFAULT_COAST_PALETTE[role as keyof typeof V1_SHADER]).forEach((v,i)=>assert.ok(Math.abs(v-values[i]!)<.006,`${role} ${v} vs ${values[i]}`));
  assert.ok(Object.isFrozen(DEFAULT_COAST_PALETTE));
 });
 test('CoastViewer has no colour literal of its own',()=>{
