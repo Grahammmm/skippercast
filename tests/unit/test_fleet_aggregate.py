@@ -71,10 +71,6 @@ class ResolutionByKind(unittest.TestCase):
         self.assertEqual(params(resolution_by_kind={}).resolution_for('troll-pelagic'), 1000)
 
 
-if __name__ == '__main__':
-    unittest.main()
-
-
 class LegacyKinds(unittest.TestCase):
     """Events mirrored before the N5 rename keep their old kind; the Worker refuses it (fleet-ais run 38194870723)."""
 
@@ -86,3 +82,5 @@ class LegacyKinds(unittest.TestCase):
         self.assertEqual(sum(c.vessels_n for c in cells if c.season_part is None), 1)
         self.assertEqual(legacy_events(events), 2)
         self.assertEqual(legacy_events(events[:1]), 0)
+if __name__ == '__main__':
+    unittest.main()

@@ -19,14 +19,13 @@ import unittest
 from skippercast.fleet.ais import process
 from skippercast.fleet.ais.events import iso_utc
 from skippercast.fleet.ais.process import HOUR, MINUTE, State, VesselRef, derive, downsample
-
-DAY = 24 * HOUR
 from skippercast.fleet.ais.sources.base import AisPosition, AisStatic
 from skippercast.fleet.ais.store import AisStore
 from skippercast.fleet.config import Port, load_region
 from skippercast.fleet.ops import id32
 from tests._support import ROOT
 
+DAY = 24 * HOUR
 MMSI = 999000123
 VESSEL = id32("CA", "test-boat-1")
 T0 = 1_791_190_800_000   # 2026-10-05T09:00:00Z, on the hour
