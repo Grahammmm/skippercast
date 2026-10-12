@@ -5,7 +5,7 @@
 // (through the dist/*.js modules that use it) by type stripping.
 //
 // Region changes and reloads. The app's modules still read the region once at
-// start (region.js, app.js and everything they load), so once boot.js has
+// start (region.js, app.js and everything they load), so once the app entry has
 // loaded them (lockRegion()), a change of region or coast is a full page load.
 // Before that, and for any change that keeps the region (a port in the same
 // region, a map view, a target, an hour), navigate() updates the URL with the
@@ -16,13 +16,32 @@
 // URL still wins; profile, layers and base also persist in localStorage and
 // restore when the URL omits them. The v2 shell swaps region-bound sources
 // itself, so configureStore({v2: true}) makes lockRegion() a no-op.
-import {batch, signal} from '@preact/signals';
+//
+// Coast keys (FE-73, design § 3A.3): presentation, current and habitat, which
+// v1's terrain modules already write, are signals here too. The parsers are
+// the ones web/coast-context.ts and packages/coast use, so both shells read a
+// link the same way.
+//
+// Profile defaults (FE-20, design § 8): the stored rail list is kept per
+// profile, so switching profile (profilePatch) restores that profile's last
+// list or its defaults. In v2 a link without ?current= draws the WCOFS
+// forecast when the rail's list includes Currents (#482); v1 keeps `off`.
+import {batch, computed, signal} from '@preact/signals';
 import {DEFAULT_PROFILE, isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
+import {canonicalHour, fishLink} from './fish-links.ts';
+import {
+  habitatURL, hasCoastTerrain, isCurrentLayer, presentationFromURL, type CurrentLayer, type Presentation,
+} from './coast-context.ts';
 
+/** Keys v1's coastal modules write; readURL reports one only when the URL names it, so v1 readers see the shape they had. */
+export const COAST_KEYS = ['presentation', 'current', 'habitat'] as const;
+export type CoastKey = typeof COAST_KEYS[number];
+/** The History view's pickers (FE-35): station id, measurement and day range, kept as written; packages/coast historyView falls back on anything it does not list. */
+export const HISTORY_KEYS = ['station', 'metric', 'range'] as const;
 /** URL parameters the store owns. `target` is the species/target id. */
-export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base'] as const;
+export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base', ...HISTORY_KEYS, ...COAST_KEYS] as const;
 export type UrlKey = typeof URL_KEYS[number];
-export type UrlState = Record<UrlKey, string | null> & {selection: string | null};
+export type UrlState = Record<Exclude<UrlKey, CoastKey>, string | null> & Partial<Record<CoastKey, string>> & {selection: string | null};
 export type Units = 'nautical';
 
 /** Masthead views (v2). `?view=` is shared with v1's map position "lat,lng,zoom". */
@@ -32,7 +51,18 @@ export const BASES = ['night', 'chart', 'aerial'] as const;
 export type Base = typeof BASES[number];
 /** `?layers=none` writes an empty rail; an absent key means stored or profile defaults. */
 export const NO_LAYERS = 'none';
-export const STORAGE_KEYS = {profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1'} as const;
+export const STORAGE_KEYS = {
+  profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1', presentation: 'skippercast-presentation-v1',
+  /** Your own comfort limits per profile (web/limits.ts); device only, never sent. */
+  limits: 'skippercast-limits-v1',
+  /** Your cruise speed for the Boat brief's run times (web/limits.ts); device only, never sent, no default. */
+  cruise: 'skippercast-cruise-v1',
+} as const;
+/** `current` when ?current= names no listed source; the value stays in the URL (v1 rule, #402). */
+export const UNSUPPORTED = 'unsupported';
+export type CurrentChoice = CurrentLayer | typeof UNSUPPORTED;
+/** The source the rail's Currents entry turns on, and a v2 link's choice when it names none but its rail list has Currents. */
+export const DEFAULT_CURRENT: CurrentLayer = 'wcofs';
 
 export const region = signal<string | null>(null);
 export const coast = signal<string | null>(null);
@@ -55,6 +85,22 @@ export const layers = signal<readonly string[]>(PROFILE_TABLE[DEFAULT_PROFILE].d
 /** Coast or focus id for the command bar (?area=, else ?focus=). */
 export const area = signal<string | null>(null);
 export const base = signal<Base>('night');
+/** The presentation the link or (v2) the last choice asks for; see stagePresentation for what the stage shows. */
+export const presentation = signal<Presentation>('chart');
+/** Surface-current source; UNSUPPORTED for an unlisted ?current=; without the key, see resolveCurrent. */
+export const current = signal<CurrentChoice>('off');
+/** Coast habitat id (?habitat=), independent of the atlas spot in `selection`. */
+export const habitat = signal<string | null>(null);
+/** History view pickers (?station=, ?metric=, ?range=) as written; null means the view's default. */
+export const historyStation = signal<string | null>(null);
+export const historyMetric = signal<string | null>(null);
+export const historyRange = signal<string | null>(null);
+
+/** Terrain presentations fall back to chart where the region has no coast terrain; the URL keeps the request. */
+export function presentationFor(requested: Presentation, regionId: string | null): Presentation {
+  return requested === 'chart' || (regionId !== null && hasCoastTerrain(regionId)) ? requested : 'chart';
+}
+export const stagePresentation = computed<Presentation>(() => presentationFor(presentation.value, region.value));
 
 let locked: {region: string | null; coast: string | null} | null = null;
 
@@ -74,18 +120,43 @@ function storage(): StoreStorage | null {
 }
 function stored(key: string): string | null { try { return storage()?.getItem(key) ?? null; } catch { return null; } }
 function store(key: string, value: string): void { try { storage()?.setItem(key, value); } catch { /* the URL still carries it */ } }
+/** Read and write the store's storage (localStorage, or the one configureStore set); a failure reads null and writes nothing. */
+export const readStored = stored;
+export const writeStored = store;
 
 /** The store's parameters in `href`. */
 export function readURL(href: string): UrlState {
-  const params = new URL(href).searchParams;
-  return {
+  const params = (options.v2 ? fishLink(href) : new URL(href)).searchParams;
+  const state: UrlState = {
     region: params.get('region'), coast: params.get('coast'), view: params.get('view'),
     target: params.get('target'), hour: params.get('hour'),
     profile: params.get('profile'), day: params.get('day'), layers: params.get('layers'),
     area: params.get('area') || params.get('focus'), base: params.get('base'),
+    station: params.get('station'), metric: params.get('metric'), range: params.get('range'),
     selection: params.get('spot') || params.get('focus'),
   };
+  for (const key of COAST_KEYS) {
+    const value = params.get(key);
+    if (value !== null) state[key] = value;
+  }
+  return state;
 }
+
+// The coast parsers ask web/coast-context.ts about a probe link, so they accept exactly what v1 accepts.
+const PROBE = 'https://skippercast.invalid/';
+
+/** `chart`, `2d` or `3d`; null for anything presentationFromURL would not return as written. */
+export function parsePresentation(value: string | null | undefined): Presentation | null {
+  if (value == null) return null;
+  const probe = new URL(PROBE);
+  probe.searchParams.set('presentation', value);
+  const shown = presentationFromURL(probe.href);
+  return shown === value ? shown : null;
+}
+/** A listed surface-current source, `off` when the key is absent, UNSUPPORTED otherwise (an empty value included). */
+export const parseCurrent = (value: string | null | undefined): CurrentChoice => value == null ? 'off' : isCurrentLayer(value) ? value : UNSUPPORTED;
+/** The habitat id habitatURL keeps (`[A-Za-z0-9._:-]{1,160}`); null otherwise. */
+export const parseHabitat = (value: string | null | undefined): string | null => value == null ? null : habitatURL(PROBE, value).searchParams.get('habitat');
 
 export const isAppView = (value: unknown): value is AppView => typeof value === 'string' && (APP_VIEWS as readonly string[]).includes(value);
 export const isBase = (value: unknown): value is Base => typeof value === 'string' && (BASES as readonly string[]).includes(value);
@@ -106,20 +177,59 @@ export function parseLayers(value: string | null): string[] | null {
 /** The ?layers= value for `ids`. */
 export const layersParam = (ids: readonly string[]): string => ids.length ? ids.join(',') : NO_LAYERS;
 
-/** The profile, layers and base `href` resolves to: URL, then storage, then the profile's defaults. */
+/** The stored rail lists by profile (`{"boat": "seafloor,clouds", …}`); FE-04's single list or anything else reads as none. */
+function storedLayers(): Readonly<Record<string, unknown>> {
+  try {
+    const value: unknown = JSON.parse(stored(STORAGE_KEYS.layers) ?? '');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  } catch { return {}; }
+}
+
+/** FE-04 stored one rail list for every profile: it becomes the stored profile's own list, once (FE-20). */
+function migrateLayers(): void {
+  const raw = stored(STORAGE_KEYS.layers), p = stored(STORAGE_KEYS.profile);
+  if (raw !== null && !raw.trimStart().startsWith('{') && parseLayers(raw)) store(STORAGE_KEYS.layers, JSON.stringify({[isProfile(p) ? p : DEFAULT_PROFILE]: raw}));
+}
+
+/** The profile, layers and base `href` resolves to: URL, then storage (the profile's own rail list), then the profile's defaults. */
 export function resolveStored(state: UrlState): {profile: Profile; layers: readonly string[]; base: Base} {
   const first = <T extends string>(is: (v: unknown) => v is T, fallback: T, ...values: (string | null)[]): T => values.find(is) ?? fallback;
   const p = first(isProfile, DEFAULT_PROFILE, state.profile, stored(STORAGE_KEYS.profile));
-  const l = parseLayers(state.layers) ?? parseLayers(stored(STORAGE_KEYS.layers)) ?? PROFILE_TABLE[p].defaultLayers;
+  const saved = storedLayers()[p];
+  const l = parseLayers(state.layers) ?? parseLayers(typeof saved === 'string' ? saved : null) ?? PROFILE_TABLE[p].defaultLayers;
   const b = first(isBase, 'night', state.base, stored(STORAGE_KEYS.base));
   return {profile: p, layers: l, base: b};
 }
 
-/** `href` with `patch` applied: a string sets a parameter, null removes it. */
+/**
+ * The surface-current choice: `?current=` when the link names it, `off` included. Without it a v2 store
+ * draws DEFAULT_CURRENT when the rail list `on` has Currents (a profile default, a stored or a linked list;
+ * #482) and nothing otherwise; v1 keeps `off` (#402).
+ */
+export function resolveCurrent(state: UrlState, on: readonly string[]): CurrentChoice {
+  if (state.current !== undefined || !options.v2) return parseCurrent(state.current);
+  return on.includes('currents') ? DEFAULT_CURRENT : 'off';
+}
+
+/** The parameters that switch to profile `next`: its default target, and its own rail (stored, else its defaults) with Currents following it. */
+export const profilePatch = (next: Profile): Partial<Record<UrlKey, null | string>> => ({profile: next, target: null, layers: null, current: null});
+
+/**
+ * The presentation `state` asks for: the URL, then (v2 only) the stored choice, then chart.
+ * v1 writes chart by removing the key, so a v1 store neither reads nor writes the stored value;
+ * v2 writes `presentation=chart` explicitly.
+ */
+export function resolvePresentation(state: UrlState): Presentation {
+  return parsePresentation(state.presentation) ?? (options.v2 ? parsePresentation(stored(STORAGE_KEYS.presentation)) : null) ?? 'chart';
+}
+
+/** `href` with `patch` applied: a string sets a parameter, null removes it. An invalid habitat id removes it too. */
 export function withParams(href: string, patch: Partial<Record<UrlKey, string | null>>): string {
-  const url = new URL(href);
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
+  const clearGeography = [patch.region, patch.coast].some(value => value === null || value === '');
+  const url = options.v2 ? fishLink(href, clearGeography) : new URL(href);
+  for (const [key, given] of Object.entries(patch)) {
+    if (given === undefined) continue;
+    const value = key === 'habitat' ? parseHabitat(given) : given;
     if (value === null || value === '') url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
@@ -129,22 +239,27 @@ export function withParams(href: string, patch: Partial<Record<UrlKey, string | 
 /** Set the signals from `href` (default: the current address). */
 export function syncFromURL(href: string = location.href): UrlState {
   const state = readURL(href);
+  migrateLayers();
   const kept = resolveStored(state);
   // A key the URL names is the user's latest choice: remember it for links that omit it.
   if (isProfile(state.profile)) store(STORAGE_KEYS.profile, kept.profile);
-  if (parseLayers(state.layers)) store(STORAGE_KEYS.layers, layersParam(kept.layers));
+  if (parseLayers(state.layers)) store(STORAGE_KEYS.layers, JSON.stringify({...storedLayers(), [kept.profile]: layersParam(kept.layers)}));
   if (isBase(state.base)) store(STORAGE_KEYS.base, kept.base);
+  const shown = resolvePresentation(state);
+  if (options.v2 && parsePresentation(state.presentation)) store(STORAGE_KEYS.presentation, shown);
   batch(() => {
     region.value = state.region; coast.value = state.coast; view.value = state.view;
     species.value = state.target; hour.value = state.hour; selection.value = state.selection;
     profile.value = kept.profile; layers.value = kept.layers; base.value = kept.base;
     appView.value = isAppView(state.view) ? state.view : 'coast';
     day.value = parseDay(state.day); area.value = state.area;
+    presentation.value = shown; current.value = resolveCurrent(state, kept.layers); habitat.value = parseHabitat(state.habitat);
+    historyStation.value = state.station; historyMetric.value = state.metric; historyRange.value = state.range;
   });
   return state;
 }
 
-/** Called by boot.js once region-bound modules load; region changes reload after this. A v2 store ignores it. */
+/** Called by the app entry once region-bound modules load; region changes reload after this. A v2 store ignores it. */
 export function lockRegion(href: string = location.href): void {
   if (options.v2) return;
   const {region: r, coast: c} = readURL(href);
@@ -211,7 +326,6 @@ export function hourParam(epochSeconds: number): string | null {
 
 /** Epoch seconds of an ?hour= value, or null when it is not a whole UTC hour. */
 export function parseHour(value: string | null): number | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}T\d{2}:00Z$/.test(value)) return null;
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) ? ms / 1000 : null;
+  const canonical = canonicalHour(value);
+  return canonical ? Date.parse(canonical) / 1000 : null;
 }

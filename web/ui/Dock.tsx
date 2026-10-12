@@ -40,18 +40,21 @@ export type DockProps<D extends string> = {
   onHour: (hour: number) => void;
   /** The hour as text ("2 pm"); shown in mono and read with the slider. */
   hourText: (hour: number) => string;
-  /** No hours to step through (observations only): slider and play disabled. */
+  /** No hours to step through (observations only): slider and play disabled. A day with one hour left still plays on into the next (FE-12). */
   disabled?: boolean;
+  /** prefers-reduced-motion: the button steps one hour per press ("Next hour") instead of playing. */
+  stepOnly?: boolean;
   class?: string;
 };
 
-export function Dock<D extends string>({days, day, onDay, playing, onPlay, hour, hours, onHour, hourText, disabled = false, class: cls}: DockProps<D>) {
-  const still = disabled || hours < 2;
+export function Dock<D extends string>({days, day, onDay, playing, onPlay, hour, hours, onHour, hourText, disabled = false, stepOnly = false, class: cls}: DockProps<D>) {
   return (
     <div class={['ui-dock', cls].filter(Boolean).join(' ')} role="group" aria-label="Time">
       <Segmented label="Day" options={days} value={day} onChange={onDay} />
-      <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} pressed={playing} disabled={still} onClick={() => onPlay(!playing)} />
-      <Range label="Hour" value={hour} max={Math.max(0, hours - 1)} onChange={onHour} valueText={hourText} disabled={still} class="ui-dock-range" />
+      {stepOnly
+        ? <IconButton icon="chevron" label="Next hour" disabled={disabled} onClick={() => onPlay(true)} />
+        : <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} pressed={playing} disabled={disabled} onClick={() => onPlay(!playing)} />}
+      <Range label="Hour" value={hour} max={Math.max(0, hours - 1)} onChange={onHour} valueText={hourText} disabled={disabled} class="ui-dock-range" />
       <output class="ui-dock-readout ui-mono" aria-live="off">{hourText(hour)}</output>
     </div>
   );

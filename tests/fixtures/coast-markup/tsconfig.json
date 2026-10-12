@@ -1,0 +1,5 @@
+{
+  // FE-75: type-checks allow-list.tsx with web/'s compiler options (tests/test_coast_markup.mjs).
+  "extends": "../../../web/tsconfig.json",
+  "include": ["allow-list.tsx"]
+}

@@ -10,6 +10,7 @@
 import {addDays, daysBetween, localParts, PACIFIC} from './time.ts';
 import {fold} from './resolve.ts';
 import {hourComfort, limitedComfort, verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
+import {THRESHOLDS} from '../../../web/score.ts';
 import type {Verdict} from './comfort.ts';
 import type {Region} from '../../types.ts';
 
@@ -104,7 +105,7 @@ export function rateHour(h: Hour): number | null {
   const complete = [h.wind, h.sea, h.sea_period, h.chop, h.swell, h.swell_from, h.other_wind, h.other_sea].every(finite) && gusts.length === 2;
   if (complete) return hourComfort({wind: h.wind, gust: h.gust, sea: {height: h.sea}, chop: {height: h.chop, period: h.chop_period}, swell: {height: h.swell, from: h.swell_from},
     secondary: {height: h.secondary, from: h.secondary_from}}, {wind: h.other_wind, sea: {height: h.other_sea}}, Math.max(...gusts));
-  return Math.min(6.9, limitedComfort(Math.max(...winds), Math.max(...seas), gusts.length ? Math.max(...gusts) : null));
+  return Math.min(THRESHOLDS.capLimited, limitedComfort(Math.max(...winds), Math.max(...seas), gusts.length ? Math.max(...gusts) : null));
 }
 
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];

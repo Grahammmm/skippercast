@@ -1,0 +1,176 @@
+{
+  "sourceRevision": "79125f0c333c0ba76255a9750646c2d1a2ad6478",
+  "sourceTree": "5f2cdf6f48dc130415549f63f65aff0a028ecb8f",
+  "scope": "Independent exact-source local UI and public-provider acceptance; no deployment or scheduled-runtime claim",
+  "sourceVerification": {
+    "providerAndProductSourceBlobs": 43,
+    "allMatchedCurrentTree": true
+  },
+  "providerRuns": [
+    {
+      "startedAt": "2026-10-03T12:15:19.835Z",
+      "finishedAt": "2026-10-03T12:15:21.888Z",
+      "readiness": {
+        "ready": true,
+        "areas": [
+          {
+            "areaId": "north",
+            "ready": true,
+            "usableHours": 6,
+            "requiredHours": 6,
+            "missing": []
+          },
+          {
+            "areaId": "central",
+            "ready": true,
+            "usableHours": 6,
+            "requiredHours": 6,
+            "missing": []
+          },
+          {
+            "areaId": "south",
+            "ready": true,
+            "usableHours": 6,
+            "requiredHours": 6,
+            "missing": []
+          }
+        ],
+        "reasons": [],
+        "horizonHours": 6
+      },
+      "publication": {
+        "publishable": true,
+        "reasons": [],
+        "usableForecastAreas": [
+          "north",
+          "central",
+          "south"
+        ],
+        "usableObservationStations": [
+          "46215",
+          "46028"
+        ]
+      },
+      "degradedSources": [
+        {
+          "id": "mur-surface-temperature",
+          "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],analysis_error[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],mask[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)]",
+          "error": "fetch failed"
+        },
+        {
+          "id": "landing-reports",
+          "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+          "error": "51 stale, failed, conflicting or invalid trip records excluded; independently valid records preserved."
+        }
+      ],
+      "rawReceiptSha256": "3ca7b965f45fba0e9cdd4f92cd7ee9bdf37506aa6adad6a1e668df1c0ede2a15"
+    },
+    {
+      "startedAt": "2026-10-03T12:17:25.759Z",
+      "finishedAt": "2026-10-03T12:17:26.925Z",
+      "readiness": {
+        "ready": true,
+        "areas": [
+          {
+            "areaId": "north",
+            "ready": true,
+            "usableHours": 6,
+            "requiredHours": 6,
+            "missing": []
+          },
+          {
+            "areaId": "central",
+            "ready": true,
+            "usableHours": 6,
+            "requiredHours": 6,
+            "missing": []
+          },
+          {
+            "areaId": "south",
+            "ready": true,
+            "usableHours": 6,
+            "requiredHours": 6,
+            "missing": []
+          }
+        ],
+        "reasons": [],
+        "horizonHours": 6
+      },
+      "publication": {
+        "publishable": true,
+        "reasons": [],
+        "usableForecastAreas": [
+          "north",
+          "central",
+          "south"
+        ],
+        "usableObservationStations": [
+          "46215",
+          "46028"
+        ]
+      },
+      "degradedSources": [
+        {
+          "id": "mur-surface-temperature",
+          "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],analysis_error[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],mask[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)]",
+          "error": "fetch failed"
+        },
+        {
+          "id": "landing-reports",
+          "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+          "error": "51 stale, failed, conflicting or invalid trip records excluded; independently valid records preserved."
+        }
+      ],
+      "rawReceiptSha256": "69c29cbbbd99b33a5504707f1f14da1b781fb5d9276fd4b300903b84d7bb3605"
+    }
+  ],
+  "browser": {
+    "nativeRaster": "Earlier independently verified native PMTiles browser evidence; not repeated here",
+    "syntheticHabitat": "Actual PMTiles vector pipeline and curated detail; one synthetic rectangle repeated in two archives, not producer/R2 evidence",
+    "actualViewports": [
+      {
+        "width": 1280,
+        "height": 720,
+        "scrollWidth": 1280
+      },
+      {
+        "width": 312,
+        "height": 675,
+        "scrollWidth": 312
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390
+      }
+    ],
+    "passed": [
+      "Populated polygon and detail",
+      "Lingcod3/3 and reefrockfish2/3 synthetic fixture scores",
+      "Escape focus restoration",
+      "100ft excludes 70\u2013120ft fixture; 300ft restores",
+      "Withdrawn source hides suggestions and labels unavailable after reload",
+      "Phone map expand/restore and options",
+      "Application motion toggle",
+      "Actual public forecast tomorrow/outlook navigation",
+      "Hourly slider changes displayed weather",
+      "Keyboard ArrowRight 08:00\u219209:00",
+      "Playback advances 14:00\u219220:00 and stops at final supported hour"
+    ]
+  },
+  "murDiagnostic": {
+    "primary": "https://coastwatch.pfeg.noaa.gov/erddap",
+    "failure": "UND_ERR_CONNECT_TIMEOUT",
+    "metadataMirror": "https://upwell.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json",
+    "metadataStatus": 200,
+    "dataMirrorStatus": 302,
+    "dataRedirectOrigin": "https://coastwatch.pfeg.noaa.gov",
+    "conclusion": "Metadata access alone does not establish a working grid fallback"
+  },
+  "remaining": [
+    "Actual remote government-only R2 and deployed Worker acceptance",
+    "Two intended scheduled collection/storage receipts",
+    "OS reduced motion, frame-performance and full assistive-technology checks",
+    "MUR primary transport outage and stale/invalid catch records remain reported; no failed layer relabeled fresh"
+  ]
+}

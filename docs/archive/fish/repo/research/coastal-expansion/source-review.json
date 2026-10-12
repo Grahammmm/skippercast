@@ -1,0 +1,11 @@
+{
+  "reviewDate": "2026-10-06",
+  "scope": "Fish shared coastal scene; no other SkipperCast worktree modified",
+  "sources": [
+    {"id": "noaa-morro-topobathy-2022", "role": "measured land and bottom", "originalMetadata": "https://www.fisheries.noaa.gov/inport/item/67998", "originalCollection": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/stac/collection.json", "rights": "NLPL in publisher STAC", "licenseEvidence": "https://spdx.org/licenses/NLPL.html", "commercialReuse": true, "acquisition": "2022-06-14", "nativeSpacingM": 1, "releasedTiles": 96, "verticalReference": "NAVD88 / GEOID12B", "limits": "Morro estuary footprint only; original voids retained; 0.052m tested-open-land accuracy is not a universal underwater accuracy claim"},
+    {"id": "noaa-etopo-2022", "role": "regional and deep-ocean model context", "originalMetadata": "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem%3Aetopo_2022", "product": "https://www.ncei.noaa.gov/products/etopo-global-relief-model", "rights": "NOAA NCEI product; published metadata says not subject to US copyright", "commercialReuse": true, "nativeSpacing": "15 arcseconds; about 400–500m locally", "verticalReference": "EGM2008", "doi": "10.25921/fd45-gt74", "limits": "Mixed source dates through 2022; no fine-survey precision claim or navigation use; not reconciled with other vertical references"}
+  ],
+  "excluded": ["In-progress/unreleased 2025 coastal lidar inventory entry", "Unresolved original CSUMB commercial rights"],
+  "originalsAndHashes": "provenance.json",
+  "verification": "native-verification.json"
+}

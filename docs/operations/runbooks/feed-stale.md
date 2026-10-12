@@ -57,6 +57,16 @@ export RAW=https://raw.githubusercontent.com/Grahammmm/skippercast
 3. **Is GitHub fresh but the public route stale?** Then publication to GitHub works and the store the site reads is behind: R2 (Cloudflare) or an edge cache. Follow the [R2 outage runbook](r2-outage.md). Edge-cache TTLs are 60 seconds for `latest.json`, so a gap longer than a few minutes is not caching.
 4. **Is everything stale, including GitHub, with green runs?** Check the step summary of the latest run (`gh run view <run-id>`) for `0/N cycles published`, and the source warnings written by `scripts/report_conditions.py`. A provider outage shows as `stale`/`failed` sources with a published feed; that is expected fail-closed behaviour, not a stale feed.
 
+## Degraded sources
+
+The same check reads every source's status in the live feed, the daily feed and each published region's live feed (`conditions/regions/<id>/latest.json`; ids from `dist/regions/index.json`, the default region being the top-level feed) and lists each one that is not `ok` (`stale`, `retained` = last good data after a failed check, `failed`, `missing`) with the age of its data when the feed was built. Buoys (including their `-spectrum` sources), alerts, tides and forecast models are critical, grouped by kind within one feed (one region):
+
+- **Whole kind out** (`FAIL` lines): every source of a critical kind is degraded past 12 hours (live feeds) or 48 hours (daily feed). The run goes red (exit bit 2).
+- **Partial outage** (`over` lines): some critical sources are past the limit while others of their kind are not, such as one NDBC buoy of two. The run stays green (exit 0) but the outage is reported.
+- Either way the `feed-source-degraded` issue is opened or refreshed; its body tracks the current report, and it closes once nothing critical is past its limit and no feed is stale. Other kinds only warn.
+
+The daily feed is stale past its own `schedule.max_delay_hours` (36 hours today), falling back to 36 hours. A region feed that is stale or unreadable fails the run only for an `active` region; for a preview region it counts as a partial outage, and so does a preview region whose sources of a whole critical kind are degraded (the issue is refreshed, the run stays green). Limits live in `catalog/feed-health.json`, shared with the Worker watchdog, which logs the same critical sources for the top-level live feed and names any kind that is wholly out. A degraded source is usually the provider (an NDBC buoy outage, an NWS API error): check the source's `issue` field in `latest.json` and the provider's status before changing the adapter.
+
 ## Fix
 
 1. **Restart the chain.**
@@ -75,7 +85,7 @@ export RAW=https://raw.githubusercontent.com/Grahammmm/skippercast
 
 ## Verify
 
-- `python3 scripts/check_feed_freshness.py --max-age-hours 3` exits 0.
+- `python3 scripts/check_feed_freshness.py` exits 0 (exit bit 1: a feed is stale or unreadable; bit 2: every source of a critical kind in a feed is degraded past its limit; a partial outage exits 0 and is listed with `over` lines).
 - Both `latest.json` copies from Detect step 2 show the same, recent time.
 - The `feed-stale` issue closes on the next hourly freshness run; to close it sooner, run `gh workflow run feed-freshness.yml --ref main`.
 - The app's Live card shows a reading from the last hour.

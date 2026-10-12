@@ -1,0 +1,25 @@
+{
+  "commit": "bc7a42ab9031ce91c9aa164d0286c3eeb3ffe27a",
+  "version": "776edde3-50fd-4051-ab0e-89c1932bcd55",
+  "ciRun": 37528779542,
+  "ciResult": "success",
+  "tests": 203,
+  "typecheck": "passed",
+  "build": "passed",
+  "sceneManifestMatches": true,
+  "sceneManifestSha256": "86fb2c30394c0e7e425af18db345f4d3b22351e3c1387c482e32ccaa8bd44cce",
+  "url": "https://fish-report.g4651.workers.dev/coast-3d",
+  "verifiedAt": "2026-10-06T20:46:47.334Z",
+  "desktopBrowser": "passed",
+  "mobileViewport": [
+    390,
+    844
+  ],
+  "mobileInteractions": "passed",
+  "liveBrowser": "passed; no console errors",
+  "habitatFootprintsInScene": 13,
+  "supportedWcofsDisplayArrows": 67,
+  "sourceResolutionKm": 4,
+  "customDomain": "pending previously requested DNS handoff",
+  "fullSkipperCastMerge": "subsequent milestone"
+}

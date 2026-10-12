@@ -9,8 +9,8 @@
 // (server/fleet/map.ts, routes/fleet.ts), so the client never decides access.
 //
 // Layers: activity events (circles, radius ∝ √dwell, drift filled, troll
-// ringed), trip tracks (segments coloured by kind, gaps dashed; the API returns
-// them decoded) and heat (aggregate cells, opacity ∝ dwell). Filters are applied
+// ringed), trip tracks (segments coloured by kind, gaps dashed; transit keeps no
+// track; the API returns them decoded) and heat (aggregate cells, opacity ∝ dwell). Filters are applied
 // server-side; every layer pages on meta.next, never on feature counts. Rows
 // whose rights are NOAA planning-only (MarineCadastre, D9) are drawn dotted and
 // can be left out with one checkbox.
@@ -21,13 +21,16 @@ export const LAYERS = ["events", "tracks", "heat"];
 export const INFERRED = "Inferred from movement (speed and track shape). Not a confirmed fishing stop or catch.";
 export const EVENT_STYLE = {
   "drift-anchor": {color: "#1f5f8b", fill: true, label: "Drift or anchor"},
-  troll: {color: "#c0561b", fill: false, label: "Troll"},
+  "troll-slow": {color: "#c0561b", fill: false, label: "Slow troll"},
+  "troll-pelagic": {color: "#8a3b12", fill: false, label: "Offshore troll"},
 };
 export const SEGMENT_STYLE = {
   "in-port": {color: "#9aa9b0", weight: 1.5, label: "In port"},
   transit: {color: "#64747d", weight: 2, label: "Transit"},
-  "fishing-drift": {color: "#1f5f8b", weight: 4, label: "Drift or anchor"},
-  "fishing-troll": {color: "#c0561b", weight: 4, label: "Troll"},
+  "drift-anchor": {color: "#1f5f8b", weight: 4, label: "Drift or anchor"},
+  "troll-slow": {color: "#c0561b", weight: 4, label: "Slow troll"},
+  "troll-pelagic": {color: "#8a3b12", weight: 4, label: "Offshore troll"},
+  uncertain: {color: "#9aa9b0", weight: 2, dashArray: "2 4", label: "Uncertain"},
   gap: {color: "#64747d", weight: 2, dashArray: "6 6", label: "Gap in coverage"},
 };
 export const HEAT_COLOR = "#b4441e";

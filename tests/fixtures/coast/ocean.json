@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "countyId": "slo",
+  "generatedAt": "2026-10-07T15:00:00.000Z",
+  "currents": [
+    {
+      "id": "hfr-6",
+      "kind": "observation",
+      "label": "Synthetic surface current",
+      "url": "https://example.invalid/currents",
+      "fetchedAt": "2026-10-07T14:50:00.000Z",
+      "issuedAt": null,
+      "sampleAt": "2026-10-07T14:00:00.000Z",
+      "nativeResolutionKm": 6,
+      "sampleStride": 1,
+      "horizontalDatum": "WGS84",
+      "surfaceOnly": true,
+      "frames": [
+        {"validAt": "2026-10-07T14:00:00.000Z", "cells": [
+          {"lat": 35.36, "lon": -120.95, "uMs": 0.1, "vMs": -0.05, "speedKnots": 0.22, "towardDeg": 117}
+        ]}
+      ],
+      "attribution": "Synthetic fixture",
+      "license": "public-domain-us-gov",
+      "limitations": "Synthetic fixture for offline tests."
+    }
+  ],
+  "cloud": null,
+  "sources": [
+    {"id": "hfr-6", "status": "ok", "fetchedAt": "2026-10-07T14:50:00.000Z", "url": "https://example.invalid/currents"}
+  ]
+}

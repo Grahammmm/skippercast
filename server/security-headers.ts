@@ -14,15 +14,17 @@ export const CONNECT_ORIGINS = [
   'https://services2.arcgis.com',             // CDFW MPA boundary query (protected-areas.js)
   'https://tile.openstreetmap.org',           // base map tiles (MapLibre fetches tiles)
   'https://gis.charttools.noaa.gov',          // NOAA ENC chart WMS
+  'https://nowcoast.noaa.gov',                // GOES cloud frames: WMS tiles pinned to listed times (web/map/clouds.ts)
+  'https://imagery.nationalmap.gov',          // USDA NAIP aerial base: USGS ImageServer tiles (web/map/aerial.ts)
 ];
-// Hosts that serve map tile images (Leaflet loads tiles as <img>).
+// Hosts that serve map tile images, loaded as <img>.
 export const IMAGE_ORIGINS = ['https://tile.openstreetmap.org', 'https://gis.charttools.noaa.gov'];
 
 export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   // Inline style *attributes* are used throughout the rendered UI (and by
-  // Leaflet/MapLibre markup); no <style> elements are injected. CSP3 browsers
+  // MapLibre markup); no <style> elements are injected. CSP3 browsers
   // apply the narrower -elem/-attr directives; older ones fall back to style-src.
   "style-src 'self' 'unsafe-inline'",
   "style-src-elem 'self'",

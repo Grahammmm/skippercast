@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "countyId": "slo",
+  "generatedAt": "2026-10-07T15:00:00.000Z",
+  "recentWindowDays": 45,
+  "stations": [
+    {
+      "stationId": "synthetic-buoy",
+      "name": "Synthetic buoy",
+      "lat": 35.3,
+      "lon": -121.0,
+      "recent": {
+        "from": "2026-08-23T15:00:00.000Z",
+        "through": "2026-10-07T14:00:00.000Z",
+        "firstObservedAt": "2026-10-07T13:00:00.000Z",
+        "lastObservedAt": "2026-10-07T14:00:00.000Z",
+        "stale": false,
+        "expectedHours": 2,
+        "observedHours": 2,
+        "hourCoverageFraction": 1,
+        "maxGapHours": 0,
+        "hours": [
+          {"at": "2026-10-07T13:00:00.000Z", "waterTempF": 57.2, "airTempF": 60, "windKnots": 6, "gustKnots": 9, "waveFt": 3.1, "periodS": 12, "sampleCount": 6,
+           "counts": {"waterTempF": 6, "airTempF": 6, "windKnots": 6, "gustKnots": 6, "waveFt": 6, "periodS": 6}},
+          {"at": "2026-10-07T14:00:00.000Z", "waterTempF": 57.4, "airTempF": 61, "windKnots": 7, "gustKnots": 10, "waveFt": 3.2, "periodS": 12, "sampleCount": 6,
+           "counts": {"waterTempF": 6, "airTempF": 6, "windKnots": 6, "gustKnots": 6, "waveFt": 6, "periodS": 6}}
+        ],
+        "qc": {"inputRows": 12, "acceptedRows": 12, "rejectedRows": 0, "duplicateRows": 0, "conflictingValues": 0, "maskedValues": 0, "trailingMissingRows": 0}
+      },
+      "baseline": {"kind": "unavailable", "label": "Synthetic fixture", "years": [], "periodStart": null, "periodEnd": null, "aggregation": "UTC-hour means, weighted equally", "months": []},
+      "archive": {"indexUrl": "https://example.invalid/history", "availableYears": [], "discoveredAt": "2026-10-07T14:50:00.000Z", "outcome": "ok"},
+      "sources": [{"url": "https://example.invalid/history/recent", "role": "recent", "outcome": "ok", "fetchedAt": "2026-10-07T14:50:00.000Z"}],
+      "limitations": ["Synthetic fixture for offline tests."]
+    }
+  ]
+}

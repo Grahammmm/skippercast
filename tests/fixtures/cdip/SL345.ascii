@@ -1,0 +1,35 @@
+Dataset {
+    Int32 waveTime[waveTime = 8];
+    Byte waveFlagPrimary[waveTime = 8];
+    Byte waveFlagSecondary[waveTime = 8];
+    Float32 waveHs[waveTime = 8];
+    Float32 waveTp[waveTime = 8];
+    Float32 waveDp[waveTime = 8];
+    String metaSiteLabel;
+    Float32 metaLatitude;
+    Float32 metaLongitude;
+    Float32 metaWaterDepth;
+} cdip/model/MOP_alongshore/SL345_forecast.nc;
+---------------------------------------------
+waveTime[8]
+1791460800, 1791471600, 1791482400, 1791493200, 1791504000, 1791514800, 1791525600, 1791536400
+
+waveFlagPrimary[8]
+1, 1, 1, 1, 1, 1, 1, 1
+
+waveFlagSecondary[8]
+0, 0, 0, 0, 0, 0, 0, 0
+
+waveHs[8]
+1.0720557, 1.0604185, 1.05244, 1.0469304, 1.040345, 1.0325757, 1.0297607, 1.0276713
+
+waveTp[8]
+16.666668, 16.666668, 15.384616, 15.384616, 15.384616, 15.384616, 14.285714, 14.285714
+
+waveDp[8]
+261.71866, 261.216, 269.73914, 269.2113, 267.48462, 264.5162, 273.41406, 272.0293
+
+metaSiteLabel, "SL345"
+metaLatitude, 35.36503
+metaLongitude, -120.87659
+metaWaterDepth, 14.99

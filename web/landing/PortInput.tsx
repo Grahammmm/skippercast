@@ -2,12 +2,13 @@
 // launching?" input and, wrapped in PortDialog, the app's port sheet. Search
 // over the home ports with v1's matching, the featured ports before a query,
 // Enter for the top match, "Use my location" with v1's geolocation rules and
-// privacy line, and "Explore the coast". It never opens on its own: the map
+// privacy line, "Explore the coast", and "Forget saved home" when v1, v2 or
+// /coast holds one (FE-83). It never opens on its own: the map
 // is never blocked. Styles: web/landing/port-input.css.
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
-import {COPY, listPorts, locatePort, type Port} from '../ports.ts';
+import {COPY, forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
 
 export type PortInputProps = {
   /** The directory; null while it loads, and an empty list when it failed. */
@@ -20,14 +21,20 @@ export type PortInputProps = {
   /** Start with "Use my location" (the command bar's locate entry). */
   locate?: boolean;
   geolocation?: Geolocation | null;
+  /** The home memory (the browser's by default; tests pass stand-ins). */
+  storage?: HomeStorage | null;
+  cookies?: CookieJar | null;
 };
 
-export function PortInput({ports, onChoose, onExplore, label = COPY.question, autoFocus = false, locate = false, geolocation}: PortInputProps) {
+export function PortInput({ports, onChoose, onExplore, label = COPY.question, autoFocus = false, locate = false, geolocation, storage, cookies}: PortInputProps) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [saved, setSaved] = useState(() => hasSavedHome(storage, cookies));
+  // One forget for v1, v2 and /coast (FE-83); this visit keeps its address.
+  const forget = () => { forgetHome(storage, cookies); setSaved(false); setFeedback(COPY.forgotten); };
   const [nearest, setNearest] = useState<Port | null>(null);
   const list = ports ?? [];
   const matches = nearest && !query ? [nearest] : listPorts(list, query, showAll);
@@ -68,6 +75,7 @@ export function PortInput({ports, onChoose, onExplore, label = COPY.question, au
         <Button icon="target" onClick={findNearby} disabled={!ports}>Use my location</Button>
         <Button icon="map" onClick={onExplore}>Explore the coast</Button>
       </div>
+      {saved ? <Button variant="quiet" size="sm" class="port-input-forget" onClick={forget}>{COPY.forget}</Button> : null}
       <p id={`${id}-note`} class="port-input-note">{COPY.privacy}</p>
     </form>
   );

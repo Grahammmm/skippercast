@@ -92,6 +92,11 @@ SHAPE_MUTATIONS = {
     'verification station id': lambda r: r['intelligence']['verification_stations'][0].update(id='4601'),
     'verification station latitude': lambda r: r['intelligence']['verification_stations'][0].update(latitude=91),
     'verification station longitude': lambda r: r['intelligence']['verification_stations'][0].update(longitude=-181),
+    'unknown base layer': lambda r: r['basemap'].update(relief=r['basemap']['aerial']),
+    'aerial without check date': lambda r: r['basemap']['aerial'].pop('checked_at'),
+    'aerial empty note': lambda r: r['basemap']['aerial'].update(note=''),
+    'aerial undated window': lambda r: r['basemap']['aerial']['acquired'].update(first='May 2022'),
+    'aerial source id': lambda r: r['basemap']['aerial'].update(source='USGS NAIP'),
 }
 
 # Cross-references the schema cannot express; both paths must still reject them.
@@ -109,6 +114,9 @@ CROSS_REFERENCE_MUTATIONS = {
     'private closure url': lambda r: r.update(closure_check={'url': 'https://localhost/closures', 'source_id': 'not-bound'}),
     'context zone not scheduled': lambda r: with_context(r)['contexts']['harbor-mouth']['marine_zones'].update(coastal='PZZ999'),
     'asset escapes dist': lambda r: r['assets'].update(atlas='../secrets.json'),
+    'aerial unknown source': lambda r: r['basemap']['aerial'].update(source='not-a-source'),
+    'aerial source without live tiles': lambda r: r['basemap']['aerial'].update(source='ndbc-history'),
+    'aerial acquired after its check': lambda r: r['basemap']['aerial']['acquired'].update(last='2026-10-09'),
 }
 
 

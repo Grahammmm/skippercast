@@ -12,12 +12,14 @@ refer to [dev-plan.md](dev-plan.md); section numbers to [design.md](design.md).
 
 **Context.** The Bridge look needs a quiet vector basemap under relief,
 fields and marks. Today the app uses OpenStreetMap raster tiles and the NOAA
-ENC WMS. Numbers are estimates until FE-10 measures (§ 4).
+ENC WMS. FE-10 measured the extract on 2026-10-08: 180 MiB (§ 4).
 
 1. **Self-hosted Protomaps extract on R2 behind `/feeds/` (recommended).**
    Built on Hermes with `pmtiles extract` (range reads, no planet
-   download); about 0.3–2 GB on R2 at cents a month, egress free, origin
-   reads edge-cached. One style file in the tokens, day and night variants.
+   download); 180 MiB on R2 (measured), under a cent a month to store,
+   egress free; tile reads go to R2 because the archive is above the
+   32 MiB edge-cache limit (§ 4 cost). One style file in the tokens, day
+   and night variants.
    Risk: build size; mitigated by lowering maximum zoom in preview regions.
 2. A hosted vector service (MapTiler Cloud, Stadia, Protomaps API) on a
    free tier with attribution. No build step, but a key in the client,
@@ -228,6 +230,12 @@ A preview switch could persist in a cookie or travel in the URL.
 
 ## Q13. Relief tiles for preview regions
 
+**Superseded 2026-10-07.** FE-13 and FE-26 are dropped: the
+`packages/coast` renderer's terrain is the relief (design § 3A.2), and
+terrain coverage grows region by region through Codex's mapping pipeline
+(`skills/skippercast-map-coast`). The original question is kept below for
+the record.
+
 **Context.** FE-13 and FE-26 port the PNG PMTiles pipeline and proxy and publish Morro Bay
 from the three approved USGS grids. The fourteen preview regions have
 seafloor candidates but no relief archive.
@@ -239,4 +247,159 @@ seafloor candidates but no relief archive.
    now. Several GB of builds and reviews before the shell exists.
 
 **Plan assumes:** option 1 (dev-plan backlog).
+**Blocks:** nothing.
+
+## Q14. Ownership boundary between the v2 shell and `packages/coast`
+
+**Context.** Since 2026-10-06 Codex has built `packages/coast` (the `fish`
+renderer, report model, charts and markup), the bridge to the Fish Worker
+and the v1 coastal modules, while Claude built the v2 shell. Both now need
+the same files (design § 3A.6). AGENTS.md's division (Codex: data and
+pipelines; Claude: product features and app code) does not say who owns a
+renderer package that is product code built from a data-heavy pipeline.
+Changing AGENTS.md is the owner's decision; this plan only proposes text.
+
+1. **Split by layer (recommended).** Codex owns `packages/coast` renderer
+   internals (`src/coast3d/**`, `src/map/habitat-lifecycle.ts`,
+   `src/state/{habitat-selection,report-binding,report-context}.ts`,
+   `src/transport.ts`), the coast data adapters and bridge
+   (`server/coast-data.ts`, `server/coast-pages.ts`), the terrain and mapping
+   pipeline and its skills, the collectors (FE-40 … FE-45, FE-84, FE-85) and
+   the v1 coastal modules until FE-61. Claude owns the v2 shell
+   (`web/app/**`, `web/landing/**`, `web/ui/**`, `web/map/**`), the visual
+   system including the bridge files inside `packages/coast`
+   (`tokens-bridge.css`, `src/palette.ts`, the `var(--coast-*)` conversions,
+   each reviewed by Codex), `web/state.ts`, the layer registry and MapStage
+   adapter, the flag flip and the v1 deletion. The `packages/coast` exports
+   v2 consumes are a public API: a change to one is announced on the
+   coordination issue first. Matches each agent's existing context and
+   keeps one owner per file.
+2. **Split by capability.** Each agent owns a feature end to end (Codex:
+   terrain, Conditions and History; Claude: chart, brief, landing). Faster
+   per feature, but two agents style the same shell and both edit the
+   store, which is the drift the merge review warns against.
+3. **Claude owns every front-end file, Codex only data.** One owner for
+   the visual system, but it discards Codex's renderer context while Codex
+   is mid-way through renderer work (PR #410), and the terrain evidence
+   gates are where a regression would be costly.
+4. **Codex owns the v2 shell too, Claude reviews.** Contradicts the current
+   division and the plan's Phase 0 work.
+
+Proposed AGENTS.md text for option 1, replacing "Division of work
+(current)":
+
+> - **Codex:** data discovery, source audits, ingestion and regional
+>   pipelines; the terrain and mapping pipeline; `packages/coast` renderer
+>   internals and the coast data adapters (`server/coast-data.ts`,
+>   `server/coast-pages.ts`); the v1 coastal modules until the v1 shell is
+>   deleted.
+> - **Claude:** product features and app code in the v2 shell (`web/`), the
+>   visual system (`web/tokens.css` and the token bridge inside
+>   `packages/coast`), `web/state.ts`, CI and reviews of Codex PRs.
+> - The `packages/coast` exports the v2 shell imports are a shared API.
+>   Announce a change to one on the coordination issue before opening the PR;
+>   the other agent reviews it.
+
+**Plan assumes:** option 1; the dev plan's "Agent" field follows it.
+**Owner action:** pick an option, and edit AGENTS.md if you accept the text.
+**Blocks:** nothing immediately; FE-70, FE-76 and FE-77 wait for Codex's
+comment on the coordination issue.
+
+## Q15. Default map presentation where terrain exists
+
+**Context.** The map stage offers Chart (MapLibre, every region) and
+Terrain 2D / 3D (the `packages/coast` renderer, six terrain packages today)
+(design § 3A.2). v1 opens on Chart and remembers nothing.
+
+1. **Chart by default; the last choice is remembered on the device and a
+   link's `?presentation=` wins (recommended).** Same picture in every
+   region, the lightest first load on phones (no `three` until asked), and
+   every SkipperCast layer is visible at once. Revisit once FE-82 drapes the
+   registry layers on terrain.
+2. **Terrain 2D by default where terrain exists, Chart elsewhere.** Shows
+   the strongest relief first and reads like concept A, but a first visit
+   downloads Three and terrain, and chart-only layers are hidden until
+   FE-82.
+3. **Terrain 3D by default.** `fish`'s native view; the heaviest on phones
+   and the least like the instrument console.
+
+**Plan assumes:** option 1 (FE-71, FE-73).
+**Blocks:** nothing.
+
+## Q16. One "How it's built" page
+
+**Context.** The plan's landing nav links "How it's built" to `/sources`.
+Codex's #395 added `/methodology` and `/about` (from `fish`) served by
+`server/coast-pages.ts`. Two explanation pages would repeat each other.
+
+1. **`/sources` is the canonical page; `/methodology` and `/about` keep
+   answering for old links, restyled with the tokens, each linking to
+   `/sources` for layer basis (recommended).** No broken Fish links, one
+   place for every basis sentence.
+2. Make `/methodology` canonical and fold `/sources` into it. The Fish URL
+   wins, but `/sources` is linked from every v1 layer today.
+3. Keep both as equals. Least work; two pages drift.
+
+**Plan assumes:** option 1 (FE-54, FE-86).
+**Blocks:** nothing.
+
+## Q17. The boat profile's default Currents layer
+
+**Context.** The boat profile lists Currents among its default layers and the
+first run says "seafloor and currents on the map", but `?current=` defaults to
+`off` (§ 3A.3, v1 rule #402) and FE-15 made `?current=` the rail entry's one
+switch, so a boat user saw Currents off. The landing's Currents dot, which
+links `layers=currents`, opened the map with Currents off for the same reason
+([#482](https://github.com/Grahammmm/skippercast/issues/482)).
+
+1. **A v2 link that names no `?current=` draws the WCOFS forecast when its
+   rail list (a profile default, a stored or a linked `?layers=`) has
+   Currents; an explicit `current=off` stays off; the landing's dot names
+   `current=wcofs` (recommended).** Needs `web/state.ts` to tell an absent
+   key from `off` (announced on #413); the terrain gets the same choice
+   through `web/map/stage.ts`. v1 keeps its rule.
+2. Drop Currents from the boat defaults and the first-run line, so nothing
+   claims it is on.
+3. Leave it: one press turns on the forecast.
+
+**Decided (2026-10-09):** option 1, built in FE-20 (`resolveCurrent`).
+**Blocks:** nothing.
+
+## Q18. One base choice in the rail
+
+**Context.** FE-23 added Aerial as a rail toggle that wrote `?base=aerial` or
+`?base=night`, so a user who arrived with `?base=chart` could not get the
+chart detail back, and no v2 control chose the ENC base at all (FE-23
+review).
+
+1. **One labelled select under the rail's entries: Night (the token
+   basemap), Chart detail (the ENC display from zoom 10) and Aerial where
+   the region's package offers it, with every offered base's basis in one
+   info popover (recommended).** One control, native keyboard, as compact
+   as the Currents source select.
+2. A segmented row of three chips. Every choice visible at once, but wider
+   than the rail.
+3. Keep the Aerial toggle and add a Chart detail toggle. Two toggles for a
+   one-of-three choice.
+
+**Decided (2026-10-09):** option 1, built in FE-20.
+**Blocks:** nothing.
+
+## Q19. Rail entries that draw nothing in the shown presentation
+
+**Context.** In Terrain 2D and 3D only Currents draws (the renderer's
+`setCurrentLayer`); the Seafloor candidates, Water temp, Swell, the fleet
+layers, Clouds and every base draw on the Chart only, so their toggles there
+changed hidden layers (FE-20 Accept 4, FE-23 review).
+
+1. **Keep them in place, disabled, each reading "Chart only" (the base select
+   too); the legend lists them with "Chart only" and no colour key; the
+   choice is kept for the Chart (recommended).** The rail does not reflow
+   between presentations and says why.
+2. Hide them in 2D and 3D. A shorter rail, but entries vanish and come back
+   with no reason given.
+3. Leave them switchable. They toggle layers no one can see.
+
+**Decided (2026-10-09):** option 1, built in FE-20. FE-80 revisits Seafloor
+when the relief options move into its entry, and FE-82 any layer it drapes.
 **Blocks:** nothing.

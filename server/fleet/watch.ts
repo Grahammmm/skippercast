@@ -13,7 +13,9 @@
 //       changes, so the same request twice changes nothing. A `watched` row needs a
 //       vessel of this region and is refused when the MMSI is another vessel's
 //       registry MMSI or the vessel holds a different one: AIS never overrides the
-//       registry (fleet_vessels.mmsi). An `admin` row needs its vessel to hold that
+//       registry (fleet_vessels.mmsi). The watched gate (design § 11, #468 D18): a `watched`
+//       row needs a method in STRONG_METHODS and confidence >= WATCHED_MIN; `call-sign` and
+//       `ais-static-name` rows are candidates only. An `admin` row needs its vessel to hold that
 //       MMSI with `mmsi` pinned (what a set-mmsi decision or an admin edit leaves);
 //       only such a row changes a stored `rejected` one (an admin's reject-mmsi).
 //     ops (<= 500): registry operations, limited to what matching may write:
@@ -31,7 +33,11 @@ export const MAX_WATCH_BYTES = 1024 * 1024;
 export const MAX_ROWS = 500;
 export const PAGE = 1000;
 export const WATCH_STATUSES = ['candidate', 'watched', 'rejected'] as const;
-export const MATCH_METHODS = ['fcc-uls', 'call-sign', 'ais-static-name', 'geofence-presence', 'admin'] as const;
+export const MATCH_METHODS = ['fcc-uls', 'call-sign', 'ais-static-name', 'geofence-presence', 'admin', 'schedule-correlation'] as const;
+/** The methods that may tie an MMSI to a vessel as `watched` (src/skippercast/fleet/ais/match.py STRONG_METHODS). */
+export const STRONG_METHODS: readonly (typeof MATCH_METHODS)[number][] = ['fcc-uls', 'geofence-presence', 'admin', 'schedule-correlation'];
+/** The least confidence of a `watched` row (src/skippercast/fleet/config.py WATCHED_MIN_CONFIDENCE). */
+export const WATCHED_MIN = 0.85;
 const SOURCES = ['aisstream', 'marinecadastre', 'datalastic'] as const;
 const MMSI = /^[1-9]\d{0,8}$/;
 const HEX32 = /^[0-9a-f]{32}$/;
@@ -88,6 +94,9 @@ function checkRow(raw: unknown, i: number, region: string): Row {
   nullable('positions_30d', x => Number.isInteger(x) && (x as number) >= 0 && (x as number) < 1e9);
   if ((v.first_seen_at as string) > (v.last_seen_at as string)) throw new Invalid(`${where}: first_seen_at after last_seen_at`);
   if (v.status === 'watched' && (v.vessel_id === null || v.vessel_id === undefined)) throw new Invalid(`${where}: a watched row needs a vessel_id`);
+  if (v.status === 'watched' && !(STRONG_METHODS as readonly string[]).includes(v.match_method as string))
+    throw new Invalid(`${where}: ${v.match_method as string} is candidate-only; a watched row needs ${STRONG_METHODS.join(', ')}`);
+  if (v.status === 'watched' && (v.confidence as number) < WATCHED_MIN) throw new Invalid(`${where}: a watched row needs confidence >= ${WATCHED_MIN}`);
   const row: Row = {region};
   for (const key of COLUMNS) if (key !== 'region' && key !== 'updated_at') row[key] = (v[key] ?? null) as SqlValue;
   row.positions_30d ??= 0;

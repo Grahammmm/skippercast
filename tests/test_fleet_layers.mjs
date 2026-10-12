@@ -8,8 +8,6 @@ import {
   trackCardHTML, heatCardHTML, filterOptions, readFilters, fleetAccess, fetchLayer, statusText, visibleFeatures, featureArea,
 } from '../dist/fleet-activity.js';
 
-const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
-const app = readFileSync(new URL('../dist/app.js', import.meta.url), 'utf8');
 const source = readFileSync(new URL('../dist/fleet-activity.js', import.meta.url), 'utf8');
 
 const event = (over = {}) => ({type: 'Feature', id: 'e1', geometry: {type: 'Point', coordinates: [-120.95, 35.3]}, properties: {
@@ -18,38 +16,18 @@ const event = (over = {}) => ({type: 'Feature', id: 'e1', geometry: {type: 'Poin
   ended_at: '2026-07-04T15:55:00Z', dwell_min: 45, season: '2026', season_part: 'summer', source: 'aisstream', classifier_version: 'c1',
   basis: 'inferred-from-movement', rights: 'aisstream-terms', planning_only: false, ...over}});
 const segment = (over = {}) => ({type: 'Feature', id: 's1', geometry: {type: 'LineString', coordinates: [[-120.9, 35.3], [-120.95, 35.32]]}, properties: {
-  layer: 'track', id: 's1', trip_id: 't1', seq: 2, segment_kind: 'fishing-troll', vessel_name: 'Sea Example', depart_port_id: 'morro-bay',
+  layer: 'track', id: 's1', trip_id: 't1', seq: 2, segment_kind: 'troll-slow', vessel_name: 'Sea Example', depart_port_id: 'morro-bay',
   return_port_id: 'morro-bay', trip_type: 'half-day', trip_status: 'closed', local_date: '2026-07-04', departed_at: '2026-07-04T14:00:00Z',
   returned_at: '2026-07-04T20:00:00Z', distance_nm: 18.2, max_offshore_nm: 6.1, fishing_min: 150, source: 'aisstream',
   basis: 'inferred-from-movement', rights: 'aisstream-terms', planning_only: false, ...over}});
 const cell = (over = {}) => ({type: 'Feature', id: 'a1', geometry: {type: 'Polygon', coordinates: [[[-121, 35], [-120.99, 35], [-120.99, 35.01], [-121, 35.01], [-121, 35]]]},
-  properties: {layer: 'heat', id: 'a1', cell_id: 'g1', module: 'grid', kind: 'troll', season: '2026', season_part: null, vessels_n: 4, events_n: 9,
+  properties: {layer: 'heat', id: 'a1', cell_id: 'g1', module: 'grid', kind: 'troll-slow', season: '2026', season_part: null, vessels_n: 4, events_n: 9,
     dwell_min: 320, first_date: '2026-06-01', last_date: '2026-07-30', computed_at: '2026-08-01T00:00:00Z', basis: 'inferred-from-movement',
     rights: 'aisstream-terms', planning_only: false, ...over}});
 const page = (features, meta = {}) => ({type: 'FeatureCollection', features, meta: {count: features.length, next: null, ignored: [], ...meta}});
 const reply = (status, body) => ({ok: status >= 200 && status < 300, status, json: async () => body});
 const FILTERS = {region: 'CA', vessels: [{id: 'v1', name: 'Sea <b>Example</b>'}], truncated: false, ports: ['morro-bay'], classes: ['six-pack'],
-  trip_types: ['half-day'], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
-
-// ---- Toggles: shipped hidden, inside one admin section ----
-
-test('index.html ships the three toggles hidden inside the admin-only fleet section', () => {
-  const section = html.match(/<details id="fleet-layers"[^>]*>[\s\S]*?<\/form>/)?.[0];
-  assert.ok(section, 'fleet section present');
-  assert.match(section, /^<details id="fleet-layers" class="fleet-layers" hidden>/);
-  for (const name of LAYERS) {
-    assert.equal(html.split(`id="layer-fleet-${name}"`).length, 2, `one ${name} toggle`);
-    assert.ok(section.includes(`id="layer-fleet-${name}"`), `${name} toggle inside the hidden section`);
-  }
-  for (const name of ['vessel', 'port', 'class', 'trip_type', 'kind', 'from', 'to', 'season', 'season_part'])
-    assert.match(section, new RegExp(`name="${name}"`), `${name} filter`);
-});
-
-test('app.js wires the layer with the optional guard; plain module names only', () => {
-  assert.match(app, /import \{ initFleetActivity \} from "\.\/fleet-activity\.js";/);
-  assert.match(app, /optional\("Fleet activity",\(\)=>initFleetActivity\(map,\{onSelect:\(html,area\)=>showAreaDetails\(html,area,"fleet-weather"\)/);
-  for (const text of [app, html, source]) assert.doesNotMatch(text, /fleet-activity[^"'\s]*-v\d+|fleet-activity\.js\?v=|modulepreload[^>]*fleet-activity/);
-});
+  trip_types: ['half-day'], kinds: ['drift-anchor', 'troll-slow'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
 
 // ---- Access: admin and both flags, decided by the server ----
 
@@ -99,13 +77,14 @@ function dom() {
   const controls = Object.fromEntries(['vessel', 'port', 'class', 'trip_type', 'kind', 'from', 'to', 'season', 'season_part'].map(n => [n, {value: '', innerHTML: '', min: '', max: ''}]));
   const form = make('fleet-filters', {elements: controls});
   for (const id of ['fleet-activity-status', 'fleet-hide-planning', 'fleet-show', 'fleet-vessels-note', 'map-options']) make(id);
-  // Removing the section removes everything inside it (index.html nests them all).
+  // Removing the section removes everything inside it (the page nests them all).
   const inside = [...elements.keys()].filter(id => id !== 'map-options');
   section.remove = function () { this.removed = true; for (const id of inside) elements.delete(id); };
   return {elements, section, toggles, controls, form, get: id => elements.get(id)};
 }
 
-function leaflet() {
+/** A stand-in for the 2D map library's layer groups, circle markers and GeoJSON shapes. */
+function mapLibrary() {
   const drawn = {circles: [], shapes: []};
   const group = () => ({items: [], on: false, addTo() { this.on = true; return this; }, clearLayers() { this.items = []; }});
   const item = (kind, args) => ({kind, args, handlers: {}, on(name, fn) { this.handlers[name] = fn; return this; }, bindTooltip(t) { this.tooltip = t; return this; },
@@ -119,7 +98,7 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
 async function start(t, fetcher) {
   const {initFleetActivity} = await import('../dist/fleet-activity.js');
-  const d = dom(), {drawn, L} = leaflet();
+  const d = dom(), {drawn, L} = mapLibrary();
   const saved = {document: globalThis.document, L: globalThis.L};
   t.after(() => { for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete globalThis[k]; else globalThis[k] = v; } });
   globalThis.document = {getElementById: id => d.get(id)};
@@ -149,7 +128,7 @@ test('an admin with the flags on sees the toggles, fills the filter card and dra
     requests.push(url);
     if (url === '/api/session') return reply(200, {is_admin: true});
     if (url.startsWith('/api/fleet/map/filters')) return reply(200, FILTERS);
-    if (url.startsWith('/api/fleet/map/events')) return reply(200, page([event(), event({id: 'e2', kind: 'troll', planning_only: true, rights: 'noaa-planning-only'})]));
+    if (url.startsWith('/api/fleet/map/events')) return reply(200, page([event(), event({id: 'e2', kind: 'troll-slow', planning_only: true, rights: 'noaa-planning-only'})]));
     return reply(500, {});
   };
   const {d, drawn, ui, selected} = await start(t, fetcher);
@@ -205,9 +184,9 @@ test('every card escapes registry text and flags planning-only rights', () => {
 
 test('track and heat cards carry their facts', () => {
   const track = trackCardHTML(segment().properties);
-  for (const text of ['Troll', 'Morro bay → Morro bay', '18.2 nm', '6.1 nm', '2 hr 30 min', 'Closed']) assert.ok(track.includes(text), text);
+  for (const text of ['Slow troll', 'Morro bay → Morro bay', '18.2 nm', '6.1 nm', '2 hr 30 min', 'Closed']) assert.ok(track.includes(text), text);
   const heat = heatCardHTML(cell().properties);
-  for (const text of ['Troll cell', '5 hr 20 min', '2026-06-01 to 2026-07-30', '>4<', '>9<']) assert.ok(heat.includes(text), text);
+  for (const text of ['Slow troll cell', '5 hr 20 min', '2026-06-01 to 2026-07-30', '>4<', '>9<']) assert.ok(heat.includes(text), text);
 });
 
 // ---- Drawing rules and queries ----
@@ -224,15 +203,15 @@ test('event radius grows with the square root of dwell inside 4–18 px', () => 
 });
 
 test('styles distinguish drift, troll and gaps', () => {
-  assert.ok(EVENT_STYLE['drift-anchor'].fill && !EVENT_STYLE.troll.fill);
-  assert.notEqual(SEGMENT_STYLE['fishing-drift'].color, SEGMENT_STYLE['fishing-troll'].color);
-  assert.notEqual(SEGMENT_STYLE.transit.color, SEGMENT_STYLE['fishing-troll'].color);
+  assert.ok(EVENT_STYLE['drift-anchor'].fill && !EVENT_STYLE['troll-slow'].fill);
+  assert.notEqual(SEGMENT_STYLE['drift-anchor'].color, SEGMENT_STYLE['troll-slow'].color);
+  assert.notEqual(SEGMENT_STYLE.transit.color, SEGMENT_STYLE['troll-slow'].color);
   assert.ok(SEGMENT_STYLE.gap.dashArray);
-  for (const kind of ['in-port', 'transit', 'fishing-drift', 'fishing-troll', 'gap']) assert.ok(SEGMENT_STYLE[kind], kind);
+  for (const kind of ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic', 'uncertain', 'gap']) assert.ok(SEGMENT_STYLE[kind], kind);
 });
 
 test('queries leave out empty filters and pass the rest to the server', () => {
-  const url = new URL(layerQuery('heat', {kind: 'troll', season: '2026', vessel: ''}, {region: 'CA', bbox: [-121.123456, 35, -120, 36]}), 'https://x.test');
+  const url = new URL(layerQuery('heat', {kind: 'troll-slow', season: '2026', vessel: ''}, {region: 'CA', bbox: [-121.123456, 35, -120, 36]}), 'https://x.test');
   assert.equal(url.pathname, '/api/fleet/map/heat');
   assert.deepEqual([...url.searchParams.keys()].sort(), ['bbox', 'kind', 'region', 'season']);
   assert.equal(url.searchParams.get('bbox'), '-121.12346,35,-120,36');

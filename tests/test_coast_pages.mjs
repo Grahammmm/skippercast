@@ -1,0 +1,147 @@
+import {readableReportURL} from '../web/readable-links.ts';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+globalThis.REGIONS={};
+globalThis.DEPLOYMENT={allowed_origins:['https://skippercast.com']};
+const {serveCoastPage,readableSelection}=await import('../server/coast-pages.ts');
+const regions=Object.fromEntries(['morro-bay','cambria-san-simeon'].map(id=>[id,JSON.parse(readFileSync(new URL('../regions/'+id+'/region.json',import.meta.url)))]));
+const template=readFileSync(new URL('../dist/coast-readable.html',import.meta.url),'utf8');
+const now=new Date('2026-10-07T12:00:00Z'),at=now.toISOString();
+const report={schemaVersion:1,countyId:'slo',generatedAt:'2026-10-07T11:50:00Z',forecasts:[{id:'central',sourceId:'nws',hours:[{at,windKnots:8,gustKnots:12,waveFt:3,wavePeriodS:12}]}],observations:[{stationId:'46028',observedAt:'2026-10-07T10:30:00Z',waterTempF:56,waveFt:4,wavePeriodS:10,url:'https://www.ndbc.noaa.gov/'}],sources:[{id:'nws',label:'NWS $& <script>',kind:'forecast',outcome:'ok',issuedAt:'2026-10-07T10:00:00Z',fetchedAt:'2026-10-07T11:50:00Z',url:'javascript:alert(1)'}],tides:[],tideEvents:[],alerts:[],catches:[],nearshore:[{areaId:'central',name:'Original CDIP',availability:'available',freshness:'current',issuedAt:'2026-10-07T10:00:00Z',fetchedAt:'2026-10-07T11:50:00Z',validThrough:'2026-10-07T15:00:00Z',temporalResolutionMinutes:180,hours:[{at,waveFt:2,periodS:11},{at:'2026-10-07T15:00:00Z',waveFt:3,periodS:12}]}]};
+const request=(path='/report',init)=>new Request('https://skippercast.com'+path,init);
+const options=(data=report)=>({template,regions,now,fetcher:async()=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}})});
+const selection=query=>readableSelection(new URL(request('/report'+query).url),regions,now);
+
+test('default readable report explicitly labels SLO reference without native controls or JS',async()=>{
+ const response=await serveCoastPage(request(),options()),html=await response.text();
+ assert.equal(response.status,200);assert.match(html,/SLO reference report/);assert.match(html,/Wind \/ gust/);assert.match(html,/8 \/ 12 kt/);assert.doesNotMatch(html,/<script|<select|type=["']range|<canvas/i);assert.match(html,/2026-10-07T11:50:00Z/);assert.match(html,/2026-10-07T10:30:00Z/);
+});
+test('original Fish aliases preserve profile, target, geographic binding and exact hour',()=>{
+ const result=selection('?area=north&mode=spear&species=gopher&hour=2026-10-07T12:00:00Z');
+ assert.equal(result.context.regionId,'cambria-san-simeon');assert.equal(result.context.profile,'spear');assert.equal(result.context.target,'gopher');assert.equal(result.context.at.toISOString(),at);assert.match(result.workspace,/region=cambria-san-simeon/);
+ for(const place of ['morro','avila','cambria'])assert.ok(selection('?place='+place).context,place);
+ assert.equal(selection('?region=morro-bay&place=cambria').context.regionId,'morro-bay');
+});
+test('missing, unknown, explicit empty, mismatched, ambiguous and unsupported geography never falls back',()=>{
+ for(const query of ['?region=','?region=monterey-point-sur','?region=constructor','?place=constructor','?area=constructor','?region=morro-bay&region=cambria-san-simeon','?coast=central','?habitat=123','?region=morro-bay&area=avila&view=35.4,-120.9,10','?region=morro-bay&view=36,-120,10'])assert.equal(selection(query).context,null,query);
+ assert.equal(selection('?region=morro-bay&hour=2026-10-07T12:30Z').context,null);
+ assert.equal(selection('?region=morro-bay&day=2026-10-11').context,null);
+ assert.equal(selection('?region=morro-bay&profile=unknown').context,null);
+});
+test('shared target/time remain exact while later-day, stale and missing forecasts show gaps',async()=>{
+ for(const [query,data] of [['?region=morro-bay&target=unlisted&hour=2026-10-11T12:00Z',report],['?region=morro-bay&hour=2026-10-07T13:00Z',report],['', {...report,sources:report.sources.map(x=>({...x,fetchedAt:'2026-10-07T08:00:00Z'}))}]]){
+  const html=await(await serveCoastPage(request('/report'+query),options(data))).text();assert.match(html,/No fresh, supported local NWS/);assert.doesNotMatch(html,/8 \/ 12 kt/);
+  if(query.includes('unlisted')){assert.match(html,/target unlisted/);assert.match(html,/2026-10-11T12:00:00.000Z/);}
+ }
+});
+test('nearshore original sampling remains visible only within supported first/last range',async()=>{
+ for(const [hour,present] of [['11',false],['13',true],['16',false]]){
+  const html=await(await serveCoastPage(request('/report?hour=2026-10-07T'+hour+':00Z'),options())).text();
+  assert.equal(html.includes('Sampling interval 180 minutes'),present,hour);
+  if(present)assert.match(html,/Original model sample <time datetime="2026-10-07T12:00:00.000Z"/);
+ }
+});
+test('public report request strips client identity, range, query and origin',async()=>{
+ let seen;const result=await serveCoastPage(request('/report?hour=2026-10-07T12:00Z&token=private',{headers:{Cookie:'session=private',Authorization:'Bearer private',Range:'bytes=2-4',Origin:'https://foreign.test'}}),{...options(),fetcher:async req=>{seen=req;return new Response(JSON.stringify(report),{headers:{'Content-Type':'application/json'}});}});
+ assert.equal(result.status,200);assert.equal(seen.url,'https://fish-report.g4651.workers.dev/api/report');assert.equal(seen.method,'GET');assert.equal(seen.redirect,'manual');assert.deepEqual([...seen.headers],[]);assert.doesNotMatch(await result.text(),/token=private/);
+});
+test('RSS retains assembly and observation dates across reads and deduplicates original observations',async()=>{
+ const data={...report,observations:[...report.observations,...report.observations]};
+ const a=await(await serveCoastPage(request('/feed.xml'),options(data))).text();
+ const b=await(await serveCoastPage(request('/feed.xml'),{...options(data),now:new Date('2026-10-10T12:00:00Z')})).text();
+ assert.equal(a,b);assert.match(a,/<lastBuildDate>Wed, 07 Oct 2026 11:50:00 GMT/);assert.match(a,/<pubDate>Wed, 07 Oct 2026 10:30:00 GMT/);assert.equal((a.match(/<item>/g)||[]).length,2);assert.doesNotMatch(a,/10 Oct/);
+});
+test('escaped markup, unsafe source links and replacement tokens remain inert',async()=>{
+ const html=await(await serveCoastPage(request('/report?target=%3Cscript%3E'),options())).text();
+ assert.match(html,/NWS \$&amp; &lt;script&gt;/);assert.match(html,/target &lt;script&gt;/);assert.doesNotMatch(html,/javascript:|<script/);assert.doesNotMatch(html,/<!--COAST_REPORT-->/);
+});
+test('failed snapshots stay explicit gaps without fabricated original clocks',async()=>{
+ for(const data of [{...report,countyId:'other'},{...report,generatedAt:'invalid'},{...report,forecasts:null}]){
+  const response=await serveCoastPage(request(),options(data));assert.equal(response.status,503);const html=await response.text();assert.match(html,/unavailable|could not be read/);assert.doesNotMatch(html,/Report assembled/);
+ }
+});
+test('GET/HEAD routes are bounded and missing template fails closed; existing privacy is not replaced',async()=>{
+ const head=await serveCoastPage(request('/report',{method:'HEAD'}),options());assert.equal(head.status,200);assert.equal(await head.text(),'');assert.equal(head.headers.get('Cache-Control'),'no-store');
+ const post=await serveCoastPage(request('/report',{method:'POST'}),options());assert.equal(post.status,405);assert.equal(post.headers.get('Allow'),'GET, HEAD');
+ assert.equal((await serveCoastPage(request('/privacy'),options())).status,404);
+ for(const shell of [undefined,template+'<!--COAST_REPORT-->'])assert.equal((await serveCoastPage(request(),{...options(),template:shell})).status,503);
+ for(const path of ['/methodology','/about']){const response=await serveCoastPage(request(path),{...options(),fetcher:async()=>{throw Error('Must not fetch');}});assert.equal(response.status,200);assert.doesNotMatch(await response.text(),/<script/);}
+});
+test('unreadable observation record fails closed for both text and RSS',async()=>{
+ for(const path of ['/report','/feed.xml'])assert.equal((await serveCoastPage(request(path),options({...report,observations:[null]}))).status,503);
+});
+test('router uses generated shell and strips request identity from asset fetch without shadowing privacy',async()=>{
+ Object.assign(globalThis.REGIONS,regions);globalThis.SHELLS={'/coast-readable.html':'/coast-readable.deadbeef.html'};
+ const {coastPages}=await import('../server/routes/coast-pages.ts');let seen;
+ const response=await coastPages.fetch(request('/methodology?token=private',{method:'HEAD',headers:{Cookie:'private',Authorization:'Bearer private'}}),{ASSETS:{fetch:async req=>{seen=req;return new Response(template);}}});
+ assert.equal(response.status,200);assert.equal(await response.text(),'');assert.equal(seen.url,'https://skippercast.com/coast-readable.deadbeef');assert.equal(seen.method,'GET');assert.deepEqual([...seen.headers],[]);
+ assert.equal((await coastPages.fetch(request('/privacy'),{})).status,404);
+ assert.equal((await coastPages.fetch(request('/report'),{})).status,503);
+});
+test('readable and information navigation preserves public selection without identity query fields',async()=>{
+ const html=await(await serveCoastPage(request('/methodology?region=morro-bay&hour=2026-10-11T12:00Z&profile=shore&target=gopher&token=private'),options())).text();
+ assert.match(html,/href="\/report\?region=morro-bay&amp;target=gopher&amp;hour=2026-10-11T12%3A00Z&amp;profile=shore"/);
+ assert.match(html,/#forecast">Open this selection/);assert.doesNotMatch(html,/token=private/);
+});
+test('legacy area aliases must agree with the reviewed binding at explicit map position',async()=>{
+ const points={north:'35.6,-121.1,10',central:'35.4,-120.9,10',south:'35.15,-120.75,10'};
+ for(const [bound,point] of Object.entries(points))for(const area of Object.keys(points)){
+  const query='?region=morro-bay&area='+area+'&view='+point;
+  const result=selection(query);
+  if(area===bound){assert.ok(result.context,query);continue;}
+  assert.equal(result.context,null,query);assert.match(result.reason,/disagrees/);
+  const html=await(await serveCoastPage(request('/report'+query),{...options(),fetcher:async()=>{throw Error('Conflicting area must not fetch');}})).text();
+  assert.match(html,/supplied legacy report area disagrees/);assert.doesNotMatch(html,/Report assembled/);
+ }
+});
+
+test('Fish privacy path serves the complete existing notice under either UI switch',async()=>{
+ const {shellFor}=await import('../server/routes/assets.ts');
+ assert.equal(shellFor('/privacy',new URLSearchParams()),'/privacy.html');
+ assert.match(readFileSync(new URL('../dist/privacy.html',import.meta.url),'utf8'),/Privacy|privacy/);
+});
+
+test('admitted overview source selection opens readable report and returns to the same overview',()=>{
+ const context={regionId:'morro-bay',point:{latitude:35.36,longitude:-120.94},localAreas:regions['morro-bay'].map.local_areas,profile:'spear',target:'cabezon-shallow-reef',at:new Date('2026-10-07T12:00Z')};
+ const url=readableReportURL('https://skippercast.com/?coast=central&view=35.36,-120.94,12&profile=spear&target=cabezon-shallow-reef&hour=2026-10-07T12:00Z&habitat=original#forecast',context);
+ const selected=readableSelection(url,regions,now);assert.ok(selected.context,selected.reason);assert.equal(selected.context.regionId,'morro-bay');assert.equal(selected.context.at.toISOString(),'2026-10-07T12:00:00.000Z');assert.equal(new URL(selected.workspace,url).searchParams.get('coast'),'central');assert.equal(new URL(selected.workspace,url).searchParams.get('habitat'),'original');
+ const gap=readableSelection(readableReportURL('https://skippercast.com/?coast=central&view=35.36,-120.94,12'),regions,now);assert.equal(gap.context,null);
+});
+
+
+test('actual readable workspace return preserves supported, unknown and empty current choices only as public state',()=>{for(const current of ['wcofs','hfr-6','constructor','']){const u=new URL('https://skippercast.com/?coast=central&view=35.36,-120.94,12&private=excluded');u.searchParams.set('current',current);const outbound=readableReportURL(u.href),selected=readableSelection(outbound,regions,now),returned=new URL(selected.workspace,outbound);assert.equal(returned.searchParams.get('current'),current);assert.equal(returned.searchParams.has('private'),false);}});
+
+// FE-86: the readable and information pages in the v2 visual system. The page
+// text is the text recorded on main before the restyle (the fixture is main's
+// template), node for node, except the one declared addition: the nav link to
+// the sources page that open-questions Q16 makes canonical, at /sources (#475).
+const textNodes=html=>html.replace(/<!--[\s\S]*?-->/g,'').split(/<[^>]*>/).filter(text=>text.trim());
+const before=readFileSync(new URL('./fixtures/coast-readable/main-before-fe86.html',import.meta.url),'utf8');
+test('FE-86 restyle keeps every text node of the readable and information pages byte-identical',async()=>{
+ for(const path of ['/report','/report?region=','/report?region=morro-bay&hour=2026-10-07T13:00Z','/methodology','/about']){
+  const render=async shell=>textNodes(await(await serveCoastPage(request(path),{...options(),template:shell})).text());
+  const old=await render(before),current=await render(template),at=old.indexOf('About');
+  assert.ok(old.length>12&&at>0,path);assert.deepEqual(current,[...old.slice(0,at+1),'How it’s built',...old.slice(at+1)],path);
+ }
+});
+test('FE-86 template links web/tokens.css and its sheet reads only token names',()=>{
+ assert.deepEqual([...template.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(m=>m[1]),['../web/tokens.css','coast-readable.css']);
+ assert.match(template,/<meta name="color-scheme" content="dark">/);
+ const tokens=readFileSync(new URL('../web/tokens.css',import.meta.url),'utf8'),defined=new Set([...tokens.matchAll(/(--[\w-]+)\s*:/g)].map(m=>m[1]));
+ const css=readFileSync(new URL('../dist/coast-readable.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+ const used=[...css.matchAll(/var\((--[\w-]+)\)/g)].map(m=>m[1]);assert.ok(used.length>20);
+ for(const name of used)assert.ok(defined.has(name),`${name} is a web/tokens.css name`);
+ assert.doesNotMatch(css,/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(|\b(?:white|black)\b/i,'no colour literals');
+ assert.doesNotMatch(css,/font-family:(?!\s*var\(--font-mono\))/,'faces come from the font tokens');
+ assert.doesNotMatch(css,/system-ui|sans-serif/);
+});
+test('FE-86 methodology and about link to the sources page; the pages need nothing beyond the unchanged CSP',async()=>{
+ const {CSP}=await import('../server/security-headers.ts');
+ for(const path of ['/methodology','/about','/report']){
+  const response=await serveCoastPage(request(path),options()),html=await response.text();
+  assert.match(html,/<a href="\/sources">How it’s built<\/a>/,path);
+  assert.equal(response.headers.get('Content-Security-Policy'),CSP,path);
+ }
+ assert.doesNotMatch(template,/<style|<script|\sstyle=|https?:\/\//i,'no inline style or script and no other origin');
+});
