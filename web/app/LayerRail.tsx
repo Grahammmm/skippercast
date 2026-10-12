@@ -25,12 +25,11 @@
 // shows Night, which is what draws.
 // Walkthrough slice 3 (#620): the rail opens with what to look for, the target
 // species ("Look for": the command bar's list, bound to the same `?target=`) and the terrain
-// grade filter (`?grade=`, web/grade.ts), which narrows the reef marks, their
-// density below zoom 10 and the seafloor candidates together.
-import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam} from '../grade.ts';
+// grade filter (`?grade=`, web/grade.ts, beside the base), which narrows the reef
+// marks, their density below zoom 10 and the seafloor candidates together.
+import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam, parseGrade} from '../grade.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {regionTargets, targetGroups} from '../species.ts';
-import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
@@ -162,11 +161,32 @@ export function baseNote(shown: Base, offer: AerialBase | null, drawn: boolean):
 }
 const BASE_NOTE = 'app-rail-base-note';
 
+const GRADE_MEANING_ID = 'app-rail-grade-meaning';
+/**
+ * The terrain grade filter (#620), beside the base so the rail grows no taller: it narrows reef marks, their
+ * wide-view density and seafloor candidates; what a grade means is read with the control and shown in the legend.
+ */
+function GradeChoice() {
+  // The description sits outside the label, so the label's text stays "Grade" alone.
+  return (
+    <>
+      <label class="app-rail-source app-rail-grade">Grade
+        <select value={grade.value} aria-describedby={GRADE_MEANING_ID}
+          onChange={event => setParams({grade: gradeParam(parseGrade((event.currentTarget as HTMLSelectElement).value))})}>
+          {GRADE_FILTERS.map(value => <option key={value} value={value}>{GRADE_LABELS[value]}</option>)}
+        </select>
+      </label>
+      <span id={GRADE_MEANING_ID} class="app-visually-hidden">{GRADE_MEANING} Unranked areas show only with All.</span>
+    </>
+  );
+}
+
 function BaseChoice() {
   const offer = aerialOffer.value, drawn = drawsIn('base', shownPresentation.value);
   const value = shownBase(base.value, offer), note = baseNote(value, offer, drawn);
   return (
     <div class="app-rail-base">
+      <GradeChoice />
       <label class="app-rail-source">Base
         <select value={value} disabled={!drawn} aria-describedby={note ? BASE_NOTE : undefined}
           onChange={event => { const next = (event.currentTarget as HTMLSelectElement).value; if (isBase(next)) setParams({base: next}); }}>
@@ -183,26 +203,20 @@ function BaseChoice() {
   );
 }
 
-/** What to look for: the target species and the terrain grade filter, at the head of the rail (#620). */
+/** What to look for (#620): the target species at the head of the rail, shown in the phone's sheet only (app.css); on a computer the command bar holds it. */
 export function LookFor() {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
   const list = regionTargets(p, region.value, species.value);
   return (
-    <div class="app-rail-look" role="group" aria-label="Where to look">
+    <div class="app-rail-look">
       {/* "Look for", not "Target": the command bar's Target select stays the one control by that name. */}
-      <label class="app-rail-source">Look for
+      <label class="app-rail-source app-rail-target">Look for
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
           {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
             <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>
           ))}
         </select>
       </label>
-      <div class="app-rail-grade">
-        <span class="app-rail-grade-label">Grade</span>
-        <Segmented label="Terrain grade" value={grade.value} onChange={next => setParams({grade: gradeParam(next)})}
-          options={GRADE_FILTERS.map(value => ({value, label: GRADE_LABELS[value]}))} />
-        <Popover iconOnly align="end" summary="Grade basis"><p>{GRADE_MEANING} The filter narrows reef marks, their wide-view density and seafloor candidates; unranked areas show only with All.</p></Popover>
-      </div>
     </div>
   );
 }
