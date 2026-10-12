@@ -289,7 +289,7 @@ export function createStage(options: StageOptions): Stage {
   const release = (): void => {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
-    shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null;
+    shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
     h?.destroy();
   };
   const fail = (error: unknown): void => {

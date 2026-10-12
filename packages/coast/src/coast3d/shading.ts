@@ -10,6 +10,15 @@ export const CONTOUR_STEPS_FT=[5,10,20,50,100,250,500] as const;
 export const MIN_WINDOW_M=6;
 /** Contour minor spacing never goes finer than this multiple of the finest grid spacing in view. */
 export const SPACING_FACTOR=1.5;
+/**
+ * The contour floor each source class keeps whatever the view asks for, in
+ * metres: the fixed intervals the renderer drew before spacing adapted (10 ft
+ * over lidar, 30 ft over survey and chart estimate, 500 ft over the regional
+ * model). The fragment shader in viewer.ts carries the same literals.
+ */
+export const SOURCE_CONTOUR_FLOOR_M={lidar:3.048,survey:9.144,estimate:9.144,model:152.4} as const;
+/** The floor for a vertex's source class as the shader classifies it (above 6.5 lidar, below 1.5 model, otherwise survey or estimate). */
+export function sourceContourFloor(sourceClass:number):number{return sourceClass>6.5?SOURCE_CONTOUR_FLOOR_M.lidar:sourceClass<1.5?SOURCE_CONTOUR_FLOOR_M.model:SOURCE_CONTOUR_FLOOR_M.survey;}
 /** Fewer submerged samples than this leave the ramp where it was. */
 const MIN_SAMPLES=16;
 
@@ -56,10 +65,10 @@ export function sunDirection(azimuthDeg:number,altitudeDeg:number):[number,numbe
 /** Feet, rounded for a readout. */
 export const feet=(metres:number)=>Math.round(metres/FOOT);
 
-/** The readout line: the ramp's span in view and the contour spacing, in feet. */
-export function shadingReadout(window:{min:number;max:number}|null,fixed:boolean,contours:{minor:number;index:number}):string{
+/** The readout line: the ramp's span in view and the contour spacing in feet (the finest drawn; each source keeps its own floor), or that contours are off. */
+export function shadingReadout(window:{min:number;max:number}|null,fixed:boolean,contours:{minor:number;index:number}|null):string{
  const ramp=fixed?'Fixed ramp 0–5,900 ft':window?`Ramp ${feet(window.min).toLocaleString('en-US')}–${feet(window.max).toLocaleString('en-US')} ft in view`:'Ramp waiting for seabed in view';
- return `${ramp} · contours ${feet(contours.minor)} ft, index ${feet(contours.index)} ft`;
+ return contours?`${ramp} · contours ${feet(contours.minor)} ft where the source allows, index ${feet(contours.index)} ft`:`${ramp} · contours off`;
 }
 
 /** The persistent exaggeration chip: seabed factor and the land's true scale. */

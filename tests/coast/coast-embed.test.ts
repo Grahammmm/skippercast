@@ -20,7 +20,8 @@ const SHADING_EDITS:[string,string][]=[
  ['<span>Adapt to view</span>','<span>10 / 30 / 500 ft</span>'],
  ['<div class="relief"><label for="sun-azimuth">Sun direction <b id="sun-azimuth-label">305°</b></label><input id="sun-azimuth" type="range" min="0" max="360" step="5" value="305"><span>Lighting only</span><span>Heights unchanged</span></div><div class="relief"><label for="photo-mix">Land <b id="photo-mix-label">Photo</b></label><input id="photo-mix" type="range" min="0" max="1" step="0.05" value="1"><span>Shaded relief</span><span>Photo</span></div><div class="layer-row"><label><input id="fixed-ramp" type="checkbox">Fixed depth colours</label><span>0–5,900 ft</span></div><p id="shading-readout" class="note" role="status">The depth colours span the seabed in view.</p>',''],
  ['<div id="relief-chip" class="relief-chip">Seabed ×5 · land true scale</div>',''],
- [' Depth colours span the depths in the current view and the contour interval adapts to that range; the panel names both. Hillshade and slope shading light the displayed surface, including any seabed exaggeration the chip names, and add no measurements.',''],
+ ['Contour lines fade across mixed-source joins to avoid switching depth floors within a triangle.','Contour lines fade across mixed-source joins to avoid switching depth intervals within a triangle.'],
+ [' Depth colours span the depths in the current view and the contour interval adapts to that range, never finer than each source supports (10 ft over lidar, 30 ft over survey and chart estimate, 500 ft over the regional model); the panel names the finest drawn. Hillshade and slope shading light the displayed surface, including any seabed exaggeration the chip names, and add no measurements.',''],
 ];
 test('the embed template is the standalone page\'s scene and sources markup plus the shading controls',()=>{
  assert.ok(coastSceneMarkup.startsWith('<main id="scene"')&&coastSceneMarkup.endsWith('</main>'));
@@ -30,7 +31,7 @@ test('the embed template is the standalone page\'s scene and sources markup plus
  assert.equal(sha256(undo(coastSceneMarkup)),'b3a1435dd60739023d2785f669aa299444ee5d69ac3c4224266a15d5a653e6a5');
  assert.equal(sha256(undo(coastSourcesMarkup)),'086cd7e125c6555bb8681d03af90eee29ce073ec2d00a943c6baa29bde2ebc5c');
  assert.equal(sha256(coastSceneMarkup),'e27748cde200cec25a8d43a9906e80be84a3d763d909a6ba2fec07f079e3faaf');
- assert.equal(sha256(coastSourcesMarkup),'4a270ce2ffa4e3dc4a3e48103e2301ce8dada1a0b18d30eb254663f0559d2ebf');
+ assert.equal(sha256(coastSourcesMarkup),'38842af57c8b97c0e6feb1148ac450ad634e50a45360cf193caa945b8c3e1bef');
  assert.equal(coastEmbedTemplate,coastSceneMarkup+coastSourcesMarkup);
 });
 

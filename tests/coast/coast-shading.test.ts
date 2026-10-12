@@ -1,7 +1,8 @@
 // Auto exposure, adaptive contours and sun direction (packages/coast/src/coast3d/shading.ts).
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {depthWindow,contourInterval,sunDirection,shadingReadout,reliefChip,MIN_WINDOW_M} from '../../packages/coast/src/coast3d/shading.ts';
+import {readFileSync} from 'node:fs';
+import {depthWindow,contourInterval,sunDirection,shadingReadout,reliefChip,sourceContourFloor,MIN_WINDOW_M,SOURCE_CONTOUR_FLOOR_M} from '../../packages/coast/src/coast3d/shading.ts';
 import {coastPoint} from '../../packages/coast/src/coast3d/grid.ts';
 
 const near=(a:number,b:number,eps=1e-9)=>assert.ok(Math.abs(a-b)<=eps,`${a} ≉ ${b}`);
@@ -47,9 +48,16 @@ test('sun direction is a unit vector in the coastPoint frame (x east, y up, z so
  for(const [az,alt] of [[305,54],[200,20],[45,70]]){const v=sunDirection(az,alt);near(Math.hypot(...v),1,1e-12);}
  const nw=sunDirection(315,45);assert.ok(nw[0]<0&&nw[2]<0&&nw[1]>0,'north-west sun is west, north and up');
 });
+test('each source keeps the contour floor the fixed intervals drew, and the shader carries the same literals',()=>{
+ assert.deepEqual(SOURCE_CONTOUR_FLOOR_M,{lidar:3.048,survey:9.144,estimate:9.144,model:152.4});
+ assert.equal(sourceContourFloor(7),3.048,'lidar 10 ft');assert.equal(sourceContourFloor(5),9.144,'survey 30 ft');assert.equal(sourceContourFloor(2),9.144,'chart estimate 30 ft');assert.equal(sourceContourFloor(1),152.4,'regional model 500 ft');
+ const shader=readFileSync(new URL('../../packages/coast/src/coast3d/viewer.ts',import.meta.url),'utf8');
+ assert.ok(shader.includes('float sourceFloor=coastSource>6.5?3.048:coastSource<1.5?152.4:9.144;float minorStep=max(contourMinor,sourceFloor)'),'the fragment shader floors the adaptive minor step per source');
+});
 test('readout names the ramp in view and the contour spacing; the chip discloses exaggeration',()=>{
- assert.equal(shadingReadout({min:18.6,max:43.3},false,{minor:3.048,index:15.24}),'Ramp 61–142 ft in view · contours 10 ft, index 50 ft');
- assert.equal(shadingReadout(null,true,{minor:3.048,index:15.24}),'Fixed ramp 0–5,900 ft · contours 10 ft, index 50 ft');
+ assert.equal(shadingReadout({min:18.6,max:43.3},false,{minor:3.048,index:15.24}),'Ramp 61–142 ft in view · contours 10 ft where the source allows, index 50 ft');
+ assert.equal(shadingReadout(null,true,{minor:3.048,index:15.24}),'Fixed ramp 0–5,900 ft · contours 10 ft where the source allows, index 50 ft');
+ assert.equal(shadingReadout({min:18.6,max:43.3},false,null),'Ramp 61–142 ft in view · contours off');
  assert.equal(reliefChip(5),'Seabed ×5 · land true scale');
  assert.equal(reliefChip(1),'Seabed true scale · land true scale');
 });
