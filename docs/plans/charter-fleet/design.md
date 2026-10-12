@@ -994,8 +994,17 @@ basis. `python -m skippercast.fleet.ais validate` compares output to labels by
 minutes and reports precision and recall for fishing (drift + troll) and per
 type, with a confusion table. Labelled trips' raw positions are copied to
 `ais/validation/` so thresholds can be re-tested later. Target before any
-public use: fishing precision ≥ 0.8, recall ≥ 0.7. **Owner**: label, or review
-and approve an agent-labelled set (`labeller` records who).
+public use: ≥ 30 trips, fishing precision ≥ 0.8 and recall ≥ 0.7, overall and
+for each of `drift-anchor`, `troll-slow` and `troll-pelagic`. The report also
+counts the labelled fishing minutes the classifier called transit (what
+discarding transit would have lost) and the scored trips by dominant labelled
+mode, port and month; it carries counts and scores only. **Owner**: label, or
+review and approve an agent-labelled set (`labeller` records who). For an agent
+set, `python -m skippercast.fleet.ais label export` writes a minute-by-minute
+summary of each unlabelled trip under FLEET_VAR on the runner (the classifier's
+kind is a hint, never copied), the agent writes proposals, and `label import`
+checks them and posts them to `POST /api/fleet/jobs/labels`
+([runbook](../../operations/runbooks/fleet-labelling.md)).
 
 ## 12. Worker API
 

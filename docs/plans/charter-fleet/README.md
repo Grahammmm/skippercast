@@ -255,3 +255,9 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   geofence. Transit keeps statistics only, and `classifier_version` is now
   `c2-…`. Live rows are rewritten when the CF-45 processor and CF-47 backfill
   reprocess them after merge. The tests use synthetic tracks only.
+- 2026-10-11: N7 labelled validation set started (#570). N7a (branch
+  `claude/n7-validate`) adds the per-mode precision and recall gate, the
+  transit-lost minutes and coverage counts to `validate`, and `label export`
+  and `label import` for agent-proposed labels, with the
+  [labelling runbook](../../operations/runbooks/fleet-labelling.md). No labels
+  yet; N7b and the labelling run follow.
