@@ -73,6 +73,16 @@ jobs:
         run: |
           pnpm build
           node scripts/check_client.mjs
+      - name: Require a smoke-test address before deploying
+        env:
+          SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
+        run: |
+          # A deploy nobody smoke-tests can go green while the site is broken, so it fails here,
+          # before anything is written. Unconfigured Cloudflare (no token or account) still deploys nothing.
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -z "$SITE" ]; then
+            echo "::error::CLOUDFLARE_SITE_URL is unset, so this deploy could not be smoke-tested. Set the repository variable (docs/cloudflare.md)."
+            exit 1
+          fi
       - name: Back up D1, migrate and deploy
         id: deploy
         env:
@@ -143,10 +153,6 @@ jobs:
           # unset means off (server/fleet/settings.ts). docs/plans/charter-fleet/design.md § 16.
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           FLEET_MAP_ENABLED: ${{ vars.FLEET_MAP_ENABLED }}
-          # Front-end rebuild switch, copied into the Worker's vars whenever set: "true" serves the new
-          # landing at / and app at /map, "false" the v1 shell; unset means the default in
-          # deployments/production.json (on since FE-60). ?ui=v1 forces v1 per request for one release (FE-61 removes it).
-          UI_V2: ${{ vars.UI_V2 }}
           # FE-84: coast snapshot sources served from SkipperCast's feeds (nearshore, water-quality, ocean, history),
           # copied whenever set; unset keeps all of them on the Fish Worker bridge. docs/coastal-service.md.
           COAST_FEEDS: ${{ vars.COAST_FEEDS }}
@@ -164,7 +170,7 @@ jobs:
         env:
           SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
         run: |
-          if [ -z "$SITE" ]; then echo "::warning::Set the CLOUDFLARE_SITE_URL repository variable so deploys are smoke-tested."; exit 0; fi
+          if [ -z "$SITE" ]; then echo "::error::CLOUDFLARE_SITE_URL is unset, so the deploy was not smoke-tested."; exit 1; fi
           bash scripts/smoke_test.sh "$SITE"
       - name: Roll back after a failed smoke test
         if: failure() && steps.deploy.outputs.deployed == 'true'
@@ -239,7 +245,7 @@ jobs:
         env:
           SITE: ${{ vars.CLOUDFLARE_SITE_URL }}
         run: |
-          if [ -z "$SITE" ]; then exit 0; fi
+          if [ -z "$SITE" ]; then echo "::error::CLOUDFLARE_SITE_URL is unset, so the rollback was not smoke-tested."; exit 1; fi
           sleep 10
           # "" skips the build match: this job builds nothing, so dist/client is absent.
           bash scripts/smoke_test.sh "$SITE" ""

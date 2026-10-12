@@ -43,7 +43,7 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
    - `WATCHDOG_GITHUB_TOKEN`: optional, for the watchdog. Create a fine-grained GitHub token for this repository only, with **Actions: Read and write**.
    - `R2_PUBLISH_TOKEN`: recommended. An R2-only token for the data jobs; see [scoped tokens](#scoped-tokens-for-the-data-jobs). Until it exists, they fall back to `CLOUDFLARE_API_TOKEN`.
 4. **Add repository variables** on the same page, under the Variables tab:
-   - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`, for the post-deploy check;
+   - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`: required. The post-deploy smoke test checks it, and a deploy fails before writing anything while it is unset;
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
 5. **Run it.** Go to **Actions → Deploy to Cloudflare → Run workflow**, or merge to `main` (deploys once Offline checks pass). The staging site appears at the workers.dev URL. Feeds start mirroring to R2 on the next live cycle (within 30 minutes) and the next daily run (4:17 a.m. Pacific). After that, `curl -sI <staging>/feeds/conditions/latest.json` shows `X-Feed-Source: r2`.
 

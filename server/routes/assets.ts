@@ -5,7 +5,7 @@ import {Hono} from 'hono';
 import type {Context, Handler} from 'hono';
 import type {AppEnv} from '../env.ts';
 
-// The v2 pages. FE-61 removed the v1 shell and the UI_V2 / `?ui=` switch: `/`
+// The v2 pages. FE-61 removed the v1 shell and the front-end switch (`?ui=` too): `/`
 // is the landing, or the app when the link names an area, and `/map` is the app.
 export const V2_SHELLS = Object.freeze({landing: '/landing.html', app: '/app.html'});
 /**
