@@ -170,6 +170,19 @@ class StationFailoverTests(TestCase):
         row = ordered_source(["1", "2"], read, NOW, {"station": "2", "data": {"sample_at": (NOW - timedelta(hours=3)).isoformat()}})
         self.assertEqual((row["status"], row["station"], row["fallback_for"]), ("retained", "2", "1"))
 
+    def test_bad_clock_and_same_reading_ties(self):
+        def reader(sample):
+            def read(station, old):
+                return {"kind": "observation", "status": "stale", "max_age_hours": 2, "data": {"sample_at": sample}}
+            return read
+        dated = {"station": "1", "data": {"sample_at": (NOW - timedelta(hours=6)).isoformat()}}
+        # A reading stamped 3 h in the future is a bad clock and cannot displace dated retained data.
+        row = ordered_source(["1"], reader((NOW + timedelta(hours=3)).isoformat()), NOW, dated)
+        self.assertEqual((row["status"], row["data"]), ("retained", dated["data"]))
+        # The same reading again is served as the station's own stale read, not relabelled retained.
+        row = ordered_source(["1"], reader(dated["data"]["sample_at"]), NOW, dated)
+        self.assertEqual((row["status"], row["station"]), ("stale", "1"))
+
     def test_error_primary_retains_inside_max_age_then_falls_back(self):
         old = {"station": "46215", "data": {"station": "46215", "sample_at": NOW.isoformat()}}
         row = self.collect_live({"46215": ValueError("outage")},

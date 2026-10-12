@@ -27,11 +27,14 @@ def fresh(row, now):
 
 
 def data_age(data, now):
-    """Hours since the data's own clock (observation, issue, or a prediction's coverage end); never a retrieval time."""
+    """Hours since the data's own clock (observation, issue, or a prediction's coverage end); never a retrieval time.
+
+    An observation or issue time more than an hour ahead is a bad clock, so it counts as unknown.
+    """
     for key in ("sample_at", "issued_at", "coverage_end"):
         age = age_hours((data or {}).get(key), now)
         if age is not None:
-            return age
+            return None if age < -1 and key != "coverage_end" else age
     return None
 
 
