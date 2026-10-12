@@ -8,7 +8,7 @@ import montereyForecast from './fixtures/brief/monterey-forecast.json' with {typ
 const {buildDaily} = await import('../packages/coast/src/daily.ts');
 const {slo} = await import('../packages/coast/src/counties.ts');
 const {PROFILE_TABLE, PROFILES} = await import('../web/profile.ts');
-const {buildBrief, buildCoastBrief, buildRegionalBrief, fleetLine, regionalReport, TILE_LIMIT_MS, LOCAL_REPORT_LINE} = await import('../web/brief/model.ts');
+const {buildBrief, buildCoastBrief, buildRegionalBrief, fleetLine, regionalReport, sourceGaps, TILE_LIMIT_MS, LOCAL_REPORT_LINE} = await import('../web/brief/model.ts');
 
 // Same clock as tests/test_coast_data.mjs: the fixture report is fresh ten minutes after it was assembled.
 const now = new Date(Date.parse(report.generatedAt) + 10 * 60_000);
@@ -163,4 +163,35 @@ test('fleet line: the daily feed\'s landing names pick the region\'s own trips, 
   const morro = {...montereyPlace, name: 'Morro Bay & Avila', port: undefined};
   assert.equal(buildRegionalBrief({daily, forecast: montereyForecast, place: morro, profile: 'boat', date, now}).fleet?.count, 2);
   assert.equal(buildBrief({context: morroContext, coast: {report, county: slo}, regional: {daily, forecast: montereyForecast, place: morro}, profile: 'boat', date, now}).fleet?.count, 2);
+});
+
+test('P5 gaps: each brief source that is not ok is named with its own status and the data\'s age, never merged or filled', () => {
+  const s = montereyDaily.sources;
+  const hoursAgo = h => new Date(now.getTime() - h * 3_600_000).toISOString();
+  const daily = {...montereyDaily, sources: {...s,
+    'buoy-46042': {...s['buoy-46042'], status: 'stale', data: {...s['buoy-46042'].data, observations: [{time: hoursAgo(4), WTMP: 14}]}},
+    tides: {...s.tides, status: 'retained', data_retrieved_at: hoursAgo(30)},
+    'alerts-PZZ535': {...s['alerts-PZZ535'], status: 'failed', data: null},
+    'buoy-46011': {id: 'buoy-46011', name: 'NOAA NDBC 46011 observations', kind: 'observation', url: '', checked_at: now.toISOString(), status: 'missing'},
+    // Map grids and rule-page watches report their own gaps; the brief does not list them.
+    sst: {id: 'sst', name: 'SST grid', kind: 'grid', url: '', checked_at: now.toISOString(), status: 'failed'},
+  }};
+  const gaps = sourceGaps(daily, now);
+  assert.deepEqual(gaps.map(g => [g.id, g.status]), [['buoy-46042', 'stale'], ['tides', 'retained'], ['alerts-PZZ535', 'failed'], ['buoy-46011', 'missing']]);
+  assert.equal(gaps[0].text, 'NOAA NDBC 46042 observations: stale, newest reading 4 h old.', 'the age is the observation\'s, not the check\'s');
+  assert.equal(gaps[1].text, 'NOAA Monterey reference tide predictions: latest check failed; showing the last good reading, 30 h old.');
+  assert.equal(gaps[2].text, 'NWS PZZ535 advisories: latest check failed; no earlier reading on hand.');
+  assert.equal(gaps[3].text, 'NOAA NDBC 46011 observations: not published in this feed.');
+  const brief = buildRegionalBrief({daily, forecast: montereyForecast, place: montereyPlace, profile: 'boat', date, now});
+  assert.deepEqual(brief.gaps, gaps);
+  assert.ok(brief.missing.includes('Current marine alert check unavailable'), 'the model\'s own list still says what it could not check');
+  assert.deepEqual(buildRegionalBrief({...regional, profile: 'boat', date, now}).gaps, [], 'all ok: no gaps');
+});
+
+test('P5 gaps: a backup is named by its own station; a backup serving ok is no gap', () => {
+  const s = montereyDaily.sources;
+  const backup = {...s['buoy-46042'], station: '46011', fallback_for: '46042', data: {...s['buoy-46042'].data, station: '46011'}};
+  assert.deepEqual(sourceGaps({...montereyDaily, sources: {...s, 'buoy-46042': backup}}, now), []);
+  const [gap] = sourceGaps({...montereyDaily, sources: {...s, 'buoy-46042': {...backup, status: 'stale'}}}, now);
+  assert.match(gap.text, /^NDBC 46011 \(backup for 46042\): stale,/);
 });

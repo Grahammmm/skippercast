@@ -19,7 +19,8 @@ import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation,
 import {profileSemantics, type Profile} from '../profile.ts';
 import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import {ndbcStationURL, sourceStation, stationText, tidePredictionURL} from '../station-label.ts';
-import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
+import {ageText} from '../confidence.ts';
+import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, SourceGap, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -61,7 +62,9 @@ function nearest<T extends {at: string}>(points: readonly T[], at: number): T | 
 
 export type BriefContext = {report: Report; county: County; area: Area; profile: Profile; now: Date; at?: string; reports?: readonly LandingReport[]; port?: string | readonly string[]; tideDatum?: string;
   /** The primary buoy's id when the regional feed's buoy reading came from a backup station (#554). */
-  buoyBackupFor?: string | null};
+  buoyBackupFor?: string | null;
+  /** The feed sources behind the brief that are not ok (sourceGaps); none when absent. */
+  gaps?: readonly SourceGap[]};
 
 /** Map buildDaily's output to the brief, adding tiles, caveat, notice and fleet line. */
 export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: BriefContext): Brief {
@@ -127,7 +130,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area, now), fleet: fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now),
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, gaps: context.gaps ?? [], tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 
@@ -215,7 +218,7 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
   const chlorophyll = chlorophyllNear(input.daily, area.lat, area.lon);
   const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
   const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'coast-report', {...input, report, area});
+  return briefFromDaily(daily, 'coast-report', {...input, report, area, gaps: input.daily ? sourceGaps(input.daily, input.now) : []});
 }
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
@@ -280,7 +283,43 @@ export type RegionalBriefInput = {daily: RegionalDailyFeed; forecast: RegionalFo
 export function buildRegionalBrief(input: RegionalBriefInput): Brief {
   const {report, county, area, tideDatum, buoyBackupFor} = regionalReport(input.daily, input.forecast, input.place);
   const daily = buildDaily(report, county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum, buoyBackupFor});
+  return briefFromDaily(daily, 'regional', {report, county, area, profile: input.profile, now: input.now, at: input.at, reports: input.daily.reports ?? [], port: input.daily.landing_names ?? input.place.port, tideDatum, buoyBackupFor,
+    gaps: sourceGaps(input.daily, input.now)});
+}
+
+/** The feed kinds the brief reads: buoys, tide predictions and marine alerts. Map layers (grids) and rule-page watches report their own gaps. */
+const BRIEF_KINDS: ReadonlySet<string> = new Set(['observation', 'prediction', 'advisory']);
+
+/** The data's own clock: a buoy's newest row, else when the data shown was retrieved. Never the check time. */
+function dataClock(source: RegionalSource): string | null {
+  const rows = source.data?.observations;
+  const times = Array.isArray(rows) ? rows.map(row => Date.parse(String((row as {time?: unknown})?.time))).filter(Number.isFinite) : [];
+  if (times.length) return new Date(Math.max(...times)).toISOString();
+  return source.data_retrieved_at ?? source.last_success_at ?? null;
+}
+
+/**
+ * Each brief source that is not ok, named by the station it describes and why: stale with its
+ * data's age, retained (last good after a failed check), failed with nothing on hand, or missing
+ * from the feed. A backup serving ok is not a gap; its tile already names it. Statuses stay
+ * distinct and nothing is filled in.
+ */
+export function sourceGaps(feed: RegionalDailyFeed, now: Date): SourceGap[] {
+  const gaps: SourceGap[] = [];
+  for (const source of Object.values(feed.sources)) {
+    if (!source || source.status === 'ok' || !BRIEF_KINDS.has(source.kind)) continue;
+    const station = sourceStation(source);
+    const label = station?.backupFor ? `${source.kind === 'prediction' ? 'NOAA' : 'NDBC'} ${stationText(station)}` : source.name;
+    const clock = dataClock(source), ageMs = clock ? now.getTime() - Date.parse(clock) : NaN;
+    const age = Number.isFinite(ageMs) ? ageText(ageMs) : null;
+    const text = source.status === 'stale' ? `stale, newest reading ${age ? `${age} old` : 'of unknown age'}`
+      : source.status === 'retained' ? `latest check failed; showing the last good reading${age ? `, ${age} old` : ''}`
+      : source.status === 'failed' ? 'latest check failed; no earlier reading on hand'
+      : source.status === 'missing' ? 'not published in this feed'
+      : source.status;
+    gaps.push({id: source.id, label, status: source.status, text: `${label}: ${text}.`});
+  }
+  return gaps;
 }
 
 export type BriefInput = {

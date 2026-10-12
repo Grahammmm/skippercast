@@ -18,7 +18,7 @@
 // Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order. The Reports view (FE-52) covers the brief and
 // the map; the stage stays mounted beneath it.
-import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, BriefGaps, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -48,6 +48,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
       <WhereToLook ranking={ranking} />
       <LowerExposure brief={brief} />
       <RunLine brief={brief} ranking={ranking} now={now} />
+      <BriefGaps brief={brief} />
       <Caveat brief={brief} />
       <BriefLinks brief={brief} />
       <BriefFooter />

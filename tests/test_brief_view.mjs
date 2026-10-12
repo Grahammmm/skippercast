@@ -271,3 +271,27 @@ test('#473: the brief asks for the coast report where the region binds one, with
   other.destroy();
   assert.equal(calls.length, before);
 });
+
+test('P5 gaps: an unreadable feed says so and the headline stops waiting; unreadable both, readings unavailable', async () => {
+  const {loadDailyFeed, dailyFeed, feedGaps, FEED_GAP, Headline, BriefGaps, render, h} = await load();
+  const daily = async path => path.startsWith('/feeds/data/') ? new Response(JSON.stringify(montereyDaily), {status: 200}) : new Response('', {status: 503});
+  await loadDailyFeed('monterey-point-sur', daily);
+  assert.deepEqual(feedGaps.value, [FEED_GAP.conditions]);
+  assert.match(render(h(BriefGaps, {brief: null})), /Live buoy feed could not be read/);
+  await loadDailyFeed('monterey-point-sur', async () => new Response('', {status: 503}));
+  assert.deepEqual(feedGaps.value, [FEED_GAP.both]);
+  assert.match(render(h(Headline, {brief: null})), /Readings unavailable\./);
+  await loadDailyFeed('monterey-point-sur', async () => new Response(JSON.stringify(montereyDaily), {status: 200}));
+  assert.deepEqual(feedGaps.value, []);
+  assert.match(render(h(Headline, {brief: null})), /Waiting for readings\./);
+  dailyFeed.value = null;
+});
+
+test('P5 gaps: source gaps stay visible; what the model could not check folds into a disclosure', async () => {
+  const {BriefGaps, render, h} = await load();
+  const html = render(h(BriefGaps, {brief: {gaps: [{id: 'tides', label: 'NOAA tides', status: 'failed', text: 'NOAA tides: latest check failed; no earlier reading on hand.'}],
+    missing: ['Tide curve unavailable for this date', 'Harbor entrance and full return route need a separate check']}}));
+  assert.match(html, /<li data-status="failed">NOAA tides: latest check failed; no earlier reading on hand\.<\/li>/);
+  assert.match(html, /<details class="app-gaps-more"><summary>Not checked in this brief \(2\)<\/summary>/);
+  assert.equal(render(h(BriefGaps, {brief: {gaps: [], missing: []}})), '', 'nothing missing renders nothing');
+});

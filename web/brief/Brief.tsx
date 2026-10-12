@@ -10,8 +10,9 @@
 // forecast point nearest the region centre) and, where web/coast-data.ts
 // admits a coast report for a bound place, that report. Without the forecast
 // the wind and swell tiles read unavailable rather than guessed; with an old
-// run they read stale with its age. Before the feed loads, or when it fails,
-// the brief keeps its empty state.
+// run they read stale with its age. Before the feed loads the brief keeps its
+// empty state; when a feed cannot be read, BriefGaps says which and the
+// headline stops waiting.
 import type {ComponentChildren} from 'preact';
 import {effect, signal} from '@preact/signals';
 import {counties} from '../../packages/coast/src/counties.ts';
@@ -37,6 +38,18 @@ export const dailyFeed = signal<RegionalDailyFeed | null>(null);
 /** The region's daily feed (`data` branch `regions/<id>/latest.json`): tides, advisories, chlorophyll, landing reports and their landing names. */
 export const dailyFeedPath = (id: string): string => `/feeds/data/regions/${encodeURIComponent(id)}/latest.json`;
 
+/**
+ * Why the brief's feeds are incomplete, one line per feed that could not be read (missing,
+ * unreadable, wrong schema or another region's); empty before loading and when both loaded.
+ */
+export const feedGaps = signal<readonly string[]>([]);
+
+export const FEED_GAP = {
+  both: 'Conditions feeds could not be read: no buoy, tide or marine alert readings. The map, rules and trip tools still work.',
+  daily: 'Daily feed could not be read: tides and marine alerts are missing.',
+  conditions: 'Live buoy feed could not be read: buoy readings come from the once-a-day run.',
+} as const;
+
 async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promise<RegionalDailyFeed | null> {
   try {
     const response = await fetchFn(path);
@@ -61,6 +74,7 @@ export function mergeFeeds(daily: RegionalDailyFeed | null, conditions: Regional
 export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
   const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
   dailyFeed.value = mergeFeeds(daily, conditions);
+  feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [FEED_GAP.daily] : !conditions ? [FEED_GAP.conditions] : [];
   return dailyFeed.peek();
 }
 
@@ -144,7 +158,8 @@ export function currentBrief(now: Date): BriefModel | null {
     limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
 }
 
-export const Headline = ({brief}: {brief: BriefModel | null}) => <h1>{brief?.headline ?? 'Waiting for readings.'}</h1>;
+export const Headline = ({brief}: {brief: BriefModel | null}) =>
+  <h1>{brief?.headline ?? (feedGaps.value.includes(FEED_GAP.both) ? 'Readings unavailable.' : 'Waiting for readings.')}</h1>;
 
 export const Deck = ({brief}: {brief: BriefModel | null}) => brief?.deck ? <p class="app-deck">{brief.deck}</p> : null;
 
@@ -164,6 +179,32 @@ export function LowerExposure({brief}: {brief: BriefModel | null}) {
       <span class="ui-eyebrow">Lower exposure</span>{' '}
       {w ? <><span class="ui-mono">{clock(w.start, tz)}–{clock(w.end, tz)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : brief.limits?.custom ? 'No lower-exposure window within your limits for this day.' : 'No lower-exposure window screened for this day.'}
     </p>
+  );
+}
+
+/**
+ * What the brief is missing and why. Feeds that could not be read and brief sources that are not
+ * ok (stale, retained, failed or missing, each named by its station) stay visible; what the day's
+ * model could not check sits in a disclosure, so the list never becomes a caveat wall.
+ */
+export function BriefGaps({brief}: {brief: BriefModel | null}) {
+  const feeds = feedGaps.value, sources = brief?.gaps ?? [], unchecked = brief?.missing ?? [];
+  if (!feeds.length && !sources.length && !unchecked.length) return null;
+  return (
+    <div class="app-gaps">
+      {feeds.length || sources.length ? (
+        <ul class="app-gaps-list" aria-label="Missing readings">
+          {feeds.map(text => <li key={text}>{text}</li>)}
+          {sources.map(gap => <li key={gap.id} data-status={gap.status}>{gap.text}</li>)}
+        </ul>
+      ) : null}
+      {unchecked.length ? (
+        <details class="app-gaps-more">
+          <summary>Not checked in this brief ({unchecked.length})</summary>
+          <ul>{unchecked.map(text => <li key={text}>{text}</li>)}</ul>
+        </details>
+      ) : null}
+    </div>
   );
 }
 
