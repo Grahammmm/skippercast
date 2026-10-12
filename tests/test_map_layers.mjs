@@ -11,7 +11,7 @@ import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markScreen, markStyle} from '../web/map/marks.ts';
 import {assessScreen} from '../web/map/habitat.ts';
-import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL} from '../web/map/coastline.ts';
+import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
 import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -469,4 +469,9 @@ test('FE-82: in Terrain the protected areas and reef marks drape without the Cha
   // A feed that goes leaves the terrain.
   setTerrainLayer('marks', null);
   assert.equal(land.overlays.has('marks'), false);
+});
+
+test('the map loads the full shoreline at the zoom the published overview was simplified for (#617)', () => {
+  const overview = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline-overview.geojson', import.meta.url), 'utf8'));
+  assert.equal(overview.provenance.overview.max_zoom, SHORELINE_DETAIL_ZOOM);
 });

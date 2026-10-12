@@ -27,6 +27,7 @@ removed).
 from pathlib import Path
 import hashlib
 import math
+from xml.sax.saxutils import escape
 
 from .contracts import atomic_json, read_json, within
 from .shoreline import overview_shoreline
@@ -87,7 +88,7 @@ def poster_svg(overview, source):
     credit = overview['provenance'].get('attribution', 'NOAA NGS CUSP shoreline')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {round(x1 - x0)} {round(y1 - y0)}" '
             f'data-zoom="{POSTER_ZOOM}" data-west="{west}" data-north="{north}" data-sha256="{source["sha256"]}">'
-            f'<title>{credit}</title><path d="{"".join(parts)}"/></svg>\n')
+            f'<title>{escape(credit)}</title><path d="{"".join(parts)}"/></svg>\n')
 
 
 def _publish_text(target, original, relative, form):
