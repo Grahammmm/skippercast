@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/coastal-terrain-only-science-review-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "scope", "facts_digest", "independent", "reviewer_id", "decision", "checked_at", "valid_until", "holds_added", "synthetic"],
+  "properties": {
+    "schema": {"const": "coastal-terrain-only-science-review-v1"},
+    "scope": {"const": "internal-terrain-only-scientific-review"},
+    "facts_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "independent": {"const": true}, "reviewer_id": {"type": "string", "minLength": 1},
+    "decision": {"const": "accept"},
+    "checked_at": {"type": "string", "format": "date-time"},
+    "valid_until": {"type": "string", "format": "date-time"},
+    "holds_added": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "synthetic": {"type": "boolean"}
+  }
+}

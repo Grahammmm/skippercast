@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence-bound source and normalized vertical semantics",
+  "type": "object",
+  "required": [
+    "schema",
+    "sign",
+    "units",
+    "datum",
+    "scale",
+    "offset",
+    "scale_offset_applied",
+    "evidence",
+    "conflicts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "sign": {
+      "enum": [
+        "positive_up",
+        "positive_down"
+      ]
+    },
+    "units": {
+      "enum": [
+        "m",
+        "ft"
+      ]
+    },
+    "datum": {
+      "enum": [
+        "MLLW",
+        "MSL",
+        "NAVD88",
+        "ellipsoid:WGS84"
+      ]
+    },
+    "scale": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "offset": {
+      "type": "number"
+    },
+    "scale_offset_applied": {
+      "type": "boolean"
+    },
+    "schema": {
+      "const": "vertical-v1"
+    },
+    "datum_realization": {
+      "type": "string"
+    },
+    "storage": {
+      "const": "normalized_depth"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "raster_header",
+              "operator_declaration",
+              "publisher_doc"
+            ]
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "header_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "facts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sign",
+              "units",
+              "datum",
+              "scale",
+              "offset",
+              "scale_offset_applied"
+            ],
+            "properties": {
+              "sign": {
+                "enum": [
+                  "positive_up",
+                  "positive_down"
+                ]
+              },
+              "units": {
+                "enum": [
+                  "m",
+                  "ft"
+                ]
+              },
+              "datum": {
+                "enum": [
+                  "MLLW",
+                  "MSL",
+                  "NAVD88",
+                  "ellipsoid:WGS84"
+                ]
+              },
+              "scale": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "offset": {
+                "type": "number"
+              },
+              "scale_offset_applied": {
+                "type": "boolean"
+              },
+              "datum_realization": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "ref": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "raster_header"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "source_sha256",
+                "header_sha256",
+                "facts"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_vertical",
+        "source_vertical_sha256",
+        "operations",
+        "datum_transform"
+      ],
+      "properties": {
+        "source_vertical": {
+          "$ref": "#"
+        },
+        "source_vertical_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "datum_transform": {
+          "const": false
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "storage"
+        ]
+      },
+      "then": {
+        "required": [
+          "lineage"
+        ],
+        "properties": {
+          "sign": {
+            "const": "positive_down"
+          },
+          "units": {
+            "const": "m"
+          },
+          "scale": {
+            "const": 1
+          },
+          "offset": {
+            "const": 0
+          },
+          "scale_offset_applied": {
+            "const": true
+          }
+        }
+      }
+    }
+  ],
+  "$id": "https://skippercast.com/schemas/vertical-v1.schema.json"
+}
