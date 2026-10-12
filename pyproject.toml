@@ -89,3 +89,4 @@ markers = [
 [tool.setuptools.package-data]
 "skippercast.coastal.resources" = ["*.schema.json"]
 "skippercast.coastal.coordinator" = ["policy.json"]
+"skippercast.coastal.render" = ["terrain_demo_*.js"]
