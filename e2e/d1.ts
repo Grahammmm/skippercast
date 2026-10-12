@@ -26,7 +26,9 @@ async function endpoint(): Promise<{url: string; token: string}> {
 export async function d1(sql: string): Promise<Record<string, unknown>[]> {
   const {url, token} = await endpoint();
   const res = await fetch(url, {method: 'POST', headers: {authorization: `Bearer ${token}`, 'content-type': 'application/json'}, body: JSON.stringify({sql})});
-  const body = await res.json() as {results?: Record<string, unknown>[]; error?: string};
+  const text = await res.text();
+  let body: {results?: Record<string, unknown>[]; error?: string};
+  try { body = JSON.parse(text); } catch { throw Error(`d1 failed (${res.status}): ${text.slice(0, 300)}\nSQL: ${sql.slice(0, 500)}`); }
   if (!res.ok) throw Error(`d1 failed (${res.status}): ${body.error ?? 'no reason'}\nSQL: ${sql.slice(0, 500)}`);
   return body.results ?? [];
 }

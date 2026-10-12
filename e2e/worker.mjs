@@ -14,7 +14,7 @@
 //
 // Arguments: <wrangler config> <persist dir> <port> [NAME:value vars...]
 import {randomBytes} from 'node:crypto';
-import {existsSync, readFileSync, writeFileSync} from 'node:fs';
+import {existsSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
 import {delimiter, join, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -39,6 +39,8 @@ const bindings = Object.fromEntries(vars.map(v => {
   const at = v.indexOf(':');
   return [v.slice(0, at), {type: 'plain_text', value: v.slice(at + 1)}];
 }));
+// A runtime that never comes up (a port clash, a bad bundle) would otherwise hang until Playwright's webServer timeout.
+const startup = setTimeout(() => { console.error('e2e/worker.mjs: the Worker did not start within 90 s'); process.exit(1); }, 90_000);
 const worker = await wrangler.unstable_startWorker({
   config,
   bindings,
@@ -57,6 +59,7 @@ async function database() {
   return mf.getD1Database('DB');
 }
 await database();
+clearTimeout(startup);
 
 // POST {sql}: every statement of the script in one D1 batch (a transaction); the rows of the last one.
 const token = randomBytes(24).toString('hex');
@@ -83,6 +86,7 @@ async function close() {
   if (closing) return;
   closing = true;
   sqlServer.close();
+  rmSync(SQL_FILE, {force: true});
   await worker.dispose().catch(() => {});
   process.exit(0);
 }
