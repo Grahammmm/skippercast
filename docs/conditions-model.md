@@ -9,6 +9,7 @@ reads it; none keeps its own copy of the numbers.
 | Text advisor comfort word (`server/advisor/answers/comfort.ts`, `conditions.ts`) | the comfort half of `hourScores` and `limitedScores`, `verdictFor`, `THRESHOLDS.capLimited` |
 | Brief lower-exposure windows (`packages/coast/src/assessment.ts`, `daily.ts`) | `withinWindowLimits`, `WINDOW_LIMITS`, `LONG_PERIOD_SWELL` |
 | Your limits (`packages/coast/src/limits.ts`, `web/limits.ts`) | `WINDOW_LIMITS` as the defaults |
+| Boat brief fishing time and return (`web/brief/run.ts`) | the brief's lower-exposure windows, so the turn-back time inherits every rule above; no score of its own |
 
 Every number is a disclosed planning heuristic tuned on the reference 23 ft
 boat. None is a sea-keeping calculation, a safety clearance or a catch

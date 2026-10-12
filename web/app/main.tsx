@@ -9,7 +9,7 @@ import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {configureStore, coast, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
-import {loadLimits} from '../limits.ts';
+import {loadCruise, loadLimits} from '../limits.ts';
 import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
@@ -21,8 +21,9 @@ configureStore({v2: true});
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry();
-// #542: the user's own comfort limits, kept on this device.
+// #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
 loadLimits();
+loadCruise();
 // The shell shows "No port chosen" until the address changes.
 if (!region.peek() && !coast.peek()) void savedHomeURL(location.href).then(next => location.replace(next));
 const width = matchMedia(NARROW_QUERY);

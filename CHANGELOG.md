@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The Boat brief now shows fishing time and when to turn back: the run from the harbor to the selected place to look (or the top pick) at the cruise speed you set, and the latest turn-back time to be in by the end of the lower-exposure window. The cruise speed is kept on this device, set in Your limits for Boat, and has no default: until you set one the brief asks for it. Distances are straight-line, so the run is at least that long; with no window (a marine alert, a stale forecast, or none inside your limits) the brief says why there is no return time.
 - The classic map is gone: `/` is always the landing (or the app when a link names an area), `/map` the app, and `/coast` opens the app's 3D view; `?ui=v1` and the `UI_V2` switch no longer change anything. The v1 shell, its coastal page and modules, Leaflet and the vendored map-test copies are deleted, and stylesheets are now minified (FE-61, part 1 of 3).
 - When no configured buoy or tide station is fresh, the feed now serves the newest reading it has: a station that just returned a 3 h old reading shows it as stale with its own name, instead of an older retained reading from another station. A station removed from the chain no longer keeps serving under the new chain (#565).
 - Configured buoy and tide roles can serve a reviewed fresh backup when their primary ages out. Source entries name the station used and its primary; feed health reports backup service as degraded without declaring an outage (#553). Legacy single-station feeds keep their existing format.

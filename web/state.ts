@@ -55,6 +55,8 @@ export const STORAGE_KEYS = {
   profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1', presentation: 'skippercast-presentation-v1',
   /** Your own comfort limits per profile (web/limits.ts); device only, never sent. */
   limits: 'skippercast-limits-v1',
+  /** Your cruise speed for the Boat brief's run times (web/limits.ts); device only, never sent, no default. */
+  cruise: 'skippercast-cruise-v1',
 } as const;
 /** `current` when ?current= names no listed source; the value stays in the URL (v1 rule, #402). */
 export const UNSUPPORTED = 'unsupported';
