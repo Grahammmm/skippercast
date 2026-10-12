@@ -94,10 +94,10 @@ Dated NOAA buoy readings, airport weather and measured water level come through 
 and carries WebSite and Organization JSON-LD; Google reads the site name from
 WebSite structured data on the home page
 ([site names](https://developers.google.com/search/docs/appearance/site-names)).
-The map names `https://skippercast.com/map`, also when `/` serves it for a shared
-link. `dist/robots.txt` allows every crawler and names `dist/sitemap.xml`, the
+The map stays `noindex`: with no area in the address it replaces itself with the
+saved home or the landing, so a crawler would see a redirect. `dist/robots.txt` allows every crawler and names `dist/sitemap.xml`, the
 public pages; while the advisor is on, the Worker's robots.txt names that
-sitemap and `/sitemap-advisor.xml`. Admin, chat, data and upload pages stay
+sitemap and `/sitemap-advisor.xml`. Admin, chat, data and upload pages also stay
 `noindex`. Google needs no extra file or markup for its AI features
 ([AI features](https://developers.google.com/search/docs/appearance/ai-features)),
 so there is no `llms.txt`. `tests/test_site_discovery.mjs` checks all of this.

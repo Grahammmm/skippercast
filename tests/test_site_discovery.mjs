@@ -1,5 +1,5 @@
 // Search and link-preview metadata: the landing's canonical, share card and
-// structured data (docs/web-app.md#search-and-link-previews), the map's canonical, and the
+// structured data (docs/web-app.md#search-and-link-previews), canonicals, and the
 // static robots.txt and sitemap.xml. FE-61 dropped v1's share card with
 // dist/index.html; these checks keep it from going missing again.
 import assert from 'node:assert/strict';
@@ -41,10 +41,11 @@ test('the landing names one canonical home, a share card and the site name', () 
   assert.ok(existsSync(new URL(byType.Organization.logo.slice(ORIGIN.length + 1), dist)), byType.Organization.logo);
 });
 
-test('the map and the pages served at two paths each name one canonical', () => {
+test('the pages served at two paths each name one canonical; the map and private pages stay noindex', () => {
+  // Without an area the app redirects to the saved home or the landing (web/app/main.tsx), so it stays out of search and the sitemap.
   const app = read('app.html');
-  assert.deepEqual(canonical(app), [`${ORIGIN}/map`], '/ also serves the app for shared links');
-  assert.ok(!meta(app, 'name', 'robots').length, 'the map is indexable');
+  assert.deepEqual(meta(app, 'name', 'robots'), ['noindex']);
+  assert.deepEqual(canonical(app), []);
   assert.equal(meta(app, 'name', 'description').length, 1);
   assert.deepEqual(canonical(read('sources.html')), [`${ORIGIN}/sources`]);
   assert.deepEqual(canonical(read('privacy.html')), [`${ORIGIN}/privacy`]);
@@ -58,9 +59,10 @@ test('robots.txt allows crawling and names the sitemap; the sitemap lists only i
   assert.match(xml, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
   assert.equal(new Set(locs).size, locs.length, 'no duplicates');
-  assert.ok(locs.includes(`${ORIGIN}/`) && locs.includes(`${ORIGIN}/map`));
+  assert.ok(locs.includes(`${ORIGIN}/`));
+  assert.ok(!locs.includes(`${ORIGIN}/map`), 'the map redirects without an area');
   // Every entry is a page in dist (by its served path) or a server-rendered public page, and none is noindex.
-  const served = {'/': 'landing.html', '/map': 'app.html', '/sources': 'sources.html', '/privacy': 'privacy.html'};
+  const served = {'/': 'landing.html', '/sources': 'sources.html', '/privacy': 'privacy.html'};
   const serverPages = new Set(['/report']);
   for (const loc of locs) {
     assert.ok(loc.startsWith(`${ORIGIN}/`), loc);

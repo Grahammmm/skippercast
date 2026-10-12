@@ -2,7 +2,6 @@
 <!-- The site's public pages (tests/test_site_discovery.mjs). The advisor's port, species and boat pages have their own sitemap, /sitemap-advisor.xml, while the advisor is on. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://skippercast.com/</loc></url>
-  <url><loc>https://skippercast.com/map</loc></url>
   <url><loc>https://skippercast.com/report</loc></url>
   <url><loc>https://skippercast.com/sources</loc></url>
   <url><loc>https://skippercast.com/species-research.html</loc></url>
