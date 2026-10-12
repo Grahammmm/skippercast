@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The classic map is gone: `/` is always the landing (or the app when a link names an area), `/map` the app, and `/coast` opens the app's 3D view; `?ui=v1` and the `UI_V2` switch no longer change anything. The v1 shell, its coastal page and modules, Leaflet and the vendored map-test copies are deleted, and stylesheets are now minified (FE-61, part 1 of 3).
+- When no configured buoy or tide station is fresh, the feed now serves the newest reading it has: a station that just returned a 3 h old reading shows it as stale with its own name, instead of an older retained reading from another station. A station removed from the chain no longer keeps serving under the new chain (#565).
 - Configured buoy and tide roles can serve a reviewed fresh backup when their primary ages out. Source entries name the station used and its primary; feed health reports backup service as degraded without declaring an outage (#553). Legacy single-station feeds keep their existing format.
 
 - When a backup station serves a buoy or tide reading, the landing, brief and daily evidence name that station as "backup for" the primary (for example "NDBC 46054 (backup for 46053)") and link to its own NOAA page, instead of showing it under the primary's name. Where the backup is also the other role's buoy, the reading says it is the same station rather than a separate measurement. Retained readings stay marked stale, and feeds without the new station fields read as before.
