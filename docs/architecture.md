@@ -1,6 +1,6 @@
 # Architecture
 
-SkipperCast is one shared mobile web app, one Cloudflare-style Worker, and a set of scheduled Python jobs that turn reviewed regional configuration and public data into published feeds. Regions are configuration, not forks: adding a coast is a data task. This page is the current map of the system; start here, then follow the links. The full documentation index is [docs/README.md](README.md).
+SkipperCast is one shared mobile web app (TypeScript and Preact, built by Vite), one Cloudflare-style Worker, and a set of scheduled Python jobs that turn reviewed regional configuration and public data into published feeds. Regions are configuration, not forks: adding a coast is a data task. This page is the current map of the system; start here, then follow the links. The full documentation index is [docs/README.md](README.md).
 
 > The older [system overview](archive/system-overview.md) is a superseded design snapshot. Detailed, dated rollout and research logs are in the [archive](archive/README.md).
 
@@ -60,7 +60,7 @@ flowchart LR
       cron["cron: watchdog"]
     end
     d1[("D1<br/>private records")]
-    web["Web app (dist/)<br/>fingerprinted static site"]
+    web["Web app (dist/client)<br/>Vite build of web/ and dist/*.html"]
     compiler["Region compiler<br/>skippercast.platform.build"]
     regions --> compiler --> web
     regions --> live & daily & seafloorjob
@@ -89,15 +89,18 @@ flowchart LR
 | Region compiler | `src/skippercast/platform/` | Validates contracts and survey qualifications; writes `dist/regions/index.json` and each region's `region.json`, `coverage.json`, `manifest.json`; CI fails if the output drifts from its sources | [Region pipeline](region-pipeline.md) |
 | Evidence pipeline | `src/skippercast/pipeline/`, `scripts/refresh_regions.py` | Collects buoys, weather, alerts, tides, satellite and radar ocean data, dated reports and regulations per region; keeps `ok/stale/missing/failed/retained` distinct; records a receipt per request; hash-bound regulation review | [Live conditions](live-conditions.md), [bite evidence](bite-evidence.md), [regulations](regulations.md), [dynamic habitat](dynamic-species-method.md), [verification](forecast-verification-quality.md) |
 | Forecast tile builder | `src/skippercast/forecast/`, `scripts/publish_forecasts.sh` | Builds wind and wave tiles from NOAA GFS / GFS-Wave and ECMWF IFS / WAM open data with byte-range GRIB reads; publishes the `forecasts` branch as a single commit and mirrors to R2 | [Forecast data](forecast-data.md) |
-| Forecast service | `server/model-api.js` | Answers Open-Meteo-style queries (`/api/om/v1/forecast`, `/marine`) from those tiles; also used by the Python jobs through `scripts/model_api.mjs` | API reference ([pending](#pending-documents)) |
+| Forecast service | `server/model-api.js` | Answers Open-Meteo-style queries (`/api/om/v1/forecast`, `/marine`) from those tiles; also used by the Python jobs through `scripts/model_api.mjs` | [API reference](engineering/api-reference.md) |
 | Seafloor pipeline | `src/skippercast/seafloor/`, `.github/workflows/seafloor.yml` | Original-survey ingestion, terrain and substrate grading, legal screening, regional PMTiles archives published to R2 with a checksum manifest and expiry, verified by HTTP Range read-back | [Seafloor](seafloor.md) |
 | Dated habitat atlas | `atlas/avila-point-estero-2026-09-20/`, `src/skippercast/atlas/` | The September 2026 Morro Bay–Avila research atlas and its GPX/notes exporter | [Atlas methodology](atlas-methodology.md) |
-| Web app | `dist/*.html`, `dist/*.js`, `dist/*.css`, `dist/vendor/` | Mobile map (Leaflet), Conditions, Export and Guide views; loads regions from `regions/index.json` and every feed through `/feeds/` | [Web app](web-app.md) |
-| Build | `scripts/build-worker.mjs`, `vite.config.mjs`, `scripts/client-build.mjs`, `scripts/check_client.mjs` | Vite bundles the pages, modules and stylesheets in `dist/` into hashed `dist/client/assets/`, static data is copied unchanged, pages are renamed with the build id; then bundles the Worker to `dist/server/index.js` with the reviewed regions, deployment policy, page map and build id compiled in | [README](../README.md) |
+| Web app | `web/` (Preact, `@preact/signals`), `dist/*.html`, `dist/*.js` | Landing page at `/` (`dist/landing.html`, `web/landing/`) and map app at `/map` (`dist/app.html`, entry `web/app/main.tsx`). URL-backed state in `web/state.ts`; shell and views in `web/app/`, the brief in `web/brief/`, map layers in `web/map/`, shared primitives in `web/ui/`. Loads regions from `regions/index.json` and every feed through `/feeds/` | [Web app](web-app.md) |
+| Chart | `web/map/chart.ts`, `web/map/layers.ts`, `web/map/style.ts` | MapLibre GL with PMTiles over a self-hosted Protomaps basemap; MapLibre loads by dynamic import on the first Chart view | [Web app](web-app.md), [ADR 0005](engineering/adr/0005-front-end-preact-vite-maplibre.md) |
+| Terrain 2D/3D | `packages/coast/`, `web/map/terrain.js`, `web/map/stage.ts` | Terrain renderer and coast report logic; loaded lazily on the first terrain choice and sharing the Chart's camera | [Web app](web-app.md), [seabed views](seabed-views.md) |
+| Offline | `dist/sw.js`, `dist/offline-pack.js`, `dist/offline-core.js`, `dist/coastal-offline-core.js`, `web/trip.ts` | Service worker with a build-id shell cache, saved trip pack (chart and base-map tiles, app files), coastal snapshot; saved data is marked and never shown as live | [Web app](web-app.md) |
+| Build | `scripts/build-worker.mjs`, `vite.config.mjs`, `scripts/client-build.mjs`, `scripts/check_client.mjs` | Vite bundles the pages (`dist/*.html`), the TypeScript in `web/` and the modules and stylesheets in `dist/` into hashed `dist/client/assets/`, static data is copied unchanged, pages are renamed with the build id; then bundles the Worker to `dist/server/index.js` with the reviewed regions, deployment policy, page map and build id compiled in | [README](../README.md) |
 | Worker | `server/index.ts`, `server/app.ts` (Hono), `server/routes/`, `server/middleware/` | TypeScript (`pnpm typecheck`). Routes pages (hashed shells served `no-store`), `/feeds/*`, the public API and the private API; identity only from a SkipperCast passkey session when `IDENTITY_PROVIDER=skippercast` (`server/auth.ts`); no request header is trusted | [Cloudflare](cloudflare.md), [production operations](production-operations.md) |
 | Feeds route | `server/feeds.ts` | `GET /feeds/<branch>/<path>`: R2 first (Range, ETag), then static assets for `tiles/`, then the GitHub branch; seafloor archives only with a current receipt | [Cloudflare](cloudflare.md) |
-| Private records | `db/schema.ts`, `drizzle/`, D1 binding `DB` | Saved trips, alert events and delivery receipts, push subscriptions, comfort feedback, rate-limit counters; owner-scoped; 90/365-day retention | [Production operations](production-operations.md) |
-| Trip alerts | `server/alert-policy.ts`, `server/trips.ts` (`checkTrips`, `deliver`), `scripts/check_saved_trips.py` | After each live cycle the job calls `POST /api/jobs/check` with a GitHub OIDC token (`server/job-auth.ts`); the Worker assesses due trips and sends Web Push with idempotent receipts | [Regional intelligence](regional-intelligence.md) |
+| Private records | `db/schema.ts`, `drizzle/`, D1 binding `DB` (public feeds and assets are in R2, binding `FEEDS`) | Accounts, saved trips, alert events and delivery receipts, push subscriptions, comfort feedback, rate-limit counters; owner-scoped; 90/365-day retention | [Production operations](production-operations.md) |
+| Trip alerts | Saved-trip alerts in the account menu (`web/app/TripAlerts.tsx`, `web/alerts.ts`); `server/alert-policy.ts`, `server/trips.ts` (`checkTrips`, `deliver`), `scripts/check_saved_trips.py` | After each live cycle the job calls `POST /api/jobs/check` with a GitHub OIDC token (`server/job-auth.ts`); the Worker assesses due trips and sends Web Push with idempotent receipts | [Regional intelligence](regional-intelligence.md) |
 | AI boat lookup | `server/boat-lookup.ts` | Signed-in only; asks an Anthropic model with web search for a named boat's specifications; the person confirms them | [Boat profile](boat-profile.md) |
 | Watchdog | `server/watchdog.ts` | Cloudflare cron every 15 minutes: if `conditions/latest.json` is over 45 minutes old and no live run is active, dispatch one | [Cloudflare](cloudflare.md) |
 | Legacy monitor | `src/skippercast/monitor/` | Morro Bay-only forecast collector and alert-lifecycle utilities used by the offline demo and a separate personal monitor; slated for archiving (guide P2-08) | [Monitor reference](monitor-reference.md) |
@@ -120,7 +123,7 @@ flowchart LR
 | `forecast-tiles.yml` | Manual | Forces a forecast tile rebuild |
 | `regional-legal-review.yml` | Mondays (Pacific), or on rule-source changes | Legal review packets for the Northern, Mendocino and San Francisco rules, as workflow artifacts |
 | `research-fish-survey.yml`, `research-substrate.yml`, `draft-region-rehearsal.yml` | Monthly, manual or on draft-region changes | Research evidence reviews as workflow artifacts; not product feeds |
-| `ci.yml` (Offline checks) | Every push and PR | Tests and generated-file drift checks ([testing](#pending-documents)) |
+| `ci.yml` (Offline checks) | Every push and PR | Tests and generated-file drift checks ([testing](engineering/testing.md)) |
 | `deploy-cloudflare.yml` | Push to `main` or manual | Cloudflare deployment |
 
 ## Evidence boundaries
@@ -135,6 +138,6 @@ The browser receives cached public feeds through the Worker, with direct-provide
 
 Add a regional contract and reviewed sources, run real imports, validate coverage and species relevance, then pass tests and an observed scheduled publication. [Region setup](regions.md) and the [quality gates](data-quality-rollout.md) define that process. Keep new areas partial until the evidence supports more precise claims.
 
-## Pending documents
+## Related documents
 
-Open pull requests add documents this page will link once they merge: the HTTP API reference, testing guide and threat model (`docs/engineering/api-reference.md`, `docs/engineering/testing.md`, `docs/legal/threat-model.md`, PR #52); runbooks and incident response (`docs/operations/`, PR #46, and `docs/operations/runbooks/rollback-release.md`, PR #26); the release process (`docs/operations/release-process.md`, PR #44); architecture decision records (`docs/engineering/adr/`, PR #39); and the data-rights register (`docs/legal/data-rights-register.md`, PR #33).
+[HTTP API reference](engineering/api-reference.md), [testing guide](engineering/testing.md), [threat model](legal/threat-model.md), [operations runbooks](operations/runbooks/rollback-release.md) and [release process](operations/release-process.md), [architecture decision records](engineering/adr/README.md), and the [data-rights register](legal/data-rights-register.md).
