@@ -130,3 +130,16 @@ test('the deploy workflow never runs a bare wrangler rollback', () => {
   assert.match(deploy, /previous_version=\$previous_version" >> "\$GITHUB_OUTPUT"/);
   assert.match(deploy, /build=\$build" >> "\$GITHUB_OUTPUT"/);
 });
+
+test('a deploy or rollback that cannot be smoke-tested fails instead of passing with a warning', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
+  // Every unset-address branch exits 1 with an error; none exits 0.
+  const unset = [...workflow.matchAll(/if \[ -z "\$SITE" \]; then (.*)/g)].map(m => m[1]);
+  assert.ok(unset.length >= 2, 'the deploy and rollback smoke steps check the address');
+  for (const branch of unset) assert.doesNotMatch(branch, /exit 0/, `unset CLOUDFLARE_SITE_URL passes: ${branch}`);
+  assert.doesNotMatch(workflow, /::warning::Set the CLOUDFLARE_SITE_URL/);
+  // The address is required before the deploy step writes anything.
+  const preflight = workflow.indexOf('Require a smoke-test address before deploying');
+  assert.ok(preflight > 0 && preflight < workflow.indexOf('id: deploy'), 'the address check runs before the deploy');
+  assert.match(workflow.slice(preflight, workflow.indexOf('id: deploy')), /-z "\$SITE" \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1/);
+});
