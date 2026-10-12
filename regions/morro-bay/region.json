@@ -228,7 +228,16 @@
     "nearshore_buoy": "46215",
     "nearshore_buoy_name": "Diablo Canyon",
     "offshore_buoy": "46028",
-    "offshore_buoy_name": "Cape San Martin offshore"
+    "offshore_buoy_name": "Cape San Martin offshore",
+    "roles": {
+      "offshore_buoy": {
+        "stations": [
+          "46028",
+          "46011"
+        ],
+        "evidence": "catalog/station-failover.json"
+      }
+    }
   },
   "mpa": {
     "bounds": [

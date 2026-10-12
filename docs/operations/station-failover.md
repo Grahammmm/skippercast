@@ -43,6 +43,8 @@ Buoy priorities apply to live observations/spectra and daily observations.
 Tide priorities apply to the daily prediction source; the live feed collects
 only buoys. Context-specific tide collection is not introduced here.
 Review exact inventories, coordinates, exposure and endpoints before adding
-another backup. The first rollout and remaining single-station decisions are
-recorded in `catalog/station-failover.json`. Predictions remain reference
+another backup. The first rollout, Morro Bay's offshore chain (46028 then
+46011) and the remaining single-station decisions are recorded in
+`catalog/station-failover.json`; `tests/contract/test_station_failover_evidence.py`
+fails when a region names a backup without a reviewed choice there. Predictions remain reference
 water levels, never local current or entrance-clearance claims.

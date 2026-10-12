@@ -25,7 +25,7 @@ class RunIdTests(TestCase):
 class FeedModelTests(TestCase):
     def test_live_feed_carries_run_id(self):
         def fake_source(ident, name, kind, url, max_age, loader, collected, previous):
-            return {'id': ident, 'status': 'ok', 'url': url, 'data': {'sample_at': '2026-09-21T18:26:00Z'}}
+            return {'id': ident, 'status': 'ok', 'url': url, 'max_age_hours': max_age, 'data': {'sample_at': '2026-09-21T18:26:00Z'}}
         with patch('skippercast.pipeline.live.source', side_effect=fake_source), \
                 patch.dict(os.environ, {'GITHUB_RUN_ID': '99'}):
             data = live(datetime(2026, 9, 21, 19, tzinfo=timezone.utc))
