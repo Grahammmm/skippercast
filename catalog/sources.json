@@ -2079,6 +2079,316 @@
         "Name and port matches stay leads until a stable key or an admin decision confirms them."
       ],
       "allowed_hosts": []
+    },
+    {
+      "id": "ndbc-history",
+      "name": "NDBC standard-met annual archives and 45-day realtime files (recorded history)",
+      "provider": "NOAA National Data Buoy Center",
+      "needs": [
+        "wave-observations",
+        "weather-observations"
+      ],
+      "documentation_url": "https://www.ndbc.noaa.gov/faq/dataindex.shtml",
+      "adapter": "ndbc-history",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-07",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA National Data Buoy Center; 46215 measured by CDIP/Scripps",
+        "terms_url": "https://www.weather.gov/disclaimer/",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "U.S. government work. Monthly bands and hourly means are SkipperCast aggregations, credited to NOAA/NDBC without implied endorsement. Pending owner confirmation (FE-42)."
+      },
+      "authenticity": {
+        "basis": "Primary publisher archive index and annual files; SHA-256 recorded per file",
+        "transport": "HTTPS; www.ndbc.noaa.gov only"
+      },
+      "coverage_note": "46215 (2004 onward) and 46028 (1983 onward) as each station's archive index lists them; missing years and hours stay missing.",
+      "limitations": [
+        "Descriptive recorded history, not a climatology, forecast or catch probability.",
+        "Realtime files are automated-QC; annual archives are post-processed and can be revised."
+      ],
+      "allowed_hosts": [
+        "www.ndbc.noaa.gov"
+      ]
+    },
+    {
+      "id": "protomaps-basemap",
+      "name": "Protomaps basemap (OpenStreetMap vector tiles), self-hosted coastal extract",
+      "provider": "Protomaps, from OpenStreetMap contributors and Natural Earth",
+      "needs": [],
+      "documentation_url": "https://docs.protomaps.com/basemaps/downloads",
+      "adapter": "pmtiles-extract",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "ODbL-1.0",
+        "attribution": "© OpenStreetMap contributors, © Protomaps",
+        "terms_url": "https://www.openstreetmap.org/copyright",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "ODbL permits commercial use with attribution. The whole archive is publicly downloadable from /feeds/tiles/basemap/ (CORS open), so it is redistributed as an ODbL derivative database: keep the attribution and ODbL notice with it, and offer the extract itself under ODbL (share-alike). The data-rights register's B6 marks OpenStreetMap commercial use unknown (tile-service policy); this self-hosted extract's commercial status is for the owner to confirm."
+      },
+      "authenticity": {
+        "basis": "Protomaps daily planet build named by date, with its listed size and BLAKE3 hash recorded in tiles/basemap/manifest.json",
+        "transport": "HTTPS range reads from build.protomaps.com by scripts/basemap/build_basemap.sh (FE-10); served from R2 under /feeds/tiles/basemap/"
+      },
+      "coverage_note": "Chart basemap (design § 4): zooms 0-10 over the California coast, zooms 11-14 inside each active and preview region's bounds; MapLibre overzooms past 14.",
+      "limitations": [
+        "OpenStreetMap land, water and road features as mapped by volunteers; not a nautical chart and not for navigation.",
+        "Refreshed by hand about quarterly; the archive name carries the Protomaps build date."
+      ],
+      "allowed_hosts": [
+        "build.protomaps.com",
+        "build-metadata.protomaps.dev"
+      ]
+    },
+    {
+      "id": "noaa-cusp-shoreline",
+      "name": "NOAA NGS Continually Updated Shoreline Product (CUSP)",
+      "provider": "NOAA National Geodetic Survey",
+      "needs": [],
+      "documentation_url": "https://nsde.ngs.noaa.gov/more.html",
+      "adapter": "cusp-vector-tiles",
+      "review_status": "approved",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA National Geodetic Survey · CUSP shoreline",
+        "terms_url": "https://oceanservice.noaa.gov/about/faq.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NOAA-created features are U.S. government public domain. CUSP also carries outside contributors; scripts/shoreline/import_cusp.py keeps only features whose creator (DAT_SET_CR) is NOAA and counts the rest for each region's review."
+      },
+      "authenticity": {
+        "basis": "NOAA Shoreline Data Explorer vector tiles; tile receipts (bytes, SHA-256) recorded in each catalog/shoreline/<region>.geojson",
+        "transport": "HTTPS; exact provider host only"
+      },
+      "coverage_note": "Per-region display shoreline for the Chart coastline (FE-11); Morro Bay imported 2026-10-08 with source dates 1994-2010.",
+      "limitations": [
+        "Historical mean-high-water lines from each feature's source_date; not a live or tidal shoreline, legal boundary or nautical chart.",
+        "Lines come from NOAA's zoom-12 display tiles (about 2 m quantisation at 35° N), separate from source accuracy (HOR_ACC).",
+        "Tiles NOAA does not serve are listed as unavailable, not certified empty."
+      ],
+      "allowed_hosts": [
+        "nsde.ngs.noaa.gov"
+      ]
+    },
+    {
+      "id": "usgs-naip",
+      "name": "NAIP natural-colour aerial mosaic (USGS The National Map ImageServer, live tiles)",
+      "provider": "USDA Farm Service Agency National Agriculture Imagery Program, served by USGS The National Map",
+      "needs": [],
+      "documentation_url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer",
+      "adapter": "arcgis-image-export",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "USGS / USDA · NAIP aerial imagery (dated mosaic)",
+        "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "U.S. government imagery; the service metadata identifies NAIP downloads as public domain and credits 'USGS, USDA, The National Map: Orthoimagery'. Credit USGS/USDA without implied endorsement. Only this NAIP-only service is used: mixed USGS imagery services (USGSImageryOnly, USGSNAIPPlus) carry third-party restrictions and are not substituted without review. Nothing is stored or redistributed; the browser requests tiles live. Pending owner confirmation (FE-45)."
+      },
+      "authenticity": {
+        "basis": "Fixed publisher ImageServer; service metadata, NaturalColor raster function and catalog acquisition dates checked 2026-10-08",
+        "transport": "HTTPS; imagery.nationalmap.gov only, the host packages/coast mapSourceHosts allows"
+      },
+      "coverage_note": "Conterminous U.S. land and shoreline at about 0.6 m. Open water returns transparent tiles. Each region that offers the aerial base records its checked acquisition window in region.json basemap.aerial; the publisher can replace the mosaic when a newer NAIP year is loaded.",
+      "limitations": [
+        "Dated aerial imagery of land and shore: not live satellite imagery, weather, underwater photography or a bottom measurement.",
+        "Offshore and open-water tiles are blank; a blank tile is not a survey of the seafloor.",
+        "Selecting the aerial base sends ordinary tile requests and network information from the browser directly to USGS.",
+        "Display zoom beyond the native resolution adds no detail."
+      ],
+      "allowed_hosts": [
+        "imagery.nationalmap.gov"
+      ],
+      "tiles": {
+        "endpoint": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage",
+        "rendering_rule": "NaturalColor",
+        "client": "packages/coast/src/map-sources.ts naipSource()",
+        "storage": "none (live tiles; design open question Q5, option 1)"
+      }
+    },
+    {
+      "id": "noaa-goes-nowcoast",
+      "name": "GOES East and West longwave infrared imagery (nowCOAST WMS time index)",
+      "provider": "NOAA National Ocean Service nowCOAST; imagery NOAA/NESDIS GOES-18 and GOES-19",
+      "needs": [
+        "weather-observations"
+      ],
+      "documentation_url": "https://nowcoast.noaa.gov/",
+      "adapter": "goes-frames",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA / NESDIS GOES East and West longwave infrared, served by NOAA nowCOAST",
+        "terms_url": "https://www.weather.gov/disclaimer/",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "U.S. government work. SkipperCast publishes only the advertised acquisition times; the browser requests the imagery from nowCOAST, pinned to a listed time. Pending owner confirmation (FE-44)."
+      },
+      "authenticity": {
+        "basis": "The goes_longwave_imagery layer's own WMS time dimension; no time is derived from the clock",
+        "transport": "HTTPS; nowcoast.noaa.gov only"
+      },
+      "coverage_note": "GOES East and West composite over the Americas, a frame about every five minutes; the newest listed frame must be at most 90 minutes old.",
+      "limitations": [
+        "Longwave infrared brightness temperature, not a cloud-cover percentage or underwater visibility.",
+        "Observed frames only, never a forecast; about 2 km resolution, coarser than individual beaches."
+      ],
+      "max_age_hours": 1.5,
+      "allowed_hosts": [
+        "nowcoast.noaa.gov"
+      ]
+    },
+    {
+      "id": "cdip-mop",
+      "name": "CDIP MOP alongshore nearshore wave model (SLO sites)",
+      "provider": "Coastal Data Information Program (CDIP), Scripps Institution of Oceanography, UC San Diego",
+      "needs": [
+        "wave-forecast"
+      ],
+      "documentation_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
+      "adapter": "cdip-mop-dap2",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "CDIP dataset licence attribute: redistribution and use without restriction",
+        "attribution": "Data from CDIP, Scripps Institution of Oceanography (https://cdip.ucsd.edu/)",
+        "terms_url": "https://cdip.ucsd.edu/m/documents/data_access.html",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "Each MOP forecast file's licence attribute reads 'These data may be redistributed and used without restriction.' CDIP's data-use page asks web displays to link to cdip.ucsd.edu and asks that the data be used unaltered; SkipperCast converts metres to feet and nulls samples the publisher flags, which the owner should confirm. Pending owner confirmation (FE-40)."
+      },
+      "authenticity": {
+        "basis": "Primary publisher THREDDS OPeNDAP server; the site label and coordinates in each file are checked against the reviewed binding",
+        "transport": "HTTPS; thredds.cdip.ucsd.edu MOP_alongshore path only"
+      },
+      "coverage_note": "Five MOP alongshore sites bound in regions/morro-bay/region.json (Pismo Beach Pier, Port San Luis, Morro Rock, Cayucos Pier, San Simeon Beach); native three-hour valid times.",
+      "limitations": [
+        "Modelled significant wave height at a nearshore site, which differs from breaking waves at a beach.",
+        "Water depth is relative to sea level; the files name no specific vertical datum.",
+        "Samples the publisher flags stay null; low-energy samples keep height only."
+      ],
+      "allowed_hosts": [
+        "thredds.cdip.ucsd.edu",
+        "cdip.ucsd.edu"
+      ]
+    },
+    {
+      "id": "slo-beach-water-quality",
+      "name": "SLO County beach water-contact status (SurfSafeSLO public view)",
+      "provider": "County of San Luis Obispo Public Health, Environmental Health Services",
+      "needs": [],
+      "documentation_url": "https://www.slocounty.ca.gov/departments/slo-health/public-health/environmental-health-services/all-environmental-health-services/recreational-health/beach-water-quality-monitoring",
+      "adapter": "slo-beach-health",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "County of San Luis Obispo Public Health; link to the county beach water quality monitoring page",
+        "terms_url": "https://www.slocounty.ca.gov/departments/slo-health/public-health/environmental-health-services/all-environmental-health-services/recreational-health/beach-water-quality-monitoring",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Public county status page with no stated licence. SkipperCast keeps concise factual statuses, the county's advisory text and the page link only; no dashboard design, photos or maps are reused. Commercial use pending owner confirmation (FE-41, open question Q8)."
+      },
+      "authenticity": {
+        "basis": "The county's officially linked SurfSafeSLO public ArcGIS view; full-count, WGS84 and in-county geometry checks on every fetch",
+        "transport": "HTTPS; services6.arcgis.com under the county's organisation path only"
+      },
+      "coverage_note": "San Luis Obispo County sampling sites, published for morro-bay as conditions/regions/morro-bay/beach-health.json about hourly.",
+      "limitations": [
+        "The public view publishes no sample or effective date; fetchedAt is SkipperCast's retrieval time, never a sample date.",
+        "The county samples weekly; advisories can also follow rain or sewage releases between samples.",
+        "A failed or incomplete fetch publishes no rows, so a missing row never means an open beach."
+      ],
+      "allowed_hosts": [
+        "services6.arcgis.com"
+      ]
+    },
+    {
+      "id": "noaa-esi-2006",
+      "name": "NOAA Central California Environmental Sensitivity Index (2006) shoreline",
+      "provider": "NOAA NOS Office of Response and Restoration",
+      "needs": [
+        "substrate"
+      ],
+      "documentation_url": "https://www.arcgis.com/home/item.html?id=5eb03df505b14b57a6a717261f529496",
+      "adapter": "shore-habitat-import",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA NOS Office of Response and Restoration, Central California ESI (2006)",
+        "terms_url": "https://www.arcgis.com/home/item.html?id=5eb03df505b14b57a6a717261f529496",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "NOAA publication; the source item states no use constraints beyond its mapping limitations and encourages attribution. Pending owner confirmation (FE-43 register row)."
+      },
+      "authenticity": {
+        "basis": "Primary NOAA ArcGIS feature service (layer 3, shoreline classification); response sha256 and fetch time kept in the asset's sourceChecks",
+        "transport": "HTTPS; exact provider host only; bounded response, truncated responses refused"
+      },
+      "bounds": [
+        -121.35,
+        34.92,
+        -120.51,
+        35.82
+      ],
+      "coverage_note": "Five reviewed San Luis Obispo County sandy-shore runs (ESI 3A) in catalog/shore-habitat/morro-bay.geojson, published to dist/regions/morro-bay/shore-habitat.geojson; written by scripts/collect_shore_habitat.py.",
+      "limitations": [
+        "2006 intertidal shoreline classification: the seabed offshore is unclassified, and this is neither today's shoreline, beach width nor surf channels; horizontal accuracy unknown.",
+        "The oil-sensitivity rank is never a fishing rank; only the sand class is reused, and fish presence is unknown."
+      ],
+      "publication_date": "2006",
+      "allowed_hosts": [
+        "services2.arcgis.com",
+        "www.arcgis.com"
+      ],
+      "update_policy": "Manual reviewed import; the source review is dated in the importer (30 days) and never renewed by a download."
+    },
+    {
+      "id": "ccc-access-points",
+      "name": "California Coastal Commission coastal access points",
+      "provider": "California Coastal Commission",
+      "needs": [],
+      "documentation_url": "https://www.arcgis.com/home/item.html?id=e45f130ce101423ea1de943a69445ece",
+      "adapter": "shore-habitat-import",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-08",
+      "rights": {
+        "license": "facts-only",
+        "attribution": "California Coastal Commission access inventory",
+        "terms_url": "https://www.arcgis.com/home/item.html?id=e45f130ce101423ea1de943a69445ece",
+        "commercial_use": "unknown",
+        "attribution_required": true,
+        "commercial_note": "Facts only: inventory id, name, coordinates and the public/closure flags used to admit a point. No photos, descriptions, phone numbers or links from the inventory are kept. The item's terms disclaim accuracy and ask users to indemnify the Commission; commercial use pending owner confirmation (FE-43 register row)."
+      },
+      "authenticity": {
+        "basis": "Primary Coastal Commission ArcGIS feature service (layer 0); response sha256, fetch time and the item's terms text kept in the asset's sourceChecks",
+        "transport": "HTTPS; exact provider hosts only; bounded response, truncated responses refused"
+      },
+      "bounds": [
+        -121.35,
+        34.92,
+        -120.51,
+        35.82
+      ],
+      "coverage_note": "Eight public beach approaches beside the five Morro Bay region shore runs.",
+      "limitations": [
+        "An inventory point is a reference, never a current-access certification, opening status or directions; check posted notices on arrival.",
+        "The access review is dated in the importer (7 days) and never renewed by a download."
+      ],
+      "allowed_hosts": [
+        "services9.arcgis.com",
+        "www.arcgis.com"
+      ],
+      "update_policy": "Manual reviewed import with the shore runs."
     }
   ]
 }

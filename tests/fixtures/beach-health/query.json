@@ -1,0 +1,31 @@
+{
+ "objectIdFieldName": "FID",
+ "geometryType": "esriGeometryPoint",
+ "spatialReference": {"wkid": 4326, "latestWkid": 4326},
+ "features": [
+  {
+   "attributes": {"FID": 1, "GlobalID_2": "00000000-0000-4000-8000-000000000001", "Station": "TS1", "Station_Na": "Test Shore North 1",
+                  "Latitude": 35.58, "Longitude": -121.12, "Status": "Beach Open", "AdvisoryMessage": "Beach Open",
+                  "AdvisoryNotes": "There are no advisory notes at this time.", "last_edited_date": 1790000000001},
+   "geometry": {"x": -121.12, "y": 35.58}
+  },
+  {
+   "attributes": {"FID": 2, "GlobalID_2": "00000000-0000-4000-8000-000000000002", "Station": "TS2", "Station_Na": "Test Shore Central 2",
+                  "Latitude": 35.43, "Longitude": null, "Status": "Beach Health Advisory", "AdvisoryMessage": "Beach Health Advisory",
+                  "AdvisoryNotes": "Elevated bacteria in the last sample.", "last_edited_date": 1790000000002},
+   "geometry": {"x": -120.88, "y": 35.43}
+  },
+  {
+   "attributes": {"FID": 3, "GlobalID_2": "00000000-0000-4000-8000-000000000003", "Station": "TS3", "Station_Na": "  ",
+                  "Latitude": 35.18, "Longitude": -120.74, "Status": " Beach Closure ", "AdvisoryMessage": "Beach Closure",
+                  "AdvisoryNotes": "Beach Closure", "last_edited_date": 1790000000003},
+   "geometry": {"x": -120.74, "y": 35.18}
+  },
+  {
+   "attributes": {"FID": 4, "GlobalID_2": null, "Station": "TS4", "Station_Na": "Test Shore South 4",
+                  "Latitude": 35.14, "Longitude": -120.64, "Status": "", "AdvisoryMessage": null,
+                  "AdvisoryNotes": "", "last_edited_date": 1790000000004},
+   "geometry": {"x": -120.64, "y": 35.14}
+  }
+ ]
+}

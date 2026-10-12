@@ -1,0 +1,11 @@
+export type HistoryMetric='waterTempF'|'airTempF'|'windKnots'|'gustKnots'|'waveFt'|'periodS';
+export type HistoryValues=Record<HistoryMetric,number|null>;
+export type HistoricalObservation=HistoryValues&{at:string};
+export type HistoricalHour=HistoricalObservation&{sampleCount:number;counts:Record<HistoryMetric,number>};
+export type HistoryQC={inputRows:number;acceptedRows:number;rejectedRows:number;duplicateRows:number;conflictingValues:number;maskedValues:number;trailingMissingRows:number};
+export type HistorySource={url:string;role:'index'|'recent'|'annual';year?:number;outcome:'ok'|'error';fetchedAt:string;sha256?:string;bytes?:number;decodedBytes?:number;parsedRows?:number;rejectedRows?:number;objectKey?:string;error?:string};
+export type HistoryArchive={indexUrl:string;availableYears:number[];discoveredAt:string;outcome:'ok'|'error'};
+export type MonthlyDistribution={month:number;metric:HistoryMetric;unit:string;count:number;rawSampleCount:number;expectedHours:number;coverageFraction:number;yearsWithData:number[];p10:number|null;median:number|null;p90:number|null;min:number|null;max:number|null;mean:number|null};
+export type RecentHistory={from:string;through:string;firstObservedAt:string|null;lastObservedAt:string|null;stale:boolean;expectedHours:number;observedHours:number;hourCoverageFraction:number;maxGapHours:number;hours:HistoricalHour[];qc:HistoryQC};
+export type StationHistory={stationId:string;name:string;lat:number;lon:number;recent:RecentHistory;baseline:{kind:'year-reference'|'multi-year-reference'|'unavailable';label:string;years:number[];periodStart:string|null;periodEnd:string|null;aggregation:'UTC-hour means, weighted equally';months:MonthlyDistribution[]};archive:HistoryArchive;sources:HistorySource[];limitations:string[]};
+export type HistoryBundle={schemaVersion:1;countyId:string;generatedAt:string;recentWindowDays:number;stations:StationHistory[]};

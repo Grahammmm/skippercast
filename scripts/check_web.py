@@ -30,6 +30,48 @@ class AssetParser(HTMLParser):
     handle_startendtag = handle_starttag
 
 
+def check_page_references(path):
+    """Resolve static resources; only registered navigation/RSS routes are dynamic."""
+    parser = AssetParser()
+    parser.feed(path.read_text())
+    public_pages = {"/report", "/feed.xml", "/methodology", "/about"}
+    for tag, attrs in parser.tags:
+        for attribute in ("src", "href"):
+            ref = attrs.get(attribute)
+            if not ref:
+                continue
+            url = urlsplit(ref)
+            if url.scheme or url.netloc or not url.path:
+                continue
+            navigation = tag == "a" and attribute == "href"
+            rss = (tag == "link" and attribute == "href" and
+                   attrs.get("rel") == "alternate" and
+                   attrs.get("type") == "application/rss+xml" and ref == "/feed.xml")
+            if (navigation and url.path in public_pages) or rss:
+                router = (ROOT / "server/routes/coast-pages.ts").read_text()
+                app = (ROOT / "server/app.ts").read_text()
+                assert f"'{url.path}'" in router and "app.route('/', coastPages);" in app, (path, ref)
+                continue
+            if navigation and url.path == "/privacy":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if(path === '/privacy') return '/privacy.html';" in assets, (path, ref)
+                assert (WEB / "privacy.html").exists(), (path, ref)
+                continue
+            if navigation and url.path == "/map":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if (path === '/map') return V2_SHELLS.app;" in assets, (path, ref)
+                assert (WEB / "app.html").exists(), (path, ref)
+                continue
+            if navigation and url.path == "/sources":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if(path === '/sources') return '/sources.html';" in assets, (path, ref)
+                assert (WEB / "sources.html").exists(), (path, ref)
+                continue
+            target = ((WEB / unquote(url.path).lstrip("/")) if url.path.startswith("/")
+                      else (path.parent / unquote(url.path))).resolve()
+            assert (target.is_relative_to(WEB) or target.is_relative_to(ROOT / "web")) and target.exists(), (path, ref)
+
+
 def sri_digest(integrity, data):
     """True when one of the SRI tokens (sha256/384/512, base64) matches data."""
     for token in integrity.split():
@@ -126,26 +168,133 @@ def check_no_versioned_client_names():
     assert not versioned, f"versioned file names in dist/ (use the canonical name): {versioned}"
 
 
+MARKUP_HOST = "web/app/CoastMarkup.tsx"
+SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
+# Every way web/ code could turn a string into DOM: innerHTML or outerHTML set
+# by property (`.x =`, `+=`, never `==`), by unquoted object key
+# (Object.assign(el, {innerHTML: s}); this also flags a type member of that
+# name) or named in any quoted string (`el['innerHTML'] =`, Reflect.set,
+# Object.defineProperty, a template-literal key), insertAdjacentHTML, Preact's
+# dangerouslySetInnerHTML, document.write/writeln, setHTMLUnsafe,
+# Range.createContextualFragment and DOMParser.parseFromString.
+MARKUP_SINK = re.compile(
+    r"\.\s*(?:inner|outer)HTML\s*\+?=(?!=)"
+    r"|\b(?:inner|outer)HTML\s*:"
+    r"|['\"`](?:inner|outer)HTML['\"`]"
+    r"|\b(?:insertAdjacentHTML|dangerouslySetInnerHTML|setHTMLUnsafe|createContextualFragment|parseFromString)\b"
+    r"|\bdocument\s*\.\s*write(?:ln)?\b")
+# A `/` after one of these (or a keyword below, or at the start) begins a regex literal, not division.
+REGEX_AFTER = set("(,=:[!&|?{};+-*%~^")
+REGEX_KEYWORDS = {"return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await"}
+
+
+def _regex_end(source, i):
+    """Index just past the regex literal starting at source[i] == '/', or None if the line ends first."""
+    j, klass, n = i + 1, False, len(source)
+    while j < n and source[j] != "\n":
+        c = source[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "[":
+            klass = True
+        elif c == "]":
+            klass = False
+        elif c == "/" and not klass:
+            j += 1
+            while j < n and (source[j].isalnum() or source[j] == "_"):
+                j += 1
+            return j
+        j += 1
+    return None
+
+
+def strip_comments(source):
+    """Blank out // and /* */ comments, keeping strings, template literals, regex literals and line numbers."""
+    out, i, n, quote = [], 0, len(source), None
+    last = ""   # the last significant character emitted outside strings and comments
+    while i < n:
+        c = source[i]
+        if quote:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(source[i + 1])
+                i += 2
+                continue
+            if c == quote or (c == "\n" and quote != "`"):
+                quote = None
+                last = c
+            i += 1
+        elif c in "'\"`":
+            quote = c
+            out.append(c)
+            i += 1
+        elif source.startswith("//", i):
+            end = source.find("\n", i)
+            i = n if end < 0 else end
+        elif source.startswith("/*", i):
+            end = source.find("*/", i + 2)
+            end = n if end < 0 else end + 2
+            out.append("".join("\n" if ch == "\n" else " " for ch in source[i:end]))
+            i = end
+        elif c == "/":
+            word = re.search(r"([A-Za-z_$]+)\s*$", "".join(out[-20:]))
+            regex = not last or last in REGEX_AFTER or bool(word and word.group(1) in REGEX_KEYWORDS)
+            end = _regex_end(source, i) if regex else None
+            out.append(source[i:end or i + 1])
+            i = end or i + 1
+            last = "/"
+        else:
+            out.append(c)
+            if not c.isspace():
+                last = c
+            i += 1
+    return "".join(out)
+
+
+def markup_sinks(root=ROOT):
+    """FE-75: only web/app/CoastMarkup.tsx may write markup into the DOM in web/ (comments ignored).
+
+    This is static text matching, not analysis: a property name built at run
+    time (`el['inner' + 'HTML']`, a variable holding the name) is not caught.
+    Review owns that case; the rule catches every literal spelling.
+    """
+    found = []
+    for path in sorted((root / "web").rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.suffix not in SOURCE_SUFFIXES or not path.is_file() or relative == MARKUP_HOST:
+            continue
+        code = strip_comments(path.read_text())
+        found += [f"{relative}:{code.count(chr(10), 0, m.start()) + 1}" for m in MARKUP_SINK.finditer(code)]
+    return found
+
+
 LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
 def check_legal_pages():
-    """Terms, privacy and licences exist, say they are drafts, and are reachable."""
+    """Terms, privacy and licences exist, say they are drafts, and are reachable.
+
+    FE-61: the v1 shell that linked them is gone; the landing's nav links the
+    sources page, and the sources page links all three.
+    """
     for name in LEGAL_PAGES:
         text = (WEB / name).read_text()
         assert "Draft — pending review by counsel" in text, name
         assert 'href="styles.css"' in text, name
-    for page in ("index.html", "sources.html"):
-        parser = AssetParser()
-        parser.feed((WEB / page).read_text())
-        missing = set(LEGAL_PAGES) - set(parser.refs)
-        assert not missing, (page, sorted(missing))
+    assert "href: '/sources'" in (ROOT / "web/landing/Landing.tsx").read_text(), "the landing links the sources page"
+    parser = AssetParser()
+    parser.feed((WEB / "sources.html").read_text())
+    missing = set(LEGAL_PAGES) - set(parser.refs)
+    assert not missing, ("sources.html", sorted(missing))
 
 
 def main():
-    assert (WEB / "index.html").is_file()
+    assert (WEB / "landing.html").is_file() and (WEB / "app.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
+    sinks = markup_sinks()
+    assert not sinks, f"markup written into the DOM outside {MARKUP_HOST} (mount packages/coast markup through it): {sinks}"
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
     usgs_leads = json.loads((WEB / 'data/usgs-ds781-source-leads.json').read_text())
     assert (WEB / 'data/usgs-ds781-source-leads.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-source-leads.json').read_bytes()
@@ -219,15 +368,7 @@ def main():
     check_vendor_integrity(pinned)
     for path in WEB.rglob("*.html"):
         if path.relative_to(WEB).parts[0] in {"client","server"}:continue
-        parser = AssetParser()
-        parser.feed(path.read_text())
-        for ref in parser.refs:
-            url = urlsplit(ref)
-            if url.scheme or url.netloc or not url.path:
-                continue
-            target = (path.parent / unquote(url.path)).resolve()
-            # Pages may also load the typed client source in web/, which Vite builds.
-            assert (target.is_relative_to(WEB) or target.is_relative_to(ROOT / "web")) and target.exists(), (path, ref)
+        check_page_references(path)
     for path in WEB.rglob("*.css"):
         if path.relative_to(WEB).parts[0] in {"client","server"}:continue
         for ref in re.findall(r"url\(['\"]?([^)'\"]+)", path.read_text()):

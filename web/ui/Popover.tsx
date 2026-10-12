@@ -15,15 +15,20 @@ export type PopoverProps = {
   align?: 'start' | 'end';
   children: ComponentChildren;
   class?: string;
+  /** The sources page the basis links into; false for a popover that is not a basis. */
+  sources?: string | false;
 };
 
-export function Popover({summary = 'basis', iconOnly = false, align = 'start', children, class: cls}: PopoverProps) {
+/** The canonical sources page (open-questions Q16; the Worker serves dist/sources.html there). */
+export const SOURCES_PAGE = '/sources';
+
+export function Popover({summary = 'basis', iconOnly = false, align = 'start', children, class: cls, sources = SOURCES_PAGE}: PopoverProps) {
   return (
     <details class={['ui-popover', iconOnly ? 'ui-popover--icon' : '', cls].filter(Boolean).join(' ')} data-align={align}>
       <summary class="ui-popover-summary ui-eyebrow" aria-label={iconOnly ? summary : undefined}>
         {iconOnly ? <Icon name="info" size={16} /> : summary}
       </summary>
-      <div class="ui-popover-body">{children}</div>
+      <div class="ui-popover-body">{children}{sources ? <p class="ui-popover-sources"><a href={sources}>How it’s built</a></p> : null}</div>
     </details>
   );
 }

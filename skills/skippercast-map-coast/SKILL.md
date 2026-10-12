@@ -38,6 +38,15 @@ habitat and new measurement area. A green job or diagnostic is not that release.
 
 ## Start from the smallest current state
 
+Before dispatch or pixel processing, use the [run progress control](references/progress-control.md).
+Record one publication path, the shared active-work allowance and downstream
+readiness in the existing checkpoint. Run its offline guard at stage boundaries.
+An overnight deadline is an observation window, not an allowance for continuous
+model work. Private proofs and code fixes do not reset a stalled map-growth run.
+When the owner requests repeated timed tests, follow the [round improvement
+loop](references/improvement-loop.md). Stop each round at its wall-clock deadline,
+audit before changing the method, and do not begin a longer run automatically.
+
 Fetch main, reconcile relevant PRs, latest ledger, saved physical receipts and
 active jobs. Do not read the entire research archive or conversation. The
 coordinator owns shared catalog/skill/ledger integration decisions; a single
@@ -52,6 +61,9 @@ For an authorized parallel or overnight run, use the bounded
 work, limits work waiting for integration, and measures verified map additions
 before deciding whether more agents would help. Use the existing coordination
 issue and private checkpoint; this is not another source catalog or scheduler.
+For an unattended run, first use the [overnight execution contract](references/overnight-contract.md).
+It defines preflight, exclusive queue claims, compact worker briefs, the two-hour
+checkpoint and the difference between a configured goal and an executing job.
 
 Use the pinned runtime and existing verified reference/cache:
 
@@ -174,8 +186,10 @@ claiming additional area. Never add overlapping source or PR totals. Record:
 No-growth refreshes are maintenance. A downloaded source, document, adapter or
 successful CI run is not new coastline. A pipeline fix is useful progress only
 when a reproducible test or real-run receipt demonstrates the blocker removed.
-If no new batch is runnable, inspect retained native gaps and qualify the next
-original source instead of repeating maintenance as the expansion task.
+If no new batch is runnable, inspect a retained gap only when the run progress
+control still permits work and its downstream publication path is executable.
+Otherwise save the dependency and stop active expansion; do not substitute
+another source proof or maintenance run for the missing release.
 
 After two unsuccessful attempts, change approach. After 20 active investigation
 minutes without a usable batch or a demonstrated release-blocker fix, save the blocker and
@@ -205,12 +219,40 @@ separate checks.
 Use the existing scheduled workflow, per-region receipts and protected PR flow.
 One coordinator dispatches/integrates; do not create a competing schedule.
 Read [execution and release](references/execution-and-release.md) for commands,
-failed-job resume, regional readback and exact validation. Before calling a
-batch live, verify its current manifest, archive access and visitor map/export
-behavior. Ledger bookkeeping alone is not publication.
+failed-job resume, regional readback and exact validation. During successive
+source-policy merges, retain the union of merged regions whose publication is
+not yet verified. A later scoped push does not recover a replaced pending run's
+scope automatically. Inspect the actual prepare matrix and follow
+[scoped publication recovery](references/execution-and-release.md#recover-replaced-scoped-publication-work)
+when a required region is omitted. Before calling a batch live, verify its
+current manifest, archive access and visitor map/export behavior. Ledger
+bookkeeping alone is not publication.
 
 For the classified-habitat opt-ins, production command and release gates, follow
 the [classified-habitat production path](references/habitat-expansion-preflight.md#production-path).
+
+## Hand off one completed slice for website 3D rendering
+
+When a suitable batch completes, reuse its artifacts and review evidence to save
+one compact private receipt for `skippercast-render-coast-3d`; do not wait for the
+whole coastline or repeat unchanged qualification. Include terrain path/format,
+coverage and valid support, resolution, units/sign, CRS, depth datum and NoData
+mask; paired imagery path or approved URL, format, coverage and terrain
+alignment; upstream revision, source identities, artifact hashes, attribution
+and rights permitting website display; exact review receipts and explicit
+website-display acceptance for these artifacts; remaining holds; and the
+existing loader/manifest or minimal loading instructions.
+
+Use `READY` only when both terrain and imagery are complete, hash-identified,
+reviewed and explicitly accepted for website display with applicable rights,
+restriction and publication gates satisfied. Otherwise use `BLOCKED`, name the
+missing prerequisites and preserve completed artifacts. Private proofs, running
+jobs, generic source rights and fishing-habitat qualification are not website
+acceptance. Keep terrain-display acceptance separate from habitat qualification,
+rankings, fishing exports and new measurement credit. Do not promote a sparse
+support mask to full rectangular coverage or substitute an unapproved imagery
+service. Report blockers promptly; no new offline work is required for a receipt.
+Keep current private paths and batch-specific evidence in the receipt, not here.
 
 Reconcile installed skills after changing the canonical repository version.
 Historical baselines, resolved failures and old PR ordering are preserved in

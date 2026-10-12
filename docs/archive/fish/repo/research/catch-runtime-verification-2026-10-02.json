@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-02T04:28:38.002602+00:00",
+  "scope": "Actual local Worker API responses for the reviewed catch integration; not browser visual verification.",
+  "checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "bytes": 1118,
+      "countyId": null,
+      "generatedAt": "2026-10-02T04:21:35.045Z",
+      "dataState": "fresh",
+      "storage": "snapshot-only"
+    },
+    {
+      "path": "/api/report",
+      "status": 200,
+      "bytes": 665742,
+      "countyId": "slo",
+      "generatedAt": "2026-10-02T04:21:35.045Z",
+      "acceptedTrips": 19,
+      "latestTripDate": "2026-09-28",
+      "context": {
+        "feedUrl": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+        "feedGeneratedAt": "2026-10-01T00:37:50Z",
+        "receivedAt": "2026-10-02T04:21:24.548Z",
+        "windowStart": "2026-08-31",
+        "windowEnd": "2026-09-29",
+        "latestTripDate": "2026-09-28",
+        "rights": {
+          "scope": "linked-factual-counts",
+          "reviewedAt": "2026-09-21",
+          "sourceCatalogUrl": "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
+        }
+      },
+      "source": {
+        "id": "landing-reports",
+        "label": "Local charter trip facts \u00b7 SkipperCast / SoCalFishReports",
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+        "kind": "report",
+        "outcome": "error",
+        "fetchedAt": "2026-10-02T04:21:24.548Z",
+        "error": "52 stale, failed, conflicting or invalid trip records excluded; independently valid records preserved."
+      },
+      "catchStatus": "19 linked dated boat-trip reports; latest 2026-09-28. Reported counts are not proven retained catches. 52 records unavailable. Landing port is not a catch location."
+    }
+  ],
+  "passed": true
+}

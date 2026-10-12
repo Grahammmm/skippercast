@@ -100,14 +100,6 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
 });
 export {expect};
 
-/** Open an area link and wait until the app has drawn the survey markers (visible on the map view). */
-export async function openMap(page: Page, path = '/?region=morro-bay#map'): Promise<void> {
-  await page.goto(path);
-  const marker = page.locator('#map .leaflet-marker-icon').first();
-  if (new URL(path, 'http://x').hash === '#map') await expect(marker).toBeVisible({timeout: 30_000});
-  else await expect(marker).toBeAttached({timeout: 30_000});
-}
-
 /** Run axe on the page as it is now; fail on serious or critical violations only (for now). */
 export async function checkA11y(page: Page, name: string, project: string): Promise<void> {
   const results = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']).analyze();

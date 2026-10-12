@@ -1,0 +1,9 @@
+{
+  "description": "Freshness limits for the published feeds, shared by scripts/check_feed_freshness.py and server/watchdog.ts. A source is degraded when its status is anything but ok (stale, retained, failed, missing). Its degraded age is how old its data was when the feed was built. A critical kind fails the check only when every source of that kind in one feed (one region) is degraded past critical_degraded_hours; a critical source past the limit while others of its kind are fine is reported without failing, and other kinds only warn. max_age_hours is the fallback when a feed does not publish its own schedule.max_delay_hours. regions describes the per-region live feeds: ids come from dist/regions/index.json, and the default region is checked as the top-level conditions feed (its alias).",
+  "critical_kinds": ["observation", "advisory", "prediction", "forecast"],
+  "feeds": {
+    "conditions": {"label": "Live conditions feed", "path": "conditions/latest.json", "max_age_hours": 3, "critical_degraded_hours": 12},
+    "data": {"label": "Daily data feed", "path": "data/latest.json", "max_age_hours": 36, "critical_degraded_hours": 48}
+  },
+  "regions": {"label": "Live regional feed", "path": "conditions/regions/{region}/latest.json", "index": "dist/regions/index.json", "max_age_hours": 3, "critical_degraded_hours": 12}
+}

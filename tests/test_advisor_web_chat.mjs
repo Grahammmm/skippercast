@@ -295,3 +295,17 @@ test('/chat.html is dark with the advisor and served as its page shell when on',
   assert.equal(on.status, 200); assert.equal(await on.text(), '/chat.0123456789');
   assert.equal(on.headers.get('Cache-Control'), 'no-store');
 });
+
+// FE-55: the v2 masthead shows its chat entry only when a cookieless HEAD of /chat.html is ok.
+test('HEAD and GET /chat.html answer 404 with the advisor off, so the masthead entry stays hidden', async () => {
+  globalThis.SHELLS['/chat.html'] = '/chat.0123456789.html';
+  const assets = {fetch: async request => new Response(request.method === 'HEAD' ? null : new URL(request.url).pathname, {status: 200})};
+  for (const method of ['HEAD', 'GET']) {
+    for (const env of [{}, {TEXT_ADVISOR_ENABLED: 'false'}, {TEXT_ADVISOR_ENABLED: ''}]) {
+      const off = await worker.fetch(new Request(ORIGIN + '/chat.html', {method}), {ASSETS: assets, ...env});
+      assert.equal(off.status, 404, `${method} with ${JSON.stringify(env)}`);
+    }
+    const on = await worker.fetch(new Request(ORIGIN + '/chat.html', {method}), {ASSETS: assets, ...ON});
+    assert.equal(on.ok, true, `${method} with the advisor on`);
+  }
+});

@@ -12,8 +12,11 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from skippercast.fleet.ais import match, process
-from skippercast.fleet.ais.match import Seen, Static, decide
+import contextlib
+import io
+
+from skippercast.fleet.ais import gate, match, process, schedule
+from skippercast.fleet.ais.match import MatchState, Seen, Static, decide
 from skippercast.fleet.ais.process import DAY, HOUR, MINUTE, VesselRef
 from skippercast.fleet.ais.sources.base import AisPosition, AisStatic
 from skippercast.fleet.ais.store import AisStore
@@ -24,6 +27,9 @@ from skippercast.fleet.ops import id32, review_id
 T0 = 1_791_190_800_000          # 2026-10-05T09:00:00Z (02:00 in Los Angeles)
 NOW = T0 + 10 * HOUR            # 12:00 local on 2026-10-05
 SEA, HELD, TWIN = id32("CA", "sea-example"), id32("CA", "held-example"), id32("CA", "twin-example")
+RIVAL = id32("CA", "rival-example")
+TWO_WEEKS = ["2026-09-20", "2026-09-23", "2026-09-26", "2026-09-30", "2026-10-03"]   # 5 days spanning 14
+ONE_WEEK = ["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"]    # 5 days inside one week
 HELD_MMSI, CANDIDATE, PLEASURE, OTHER = 999000301, 999000302, 999000303, 999000304
 
 
@@ -337,6 +343,351 @@ class RunTests(unittest.TestCase):
         self.assertEqual([op["proposal_json"]["reason"] for op in worker.ops if op["op"] == "review.open"],
                          ["length-contradicts"])
         self.assertEqual(self.watched(), [])
+
+
+class ScheduleTests(unittest.TestCase):
+    """Stage 4, schedule-correlation (N4): at-sea days against landing report days."""
+
+    def decide(self, statics, *, at_sea, reports, presence=None, prior=None, vessels=None):
+        statics = {s.mmsi: s for s in statics}
+        seen = {m: Seen(T0 - 20 * DAY, T0, "aisstream", 400) for m in statics}
+        presence = {m: {"port-a": 1} for m in statics} if presence is None else presence
+        return decide(REGION, fleet() if vessels is None else vessels, (), statics, seen, presence, prior or {}, NOW,
+                      at_sea=at_sea, reports=reports)
+
+    def rows(self, decision):
+        return {int(r["mmsi"]): r for r in decision.rows}
+
+    def test_thresholds_come_from_the_region(self):
+        self.assertEqual(schedule.rules(REGION), schedule.Rules(5, 14, 3, 1, 30))
+        self.assertEqual(schedule.span_days(TWO_WEEKS), 14)
+        self.assertEqual(schedule.span_days(ONE_WEEK), 5)
+        self.assertEqual(schedule.span_days([]), 0)
+
+    def test_five_matched_days_over_two_weeks_promote_to_watched(self):
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        at_sea = {CANDIDATE: set(TWO_WEEKS) | {"2026-10-04"}}   # a day at sea without a report does not count
+        decision = self.decide([boat], at_sea=at_sea, reports={SEA: set(TWO_WEEKS)})
+        row = self.rows(decision)[CANDIDATE]
+        self.assertEqual((row["status"], row["match_method"], row["vessel_id"]), ("watched", "schedule-correlation", SEA))
+        self.assertGreaterEqual(row["confidence"], AUTO)
+        self.assertEqual(decision.targets, {CANDIDATE: VesselRef(SEA, "inspected-party", "port-a")})
+        self.assertEqual(decision.reviews, [])
+        # Four of the five days is not enough.
+        four = self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS[1:])}, reports={SEA: set(TWO_WEEKS)})
+        self.assertEqual(self.rows(four)[CANDIDATE]["status"], "candidate")
+        # Once watched it stays watched while the name matches, even when this run's feed could not be read.
+        sticky = self.decide([boat], at_sea={}, reports=None, prior={CANDIDATE: row})
+        self.assertEqual((self.rows(sticky)[CANDIDATE]["status"], self.rows(sticky)[CANDIDATE]["match_method"]),
+                         ("watched", "schedule-correlation"))
+
+    def test_five_matched_days_inside_one_week_stay_a_candidate(self):
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        decision = self.decide([boat], at_sea={CANDIDATE: set(ONE_WEEK)}, reports={SEA: set(ONE_WEEK)})
+        row = self.rows(decision)[CANDIDATE]
+        self.assertEqual((row["status"], row["match_method"], row["confidence"]), ("candidate", "ais-static-name", 0.7))
+        self.assertEqual(decision.targets, {})
+
+    def test_a_rival_vessel_reporting_on_the_same_days_is_a_review_never_watched(self):
+        vessels = fleet() + [vessel(RIVAL, "Rival Example")]   # the same home port, port-a
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        reports = {SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS)}
+        decision = self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS)}, reports=reports, vessels=vessels)
+        row = self.rows(decision)[CANDIDATE]
+        self.assertEqual((row["status"], row["vessel_id"]), ("candidate", SEA))
+        self.assertEqual(decision.targets, {})
+        review, = decision.reviews
+        self.assertEqual((review["subject_id"], review["proposal_json"]["reason"]), (SEA, "schedule-rival"))
+        self.assertEqual(review["candidate_json"]["schedule_days"], 5)
+        # A rival also undoes stickiness.
+        watched = {**row, "status": "watched", "match_method": "schedule-correlation", "confidence": 0.85}
+        again = self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS)}, reports=reports, vessels=vessels,
+                            prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(again)[CANDIDATE]["status"], "candidate")
+        # Another port's boat on the same days is no rival.
+        elsewhere = fleet() + [vessel(RIVAL, "Rival Example", port="port-b")]
+        self.assertEqual(self.rows(self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS)}, reports=reports,
+                                               vessels=elsewhere))[CANDIDATE]["status"], "watched")
+        sea = {CANDIDATE: set(TWO_WEEKS)}
+        close = self.decide([boat], at_sea=sea, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:4])}, vessels=vessels)
+        self.assertEqual((self.rows(close)[CANDIDATE]["status"], [r["proposal_json"]["reason"] for r in close.reviews]),
+                         ("candidate", ["schedule-rival"]), "5 matched days against 4: a lead of 1 is no lead")
+        clear = self.decide([boat], at_sea=sea, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:2])}, vessels=vessels)
+        self.assertEqual((self.rows(clear)[CANDIDATE]["status"], clear.reviews), ("watched", []), "5 against 2: a lead of 3")
+
+    def test_days_in_port_with_a_report_count_against_the_match(self):
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        sea, reports = {CANDIDATE: set(TWO_WEEKS)}, {SEA: set(TWO_WEEKS) | {"2026-10-01", "2026-10-02"}}
+
+        def run(in_port):
+            statics = {boat.mmsi: boat}
+            seen = {boat.mmsi: Seen(T0 - 20 * DAY, T0, "aisstream", 400)}
+            return decide(REGION, fleet(), (), statics, seen, {CANDIDATE: {"port-a": 1}}, {}, NOW, at_sea=sea,
+                          reports=reports, in_port={CANDIDATE: in_port})
+        one = run({"2026-10-01"})
+        self.assertEqual(self.rows(one)[CANDIDATE]["status"], "watched", "one contradiction is tolerated")
+        two = run({"2026-10-01", "2026-10-02"})
+        self.assertEqual((self.rows(two)[CANDIDATE]["status"], [r["proposal_json"]["reason"] for r in two.reviews]),
+                         ("candidate", ["schedule-contradicted"]))
+        # A day in port that was also a day at sea (arrived that day) is no contradiction.
+        self.assertEqual(self.rows(run(set(TWO_WEEKS)))[CANDIDATE]["status"], "watched")
+
+    def test_a_watched_schedule_row_is_undone_by_a_late_rival_or_a_lapse(self):
+        vessels = fleet() + [vessel(RIVAL, "Rival Example")]
+        boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
+        watched = {"mmsi": str(CANDIDATE), "vessel_id": SEA, "status": "watched", "match_method": "schedule-correlation",
+                   "confidence": 0.85}
+        # Evidence aged below min_days (2 matched days) while a rival reports on 2 of them: no longer qualifies, yet demoted.
+        aged = {CANDIDATE: set(TWO_WEEKS[3:])}
+        reports = {SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[3:])}
+        rival = self.decide([boat], at_sea=aged, reports=reports, vessels=vessels, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(rival)[CANDIDATE]["status"], "candidate")
+        alone = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS)}, vessels=vessels, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(alone)[CANDIDATE]["status"], "watched", "thin but recent evidence, no rival: stays")
+        # No matched day in the last lapse_days (30): the row lapses. NOW is 2026-10-05.
+        old = ["2026-08-20", "2026-08-25"]
+        lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(lapsed)[CANDIDATE]["status"], "candidate")
+        # A same-port vessel that reports only on other days is no rival, even to a thin row.
+        stranger = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:3])},
+                               vessels=vessels, prior={CANDIDATE: watched})
+        self.assertEqual((self.rows(stranger)[CANDIDATE]["status"], stranger.reviews), ("watched", []))
+        none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched})
+        self.assertEqual(self.rows(none)[CANDIDATE]["status"], "candidate")
+
+    def test_the_registry_mmsi_is_never_overwritten(self):
+        rival = full_static(OTHER, "HELD EXAMPLE", ship_type=60, length_m=18.0)
+        held = full_static(HELD_MMSI, "HELD EXAMPLE", ship_type=60, length_m=18.0)
+        decision = self.decide([held, rival], at_sea={OTHER: set(TWO_WEEKS)}, reports={HELD: set(TWO_WEEKS)},
+                               presence={OTHER: {"port-b": 2}})
+        rows = self.rows(decision)
+        self.assertEqual((rows[HELD_MMSI]["status"], rows[HELD_MMSI]["match_method"]), ("watched", "fcc-uls"))
+        self.assertEqual((rows[OTHER]["status"], rows[OTHER]["vessel_id"]), ("candidate", HELD))
+        self.assertEqual(decision.targets, {HELD_MMSI: VesselRef(HELD, "inspected-party", "port-b")})
+        self.assertEqual([r["proposal_json"]["reason"] for r in decision.reviews], ["vessel-has-registry-mmsi"])
+
+    def test_unknown_statics_do_not_block_the_schedule_but_contradictions_and_absence_do(self):
+        at_sea, reports = {OTHER: set(TWO_WEEKS)}, {SEA: set(TWO_WEEKS)}
+        unknown = self.decide([full_static(OTHER, "SEA EXAMPLE")], at_sea=at_sea, reports=reports)
+        self.assertEqual((self.rows(unknown)[OTHER]["status"], self.rows(unknown)[OTHER]["match_method"]),
+                         ("watched", "schedule-correlation"))
+        self.assertGreaterEqual(self.rows(unknown)[OTHER]["confidence"], AUTO)
+        short = self.decide([full_static(OTHER, "SEA EXAMPLE", ship_type=37, length_m=8.0)], at_sea=at_sea, reports=reports)
+        self.assertEqual(self.rows(short)[OTHER]["status"], "candidate")
+        self.assertEqual([r["proposal_json"]["reason"] for r in short.reviews], ["length-contradicts"])
+        never = self.decide([full_static(OTHER, "SEA EXAMPLE")], at_sea=at_sea, reports=reports, presence={})
+        self.assertEqual(self.rows(never)[OTHER]["status"], "candidate", "never seen in the home port")
+        self.assertEqual([r["proposal_json"]["reason"] for r in never.reviews], ["never-in-home-port"])
+        twins = [vessel(SEA, "Twin Example"), vessel(TWIN, "Twin Example")]
+        both = self.decide([full_static(OTHER, "TWIN EXAMPLE", ship_type=60, length_m=18.0)], at_sea=at_sea,
+                           reports={SEA: set(TWO_WEEKS), TWIN: set(TWO_WEEKS)}, vessels=twins,
+                           presence={OTHER: {"port-a": 1}})
+        self.assertEqual(self.rows(both)[OTHER]["status"], "candidate", "two vessels of one name never promote")
+        # Without schedule inputs the matcher behaves as before.
+        none = self.decide([full_static(OTHER, "SEA EXAMPLE")], at_sea=None, reports=None)
+        self.assertEqual(self.rows(none)[OTHER]["status"], "candidate")
+
+    def test_report_days_read_the_feed_as_trip_pairing_does(self):
+        vessels = [vessel(SEA, "Sea Example", port="morro-bay", aliases=("SEAEX",)),
+                   vessel(TWIN, "Twin Example", port="morro-bay"), vessel(RIVAL, "Twin Example", port="morro-bay"),
+                   {**vessel(HELD, "Gone Example", port="morro-bay"), "status": "excluded"}]
+        rows = [{"id": "1", "date": "2026-10-01", "boat": "Sea Example", "port": "Morro Bay"},
+                {"id": "2", "date": "2026-10-02", "boat": "F/V SEAEX", "port": "morro bay"},      # alias, any case
+                {"id": "3", "date": "2026-10-03", "boat": "Sea Example", "port": "Avila Beach"},   # another port
+                {"id": "4", "date": "2026-10-04", "boat": "Twin Example", "port": "Morro Bay"},    # two vessels
+                {"id": "5", "date": "2026-10-05", "boat": "Gone Example", "port": "Morro Bay"},    # excluded
+                {"id": "6", "date": "Oct 6", "boat": "Sea Example", "port": "Morro Bay"}]
+        self.assertEqual(schedule.report_days(rows, vessels, schedule.landing_ports()),
+                         {SEA: {"2026-10-01", "2026-10-02"}})
+
+    def test_the_feed_loader_reads_each_coastal_region_once_and_fails_soft(self):
+        ca = load_region("CA")
+        urls = schedule.feed_urls(ca)
+        self.assertIn("https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json", urls)
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertEqual(schedule.feed_urls(REGION), [], "synthetic ports belong to no coastal region")
+        vessels = [vessel(SEA, "Sea Example", port="morro-bay")]
+        fetched = []
+
+        def fetch(url):
+            fetched.append(url)
+            if "morro-bay" not in url:
+                raise OSError("offline")
+            return {"reports": [{"id": "1", "date": "2026-10-01", "boat": "Sea Example", "port": "Morro Bay"}]}
+
+        self.assertEqual(schedule.load_report_days(ca, vessels, fetch=fetch), {SEA: {"2026-10-01"}})
+        self.assertEqual(sorted(fetched), urls)
+
+        def down(url):
+            raise OSError("offline")
+
+        self.assertIsNone(schedule.load_report_days(ca, vessels, fetch=down), "no feed read: no schedule evidence")
+
+    def test_the_state_records_days_at_sea(self):
+        state = process.State(Path(self.tmp()) / "state.sqlite")
+        self.addCleanup(state.close)
+        mstate = MatchState(state)
+        lat, lon = PORT_A.point
+        fix = lambda ts, la, lo: AisPosition(CANDIDATE, ts, la, lo, 6.0, None, None, None, "PositionReport", "aisstream", ts)
+        mstate.add((), [fix(T0, lat, lon), fix(T0 + HOUR, lat + 0.2, lon),          # 2026-10-05: out and back
+                        fix(T0 - DAY, lat, lon),                                     # 2026-10-04: in port only
+                        fix(T0 - 2 * DAY, lat + 0.5, lon)], REGION.ports, match.ZoneInfo(REGION.timezone))
+        self.assertEqual(mstate.away("2026-09-01"), {CANDIDATE: {"2026-10-03", "2026-10-05"}})
+        self.assertEqual(mstate.presence("2026-09-01"), {CANDIDATE: {"port-a": 2}})
+        mstate.prune("2026-10-04")
+        self.assertEqual(mstate.away("2026-09-01"), {CANDIDATE: {"2026-10-05"}})
+
+    def tmp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        return directory.name
+
+    def test_a_run_promotes_by_schedule_from_the_state_and_the_feed(self):
+        root = Path(self.tmp()) / "CA" / "ais"
+        AisStore(root).write(statics=[static(CANDIDATE, T0 - DAY, "SEA EXAMPLE", ship_type=60, bow=12, stern=6)])
+        state = process.State(root / "state.sqlite")
+        mstate = MatchState(state)
+        state.db.executemany("INSERT INTO match_away VALUES(?,?)", [(CANDIDATE, d) for d in TWO_WEEKS])
+        state.db.execute("INSERT INTO match_presence VALUES(?,?,?)", (CANDIDATE, "port-a", "2026-10-04"))
+        state.close()
+        del mstate
+        calls = []
+        original = match.load_report_days
+        match.load_report_days = lambda region, vessels: calls.append(len(vessels)) or {SEA: set(TWO_WEEKS)}
+        try:
+            worker = FakeWorker()
+            process.run(REGION, worker, root=root, now_ms=NOW)
+        finally:
+            match.load_report_days = original
+        self.assertEqual(calls, [2], "the loader sees the snapshot's vessels")
+        row = worker.watch[str(CANDIDATE)]
+        self.assertEqual((row["status"], row["vessel_id"], row["match_method"]), ("watched", SEA, "schedule-correlation"))
+        self.assertEqual(sorted(read_watch(root / "watch.json", "CA").watched), [CANDIDATE])
+
+    def test_precision_scores_promotions_against_hidden_registry_mmsis(self):
+        vessels = [vessel(SEA, "Sea Example", mmsi=CANDIDATE), vessel(TWIN, "Twin Example", mmsi=PLEASURE, port="port-b"),
+                   vessel(RIVAL, "Rival Example", port="port-b")]
+        other_days = ["2026-09-21", "2026-09-24", "2026-09-27", "2026-10-01", "2026-10-04"]
+        statics = {CANDIDATE: full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0),
+                   OTHER: full_static(OTHER, "TWIN EXAMPLE", ship_type=60, length_m=18.0),     # not Twin's MMSI
+                   HELD_MMSI: full_static(HELD_MMSI, "RIVAL EXAMPLE", ship_type=60, length_m=18.0)}
+        seen = {m: Seen(T0 - 20 * DAY, T0, "aisstream", 100) for m in statics}
+        presence = {CANDIDATE: {"port-a": 9}, OTHER: {"port-b": 1}, HELD_MMSI: {"port-b": 1}}
+        at_sea = {CANDIDATE: set(TWO_WEEKS), OTHER: set(TWO_WEEKS), HELD_MMSI: set(other_days)}
+        reports = {SEA: set(TWO_WEEKS), TWIN: set(TWO_WEEKS[:4]) | {"2026-10-04"}, RIVAL: set(other_days)}
+        window = (statics, seen, presence, at_sea, NOW)
+        counts = schedule.precision(REGION, vessels, [], [window], reports)
+        self.assertEqual(counts, {"windows": 1, "schedule_matches": 2, "correct": 1, "false_matches": 0,
+                                  "unverified": 1, "rival_reviews": 0, "precision": 1.0},
+                         "nine home-port days cannot promote by geofence here; Twin's four matched days do not qualify")
+        reports[TWIN] = set(TWO_WEEKS)
+        counts = schedule.precision(REGION, vessels, [], [window, window], reports)
+        self.assertEqual((counts["schedule_matches"], counts["correct"], counts["false_matches"], counts["unverified"],
+                          counts["precision"]), (6, 2, 2, 2, 0.5), "OTHER now matches Twin's schedule: a false match")
+        # Two boats of one port reporting on the same days: reviews, not matches.
+        reports[RIVAL] = set(TWO_WEEKS)
+        at_sea[HELD_MMSI] = set(TWO_WEEKS)
+        counts = schedule.precision(REGION, vessels, [], [window], reports)
+        self.assertEqual((counts["schedule_matches"], counts["rival_reviews"]), (1, 2))
+
+    def test_precision_applies_the_contradiction_rule(self):
+        vessels = [vessel(SEA, "Sea Example", mmsi=CANDIDATE)]
+        statics = {CANDIDATE: full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)}
+        seen = {CANDIDATE: Seen(T0 - 20 * DAY, T0, "aisstream", 100)}
+        reports = {SEA: set(TWO_WEEKS) | {"2026-10-01", "2026-10-02"}}
+        args = (statics, seen, {CANDIDATE: {"port-a": 9}}, {CANDIDATE: set(TWO_WEEKS)}, NOW)
+        plain = schedule.precision(REGION, vessels, [], [args], reports)
+        self.assertEqual(plain["schedule_matches"], 1)
+        held = schedule.precision(REGION, vessels, [], [args + ({CANDIDATE: {"2026-10-01", "2026-10-02"}},)], reports)
+        self.assertEqual((held["schedule_matches"], held["rival_reviews"]), (0, 0), "two contradictions: no match")
+
+    def test_schedule_precision_command_over_a_store(self):
+        directory = Path(self.tmp())
+        root = directory / "CA" / "ais"
+        lat, lon = PORT_A.point
+        offsets = [15, 12, 9, 5, 2]   # local days 2026-09-20 .. 2026-10-03, as TWO_WEEKS
+        positions = moored(CANDIDATE, [1]) + [
+            AisPosition(CANDIDATE, T0 - k * DAY + 12 * HOUR, lat + 0.3, lon, 7.0, None, None, None, "PositionReport",
+                        "aisstream", T0 - k * DAY + 12 * HOUR) for k in offsets]
+        AisStore(root).write(statics=[static(CANDIDATE, T0 - 16 * DAY, "SEA EXAMPLE", ship_type=60, bow=12, stern=6)],
+                             positions=positions)
+        (directory / "vessels.json").write_text(json.dumps([vessel(SEA, "Sea Example", mmsi=CANDIDATE, port="port-a")]))
+        reports = [{"id": str(i), "date": d, "boat": "Sea Example", "port": "Port A"} for i, d in enumerate(TWO_WEEKS)]
+        (directory / "reports.json").write_text(json.dumps({"reports": reports}))
+        original = schedule.landing_ports
+        schedule.landing_ports = lambda root=None: {"port a": "port-a"}
+        out = io.StringIO()
+        try:
+            from skippercast.fleet import config
+            saved = config.load_region
+            config.load_region = lambda ident: REGION
+            with contextlib.redirect_stdout(out):
+                code = schedule.main(["--region", "CA", "--from", "2026-09-06", "--to", "2026-10-05",
+                                      "--reports", str(directory / "reports.json"), "--vessels",
+                                      str(directory / "vessels.json"), "--source", "aisstream", "--root", str(root)])
+        finally:
+            schedule.landing_ports = original
+            config.load_region = saved
+        self.assertEqual(code, 0)
+        result = json.loads(out.getvalue())
+        self.assertEqual((result["report_rows"], result["schedule_matches"], result["correct"], result["false_matches"],
+                          result["precision"]), (5, 1, 1, 0, 1.0))
+        self.assertNotIn(str(CANDIDATE), out.getvalue(), "counts only")
+
+
+class GateTests(unittest.TestCase):
+    """The watched gate (N4, design § 11): strong methods and confidence >= 0.85."""
+
+    def row(self, **extra):
+        return {"mmsi": str(OTHER), "vessel_id": SEA, "match_method": "geofence-presence", "confidence": 0.85,
+                "status": "watched", **extra}
+
+    def test_gate_problem(self):
+        self.assertIsNone(match.gate_problem(self.row()))
+        for method in ("fcc-uls", "admin", "schedule-correlation"):
+            self.assertIsNone(match.gate_problem(self.row(match_method=method, confidence=0.9)), method)
+        for method in ("call-sign", "ais-static-name"):
+            self.assertIn("candidate-only", match.gate_problem(self.row(match_method=method, confidence=0.99)))
+            self.assertIsNone(match.gate_problem(self.row(match_method=method, status="candidate")))
+        self.assertIn("below", match.gate_problem(self.row(confidence=0.849)))
+        self.assertIn("below", match.gate_problem(self.row(confidence=None)))
+        self.assertIsNone(match.gate_problem(self.row(status="rejected", match_method="fcc-uls", confidence=0.0)))
+
+    def test_decide_refuses_to_build_a_watched_row_that_fails_the_gate(self):
+        """A region whose mmsi_auto were lowered (the loader refuses one) could not make match write a weak row."""
+        weak = replace(REGION, thresholds={**REGION.thresholds,
+                                           "match": {**REGION.thresholds["match"], "mmsi_auto": 0.5}})
+        boat = full_static(CANDIDATE, "Sea Example", ship_type=60, length_m=18.0)
+        seen = {CANDIDATE: Seen(T0, T0, "aisstream", 1)}
+        with self.assertRaisesRegex(ValueError, "fails the gate: confidence 0.7 is below 0.85"):
+            decide(weak, fleet(), (), {CANDIDATE: boat}, seen, {CANDIDATE: {"port-a": 3}}, {}, NOW)
+
+    def test_watch_check_counts_by_method_and_fails_on_a_weak_watched_row(self):
+        good = [self.row(mmsi="999000401"), self.row(mmsi="999000402", match_method="fcc-uls", confidence=0.9),
+                self.row(mmsi="999000403", match_method="call-sign", confidence=0.8, status="candidate")]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(gate.main(["--region", "CA"], worker=FakeWorker(watch=good)), 0)
+        result = json.loads(out.getvalue())
+        self.assertEqual(result["counts"], {"candidate": {"call-sign": 1},
+                                            "watched": {"fcc-uls": 1, "geofence-presence": 1}})
+        self.assertEqual((result["failed"], result["failures"]), (0, {}))
+        self.assertNotIn("999000401", out.getvalue(), "counts only")
+        bad = good + [self.row(mmsi="999000404", match_method="ais-static-name", confidence=0.9),
+                      self.row(mmsi="999000405", confidence=0.6)]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(gate.main(["--region", "CA"], worker=FakeWorker(watch=bad)), 1)
+        result = json.loads(out.getvalue())
+        self.assertEqual((result["failed"], result["failures"]), (2, {"ais-static-name": 1, "geofence-presence": 1}))
+
+    def test_the_command_line_lists_the_new_commands(self):
+        from skippercast.fleet.ais.__main__ import COMMANDS
+        self.assertIn("watch-check", COMMANDS)
+        self.assertIn("schedule-precision", COMMANDS)
+
+    def test_the_region_floor(self):
+        self.assertGreaterEqual(REGION.thresholds["match"]["mmsi_auto"], match.WATCHED_MIN_CONFIDENCE)
 
 
 if __name__ == "__main__":

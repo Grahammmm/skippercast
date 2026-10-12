@@ -1,9 +1,18 @@
-// The one conditions score and verdict, shared by the Tomorrow card, the
-// meteogram, the search plans and the trip planner. Pure and dependency-free:
-// every number here is a disclosed planning heuristic tuned on the reference
-// 23 ft deep-V (see dist/boat-handling.js), not a sea-keeping calculation and
-// not a safety clearance. Change a threshold here and the golden tests in
+// The one conditions model: the graded score and verdict shared by the
+// Tomorrow card, the meteogram, the search plans, the trip planner and the
+// text advisor (server/advisor/answers/comfort.ts), and the window rule the
+// brief's lower-exposure windows use (packages/coast/src/assessment.ts,
+// daily.ts). Pure and dependency-free: every number here is a disclosed
+// planning heuristic tuned on the reference 23 ft deep-V (see
+// dist/boat-handling.js), not a sea-keeping calculation and not a safety
+// clearance. Change a threshold here and the golden tests in
 // tests/test_score.mjs will show exactly which ratings move.
+//
+// Two questions, deliberately answered differently (docs/conditions-model.md):
+// the score grades how comfortable and fishable an hour is on a 0-10 scale;
+// the window rule asks whether an hour sits inside the person's own numerical
+// limits (packages/coast/src/limits.ts), which they can set looser or
+// stricter. Both live here so neither copies the other's numbers.
 //
 // Erasable TypeScript only: legacy dist/*.js modules and Node tests import it.
 
@@ -176,3 +185,31 @@ export function verdictFor(rating: {conditions?: number | null; hazard?: boolean
 export const VERDICT_RANK: Record<Verdict, number> = Object.freeze({go: 0, marginal: 1, unknown: 2, 'no-go': 3});
 /** The worse of two verdicts (a window takes the worse of its hours). */
 export const worseVerdict = (a: Verdict, b: Verdict): Verdict => (VERDICT_RANK[a] >= VERDICT_RANK[b] ? a : b);
+
+/** A window rule's wind, gust and seas limits. Units: knots and feet. */
+export interface WindowLimits {wind: number; gust: number; wave: number}
+
+/** The brief's default window limits: boat, and the other profiles. The user's own limits replace them. */
+export const WINDOW_LIMITS: Readonly<Record<'boat' | 'other', Readonly<WindowLimits>>> = Object.freeze({
+  boat: Object.freeze({wind: 10, gust: 15, wave: 4}),
+  other: Object.freeze({wind: 8, gust: 12, wave: 3}),
+});
+
+/** Seas at least this high (ft) at least this period (s) keep an hour out of a window whatever the limits. */
+export const LONG_PERIOD_SWELL = Object.freeze({height: 2.5, period: 15});
+
+/** One hour's window inputs; nulls are unknown, and an unknown never fits a window. */
+export interface WindowHour {wind: number | null; gust: number | null; wave: number | null; period: number | null}
+
+/**
+ * Whether an hour's wind, gusts and seas sit inside the limits. `waveOk`, when a
+ * profile judges the water from its own nearshore model (spear surge), replaces
+ * the seas test and the long-period swell rule. Daylight, alerts and per-hour
+ * hazards are the caller's.
+ */
+export function withinWindowLimits(h: WindowHour, limits: WindowLimits, waveOk?: boolean): boolean {
+  if (!Number.isFinite(h.wind as number) || !Number.isFinite(h.gust as number) || !Number.isFinite(h.wave as number) || !Number.isFinite(h.period as number)) return false;
+  const wave = (h.wave as number), period = (h.period as number);
+  const seasOk = waveOk ?? (wave <= limits.wave && !(wave >= LONG_PERIOD_SWELL.height && period >= LONG_PERIOD_SWELL.period));
+  return (h.wind as number) <= limits.wind && (h.gust as number) <= limits.gust && seasOk;
+}

@@ -1,6 +1,6 @@
 """``file-import``: vessels from an owner-supplied file in ``<FLEET_VAR>/<region>/inputs/`` (design section 6).
 
-The one format so far is ``cdfw-cpfv-v1``: the CDFW Commercial Passenger Fishing
+The licence format is ``cdfw-cpfv-v1``: the CDFW Commercial Passenger Fishing
 Vessel licence list the owner requests under the California Public Records Act
 (docs/plans/charter-fleet/open-questions.md, Q4 and its appendix). It is a CSV
 with the fields that request asks for, matched by header name (case, spaces and
@@ -26,6 +26,12 @@ records-request page (``fleet.json`` ``agencies``, or the binding's
 ``source_url``) with ``#<binding id>-<sha256 of the file, 12 hex>`` appended, so
 each response file is its own record and re-importing the same file re-sees
 the same facts.
+
+The separate ``scout-candidates-v1`` format reads public discovery leads with
+``port_id,boat,operator,class,landing,website,evidence_urls``. Each fact keeps
+the row's public HTTPS evidence (pipe-separated); it never claims CDFW licence
+provenance. Class labels await verification. Unsafe evidence and personal
+operator names are dropped and counted. The private CSV stays in fleet var.
 """
 from __future__ import annotations
 
@@ -37,11 +43,22 @@ import re
 from typing import Any, Iterable, Mapping
 
 from .base import Candidate, Fact, RunContext
+from .fcc_uls import PERSON_MARKERS, is_entity as registry_entity
+from ..ops import https_url
 
 ID = "file-import"
 CONFIDENCE = 0.9
 
 COLUMN_SETS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
+    "scout-candidates-v1": {
+        "port_id": ("portid",),
+        "vessel_name": ("boat",),
+        "operator": ("operator",),
+        "class": ("class",),
+        "landing": ("landing",),
+        "website": ("website",),
+        "evidence_urls": ("evidenceurls",),
+    },
     "cdfw-cpfv-v1": {
         "vessel_name": ("vesselname", "vessel", "boatname", "nameofvessel"),
         "fg_number": ("fgnumber", "fg", "fgno", "cdfwregistrationnumber", "commercialboatregistrationnumber",
@@ -58,8 +75,8 @@ COLUMN_SETS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
         "crab_trap_validation": ("crabtrapvalidation", "cpfvcrabtrapvalidation"),
     },
 }
-REQUIRED = {"cdfw-cpfv-v1": ("vessel_name",)}
-ONE_OF = {"cdfw-cpfv-v1": ("fg_number", "licence_number")}
+REQUIRED = {"cdfw-cpfv-v1": ("vessel_name",), "scout-candidates-v1": tuple(COLUMN_SETS["scout-candidates-v1"])}
+ONE_OF = {"cdfw-cpfv-v1": ("fg_number", "licence_number"), "scout-candidates-v1": ()}
 
 # A licensee kept as operator_business: a business entity. Trusts and estates are often an individual's, so not kept.
 ENTITY = re.compile(r"\b(?:L\.?\s?L\.?\s?C|INC(?:ORPORATED)?|CORP(?:ORATION)?|CO(?:MPANY)?|LTD|LIMITED|L\.?\s?L\.?\s?P"
@@ -116,7 +133,7 @@ def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
             mapping[header] = canonical
     present = set(mapping.values())
     missing = [c for c in REQUIRED[column_set] if c not in present]
-    if missing or not present & set(ONE_OF[column_set]):
+    if missing or (ONE_OF[column_set] and not present & set(ONE_OF[column_set])):
         need = missing or [" or ".join(ONE_OF[column_set])]
         raise FileImportError(f"{column_set}: missing column(s) {', '.join(need)}")
     return [{canonical: (row.get(header) or "").strip() for header, canonical in mapping.items()} for row in reader]
@@ -162,6 +179,8 @@ class FileImport:
             return []
         data = path.read_bytes()
         rows = read_rows(data, str(binding.params.get("columns", "")))
+        if binding.params.get("columns") == "scout-candidates-v1":
+            return self._scout(rows, binding, ctx, report)
         source_url = self._source_url(binding, ctx, hashlib.sha256(data).hexdigest())
         now = ctx.clock()
         out = []
@@ -197,4 +216,73 @@ class FileImport:
                                  keys=keys, facts=tuple(f for f in facts if f.value not in (None, ""))))
         report["status"] = "ok"
         report["candidates"] = len(out)
+        return out
+
+
+    def _scout(self, rows, binding, ctx, report) -> list[Candidate]:
+        """Public scout leads, never agency/licence assertions.
+
+        Evidence is pipe-separated HTTPS page URLs; missing/blocked evidence is
+        counted and skipped. A safe website is a fallback source for its own row.
+        File paths are never provenance. Class labels remain unverified leads
+        rather than becoming inspection or passenger-capacity claims.
+        """
+        now, out = ctx.clock(), []
+        report.update(rows_without_evidence=0, rows_without_port=0,
+                      operator_names_dropped=0, urls_dropped=0, unverified_classes=0)
+
+        def safe_url(value):
+            url = https_url(value)
+            if not url or ctx.region.is_off_limits(url):
+                if value:
+                    report["urls_dropped"] += 1
+                return None
+            return url
+
+        for row in rows:
+            report["rows"] += 1
+            name = " ".join(row["vessel_name"].split())
+            if not name:
+                report["rows_without_name"] += 1
+                continue
+            # Exact ids prevent a misspelled/foreign port from silently losing its scope.
+            port = next((p.id for p in ctx.region.ports if p.id == row["port_id"]), None)
+            if not port:
+                report["rows_without_port"] += 1
+                continue
+            website = safe_url(row["website"])
+            evidence = sorted({url for value in row["evidence_urls"].split("|")
+                               if (url := safe_url(value.strip()))})
+            if not evidence and website:
+                evidence = [website]
+            if not evidence:
+                report["rows_without_evidence"] += 1
+                continue
+
+            def facts(field, value):
+                return [Fact(field, value, binding.id, url, "page", 0.7, binding.rights, now)
+                        for url in evidence]
+
+            found = facts("name", name) + facts("port", port)
+            if website:
+                found += facts("website", website)
+            business = " ".join(row["operator"].split())
+            # Public trade names are usable; plain person names and personal markers are not.
+            trade = re.search(r"\b(?:charters?|sportfishing|fishing|tours?|landing|excursions?)\b", business, re.I)
+            if business and not PERSON_MARKERS.search(business.upper()) and (
+                    registry_entity("C", business, "", "") or (trade and "," not in business)):
+                found += facts("operator", business[:120])
+            elif business:
+                report["operator_names_dropped"] += 1
+            landing = next((x.id for x in ctx.region.landings if x.port == port
+                            and _norm(row["landing"]) in {_norm(x.id), _norm(x.name)}), None)
+            if landing:
+                found += facts("landing", landing)
+            if row["class"] and row["class"].lower() != "unknown":
+                report["unverified_classes"] += 1
+            # Stable across row order and changes to evidence lists; same-name different ports stay apart.
+            record = hashlib.sha256(f"{port}|{_norm(name)}|{website or ''}".encode()).hexdigest()
+            out.append(Candidate(binding.id, name, port_hint=port, landing_hint=landing,
+                                 facts=tuple(found), record_id=record))
+        report.update(status="ok", candidates=len(out))
         return out

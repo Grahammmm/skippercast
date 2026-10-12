@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {CSP, CONNECT_ORIGINS, IMAGE_ORIGINS, SECURITY_HEADERS, secure, headersFile} from '../server/security-headers.ts';
+import {cloudSource, mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/sources.html': '/sources.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/sources.html': '/sources.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 globalThis.BUILD_ID = 'test';
 const {default: worker} = await import('../server/index.ts');
 
@@ -32,6 +33,33 @@ test('the policy is enumerated: no scheme wildcards, no inline script, no framin
   assert.match(SECURITY_HEADERS['Permissions-Policy'], /geolocation=\(self\)/);
 });
 
+// FE-22: the v2 cloud loop requests nowCOAST WMS tiles through MapLibre, which loads raster
+// tiles with fetch (web/map/engine.ts keeps refreshExpiredTiles on), so its one host joins
+// connect-src only; no <img> loads it and img-src stays as it was.
+test('the GOES cloud frames\' host is allowed for MapLibre\'s tile fetches, and nothing wider', () => {
+  const at = '2026-10-02T02:53:00.000Z';
+  const frame = cloudSource({id: 'goes-longwave', kind: 'observation', observedAt: at, fetchedAt: at, availableTimes: [at], layer: 'goes_longwave_imagery',
+    url: 'https://nowcoast.noaa.gov/', attribution: 'NOAA / NESDIS · GOES', license: 'public-domain-us-gov', limitations: 'Observed frames only.'}, new Date(at));
+  const origin = new URL(frame.tiles[0]).origin;
+  assert.equal(origin, 'https://nowcoast.noaa.gov');
+  assert.ok(mapSourceHosts.includes(origin), 'the fixed publisher host packages/coast names');
+  assert.ok(directives['connect-src'].includes(origin));
+  assert.ok(!directives['img-src'].includes(origin), 'img-src is not widened');
+  assert.equal(CONNECT_ORIGINS.filter(o => o.includes('nowcoast')).length, 1);
+});
+
+// FE-23: the aerial base's NAIP tiles load the same way (web/map/aerial.ts draws naipSource()), so its
+// one USGS host joins connect-src only; every fixed publisher host packages/coast names is now allowed.
+test('the NAIP aerial base\'s host is allowed for MapLibre\'s tile fetches, and nothing wider', () => {
+  const origins = [...new Set(naipSource().tiles.map(t => new URL(t.replace('{bbox-epsg-3857}', '0,0,1,1')).origin))];
+  assert.deepEqual(origins, ['https://imagery.nationalmap.gov']);
+  assert.ok(mapSourceHosts.includes(origins[0]), 'the fixed publisher host packages/coast names');
+  assert.ok(directives['connect-src'].includes(origins[0]));
+  assert.ok(!directives['img-src'].includes(origins[0]), 'img-src is not widened');
+  assert.equal(CONNECT_ORIGINS.filter(o => o.includes('nationalmap')).length, 1);
+  for (const host of mapSourceHosts) assert.ok(directives['connect-src'].includes(host), host);
+});
+
 // Every https origin written as a string literal in the client must be either
 // allowed by the CSP or known to be a plain link (never fetched or embedded).
 const LINK_ONLY = new Set(['docs.raymarine.com', 'inavx.com', 'marinespecies.wildlife.ca.gov', 'support.garmin.com',
@@ -55,7 +83,7 @@ test('page shells, assets, APIs, feeds and errors all carry the security headers
   class Immutable extends Headers { set() { throw new TypeError('immutable'); } }
   const ASSETS = {fetch: async request => {
     const path = new URL(request.url).pathname;requested.push(path);
-    const html = path.startsWith('/index.') || path.startsWith('/sources.');
+    const html = /^\/(index|sources|landing|app)\.\d+$/.test(path);
     const response = new Response(html ? '<!doctype html><title>x</title>' : 'x', {headers: {'Content-Type': html ? 'text/html' : 'text/javascript'}});
     Object.defineProperty(response, 'headers', {value: new Immutable(response.headers)});
     return response;
@@ -64,7 +92,7 @@ test('page shells, assets, APIs, feeds and errors all carry the security headers
   const shell = await worker.fetch(new Request('https://skippercast.com/'), env);
   assert.equal(shell.status, 200);assertSecured(shell, 'shell');
   assert.equal(shell.headers.get('Cache-Control'), 'no-store', 'shells stay uncached');
-  assert.deepEqual(requested, ['/index.0123456789']);
+  assert.deepEqual(requested, ['/landing.0123456789']);
   assertSecured(await worker.fetch(new Request('https://skippercast.com/sources.html'), env), 'sources shell');
   const asset = await worker.fetch(new Request('https://skippercast.com/app.0123456789.js'), env);
   assertSecured(asset, 'asset');assert.equal(asset.headers.get('Content-Type'), 'text/javascript');

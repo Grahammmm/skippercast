@@ -120,7 +120,8 @@ def run_candidates(run_dir: Path) -> list[Candidate]:
 def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -> dict:
     adapters, rows, report = dict(adapters or {}), [], {}
     for binding in ctx.region.enabled_sources():
-        if binding.adapter in NOT_DISCOVERY:
+        scout = binding.adapter == "file-import" and binding.params.get("columns") == "scout-candidates-v1"
+        if binding.adapter in NOT_DISCOVERY and not scout:
             continue
         try:
             adapter = adapters.get(binding.adapter) or get(binding.adapter)()
@@ -135,7 +136,8 @@ def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -
             report[binding.id] = {"status": "failed", "error": f"{type(error).__name__}: {error}"[:500]}
             continue
         rows += found
-        report[binding.id] = {"status": "ok", "candidates": len(found)}
+        report[binding.id] = {"status": "ok", "candidates": len(found),
+                              **(getattr(adapter, "report", {}).get(binding.id, {}) if scout else {})}
     failed = sum(r["status"] == "failed" for r in report.values())
     doc = {"at": ops.iso(ctx.clock(), "at"), "complete": not failed, "bindings": report}
     (ctx.run_dir / "discover.json").write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")

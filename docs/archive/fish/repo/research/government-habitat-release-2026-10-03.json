@@ -1,0 +1,315 @@
+{
+  "checkedAt": "2026-10-03T01:40:06.597Z",
+  "runtime": {
+    "checkedAt": "2026-10-03T01:40:06.597Z",
+    "releaseId": "cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158",
+    "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+    "checks": [
+      {
+        "region": "morro-bay",
+        "head": 200,
+        "range": 206,
+        "length": 16384,
+        "rangeSha256": "6bdef1fa4aabe0647d78a4a9960c535ab9be3e55da983e5cab172a2c0739f4e3",
+        "ifMatch": 412
+      },
+      {
+        "region": "cambria-san-simeon",
+        "head": 200,
+        "range": 206,
+        "length": 16384,
+        "rangeSha256": "1c766e50b6d6732c823a08ef2628db8236b40b03a7957496bdecd85e6a128ca4",
+        "ifMatch": 412
+      },
+      {
+        "path": "/api/habitat/tiles?region=morro-bay",
+        "heldStatus": 503
+      },
+      {
+        "path": "/api/habitat/tiles?region=cambria-san-simeon",
+        "heldStatus": 503
+      },
+      {
+        "path": "/data/skippercast-habitat.geojson",
+        "heldStatus": 503
+      },
+      {
+        "path": "/data/skippercast-species.json",
+        "heldStatus": 503
+      },
+      {
+        "path": "/api/habitat/tiles?region=morro-bay",
+        "recovered": 200
+      },
+      {
+        "path": "/api/habitat/tiles?region=cambria-san-simeon",
+        "recovered": 200
+      },
+      {
+        "path": "/data/skippercast-habitat.geojson",
+        "recovered": 200
+      },
+      {
+        "path": "/habitat-government/cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158/morro-bay.pmtiles",
+        "blocked": 404
+      },
+      {
+        "path": "/%64ata/skippercast-habitat.geojson",
+        "blocked": 404
+      }
+    ]
+  },
+  "release": {
+    "schemaVersion": 1,
+    "sourceKind": "fish-government",
+    "status": "ready",
+    "ready": true,
+    "releaseId": "cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158",
+    "sourceScope": "government-only",
+    "sourceUse": "for-profit",
+    "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+    "catalogSha256": "a1fb8566201d3c21973592911dab8d48593d6b653056b9820f2511a7e53e047b",
+    "expiresAt": "2026-11-05T00:00:00+00:00",
+    "regions": [
+      {
+        "regionId": "morro-bay",
+        "ready": true,
+        "status": "ready",
+        "commercialArchivePermitted": true,
+        "license": "public-domain-us-gov",
+        "builtAt": "2026-10-03T01:26:24.332635+00:00",
+        "expiresAt": "2026-11-05T00:00:00+00:00",
+        "archiveSha256": "1eac589849c92625a64c5ef521f2e22c66cc93eabf2d739919f0008421d34f8a",
+        "archiveBytes": 15285607,
+        "archiveETag": "\"sha256-1eac589849c92625a64c5ef521f2e22c66cc93eabf2d739919f0008421d34f8a\"",
+        "reviewReceiptSha256": "e2a2757a482299882bea8f960d90124be3683dfbad04fc4ac5c05de627998d6b",
+        "featureCount": 2821,
+        "exportSha256": "5d5223fc17642da81ff9d91e50a0ea2c070a61d5aaeb36e459e3c9f5eb59735b",
+        "exportBytes": 17873391,
+        "coverageCount": 10101,
+        "layerNames": [
+          "cells",
+          "habitat"
+        ],
+        "bounds": [
+          -121.35,
+          34.92,
+          -120.51,
+          35.82
+        ],
+        "attribution": [
+          "USGS"
+        ],
+        "archiveKey": "habitat-government/cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158/morro-bay.pmtiles",
+        "archiveUrl": "/api/habitat/tiles?region=morro-bay",
+        "sourceManifestUrl": "/api/habitat/release"
+      },
+      {
+        "regionId": "cambria-san-simeon",
+        "ready": true,
+        "status": "ready",
+        "commercialArchivePermitted": true,
+        "license": "public-domain-us-gov",
+        "builtAt": "2026-10-03T01:27:26.065257+00:00",
+        "expiresAt": "2026-11-05T00:00:00+00:00",
+        "archiveSha256": "7e8cb47eec10b7b3587663ad2dbc43a6164de544f82eaf3feac14b2829dfe284",
+        "archiveBytes": 627276,
+        "archiveETag": "\"sha256-7e8cb47eec10b7b3587663ad2dbc43a6164de544f82eaf3feac14b2829dfe284\"",
+        "reviewReceiptSha256": "aa6e6f30e6bdef3017d06b48c1b3ca37b1f817de1b20591b9919d8d5d946c261",
+        "featureCount": 47,
+        "exportSha256": "636c456c915b8076404b7c7a22902f6ec57502ca3d46edf2e7841015cba4063e",
+        "exportBytes": 167338,
+        "coverageCount": 2352,
+        "layerNames": [
+          "cells",
+          "habitat"
+        ],
+        "bounds": [
+          -121.35,
+          34.92,
+          -120.51,
+          35.82
+        ],
+        "attribution": [
+          "USGS"
+        ],
+        "archiveKey": "habitat-government/cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158/cambria-san-simeon.pmtiles",
+        "archiveUrl": "/api/habitat/tiles?region=cambria-san-simeon",
+        "sourceManifestUrl": "/api/habitat/release"
+      }
+    ]
+  },
+  "science": {
+    "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+    "mergeCommit": "db19844a3086243d40637faa82d72fa2d01dc997",
+    "pullRequest": "https://github.com/Grahammmm/skippercast/pull/209",
+    "ciRun": "https://github.com/Grahammmm/skippercast/actions/runs/37086299504",
+    "pythonTests": 1110,
+    "expectedPrivateArchiveSkips": 14,
+    "subtests": 4511,
+    "regionsComplete": 2,
+    "reachesComplete": 12,
+    "fullCatalogUnchanged": true,
+    "sourceSelection": "Government originals selected before terrain, precedence and calibration"
+  },
+  "fishVerification": {
+    "nodeTests": 172,
+    "typeChecks": "passed",
+    "build": "passed",
+    "independentReview": "fishing_needs accepted actual complete release, six importer tests, exact canonical geometry and full run/source receipts",
+    "desktopMobileRenderedAcceptance": "pending; browser URL/security policy not bypassed"
+  },
+  "storage": {
+    "kind": "local private R2",
+    "binding": "HABITAT",
+    "bucket": "fish-habitat",
+    "cloudObjectsPublished": false,
+    "privateCanonicalAndScientificReceipts": "Retained privately with byte checksums; never ASSETS"
+  },
+  "limits": [
+    "Survey-derived habitat; actual fish presence and catch probability unmeasured",
+    "Nominal depth and original datum/mask limitations retained",
+    "Permanent spatial screening does not clear season, gear or transient closures",
+    "Private local R2 data requires explicit verified staging for another checkout or cloud deployment"
+  ],
+  "dataRuntime": {
+    "checkedAt": "2026-10-03T01:49:57.830Z",
+    "checks": [
+      {
+        "path": "/api/report",
+        "status": 200,
+        "generatedAt": "2026-10-03T01:41:26.295Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/ocean",
+        "status": 200,
+        "generatedAt": "2026-10-03T01:41:22.849Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/history",
+        "status": 200,
+        "generatedAt": "2026-10-03T01:41:25.035Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/health",
+        "status": 200,
+        "generatedAt": "2026-10-03T01:41:26.295Z"
+      }
+    ],
+    "all65AnnualBaselinesCatalogsAndOriginalReceiptsPreserved": true,
+    "murOriginalLayerAndClocksPreserved": true,
+    "retainedCatchFactsAndTripDatesPreserved": true,
+    "omittedPriorTrips": [
+      {
+        "id": "6a3f70dc02242976",
+        "date": "2026-09-22",
+        "boat": "Starfire"
+      },
+      {
+        "id": "f7768beac89910a9",
+        "date": "2026-09-22",
+        "boat": "Endeavor (MB)"
+      }
+    ],
+    "verificationCorrection": "Initial same-edition assertion rejected an actual new upstream edition; independently reviewed omissions are recorded separately.",
+    "report": {
+      "catchCount": 19,
+      "catchContext": {
+        "feedUrl": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+        "feedGeneratedAt": "2026-10-03T00:56:02Z",
+        "receivedAt": "2026-10-03T01:41:24.530Z",
+        "windowStart": "2026-09-02",
+        "windowEnd": "2026-10-01",
+        "latestTripDate": "2026-10-01",
+        "rights": {
+          "scope": "linked-factual-counts",
+          "reviewedAt": "2026-09-21",
+          "sourceCatalogUrl": "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
+        }
+      },
+      "observations": [
+        {
+          "id": "46215",
+          "at": "2026-10-03T00:56:00.000Z"
+        },
+        {
+          "id": "46028",
+          "at": "2026-10-03T00:50:00.000Z"
+        }
+      ],
+      "nwsIssuedAt": [
+        {
+          "at": "2026-10-02T22:31:34.000Z"
+        },
+        {
+          "at": "2026-10-02T22:31:34.000Z"
+        },
+        {
+          "at": "2026-10-02T22:31:34.000Z"
+        }
+      ]
+    },
+    "ocean": {
+      "cloudObservedAt": "2026-10-03T01:38:00.000Z",
+      "currents": [
+        {
+          "id": "wcofs",
+          "kind": "forecast",
+          "issuedAt": "2026-10-02T03:00:00.000Z",
+          "sampleAt": null,
+          "fetchedAt": "2026-10-03T01:12:36.000Z"
+        },
+        {
+          "id": "hfr-1",
+          "kind": "observation",
+          "issuedAt": null,
+          "sampleAt": "2026-10-02T22:00:00.000Z",
+          "fetchedAt": "2026-10-03T01:12:33.000Z"
+        },
+        {
+          "id": "hfr-6",
+          "kind": "observation",
+          "issuedAt": null,
+          "sampleAt": "2026-10-02T20:00:00.000Z",
+          "fetchedAt": "2026-10-03T01:12:32.000Z"
+        }
+      ]
+    },
+    "history": {
+      "stations": [
+        {
+          "id": "46215",
+          "baselineYears": 22,
+          "latestObservation": "2026-10-03T00:56:00.000Z"
+        },
+        {
+          "id": "46028",
+          "baselineYears": 43,
+          "latestObservation": "2026-10-03T01:00:00.000Z"
+        }
+      ]
+    },
+    "scope": "Actual local backend verification; no browser rendering or cloud publication claim"
+  },
+  "catchEditionReview": {
+    "reviewer": "source_registry",
+    "checkedAt": "2026-10-03T01:50:33Z",
+    "feedGeneratedAt": "2026-10-03T00:56:02Z",
+    "upstreamBytes": 1388016,
+    "originalSeptember22Receipt": "2026-09-30T01:18:52Z",
+    "receiptAgeAtCollection": "72h22m32.530s",
+    "existingMaxAgeHours": 72,
+    "omittedIds": [
+      "6a3f70dc02242976",
+      "f7768beac89910a9"
+    ],
+    "originalRecordsStillPresentAndUnchanged": true,
+    "collectorReplayMatchesSnapshotExactly": true,
+    "retainedFactsUnchanged": true,
+    "advancedOriginalReceiptClocks": 15,
+    "interpretation": "Source-day receipts aged beyond the unchanged gate. Feed generation and Fish retrieval do not renew original evidence clocks."
+  }
+}

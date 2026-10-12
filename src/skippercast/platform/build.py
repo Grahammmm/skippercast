@@ -12,6 +12,7 @@ from .qualified_scope import validate_qualified_scope, qualified_subset_satisfie
 from .coasts import compile_coasts
 from .sectors import compile_sectors
 from .readiness import compile_readiness
+from .shoreline import publish_shoreline
 
 
 def target_options(region, targets):
@@ -31,6 +32,29 @@ def validate_regional_rules(region, root, now=None):
     if snapshot['rules_review_status'] != 'reviewed':
         raise ValueError('Changed regulatory content needs an explicit review decision before publishing')
     region['regulatory_authority_hosts'] = jurisdiction['authority_hosts']
+
+
+def compile_shore_habitat(root, regions):
+    """Copy each reviewed catalog/shore-habitat/<id>.geojson into its published region package.
+
+    The file is validated (schema, region id, coordinates inside the region) and copied
+    byte for byte; its review dates are the importer's and are never changed here."""
+    from .. import validate
+    known = {r['id']: r for r in regions}
+    for path in sorted((root / 'catalog/shore-habitat').glob('*.geojson')):
+        region = known.get(path.stem)
+        if region is None:
+            raise ValueError(f'Shore habitat names an unknown or draft region {path.stem}')
+        data = read_json(path)
+        validate.check('shore-habitat', data)
+        if data['regionId'] != region['id'] or any(f['properties']['region'] != region['id'] for f in data['features']):
+            raise ValueError(f'Shore habitat {path.name} belongs to another region')
+        west, south, east, north = region['bounds']
+        points = [p for f in data['features'] for line in f['geometry']['coordinates'] for p in line]
+        points += [a['coordinates'] for f in data['features'] for a in f['properties']['access']]
+        if not all(west <= x <= east and south <= y <= north for x, y in points):
+            raise ValueError(f'Shore habitat {path.name} lies outside the {region["id"]} bounds')
+        shutil.copyfile(path, root / 'dist/regions' / region['id'] / 'shore-habitat.geojson')
 
 
 def build(root=REPO, now=None):
@@ -78,6 +102,9 @@ def build(root=REPO, now=None):
             if not asset.is_file():
                 raise ValueError(f"Missing published asset for {region['id']}: {value}")
             assets[key] = {"path": value, "sha256": hashlib.sha256(asset.read_bytes()).hexdigest(), "bytes": asset.stat().st_size}
+        # The CUSP shoreline (FE-10) ships beside the package, outside region.assets and the manifest,
+        # so v1 offline packs (every manifest asset) stay the same until the v2 Chart reads it.
+        publish_shoreline(root, region, output)
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)
@@ -111,6 +138,7 @@ def build(root=REPO, now=None):
         receipt = atomic_json(output / "manifest.json", {"schema_version": 1, "region_id": region["id"], "assets": assets}, kind="region-manifest")
         entries.append({"id": region["id"], "name": region["name"], "status": region["status"], "fishing_bounds": region['fishing_bounds'], "discovery_bounds": region.get('map',{}).get('discovery_bounds',region['fishing_bounds']), "config": f"regions/{region['id']}/region.json", "manifest": receipt["sha256"]})
     compile_launch_points(root, published)
+    compile_shore_habitat(root, published)
     atomic_json(root / "dist/regions/index.json", {"schema_version": 1, "default_region": DEFAULT_REGION, "regions": entries}, kind="published-regions")
     default = load_region(DEFAULT_REGION, root)
     validate_regional_rules(default, root, now)

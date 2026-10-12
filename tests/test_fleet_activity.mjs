@@ -56,7 +56,7 @@ function trip(mmsi, departed, {source = 'aisstream', vessel = VESSEL, status = '
     returned_at: status === 'open' ? null : departed.replace('T08', 'T13'), local_date: departed.slice(0, 10), season: '2026', season_part: 'fall',
     status, trip_type_inferred: null, distance_nm: distance, max_offshore_nm: 4.2, fishing_min: 70, positions_n: 300, gap_min: 0,
     source, rights: source === 'marinecadastre' ? 'noaa-planning-only' : 'internal-only', classifier_version: 'c1-0123456789abcdef', computed_at: NOW};
-  const segments = [0, 1, 2].map(seq => ({id: sha(`${id}|${seq}`), trip_id: id, seq, kind: ['transit', 'fishing-drift', 'transit'][seq],
+  const segments = [0, 1, 2].map(seq => ({id: sha(`${id}|${seq}`), trip_id: id, seq, kind: ['transit', 'drift-anchor', 'transit'][seq],
     started_at: departed.replace(':00:00.000Z', `:${10 + seq}:00.000Z`), ended_at: departed.replace(':00:00.000Z', `:${11 + seq}:00.000Z`),
     geometry: '_p~iF~ps|U_ulLnnqC', points_n: 20, mean_sog: 1.2, straightness: 0.4, heading_var: 0.5}));
   const started = segments[1].started_at;
@@ -90,11 +90,11 @@ test('reprocessing a window twice leaves identical rows', {skip}, async () => {
     const body = replaceBody([W(A)], [trip(A, '2026-10-01T08:00:00.000Z'), trip(A, '2026-10-02T08:00:00.000Z', {status: 'open'})]);
     const first = await call(db, 'activity', body);
     assert.equal(first.status, 200, JSON.stringify(first.body));
-    assert.deepEqual(first.body.changes, {deleted_events: 0, deleted_segments: 0, deleted_trips: 0, trips: 2, segments: 6, events: 2});
+    assert.deepEqual(first.body.changes, {unpaired: 0, deleted_events: 0, deleted_segments: 0, deleted_trips: 0, trips: 2, segments: 6, events: 2, paired_advisor: 0});
     const before = dump(sql);
     const second = await call(db, 'activity', body);
     assert.equal(second.status, 200);
-    assert.deepEqual(second.body.changes, {deleted_events: 2, deleted_segments: 6, deleted_trips: 2, trips: 2, segments: 6, events: 2});
+    assert.deepEqual(second.body.changes, {unpaired: 0, deleted_events: 2, deleted_segments: 6, deleted_trips: 2, trips: 2, segments: 6, events: 2, paired_advisor: 0});
     assert.deepEqual(dump(sql), before);
     // A window recomputed with fewer trips (the open one went away) drops it with its children.
     const third = await call(db, 'activity', replaceBody([W(A)], [trip(A, '2026-10-01T08:00:00.000Z')]));
@@ -114,7 +114,7 @@ test('replace-window touches only the given MMSIs, source and window', {skip}, a
     const backfill = trip(A, '2026-10-02T09:00:00.000Z', {source: 'marinecadastre'});      // A, other source
     assert.equal((await call(db, 'activity', replaceBody([W(A), W(A, '2026-10-05T00:00:00.000Z', '2026-10-06T00:00:00.000Z'), W(B)], [inside, outside, otherMmsi]))).status, 200);
     assert.equal((await call(db, 'activity', replaceBody([W(A)], [backfill], 'marinecadastre'))).status, 200);
-    sql.prepare(`INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES('label-1',?,?,?,'fishing-drift','agent:test','synthetic',?)`)
+    sql.prepare(`INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES('label-1',?,?,?,'drift-anchor','agent:test','synthetic',?)`)
       .run(inside.trip.id, inside.segments[1].started_at, inside.segments[1].ended_at, NOW);
     // Every derived row except the replaced trip's own.
     const others = () => ['fleet_trips', 'fleet_segments', 'fleet_events'].map(t =>
@@ -126,7 +126,7 @@ test('replace-window touches only the given MMSIs, source and window', {skip}, a
     const recomputed = trip(A, '2026-10-02T08:00:00.000Z', {distance: 20.25});
     const result = await call(db, 'activity', replaceBody([W(A)], [recomputed]));
     assert.equal(result.status, 200, JSON.stringify(result.body));
-    assert.deepEqual(result.body.changes, {deleted_events: 1, deleted_segments: 3, deleted_trips: 1, trips: 1, segments: 3, events: 1});
+    assert.deepEqual(result.body.changes, {unpaired: 0, deleted_events: 1, deleted_segments: 3, deleted_trips: 1, trips: 1, segments: 3, events: 1, paired_advisor: 0});
     assert.equal(sql.prepare('SELECT distance_nm FROM fleet_trips WHERE id=?').get(inside.trip.id).distance_nm, 20.25);
     assert.deepEqual(others(), untouched);
     assert.deepEqual(ids(sql, 'fleet_trips').sort(), [inside, outside, otherMmsi, backfill].map(p => p.trip.id).sort());
@@ -176,7 +176,7 @@ test('aggregates upsert, delete listed cells and prune a full rebuild', {skip}, 
     assert.equal((await post({season: '2026', cells: [{...cell(1), dwell_min: 120}], delete: [cell(3).id]})).status, 200);
     assert.deepEqual(sql.prepare('SELECT cell_id, dwell_min FROM fleet_aggregates WHERE season=? ORDER BY cell_id').all('2026').map(r => ({...r})),
       [{cell_id: 'g1000:1:1', dwell_min: 120}, {cell_id: 'g1000:2:1', dwell_min: 90}]);
-    sql.prepare(`INSERT INTO fleet_aggregates(id,region,module,params_json,cell_id,lat,lon,season,kind,rights,computed_at) VALUES(?,?,'h3','{}','h3:x',35,-121,'2026','troll','internal-only',?)`)
+    sql.prepare(`INSERT INTO fleet_aggregates(id,region,module,params_json,cell_id,lat,lon,season,kind,rights,computed_at) VALUES(?,?,'h3','{}','h3:x',35,-121,'2026','troll-slow','internal-only',?)`)
       .run(sha('h3-cell'), REGION, NOW);
     const later = '2026-10-05T12:30:00.000Z';
     assert.equal((await post({season: '2026', cells: [cell(2, later), cell(4, later)], prune: later})).status, 200);

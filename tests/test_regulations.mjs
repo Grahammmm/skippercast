@@ -1,9 +1,16 @@
+// The reviewed rules registry read through web/regs.ts (FE-61 moved these from
+// v1's dist/regulations.js, deleted with the v1 shell; its HTML card, gear
+// methods and fishing-location check went with it).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { regulationState, regulationsHTML, validRegulations, officialURL, areaNoticesHTML, ruleSummary, ruleSummaryHTML, firstClause, depthLimit } from "../dist/regulations.js";
+import { regulationState, validRegulations, officialURL, ruleProfile, ruleSummary, firstClause, depthLimit } from "../web/regs.ts";
 const now = Date.parse("2026-09-21T18:00:00Z");
-const original = JSON.parse(readFileSync(new URL("../dist/data/regulations.json", import.meta.url), "utf8"));
+const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), "utf8"));
+const original = read("data/regulations.json");
+const region = read("regions/morro-bay/region.json");
+const state = (d, id, at = now) => regulationState(d, id, region, at);
+const summary = (d, id, at = now) => ruleSummary(d, id, state(d, id, at), region);
 function data(at = now) {
   const d = structuredClone(original);
   d.reviewed_at = new Date(at - 3600000).toISOString();
@@ -16,17 +23,13 @@ function data(at = now) {
 }
 test("all seven species have local limits and correct initial season states", () => {
   const d = data();
-  assert.ok(validRegulations(d));
-  for (const id of Object.keys(d.species)) {
-    const state = regulationState(d, id, now);
-    assert.equal(state.status, id === "dungeness" ? "closed" : "open");
-    assert.match(regulationsHTML(d, id, now), /Daily \/ possession limit/);
-  }
+  assert.ok(validRegulations(d, region));
+  for (const id of Object.keys(d.species)) assert.equal(state(d, id).status, id === "dungeness" ? "closed" : "open");
   assert.match(d.species.halibut.bag, /^5 /);
   assert.match(d.species.albacore.bag, /^25 /);
   assert.match(d.species.rockfish.details.join(" "), /1 copper, 2 canary/);
 });
-test("seasons roll at Pacific midnight; crab does not auto-authorize traps", () => {
+test("seasons roll at Pacific midnight; crab is only scheduled", () => {
   for (const [date, species, expected] of [
     ["2026-10-01T06:59:00Z", "salmon", "open"],
     ["2026-10-01T07:00:00Z", "salmon", "closed"],
@@ -34,7 +37,7 @@ test("seasons roll at Pacific midnight; crab does not auto-authorize traps", () 
     ["2027-01-01T08:00:00Z", "lingcod", "unknown"],
   ]) {
     const at = Date.parse(date);
-    assert.equal(regulationState(data(at), species, at).status, expected);
+    assert.equal(state(data(at), species, at).status, expected);
   }
 });
 test("stale, changed, missing, retained, unreviewed and mismatched evidence withhold open", () => {
@@ -49,127 +52,91 @@ test("stale, changed, missing, retained, unreviewed and mismatched evidence with
     (d) => d.checks["rules-salmon"].data_retrieved_at = "2026-09-19T00:00:00Z",
   ]) {
     const d = data(); edit(d);
-    assert.equal(regulationState(d, "salmon", now).status, "unknown");
-    assert.equal(regulationState(d, "lingcod", now).status, "open");
+    assert.equal(state(d, "salmon").status, "unknown");
+    assert.equal(state(d, "lingcod").status, "open");
   }
 });
-
-test("unreviewed legal content withholds open and ancillary access notices stay separate", () => {
+test("unreviewed legal content withholds open; links stay on official sources", () => {
   const d = data(); d.rules_review_status = 'content-needs-review';
-  assert.equal(regulationState(d, 'lingcod', now).status, 'unknown');
-  const southern = JSON.parse(readFileSync(new URL('../dist/regions/southern-california/regulations.json', import.meta.url), 'utf8'));
-  southern.checks['rules-navy-sci'].status = 'unavailable';
-  const html = areaNoticesHTML(southern, Date.parse(southern.reviewed_at));
-  assert.match(html, /Area rules &amp; island access/);
-  assert.match(html, /Current operational clearance has not been verified/);
-  assert.match(html, /https:\/\/www.ecfr.gov\/current\/title-33/);
-  assert.match(officialURL('https://fgc.ca.gov/Regulations/2026-New-and-Proposed'), /^https:\/\/fgc.ca.gov/);
+  assert.equal(state(d, 'lingcod').status, 'unknown');
+  assert.equal(officialURL("javascript:alert(1)", region), "https://wildlife.ca.gov/Fishing/Ocean");
+  assert.equal(officialURL("https://wildlife.ca.gov.attacker.example/", region), "https://wildlife.ca.gov/Fishing/Ocean");
 });
-test("unavailable or malformed registry still gives official links", () => {
-  assert.equal(regulationState(null, "salmon", now).status, "unknown");
-  assert.match(regulationsHTML(null, "salmon", now), /https:\/\/wildlife.ca.gov\/Fishing\/Ocean/);
+test("an unavailable or incomplete registry is unknown", () => {
+  assert.equal(state(null, "salmon").status, "unknown");
   const d = data(); delete d.species.bluefin;
-  assert.ok(!validRegulations(d));
+  assert.ok(!validRegulations(d, region));
 });
-test("data is escaped and links stay on official sources", () => {
-  const d = data(); d.species.lingcod.name = '<img src=x onerror="bad()">';
-  const html = regulationsHTML(d, "lingcod", now);
-  assert.ok(!html.includes('<img'));
-  assert.match(html, /&lt;img/);
-  assert.equal(officialURL("javascript:alert(1)"), "https://wildlife.ca.gov/Fishing/Ocean");
-  assert.equal(officialURL("https://wildlife.ca.gov.attacker.example/"), "https://wildlife.ca.gov/Fishing/Ocean");
-});
-
 test("combined reef selector keeps both legal limits and does not mask an unverified species", () => {
   const d = data();
-  assert.equal(regulationState(d, "reef", now).status, "open");
-  const html = regulationsHTML(d, "reef", now);
-  assert.match(html, /2 per person daily/);
-  assert.match(html, /10 total rockfish, cabezon and greenlings/);
-  assert.match(html, /22 in minimum/);
-  assert.match(html, /Keep the limits separate/);
+  assert.equal(state(d, "reef").status, "open");
+  assert.deepEqual(summary(d, "reef").bag.map((b) => b.split(":")[0]), ["Lingcod", "Rockfish / rock cod"]);
   d.checks["rules-groundfish"].status = "changed";
-  assert.equal(regulationState(d, "reef", now).status, "unknown");
-  assert.equal(regulationState(null, "reef", now).status, "unknown");
+  assert.equal(state(d, "reef").status, "unknown");
+  assert.equal(state(null, "reef").status, "unknown");
 });
-
-test('latitude-limited seasons check the entire selected fishing geometry', () => {
-  const d=data();
-  d.species.salmon.windows[0].geography={kind:'latitude-band',south:35.0,north:35.4,source_id:'rules-salmon',note:'Open only between reviewed latitude lines.'};
-  const location=(latitude,geometry=null)=>({coverage:'covered',regionId:'morro-bay',point:{latitude,longitude:-120.9,geometry},protection:{status:'clear'}});
-  assert.equal(regulationState(d,'salmon',now).status,'unknown');
-  assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.2)).status,'open');
-  const north=regulationState(d,'salmon',now,null,'rod',null,location(35.5));
-  assert.equal(north.status,'closed');
-  assert.match(north.reason,/outside the area opened/);
-  const crossing={type:'Polygon',coordinates:[[[-121,35.35],[-120.8,35.35],[-120.8,35.45],[-121,35.45],[-121,35.35]]]};
-  assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.38,crossing)).status,'unknown');
-  d.checks['rules-salmon'].status='changed';
-  assert.equal(regulationState(d,'salmon',now,null,'rod',null,location(35.2)).status,'unknown');
-  d.species.salmon.windows[0].geography.north=91;
-  assert.equal(validRegulations(d),false);
-});
-
-test("summary row leads the card with status, bag, size, depth, verified date and one link", () => {
+test('a latitude-limited season asks for a fishing location and its band is validated', () => {
   const d = data();
-  const html = regulationsHTML(d, "halibut", now);
-  const row = html.indexOf('class="reg-summary-row"');
-  assert.ok(row > 0 && row < html.indexOf("reg-notice"), "row comes before the existing detail");
-  assert.match(html, /<dl class="reg-limits"><dt>Season<\/dt>/, "existing detail is still rendered");
-  const s = ruleSummary(d, "halibut", regulationState(d, "halibut", now));
+  d.species.salmon.windows[0].geography = {kind: 'latitude-band', south: 35.0, north: 35.4, source_id: 'rules-salmon', note: 'Open only between reviewed latitude lines.'};
+  assert.equal(state(d, 'salmon').status, 'unknown');
+  assert.equal(state(d, 'salmon').label, 'Choose fishing location');
+  d.species.salmon.windows[0].geography.north = 91;
+  assert.equal(validRegulations(d, region), false);
+});
+test("summary leads with status, bag, size, depth, verified date and one link", () => {
+  const d = data();
+  const s = summary(d, "halibut");
   assert.equal(s.label, "Open");
   assert.deepEqual(s.bag, ["5 per person daily"]);
   assert.deepEqual(s.size, ["22 in min total length"]);
   assert.equal(s.verified, "Sep 21");
   assert.match(s.link, /^https:\/\/wildlife\.ca\.gov\//);
-  assert.equal((ruleSummaryHTML(s).match(/<a /g) || []).length, 1, "exactly one official link");
-  const lingcod = ruleSummary(d, "lingcod", regulationState(d, "lingcod", now));
-  assert.equal(lingcod.depth, "All depths");
-  const reef = ruleSummary(d, "reef", regulationState(d, "reef", now));
-  assert.deepEqual(reef.bag.map((b) => b.split(":")[0]), ["Lingcod", "Rockfish / rock cod"]);
-  assert.equal(reef.linkLabel, "Official groundfish rules");
-  assert.equal((regulationsHTML(d, "reef", now).match(/reg-summary-row/g) || []).length, 1, "member cards do not repeat the row");
+  assert.equal(summary(d, "lingcod").depth, "All depths");
+  assert.equal(summary(d, "reef").linkLabel, "Official groundfish rules");
 });
-
-test("summary row keeps the fail-closed status and never claims verification", () => {
+test("summary keeps the fail-closed status and never claims verification", () => {
   const d = data();
   d.checks[d.species.halibut.source_ids[0]].status = "changed";
-  const state = regulationState(d, "halibut", now);
-  const s = ruleSummary(d, "halibut", state);
+  const s = summary(d, "halibut");
   assert.equal(s.status, "unknown");
   assert.equal(s.label, "Check rules");
   assert.equal(s.verified, null);
+  assert.equal(s.checked, "Sep 21");
   assert.equal(s.depth, null);
-  assert.match(ruleSummaryHTML(s), /Needs recheck · last check Sep 21/);
-  assert.doesNotMatch(ruleSummaryHTML(s), />Open</);
   const stale = data(now - 48 * 3600000);
-  const staleSummary = ruleSummary(stale, "lingcod", regulationState(stale, "lingcod", now));
-  assert.equal(staleSummary.label, "Check rules");
-  assert.equal(staleSummary.verified, null);
-  const missing = ruleSummary(null, "salmon", regulationState(null, "salmon", now));
+  assert.equal(summary(stale, "lingcod").label, "Check rules");
+  assert.equal(summary(stale, "lingcod").verified, null);
+  const missing = summary(null, "salmon");
   assert.equal(missing.label, "Check rules");
   assert.deepEqual(missing.bag, []);
   assert.equal(missing.link, "https://wildlife.ca.gov/Fishing/Ocean");
-  assert.match(regulationsHTML(null, "salmon", now), /reg-summary-row[\s\S]*Check rules[\s\S]*Official CDFW rules/);
   const unreviewed = data(); unreviewed.rules_review_status = "content-needs-review";
-  assert.equal(ruleSummary(unreviewed, "halibut", regulationState(unreviewed, "halibut", now)).verified, null);
+  assert.equal(summary(unreviewed, "halibut").verified, null);
 });
-
 test("summary text is cut from the reviewed wording, never rewritten, and depth comes from structured access", () => {
   assert.equal(firstClause("2 per person daily; 2 in possession."), "2 per person daily");
   assert.equal(firstClause("22 in minimum total length."), "22 in min total length");
   assert.match(firstClause("5 total kelp, barred sand and spotted sand bass combined, with no more than 4 barred sand bass."), /…$|exceptions below/);
   assert.match(firstClause("14 in minimum total length (or the regulation's defined 10 in alternate length)."), /^14 in min total length \(exceptions below\)$/);
   assert.equal(firstClause(""), null);
-  const southern = JSON.parse(readFileSync(new URL("../dist/regions/southern-california/regulations.json", import.meta.url), "utf8"));
+  const southern = read("regions/southern-california/regulations.json");
   assert.equal(depthLimit(southern.species.lingcod, "2026-08-01"), "Inside 50-fm line");
   assert.equal(depthLimit(southern.species.lingcod, "2026-11-01"), "Outside 50-fm line");
   assert.equal(depthLimit(southern.species.lingcod, "2026-05-01"), "All depths");
   assert.equal(depthLimit(southern.species.lingcod, "2026-02-01"), null, "no active window, no depth claim");
   assert.equal(depthLimit(southern.species.halibut, "2026-05-01"), null, "no depth wording, no depth claim");
 });
-
-test("summary escapes registry text", () => {
-  const d = data(); d.species.halibut.bag = '<b onmouseover="x()">5</b> per person daily';
-  assert.doesNotMatch(ruleSummaryHTML(ruleSummary(d, "halibut", regulationState(d, "halibut", now))), /<b /);
+test('unsupported and inherited target identities remain unknown in state and summary', () => {
+  const d = data();
+  for (const id of ['constructor', 'toString', '__proto__', '', 'unsupported-target']) {
+    assert.equal(ruleProfile(d, id, region), null, id);
+    const s = state(d, id);
+    assert.equal(s.status, 'unknown'); assert.equal(s.profile, undefined);
+    const row = ruleSummary(d, id, s, region);
+    assert.deepEqual(row.bag, []); assert.deepEqual(row.size, []); assert.equal(row.depth, null); assert.equal(row.verified, null);
+  }
+  const inherited = Object.create({borrowed: d.species.lingcod}); Object.assign(inherited, d.species);
+  assert.equal(state({...d, species: inherited}, 'borrowed').status, 'unknown');
+  const malformed = {...d, species: {...d.species, broken: {name: 'Broken'}}};
+  assert.equal(state(malformed, 'broken').status, 'unknown');
 });

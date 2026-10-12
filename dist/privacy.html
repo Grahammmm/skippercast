@@ -23,7 +23,7 @@
         Draft — pending review by counsel. This notice describes what the
         current code does; it has not yet been reviewed by a lawyer.
       </p>
-      <p class="small">Draft dated October 4, 2026.</p>
+      <p class="small">Draft dated October 11, 2026.</p>
 
       <h2 id="summary">In short</h2>
       <ul>
@@ -32,7 +32,13 @@
           If you sign in, we store only what you save: trip alerts, notification
           devices and comfort ratings. You can export or delete it at any time.
         </li>
-        <li>We do not sell or share personal information, and we run no analytics or advertising trackers.</li>
+        <li>
+          We do not sell or share personal information, and we run no
+          advertising or third-party trackers. The site counts a few anonymous
+          visit steps and page errors, without cookies or identifiers, and
+          sends nothing when your browser asks not to be tracked. See
+          <a href="#analytics">Usage statistics</a>.
+        </li>
         <li>
           If you use the AI boat lookup, the boat description you type is sent to
           Anthropic to find its specifications.
@@ -269,11 +275,75 @@
         </li>
       </ul>
 
-      <h2 id="analytics">Analytics and cookies</h2>
+      <h2 id="analytics">Usage statistics and cookies</h2>
       <p>
-        SkipperCast has no analytics, advertising or tracking scripts today and
-        sets no tracking cookies. If that changes, this notice will be updated
-        first.
+        The map, the home page and the Text Advisor pages send us a small set
+        of anonymous usage statistics, so we can see which steps of a visit
+        people reach and which releases break. They go to our own Cloudflare
+        Workers Analytics Engine dataset, not to an analytics company.
+      </p>
+      <ul>
+        <li>
+          <strong>Visit steps.</strong> The name of a step, counted at most once
+          per page load and region: choosing a port (<code>port_selected</code>),
+          adding a spot to a trip (<code>spot_saved</code>), saving a region
+          for offline use (<code>offline_saved</code>), and opening a Text
+          Advisor port, species or boat page or following its “Text
+          SkipperCast” link (<code>advisor_port_view</code>,
+          <code>advisor_species_view</code>, <code>advisor_boat_view</code>,
+          <code>advisor_cta</code>). The map sends <code>port_selected</code>,
+          <code>spot_saved</code> and <code>offline_saved</code>. The home page
+          sends error reports only.
+        </li>
+        <li>
+          <strong>With each step:</strong> the id of the region shown (a region
+          we do not publish is recorded as “other”), the site’s build, and
+          where the visit came from when the page address has an
+          <code>s</code> parameter of <code>txt</code> (a link in a Text
+          Advisor message), <code>ig</code> or <code>fb</code> (Instagram and
+          Facebook posts) or <code>qr</code> (our printed QR code). Any other
+          value is not sent.
+        </li>
+        <li>
+          <strong>Error reports.</strong> When a page hits an uncaught error,
+          the browser sends whether it was an error or a rejected promise; the
+          error message, with web-address queries and coordinates removed, cut
+          to 200 characters; the script’s file name only (no folder or
+          address), with the line and column; the site’s build; and the last
+          request id our server returned to that page. Before storing a report,
+          our server also removes email addresses and runs of six or more
+          digits, cuts the message to 96 characters, and keeps only a
+          shortened one-way hash of the request id, so we can match the error
+          to our server logs. A page sends at most 5 error reports and 30
+          records in all.
+        </li>
+      </ul>
+      <p>
+        <strong>Not collected:</strong> no cookies, local storage, or user,
+        session or device identifier; no full web addresses, positions or boat
+        details. We do not collect form entries; error messages are scrubbed
+        as above. Your IP address is not stored with the statistics; our
+        server uses it only to limit how often it accepts them, as on every
+        public request.
+      </p>
+      <p>
+        <strong>How long it is kept.</strong> Cloudflare keeps these records
+        for three months, the Analytics Engine default, and we set no longer
+        period. A daily operations report copies the last day’s step counts
+        and the ten most reported errors (scrubbed message, script file name,
+        line, kind and build) into the run summary of a GitHub Actions job in
+        our public code repository, where anyone can read them and GitHub
+        keeps them under its own retention for workflow runs.
+      </p>
+      <p>
+        <strong>Do Not Track and Global Privacy Control.</strong> If your
+        browser sends either signal, the pages send no usage statistics or
+        error reports at all.
+      </p>
+      <p>
+        There are no advertising or third-party tracking scripts, and
+        SkipperCast sets no tracking cookies. If what we collect changes, this
+        notice will be updated first.
       </p>
 
       <h2 id="rights">Your choices and rights</h2>

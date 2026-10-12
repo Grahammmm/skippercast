@@ -32,10 +32,19 @@ if [ -f var/forecasts/index.json ]; then
 fi
 
 python scripts/refresh_regions.py live --output var/live --previous-root var/live-published
+# CDIP nearshore model sites (FE-40): warns per site or region, never fails the cycle.
+if ! python -m skippercast.pipeline.cdip_nearshore --output var/live --previous-root var/live-published; then
+  echo "::warning title=Nearshore model::CDIP collector failed; regions keep their last published nearshore.json"
+fi
 if [ "$intelligence" = 1 ] || [ ! -f var/live/intelligence-health.json ]; then
   python scripts/refresh_regions.py intelligence --output var/live --previous-root var/live-published
 fi
 python scripts/refresh_regions.py habitat --output var/live --previous-root var/live-published
+# SLO County beach statuses beside each bound region's latest.json, about hourly (FE-41).
+# A failed fetch publishes an error source with no rows; it never stops the cycle.
+if ! python -m skippercast.pipeline.beach_health --root var/live; then
+  echo "::warning title=Beach health::county beach status fetch failed; published as unavailable"
+fi
 
 # Publish.
 cp var/live/latest.json var/live/intelligence-health.json var/live/habitat-health.json var/live-published/
@@ -50,6 +59,18 @@ for region in Path('var/live-published/regions').iterdir():
         prune_archive(region)
 PY
 cp docs/live-conditions.md var/live-published/README.md
+# GOES longwave frame times (FE-44). A failure keeps the last index, which ages out of the client's 90-minute gate.
+python -m skippercast.pipeline.goes_frames --output var/live-published/goes-times.json || true
+# The coast report's ocean packet (FE-84) from the intelligence feed and the GOES index above. A failure
+# keeps the last packet, which the Worker stops serving three hours after its generatedAt.
+if ! python -m skippercast.pipeline.coast_snapshots --root var/live-published; then
+  echo "::warning title=Coast ocean packet::assembly failed; the Worker falls back to the Fish bridge once it is 3 h old"
+fi
+# The coast report base (FE-87): NWS area forecasts and alerts, CO-OPS tides, this cycle's buoys, the daily feed's
+# catches and spatial layers. With no usable forecast or buoy reading it keeps the last report (2 h limit at the Worker).
+if ! python -m skippercast.pipeline.coast_report --root var/live-published; then
+  echo "::warning title=Coast report::nothing usable or assembly failed; the Worker falls back to the Fish bridge once the last report is 2 h old"
+fi
 # One parentless commit, force-pushed with a lease: the branch never grows history.
 bash scripts/publish_branch_snapshot.sh conditions var/live-published 'Refresh regional ocean evidence and forecast archive'
 echo "published"

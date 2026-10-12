@@ -2,10 +2,15 @@
 
 The runner is driven against a fake ``claude`` executable written into a temporary
 directory: it answers ``--version`` and ``auth status``, reads the prompt from stdin,
-logs each call (argument list, working directory, environment names) next to itself and
+records each call (argument list, working directory, environment names) next to itself and
 writes empty profiles for the manifest's boats, or fails, hangs or writes nothing as the
 test's plan says. Manifests come from ``agent.manifests`` over invented vessels; nothing
 here reaches the network or a real CLI.
+
+Sessions run in parallel, so the fake never shares a log file between processes: each
+record is its own JSON file, written under a temporary name and renamed into place, and a
+session counts its batch's earlier calls by file name. A shared append-only log let one
+session read another's half-written line, crash on it and exit without recording its call.
 """
 from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
@@ -56,13 +61,23 @@ doc = json.loads(manifest.read_text())
 batch = doc["batch_id"]
 plan = json.loads((here / "plan.json").read_text()) if (here / "plan.json").exists() else {{}}
 behaviour = plan.get(batch, "ok")
-log = here / "calls.jsonl"
-before = sum(1 for line in log.read_text().splitlines() if json.loads(line)["batch"] == batch) if log.exists() else 0
-with log.open("a") as f:
-    f.write(json.dumps({{"batch": batch, "argv": args, "cwd": os.getcwd(), "env": sorted(os.environ),
-                        "token": os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), "prompt": prompt,
-                        "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(),
-                        "start": time.monotonic()}}) + "\n")
+
+
+def record(kind, row):
+    # One file per record, renamed into place whole: a parallel session never sees part of it.
+    folder = here / kind
+    folder.mkdir(exist_ok=True)
+    final = folder / f"{{batch}}-{{os.getpid()}}-{{time.monotonic_ns()}}.json"
+    temporary = final.with_name(final.name + ".tmp")
+    temporary.write_text(json.dumps(row))
+    os.replace(temporary, final)
+
+
+before = len(list((here / "calls").glob(batch + "-*.json")))
+record("calls", {{"batch": batch, "argv": args, "cwd": os.getcwd(), "env": sorted(os.environ),
+                 "token": os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), "prompt": prompt,
+                 "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(),
+                 "start": time.monotonic()}})
 time.sleep(float(plan.get("_sleep", 0)))
 if behaviour == "hang-tree":
     import subprocess
@@ -82,8 +97,7 @@ if behaviour == "error-result":
 if behaviour != "no-profiles":
     for boat in doc["boats"]:
         Path(doc["output_dir"], boat["vessel_id"] + ".json").write_text("{{}}")
-with (here / "ends.jsonl").open("a") as f:
-    f.write(json.dumps({{"batch": batch, "end": time.monotonic()}}) + "\n")
+record("ends", {{"batch": batch, "end": time.monotonic()}})
 print(json.dumps({{"type": "result", "subtype": "success", "is_error": False, "num_turns": 7, "result": "done",
                   "permission_denials": []}}))
 '''
@@ -142,9 +156,12 @@ class Harness:
         return run_osint.run("CA", RUN_ID, claude=str(self.claude), environ=self.environ,
                              auth_file=self.tmp / "missing.env", **options)
 
+    def records(self, kind):
+        """The fake's ``kind`` records; a file that does not parse fails the test (none should)."""
+        return [json.loads(path.read_text()) for path in sorted((self.bin / kind).glob("*.json"))]
+
     def calls(self, batch=None):
-        log = self.bin / "calls.jsonl"
-        rows = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+        rows = sorted(self.records("calls"), key=lambda r: r["start"])
         return [r for r in rows if batch is None or r["batch"] == batch]
 
     def state(self):
@@ -208,7 +225,7 @@ class BatchTests(unittest.TestCase):
         code, _counts = h.run(parallel=2)
         self.assertEqual(code, 0)
         starts = sorted(c["start"] for c in h.calls())
-        ends = sorted(json.loads(line)["end"] for line in (h.bin / "ends.jsonl").read_text().splitlines())
+        ends = sorted(r["end"] for r in h.records("ends"))
         events = sorted([(t, 1) for t in starts] + [(t, -1) for t in ends])
         running = peak = 0
         for _t, step in events:

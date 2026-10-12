@@ -1,0 +1,23 @@
+{
+  "deployedAt": "2026-10-03T15:38:00Z",
+  "worker": "fish-report",
+  "preview": "https://fish-report.g4651.workers.dev",
+  "d1": "fish (database id redacted for the public archive)",
+  "bucket": "fish-habitat",
+  "r2PublicAccess": "disabled",
+  "cloudHabitatRelease": "6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+  "science": "cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158",
+  "migrations": [
+    "0001_initial.sql",
+    "0002_auxiliary.sql"
+  ],
+  "localTests": 197,
+  "integratedMainRevision": "fd0c1b9d8ac34756a6ce06e4e08a450d301b6c6e",
+  "unattendedRunsWitnessed": 0,
+  "dnsStatus": "pending Namecheap nameserver switch",
+  "gitBuildsStatus": "new Fish-only installation; callback rejected; recovery pending",
+  "observedLimitations": [
+    "MUR analysis expired, field withheld",
+    "Catch feed reports source failure; original eligible dated trip facts retained"
+  ]
+}

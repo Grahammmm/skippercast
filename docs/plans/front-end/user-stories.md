@@ -10,10 +10,10 @@ Phases and task ids (FE-xx) follow dev-plan.md:
 | Phase | Theme | Tasks |
 | --- | --- | --- |
 | P0 | Foundations behind `UI_V2`: flag and routing, tokens and fonts, icons, state v2, desktop and mobile shells, landing, port chooser and first run | FE-01 – FE-09 |
-| P1 | Map engine and core layers: basemap, MapLibre engine and layer registry, relief, currents, water temperature, habitat and marks, MPAs, swell field and nearshore rings, time dock and legend, charter grounds and commercial AIS, clouds, aerial, fleet activity, relief proxy, landing night map | FE-10 – FE-27 |
-| P2 | Profiles, brief and charts: Boat / Shore / Spear, the daily brief, series charts and Conditions view, tide curve, "where to look", History view, shore runs, the brief column | FE-30 – FE-37 |
-| P3 | `fish` data sources into SkipperCast collectors: nearshore wave model, beach health, buoy history, shore runs and access points, cloud frame index, aerial source config | FE-40 – FE-45 |
-| P4 | Remaining features into the new shell: account and alerts, trip planner and offline pack, discussions and catch cards, Fleet view, species plans and regulations, advisor entry | FE-50 – FE-55 |
+| P1 | One map stage and its layers: the coast embed and MapStage (Chart, Terrain 2D, Terrain 3D), basemap and style, MapLibre engine and layer registry, currents, water temperature, habitat and marks, MPAs, swell field and nearshore rings, time dock and legend, charter grounds and commercial AIS, clouds, aerial, fleet activity, terrain options and overlays, landing night map (FE-13 and FE-26 dropped 2026-10-07) | FE-10 – FE-27, FE-70 – FE-73, FE-79 – FE-82 |
+| P2 | Profiles, brief and charts: the coast data client, markup host and token bridge, Boat / Shore / Spear, the brief adapter, Conditions view, tide curve, "where to look", History view, shore runs, the brief column | FE-30 – FE-37, FE-74 – FE-77 |
+| P3 | `fish` data sources into SkipperCast collectors and the bridge's retirement: nearshore wave model, beach health, buoy history, shore runs and access points, cloud frame index, aerial source config, snapshots and assets | FE-40 – FE-45, FE-84, FE-85 |
+| P4 | Remaining features into the new shell: account and alerts, trip planner and offline pack, reports and catch cards, Fleet view, species plans and regulations, advisor entry, Fish and coast links, home memory, readable pages | FE-50 – FE-55, FE-78, FE-83, FE-86 |
 | P5 | Flip the flag, delete the old shell, retire `fish` | FE-60 – FE-62 |
 
 If dev-plan.md changes its phases, it wins; fix this file.
@@ -80,11 +80,14 @@ to look, so that I can decide in a minute whether and where to go.
 **US-B2. See the seafloor as relief.** As a boat angler, I want the bottom
 drawn as shaded relief with depth colour, so that I can read structure the
 way I read my sounder.
-- Acceptance: the Seafloor layer draws the relief tiles with the depth
-  ramp over the basemap, transparent where no survey exists, with the
-  survey's name and year in the legend; seafloor candidates and reef marks
-  draw above it. Panning a dense region stays responsive (design § 13 budget).
-- MVP. P1 (FE-13, FE-26, FE-14).
+- Acceptance: where terrain exists, the Terrain 2D and 3D presentations
+  show the `packages/coast` relief with its source coverage, measured and
+  modelled labels and gaps left open, and the Seafloor entry's options set
+  relief, water and contours; in Chart, seafloor candidates and reef marks
+  draw with the survey's name and year in the legend. Switching
+  presentation keeps place, target and hour. Panning a dense region stays
+  responsive (design § 13 budget).
+- MVP. P1 (FE-71, FE-80, FE-14); FE-13 and FE-26 dropped 2026-10-07.
 
 **US-B3. See currents move.** As a boat angler, I want surface currents drawn
 as flowing streamlines for the selected hour, so that I can see where the
@@ -123,14 +126,14 @@ surfperch and halibut, so that the app is about my water.
   guidance, each with source year and the access review date; the depth
   limit and reef marks are hidden; the caveat says offshore seas are not
   breakers at the beach.
-- MVP. P2 (FE-36) on P3 data (FE-43).
+- MVP. P2 (FE-36) on the bridge's shore-habitat data (FE-74); FE-43 moves the import into SkipperCast.
 
 **US-S2. Know the beach is open.** As a shore angler, I want county beach
 health notices on the brief, so that I do not fish a posted beach.
 - Acceptance: notices from the county feed for the selected area show on
   the brief with the county link and the fetch age; absent sample dates are
   stated as absent, never invented.
-- MVP. P3 (FE-41), shown in P2's brief (FE-31 reads the feed when present, FE-37 renders it).
+- MVP. P2: the coast report's water-quality binding (FE-74), read by the brief adapter (FE-31) and rendered by FE-37; FE-41 moves the collector into SkipperCast.
 
 ## Spearfisher
 
@@ -140,7 +143,7 @@ so that the brief answers my question rather than a boat's.
 - Acceptance: `profile=spear` sets the 60 ft limit, the swell tile prefers
   the nearest fresh nearshore model site, the headline rules use the spear
   variants, and the caveat states that visibility is unverified.
-- MVP. P2 (FE-30, FE-31, FE-37) on P3 data (FE-40); rings on the map in FE-27.
+- MVP. P2 (FE-30, FE-31, FE-37) on the coast report's nearshore sites (FE-74); rings on the map in FE-27; FE-40 moves the collector into SkipperCast.
 
 ## Returning user (any profile)
 
@@ -164,7 +167,7 @@ seasonal bands, so that I can judge whether today is unusual.
 - Acceptance: the History view shows the recent 45 days of hourly means
   for a station and metric over the recorded monthly 10th, median and 90th
   percentile bands, with sample counts and missing coverage shown.
-- MVP. P2 (FE-35) on P3 data (FE-42).
+- MVP. P2 (FE-35) on the coast history snapshot (FE-74); FE-42 moves the collector into SkipperCast.
 
 **US-R4. One legend, one rail.** As a returning user, I want layers to be a
 single rail of six toggles with one legend, so that the map is readable on a
@@ -206,7 +209,7 @@ delete the repository, and its research receipts kept.
 - Acceptance: design § 15's checklist is ticked in FE-62's PR with links;
   `docs/archive/fish/` holds the docs and research listed there; the owner
   archives, then deletes, the repository.
-- MVP. P5 (FE-62).
+- MVP. P5 (FE-62), after the bridge reads SkipperCast storage (FE-84, FE-85).
 
 **US-O4. Fleet stays dark until I say.** As the owner, I want the charter
 fleet layers in the new shell to keep their admin gating, so that the

@@ -7,6 +7,8 @@
 // before CF-33"). With FLEET_ENABLED off (and with it on for a boat with no registry link)
 // the page must stay byte-identical. They live outside tests/fixtures/fleet/ because the
 // privacy scan there reads the JSON-LD keys ("@context", "@type") as Instagram mentions.
+// FE-55 regenerated them for the v2 tokens: two head lines (color-scheme, the tokens
+// stylesheet) were added and the text content is unchanged.
 // Regenerate only for an intended advisor page change:
 //   SNAPSHOT_WRITE=1 node --test tests/test_fleet_profile_page.mjs
 import test from 'node:test';
@@ -19,7 +21,7 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html'};
 globalThis.BUILD_ID = '0123456789';
-globalThis.ADVISOR_ASSETS = {'advisor/pages.css': '/assets/chat.abcdef0123.css', 'advisor/chat.js': '/assets/chat.0123abcdef.js'};
+globalThis.ADVISOR_ASSETS = {'advisor/tokens.css': '/assets/tokens.fedcba9876.css', 'advisor/pages.css': '/assets/chat.abcdef0123.css', 'advisor/chat.js': '/assets/chat.0123abcdef.js'};
 const {default: worker} = await import('../server/index.ts');
 const {pagesDeps} = await import('../server/routes/advisor.ts');
 

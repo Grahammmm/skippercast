@@ -9,8 +9,36 @@
   "metadata_member_sha256": "e330211c7b5b2512f37083bcc5d96e5f921bc5bd8a035387360dd61da3efc688",
   "shapefile_crs": "EPSG:32610",
   "expected_polygon_count": 625,
-  "pure_bedrock_units": ["Tus", "Tm", "KJug", "KJug?", "KJf", "Ksl", "Jo", "Jo?"],
-  "composite_sediment_over_bedrock_units_excluded": ["Qms/Tus", "Qms/KJf", "Qms/KJug", "Qms/KJug?"],
+  "pure_bedrock_units": [
+    "Tus",
+    "Tm",
+    "KJug",
+    "KJug?",
+    "KJf",
+    "Ksl",
+    "Jo",
+    "Jo?"
+  ],
+  "composite_sediment_over_bedrock_units_excluded": [
+    "Qms/Tus",
+    "Qms/KJf",
+    "Qms/KJug",
+    "Qms/KJug?"
+  ],
   "classification_note": "The pure units are interpreted exposed seafloor bedrock. Composite Qms/ units have a thin, potentially ephemeral sediment cover and are not classified as exposed rock in this screen. Lithology interpretation used multibeam, backscatter, samples where available and other geology; it is not a sample at every cell.",
-  "rights": "USGS public-domain data; credit USGS. Original CSUMB native-grid redistribution is separately unresolved."
+  "rights": "Original USGS-authored vector data are public domain. Credit USGS, retain source resolution and navigation limitations, and share derived products with USGS as requested by the metadata. Paired original CSUMB depth requires its separate reviewed noncommercial terms; a government vector does not grant rights to its bathymetry inputs.",
+  "publication_year": 2015,
+  "reviewed_on": "2026-10-06",
+  "rights_source_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+  "interpretation_review": {
+    "profile": "original-interpreted-bedrock-area-v1",
+    "unit_field": "MapUnitAbb",
+    "invalid_exposed_bedrock_records": [
+      123
+    ],
+    "interpretation": "Original pure geologic units identify interpreted exposed bedrock, not rugose class3, measured boulders, numerical habitat rank or fish presence. Lithology question marks remain uncertain.",
+    "depth": "Vector itself has no measured depth; pair only with verified original nominaldepth mask.",
+    "source_time": "2015 map publication; underlying depth/backscatter lineage overlaps CSUMB mapping, not independentconfirmation.",
+    "publication_notice": "Outline may end at a bounded processing window; such edges are not established reef edges."
+  }
 }

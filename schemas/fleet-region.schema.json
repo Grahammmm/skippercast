@@ -153,7 +153,8 @@
           "additionalProperties": false,
           "required": ["in_port_debounce_min", "min_trip_minutes", "min_trip_offshore_nm", "gap_unknown_min",
                        "gap_split_hours", "max_open_trip_hours", "window_min", "min_segment_minutes",
-                       "simplify_tolerance_m", "drift", "troll"],
+                       "simplify_tolerance_m", "offshore_min_nm", "drift", "troll_slow", "troll_pelagic",
+                       "transit"],
           "properties": {
             "in_port_debounce_min": {"$ref": "#/$defs/positive"},
             "min_trip_minutes": {"$ref": "#/$defs/positive"},
@@ -174,19 +175,40 @@
               "type": "object", "additionalProperties": false, "required": ["max_sog_kn", "min_minutes"],
               "properties": {"max_sog_kn": {"$ref": "#/$defs/positive"}, "min_minutes": {"$ref": "#/$defs/positive"}}
             },
-            "troll": {
+            "offshore_min_nm": {"$ref": "#/$defs/positive"},
+            "troll_slow": {
               "type": "object", "additionalProperties": false,
               "required": ["min_sog_kn", "max_sog_kn", "max_straightness", "min_heading_variance", "min_minutes"],
               "properties": {"min_sog_kn": {"$ref": "#/$defs/positive"}, "max_sog_kn": {"$ref": "#/$defs/positive"},
                              "max_straightness": {"$ref": "#/$defs/unit"}, "min_heading_variance": {"$ref": "#/$defs/unit"},
                              "min_minutes": {"$ref": "#/$defs/positive"}}
+            },
+            "troll_pelagic": {
+              "type": "object", "additionalProperties": false,
+              "required": ["min_sog_kn", "max_sog_kn", "stop_max_minutes", "min_minutes"],
+              "properties": {"min_sog_kn": {"$ref": "#/$defs/positive"}, "max_sog_kn": {"$ref": "#/$defs/positive"},
+                             "stop_max_minutes": {"$ref": "#/$defs/positive"}, "min_minutes": {"$ref": "#/$defs/positive"}}
+            },
+            "transit": {
+              "type": "object", "additionalProperties": false, "required": ["min_straightness"],
+              "properties": {"min_straightness": {"$ref": "#/$defs/unit"}}
             }
           }
         },
         "match": {
-          "type": "object", "additionalProperties": false, "required": ["auto_merge", "review_min", "mmsi_auto"],
+          "type": "object", "additionalProperties": false, "required": ["auto_merge", "review_min", "mmsi_auto", "schedule"],
           "properties": {"auto_merge": {"$ref": "#/$defs/unit"}, "review_min": {"$ref": "#/$defs/unit"},
-                         "mmsi_auto": {"$ref": "#/$defs/unit"}}
+                         "mmsi_auto": {"description": "Confidence of an AIS-only promotion to watched; at least 0.85, the watched floor.",
+                                       "$ref": "#/$defs/unit"},
+                         "schedule": {
+                           "description": "schedule-correlation (design section 11): at-sea days that coincide with landing reports naming the boat.",
+                           "type": "object", "additionalProperties": false, "required": ["min_days", "min_span_days", "min_lead", "max_contradictions", "lapse_days"],
+                           "properties": {"min_days": {"type": "integer", "minimum": 1},
+                                          "min_span_days": {"type": "integer", "minimum": 1},
+                                          "min_lead": {"description": "Matched days a vessel must lead every other vessel of its port by.", "type": "integer", "minimum": 1},
+                                          "max_contradictions": {"description": "Report days spent in port (not at sea) tolerated before a match goes to review.", "type": "integer", "minimum": 0},
+                                          "lapse_days": {"description": "A watched schedule row with no matched day this recent lapses to candidate.", "type": "integer", "minimum": 1}}
+                         }}
         },
         "refresh": {
           "type": "object", "additionalProperties": false,
@@ -204,9 +226,12 @@
         },
         "aggregate": {
           "type": "object", "additionalProperties": false,
-          "required": ["module", "resolution_m", "min_distinct_vessels", "delay_hours"],
+          "required": ["module", "resolution_m", "resolution_by_kind", "min_distinct_vessels", "delay_hours"],
           "properties": {"module": {"enum": ["grid", "h3"]},
                          "resolution_m": {"$ref": "#/$defs/positive"},
+                         "resolution_by_kind": {"description": "A coarser cell edge for a fishing kind, a whole multiple of resolution_m (checked by fleet.config); other kinds use resolution_m.",
+                                                "type": "object", "propertyNames": {"enum": ["drift-anchor", "troll-slow", "troll-pelagic"]},
+                                                "additionalProperties": {"$ref": "#/$defs/positive"}},
                          "min_distinct_vessels": {"description": "null turns the privacy floor off (admin views).", "oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
                          "delay_hours": {"description": "null turns the publication delay off (admin views).", "oneOf": [{"type": "number", "minimum": 0}, {"type": "null"}]}}
         }
