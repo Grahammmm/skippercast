@@ -4,8 +4,8 @@
 
 /** One US survey foot is close enough to the international foot for display spacing. */
 const FOOT=.3048;
-/** Contour steps offered, in feet, finest first. */
-export const CONTOUR_STEPS_FT=[5,10,20,50,100,250,500] as const;
+/** Contour steps offered, in feet, finest first: 10 ft is the lidar floor (SOURCE_CONTOUR_FLOOR_M), so nothing finer is offered. */
+export const CONTOUR_STEPS_FT=[10,20,50,100,250,500] as const;
 /** The narrowest depth window the ramp may stretch across, in metres. */
 export const MIN_WINDOW_M=6;
 /** Contour minor spacing never goes finer than this multiple of the finest grid spacing in view. */

@@ -29,16 +29,17 @@ test('contour spacing draws about eight to twenty minor lines and indexes every 
   const {minor,index}=contourInterval(window,0);
   const lines=window/minor;near(index,minor*5);
   assert.ok(lines<=20||minor===500*.3048,`${window} m: ${lines} lines at ${minor} m`);
-  assert.ok(lines>=8||minor===5*.3048,`${window} m: ${lines} lines at ${minor} m`);
+  assert.ok(lines>=8||minor===10*.3048,`${window} m: ${lines} lines at ${minor} m`);
  }
- near(contourInterval(25,0).minor,5*.3048*1);// 25 m / 1.524 = 16.4 lines
+ near(contourInterval(25,0).minor,10*.3048);// 25 m / 3.048 = 8.2 lines; 5 ft is never offered since lidar's floor is 10 ft
  near(contourInterval(80,0).minor,20*.3048);
 });
 test('contour spacing never goes finer than the finest grid spacing allows',()=>{
- near(contourInterval(10,2).minor,10*.3048);// 2 m display mesh: 3 m floor, so 10 ft not 5 ft
+ near(contourInterval(10,2).minor,10*.3048);// 2 m display mesh: 3 m floor, 10 ft
+ near(contourInterval(4,0).minor,10*.3048);// a very narrow window still gets the finest step offered, 10 ft
  near(contourInterval(10,30).minor,250*.3048);// 30 m model grid: 45 m floor
  near(contourInterval(10,1000).minor,500*.3048,1e-9);// coarser than every step: the coarsest
- near(contourInterval(NaN,NaN).minor,5*.3048);
+ near(contourInterval(NaN,NaN).minor,10*.3048);
 });
 test('sun direction is a unit vector in the coastPoint frame (x east, y up, z south)',()=>{
  const [nx,nz]=coastPoint(-120.98,35.6);assert.ok(nz<0&&Math.abs(nx)<1e-6,'north is -z');
