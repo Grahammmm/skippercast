@@ -63,7 +63,7 @@ export async function verifyJobToken(token:unknown,policy:JobPolicy,...rest:[Fet
     const pick=(keys:ExternalJSON[])=>keys.find((k:ExternalJSON)=>k.kid===header.kid&&k.kty==='RSA'&&k.use==='sig'&&k.alg==='RS256');
     let keys=jwksCache&&now>=jwksCache.at&&now-jwksCache.at<JWKS_TTL_S?jwksCache.keys:undefined,fetched=false;
     if(!keys){const loaded=await load();if(!loaded)return false;keys=loaded;fetched=true;}
-    let jwk=pick(keys);
+    stage='jwks-key';let jwk=pick(keys);
     if(!jwk&&!fetched&&now-lastForcedRefetch>=JWKS_REFETCH_COOLDOWN_S){lastForcedRefetch=now;const loaded=await load();if(!loaded)return false;jwk=pick(loaded);}
     stage='jwks-key';if(!jwk){console.warn('Scheduler signing key unavailable');return false;}
     stage='signature';
