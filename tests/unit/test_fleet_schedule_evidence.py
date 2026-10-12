@@ -11,7 +11,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "fleet" / "schedule_evidence.py"
+from tests._support import FIXTURES, ROOT
+
+SCRIPT = ROOT / "scripts" / "fleet" / "schedule_evidence.py"
 spec = importlib.util.spec_from_file_location("schedule_evidence", SCRIPT)
 se = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(se)
@@ -76,7 +78,7 @@ class ScheduleEvidenceTests(unittest.TestCase):
             landings=[SimpleNamespace(id="test-landing", name="Test Landing", port="test-port")],
             ports=[SimpleNamespace(id="test-port", name="Test Port")],
             enabled_sources=lambda: [binding])
-        body = (SCRIPT.parents[2] / "tests/fixtures/fleet/landings/fr-boat-blue.html").read_bytes()
+        body = (FIXTURES / "fleet/landings/fr-boat-blue.html").read_bytes()
 
         class OfflineClient:
             def __init__(self):
