@@ -34,7 +34,7 @@ const origin = template => new URL(template.replace('{bbox-epsg-3857}', '0,0,1,1
 test('the aerial base is read from the region package, only where it names usgs-naip with ordered dates', () => {
   const config = json('regions/morro-bay/region.json').basemap.aerial;
   assert.deepEqual(MORRO, {source: AERIAL_CATALOG_ID, first: config.acquired.first, last: config.acquired.last, checkedAt: config.checked_at, note: config.note, byDefault: json('regions/morro-bay/region.json').basemap.default === 'aerial'});
-  assert.equal(MORRO.byDefault, false, 'Morro Bay opens on Night until the owner takes the slow-phone paint cost of opening on Aerial (PR #604)');
+  assert.equal(MORRO.byDefault, true, 'Morro Bay opens on Aerial (owner decision, 12 Oct 2026)');
   assert.deepEqual(aerialBase(json('regions/morro-bay/region.json')), MORRO, 'the published package carries the source record');
   for (const id of regionIds.filter(id => id !== 'morro-bay')) assert.equal(aerialBase(json(`regions/${id}/region.json`)), null, `${id} offers no aerial base`);
   const aerial = patch => ({basemap: {aerial: {...config, ...patch}}});

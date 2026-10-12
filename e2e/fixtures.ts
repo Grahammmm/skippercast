@@ -22,6 +22,9 @@ export type V2Page = 'app' | 'landing';
 /** Lighthouse's mobile profile: 4× slower CPU, 1.6 Mb/s down, 750 kb/s up, 150 ms round trip. */
 export const THROTTLED_MOBILE = {cpu: 4, latency: 150, downloadThroughput: 1.6e6 / 8, uploadThroughput: 750e3 / 8};
 export const LCP_BUDGET_MS = 2500;
+/** The app opening on the Aerial base (region.json `basemap.default`): the owner accepted on 12 Oct 2026 that on the throttled
+ * profile the NAIP tiles queue behind the bundle and basemap, so the imagery credit (the largest paint) lands near 8 s. */
+export const AERIAL_LCP_BUDGET_MS = 10000;
 /** A 1×1 transparent PNG: what the stubbed NAIP service answers with. */
 export const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
