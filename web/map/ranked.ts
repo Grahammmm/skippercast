@@ -30,7 +30,7 @@ export interface RankedTarget {
   readonly trip_fit?: number; readonly evidence_confidence?: {readonly percent?: number} | null; readonly area_ids?: readonly string[];
   readonly terrain_interpretation?: string; readonly special_note?: string; readonly evidence_status?: string; readonly survey_year?: number;
 }
-/** The event's detail (dist/export-ui.js): no targets when the plan is cleared. */
+/** The event's detail (web/planner.ts): no targets when the plan is cleared. */
 export interface RankedPlan {
   readonly targets: readonly RankedTarget[];
   readonly areas: readonly {readonly id: string; readonly geometry: unknown}[];

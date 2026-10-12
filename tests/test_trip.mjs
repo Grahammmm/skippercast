@@ -1,5 +1,5 @@
-// FE-51: the v2 trip planner and offline pack (web/trip.ts). The planner is
-// v1's (dist/export-ui.js); these tests pin what the wrapper adds: the shared
+// FE-51: the v2 trip planner and offline pack (web/trip.ts). The planner's
+// own state is tests/test_planner.mjs; these tests pin what trip.ts adds: the shared
 // draft, the map adapter, the headless protected-area screen (the same GPX
 // bytes as v1's map screen), the basemap plan's budget and the range recorder.
 // tests/test_trip_export.mjs and the e2e ranked export cover the planner.

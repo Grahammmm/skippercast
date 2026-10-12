@@ -61,7 +61,7 @@ test('a port in the region already shown keeps the target; another region resets
 
 test('reload sites go through the store; the in-place ones are the ones that are safe', async () => {
   const read = name => readFile(join(ROOT, 'dist', name), 'utf8');
-  for (const name of ['home-port.js', 'coasts.js', 'region.js', 'export-ui.js']) {
+  for (const name of ['home-port.js', 'coasts.js', 'region.js']) {
     const source = await read(name);
     assert.match(source, /from '\.\.\/web\/state\.ts'/, name);
     assert.doesNotMatch(source, /location\.(?:assign|replace)\(/, `${name} navigates through web/state.ts`);

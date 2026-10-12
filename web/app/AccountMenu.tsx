@@ -1,16 +1,17 @@
 // Account menu (FE-50, design § 6 and § 7, US-R5): the masthead's sign in
 // becomes one disclosure holding the account (v1's passkey dialog), the boat
-// (first-run.js presets and the exact-boat sheet), saved-trip alerts and the
+// (first-run.js presets and the exact-boat sheet), saved-trip alerts (TripAlerts.tsx) and the
 // take-it-with-you entries. A real button with aria-expanded; opening moves
 // focus into the panel, arrows and Home/End move between its controls,
 // Escape or a click outside closes it and returns focus to the button.
-// Every action is web/account.ts, which wraps the v1 modules unchanged; the
-// trip plan and the offline section are web/trip.ts (FE-51).
+// The account and boat actions are web/account.ts, which wraps the v1 modules
+// unchanged; the alerts are web/alerts.ts; the trip plan and the offline
+// section are web/trip.ts (FE-51).
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
-import {accountLabel, boat, choosePreset, followAccountHash, loadBoat, mountTripAlerts, openAccountDialog, openBoatSheet, refreshSession, session, type Session} from '../account.ts';
+import {accountLabel, boat, choosePreset, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, refreshSession, session, type Session} from '../account.ts';
 import {region, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 
@@ -23,18 +24,13 @@ const ACCOUNT_LINE: Readonly<Record<Session['state'], string>> = {
 };
 const FOCUSABLE = 'button:not([disabled]), a[href]';
 
-/** The alerts dialog's body, mounted only while open: fresh hosts each time, since trip-alerts.js binds its listeners to them. */
-function TripAlerts({regionId}: {regionId: string}) {
+type AlertsView = typeof import('./TripAlerts.tsx').TripAlerts;
+/** The alerts dialog's body loads on first open, so the app entry carries none of it. */
+function LazyAlerts({regionId}: {regionId: string}) {
+  const [View, setView] = useState<{c: AlertsView} | null>(null);
   const [error, setError] = useState('');
-  useEffect(() => { mountTripAlerts(regionId, species.peek()).catch((e: Error) => setError(e.message)); }, [regionId]);
-  return (
-    <div class="app-alerts">
-      <label>Alert species<select id="species-select"></select></label>
-      <input type="hidden" id="comfort-heading" value="" />
-      <div id="trip-alerts"><p role="status">{error || 'Loading your alerts…'}</p></div>
-      <div id="comfort-feedback"></div>
-    </div>
-  );
+  useEffect(() => { import('./TripAlerts.tsx').then(m => setView({c: m.TripAlerts}), () => setError('Your alerts could not load. Try again when you are online.')); }, []);
+  return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{error || 'Loading your alerts…'}</p>;
 }
 
 /** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. */
@@ -113,7 +109,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
         </section>
       </div>
       {alerts && regionId
-        ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title="Trip alerts"><TripAlerts regionId={regionId} /></PortDialog>
+        ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title="Trip alerts"><LazyAlerts regionId={regionId} /></PortDialog>
         : null}
     </div>
   );

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The trip plan and saved-trip alerts in the map are now built into the app instead of the classic map's planner and alerts modules (#602). Saved plans, ranked selections, GPX files, offline notes and saved alerts carry over unchanged. Signed out, the alerts dialog shows only the sign-in prompt, without the species list it could not use; deleting your account still asks first, now with focus on Cancel.
 - The Boat brief now shows fishing time and when to turn back: the run from the harbor to the selected place to look (or the top pick) at the cruise speed you set, and the latest turn-back time to be in by the end of the lower-exposure window. The cruise speed is kept on this device, set in Your limits for Boat, and has no default: until you set one the brief asks for it. Distances are straight-line, so the run is at least that long; with no window (a marine alert, a stale forecast, or none inside your limits) the brief says why there is no return time.
 - The classic map is gone: `/` is always the landing (or the app when a link names an area), `/map` the app, and `/coast` opens the app's 3D view; `?ui=v1` and the `UI_V2` switch no longer change anything. The v1 shell, its coastal page and modules, Leaflet and the vendored map-test copies are deleted, and stylesheets are now minified (FE-61, part 1 of 3).
 - When no configured buoy or tide station is fresh, the feed now serves the newest reading it has: a station that just returned a 3 h old reading shows it as stale with its own name, instead of an older retained reading from another station. A station removed from the chain no longer keeps serving under the new chain (#565).
@@ -15,6 +16,7 @@
 
 ### Internal
 
+- `dist/export-ui.js` and `dist/trip-alerts.js` are retired: the planner's state is `web/planner.ts` (signals) drawn by `web/app/Planner.tsx`, and the alerts are `web/alerts.ts` and `web/app/TripAlerts.tsx`, both loaded on first open. `tests/test_planner.mjs` pins the draft key and shape, ranking, restore and the loading races; `tests/test_alerts.mjs` pins the API bodies; a new signed-in alerts case runs in `e2e/v2-account.spec.ts`.
 - `/api/health` reads its version from `package.json` at build time instead of a literal that had to be bumped by hand with each release.
 - `e2e/d1.ts` is the one `d1()` helper for `e2e/admin.spec.ts` and `e2e/fleet-admin.spec.ts`: it retries `wrangler d1 execute --local` up to five attempts with a growing pause when the running Worker holds the SQLite file (`SQLITE_BUSY` or "database is locked") and rethrows any other failure at once, with wrangler's stdout appended (#579).
 - One conditions model: the text advisor's comfort word and the brief's lower-exposure windows now read `web/score.ts` instead of their own copies of its numbers, with no change to any rating. `docs/conditions-model.md` records why the graded score and the window rule stay separate and the four golden hours where they disagree (#542 C7).

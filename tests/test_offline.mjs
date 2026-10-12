@@ -99,11 +99,12 @@ test('install help: browser prompt when offered, Share hint on iOS Safari, nothi
 });
 
 // FE-61: v1's offline.js registered the worker on every visit; v2 registers it once something is saved (FE-51).
-test('the app registers the stable, classic /sw.js, as trip-alerts.js does', () => {
+test('the app registers the stable, classic /sw.js, as the alerts do', () => {
   const trip = read('../web/trip.ts');
   assert.match(trip, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
-  assert.doesNotMatch(trip, /register\('\/sw\.js',/, 'the worker is classic; trip-alerts.js registers it the same way');
-  assert.match(read('../dist/trip-alerts.js'), /register\('\/sw\.js'\)/);
+  assert.doesNotMatch(trip, /register\('\/sw\.js',/, 'the worker is classic; web/alerts.ts registers it the same way');
+  assert.match(read('../web/alerts.ts'), /register\('\/sw\.js'\)/);
+  assert.doesNotMatch(read('../web/alerts.ts'), /register\('\/sw\.js',/);
 });
 
 test('saving a pack never re-stamps data the service worker answered from an older save', () => {
