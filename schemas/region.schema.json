@@ -175,7 +175,13 @@
       "description": "Optional base layers offered where their coverage was checked for this region (FE-45). An absent key means the base is not offered here. validate_region checks the catalog source and the date order.",
       "type": "object",
       "additionalProperties": false,
+      "if": {"required": ["default"], "properties": {"default": {"const": "aerial"}}},
+      "then": {"required": ["aerial"]},
       "properties": {
+        "default": {
+          "description": "The base the Chart opens on when neither the link nor the viewer's saved choice names one. aerial needs basemap.aerial; absent means night.",
+          "enum": ["night", "aerial"]
+        },
         "aerial": {
           "description": "Live aerial tiles from a catalog source (usgs-naip). acquired is the acquisition window the publisher's catalog listed for the region bounds on checked_at.",
           "type": "object",
