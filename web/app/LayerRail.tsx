@@ -31,7 +31,7 @@ import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
-import {currentStatus, setTerrainOption, shownPresentation, terrainOptions} from '../map/stage.ts';
+import {currentStatus, setTerrainOption, shownPresentation, terrainOptions, terrainShading} from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, isBase, layers, layersParam, setParams, UNSUPPORTED, type Base} from '../state.ts';
 import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
 
@@ -126,7 +126,13 @@ export function TerrainOptions({on}: {on: boolean}) {
       {o.water ? <Range id="terrain-water" label="Water opacity" value={o.waterOpacity} text={`${Math.round(o.waterOpacity * 100)}%`} min={0} max={0.8} step={0.05}
         onInput={v => setTerrainOption('waterOpacity', v)} /> : null}
       <p class="app-rail-hint">Illustrative +0.8 m water surface. Not a live tide.</p>
-      <Option label="Depth contours · 10 / 30 / 500 ft" checked={o.contours} onChange={v => setTerrainOption('contours', v)} />
+      <Option label="Depth contours · adapt to view" checked={o.contours} onChange={v => setTerrainOption('contours', v)} />
+      <Option label="Fixed depth colours" checked={o.fixedRamp} onChange={v => setTerrainOption('fixedRamp', v)} />
+      {terrainShading.value ? <p class="app-rail-hint" role="status">{terrainShading.value.readout}</p> : null}
+      <Range id="terrain-sun" label="Sun direction" value={o.sunAzimuth} text={`${o.sunAzimuth}°`} min={0} max={360} step={5} ends={['Lighting only', 'Heights unchanged']}
+        onInput={v => setTerrainOption('sunAzimuth', v)} />
+      <Range id="terrain-photo" label="Land" value={o.photoMix} text={o.photoMix >= 1 ? 'Photo' : o.photoMix <= 0 ? 'Shaded relief' : `${Math.round(o.photoMix * 100)}% photo`} min={0} max={1} step={0.05}
+        ends={['Shaded relief', 'Photo']} onInput={v => setTerrainOption('photoMix', v)} />
       <Option label="Source coverage" checked={o.sourceCoverage} onChange={v => setTerrainOption('sourceCoverage', v)} />
       <Option label="Reefs & species pins" checked={o.habitat && on} disabled={!on} onChange={v => setTerrainOption('habitat', v)} />
       </div>
