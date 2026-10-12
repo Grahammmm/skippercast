@@ -15,6 +15,7 @@
 
 ### Internal
 
+- `/api/health` reads its version from `package.json` at build time instead of a literal that had to be bumped by hand with each release.
 - `e2e/d1.ts` is the one `d1()` helper for `e2e/admin.spec.ts` and `e2e/fleet-admin.spec.ts`: it retries `wrangler d1 execute --local` up to five attempts with a growing pause when the running Worker holds the SQLite file (`SQLITE_BUSY` or "database is locked") and rethrows any other failure at once, with wrangler's stdout appended (#579).
 - One conditions model: the text advisor's comfort word and the brief's lower-exposure windows now read `web/score.ts` instead of their own copies of its numbers, with no change to any rating. `docs/conditions-model.md` records why the graded score and the window rule stay separate and the four golden hours where they disagree (#542 C7).
 - A deploy now fails, before anything is written, when the `CLOUDFLARE_SITE_URL` repository variable is unset, and the smoke-test steps of a deploy or manual rollback fail instead of passing with a warning: a green run no longer means a site nobody checked.
