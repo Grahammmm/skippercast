@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/fleet-region.schema.json",
+  "title": "SkipperCast charter fleet region",
+  "description": "regions/<STATE>/fleet.json: a state-level charter fleet region (docs/plans/charter-fleet/design.md section 3). Shape only; cross-references (port ids in catalog/home-ports.json and regions/*/region.json, geofence geometry, registered adapters, off-limits hosts, the AIS bbox) are checked by skippercast.fleet.config.load_region. $defs also hold the shapes of the region-independent catalogs in catalog/fleet/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "timezone", "status", "ports", "landings", "ais",
+               "agencies", "sources", "thresholds", "seasons", "resolver_overrides"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"description": "Upper-case postal code; distinct from the lower-case coastal region ids.", "type": "string", "pattern": "^[A-Z]{2}$"},
+    "name": {"type": "string", "minLength": 1},
+    "timezone": {"type": "string", "pattern": "^[A-Za-z_]+(/[A-Za-z0-9_+-]+)+$"},
+    "status": {"description": "dry-run regions may only write to the staging sink.", "enum": ["active", "dry-run"]},
+    "ports": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/port"}},
+    "landings": {"type": "array", "items": {"$ref": "#/$defs/landing"}},
+    "ais": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "bbox", "message_types", "mmsi_filter"],
+      "properties": {
+        "source": {"enum": ["aisstream", "datalastic"]},
+        "bbox": {
+          "description": "[[lat_south, lon_west], [lat_north, lon_east]] (aisstream order, not the west,south,east,north bbox in common.schema.json).",
+          "type": "array", "minItems": 2, "maxItems": 2,
+          "items": {"$ref": "#/$defs/latlon"}
+        },
+        "message_types": {"type": "array", "minItems": 1, "uniqueItems": true,
+                          "items": {"type": "string", "pattern": "^[A-Z][A-Za-z]+$"}},
+        "mmsi_filter": {"type": "boolean"}
+      }
+    },
+    "agencies": {"type": "array", "items": {"$ref": "#/$defs/agency"}},
+    "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/binding"}},
+    "thresholds": {"$ref": "#/$defs/thresholds"},
+    "seasons": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parts"],
+      "properties": {
+        "parts": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "months"],
+            "properties": {
+              "id": {"$ref": "common.schema.json#/$defs/id"},
+              "months": {"type": "array", "minItems": 1, "uniqueItems": true,
+                         "items": {"type": "integer", "minimum": 1, "maximum": 12}}
+            }
+          }
+        }
+      }
+    },
+    "resolver_overrides": {
+      "description": "Per-field overrides of catalog/fleet/resolver.json; each key must be a field the catalog defines.",
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/resolver_rule_override"}
+    }
+  },
+  "$defs": {
+    "latlon": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "prefixItems": [{"type": "number", "minimum": -90, "maximum": 90},
+                      {"type": "number", "minimum": -180, "maximum": 180}]
+    },
+    "lonlat": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "prefixItems": [{"type": "number", "minimum": -180, "maximum": 180},
+                      {"type": "number", "minimum": -90, "maximum": 90}]
+    },
+    "polygon": {
+      "description": "GeoJSON Polygon, lon/lat WGS84, one closed outer ring (first point repeated last). Closure, simplicity and containment are checked by the loader.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": {"const": "Polygon"},
+        "coordinates": {
+          "type": "array", "minItems": 1, "maxItems": 1,
+          "items": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/lonlat"}}
+        }
+      }
+    },
+    "waters": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"enum": ["ocean", "bay", "delta", "inland"]}
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "point", "home_port", "region", "waters", "geofence", "geofence_source"],
+      "properties": {
+        "id": {"$ref": "common.schema.json#/$defs/id"},
+        "name": {"type": "string", "minLength": 1},
+        "point": {"$ref": "#/$defs/latlon"},
+        "home_port": {"description": "A catalog/home-ports.json id, or null.", "oneOf": [{"$ref": "common.schema.json#/$defs/id"}, {"type": "null"}]},
+        "region": {"description": "A coastal region id (regions/<id>/region.json), or null.", "oneOf": [{"$ref": "common.schema.json#/$defs/id"}, {"type": "null"}]},
+        "waters": {"$ref": "#/$defs/waters"},
+        "geofence": {"$ref": "#/$defs/polygon"},
+        "geofence_source": {"description": "How the polygon was made: drawn by hand around the harbor basin and entrance, or traced from a named chart.", "enum": ["drawn", "chart"]}
+      }
+    },
+    "landing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "port", "point", "website"],
+      "properties": {
+        "id": {"$ref": "common.schema.json#/$defs/id"},
+        "name": {"type": "string", "minLength": 1},
+        "port": {"$ref": "common.schema.json#/$defs/id"},
+        "point": {"$ref": "#/$defs/latlon"},
+        "website": {"oneOf": [{"$ref": "common.schema.json#/$defs/https_url"}, {"type": "null"}]}
+      }
+    },
+    "agency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "notes", "records_request_url"],
+      "properties": {
+        "id": {"$ref": "common.schema.json#/$defs/id"},
+        "name": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["licensing", "vessel-registry", "radio-licence"]},
+        "notes": {"type": "string"},
+        "records_request_url": {"oneOf": [{"$ref": "common.schema.json#/$defs/https_url"}, {"type": "null"}]}
+      }
+    },
+    "rights": {
+      "enum": ["public-domain", "facts-only", "api-terms", "public-record", "noaa-planning-only", "internal-only"]
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "adapter", "enabled", "params", "rights"],
+      "properties": {
+        "id": {"$ref": "common.schema.json#/$defs/id"},
+        "adapter": {"$ref": "common.schema.json#/$defs/id"},
+        "enabled": {"type": "boolean"},
+        "params": {"type": "object"},
+        "rights": {"$ref": "#/$defs/rights"},
+        "note": {"type": "string"}
+      }
+    },
+    "positive": {"type": "number", "exclusiveMinimum": 0},
+    "unit": {"type": "number", "minimum": 0, "maximum": 1},
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activity", "match", "refresh", "retention", "aggregate"],
+      "properties": {
+        "activity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["in_port_debounce_min", "min_trip_minutes", "min_trip_offshore_nm", "gap_unknown_min",
+                       "gap_split_hours", "max_open_trip_hours", "window_min", "min_segment_minutes",
+                       "simplify_tolerance_m", "drift", "troll"],
+          "properties": {
+            "in_port_debounce_min": {"$ref": "#/$defs/positive"},
+            "min_trip_minutes": {"$ref": "#/$defs/positive"},
+            "min_trip_offshore_nm": {"$ref": "#/$defs/positive"},
+            "gap_unknown_min": {"$ref": "#/$defs/positive"},
+            "gap_split_hours": {"$ref": "#/$defs/positive"},
+            "max_open_trip_hours": {
+              "type": "object", "additionalProperties": false,
+              "required": ["six-pack", "inspected-party", "long-range"],
+              "properties": {"six-pack": {"$ref": "#/$defs/positive"},
+                             "inspected-party": {"$ref": "#/$defs/positive"},
+                             "long-range": {"$ref": "#/$defs/positive"}}
+            },
+            "window_min": {"$ref": "#/$defs/positive"},
+            "min_segment_minutes": {"$ref": "#/$defs/positive"},
+            "simplify_tolerance_m": {"$ref": "#/$defs/positive"},
+            "drift": {
+              "type": "object", "additionalProperties": false, "required": ["max_sog_kn", "min_minutes"],
+              "properties": {"max_sog_kn": {"$ref": "#/$defs/positive"}, "min_minutes": {"$ref": "#/$defs/positive"}}
+            },
+            "troll": {
+              "type": "object", "additionalProperties": false,
+              "required": ["min_sog_kn", "max_sog_kn", "max_straightness", "min_heading_variance", "min_minutes"],
+              "properties": {"min_sog_kn": {"$ref": "#/$defs/positive"}, "max_sog_kn": {"$ref": "#/$defs/positive"},
+                             "max_straightness": {"$ref": "#/$defs/unit"}, "min_heading_variance": {"$ref": "#/$defs/unit"},
+                             "min_minutes": {"$ref": "#/$defs/positive"}}
+            }
+          }
+        },
+        "match": {
+          "type": "object", "additionalProperties": false, "required": ["auto_merge", "review_min", "mmsi_auto"],
+          "properties": {"auto_merge": {"$ref": "#/$defs/unit"}, "review_min": {"$ref": "#/$defs/unit"},
+                         "mmsi_auto": {"$ref": "#/$defs/unit"}}
+        },
+        "refresh": {
+          "type": "object", "additionalProperties": false,
+          "required": ["vanished_after_runs", "vanished_after_days", "osint_stale_days", "fact_stale_days"],
+          "properties": {"vanished_after_runs": {"type": "integer", "minimum": 1},
+                         "vanished_after_days": {"type": "integer", "minimum": 1},
+                         "osint_stale_days": {"type": "integer", "minimum": 1},
+                         "fact_stale_days": {"type": "integer", "minimum": 1}}
+        },
+        "retention": {
+          "type": "object", "additionalProperties": false, "required": ["raw_days", "discovery_days", "static_days"],
+          "properties": {"raw_days": {"type": "integer", "minimum": 1},
+                         "discovery_days": {"type": "integer", "minimum": 1},
+                         "static_days": {"type": "integer", "minimum": 1}}
+        },
+        "aggregate": {
+          "type": "object", "additionalProperties": false,
+          "required": ["module", "resolution_m", "min_distinct_vessels", "delay_hours"],
+          "properties": {"module": {"enum": ["grid", "h3"]},
+                         "resolution_m": {"$ref": "#/$defs/positive"},
+                         "min_distinct_vessels": {"description": "null turns the privacy floor off (admin views).", "oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+                         "delay_hours": {"description": "null turns the publication delay off (admin views).", "oneOf": [{"type": "number", "minimum": 0}, {"type": "null"}]}}
+        }
+      }
+    },
+    "resolver_rule": {
+      "type": "object", "additionalProperties": false, "required": ["priority", "min_confidence"],
+      "properties": {
+        "priority": {"description": "Source kinds, highest priority first: adapter ids plus admin, operator and osint.",
+                     "type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "common.schema.json#/$defs/id"}},
+        "min_confidence": {"$ref": "#/$defs/unit"}
+      }
+    },
+    "resolver_rule_override": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": {
+        "priority": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "common.schema.json#/$defs/id"}},
+        "min_confidence": {"$ref": "#/$defs/unit"}
+      }
+    },
+    "resolver_catalog": {
+      "description": "catalog/fleet/resolver.json.",
+      "type": "object", "additionalProperties": false, "required": ["schema_version", "description", "fields"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "description": {"type": "string"},
+        "fields": {"type": "object", "minProperties": 1,
+                   "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
+                   "additionalProperties": {"$ref": "#/$defs/resolver_rule"}}
+      }
+    },
+    "off_limits_catalog": {
+      "description": "catalog/fleet/off-limits.json: hosts whose terms forbid automated access (D7). A host also covers its subdomains.",
+      "type": "object", "additionalProperties": false, "required": ["schema_version", "description", "hosts"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "description": {"type": "string"},
+        "hosts": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["host", "reason"],
+            "properties": {
+              "host": {"type": "string", "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "lead_score_catalog": {
+      "description": "catalog/fleet/lead-score.json: weights of the 0-100 outreach lead score (design section 13); weights sum to 1.",
+      "type": "object", "additionalProperties": false, "required": ["schema_version", "description", "scale", "weights"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "description": {"type": "string"},
+        "scale": {"const": 100},
+        "weights": {"type": "object", "minProperties": 1,
+                    "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
+                    "additionalProperties": {"$ref": "#/$defs/unit"}}
+      }
+    }
+  }
+}
