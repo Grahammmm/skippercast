@@ -73,11 +73,11 @@ test('committed expired access and rules dates remain visible without blanket Ho
     assert.ok(Date.parse(r.run.properties.legalReviewExpiresAt) < NOW);
     assert.ok(Date.parse(r.run.properties.accessReviewExpiresAt) < NOW);
     assert.equal(r.status.label, 'No surf model', r.name);
-    const card = runMark(r, 'surfperch');
-    assert.match(card.reading, /rules checked Oct 2, 2026, review until Oct 3, 2026/);
+    const card = runMark(r, 'surfperch', NOW);
+    assert.match(card.reading, /rules checked Oct 2, 2026, review expired Oct 3, 2026/);
     assert.match(card.basis, /check the current CDFW rules/);
     assert.match(card.basis, /Review dates remain historical context/);
-    assert.match(card.reading, /Access checked Oct 2, 2026, review until Oct 9, 2026/);
+    assert.match(card.reading, /Access checked Oct 2, 2026, review expired Oct 9, 2026/);
     assert.match(card.basis, /Ranking does not establish legal permission/);
     assert.doesNotMatch(card.basis, /held when a review expires/);
   }
@@ -128,10 +128,16 @@ test('a protected access point blocks a run even with an expired rules review', 
 
 test('the card shows review dates, method guidance and the official rules link, and never promises fish', () => {
   const [r] = shownRuns(PACKAGE, READY, null, NOW);
-  const card = runMark(r, 'surfperch');
+  const card = runMark(r, 'surfperch', NOW);
   assert.match(card.kind, /^Shore run · (No surf model|Blocked)$/);
-  assert.match(card.reading, /Access checked .+, review until .+ · rules checked .+ · source review until/);
+  assert.match(card.reading, /Access checked .+, review (until|expired) .+ · rules checked .+ · source review until/);
   assert.equal(shoreReviewLines(r.run.properties).includes('Oct'), true);
+  // P5: a lapsed access or rules review says expired instead of a past "review until" date.
+  const clocks = {accessReviewedAt: '2026-10-03T02:48:10Z', accessReviewExpiresAt: '2026-10-10T02:48:10Z', legalReviewedAt: '2026-10-03T02:43:19Z',
+    legalReviewExpiresAt: '2026-10-04T02:43:19Z', reviewExpiresAt: '2026-11-02T02:48:10Z'};
+  assert.equal(shoreReviewLines(clocks, Date.parse('2026-10-12T13:00:00Z')),
+    'Access checked Oct 2, 2026, review expired Oct 9, 2026 · rules checked Oct 2, 2026, review expired Oct 3, 2026 · source review until Nov 1, 2026');
+  assert.match(shoreReviewLines(clocks, Date.parse('2026-10-03T12:00:00Z')), /review until Oct 9, 2026 · rules checked Oct 2, 2026, review until Oct 3/);
   assert.deepEqual(card.regulations, {href: CDFW_RULES_URL, label: 'Official CDFW regional rules'});
   for (const target of ['surfperch', 'halibut', 'lingcod']) {
     const text = [shoreGuidance(target).text, runMark(r, target).basis].join(' ');

@@ -218,7 +218,7 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
   const chlorophyll = chlorophyllNear(input.daily, area.lat, area.lon);
   const report = chlorophyll ? {...input.report, chlorophyll} : input.report;
   const daily = buildDaily(report, input.county, area, input.profile, input.date, input.now, input.limits);
-  return briefFromDaily(daily, 'coast-report', {...input, report, area, gaps: reportGaps(report, input.now)});
+  return briefFromDaily(daily, 'coast-report', {...input, report, area, gaps: reportGaps(report, input.county, area, input.now)});
 }
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
@@ -340,7 +340,8 @@ function feedGap(source: RegionalSource, now: Date): SourceGap {
  */
 export function sourceGaps(feed: RegionalDailyFeed, now: Date): SourceGap[] {
   const entries = Object.values(feed.sources).filter((item): item is RegionalSource => !!item);
-  const first = entries.find(item => item.kind === 'observation');
+  // The buoy regionalReport reads for the Water tile: the first with a station in its data, else the first at all.
+  const first = entries.find(item => item.kind === 'observation' && typeof item.data?.station === 'string') ?? entries.find(item => item.kind === 'observation');
   const buoyStation = first ? stationOf(first) : null;
   const read = entries.filter(item => (item.kind === 'observation' && stationOf(item) === buoyStation) || item === feed.sources.tides || item.kind === 'advisory');
   const groups = new Map<string, RegionalSource[]>();
@@ -352,11 +353,21 @@ export function sourceGaps(feed: RegionalDailyFeed, now: Date): SourceGap[] {
 }
 
 /**
- * The coast report's sources whose latest check failed. The report keeps no stale or retained
- * status, only the outcome and when it was fetched, so the line says exactly that.
+ * The coast report's sources behind this area's tiles whose latest check failed: the area's
+ * forecast, the water buoy, the tide predictions (one line) and the marine alert check. The report
+ * keeps no stale or retained status, only the outcome and when it was fetched, so the line says
+ * exactly that.
  */
-export function reportGaps(report: Report, now: Date): SourceGap[] {
-  return report.sources.filter(item => item.outcome === 'error').map(item => {
+export function reportGaps(report: Report, county: County, area: Area, now: Date): SourceGap[] {
+  const forecastId = report.forecasts.find(item => item.id === area.id)?.sourceId;
+  const buoyUrls = new Set(report.observations.filter(item => item.stationId === county.temperatureStationId).map(item => item.url));
+  const read = report.sources.filter(item => item.id === forecastId || item.id === 'nws-alerts' || item.kind === 'prediction'
+    || (item.kind === 'observation' && (item.id === `ndbc-${county.temperatureStationId}` || buoyUrls.has(item.url))));
+  const failed = read.filter(item => item.outcome === 'error');
+  // The tide curve and its events are one station; one line, and none while either still answers.
+  const tides = read.filter(item => item.kind === 'prediction');
+  const shown = failed.filter(item => item.kind !== 'prediction').concat(tides.length && tides.every(item => item.outcome === 'error') ? [tides[0]!] : []);
+  return shown.map(item => {
     const ms = now.getTime() - Date.parse(item.fetchedAt);
     const when = Number.isFinite(ms) ? `; last fetched ${ageText(ms)} ago` : '';
     return {id: item.id, label: item.label, status: 'failed', text: `${item.label}: latest check failed${when}.`};

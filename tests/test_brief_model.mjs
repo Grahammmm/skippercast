@@ -219,9 +219,12 @@ test('P5 gaps: a backup is named by its own station; a backup serving ok is no g
   assert.match(gap.text, /^NDBC 46011 \(backup for 46042\): stale,/);
 });
 
-test('P5 gaps: the coast brief lists the report\'s failed checks, not the regional feed\'s', () => {
-  const failed = {...report, sources: report.sources.map((item, i) => i === 0 ? {...item, outcome: 'error'} : item)};
-  const brief = buildCoastBrief({report: failed, county: slo, areaId: 'central', profile: 'boat', date, now, daily: {...montereyDaily, sources: {...montereyDaily.sources, tides: {...montereyDaily.sources.tides, status: 'failed'}}}});
-  assert.deepEqual(brief.gaps.map(g => g.id), [report.sources[0].id]);
-  assert.match(brief.gaps[0].text, /: latest check failed; last fetched \d+ (min|h|d) ago\.$/);
+test('P5 gaps: the coast brief lists only the failed checks behind this area\'s tiles, not other areas\' or the regional feed\'s', () => {
+  const fail = ids => ({...report, sources: report.sources.map(item => ids.includes(item.id) ? {...item, outcome: 'error'} : item)});
+  const coast = r => buildCoastBrief({report: r, county: slo, areaId: 'central', profile: 'boat', date, now, daily: {...montereyDaily, sources: {...montereyDaily.sources, tides: {...montereyDaily.sources.tides, status: 'failed'}}}});
+  assert.deepEqual(coast(fail(['nws-north', 'nws-south', 'ndbc-46028', 'noaa-blended-sst', 'cdfw-protected-areas', 'landing-reports'])).gaps, [], 'other areas and other layers are not this brief\'s gaps');
+  assert.deepEqual(coast(fail(['coops-tide-events'])).gaps, [], 'the tide curve still answers');
+  const brief = coast(fail(['nws-central', 'ndbc-46215', 'coops-tides', 'coops-tide-events', 'nws-alerts']));
+  assert.deepEqual(brief.gaps.map(g => g.id), ['nws-central', 'ndbc-46215', 'nws-alerts', 'coops-tides']);
+  assert.match(brief.gaps[0].text, /^NWS · Morro Bay & Point Estero: latest check failed; last fetched \d+ (min|h|d) ago\.$/);
 });

@@ -84,8 +84,9 @@ export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): 
   const load = ++feedLoad;
   feedGaps.value = [];
   const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
-  // A later load (another region) owns the gap lines; this one's feed still lands as before.
-  if (load === feedLoad) feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
+  // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
+  if (load !== feedLoad) return mergeFeeds(daily, conditions);
+  feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
   dailyFeed.value = mergeFeeds(daily, conditions);
   return dailyFeed.peek();
 }
