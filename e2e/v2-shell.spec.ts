@@ -9,7 +9,7 @@
 // viewport preset; axe is clean; the page paints within the LCP budget on
 // the throttled mobile profile (FE-09, design § 13).
 import type {Page} from '@playwright/test';
-import {test, expect, VIEWPORTS, LCP_BUDGET_MS} from './fixtures.ts';
+import {test, expect, VIEWPORTS, LCP_BUDGET_MS, AERIAL_LCP_BUDGET_MS} from './fixtures.ts';
 
 const AREA = {region: 'morro-bay'};
 const TABS = 56;
@@ -140,10 +140,20 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
 
 test('the shell paints within the LCP budget on the throttled mobile profile', async ({pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
-  const lcp = await v2.lcp('app', AREA);
+  // The shell on the Night base is the design § 13 budget; Morro Bay opens on Aerial, whose tiles land later (owner's call).
+  const lcp = await v2.lcp('app', {...AREA, base: 'night'});
   console.log(`v2 app shell LCP ${Math.round(lcp)} ms (budget ${LCP_BUDGET_MS}, design § 13)`);
   expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
   expect(lcp).toBeLessThanOrEqual(LCP_BUDGET_MS);
+  expect(pageErrors).toEqual([]);
+});
+
+test('opening on the Aerial base paints within the budget the owner accepted for it', async ({pageErrors, v2}, info) => {
+  test.skip(info.project.name !== 'phone', 'measured once, at phone size');
+  const lcp = await v2.lcp('app', AREA);
+  console.log(`v2 app Aerial default LCP ${Math.round(lcp)} ms (budget ${AERIAL_LCP_BUDGET_MS}, design § 13)`);
+  expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
+  expect(lcp).toBeLessThanOrEqual(AERIAL_LCP_BUDGET_MS);
   expect(pageErrors).toEqual([]);
 });
 

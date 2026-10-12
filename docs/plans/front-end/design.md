@@ -1297,7 +1297,10 @@ v1 entries it deletes.
   gzipped; startup JSON for Morro Bay keeps the existing budget file and
   lowers `max_bytes` toward the 400 KB target as layers move to tiles;
   Largest Contentful Paint ≤ 2.5 s on Playwright's throttled mobile profile
-  against the built site; basemap tile fetch per session ≤ 150 tiles at the
+  against the built site (measured on the Night base; where a region opens
+  on Aerial the imagery credit lands near 8 s on that profile because the
+  tiles queue behind the bundle, a cost the owner accepted on 12 Oct 2026,
+  so that load has its own 10 s budget); basemap tile fetch per session ≤ 150 tiles at the
   default view. `three` and `CoastViewer` load only by dynamic import when a
   Terrain presentation is first chosen; `check_client.mjs` fails if the app
   entry's static imports reach `three`. Terrain streaming keeps the
