@@ -247,6 +247,7 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   (`skippercast-fleet-registry`, `skippercast-fleet-activity`), as #468 and
   #469 specify. Recorded in `open-questions.md`; N8 and N9 in `graph.md` updated.
 - 2026-10-11: [Fleet seed #521](https://github.com/Grahammmm/skippercast/issues/521): 347 scout rows across 28 ports transferred to AgentOrange with matching SHA-256. The draft importer's offline check yields 342 candidates and five skips for missing usable provenance. Gate (d) remains pending; no Worker registry job has been dispatched. The eight unscouted ports remain separate backlog.
+- 2026-10-11: N4 code half ([#570](https://github.com/Grahammmm/skippercast/issues/570)): `schedule-correlation` matching (5 matched at-sea and landing-report days over 14, no rival boat of the same port), the watched gate (strong method and confidence ≥ 0.85) in the Worker and the matcher, `python -m skippercast.fleet.ais watch-check` and `schedule-precision`. No precision figure yet: the January–June 2026 landing-report archive is not in the repository. The coverage run waits on N3.
 - 2026-10-11: N5 activity classifier in review (#570, branch
   `claude/n5-classifier`). It adds the modes `drift-anchor`, `troll-slow`,
   `troll-pelagic` and `uncertain`, and keeps every threshold in `fleet.json`

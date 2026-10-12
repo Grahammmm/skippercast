@@ -196,9 +196,19 @@
           }
         },
         "match": {
-          "type": "object", "additionalProperties": false, "required": ["auto_merge", "review_min", "mmsi_auto"],
+          "type": "object", "additionalProperties": false, "required": ["auto_merge", "review_min", "mmsi_auto", "schedule"],
           "properties": {"auto_merge": {"$ref": "#/$defs/unit"}, "review_min": {"$ref": "#/$defs/unit"},
-                         "mmsi_auto": {"$ref": "#/$defs/unit"}}
+                         "mmsi_auto": {"description": "Confidence of an AIS-only promotion to watched; at least 0.85, the watched floor.",
+                                       "$ref": "#/$defs/unit"},
+                         "schedule": {
+                           "description": "schedule-correlation (design section 11): at-sea days that coincide with landing reports naming the boat.",
+                           "type": "object", "additionalProperties": false, "required": ["min_days", "min_span_days", "min_lead", "max_contradictions", "lapse_days"],
+                           "properties": {"min_days": {"type": "integer", "minimum": 1},
+                                          "min_span_days": {"type": "integer", "minimum": 1},
+                                          "min_lead": {"description": "Matched days a vessel must lead every other vessel of its port by.", "type": "integer", "minimum": 1},
+                                          "max_contradictions": {"description": "Report days spent in port (not at sea) tolerated before a match goes to review.", "type": "integer", "minimum": 0},
+                                          "lapse_days": {"description": "A watched schedule row with no matched day this recent lapses to candidate.", "type": "integer", "minimum": 1}}
+                         }}
         },
         "refresh": {
           "type": "object", "additionalProperties": false,
