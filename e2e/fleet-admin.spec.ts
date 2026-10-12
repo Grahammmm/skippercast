@@ -21,14 +21,19 @@ async function signInAsAdmin(page: Page): Promise<string> {
   // FE-61: the app's #account link opens the account dialog (web/account.ts), as the v1 Guide's button did;
   // a chosen profile keeps the first-run card from covering it.
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
+  // The dialog also starts a passkey-autofill sign-in (dist/account.js). Clicking Create while that request's
+  // options are still loading lets its ceremony start after the registration and abort or answer it (#579), so
+  // wait for them first (bounded: a browser without autofill never asks).
+  const autofill = page.waitForResponse(r => r.url().endsWith('/api/auth/login/options'), {timeout: 15_000}).catch(() => undefined);
   await page.goto('/map?region=morro-bay#account');
   await expect(page.locator('.account-card')).toBeVisible({timeout: 30_000});
+  await autofill;
   const reloaded = page.waitForEvent('load');   // the app reloads signed in
   await page.locator('#account-create').click();
   await reloaded;
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);
   const userId = word((await (await page.request.get('/api/session')).json()).user.id);
-  d1(`UPDATE users SET role='admin' WHERE id='${userId}';`);
+  await d1(`UPDATE users SET role='admin' WHERE id='${userId}';`);
   expect((await (await page.request.get('/api/session')).json()).is_admin).toBe(true);
   return userId;
 }
@@ -36,10 +41,11 @@ async function signInAsAdmin(page: Page): Promise<string> {
 test('an admin decides a fleet review, edits a vessel field and sees it pinned', async ({page, pageErrors}, info) => {
   test.setTimeout(120_000);
   const userId = await signInAsAdmin(page);
-  const tag = word(info.project.name), region = `e2e-${tag}`;
+  // Unique per project and attempt: a retry or --repeat-each run seeds fresh rows instead of failing on the last attempt's.
+  const tag = word(`${info.project.name}-${info.repeatEachIndex}-${info.retry}`), region = `e2e-${tag}`;
   const vessel = hex(`e2e-fleet-vessel:${tag}`), review = hex(`e2e-fleet-review:${tag}`), name = `E2E Osprey ${tag}`;
   const now = new Date().toISOString();
-  d1(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,port_id,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
+  await d1(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,port_id,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
       VALUES('${vessel}','${region}','e2e-osprey-${tag}','${name}','E2EOSPREY${tag.toUpperCase()}','morro-bay','active','hidden','${now}','${now}','${now}','${now}');`
     + `INSERT INTO fleet_reviews(id,region,kind,subject_id,candidate_json,proposal_json,score,status,opened_at)
       VALUES('${review}','${region}','class','${vessel}','{"values":[{"source_id":"e2e-a","value":"six-pack","confidence":0.8},{"source_id":"e2e-b","value":"inspected-party","confidence":0.7}]}',
@@ -58,7 +64,7 @@ test('an admin decides a fleet review, edits a vessel field and sees it pinned',
   await card.getByRole('button', {name: 'Set class'}).click();
   await expect(page.getByRole('status').filter({hasText: 'Decided: Set class.'})).toBeVisible();
   await expect(card).toHaveCount(0);
-  expect(d1(`SELECT status,decided_by,json_extract(decision_json,'$.vessel_class') AS cls FROM fleet_reviews WHERE id='${review}'`))
+  expect(await d1(`SELECT status,decided_by,json_extract(decision_json,'$.vessel_class') AS cls FROM fleet_reviews WHERE id='${review}'`))
     .toEqual([{status: 'decided', decided_by: userId, cls: 'inspected-party'}]);
 
   // The vessel: listed with the class pinned, then a field edited from its detail.
@@ -83,16 +89,16 @@ test('an admin decides a fleet review, edits a vessel field and sees it pinned',
   await expect(passengers).toContainText('Pinned');
   await expect(passengers).toContainText('Admin edit');
   await checkA11y(page, 'fleet-vessel', info.project.name);
-  expect(d1(`SELECT passengers_max,json_type(pinned_json,'$.passengers_max') AS pin FROM fleet_vessels WHERE id='${vessel}'`))
+  expect(await d1(`SELECT passengers_max,json_type(pinned_json,'$.passengers_max') AS pin FROM fleet_vessels WHERE id='${vessel}'`))
     .toEqual([{passengers_max: 6, pin: 'object'}]);
-  expect(d1(`SELECT value_json,method,source_url FROM fleet_vessel_facts WHERE vessel_id='${vessel}' AND field='passengers_max' AND superseded_at IS NULL`))
+  expect(await d1(`SELECT value_json,method,source_url FROM fleet_vessel_facts WHERE vessel_id='${vessel}' AND field='passengers_max' AND superseded_at IS NULL`))
     .toEqual([{value_json: '6', method: 'admin', source_url: `admin:${userId}`}]);
 
   // Unpin releases the pin and keeps the value.
   await passengers.getByRole('button', {name: 'Unpin Passengers (max)'}).click();
   await expect(page.getByRole('status').filter({hasText: 'Passengers (max) unpinned'})).toBeVisible();
   await expect(passengers).not.toContainText('Pinned');
-  expect(d1(`SELECT passengers_max,json_type(pinned_json,'$.passengers_max') AS pin FROM fleet_vessels WHERE id='${vessel}'`))
+  expect(await d1(`SELECT passengers_max,json_type(pinned_json,'$.passengers_max') AS pin FROM fleet_vessels WHERE id='${vessel}'`))
     .toEqual([{passengers_max: 6, pin: null}]);
   expect(pageErrors).toEqual([]);
 });
