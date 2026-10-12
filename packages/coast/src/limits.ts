@@ -2,7 +2,7 @@
 // lower-exposure window uses, and for spear the highest surge band, set per
 // profile by the user and kept on the device (web/limits.ts).
 //
-// Defaults are the thresholds the brief already uses: assessment.ts
+// Defaults are the thresholds the brief already uses: web/score.ts
 // WINDOW_LIMITS (boat 10 kt, 15 kt gusts, 4 ft seas; shore, spear and kayak
 // 8 kt, 12 kt, 3 ft) and spear.ts SPEAR.windowMaxSurge. A user may set a
 // comfort limit lower or higher within LIMIT_BOUNDS. Hazard rules never read
@@ -15,7 +15,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import type {BriefMode} from './types.ts';
-import {WINDOW_LIMITS} from './assessment.ts';
+import {WINDOW_LIMITS} from '../../../web/score.ts';
 import {SPEAR, SURGE_RANK} from './spear.ts';
 
 /** The surge bands a spear limit may name; Heavy is never allowed. */
