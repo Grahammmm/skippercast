@@ -5,7 +5,11 @@
   "sources": [
     "https://www.ndbc.noaa.gov/activestations.xml",
     "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions",
-    "https://www.ndbc.noaa.gov/data/realtime2/46011.txt"
+    "https://www.ndbc.noaa.gov/data/realtime2/46011.txt",
+    "https://www.ndbc.noaa.gov/data/realtime2/46028.txt",
+    "https://www.ndbc.noaa.gov/data/realtime2/46215.txt",
+    "https://www.ndbc.noaa.gov/data/realtime2/46286.txt",
+    "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations/9412553/tidepredoffsets.json"
   ],
   "choices": [
     {
@@ -89,7 +93,7 @@
         -120.999
       ],
       "exposure": "Open-ocean NDBC weather buoys on the exposed central coast north of Point Conception: Cape San Martin, 55 NM west-northwest of Morro Bay, and Santa Maria, 21 NM northwest of Point Arguello. Both face the prevailing northwest wind and swell.",
-      "reason": "Morro Bay's offshore role is a regional open-water wind and wave reference, not a reading at the harbor or the fishing grounds. Santa Maria sits on the same exposed coast and is closer to Estero Bay and Point Buchon than Cape San Martin is. It is a different place: northwest wind usually builds toward Point Arguello, so the backup can read stronger wind than the primary would. The label names 46011 whenever it serves. Same-hour sample 2026-10-12 12:20Z: 46028 3.5 m at 11 s from 324 deg, wind 270 deg 2 m/s; 46011 2.9 m at 11 s from 310 deg, wind 270 deg 3 m/s.",
+      "reason": "Morro Bay's offshore role is a regional open-water wind and wave reference, not a reading at the harbor or the fishing grounds. Santa Maria sits on the same exposed coast and is closer to Estero Bay and Point Buchon than Cape San Martin is. It is a different place: northwest wind usually builds toward Point Arguello, so the backup can read stronger wind than the primary would. The label names 46011 whenever it serves. Same-hour sample 2026-10-12 12:20Z: 46028 3.5 m at 11 s from 324 deg, wind 270 deg 2 m/s; 46011 2.9 m at 11 s from 310 deg, wind 260 deg 3 m/s.",
       "endpoints": [
         "https://www.ndbc.noaa.gov/data/realtime2/46028.txt",
         "https://www.ndbc.noaa.gov/data/realtime2/46011.txt",

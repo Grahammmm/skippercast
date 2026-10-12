@@ -22,7 +22,8 @@ def chains(region):
 
 class StationFailoverEvidenceTests(TestCase):
     def test_each_backup_has_a_reviewed_choice(self):
-        reviewed = {(c["primary"], c["backup"]) for c in CATALOG["choices"]}
+        # The first rollout's choices predate region and role fields; later ones name both.
+        reviewed = {(c.get("region"), c.get("role"), c["primary"], c["backup"]) for c in CATALOG["choices"]}
         for path in sorted((ROOT / "regions").glob("*/region.json")):
             region = json.loads(path.read_text())
             for role, config in chains(region):
@@ -30,7 +31,8 @@ class StationFailoverEvidenceTests(TestCase):
                     self.assertEqual(config.get("evidence"), "catalog/station-failover.json")
                     ids = config["stations"]
                     for backup in ids[1:]:
-                        self.assertIn((ids[0], backup), reviewed)
+                        self.assertTrue({(region["id"], role, ids[0], backup), (None, None, ids[0], backup)} & reviewed,
+                                        f"no reviewed choice for {ids[0]} -> {backup}")
 
     def test_morro_bay_offshore_falls_back_to_santa_maria_only(self):
         stations = json.loads((ROOT / "regions" / "morro-bay" / "region.json").read_text())["stations"]
