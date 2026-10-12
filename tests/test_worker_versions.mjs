@@ -141,5 +141,6 @@ test('a deploy or rollback that cannot be smoke-tested fails instead of passing 
   // The address is required before the deploy step writes anything.
   const preflight = workflow.indexOf('Require a smoke-test address before deploying');
   assert.ok(preflight > 0 && preflight < workflow.indexOf('id: deploy'), 'the address check runs before the deploy');
-  assert.match(workflow.slice(preflight, workflow.indexOf('id: deploy')), /-z "\$SITE" \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1/);
+  assert.match(workflow.slice(preflight, workflow.indexOf('id: deploy')), /\[ -n "\$CLOUDFLARE_API_TOKEN" \] && \[ -n "\$CLOUDFLARE_ACCOUNT_ID" \] && \[ -z "\$SITE" \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1/);
+  // Unconfigured Cloudflare (a fork without the secrets) still deploys nothing rather than failing.
 });
