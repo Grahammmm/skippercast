@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from skippercast.platform.shoreline import OVERVIEW_MIN_RING_M, OVERVIEW_TOLERANCE_M, feature_lines, overview_shoreline, simplify
-from skippercast.platform.startup_forms import ATLAS_MARKS, PLAN_INDEX, SHORELINE_OVERVIEW, publish_startup_forms
+from skippercast.platform.startup_forms import ATLAS_MARKS, PLAN_INDEX, POSTER, SHORELINE_OVERVIEW, poster_svg, publish_startup_forms
 from tests._support import ROOT
 
 MB = ROOT / 'dist/regions/morro-bay'
@@ -51,6 +51,13 @@ class CommittedCopies(unittest.TestCase):
                             'an overview vertex is always one of the published vertices')
         self.assertLess(len(json.dumps(overview)), len(json.dumps(full)) / 3)
 
+    def test_poster_is_the_overview_as_one_path_and_names_its_checksum(self):
+        text, overview = (MB / POSTER).read_text(), read(MB / SHORELINE_OVERVIEW)
+        self.assertEqual(text, poster_svg(overview, {'path': 'x', 'sha256': sha(MB / SHORELINE_OVERVIEW)}))
+        self.assertIn(f'data-sha256="{sha(MB / SHORELINE_OVERVIEW)}"', text)
+        self.assertEqual(text.count('<path '), 1)
+        self.assertRegex(text, r'<path d="[Ml0-9 \-]+"/>')
+
 
 class Overview(unittest.TestCase):
     SCALE = (111_320 * math.cos(math.radians(35.4)), 110_540)
@@ -90,7 +97,7 @@ class Publish(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root, output = Path(tmp), Path(tmp) / 'dist/regions/r'
             output.mkdir(parents=True)
-            for name in (ATLAS_MARKS, PLAN_INDEX, SHORELINE_OVERVIEW):
+            for name in (ATLAS_MARKS, PLAN_INDEX, SHORELINE_OVERVIEW, POSTER):
                 (output / name).write_text('{}')
             region = {'id': 'r', 'assets': {'atlas': 'regions/r/atlas.json', 'search_plans': None}}
             self.assertEqual(publish_startup_forms(root, region, output), [])

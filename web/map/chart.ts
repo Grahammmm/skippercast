@@ -24,6 +24,7 @@ import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams} from '../state.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
+import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineOverviewURL, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
@@ -119,6 +120,9 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   // #617: the shoreline file drawn now, and the region whose full shoreline has loaded (kept on zooming out: no second request).
   let drawnShore = '', detailRegion: string | null = null;
+  // #617: the poster (poster.ts) is asked for once, on the first mount, and goes on the first idle or user move.
+  let posterAsked = false, painted = false;
+  const posterDone = (): void => { painted = true; poster.value = null; };
   let currents: Currents | null = null;
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
@@ -131,6 +135,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     host.dataset.view = k;
     if (k === applied || shownPresentation.peek() !== 'chart' || appView.peek() !== 'coast') return;
     applied = k;
+    posterDone();
     camera.value = next;
     clearTimeout(viewTimer);
     viewTimer = setTimeout(() => { if (alive && shownPresentation.peek() === 'chart' && appView.peek() === 'coast') setParams({view: k}); }, viewDelay);
@@ -140,6 +145,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     const at = camera.peek(), id = region.peek();
     if (mounting || engine.peek() || chartFailed.peek() || !at || !id) return;
     mounting = true;
+    if (!posterAsked) { posterAsked = true; void loadPoster(id, page(), () => painted, options.fetchFn); }
     try {
       const [library, archive] = await Promise.all([load(), basemapArchive(fetchFn, page())]);
       if (!alive) return;
@@ -169,6 +175,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
         },
         onIdle: () => {
+          if (!painted) { posterDone(); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
           host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
           host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
         },
@@ -184,6 +191,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       show(start);
     } catch (error) {
       console.error('Chart unavailable', error);
+      posterDone();
       if (alive) chartFailed.value = true;
     } finally {
       mounting = false;
@@ -255,6 +263,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!alive) return;
       alive = false;
       clearTimeout(viewTimer);
+      posterDone();
       for (const dispose of disposers) dispose();
       seafloor?.destroy();
       marks.destroy();
