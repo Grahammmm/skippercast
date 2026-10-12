@@ -36,7 +36,9 @@
 // terrain basis, the screened candidates as "Chart only", and while Source
 // coverage is on the renderer's colour key and its sources with their dates, verbatim.
 import {IconButton} from '../ui/Button.tsx';
-import {current, layers} from '../state.ts';
+import {current, grade, layers, profile, region, species} from '../state.ts';
+import {GRADE_LABELS, GRADE_MEANING} from '../grade.ts';
+import {targetLabel} from '../species.ts';
 import {chartFailed, unavailable} from '../map/chart.ts';
 import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
@@ -44,7 +46,7 @@ import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
-import {markNote, markScreen} from '../map/marks.ts';
+import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
@@ -213,6 +215,23 @@ function FleetRow() {
   );
 }
 
+/** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
+export function DensityRow() {
+  const n = densityShown.value;
+  if (n === null) return null;
+  const label = targetLabel(profile.value, region.value, species.value), g = grade.value;
+  return (
+    <li class="app-legend-density">
+      {n ? <span class="app-swatch" data-layer="marks-density" aria-hidden="true"></span> : null}
+      {n ? `${label} habitat candidates, denser here` : `No mapped reef marks for ${label.toLowerCase()} here`}
+      <Popover iconOnly summary="Habitat candidate density basis">
+        <p>{layerEntry('marks').basis} {GRADE_MEANING} Density shows where mapped candidates cluster, not where fish are; it is drawn only around surveyed marks.</p>
+      </Popover>
+      {n ? <p class="app-legend-note" data-reason="marks-density">{g === 'all' ? '' : `Grade ${GRADE_LABELS[g]} · `}Zoom in to see each reef mark</p> : null}
+    </li>
+  );
+}
+
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
 const PlainRow = ({id, label, reason}: {id: string; label: string; reason: string}) => (
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
@@ -230,6 +249,7 @@ export function Legend() {
           : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
+        <DensityRow />
         <MpaRow />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}

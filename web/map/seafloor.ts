@@ -17,8 +17,9 @@ import {
   FIT_STYLE, GRADE_STYLE, HABITAT_LABEL, archiveURL, decodeTile, dedupeById, habitatDetails, ledgerURL, loadManifest,
   sourceRightsDetails, tileFeatures, tilesForBounds,
 } from '../../dist/seafloor-data.js';
+import {GRADE_LABELS, gradeAllows, type GradeFilter} from '../grade.ts';
 import {PROFILE_TABLE, withinDepth, type Profile} from '../profile.ts';
-import {layers, profile, region, species} from '../state.ts';
+import {grade, layers, profile, region, species} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {SEAFLOOR_SOURCE} from './layers.ts';
 import type {Palette} from './palette.ts';
@@ -133,6 +134,14 @@ export function toneOf(f: SeafloorFeature, view: string): Tone {
   if (f.kind !== 'candidate') return f.kind;
   const value = String(view === 'terrain' ? f.properties.terrain_grade : f.properties[view]);
   return Object.hasOwn(RANK, value) ? RANK[value]! : 'unknown';
+}
+
+/**
+ * The habitat features the rail's grade filter keeps (#620): candidates by their terrain grade; unranked search and
+ * interpreted areas only while every grade is shown, since an unranked area cannot claim A or B.
+ */
+export function gradeFiltered<F extends Pick<SeafloorFeature, 'kind' | 'properties'>>(features: readonly F[], filter: GradeFilter): F[] {
+  return features.filter(f => filter === 'all' || f.kind === 'candidate' && gradeAllows(filter, f.properties.terrain_grade));
 }
 
 /** The publication's species-fit key for a target (`fit_lingcod`), or null for a target without one. */
@@ -340,16 +349,18 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (token !== loading || !current()) return;
     const p = profile.peek(), limit = PROFILE_TABLE[p].maxDepthFt;
     const admitted = (dedupeById(parts.flatMap(t => t.habitat)) as TileFeature[]).map(f => admitHabitat(f, admit)).filter(f => f !== null);
-    const habitat = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
+    const inDepth = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
+    const g = grade.peek(), habitat = gradeFiltered(inDepth, g);
     const cells = (dedupeById(parts.flatMap(t => t.cells)) as TileFeature[]).map(f => admitCell(f, admit)).filter(f => f !== null);
     const key = fitKey(species.peek(), p), fit = key && habitat.some(f => f.kind === 'candidate' && Object.hasOwn(f.properties, key)) ? key : null;
     view = seafloorView.peek() === 'fit' && fit ? fit : 'terrain';
     drawn = new Map(habitat.map(f => [f.id, f]));
     engine.setData(SEAFLOOR_SOURCE, collection([...cells, ...habitat], view));
     filled = cells.length + habitat.length > 0;
-    const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - habitat.length;
+    const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - inDepth.length, graded = inDepth.length - habitat.length;
     ready([`${ranked} candidate${ranked === 1 ? '' : 's'} · ${habitat.length - ranked} unranked in view`,
-      deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : ''].filter(Boolean).join(' · '), {
+      deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : '',
+      graded ? `${graded} outside grade ${GRADE_LABELS[g]} left out` : ''].filter(Boolean).join(' · '), {
       view: view === 'terrain' ? 'terrain' : 'fit', fit: fit ? fitName(fit) : null, drawn: habitat.length + cells.length,
       surveys: [...new Set(habitat.map(f => `${f.survey.id} (${f.survey.year})`))].sort(),
       credits: [...new Set([...habitat, ...cells].flatMap(f => f.rights.map(r => r.credit)))],
@@ -375,7 +386,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   const on = computed(() => layers.value.includes('seafloor'));
   const disposers = [
     effect(() => { on.value; region.value; untracked(() => void enable()); }),
-    effect(() => { camera.value; shownPresentation.value; profile.value; species.value; seafloorView.value; untracked(() => void draw()); }),
+    effect(() => { camera.value; shownPresentation.value; profile.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
   ];
   return {
     mark(id) { const f = drawn.get(id); return f ? seafloorMark(f, view) : null; },

@@ -23,6 +23,14 @@
 // package offers it (FE-23), so a link's `?base=chart` can be chosen again.
 // The bases draw on the Chart only; `?base=aerial` where no aerial is offered
 // shows Night, which is what draws.
+// Walkthrough slice 3 (#620): the rail opens with what to look for, the target
+// species (the command bar's list, bound to the same `?target=`) and the terrain
+// grade filter (`?grade=`, web/grade.ts), which narrows the reef marks, their
+// density below zoom 10 and the seafloor candidates together.
+import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam} from '../grade.ts';
+import {PROFILE_TABLE} from '../profile.ts';
+import {regionPlans, targetGroups, targetsFor} from '../species.ts';
+import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
@@ -32,7 +40,7 @@ import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
 import {currentStatus, setTerrainOption, shownPresentation, terrainOptions, terrainShading} from '../map/stage.ts';
-import {base, current, DEFAULT_CURRENT, isBase, layers, layersParam, setParams, UNSUPPORTED, type Base} from '../state.ts';
+import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
 import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
 
 export {RAIL_ENTRIES, railOn, toggled, type RailEntry} from './rail.ts';
@@ -175,10 +183,33 @@ function BaseChoice() {
   );
 }
 
+/** What to look for: the target species and the terrain grade filter, at the head of the rail (#620). */
+export function LookFor() {
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, r = region.value, loaded = regionPlans.value;
+  const list = targetsFor(p, r, loaded && loaded.region === r ? loaded.plans : {}, species.value);
+  return (
+    <div class="app-rail-look" role="group" aria-label="Where to look">
+      <label class="app-rail-source">Target
+        <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
+          {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
+            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>
+          ))}
+        </select>
+      </label>
+      <div class="app-rail-grade">
+        <span class="app-rail-grade-label">Grade</span>
+        <Segmented label="Terrain grade" value={grade.value} onChange={next => setParams({grade: gradeParam(next)})}
+          options={GRADE_FILTERS.map(value => ({value, label: GRADE_LABELS[value]}))} />
+        <Popover iconOnly align="end" summary="Grade basis"><p>{GRADE_MEANING} The filter narrows reef marks, their wide-view density and seafloor candidates; unranked areas show only with All.</p></Popover>
+      </div>
+    </div>
+  );
+}
+
 export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value;
   return (
-    <Rail class="app-rail" footer={<BaseChoice />}>
+    <Rail class="app-rail" header={<LookFor />} footer={<BaseChoice />}>
       {RAIL_ENTRIES.map(e => {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (

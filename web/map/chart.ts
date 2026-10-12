@@ -28,7 +28,7 @@ import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineOverviewURL, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
+import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
@@ -231,6 +231,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!e) return;
       e.setData(id, collection);
       if (id === MARKS_SOURCE) host.dataset.marks = String(collection.features.length);
+      if (id === DENSITY_SOURCE) host.dataset.density = String(collection.features.length);
     })),
     // The ranked trip spots, grouped at the camera's zoom; a spot that is cleared or withheld takes its card with it.
     effect(() => {

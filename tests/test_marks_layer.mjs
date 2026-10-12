@@ -76,7 +76,7 @@ test('marks are points with their fit badge, inside the profile\'s depth limit',
   const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
   assert.equal(boat.features.length, ATLAS.targets.filter(t => markShown(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
-  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3'}});
+  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1}});
   const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);
   assert.ok(spear.features.length > 0 && spear.features.every(f => ATLAS.targets.find(t => t.id === f.properties.id).neighborhood_depth_ft[1] <= 60), 'Spear: 60 ft');
   assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', CHECKED).features.every(f => !('fit' in f.properties)), 'no badge without a fit');
