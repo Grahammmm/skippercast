@@ -369,7 +369,8 @@ Other registry tables:
 - **`fleet_ais_watch`**: PK `(region, mmsi)`; `vessel_id` (a candidate carries
   the vessel it is proposed for, null only when two vessels match; only a
   `watched` row ties the MMSI to the vessel), `match_method` (`fcc-uls`, `call-sign`, `ais-static-name`,
-  `geofence-presence`, `admin`), `confidence`, `status` (`candidate`,
+  `geofence-presence`, `admin`, `schedule-correlation`; a `watched` row needs one of `fcc-uls`,
+  `geofence-presence`, `admin` or `schedule-correlation` and confidence ≥ 0.85), `confidence`, `status` (`candidate`,
   `watched`, `rejected`), `ais_name`, `ais_call_sign`, `ais_class`,
   `first_seen_at`, `last_seen_at`, `last_seen_source`, `positions_30d`,
   `updated_at`; index `watch_vessel (vessel_id)`.
@@ -961,7 +962,20 @@ vessel has no MMSI) with a ship type not outside 30/37/60/69 → `candidate`;
 (3) positions inside the vessel's own port geofence on ≥ 3 distinct days of the
 last 30 → `watched` at ≥ `mmsi_auto`, only with a *known* ship type of
 30/37/60/69 and a *known* length within 20%, and never for a vessel that already
-has a registry MMSI or when two vessels match. Anything weaker → `mmsi` review,
+has a registry MMSI or when two vessels match; (4) `schedule-correlation`
+(`ais/schedule.py`): a stage-2 candidate seen in its home port at least once,
+at sea (a position outside every port geofence) on ≥ `thresholds.match.schedule.min_days`
+(5) days that a landing report in the daily feed's `reports[]` named the vessel
+at its home port, spanning ≥ `min_span_days` (14) → `watched` at ≥ `mmsi_auto`;
+an unknown type or length does not block it, a contradicting length does, and
+a vessel that does not lead every other vessel of its port by `min_lead` (3)
+matched days has a rival (a same-port vessel sharing at least one at-sea day)
+→ an `mmsi` review (`schedule-rival`); one with more than `max_contradictions`
+(1) report days spent in port → an `mmsi` review (`schedule-contradicted`); a watched row with
+no matched day in the last `lapse_days` (30) lapses to candidate. The watched gate: a `watched`
+row needs `fcc-uls`, `geofence-presence`, `admin` or `schedule-correlation` and
+confidence ≥ 0.85, checked by the matcher, the Worker and `python -m
+skippercast.fleet.ais watch-check`. Anything weaker → `mmsi` review,
 opened when the candidate cannot promote and has been seen in the vessel's home
 port, when it has been seen there without promoting for 7 days, after 7 days for
 a vessel without a home port, and for a registry MMSI whose statics agree on
@@ -980,8 +994,17 @@ basis. `python -m skippercast.fleet.ais validate` compares output to labels by
 minutes and reports precision and recall for fishing (drift + troll) and per
 type, with a confusion table. Labelled trips' raw positions are copied to
 `ais/validation/` so thresholds can be re-tested later. Target before any
-public use: fishing precision ≥ 0.8, recall ≥ 0.7. **Owner**: label, or review
-and approve an agent-labelled set (`labeller` records who).
+public use: ≥ 30 trips, fishing precision ≥ 0.8 and recall ≥ 0.7, overall and
+for each of `drift-anchor`, `troll-slow` and `troll-pelagic`. The report also
+counts the labelled fishing minutes the classifier called transit (what
+discarding transit would have lost) and the scored trips by dominant labelled
+mode, port and month; it carries counts and scores only. **Owner**: label, or
+review and approve an agent-labelled set (`labeller` records who). For an agent
+set, `python -m skippercast.fleet.ais label export` writes a minute-by-minute
+summary of each unlabelled trip under FLEET_VAR on the runner (the classifier's
+kind is a hint, never copied), the agent writes proposals, and `label import`
+checks them and posts them to `POST /api/fleet/jobs/labels`
+([runbook](../../operations/runbooks/fleet-labelling.md)).
 
 ## 12. Worker API
 
@@ -1000,6 +1023,7 @@ D1's statement and bound-parameter limits.
 | `POST /api/fleet/jobs/activity` | replace-window trips/segments/events; aggregates |
 | `POST /api/fleet/jobs/heartbeat` | heartbeat, hourly counters |
 | `GET /api/fleet/jobs/labels` | labels for validation |
+| `POST /api/fleet/jobs/labels` | one trip's agent-proposed labels, `{trip_id, labeller: "agent:<name>", labels}`; replaces that agent's labels on the trip, checked as the admin POST is (`label import`, `fleet-ais.yml` `label_import`; N7) |
 | `GET /api/fleet/jobs/health` | staleness booleans and ages only |
 
 **Admin routes** (`requireAdmin`, 404 unless `FLEET_ENABLED`):
@@ -1011,7 +1035,12 @@ D1's statement and bound-parameter limits.
 `GET|POST /api/admin/fleet/operators/:id/outreach`,
 `POST /api/admin/fleet/outreach/:id` (approve, discard, log as sent by owner);
 `GET /api/admin/fleet/coverage`, `/ais/health`, `/clicks`;
-`GET|POST /api/admin/fleet/labels`. A review decision (CF-30,
+`GET /api/admin/fleet/trips` (`labelled=all|yes|no|agent|approved`),
+`GET /api/admin/fleet/trips/:id`, `POST /api/admin/fleet/trips/:id/labels`,
+`POST /api/admin/fleet/labels/:id/delete`,
+`POST /api/admin/fleet/trips/:id/approve` (N7: the trip's `agent:*` labels
+take the approving admin's `users.id` as `labeller`, and `basis` gains the
+prefix `approved from agent:<name>: `). A review decision (CF-30,
 `server/fleet/admin/reviews.ts`) is `{action, ...}` stored canonically in
 `decision_json`: `same-vessel` (merge, advisor-link; `vessel_id`, and for
 advisor-link `boat_id`, which sets `advisor_boats.fleet_vessel_id`),
@@ -1061,8 +1090,12 @@ New hash routes in `web/admin/` (same patterns as `queue.tsx` and
 - **Coverage** (`#fleet-coverage`): boats by port and class; completeness by
   field group; % with MMSI and % seen in 30 days by port and class; sources per
   boat and single-source boats; run history.
-- **Labelling** (`#fleet-trip/<id>`): segments on a small map with a speed
-  strip; select a time range, label it, give the basis.
+- **Labelling** (`#fleet-labels`, `#fleet-trip/<id>`): segments on a small map
+  with a speed strip; select a time range, label it, give the basis. A trip
+  with agent labels shows *Awaiting approval* in the list and on the trip;
+  **Approve agent labels** records the owner as labeller (N7), and rejecting a
+  label is its delete. The list filters trips awaiting approval and trips
+  with approved agent labels.
 
 **Public profile.** `/boats/<slug>` stays one page
 (`server/advisor/pages/boat.ts`); the route moves behind a gate that passes

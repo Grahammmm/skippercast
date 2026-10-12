@@ -78,6 +78,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: every `watched` row has confidence ≥ 0.85 and a method in {`fcc-uls`, `geofence-presence`, `admin`, `schedule-correlation`} (`call-sign` and `ais-static-name` are candidate-only) (assertion over the watch endpoint, exit 0); `pytest tests/unit/test_fleet_match.py` passes; for `schedule-correlation`, precision on the January–June 2026 history ≥ 0.9 against landing-report days, reported with the false-match count.
 - Runs: Large builds `schedule-correlation`; Orchestrator gates; Small polls runs.
 - Depends on: N3, and the listener healthy (#508). Reuses: CF-46 (`ais/match.py`, `server/fleet/watch.ts`), CF-47 backfill, CF-45 processor.
+- Status (2026-10-11): code half built on `claude/n4-schedule-correlation` ([#570](https://github.com/Grahammmm/skippercast/issues/570)): `schedule-correlation` (`ais/schedule.py`, thresholds `thresholds.match.schedule`), the watched gate in `watch.ts` and `match.py`, `watch-check` and `schedule-precision`. The coverage run waits on N3 and on a January–June 2026 landing-report history, which the repository does not hold.
 
 ### N5 · Activity classifier · **in review**
 
@@ -106,6 +107,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: **owner approves** the set (or labels it), recorded in `labeller`; then `python -m skippercast.fleet.ais validate` reports fishing precision ≥ 0.8 and recall ≥ 0.7, overall and per mode, and the fishing minutes transit discarding would have lost.
 - Runs: Large proposes labels; owner approves; Small runs `validate`.
 - Depends on: N5 (N6 public go-live waits on N7 and Q1). Reuses: CF-48 (`validate.py`, `server/fleet/admin/labels.ts`).
+- Status: in progress. N7a (`claude/n7-validate`): per-mode gate, transit-lost minutes, coverage counts, and `label export`/`label import` with the [labelling runbook](../../operations/runbooks/fleet-labelling.md). N7b (`claude/n7-labels-approve`) adds the job route, owner approval and the workflow input. The labelling run follows both.
 
 ### N8 · Skill packaging
 

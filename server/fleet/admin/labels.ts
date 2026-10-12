@@ -3,19 +3,23 @@
 // behind requireUser and requireAdmin (the FLEET_ENABLED gate in routes/fleet.ts runs first);
 // the job read is mounted in routes/fleet.ts behind requireFleetJob.
 //
-//   GET  /api/admin/fleet/trips        ?region= &labelled=all|yes|no &cursor=   newest departure first, PAGE a page,
+//   GET  /api/admin/fleet/trips        ?region= &labelled=all|yes|no|agent|approved &cursor=   newest departure first, PAGE a page,
 //                                      with the labelling progress (labelled trips, labels by labeller kind, ports,
 //                                      labelled minutes per label) against the 30-trip target
 //   GET  /api/admin/fleet/trips/:id    the trip, its vessel, its segments (decoded tracks, mean SOG) and its labels
 //   POST /api/admin/fleet/trips/:id/labels   {started_at, ended_at, label, basis}: a hand label of a time range
-//   POST /api/admin/fleet/labels/:id/delete  removes one label
+//   POST /api/admin/fleet/labels/:id/delete  removes one label (rejecting an agent's label is this delete)
+//   POST /api/admin/fleet/trips/:id/approve  the owner approves the trip's agent labels: labeller becomes the admin's
+//                                      users.id and basis gains "approved from agent:<name>: " (N7)
+//   POST /api/fleet/jobs/labels        {trip_id, labeller: "agent:<name>", labels: [{started_at, ended_at, label, basis}]}:
+//                                      replaces that agent's labels on the trip (N7; `python -m skippercast.fleet.ais label import`)
 //   GET  /api/fleet/jobs/labels        ?region= &cursor=   labelled trips with their labels, by trip id, for
 //                                      `python -m skippercast.fleet.ais validate` (src/skippercast/fleet/ais/validate.py)
 //
 // A label is a time range of one trip marked in-port, transit, drift-anchor, troll-slow or troll-pelagic,
 // with its basis (what the labeller went on: the track's shape, a skipper's log, a landing
 // report...). `labeller` records who: the admin's users.id; an agent-labelled set carries
-// `agent:<name>` and is counted apart so the owner can review and approve it. Ranges of one
+// `agent:<name>` and is counted apart until the owner approves it. Ranges of one
 // trip never overlap, so every labelled minute has one truth. Labels are keyed by trip id
 // and time and survive reprocessing (fleet/activity.ts never touches them).
 //
@@ -41,7 +45,11 @@ const HEX32 = /^[0-9a-f]{32}$/;
 const REGION = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?Z$/;
 const CURSOR = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)~([0-9a-f]{32})$/;
-const FILTERS = ['all', 'yes', 'no'] as const;
+const FILTERS = ['all', 'yes', 'no', 'agent', 'approved'] as const;
+const AGENT = /^agent:[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;   // as label.py LABELLER (N7a)
+export const APPROVED_PREFIX = 'approved from ';
+const LABEL_FIELDS = ['started_at', 'ended_at', 'label', 'basis'];
+const AGENT_LABELS = (t: string): string => `EXISTS(SELECT 1 FROM fleet_segment_labels a WHERE a.trip_id=${t}.id AND a.labeller LIKE 'agent:%')`;
 
 const newId = (): string => [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
 /** An ISO UTC time with a Z, normalised to milliseconds; null if it is not one. */
@@ -54,7 +62,7 @@ export function isoTime(v: unknown): string | null {
 export interface TripRow {
   id: string; region: string; vessel_id: string; vessel_name: string | null; vessel_class: string | null; mmsi: string;
   depart_port_id: string | null; return_port_id: string | null; departed_at: string; returned_at: string | null; local_date: string;
-  status: string; distance_nm: number | null; fishing_min: number | null; source: string; rights: string; labels: number;
+  status: string; distance_nm: number | null; fishing_min: number | null; source: string; rights: string; labels: number; agent_labels: number;
 }
 export interface LabelRow {id: string; trip_id: string; started_at: string; ended_at: string; label: string; labeller: string; basis: string | null; created_at: string}
 export interface Progress {
@@ -72,7 +80,8 @@ export interface TripDetail {
 }
 
 const TRIP_COLUMNS = `t.id,t.region,t.vessel_id,v.name AS vessel_name,v.vessel_class,t.mmsi,t.depart_port_id,t.return_port_id,t.departed_at,
-  t.returned_at,t.local_date,t.status,t.distance_nm,t.fishing_min,t.source,t.rights,(SELECT count(*) FROM fleet_segment_labels l WHERE l.trip_id=t.id) AS labels`;
+  t.returned_at,t.local_date,t.status,t.distance_nm,t.fishing_min,t.source,t.rights,(SELECT count(*) FROM fleet_segment_labels l WHERE l.trip_id=t.id) AS labels,
+  (SELECT count(*) FROM fleet_segment_labels l WHERE l.trip_id=t.id AND l.labeller LIKE 'agent:%') AS agent_labels`;
 
 /** GET /api/admin/fleet/trips. */
 export async function listTrips(db: D1Database, q: {region?: string; labelled?: string; cursor?: string}):
@@ -80,8 +89,12 @@ export async function listTrips(db: D1Database, q: {region?: string; labelled?: 
   const where: string[] = [], args: string[] = [];
   if (q.region) { if (!REGION.test(q.region)) return {error: 'invalid region'}; where.push('t.region=?'); args.push(q.region); }
   const labelled = q.labelled || 'all';
-  if (!(FILTERS as readonly string[]).includes(labelled)) return {error: 'labelled must be all, yes or no'};
-  if (labelled !== 'all') where.push(`${labelled === 'no' ? 'NOT ' : ''}EXISTS(SELECT 1 FROM fleet_segment_labels l WHERE l.trip_id=t.id)`);
+  if (!(FILTERS as readonly string[]).includes(labelled)) return {error: 'labelled must be all, yes, no, agent or approved'};
+  if (labelled === 'yes' || labelled === 'no') where.push(`${labelled === 'no' ? 'NOT ' : ''}EXISTS(SELECT 1 FROM fleet_segment_labels l WHERE l.trip_id=t.id)`);
+  // Awaiting approval: any agent label left. Approved: owner-approved labels and none still awaiting.
+  if (labelled === 'agent') where.push(AGENT_LABELS('t'));
+  if (labelled === 'approved') where.push(`NOT ${AGENT_LABELS('t')} AND EXISTS(SELECT 1 FROM fleet_segment_labels l WHERE l.trip_id=t.id
+    AND l.basis LIKE '${APPROVED_PREFIX}agent:%')`);
   if (q.cursor) {
     const m = CURSOR.exec(q.cursor);
     if (!m) return {error: 'invalid cursor'};
@@ -138,31 +151,94 @@ export async function tripDetail(db: D1Database, id: string): Promise<TripDetail
   return {trip, window: windowOf(trip, views), segments: views, labels, basis: BASIS, label_kinds: LABELS};
 }
 
+type Range = Pick<LabelRow, 'started_at' | 'ended_at' | 'label'>;
+const overlap = (a: Range, b: Range): boolean => a.started_at < b.ended_at && a.ended_at > b.started_at;
+const clashError = (c: Range): string => `overlaps the ${c.label} label from ${c.started_at} to ${c.ended_at}; delete it first`;
+const insertLabel = (db: D1Database, l: LabelRow): D1PreparedStatement =>
+  db.prepare('INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES(?,?,?,?,?,?,?,?)')
+    .bind(l.id, l.trip_id, l.started_at, l.ended_at, l.label, l.labeller, l.basis, l.created_at);
+async function tripWindow(db: D1Database, trip: TripFull): Promise<{from: string; to: string}> {
+  return windowOf(trip, (await db.prepare('SELECT ended_at FROM fleet_segments WHERE trip_id=?').bind(trip.id).all<{ended_at: string}>()).results);
+}
+
+/**
+ * One proposed label, checked the same way for an admin and an agent: known fields only, ISO UTC times at least a
+ * minute apart inside the trip's window, a known label and a basis. Overlap is the caller's check.
+ */
+export function checkLabel(input: unknown, window: {from: string; to: string}): {ok: Range & {basis: string}} | {error: string} {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {error: 'a label must be an object'};
+  const fields = input as Record<string, unknown>;
+  const extra = Object.keys(fields).find(k => !LABEL_FIELDS.includes(k));
+  if (extra) return {error: `unknown field ${extra}`};
+  const startedAt = isoTime(fields.started_at), endedAt = isoTime(fields.ended_at);
+  if (!startedAt || !endedAt) return {error: 'started_at and ended_at must be ISO UTC times'};
+  if (Date.parse(endedAt) - Date.parse(startedAt) < MIN_LABEL_MS) return {error: 'a label covers at least one minute'};
+  if (typeof fields.label !== 'string' || !(LABELS as readonly string[]).includes(fields.label)) return {error: `label must be one of ${LABELS.join(', ')}`};
+  const basis = typeof fields.basis === 'string' ? fields.basis.trim() : '';
+  if (basis.length < 2 || basis.length > MAX_BASIS) return {error: `basis is required (2 to ${MAX_BASIS} characters)`};
+  if (startedAt < window.from || endedAt > window.to) return {error: `the range must fall within the trip (${window.from} to ${window.to})`};
+  return {ok: {started_at: startedAt, ended_at: endedAt, label: fields.label, basis}};
+}
+
 /** POST /api/admin/fleet/trips/:id/labels: the label, by `labeller` (the admin's users.id), and the trip's labels after it. */
 export async function addLabel(db: D1Database, tripId: string, input: Record<string, unknown>, labeller: string, now: string):
   Promise<AdminOutcome<{label: LabelRow; labels: LabelRow[]}>> {
   const trip = await tripRow(db, tripId);
   if (!trip) return {status: 'not-found'};
-  const extra = Object.keys(input).find(k => !['started_at', 'ended_at', 'label', 'basis'].includes(k));
-  if (extra) return {status: 'invalid', error: `unknown field ${extra}`};
-  const startedAt = isoTime(input.started_at), endedAt = isoTime(input.ended_at);
-  if (!startedAt || !endedAt) return {status: 'invalid', error: 'started_at and ended_at must be ISO UTC times'};
-  if (Date.parse(endedAt) - Date.parse(startedAt) < MIN_LABEL_MS) return {status: 'invalid', error: 'a label covers at least one minute'};
-  if (typeof input.label !== 'string' || !(LABELS as readonly string[]).includes(input.label)) return {status: 'invalid', error: `label must be one of ${LABELS.join(', ')}`};
-  const basis = typeof input.basis === 'string' ? input.basis.trim() : '';
-  if (basis.length < 2 || basis.length > MAX_BASIS) return {status: 'invalid', error: `basis is required (2 to ${MAX_BASIS} characters)`};
+  const checked = checkLabel(input, await tripWindow(db, trip));
+  if ('error' in checked) return {status: 'invalid', error: checked.error};
   if (!labeller) return {status: 'invalid', error: 'no labeller'};
-  const segments = (await db.prepare('SELECT ended_at FROM fleet_segments WHERE trip_id=?').bind(tripId).all<{ended_at: string}>()).results;
-  const window = windowOf(trip, segments);
-  if (startedAt < window.from || endedAt > window.to) return {status: 'invalid', error: `the range must fall within the trip (${window.from} to ${window.to})`};
   const existing = await labelsOf(db, tripId);
   if (existing.length >= MAX_LABELS) return {status: 'conflict', error: `a trip holds at most ${MAX_LABELS} labels`};
-  const clash = existing.find(l => l.started_at < endedAt && l.ended_at > startedAt);
-  if (clash) return {status: 'conflict', error: `overlaps the ${clash.label} label from ${clash.started_at} to ${clash.ended_at}; delete it first`};
-  const label: LabelRow = {id: newId(), trip_id: tripId, started_at: startedAt, ended_at: endedAt, label: input.label, labeller, basis, created_at: now};
-  await db.prepare('INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at) VALUES(?,?,?,?,?,?,?,?)')
-    .bind(label.id, label.trip_id, label.started_at, label.ended_at, label.label, label.labeller, label.basis, label.created_at).run();
+  const clash = existing.find(l => overlap(l, checked.ok));
+  if (clash) return {status: 'conflict', error: clashError(clash)};
+  const label: LabelRow = {id: newId(), trip_id: tripId, ...checked.ok, labeller, created_at: now};
+  await insertLabel(db, label).run();
   return {status: 'ok', value: {label, labels: await labelsOf(db, tripId)}};
+}
+
+/**
+ * POST /api/fleet/jobs/labels: an agent's proposed labels for one trip replace that agent's earlier labels on it, in one
+ * batch. Each label is checked as an admin's is; the set must not overlap itself or any other labeller's labels. An empty
+ * list withdraws the agent's labels. Approved labels carry the owner's id, so a later import never replaces them.
+ */
+export async function importAgentLabels(db: D1Database, input: Record<string, unknown>, now: string):
+  Promise<{status: number; body: Record<string, unknown>}> {
+  const bad = (error: string, status = 400): {status: number; body: Record<string, unknown>} => ({status, body: {error}});
+  const {trip_id: tripId, labeller, labels: proposed, ...extra} = input;
+  if (Object.keys(extra).length) return bad(`unknown field ${Object.keys(extra)[0]}`);
+  if (typeof labeller !== 'string' || !AGENT.test(labeller)) return bad('labeller must be agent:<name>');
+  if (!Array.isArray(proposed)) return bad('labels must be an array');
+  if (proposed.length > MAX_LABELS) return bad(`a trip holds at most ${MAX_LABELS} labels`);
+  const trip = typeof tripId === 'string' ? await tripRow(db, tripId) : null;
+  if (!trip) return bad('trip not found', 404);
+  const window = await tripWindow(db, trip);
+  const rows: LabelRow[] = [];
+  for (const [i, one] of proposed.entries()) {
+    const checked = checkLabel(one, window);
+    if ('error' in checked) return bad(`labels[${i}]: ${checked.error}`);
+    rows.push({id: newId(), trip_id: trip.id, ...checked.ok, labeller, created_at: now});
+  }
+  const others = (await labelsOf(db, trip.id)).filter(l => l.labeller !== labeller);
+  if (others.length + rows.length > MAX_LABELS) return bad(`a trip holds at most ${MAX_LABELS} labels`, 409);
+  for (const [i, row] of rows.entries()) {
+    const clash = [...others, ...rows.slice(0, i)].find(l => overlap(l, row));
+    if (clash) return bad(`labels[${i}]: ${clashError(clash)}`, 409);
+  }
+  const results = await db.batch([db.prepare('DELETE FROM fleet_segment_labels WHERE trip_id=? AND labeller=?').bind(trip.id, labeller),
+    ...rows.map(r => insertLabel(db, r))]);
+  return {status: 200, body: {ok: true, trip_id: trip.id, labeller, replaced: results[0]?.meta.changes ?? 0, labels: rows.length}};
+}
+
+/** POST /api/admin/fleet/trips/:id/approve: the trip's agent labels become the owner's, their basis keeping the agent's name. */
+export async function approveTrip(db: D1Database, tripId: string, owner: string): Promise<AdminOutcome<{approved: number; labels: LabelRow[]}>> {
+  if (!(await tripRow(db, tripId))) return {status: 'not-found'};
+  if (!owner) return {status: 'invalid', error: 'no labeller'};
+  const result = await db.prepare(`UPDATE fleet_segment_labels SET labeller=?,basis=?||labeller||': '||COALESCE(basis,'')
+    WHERE trip_id=? AND labeller LIKE 'agent:%'`).bind(owner, APPROVED_PREFIX, tripId).run();
+  const approved = result.meta.changes ?? 0;
+  if (!approved) return {status: 'conflict', error: 'no agent labels await approval on this trip'};
+  return {status: 'ok', value: {approved, labels: await labelsOf(db, tripId)}};
 }
 
 /** POST /api/admin/fleet/labels/:id/delete: the trip's labels after it. */
