@@ -1,7 +1,8 @@
 // Mobile layout (FE-06, design § 6 mobile, D8): the map fills the viewport;
 // a top strip over it holds the brand and location card, the layers button
 // and the Boat / Shore / Spear switch; one bottom sheet with three detents
-// holds the brief (peek: the time window, freshness and headline; half: the
+// holds the brief (peek: the time window, freshness and the day verdict with
+// its limit (#616); half: the
 // four tiles and the top pick; full: the whole brief (FE-37: deck, the
 // lower-exposure window, caveat, notice, fleet and local lines) with the day, target
 // and area menus, the area group holding the port and locate controls as on
@@ -25,7 +26,7 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, BriefGaps, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -78,12 +79,12 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
             <FreshnessDot />
           </div>
-          <Headline brief={brief} />
+          <Verdict brief={brief} now={now} />
         </>
       )}
       <BriefTiles brief={brief} compact={detent !== 'full'} />
       <WhereToLook ranking={ranking} />
-      <Deck brief={brief} />
+      <Details brief={brief} />
       <LowerExposure brief={brief} />
       <RunLine brief={brief} ranking={ranking} now={now} />
       <TideSpark brief={brief} now={now} />
@@ -95,8 +96,6 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
           <PortControl />
         </div>
       </div>
-      <BriefGaps brief={brief} />
-      <Caveat brief={brief} />
       <BriefLinks brief={brief} />
       <BriefFooter><ReportsLink /><AccountMenu inline /></BriefFooter>
     </div>

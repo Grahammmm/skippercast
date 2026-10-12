@@ -8,11 +8,11 @@
 // tests/fixtures/score-golden.json.
 // A planning heuristic, never a safety clearance; an advisory makes it 'rough'.
 
-import {hourScores, limitedScores, verdictFor, type BoatFactors, type HourConditions, type Verdict} from '../../../web/score.ts';
+import {hourScores, limitedScores, verdictFor, REFERENCE_BOAT, type BoatFactors, type HourConditions, type Verdict} from '../../../web/score.ts';
 
 export {verdictFor};
 export type {BoatFactors, HourConditions, Verdict};
-export const REFERENCE_BOAT: Readonly<BoatFactors> = Object.freeze({sea: 1, wind: 1, chopPeriod: 6});
+export {REFERENCE_BOAT};
 export const BOAT_PHRASE = 'a mid-size center console';
 
 /** hourScores(...).comfort: the rougher wind and seas of two models, the checked gust, the first model's partitions. */

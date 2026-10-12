@@ -1,6 +1,6 @@
 // The v2 app shell behind ?ui=v2 (FE-05 desktop, FE-06 mobile;
 // docs/plans/front-end/dev-plan.md): at laptop width the brief column is
-// 332 px beside a map stage that fills the rest; under 1,024 px the map
+// 300 px (#616) beside a map stage that fills the rest; under 1,024 px the map
 // fills the viewport under a top strip, one sheet with three detents moved by
 // drag and keyboard, and a four-tab nav, at 390 and 320 px wide with no
 // horizontal page scroll and 44 px targets. View links, the profile switch,
@@ -39,7 +39,7 @@ test('the shell lays out the brief beside the map (laptop) or under a sheet (pho
     if (viewport.width >= 1024) {
       await expect(brief).toBeVisible();
       const b = (await brief.boundingBox())!;
-      expect(Math.round(b.width), name).toBe(332);
+      expect(Math.round(b.width), name).toBe(300);
       expect(Math.round(s.x), name).toBe(Math.round(b.x + b.width));
       expect(Math.round(s.x + s.width), name).toBe(viewport.width);
     } else {
@@ -129,7 +129,8 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
       '.ui-rail-item:last-child .ui-rail-toggle', 'input[aria-label="Hour"]', 'button[aria-label="Play"]'];
   const reached = new Set<string>();
-  for (let i = 0; i < 60 && reached.size < wanted.length; i++) {
+  // #616 added the verdict basis and the Details summary to the brief column, before the rail in tab order.
+  for (let i = 0; i < 80 && reached.size < wanted.length; i++) {
     await page.keyboard.press('Tab');
     for (const selector of wanted) if (!reached.has(selector) && await page.locator(selector).evaluate(el => el === document.activeElement)) reached.add(selector);
   }

@@ -6,7 +6,8 @@ reads it; none keeps its own copy of the numbers.
 | Surface | Reads |
 | --- | --- |
 | Tomorrow card, meteogram, search plans, trip planner (`dist/tomorrow.js`, `dist/morning-outlook.js`) | `hourScores`, `limitedScores`, `verdictFor`, `THRESHOLDS` |
-| Text advisor comfort word (`server/advisor/answers/comfort.ts`, `conditions.ts`) | the comfort half of `hourScores` and `limitedScores`, `verdictFor`, `THRESHOLDS.capLimited` |
+| Text advisor comfort word (`server/advisor/answers/comfort.ts`, `conditions.ts`) | `rateComfort` (the comfort half of `hourScores` and `limitedScores`), `verdictFor` |
+| Brief day verdict (`web/brief/verdict.ts`) | `rateComfort`, `comfortCosts` (to name the limit), `verdictFor`, `THRESHOLDS.capHazard` |
 | Brief lower-exposure windows (`packages/coast/src/assessment.ts`, `daily.ts`) | `withinWindowLimits`, `WINDOW_LIMITS`, `LONG_PERIOD_SWELL` |
 | Your limits (`packages/coast/src/limits.ts`, `web/limits.ts`) | `WINDOW_LIMITS` as the defaults |
 | Boat brief fishing time and return (`web/brief/run.ts`) | the brief's lower-exposure windows, so the turn-back time inherits every rule above; no score of its own |
@@ -51,6 +52,35 @@ period. They agree on 65:
 
 Change a threshold or a default limit and that test fails with the new list;
 update this page in the same pull request.
+
+## The day verdict
+
+The brief's first line (`web/brief/verdict.ts`, #616) turns the score into one
+word for the morning window, sunrise to noon on the brief's date (from the
+current hour when that is today; once noon has passed, the rest of the
+daylight). It is a comfort rating for the reference boat, not a bite or catch
+forecast and not a safety clearance.
+
+- **Boat.** Each hour is rated by `rateComfort` over the regional dual-model
+  feed (NOAA GFS and GFS-Wave, ECMWF IFS and WAM) at the forecast point the
+  Conditions view reads, the same function the text advisor uses. The worst
+  hour sets the day through `verdictFor`: 7 and above is Comfortable, under 4
+  is Rough, Marginal between. The sentence names the largest charge in that
+  hour from `comfortCosts` (wind with its gust, combined seas with period, wind
+  chop, or a crossing swell) and a second charge when it costs a point or more.
+- **Shore, Spear and Kayak.** Their own hourly grades (`shore-conditions.ts`,
+  `spear.ts`, `kayak.ts` in `packages/coast`), the roughest hour in the same
+  window; Calmer reads Comfortable.
+- **Never reassuring on thin evidence.** An active marine alert makes the day
+  Rough. A Comfortable window is held at Marginal, with a sentence saying why,
+  when any hour is a limited estimate, hours have no forecast, a model run is
+  over 18 h old, the marine alert check is unavailable, or the bar estimate
+  reads hazardous in the window. Runs over 36 h old are not used; with no
+  forecast the verdict is Unknown. Buoy readings never enter it, so a stale
+  buoy cannot raise it.
+
+`tests/test_brief_verdict.mjs` pins the bands, the caps, the limit sentence
+and the Unknown cases.
 
 ## Staleness and failover inputs
 

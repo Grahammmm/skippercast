@@ -26,8 +26,10 @@ import {PROFILE_TABLE, type Profile} from '../profile.ts';
 import {hour, profile} from '../state.ts';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/App.tsx';
+import {Popover} from '../ui/Popover.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';
+import {briefVerdict, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 
 export type {BriefModel};
@@ -176,8 +178,58 @@ export const Headline = ({brief}: {brief: BriefModel | null}) =>
 
 export const Deck = ({brief}: {brief: BriefModel | null}) => brief?.deck ? <p class="app-deck">{brief.deck}</p> : null;
 
-export const BriefTiles = ({brief, compact = false}: {brief: BriefModel | null; compact?: boolean}) =>
-  <Tiles tiles={brief?.tiles ?? null} compact={compact} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />;
+/** The day verdict for the brief shown now: the regional forecast only when it is this region's. */
+export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdict | null {
+  const info = regionInfo.value, forecast = regionalForecast.value;
+  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? 'America/Los_Angeles');
+}
+
+const VERDICT_BASIS = {
+  'comfort-score': 'Comfort rating for the reference 23 ft boat, not a bite forecast or a safety clearance. Each hour from sunrise to noon is scored 0 to 10 from both forecast models’ wind, gusts, combined seas and wind chop at the forecast point, less a penalty for a crossing swell or short, steep chop. The worst hour sets the day: 7 and above is Comfortable, under 4 is Rough, Marginal between. An estimate missing wave detail or the second model is capped at 6.9; a marine alert makes the day Rough.',
+  profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour from sunrise to noon sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
+} as const;
+
+/**
+ * The brief's first two lines: the verdict word for the morning window and one sentence naming what
+ * limits it, with the basis behind a popover. Before there is a brief, the waiting headline.
+ */
+export function Verdict({brief, now}: {brief: BriefModel | null; now: Date}) {
+  const v = currentVerdict(brief, now);
+  if (!v) return <Headline brief={brief} />;
+  return (
+    <div class="app-verdict" data-verdict={v.verdict}>
+      <div class="app-verdict-head">
+        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{v.window ? <span class="app-verdict-window ui-mono">{v.window}</span> : null}</h1>
+        <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
+      </div>
+      <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
+    </div>
+  );
+}
+
+/**
+ * The longer text folded under the verdict: the readings line, the deck, what is missing and the
+ * profile caveat (the profile's own before there is a brief). The summary keeps a count of missing or
+ * stale sources in view.
+ */
+export function Details({brief}: {brief: BriefModel | null}) {
+  const gaps = feedGaps.value.length + (brief?.gaps.length ?? 0);
+  return (
+    <details class="app-details">
+      <summary>Details{gaps ? <span class="app-details-gaps"> · {gaps} missing or stale</span> : null}</summary>
+      <div class="app-details-body">
+        {brief ? <p class="app-readings ui-mono">{brief.headline}</p> : null}
+        <Deck brief={brief} />
+        <BriefGaps brief={brief} />
+        <Caveat brief={brief} />
+      </div>
+    </details>
+  );
+}
+
+/** The four tiles: compact in the sheet below full, dense (short source, one row) in the desktop column. */
+export const BriefTiles = ({brief, compact = false, dense = false}: {brief: BriefModel | null; compact?: boolean; dense?: boolean}) =>
+  <Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />;
 
 const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 

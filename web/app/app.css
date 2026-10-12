@@ -1,6 +1,6 @@
 /* The v2 app shell (FE-05, docs/plans/front-end/design.md § 6, concept A ·
    Bridge). Loaded after web/tokens.css and web/ui/ui.css by dist/app.html.
-   Desktop (≥ 1,024 px): masthead, command bar, a 332 px brief column beside
+   Desktop (≥ 1,024 px): masthead, command bar, a 300 px brief column beside
    the map stage with its chrome (rail, legend, dock, mark card). Mobile
    (under 1,024 px, FE-06): the map fills the viewport under a floating top
    strip, one bottom sheet and a tab nav, with no horizontal scroll from
@@ -44,11 +44,36 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-window { margin-left: auto; color: var(--text); font-size: var(--text-13); }
 
 /* Brief beside the map stage */
-.app-main { display: grid; grid-template-columns: 332px minmax(0, 1fr); min-height: 0; }
-.app-brief { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
+.app-main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+.app-brief { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
 .app-brief h1 { margin: 0; font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
 .app-brief h2 { margin: 0; }
 .app-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+/* #616: the desktop column's tiles on one row of four, short source lines, detail and basis kept. */
+.app-tiles--dense { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-1); }
+.app-tiles--dense .ui-tile { min-width: 0; padding: var(--space-2) var(--space-1); }
+.app-tiles--dense .ui-tile-label .icon { display: none; }
+.app-tiles--dense .ui-tile-detail, .app-tiles--dense .ui-tile-source { flex-wrap: wrap; overflow-wrap: anywhere; font-size: var(--text-11); }
+.app-tiles--dense .ui-tile:nth-child(n + 3) .ui-popover-body { left: auto; right: 0; }
+/* #616: the day verdict leads the brief; the word takes the verdict's colour, the limit sentence follows. */
+.app-verdict { display: flex; flex-direction: column; gap: var(--space-1); }
+.app-verdict h1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.app-verdict-word { color: var(--text); }
+.app-verdict[data-verdict="comfortable"] .app-verdict-word { color: var(--mint); }
+.app-verdict[data-verdict="marginal"] .app-verdict-word { color: var(--amber); }
+.app-verdict[data-verdict="rough"] .app-verdict-word { color: var(--coral); }
+.app-verdict[data-verdict="unknown"] .app-verdict-word { color: var(--muted); }
+.app-verdict-window { color: var(--muted); font-size: var(--text-13); font-weight: var(--weight-regular); }
+.app-verdict-limit { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
+.app-verdict-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+/* The basis keeps its 44 px target without making the verdict row taller than its heading. */
+.app-verdict .ui-popover { flex: none; margin-block: calc(var(--space-2) * -1); color: var(--muted); }
+.app-details { color: var(--muted); font-size: var(--text-13); }
+.app-details > summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); color: var(--text); cursor: pointer; }
+.app-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-details-gaps { color: var(--amber); }
+.app-details-body { display: flex; flex-direction: column; gap: var(--space-2); }
+.app-readings { margin: 0; color: var(--text); }
 .app-spark { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); color: var(--muted); font-size: var(--text-13); }
 .app-spark-empty { display: grid; place-items: center; min-height: 72px; }
 .app-spark-events { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding: 0; list-style: none; }
@@ -245,6 +270,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
 .app-sheet h1 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-sheet h2 { margin: 0; }
+.app-sheet .app-verdict-limit { font-size: var(--text-13); }
 .app-sheet .app-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .app-sheet .ui-tile { min-width: 0; padding: var(--space-2) var(--space-1); }
 .app-sheet .ui-tile-label .icon { display: none; }
