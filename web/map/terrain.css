@@ -1,0 +1,11 @@
+/* The terrain presentation inside the v2 map stage (FE-71, design § 3A.2).
+   Linked last in the terrain host's shadow root by web/map/terrain.ts, after
+   packages/coast/coast.css and the token bridge.
+   FE-80: v2 mounts with host chrome (FE-79), so the layers panel, view
+   controls, reading and habitat detail are not in this root; the rail, the
+   stage's view buttons and the mark card draw them. The footer's depth ramp is
+   the legend's Seafloor key, so the footer goes too, with the intro and hints. */
+:host { display: block; color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
+[hidden] { display: none !important; }
+#scene { width: 100%; height: 100%; min-height: 0; }
+.intro, .gesture, .map-note, footer { display: none; }

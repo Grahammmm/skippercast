@@ -52,6 +52,7 @@ export const GLYPHS = {
   download: {d: 'M12 3v12m-5-5 5 5 5-5M4 21h16'},
   search: {d: 'm20 20-4-4', dots: [[11, 11, 7]]},
   menu: {d: 'M4 7h16M4 12h16M4 17h16'},
+  kayak: {d: 'M2 15c5-3 15-3 20 0-5 3-15 3-20 0ZM6 21 18 5m-2-1 4 3M4 19l4 3'},
 } as const satisfies Record<string, Glyph>;
 
 export type IconName = keyof typeof GLYPHS;

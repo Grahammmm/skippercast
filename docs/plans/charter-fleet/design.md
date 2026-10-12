@@ -157,14 +157,17 @@ and San Diego is split into `san-diego` (Point Loma landings) and
       "gap_unknown_min": 30, "gap_split_hours": 12,
       "max_open_trip_hours": {"six-pack": 18, "inspected-party": 40, "long-range": 480},
       "window_min": 20, "min_segment_minutes": 5, "simplify_tolerance_m": 25,
+      "offshore_min_nm": 5.0,
       "drift": {"max_sog_kn": 2.0, "min_minutes": 15},
-      "troll": {"min_sog_kn": 4.0, "max_sog_kn": 9.0, "max_straightness": 0.6,
-                "min_heading_variance": 0.35, "min_minutes": 15}},
+      "troll_slow": {"min_sog_kn": 2.2, "max_sog_kn": 3.5, "max_straightness": 0.9,
+                     "min_heading_variance": 0.05, "min_minutes": 15},
+      "troll_pelagic": {"min_sog_kn": 5.0, "max_sog_kn": 9.0, "stop_max_minutes": 30, "min_minutes": 30},
+      "transit": {"min_straightness": 0.8}},
     "match": {"auto_merge": 0.9, "review_min": 0.6, "mmsi_auto": 0.85},
     "refresh": {"vanished_after_runs": 3, "vanished_after_days": 45,
                 "osint_stale_days": 60, "fact_stale_days": 120},
     "retention": {"raw_days": 30, "discovery_days": 7, "static_days": 90},
-    "aggregate": {"module": "grid", "resolution_m": 1000,
+    "aggregate": {"module": "grid", "resolution_m": 1000, "resolution_by_kind": {"troll-pelagic": 3000},
                   "min_distinct_vessels": null, "delay_hours": null}
   },
   "seasons": {"parts": [{"id": "winter", "months": [12, 1, 2]}, {"id": "spring", "months": [3, 4, 5]},
@@ -366,7 +369,8 @@ Other registry tables:
 - **`fleet_ais_watch`**: PK `(region, mmsi)`; `vessel_id` (a candidate carries
   the vessel it is proposed for, null only when two vessels match; only a
   `watched` row ties the MMSI to the vessel), `match_method` (`fcc-uls`, `call-sign`, `ais-static-name`,
-  `geofence-presence`, `admin`), `confidence`, `status` (`candidate`,
+  `geofence-presence`, `admin`, `schedule-correlation`; a `watched` row needs one of `fcc-uls`,
+  `geofence-presence`, `admin` or `schedule-correlation` and confidence ≥ 0.85), `confidence`, `status` (`candidate`,
   `watched`, `rejected`), `ais_name`, `ais_call_sign`, `ais_class`,
   `first_seen_at`, `last_seen_at`, `last_seen_source`, `positions_30d`,
   `updated_at`; index `watch_vessel (vessel_id)`.
@@ -381,12 +385,13 @@ Other registry tables:
   local_date)`, `trip_region_season (region, season)`, `trip_source_time
   (source, departed_at)`.
 - **`fleet_segments`**: `id` `sha256(trip_id|seq)[:32]`, `trip_id`, `seq`,
-  `kind` (`in-port`, `transit`, `fishing-drift`, `fishing-troll`, `gap`),
-  `started_at`, `ended_at`, `geometry` (encoded polyline, precision 5),
-  `points_n`, `mean_sog`, `straightness`, `heading_var`; index `seg_trip (trip_id, seq)`.
+  `kind` (`in-port`, `transit`, `drift-anchor`, `troll-slow`, `troll-pelagic`,
+  `uncertain`, `gap`), `started_at`, `ended_at`, `geometry` (encoded polyline,
+  precision 5; null for `transit` and `gap`), `points_n`, `mean_sog`, `p90_sog`,
+  `distance_nm`, `straightness`, `heading_var`; index `seg_trip (trip_id, seq)`.
 - **`fleet_events`**: one per fishing segment. `id`
   `sha256(trip_id|started_at|kind)[:32]`, `trip_id`, `segment_id`,
-  `vessel_id`, `region`, `kind` (`drift-anchor`, `troll`), `lat`, `lon`
+  `vessel_id`, `region`, `kind` (`drift-anchor`, `troll-slow`, `troll-pelagic`), `lat`, `lon`
   (median), `radius_m` (p90 distance), `started_at`, `ended_at`, `dwell_min`,
   `port_id`, `vessel_class`, `trip_type`, `season`, `season_part`, `basis`
   (always `inferred-from-movement`), `source`, `rights`, `classifier_version`,
@@ -406,7 +411,7 @@ Other registry tables:
   `created_at`; index `label_trip (trip_id)`.
 - **`fleet_ais_hours`**: PK `(region, hour)`; `messages`,
   `watched_messages`, `vessels`, `reconnects`, `max_gap_s`, `dropped`.
-- **`fleet_trip_reports`** (catch-log pairing, filled later): PK
+- **`fleet_trip_reports`** (catch-log pairing, filled by `server/fleet/pairing.ts` from the activity job: advisor pairs on each window, landing pairs in the `processed` sweep over the last 31 days of the daily feeds; #345): PK
   `(trip_id, report_kind, report_ref)`; `report_kind` (`advisor`, `landing`),
   `report_ref` (`advisor_reports.id`, or the landing report `id` in the daily
   feed), `match` (`boat-date`, `alias-port-date`), `confidence`, `created_at`.
@@ -892,18 +897,29 @@ for derived speed, heading or straightness.
 
 **Classification (D10).** Over a centred `window_min` (20 min) window per
 position: mean SOG (reported, else derived), straightness = net displacement /
-path length, heading variance = 1 − mean resultant length of COG. In precedence
-order:
+path length, heading variance = 1 − mean resultant length of COG. Offshore
+distance is the distance to the nearest port geofence in `fleet.json` (the only
+coastline every region has offline). In precedence order (charter-fleet N5;
+sources in [references/classification.md](references/classification.md)):
 
 | Label | Rule |
 | --- | --- |
 | `in-port` | inside a geofence |
-| `fishing-drift` | SOG ≤ 2 kn sustained ≥ 15 min outside geofences |
-| `fishing-troll` | SOG 4–9 kn and (straightness ≤ 0.6 or heading variance ≥ 0.35), sustained ≥ 15 min |
-| `transit` | everything else at sea |
+| `drift-anchor` | SOG ≤ 2 kn, sustained ≥ 15 min |
+| `troll-slow` | SOG 2.2–3.5 kn and (straightness ≤ 0.9 or heading variance ≥ 0.05), sustained ≥ 15 min |
+| `troll-pelagic` | SOG 5–9 kn at least 5 nm from every geofence, straight or not, sustained ≥ 30 min |
+| `transit` | SOG above 9 kn, or above 3.5 kn with straightness ≥ 0.8 (so a straight run at trolling speed inshore) |
+| `uncertain` | everything else: between bands, the slow band without its shape, a turning run inshore at pelagic speed, no speed |
 
-Runs shorter than `min_segment_minutes` merge into the longer neighbour; a
-fishing run under its minimum becomes transit. Silences over `gap_unknown_min`
+`drift-anchor`, `troll-slow` and `troll-pelagic` are fishing. `uncertain` is
+not: it never feeds an aggregate and keeps its geometry for the labelling
+view. No rule reads the clock: a night drift offshore is `drift-anchor`.
+
+Runs shorter than `min_segment_minutes` merge into the longer neighbour. The
+runs between two `troll-pelagic` runs of at least `window_min` each, together
+at most `stop_max_minutes` (30) and wholly offshore, join them, so paddy stops
+do not split a pelagic search. A fishing run under its minimum then becomes
+`uncertain`. Silences over `gap_unknown_min`
 (including one before the return fix) are `gap` segments that never merge, so a
 run between two gaps may be shorter than `min_segment_minutes`. A short dip
 into a geofence inside a fishing run merges into that run, so CF-44 must drop
@@ -915,9 +931,15 @@ downsamples raw cadence to one fix per minute before classifying. Output carries
 **Events, tracks, aggregates.** One event per fishing segment (median point,
 p90 radius, `basis=inferred-from-movement`). Each segment's positions are
 simplified with Douglas-Peucker at 25 m on a local equirectangular projection
-and stored as an encoded polyline; transits are kept. Aggregates are a
+and stored as an encoded polyline. Transit keeps statistics only (minutes,
+point count, mean and p90 SOG, distance) and no geometry (#469 D20). Aggregates are a
 pluggable module (`ais/aggregate/base.py`: `compute(events, params) ->
-list[Cell]`); `grid` bins dwell into `resolution_m` cells. The privacy knobs
+list[Cell]`); `grid` bins dwell into `resolution_m` cells, or a kind's coarser
+`resolution_by_kind` edge (troll-pelagic at 3 km; a whole multiple of
+`resolution_m`, N6), and the cell id `g<edge>:<row>:<col>` carries the edge the
+map draws. The map is part of `params_json`, so changing it changes every cell
+id, and the next processor run replaces the old cells of the seasons it
+reprocesses (`push_aggregates` diffs the touched seasons). The privacy knobs
 `min_distinct_vessels` and `delay_hours` exist and are `null` for admin views;
 an `h3` module needs no schema change.
 
@@ -945,7 +967,20 @@ vessel has no MMSI) with a ship type not outside 30/37/60/69 → `candidate`;
 (3) positions inside the vessel's own port geofence on ≥ 3 distinct days of the
 last 30 → `watched` at ≥ `mmsi_auto`, only with a *known* ship type of
 30/37/60/69 and a *known* length within 20%, and never for a vessel that already
-has a registry MMSI or when two vessels match. Anything weaker → `mmsi` review,
+has a registry MMSI or when two vessels match; (4) `schedule-correlation`
+(`ais/schedule.py`): a stage-2 candidate seen in its home port at least once,
+at sea (a position outside every port geofence) on ≥ `thresholds.match.schedule.min_days`
+(5) days that a landing report in the daily feed's `reports[]` named the vessel
+at its home port, spanning ≥ `min_span_days` (14) → `watched` at ≥ `mmsi_auto`;
+an unknown type or length does not block it, a contradicting length does, and
+a vessel that does not lead every other vessel of its port by `min_lead` (3)
+matched days has a rival (a same-port vessel sharing at least one at-sea day)
+→ an `mmsi` review (`schedule-rival`); one with more than `max_contradictions`
+(1) report days spent in port → an `mmsi` review (`schedule-contradicted`); a watched row with
+no matched day in the last `lapse_days` (30) lapses to candidate. The watched gate: a `watched`
+row needs `fcc-uls`, `geofence-presence`, `admin` or `schedule-correlation` and
+confidence ≥ 0.85, checked by the matcher, the Worker and `python -m
+skippercast.fleet.ais watch-check`. Anything weaker → `mmsi` review,
 opened when the candidate cannot promote and has been seen in the vessel's home
 port, when it has been seen there without promoting for 7 days, after 7 days for
 a vessel without a home port, and for a registry MMSI whose statics agree on
@@ -964,8 +999,17 @@ basis. `python -m skippercast.fleet.ais validate` compares output to labels by
 minutes and reports precision and recall for fishing (drift + troll) and per
 type, with a confusion table. Labelled trips' raw positions are copied to
 `ais/validation/` so thresholds can be re-tested later. Target before any
-public use: fishing precision ≥ 0.8, recall ≥ 0.7. **Owner**: label, or review
-and approve an agent-labelled set (`labeller` records who).
+public use: ≥ 30 trips, fishing precision ≥ 0.8 and recall ≥ 0.7, overall and
+for each of `drift-anchor`, `troll-slow` and `troll-pelagic`. The report also
+counts the labelled fishing minutes the classifier called transit (what
+discarding transit would have lost) and the scored trips by dominant labelled
+mode, port and month; it carries counts and scores only. **Owner**: label, or
+review and approve an agent-labelled set (`labeller` records who). For an agent
+set, `python -m skippercast.fleet.ais label export` writes a minute-by-minute
+summary of each unlabelled trip under FLEET_VAR on the runner (the classifier's
+kind is a hint, never copied), the agent writes proposals, and `label import`
+checks them and posts them to `POST /api/fleet/jobs/labels`
+([runbook](../../operations/runbooks/fleet-labelling.md)).
 
 ## 12. Worker API
 
@@ -984,6 +1028,7 @@ D1's statement and bound-parameter limits.
 | `POST /api/fleet/jobs/activity` | replace-window trips/segments/events; aggregates |
 | `POST /api/fleet/jobs/heartbeat` | heartbeat, hourly counters |
 | `GET /api/fleet/jobs/labels` | labels for validation |
+| `POST /api/fleet/jobs/labels` | one trip's agent-proposed labels, `{trip_id, labeller: "agent:<name>", labels}`; replaces that agent's labels on the trip, checked as the admin POST is (`label import`, `fleet-ais.yml` `label_import`; N7) |
 | `GET /api/fleet/jobs/health` | staleness booleans and ages only |
 
 **Admin routes** (`requireAdmin`, 404 unless `FLEET_ENABLED`):
@@ -995,7 +1040,12 @@ D1's statement and bound-parameter limits.
 `GET|POST /api/admin/fleet/operators/:id/outreach`,
 `POST /api/admin/fleet/outreach/:id` (approve, discard, log as sent by owner);
 `GET /api/admin/fleet/coverage`, `/ais/health`, `/clicks`;
-`GET|POST /api/admin/fleet/labels`. A review decision (CF-30,
+`GET /api/admin/fleet/trips` (`labelled=all|yes|no|agent|approved`),
+`GET /api/admin/fleet/trips/:id`, `POST /api/admin/fleet/trips/:id/labels`,
+`POST /api/admin/fleet/labels/:id/delete`,
+`POST /api/admin/fleet/trips/:id/approve` (N7: the trip's `agent:*` labels
+take the approving admin's `users.id` as `labeller`, and `basis` gains the
+prefix `approved from agent:<name>: `). A review decision (CF-30,
 `server/fleet/admin/reviews.ts`) is `{action, ...}` stored canonically in
 `decision_json`: `same-vessel` (merge, advisor-link; `vessel_id`, and for
 advisor-link `boat_id`, which sets `advisor_boats.fleet_vessel_id`),
@@ -1009,6 +1059,10 @@ changes it to "advisor or fleet enabled", and each feature keeps its own check.
 
 **Map routes** (`FLEET_MAP_ENABLED`, admin only in this plan):
 `/api/fleet/map/filters`, `/events`, `/tracks`, `/heat` (section 14).
+
+**Public heat** (`FLEET_ENABLED` and `FLEET_PUBLIC_HEAT_ENABLED`, anonymous,
+per-IP `PUBLIC_LIMITER`): `GET /api/fleet/public/heat` (section 14). Every other
+path under `/api/fleet/public/` answers 404.
 
 **Public** (`FLEET_ENABLED`): `/boats/<slug>` (section 13) and
 `GET /go/<slug>?t=booking|website&p=profile|directory|map`. It redirects only
@@ -1045,8 +1099,12 @@ New hash routes in `web/admin/` (same patterns as `queue.tsx` and
 - **Coverage** (`#fleet-coverage`): boats by port and class; completeness by
   field group; % with MMSI and % seen in 30 days by port and class; sources per
   boat and single-source boats; run history.
-- **Labelling** (`#fleet-trip/<id>`): segments on a small map with a speed
-  strip; select a time range, label it, give the basis.
+- **Labelling** (`#fleet-labels`, `#fleet-trip/<id>`): segments on a small map
+  with a speed strip; select a time range, label it, give the basis. A trip
+  with agent labels shows *Awaiting approval* in the list and on the trip;
+  **Approve agent labels** records the owner as labeller (N7), and rejecting a
+  label is its delete. The list filters trips awaiting approval and trips
+  with approved agent labels.
 
 **Public profile.** `/boats/<slug>` stays one page
 (`server/advisor/pages/boat.ts`); the route moves behind a gate that passes
@@ -1104,8 +1162,9 @@ existing `optional(...)` guard.
 | Layer | Drawing |
 | --- | --- |
 | Activity events | circles, radius ∝ √dwell (4–18 px), drift filled, troll ringed; card: boat, port, class, date, start/end, dwell, type, source and rights, and "Inferred from movement (speed and track shape). Not a confirmed fishing stop or catch." |
-| Trip tracks | decoded polylines per segment coloured by kind (transit grey, drift and troll distinct, gap dashed) |
-| Heat | aggregate cells as rectangles, opacity ∝ dwell; no new vendored library |
+| Trip tracks | decoded polylines of fishing segments only (drift-anchor, troll-slow, troll-pelagic), coloured by kind; in-port, transit, uncertain and gap segments never reach the layer (N6, #469 D20–D22); the admin trip view reads every segment through its own route |
+| Heat | aggregate cells as rectangles, opacity ∝ dwell, each drawn at the edge in its cell id (1 km, pelagic 3 km); no new vendored library |
+| Public heat (`GET /api/fleet/public/heat`, anonymous, N6) | whole-season cells only: Polygon features whose properties are exactly `kind`, `season`, `dwell_min`, `vessels_n`, `basis`, `computed_at`, and `meta` `region`, `cell_m`, `min_vessels`, `delay_hours`, `count`, `capped`, `next`. Query `region` (required), `kind`, `season`, `limit`, `cursor`; a `season_part` parameter is a 400; module `grid`; 5,000 cells a page. The floors of section 15 are applied in SQL and checked again in code. No public page draws it yet |
 
 One filter card, applied server-side: boat, port, vessel class, trip type,
 activity type, date range, season (year and part). Endpoints take `region,
@@ -1133,7 +1192,16 @@ Ranked; picks marked. Only the admin views and the flagged profile are built.
   directory. (3) Profiles only, reached from search and the map.
 - **Activity in the map and planner.** (1, **pick**) Aggregates only: an
   "inferred from movement" heat layer at ≥ 1 km cells, ≥ 3 distinct vessels,
-  ≥ 72 h delay, MarineCadastre-derived cells kept off paid tiers. (2) Plus
+  ≥ 72 h delay, MarineCadastre-derived cells kept off paid tiers. Built in N6
+  as `GET /api/fleet/public/heat` with fixed floors (`PUBLIC_HEAT` in
+  `server/fleet/public-heat.ts`): `vessels_n` ≥ 3; `last_date` (a local
+  calendar date) wholly at least 72 h old in any time zone, so the date must
+  be at least 108 h past its UTC midnight; rights `public-domain`,
+  `public-record`, `facts-only` or `api-terms` only; whole-season cells only,
+  since a whole season minus its published part cells would reveal the dwell
+  of a part whose own cell fell under the floors. The server has no paid
+  tier, so "off paid surfaces" is read as "off the public route": every
+  `noaa-planning-only` and `internal-only` cell is withheld from it. (2) Plus
   per-trip tracks for opted-in operators. (3) Admin-only indefinitely.
 - **Charter data in trip planning.** (1, **pick**) "Boats from your port this
   week": registry offerings and departures for the trip's port and date, with
@@ -1147,6 +1215,7 @@ Ranked; picks marked. Only the admin views and the flagged profile are built.
 | --- | --- | --- |
 | `FLEET_ENABLED` | Worker var | admin fleet views, job routes, registry data on `/boats`, `/go/` |
 | `FLEET_MAP_ENABLED` | Worker var | map routes and layers (admin only) |
+| `FLEET_PUBLIC_HEAT_ENABLED` | Worker var | the anonymous `GET /api/fleet/public/heat` (with `FLEET_ENABLED`); off until the owner approves go-live after N7 and Q1 (runbook `fleet-public-heat.md`) |
 | `ENABLE_FLEET` | repo variable | the Hermes workflows run |
 
 `server/fleet/settings.ts` parses the Worker vars (default off) like
@@ -1183,7 +1252,10 @@ install → `FLEET_MAP_ENABLED`.
 - **TECK.net**: facts only; **Owner** asks before paid use.
 - **Google Places**: `place_id` only (latitude/longitude at most 30 days; rating and count never stored, CF-16); attribution where shown.
 - **aisstream.io**: no published terms; internal use only until written terms
-  exist (**Owner**); no live per-vessel display.
+  exist (**Owner**); no live per-vessel display. Its rows are `internal-only`
+  (`SOURCE_RIGHTS` in `ais/process.py`), so the public heat route returns no
+  aisstream cells. When Q1 settles, moving aisstream to `api-terms` is a
+  one-line change there, and the next processor run rewrites the cells' rights.
 - **Operators' wishes**: `hidden` and `do-not-contact` are honoured by every
   query; a removal request also deletes outreach rows.
 - `docs/legal/threat-model.md` gains a fleet section (`/go/` redirect, job

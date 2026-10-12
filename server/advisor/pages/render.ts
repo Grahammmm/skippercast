@@ -60,7 +60,8 @@ export const copyFor = (language: PageLanguage): PageCopy => PAGES_COPY[language
 
 /**
  * The hashed paths the build exposes (scripts/build-worker.mjs, ADVISOR_ASSETS):
- * 'advisor/pages.css' is dist/chat.html's stylesheet set (tokens, the chat
+ * 'advisor/tokens.css' is web/tokens.css (FE-55: the v2 tokens and fonts),
+ * 'advisor/pages.css' the rest of dist/chat.html's stylesheet set (the chat
  * island's and the pages' styles) and 'advisor/chat.js' its entry script (the
  * chat island and the pages' telemetry). Empty in a bare dev or test run.
  */
@@ -131,7 +132,7 @@ export function layout(page: PageOptions, settings: SiteSettings): string {
   const canonical = canonicalUrl(base, page.path, page.language);
   const other: PageLanguage = page.language === 'es' ? 'en' : 'es';
   const image = absolute(base, page.image || PREVIEW_IMAGE);
-  const css = assetPath('advisor/pages.css'), js = assetPath('advisor/chat.js'), advisor = page.advisor !== false;
+  const tokens = assetPath('advisor/tokens.css'), css = assetPath('advisor/pages.css'), js = assetPath('advisor/chat.js'), advisor = page.advisor !== false;
   const crumbs: Crumb[] = [{name: copy.home, path: '/'}, ...page.crumbs];
   const ld = [
     {'@context': 'https://schema.org', '@type': 'Organization', name: 'SkipperCast', url: `${base}/`, logo: `${base}/app-icon-512.png`},
@@ -144,6 +145,7 @@ export function layout(page: PageOptions, settings: SiteSettings): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>${page.title}</title>
 <meta name="description" content="${page.description}">
 ${page.noindex ? raw('<meta name="robots" content="noindex">\n') : ''}<link rel="canonical" href="${canonical}">
@@ -159,7 +161,8 @@ ${page.kind === 'missing' ? '' : html`<link rel="alternate" hreflang="${page.lan
 <meta name="twitter:card" content="summary_large_image">
 <meta name="skippercast-build" content="${build()}">
 <link rel="icon" href="/app-icon.svg" type="image/svg+xml">
-${css ? html`<link rel="stylesheet" href="${css}">` : ''}
+${tokens ? html`<link rel="stylesheet" href="${tokens}">
+` : ''}${css ? html`<link rel="stylesheet" href="${css}">` : ''}
 <script type="application/ld+json">${jsonLd(ld)}</script>
 </head>
 <body class="adv-page" data-advisor-page="${page.kind}" data-region="${page.region ?? ''}">

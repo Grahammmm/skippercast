@@ -199,6 +199,11 @@ def screen_candidates(candidates, state, *, native_geometries=None, native_exclu
             label = ('Publisher-interpreted rugose-rock habitat area, unranked. '
                      'Within the nominal 25–300 ft depth band; paired survey depth is not a navigation claim. '
                      'Terrain grade and species fit are unknown. Fish presence and precise fishing positions are unverified.')
+        if classified and classified.get('interpretation_method') == 'original-interpreted-bedrock-v1':
+            label = ('Publisher-interpreted exposed-bedrock habitat area, unranked. '
+                     'Within the nominal 25–300 ft depth band; paired survey depth is not a navigation claim. '
+                     'Lithology uncertainty is retained. Rugosity, terrain grade and species fit are unknown. '
+                     'Fish presence and precise fishing positions are unverified.')
         p['label'] = ('Held: '+', '.join(reasons)+'. ' if reasons else '') + label
         p['planning_notice'] = 'Planning only. Not a navigation chart. Check current CDFW regulations.'
         if reasons:

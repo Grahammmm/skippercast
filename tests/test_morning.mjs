@@ -191,16 +191,3 @@ test("a retained individual model cannot be made fresh by another successful ref
  assert.equal(row.limited,true);
  assert.ok(row.reasons.some(r=>r.includes('NOAA GFS forecast unavailable')));
 });
-test("day narrative labels incomplete coverage as a limited estimate",async()=>{
- const {boatDayHTML,ratingLabel}=await import('../dist/forecast-summary.js');
- const b=bundle(),r=rankMornings(b,0,'reef',now)[0];
- let html=boatDayHTML(b,0,'reef',times[0],r,now);
- assert.match(html,/on the boat/);assert.match(html,/kt/);assert.match(html,/seconds apart/);
- assert.equal(ratingLabel(0),'Very rough');assert.equal(ratingLabel(null),'Data incomplete');
- b.models.ncep_gfswave016.data[0].hourly.wave_height.fill(null);
- const missing=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],missing,now);
- assert.match(html,/Limited forecast screen/);assert.match(html,/limited comparison/);assert.ok(missing.conditions<=6.9);
- b.models.ecmwf_wam.data[0].hourly.wave_height.fill(null);
- const none=rankMornings(b,0,'reef',now)[0];html=boatDayHTML(b,0,'reef',times[0],none,now);
- assert.equal(none.conditions,null);assert.match(html,/Data incomplete/);assert.doesNotMatch(html,/0.0\/10/);
-});

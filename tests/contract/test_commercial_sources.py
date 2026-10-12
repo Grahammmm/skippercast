@@ -2,8 +2,9 @@
 
 Every asset bound in a non-draft ``regions/*/region.json``, every runtime
 provider binding in those regions, and every runtime call to a known
-third-party service in ``src/``, ``server/`` and ``dist/*.js`` must map to a
-reviewed source whose ``rights.commercial_use`` is ``"allowed"``.
+third-party service in ``src/``, ``server/``, ``dist/*.js``, ``web/`` and
+``packages/coast/src/`` must map to a reviewed source whose
+``rights.commercial_use`` is ``"allowed"``.
 
 Known blockers are listed explicitly in ``KNOWN_BLOCKERS``, each pointing to its
 row in docs/legal/data-rights-register.md. The test asserts that the allow-list
@@ -32,6 +33,7 @@ RUNTIME_HOSTS = {
     re.compile(r'https://(?:[a-z]+-)?api\.open-meteo\.com'): 'open-meteo-api',
     re.compile(r'https://tile\.openstreetmap\.org'): 'osm-tiles',
     re.compile(r'https://gis\.charttools\.noaa\.gov'): 'noaa-enc-display',
+    re.compile(r'https://imagery\.nationalmap\.gov'): 'usgs-naip',
 }
 
 # If an asset's text contains one of these hosts, its mapping must name the
@@ -138,7 +140,7 @@ KNOWN_BLOCKERS = {
         'data/charter-grounds.json', 'data/daily-evidence.json',
     }),
     'osm-tiles': (REGISTER_ROW + 'b6--openstreetmap-tile-service', '2026-09-28', {
-        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js', 'runtime:server/security-headers.ts',
+        'runtime:dist/chart-map.js', 'runtime:server/security-headers.ts',
     }),
 }
 
@@ -210,17 +212,24 @@ def usages():
                 unmapped.add(f"{region['id']}:{kind}={path}")
                 continue
             found.update((path, ident) for ident in ids)
+        # The CUSP shoreline ships beside the region package (FE-10), outside region.json assets.
+        shoreline = f"regions/{region['id']}/shoreline.geojson"
+        if (ROOT / 'dist' / shoreline).is_file():
+            found.add((shoreline, 'noaa-cusp-shoreline'))
         for role, ident in (region.get('intelligence') or {}).get('providers', {}).items():
             found.add((f'region.json:intelligence.providers.{role}', ident))
         for role, ident in region.get('pipeline_sources', {}).items():
             found.add((f'region.json:pipeline_sources.{role}', ident))
+        for layer, binding in region.get('basemap', {}).items():
+            found.add((f'region.json:basemap.{layer}', binding['source']))
         for need in ('wind-forecast', 'wave-forecast'):
             # Mirrors the scheduled pipeline's model selection (settings.model_ids).
             for ident in region['source_bindings'].get(need, []):
                 if sources[ident]['adapter'] == 'open-meteo' and sources[ident]['review_status'] == 'approved':
                     found.add((f'region.json:source_bindings.{need}', ident))
     files = [*sorted((ROOT / 'src').rglob('*.py')), *sorted((ROOT / 'server').rglob('*.js')), *sorted((ROOT / 'server').rglob('*.ts')),
-             *sorted((ROOT / 'dist').glob('*.js'))]
+             *sorted((ROOT / 'dist').glob('*.js')), *sorted((ROOT / 'web').rglob('*.ts')), *sorted((ROOT / 'web').rglob('*.tsx')),
+             *sorted((ROOT / 'packages/coast/src').rglob('*.ts'))]
     for path in files:
         text = path.read_text(encoding='utf-8')
         for pattern, ident in RUNTIME_HOSTS.items():

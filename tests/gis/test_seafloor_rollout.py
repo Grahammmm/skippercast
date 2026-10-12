@@ -14,6 +14,18 @@ from tests.gis.test_seafloor_publish import Bucket
 
 
 class RolloutTests(unittest.TestCase):
+    def test_publication_origin_reports_code_without_exception_payload(self):
+        try:
+            jobs.batch_key('../invalid', 'r01')
+        except ValueError as error:
+            error.args = ('private coordinates and token must not be logged',)
+            origin = jobs.publication_origin(error)
+        self.assertEqual(origin['module'], 'jobs.py')
+        self.assertEqual(origin['function'], 'batch_key')
+        self.assertIsInstance(origin['line'], int)
+        self.assertEqual(set(origin), {'module', 'function', 'line'})
+        self.assertNotIn('private', json.dumps(origin))
+
     def test_missing_or_unsafe_batch_cannot_reuse_a_shared_result(self):
         for batch in ('', '-', '../old', 'a/b'):
             with self.subTest(batch=batch), self.assertRaises(ValueError):

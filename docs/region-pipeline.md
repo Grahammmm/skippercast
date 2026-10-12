@@ -26,6 +26,11 @@ flowchart LR
 
 ## What is already standardized
 
+For shared 2D/3D map development and visual refinement, use
+[`$skippercast-build-coastal-map`](../skills/skippercast-build-coastal-map/SKILL.md).
+It coordinates these focused data stages with bounded subagents, actual visual
+acceptance and live-release verification. Routine refreshes retain their existing jobs.
+
 | Stage | Contract or implementation | Cadence / gate |
 | --- | --- | --- |
 | Define the need | `catalog/data-needs.json` and `catalog/targets.json` | Reused for every region; no provider selected yet. |

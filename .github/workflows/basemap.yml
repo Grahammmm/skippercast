@@ -1,0 +1,75 @@
+name: Build and publish the basemap
+
+# FE-10 (docs/plans/front-end/design.md § 4 option 1): cut the Chart basemap
+# from a Protomaps daily planet build by byte ranges, merge it into
+# tiles/basemap/ca-coast-<build>.pmtiles and publish it with
+# tiles/basemap/manifest.json to R2. Dispatch only: the refresh is quarterly
+# and by hand, and nothing a pull request changes may run with the R2 token.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: Protomaps daily build (YYYYMMDD); "latest" picks the newest listed build
+        type: string
+        default: latest
+      publish:
+        description: Upload to R2 (off builds and measures only)
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: basemap-publication
+  cancel-in-progress: false
+
+jobs:
+  basemap:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.25'
+          cache: false
+      - run: python -m pip install -r requirements-publish.txt -r requirements-test.txt
+      - name: Install the pmtiles CLI (go-pmtiles v1.31.2, checked against the Go checksum database)
+        run: GOBIN="$RUNNER_TEMP/bin" go install -trimpath github.com/protomaps/go-pmtiles@v1.31.2
+      - name: Test the region plan and manifest
+        run: python -m pytest tests/unit/test_basemap_regions.py -q
+      - name: Extract, merge and record the archive
+        env:
+          BUILD: ${{ inputs.build }}
+          PMTILES: ${{ runner.temp }}/bin/go-pmtiles
+        run: |
+          set -o pipefail
+          mkdir -p var
+          bash scripts/basemap/build_basemap.sh "$BUILD" var/basemap 2>&1 | grep -v 'fetching chunks\|merging tile data' | tee var/basemap.log
+          tail -n 1 var/basemap.log >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish to R2 and read it back
+        if: inputs.publish
+        env:
+          # R2-only token when configured (docs/cloudflare.md); the deploy token is the fallback.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python scripts/basemap/regions.py publish --dir var/basemap >> "$GITHUB_STEP_SUMMARY"
+      - name: Check the site serves the archive by HTTP Range
+        if: inputs.publish
+        env:
+          SITE_URL: ${{ vars.CLOUDFLARE_SITE_URL || 'https://skippercast.com' }}
+        run: |
+          key=$(python -c 'import json; print(json.load(open("var/basemap/manifest.json"))["key"])')
+          magic=$(curl -sSf --retry 3 -r 0-6 "${SITE_URL%/}/feeds/$key")
+          test "$magic" = PMTiles
+          echo "Served ${SITE_URL%/}/feeds/$key by HTTP Range." >> "$GITHUB_STEP_SUMMARY"

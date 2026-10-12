@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-01",
+  "publication": "SLOFishReport.com",
+  "providerAdapters": [
+    {
+      "id": "nws",
+      "producer": "NOAA NWS",
+      "transport": "JSON GeoJSON",
+      "rights": "free for any purpose; identify User-Agent",
+      "docs": "https://www.weather.gov/documentation/services-web-api",
+      "discovery": "https://api.weather.gov/points/{lat},{lon}",
+      "forecast": "discover forecastGridData; do not assume hourly marine forecast route",
+      "alerts": "https://api.weather.gov/alerts/active?area=CA,PZ",
+      "pollMinutes": 30,
+      "bindings": {
+        "north": "LOX/62,133",
+        "central": "LOX/68,119",
+        "south": "LOX/73,110"
+      },
+      "status": "live collector verified"
+    },
+    {
+      "id": "ndbc",
+      "producer": "NOAA NDBC; CDIP produces 46215 wave record",
+      "transport": "ASCII text",
+      "rights": "NOAA public data; CDIP metadata unrestricted redistribution",
+      "template": "https://www.ndbc.noaa.gov/data/realtime2/{station}.txt",
+      "stations": [
+        "46215",
+        "46028"
+      ],
+      "pollMinutes": 15,
+      "status": "live collector verified"
+    },
+    {
+      "id": "coops",
+      "producer": "NOAA CO-OPS",
+      "transport": "JSON",
+      "rights": "NOAA public data",
+      "base": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
+      "station": "9412110",
+      "datum": "MLLW",
+      "timezone": "gmt",
+      "units": "metric",
+      "products": [
+        "predictions",
+        "water_level",
+        "water_temperature"
+      ],
+      "intervals": [
+        "6",
+        "hilo"
+      ],
+      "unsupportedAtReview": [
+        "wind"
+      ],
+      "stationLimit": "Port San Luis reference, not Morro entrance current",
+      "status": "tide live collector verified; observations direct probe verified"
+    },
+    {
+      "id": "cdip-mop",
+      "producer": "Scripps CDIP",
+      "transport": "OPeNDAP ASCII/NetCDF",
+      "rights": "metadata unrestricted use and redistribution",
+      "base": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_alongshore/{site}_forecast.nc",
+      "sites": [
+        {
+          "id": "SL097",
+          "name": "Pismo Beach Pier",
+          "lat": 35.13593,
+          "lon": -120.6609
+        },
+        {
+          "id": "SL165",
+          "name": "Port San Luis",
+          "lat": 35.16219,
+          "lon": -120.74368
+        },
+        {
+          "id": "SL345",
+          "name": "Morro Rock",
+          "lat": 35.36503,
+          "lon": -120.87659
+        },
+        {
+          "id": "SL400",
+          "name": "Cayucos Pier",
+          "lat": 35.43385,
+          "lon": -120.91185
+        },
+        {
+          "id": "SL552",
+          "name": "San Simeon Beach State Park",
+          "lat": 35.58976,
+          "lon": -121.13583
+        }
+      ],
+      "status": "all metadata verified; SL345 data subset verified"
+    },
+    {
+      "id": "wcofs",
+      "producer": "NOAA NOS",
+      "transport": "OPeNDAP ASCII/NetCDF",
+      "rights": "NOAA public data",
+      "catalog": "https://opendap.co-ops.nos.noaa.gov/thredds/catalog/NOAA/WCOFS/MODELS/{YYYY}/{MM}/{DD}/catalog.xml",
+      "horizonHours": 72,
+      "nativeResolutionKm": 4,
+      "cycle": "daily 03Z",
+      "dependencies": [
+        "satellite SST",
+        "HFRNet",
+        "RTOFS",
+        "NAM"
+      ],
+      "status": "catalog and metadata verified; regional current populated cells not re-probed"
+    },
+    {
+      "id": "mur",
+      "producer": "NASA JPL",
+      "deliveryService": "NOAA CoastWatch",
+      "rights": "free use and redistribution; JPL NASA MEaSUREs acknowledgment",
+      "dataset": "jplMURSST41",
+      "base": "https://coastwatch.pfeg.noaa.gov/erddap",
+      "variables": [
+        "analysed_sst",
+        "analysis_error",
+        "mask"
+      ],
+      "nativeResolutionDeg": 0.01,
+      "cadence": "daily; recent seven days revised",
+      "status": "local small subset verified"
+    },
+    {
+      "id": "hfr",
+      "producer": "IOOS HFRNet",
+      "deliveryService": "NOAA NDBC",
+      "rights": "public data with attribution",
+      "base": "https://dods.ndbc.noaa.gov/thredds/dodsC/hfradar_uswc_6km",
+      "nativeResolutionKm": 6,
+      "variables": [
+        "u",
+        "v",
+        "number_of_sites",
+        "hdop"
+      ],
+      "cadence": "hourly; populated cells vary",
+      "status": "metadata verified; regional populated cells not re-probed"
+    },
+    {
+      "id": "cdfw-mpa",
+      "producer": "CDFW Marine Region GIS Lab",
+      "rights": "CC BY 4.0",
+      "base": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0",
+      "dataset": "DS582",
+      "status": "metadata, exact license and region count verified"
+    },
+    {
+      "id": "slo-water-health",
+      "producer": "SLO County Environmental Health",
+      "rights": "dataset redistribution license unverified; facts attribution/link first",
+      "base": "https://services6.arcgis.com/M6e56DqzbdJf20YO/arcgis/rest/services/SurfSafeSLO_Public_View/FeatureServer/0",
+      "fields": [
+        "Station",
+        "Station_Na",
+        "Status",
+        "AdvisoryMessage",
+        "AdvisoryNotes"
+      ],
+      "coverageSites": 19,
+      "status": "all 19 status records verified; lacks sample timestamp"
+    },
+    {
+      "id": "landing-counts",
+      "producer": "local operators",
+      "deliveryService": "SoCalFishReports TECK.net",
+      "rights": "all rights reserved; commercial bulk republication not licensed in audit",
+      "template": "https://www.socalfishreports.com/dock_totals/boats.php?date={YYYY-MM-DD}",
+      "poll": "evening/morning; recheck past 14 days",
+      "status": "public pages accessible and local trip rows verified; excluded from live collector pending access review"
+    }
+  ],
+  "gaps": [
+    "measured dive-site underwater visibility",
+    "calibrated species/method bite probabilities",
+    "verified complete local charter AIS tracks",
+    "precise small-reef currents",
+    "rights for bulk charter database republication"
+  ]
+}

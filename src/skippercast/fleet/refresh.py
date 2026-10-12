@@ -17,10 +17,12 @@ ingest.
 | ``schedule`` | an offering added or retired, or its ``departs_local`` or ``days`` changed |
 
 Offerings of a vessel whose sources listed offerings in this run, but not that
-one, are retired (``offering.upsert`` with ``status: retired``). A vessel is
-"listed" when a candidate was assigned to it or proposed for it in a merge
-review. Runs count towards ``vanished`` only when every discovery binding of the
-run succeeded (``discover.json`` ``complete``), so a source outage never marks
+one, are retired (``offering.upsert`` with ``status: retired``), but only when
+every discovery binding of the run succeeded (``discover.json`` ``complete``):
+in a ``partial`` run the failed source's offerings are kept, so an outage records
+no ``schedule`` change. A vessel is "listed" when a candidate was assigned to it
+or proposed for it in a merge review. Runs count towards ``vanished`` only when
+the run's discovery was ``complete`` as well, so a source outage never marks
 its boats vanished. Change ids hash the after-value, so a rerun records nothing
 new.
 """
@@ -115,7 +117,7 @@ def detect(before: Snapshot, sent: Iterable[Mapping[str, Any]], now: str, *, com
                    {"offering_id": ident, "departs_local": op.get("departs_local"), "days": op.get("days_json")})
     sent_ids, with_offers = {op["id"] for op in offers}, {op["vessel_id"] for op in offers}
     for ident, (vid, old) in sorted(offered.items()):
-        if vid in with_offers and old.get("status") == "active" and ident not in sent_ids:
+        if complete and vid in with_offers and old.get("status") == "active" and ident not in sent_ids:
             out.append({"op": "offering.upsert", "id": ident, "vessel_id": vid, "name": old["name"],
                         "trip_type": old["trip_type"], "seen_at": now, "status": "retired"})
             change(vid, "schedule", {"offering_id": ident, "status": "active"}, {"offering_id": ident, "retired": old["name"]})

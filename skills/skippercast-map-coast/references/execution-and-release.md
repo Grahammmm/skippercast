@@ -127,6 +127,60 @@ regional job with verification of every region. stderr stage messages show
 restore and regional build/read-back progress while stdout stays machine JSON.
 
 
+## Recover replaced scoped publication work
+
+A verified policy-only push is scoped by that push's exact `before` and `after`
+commits. It refreshes the complete affected regions, including reviewed previous
+scopes and neighbors; it does not accumulate scopes from earlier cancelled
+runs. Seeing an earlier source opt-in on latest main does not establish that
+its region is in the latest prepare matrix.
+
+The workflow currently shares the `seafloor-publication` concurrency group with
+`cancel-in-progress: false`. This preserves an active run, but the default queue
+still replaces an older pending run with a newer one. See
+[GitHub's concurrency contract](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+For example, a pending Monterey policy refresh can be replaced by a later
+Cambria policy refresh whose own push delta selects only Cambria. Both policies
+can be merged while Monterey remains unpublished.
+
+Keep this recovery in the existing coordinator checkpoint, with one release
+operator and the current authorization:
+
+1. Retain the union of merged, publication-unverified region scopes. Record the
+   merged source/policy revision, intended regions, expected public additions or
+   removals, saved public baseline and run/batch status. A cancelled or replaced
+   run leaves its region outstanding; remove a scope only after live verification.
+2. Inspect the surviving run's actual `prepare` outputs and summary: `matrix`,
+   `worker_matrix` and publisher `regions`. Compare these with the outstanding
+   union. The commit on latest main, a queued run, or a successful Cambria job
+   does not prove Monterey was prepared or published.
+3. If a cancelled scope is omitted, dispatch the existing `seafloor.yml` from
+   latest main for that explicit region, or use a blank region for a global
+   refresh when several outstanding regions need recovery. Set `max_new=0`
+   and leave `reach` blank so this restores publication without adding reaches.
+   Reuse qualified caches and the normal stage, screen and publisher; do not
+   create another scheduler, credentials, catalog or routine forced rebuild.
+   Do not cancel active work to speed recovery.
+
+   ```bash
+   gh workflow run seafloor.yml --ref main -f region=REGION_ID -f max_new=0
+   # Global recovery across the catalog scope:
+   gh workflow run seafloor.yml --ref main -f region= -f max_new=0
+   ```
+
+4. Save the recovery run/batch and check its actual prepare matrix again. If it
+   is replaced or still omits an outstanding region, retain the blocker and
+   reconcile the current queue before another bounded dispatch; do not repeat
+   dispatches while an equivalent recovery is already queued or running.
+5. Verify each outstanding region independently: current manifest/source
+   identity, expected new public native feature IDs or deduplicated geometry
+   unions, retained prior features and holds, actual archive bytes/hash and HTTP
+   Range access, and visitor map/export behavior. A regional publisher success
+   or ledger refresh cannot clear another region's checkpoint. A maintenance
+   refresh and this recovery procedure add no measured coverage by themselves;
+   count habitat additions only after their separate regional live readback.
+
+
 ## Completion and honest progress
 
 A reach is not "complete" because it ran once. Report its surveyed fraction,

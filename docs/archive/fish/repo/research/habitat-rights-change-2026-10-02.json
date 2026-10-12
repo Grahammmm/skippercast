@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-02T07:53:11.465Z",
+  "catalogReviewedAt": "2026-10-02T07:44:21.615Z",
+  "scope": "Read-only comparison of previously admitted Fish contributors and current public SkipperCast catalog; no geometry, code, source refresh, or publication changes.",
+  "catalogs": {
+    "old": {
+      "commit": "f4f1565dd92196d8fcae90fdd5b953a9254562ad",
+      "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/f4f1565dd92196d8fcae90fdd5b953a9254562ad/catalog/surveys.json"
+    },
+    "current": {
+      "commit": "97de356518f4acfb3364d67b68e88fcedccc25f5",
+      "message": "Release reviewed Avila and SCC16 native habitat (#195)\n\nPreserve native source identity, unknown datum metadata and credited noncommercial terms. Extend the reviewed screen to three complete in-bounds reach envelopes and retain all spatial holds.\n\nCo-authored-by: Codex <email redacted>",
+      "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/catalog/surveys.json"
+    },
+    "probes": [
+      {
+        "url": "https://api.github.com/repos/Grahammmm/skippercast/commits/main",
+        "status": 200,
+        "startedAt": "2026-10-02T07:44:20.863Z",
+        "completedAt": "2026-10-02T07:44:21.251Z",
+        "elapsedMs": 388,
+        "bytes": 68608,
+        "sha256": "a22c27bb0bfbaa40879649e53bf8bcab7d21e72b54d13fc078d2661a9c91dc68"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/catalog/surveys.json",
+        "status": 200,
+        "startedAt": "2026-10-02T07:44:21.253Z",
+        "completedAt": "2026-10-02T07:44:21.473Z",
+        "elapsedMs": 220,
+        "bytes": 1095057,
+        "sha256": "12ee2b517e6b976ed412baf306b467b49e09a272a53b807621f36b6e6a5d537a"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/f4f1565dd92196d8fcae90fdd5b953a9254562ad/catalog/surveys.json",
+        "status": 200,
+        "startedAt": "2026-10-02T07:44:21.252Z",
+        "completedAt": "2026-10-02T07:44:21.605Z",
+        "elapsedMs": 353,
+        "bytes": 1001051,
+        "sha256": "c393570af6735da9344daa07d539ec8cd2254d4fdb96fbbc890d83617910258b"
+      }
+    ]
+  },
+  "existingFishContributors": {
+    "habitat": [
+      {
+        "sourceId": "seafloorcharacter-offshoremorrobay-zip-af69d59824",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/0abf6339a0ce4077b5e58852345151a3/SeafloorCharacter_OffshoreMorroBay.zip",
+        "landingPage": "https://doi.org/10.5066/P9HEZNRO",
+        "rightsSourceUrl": null
+      },
+      {
+        "sourceId": "bathymetry-offshoremorrobay-zip-fad659557e",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip",
+        "landingPage": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml",
+        "rightsSourceUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml"
+      },
+      {
+        "sourceId": "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/21b585e020ab4afba49b2754075826a7/Bathymetry_OffshorePointBuchon.zip",
+        "landingPage": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml",
+        "rightsSourceUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+      },
+      {
+        "sourceId": "seafloorcharacter-offshorepointbuchon-zip-f2fe0d40f6",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/3963d3925b9841ecb9b6a743b92326d7/SeafloorCharacter_OffshorePointBuchon.zip",
+        "landingPage": "https://doi.org/10.5066/P9KBGELE",
+        "rightsSourceUrl": null
+      },
+      {
+        "sourceId": "seafloorcharacter-offshorepointestero-zip-cba663f7fd",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/22adeb1ae71b4e28a5d38acdf66daec0/SeafloorCharacter_OffshorePointEstero.zip",
+        "landingPage": "https://doi.org/10.5066/P9ZSTUK1",
+        "rightsSourceUrl": null
+      },
+      {
+        "sourceId": "bathymetry-offshorepointestero-zip-7e3be5eb12",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip",
+        "landingPage": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml",
+        "rightsSourceUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml"
+      }
+    ],
+    "nativeBathymetry": [
+      {
+        "sourceId": "bathymetry-offshoremorrobay-zip-fad659557e",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip",
+        "landingPage": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml",
+        "rightsSourceUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml"
+      },
+      {
+        "sourceId": "bathymetry-offshorepointbuchon-zip-fcc90bde5c",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/21b585e020ab4afba49b2754075826a7/Bathymetry_OffshorePointBuchon.zip",
+        "landingPage": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml",
+        "rightsSourceUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml"
+      },
+      {
+        "sourceId": "bathymetry-offshorepointestero-zip-7e3be5eb12",
+        "oldLicense": "public-domain-us-gov",
+        "currentLicense": "public-domain-us-gov",
+        "rightsChanged": false,
+        "originalUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip",
+        "landingPage": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml",
+        "rightsSourceUrl": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml"
+      }
+    ],
+    "finding": "All six habitat contributor license identities and all three native bathymetry contributor license identities remain public-domain-us-gov. No previously admitted contributor was reclassified."
+  },
+  "catalogChanges": {
+    "previouslyUnknownNowNoncommercialCount": 20,
+    "previouslyUnknownNowNoncommercial": [
+      {
+        "sourceId": "csumb-bigcreek-bc-n-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/BigCreek_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-bigcreek-bc-n-5m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "landingPage": "unknown",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-bigcreek-bc-s-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "landingPage": "unknown",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-bigcreek-bc-s-5m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "landingPage": "unknown",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-bigcreek-lp-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "landingPage": "unknown",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-bigcreek-lp-5m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/BigCreek/multibeam/data/version2/products/BigCreek_additional_products.tar.gz",
+        "landingPage": "unknown",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-slaterock-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SlateRock/multibeam/data/version2/products/SlateRock_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SlateRock_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block16-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block16/multibeam/data/version2/products/SCC_Block16_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block16_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block15-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block15/multibeam/data/version2/products/SCC_Block15_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block15_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block14-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block14/multibeam/data/version2/products/SCC_Block14_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block14_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-pge-avila-blocki-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-pge-avila-blockj-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_AvilaBay/multibeam/data/version2/products/PGE_AvilaBay_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/PGE_AvilaBay_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block09-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version2/products/SCC_Block09_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block09_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block09-5m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block09/multibeam/data/version2/products/SCC_Block09_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block09_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block10-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block10/multibeam/data/version2/products/SCC_Block10_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block10_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block10-5m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block10/multibeam/data/version2/products/SCC_Block10_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block10_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block11-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block11/multibeam/data/version2/products/SCC_Block11_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block11_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block11-5m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block11/multibeam/data/version2/products/SCC_Block11_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block11_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block13-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block13/multibeam/data/version2/products/SCC_Block13_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block13_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      },
+      {
+        "sourceId": "csumb-scc-block12-2m-native",
+        "oldLicense": "unknown",
+        "currentLicense": "csumb-public-use-noncommercial",
+        "rightsChanged": true,
+        "originalUrl": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SCC_Block12/multibeam/data/version2/products/SCC_Block12_additional_products.tar.gz",
+        "landingPage": "https://www.ngdc.noaa.gov/ships/ventresca/SCC_Block12_mb.html",
+        "rightsSourceUrl": "https://csumb.edu/undersea/sfml-data-library/"
+      }
+    ],
+    "newNonPublicCount": 14,
+    "newNonPublic": [
+      {
+        "sourceId": "csumb-cooperpoint-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CooperPoint/multibeam/data/version2/products/CooperPoint_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-point-sur-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PointSur/multibeam/data/version2/products/PointSur_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-hurricane-point-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/HurricanePoint/multibeam/data/version2/products/HurricanePt_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-grimes-point-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/GrimesPoint/multibeam/data/version2/products/GrimesPoint_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-kasler-point-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/KaslerPoint/multibeam/data/version2/products/KaslerPt_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-soberanes-point-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/SoberanesPoint/multibeam/data/version2/products/SoberanesPt_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-yankee-point-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/YankeePoint/multibeam/data/version2/products/YankeePt_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blockc-1m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blockd-1m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blockc-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blockd-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blocke-2m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blockc-5m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      },
+      {
+        "sourceId": "csumb-pge-mid-blocke-5m-native",
+        "license": "csumb-public-use-noncommercial",
+        "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Mid/multibeam/data/version2/products/PGE_Mid_additional_products.tar.gz"
+      }
+    ],
+    "finding": "Separate CSUMB native sources were newly reviewed/admitted as csumb-public-use-noncommercial, including Avila I/J and SCC16. This differs from a correction to the previously admitted USGS source rights; catalog totals are not current per-region export feature counts."
+  },
+  "primaryTerms": {
+    "csumb": {
+      "url": "https://csumb.edu/undersea/sfml-data-library/",
+      "method": "Primary public policy read with web tool during this review; precise request duration not recorded.",
+      "summary": "The policy permits access with credit but requires express SFML permission for for-profit enterprise use. NOAA hosting does not change the original producer terms. No permission request was made."
+    },
+    "usgs": [
+      {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/137e935afcd24506b6c8a2d23ff7a6d4/Bathymetry_OffshoreMorroBay_metadata.xml",
+        "status": 200,
+        "startedAt": "2026-10-02T07:47:18.459Z",
+        "completedAt": "2026-10-02T07:47:19.310Z",
+        "elapsedMs": 850,
+        "bytes": 16547,
+        "summary": "Original USGS metadata identifies USGS-authored or produced data as public domain with free redistribution and proper source/metadata attribution; collaborator credits remain required. Not for navigation."
+      },
+      {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/134dbdd47ee649b1863acc6cfa6ed0e6/Bathymetry_OffshorePointBuchon_metadata.xml",
+        "status": 200,
+        "startedAt": "2026-10-02T07:47:19.310Z",
+        "completedAt": "2026-10-02T07:47:20.021Z",
+        "elapsedMs": 711,
+        "bytes": 16229,
+        "summary": "Original USGS metadata identifies USGS-authored or produced data as public domain with free redistribution and proper source/metadata attribution; collaborator credits remain required. Not for navigation."
+      },
+      {
+        "url": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/cfefab299c38493c87398393e6a5597a/Bathymetry_OffshorePointEstero_metadata.xml",
+        "status": 200,
+        "startedAt": "2026-10-02T07:47:20.021Z",
+        "completedAt": "2026-10-02T07:47:20.730Z",
+        "elapsedMs": 709,
+        "bytes": 16227,
+        "summary": "Original USGS metadata identifies USGS-authored or produced data as public domain with free redistribution and proper source/metadata attribution; collaborator credits remain required. Not for navigation."
+      }
+    ]
+  },
+  "producerAtProbe": {
+    "manifests": [
+      {
+        "url": "https://skippercast.g4651.workers.dev/feeds/tiles/seafloor/manifest-morro-bay.json",
+        "status": 200,
+        "startedAt": "2026-10-02T07:47:20.730Z",
+        "completedAt": "2026-10-02T07:47:21.247Z",
+        "elapsedMs": 517,
+        "bytes": 21,
+        "producerStatus": "updating"
+      },
+      {
+        "url": "https://skippercast.g4651.workers.dev/feeds/tiles/seafloor/manifest-cambria-san-simeon.json",
+        "status": 200,
+        "startedAt": "2026-10-02T07:47:21.247Z",
+        "completedAt": "2026-10-02T07:47:21.577Z",
+        "elapsedMs": 330,
+        "bytes": 21,
+        "producerStatus": "updating"
+      }
+    ],
+    "morroCanonicalExport": {
+      "url": "https://skippercast.g4651.workers.dev/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson.gz",
+      "status": 503,
+      "checkedAt": null,
+      "limitation": "Observed during earlier bounded read in this review; exact clock/duration not persisted. No failed export payload was saved."
+    },
+    "parentObservedReadyArchiveHashes": {
+      "observedAtApproximate": "2026-10-02T07:38:00Z",
+      "provenance": "Provided by parent importer run, not independently reverified here",
+      "morroBay": "6252cc806ca1da318ab0de9ffaf682a46bb0e61d5187f71e8b98bd1d8fa46134",
+      "cambriaSanSimeon": "d35ee05c0bc4fe27ef373de43a4d467444bf0b80872094f0199f1cb25f68b49a"
+    },
+    "perRegionFeatureRightsCounts": [
+      {
+        "regionId": "morro-bay",
+        "allowed": null,
+        "excluded": null
+      },
+      {
+        "regionId": "cambria-san-simeon",
+        "allowed": null,
+        "excluded": null
+      }
+    ],
+    "countLimitation": "No stable current hash-verified canonical export available during these independent probes. Historical development/private feature counts must not be substituted."
+  },
+  "existingImmutableOrSeparateReleaseCheck": {
+    "status": "unavailable-not-established",
+    "treeProbe": {
+      "url": "https://api.github.com/repos/Grahammmm/skippercast/git/trees/97de356518f4acfb3364d67b68e88fcedccc25f5?recursive=1",
+      "status": 200,
+      "startedAt": "2026-10-02T07:47:21.577Z",
+      "completedAt": "2026-10-02T07:47:22.540Z",
+      "elapsedMs": 963,
+      "bytes": 635337,
+      "truncated": false
+    },
+    "inspectedPublishedCodeAndDocs": [
+      {
+        "path": "docs/archive/seafloor-morro-avila-batch-2026-10-01.md",
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/docs/archive/seafloor-morro-avila-batch-2026-10-01.md",
+        "status": 200
+      },
+      {
+        "path": "research/receipts/seafloor-morro-cambria-reach-batch.json",
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/research/receipts/seafloor-morro-cambria-reach-batch.json",
+        "status": 200
+      },
+      {
+        "path": "src/skippercast/seafloor/rights.py",
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/src/skippercast/seafloor/rights.py",
+        "status": 200
+      },
+      {
+        "path": "src/skippercast/seafloor/publish.py",
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/src/skippercast/seafloor/publish.py",
+        "status": 200
+      },
+      {
+        "path": "docs/seafloor.md",
+        "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/97de356518f4acfb3364d67b68e88fcedccc25f5/docs/seafloor.md",
+        "status": 200
+      }
+    ],
+    "finding": "The inspected publisher uploads the canonical export and archive to fixed region aliases, writes an updating hold before alias replacement, and publishes the ready manifest after hash read-back. Content hashes in the manifest identify a release but do not establish a separately addressable immutable prior release. No explicitly separate government-only binding or immutable prior USGS-only archive/export was established in the inspected public tree, publisher, manifest contract and release documentation.",
+    "limitation": "This is a narrow checked absence in the inspected published interfaces, not an assertion that no private backup or other unadvertised object exists. No alternate path was guessed or downloaded."
+  },
+  "conclusion": {
+    "priorLocalFiles": "Preserve the previously approved local USGS-derived artifacts: their source rights have not changed in this catalog comparison. Their original hashes, provenance, review limits and non-navigation caveats remain applicable.",
+    "currentFullArchive": "Keep the mutable full regional archive/proxy withheld while current content fails the existing commercial rights/hash/readiness gates. The current mixed release does not become public domain by aggregation.",
+    "recovery": "No already published eligible replacement binding established by this review. A producer-provided eligible immutable or separately reviewed government-only release would require a new explicit receipt and existing full gates; no filter or rewritten artifact was designed here.",
+    "actions": "Only this evidence receipt was written. No restricted raw geometry copied, gates relaxed, SkipperCast edits made, or operators contacted."
+  }
+}

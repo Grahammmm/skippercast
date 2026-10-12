@@ -2,8 +2,9 @@
 // Validation, § 13 Labelling, D10; CF-48). #fleet-labels lists trips (newest first, filter
 // labelled or not) with the progress toward the 30-trip target; #fleet-trip/<id> shows one
 // trip's segments on a small map with a speed strip, and labels a time range as in-port,
-// transit, fishing drift or fishing troll with the basis for it (server/fleet/admin/labels.ts).
-// The labeller is recorded server-side (the admin's id; an agent set carries agent:<name>).
+// transit, drift or anchor, slow troll or pelagic troll with the basis for it (server/fleet/admin/labels.ts).
+// The labeller is recorded server-side (the admin's id; an agent set carries agent:<name>). A trip with
+// agent labels shows "awaiting approval"; Approve makes them the admin's (N7), and rejecting one is its delete.
 //
 // Everything shown of the trip except the hand labels is inferred from movement: segment
 // kinds, speeds and fishing minutes are the classifier's output, never confirmed fishing.
@@ -11,12 +12,15 @@ import {useEffect, useState} from 'preact/hooks';
 import {ApiError, getFleet, postFleet, when} from './api.ts';
 import {fleetHref, fleetTripHref, fleetVesselHref} from './route.ts';
 
-const LABELS = ['in-port', 'transit', 'fishing-drift', 'fishing-troll'] as const;
-const FILTERS = ['all', 'no', 'yes'] as const;
+const LABELS = ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic'] as const;
+const KINDS = ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic', 'uncertain', 'gap'] as const;
+const FILTERS = ['all', 'no', 'yes', 'agent', 'approved'] as const;
 export const TRIP_COPY = {
   heading: 'Labelling', tripHeading: 'Label a trip', loading: 'Loading…', failed: 'Could not load. Try again.', none: 'No trips match.', more: 'More',
-  saved: 'Label saved.', deleted: 'Label deleted.',
-  filter: 'Show', filters: {all: 'All trips', no: 'Not labelled', yes: 'Labelled'} as Record<string, string>,
+  saved: 'Label saved.', deleted: 'Label deleted.', approved: 'Agent labels approved.',
+  filter: 'Show', filters: {all: 'All trips', no: 'Not labelled', yes: 'Labelled', agent: 'Awaiting approval', approved: 'Approved agent labels'} as Record<string, string>,
+  awaiting: 'Awaiting approval', approve: 'Approve agent labels',
+  approveHint: 'Check each agent label against the track. Delete any you disagree with, then approve: the rest are recorded as yours, with the agent named in the basis.',
   inferred: 'Inferred from movement',
   inferredNote: 'Segment kinds, speeds and fishing minutes are inferred from movement (speed and track shape): the classifier’s output, never confirmed fishing. Your labels are what it is scored against.',
   progressHeading: 'Validation set',
@@ -33,18 +37,20 @@ export const TRIP_COPY = {
   straightness: 'Straightness', headingVar: 'Heading variance', use: 'Use range',
   formHeading: 'Add a label', start: 'Start', end: 'End', label: 'Label', basis: 'Basis', basisHint: 'What you went on, for example the track shape, a skipper’s log or a landing report.',
   add: 'Add label', labelsHeading: 'Labels', labelsNone: 'No labels yet.', labeller: 'Labeller', created: 'Added', remove: 'Delete', agent: 'agent',
-  kinds: {'in-port': 'In port', 'transit': 'Transit', 'fishing-drift': 'Fishing, drift or anchor', 'fishing-troll': 'Fishing, troll', 'gap': 'Gap (no positions)'} as Record<string, string>,
+  kinds: {'in-port': 'In port', 'transit': 'Transit (no track kept)', 'drift-anchor': 'Fishing, drift or anchor', 'troll-slow': 'Fishing, slow troll',
+    'troll-pelagic': 'Fishing, offshore troll', 'uncertain': 'Uncertain (not counted as fishing)', 'gap': 'Gap (no positions)'} as Record<string, string>,
   basisSuggestions: ['Track shape (speed and turns)', 'Skipper’s log', 'Landing report', 'Photo or video', 'On board'],
 };
 /** The nav and page-title label of the labelling views (web/admin/app.tsx FLEET_PAGES). */
 export const LABELS_LABEL = TRIP_COPY.heading;
 const COPY = TRIP_COPY;
-const KIND_COLOR: Record<string, string> = {'in-port': 'var(--ink-2)', 'transit': 'var(--brand)', 'fishing-drift': 'var(--kelp)', 'fishing-troll': 'var(--caution)', 'gap': 'var(--line)'};
+const KIND_COLOR: Record<string, string> = {'in-port': 'var(--ink-2)', 'transit': 'var(--brand)', 'drift-anchor': 'var(--kelp)', 'troll-slow': 'var(--caution)',
+  'troll-pelagic': 'var(--amber)', 'uncertain': 'var(--brand-tint)', 'gap': 'var(--line)'};
 
 interface TripRow {
   id: string; region: string; vessel_id: string; vessel_name: string | null; vessel_class: string | null; mmsi: string; depart_port_id: string | null;
   return_port_id: string | null; departed_at: string; returned_at: string | null; local_date: string; status: string; distance_nm: number | null;
-  fishing_min: number | null; source: string; rights: string; labels: number;
+  fishing_min: number | null; source: string; rights: string; labels: number; agent_labels: number;
 }
 interface Progress {trips: number; labels: number; by_labeller: {admin: number; agent: number}; ports: number; minutes: Record<string, number>; target_trips: number}
 interface Segment {id: string; seq: number; kind: string; started_at: string; ended_at: string; points_n: number | null; mean_sog: number | null;
@@ -108,7 +114,8 @@ export function FleetLabelsView({region}: {region: string}) {
               <tr key={t.id}>
                 <th scope="row"><a href={fleetTripHref(t.id)}>{t.local_date} {when(t.departed_at)}</a></th>
                 <td>{t.vessel_name ?? t.vessel_id}{t.vessel_class ? ` · ${t.vessel_class}` : ''}</td>
-                <td>{t.depart_port_id ?? '—'}</td><td>{t.status}</td><td>{t.source}</td><td>{t.fishing_min ?? '—'}</td><td>{t.labels}</td>
+                <td>{t.depart_port_id ?? '—'}</td><td>{t.status}</td><td>{t.source}</td><td>{t.fishing_min ?? '—'}</td>
+                <td>{t.labels}{t.agent_labels ? <span class="admin-reason">{COPY.awaiting}</span> : null}</td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -122,7 +129,7 @@ export function FleetLabelsView({region}: {region: string}) {
 export function FleetTripView({id}: {id: string}) {
   const [detail, setDetail] = useState<TripDetail | null | 'failed'>(null);
   const [range, setRange] = useState<{from: string; to: string} | null>(null);
-  const [label, setLabel] = useState<string>('fishing-drift');
+  const [label, setLabel] = useState<string>('drift-anchor');
   const [basis, setBasis] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -134,6 +141,7 @@ export function FleetTripView({id}: {id: string}) {
   if (detail === 'failed') return <p class="admin-error" role="alert">{COPY.failed}</p>;
   const {trip, window: span, segments, labels} = detail;
   const pick = (s: {started_at: string; ended_at: string}): void => { setRange({from: s.started_at, to: s.ended_at}); setNotice(''); setError(''); };
+  const awaiting = labels.some(l => l.labeller.startsWith('agent:'));
 
   async function act(run: () => Promise<unknown>, done: string): Promise<boolean> {
     if (busy) return false;
@@ -195,7 +203,12 @@ export function FleetTripView({id}: {id: string}) {
         <button type="submit" class="admin-button is-primary" disabled={busy || !range || basis.trim().length < 2}>{COPY.add}</button>
       </form>
 
-      <h2>{COPY.labelsHeading}</h2>
+      <h2>{COPY.labelsHeading}{awaiting ? <span class="admin-reason">{COPY.awaiting}</span> : null}</h2>
+      {awaiting ? (
+        <p class="admin-hint">{COPY.approveHint}{' '}
+          <button type="button" class="admin-button is-primary" disabled={busy}
+            onClick={() => void act(() => postFleet(`trips/${encodeURIComponent(id)}/approve`, {}), COPY.approved)}>{COPY.approve}</button></p>
+      ) : null}
       {!labels.length ? <p>{COPY.labelsNone}</p> : (
         <div class="admin-scroll" tabIndex={0} role="region" aria-label={COPY.labelsHeading}><table class="admin-counts">
           <thead><tr><th scope="col">{COPY.from}</th><th scope="col">{COPY.to}</th><th scope="col">{COPY.label}</th><th scope="col">{COPY.basis}</th>
@@ -229,7 +242,7 @@ export function FleetTripView({id}: {id: string}) {
 
 function Legend() {
   return (
-    <p class="admin-muted">{COPY.inferred}: {(['in-port', 'transit', 'fishing-drift', 'fishing-troll', 'gap'] as const).map(k => (
+    <p class="admin-muted">{COPY.inferred}: {KINDS.map(k => (
       <span key={k}> <svg width="12" height="12" aria-hidden="true"><rect width="12" height="12" fill={KIND_COLOR[k]} /></svg> {COPY.kinds[k]}</span>
     ))}</p>
   );

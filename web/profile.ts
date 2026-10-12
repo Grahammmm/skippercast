@@ -1,11 +1,11 @@
-// Boat / Shore / Spear profile semantics (FE-04, design § 8), ported from
+// Boat / Shore / Spear / Kayak profile semantics (FE-04, design § 8), ported from
 // fish's experience.ts, daily.ts and opportunity.ts as data so that tests
 // cover the table without the DOM. The brief (FE-30), the layer rail (FE-11)
 // and the command bar read it; nothing here promises fish.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 
-export const PROFILES = ['boat', 'shore', 'spear'] as const;
+export const PROFILES = ['boat', 'shore', 'spear', 'kayak'] as const;
 export type Profile = typeof PROFILES[number];
 
 /** How a species search plan is fished; a plan may carry several. */
@@ -51,6 +51,15 @@ export const PROFILE_TABLE: Readonly<Record<Profile, ProfileSemantics>> = {
     id: 'spear', label: 'Spear', defaultTarget: 'cabezon-shallow-reef', maxDepthFt: 60, method: 'dive', fixedSpecies: [],
     whereToLook: 'reef-shallow', swellTile: 'nearshore', defaultLayers: ['seafloor', 'swell'],
     caveat: 'In-water visibility is unverified; surface currents cannot clear a dive.',
+  },
+  // Kayak fishes the boat plans from a paddle craft: the reef-fit ranking within
+  // a shallower limit (a screening choice for how far down a paddler usually
+  // fishes; depth is not distance from the launch). Client-only: the legacy
+  // coast experience and saved preferences know boat, shore and spear.
+  kayak: {
+    id: 'kayak', label: 'Kayak', defaultTarget: 'lingcod', maxDepthFt: 120, method: 'boat', fixedSpecies: [],
+    whereToLook: 'reef-fit', swellTile: 'offshore', defaultLayers: ['seafloor', 'currents'],
+    caveat: 'Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle.',
   },
 };
 
@@ -99,6 +108,18 @@ export function speciesForProfile(plans: Readonly<Record<string, PlanLike>>, pro
   const ids = [p.defaultTarget, ...p.fixedSpecies];
   for (const [id, plan] of Object.entries(plans)) if (planMethods(id, plan).includes(p.method)) ids.push(id);
   return ids.filter((id, i) => ids.indexOf(id) === i);
+}
+
+/** The terrain renderer's deepest limit, which packages/coast `experience.ts` applies where a profile sets none. */
+export const TERRAIN_DEPTH_CEILING_FT = 300;
+
+/**
+ * The depth limit the terrain renderer takes for `profile` (`setDepthLimit`):
+ * the profile's own limit, else the ceiling. tests/test_profile.mjs pins it to
+ * `experience.ts` `maxDepth`, so the two tables cannot drift.
+ */
+export function terrainDepthLimitFt(profile: Profile): number {
+  return PROFILE_TABLE[profile].maxDepthFt ?? TERRAIN_DEPTH_CEILING_FT;
 }
 
 /** Whether a mark or candidate at `depthFt` is inside the profile's limit; unknown depth stays in. */

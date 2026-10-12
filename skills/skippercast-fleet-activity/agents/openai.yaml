@@ -1,0 +1,4 @@
+interface:
+  display_name: "SkipperCast Fleet Activity"
+  short_description: "Check charter fishing activity, validation and heat-map status"
+  default_prompt: "Use $skippercast-fleet-activity in cycle mode for region CA: a bounded 60-minute run over the existing AIS jobs, ending with a counts-only report and owner issues for any missing step."

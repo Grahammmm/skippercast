@@ -1,0 +1,4 @@
+#YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS  TIDE
+#yr  mo dy hr mn degT m/s  m/s     m   sec   sec degT   hPa  degC  degC  degC  nmi    ft
+2024 01 15 06 00 290  5.0  7.0  1.50 12.00  8.00 300 1015.0  12.0   9.0  99.0 99.0 99.00
+2024 07 15 06 00 290 99.0 99.0  2.00 00.00  8.00 300 1015.0  12.0  14.0  99.0 99.0 99.00

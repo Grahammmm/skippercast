@@ -1,3 +1,4 @@
+import {sharedTargetOptions} from './coast-targets.js';
 import defaultRegion from "./region-default.js";
 import {withFeeds} from "./feeds.js";
 import {loadCoasts,coastForPackage,coastURL} from './coasts.js';
@@ -16,6 +17,10 @@ export function renderTargetOptions(select, options, value) {
     }
   }
   select.value=value;
+}
+export function initialTargetSelection(region,target){
+ const options=sharedTargetOptions(region),value=target===null?region.species[0]:target;
+ return {value,options:options.some(item=>item.id===value)?options:[...options,{id:value,name:value?'Selected target · not mapped here':'Empty shared target · not mapped here',group:'Unavailable selection'}]};
 }
 export const assetURL = (key) => active.assets[key] || null;
 export function setRegion(region) {
@@ -36,15 +41,9 @@ export async function initRegion() {
   const r = await fetch(entry.config,{cache:"no-cache"});if(!r.ok) throw new Error("Region package unavailable");
   setRegion(await r.json());
   const species=document.getElementById('species-select');
-  species.replaceChildren();
-  const groups=new Map();
-  for(const target of active.target_options || []) {
-    if(!groups.has(target.group)) {const group=document.createElement('optgroup');group.label=target.group;groups.set(target.group,group);species.append(group);}
-    groups.get(target.group).append(new Option(target.name,target.id));
-  }
-  if(!species.options.length) throw Error('Regional species definitions unavailable');
-  const target=new URL(location.href).searchParams.get('target');
-  species.value=active.species.includes(target)?target:active.species[0];
+  const initial=initialTargetSelection(active,new URL(location.href).searchParams.get('target'));
+  renderTargetOptions(species,initial.options,initial.value);
+  if(!species.options.length)throw Error('Regional species definitions unavailable');
   const chooser=document.getElementById("region-select");
   const catalog=await loadCoasts(),coast=coastForPackage(active.id,catalog);
   chooser.append(new Option(`Entire ${coast.name} coast · overview`,'coastal-overview'));

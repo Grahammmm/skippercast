@@ -11,7 +11,7 @@ import re
 from .fetch import restore_private, upload_private
 from .io import sha256
 
-SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|tgz|tar\.gz|json)|[a-f0-9]{64}\.(?:tif|json))|(?:reaches|private-reaches)/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run|classified-run|classified-candidates|classified-habitat|classified-held|classified-native)\.(?:json|geojson)|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
+SAFE = re.compile(r'(?:reference/(?:cells|run)\.json|cache/[a-f0-9]{64}/(?:source\.(?:zip|bag|tif|tiff|tgz|tar\.gz|json)|[a-f0-9]{64}\.(?:tif|json))|(?:reaches|private-reaches)/[a-z0-9-]+/(?:cells|terrain|habitat|held|candidates|atlas-comparison|coverage-checkpoint|coverage-cells|physical|run|classified-run|classified-candidates|classified-habitat|classified-held|classified-native)\.(?:json|geojson)|(?:reaches|private-reaches)/[a-z0-9-]+/classified-bedrock-audit\.json|screen/(?:snapshot|source-receipts|refresh-failure|(?:cdfw-mpa|noaa-federal|security)-[a-f0-9]{64})\.json)')
 
 
 def missing(error):
@@ -105,6 +105,14 @@ def reach_paths(root, reach):
             inputs = json.loads(receipt.read_text()).get('inputs', {})
             hashes.update(r['sha256'] for r in inputs.get('sources', []))
             hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
+        classified = folder/'classified-run.json'
+        if classified.exists():
+            # Original interpretation files may not contribute to the graded
+            # bathymetry run. A clean publisher must still authenticate them.
+            sources = json.loads(classified.read_text())['inputs']['physical']['sources']
+            for source in sources:
+                hashes.add(source['depth_source']['sha256'])
+                hashes.add(source['classification_binding']['row']['sha256'])
     if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
         raise ValueError('Invalid source hash in private reach state')
     directories = folders + [base/'cache'/h for h in sorted(hashes)]

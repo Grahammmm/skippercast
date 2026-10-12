@@ -54,3 +54,32 @@ test('the boat page shows the verified badge, the reports and the booking link; 
   expect(missing?.status()).toBe(404);
   expect(pageErrors).toEqual([]);
 });
+
+// FE-55: the pages and the web chat load the v2 tokens and fonts (web/tokens.css), and the v2
+// masthead links to the chat while the advisor is on (these runs set TEXT_ADVISOR_ENABLED).
+test('the advisor pages and the chat use the v2 tokens and fonts', async ({page, pageErrors}) => {
+  for (const path of ['/ports/morro-bay', '/chat.html']) {
+    await page.goto(path);
+    const look = await page.evaluate(async () => {
+      await document.fonts.ready;
+      const root = getComputedStyle(document.documentElement), body = getComputedStyle(document.body);
+      return {bg: root.getPropertyValue('--bg').trim(), body: body.backgroundColor, font: body.fontFamily, sans: document.fonts.check('15px "DM Sans"')};
+    });
+    expect(look.bg, path).toBe('#07131d');
+    expect(look.body, path).toBe('rgb(7, 19, 29)');
+    expect(look.font, path).toMatch(/^"DM Sans"/);
+    expect(look.sans, path).toBe(true);
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('the v2 masthead links to the web chat while the advisor is on', async ({page, pageErrors}, info) => {
+  test.skip(info.project.name !== 'laptop', 'the masthead is the desktop shell');
+  await page.goto('/map?ui=v2&region=morro-bay');
+  const entry = page.locator('.app-masthead').getByRole('link', {name: 'Ask SkipperCast'});
+  await expect(entry).toHaveAttribute('href', '/chat.html');
+  await entry.click();
+  await expect(page).toHaveURL(/\/chat\.html$/);
+  await expect(page.locator('h1')).toHaveText('Text SkipperCast');
+  expect(pageErrors).toEqual([]);
+});

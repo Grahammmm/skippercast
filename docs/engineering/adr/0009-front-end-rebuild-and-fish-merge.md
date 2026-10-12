@@ -74,6 +74,57 @@
 - **Keep `fish` as a second product on the same data**: two code bases, two
   Workers, two sets of gates for one owner.
 
+## Addendum (2026-10-07): integrating `packages/coast`
+
+The status above is unchanged. Between 2026-10-06 and 2026-10-07 Codex
+merged `fish`'s client into SkipperCast as `packages/coast/` (#385 and
+follow-ups), mounted it in the v1 page as terrain presentations (#392),
+added the local report and history to v1 Conditions (#393), a bounded
+bridge to the Fish Worker (#381), readable report, RSS and information
+routes (#395), Fish link aliases in the shared store (#379, #396), one
+surface-current choice (#402) and offline snapshots (#405). The renderer is
+Three (`three` 0.180 from npm); its 2D is a camera-only top-down view, and
+`packages/coast` contains no MapLibre code. Details are in
+[design § 3A](../../plans/front-end/design.md#3a-integration-with-packagescoast-2026-10-07).
+
+This amends the decision as follows:
+
+1. **One shell.** The v2 Bridge shell (`web/app/`) remains the single
+   public shell for FE-60. Its map stage has three presentations of one
+   place, camera, selection and hour: **Chart** (MapLibre GL + PMTiles, as
+   decided in item 1, every region) and **Terrain 2D / 3D** (the
+   `packages/coast` renderer, where terrain exists). The v1 chart, the v1
+   coastal overview and `/coast` retire with the v1 shell.
+2. **Item 1** stands for the Chart presentation. `three` joins the npm
+   dependencies for the Terrain presentations and loads only by dynamic
+   import.
+3. **Item 5** is amended: "porting, not pasting" happened as the typed
+   `packages/coast` package rather than modules in `web/`. v2 imports its
+   models, field mathematics, frame gates and markup instead of porting them
+   a second time. The PNG relief pipeline and proxy (plan FE-13, FE-26) are
+   dropped: the renderer's SHA-verified terrain is the relief. The `fish`
+   collectors still move into SkipperCast before `fish` retires, now with
+   output shaped as the `packages/coast` types so the bridge's upstream can
+   switch without a client change.
+4. **Item 3** extends to `packages/coast` through a token bridge
+   (`--coast-*` properties mapped to `web/tokens.css` under an opt-in, with
+   today's literals as fallbacks so v1 pages keep their look) and a
+   shrink-only token-lint baseline for the package.
+5. **One controller.** `web/state.ts` is the single URL, profile and time
+   store for both shells; it gains `presentation`, `current` and `habitat`,
+   and `web/fish-links.ts` stays the only alias table.
+
+Consequences added: (+) the terrain the owner chose survives with its
+evidence gates, and v2 drops a relief pipeline; (+) no second port of
+`fish` code. (–) Both agents edit `packages/coast`, `web/state.ts` and the
+Worker routes, so the shared files have rules (design § 3A.6) and a
+coordination issue; (–) the renderer needs a host-chrome mode (plan FE-79)
+before the v2 rail can own its controls; (–) the Fish Worker remains a live
+dependency until the collectors and assets move (plan FE-84, FE-85).
+Ownership of each side is proposed in
+[open-questions Q14](../../plans/front-end/open-questions.md#q14-ownership-boundary-between-the-v2-shell-and-packagescoast)
+for the owner to decide.
+
 ## Links
 
 - ADR 0005; [docs/plans/front-end/](../../plans/front-end/README.md)

@@ -1,0 +1,144 @@
+{
+  "checkedAt": "2026-10-02T04:01:27.947518+00:00",
+  "scope": "Local Cloudflare Worker API verification; browser visual and interaction verification remains blocked by an unavailable administrator-policy check.",
+  "checks": [
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "status": 200,
+      "bytes": 1120,
+      "contentRange": null,
+      "etag": null,
+      "nosniff": "nosniff",
+      "countyId": "slo",
+      "generatedAt": "2026-10-02T03:55:20.899Z",
+      "dataState": "fresh",
+      "storage": "snapshot-only"
+    },
+    {
+      "path": "/api/report",
+      "method": "GET",
+      "status": 200,
+      "bytes": 656187,
+      "contentRange": null,
+      "etag": null,
+      "nosniff": "nosniff",
+      "countyId": "slo",
+      "generatedAt": "2026-10-02T03:55:20.899Z",
+      "forecastAreas": 3,
+      "tides": 1200,
+      "sources": {
+        "ndbc-46215": "ok",
+        "nws-central": "ok",
+        "nws-north": "ok",
+        "nws-south": "ok",
+        "ndbc-46028": "ok",
+        "coops-tide-events": "ok",
+        "coops-tides": "ok",
+        "nws-alerts": "ok",
+        "landing-reports": "pending",
+        "cdip-SL165": "ok",
+        "cdip-SL097": "ok",
+        "slo-beach-water-quality": "ok",
+        "cdip-SL400": "ok",
+        "cdip-SL345": "ok",
+        "cdip-SL552": "ok",
+        "cdfw-protected-areas": "ok",
+        "mur-surface-temperature": "error"
+      }
+    },
+    {
+      "path": "/api/history",
+      "method": "GET",
+      "status": 200,
+      "bytes": 607935,
+      "contentRange": null,
+      "etag": null,
+      "nosniff": "nosniff",
+      "countyId": "slo",
+      "generatedAt": "2026-10-02T03:03:23.058Z",
+      "stations": [
+        {
+          "id": "46215",
+          "availableYears": 22
+        },
+        {
+          "id": "46028",
+          "availableYears": 43
+        }
+      ]
+    },
+    {
+      "path": "/api/ocean",
+      "method": "GET",
+      "status": 200,
+      "bytes": 1527566,
+      "contentRange": null,
+      "etag": null,
+      "nosniff": "nosniff",
+      "countyId": "slo",
+      "generatedAt": "2026-10-02T03:56:16.358Z",
+      "currents": [
+        "wcofs",
+        "hfr-1",
+        "hfr-6"
+      ],
+      "cloudObservedAt": "2026-10-02T03:53:00.000Z"
+    },
+    {
+      "path": "/api/bathymetry/tiles",
+      "method": "GET",
+      "status": 206,
+      "bytes": 16384,
+      "contentRange": "bytes 0-16383/12044691",
+      "etag": "\"sha256-f4a5910129f96da4a27f7b50f36bf215a1ab17b4959e933345b8ab5ed53447ec\"",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/api/habitat/tiles?region=morro-bay",
+      "method": "GET",
+      "status": 206,
+      "bytes": 16384,
+      "contentRange": "bytes 0-16383/15286042",
+      "etag": "\"0e6c8b3610c602fa8be45cf18f7e8530\"",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/api/habitat/tiles?region=cambria-san-simeon",
+      "method": "GET",
+      "status": 206,
+      "bytes": 16384,
+      "contentRange": "bytes 0-16383/627444",
+      "etag": "\"f4597f879575ec3fc0484e6b79a73bae\"",
+      "nosniff": "nosniff"
+    }
+  ],
+  "tests": {
+    "typecheck": "passed",
+    "node": {
+      "passed": 124,
+      "failed": 0
+    },
+    "nativeRasterPython": {
+      "passed": 5,
+      "failed": 0
+    },
+    "sqliteMigrations": "0001 and 0002 applied; upsert, county/kind isolation and kind constraint verified",
+    "build": "passed"
+  },
+  "initialHabitatCheck": [
+    {
+      "path": "/api/habitat/tiles?region=morro-bay",
+      "status": 503,
+      "error": ""
+    },
+    {
+      "path": "/api/habitat/tiles?region=cambria",
+      "status": 404,
+      "error": ""
+    }
+  ],
+  "initialHabitatCheckNote": "The first probe used an abbreviated unregistered second region ID and the pinned reviewed release had changed upstream. The importer revalidated the current official releases, and the corrected probes below use the actual registered IDs.",
+  "finalHabitatCheckedAt": "2026-10-02T04:04:28.751Z",
+  "passed": true
+}

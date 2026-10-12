@@ -280,7 +280,7 @@ dbTest('other activity tables take their documented defaults', async () => {
 // US-B4: a skipper report and a landing report for a boat's trip date both resolve to the
 // AIS trip through the fleet_trip_reports keys, with plain SQL. Landing reports live in the
 // daily feed (id, boat, port, date), not D1; the fixture loads feed rows into a temp table
-// with the port already resolved to a region port id. Pairing code is a later task (CF-45).
+// with the port already resolved to a region port id. The pairing code is server/fleet/pairing.ts (#345).
 dbTest('US-B4 join fixture: advisor and landing reports resolve to the trip', async () => {
   const sql = await upTo(14);
   sql.prepare(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,port_id,mmsi,first_seen_at,last_seen_at,created_at,updated_at)

@@ -72,20 +72,26 @@ class ActivityThresholds:
     max_open_trip_hours: Mapping[str, float]
     window_min: float
     min_segment_minutes: float
+    offshore_min_nm: float
     drift_max_sog_kn: float
     drift_min_minutes: float
-    troll_min_sog_kn: float
-    troll_max_sog_kn: float
-    troll_max_straightness: float
-    troll_min_heading_variance: float
-    troll_min_minutes: float
+    troll_slow_min_sog_kn: float
+    troll_slow_max_sog_kn: float
+    troll_slow_max_straightness: float
+    troll_slow_min_heading_variance: float
+    troll_slow_min_minutes: float
+    troll_pelagic_min_sog_kn: float
+    troll_pelagic_max_sog_kn: float
+    troll_pelagic_stop_max_minutes: float
+    troll_pelagic_min_minutes: float
+    transit_min_straightness: float
     raw: Mapping[str, Any]
 
     @classmethod
     def from_mapping(cls, thresholds: Mapping[str, Any]) -> "ActivityThresholds":
         """From a region's ``thresholds`` (or just its ``activity`` member)."""
         activity = thresholds["activity"] if "activity" in thresholds else thresholds
-        drift, troll = activity["drift"], activity["troll"]
+        drift, slow, pelagic = activity["drift"], activity["troll_slow"], activity["troll_pelagic"]
         return cls(
             in_port_debounce_min=float(activity["in_port_debounce_min"]),
             min_trip_minutes=float(activity["min_trip_minutes"]),
@@ -95,13 +101,19 @@ class ActivityThresholds:
             max_open_trip_hours={str(k): float(v) for k, v in activity["max_open_trip_hours"].items()},
             window_min=float(activity["window_min"]),
             min_segment_minutes=float(activity["min_segment_minutes"]),
+            offshore_min_nm=float(activity["offshore_min_nm"]),
             drift_max_sog_kn=float(drift["max_sog_kn"]),
             drift_min_minutes=float(drift["min_minutes"]),
-            troll_min_sog_kn=float(troll["min_sog_kn"]),
-            troll_max_sog_kn=float(troll["max_sog_kn"]),
-            troll_max_straightness=float(troll["max_straightness"]),
-            troll_min_heading_variance=float(troll["min_heading_variance"]),
-            troll_min_minutes=float(troll["min_minutes"]),
+            troll_slow_min_sog_kn=float(slow["min_sog_kn"]),
+            troll_slow_max_sog_kn=float(slow["max_sog_kn"]),
+            troll_slow_max_straightness=float(slow["max_straightness"]),
+            troll_slow_min_heading_variance=float(slow["min_heading_variance"]),
+            troll_slow_min_minutes=float(slow["min_minutes"]),
+            troll_pelagic_min_sog_kn=float(pelagic["min_sog_kn"]),
+            troll_pelagic_max_sog_kn=float(pelagic["max_sog_kn"]),
+            troll_pelagic_stop_max_minutes=float(pelagic["stop_max_minutes"]),
+            troll_pelagic_min_minutes=float(pelagic["min_minutes"]),
+            transit_min_straightness=float(activity["transit"]["min_straightness"]),
             raw=_plain(activity),
         )
 

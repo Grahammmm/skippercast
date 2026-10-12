@@ -113,7 +113,7 @@ fi
 # The zone must already be active on this Cloudflare account (docs/cloudflare.md).
 # ENABLE_QUEUES / ENABLE_ANALYTICS / ENABLE_ADVISOR ("true") add the optional bindings; the script reads them
 # from the environment, and with ENABLE_ADVISOR also copies TEXT_ADVISOR_ENABLED, BLUEBUBBLES_PRIVATE_API and
-# ADVISOR_* into the Worker's vars. FLEET_ENABLED and FLEET_MAP_ENABLED (charter fleet switches, no bindings) are copied whenever set.
+# ADVISOR_* into the Worker's vars. FLEET_ENABLED, FLEET_MAP_ENABLED and FLEET_PUBLIC_HEAT_ENABLED (charter fleet switches, no bindings) are copied whenever set.
 node scripts/wrangler_config.mjs "$id" "$BUCKET" "$CONFIG" "${CUSTOM_DOMAINS:-}"
 
 # Before touching the schema, keep a way back. D1 Time Travel can restore to any
@@ -134,6 +134,22 @@ rm -f "$backup"
 echo "D1 export saved to r2://$BACKUP_BUCKET/d1/$stamp-${GITHUB_SHA:-local}.sql"
 
 $WRANGLER d1 migrations apply "$DB_NAME" --remote --config "$CONFIG"
+# Record the version serving traffic now, so a failed smoke test can roll back to it.
+# A bare `wrangler rollback` would not: the secrets upload below adds a second deployment,
+# and Wrangler would pick this commit's own code version (#568). Empty on the first deploy.
+previous_version=""
+if $WRANGLER deployments list --json --config "$CONFIG" > var/deployments.json 2>/dev/null; then
+  previous_version=$(node scripts/worker_versions.mjs live var/deployments.json 2>/dev/null || true)
+fi
+rm -f var/deployments.json
+echo "Live Worker version before this deploy: ${previous_version:-none}"
+if [ -n "${GITHUB_OUTPUT:-}" ] && [ -n "$previous_version" ]; then echo "previous_version=$previous_version" >> "$GITHUB_OUTPUT"; fi
+# The build id this deploy serves (pages are NAME.<build>.html), for checking a rollback took effect.
+build=""
+for page in dist/client/*.html; do
+  if [[ "$page" =~ \.([0-9a-f]{10})\.html$ ]]; then build=${BASH_REMATCH[1]}; break; fi
+done
+if [ -n "${GITHUB_OUTPUT:-}" ] && [ -n "$build" ]; then echo "build=$build" >> "$GITHUB_OUTPUT"; fi
 $WRANGLER deploy --config "$CONFIG" --message "${GITHUB_SHA:-local} run ${GITHUB_RUN_ID:-local}"
 if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "deployed=true" >> "$GITHUB_OUTPUT"; fi
 

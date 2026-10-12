@@ -147,7 +147,7 @@ export function renderOutlook(rows, point) {
   const best = valid[0],
     qualifying = valid.filter((r) => r.conditions >= 8);
   const bestLabel=best?.conditions<4?"Least rough outlook":best?.confidence==="Low"?"Tentative best":"Best";
-  // The header badge (#best-day-banner) is web/components/OutlookBadge.tsx.
+  // The header badge (#best-day-banner) is web/views.ts.
   outlook.value = {
     label: best ? (comfortOnly?"Daytime boat comfort":best.conditions<4?"Least rough outlook":best.confidence === "Low" ? "Tentative conditions" : best.provisional ? "Provisional best" : "Best conditions") : "7-day outlook",
     value: best ? `${local(best.time, { weekday: "short" })} · ${num(best.conditions)}/10` : "Check conditions",

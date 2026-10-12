@@ -285,6 +285,10 @@ export function sourceRightsDetails(value) {
 export function habitatDetails(properties = {}) {
   const searchArea = properties.status === 'search-area';
   const classifiedArea = properties.status === 'classified-area';
+  const classified = parse(properties.classified_area);
+  const classifiedBedrock = classifiedArea
+    && classified?.profile === 'original-interpreted-bedrock-area-v1'
+    && classified?.interpretation_method === 'original-interpreted-bedrock-v1';
   const search = parse(properties.search_area);
   const sources = parse(properties.source_ids);
   const screen = parse(properties.screen);
@@ -297,8 +301,9 @@ export function habitatDetails(properties = {}) {
   }));
   return {
     rights: sourceRightsDetails(properties.source_rights),
-    title: classifiedArea ? 'Publisher-interpreted rugose-rock habitat area' : searchArea ? 'Measured rough-bottom search area' : HABITAT_LABEL,
+    title: classifiedBedrock ? 'Publisher-interpreted exposed-bedrock habitat area' : classifiedArea ? 'Publisher-interpreted rugose-rock habitat area' : searchArea ? 'Measured rough-bottom search area' : HABITAT_LABEL,
     classifiedArea,
+    classifiedBedrock,
     searchArea,
     searchTargets: searchArea && Array.isArray(search?.target_species) ? search.target_species : [],
     depth: classifiedArea ? 'Within nominal 25–300 ft band' : lo !== null && hi !== null ? `${lo}–${hi} ft nominal` : 'Depth unknown',

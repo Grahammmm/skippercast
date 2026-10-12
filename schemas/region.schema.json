@@ -171,6 +171,33 @@
         "unavailable_target_sources": {"type": "object", "additionalProperties": {"$ref": "common.schema.json#/$defs/https_url"}}
       }
     },
+    "basemap": {
+      "description": "Optional base layers offered where their coverage was checked for this region (FE-45). An absent key means the base is not offered here. validate_region checks the catalog source and the date order.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "aerial": {
+          "description": "Live aerial tiles from a catalog source (usgs-naip). acquired is the acquisition window the publisher's catalog listed for the region bounds on checked_at.",
+          "type": "object",
+          "required": ["source", "checked_at", "acquired", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "source": {"$ref": "common.schema.json#/$defs/id"},
+            "checked_at": {"$ref": "common.schema.json#/$defs/date"},
+            "acquired": {
+              "type": "object",
+              "required": ["first", "last"],
+              "additionalProperties": false,
+              "properties": {
+                "first": {"$ref": "common.schema.json#/$defs/date"},
+                "last": {"$ref": "common.schema.json#/$defs/date"}
+              }
+            },
+            "note": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
     "coverage": {
       "description": "Reviewed evidence per need; need_status() only reads status and reason.",
       "type": "object",
@@ -249,6 +276,81 @@
       "type": "object",
       "required": ["tide", "airport", "nearshore_buoy", "offshore_buoy", "nearshore_buoy_name", "offshore_buoy_name"],
       "properties": {
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nearshore_buoy": {
+              "type": "object",
+              "required": [
+                "stations"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "stations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9]{5}$"
+                  }
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "offshore_buoy": {
+              "type": "object",
+              "required": [
+                "stations"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "stations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9]{5}$"
+                  }
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "tide": {
+              "type": "object",
+              "required": [
+                "stations"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "stations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^\\d{7}$"
+                  }
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
         "tide": {"type": "string", "pattern": "^\\d{7}$"},
         "airport": {"type": "string", "pattern": "^[A-Z0-9]{4}$"},
         "nearshore_buoy": {"type": "string", "pattern": "^[A-Za-z0-9]{5}$"},

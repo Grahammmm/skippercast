@@ -9,6 +9,7 @@ from pathlib import Path
 from .collect import publication, source, stamp
 from .parsers import ndbc
 from .settings import settings, previous_for_region
+from .failover import station_chain, ordered_source
 
 def collect(now=None, previous=None, region_id="morro-bay"):
     now = now or datetime.now(timezone.utc)
@@ -18,6 +19,12 @@ def collect(now=None, previous=None, region_id="morro-bay"):
     buoys = (("diablo", station["nearshore_buoy"], station["nearshore_buoy_name"], False),
              ("diablo-spectrum", station["nearshore_buoy"], station["nearshore_buoy_name"] + " swell and wind waves", True),
              ("offshore", station["offshore_buoy"], station["offshore_buoy_name"], False))
+
+    role_chains = {}
+    for local in [station, *[c["stations"] for c in region.get("contexts", {}).values()]]:
+        for role in ("nearshore_buoy", "offshore_buoy"):
+            if role in local.get("roles", {}):
+                role_chains[local[role]] = station_chain(local, role)
 
     aliases = {key: f"buoy-{ident}{'-spectrum' if spectral else ''}" for key, ident, _, spectral in buoys}
     unique = {}
@@ -32,6 +39,20 @@ def collect(now=None, previous=None, region_id="morro-bay"):
 
     def one(item):
         ident, station, name, spectral = item
+        if station in role_chains:
+            primary = station
+            def read_station(used, old):
+                url = f"https://www.ndbc.noaa.gov/data/realtime2/{used}.{'spec' if spectral else 'txt'}"
+                def load(client):
+                    data = ndbc(client.get(url), used, spectral)
+                    data["observations"] = sorted(data["observations"], key=lambda r: r["time"], reverse=True)[:24]
+                    return data
+                backup_name = f"NOAA NDBC {used}" + (" swell and wind waves" if spectral else " observations")
+                return source(ident, name if used == primary else backup_name,
+                              "observation", url, 2, load, now, old)
+            row = ordered_source(role_chains[station], read_station, now, previous.get("sources", {}).get(ident))
+            row["station_url"] = f"https://www.ndbc.noaa.gov/station_page.php?station={row['station']}"
+            return ident, row
         url = f"https://www.ndbc.noaa.gov/data/realtime2/{station}.{'spec' if spectral else 'txt'}"
 
         def read(client):
@@ -47,7 +68,7 @@ def collect(now=None, previous=None, region_id="morro-bay"):
 
     with ThreadPoolExecutor(max_workers=3) as pool:
         sources = dict(pool.map(one, buoys))
-    issues=[key for key,s in sources.items() if s["status"]!="ok"]
+    issues=[key for key,s in sources.items() if s["status"]!="ok" or s.get("fallback_for")]
     for alias, key in aliases.items(): sources[alias]={**sources[key],"id":alias}
     return {
         "schema_version": 1,
@@ -58,7 +79,7 @@ def collect(now=None, previous=None, region_id="morro-bay"):
         "schedule_minutes": 30,
         "sources": sources,
         "health": {
-            "status": "ok" if all(s["status"] == "ok" for s in sources.values()) else "degraded",
+            "status": "ok" if all(s["status"] == "ok" and not s.get("fallback_for") for s in sources.values()) else "degraded",
             "issues": issues,
         },
     }

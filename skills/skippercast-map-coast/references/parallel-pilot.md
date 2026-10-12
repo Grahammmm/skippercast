@@ -4,6 +4,9 @@ Use this procedure when the owner requests parallel mapping or a timed pilot.
 The duration is an observation window, not permission to prolong a blocked
 batch. Record the UTC start and deadline and the user's reporting preferences
 in the existing coordination issue and private progress checkpoint.
+Apply [run progress control](progress-control.md) before filling the pool and at
+every stage boundary. Its cumulative allowance and no-public-progress stop
+survive task reassignment, diagnostics, repairs and intermediate successes.
 
 ## Choose one release before filling the worker pool
 
@@ -29,7 +32,10 @@ For the classified-habitat production path and release gates, follow
 
 Use the concurrency available in the current session; do not assume that a
 requested increase overrides its hard limit. A useful starting arrangement is
-one coordinator, two bounded source/processing workers and one reviewer.
+one coordinator, one bounded execution worker when useful, and an independent
+reviewer when an artifact is ready. Do not keep idle review or observer agents
+sampling. Add a second execution worker after a complete calibration release
+only when remaining allowance and downstream capacity justify it.
 Reassign an idle source slot to implementation when that is the bottleneck.
 
 - The coordinator owns integration decisions and shared skills/state. It may
@@ -65,12 +71,24 @@ other active chats and agents for the same source/reach/method. Never commit to
 another worker's branch. Use focused branches and the existing protected PR
 flow; two independent branches can run concurrently, shared writes cannot.
 
-Where the owner permits model selection, focused qualification and deterministic
-run supervision can use an economical model such as Luna with sufficient
-reasoning effort. Use Sol for integration, ambiguous code changes and independent
-review. Respect an explicit user choice; do not silently switch the coordinator
-or escalate to Astra. Give fresh workers a bounded brief and relevant paths,
-not the full conversation. Model names are choices, not measured cost savings.
+Where the owner permits model selection, start with a Sol coordinator at medium
+reasoning effort, one Luna worker at medium effort for bounded qualification
+and established deterministic processing when useful, and a Sol reviewer when
+an artifact is ready. Add execution capacity only after calibration. Use higher
+review effort for scientific method or ambiguous geometry changes. Respect the
+current session's hard concurrency limit; these four roles include the coordinator.
+This is a suggested allocation, not permission to switch an explicit user model.
+Do not escalate to Astra without owner authorization. Give fresh workers the
+compact manifest in [overnight-contract.md](overnight-contract.md), not the full
+conversation. Models supervise scripts; they do not repeatedly inspect unchanged
+jobs. Model names are choices, not measured token or billing savings.
+
+An optional second session can own read-only review and receipt comparison.
+Use Sol for scientific review; Luna can perform bounded source and receipt
+checks. Neither session changes the other's branch, shared claim state or
+publication state. Record that ownership before dispatch; the coordinator alone
+integrates and publishes unless one release operator is explicitly designated.
+A second session is not automatically created or messaged by loading this skill.
 
 ## Require a handoff that can be executed
 
@@ -97,10 +115,27 @@ union. Count features by unique verified native feature IDs, not union component
 or tile fragments. IDs alone do not establish new physical-area expansion.
 Invalid geometry cannot enter a public batch.
 
+For original geologic bedrock polygons, the private
+`skippercast.seafloor.bedrock_vectors` kernel can intersect an already qualified
+native depth window. Qualify exposed units and retain lithology uncertainty;
+exclude sediment-covered units and hold invalid original records without repair.
+Require the normalized `depth_m_positive_down` band, a matching projected metre
+CRS and windows no larger than 512 by 512 pixels. Keep shallow knowledge separate.
+Assemble adjacent window fragments by original record before subtracting a
+qualified native baseline and applying the connected-component area rule. A
+source record may contain several disconnected components; its total area is
+not their individual acceptance. Source attribution, datum, coverage and rights
+validation belong to the caller. This private kernel does not implement vector
+source admission, current spatial screens, ranking, map output or exports.
+Never relabel a geologic bedrock unit as a raster rugose class or count a private
+window result as additional habitat before baseline comparison and publication.
+
 ## Switch work instead of repeating failure
 
 Keep physical mapping independent of final publication holds. A held source can
-produce private evidence while another qualified batch advances. After two
+produce one scoped private deliverable within the run allowance while another
+executable batch advances. Validated held candidates still count toward the
+two-handoff cap. After two
 failed attempts at the same problem, change source, reach or method using the
 diagnostic evidence. Within 20 active investigation minutes, require a usable
 batch or a demonstrated release-blocker fix. New metadata or debugging output
@@ -170,10 +205,13 @@ not work around the restriction with credentialed access.
 
 ## Checkpoint and reconcile
 
-For the owner's requested pilot, give brief updates about every three minutes
-of active work and a milestone summary every 15 minutes. Summarize new evidence,
-the deliverable, remaining blocker and next action. Do not manufacture activity
-updates while an unchanged deterministic job runs. Save completed commands and
+Honor the owner's reporting cadence. The interactive pilot uses brief updates
+about every three active minutes and a milestone summary every 15 minutes;
+unattended overnight mode uses hourly outcome summaries plus material failures,
+completion or required action. Normal tool-driven turns still follow the host's
+communication requirements. Summarize new evidence, the deliverable, remaining
+blocker and next action. Do not manufacture updates or keep a model sampling
+while an unchanged deterministic job runs. Save completed commands and
 evidence before a turn ends or a worker changes tasks.
 
 Honor the user's active-work cap. Record deterministic background wall time
@@ -220,3 +258,7 @@ Do not promise a linear speedup or double a pool automatically. If concurrency
 is capped, explain that limit and propose a separately authorized configuration
 or subsequent trial. Preserve the next ready batch and unresolved dependencies
 in the same checkpoint so the next session resumes instead of re-auditing.
+
+## Original geologic bedrock batch
+
+The reviewed SIM3327 method uses an explicit `original-interpreted-bedrock-v1` policy with authenticated original vectors, pure bedrock units, invalid-record holds and nonoverlapping `native_windows`. It is a separate interpretation from rugose raster class3. The normal classified stage reconstructs current canonical graded exclusions and earlier original classified geometry; no manual runner baseline artifact is required. Default selected-source support uses only the paired source's winning Tier1 cells. Broader footprint support requires the explicit paired-reference mode, verified dependencies and all producer terms. Before growing a window set, test positive additional native habitat and preserve prior geometry identities. Processing-window edges do not establish reef edges. Source activation, current screens and complete public map/export readback remain separate gates.
