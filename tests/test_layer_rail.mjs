@@ -210,6 +210,8 @@ test('the base choice: Night and Chart detail everywhere, Aerial where offered, 
   const html = baseChoice(m.render(m.h(m.LayerRail)));
   assert.match(html, /<label class="app-rail-source">Base<select aria-describedby="app-rail-base-note"><option value="night">Night<\/option><option selected value="chart">Chart detail<\/option><\/select><\/label>/);
   assert.match(html, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Base basis">/);
+  // #620: the grade filter shares the row, its meaning read with it and kept out of its label.
+  assert.match(html, /<label class="app-rail-source app-rail-grade">Grade<select aria-describedby="app-rail-grade-meaning"><option selected value="all">All<\/option><option value="ab">A and B<\/option><option value="a">A only<\/option><\/select><\/label><span id="app-rail-grade-meaning" class="app-visually-hidden">Terrain grade ranks search priority from surveys, not catch\./);
   assert.match(html, /Chart detail: NOAA electronic navigational chart display service, drawn from zoom 10; for planning, never for navigation\./);
   assert.match(html, /class="ui-rail-note ui-mono">from zoom 10</);
 });

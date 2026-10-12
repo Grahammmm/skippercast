@@ -23,10 +23,10 @@
 // package offers it (FE-23), so a link's `?base=chart` can be chosen again.
 // The bases draw on the Chart only; `?base=aerial` where no aerial is offered
 // shows Night, which is what draws.
-// Walkthrough slice 3 (#620): the rail opens with what to look for, the target
-// species ("Look for": the command bar's list, bound to the same `?target=`) and the terrain
-// grade filter (`?grade=`, web/grade.ts, beside the base), which narrows the reef
-// marks, their density below zoom 10 and the seafloor candidates together.
+// Walkthrough slice 3 (#620): the terrain grade filter (`?grade=`, web/grade.ts)
+// shares the base row and narrows the reef marks, their density below zoom 10 and
+// the seafloor candidates together. In the phone's Layers sheet the rail also opens
+// with the target species ("Look for": the command bar's list, the same `?target=`).
 import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam, parseGrade} from '../grade.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {regionTargets, targetGroups} from '../species.ts';
