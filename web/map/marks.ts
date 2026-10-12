@@ -26,6 +26,7 @@ import {loadMpas, mpaQuery, validMpas} from './mpa.ts';
 import type {Palette} from './palette.ts';
 import {LABEL_FONT} from './style.ts';
 import {coastSpecies, shownPresentation, terrainDetail, terrainMark} from './stage.ts';
+import {atlasMarksURL} from '../startup-forms.ts';
 
 /** The pickable layers: a 44 px transparent target under each mark ring, and the two kinds of outline. */
 export const MARK_PICK = 'marks-target';
@@ -196,9 +197,11 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
   async function read(id: string, current: number): Promise<void> {
     const meta = await json(`regions/${encodeURIComponent(id)}/region.json`) as RegionData;
     void screen(id, meta, current).catch(() => { if (current === run) setScreen({areas: null, checkedAt: null, live: false}); });
-    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean): Promise<T | null> => {
+    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean, light?: string): Promise<T | null> => {
       const path = meta.assets?.[key];
       if (!path) return null;
+      // #617: the region's startup copy first (web/startup-forms.ts); the full file when the copy is missing or wrong.
+      if (light) try { const d = await json(light); if (valid(d as never)) return d as T; } catch { /* the full file below */ }
       try {
         const d = await json(path);
         if (!valid(d as never)) throw new Error(`${path} is not ${id}'s ${key}`);
@@ -206,7 +209,7 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
       } catch (error) { if (current === run) onError(layer, error); return null; }
     };
     const [atlas, survey, geology] = await Promise.all([
-      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets)),
+      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets), atlasMarksURL(id)),
       part<Survey>('survey_habitat', 'habitat', (d: Survey | null) => isCollection(d, id)),
       part<Geology>('geology', 'habitat', (d: Geology | null) => isCollection(d, id)),
     ]);

@@ -16,6 +16,7 @@ import {build} from 'esbuild';
 import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_landing_shoreline.mjs';
 import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, placeLabel, tideReading, tideURL} from '../web/landing/readings.ts';
 import {saveData} from '../web/landing/save-data.ts';
+import {warmApp, warmList} from '../web/landing/warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -287,7 +288,7 @@ test('the night map draws the first listed source with a fresh frame, the night 
   const style = nightStyle(palette, 'https://s.test/feeds/tiles/basemap/a.pmtiles', 'https://s.test/?ui=v2', 'morro-bay');
   assert.equal(style.name, 'SkipperCast basemap (night)');
   assert.equal(style.glyphs, 'https://s.test/basemap/glyphs/{fontstack}/{range}.pbf');
-  assert.equal(style.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  assert.equal(style.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson', 'the light overview shoreline (#617)');
   assert.deepEqual(style.layers.slice(-2).map(l => [l.id, l.paint['line-color'], l.paint['line-opacity']]), [['coastline-glow', 'token(depth-0)', 0.45], ['coastline', 'token(flow)', 0.9]], 'the coastline last, in the SVG\'s glow');
   const colours = style.layers.flatMap(l => Object.entries(l.paint ?? {}).filter(([k]) => k.endsWith('-color')).map(([, v]) => v));
   assert.ok(colours.length > 5 && colours.every(v => /^token\([a-z0-9-]+\)$/.test(v)), 'every colour is a token');
@@ -332,4 +333,18 @@ test('the Currents preview dims the map only while streamlines are drawn (FE-25 
   const css = readFileSync(join(ROOT, 'web/landing/landing.css'), 'utf8');
   const dims = [...css.matchAll(/^([^{}\n]*maplibregl-canvas[^{}\n]*)\{[^}]*opacity:\s*0\.45/gm)].map(m => m[1].trim());
   assert.deepEqual(dims, ['.landing[data-preview="currents"] .landing-night[data-currents="drawn"] .maplibregl-canvas'], 'the only dimming rule needs drawn streamlines');
+});
+
+test('the landing warms the app\'s first-paint files once, at low priority, and nothing under Save-Data (#617)', async () => {
+  const list = {warm: ['/assets/app.1111111111.js', '/assets/app.2222222222.css', 'https://elsewhere.test/x.js', '/regions/morro-bay/region.json', 7]};
+  assert.deepEqual(warmList(list), ['/assets/app.1111111111.js', '/assets/app.2222222222.css'], 'hashed same-origin assets only, never region data');
+  assert.deepEqual(warmList(null), []);
+  const asked = [];
+  const fetchFn = async (url, init) => { asked.push([url, init?.priority ?? init?.cache]); return {ok: true, json: async () => list, blob: async () => new Blob([])}; };
+  assert.deepEqual(await warmApp(fetchFn, {connection: {saveData: false}}), ['/assets/app.1111111111.js', '/assets/app.2222222222.css']);
+  assert.deepEqual(asked, [['/precache.json', 'no-cache'], ['/assets/app.1111111111.js', 'low'], ['/assets/app.2222222222.css', 'low']]);
+  asked.length = 0;
+  assert.deepEqual(await warmApp(fetchFn, {connection: {saveData: true}}), []);
+  assert.deepEqual(asked, [], 'Save-Data: no request at all');
+  assert.deepEqual(await warmApp(async () => { throw new Error('offline'); }, {}), [], 'a failure is quiet');
 });

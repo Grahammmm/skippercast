@@ -150,4 +150,17 @@ test('the region\'s plans load for that region only', async () => {
   await loadPlans('morro-bay', async () => ({ok: false}));
   assert.equal(regionPlans.value.region, 'morro-bay', 'a failed load keeps what was listed');
   regionPlans.value = null;
+  // #617: the search-plan index first; the full plans only when the index fails.
+  const index = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/search-plan-index.json', import.meta.url), 'utf8'));
+  assert.deepEqual(index.profiles, PLANS, 'the committed index carries every plan profile');
+  for (const failIndex of [false, true]) {
+    const asked = [];
+    await loadPlans('morro-bay', async url => {
+      asked.push(String(url));
+      return failIndex && String(url).endsWith('search-plan-index.json') ? {ok: false} : {ok: true, json: async () => ({region_id: 'morro-bay', profiles: PLANS})};
+    });
+    assert.deepEqual(asked, ['regions/morro-bay/search-plan-index.json', ...failIndex ? ['regions/morro-bay/search-plans.json'] : []]);
+    assert.equal(regionPlans.value.region, 'morro-bay');
+    regionPlans.value = null;
+  }
 });

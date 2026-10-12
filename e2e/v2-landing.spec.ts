@@ -387,3 +387,32 @@ test('with WebGL disabled the landing keeps the shoreline SVG, never fetches Map
   await checkA11y(page, 'v2-landing-no-webgl', info.project.name);
   expect(pageErrors).toEqual([]);
 });
+
+// #617: after its first paint the landing fetches the app's first-paint files (precache.json `warm`) at low
+// priority, and opening the app loads each of them, so the browser cache answers; Save-Data warms nothing.
+test('the landing warms the app\'s first-paint files, and none under Save-Data', async ({page, browser, baseURL, pageErrors}, info) => {
+  test.skip(info.project.name !== 'phone', 'checked once');
+  const precache = await (await page.request.get('/precache.json')).json() as {warm: string[]};
+  expect(precache.warm.length, 'the app has files the landing does not load itself').toBeGreaterThan(0);
+  const seen = new Set<string>();
+  page.on('request', r => { const u = new URL(r.url()); if (u.origin === new URL(baseURL!).origin) seen.add(u.pathname); });
+  await page.goto('/');
+  await expect.poll(() => precache.warm.filter(p => !seen.has(p)), {timeout: 30_000}).toEqual([]);
+  expect(precache.warm.filter(p => !p.startsWith('/assets/')), 'only hashed app files are warmed, nothing region-specific').toEqual([]);
+  seen.clear();
+  await page.goto(SHELL);
+  await expect(page.locator('.app-chart')).toBeVisible();
+  await expect.poll(() => precache.warm.filter(p => !seen.has(p)), {message: 'every warmed file is one the app loads'}).toEqual([]);
+  expect(pageErrors).toEqual([]);
+
+  const saving = await browser.newContext({baseURL, serviceWorkers: 'block'});
+  await saving.route(url => url.origin !== new URL(baseURL!).origin, route => route.abort('blockedbyclient'));
+  await saving.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true}, configurable: true}));
+  const quiet = await saving.newPage(), asked: string[] = [];
+  quiet.on('request', r => asked.push(new URL(r.url()).pathname));
+  await quiet.goto('/');
+  await expect(quiet.locator('#landing-app input')).toBeVisible();
+  await quiet.waitForTimeout(1500);
+  expect(asked.filter(p => p === '/precache.json' || precache.warm.includes(p)), 'Save-Data: no warm-up').toEqual([]);
+  await saving.close();
+});

@@ -204,7 +204,7 @@ test('prefers-reduced-motion never auto-plays: the button steps one hour per pre
 
 test('the Chart draws the basemap and the Morro Bay coastline with their attribution', async ({page, pageErrors, v2}) => {
   const fetched: string[] = [];
-  page.on('response', response => { if (/ca-coast-fixture\.pmtiles|shoreline\.geojson/.test(response.url())) fetched.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+  page.on('response', response => { if (/ca-coast-fixture\.pmtiles|shoreline(?:-overview)?\.geojson/.test(response.url())) fetched.push(`${response.status()} ${new URL(response.url()).pathname}`); });
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,11'});
   const chart = page.locator('.app-chart');
@@ -213,15 +213,26 @@ test('the Chart draws the basemap and the Morro Bay coastline with their attribu
   await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('NOAA NGS · CUSP shoreline');
   await expect(chart.locator('.maplibregl-ctrl-scale')).toHaveText(/nm|ft/);
   await expect.poll(() => fetched.some(f => f.startsWith('206 /feeds/tiles/basemap/')), {message: 'the basemap is read by range'}).toBe(true);
-  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline.geojson');
+  // #617: below the detail zoom the Chart draws the overview shoreline only.
+  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline-overview.geojson');
+  expect(fetched.filter(f => f.endsWith('/shoreline.geojson')), 'no full shoreline at the opening zoom').toEqual([]);
   await expect(chart).toHaveAttribute('data-view', '35.38000,-120.88000,11');
   await expect(page.locator('[data-unavailable]')).toHaveCount(0);
   await v2.a11y('v2-map-chart-engine');
+  // At ?view= zoom 13 (MapLibre 12) it opens on the full shoreline, read once.
+  fetched.length = 0;
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,13'});
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline.geojson');
+  await page.waitForTimeout(1000);
+  expect(fetched.filter(f => f.includes('/shoreline')), 'the full shoreline once, no overview').toEqual(['200 /regions/morro-bay/shoreline.geojson']);
   expect(pageErrors).toEqual([]);
 });
 
 test('a failing coastline marks only its layer unavailable; the basemap keeps drawing', async ({page, v2}) => {
-  await page.route('**/regions/morro-bay/shoreline.geojson', route => route.fulfill({status: 503, body: 'Offline map test'}));
+  // #617: a failed overview shoreline falls back to the full one; only when both fail is the layer unavailable.
+  const asked: string[] = [];
+  await page.route(/\/regions\/morro-bay\/shoreline(?:-overview)?\.geojson$/, route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({status: 503, body: 'Offline map test'}); });
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart'});
   if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
@@ -229,6 +240,7 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   await expect(page.locator('[data-unavailable]')).toHaveCount(1);
   await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
 });
 
 test('Chart → 3D → Chart keeps the centre within one zoom step', async ({page, v2}) => {

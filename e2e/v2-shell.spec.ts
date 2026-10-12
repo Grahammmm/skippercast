@@ -139,11 +139,15 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
   expect(pageErrors).toEqual([]);
 });
 
-test('the shell paints within the LCP budget on the throttled mobile profile', async ({pageErrors, v2}, info) => {
+test('the shell paints within the LCP budget on the throttled mobile profile', async ({page, pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
   // The shell on the Night base is the design § 13 budget; Morro Bay opens on Aerial, whose tiles land later (owner's call).
   const lcp = await v2.lcp('app', {...AREA, base: 'night'});
   console.log(`v2 app shell LCP ${Math.round(lcp)} ms (budget ${LCP_BUDGET_MS}, design § 13)`);
+  // #617: the coast poster (web/map/poster.ts) is an inline path, never the LCP element; reported, and gone once the map has drawn.
+  const [poster, idle] = await page.evaluate(() => ['skippercast-poster', 'skippercast-chart-idle'].map(n => performance.getEntriesByName(n)[0]?.startTime ?? null));
+  console.log(`v2 app coast poster ${poster === null ? 'not shown (the map drew first)' : `${Math.round(poster)} ms`}; Chart first complete frame ${idle === null ? 'none' : `${Math.round(idle)} ms`}`);
+  await expect(page.locator('.app-poster')).toHaveCount(0);
   expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
   expect(lcp).toBeLessThanOrEqual(LCP_BUDGET_MS);
   expect(pageErrors).toEqual([]);

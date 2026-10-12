@@ -119,6 +119,11 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* FE-11: MapLibre draws into .app-chart (web/map/chart.ts); its chrome is web/map/chart.css. */
 .app-map .app-chart { position: absolute; inset: 0; }
 .app-map .app-chart[hidden] { display: none; }
+/* #617: the poster (MapStage.tsx ChartPoster) over the empty Chart, drawn as the coastline glow, until the map's first frame. */
+.app-map .app-poster { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; overflow: visible; }
+.app-poster path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.app-poster-glow { stroke: var(--blue); stroke-width: 5px; stroke-opacity: 0.28; }
+.app-poster-line { stroke: var(--muted); stroke-width: 1px; stroke-opacity: 0.85; }
 .app-presentation { position: absolute; right: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); max-width: min(280px, calc(100% - 2 * var(--space-4))); }
 .app-presentation .ui-segmented { box-shadow: var(--elev-2); }
 .app-presentation .ui-chip { min-width: var(--touch-min); }

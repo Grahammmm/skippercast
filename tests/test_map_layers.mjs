@@ -11,7 +11,7 @@ import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markScreen, markStyle} from '../web/map/marks.ts';
 import {assessScreen} from '../web/map/habitat.ts';
-import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL} from '../web/map/coastline.ts';
+import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
 import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -292,7 +292,8 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
-  assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  // #617: the first view (?view= zoom 12, MapLibre 11) draws the overview shoreline.
+  assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson');
   // The startup budget: the style's own source loads the shoreline once (it is not set again for the
   // region the Chart opened on), and the marks and protected areas share each region file.
   assert.deepEqual((map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE), [], 'the shoreline is not requested twice');
@@ -310,6 +311,11 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.equal(map.jumps.length, jumps, 'the chart is not sent back where it already is');
   setParams({view: '35.30000,-120.80000,13'});
   assert.deepEqual(map.jumps.at(-1), {center: [-120.8, 35.3], zoom: 12}, 'a new ?view= moves the chart');
+  // At the detail zoom (MapLibre 12) the full shoreline replaces the overview, and stays on zooming back out.
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline.geojson']);
+  setParams({view: '35.30000,-120.80000,11'});
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline.geojson'], 'no second request on zooming out');
 
   setParams({base: 'chart'});
   assert.equal(map.visibility[ENC_LAYER], 'visible', '?base=chart shows the ENC base');
@@ -357,7 +363,7 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   setParams({region: 'cambria-san-simeon'});
   await tick();
   assert.deepEqual(unavailable.value, ['basemap'], 'a new region retries its coastline');
-  assert.equal(map.data[COASTLINE_SOURCE], 'https://s.test/regions/cambria-san-simeon/shoreline.geojson');
+  assert.equal(map.data[COASTLINE_SOURCE], 'https://s.test/regions/cambria-san-simeon/shoreline-overview.geojson');
   stage.destroy();
   assert.deepEqual(unavailable.value, []);
 });
@@ -463,4 +469,9 @@ test('FE-82: in Terrain the protected areas and reef marks drape without the Cha
   // A feed that goes leaves the terrain.
   setTerrainLayer('marks', null);
   assert.equal(land.overlays.has('marks'), false);
+});
+
+test('the map loads the full shoreline at the zoom the published overview was simplified for (#617)', () => {
+  const overview = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline-overview.geojson', import.meta.url), 'utf8'));
+  assert.equal(overview.provenance.overview.max_zoom, SHORELINE_DETAIL_ZOOM);
 });
