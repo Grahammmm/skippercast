@@ -12,18 +12,20 @@
 //   crossing swell). The advisor's comfort word reads the same function.
 // - Shore, Spear and Kayak: their own hourly graders (packages/coast
 //   shore-conditions.ts, spear.ts, kayak.ts), worst hour in the same window,
-//   Calmer read as Comfortable.
+//   Calmer read as Comfortable; the sentence leads with the hour's decisive
+//   or worst-band reasons (launch surf, fog, daylight before wind and seas).
 // - Never reassuring on thin evidence: an active marine alert makes the day
 //   Rough; partial forecast detail, unrated hours, a run older than its tile
 //   limit, a missing alert check or a hazardous bar estimate hold a
-//   Comfortable window at Marginal and say why. No forecast reads Unknown.
+//   Comfortable window at Marginal and say why; on a Marginal or Rough day a
+//   missing alert check is still named. No forecast reads Unknown.
 //   Buoy readings never enter the verdict, so a stale buoy cannot raise it.
 //
 // A comfort heuristic for planning, not a bite or catch forecast and not a
 // safety clearance.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
-import {THRESHOLDS, rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
+import {rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
 import {sample} from '../map/forecast-grid.ts';
 import type {ConditionsForecast, ModelRun} from '../conditions.ts';
 import type {Profile} from '../profile.ts';
@@ -82,20 +84,22 @@ export function clockText(ms: number, tz: string): string {
 }
 
 /**
- * The hours to rate on `date`: whole hours from sunrise (or 6 am) to noon,
- * from the current hour on when the date is today; once the morning has
- * passed, the rest of the daylight. Epoch ms, ascending.
+ * The hours to rate on `date`: whole hours starting at or after sunrise (or
+ * 6 am) and before noon, from the current hour on when the date is today; once
+ * the morning has passed, the hours starting before sunset (or 6 pm). Epoch
+ * ms, ascending. `covered` says whether the candidates reach the date at all.
  */
-export function windowHours(candidates: readonly number[], date: string, tz: string, sunrise: string | null, sunset: string | null, now: Date): {hours: number[]; label: string | null} {
-  const rise = sunrise && Number.isFinite(Date.parse(sunrise)) ? local(Date.parse(sunrise), tz).hour : DEFAULT_START_HOUR;
-  const set = sunset && Number.isFinite(Date.parse(sunset)) ? local(Date.parse(sunset), tz).hour : 18;
+export function windowHours(candidates: readonly number[], date: string, tz: string, sunrise: string | null, sunset: string | null, now: Date): {hours: number[]; label: string | null; covered: boolean} {
+  const riseMs = sunrise ? Date.parse(sunrise) : NaN, setMs = sunset ? Date.parse(sunset) : NaN;
+  const afterRise = (ms: number) => Number.isFinite(riseMs) ? ms >= riseMs : local(ms, tz).hour >= DEFAULT_START_HOUR;
+  const beforeSet = (ms: number) => Number.isFinite(setMs) ? ms < setMs : local(ms, tz).hour < 18;
   const from = Math.floor(now.getTime() / HOUR) * HOUR;
-  const on = [...candidates].filter(ms => ms >= from && local(ms, tz).date === date).sort((a, b) => a - b);
-  const label = (hours: number[], end: string) => hours.length ? `${clockText(hours[0]!, tz)}–${end}` : null;
-  const morning = on.filter(ms => { const h = local(ms, tz).hour; return h >= rise && h < WINDOW_END_HOUR; });
-  if (morning.length) return {hours: morning, label: label(morning, 'noon')};
-  const rest = on.filter(ms => { const h = local(ms, tz).hour; return h >= Math.max(rise, WINDOW_END_HOUR) && h < set; });
-  return {hours: rest, label: rest.length ? label(rest, clockText(rest.at(-1)! + HOUR, tz)) : null};
+  const onDate = [...candidates].filter(ms => local(ms, tz).date === date).sort((a, b) => a - b);
+  const on = onDate.filter(ms => ms >= from && afterRise(ms) && beforeSet(ms));
+  const label = (hours: number[], end: string) => `${clockText(hours[0]!, tz)}–${end}`;
+  const morning = on.filter(ms => local(ms, tz).hour < WINDOW_END_HOUR);
+  if (morning.length) return {hours: morning, label: label(morning, 'noon'), covered: true};
+  return {hours: on, label: on.length ? label(on, clockText(on.at(-1)! + HOUR, tz)) : null, covered: onDate.length > 0};
 }
 
 const usable = (run: ModelRun | undefined, now: Date): run is ModelRun => !!run && finite(run.issued) && now.getTime() - run.issued * 1000 <= RUN_MAX_MS;
@@ -137,11 +141,17 @@ export function charges(r: ComfortRating): {kind: Charge; cost: number}[] {
 
 function phrase(kind: Charge, r: ComfortRating, h: FeedHour): string {
   if (kind === 'wind') return `${r0(r.wind)} kt wind${r.gust !== null && r.gust >= r.wind + 3 ? ` gusting ${r0(r.gust)}` : ''}`;
-  if (kind === 'seas') return `${r1(r.sea)} ft seas${finite(h.sea_period) ? ` at ${r0(h.sea_period)} s` : ''}`;
+  // The period is GFS-Wave's; name it only when its height is the one shown (WAM's period is not in the feed).
+  if (kind === 'seas') return `${r1(r.sea)} ft seas${finite(h.sea_period) && finite(h.sea) && h.sea >= r.sea ? ` at ${r0(h.sea_period)} s` : ''}`;
   if (kind === 'chop') return `${r1(r.chop ?? 0)} ft of ${r.costs.short > 0 ? 'short, steep ' : ''}wind chop`;
   const from = compass(h.secondary_from);
   return `a ${r1(h.secondary ?? 0)} ft cross swell${from ? ` from the ${from}` : ''}`;
 }
+
+/** Said when the date's daylight hours have all passed. */
+export const NO_DAYLIGHT = 'No daylight left on this day.';
+/** Added to the limit sentence when the alert check is missing and the day is not held for it. */
+export const NO_ALERT_CHECK = 'No current marine alert check.';
 
 const heldSentence = (reasons: string[]): string | null => reasons.length ? `Held at Marginal: ${reasons.join('; ')}.` : null;
 
@@ -156,8 +166,8 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score'});
   if (!forecast) return unknown('No forecast for this morning yet.');
   const feed = feedReader(forecast, now);
-  const {hours, label} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
-  if (!hours.length) return unknown(feed.times.length ? 'The forecast does not cover the daylight hours left on this day.' : 'No forecast for this morning yet.');
+  const {hours, label, covered} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
+  if (!hours.length) return unknown(covered ? NO_DAYLIGHT : feed.times.length ? 'The forecast does not reach this day yet.' : 'No forecast for this morning yet.');
   const rows = hours.map(ms => ({ms, hour: feed.read(ms)})).map(row => ({...row, rating: rateComfort(row.hour)}));
   const rated = rows.filter((row): row is typeof row & {rating: ComfortRating} => row.rating !== null);
   if (!rated.length) return unknown('No wind and seas forecast for this window.', label);
@@ -186,26 +196,44 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   if (bar) reasons.push(bar);
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
-  return {verdict, limit, held, window: label, score: alert ? Math.min(score, THRESHOLDS.capHazard) : score, basis: 'comfort-score'};
+  else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
+  // Under an alert the day is Rough whatever the hours score, so no score is shown.
+  return {verdict, limit, held, window: label, score: alert ? null : score, basis: 'comfort-score'};
 }
 
 type GradedHour = {at: string; verdict: string; reasons: readonly string[]};
 const GRADE: Readonly<Record<string, DayVerdict>> = {Calmer: 'comfortable', Marginal: 'marginal', Rough: 'rough'};
 const RANK: Readonly<Record<DayVerdict, number>> = {comfortable: 0, marginal: 1, rough: 2, unknown: -1};
 
+/** A reason that decides an hour on its own in the profile graders (kayak.ts, shore-conditions.ts, spear.ts), whatever the wind and seas bands. */
+const DECISIVE = /fog|outside daylight|surf at the launch|offshore$|long-period swell|short-period chop|dawn or dusk/i;
+/** Band words by how much they cost, worst first. */
+const SEVERE = /^(?:rough|strong|heavy|large|fresh|choppy)\b/i, MODERATE = /^moderate\b/i;
+const reasonRank = (r: string) => DECISIVE.test(r) ? 3 : SEVERE.test(r) ? 2 : MODERATE.test(r) ? 1 : 0;
+
+/**
+ * The two reasons that limit a graded hour: the graders list theirs in a fixed order (wind, seas,
+ * then launch, fog, daylight), so a Marginal or Rough hour leads with its decisive or worst-band
+ * reasons; a calmer hour keeps the graders' order.
+ */
+export function limitReasons(reasons: readonly string[], grade: DayVerdict): string[] {
+  if (grade === 'comfortable') return reasons.slice(0, 2);
+  return reasons.map((r, i) => ({r, i})).sort((a, b) => reasonRank(b.r) - reasonRank(a.r) || a.i - b.i).slice(0, 2).map(x => x.r);
+}
+
 /** The Shore, Spear or Kayak verdict from the profile's own hourly grader. */
 export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdict {
   const p = brief.profile as Exclude<Profile, 'boat'>;
   const graded: readonly GradedHour[] = (p === 'shore' ? brief.shore?.hours : p === 'spear' ? brief.spear?.hours : brief.kayak?.hours) ?? [];
   const byMs = new Map(graded.map(h => [Date.parse(h.at), h]));
-  const {hours, label} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
+  const {hours, label, covered} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
   const rows = hours.map(ms => ({ms, hour: byMs.get(ms)!, grade: GRADE[byMs.get(ms)!.verdict] ?? 'unknown' as DayVerdict}));
   const rated = rows.filter(row => row.grade !== 'unknown');
-  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : 'No forecast for this morning yet.', held: null, window: label, score: null, basis: p};
+  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this morning yet.', held: null, window: label, score: null, basis: p};
   const worst = rated.reduce((a, b) => RANK[b.grade] > RANK[a.grade] ? b : a);
   const alert = brief.alerts[0];
   let verdict: DayVerdict = alert ? 'rough' : worst.grade;
-  const why = cap(worst.hour.reasons.slice(0, 2).join(', ') || VERDICT_WORD[worst.grade].toLowerCase());
+  const why = cap(limitReasons(worst.hour.reasons, worst.grade).join(', ') || VERDICT_WORD[worst.grade].toLowerCase());
   let limit = verdict === 'comfortable' ? `${why} through ${label!.split('–')[1]}.` : `${why} at ${clockText(worst.ms, tz)}.`;
   if (alert) limit = `${alert.event} in effect. ${limit}`;
   const reasons: string[] = [];
@@ -213,6 +241,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push('the marine alert check is unavailable');
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
+  else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
   return {verdict, limit, held, window: label, score: null, basis: p};
 }
 

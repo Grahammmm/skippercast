@@ -5,7 +5,8 @@
 // values invented.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {boatVerdict, briefVerdict, profileVerdict, windowHours, feedReader, ALERT_CHECK_MISSING, VERDICT_WORD} from '../web/brief/verdict.ts';
+import {boatVerdict, briefVerdict, profileVerdict, windowHours, feedReader, limitReasons, ALERT_CHECK_MISSING, NO_ALERT_CHECK, NO_DAYLIGHT, VERDICT_WORD} from '../web/brief/verdict.ts';
+import {kayakHours} from '../packages/coast/src/kayak.ts';
 import {rateComfort, verdictFor, THRESHOLDS} from '../web/score.ts';
 
 const TZ = 'America/Los_Angeles';
@@ -42,15 +43,20 @@ function forecast({over = {}, at = () => ({}), drop = [], runAgeH = 4} = {}) {
 const brief = (over = {}) => ({profile: 'boat', date: DATE, sunrise: SUNRISE, sunset: SUNSET, alerts: [], missing: [], bar: null, shore: null, spear: null, kayak: null, tiles: [], ...over});
 const hourAt = h => Date.parse(`2026-10-13T${String(h + 7).padStart(2, '0')}:00:00Z`) / 1000; // local hour h → epoch
 
-test('the window runs from the sunrise hour to noon, from the current hour on; past noon it is the rest of the daylight', () => {
+test('the window runs from the first whole hour after sunrise to noon, from the current hour on; past noon it is the rest of the daylight', () => {
   const ms = TIMES.map(t => t * 1000);
   const morning = windowHours(ms, DATE, TZ, SUNRISE, SUNSET, NOW);
-  assert.equal(morning.label, '7 am–noon');
-  assert.equal(morning.hours.length, 5);
+  assert.equal(morning.label, '8 am–noon', 'sunrise 7:10: the 7 am hour starts in the dark');
+  assert.equal(morning.hours.length, 4);
+  assert.equal(windowHours(ms, DATE, TZ, '2026-10-13T14:00:00Z', SUNSET, NOW).label, '7 am–noon', 'a sunrise on the hour starts the window');
+  assert.equal(windowHours(ms, DATE, TZ, null, null, NOW).label, '6 am–noon', 'no sunrise: 6 am');
   const late = windowHours(ms, DATE, TZ, SUNRISE, SUNSET, new Date('2026-10-13T17:30:00Z')); // 10:30 am
   assert.equal(late.label, '10 am–noon');
   const afternoon = windowHours(ms, DATE, TZ, SUNRISE, SUNSET, new Date('2026-10-13T20:30:00Z')); // 1:30 pm
-  assert.equal(afternoon.label, '1 pm–6 pm');
+  assert.equal(afternoon.label, '1 pm–7 pm', 'sunset 6:30: the 6 pm hour starts in daylight');
+  const dark = windowHours(ms, DATE, TZ, SUNRISE, SUNSET, new Date('2026-10-14T02:30:00Z')); // 7:30 pm
+  assert.deepEqual([dark.hours, dark.label, dark.covered], [[], null, true]);
+  assert.equal(boatVerdict(brief(), forecast(), new Date('2026-10-14T02:30:00Z'), TZ).limit, NO_DAYLIGHT);
 });
 
 test('each verdict maps to the disclosed score bands over the worst hour', () => {
@@ -74,8 +80,11 @@ test('the limit sentence names the worst input at its hour', () => {
   const windy = boatVerdict(brief(), forecast({at: t => t === hourAt(10) ? {wind_speed_10m: 20, ecmwf_wind: 19, wind_gusts_10m: 26, ecmwf_gust: 25} : {}}), NOW, TZ);
   assert.equal(windy.verdict, 'marginal');
   assert.match(windy.limit, /^20 kt wind gusting 26 at 10 am\.$/);
-  const seas = boatVerdict(brief(), forecast({over: {wave_height: 7, wam: 7.4, wave_period: 8, swell_wave_height: 6.5}}), NOW, TZ);
-  assert.match(seas.limit, /^7\.4 ft seas at 8 s at 7 am/);
+  const seas = boatVerdict(brief(), forecast({over: {wave_height: 7.4, wam: 7, wave_period: 8, swell_wave_height: 6.5}}), NOW, TZ);
+  assert.match(seas.limit, /^7\.4 ft seas at 8 s at 8 am/);
+  // GFS-Wave's period is named only with GFS-Wave's height; WAM's period is not in the feed.
+  const wam = boatVerdict(brief(), forecast({over: {wave_height: 7, wam: 7.4, wave_period: 8, swell_wave_height: 6.5}}), NOW, TZ);
+  assert.match(wam.limit, /^7\.4 ft seas at 8 am/);
   const chop = boatVerdict(brief(), forecast({over: {wind_wave_height: 2.2, wind_wave_period: 3, wind_speed_10m: 12, ecmwf_wind: 12, wind_gusts_10m: 15, ecmwf_gust: 15}}), NOW, TZ);
   assert.match(chop.limit, /short, steep wind chop/);
   // A crossing swell alone costs 0.7: the day stays Comfortable and the sentence gives the range.
@@ -90,18 +99,24 @@ test('the limited cap: partial detail, missing hours, an old run or no alert che
   assert.match(noEcmwf.held, /^Held at Marginal: forecast detail is partial\.$/);
   const gap = boatVerdict(brief(), forecast({at: t => t === hourAt(9) ? {wind_speed_10m: null, ecmwf_wind: null} : {}}), NOW, TZ);
   assert.equal(gap.verdict, 'marginal');
-  assert.match(gap.held, /1 of 5 hours have no forecast/);
+  assert.match(gap.held, /1 of 4 hours have no forecast/);
   const old = boatVerdict(brief(), forecast({runAgeH: 20}), NOW, TZ);
   assert.equal(old.verdict, 'marginal');
   assert.match(old.held, /forecast run is 20 h old/);
   const noCheck = boatVerdict(brief({missing: [ALERT_CHECK_MISSING]}), forecast(), NOW, TZ);
   assert.equal(noCheck.verdict, 'marginal');
   assert.match(noCheck.held, /marine alert check is unavailable/);
-  const bar = boatVerdict(brief({bar: {hazardous: [{at: '2026-10-13T15:00:00Z'}]}}), forecast(), NOW, TZ);
-  assert.match(bar.held, /bar estimate reads hazardous at 8 am/);
+  const bar = boatVerdict(brief({bar: {hazardous: [{at: '2026-10-13T16:00:00Z'}]}}), forecast(), NOW, TZ);
+  assert.match(bar.held, /bar estimate reads hazardous at 9 am/);
+  // On a day that is already Marginal the missing alert check is still said.
+  const windy = forecast({over: {wind_speed_10m: 16, ecmwf_wind: 16, wind_gusts_10m: 22, ecmwf_gust: 22}});
+  const marginal = boatVerdict(brief({missing: [ALERT_CHECK_MISSING]}), windy, NOW, TZ);
+  assert.deepEqual([marginal.verdict, marginal.held], ['marginal', null]);
+  assert.ok(marginal.limit.endsWith(` ${NO_ALERT_CHECK}`));
   // A cap only holds a Comfortable window; a Rough one stays Rough without a held line.
   const rough = boatVerdict(brief({missing: [ALERT_CHECK_MISSING]}), forecast({over: {wind_speed_10m: 30, ecmwf_wind: 30, wind_gusts_10m: 38, ecmwf_gust: 38}}), NOW, TZ);
   assert.deepEqual([rough.verdict, rough.held], ['rough', null]);
+  assert.match(rough.limit, /No current marine alert check\.$/);
 });
 
 test('runs over 36 h old are not used, and with none left the verdict is Unknown', () => {
@@ -112,7 +127,7 @@ test('a marine alert makes the day Rough and leads the sentence', () => {
   const v = boatVerdict(brief({alerts: [{event: 'Small Craft Advisory'}]}), forecast(), NOW, TZ);
   assert.equal(v.verdict, 'rough');
   assert.match(v.limit, /^Small Craft Advisory in effect\. /);
-  assert.ok(v.score <= THRESHOLDS.capHazard);
+  assert.equal(v.score, null, 'under an alert no hour score is shown');
 });
 
 test('Unknown without a forecast, or with no wind and seas in the window', () => {
@@ -133,13 +148,31 @@ test('buoy readings never enter the verdict: a stale buoy tile cannot raise it',
 
 test('Shore, Spear and Kayak take their own hourly grade: the roughest hour in the window, Calmer read as Comfortable', () => {
   const at = h => `2026-10-13T${String(h + 7).padStart(2, '0')}:00:00Z`;
-  const hours = [7, 8, 9, 10, 11].map(h => ({at: at(h), verdict: h === 10 ? 'Marginal' : 'Calmer', reasons: h === 10 ? ['moderate wind (12 kt) onshore', 'rough seas (3 ft at 8 s)'] : ['light wind']}));
+  const hours = [8, 9, 10, 11].map(h => ({at: at(h), verdict: h === 10 ? 'Marginal' : 'Calmer', reasons: h === 10 ? ['moderate wind (12 kt) onshore', 'rough seas (3 ft at 8 s)'] : ['light wind']}));
   const kayak = profileVerdict(brief({profile: 'kayak', kayak: {hours}}), NOW, TZ);
-  assert.deepEqual([kayak.verdict, kayak.limit, kayak.basis], ['marginal', 'Moderate wind (12 kt) onshore, rough seas (3 ft at 8 s) at 10 am.', 'kayak']);
+  assert.deepEqual([kayak.verdict, kayak.limit, kayak.basis], ['marginal', 'Rough seas (3 ft at 8 s), moderate wind (12 kt) onshore at 10 am.', 'kayak']);
   const calm = profileVerdict(brief({profile: 'shore', shore: {hours: hours.map(h => ({...h, verdict: 'Calmer', reasons: ['small surf']}))}}), NOW, TZ);
   assert.deepEqual([calm.verdict, calm.limit], ['comfortable', 'Small surf through noon.']);
   const thin = profileVerdict(brief({profile: 'spear', spear: {hours: hours.map((h, i) => ({...h, verdict: i ? 'Calmer' : 'Unknown'}))}}), NOW, TZ);
   assert.equal(thin.verdict, 'marginal');
-  assert.match(thin.held, /1 of 5 hours are unknown/);
+  assert.match(thin.held, /1 of 4 hours are unknown/);
   assert.equal(profileVerdict(brief({profile: 'shore', shore: null}), NOW, TZ).verdict, 'unknown');
+});
+
+test('the real kayak grader: a calm morning after a 7:10 sunrise reads Comfortable, not Rough for the dark 7 am hour', () => {
+  const at = h => `2026-10-13T${String(h + 7).padStart(2, '0')}:00:00Z`;
+  const fc = [6, 7, 8, 9, 10, 11, 12].map(h => ({at: at(h), windKnots: 4, gustKnots: 6, waveFt: 1.5, wavePeriodS: 10, windDirectionDeg: 270}));
+  const hours = kayakHours({hours: fc, site: undefined, seawardDeg: 225, alerts: [], sunrise: SUNRISE, sunset: SUNSET});
+  assert.equal(hours.find(h => h.at === at(7)).daylight, false, 'the grader marks the 7 am hour dark');
+  const v = profileVerdict(brief({profile: 'kayak', kayak: {hours}}), NOW, TZ);
+  assert.equal(v.verdict, 'comfortable');
+  assert.equal(v.window, '8 am–noon');
+});
+
+test('a graded hour leads with its decisive or worst-band reasons, not the graders\' fixed order', () => {
+  assert.deepEqual(limitReasons(['light wind (4 kt)', 'small seas (1.5 ft at 10 s)', 'surf at the launch'], 'marginal'), ['surf at the launch', 'light wind (4 kt)']);
+  assert.deepEqual(limitReasons(['light wind (4 kt)', 'small seas (1 ft)', 'fog alert'], 'rough'), ['fog alert', 'light wind (4 kt)']);
+  assert.deepEqual(limitReasons(['moderate wind (12 kt) onshore', 'large seas (5 ft at 9 s)'], 'rough'), ['large seas (5 ft at 9 s)', 'moderate wind (12 kt) onshore']);
+  assert.deepEqual(limitReasons(['light wind (4 kt) offshore', 'small seas (1 ft)'], 'marginal')[0], 'light wind (4 kt) offshore');
+  assert.deepEqual(limitReasons(['light wind', 'small seas', 'fog alert'], 'comfortable'), ['light wind', 'small seas']);
 });

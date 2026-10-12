@@ -185,8 +185,8 @@ export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdic
 }
 
 const VERDICT_BASIS = {
-  'comfort-score': 'Comfort rating for the reference 23 ft boat, not a bite forecast or a safety clearance. Each hour from sunrise to noon is scored 0 to 10 from both forecast models’ wind, gusts, combined seas and wind chop at the forecast point, less a penalty for a crossing swell or short, steep chop. The worst hour sets the day: 7 and above is Comfortable, under 4 is Rough, Marginal between. An estimate missing wave detail or the second model is capped at 6.9; a marine alert makes the day Rough.',
-  profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour from sunrise to noon sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
+  'comfort-score': 'Comfort rating for the reference 23 ft boat, not a bite forecast or a safety clearance. Each hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) is scored 0 to 10 from both forecast models’ wind, gusts, combined seas and wind chop at the forecast point, less a penalty for a crossing swell or short, steep chop. The worst hour sets the day: 7 and above is Comfortable, under 4 is Rough, Marginal between. An estimate missing wave detail or the second model is capped at 6.9; a marine alert makes the day Rough.',
+  profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
 } as const;
 
 /**
@@ -199,7 +199,7 @@ export function Verdict({brief, now}: {brief: BriefModel | null; now: Date}) {
   return (
     <div class="app-verdict" data-verdict={v.verdict}>
       <div class="app-verdict-head">
-        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{v.window ? <span class="app-verdict-window ui-mono">{v.window}</span> : null}</h1>
+        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{v.window ? ' ' : null}{v.window ? <span class="app-verdict-window ui-mono">{v.window}</span> : null}</h1>
         <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
