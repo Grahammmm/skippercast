@@ -11,7 +11,7 @@ import {fileURLToPath} from 'node:url';
 // so a "curl | grep -q" pipeline would hit SIGPIPE under pipefail (the bug that
 // rolled back every deploy after #26).
 // FE-60: `v2` (the default) serves the landing at /, the app at /map and redirects /coast to it; `v1` is
-// UI_V2=false or a rolled-back Worker: / is the v1 shell, /map answers only with ?ui=v2, /coast is its own page.
+// a rolled-back Worker built before FE-61: / is the v1 shell, /map answers only with ?ui=v2, /coast is its own page.
 function site({forgedSignedIn=false, swCache='public, max-age=0, must-revalidate', publicKey='B'.repeat(87), shell='v2', broken=''}={}) {
   const body = shell === 'v2' ? '<body class="landing-body">\n' : '<body class="atlas-app">\n';
   const page = '<!doctype html>\n<html><head><title>SkipperCast</title></head>\n' + body + 'x'.repeat(400000) + '</body></html>';
@@ -80,7 +80,7 @@ test('smoke test checks /map and /coast with the v2 shell on (FE-60): /coast fol
   assert.match(out, /coast page ok/);
 });
 
-test('smoke test still passes with UI_V2=false or a rolled-back Worker: /map is checked through ?ui=v2', async () => {
+test('smoke test still passes after a rollback to a Worker that serves the v1 shell: /map is checked through ?ui=v2', async () => {
   const {code, out} = await smoke({shell: 'v1'});
   assert.equal(code, 0, out);
   assert.match(out, /map page ok \(\/map\?ui=v2\)/);
