@@ -1,0 +1,253 @@
+{
+  "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+  "sourceScope": "government-only before processing",
+  "priorPublishedRegions": [
+    "morro-bay",
+    "cambria-san-simeon"
+  ],
+  "newRegions": [
+    {
+      "regionId": "monterey-point-sur",
+      "featureCount": 904,
+      "archiveSha256": "35ac91937ea8d65c1172142e96768bd88f9f6635c8f41964572f30d54e60014f",
+      "exportSha256": "c3c7c7d6901e7d5413e52a664eec83abaa9a176d08236c07663160ccfedf1f20",
+      "screenExpiresAt": "2026-11-05T00:00:00+00:00",
+      "reaches": [
+        {
+          "reach": "monterey-point-sur-r01",
+          "selectedValidKm2": 21.821047035,
+          "physicalCandidates": 293,
+          "admittedPolygons": 258,
+          "habitatKm2": 3.440726954,
+          "heldByReason": {
+            "overlap-cdfw-mpa": 35
+          },
+          "status": "habitat-screened",
+          "inputHash": "bd311426a1856dec61e58ce61a36e66569ef47e3bbd0b95e295e844c2b838b6a",
+          "physicalInputHash": "0fc765aedc12663af96d45f40def0152bfa941889039ac34aa7c21ff1180932e",
+          "sourceIds": [
+            "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+            "usgs-1998-sgf5g-native"
+          ]
+        },
+        {
+          "reach": "monterey-point-sur-r02",
+          "selectedValidKm2": 6.703702396,
+          "physicalCandidates": 126,
+          "admittedPolygons": 14,
+          "habitatKm2": 0.15359102,
+          "heldByReason": {
+            "habitat-contract-incomplete": 4,
+            "metric-support-incomplete": 4,
+            "overlap-cdfw-mpa": 112
+          },
+          "status": "habitat-screened",
+          "inputHash": "01d97782a38d1a7cf071ea80ad2454834b8e891faac9cb4816683d0e7da8ae06",
+          "physicalInputHash": "4920e3d5a6727dcbfb170fa41a5e39d498c041d7be93deb6ed9367d5b26352be",
+          "sourceIds": [
+            "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+            "usgs-1998-sgf5g-native"
+          ]
+        },
+        {
+          "reach": "monterey-point-sur-r03",
+          "selectedValidKm2": 11.544077117,
+          "physicalCandidates": 128,
+          "admittedPolygons": 91,
+          "habitatKm2": 2.069371195,
+          "heldByReason": {
+            "habitat-contract-incomplete": 37,
+            "metric-support-incomplete": 37
+          },
+          "status": "habitat-screened",
+          "inputHash": "8e75046e06c67384e501331e12b3f2cc5b9d087927f10b75293ecba870e32186",
+          "physicalInputHash": "d409f43e6a7b1d5d701cc144db2b5c6e07f94eff67f90e5577c2d5f5e23fd61d",
+          "sourceIds": [
+            "usgs-1998-sgf5g-native"
+          ]
+        },
+        {
+          "reach": "monterey-point-sur-r04",
+          "selectedValidKm2": 73.689364982,
+          "physicalCandidates": 790,
+          "admittedPolygons": 541,
+          "habitatKm2": 3.906197847,
+          "heldByReason": {
+            "habitat-contract-incomplete": 45,
+            "metric-support-incomplete": 45,
+            "overlap-cdfw-mpa": 222
+          },
+          "status": "habitat-screened",
+          "inputHash": "7d45d115824909521e9ac4d2df470da8ea96c4b93b6cc29c83453fbd0c5704d7",
+          "physicalInputHash": "294cd610d1e2936e97f7208692dcfb53a5f963f16ce3d21a022c0691fca57dd5",
+          "sourceIds": [
+            "usgs-1998-sgf5g-native",
+            "usgs-1998-sur5g-native"
+          ]
+        }
+      ]
+    },
+    {
+      "regionId": "point-arguello-conception",
+      "featureCount": 788,
+      "archiveSha256": "22bf843b9480a016bdd9d5d8623345ef626123f7c44a5a5e0028127c675dcfc4",
+      "exportSha256": "37cda1024e491fefc97ac6807bbc0bc9a3e91b36ca58a98312245d892afb5256",
+      "screenExpiresAt": "2026-11-05T00:00:00+00:00",
+      "reaches": [
+        {
+          "reach": "point-arguello-conception-r01",
+          "selectedValidKm2": 0.0,
+          "physicalCandidates": 0,
+          "admittedPolygons": 0,
+          "habitatKm2": 0.0,
+          "heldByReason": {},
+          "status": "habitat-screened",
+          "inputHash": "ddad9e23c01da4c60ee0f8afb2149cff73fde36b580a414ec98fa46b4ee0e050",
+          "physicalInputHash": "77ccc94130af01a6d6c03b4df467916ab719103cbb3c0a0ae354dc6a4b295e80",
+          "sourceIds": []
+        },
+        {
+          "reach": "point-arguello-conception-r02",
+          "selectedValidKm2": 0.0,
+          "physicalCandidates": 0,
+          "admittedPolygons": 0,
+          "habitatKm2": 0.0,
+          "heldByReason": {},
+          "status": "habitat-screened",
+          "inputHash": "941222d3edae1247eacd9a4f5a539295b4a9307ffaf1285dba1aaa404e203263",
+          "physicalInputHash": "000e80b8d631faee1dbd4b122b9d1b52ee061f94e80e21d9c9b360bbfa2a0877",
+          "sourceIds": []
+        },
+        {
+          "reach": "point-arguello-conception-r03",
+          "selectedValidKm2": 0.0,
+          "physicalCandidates": 0,
+          "admittedPolygons": 0,
+          "habitatKm2": 0.0,
+          "heldByReason": {},
+          "status": "habitat-screened",
+          "inputHash": "e48a3b619b74fa131f7291ad5dcbed4bbb91db795d5f3e6f2b504c4204b4f02d",
+          "physicalInputHash": "9c3e092d6759fe4c9098a61b81d12ebec6e652709ce420ad039fda6bafe95138",
+          "sourceIds": []
+        },
+        {
+          "reach": "point-arguello-conception-r04",
+          "selectedValidKm2": 0.0,
+          "physicalCandidates": 0,
+          "admittedPolygons": 0,
+          "habitatKm2": 0.0,
+          "heldByReason": {},
+          "status": "habitat-screened",
+          "inputHash": "9cfa97bec417c944e52186afd6e5b49f69322c55009da00a0ab4241c4f162aa5",
+          "physicalInputHash": "b191cb50c408fcf4ff215efcd9417eefbaa54bf5d5c41c981d06078fe24b92ac",
+          "sourceIds": []
+        },
+        {
+          "reach": "point-arguello-conception-r05",
+          "selectedValidKm2": 0.0,
+          "physicalCandidates": 0,
+          "admittedPolygons": 0,
+          "habitatKm2": 0.0,
+          "heldByReason": {},
+          "status": "habitat-held-for-screen",
+          "inputHash": "9e2282032ae9c1e3db9e6e640f5e4e8cdd6f18dc42f73359d546e4c590a38ea6",
+          "physicalInputHash": "9e9ad703f76eb80e233b13eaf1072ed4888b025371ad6986ab93548ebd6d3576",
+          "sourceIds": []
+        },
+        {
+          "reach": "point-arguello-conception-r06",
+          "selectedValidKm2": 56.900908883,
+          "physicalCandidates": 947,
+          "admittedPolygons": 452,
+          "habitatKm2": 2.838981687,
+          "heldByReason": {
+            "habitat-contract-incomplete": 118,
+            "metric-support-incomplete": 118,
+            "overlap-cdfw-mpa": 74,
+            "overlap-security": 403
+          },
+          "status": "habitat-screened",
+          "inputHash": "db09e82948a59a22a05da7fb9c7b4a2767198501052ab4f8f810fc3e151a15b1",
+          "physicalInputHash": "6cf6ca0c55a03e13f5935200b8f7e3f5c32e0f7f3bf8f935d3017b43c33ff018",
+          "sourceIds": [
+            "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+            "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+            "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+            "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+          ]
+        },
+        {
+          "reach": "point-arguello-conception-r07",
+          "selectedValidKm2": 56.089512589,
+          "physicalCandidates": 225,
+          "admittedPolygons": 187,
+          "habitatKm2": 3.238532476,
+          "heldByReason": {
+            "habitat-contract-incomplete": 38,
+            "metric-support-incomplete": 38
+          },
+          "status": "habitat-screened",
+          "inputHash": "86227d9a2cb24e23d97cf3c9599a8d4863fa15b0736dc0fdd4489f13ec82ab51",
+          "physicalInputHash": "21398a442ae3bede760402338d20a0c4a5e933cb71ef701c25b1560c1907c89b",
+          "sourceIds": [
+            "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+            "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+            "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+            "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+            "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+            "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+            "h11953-mb-8m-mllw-4of4-bag-e70772d2bb"
+          ]
+        },
+        {
+          "reach": "point-arguello-conception-r08",
+          "selectedValidKm2": 41.780300878,
+          "physicalCandidates": 264,
+          "admittedPolygons": 149,
+          "habitatKm2": 2.530394038,
+          "heldByReason": {
+            "habitat-contract-incomplete": 37,
+            "metric-support-incomplete": 37,
+            "overlap-cdfw-mpa": 82
+          },
+          "status": "habitat-screened",
+          "inputHash": "c5c1e0b555e799d3846059cfa421f0e495925eda89f3d733b68a86f20e39c1c0",
+          "physicalInputHash": "d8498603d45effd964f3ec30de76ab02de758189bcc27da812ac64eb7ce48b0a",
+          "sourceIds": [
+            "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+            "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+            "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+            "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b"
+          ]
+        }
+      ]
+    }
+  ],
+  "newPolygonCount": 1692,
+  "limits": [
+    "Physical habitat candidates; no fish presence or catch probability.",
+    "Northern Monterey screen boundary and Arguello r05 remain held.",
+    "Empty source gaps remain empty; model context adds no habitat credit.",
+    "Independent substrate confirmation is absent; unknown datums and interpolation masks stay unknown."
+  ],
+  "deduplicatedAddedHabitatKm2": 18.177795216787036,
+  "areaBasis": "Canonical complete screened polygons projected to EPSG:3310; new union minus previously published SLO union, not summed fragments",
+  "regionalAreas": {
+    "morro-bay": {
+      "uniqueFeatures": 2821,
+      "deduplicatedHabitatKm2": 40.3226079190154
+    },
+    "cambria-san-simeon": {
+      "uniqueFeatures": 47,
+      "deduplicatedHabitatKm2": 0.2889729656961798
+    },
+    "monterey-point-sur": {
+      "uniqueFeatures": 904,
+      "deduplicatedHabitatKm2": 9.569887015996406
+    },
+    "point-arguello-conception": {
+      "uniqueFeatures": 788,
+      "deduplicatedHabitatKm2": 8.6079082007906
+    }
+  }
+}

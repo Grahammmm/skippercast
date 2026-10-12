@@ -159,3 +159,14 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   basemap from FE-10's archive, the CUSP coastline glow, the ENC base on
   `?base=chart`, the § 9 layer registry (`web/map/layers.ts`) and the mark
   card's Chart selections; `dist/map-test.html` removed.
+- 2026-10-09: FE-25 added the landing's live night map after first paint
+  (`web/landing/NightMap.tsx`): FE-11's engine as a still backdrop, the CUSP
+  coastline glow and FE-15's streamlines, with the shoreline SVG as the first
+  paint and the fallback.
+- 2026-10-11: FE-60 done. `UI_V2` is on by default (#540) and released as
+  v0.8.0 after the live check's fixes (#556, #557); Phase 5 continues with
+  FE-61. The Chart basemap waits on its first publish (#474).
+- 2026-10-11: FE-62 part a archived `fish`'s docs and research receipts in
+  [docs/archive/fish/](../../archive/fish/README.md) with the § 15 checklist
+  and the Cloudflare resources the owner deletes. Part b (the bridge's Fish
+  Worker fallback) is pending (#570).

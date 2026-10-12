@@ -2,12 +2,20 @@
 // a top strip over it holds the brand and location card, the layers button
 // and the Boat / Shore / Spear switch; one bottom sheet with three detents
 // holds the brief (peek: the time window, freshness and headline; half: the
-// four tiles and the top pick; full: the whole brief with the day, target
+// four tiles and the top pick; full: the whole brief (FE-37: deck, the
+// lower-exposure window, caveat, notice, fleet and local lines) with the day, target
 // and area menus, the area group holding the port and locate controls as on
 // the desktop, FE-08) with the hour slider pinned at its top edge; a four-tab
 // nav sits under the sheet. The layers button swaps the sheet's content for
 // the rail and the legend; a selected mark replaces the peek content with
-// its card. Every piece is the desktop's, composed in this order.
+// its card. In the Conditions view (FE-32) and the Fleet view (FE-53) the
+// sheet holds that view instead of the brief. Every piece is the desktop's,
+// composed in this order. The Reports view (FE-52) opens from the sheet's
+// footer and replaces the sheet with its page over the map.
+// its card. In the Conditions (FE-32) and History (FE-35) views the sheet holds that view instead
+// of the brief. Every piece is the desktop's, composed in this order. The
+// Reports view (FE-52) opens from the sheet's footer and replaces the sheet
+// with its page over the map.
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -15,13 +23,22 @@ import {Range} from '../ui/Dock.tsx';
 import {Sheet, type Detent} from '../ui/Sheet.tsx';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
+import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, Caveat, Headline, Picks, TideSpark, Tiles, type Pick} from './Desktop.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {TideSpark} from '../brief/TideSpark.tsx';
+import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
+import {RunLine} from '../brief/Run.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
+import {Conditions} from './views/Conditions.tsx';
+import {Fleet} from './views/Fleet.tsx';
+import {History} from './views/History.tsx';
+import {Reports} from './views/Reports.tsx';
+import {appView, setParams, withParams} from '../state.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
@@ -50,23 +67,26 @@ export function HourEdge({now}: {now: Date}) {
   );
 }
 
-/** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. */
-export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: readonly Pick[]; onFocus?: () => void}) {
-  const tz = zone(), state = dockState(now, tz);
+/** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
+export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date; ranking?: Ranking; onFocus?: () => void; detent?: Detent}) {
+  const tz = zone(), state = dockState(now, tz), brief = currentBrief(now);
   return (
-    <div class="app-sheet-brief" onFocusIn={onFocus}>
+    <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value ? <MarkCard /> : (
         <>
           <div class="app-sheet-head">
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
             <FreshnessDot />
           </div>
-          <Headline />
+          <Headline brief={brief} />
         </>
       )}
-      <Tiles />
-      <Picks picks={picks} />
-      <TideSpark />
+      <BriefTiles brief={brief} compact={detent !== 'full'} />
+      <WhereToLook ranking={ranking} />
+      <Deck brief={brief} />
+      <LowerExposure brief={brief} />
+      <RunLine brief={brief} ranking={ranking} now={now} />
+      <TideSpark brief={brief} now={now} />
       <div class="app-sheet-menus">
         <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
         <TargetSelect />
@@ -75,11 +95,17 @@ export function SheetBrief({now, picks = [], onFocus}: {now: Date; picks?: reado
           <PortControl />
         </div>
       </div>
-      <Caveat />
-      <BriefFooter><AccountMenu inline /></BriefFooter>
+      <Caveat brief={brief} />
+      <BriefLinks brief={brief} />
+      <BriefFooter><ReportsLink /><AccountMenu inline /></BriefFooter>
     </div>
   );
 }
+
+/** The sheet footer's way into the Reports view (the four tabs leave it out). */
+export const ReportsLink = () =>
+  <a href={withParams(typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href, {view: 'reports'})} class="app-reports-link"
+    onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>Reports</a>;
 
 /** The layer rail and the legend as the sheet's content. */
 export function LayersPanel({onClose}: {onClose: () => void}) {
@@ -99,7 +125,7 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
-  const layersOpen = panel === 'layers';
+  const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <div class="app-mobile">
       <MapStage />
@@ -110,13 +136,14 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
             <Location />
           </div>
           <IconButton icon="layers" label="Layers" variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />
+          <LimitsControl compact />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      <Sheet label={layersOpen ? 'Layers' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' ? <main class="app-mobile-page"><Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
-        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : <SheetBrief now={now} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
-      </Sheet>
+        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
+      </Sheet>}
       <ViewNav icons class="app-tabs" />
     </div>
   );

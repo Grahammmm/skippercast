@@ -65,6 +65,8 @@ pnpm build
   committed output so CI still covers it. The full run fails on any skip whose
   reason is not allow-listed in `scripts/pytest_report.py`.
 - Never mark a failing check as expected or delete a test to get green.
+- On a small machine (2 CPUs), run the tests that cover your change, not the
+  whole suite at once; CI runs the full suites.
 
 ## Reviewing the other agent's PR
 
@@ -93,6 +95,7 @@ Before merging:
 
 - Obtain an independent review from the other agent or a delegated reviewer;
   resolve every blocking finding. Do not approve your own work as its only review.
+  A reviewer is a separate agent that did not build the change.
 - Confirm required CI checks pass on the exact current PR head, the branch is
   up to date with `main`, and no conflicts or unresolved change requests remain.
   After updating a branch, wait for its new checks before merging.
@@ -133,7 +136,72 @@ through PRs.
 Either agent can take any task the owner assigns; the split exists so the two
 rarely edit the same files at once.
 
+## Autonomous sessions
+
+Agents keep working without waiting on the owner. The owner often cannot see a
+pending approval, so a wait becomes a silent stall.
+
+**Do not stall.**
+
+- Do not wait on an approval or confirmation that the task already authorises.
+  Work from the task as written.
+- Start sub-agents with plain `Agent` calls. Do not depend on `SendMessage` to
+  hand out work, and do not interrupt and restart agents that are running.
+- If a tool call is denied or hangs, try another route once. If none exists,
+  park that thread: post one comment on the task's tracking issue with the
+  exact link or action needed, then continue with every other thread. End the
+  session only when every remaining thread is parked.
+- Ask the owner only for a genuinely new decision, a change to an owner-area
+  file (see `.github/CODEOWNERS`), or anything involving credentials, spending
+  or access controls.
+- Never push to `main`, bypass a required check, or weaken a security or
+  data-quality gate to get unblocked. A denied action is parked, not worked
+  around.
+
+**Track work on GitHub.** Keep the to-do list and outstanding tasks as issues
+in this repository, not only in chat, so any agent or the owner can pick them
+up. Link each PR to its issue.
+
+**Delegate by weight.** The orchestrating agent plans, gates results and
+decides. Larger models build and review. Mid-size models do mechanical work
+such as rebases and merge stewarding. Small models do grunt work such as
+polling CI, summarising issues, extracting fields and running test commands.
+Output from a smaller model is never trusted without a gate: a test, a
+deterministic check, or review by a larger model. If a unit of work fails
+twice, escalate it to the next model tier instead of retrying the same one.
+A builder never reviews its own work.
+
+**Fresh containers.** A cloud session starts with no dependencies installed.
+Before building, run `pnpm install --frozen-lockfile` and
+`python -m pip install -e ".[test]"` and wait for both to finish. Do the work
+in a branch or worktree, never on `main`.
+
+## Progress reports
+
+Once a task has been running for 60 minutes, post a short report every 30
+minutes until it finishes, in chat and as a comment on the task's tracking
+issue. Use exactly three headings:
+
+- **Progress**: what was done since the last report, as features and results
+  (PRs opened or merged, checks passed), not a list of steps.
+- **Problems**: what broke or is parked, in plain words.
+- **Plans**: what happens next. End with **Needed from you**: every action the
+  owner must take, each as one direct link or button (the PR to merge, the
+  issue to answer), or "nothing needed".
+
+**Options.** When the owner must choose, list every option in order with the
+recommended one first and marked "(Recommended)". State each option's
+downsides plainly. Use this only for real owner decisions, not for steps the
+task already settles.
+
+**Merging.** When a PR is ready for the owner to merge, give the direct PR link
+and say what to click (Squash and merge once the checks are green).
+
 ## Default SkipperCast workspace on AgentOrange
+
+This section applies when the session has the Tailscale/SSH connection to
+AgentOrange. A cloud session without it uses the checkout the session provides
+(see "Autonomous sessions") and says so in its first report.
 
 - For future SkipperCast development, documents, datasets and generated outputs, work on AgentOrange through the existing Tailscale/SSH connection (`ssh agentorange`). Confirm remote access before making changes.
 - The authoritative repository checkout is `$HOME/skippercast-data/2026-10-07-pge-south/repo`. The seafloor data cache is `$HOME/skippercast-data/2026-10-07-pge-south/repo/var/seafloor/cache`. Keep cache and other private or bulky working data under ignored `var/`; do not commit them. Put reviewed documents, source code and intended generated release outputs in their established repository directories.

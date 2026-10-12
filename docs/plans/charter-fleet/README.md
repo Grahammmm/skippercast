@@ -24,6 +24,7 @@ conversation that produced it.
 | [design.md](design.md) | Decisions, research findings, architecture, data model, region config, source adapters, the OSINT contract and re-run design, the AIS pipeline, activity classification, map layers, retention, monthly cost estimate and risks |
 | [dev-plan.md](dev-plan.md) | Phases P0–P6 and PR-sized tasks with ids, dependencies, files touched and acceptance criteria |
 | [open-questions.md](open-questions.md) | Decisions waiting on the owner, with ranked options, the pick the plan assumes meanwhile, and the CPRA request text |
+| [graph.md](graph.md) | The remaining run (CF-62, Prompts A and B) as nine nodes, each with one input, one output and one deterministic check, plus owner-only steps |
 
 ## How to use this plan
 
@@ -191,3 +192,87 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   runbooks (`FLEET_ENABLED`, `ENABLE_FLEET`, `AISSTREAM_API_KEY`, the
   subscription token on Hermes, linger), then the staging run, the first
   registry run, the listener install and the first OSINT run.
+- 2026-10-10: Layer 0 baseline (read from public Actions run metadata and
+  logs, counts only, no registry or AIS contents; `main` at `cb0b0ed`). Pending
+  CF-62 is partly done: the first CA runs happened on 2026-10-05/06 on the
+  data runner, although [#458](https://github.com/Grahammmm/skippercast/issues/458)
+  still shows every owner box unticked (it was last edited 2026-10-08 and is
+  out of date). Prompts A and B are
+  [#468](https://github.com/Grahammmm/skippercast/issues/468) and
+  [#469](https://github.com/Grahammmm/skippercast/issues/469) (both open);
+  [#459](https://github.com/Grahammmm/skippercast/issues/459) is closed and
+  superseded by them.
+  - Has run: *Fleet registry* CA, `worker` sink, one successful run
+    ([run](https://github.com/Grahammmm/skippercast/actions/runs/37367387546)),
+    status `partial` (28 bindings, 1 failed; 267 vessels created, 64 reviews
+    opened; `GOOGLE_PLACES_API_KEY` empty, so Places enrichment skipped).
+    *Fleet OSINT* CA: two failed dispatches
+    ([run](https://github.com/Grahammmm/skippercast/actions/runs/37368164296),
+    [run](https://github.com/Grahammmm/skippercast/actions/runs/37371281783))
+    then one success ([run](https://github.com/Grahammmm/skippercast/actions/runs/37414628981)):
+    14 of 14 batches done, 267 profiles planned, ingest `partial` (257
+    ingested, 10 refused, 198 reviews open). *Fleet AIS listener* installed
+    once ([run](https://github.com/Grahammmm/skippercast/actions/runs/37367390065)):
+    the heartbeat showed messages within 90 seconds, so the aisstream secret
+    is set. *Fleet AIS processor* has run on schedule (21 runs since
+    2026-10-05, 17 successful and 4 cancelled; latest [success](https://github.com/Grahammmm/skippercast/actions/runs/38061790792)).
+    `regions/CA/fleet.json` exists with `status: active`; `regions/OR/fleet.json`
+    is `dry-run`.
+  - Not run: no first activity map or fishing classification (Prompt B,
+    #469); no labelled trips; `FLEET_MAP_ENABLED` work; no CDFW CPRA request
+    evidence; MMSI identification is 0 for every CA charter-identity region in
+    the coverage report of the registry run.
+  - Failing now: *Fleet AIS health* failed on 2026-10-10 at 06:21 and 13:01
+    UTC (heartbeat and processor stale more than 3 hours, which is the alert
+    working); issue [#508](https://github.com/Grahammmm/skippercast/issues/508)
+    is open. The listener needs the owner-step restart in
+    `docs/operations/runbooks/fleet-ais-down.md`.
+  - Checks on `main`: `PYTHONPATH=src python -m pytest -q -x -m "not gis" -k fleet`
+    exit 0, 453 passed, 939 deselected, 199 subtests passed;
+    `node --test tests/test_fleet_*.mjs` exit 0, 130 pass, 0 fail, 0 skipped;
+    `python scripts/check_repository.py` exit 0.
+  - Fixed by [#515](https://github.com/Grahammmm/skippercast/pull/515)
+    (2026-10-10): [#339](https://github.com/Grahammmm/skippercast/issues/339)
+    (refresh retired offerings in a partial run) and
+    [#340](https://github.com/Grahammmm/skippercast/issues/340)
+    (teck-reports and directories facts never won a column).
+  - Open defect: [#345](https://github.com/Grahammmm/skippercast/issues/345)
+    (`fleet_trip_reports` never populated; 55% of the lead score).
+  - Owner steps outstanding in
+    [#458](https://github.com/Grahammmm/skippercast/issues/458): Google Places
+    key, Hermes subscription token and linger, workflow review (CODEOWNERS),
+    CDFW CPRA request, 30 labelled trips (or approve an agent-labelled set),
+    Q16 terms review, paid AIS history decision. Tick the boxes already done.
+- 2026-10-10: owner decision: the run is packaged as two skills
+  (`skippercast-fleet-registry`, `skippercast-fleet-activity`), as #468 and
+  #469 specify. Recorded in `open-questions.md`; N8 and N9 in `graph.md` updated.
+- 2026-10-11: [Fleet seed #521](https://github.com/Grahammmm/skippercast/issues/521): 347 scout rows across 28 ports transferred to AgentOrange with matching SHA-256. The draft importer's offline check yields 342 candidates and five skips for missing usable provenance. Gate (d) remains pending; no Worker registry job has been dispatched. The eight unscouted ports remain separate backlog.
+- 2026-10-11: N4 code half ([#570](https://github.com/Grahammmm/skippercast/issues/570)): `schedule-correlation` matching (5 matched at-sea and landing-report days over 14, no rival boat of the same port), the watched gate (strong method and confidence ≥ 0.85) in the Worker and the matcher, `python -m skippercast.fleet.ais watch-check` and `schedule-precision`. No precision figure yet: the January–June 2026 landing-report archive is not in the repository. The coverage run waits on N3.
+- 2026-10-11: N5 activity classifier in review (#570, branch
+  `claude/n5-classifier`). It adds the modes `drift-anchor`, `troll-slow`,
+  `troll-pelagic` and `uncertain`, and keeps every threshold in `fleet.json`
+  `thresholds.activity`. Offshore distance is measured to the nearest port
+  geofence. Transit keeps statistics only, and `classifier_version` is now
+  `c2-…`. Live rows are rewritten when the CF-45 processor and CF-47 backfill
+  reprocess them after merge. The tests use synthetic tracks only.
+- 2026-10-11: N6 heat-map aggregate in review (branch `claude/n6-heat-map`,
+  #570). CA and OR bin troll-pelagic into 3 km cells (`resolution_by_kind`),
+  other modes stay at 1 km; the new params change every cell id, so the next
+  processor run replaces the old cells of the seasons it reprocesses.
+  `GET /api/fleet/public/heat` returns whole-season cells only, with at
+  least 3 vessels, at least 72 h old and allowlisted rights, behind `FLEET_PUBLIC_HEAT_ENABLED` (off); it is empty until Q1 moves
+  aisstream to `api-terms`. The admin tracks layer now draws fishing segments
+  only. Tests use synthetic cells only.
+- 2026-10-11: N7 labelled validation set started (#570). N7a (branch
+  `claude/n7-validate`) adds the per-mode precision and recall gate, the
+  transit-lost minutes and coverage counts to `validate`, and `label export`
+  and `label import` for agent-proposed labels, with the
+  [labelling runbook](../../operations/runbooks/fleet-labelling.md). No labels
+  yet; N7b and the labelling run follow.
+- 2026-10-12: N8 skill packaging in review (branch `claude/n8-fleet-skills`,
+  #570): `skills/skippercast-fleet-registry/` and
+  `skills/skippercast-fleet-activity/`, each with modes, guardrails, stop
+  conditions and a counts-only end-of-run report, and a contract test that
+  every command and workflow input they name exists. They run on request over
+  the existing GitHub schedules; Hermes scheduling, Telegram alerts, the host
+  check and the status scripts are still gaps of #468 and #469.

@@ -12,7 +12,7 @@ import {slo} from '../packages/coast/src/counties.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
 
 test('the table matches design § 8 row for row', () => {
-  assert.deepEqual(PROFILES, ['boat', 'shore', 'spear']);
+  assert.deepEqual(PROFILES, ['boat', 'shore', 'spear', 'kayak']);
   assert.equal(DEFAULT_PROFILE, 'boat');
   const rows = {
     boat: {defaultTarget: 'lingcod', maxDepthFt: 300, method: 'boat', fixedSpecies: [], whereToLook: 'reef-fit', swellTile: 'offshore',
@@ -21,6 +21,8 @@ test('the table matches design § 8 row for row', () => {
       defaultLayers: ['swell', 'water-temp'], caveat: 'Offshore seas do not measure breakers at your beach; check surf, access and water quality.'},
     spear: {defaultTarget: 'cabezon-shallow-reef', maxDepthFt: 60, method: 'dive', fixedSpecies: [], whereToLook: 'reef-shallow', swellTile: 'nearshore',
       defaultLayers: ['seafloor', 'swell'], caveat: 'In-water visibility is unverified; surface currents cannot clear a dive.'},
+    kayak: {defaultTarget: 'lingcod', maxDepthFt: 120, method: 'boat', fixedSpecies: [], whereToLook: 'reef-fit', swellTile: 'offshore',
+      defaultLayers: ['seafloor', 'currents'], caveat: 'Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle.'},
   };
   for (const [id, row] of Object.entries(rows)) {
     const {id: tableId, label, ...rest} = profileSemantics(id);
@@ -30,7 +32,7 @@ test('the table matches design § 8 row for row', () => {
     for (const layer of rest.defaultLayers) assert.ok(RAIL_IDS.includes(layer), `${id}: ${layer} is a rail id`);
     assert.ok(rest.caveat.endsWith('.') && !/\b(?:bite|guarantee|will be)\b/i.test(rest.caveat), `${id}: the caveat promises nothing`);
   }
-  assert.ok(isProfile('spear') && !isProfile('kayak') && !isProfile(null));
+  assert.ok(isProfile('spear') && isProfile('kayak') && !isProfile('canoe') && !isProfile(null));
   assert.deepEqual(METHODS, ['boat', 'shore', 'dive']);
 });
 
@@ -59,6 +61,7 @@ test('plans are filtered by method: boat takes every plan, shore the sandy-shore
   assert.deepEqual(speciesForProfile(plans, 'boat'), ['lingcod', 'reef', 'halibut', 'kelp-bass', 'albacore', 'yellowtail', 'lobster']);
   assert.deepEqual(speciesForProfile(plans, 'shore'), ['surfperch', 'halibut']);
   assert.deepEqual(speciesForProfile(plans, 'spear'), ['cabezon-shallow-reef', 'reef', 'kelp-bass']);
+  assert.deepEqual(speciesForProfile(plans, 'kayak'), speciesForProfile(plans, 'boat'), 'kayak fishes the boat plans');
 });
 
 test('the published Morro Bay plans all fit the boat profile and only bottom reef plans fit a dive', async () => {
@@ -78,6 +81,8 @@ test('depth limits: 300 ft boat, 60 ft spear, none for shore; unknown depth stay
   assert.equal(withinDepth('shore', 5000), true);
   assert.equal(withinDepth('spear', null), true);
   assert.equal(withinDepth('spear', Number.NaN), true);
+  assert.equal(withinDepth('kayak', 120), true);
+  assert.equal(withinDepth('kayak', 121), false);
 });
 
 test('PROFILE_TABLE depth limits and default targets equal packages/coast experience.ts', () => {
@@ -86,8 +91,9 @@ test('PROFILE_TABLE depth limits and default targets equal packages/coast experi
   const report = {schemaVersion: 1, countyId: 'slo', generatedAt: now.toISOString(), forecasts: [], observations: [], tides: [], tideEvents: [],
     alerts: [], sources: [], catches: [], catchStatus: 'none', visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}, habitatStatus: 'none'};
   assert.equal(TERRAIN_DEPTH_CEILING_FT, 300);
-  assert.deepEqual(PROFILES.map(terrainDepthLimitFt), [300, 300, 60], 'boat 300, shore the ceiling, spear 60');
-  for (const profile of PROFILES) {
+  assert.deepEqual(PROFILES.map(terrainDepthLimitFt), [300, 300, 60, 120], 'boat 300, shore the ceiling, spear 60, kayak 120');
+  // Kayak is client-only: the legacy coast experience knows boat, shore and spear.
+  for (const profile of PROFILES.filter(id => id !== 'kayak')) {
     const state = createState(report, slo, profile, slo.defaultAreaId, undefined, undefined, now);
     assert.equal(state.maxDepth, terrainDepthLimitFt(profile), `${profile}: experience.ts maxDepth`);
     assert.equal(defaultSpecies(profile), PROFILE_TABLE[profile].defaultTarget, `${profile}: experience.ts defaultSpecies`);

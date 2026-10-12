@@ -198,7 +198,7 @@ test('decodes a real tippecanoe PMTiles archive: 107 Morro Bay reef outlines aft
   const root = new URL('../dist/', import.meta.url);
   const sandbox = { TextDecoder, DecompressionStream, Response, Uint8Array, DataView, ArrayBuffer, Promise, console };
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(new URL('vendor/pmtiles-4.5.0/pmtiles.js', root), 'utf8') + ';globalThis.pmtiles = pmtiles;', sandbox);
+  vm.runInContext(fs.readFileSync(new URL('../node_modules/pmtiles/dist/pmtiles.js', import.meta.url), 'utf8') + ';globalThis.pmtiles = pmtiles;', sandbox);
   const buf = fs.readFileSync(new URL('tiles/morro-bay-reef-outlines.pmtiles', root));
   const source = { getKey: () => 'fixture', getBytes: async (offset, length) => ({ data: buf.buffer.slice(buf.byteOffset + offset, buf.byteOffset + offset + length) }) };
   const archive = new sandbox.pmtiles.PMTiles(source);
@@ -237,7 +237,7 @@ test('synthetic native point-contact outline survives actual tiles as one unrank
   const vm = await import('node:vm');
   const sandbox = {TextDecoder,DecompressionStream,Response,Uint8Array,DataView,ArrayBuffer,Promise,console};
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(new URL('../dist/vendor/pmtiles-4.5.0/pmtiles.js',import.meta.url),'utf8')+';globalThis.pmtiles=pmtiles;',sandbox);
+  vm.runInContext(fs.readFileSync(new URL('../node_modules/pmtiles/dist/pmtiles.js',import.meta.url),'utf8')+';globalThis.pmtiles=pmtiles;',sandbox);
   const buf=fs.readFileSync(new URL('./fixtures/seafloor/classified-point-contact.pmtiles',import.meta.url));
   const archive=new sandbox.pmtiles.PMTiles({getKey:()=> 'synthetic-contact',getBytes:async(offset,length)=>({data:buf.buffer.slice(buf.byteOffset+offset,buf.byteOffset+offset+length)})});
   const h=await archive.getHeader();

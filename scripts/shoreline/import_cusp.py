@@ -16,7 +16,9 @@ and to the region, and keeps the source fields per feature: SRC_DATE as
   counted under `provenance.held_creators` for the region's review.
 - A tile NOAA answers 403 or 404 is recorded as unavailable, never as
   certified empty. Any other failure stops the import and writes nothing.
-The platform build copies the file to dist/regions/<id>/shoreline.geojson.
+The platform build writes a published form to dist/regions/<id>/shoreline.geojson:
+features with identical properties merged into MultiLineStrings, coordinates
+rounded to 5 decimals, schema_version 2.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor

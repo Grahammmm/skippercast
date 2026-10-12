@@ -1,0 +1,69 @@
+{
+  "verifiedAt": "2026-10-07T02:50:06.648Z",
+  "implementationCommit": "4ac5e0cabb369c97beba5db639856b855fda347a",
+  "ciRun": 37563678743,
+  "assets": [
+    {
+      "path": "/",
+      "bytes": 14931,
+      "sha256": "ef7e806adb5e0a357205ad74367f6c8d8cb6120b82d9ce763257c1f25df0e7cc"
+    },
+    {
+      "path": "/assets/coast3d.js",
+      "bytes": 646049,
+      "sha256": "c1b2371508b6d995a25b746239877379de5d1a92b8cb16cfe0fd6b7eb01e855e"
+    },
+    {
+      "path": "/assets/coast3d.css",
+      "bytes": 22495,
+      "sha256": "87367de6ccd8146164d6309c80b2b68e3d9049f629b02c23509ca8ecb4f774c5"
+    },
+    {
+      "path": "/data/coast-wide/manifest.json",
+      "bytes": 1784654,
+      "sha256": "e61fc7f1c29ba59dd943a3492acad0117bc7c769ab7f59547538955f5918bfd8"
+    },
+    {
+      "path": "/data/coast-wide/h-10240-6144-2.bin",
+      "bytes": 214855,
+      "sha256": "a8dd7c7bdd4d65809d87b665b4bc7ebf35b4f1984609ab0dd946c776682ca171"
+    }
+  ],
+  "checks": [
+    "Homepage security and conditional304 retained",
+    "/api/health200",
+    "/api/report200",
+    "/report200",
+    "All public/data paths unchanged versus preceding implementation",
+    "237Node tests, both TypeScript checks and build passed",
+    "Independent eight-region2D/3D baseline audit",
+    "Independent visual confirmation: dominant MorroRock checkerboard removed",
+    "Live desktop1280x800: closeMorro3D/2D, original source inspection",
+    "Live phone390x844: continuous Rock shape, map610px, no horizontal overflow",
+    "No browser warnings/errors"
+  ],
+  "release": {
+    "commit": "4ac5e0cabb369c97beba5db639856b855fda347a",
+    "dirty": false,
+    "builtAt": "2026-10-07T02:47:39.718Z"
+  },
+  "cloudflareVersion": "27277b92-688b-404b-8859-cf5c6a6a86f7",
+  "nativeInspection": {
+    "sourceLabel": "USGS3DEP land context",
+    "reading": "117ft elevation",
+    "coordinate": "35.36999N120.86905W",
+    "displaySpacingM": 2,
+    "nativeLimit": "Original spacing varies; vertical reference not established in export receipt"
+  },
+  "limits": [
+    "Coarse harbor shoreline facets and source joins remain in some views",
+    "Genuine dated aerial imagery gaps remain, including Arguello",
+    "Display smoothing adds no measurements or native accuracy"
+  ],
+  "habitatAuditCorrection": "The PointSur pale offshore speckles disappear with Reefs&speciespins disabled: original admitted habitat polygons, not a terrain artifact. These were preserved.",
+  "screenshots": [
+    "artifacts/corridor/morro-cleanup-live-desktop.jpg",
+    "artifacts/corridor/morro-cleanup-live-mobile.jpg",
+    "artifacts/corridor/morro-artifact-before.jpg"
+  ]
+}

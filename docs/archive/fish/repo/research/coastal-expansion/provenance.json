@@ -1,0 +1,1762 @@
+{
+  "schemaVersion": 1,
+  "collection": {
+    "schemaVersion": 1,
+    "originalSources": [
+      {
+        "name": "MRR22_008.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_008.tif",
+        "sha256": "a6833d08947b037a5082b48d1ad302ef53fc0dd4a1ba178ea64c378e294ee20f",
+        "bytes": 534159,
+        "retrievedAt": "2026-10-06T22:24:23.726273+00:00"
+      },
+      {
+        "name": "MRR22_007.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_007.tif",
+        "sha256": "51c91a4556ea7e53e53f6ccf33705f76cb40a3f0083ffa91eecfa7d05a9e5dc1",
+        "bytes": 47773,
+        "retrievedAt": "2026-10-06T22:24:23.328225+00:00"
+      },
+      {
+        "name": "MRR22_006.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_006.tif",
+        "sha256": "7f008e167f04562dc5d10894008f3e85dd3514b08d18c9d33a39774ca38306ce",
+        "bytes": 167724,
+        "retrievedAt": "2026-10-06T22:24:23.503018+00:00"
+      },
+      {
+        "name": "MRR22_010.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_010.tif",
+        "sha256": "2519a4d34e1d16b9a1925a5fc70227eeca29493fb408d7559520cba158d0b657",
+        "bytes": 254250,
+        "retrievedAt": "2026-10-06T22:24:23.559568+00:00"
+      },
+      {
+        "name": "MRR22_005.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_005.tif",
+        "sha256": "37b96be9c3afaa9026b2fbaafec0034e96205a09d23046d655242d2b6c328af5",
+        "bytes": 526637,
+        "retrievedAt": "2026-10-06T22:24:24.203735+00:00"
+      },
+      {
+        "name": "MRR22_003.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_003.tif",
+        "sha256": "946fabe42488cecbbca0ea04d818fbd0b7541142e665f88ac20131b7326dc6a4",
+        "bytes": 60641,
+        "retrievedAt": "2026-10-06T22:24:24.091083+00:00"
+      },
+      {
+        "name": "MRR22_009.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_009.tif",
+        "sha256": "ef597c857f16022f36d34ee3e7b27e8a80349025928ce789ac8de1f84d0053c2",
+        "bytes": 480984,
+        "retrievedAt": "2026-10-06T22:24:24.431404+00:00"
+      },
+      {
+        "name": "MRR22_001.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_001.tif",
+        "sha256": "4c05ebdeac66add09e8863f0c5af67ac6f31323617f2225235d6610d0a051065",
+        "bytes": 231454,
+        "retrievedAt": "2026-10-06T22:15:36.802687+00:00"
+      },
+      {
+        "name": "MRR22_004.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_004.tif",
+        "sha256": "ceab27a6ce64d05b6e48e26b6a914dbfa5b8377d30be90c16fe2350361d8e8ca",
+        "bytes": 205928,
+        "retrievedAt": "2026-10-06T22:24:24.487775+00:00"
+      },
+      {
+        "name": "MRR22_002.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_002.tif",
+        "sha256": "a916f65c61142527b095ce49ea505e520a429eb75969b631209a1074800b99c9",
+        "bytes": 441253,
+        "retrievedAt": "2026-10-06T22:24:24.921719+00:00"
+      },
+      {
+        "name": "MRR22_014.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_014.tif",
+        "sha256": "36c0df00bca2607e40f1f15ba0df77ec4038202b3fd3198c5829d6ae9bdfaa8c",
+        "bytes": 505186,
+        "retrievedAt": "2026-10-06T22:24:25.887307+00:00"
+      },
+      {
+        "name": "MRR22_015.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_015.tif",
+        "sha256": "74823c85d2cb4aad293786879f5ab6764055f93b50579d03fbd1332803067365",
+        "bytes": 465212,
+        "retrievedAt": "2026-10-06T22:24:25.359624+00:00"
+      },
+      {
+        "name": "MRR22_012.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_012.tif",
+        "sha256": "7a1acb389f73628fb8bc06c51461697abbc5398827ef4997a19c9bcd327c43a9",
+        "bytes": 44340,
+        "retrievedAt": "2026-10-06T22:24:24.991842+00:00"
+      },
+      {
+        "name": "MRR22_017.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_017.tif",
+        "sha256": "aaca9f5b52a6bd4acb7558d3353be0ecce6c219c09f55ef81cbaeeff56b6f0de",
+        "bytes": 451728,
+        "retrievedAt": "2026-10-06T22:24:25.847547+00:00"
+      },
+      {
+        "name": "MRR22_013.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_013.tif",
+        "sha256": "ebc5196a4a51d56b4a90b8f3881a6c9b0c211ead5c613798c532eb46908e3a10",
+        "bytes": 476615,
+        "retrievedAt": "2026-10-06T22:24:25.839393+00:00"
+      },
+      {
+        "name": "MRR22_018.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_018.tif",
+        "sha256": "5cd18a91d8015c7108cc10585660e26365fa9bea08197316ea28dbd5d0176074",
+        "bytes": 308694,
+        "retrievedAt": "2026-10-06T22:24:26.188088+00:00"
+      },
+      {
+        "name": "MRR22_011.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_011.tif",
+        "sha256": "0ee4d0414a7832ce8c2c1f90201d314468fcb3ee3e314cf6b282d35253d022d1",
+        "bytes": 175391,
+        "retrievedAt": "2026-10-06T22:24:26.531472+00:00"
+      },
+      {
+        "name": "MRR22_016.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_016.tif",
+        "sha256": "b7b4c9a957e4621b23a7e8bbb7dd7392fed2897f95e26d83cb5a006a82dfc52f",
+        "bytes": 517853,
+        "retrievedAt": "2026-10-06T22:24:26.795457+00:00"
+      },
+      {
+        "name": "MRR22_020.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_020.tif",
+        "sha256": "40a22af5f69f28107d07be5d4e1eb01e4a0e427eee9ee53bfb91d65093755d17",
+        "bytes": 527880,
+        "retrievedAt": "2026-10-06T22:24:26.731705+00:00"
+      },
+      {
+        "name": "MRR22_019.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_019.tif",
+        "sha256": "bfba5b56fb01936ce65adbed2f5a5a09fa2f87fb934c83483138651a4c7b11dd",
+        "bytes": 360864,
+        "retrievedAt": "2026-10-06T22:24:27.037308+00:00"
+      },
+      {
+        "name": "MRR22_028.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_028.tif",
+        "sha256": "3bb78520a03be0d6ce29de320be0c3dd38b67480f1d5715d9bcf42813e45eaef",
+        "bytes": 399409,
+        "retrievedAt": "2026-10-06T22:24:27.354028+00:00"
+      },
+      {
+        "name": "MRR22_030.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_030.tif",
+        "sha256": "c54db76cd9972b3196402e856a784a115c29df972a2ba287cbede3ec6969599c",
+        "bytes": 191985,
+        "retrievedAt": "2026-10-06T22:24:27.470312+00:00"
+      },
+      {
+        "name": "MRR22_021.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_021.tif",
+        "sha256": "f58519efeec49f2fc495abcc778507455773eeda8e73e250af7034e009a32afe",
+        "bytes": 491233,
+        "retrievedAt": "2026-10-06T22:24:27.748968+00:00"
+      },
+      {
+        "name": "MRR22_022.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_022.tif",
+        "sha256": "30c3c3f566f5c40b793823c2d802965fb5161da233a17f62eae425f8011f2c1b",
+        "bytes": 456607,
+        "retrievedAt": "2026-10-06T22:24:27.852814+00:00"
+      },
+      {
+        "name": "MRR22_024.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_024.tif",
+        "sha256": "f9e478e2b8698595e50b7732206120d6f4b890cef40ee708731154c0de4eb64a",
+        "bytes": 478884,
+        "retrievedAt": "2026-10-06T22:24:28.141463+00:00"
+      },
+      {
+        "name": "MRR22_029.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_029.tif",
+        "sha256": "31688a99ba72985c2b29c7fba1e6662ab48cfdb0890fd566e29138a8afb41519",
+        "bytes": 495670,
+        "retrievedAt": "2026-10-06T22:24:28.505121+00:00"
+      },
+      {
+        "name": "MRR22_027.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_027.tif",
+        "sha256": "750ac73edeac94505eec9b3f632feed92429d0b2b56746fc40a77148da58517b",
+        "bytes": 443345,
+        "retrievedAt": "2026-10-06T22:24:28.636522+00:00"
+      },
+      {
+        "name": "MRR22_026.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_026.tif",
+        "sha256": "d310e205488ae1e3ea8611e389d9ca5a3894eb17b9906aad30d325eb47a81cb9",
+        "bytes": 525529,
+        "retrievedAt": "2026-10-06T22:24:28.676443+00:00"
+      },
+      {
+        "name": "MRR22_023.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_023.tif",
+        "sha256": "97bc3ddcb1f6ff9fbdc6b135d1a7f2c9796d1613ac61c59a89c6aea46f057267",
+        "bytes": 442797,
+        "retrievedAt": "2026-10-06T22:24:28.996329+00:00"
+      },
+      {
+        "name": "MRR22_025.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_025.tif",
+        "sha256": "9f924ee5a950527129dd3af6dc5adedafa5800ccee3ca5d9671c96241d6521b1",
+        "bytes": 245375,
+        "retrievedAt": "2026-10-06T22:24:29.268803+00:00"
+      },
+      {
+        "name": "MRR22_033.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_033.tif",
+        "sha256": "44f79b9a57c95e9574fbf3671b35cff6a8aa10cfdb7c65834db91991237a9bf9",
+        "bytes": 85023,
+        "retrievedAt": "2026-10-06T22:24:29.315291+00:00"
+      },
+      {
+        "name": "MRR22_036.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_036.tif",
+        "sha256": "a799eac2c6ac3fba2ea59b4dcfad78d167800ef3a277b1b12d1763115527ca3b",
+        "bytes": 272449,
+        "retrievedAt": "2026-10-06T22:24:29.477029+00:00"
+      },
+      {
+        "name": "MRR22_037.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_037.tif",
+        "sha256": "343c5fe1842486ad0ab78f9d501ca56b410f0ec76ce5cee81626d5b0e73c0ddf",
+        "bytes": 293542,
+        "retrievedAt": "2026-10-06T22:24:29.785797+00:00"
+      },
+      {
+        "name": "MRR22_034.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_034.tif",
+        "sha256": "01ed2ac25efae3090500670a411dca675be1ed7e835f6927bb915c00ca6eb9f4",
+        "bytes": 154377,
+        "retrievedAt": "2026-10-06T22:24:30.036524+00:00"
+      },
+      {
+        "name": "MRR22_031.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_031.tif",
+        "sha256": "3017230262e69fe50905029421f2a17cb444b2726459de05127f31f0e318170a",
+        "bytes": 203033,
+        "retrievedAt": "2026-10-06T22:24:30.138157+00:00"
+      },
+      {
+        "name": "MRR22_032.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_032.tif",
+        "sha256": "7e6f05324808cb70f16dff4ac8cb255f5e5e901a33be5c24ebf37245851abfa5",
+        "bytes": 99672,
+        "retrievedAt": "2026-10-06T22:24:30.084598+00:00"
+      },
+      {
+        "name": "MRR22_035.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_035.tif",
+        "sha256": "c8e5f1bfb48c57556fab3603f8561301d671b0cf941468353f3c4f41e94f83b8",
+        "bytes": 544903,
+        "retrievedAt": "2026-10-06T22:24:30.564816+00:00"
+      },
+      {
+        "name": "MRR22_038.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_038.tif",
+        "sha256": "b744fd5f8671e613031d6b109f36576954630758fbf41273093dbcf57a94abc3",
+        "bytes": 389319,
+        "retrievedAt": "2026-10-06T22:24:30.842011+00:00"
+      },
+      {
+        "name": "MRR22_039.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_039.tif",
+        "sha256": "8d444a1e1257d33796ddf40b36de718aa977c1a42f41d8ffae584abad59b2734",
+        "bytes": 513864,
+        "retrievedAt": "2026-10-06T22:24:30.983945+00:00"
+      },
+      {
+        "name": "MRR22_041.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_041.tif",
+        "sha256": "1270cd0ed821a78bdf1ab762679fb1e2dfee4ea1320714fd0f04eba67cf62bf5",
+        "bytes": 543054,
+        "retrievedAt": "2026-10-06T22:24:30.973243+00:00"
+      },
+      {
+        "name": "MRR22_040.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_040.tif",
+        "sha256": "4a8ecd1bdac14c3a10fa6e2c90e1f202b0bcd2c5724e8c3416f22ebf472d2b97",
+        "bytes": 551070,
+        "retrievedAt": "2026-10-06T22:24:31.376371+00:00"
+      },
+      {
+        "name": "MRR22_046.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_046.tif",
+        "sha256": "64863df1a6a4004f743ee3f3e8144801d300235cd0701cf72fd08f8e0ccc4c58",
+        "bytes": 84853,
+        "retrievedAt": "2026-10-06T22:24:31.446837+00:00"
+      },
+      {
+        "name": "MRR22_043.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_043.tif",
+        "sha256": "eb7fb23fd7736e4297edf3b81566e41e51ebd822478a190f1cc33c38d01d5a58",
+        "bytes": 84935,
+        "retrievedAt": "2026-10-06T22:24:31.684932+00:00"
+      },
+      {
+        "name": "MRR22_045.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_045.tif",
+        "sha256": "52329624e2fe8f36c76d026d115ed010c53ae1c7f4946ea96ab483b3e9916517",
+        "bytes": 310189,
+        "retrievedAt": "2026-10-06T22:24:31.810520+00:00"
+      },
+      {
+        "name": "MRR22_048.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_048.tif",
+        "sha256": "98a733b370a13e2fdd478ce74cc2d7997259d2c56d083649421e737c2df99c3f",
+        "bytes": 509944,
+        "retrievedAt": "2026-10-06T22:24:32.145303+00:00"
+      },
+      {
+        "name": "MRR22_044.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_044.tif",
+        "sha256": "4064506f75682558b952bc8b45f2613444e16ea5ede64b322ceefffc399d13d9",
+        "bytes": 553995,
+        "retrievedAt": "2026-10-06T22:24:32.196611+00:00"
+      },
+      {
+        "name": "MRR22_042.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_042.tif",
+        "sha256": "bb07773acfd4d3fa4700b1f889110396b8c5fe9e95f0c1c185103b2c48d8f29e",
+        "bytes": 426913,
+        "retrievedAt": "2026-10-06T22:24:32.563978+00:00"
+      },
+      {
+        "name": "MRR22_049.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_049.tif",
+        "sha256": "4748939da79a55dd7871fc84c66819e1426c8a9e1197d92d1d88428165f4c51c",
+        "bytes": 581311,
+        "retrievedAt": "2026-10-06T22:24:32.617062+00:00"
+      },
+      {
+        "name": "MRR22_047.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_047.tif",
+        "sha256": "abd49ac513d885f5970199e8605503a4a4c54fc26d6fe8d2599e4311c4d3e378",
+        "bytes": 360847,
+        "retrievedAt": "2026-10-06T22:24:32.868866+00:00"
+      },
+      {
+        "name": "MRR22_050.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_050.tif",
+        "sha256": "c3ad31991ca8408e7709e0aa768c218d67c25d58638f68bb6ff05aefd85e1680",
+        "bytes": 579958,
+        "retrievedAt": "2026-10-06T22:24:33.153953+00:00"
+      },
+      {
+        "name": "MRR22_051.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_051.tif",
+        "sha256": "879b77f02c795e96a9c3567cf51f171deb8672a057b594888b99f7db3faf84ed",
+        "bytes": 460070,
+        "retrievedAt": "2026-10-06T22:24:33.397775+00:00"
+      },
+      {
+        "name": "MRR22_052.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_052.tif",
+        "sha256": "3a560b75731149cc9c0c3b4774d91370daa74c1319acdaa3639d64391bea4574",
+        "bytes": 15160,
+        "retrievedAt": "2026-10-06T22:24:33.042680+00:00"
+      },
+      {
+        "name": "MRR22_053.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_053.tif",
+        "sha256": "ee6de53dbcefa70d7ed8af976368e28e51c3ad7de2d1a8b02f4707035f0d3a79",
+        "bytes": 533712,
+        "retrievedAt": "2026-10-06T22:24:33.768749+00:00"
+      },
+      {
+        "name": "MRR22_054.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_054.tif",
+        "sha256": "a54b2436778e8c575887739e0cee4f5f0207063bdeb1e4446e630f4d9a550b04",
+        "bytes": 368744,
+        "retrievedAt": "2026-10-06T22:24:33.915452+00:00"
+      },
+      {
+        "name": "MRR22_057.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_057.tif",
+        "sha256": "609fb8057e3e7f6c591a66b83886254784d18648de8868a6a8c3f6d50155f37c",
+        "bytes": 542305,
+        "retrievedAt": "2026-10-06T22:24:34.001845+00:00"
+      },
+      {
+        "name": "MRR22_058.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_058.tif",
+        "sha256": "72b2e18065bbf717b3a9b060b901f62cdef0e518598084d1908a19ae74c8d45c",
+        "bytes": 528082,
+        "retrievedAt": "2026-10-06T22:24:34.321060+00:00"
+      },
+      {
+        "name": "MRR22_059.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_059.tif",
+        "sha256": "5876dfdd0a770cb65227aca0a3786d742d81a9c937d1c80128356241a096044f",
+        "bytes": 523802,
+        "retrievedAt": "2026-10-06T22:24:34.521497+00:00"
+      },
+      {
+        "name": "MRR22_056.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_056.tif",
+        "sha256": "056b0a1493b73a6a15ce1e6b6b45c42e3b9e1e64b05a7a77bc218da6296abf25",
+        "bytes": 352124,
+        "retrievedAt": "2026-10-06T22:24:34.844412+00:00"
+      },
+      {
+        "name": "MRR22_055.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_055.tif",
+        "sha256": "419c3de03c796bed3a40655d6b24a834d865f28dc1dfbd5b4cbdf126ccb5c18a",
+        "bytes": 278362,
+        "retrievedAt": "2026-10-06T22:24:34.674383+00:00"
+      },
+      {
+        "name": "MRR22_063.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_063.tif",
+        "sha256": "12d75fc8aa641b687ef4f15b888b70c1e286c409a9a74016b6d58dea1e6d28bd",
+        "bytes": 431007,
+        "retrievedAt": "2026-10-06T22:24:35.116316+00:00"
+      },
+      {
+        "name": "MRR22_061.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_061.tif",
+        "sha256": "eb626bad7cea81cb943e8cad594a8d76e155a1c8b20a350dc87549173525b934",
+        "bytes": 510808,
+        "retrievedAt": "2026-10-06T22:24:35.293767+00:00"
+      },
+      {
+        "name": "MRR22_060.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_060.tif",
+        "sha256": "c3a5ffcacd92bd58c7fe3f7d04091321c5adf752fca062576b8cec3aac7e8c8c",
+        "bytes": 307870,
+        "retrievedAt": "2026-10-06T22:24:35.414840+00:00"
+      },
+      {
+        "name": "MRR22_065.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_065.tif",
+        "sha256": "b7e0afce8646c74f691f45285ea43439ea6e86cd419e4ce929e1689b728df445",
+        "bytes": 186946,
+        "retrievedAt": "2026-10-06T22:24:35.624697+00:00"
+      },
+      {
+        "name": "MRR22_064.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_064.tif",
+        "sha256": "5b9cd296be9957d476e1992788cd7e4841a29e227a12b06713f8c19877151fce",
+        "bytes": 291050,
+        "retrievedAt": "2026-10-06T22:24:35.965717+00:00"
+      },
+      {
+        "name": "MRR22_062.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_062.tif",
+        "sha256": "1b3ad3430f3b2a8beb775e8e1951d719e94093d2380394ba95c5dfb7f152e643",
+        "bytes": 513711,
+        "retrievedAt": "2026-10-06T22:24:36.128972+00:00"
+      },
+      {
+        "name": "MRR22_067.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_067.tif",
+        "sha256": "8fb00e57a275e6b94920532c008453c5b1054acb7246f7449d21b39a82dbe711",
+        "bytes": 566825,
+        "retrievedAt": "2026-10-06T22:24:36.188840+00:00"
+      },
+      {
+        "name": "MRR22_066.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_066.tif",
+        "sha256": "61927ac5e161d6934410578c3a266b506ec0fefeb5e065fb1ac703c984e80de6",
+        "bytes": 425455,
+        "retrievedAt": "2026-10-06T22:24:36.548764+00:00"
+      },
+      {
+        "name": "MRR22_070.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_070.tif",
+        "sha256": "84f3f7b23d031dacaa4b484f910a557624ead8f956e7901bd623af0d3f77861d",
+        "bytes": 533437,
+        "retrievedAt": "2026-10-06T22:24:36.803938+00:00"
+      },
+      {
+        "name": "MRR22_077.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_077.tif",
+        "sha256": "baf5e4894bee3d0266381e711ffd8db682eca2c923821b7af704602e2e46e9fc",
+        "bytes": 7426,
+        "retrievedAt": "2026-10-06T22:24:36.547627+00:00"
+      },
+      {
+        "name": "MRR22_071.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_071.tif",
+        "sha256": "5eba336035de67e3774ca2bdba048a8beb652cc93a6a5759390e0e53ec3f6efd",
+        "bytes": 512529,
+        "retrievedAt": "2026-10-06T22:24:37.088234+00:00"
+      },
+      {
+        "name": "MRR22_073.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_073.tif",
+        "sha256": "cda6212b40c897a61decde964f11e2f5cf9c2a7d2eef3d7943a096c9c3efc846",
+        "bytes": 13620,
+        "retrievedAt": "2026-10-06T22:24:36.987387+00:00"
+      },
+      {
+        "name": "MRR22_069.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_069.tif",
+        "sha256": "77dbfa370a26dc3a9c5f1b4eae104be08a379c7a902a5daf3b64502e2e545956",
+        "bytes": 475404,
+        "retrievedAt": "2026-10-06T22:24:37.392468+00:00"
+      },
+      {
+        "name": "MRR22_068.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_068.tif",
+        "sha256": "2db2bf30e7fc6292c21c3bc80eee18a4edb2a0b872695df104861205656b739f",
+        "bytes": 154707,
+        "retrievedAt": "2026-10-06T22:24:37.502135+00:00"
+      },
+      {
+        "name": "MRR22_075.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_075.tif",
+        "sha256": "7b86566cab9c11358053a66f091d33ea7864d4e1fe70e40a7d41a0d6161084ae",
+        "bytes": 503899,
+        "retrievedAt": "2026-10-06T22:24:37.871004+00:00"
+      },
+      {
+        "name": "MRR22_076.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_076.tif",
+        "sha256": "fd2b4e89f0f10b0af9b568b4947fd5f976b0a60223b432ef7112fd81c56b5f84",
+        "bytes": 8042,
+        "retrievedAt": "2026-10-06T22:24:37.516181+00:00"
+      },
+      {
+        "name": "MRR22_074.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_074.tif",
+        "sha256": "f30213a7f9df0cb9d15711efb0e36ef146c8adeed8c0d0eecfdd81c130dbb20d",
+        "bytes": 71511,
+        "retrievedAt": "2026-10-06T22:24:37.970117+00:00"
+      },
+      {
+        "name": "MRR22_072.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_072.tif",
+        "sha256": "0e876886569761e5e41a71d7fabcfe996749a62ca62efd4bd8c9e8c60f6df0ab",
+        "bytes": 278689,
+        "retrievedAt": "2026-10-06T22:24:38.273632+00:00"
+      },
+      {
+        "name": "MRR22_086.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_086.tif",
+        "sha256": "57b6905ccbd045dddc718851392f45a0f27482ba46c010e44122e5937607faf1",
+        "bytes": 463764,
+        "retrievedAt": "2026-10-06T22:24:38.337138+00:00"
+      },
+      {
+        "name": "MRR22_081.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_081.tif",
+        "sha256": "8132ee547530be06240960e0418c746f73a32dcdc2409c13048b22109ebe615f",
+        "bytes": 103181,
+        "retrievedAt": "2026-10-06T22:24:38.827376+00:00"
+      },
+      {
+        "name": "MRR22_087.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_087.tif",
+        "sha256": "29756ab12c8efb5878d68d820f41455387478aba5f28c617a01f71f04b666d37",
+        "bytes": 140960,
+        "retrievedAt": "2026-10-06T22:24:38.703315+00:00"
+      },
+      {
+        "name": "MRR22_084.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_084.tif",
+        "sha256": "ba8e1ddd520632b97183aa59e37d589fb3572b07e9fc2fc3ddfe7cf949c30fcd",
+        "bytes": 128728,
+        "retrievedAt": "2026-10-06T22:24:38.951342+00:00"
+      },
+      {
+        "name": "MRR22_083.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_083.tif",
+        "sha256": "01f4893a911309f0d9c56653b0c8fd79ea36ebf428b76da7dbcfd0ee6a3a0d1e",
+        "bytes": 5813,
+        "retrievedAt": "2026-10-06T22:24:38.782684+00:00"
+      },
+      {
+        "name": "MRR22_079.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_079.tif",
+        "sha256": "f6700ab573e7811c22390b8dfa6392f061eb6e927b5fd33afd958167c59ff3fb",
+        "bytes": 542325,
+        "retrievedAt": "2026-10-06T22:24:39.548037+00:00"
+      },
+      {
+        "name": "MRR22_085.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_085.tif",
+        "sha256": "625e04f779cb3ba65e01244d34b44ca663268d4825b510af39d3caa8366ccb1c",
+        "bytes": 486855,
+        "retrievedAt": "2026-10-06T22:24:39.647985+00:00"
+      },
+      {
+        "name": "MRR22_082.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_082.tif",
+        "sha256": "6c02d15284846865ad6f66202f5f3d6b3a74163cfafd3ed863a489eb4723ef5e",
+        "bytes": 95580,
+        "retrievedAt": "2026-10-06T22:24:39.507443+00:00"
+      },
+      {
+        "name": "MRR22_078.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_078.tif",
+        "sha256": "1c6aa01bc26a5a4090110ef87326521598404ccece23d72a683de68678d6653a",
+        "bytes": 473495,
+        "retrievedAt": "2026-10-06T22:24:39.737909+00:00"
+      },
+      {
+        "name": "MRR22_080.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_080.tif",
+        "sha256": "afc105c141923faa385a9c70234a6e3d71922f84724147dbc3580fc61f529295",
+        "bytes": 251898,
+        "retrievedAt": "2026-10-06T22:24:40.238435+00:00"
+      },
+      {
+        "name": "MRR22_089.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_089.tif",
+        "sha256": "6e5fef918431dc1d3bd4ed27a85af11090663ce4abe7285a3e89d0dfdb64944e",
+        "bytes": 361820,
+        "retrievedAt": "2026-10-06T22:24:40.349950+00:00"
+      },
+      {
+        "name": "MRR22_091.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_091.tif",
+        "sha256": "b93d0f0d3a6bf28fae3b51fc6b1a436ae135f36e1b63f0afce6fd8b237f97a21",
+        "bytes": 329461,
+        "retrievedAt": "2026-10-06T22:24:40.376427+00:00"
+      },
+      {
+        "name": "MRR22_090.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_090.tif",
+        "sha256": "64f717699e9e5e490c39e8639f123d3dda1837a9c6df5e1852948ee42387d532",
+        "bytes": 524302,
+        "retrievedAt": "2026-10-06T22:24:40.549016+00:00"
+      },
+      {
+        "name": "MRR22_093.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_093.tif",
+        "sha256": "595c836178835f31e97f09a881c44558c736d55bdeb5a9acba96256af7343b7e",
+        "bytes": 69341,
+        "retrievedAt": "2026-10-06T22:24:40.756163+00:00"
+      },
+      {
+        "name": "MRR22_092.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_092.tif",
+        "sha256": "83699648d9bfde197dbd12610fe86a188290772fa0e03c9d48062a3bf98d73d4",
+        "bytes": 99980,
+        "retrievedAt": "2026-10-06T22:24:40.959660+00:00"
+      },
+      {
+        "name": "MRR22_096.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_096.tif",
+        "sha256": "efa3866051c2106bcf9854b58e700b39adc296776e290e764694a54e9fdfa63d",
+        "bytes": 9920,
+        "retrievedAt": "2026-10-06T22:24:40.800665+00:00"
+      },
+      {
+        "name": "MRR22_094.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_094.tif",
+        "sha256": "61c6838744dba3d291bfdb426aab2c6191364a3db3bd983d4c21f0528c8486f9",
+        "bytes": 286223,
+        "retrievedAt": "2026-10-06T22:24:41.264462+00:00"
+      },
+      {
+        "name": "MRR22_095.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_095.tif",
+        "sha256": "7e1c28523070caf48265991a794fdf26793a3e49d5e2409820f05f719579b864",
+        "bytes": 163968,
+        "retrievedAt": "2026-10-06T22:24:41.480316+00:00"
+      },
+      {
+        "name": "MRR22_097.tif",
+        "url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/MRR22_097.tif",
+        "sha256": "faaa3c8ad7a0610bce8514e745393c7c9a67741b4cce6aa011ee212390c0e192",
+        "bytes": 21201,
+        "retrievedAt": "2026-10-06T22:24:41.299765+00:00"
+      },
+      {
+        "name": "etopo-2022.tif",
+        "url": "https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/15s/15s_surface_elev_gtif/ETOPO_2022_v1_15s_N45W135_surface.tif",
+        "sha256": "4ff26df2ad67546a8c6d94e54c31f7080c80f87f1bf16f2f07e64624ec373432",
+        "bytes": 23387920,
+        "retrievedAt": "2026-10-06T22:24:48.223287+00:00"
+      },
+      {
+        "name": "etopo-2022-east.tif",
+        "url": "https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/15s/15s_surface_elev_gtif/ETOPO_2022_v1_15s_N45W120_surface.tif",
+        "sha256": "806d5dbc40838e1b89c6afb7836fd62c92c47485bfc9a3aa453c3efa05b01a43",
+        "bytes": 33963841,
+        "retrievedAt": "2026-10-06T23:06:31.174327+00:00"
+      }
+    ],
+    "lidarSurveyDate": "2022-06-14",
+    "lidarProduct": "NOAA Digital Coast 9630",
+    "lidarVerticalReference": "NAVD88 / GEOID12B, metres",
+    "lidarOriginalMetadata": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/CA_Morro_Bay_DEM_2022_9630/ca2022_morro_dem_m9630_met.xml",
+    "metadataSha256": "914ea843537c3ddfa3145562ac215e4f01b21dd7d19ed21b5982ecab4c950ccc",
+    "etopoProduct": "ETOPO 2022 v1, 15 arc-second",
+    "notes": [
+      "Native masks preserved; no replacement values written to original rasters",
+      "Global model is regional display context, not reef-scale sounding coverage"
+    ]
+  },
+  "lidarLicense": "NLPL",
+  "licenseEvidence": "https://spdx.org/licenses/NLPL.html",
+  "measuredSourcesUnmodified": true,
+  "displayRules": [
+    "Inspection retains unblended nearest displayed source samples and source class.",
+    "Fine display spacing does not improve native source resolution.",
+    "Normals and source transitions are smoothed for display; no rocks or fish locations are invented.",
+    "Morro Bay lidar land and bottom share NAVD88; offshore survey output reference remains unresolved.",
+    "A zero/adjustable water display surface is not an observed tide.",
+    "Regional model is used outside detailed survey support, including beyond 300ft."
+  ],
+  "imageryReceipts": [
+    {
+      "name": "harbor-0-0",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13460183.101348698%2C4204001.141110818%2C-13453183.101348698%2C4211001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_bf3852db_fc7a_4167_891f_cb8b38ee28a0.jpg",
+      "bytes": 640463,
+      "sha256": "c4797941d72332eb45bc849c8dcb9b819be084e92fb12c743996b148dcda7cd9",
+      "extent3857": {
+        "xmin": -13460183.101348698,
+        "ymin": 4204001.141110818,
+        "xmax": -13453183.101348698,
+        "ymax": 4211001.141110818,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 2048,
+      "height": 2048,
+      "retrievedAt": "2026-10-06T22:34:37.187636+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "harbor-0-1",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13460183.101348698%2C4211001.141110818%2C-13453183.101348698%2C4218001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_80fcebd6_47cf_400b_94f6_f628ae20c6e0.jpg",
+      "bytes": 728346,
+      "sha256": "e479a67cf6169d177780c3daffbae48bb2f4050daa5a603ff22bce9ff2c7d382",
+      "extent3857": {
+        "xmin": -13460183.101348698,
+        "ymin": 4211001.141110818,
+        "xmax": -13453183.101348698,
+        "ymax": 4218001.141110818,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 2048,
+      "height": 2048,
+      "retrievedAt": "2026-10-06T22:34:51.395300+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "harbor-1-0",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13453183.101348698%2C4204001.141110818%2C-13446183.101348698%2C4211001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_6dac7fb8_73e7_4f08_be9e_d4b93b5d091a.jpg",
+      "bytes": 729355,
+      "sha256": "cde20fe01ca39b02985c6899d5f0ff0ed4e08eb655ed1ae8d8fd17e599a454cc",
+      "extent3857": {
+        "xmin": -13453183.101348698,
+        "ymin": 4204001.141110818,
+        "xmax": -13446183.101348698,
+        "ymax": 4211001.141110818,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 2048,
+      "height": 2048,
+      "retrievedAt": "2026-10-06T22:34:45.841125+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "harbor-1-1",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13453183.101348698%2C4211001.141110818%2C-13446183.101348698%2C4218001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_b28827d9_3c4c_481a_8eba_2b34fb673c19.jpg",
+      "bytes": 573908,
+      "sha256": "ad6b224fcdcfec81b1e0aeeab525ac02ca86aff1abd11fc3971cb54503d0434c",
+      "extent3857": {
+        "xmin": -13453183.101348698,
+        "ymin": 4211001.141110818,
+        "xmax": -13446183.101348698,
+        "ymax": 4218001.141110818,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 2048,
+      "height": 2048,
+      "retrievedAt": "2026-10-06T22:35:00.968148+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "harbor",
+      "sha256": "f1ea1eb51687d01e58972c1c134dc0cfe8e8e99ffcca1ac07526b99180348a06",
+      "bytes": 4583793,
+      "extent3857": {
+        "xmin": -13460183.101348698,
+        "ymin": 4204001.141110818,
+        "xmax": -13446183.101348698,
+        "ymax": 4218001.141110818
+      },
+      "source": "USGS / USDA NAIP dated aerial mosaic",
+      "parts": [
+        {
+          "name": "harbor-0-0",
+          "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13460183.101348698%2C4204001.141110818%2C-13453183.101348698%2C4211001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+          "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_bf3852db_fc7a_4167_891f_cb8b38ee28a0.jpg",
+          "bytes": 640463,
+          "sha256": "c4797941d72332eb45bc849c8dcb9b819be084e92fb12c743996b148dcda7cd9",
+          "extent3857": {
+            "xmin": -13460183.101348698,
+            "ymin": 4204001.141110818,
+            "xmax": -13453183.101348698,
+            "ymax": 4211001.141110818,
+            "spatialReference": {
+              "wkid": 102100,
+              "latestWkid": 3857
+            }
+          },
+          "width": 2048,
+          "height": 2048,
+          "retrievedAt": "2026-10-06T22:34:37.187636+00:00",
+          "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+        },
+        {
+          "name": "harbor-1-0",
+          "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13453183.101348698%2C4204001.141110818%2C-13446183.101348698%2C4211001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+          "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_6dac7fb8_73e7_4f08_be9e_d4b93b5d091a.jpg",
+          "bytes": 729355,
+          "sha256": "cde20fe01ca39b02985c6899d5f0ff0ed4e08eb655ed1ae8d8fd17e599a454cc",
+          "extent3857": {
+            "xmin": -13453183.101348698,
+            "ymin": 4204001.141110818,
+            "xmax": -13446183.101348698,
+            "ymax": 4211001.141110818,
+            "spatialReference": {
+              "wkid": 102100,
+              "latestWkid": 3857
+            }
+          },
+          "width": 2048,
+          "height": 2048,
+          "retrievedAt": "2026-10-06T22:34:45.841125+00:00",
+          "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+        },
+        {
+          "name": "harbor-0-1",
+          "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13460183.101348698%2C4211001.141110818%2C-13453183.101348698%2C4218001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+          "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_80fcebd6_47cf_400b_94f6_f628ae20c6e0.jpg",
+          "bytes": 728346,
+          "sha256": "e479a67cf6169d177780c3daffbae48bb2f4050daa5a603ff22bce9ff2c7d382",
+          "extent3857": {
+            "xmin": -13460183.101348698,
+            "ymin": 4211001.141110818,
+            "xmax": -13453183.101348698,
+            "ymax": 4218001.141110818,
+            "spatialReference": {
+              "wkid": 102100,
+              "latestWkid": 3857
+            }
+          },
+          "width": 2048,
+          "height": 2048,
+          "retrievedAt": "2026-10-06T22:34:51.395300+00:00",
+          "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+        },
+        {
+          "name": "harbor-1-1",
+          "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13453183.101348698%2C4211001.141110818%2C-13446183.101348698%2C4218001.141110818&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+          "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_b28827d9_3c4c_481a_8eba_2b34fb673c19.jpg",
+          "bytes": 573908,
+          "sha256": "ad6b224fcdcfec81b1e0aeeab525ac02ca86aff1abd11fc3971cb54503d0434c",
+          "extent3857": {
+            "xmin": -13453183.101348698,
+            "ymin": 4211001.141110818,
+            "xmax": -13446183.101348698,
+            "ymax": 4218001.141110818,
+            "spatialReference": {
+              "wkid": 102100,
+              "latestWkid": 3857
+            }
+          },
+          "width": 2048,
+          "height": 2048,
+          "retrievedAt": "2026-10-06T22:35:00.968148+00:00",
+          "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+        }
+      ]
+    },
+    {
+      "name": "region--32768--131072",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4343115.460289833%2C-13467431.996170238%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_a25f89cf_658d_42be_af86_13c06a799602.jpg",
+      "bytes": 170415,
+      "sha256": "655ec22b4abd75f40c37cdecb23591de9786ded049580aa705fb24def3e12d93",
+      "extent3857": {
+        "xmin": -13507646.797153153,
+        "ymin": 4343115.460289833,
+        "xmax": -13467431.996170238,
+        "ymax": 4383330.261272749,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:42.041229+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--32768--163840",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4383330.261272749%2C-13467431.996170238%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_cdc170b4_e77d_4c81_ae7c_df3585e31777.jpg",
+      "bytes": 156452,
+      "sha256": "569e375d0e23cc131297af291eec8b9b747279dd62244082639235bf550fe22e",
+      "extent3857": {
+        "xmin": -13507646.797153153,
+        "ymin": 4383330.261272748,
+        "xmax": -13467431.996170238,
+        "ymax": 4423545.062255664,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:36.016457+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--32768--32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4222471.057341086%2C-13467431.996170238%2C4262685.858324002&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_01952838_d524_4824_be63_652e532b66f5.jpg",
+      "bytes": 94013,
+      "sha256": "a2283d06804febc57b643a36c0f5f4911ce39c167ecc2a98ddcf07f52ee63799",
+      "extent3857": {
+        "xmin": -13507646.797153153,
+        "ymin": 4222471.057341085,
+        "xmax": -13467431.996170238,
+        "ymax": 4262685.858324001,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:56.372738+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--32768--65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4262685.858324002%2C-13467431.996170238%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_b454cf4f_3169_4c72_88e9_4118ba6dc548.jpg",
+      "bytes": 172390,
+      "sha256": "c0ed0f3af71ebf4ff91783523e1245c0cb7e85a3356bfd945c2e8489eafc6919",
+      "extent3857": {
+        "xmin": -13507646.797153153,
+        "ymin": 4262685.858324002,
+        "xmax": -13467431.996170238,
+        "ymax": 4302900.659306917,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:53.375717+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--32768--98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4302900.659306917%2C-13467431.996170238%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_56eb3560_1dad_48e8_9bd1_f68601c0eafd.jpg",
+      "bytes": 172045,
+      "sha256": "6f7a2812059f4634b538d26a2b985254e96e40036fee5c630b06ba8ce6eff8f6",
+      "extent3857": {
+        "xmin": -13507646.797153153,
+        "ymin": 4302900.659306916,
+        "xmax": -13467431.996170238,
+        "ymax": 4343115.460289832,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:48.902574+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--65536--131072",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13547861.59813607%2C4343115.460289833%2C-13507646.797153153%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_b0400432_ced8_4141_ab24_308f6316ce2d.jpg",
+      "bytes": 177181,
+      "sha256": "db9a7705121226142ebd21a71b565f473ae65db866e7a4e6cd43ef48232654d1",
+      "extent3857": {
+        "xmin": -13547861.598136067,
+        "ymin": 4343115.460289833,
+        "xmax": -13507646.79715315,
+        "ymax": 4383330.26127275,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:40.795983+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--65536--163840",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13547861.59813607%2C4383330.261272749%2C-13507646.797153153%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_26b928d2_6954_4b76_850b_e5a7d838adf5.jpg",
+      "bytes": 179045,
+      "sha256": "743accae821c6a651cdb348c6545154a1948e831904be5a8022152f05acf7a3c",
+      "extent3857": {
+        "xmin": -13547861.598136067,
+        "ymin": 4383330.261272748,
+        "xmax": -13507646.79715315,
+        "ymax": 4423545.062255665,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:35.385603+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--65536--65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13547861.59813607%2C4262685.858324002%2C-13507646.797153153%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_157771b2_c4aa_429e_9afe_4638d24d7971.jpg",
+      "bytes": 70437,
+      "sha256": "16c43e6e3b6c0b5499e901aaa83796693de370165f8bd17c1a6c0882df7ac6c7",
+      "extent3857": {
+        "xmin": -13547861.598136067,
+        "ymin": 4262685.858324002,
+        "xmax": -13507646.79715315,
+        "ymax": 4302900.659306918,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:52.558961+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--65536--98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13547861.59813607%2C4302900.659306917%2C-13507646.797153153%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_f9783402_069b_4577_a0a3_27965522dbe3.jpg",
+      "bytes": 160115,
+      "sha256": "0ee627c3ba08dcdcf3e3095fb1564ab63d289404d23749c475b4d36a9d35ab92",
+      "extent3857": {
+        "xmin": -13547861.598136067,
+        "ymin": 4302900.659306916,
+        "xmax": -13507646.79715315,
+        "ymax": 4343115.460289833,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:47.972177+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--98304--131072",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13588076.399118984%2C4343115.460289833%2C-13547861.59813607%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_929b2bb4_21ac_42eb_a752_2f0b8b157330.jpg",
+      "bytes": 143841,
+      "sha256": "aa166aa49924797a372f9f5ae43039dfb3da4a85f7505e8c9879afdb682cb997",
+      "extent3857": {
+        "xmin": -13588076.399118984,
+        "ymin": 4343115.460289833,
+        "xmax": -13547861.598136067,
+        "ymax": 4383330.261272749,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:40.053026+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--98304--163840",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13588076.399118984%2C4383330.261272749%2C-13547861.59813607%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_ad03a295_95cf_4e4e_af62_6f9916153611.jpg",
+      "bytes": 94701,
+      "sha256": "f7103746051e33b81c99c91acc9dbbcb2423af03d4ef687298fef7a4f1b6d9eb",
+      "extent3857": {
+        "xmin": -13588076.399118984,
+        "ymin": 4383330.261272748,
+        "xmax": -13547861.598136067,
+        "ymax": 4423545.062255664,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:34.499511+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region--98304--98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13588076.399118984%2C4302900.659306917%2C-13547861.59813607%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_a3faa325_587f_4c52_bb3c_dc64c8050b28.jpg",
+      "bytes": 57656,
+      "sha256": "92aa197a2e8ecf333361ba364be57aeb9ac18c1586af835e1ad70faa48d9f3f6",
+      "extent3857": {
+        "xmin": -13588076.399118984,
+        "ymin": 4302900.659306916,
+        "xmax": -13547861.598136067,
+        "ymax": 4343115.460289832,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:46.900512+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0--131072",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4343115.460289833%2C-13427217.195187323%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_8f96c95f_4c85_4a5d_ada7_f81fdffb5833.jpg",
+      "bytes": 183544,
+      "sha256": "e7e50a74989610519a16c535d0a9b4f51f28e144a00eb8cc665a7d62a5d459be",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4343115.460289833,
+        "xmax": -13427217.195187323,
+        "ymax": 4383330.261272749,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:42.835309+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0--163840",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4383330.261272749%2C-13427217.195187323%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_34d3f2bb_eda5_4555_b054_f8b88b2a994a.jpg",
+      "bytes": 144685,
+      "sha256": "5a828a33fc089aab1b6de162fe099f842666ac640e72de1a68ec8bdab3889440",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4383330.261272748,
+        "xmax": -13427217.195187323,
+        "ymax": 4423545.062255664,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:36.816823+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0--32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4222471.057341086%2C-13427217.195187323%2C4262685.858324002&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_f91dd2dc_9c5c_4ff0_bd26_08a1727ed6ae.jpg",
+      "bytes": 198234,
+      "sha256": "46c5116919804dbbd9e43ea35cf5f7af78921164f5d08a8014db886f5ed4660d",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4222471.057341085,
+        "xmax": -13427217.195187323,
+        "ymax": 4262685.858324001,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:57.090029+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0--65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4262685.858324002%2C-13427217.195187323%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_d330ead5_a1e2_4627_b068_da575229f366.jpg",
+      "bytes": 175630,
+      "sha256": "3fd7b4b947a957a7722d1b53f82b15b40db6c8980d8bb7eb1e269d07246e4e06",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4262685.858324002,
+        "xmax": -13427217.195187323,
+        "ymax": 4302900.659306917,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:54.064794+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0--98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4302900.659306917%2C-13427217.195187323%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_8388e7bf_daaa_4457_94d5_ba41402b0b0b.jpg",
+      "bytes": 170988,
+      "sha256": "1dc48ea5de6f261161b017131bb91e4c3b2aeceebc4f2247aa4f444c9d4074d8",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4302900.659306916,
+        "xmax": -13427217.195187323,
+        "ymax": 4343115.460289832,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:49.787200+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0-0",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4182256.25635817%2C-13427217.195187323%2C4222471.057341086&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_b0ed7b7f_484e_4d2e_b6d1_9010039edf43.jpg",
+      "bytes": 143369,
+      "sha256": "7942530d236f0af035c1731e95f615ea1ad0e9857542037583438ad2003dd381",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4182256.25635817,
+        "xmax": -13427217.195187323,
+        "ymax": 4222471.057341086,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:00.275852+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0-32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4142041.455375254%2C-13427217.195187323%2C4182256.25635817&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_daf33ace_67de_4dd2_93fd_8267ee0675c2.jpg",
+      "bytes": 42852,
+      "sha256": "17d73a983a74e21a2d22f908ce48657443ebfc5af92a135edff7ff2c585e32aa",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4142041.455375254,
+        "xmax": -13427217.195187323,
+        "ymax": 4182256.25635817,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:02.702323+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-0-65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4101826.6543923384%2C-13427217.195187323%2C4142041.455375254&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_598a809a_d2ec_4f8c_a41f_5ebf2e1139a7.jpg",
+      "bytes": 17795,
+      "sha256": "b9a3999b7ddc2782932d0d88df3889a006c0cab8c834ea9d8ebb4b6f450b16d8",
+      "extent3857": {
+        "xmin": -13467431.996170238,
+        "ymin": 4101826.6543923384,
+        "xmax": -13427217.195187323,
+        "ymax": 4142041.455375254,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:05.441310+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768--131072",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4343115.460289833%2C-13387002.394204406%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_3266d416_b884_4f80_84e4_3b8942f6d2d2.jpg",
+      "bytes": 148226,
+      "sha256": "d4f86fb8f3035aee2951b68a61c972f41e9a6edc90f724df2682ca8d1331a51e",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4343115.460289833,
+        "xmax": -13387002.394204406,
+        "ymax": 4383330.26127275,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:44.316674+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768--163840",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4383330.261272749%2C-13387002.394204406%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_c675fd0b_6fb6_49c3_b33b_dc68094c12fd.jpg",
+      "bytes": 124064,
+      "sha256": "707c4555c03414506c117cdbc65e2d938ab64ff9e9b8823699e97aedb5614988",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4383330.261272748,
+        "xmax": -13387002.394204406,
+        "ymax": 4423545.062255665,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:37.810172+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768--32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4222471.057341086%2C-13387002.394204406%2C4262685.858324002&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_44dc76e1_bb09_4645_971e_9c6879f57dc2.jpg",
+      "bytes": 165040,
+      "sha256": "50f300950b11714f9fb46ca8a197335fcdf2908fb7889c6e97aa6c09694b6c66",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4222471.057341085,
+        "xmax": -13387002.394204406,
+        "ymax": 4262685.858324002,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:58.019899+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768--65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4262685.858324002%2C-13387002.394204406%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_426b6dad_c67f_4dba_9760_a43530e587b6.jpg",
+      "bytes": 173966,
+      "sha256": "1e1a87af4de6fec328672d66642f50891dfc13f2a39692438182f92cd599023a",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4262685.858324002,
+        "xmax": -13387002.394204406,
+        "ymax": 4302900.659306918,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:54.959000+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768--98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4302900.659306917%2C-13387002.394204406%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_af77d42b_07ee_4eed_ab0c_dc0dcee15dff.jpg",
+      "bytes": 160385,
+      "sha256": "2a607f28fbd1176f8bd987cc6a093cc5377711e8cecdd9942ed9f99b16da8b62",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4302900.659306916,
+        "xmax": -13387002.394204406,
+        "ymax": 4343115.460289833,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:50.774944+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768-0",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4182256.25635817%2C-13387002.394204406%2C4222471.057341086&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_a64dcab2_a293_42b2_a80f_0568fa64a673.jpg",
+      "bytes": 200256,
+      "sha256": "09cf24c2126f9bd1e25d95869a2f786a925e122d7bc1220a296d64f706906db6",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4182256.25635817,
+        "xmax": -13387002.394204406,
+        "ymax": 4222471.057341087,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:01.446831+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768-32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4142041.455375254%2C-13387002.394204406%2C4182256.25635817&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_2a5c83da_8c86_414e_bcd5_cb8c73cfc5fd.jpg",
+      "bytes": 186833,
+      "sha256": "74d9fa7b7128b541f98daad4e9f11206df4698a7aa7e4e2eeb4b88108791f08b",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4142041.4553752537,
+        "xmax": -13387002.394204406,
+        "ymax": 4182256.2563581704,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:03.876372+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768-65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4101826.6543923384%2C-13387002.394204406%2C4142041.455375254&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_86ddc66a_d51a_4418_a6d2_278e46d918a7.jpg",
+      "bytes": 164545,
+      "sha256": "0c3b94b65adc73f9004012a95e4df9e74d005cb950cfdd48c1a73d9fb19f181f",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4101826.654392338,
+        "xmax": -13387002.394204406,
+        "ymax": 4142041.4553752546,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:06.440800+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-32768-98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4061611.8534094226%2C-13387002.394204406%2C4101826.6543923384&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_2bee47cf_9317_4074_956b_d5358dd72f3a.jpg",
+      "bytes": 57407,
+      "sha256": "99b48f6575d167417ef1c6ad81f76d0878395574ca2fd6df7adba3c1c3798af7",
+      "extent3857": {
+        "xmin": -13427217.195187323,
+        "ymin": 4061611.853409422,
+        "xmax": -13387002.394204406,
+        "ymax": 4101826.654392339,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:08.050985+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536--131072",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4343115.460289833%2C-13346787.593221491%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_e32dcd32_3958_4d3b_a63b_1426fbe5cc6b.jpg",
+      "bytes": 128152,
+      "sha256": "7c2d448ab3b8f3404b14cf4e7be52c5622c01156efcd653da32c683ec7c28822",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4343115.460289833,
+        "xmax": -13346787.59322149,
+        "ymax": 4383330.261272749,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:45.842603+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536--163840",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4383330.261272749%2C-13346787.593221491%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_afb3eaa6_a995_4bc4_a7c4_f83ff284c176.jpg",
+      "bytes": 176656,
+      "sha256": "708c62035ab9d8ecda03cb632b961afded6577dfc1db73a84c6606c71c14a42a",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4383330.261272748,
+        "xmax": -13346787.59322149,
+        "ymax": 4423545.062255664,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:38.936187+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536--32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4222471.057341086%2C-13346787.593221491%2C4262685.858324002&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_1aa0c875_07b4_4316_9132_2f9bffe9661a.jpg",
+      "bytes": 149217,
+      "sha256": "2ca18e8ab6020051a50382479f2dc214b1c65f402b689262bd4964bab4f84a41",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4222471.057341085,
+        "xmax": -13346787.59322149,
+        "ymax": 4262685.858324001,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:58.924124+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536--65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4262685.858324002%2C-13346787.593221491%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_c5e4bd9f_e5db_4533_a783_bca0710f6301.jpg",
+      "bytes": 132708,
+      "sha256": "7c0f0f9e00bffdebad94cb5e6109724c259a0d3595c32b087e0222ee6ac33f34",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4262685.858324002,
+        "xmax": -13346787.59322149,
+        "ymax": 4302900.659306917,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:55.786526+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536--98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4302900.659306917%2C-13346787.593221491%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_92ff749b_4a64_4331_a5dd_0d47e3984539.jpg",
+      "bytes": 126559,
+      "sha256": "012546faf4d849e1382c37a95d3b7f0493cd828c3857b2cf32e3d6d03c1c3ab8",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4302900.659306916,
+        "xmax": -13346787.59322149,
+        "ymax": 4343115.460289832,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:27:51.905381+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536-0",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4182256.25635817%2C-13346787.593221491%2C4222471.057341086&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_f31a7642_329a_41cd_89ca_17573bb58072.jpg",
+      "bytes": 152336,
+      "sha256": "f6d10321e021acfc20b47d87d550fe4e308d54c48dd5d3a369f5c8c720da36b3",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4182256.25635817,
+        "xmax": -13346787.59322149,
+        "ymax": 4222471.057341086,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:02.136348+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536-32768",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4142041.455375254%2C-13346787.593221491%2C4182256.25635817&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_ca7d49a8_dc72_427c_98f7_df07b8e3aea7.jpg",
+      "bytes": 172263,
+      "sha256": "294e311106a65b9e8b892db6dba1df790a23b0e9e70102842290631e5b01eee3",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4142041.455375254,
+        "xmax": -13346787.59322149,
+        "ymax": 4182256.25635817,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:04.860223+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536-65536",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4101826.6543923384%2C-13346787.593221491%2C4142041.455375254&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_0708564a_3786_4800_83f0_f5c95a41b769.jpg",
+      "bytes": 180850,
+      "sha256": "d7d2c1a32dc51732e0ee575347c585116519b68e8586acb9824e09d8f4f1c2a2",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4101826.6543923384,
+        "xmax": -13346787.59322149,
+        "ymax": 4142041.455375254,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:07.236008+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    },
+    {
+      "name": "region-65536-98304",
+      "url": "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4061611.8534094226%2C-13346787.593221491%2C4101826.6543923384&bboxSR=3857&imageSR=3857&size=1024%2C1024&format=jpg&interpolation=RSP_BilinearInterpolation&renderingRule=%7B%22rasterFunction%22%3A+%22NaturalColor%22%7D",
+      "assetUrl": "https://imagery.nationalmap.gov/arcgis/rest/directories/imagery_output/USGSNAIPImagery_ImageServer/_ags_5f684b3c_90c4_41b7_8d8e_c5ae8181cafa.jpg",
+      "bytes": 74033,
+      "sha256": "a74c05e3199cd9f6c3e4cb313da16a7885eb00c6ecd910fe2d458ffcb83e5fa0",
+      "extent3857": {
+        "xmin": -13387002.394204406,
+        "ymin": 4061611.8534094226,
+        "xmax": -13346787.59322149,
+        "ymax": 4101826.6543923384,
+        "spatialReference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        }
+      },
+      "width": 1024,
+      "height": 1024,
+      "retrievedAt": "2026-10-06T22:28:08.914216+00:00",
+      "source": "USGS / USDA NAIP dated aerial mosaic; acquisition dates vary; not live imagery"
+    }
+  ],
+  "wideOverview": {
+    "coverage4326": [
+      -126,
+      32.5,
+      -117.5,
+      39
+    ],
+    "source": "two original adjacent NOAA ETOPO tiles; EGM2008; no zero-filled voids",
+    "displaySpacingM": [
+      1505.8585772255165,
+      1420.4485333540292
+    ],
+    "imagery": {
+      "url": "/data/coast-wide/overview-land.png",
+      "sha256": "d5f0d2e12955f53fb6495df7066fe5368a1a5de1d176527e0cc45755c810b061",
+      "bytes": 4603783,
+      "bounds": [
+        -98303.99999999939,
+        -163840.00000000023,
+        98304.0000000009,
+        131072.00000000058
+      ],
+      "kind": "dated NAIP overview; downsampled 128m geographic texture; transparent missing tiles"
+    },
+    "originalImageryHashes": [
+      "655ec22b4abd75f40c37cdecb23591de9786ded049580aa705fb24def3e12d93",
+      "569e375d0e23cc131297af291eec8b9b747279dd62244082639235bf550fe22e",
+      "a2283d06804febc57b643a36c0f5f4911ce39c167ecc2a98ddcf07f52ee63799",
+      "c0ed0f3af71ebf4ff91783523e1245c0cb7e85a3356bfd945c2e8489eafc6919",
+      "6f7a2812059f4634b538d26a2b985254e96e40036fee5c630b06ba8ce6eff8f6",
+      "db9a7705121226142ebd21a71b565f473ae65db866e7a4e6cd43ef48232654d1",
+      "743accae821c6a651cdb348c6545154a1948e831904be5a8022152f05acf7a3c",
+      "16c43e6e3b6c0b5499e901aaa83796693de370165f8bd17c1a6c0882df7ac6c7",
+      "0ee627c3ba08dcdcf3e3095fb1564ab63d289404d23749c475b4d36a9d35ab92",
+      "aa166aa49924797a372f9f5ae43039dfb3da4a85f7505e8c9879afdb682cb997",
+      "f7103746051e33b81c99c91acc9dbbcb2423af03d4ef687298fef7a4f1b6d9eb",
+      "92aa197a2e8ecf333361ba364be57aeb9ac18c1586af835e1ad70faa48d9f3f6",
+      "e7e50a74989610519a16c535d0a9b4f51f28e144a00eb8cc665a7d62a5d459be",
+      "5a828a33fc089aab1b6de162fe099f842666ac640e72de1a68ec8bdab3889440",
+      "46c5116919804dbbd9e43ea35cf5f7af78921164f5d08a8014db886f5ed4660d",
+      "3fd7b4b947a957a7722d1b53f82b15b40db6c8980d8bb7eb1e269d07246e4e06",
+      "1dc48ea5de6f261161b017131bb91e4c3b2aeceebc4f2247aa4f444c9d4074d8",
+      "7942530d236f0af035c1731e95f615ea1ad0e9857542037583438ad2003dd381",
+      "17d73a983a74e21a2d22f908ce48657443ebfc5af92a135edff7ff2c585e32aa",
+      "b9a3999b7ddc2782932d0d88df3889a006c0cab8c834ea9d8ebb4b6f450b16d8",
+      "d4f86fb8f3035aee2951b68a61c972f41e9a6edc90f724df2682ca8d1331a51e",
+      "707c4555c03414506c117cdbc65e2d938ab64ff9e9b8823699e97aedb5614988",
+      "50f300950b11714f9fb46ca8a197335fcdf2908fb7889c6e97aa6c09694b6c66",
+      "1e1a87af4de6fec328672d66642f50891dfc13f2a39692438182f92cd599023a",
+      "2a607f28fbd1176f8bd987cc6a093cc5377711e8cecdd9942ed9f99b16da8b62",
+      "09cf24c2126f9bd1e25d95869a2f786a925e122d7bc1220a296d64f706906db6",
+      "74d9fa7b7128b541f98daad4e9f11206df4698a7aa7e4e2eeb4b88108791f08b",
+      "0c3b94b65adc73f9004012a95e4df9e74d005cb950cfdd48c1a73d9fb19f181f",
+      "99b48f6575d167417ef1c6ad81f76d0878395574ca2fd6df7adba3c1c3798af7",
+      "7c2d448ab3b8f3404b14cf4e7be52c5622c01156efcd653da32c683ec7c28822",
+      "708c62035ab9d8ecda03cb632b961afded6577dfc1db73a84c6606c71c14a42a",
+      "2ca18e8ab6020051a50382479f2dc214b1c65f402b689262bd4964bab4f84a41",
+      "7c0f0f9e00bffdebad94cb5e6109724c259a0d3595c32b087e0222ee6ac33f34",
+      "012546faf4d849e1382c37a95d3b7f0493cd828c3857b2cf32e3d6d03c1c3ab8",
+      "f6d10321e021acfc20b47d87d550fe4e308d54c48dd5d3a369f5c8c720da36b3",
+      "294e311106a65b9e8b892db6dba1df790a23b0e9e70102842290631e5b01eee3",
+      "d7d2c1a32dc51732e0ee575347c585116519b68e8586acb9824e09d8f4f1c2a2",
+      "a74c05e3199cd9f6c3e4cb313da16a7885eb00c6ecd910fe2d458ffcb83e5fa0"
+    ]
+  }
+}

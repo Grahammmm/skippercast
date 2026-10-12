@@ -9,7 +9,7 @@ import {DatabaseSync} from 'node:sqlite';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html'};
+globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
 const {default: deployed, checkTrips, ClientError} = await import('../server/index.ts');
@@ -142,10 +142,22 @@ test('page shells are served from their fingerprinted file with no-store; other 
     return new Response('page', {headers: {'Content-Type': path.includes('.') ? 'text/javascript' : 'text/html', 'Cache-Control': 'public, max-age=31536000'}}); }};
   const shell = await worker.fetch(new Request(origin + '/?region=morro-bay'), {ASSETS});
   assert.equal(shell.status, 200);assert.equal(shell.headers.get('Cache-Control'), 'no-store');
-  assert.deepEqual(requested[0], ['/index.0123456789', ''], 'hashed file, without .html or the visitor query');
+  assert.deepEqual(requested[0], ['/app.0123456789', ''], 'hashed file, without .html or the visitor query');
   const asset = await worker.fetch(new Request(origin + '/app.0123456789.js'), {ASSETS});
   assert.equal(asset.headers.get('Cache-Control'), 'public, max-age=31536000', 'hashed assets keep their long cache');
   assert.equal((await worker.fetch(new Request(origin + '/'), {})).status, 404, 'no asset binding, no page');
+});
+
+test('a page path missing from SHELLS is fetched directly and still served no-store', async () => {
+  const requested = [], saved = globalThis.SHELLS['/landing.html'];
+  const ASSETS = {fetch: async req => { requested.push(new URL(req.url).pathname + new URL(req.url).search);
+    return new Response('page', {headers: {'Content-Type': 'text/html', 'Cache-Control': 'public, max-age=31536000'}}); }};
+  delete globalThis.SHELLS['/landing.html'];
+  try {
+    const shell = await worker.fetch(new Request(origin + '/?utm=x'), {ASSETS});
+    assert.equal(shell.status, 200);assert.equal(shell.headers.get('Cache-Control'), 'no-store');
+    assert.deepEqual(requested, ['/landing'], 'the page path itself, without .html or the visitor query');
+  } finally { globalThis.SHELLS['/landing.html'] = saved; }
 });
 
 test('only typed client errors answer 400 with their message; dependency errors stay generic', async () => {

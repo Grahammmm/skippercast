@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-11",
+  "method": "Great-circle station-to-station distances using NOAA public inventory coordinates (mean Earth radius 6371.0088 km). This is a bounded first rollout, not a coast-wide equivalence claim.",
+  "sources": [
+    "https://www.ndbc.noaa.gov/activestations.xml",
+    "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions"
+  ],
+  "choices": [
+    {
+      "primary": "46053",
+      "backup": "46054",
+      "distance_km": 57.61,
+      "primary_coordinates": [
+        34.246,
+        -119.842
+      ],
+      "backup_coordinates": [
+        34.274,
+        -120.468
+      ],
+      "exposure": "Offshore Santa Barbara Channel reference to offshore Santa Barbara Channel reference. Existing logical nearshore roles also use offshore channel references.",
+      "reason": "Both stations measure open channel wind and waves south of the mainland and north of the Channel Islands. Backup is a western-channel regional reference, not an estimate at the eastern station or Ventura shore. Local shelter and gradients remain different. No offshore-to-beach substitution.",
+      "endpoints": [
+        "https://www.ndbc.noaa.gov/data/realtime2/46053.txt",
+        "https://www.ndbc.noaa.gov/data/realtime2/46054.txt",
+        "https://www.ndbc.noaa.gov/data/realtime2/46054.spec"
+      ],
+      "observed_primary_sample_at": "2026-10-06T05:50:00Z",
+      "observed_backup_sample_at": "2026-10-11T13:30:00Z",
+      "rejected": {
+        "46011": "Santa Maria is on the exposed coast northwest of Point Conception, outside the sheltered channel; proximity alone does not qualify it."
+      }
+    },
+    {
+      "primary": "9410660",
+      "backup": "9410680",
+      "distance_km": 5.45,
+      "primary_coordinates": [
+        33.72,
+        -118.272
+      ],
+      "backup_coordinates": [
+        33.7517,
+        -118.227
+      ],
+      "exposure": "Los Angeles outer harbor and Long Beach Terminal Island: adjacent ports in the San Pedro Bay harbor complex.",
+      "reason": "Both NOAA reference prediction stations provide MLLW high/low water levels in the same harbor complex. Heights and times remain station-specific. Neither predicts entrance current or slack water.",
+      "endpoint": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&station=9410680&datum=MLLW&begin_date=20261011&end_date=20261019&time_zone=gmt&units=english&interval=hilo&format=json",
+      "observed_prediction_coverage": [
+        "2026-10-11",
+        "2026-10-19"
+      ]
+    },
+    {
+      "primary": "9410170",
+      "backup": "9410166",
+      "distance_km": 5.63,
+      "primary_coordinates": [
+        32.71555555555555,
+        -117.1766666666667
+      ],
+      "backup_coordinates": [
+        32.7033,
+        -117.235
+      ],
+      "exposure": "San Diego Bay harbor reference to another station inside the same bay.",
+      "reason": "Quarantine Station lies 5.63 km west of Broadway inside San Diego Bay. It is a NOAA subordinate high/low prediction station using Broadway offsets, not an independent observing system. Serves station-specific reference MLLW predictions only; no local current or slack-water claim. A provider-wide outage can affect both.",
+      "reference_id": "9410170",
+      "endpoint": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&station=9410166&datum=MLLW&begin_date=20261011&end_date=20261019&time_zone=gmt&units=english&interval=hilo&format=json",
+      "observed_prediction_coverage": [
+        "2026-10-11",
+        "2026-10-19"
+      ]
+    }
+  ],
+  "unconfigured_policy": "Keep all other roles single-station in this bounded rollout: an adjacent station is not evidence of comparable exposure, and offshore wind buoys are not substitutes for CDIP nearshore wave sensors. Never substitute tide heights across a headland, harbor or island without a separate review.",
+  "unconfigured_regions": [
+    {
+      "id": "big-sur-coast",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "bodega-point-reyes",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "cambria-san-simeon",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "crescent-city",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "fort-bragg-point-arena",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "humboldt-bay-cape-mendocino",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "monterey-point-sur",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "morro-bay",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "point-arena-bodega",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "point-arguello-conception",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "point-reyes-pigeon",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "santa-cruz-monterey-bay",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "shelter-cove-north-mendocino",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    },
+    {
+      "id": "south-big-sur-san-simeon",
+      "reason": "No nearby backup with documented comparable exposure reviewed in this change; existing single-station references retained."
+    }
+  ]
+}

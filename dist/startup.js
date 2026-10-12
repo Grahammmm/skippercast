@@ -1,7 +1,7 @@
 // Startup helpers (P4-05): defer data a screen needs until that screen opens,
 // and clear the map's loading skeleton once the first markers are drawn.
 //
-// navigation.js shows a screen by setting <body data-view="...">, so that
+// The app (web/app/Masthead.tsx) shows a screen by setting <body data-view="...">, so that
 // attribute is the one signal every way of opening a screen goes through
 // (tabs, links, the back button, a shared #forecast link).
 

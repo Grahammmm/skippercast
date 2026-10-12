@@ -24,7 +24,11 @@ const symbols = style => style.layers.filter(layer => layer.type === 'symbol');
 
 test('the palette reads every token from web/tokens.css in both themes', () => {
   const css = read('web/tokens.css').toString();
-  for (const [theme, tokens] of Object.entries(themes(css, FILES['web/tokens.css']))) {
+  // The contrast parser reads colours only; the one numeric token (the MPA fill's opacity, FE-19) is read here.
+  const numbers = Object.fromEntries([...css.matchAll(/--([a-z0-9-]+):\s*(\d*\.?\d+)\s*;/g)].map(m => [m[1], m[2]]));
+  assert.equal(numbers['mpa-fill-opacity'], '0.08');
+  for (const [theme, colours] of Object.entries(themes(css, FILES['web/tokens.css']))) {
+    const tokens = {...numbers, ...colours};
     const palette = readPalette(name => tokens[name] ?? '');
     for (const [key, token] of Object.entries(PALETTE_TOKENS)) assert.equal(palette[key], tokens[token], `${theme} --${token}`);
   }
@@ -109,7 +113,7 @@ function evaluate(expr, feature) {
 test('every basemap layer matches a feature of the synthetic Protomaps fixture', async () => {
   const sandbox = {TextDecoder, DecompressionStream, Response, Uint8Array, DataView, ArrayBuffer, Promise, console};
   vm.createContext(sandbox);
-  vm.runInContext(read('dist/vendor/pmtiles-4.5.0/pmtiles.js').toString() + ';globalThis.pmtiles = pmtiles;', sandbox);
+  vm.runInContext(read('node_modules/pmtiles/dist/pmtiles.js').toString() + ';globalThis.pmtiles = pmtiles;', sandbox);
   const buf = read('tests/fixtures/basemap/tiny.pmtiles');
   const archive = new sandbox.pmtiles.PMTiles({getKey: () => 'tiny', getBytes: async (offset, length) => ({data: buf.buffer.slice(buf.byteOffset + offset, buf.byteOffset + offset + length)})});
   const header = await archive.getHeader();

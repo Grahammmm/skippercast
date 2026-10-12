@@ -55,6 +55,24 @@ test('the shell lays out the brief beside the map (laptop) or under a sheet (pho
   expect(pageErrors).toEqual([]);
 });
 
+test('FE-52: Reports opens from the masthead (laptop) or the sheet footer (phone) as a page over the map; axe is clean', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', AREA);
+  if (isMobile) {
+    await page.locator('.ui-sheet-handle').focus();
+    await page.keyboard.press('End');
+    await page.locator('.app-reports-link').click();
+  } else await page.locator('nav[aria-label="Views"] a[data-view="reports"]').click();
+  await expect(page).toHaveURL(/[?&]view=reports/);
+  const reports = page.locator('article.app-reports');
+  await expect(reports.locator('h1')).toHaveText('Reports');
+  await expect(reports.locator('a[href="/feed.xml"]')).toBeVisible();
+  await expect(page.locator('section.app-stage')).toHaveCount(1);
+  await v2.a11y(isMobile ? 'v2-reports-mobile' : 'v2-reports');
+  const width = page.viewportSize()!.width;
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  expect(pageErrors).toEqual([]);
+});
+
 test('view links, the profile switch, the rail and the hour slider update the address without a reload', async ({page, pageErrors, v2, isMobile}) => {
   await v2.open('app', AREA);
   await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
@@ -62,6 +80,11 @@ test('view links, the profile switch, the rail and the hour slider update the ad
   await page.locator('nav[aria-label="Views"] a[data-view="conditions"]').click();
   await expect(page).toHaveURL(/[?&]view=conditions/);
   await expect(page.locator('a[data-view="conditions"]')).toHaveAttribute('aria-current', 'page');
+  // The Conditions view (FE-32) covers the map chrome and holds the phone sheet; the brief and the rail are the map view's, so go back to it.
+  await expect(page.locator('section.app-conditions')).toBeVisible();
+  await page.locator('nav[aria-label="Views"] a[data-view="coast"]').click();
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  await expect(page.locator('a[data-view="coast"]')).toHaveAttribute('aria-current', 'page');
   await page.locator('[aria-label="Profile"] button', {hasText: 'Spear'}).click();
   await expect(page).toHaveURL(/[?&]profile=spear/);
   await expect(page.locator('.app-caveat')).toContainText('In-water visibility is unverified');
@@ -213,10 +236,11 @@ test.describe('phone', () => {
   }
 
   test('a selected mark takes the sheet\'s peek and clearing it brings the headline back', async ({page, pageErrors, v2}) => {
-    await v2.open('app', {...AREA, spot: 'r12'});
+    // FE-18: the link names a reef mark of the Morro Bay atlas, so the card carries its name once the atlas loads.
+    await v2.open('app', {...AREA, spot: 'SC26-001'});
     const sheet = page.locator('.ui-sheet');
     await expect(sheet).toHaveAttribute('data-detent', 'peek');
-    await expect(sheet.locator('.app-mark h2')).toHaveText('r12');
+    await expect(sheet.locator('.app-mark h2')).toHaveText('Southern rocky rise');
     await expect(sheet.locator('.app-mark h2')).toBeInViewport();
     await expect(sheet.locator('h1')).toHaveCount(0);
     await page.locator('button[aria-label="Clear selection"]').click();
@@ -224,4 +248,46 @@ test.describe('phone', () => {
     await expect(sheet.locator('h1')).toBeInViewport();
     expect(pageErrors).toEqual([]);
   });
+});
+
+// FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The
+// contexts are the app at /map (Chart) and /coast, which moves to the app's 3D terrain (FE-78): the terrain lives
+// inside the same stage and its in-scene place and target controls stay hidden, and no v1 map mounts.
+test('FE-60: no duplicate map, picker or timeline for one context (/map and /coast)', async ({page, pageErrors, v2, isMobile}) => {
+  await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered: the terrain stays loading, offline */ });
+  const contexts: Array<[string, string, 'chart' | 'terrain']> = [
+    ['/map', v2.url('app', {...AREA, presentation: 'chart'}), 'chart'],
+    ['/coast', `/coast?${new URLSearchParams({...AREA, ui: 'v2'})}`, 'terrain'],
+  ];
+  for (const [name, url, surface] of contexts) {
+    await page.goto(url);
+    await expect(page).toHaveURL(/\/map\?/);
+    await expect(page.locator('.app-location'), name).toContainText('Morro Bay');
+    // One map: one stage, one visible surface, at most one MapLibre canvas, no v1 map.
+    await expect(page.locator('section.app-stage'), name).toHaveCount(1);
+    await expect(page.locator(surface === 'chart' ? '.app-map' : '.app-terrain'), name).toBeVisible();
+    await expect(page.locator(surface === 'chart' ? '.app-terrain' : '.app-map'), name).toBeHidden();
+    expect(await page.locator('canvas.maplibregl-canvas').count(), `${name}: MapLibre canvases`).toBeLessThanOrEqual(1);
+    await expect(page.locator('#map'), `${name}: no v1 map`).toHaveCount(0);
+    // One of each picker: area and port, target, profile, presentation.
+    for (const label of ['Area and port', 'Target species', 'Profile', 'Map presentation'])
+      expect(await page.getByRole('group', {name: label, exact: true}).count(), `${name}: ${label}`).toBeLessThanOrEqual(1);
+    expect(await page.locator('button.app-port').count(), `${name}: port button`).toBeLessThanOrEqual(1);
+    await expect(page.getByRole('group', {name: 'Profile', exact: true}), name).toHaveCount(1);
+    await expect(page.getByRole('group', {name: 'Map presentation', exact: true}), name).toHaveCount(1);
+    if (!isMobile) await expect(page.getByRole('group', {name: 'Area and port', exact: true}), name).toHaveCount(1);
+    // One timeline: one hour slider and at most one day picker.
+    await expect(page.locator('input[aria-label="Hour"]'), `${name}: hour slider`).toHaveCount(1);
+    expect(await page.getByRole('group', {name: 'Day', exact: true}).count(), `${name}: day picker`).toBeLessThanOrEqual(1);
+    if (surface === 'terrain') {
+      const host = page.locator('.app-terrain');
+      await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene')), name).toBe(true);
+      // The host owns place, target and time: the embed's own species picker is hidden and it draws no timeline.
+      expect(await host.evaluate(el => {
+        const root = el.shadowRoot!, species = root.getElementById('species') as HTMLElement | null;
+        return {species: !species || species.hidden, timeline: root.querySelectorAll('input[type="range"][aria-label="Hour"], .time-dock-center').length};
+      }), name).toEqual({species: true, timeline: 0});
+    }
+  }
+  expect(pageErrors).toEqual([]);
 });

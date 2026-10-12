@@ -3,16 +3,21 @@
 // over a fake MapLibre and a fake terrain, so neither a GPU nor the library is
 // needed. The web/map/*.ts files run by type stripping.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, layerEntry, layersIn, railLayers, sourceLayer} from '../web/map/layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
+import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
+import {groundsOverlay} from '../web/map/charter-grounds.ts';
+import {markScreen, markStyle} from '../web/map/marks.ts';
+import {assessScreen} from '../web/map/habitat.ts';
 import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL} from '../web/map/coastline.ts';
 import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
+import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
-import {camera, cameraParam, choosePresentation, createStage, terrainFailed, zoomForSpan} from '../web/map/stage.ts';
+import {camera, cameraParam, choosePresentation, createStage, drape, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map';
@@ -23,12 +28,12 @@ const SENTINELS = new Set(Object.values(sentinel));
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
 const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'swell', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
-  'clouds', 'marks', 'selection', 'coastline'];
+  'clouds', 'marks', 'selection', 'trip-ranked', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
   assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
-  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell\s+field, MPAs, habitat polygons, shore runs, seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), marks, selection, coastline glow\./, 'the design states the order this test pins');
+  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell\s+field, MPAs, habitat polygons, shore runs, seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), marks, selection, ranked trip spots, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
@@ -85,6 +90,33 @@ test('a shoreline click becomes a mark with its own source date and stated accur
   assert.equal(coastlineMark({source_date: '1994-02-28'}).reading, 'Accuracy not stated');
 });
 
+test('every import line reads the same mark from the published shoreline (schema_version 2)', () => {
+  // The platform build merges import features with identical properties into one MultiLineString
+  // and rounds coordinates to 5 decimals; a click on any line must still give its old mark card.
+  const source = JSON.parse(readFileSync(new URL('../catalog/shoreline/morro-bay.geojson', import.meta.url), 'utf8'));
+  const published = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline.geojson', import.meta.url), 'utf8'));
+  assert.equal(published.type, 'FeatureCollection');
+  assert.equal(published.schema_version, 2);
+  const key = p => JSON.stringify(Object.keys(p).sort().map(k => [k, p[k]]));
+  const lines = g => g.type === 'LineString' ? [g.coordinates] : g.coordinates;
+  const byProps = new Map(published.features.map(f => [key(f.properties), f]));
+  assert.equal(byProps.size, published.features.length, 'one published feature per property set');
+  let matched = 0;
+  for (const feature of source.features) {
+    const merged = byProps.get(key(feature.properties));
+    assert.ok(merged, `${feature.id} has a published feature`);
+    assert.deepEqual(merged.properties, feature.properties);
+    assert.deepEqual(coastlineMark(merged.properties), coastlineMark(feature.properties));
+    assert.ok(coastlineMark(merged.properties), `${feature.id} stays selectable`);
+    for (const line of lines(feature.geometry)) {
+      const same = lines(merged.geometry).some(c => c.length === line.length && c.every(([x, y], i) => Math.abs(x - line[i][0]) <= 6e-6 && Math.abs(y - line[i][1]) <= 6e-6));
+      assert.ok(same, `${feature.id}: its line is in ${merged.id}`);
+      matched++;
+    }
+  }
+  assert.equal(published.features.reduce((n, f) => n + lines(f.geometry).length, 0), matched, 'no line added or lost');
+});
+
 test('the basemap archive comes from FE-10\'s manifest, and only a tiles/basemap/*.pmtiles key is accepted', async () => {
   const reply = (body, ok = true) => async url => { assert.equal(url, `https://s.test/${BASEMAP_MANIFEST}`); return {ok, json: async () => body}; };
   assert.equal(await basemapArchive(reply({key: 'tiles/basemap/ca-coast-20261008.pmtiles'}), PAGE), 'https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles');
@@ -112,9 +144,11 @@ function library() {
     getZoom() { return this.zoom; }
     jumpTo({center, zoom}) { this.jumps.push({center, zoom}); this.center = {lat: center[1], lng: center[0]}; this.zoom = zoom; this.fire('moveend'); }
     move(lat, lng, zoom) { this.center = {lat, lng}; this.zoom = zoom; this.fire('moveend'); }
-    getLayer(id) { return this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
-    setLayoutProperty(id, name, value) { this.visibility[id] = value; }
-    getSource(id) { return this.options.style.sources[id] ? {setData: data => { this.data[id] = data; }} : undefined; }
+    // With `fake.lateStyle`, the style's layers and sources exist only once a test sets `styled` (as MapLibre's before `style.load`).
+    get loaded() { return this.styled ?? !fake.lateStyle; }
+    getLayer(id) { return this.loaded && this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
+    setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
+    getSource(id) { return this.loaded && this.options.style.sources[id] ? {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
     queryRenderedFeatures(_point, {layers}) { return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
     remove() { this.removed = true; }
@@ -166,6 +200,40 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   assert.equal(fake.maps[1].removed, true);
 });
 
+test('a still engine (the landing\'s night map, FE-25) takes no input, fades no label and adds no control', () => {
+  const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.4, longitude: -121.2, zoom: 10.2};
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, still: true});
+  const [map] = fake.maps;
+  assert.equal(map.options.interactive, false);
+  assert.equal(map.options.fadeDuration, 0);
+  assert.deepEqual(map.controls, [], 'the page credits the basemap itself');
+  assert.equal(mapOptions({}, style, camera).interactive, undefined, 'the Chart keeps its gestures');
+});
+
+test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {
+  const fake = library();
+  fake.lateStyle = true;
+  const style = {version: 8, sources: {[COASTLINE_SOURCE]: {type: 'geojson', data: 'start'}}, layers: [{id: COASTLINE_LINE, type: 'line', source: COASTLINE_SOURCE}]};
+  const engine = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {}, onLayerError() {}});
+  const [map] = fake.maps;
+  engine.setVisible(COASTLINE_LINE, false);
+  engine.setVisible(COASTLINE_LINE, true);
+  engine.setData(COASTLINE_SOURCE, 'first');
+  engine.setData(COASTLINE_SOURCE, 'latest');
+  engine.setVisible('not-in-style', true);
+  engine.setData('not-in-style', 'ignored');
+  assert.deepEqual([map.layoutCalls, map.dataCalls], [undefined, undefined], 'nothing applies before the style has loaded');
+  map.styled = true;
+  map.fire('style.load');
+  assert.deepEqual(map.layoutCalls, [[COASTLINE_LINE, 'visible']], 'once, with the latest visibility');
+  assert.deepEqual(map.dataCalls, [[COASTLINE_SOURCE, 'latest']], 'once, with the latest data');
+  engine.setData(COASTLINE_SOURCE, 'after');
+  engine.setVisible(COASTLINE_LINE, false);
+  map.fire('style.load');
+  assert.deepEqual(map.dataCalls.map(([, data]) => data), ['latest', 'after'], 'after the style loads, calls apply at once and nothing replays');
+  assert.deepEqual(map.layoutCalls.map(([, value]) => value), ['visible', 'none']);
+});
+
 /** A browser just big enough for navigate() (as tests/test_map_stage.mjs). */
 function browser(href) {
   globalThis.location = {href};
@@ -177,23 +245,34 @@ function browser(href) {
 }
 const doc = () => ({hidden: false, addEventListener() {}, removeEventListener() {}});
 
-/** A fake terrain whose renderer reports a camera through onView. */
+/** A fake terrain whose renderer reports a camera through onView and keeps the overlays it is given. */
 function terrain() {
-  const fake = {options: null};
-  const handle = {load: async () => true, destroy() {}};
+  const fake = {options: null, overlays: new Map(), sets: 0};
+  const handle = {load: async () => true, destroy() {},
+    setOverlay(id, overlay) { fake.sets++; fake.overlays.set(id, overlay); }, removeOverlay: id => fake.overlays.delete(id)};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible']) handle[name] = () => true;
   fake.module = {styles: [], mountCoast(_host, options) { fake.options = options; return handle; }};
   return fake;
 }
 
-function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}} = {}) {
+/** The published file under dist/ for a page-relative URL (the region packages FE-19's protected areas read), or a 404. */
+function serveDist(url) {
+  const file = new URL(`../dist${new URL(url).pathname}`, import.meta.url);
+  return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
+}
+
+function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
-  const fetchFn = async url => { fetches.push(url); return manifest ? {ok: true, json: async () => manifest} : {ok: false, json: async () => ({})}; };
+  const fetchFn = async url => {
+    fetches.push(url);
+    if (/^https:\/\/s\.test\/(?:regions|data)\//.test(url)) return serveDist(url);
+    return manifest ? {ok: true, json: async () => manifest} : {ok: false, json: async () => ({})};
+  };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
-  const stage = createStage({host: {shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
-    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
+  const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
+    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
   return {fake, land, host, stage, fetches};
 }
 
@@ -204,10 +283,21 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   await tick(); await tick();
   assert.equal(fake.maps.length, 1, 'one map');
   const [map] = fake.maps;
-  assert.deepEqual(fetches, [`https://s.test/${BASEMAP_MANIFEST}`]);
+  // The boat profile's default layers include Seafloor (FE-14), which checks its own publication; the
+  // protected areas (FE-19) read only the region's own files. The reef marks' run-time screen (#489) asks
+  // v1's live ds582 query, then the daily feed's boundary record (the Worker's part, else the whole feed).
+  assert.deepEqual(fetches.filter(url => !url.startsWith('https://s.test/regions/') && !url.startsWith('https://s.test/data/')).sort(), [
+    `https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json', mpaQuery([-121.9, 34.95, -120.55, 35.85]),
+    'https://s.test/api/daily?region=morro-bay&part=mpa-boundaries', 'https://s.test/feeds/data/regions/morro-bay/latest.json',
+  ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  // The startup budget: the style's own source loads the shoreline once (it is not set again for the
+  // region the Chart opened on), and the marks and protected areas share each region file.
+  assert.deepEqual((map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE), [], 'the shoreline is not requested twice');
+  const statics = fetches.filter(url => url.startsWith('https://s.test/regions/') || url.startsWith('https://s.test/data/'));
+  assert.deepEqual(statics, [...new Set(statics)], 'each committed region file is requested once');
   assert.deepEqual(map.options.center, [-120.86, 35.37], 'the region centre');
   assert.equal(host.dataset.view, '35.37000,-120.86000,12');
 
@@ -294,4 +384,83 @@ test('a shoreline click fills the mark card; empty water clears it; no WebGL fai
   assert.equal(chartFailed.value, true, 'the stage shows "Map unavailable."');
   assert.equal(terrainFailed.value, false, 'the terrain is unaffected');
   second.stage.destroy();
+});
+
+// FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
+const OVERLAY_PALETTE = readPalette(name => (name === 'mpa-fill-opacity' ? '0.18' : `token(${name})`));
+
+test('FE-82: protected areas, reef marks and charter grounds drape on the terrain in their Chart style\'s token roles', () => {
+  assert.deepEqual(LAYERS.filter(e => e.terrain).map(e => e.id), ['mpas', 'charter-grounds', 'marks']);
+  for (const e of LAYERS.filter(x => x.terrain)) {
+    assert.ok(e.presentations.includes('chart') && e.presentations.includes('terrain'), `${e.id} draws in both`);
+    for (const role of [e.terrain.color, e.terrain.outline].filter(Boolean)) assert.ok(COAST_OVERLAY_COLORS.includes(role), `${e.id}: ${role} is an overlay role`);
+  }
+  // The same tokens as the Chart's layers.
+  const [mpaFill, mpaLine] = mpaLayers(sentinel), mpas = layerEntry('mpas').terrain;
+  assert.deepEqual([sentinel[mpas.color], sentinel[mpas.outline], mpas.opacity], [mpaFill.paint['fill-color'], mpaLine.paint['line-color'], 'mpaFillOpacity']);
+  assert.deepEqual(mpaFill.paint['fill-opacity'], ['to-number', sentinel.mpaFillOpacity], 'both read --mpa-fill-opacity');
+  const ring = markStyle(sentinel).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
+  assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
+  assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
+  const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});
+  const charter = layerEntry('charter-grounds').terrain;
+  assert.deepEqual([sentinel[charter.color], sentinel[charter.outline]], [grounds.layers.find(l => l.id === 'charter-grounds-line').paint['line-color'], sentinel.amber]);
+  // "Chart only" leaves the entries the terrain now draws: the Charter fleet rail entry (its grounds).
+  assert.equal(drawsIn('fleet', '3d'), true);
+  assert.equal(drawsIn('fleet', '2d'), true);
+  assert.deepEqual(drapeStyle(mpas, OVERLAY_PALETTE), {color: 'mpaFill', opacity: 0.18, outline: 'mpaLine'}, 'roles stay roles; the opacity token is a number');
+  assert.deepEqual(drapeStyle(marks, OVERLAY_PALETTE), {color: 'bg', opacity: 0.75, outline: 'mint', size: 18});
+});
+
+test('FE-82: the stage drapes each feed in § 9 order, replaces what changed, removes what went and survives a refusal', t => {
+  const warn = t.mock.method(console, 'warn', () => {});
+  const calls = [];
+  const h = {setOverlay: (id, o) => { calls.push(['set', id, o.order, o.features.length]); if (id === 'charter-grounds' && o.features.length > 1) throw new Error('too big'); },
+    removeOverlay: id => { calls.push(['remove', id]); return true; }};
+  const point = id => ({id, geometry: {type: 'Point', coordinates: [-120.9, 35.4]}});
+  const marks = {features: [point('a')], pick: () => null}, mpas = {features: [point(0)], pick: () => null};
+  let draped = drape(h, {marks, mpas, swell: marks}, OVERLAY_PALETTE);
+  const order = id => LAYERS.findIndex(e => e.id === id);
+  assert.deepEqual(calls, [['set', 'mpas', order('mpas'), 1], ['set', 'marks', order('marks'), 1]], 'bottom to top; an entry without a drape is ignored');
+  calls.length = 0;
+  draped = drape(h, {marks, mpas}, OVERLAY_PALETTE, draped);
+  assert.deepEqual(calls, [], 'an unchanged feed is not sent again');
+  draped = drape(h, {marks: {...marks}, mpas: {features: [], pick: () => null}, 'charter-grounds': {features: [point('x'), point('y')], pick: () => null}}, OVERLAY_PALETTE, draped);
+  assert.deepEqual(calls, [['remove', 'mpas'], ['set', 'charter-grounds', order('charter-grounds'), 2], ['set', 'marks', order('marks'), 1]]);
+  assert.equal(warn.mock.callCount(), 1, 'the refusal is logged');
+  assert.deepEqual([...draped.keys()], ['marks'], 'the refused overlay is not counted as draped');
+});
+
+test('FE-82: in Terrain the protected areas and reef marks drape without the Chart, and a pick selects what the Chart\'s would', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const nav = browser(`${PAGE}?region=morro-bay&presentation=3d`);
+  const {fake, land, stage} = chartStage({overlayPalette: () => OVERLAY_PALETTE});
+  t.after(() => stage.destroy());
+  for (let i = 0; i < 8; i++) await tick();
+  assert.equal(fake.maps.length, 0, 'MapLibre never loads for a terrain-only visit');
+  assert.equal(land.options.overlayPalette, OVERLAY_PALETTE, 'the overlay roles resolve from the token palette');
+  const mpas = land.overlays.get('mpas');
+  assert.deepEqual([mpas.kind, mpas.style, mpas.order], ['fill', {color: 'mpaFill', opacity: 0.18, outline: 'mpaLine'}, LAYERS.findIndex(e => e.id === 'mpas')]);
+  assert.equal(mpas.features.length, 8, 'the same checked areas the Chart draws');
+  // A protected area: the card the Chart's click opens for the same feature.
+  const cambria = mpas.features.findIndex(f => f.properties.NAME === 'Cambria SMCA');
+  land.options.onOverlayPick({overlay: 'mpas', feature: cambria, kind: 'fill', latitude: 35.5, longitude: -121.1});
+  assert.deepEqual(terrainPick.value, mpaMark(mpas.features[cambria].properties));
+  assert.equal(terrainPick.value.name, 'Cambria State Marine Conservation Area');
+  // A reef mark: the pick selects its spot, as the Chart's click does. The fake network fails the live boundary
+  // checks, so the run-time screen withholds the marks until a current check (the committed snapshot, this hour) passes.
+  assert.equal(land.overlays.has('marks'), false, 'withheld marks never drape');
+  const snapshot = JSON.parse(readFileSync(new URL('../dist/data/protected-areas.geojson', import.meta.url), 'utf8'));
+  markScreen.value = assessScreen({areas: snapshot.features, checkedAt: new Date(Date.now() - 3_600_000).toISOString(), live: false, closures: undefined}, Date.now());
+  const marks = land.overlays.get('marks');
+  assert.equal(marks.kind, 'point');
+  assert.deepEqual(marks.features.map(f => f.id), terrainLayers.value.marks.features.map(f => f.id));
+  assert.ok(marks.features.length > 0, 'Morro Bay has reef marks for the boat default target');
+  const spot = marks.features[0].id;
+  land.options.onOverlayPick({overlay: 'marks', feature: spot, kind: 'point', latitude: 35.4, longitude: -120.9});
+  assert.equal(nav.params().get('spot'), spot);
+  assert.equal(terrainPick.value, null, 'one selection at a time');
+  // A feed that goes leaves the terrain.
+  setTerrainLayer('marks', null);
+  assert.equal(land.overlays.has('marks'), false);
 });

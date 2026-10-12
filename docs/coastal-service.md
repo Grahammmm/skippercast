@@ -111,6 +111,7 @@ region:
 | `water-quality` | `conditions/regions/morro-bay/beach-health.json` | FE-41, about hourly | 3 h after `generatedAt` | the report's `waterQuality` and its `slo-beach-water-quality` source |
 | `ocean` | `conditions/regions/morro-bay/coast-ocean.json` | `coast_snapshots.py`, each live cycle | 3 h after `generatedAt` | the whole `/api/coast/ocean` packet |
 | `history` | `data/regions/morro-bay/history.json` | FE-42, weekly recent pass | 8 days after `generatedAt` | the whole `/api/coast/history` packet |
+| `report` | `conditions/regions/morro-bay/coast-report.json` | `coast_report.py`, each live cycle (FE-87) | 2 h after `generatedAt` | the report's base: forecasts, observations, tides, alerts, catches and spatial layers |
 
 A switched feed is used only while it is present, readable, shaped as the
 `packages/coast` type it stands for and inside its age limit, measured by the
@@ -129,12 +130,27 @@ whose model issue is 48 h old or more is `stale`, and a history station whose
 last observation is more than 3 h old has `recent.stale` set (the weekly pass
 publishes it as current). Until the recent pass runs more often than weekly,
 a switched History view shows the recent series as stale most of the week; on
-October 8, 2026 Fish's recent series was under an hour old. The rest of the report (forecasts, observations,
+October 8, 2026 Fish's recent series was under an hour old. Unless `report`
+is switched (FE-87, below), the rest of the report (forecasts, observations,
 tides, alerts, catches and spatial layers) still comes from Fish, so a Fish
 failure keeps `/api/coast/report` unavailable; the ocean and history packets
 need no bridge once switched. Every switched response names its upstream per
 source in `X-Coast-Upstream`, for example `nearshore=skippercast,
-water-quality=fish (stale)`.
+water-quality=fish (stale)`. A history bundle without a positive
+`recentWindowDays` is invalid, and a packet whose merged rows exceed the route's
+byte limit (8 MB for the report) is refused with 503, as the service worker
+would refuse it.
+
+A name in `COAST_FEEDS` is honoured only while none of the `catalog/sources.json`
+rows behind it is refused by the rights register: a missing row, a
+`restricted` or `unavailable` review status, or `commercial_use` of
+`prohibited` or `permission-required` drops that name, and its snapshot stays
+on the bridge. The rows are `cdip-mop` (nearshore), `slo-beach-water-quality`
+(water quality), `noaa-wcofs`, `noaa-hfr-thredds` and `noaa-goes-nowcoast`
+(ocean), `ndbc-history` (history), and `nws-weather`, `ndbc-buoys`,
+`noaa-tides`, `landing-reports`, `noaa-blended-sst` and `cdfw-mpas` (report).
+A `candidate` row or `unknown` commercial use is not a refusal: the owner
+confirms those register rows before setting the var.
 
 `python -m skippercast.pipeline.coast_snapshots --root var/live-published` runs
 in `scripts/live_cycle.sh` after the GOES index. It builds `OceanData` from the
@@ -145,6 +161,38 @@ sampled within 6 h, native frames, SLO marine bounds, HDOP and radar-count
 gates) and from `goes-times.json` while its newest frame is within 90 minutes.
 On October 8, 2026 its currents were byte-identical to Fish's normaliser run on
 the same `intelligence.json`.
+
+## Report base from SkipperCast collectors (FE-87)
+
+`python -m skippercast.pipeline.coast_report --root var/live-published` runs
+in `scripts/live_cycle.sh` after the ocean packet and writes
+`regions/morro-bay/coast-report.json`, the SLO county's `Report`:
+
+| Report field | Source status ids | From |
+| --- | --- | --- |
+| `forecasts` | `nws-north`, `nws-central`, `nws-south` | NWS gridpoints of each county area's marine point, fetched here (`fish` `expandGrid` rules: 168 hours from the current hour, WMO units converted, gaps left blank) |
+| `alerts` | `nws-alerts` | NWS active alerts for `CA,PZ`, kept for an area when an affected zone is the area's marine zone or one its marine or shore point reports, or the polygon covers either point (`filterAlerts`); a paginated answer is an error |
+| `tides`, `tideEvents` | `coops-tides`, `coops-tide-events` | CO-OPS Port San Luis predictions, MLLW, 6-minute and high/low, the previous UTC day to three days ahead (`parseTides`) |
+| `observations` | `ndbc-46215`, `ndbc-46028` | this cycle's `regions/morro-bay/latest.json` (`live.py`): the newest row with a wave height, else with wind, every field from that one row (`parseNdbc`) |
+| `catches`, `catchStatus`, `catchContext` | `landing-reports` | the daily feed (`collect.py`, its public copy), with `fish` `collectCatches` checks: each trip within the reviewed window and identical to its day receipt, receipts under 72 h old, facts and links only |
+| `spatial` | `noaa-blended-sst`, `cdfw-protected-areas` | the daily feed's sea-surface temperature grid (NOAA Geo-Polar Blended 5 km, the region's configured analysis; `fish` read JPL MUR, so the layer keeps this source's id and resolution) and CDFW DS582 boundaries |
+
+Each source keeps its own outcome and clocks: an NWS source's issue and valid
+times, a buoy's live-feed retrieval, the daily feed's retrieval and analysis
+times, a trip's receipt time. A failed source is an `error` status with no
+rows. As `fish` did, a run with no populated forecast area and no buoy
+observation under three hours old writes nothing; the last report then ages out
+of the Worker's 2 h limit and the bridge serves Fish's. On October 8, 2026 a
+dry run outside the repository matched Fish's live report: identical forecast
+hours for all three areas over the 168 common hours, identical tide curve (1,200
+points) and events (19), the same two alerts with the same areas, and the same
+20 catch trips and catch status; the buoys differed only by Fish's newer fetch.
+
+With `report` switched and current, `/api/coast/report` is SkipperCast's report
+with the switched nearshore and beach feeds merged in; a source whose own feed
+is not used still takes Fish's rows (one Fish request). With every source
+switched and published, no snapshot reads Fish. If Fish does not answer, the
+report is served without those rows and the header adds `fish=unavailable`.
 
 The upstream origin is fixed in `server/coast-data.ts`. The bridge is transport
 for an existing reviewed publication, not an independent claim that every

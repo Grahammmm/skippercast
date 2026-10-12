@@ -1,17 +1,22 @@
 // SkipperCast service worker: trip-alert notifications and the offline trip pack.
 //
-// A classic script, not a module: trip-alerts.js and offline.js register the
+// A classic script, not a module: trip-alerts.js and offline-pack.js register the
 // same stable '/sw.js' without {type:'module'} (the type is part of a
 // registration, and classic workers run on every browser that has web push).
 // The logic is plain top-level functions so tests/test_sw.mjs loads this exact
 // file in node:vm with a fake `self`, rather than testing an exported copy.
 //
 // Caches (Cache Storage; nothing here uses localStorage):
-//   sc-shell-<build>  the app shell '/' and this build's fingerprinted assets,
-//                     listed by the build in /precache.json. Older builds are
-//                     deleted on activate.
+//   sc-shell-<build>  the shell '/' (the landing, whose first paint is listed
+//                     too: #497) and this build's fingerprinted assets, listed
+//                     by the build in /precache.json. Older builds are deleted
+//                     on activate.
 //   sc-data           the latest public data responses seen online (bounded).
 //   sc-pack-<region>  an explicit "Save for offline" trip pack (offline-pack.js).
+//                     A pack saved from the v2 app (web/trip.ts, FE-51) also
+//                     holds that app's page, its hashed files and the basemap
+//                     byte ranges for the region at zoom 8–12; they answer
+//                     only when the network fails.
 // Data is network-first. A response answered from a cache always carries
 // X-SC-Offline: <saved-at ISO> and the page is told, so saved data is never
 // shown as if it were live.
@@ -40,9 +45,13 @@ const DATA_PATH = /^\/(?:feeds|regions|data)\//;
 // Public government data the page fetches directly (tides, NWS alerts).
 const DATA_HOSTS = new Set(['api.tidesandcurrents.noaa.gov', 'api.weather.gov']);
 const FINGERPRINTED = /\.[0-9a-f]{10}\.(?:js|css)$/;
+// FE-51: the v2 app's page as a pack saves it, and its basemap archive (offline-core.js BASEMAP_ARCHIVE).
+const V2_SHELL = '/map';
+const BASEMAP_ARCHIVE = /^\/feeds\/tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
 
 /** Which strategy answers this request, or null to leave it to the network. */
 function routeFor(request, origin) {
+  if (request.method === 'GET' && new URL(request.url).origin === origin && basemapKey(request)) return 'basemap';
   if (request.method !== 'GET' || request.headers.has('range')) return null;
   const url = new URL(request.url);
   if (url.origin !== origin) {
@@ -63,7 +72,7 @@ function routeFor(request, origin) {
 
 /**
  * Stable cache key for a WMS tile of the ENC chart: layer set, tile size and
- * Web Mercator tile index. Leaflet and offline-pack.js write the GetMap query
+ * Web Mercator tile index. A WMS tile layer and offline-pack.js write the GetMap query
  * differently (parameter order, float digits), so neither URL is the key.
  * Null for anything that is not a square EPSG:3857 tile on the tile grid.
  */
@@ -83,6 +92,12 @@ function encTileKey(input) {
   if (!Number.isInteger(zoom) || Math.abs(perAxis * span - 2 * MERCATOR_HALF) > span * 1e-6) return null;
   const x = Math.round((box[0] + MERCATOR_HALF) / span), y = Math.round((MERCATOR_HALF - box[3]) / span);
   return `${ENC_ORIGIN}/__skippercast-tile/${layers}/${size}/${zoom}/${x}/${y}`;
+}
+
+/** The pack key of a basemap byte-range request (offline-core.js basemapRangeKey derives the same); null otherwise. */
+function basemapKey(request) {
+  const url = new URL(request.url), m = /^bytes=(\d+)-(\d+)$/.exec(request.headers.get('range') || '');
+  return m && !url.search && BASEMAP_ARCHIVE.test(url.pathname) ? `${url.origin}${url.pathname}?sc-range=${m[1]}-${m[2]}` : null;
 }
 
 /** A copy of a stored response that says, in a header, when it was saved. */
@@ -146,7 +161,7 @@ async function trimCache(name, limit) {
   for (const key of keys.slice(0, Math.max(0, keys.length - limit))) await cache.delete(key);
 }
 
-// Per page (client id): the oldest saved-at it has been shown. offline.js asks
+// Per page (client id): the oldest saved-at it has been shown. offline-pack.js asks
 // for it once it loads, because messages sent before it listens are lost.
 const servedFromCache = new Map();
 async function tellClient(clientId, savedAt, url) {
@@ -215,8 +230,10 @@ async function shell(event) {
     return await fetch(event.request);
   } catch (error) {
     const path = new URL(event.request.url).pathname;
+    // The v2 app opens offline only from a pack that saved it (FE-51).
+    if (path === V2_SHELL) return fromPack(event.request, error, self.location.origin + V2_SHELL);
     if (!/^\/(?:index\.html)?$/.test(path)) throw error;
-    const saved = await (await caches.open(SHELL_CACHE)).match('/', {ignoreSearch: true});
+    const saved = await (await caches.open(SHELL_CACHE)).match('/');
     if (!saved) throw error;
     return saved;
   }
@@ -226,7 +243,8 @@ async function cacheFirst(request) {
   const cache = await caches.open(SHELL_CACHE);
   const hit = await cache.match(request, {ignoreSearch: true});
   if (hit) return hit;
-  const response = await fetch(request);
+  let response;
+  try { response = await fetch(request); } catch (error) { return fromPack(request, error); }
   // A fingerprinted name never changes content, so it can join this build's cache.
   if (storable(response) && FINGERPRINTED.test(new URL(request.url).pathname)) cache.put(request, response.clone()).catch(() => {});
   return response;
@@ -244,13 +262,32 @@ async function tile(event) {
 
 async function precached(request) {
   const hit = await (await caches.open(SHELL_CACHE)).match(request, {ignoreSearch: true});
-  return hit || fetch(request);
+  if (hit) return hit;
+  try { return await fetch(request); } catch (error) { return fromPack(request, error); }
+}
+
+/** After a network failure: the newest pack copy (a v2 pack's page, hashed files and glyphs), marked offline, or the failure. */
+async function fromPack(request, error, key = request) {
+  const saved = await newestSaved(request, key);
+  if (!saved) throw error;
+  return offlineResponse(saved);
+}
+
+/** A basemap byte range: network first, then the saved range, as the 206 the reader asked for. */
+async function basemap(event) {
+  try {
+    return await fetch(event.request);
+  } catch (error) {
+    const saved = await fromPack(event.request, error, basemapKey(event.request));
+    return new Response(saved.body, {status: 206, headers: saved.headers});
+  }
 }
 
 function handleFetch(event, origin = self.location.origin) {
   const route = routeFor(event.request, origin);
   if (!route) return null;
   event.respondWith(route === 'coastal' ? networkFirstCoastal(event) : route === 'data' ? networkFirstData(event)
+    : route === 'basemap' ? basemap(event)
     : route === 'shell' ? shell(event)
     : route === 'tile' ? tile(event)
     : route === 'immutable' ? cacheFirst(event.request)
@@ -280,7 +317,7 @@ async function shellReady() {
 
 async function install() {
   // Push must keep working even if the precache cannot be fetched right now, so a
-  // failed precache does not fail the install; offline.js asks again on the next load.
+  // failed precache does not fail the install; offline-pack.js asks again on the next load.
   try { await precacheShell(); } catch (error) { console.warn('SkipperCast offline shell not stored:', error?.message || error); }
 }
 

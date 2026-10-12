@@ -1,0 +1,217 @@
+{
+  "checkedAt": "2026-10-03T15:51:24.316Z",
+  "origin": "https://fish-report.g4651.workers.dev",
+  "health": {
+    "county": "slo",
+    "dataState": "fresh",
+    "generatedAt": "2026-10-03T15:35:45.966Z",
+    "storage": "configured",
+    "snapshotAgeMinutes": 16,
+    "readiness": {
+      "ready": true,
+      "areas": [
+        {
+          "areaId": "north",
+          "ready": true,
+          "usableHours": 6,
+          "requiredHours": 6,
+          "missing": []
+        },
+        {
+          "areaId": "central",
+          "ready": true,
+          "usableHours": 6,
+          "requiredHours": 6,
+          "missing": []
+        },
+        {
+          "areaId": "south",
+          "ready": true,
+          "usableHours": 6,
+          "requiredHours": 6,
+          "missing": []
+        }
+      ],
+      "reasons": [],
+      "horizonHours": 6
+    },
+    "sources": [
+      {
+        "id": "ndbc-46215",
+        "outcome": "ok"
+      },
+      {
+        "id": "ndbc-46028",
+        "outcome": "ok"
+      },
+      {
+        "id": "nws-north",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T11:11:39.000Z"
+      },
+      {
+        "id": "nws-south",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T11:11:39.000Z"
+      },
+      {
+        "id": "coops-tide-events",
+        "outcome": "ok"
+      },
+      {
+        "id": "nws-central",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T11:11:39.000Z"
+      },
+      {
+        "id": "coops-tides",
+        "outcome": "ok"
+      },
+      {
+        "id": "nws-alerts",
+        "outcome": "ok"
+      },
+      {
+        "id": "cdip-SL345",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T13:44:06.000Z"
+      },
+      {
+        "id": "cdip-SL165",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T13:43:45.000Z"
+      },
+      {
+        "id": "cdip-SL552",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T13:44:24.000Z"
+      },
+      {
+        "id": "cdip-SL097",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T13:43:37.000Z"
+      },
+      {
+        "id": "cdip-SL400",
+        "outcome": "ok",
+        "issuedAt": "2026-10-03T13:44:11.000Z"
+      },
+      {
+        "id": "slo-beach-water-quality",
+        "outcome": "ok"
+      },
+      {
+        "id": "cdfw-protected-areas",
+        "outcome": "ok"
+      },
+      {
+        "id": "mur-surface-temperature",
+        "outcome": "error"
+      },
+      {
+        "id": "landing-reports",
+        "outcome": "error"
+      }
+    ],
+    "subscriptions": "disabled"
+  },
+  "releaseId": "6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+  "scientificReleaseId": "cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158",
+  "reportAt": "2026-10-03T15:35:45.966Z",
+  "oceanAt": "2026-10-03T15:35:43.993Z",
+  "historyAt": "2026-10-03T15:36:27.978Z",
+  "currentFields": [
+    {
+      "id": "wcofs",
+      "issuedAt": "2026-10-03T03:00:00.000Z",
+      "sampleAt": null,
+      "fetchedAt": "2026-10-03T15:08:06.000Z"
+    },
+    {
+      "id": "hfr-1",
+      "issuedAt": null,
+      "sampleAt": "2026-10-03T13:00:00.000Z",
+      "fetchedAt": "2026-10-03T15:07:57.000Z"
+    },
+    {
+      "id": "hfr-6",
+      "issuedAt": null,
+      "sampleAt": "2026-10-03T13:00:00.000Z",
+      "fetchedAt": "2026-10-03T15:07:54.000Z"
+    }
+  ],
+  "cloud": "2026-10-03T15:33:00.000Z",
+  "annualBaselines": "unchanged",
+  "requests": [
+    {
+      "path": "/api/report",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/history",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/ocean",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/data/skippercast-manifest.json",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/habitat/release",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/data/skippercast-habitat.geojson?release=6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/data/skippercast-species.json?release=6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/habitat/tiles?region=morro-bay&release=6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+      "method": "HEAD",
+      "status": 200
+    },
+    {
+      "path": "/api/habitat/tiles?region=morro-bay&release=6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+      "method": "GET",
+      "status": 206
+    },
+    {
+      "path": "/api/habitat/tiles?region=cambria-san-simeon&release=6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+      "method": "HEAD",
+      "status": 200
+    },
+    {
+      "path": "/api/habitat/tiles?region=cambria-san-simeon&release=6ad5838ac60c582494a2953ef878d1610e5e61b3a8b9e43ae741946511ad2ca6",
+      "method": "GET",
+      "status": 206
+    },
+    {
+      "path": "/api/bathymetry/tiles",
+      "method": "GET",
+      "status": 206
+    },
+    {
+      "path": "/habitat-government/current.json",
+      "method": "GET",
+      "status": 404
+    }
+  ]
+}

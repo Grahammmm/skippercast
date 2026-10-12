@@ -6,7 +6,7 @@
 //
 //   GET /api/fleet/map/filters?region=   the values the filter card offers, from the data (<= 500 vessels; truncated: true past that)
 //   GET /api/fleet/map/events?...         fleet_events as Point features, newest first, <= 2,000 a page
-//   GET /api/fleet/map/tracks?...         fleet_trips' segments as LineString features, <= 300 trips a page
+//   GET /api/fleet/map/tracks?...         fleet_trips' fishing segments as LineString features, <= 300 trips a page
 //   GET /api/fleet/map/heat?...           fleet_aggregates cells as Polygon features, most dwell first, <= 5,000 a page
 //
 // Query (every layer): region (required), bbox=minLon,minLat,maxLon,maxLat,
@@ -20,6 +20,10 @@
 // which the aggregator always writes beside the per-part cells (§ 5), so the
 // default heat view never counts a dwell twice. A heat cell without dates is
 // kept under a date filter, and the bound it escaped is listed in `meta.ignored`.
+//
+// Tracks draw fishing segments only (FISHING_KINDS, #469 D20-D22): in-port,
+// transit, uncertain and gap segments never reach the layer. The admin trip
+// view reads a trip's every segment through its own route (fleet/admin/labels.ts).
 //
 // Tracks page by trip: `limit` and `meta.trips` count trips, `meta.count` counts
 // segment features. A bbox drops segments (and trips left with none) after the
@@ -39,7 +43,8 @@ import type {AppEnv} from '../env.ts';
 export const CAPS = {events: 2000, tracks: 300, heat: 5000} as const;
 export const LAYERS = ['filters', 'events', 'tracks', 'heat'] as const;
 export type Layer = typeof LAYERS[number];
-export const KINDS = ['drift-anchor', 'troll'] as const;
+/** The fishing modes (src/skippercast/fleet/ais/classify.py FISHING_KINDS): the kind filter and the only segments tracks draw. */
+export const FISHING_KINDS = ['drift-anchor', 'troll-slow', 'troll-pelagic'] as const;
 export const SOURCES = ['aisstream', 'marinecadastre', 'datalastic'] as const;
 export const BASIS = 'inferred-from-movement';
 export const PLANNING_ONLY = 'noaa-planning-only';
@@ -47,10 +52,10 @@ const MAX_VALUES = 10;   // keeps every statement under D1's 100 bound parameter
 const MAX_FILTER_VESSELS = 500;
 const DEFAULT_CELL_M = 1000;
 
-const REGION = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
-const TOKEN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
+export const REGION = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
+export const TOKEN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-const SEASON = /^\d{4}$/;
+export const SEASON = /^\d{4}$/;
 const CURSOR = /^[A-Za-z0-9_-]{1,400}$/;
 
 export interface MapQuery {
@@ -83,8 +88,8 @@ function list(name: string, raw: string | undefined, allowed?: readonly string[]
   return values;
 }
 
-const encodeCursor = (parts: (string | number)[]): string => btoa(JSON.stringify(parts)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-function decodeCursor(raw: string, shape: ('s' | 'n')[]): string[] | null {
+export const encodeCursor = (parts: (string | number)[]): string => btoa(JSON.stringify(parts)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+export function decodeCursor(raw: string, shape: ('s' | 'n')[]): string[] | null {
   if (!CURSOR.test(raw)) return null;
   try {
     const parts: unknown = JSON.parse(atob(raw.replace(/-/g, '+').replace(/_/g, '/')));
@@ -116,7 +121,7 @@ export function mapQuery(layer: Exclude<Layer, 'filters'>, params: Params): MapQ
   if (!TOKEN.test(module)) return {error: 'invalid module'};
   const lists: Record<string, string[]> = {};
   for (const name of LIST_FILTERS) {
-    const value = list(name, params[name], name === 'kind' ? KINDS : name === 'source' ? SOURCES : undefined);
+    const value = list(name, params[name], name === 'kind' ? FISHING_KINDS : name === 'source' ? SOURCES : undefined);
     if (typeof value === 'string') return {error: value};
     lists[name] = value;
   }
@@ -216,7 +221,8 @@ export async function mapTracks(db: D1Database, q: MapQuery): Promise<MapPage> {
   for (let i = 0; i < shown.length; i += 90) {
     const ids = shown.slice(i, i + 90).map(t => t.id);
     const rows = (await db.prepare(`SELECT id, trip_id, seq, kind, started_at, ended_at, geometry, points_n, mean_sog FROM fleet_segments
-      WHERE trip_id IN (${ids.map(() => '?').join(',')}) ORDER BY trip_id, seq`).bind(...ids).all<SegmentRow>()).results;
+      WHERE trip_id IN (${ids.map(() => '?').join(',')}) AND kind IN (${FISHING_KINDS.map(() => '?').join(',')}) ORDER BY trip_id, seq`)
+      .bind(...ids, ...FISHING_KINDS).all<SegmentRow>()).results;
     for (const row of rows) { const list = segments.get(row.trip_id) ?? []; list.push(row); segments.set(row.trip_id, list); }
   }
   const features: Feature[] = [];
@@ -262,7 +268,7 @@ export async function mapHeat(db: D1Database, q: MapQuery): Promise<MapPage> {
       a.dwell_min, a.first_date, a.last_date, a.rights, a.computed_at
     FROM fleet_aggregates a WHERE ${w.sql} ORDER BY a.dwell_min DESC, a.id ASC LIMIT ?`).bind(...w.args, q.limit + 1).all<CellRow>()).results;
   const more = rows.length > q.limit, shown = rows.slice(0, q.limit);
-  const features: Feature[] = shown.map(r => ({type: 'Feature', id: r.id, geometry: {type: 'Polygon', coordinates: [cellRing(r.lat, r.lon, cellSize(r.params_json))]}, properties: {
+  const features: Feature[] = shown.map(r => ({type: 'Feature', id: r.id, geometry: {type: 'Polygon', coordinates: [cellRing(r.lat, r.lon, cellSize(r.cell_id, r.params_json))]}, properties: {
     layer: 'heat', id: r.id, cell_id: r.cell_id, module: r.module, kind: r.kind, season: r.season, season_part: r.season_part,
     vessels_n: r.vessels_n, events_n: r.events_n, dwell_min: r.dwell_min, first_date: r.first_date, last_date: r.last_date, computed_at: r.computed_at,
     basis: BASIS, rights: r.rights, planning_only: planning(r.rights)}}));
@@ -355,15 +361,21 @@ function intersects(coordinates: [number, number][], [w, s, e, n]: [number, numb
   return minLon <= e && maxLon >= w && minLat <= n && maxLat >= s;
 }
 
-/** A cell's edge in metres from its params_json (resolution_m), else the 1 km default (§ 3 thresholds.aggregate). */
-function cellSize(paramsJson: string): number {
+const GRID_CELL = /^g(\d+(?:\.\d+)?):-?\d+:-?\d+$/;
+const validSize = (size: number): boolean => Number.isFinite(size) && size > 0 && size <= 100_000;
+
+/** A cell's edge in metres: the edge its grid cell id was binned at (`g<edge>:<row>:<col>`, per kind since N6),
+ * else its params_json resolution_m, else the 1 km default (§ 3 thresholds.aggregate). */
+export function cellSize(cellId: string, paramsJson: string): number {
+  const fromId = Number(GRID_CELL.exec(cellId)?.[1]);
+  if (validSize(fromId)) return fromId;
   const params = parseJson(paramsJson) as {resolution_m?: unknown} | null;
   const size = params && typeof params === 'object' ? Number(params.resolution_m) : NaN;
-  return Number.isFinite(size) && size > 0 && size <= 100_000 ? size : DEFAULT_CELL_M;
+  return validSize(size) ? size : DEFAULT_CELL_M;
 }
 
 /** A closed rectangle ring of `size` metres centred on (lat, lon), equirectangular. */
-function cellRing(lat: number, lon: number, size: number): [number, number][] {
+export function cellRing(lat: number, lon: number, size: number): [number, number][] {
   const dLat = size / 2 / 111_320, dLon = size / 2 / (111_320 * Math.max(Math.cos(lat * Math.PI / 180), 0.01));
   const r = (v: number): number => Number(v.toFixed(6));
   return [[r(lon - dLon), r(lat - dLat)], [r(lon + dLon), r(lat - dLat)], [r(lon + dLon), r(lat + dLat)], [r(lon - dLon), r(lat + dLat)], [r(lon - dLon), r(lat - dLat)]];

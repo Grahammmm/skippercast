@@ -16,10 +16,10 @@ import {ProfilePills} from './ProfilePills.tsx';
 import {DEFAULT_REGION, loadReadout, type Readout as Data} from './readings.ts';
 import {Readout} from './Readout.tsx';
 
-/** The nav (§ 7): Fleet opens the app's fleet view, Reports the coast report (#395), How it's built the sources page (Q16). */
+/** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
   {label: 'Fleet', href: `/map?region=${DEFAULT_REGION}&view=fleet`},
-  {label: 'Reports', href: '/report'},
+  {label: 'Reports', href: `/map?region=${DEFAULT_REGION}&view=reports`},
   {label: 'How it’s built', href: '/sources'},
 ] as const;
 
@@ -36,7 +36,7 @@ export function LandingHead({href}: {href: string}) {
       <nav aria-label="Site">
         <ul class="landing-nav">
           {NAV.map(item => <li key={item.label}><a href={item.href.startsWith('/map') ? keepUI(href, item.href) : item.href}>{item.label}</a></li>)}
-          <li><a href="/?ui=v1#account">Sign in</a></li>
+          <li><a href="/map#account">Sign in</a></li>
         </ul>
       </nav>
     </header>

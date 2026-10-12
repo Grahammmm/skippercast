@@ -342,3 +342,64 @@ Codex's #395 added `/methodology` and `/about` (from `fish`) served by
 
 **Plan assumes:** option 1 (FE-54, FE-86).
 **Blocks:** nothing.
+
+## Q17. The boat profile's default Currents layer
+
+**Context.** The boat profile lists Currents among its default layers and the
+first run says "seafloor and currents on the map", but `?current=` defaults to
+`off` (§ 3A.3, v1 rule #402) and FE-15 made `?current=` the rail entry's one
+switch, so a boat user saw Currents off. The landing's Currents dot, which
+links `layers=currents`, opened the map with Currents off for the same reason
+([#482](https://github.com/Grahammmm/skippercast/issues/482)).
+
+1. **A v2 link that names no `?current=` draws the WCOFS forecast when its
+   rail list (a profile default, a stored or a linked `?layers=`) has
+   Currents; an explicit `current=off` stays off; the landing's dot names
+   `current=wcofs` (recommended).** Needs `web/state.ts` to tell an absent
+   key from `off` (announced on #413); the terrain gets the same choice
+   through `web/map/stage.ts`. v1 keeps its rule.
+2. Drop Currents from the boat defaults and the first-run line, so nothing
+   claims it is on.
+3. Leave it: one press turns on the forecast.
+
+**Decided (2026-10-09):** option 1, built in FE-20 (`resolveCurrent`).
+**Blocks:** nothing.
+
+## Q18. One base choice in the rail
+
+**Context.** FE-23 added Aerial as a rail toggle that wrote `?base=aerial` or
+`?base=night`, so a user who arrived with `?base=chart` could not get the
+chart detail back, and no v2 control chose the ENC base at all (FE-23
+review).
+
+1. **One labelled select under the rail's entries: Night (the token
+   basemap), Chart detail (the ENC display from zoom 10) and Aerial where
+   the region's package offers it, with every offered base's basis in one
+   info popover (recommended).** One control, native keyboard, as compact
+   as the Currents source select.
+2. A segmented row of three chips. Every choice visible at once, but wider
+   than the rail.
+3. Keep the Aerial toggle and add a Chart detail toggle. Two toggles for a
+   one-of-three choice.
+
+**Decided (2026-10-09):** option 1, built in FE-20.
+**Blocks:** nothing.
+
+## Q19. Rail entries that draw nothing in the shown presentation
+
+**Context.** In Terrain 2D and 3D only Currents draws (the renderer's
+`setCurrentLayer`); the Seafloor candidates, Water temp, Swell, the fleet
+layers, Clouds and every base draw on the Chart only, so their toggles there
+changed hidden layers (FE-20 Accept 4, FE-23 review).
+
+1. **Keep them in place, disabled, each reading "Chart only" (the base select
+   too); the legend lists them with "Chart only" and no colour key; the
+   choice is kept for the Chart (recommended).** The rail does not reflow
+   between presentations and says why.
+2. Hide them in 2D and 3D. A shorter rail, but entries vanish and come back
+   with no reason given.
+3. Leave them switchable. They toggle layers no one can see.
+
+**Decided (2026-10-09):** option 1, built in FE-20. FE-80 revisits Seafloor
+when the relief options move into its entry, and FE-82 any layer it drapes.
+**Blocks:** nothing.

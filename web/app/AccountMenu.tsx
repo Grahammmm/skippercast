@@ -4,13 +4,15 @@
 // take-it-with-you entries. A real button with aria-expanded; opening moves
 // focus into the panel, arrows and Home/End move between its controls,
 // Escape or a click outside closes it and returns focus to the button.
-// Every action is web/account.ts, which wraps the v1 modules unchanged.
+// Every action is web/account.ts, which wraps the v1 modules unchanged; the
+// trip plan and the offline section are web/trip.ts (FE-51).
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
-import {accountLabel, boat, choosePreset, classicURL, followAccountHash, loadBoat, mountTripAlerts, openAccountDialog, openBoatSheet, refreshSession, session, type Session} from '../account.ts';
+import {accountLabel, boat, choosePreset, followAccountHash, loadBoat, mountTripAlerts, openAccountDialog, openBoatSheet, refreshSession, session, type Session} from '../account.ts';
 import {region, species} from '../state.ts';
+import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 
 const ACCOUNT_LINE: Readonly<Record<Session['state'], string>> = {
   'loading': 'Checking your account…',
@@ -103,9 +105,10 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
         <section aria-labelledby={`${id}-take`}>
           <h2 id={`${id}-take`} class="ui-eyebrow">Take it with you</h2>
           <ul class="app-account-links">
+            <li><Button size="sm" variant="quiet" icon="pin" disabled={!regionId} onClick={run(openTrip)}>
+              Trip plan and GPX{tripIds.value.length ? ` · ${tripIds.value.length} saved` : ''}</Button></li>
+            <li><Button size="sm" variant="quiet" icon="download" disabled={!regionId} onClick={run(() => { offlineOpen.value = true; })}>Save for offline</Button></li>
             <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />Offline spot notes (new tab)</a></li>
-            <li><a href={classicURL(regionId, '#export')}><Icon name="download" size={16} />Chartplotter day plan (GPX, classic map)</a></li>
-            <li><a href={classicURL(regionId, '#guide')}><Icon name="download" size={16} />Offline trip pack (classic map)</a></li>
           </ul>
         </section>
       </div>

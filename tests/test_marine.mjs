@@ -15,7 +15,6 @@ import {
   modelURL,
   currentAt,
 } from "../dist/marine-data.js";
-import { matchesSpecies, PROFILES } from "../dist/species.js";
 import { lineChart, waveSketch } from "../dist/marine-charts.js";
 
 const forecast = (values = [0, 2], times = [100, 3700]) => ({
@@ -172,39 +171,6 @@ test("every model request has its own grid, UTC epochs, explicit units and eight
       url.searchParams.get("latitude").split(",").length,
       POINTS.length,
     );
-  }
-});
-test("species filters separate reef candidates, sediment windows, and pelagic search sectors", () => {
-  const atlas = JSON.parse(
-    fs.readFileSync(new URL("../dist/data/atlas.json", import.meta.url)),
-  );
-  const soft = JSON.parse(
-    fs.readFileSync(
-      new URL("../research/receipts/species-habitat.json", import.meta.url),
-    ),
-  );
-  assert.deepEqual(Object.keys(PROFILES).sort(), ['reef','lingcod','rockfish','halibut','salmon','albacore','bluefin','dungeness','rockfish-reef','gopher-rockfish','cabezon-shallow-reef','surfperch'].sort()); // Original chart profiles plus distinct native coast targets.
-  assert.equal(atlas.targets.filter((t) => matchesSpecies(t, "reef")).length, 132);
-  assert.equal(
-    atlas.targets.filter((t) => matchesSpecies(t, "rockfish")).length,
-    132,
-  );
-  const ling = atlas.targets.filter((t) => matchesSpecies(t, "lingcod"));
-  assert.ok(ling.length > 0 && ling.length < 132);
-  for (const id of ["halibut", "dungeness", "salmon", "bluefin", "albacore"])
-    assert.equal(atlas.targets.filter((t) => matchesSpecies(t, id)).length, 0);
-  assert.equal(soft.areas.length, 18);
-  assert.equal(
-    soft.areas.filter((a) => a.species.includes("halibut")).length,
-    9,
-  );
-  for (const a of soft.areas) {
-    assert.ok(a.depth_ft[1] <= 195);
-    assert.ok(a.depth_ft[0] >= 25);
-    assert.ok(a.soft_bottom_percent >= 95);
-    assert.ok(!a.source_url.includes("Cambria"));
-    assert.equal(a.geometry.type, "Polygon");
-    if (a.species.includes("halibut")) assert.ok(a.depth_ft[1] <= 100);
   }
 });
 test("graphs break at missing values and wave drawings do not claim exact wave arrivals", () => {

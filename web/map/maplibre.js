@@ -11,6 +11,6 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './chart.css';
 
-export {Protocol} from 'pmtiles';
+export {PMTiles, Protocol} from 'pmtiles';
 export {workerUrl};
 export const lib = maplibregl;

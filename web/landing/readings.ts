@@ -5,9 +5,17 @@
 // a reading that ages on screen turns stale; a missing one says so and is
 // never filled from another station.
 //
+// A backup station (#554: source.station, source.fallback_for) is named as
+// itself, "backup for" the primary, never under the primary's name.
+//
 // Erasable syntax only: Node tests import this file by type stripping.
+import {sharedStation, sourceStation, stationText} from '../station-label.ts';
 
 export const DEFAULT_REGION = 'morro-bay';
+/** The default region's name (its region.json `name`, equal by test), shown until that loads: the readout names the place it reads (#422). */
+export const DEFAULT_PLACE = 'Morro Bay & Avila';
+/** "Morro Bay & Avila area"; a name that already ends in "area" is kept as it is. */
+export const placeLabel = (name: string): string => /\barea$/i.test(name.trim()) ? name.trim() : `${name.trim()} area`;
 /** v1's rule (dist/live-conditions.js): a feed generated more than 90 minutes ago is late. */
 export const FEED_LATE_MIN = 90;
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
@@ -30,6 +38,7 @@ export interface FeedState {readonly age: string | null; readonly stale: boolean
 
 /** The parts of regions/<id>/region.json the readout needs. */
 export interface RegionStations {
+  readonly name?: string;
   readonly conditions_feed?: string;
   readonly stations?: {tide?: string; tide_name?: string; tide_note?: string; nearshore_buoy?: string; offshore_buoy?: string};
   readonly harbor?: {name?: string; latitude?: number; longitude?: number};
@@ -37,7 +46,7 @@ export interface RegionStations {
 }
 
 type Row = Record<string, unknown>;
-interface Source {name?: string; status?: string; max_age_hours?: number; data?: {station?: string; units?: Record<string, string>; observations?: Row[]}}
+interface Source {name?: string; status?: string; station?: string; fallback_for?: string; max_age_hours?: number; data?: {station?: string; units?: Record<string, string>; observations?: Row[]}}
 interface Feed {schema_version?: number; generated_at?: string; sources?: Record<string, Source>}
 
 const time = (value: unknown): number => typeof value === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(value) ? Date.parse(value) : NaN;
@@ -88,15 +97,25 @@ export function buoyReadings(feed: unknown, region: RegionStations = {}, now = D
   const f = (feed as Feed)?.schema_version === 1 ? feed as Feed : null;
   const stations = region.stations ?? {};
   const src = (key: string) => f?.sources?.[key];
-  const stationId = (key: string, fallback?: string) => src(key)?.data?.station ?? fallback;
-  const station = (key: string, fallback?: string) => `NDBC ${stationId(key, fallback) ?? '—'}`;
+  const actual = (key: string, fallback?: string) => sourceStation(src(key), src(key)?.data?.station ?? fallback);
+  const stationId = (key: string, fallback?: string) => actual(key, fallback)?.id ?? src(key)?.data?.station ?? fallback;
+  const station = (key: string, fallback?: string) => { const s = actual(key, fallback); return `NDBC ${s ? stationText(s) : stationId(key, fallback) ?? '—'}`; };
   const ok = (key: string) => src(key)?.status === 'ok';
   /** The source's own age limit; none is assumed when the feed gives none. */
   const limit = (key: string): number | null => finite(src(key)?.max_age_hours) ? src(key)!.max_age_hours! : null;
-  const name = (key: string, fallback: string, buoy?: string) => {
-    const where = fromHarbor(region, stationId(key, buoy));
-    return `the ${src(key)?.name ?? fallback} buoy${where ? `, ${where}` : ''}`;
+  /** The buoy named in a basis: the region's name for `nameKey`, or for a backup the station `key` actually read. */
+  const name = (key: string, fallback: string, buoy?: string, nameKey = key) => {
+    const s = actual(key, buoy);
+    if (s?.backupFor) {
+      const where = fromHarbor(region, s.id);
+      return `NDBC buoy ${s.id}${where ? `, ${where}` : ''}, the backup for ${s.backupFor}`;
+    }
+    const where = fromHarbor(region, stationId(nameKey, buoy));
+    return `the ${src(nameKey)?.name ?? fallback} buoy${where ? `, ${where}` : ''}`;
   };
+  // A backup can make two roles read one station: say so instead of implying two measurements.
+  const same = (key: string, other: string, otherLabel: string, buoy?: string, otherBuoy?: string) =>
+    sharedStation(actual(key, buoy), actual(other, otherBuoy)) ? ` Same station as the ${otherLabel}, not a separate measurement.` : '';
 
   const wind = newest(src('offshore'), 'WSPD', 'm/s');
   const gust = wind && finite(wind.row.GST) ? Math.round((wind.row.GST as number) * 1.943844) : null;
@@ -109,14 +128,14 @@ export function buoyReadings(feed: unknown, region: RegionStations = {}, now = D
     {id: 'wind', label: 'Wind', ...(wind ? {reading: String(Math.round((wind.row.WSPD as number) * 1.943844)), unit: 'kt'} : {reading: 'No reading'}),
       detail: [windFrom, gust !== null ? `gusts ${gust}` : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('offshore', stations.offshore_buoy), wind?.at ?? null, ok('offshore'), limit('offshore'), now),
-      basis: `Observed wind at ${name('offshore', 'offshore', stations.offshore_buoy)}, out at sea: not a harbor or launch reading. Averaged over 8 minutes, with the peak gust; ${rule('offshore')}.`},
+      basis: `Observed wind at ${name('offshore', 'offshore', stations.offshore_buoy)}, out at sea: not a harbor or launch reading. Averaged over 8 minutes, with the peak gust; ${rule('offshore')}.${same('offshore', 'diablo', 'water reading', stations.offshore_buoy, stations.nearshore_buoy)}`},
     {id: 'swell', label: 'Swell', ...(swell ? {reading: ((swell.row.SwH as number) * 3.28084).toFixed(1), unit: 'ft'} : {reading: 'No reading'}),
       detail: [period, swell && typeof swell.row.SwD === 'string' && /^[NSEW]{1,3}$/.test(swell.row.SwD) ? swell.row.SwD : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('diablo-spectrum', stations.nearshore_buoy), swell?.at ?? null, ok('diablo-spectrum'), limit('diablo-spectrum'), now),
-      basis: `Swell height, period and direction from the wave spectrum at ${name('diablo', 'nearshore', stations.nearshore_buoy)}; wind waves are left out; ${rule('diablo-spectrum')}.`},
+      basis: `Swell height, period and direction from the wave spectrum at ${name('diablo-spectrum', 'nearshore', stations.nearshore_buoy, 'diablo')}; wind waves are left out; ${rule('diablo-spectrum')}.${same('diablo-spectrum', 'offshore', 'wind reading', stations.nearshore_buoy, stations.offshore_buoy)}`},
     {id: 'water', label: 'Water', ...(water ? {reading: String(Math.round((water.row.WTMP as number) * 1.8 + 32)), unit: '°F'} : {reading: 'No reading'}),
       ...judged(station('diablo', stations.nearshore_buoy), water?.at ?? null, ok('diablo'), limit('diablo'), now),
-      basis: `Surface water temperature measured at ${name('diablo', 'nearshore', stations.nearshore_buoy)}; ${rule('diablo')}.`},
+      basis: `Surface water temperature measured at ${name('diablo', 'nearshore', stations.nearshore_buoy)}; ${rule('diablo')}.${same('diablo', 'offshore', 'wind reading', stations.nearshore_buoy, stations.offshore_buoy)}`},
   ];
 }
 
@@ -147,7 +166,7 @@ export function feedState(feed: unknown, now = Date.now()): FeedState {
   return {age: ageText(now - at), stale: now - at > FEED_LATE_MIN * 60000};
 }
 
-export interface Readout {readonly readings: Reading[]; readonly feed: FeedState}
+export interface Readout {readonly readings: Reading[]; readonly feed: FeedState; /** The region the stations are read for (region.json `name`). */ readonly place?: string}
 
 /** Load the default region's readings; every failure becomes an unavailable tile, never an error. */
 export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAULT_REGION, now: () => number = Date.now): Promise<Readout> {
@@ -160,5 +179,6 @@ export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAUL
   const station = info.stations?.tide ?? '9412110';
   const [feed, tide] = await Promise.all([json(feedPath(info.conditions_feed, region)).catch(() => null), json(tideURL(station)).catch(() => null)]);
   const at = now();
-  return {readings: [...buoyReadings(feed, info, at), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note)], feed: feedState(feed, at)};
+  return {readings: [...buoyReadings(feed, info, at), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note)], feed: feedState(feed, at),
+    place: typeof info.name === 'string' && info.name.trim() ? info.name.trim() : DEFAULT_PLACE};
 }

@@ -8,8 +8,13 @@
 // home opens in v2, Forget clears it everywhere, and denied storage still
 // navigates. The landing itself (FE-07): the readout with source, age and
 // stale state from stubbed feeds at a fixed clock, the saved-port redirect,
-// the port input with a profile pill, the layer dots, axe, no map engine
-// request, and LCP on the throttled mobile profile.
+// the port input with a profile pill, the layer dots, axe, no three request,
+// and LCP on the throttled mobile profile. FE-25: the live night map after
+// first paint over the synthetic basemap fixture and a synthetic WCOFS packet
+// (the coast bridge is otherwise held), its credit and Currents preview,
+// motion standing still under reduced motion, and the shoreline SVG alone
+// with WebGL disabled.
+import {readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 import {test, expect, checkA11y, LCP_BUDGET_MS} from './fixtures.ts';
 
@@ -65,10 +70,9 @@ test('the port chooser matches by name, Enter navigates in place, and v1 reads t
   expect(await stayed(page), 'no reload').toBe(true);
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('san-diego');
   await expect(page.locator('.app-port')).toContainText('San Diego');
-  // v1 (shared key): a bare visit opens the port v2 saved instead of its chooser.
-  await page.goto('/?ui=v1');
-  await expect(page).toHaveURL(/[?&]region=southern-california/);
-  await expect(page.locator('.home-port-card')).toHaveCount(0);
+  // A later bare visit to the app opens the saved port (FE-61: v1's chooser that shared the key is gone).
+  await page.goto('/map');
+  await expect(page).toHaveURL(/\/map\?[^#]*region=southern-california/);
   expect(pageErrors).toEqual([]);
 });
 
@@ -115,8 +119,8 @@ test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast
   expect(await page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [PORT_KEY, PLACE_KEY, PROFILE_KEY])).toEqual([null, null, null]);
   expect((await context.cookies()).some(c => c.name === 'skippercast_home')).toBe(false);
   await expect(page).toHaveURL(/[?&]place=cambria/);   // this visit stays where it is
-  await page.goto('/?ui=v1');
-  await expect(page.locator('.home-port-card')).toBeVisible();   // v1 has no home either
+  await page.goto('/map');
+  await expect(page.locator('h1')).toContainText('Know the water');   // no home: a bare visit opens the landing
   expect(pageErrors).toEqual([]);
 });
 
@@ -178,9 +182,10 @@ async function landingFeeds(page: Page, feed: unknown = FEED, tide: unknown = TI
   await page.route('**/feeds/conditions/regions/morro-bay/latest.json', route => feed ? route.fulfill({json: feed}) : route.fulfill({status: 404, json: {}}));
   await page.route('https://api.tidesandcurrents.noaa.gov/**', route => tide ? route.fulfill({json: tide}) : route.abort('failed'));
 }
-const ENGINE = /maplibre|pmtiles|three|coast3d|coast-workspace/i;
+/** The terrain renderer and three (FE-25 acceptance 4: the landing never requests them); MapLibre may load, after first paint. */
+const THREE = /three|coast3d|coast-workspace|\/assets\/(?:viewer|embed|terrain)\./i;
 
-test('the landing shows the hero and every reading with its source and age; a stale reading says stale; no map engine loads', async ({page, pageErrors, v2}, info) => {
+test('the landing shows the hero and every reading with its source and age; a stale reading says stale; no three loads', async ({page, pageErrors, v2}, info) => {
   const requests: string[] = [];
   page.on('request', request => requests.push(request.url()));
   await landingFeeds(page);
@@ -196,9 +201,10 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('[data-reading="water"] .ui-tile')).toHaveAttribute('data-state', 'stale');
   await expect(page.locator('[data-reading="water"] .ui-tile-source')).toHaveText('NDBC 46215 · 3 hstale');
   await expect(page.locator('.landing-fresh')).toHaveText('Buoy feed updated 12 min ago');
+  await expect(page.locator('#landing-readout-title')).toHaveText('Latest readings · Morro Bay & Avila area');
   await expect(page.locator('[data-fleet]')).toHaveCount(0);
   await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(6);
-  await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&ui=v2$/);
+  await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&current=wcofs&ui=v2$/);
   await page.locator('[data-reading="tide"] summary').click();
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('mean lower low water');
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('not a Morro Bay bar-current prediction');
@@ -206,7 +212,7 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('[data-reading="wind"] .ui-popover-body')).toContainText('about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading');
   await expect(page.locator('.landing-credit')).toHaveText('Shoreline: NOAA National Geodetic Survey · CUSP shoreline, surveyed 1994–2010.');
   await checkA11y(page, 'v2-landing', info.project.name);
-  expect(requests.filter(url => ENGINE.test(new URL(url).pathname)), 'no MapLibre or three request').toEqual([]);
+  expect(requests.filter(url => THREE.test(new URL(url).pathname)), 'no three request').toEqual([]);
   expect(pageErrors).toEqual([]);
 });
 
@@ -217,6 +223,32 @@ test('with the feeds unavailable every tile still names its source, says unavail
   await expect(sources).toHaveText(['NDBC 46028 · unavailablestale', 'NDBC 46215 · unavailablestale', 'NDBC 46215 · unavailablestale', 'NOAA 9412110 · unavailablestale']);
   await expect(page.locator('.landing-tiles .ui-tile[data-state="stale"]')).toHaveCount(4);
   await expect(page.locator('.landing-fresh')).toHaveText('Buoy feed unavailable');
+  expect(pageErrors).toEqual([]);
+});
+
+// #554: a backup station is named as itself and "backup for" the primary; when it is also the
+// other role's station the readout says so; a retained backup stays stale.
+const backupSource = (status = 'ok') => ({station: '46011', fallback_for: '46215', status});
+const BACKUP_FEED = {...FEED, sources: {
+  offshore: {...FEED.sources.offshore, data: {...FEED.sources.offshore.data, station: '46011'}, station: '46011'},
+  'diablo-spectrum': {...FEED.sources['diablo-spectrum'], name: 'NOAA NDBC 46011 swell and wind waves', ...backupSource(), data: {...FEED.sources['diablo-spectrum'].data, station: '46011'}},
+  diablo: {...FEED.sources.diablo, name: 'NOAA NDBC 46011 observations', ...backupSource('retained'), data: {...FEED.sources.diablo.data, station: '46011'}},
+}};
+
+test('backup buoys name their own station, say when two tiles share it, and a retained one stays stale', async ({page, pageErrors, v2}) => {
+  await landingFeeds(page, BACKUP_FEED);
+  await v2.open('landing');
+  await expect(page.locator('[data-reading="swell"] .ui-tile-source')).toHaveText('NDBC 46011 (backup for 46215) · 34 min');
+  await expect(page.locator('[data-reading="water"] .ui-tile-source')).toHaveText('NDBC 46011 (backup for 46215) · 3 hstale');
+  await expect(page.locator('[data-reading="water"] .ui-tile')).toHaveAttribute('data-state', 'stale');
+  await expect(page.locator('[data-reading="wind"] .ui-tile-source')).toHaveText('NDBC 46011 · 20 min');
+  await page.locator('[data-reading="swell"] summary').click();
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('NDBC buoy 46011');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('the backup for 46215');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('Same station as the wind reading, not a separate measurement.');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).not.toContainText('Diablo Canyon');
+  // Nothing overflows the phone width.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(pageErrors).toEqual([]);
 });
 
@@ -247,11 +279,111 @@ test('a profile pill and a port from the landing input open the app with both an
   expect(pageErrors).toEqual([]);
 });
 
-test('the landing paints within the LCP budget on the throttled mobile profile', async ({pageErrors, v2}, info) => {
+test('the landing paints within the LCP budget on the throttled mobile profile, with the night map loading after it', async ({page, pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
+  await nightFixtures(page);
   const lcp = await v2.lcp('landing');
   console.log(`v2 landing LCP ${Math.round(lcp)} ms (budget ${LCP_BUDGET_MS}, design § 13)`);
   expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
   expect(lcp).toBeLessThanOrEqual(LCP_BUDGET_MS);
+  await expect(page.locator('.landing-night')).toHaveAttribute('data-state', 'ready');   // the map drew in the same load
+  expect(pageErrors).toEqual([]);
+});
+
+// FE-25: the night map over e2e/v2-map.spec.ts's fixtures: the synthetic basemap (one tile, served by range) and a WCOFS
+// packet on a 0.04° grid off Morro Bay with three-hourly frames around now; every other coast bridge request is held.
+const TINY = readFileSync(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
+const ARCHIVE = 'tiles/basemap/ca-coast-fixture.pmtiles';
+const HOUR_MS = 3_600_000;
+async function nightFixtures(page: Page): Promise<void> {
+  await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered */ });
+  await page.route('**/feeds/tiles/basemap/manifest.json', route => route.fulfill({json: {schema_version: 1, key: ARCHIVE}}));
+  await page.route(`**/feeds/${ARCHIVE}`, route => {
+    const range = /bytes=(\d+)-(\d+)/.exec(route.request().headers().range ?? '');
+    if (!range) return route.fulfill({body: TINY, headers: {'Accept-Ranges': 'bytes'}});
+    const start = Number(range[1]), end = Math.min(Number(range[2]), TINY.length - 1);
+    return route.fulfill({status: 206, body: TINY.subarray(start, end + 1),
+      headers: {'Content-Range': `bytes ${start}-${end}/${TINY.length}`, 'Accept-Ranges': 'bytes', 'Content-Type': 'application/octet-stream'}});
+  });
+  const now = Date.now(), three = 3 * HOUR_MS, first = Math.floor(now / three) * three - three, iso = (ms: number) => new Date(ms).toISOString();
+  const cells = [];
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 17; i++) {
+    const lon = +(-121.24 + i * 0.04).toFixed(6), lat = +(35.16 + j * 0.04).toFixed(6), uMs = 0.15 + i * 0.03, vMs = 0.12 - j * 0.02;
+    cells.push({lat, lon, uMs, vMs, speedKnots: Math.hypot(uMs, vMs) * 1.943844492, towardDeg: (Math.atan2(uMs, vMs) * 180 / Math.PI + 360) % 360});
+  }
+  const wcofs = {id: 'wcofs', kind: 'forecast', label: 'NOAA WCOFS surface forecast', url: 'https://example.test/wcofs', fetchedAt: iso(now - 600_000),
+    issuedAt: iso(now - three), sampleAt: null, nativeResolutionKm: 4, sampleStride: 1, horizontalDatum: 'NAD83', surfaceOnly: true,
+    attribution: 'NOAA', license: 'public-domain-us-gov', limitations: 'Surface only.', frames: [0, 1, 2, 3].map(k => ({validAt: iso(first + k * three), cells}))};
+  await page.route('**/api/coast/ocean', route => route.fulfill({json: {schemaVersion: 1, countyId: 'slo', generatedAt: iso(now - 300_000), currents: [wcofs], cloud: null, sources: []}}));
+}
+const flow = (page: Page) => page.locator('.landing-night canvas.chart-flow--dash');
+
+test('after first paint the night map draws the coastline and animated currents behind the hero, credits them and loads no three', async ({page, pageErrors, v2}, info) => {
+  const requests: string[] = [];
+  page.on('request', request => requests.push(request.url()));
+  await nightFixtures(page);
+  await v2.open('landing');
+  await expect(page.locator('.landing-night')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('.landing')).toHaveAttribute('data-night', 'ready');
+  await expect(page.locator('.landing-night canvas.maplibregl-canvas')).toHaveAttribute('tabindex', '-1');   // still: never in the tab order
+  await expect(page.locator('.landing-night .maplibregl-control-container a, .landing-night button')).toHaveCount(0);
+  await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
+  expect(Number(await flow(page).getAttribute('data-paths')), 'streamlines over the field').toBeGreaterThan(10);
+  // The SVG stays as the fallback, faded out under the drawn map.
+  await expect(page.locator('.landing-shore path')).toHaveCount(2);
+  await expect.poll(() => page.locator('.landing-shore').evaluate(el => getComputedStyle(el).opacity)).toBe('0');
+  await expect(page.locator('[data-credit="basemap"]')).toHaveText('Basemap: © OpenStreetMap contributors, © Protomaps.');
+  await expect(page.locator('[data-credit="currents"]')).toHaveText(/^Currents: NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.$/);
+  // MapLibre is fetched only after the first paint and the load event (design § 13).
+  const timing = await page.evaluate(() => ({
+    paint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? NaN,
+    load: performance.getEntriesByType('navigation').map(e => (e as PerformanceNavigationTiming).loadEventEnd)[0] ?? NaN,
+    maplibre: performance.getEntriesByType('resource').find(e => /\/assets\/maplibre\.[0-9a-f]+\.js$/.test(e.name))?.startTime ?? NaN,
+  }));
+  expect(timing.maplibre, 'MapLibre after first paint').toBeGreaterThan(timing.paint);
+  expect(timing.maplibre, 'MapLibre after the load event').toBeGreaterThanOrEqual(timing.load);
+  expect(requests.some(url => new URL(url).pathname === `/feeds/${ARCHIVE}`), 'the basemap is read').toBe(true);
+  // A Currents dot previews the streamlines; leaving it ends the preview.
+  const dot = page.locator('.landing-dots a[data-layer="currents"]');
+  await dot.focus();
+  await expect(page.locator('.landing')).toHaveAttribute('data-preview', 'currents');
+  await dot.blur();
+  await expect(page.locator('.landing')).not.toHaveAttribute('data-preview', /./);
+  await checkA11y(page, 'v2-landing-night', info.project.name);
+  expect(requests.filter(url => THREE.test(new URL(url).pathname)), 'no three request').toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('under prefers-reduced-motion the night map\'s currents stand still', async ({page, pageErrors, v2}) => {
+  await nightFixtures(page);
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await v2.open('landing');
+  await expect(page.locator('.landing-night')).toHaveAttribute('data-state', 'ready');
+  await expect(flow(page)).toHaveAttribute('data-motion', 'still');
+  expect(Number(await flow(page).getAttribute('data-paths'))).toBeGreaterThan(10);
+  expect(pageErrors).toEqual([]);
+});
+
+test('with WebGL disabled the landing keeps the shoreline SVG, never fetches MapLibre, and axe is clean', async ({page, pageErrors, v2}, info) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, ...rest: unknown[]) {
+      return /webgl/i.test(kind) ? null : (original as (...a: unknown[]) => unknown).call(this, kind, ...rest);
+    } as typeof original;
+  });
+  const requests: string[] = [];
+  page.on('request', request => requests.push(request.url()));
+  await nightFixtures(page);
+  await v2.open('landing');
+  await page.waitForLoadState('load');
+  // The night map's start runs a frame after the load event; give it that frame and one more task.
+  await page.evaluate(() => new Promise(done => requestAnimationFrame(() => setTimeout(done, 100))));
+  await expect(page.locator('.landing-shore path')).toHaveCount(2);
+  await expect(page.locator('.landing-shore')).toBeVisible();
+  expect(await page.locator('.landing-shore').evaluate(el => getComputedStyle(el).opacity)).not.toBe('0');
+  await expect(page.locator('.landing-night')).toHaveCount(0);
+  await expect(page.locator('.landing')).not.toHaveAttribute('data-night', /./);
+  expect(requests.filter(url => /\/assets\/(?:maplibre|NightMap)\./.test(new URL(url).pathname)), 'no MapLibre or night map request').toEqual([]);
+  await checkA11y(page, 'v2-landing-no-webgl', info.project.name);
   expect(pageErrors).toEqual([]);
 });

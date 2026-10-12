@@ -585,7 +585,16 @@
     "nearshore_buoy_name": "Mission Bay / San Diego",
     "offshore_buoy": "46086",
     "offshore_buoy_name": "San Clemente Basin",
-    "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+    "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+    "roles": {
+      "tide": {
+        "stations": [
+          "9410170",
+          "9410166"
+        ],
+        "evidence": "catalog/station-failover.json"
+      }
+    }
   },
   "mpa": {
     "bounds": [
@@ -972,7 +981,16 @@
         "nearshore_buoy_name": "Mission Bay / San Diego",
         "offshore_buoy": "46086",
         "offshore_buoy_name": "San Clemente Basin",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410170",
+              "9410166"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ740",
@@ -991,7 +1009,16 @@
         "nearshore_buoy_name": "San Pedro",
         "offshore_buoy": "46025",
         "offshore_buoy_name": "Santa Monica Basin",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410660",
+              "9410680"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ655",
@@ -1010,7 +1037,16 @@
         "nearshore_buoy_name": "Santa Monica Bay",
         "offshore_buoy": "46025",
         "offshore_buoy_name": "Santa Monica Basin",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410660",
+              "9410680"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ655",
@@ -1029,7 +1065,16 @@
         "nearshore_buoy_name": "East Santa Barbara Channel",
         "offshore_buoy": "46054",
         "offshore_buoy_name": "West Santa Barbara Channel",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "nearshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ650",
@@ -1048,7 +1093,16 @@
         "nearshore_buoy_name": "West Santa Barbara Channel",
         "offshore_buoy": "46053",
         "offshore_buoy_name": "East Santa Barbara Channel",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "offshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ650",
@@ -1067,7 +1121,16 @@
         "nearshore_buoy_name": "West Santa Barbara Channel",
         "offshore_buoy": "46053",
         "offshore_buoy_name": "East Santa Barbara Channel",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "offshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ673",
@@ -1086,7 +1149,16 @@
         "nearshore_buoy_name": "Santa Monica Bay",
         "offshore_buoy": "46025",
         "offshore_buoy_name": "Santa Monica Basin",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410660",
+              "9410680"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ676",
@@ -1105,7 +1177,16 @@
         "nearshore_buoy_name": "East Santa Barbara Channel",
         "offshore_buoy": "46054",
         "offshore_buoy_name": "West Santa Barbara Channel",
-        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time."
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "nearshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
       },
       "marine_zones": {
         "coastal": "PZZ655",

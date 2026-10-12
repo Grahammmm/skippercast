@@ -15,7 +15,7 @@ globalThis.SHELLS = {'/': '/index.0123456789.html', '/admin.html': '/admin.01234
 globalThis.BUILD_ID = 'build-test';
 const {default: worker} = await import('../server/index.ts');
 const {fleetJobs} = await import('../server/routes/fleet.ts');
-const {watchDeps, PAGE, MAX_ROWS} = await import('../server/fleet/watch.ts');
+const {watchDeps, PAGE, MAX_ROWS, MATCH_METHODS, STRONG_METHODS, WATCHED_MIN} = await import('../server/fleet/watch.ts');
 
 const skip = sqliteUnavailable ?? false;
 const ORIGIN = 'https://skippercast.com', REGION = 'CA';
@@ -141,17 +141,43 @@ test('AIS never overrides a registry MMSI', {skip}, async () => {
   const {sql, db} = database();
   try {
     // B is Held Example's registry MMSI: it cannot be watched for another vessel.
-    const stolen = await post(db, {rows: [row(B, {status: 'watched', match_method: 'geofence-presence'})]});
+    const stolen = await post(db, {rows: [row(B, {status: 'watched', match_method: 'geofence-presence', confidence: 0.85})]});
     assert.equal(stolen.status, 400);
     assert.match(stolen.body.error, /another vessel's registry MMSI/);
     // Held Example holds B, so another MMSI cannot be watched for it.
-    const second = await post(db, {rows: [row(A, {vessel_id: HELD, status: 'watched', match_method: 'geofence-presence'})]});
+    const second = await post(db, {rows: [row(A, {vessel_id: HELD, status: 'watched', match_method: 'geofence-presence', confidence: 0.85})]});
     assert.equal(second.status, 400);
     assert.match(second.body.error, /registry MMSI is 999000202/);
     // As candidates they are fine, and watching B for its own vessel is too.
-    assert.equal((await post(db, {rows: [row(A, {vessel_id: HELD}), row(B, {vessel_id: HELD, status: 'watched', match_method: 'fcc-uls'})]})).status, 200);
+    assert.equal((await post(db, {rows: [row(A, {vessel_id: HELD}), row(B, {vessel_id: HELD, status: 'watched', match_method: 'fcc-uls', confidence: 0.9})]})).status, 200);
     assert.equal(sql.prepare('SELECT mmsi FROM fleet_vessels WHERE id=?').get(HELD).mmsi, B);
     assert.equal(sql.prepare('SELECT mmsi FROM fleet_vessels WHERE id=?').get(SEA).mmsi, null);
+  } finally { sql.close(); }
+});
+
+test('the watched gate: a strong method and confidence >= 0.85, or a candidate', {skip}, async () => {
+  const {sql, db} = database();
+  try {
+    assert.equal(WATCHED_MIN, 0.85);
+    assert.deepEqual([...STRONG_METHODS].sort(), ['admin', 'fcc-uls', 'geofence-presence', 'schedule-correlation']);
+    assert.deepEqual(MATCH_METHODS.filter(m => !STRONG_METHODS.includes(m)).sort(), ['ais-static-name', 'call-sign']);
+    for (const method of ['call-sign', 'ais-static-name']) {
+      const refused = await post(db, {rows: [row(A, {status: 'watched', match_method: method, confidence: 0.95})]});
+      assert.equal(refused.status, 400, method);
+      assert.match(refused.body.error, new RegExp(`${method} is candidate-only`));
+      assert.equal((await post(db, {rows: [row(A, {match_method: method, confidence: 0.95})]})).status, 200, `${method} as a candidate`);
+    }
+    for (const method of ['geofence-presence', 'schedule-correlation']) {
+      const weak = await post(db, {rows: [row(A, {status: 'watched', match_method: method, confidence: 0.849})]});
+      assert.equal(weak.status, 400, method);
+      assert.match(weak.body.error, /confidence >= 0\.85/);
+    }
+    assert.equal(stored(sql, A).status, 'candidate', 'a refused request writes nothing');
+    const watched = await post(db, {rows: [row(A, {status: 'watched', match_method: 'schedule-correlation', confidence: 0.85})]});
+    assert.equal(watched.status, 200, JSON.stringify(watched.body));
+    assert.deepEqual([stored(sql, A).status, stored(sql, A).match_method], ['watched', 'schedule-correlation']);
+    // The gate binds watched rows only: a rejected or candidate row of any method and confidence is fine.
+    assert.equal((await post(db, {rows: [row(C, {vessel_id: null, match_method: 'call-sign', confidence: 0.1})]})).status, 200);
   } finally { sql.close(); }
 });
 

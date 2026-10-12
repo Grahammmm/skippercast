@@ -2,7 +2,10 @@
 // (dist/regions/<id>/shoreline.geojson, built by FE-10) drawn as a blurred line
 // under a crisp one, as fish's map drew it, with colours from the palette. A
 // click on the line selects that segment: the mark card shows its source date
-// and stated accuracy, because every feature keeps them.
+// and stated accuracy, because every feature keeps them. In the published form
+// (schema_version 2, src/skippercast/platform/shoreline.py) a feature is one
+// MultiLineString per distinct set of source properties, so each line still
+// reads its own fields from the feature it belongs to.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import type {Palette} from './palette.ts';
@@ -37,7 +40,17 @@ export function coastlineLayers(p: Palette): LineLayer[] {
 }
 
 /** What the mark card shows for any Chart selection (web/app/MarkCard.tsx renders it). */
-export interface ChartMark {readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string}
+export interface ChartMark {
+  readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string;
+  /** The official page with the rules that apply there (FE-19's protected areas); the card's Regulations action opens it. */
+  readonly regulations?: {readonly href: string; readonly label: string};
+  /** The regulations line (FE-18): what the feature's own build screened, and the rules check. */
+  readonly rules?: string;
+  /** An atlas mark the run-time screen withholds (#489): the card offers no trip actions. */
+  readonly withheld?: boolean;
+  /** The trip plan's spot this card reviews in the planner (a ranked trip spot, #495). */
+  readonly trip?: string;
+}
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

@@ -38,9 +38,9 @@ class SouthernObservationTests(TestCase):
         seen=[]
         def fake_source(ident,name,kind,url,max_age,loader,collected,previous):
             seen.append(url)
-            return {'id':ident,'status':'ok','url':url,'data':{'sample_at':'2026-09-22T12:00:00Z'}}
+            return {'id':ident,'status':'ok','url':url,'kind':kind,'max_age_hours':max_age,'data':{'sample_at':'2026-09-22T12:00:00Z'}}
         with patch('skippercast.pipeline.live.source',side_effect=fake_source):
-            data=collect(region_id='southern-california')
+            data=collect(datetime(2026, 9, 22, 12, tzinfo=timezone.utc), region_id='southern-california')
         self.assertEqual(len(seen),len(set(seen)))
         self.assertIn('46258',data['sources']['diablo']['station_url'])
         self.assertIn('46054',data['sources']['buoy-46054']['station_url'])

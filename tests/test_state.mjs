@@ -17,7 +17,7 @@ test('every v2 key round-trips through withParams, readURL and syncFromURL', () 
   configureStore({storage: store});
   const patch = {region: 'morro-bay', coast: null, view: 'conditions', target: 'halibut', hour: '2026-09-30T15:00Z',
     profile: 'shore', day: '2026-10-06', layers: 'swell,water-temp', area: 'estero', base: 'chart',
-    presentation: '3d', current: 'hfr-1', habitat: 'reef:r12'};
+    presentation: '3d', current: 'hfr-1', habitat: 'reef:r12', station: '46215', metric: 'waveFt', range: '14'};
   assert.deepEqual(Object.keys(patch).sort(), [...URL_KEYS].sort(), 'the test covers every store key');
   const href = withParams(ORIGIN + '?focus=r12', patch);
   const read = readURL(href);
@@ -36,12 +36,12 @@ test('every v2 key round-trips through withParams, readURL and syncFromURL', () 
   for (const key of ['profile', 'day', 'layers', 'area', 'base']) assert.equal(cleared[key], key === 'area' ? 'r12' : null, key);
 });
 
-test('stored profile, layers and base restore when the URL omits them; the URL wins', () => {
+test('stored profile, layers and base restore when the URL omits them; layers are kept per profile; the URL wins', () => {
   const store = memory();
   configureStore({storage: store});
   syncFromURL(ORIGIN + '?profile=spear&layers=seafloor&base=aerial');
   assert.equal(store.map.get(STORAGE_KEYS.profile), 'spear');
-  assert.equal(store.map.get(STORAGE_KEYS.layers), 'seafloor');
+  assert.deepEqual(JSON.parse(store.map.get(STORAGE_KEYS.layers)), {spear: 'seafloor'});
   assert.equal(store.map.get(STORAGE_KEYS.base), 'aerial');
   syncFromURL(ORIGIN + '?region=morro-bay');
   assert.equal(profile.value, 'spear');
@@ -49,15 +49,35 @@ test('stored profile, layers and base restore when the URL omits them; the URL w
   assert.equal(base.value, 'aerial');
   syncFromURL(ORIGIN + '?profile=boat');
   assert.equal(profile.value, 'boat', '?profile= wins over storage');
-  assert.deepEqual(layers.value, ['seafloor'], 'stored layers outlive a profile change');
+  assert.deepEqual(layers.value, PROFILE_TABLE.boat.defaultLayers, 'another profile has its own layers, its defaults until chosen (FE-20)');
   syncFromURL(ORIGIN + '?layers=none');
   assert.deepEqual(layers.value, [], 'none empties the rail');
-  assert.equal(store.map.get(STORAGE_KEYS.layers), 'none');
+  assert.deepEqual(JSON.parse(store.map.get(STORAGE_KEYS.layers)), {spear: 'seafloor', boat: 'none'});
+  syncFromURL(ORIGIN + '?profile=spear');
+  assert.deepEqual(layers.value, ['seafloor'], 'each profile restores its own list');
+  // FE-04's single stored list becomes the stored profile's own list; other profiles keep their defaults.
+  store.setItem(STORAGE_KEYS.layers, 'clouds');
+  syncFromURL(ORIGIN + '?region=morro-bay');
+  assert.deepEqual(layers.value, ['clouds'], 'the legacy list loads for the stored profile');
+  assert.deepEqual(JSON.parse(store.map.get(STORAGE_KEYS.layers)), {spear: 'clouds'});
+  syncFromURL(ORIGIN + '?profile=boat');
+  assert.deepEqual(layers.value, PROFILE_TABLE.boat.defaultLayers);
+  syncFromURL(ORIGIN + '?profile=spear');
+  assert.deepEqual(layers.value, ['clouds'], 'and stays that profile\'s after a switch');
+  store.setItem(STORAGE_KEYS.layers, 'none');
+  syncFromURL(ORIGIN + '?profile=spear');
+  assert.deepEqual(layers.value, [], 'a legacy empty rail loads too');
+  // Junk reads as nothing stored.
+  for (const old of ['"clouds"', '[1]', '{"spear": 7}', '{']) {
+    store.setItem(STORAGE_KEYS.layers, old);
+    syncFromURL(ORIGIN + '?profile=spear');
+    assert.deepEqual(layers.value, PROFILE_TABLE.spear.defaultLayers, old);
+  }
 });
 
 test('without storage or parameters the profile defaults to boat with its layers; junk is ignored', () => {
   configureStore({storage: null});
-  syncFromURL(ORIGIN + '?profile=kayak&view=35.36000,-120.94000,10&day=2026-02-30&layers=,Bad!,&base=sepia&focus=estero');
+  syncFromURL(ORIGIN + '?profile=jetski&view=35.36000,-120.94000,10&day=2026-02-30&layers=,Bad!,&base=sepia&focus=estero');
   assert.equal(profile.value, 'boat');
   assert.deepEqual(layers.value, PROFILE_TABLE.boat.defaultLayers);
   assert.equal(base.value, 'night');

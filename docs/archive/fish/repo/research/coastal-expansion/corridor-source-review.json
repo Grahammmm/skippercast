@@ -1,0 +1,1132 @@
+{
+  "sources": [
+    {
+      "id": 8,
+      "label": "H11952_MB_8m_MLLW_4of4.bag",
+      "kind": "survey",
+      "resolutionM": 8,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_8m_MLLW_4of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "7a726128f5d4ee4b5f761f5544d16b2b9e9ddcbe0c80f7bb79573e3659e2afd1",
+      "cogSha256": "a470c11683ea40e522d8584f7832a772ca1cd7eb750f37e8a9fb820ab8984b96",
+      "sourceId": "h11952-mb-8m-mllw-4of4-bag-e1fb31ac2b",
+      "bounds4326": [
+        -120.58301185447054,
+        34.4352679193879,
+        -120.4555981206141,
+        34.55123812169226
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 9,
+      "label": "H11953_MB_8m_MLLW_4of4.bag",
+      "kind": "survey",
+      "resolutionM": 8,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_8m_MLLW_4of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "e70772d2bbfcb310f7a997f0a58a148baa742b79c242b3f0794d6e5a442b97a2",
+      "cogSha256": "9ffef755c4b646886314e6cd52645ad66baef8854ad326e02ac12eac47b776a4",
+      "sourceId": "h11953-mb-8m-mllw-4of4-bag-e70772d2bb",
+      "bounds4326": [
+        -120.72839048502262,
+        34.485640885719455,
+        -120.54434135087223,
+        34.64366754113475
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 10,
+      "label": "1998 EM300 SGF5G original5m shelf depth grid",
+      "kind": "survey",
+      "resolutionM": 5,
+      "datum": "unknown",
+      "sourceDate": "1998",
+      "url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+      "sourceUrl": "https://pubs.usgs.gov/of/2001/0179/exp_arc/battopo/sgf5g.tgz",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "753fa82adcc5dea5fa6a2261a8a1d38a3035ea5c3a3e8b7b58e7017e894f104f",
+      "cogSha256": "ab07baa8eddbde05d3b36c2a8257efdc733442d7c31c91ad414a8ddd3eb2693a",
+      "sourceId": "usgs-1998-sgf5g-native",
+      "bounds4326": [
+        -122.03258875356055,
+        36.360698918821335,
+        -121.91376906583389,
+        36.570952465125835
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 11,
+      "label": "1998 EM300 SUR5G original5m shelf depth grid",
+      "kind": "survey",
+      "resolutionM": 5,
+      "datum": "unknown",
+      "sourceDate": "1998",
+      "url": "https://pubs.usgs.gov/of/2001/0179/data/battopo/em300bat_faq.html",
+      "sourceUrl": "https://pubs.usgs.gov/of/2001/0179/exp_arc/battopo/sur5g.tgz",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "807a68a73f78dcbecf173454c613bf5df6aa6264c643182e6b89fcdfe758f283",
+      "cogSha256": "12d57148cf308e0a7349e9479ba53780935a2f4962787bf4e1bfcfd1a038686c",
+      "sourceId": "usgs-1998-sur5g-native",
+      "bounds4326": [
+        -122.08845232365955,
+        36.21525406385439,
+        -121.9144991461588,
+        36.37141762329271
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 12,
+      "label": "H11952_MB_4m_MLLW_3of4.bag",
+      "kind": "survey",
+      "resolutionM": 4,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_4m_MLLW_3of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "d3466c6450d083f348e9bcfff0d32d414ce12feee885677ec90790aa1fa3ee48",
+      "cogSha256": "94ea3735d3eddb8fdd3d4fd367ebc1f7971cf5416d88d165bcf9a937960c29ec",
+      "sourceId": "h11952-mb-4m-mllw-3of4-bag-1961b50d36",
+      "bounds4326": [
+        -120.5772921053728,
+        34.4352494484484,
+        -120.45557689256306,
+        34.55110636019215
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 13,
+      "label": "H11953_MB_4m_MLLW_3of4.bag",
+      "kind": "survey",
+      "resolutionM": 4,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_4m_MLLW_3of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "c5f25f47c007f061ae4c7779d8abe41fa1618332c13ec15b35da4fd7f365c208",
+      "cogSha256": "cfc13d1484fc6dda7cff9d7de0e271eb1adb504fb3ad9363ef41f1ad1f6c1f28",
+      "sourceId": "h11953-mb-4m-mllw-3of4-bag-f90a1710f1",
+      "bounds4326": [
+        -120.73290234132405,
+        34.48545420961629,
+        -120.54660681305928,
+        34.64751827652552
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 14,
+      "label": "USGS / CSUMB SFML Monterey published grid",
+      "kind": "survey",
+      "resolutionM": 2,
+      "datum": "NAVD88",
+      "sourceDate": "Acoustic 1998\u20132012 / lidar 2009\u20132010",
+      "url": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/metadata/Bathymetry_2m_OffshoreMonterey_metadata.txt",
+      "sourceUrl": "https://cmgds.marine.usgs.gov/data/csmp/OffshoreMonterey/data/Bathymetry_2m_OffshoreMonterey.zip",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "2a769bc2bb343f6df5041ad7cab7bfcfe3eb641e2ef0bba7f3709edcd07c17f1",
+      "cogSha256": "b32698ae396fe34793ab3eb8aa049227b2f9d0f55791226e6cb64e71cd47b5c3",
+      "sourceId": "bathymetry-2m-offshoremonterey-zip-172dbd1794",
+      "bounds4326": [
+        -122.0668020274765,
+        36.529557177226685,
+        -121.80924492876288,
+        36.695047905625046
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration. Mixed acquisitions: acoustic 1998\u20132012 and lidar 2009\u20132010; publication/merge processing 2016 is not the acquisition year. This published nearshore grid was resampled by its producer from the 2013 NOAA TopoBathy Merge to 2 m; the separate MBARI 5 m product was not merged into it. 2 m is delivered grid spacing, not a per-cell sounding precision or proof of native fine detail. Source metadata reports accuracy no better than 2 m horizontal / 0.20 m vertical; NAVD88 depths remain nominal. Actual input interpolation/lineage masks unavailable.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 15,
+      "label": "H11952_MB_2m_MLLW_2of4.bag",
+      "kind": "survey",
+      "resolutionM": 2,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_2m_MLLW_2of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "0cb528795f939e9238e9b11f52279940a2365b2b4b6f52d9f9db8aea82b235fa",
+      "cogSha256": "1fac72dca3c3c5fed3b3b296348bb5c478276d3c2e6e8cc21e97b322b6e6db57",
+      "sourceId": "h11952-mb-2m-mllw-2of4-bag-ffa92402c6",
+      "bounds4326": [
+        -120.59372359326147,
+        34.43527715485641,
+        -120.45555001086475,
+        34.55338756795562
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 16,
+      "label": "H11953_MB_2m_MLLW_2of4.bag",
+      "kind": "survey",
+      "resolutionM": 2,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_2m_MLLW_2of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "54cb613323fd5d12d38e98d7f265f7bea44025f0e4d0a1de04483679b9bdd94d",
+      "cogSha256": "479bb152ff4d181a62e2f3547db097bd376295a061f3971b72542a8b390e4f1a",
+      "sourceId": "h11953-mb-2m-mllw-2of4-bag-fd284baf0f",
+      "bounds4326": [
+        -120.73685971157404,
+        34.483530434641196,
+        -120.54373887807752,
+        34.64540151692549
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 17,
+      "label": "H11952_MB_1m_MLLW_1of4.bag",
+      "kind": "survey",
+      "resolutionM": 1.0,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/DR/H11952.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/H11952_MB_1m_MLLW_1of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "72f02a82c27110e011c060ff73d9fa9ee77dae7dd058f9b274a606538f4321bd",
+      "cogSha256": "ee62dc7d71ce8e34252dfb864f61554a209ec74744b5e31bc48b5ab81ff9c809",
+      "sourceId": "h11952-mb-1m-mllw-1of4-bag-a9df8da8d0",
+      "bounds4326": [
+        -120.5806213584377,
+        34.44454397080731,
+        -120.4609140942441,
+        34.549146097528464
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 18,
+      "label": "H11953_MB_1m_MLLW_1of4.bag",
+      "kind": "survey",
+      "resolutionM": 1,
+      "datum": "MLLW",
+      "sourceDate": "2008",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/DR/H11953.pdf",
+      "sourceUrl": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11953/BAG/H11953_MB_1m_MLLW_1of4.bag",
+      "rights": "Reviewed government public-domain product",
+      "sourceSha256": "4f8a559dffa35ffa0a1eaad1c08f91a138e90e6c041f5e9112ad05670e4713a9",
+      "cogSha256": "ad4cc09a82d5e3c53634753d406365a67ef663787d20a9e57615fa199eaa1a49",
+      "sourceId": "h11953-mb-1m-mllw-1of4-bag-8b1bfa456f",
+      "bounds4326": [
+        -120.65195909919345,
+        34.527108456238544,
+        -120.54799997220634,
+        34.56289496143852
+      ],
+      "notice": "Opened through original-native-adapters-v1; native-resolution COG cached by source hash. Usable original producer-gridded depth in the reviewed window; no habitat or legal clearance. Interpolation mask and acquisition independence unresolved; do not count as independent corroboration.",
+      "interpolationMask": "unknown"
+    },
+    {
+      "id": 19,
+      "label": "USGS 3DEP coastal bare-earth mosaic",
+      "kind": "land",
+      "resolutionM": null,
+      "datum": "NAVD88; mosaic references and dated inputs",
+      "sourceDate": "Mixed dated surveys; service edition USGS National Map 3D Elevation Program (3DEP). October 01, 2026.",
+      "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer",
+      "rights": "USGS public data",
+      "notice": "Original multi-resolution land context; 19.64m Web Mercator exports (about 16m at the scene origin) do not establish native survey precision."
+    },
+    {
+      "id": 20,
+      "label": "NOAA coastal relief model v2 \u00b7 regional context",
+      "kind": "model",
+      "resolutionM": 31,
+      "datum": "Mean sea level; original mixed source references",
+      "sourceDate": "Mixed historical sources; 2013 edition",
+      "url": "https://www.ncei.noaa.gov/products/coastal-relief-model",
+      "sourceSha256": "894ba0a273aa21dfb947d1144cc50296d7a8ca35caf671d9b23ab5ad7265ab9b",
+      "rights": "NOAA NCEI US public domain; not for navigation",
+      "notice": "Regional interpolated relief context only; not native shallow habitat support or precise soundings"
+    }
+  ],
+  "landCollection": {
+    "sources": [
+      {
+        "name": "region--32768--32768",
+        "bytes": 8785018,
+        "sha256": "cf66807681fe9c51390d738d133015d7bb23e64eb9863b1dd80c28ebd5633445",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4222471.057341085%2C-13467431.996170238%2C4262685.858324001&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_0df499c9_f2bc_466f_a8e3_d01766070945.tif",
+        "extent3857": [
+          -13507646.797153153,
+          4222471.057341085,
+          -13467431.996170238,
+          4262685.858324001
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:20.083261+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--32768--131072",
+        "bytes": 16780410,
+        "sha256": "f29d671f46bae3ff7b1cf132cf8e7e0c7a52b4493b56e76844a10630d98fc2aa",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4343115.460289833%2C-13467431.996170238%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_f9389ded_c3d4_4ba2_b461_6305757b7161.tif",
+        "extent3857": [
+          -13507646.797153153,
+          4343115.460289833,
+          -13467431.996170238,
+          4383330.261272749
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:21.198049+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--32768--163840",
+        "bytes": 16780410,
+        "sha256": "fd13940b998b86e3d600ed7d5e077bf8bc599f471862e43dbc75773d62eddc64",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4383330.261272748%2C-13467431.996170238%2C4423545.062255664&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_99174a0e_2511_4d20_b678_9d874a211270.tif",
+        "extent3857": [
+          -13507646.797153153,
+          4383330.261272748,
+          -13467431.996170238,
+          4423545.062255664
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:22.660251+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--32768--65536",
+        "bytes": 16780410,
+        "sha256": "476fde39e1cbc6080caef89131b569759314b0fb0800cea25e08712f72519b7e",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4262685.858324002%2C-13467431.996170238%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_1c343b9e_ffe1_420b_b492_8e42909fa8cc.tif",
+        "extent3857": [
+          -13507646.797153153,
+          4262685.858324002,
+          -13467431.996170238,
+          4302900.659306917
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:22.740803+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--65536--131072",
+        "bytes": 16780410,
+        "sha256": "bb32fe5e53f5e420122fefeab4a2b1e04211798579f515c38daf34d036ce846e",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13547861.598136067%2C4343115.460289833%2C-13507646.79715315%2C4383330.26127275&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_a18b4f46_c9eb_4eca_b25d_84065ccb4485.tif",
+        "extent3857": [
+          -13547861.598136067,
+          4343115.460289833,
+          -13507646.79715315,
+          4383330.26127275
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:26.025029+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--65536--163840",
+        "bytes": 16780410,
+        "sha256": "7f8aab9341265d8507dd94b962c335430096a17dd2a360e4348c8cf4b860da57",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13547861.598136067%2C4383330.261272748%2C-13507646.79715315%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_6fe7f125_1d35_4b66_8d23_c97a763e494c.tif",
+        "extent3857": [
+          -13547861.598136067,
+          4383330.261272748,
+          -13507646.79715315,
+          4423545.062255665
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:26.328427+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--32768--98304",
+        "bytes": 16780410,
+        "sha256": "51bd56543c9bb33ae6e1e476264480b2489a173518bdd0a2fa5eae66c4ec05e2",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13507646.797153153%2C4302900.659306916%2C-13467431.996170238%2C4343115.460289832&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_e42d59cc_ea13_4cce_8966_fcb1964d8f4a.tif",
+        "extent3857": [
+          -13507646.797153153,
+          4302900.659306916,
+          -13467431.996170238,
+          4343115.460289832
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:26.464797+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--65536--65536",
+        "bytes": 5770362,
+        "sha256": "947d64b58e302c89aea54a217797c841135076cdc3bdabdb1b91354efeede4f0",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13547861.598136067%2C4262685.858324002%2C-13507646.79715315%2C4302900.659306918&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_24501c90_17f3_4d68_b8bb_95b379d8a252.tif",
+        "extent3857": [
+          -13547861.598136067,
+          4262685.858324002,
+          -13507646.79715315,
+          4302900.659306918
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:26.968621+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--98304--163840",
+        "bytes": 7277690,
+        "sha256": "724a3d5067b3b2d075a9885bdac0fb7d8bbebc2eb9b59d5ce0e65db3da8ba69f",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13588076.399118984%2C4383330.261272748%2C-13547861.598136067%2C4423545.062255664&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_326c0db8_6f18_473e_a428_bb8fffa5034d.tif",
+        "extent3857": [
+          -13588076.399118982,
+          4383330.261272748,
+          -13547861.598136066,
+          4423545.062255665
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:28.833478+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--65536--98304",
+        "bytes": 15731834,
+        "sha256": "7dae979182279d5fb4f734c17539e3742729648e4e1563bf05c60f86efef1ba5",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13547861.598136067%2C4302900.659306916%2C-13507646.79715315%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_e8a5a00e_f794_470e_a1e7_bc008314b9a5.tif",
+        "extent3857": [
+          -13547861.598136067,
+          4302900.659306916,
+          -13507646.79715315,
+          4343115.460289833
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:29.255609+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--98304--98304",
+        "bytes": 4000890,
+        "sha256": "90d590b3345e5bbb6e5320ba95d80a41ccafba1720b146e0ce0aa9b7396c6dc7",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13588076.399118984%2C4302900.659306916%2C-13547861.598136067%2C4343115.460289832&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_1b39e083_497e_4135_98c3_e2b957cd2bca.tif",
+        "extent3857": [
+          -13588076.399118982,
+          4302900.659306916,
+          -13547861.598136066,
+          4343115.460289833
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:29.721997+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region--98304--131072",
+        "bytes": 11734138,
+        "sha256": "f1e8c463b336cbfb1fa01a0e03283316aa0425578370804e97f94249ea47be35",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13588076.399118984%2C4343115.460289833%2C-13547861.598136067%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_f4e8e86e_e1ec_40b0_8cf0_73ec18a8c623.tif",
+        "extent3857": [
+          -13588076.399118982,
+          4343115.460289833,
+          -13547861.598136066,
+          4383330.26127275
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:29.787007+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0--131072",
+        "bytes": 16780410,
+        "sha256": "6ea847edf1392d255e1a5b54224fc65777b36bbb283ef292a1d837d1ca3797d4",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4343115.460289833%2C-13427217.195187323%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_148e6150_b965_4943_aaac_10da9d444429.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4343115.460289833,
+          -13427217.195187323,
+          4383330.261272749
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:31.828747+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0--163840",
+        "bytes": 16780410,
+        "sha256": "1cd1546ad5031973f4a09f691eb2baae7bc542ab21a8f4a484893c84adc1cc59",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4383330.261272748%2C-13427217.195187323%2C4423545.062255664&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_d6380dc6_c111_4bd3_8f03_ed6b0e30c600.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4383330.261272748,
+          -13427217.195187323,
+          4423545.062255664
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:34.136380+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0--32768",
+        "bytes": 16780410,
+        "sha256": "5f8f42c596ff45ad5ed741fdc8bc0198580a04dcaef08808cc5c7884a610d738",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4222471.057341085%2C-13427217.195187323%2C4262685.858324001&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_a41647b2_e98e_4049_a7f3_d5c008b789cc.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4222471.057341085,
+          -13427217.195187323,
+          4262685.858324001
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:35.170355+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0--65536",
+        "bytes": 16780410,
+        "sha256": "3d1c78609a49233aec8de66b68e51b4fc6c9070e8b13e44dc35fdef36e56eb3e",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4262685.858324002%2C-13427217.195187323%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_61280b7b_44b9_45be_bf67_dd6dd527f7a9.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4262685.858324002,
+          -13427217.195187323,
+          4302900.659306917
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:35.352556+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0-32768",
+        "bytes": 1838202,
+        "sha256": "9509fc0d9e19190fac343714d7e0a404eda92bcde8b92d6b4586b012744a870b",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4142041.455375254%2C-13427217.195187323%2C4182256.25635817&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_2f9f5ef6_1bf4_4ebd_96f6_a771f401575d.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4142041.455375254,
+          -13427217.195187323,
+          4182256.25635817
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:36.349863+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0-0",
+        "bytes": 11996282,
+        "sha256": "a1df89aa5cfe387af670bb0b76fbbbf1ef741ede9a31883cf14c2c7f03a1fea4",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4182256.25635817%2C-13427217.195187323%2C4222471.057341086&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_ececb3df_a87c_45be_b980_67552e527152.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4182256.25635817,
+          -13427217.195187323,
+          4222471.057341086
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:37.143106+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0--98304",
+        "bytes": 16780410,
+        "sha256": "0ee8fde3dd4d79005f25e18eb8bfc5a87aa86f40cca39d40bb5ddfd39f68168d",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4302900.659306916%2C-13427217.195187323%2C4343115.460289832&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_452a3fd4_aacd_4692_a166_8f4d40a9a6e5.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4302900.659306916,
+          -13427217.195187323,
+          4343115.460289832
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:37.249135+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-0-65536",
+        "bytes": 1182842,
+        "sha256": "05dd88d846f4b68dc8df19f2406e4cd74820f7eb978ce49052a47651a8b0fbe8",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13467431.996170238%2C4101826.6543923384%2C-13427217.195187323%2C4142041.455375254&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_b2a603a2_60fb_4d11_9b03_c6e444cb9bc4.tif",
+        "extent3857": [
+          -13467431.996170238,
+          4101826.6543923384,
+          -13427217.195187323,
+          4142041.455375254
+        ],
+        "exportSpacingM": [
+          19.6361332924389,
+          19.636133292439354
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:37.261010+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768--131072",
+        "bytes": 16780410,
+        "sha256": "d013a2646eeb4a4dae756902c76513b9b6d9eefabb027d75c42e4fc6a3ed0c7b",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4343115.460289833%2C-13387002.394204406%2C4383330.26127275&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_c447383e_95de_4f63_8bcd_f5b0de1ec940.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4343115.460289833,
+          -13387002.394204406,
+          4383330.26127275
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:40.620810+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768--163840",
+        "bytes": 16780410,
+        "sha256": "2cb7bb3d1575cd3b235254a923f02ccba70bd65b20890eed58b92a25022218bd",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4383330.261272748%2C-13387002.394204406%2C4423545.062255665&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_56f51e24_52c0_4534_81e5_b7bccbeb6035.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4383330.261272748,
+          -13387002.394204406,
+          4423545.062255665
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:40.878868+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768--32768",
+        "bytes": 16780410,
+        "sha256": "beefa8cb9de9a6cd373394e8ae44ef89b22a93adf213b8ede437a5e40cc714ba",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4222471.057341085%2C-13387002.394204406%2C4262685.858324002&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_5715cf95_521d_444a_a908_f683c48fab7d.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4222471.057341085,
+          -13387002.394204406,
+          4262685.858324002
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:41.710622+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768--65536",
+        "bytes": 16780410,
+        "sha256": "e76d80cca3079b0ec081ec7556ac4c9a13548b5c362d11631148fd3506b7b565",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4262685.858324002%2C-13387002.394204406%2C4302900.659306918&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_163b98ed_99ba_4b25_959e_c8185e8a95d1.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4262685.858324002,
+          -13387002.394204406,
+          4302900.659306918
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:44.929582+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768--98304",
+        "bytes": 16780410,
+        "sha256": "c234735ab33ec1a1d4a1d09ea8778d2ab9db61044e03bd7cca63f49ed2b23078",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4302900.659306916%2C-13387002.394204406%2C4343115.460289833&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_0fce5e08_1cbb_4e19_9c7f_a878c8ec9ccb.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4302900.659306916,
+          -13387002.394204406,
+          4343115.460289833
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:45.225711+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768-0",
+        "bytes": 16780410,
+        "sha256": "e45c62c159a83ded30fd3c8252c43453073ab073b285a81cc242d7a133eed36d",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4182256.25635817%2C-13387002.394204406%2C4222471.057341087&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_a657ddbe_05fc_4349_9ffb_b95ef15b76bc.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4182256.25635817,
+          -13387002.394204406,
+          4222471.057341087
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:46.104500+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768-98304",
+        "bytes": 4263034,
+        "sha256": "c596b03fc2b60b0dc55f90a7d20484edbf525ba3dcbf1095f52d5951ad32671c",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4061611.853409422%2C-13387002.394204406%2C4101826.654392339&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_f7a5aaf4_cc87_4b07_ad1e_185bf5561321.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4061611.853409422,
+          -13387002.394204406,
+          4101826.654392339
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:47.105119+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768-32768",
+        "bytes": 16780410,
+        "sha256": "c4172332792446ff76226362227ec6fd7908e7348b35d56dfdd2bbbba33d9f5f",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4142041.4553752537%2C-13387002.394204406%2C4182256.2563581704&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_6ba9b2ee_2679_41ee_962a_e5faae17cd08.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4142041.4553752537,
+          -13387002.394204406,
+          4182256.2563581704
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:47.899929+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-32768-65536",
+        "bytes": 16780410,
+        "sha256": "41a0f337a2722381c69df15a8bb7e798ee294fb263cd5717846074e618c934a1",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13427217.195187323%2C4101826.654392338%2C-13387002.394204406%2C4142041.4553752546&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_cfe9a737_df17_4d93_a281_a690eede7440.tif",
+        "extent3857": [
+          -13427217.195187323,
+          4101826.654392338,
+          -13387002.394204406,
+          4142041.4553752546
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:49.726815+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536--131072",
+        "bytes": 16780410,
+        "sha256": "0b14f32b3d877ef15b4f8b3a3dd3b3bd0786f55f5c9f67de22116d80b9b0fc74",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4343115.460289833%2C-13346787.59322149%2C4383330.261272749&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_5011b9cd_c954_4317_a1d0_67051facd7ec.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4343115.460289833,
+          -13346787.593221487,
+          4383330.26127275
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:50.059393+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536--32768",
+        "bytes": 16780410,
+        "sha256": "3a03e87011e33bb0eca91645a776d154143ea0c07a0098479e66aa7f5a74dc1c",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4222471.057341085%2C-13346787.59322149%2C4262685.858324001&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_2f66398e_7cee_4066_8b08_dcf2131dafd6.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4222471.057341085,
+          -13346787.593221487,
+          4262685.858324002
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:51.960473+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536--163840",
+        "bytes": 16780410,
+        "sha256": "dff4ae842ca51c7eacb3f7a3123c6a24b2b946176add9b9990406e503dbcc8cf",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4383330.261272748%2C-13346787.59322149%2C4423545.062255664&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_ad7269c7_573d_4fcd_aa5a_c1cdccd1c862.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4383330.261272748,
+          -13346787.593221487,
+          4423545.062255665
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:52.372347+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536--98304",
+        "bytes": 16780410,
+        "sha256": "f054e667a5d9db47a122cdd9e08e80075d8b67a29a43cbbb1a0003a6f60b387b",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4302900.659306916%2C-13346787.59322149%2C4343115.460289832&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_0166c764_94a9_409d_8232_939c6f6d4eb1.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4302900.659306916,
+          -13346787.593221487,
+          4343115.460289833
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:53.660501+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536--65536",
+        "bytes": 16780410,
+        "sha256": "a7fe0b3eb8d1c224ff0788cfe78f23cf51b6ff5b5858cbb2341974282d656698",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4262685.858324002%2C-13346787.59322149%2C4302900.659306917&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_326cd00a_0b79_4d9f_8200_14cbc3ae6c8a.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4262685.858324002,
+          -13346787.593221487,
+          4302900.659306918
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:55.514333+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536-0",
+        "bytes": 16780410,
+        "sha256": "567b3cbee15559d1050f2216ba0c6867988da9b9810ce48ae04cf3b8419543b9",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4182256.25635817%2C-13346787.59322149%2C4222471.057341086&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_d740ee73_e3a7_42b0_9dca_40dba9b34414.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4182256.25635817,
+          -13346787.593221487,
+          4222471.057341087
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:58.380765+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536-98304",
+        "bytes": 5770362,
+        "sha256": "18b77e54b39f2a4cbba4fb1b9521597db8546796e5261d0273a854ea73418087",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4061611.8534094226%2C-13346787.59322149%2C4101826.6543923384&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_dc396383_b7d0_4076_b9be_906394a960e7.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4061611.853409422,
+          -13346787.593221487,
+          4101826.654392339
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:09:59.045966+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536-32768",
+        "bytes": 16780410,
+        "sha256": "d96e590af2b42eea4815efaeebfb0d778fa31d140796185e0516309b332af811",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4142041.455375254%2C-13346787.59322149%2C4182256.25635817&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_25dc1225_8a7b_4ea1_aa3f_8009229b3c1b.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4142041.4553752537,
+          -13346787.593221487,
+          4182256.2563581704
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:10:00.445838+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      },
+      {
+        "name": "region-65536-65536",
+        "bytes": 16780410,
+        "sha256": "4977e58e3dda74ac83810a061cd8ebd6dc3c255d7e507ef62f046eec549b3451",
+        "url": "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=json&bbox=-13387002.394204406%2C4101826.6543923384%2C-13346787.59322149%2C4142041.455375254&bboxSR=3857&imageSR=3857&size=2048%2C2048&format=tiff&pixelType=F32&interpolation=RSP_NearestNeighbor&noDataInterpretation=esriNoDataMatchAny",
+        "assetUrl": "https://elevation.nationalmap.gov/arcgis/rest/directories/elevation_output/3DEPElevation_ImageServer/_ags_17ba87c9_c20d_4d6e_a739_eac18791ba07.tif",
+        "extent3857": [
+          -13387002.394204404,
+          4101826.654392338,
+          -13346787.593221487,
+          4142041.4553752546
+        ],
+        "exportSpacingM": [
+          19.63613329243981,
+          19.63613329243981
+        ],
+        "source": "USGS 3DEP bare-earth multi-resolution mosaic",
+        "datum": "NAVD88; original mixed acquisition dates",
+        "retrievedAt": "2026-10-07T00:10:02.547098+00:00",
+        "precisionNotice": "Export spacing is not original survey accuracy; dated multi-resolution land context, not a new lidar survey"
+      }
+    ],
+    "failures": [],
+    "requested": 38,
+    "complete": true,
+    "serviceSha256": "74b4d74deceb9fc1728945ec27cec809bdcb7427e1949ed80c48a9bf60c0e777"
+  },
+  "model": {
+    "source": "NOAA Southern California Coastal Relief Model version 2",
+    "edition": "2013",
+    "url": "https://www.ngdc.noaa.gov/thredds/wcs/crm/crm_socal_1as_vers2.nc?service=WCS&version=1.0.0&request=GetCoverage&coverage=Band1&CRS=OGC%3ACRS84&BBOX=-122.3%2C34.35%2C-120.06%2C36.8&format=GeoTIFF_Float&resx=0.00027777778&resy=0.00027777778",
+    "metadataUrl": "https://www.ncei.noaa.gov/products/coastal-relief-model",
+    "rights": "NOAA NCEI US public domain; not for navigation",
+    "nativeSpacingDegrees": [
+      0.00027777778000000024,
+      0.0002777777800000004
+    ],
+    "bounds": [
+      -122.30013888329,
+      34.34986109791,
+      -120.05986108759001,
+      36.800138895290004
+    ],
+    "size": [
+      8065,
+      8821
+    ],
+    "bytes": 284636484,
+    "sha256": "894ba0a273aa21dfb947d1144cc50296d7a8ca35caf671d9b23ab5ad7265ab9b",
+    "retrievedAt": "2026-10-07T00:14:58.567277+00:00",
+    "datum": "Mean sea level; original mixed source references",
+    "acquisitionDates": "Mixed historical sources; edition is not acquisition date",
+    "kind": "model",
+    "notice": "Regional interpolated relief context only; not native shallow habitat support or precise soundings"
+  },
+  "sourceCountsAtFinestDisplay": {
+    "1": 1670749,
+    "20": 43951681,
+    "19": 45403010,
+    "14": 3312179,
+    "10": 2223195,
+    "11": 3997748,
+    "6": 1966734,
+    "2": 11446,
+    "3": 1503972,
+    "4": 1462900,
+    "7": 229153,
+    "5": 1977951,
+    "13": 1034480,
+    "16": 364939,
+    "9": 122687,
+    "18": 98787,
+    "12": 508353,
+    "15": 248142,
+    "17": 105237,
+    "8": 28109
+  },
+  "newSurveyTileCount": 82,
+  "rules": [
+    "Only horizontal reprojection. Original normalized nominal depth values are unchanged.",
+    "Valid/nodata masks preserved; unknown interpolation masks remain unknown.",
+    "Model context does not enter habitat scores or measured-area credit.",
+    "Existing SLO native measurements and Morro lidar retain precedence."
+  ]
+}

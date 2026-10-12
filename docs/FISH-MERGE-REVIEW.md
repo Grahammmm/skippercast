@@ -6,7 +6,7 @@ Inventory examined October 6, 2026. SkipperCast base: `04dfc9057662553dd6ca3a71c
 
 Use SkipperCast's Worker, region contracts, private-account boundary and deployment pipeline as the host. Fish adds real terrain rendering, shore/dive report details and historical analysis. A clean merge needs one location/profile/time controller and one public map workspace. Copying both complete sites beneath different navigation labels would preserve files but still duplicate their offerings.
 
-SkipperCast's existing v2 state and profile modules are useful extension points, but its v2 app is an unfinished shell. `web/app/Desktop.tsx` still supplies placeholder map/readings, `web/app/App.tsx` describes this explicitly, and `deployments/production.json` has `ui_v2: false`. Do not mistake the v2 Coast/Conditions/History/Fleet navigation for implemented views. Default SkipperCast functionality resides in `dist/index.html` and its modules.
+SkipperCast's existing v2 state and profile modules are useful extension points, but its v2 app is an unfinished shell. `web/app/Desktop.tsx` still supplies placeholder map/readings, `web/app/App.tsx` describes this explicitly (at this inventory the rebuilt app was not yet the default). Do not mistake the v2 Coast/Conditions/History/Fleet navigation for implemented views. Default SkipperCast functionality resides in `dist/index.html` and its modules.
 
 ## Capability inventory
 

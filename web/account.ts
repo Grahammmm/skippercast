@@ -129,6 +129,3 @@ export async function mountTripAlerts(regionId: string, target: string | null): 
   document.querySelector('#trip-alerts > details')?.setAttribute('open', '');
 }
 
-/** v1's guide holds the GPX day plan and the offline pack until FE-51 brings them into v2. */
-export const classicURL = (regionId: string | null, hash: '#export' | '#guide'): string =>
-  `/?ui=v1${regionId ? `&region=${encodeURIComponent(regionId)}` : ''}${hash}`;

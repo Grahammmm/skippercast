@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-03T00:46:55.870Z",
+  "scope": "Actual data APIs and original-clock checks; browser acceptance pending.",
+  "checks": [
+    {
+      "endpoint": "health",
+      "status": 200,
+      "generatedAt": "2026-10-03T00:42:12.311Z"
+    },
+    {
+      "endpoint": "report",
+      "status": 200,
+      "generatedAt": "2026-10-03T00:42:12.311Z"
+    },
+    {
+      "endpoint": "ocean",
+      "status": 200,
+      "generatedAt": "2026-10-03T00:42:06.443Z"
+    },
+    {
+      "endpoint": "history",
+      "status": 200,
+      "generatedAt": "2026-10-03T00:44:11.206Z"
+    }
+  ],
+  "annualBaselinesCatalogsAndReceiptsPreserved": true,
+  "murOriginalLayerAndClocksPreserved": true,
+  "habitat": {
+    "ready": false,
+    "error": "Reviewed habitat publication changed",
+    "headChecks": [
+      {
+        "region": "morro-bay",
+        "status": 503
+      },
+      {
+        "region": "cambria-san-simeon",
+        "status": 503
+      }
+    ]
+  },
+  "report": {
+    "generatedAt": "2026-10-03T00:42:12.311Z"
+  },
+  "ocean": {
+    "generatedAt": "2026-10-03T00:42:06.443Z",
+    "cloudObservedAt": "2026-10-03T00:38:00.000Z",
+    "currents": [
+      {
+        "id": "wcofs",
+        "kind": "forecast",
+        "issuedAt": "2026-10-02T03:00:00.000Z",
+        "sampleAt": null,
+        "fetchedAt": "2026-10-02T21:11:58.000Z"
+      }
+    ]
+  },
+  "history": {
+    "generatedAt": "2026-10-03T00:44:11.206Z",
+    "stations": [
+      {
+        "id": "46215",
+        "baselineYears": 22,
+        "lastObservedAt": "2026-10-02T23:56:00.000Z"
+      },
+      {
+        "id": "46028",
+        "baselineYears": 43,
+        "lastObservedAt": "2026-10-03T00:20:00.000Z"
+      }
+    ]
+  },
+  "verificationCorrection": "The first Node preflight lacked a same-origin resolver and failed before HTTP. The corrected fetch wrapper resolved actual relative endpoints; both HEAD responses and the actual preflight now establish withdrawal."
+}

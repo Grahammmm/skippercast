@@ -43,8 +43,9 @@
 //   GET|POST /api/admin/fleet/operators/:id, GET|POST /api/admin/fleet/operators/:id/outreach, POST /api/admin/fleet/outreach/:id
 //   GET  /api/admin/fleet/coverage     ?region=   fleet/admin/coverage.ts (CF-35)
 //   GET  /api/admin/fleet/ais/health   ?region=   fleet/admin/ais-health.ts (CF-35)
-//   GET  /api/admin/fleet/trips        ?region= &labelled=all|yes|no &cursor=   fleet/admin/labels.ts (CF-48): trip labelling
+//   GET  /api/admin/fleet/trips        ?region= &labelled=all|yes|no|agent|approved &cursor=   fleet/admin/labels.ts (CF-48): trip labelling
 //   GET  /api/admin/fleet/trips/:id, POST /api/admin/fleet/trips/:id/labels {started_at, ended_at, label, basis}, POST /api/admin/fleet/labels/:id/delete
+//   POST /api/admin/fleet/trips/:id/approve   the trip's agent labels become the signed-in admin's (N7)
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
@@ -88,7 +89,7 @@ import {listOperators, operatorDetail, editOperator, listOutreach, addOutreach, 
 import {coverageQuery, coverageReport} from '../fleet/admin/coverage.ts';
 import {healthQuery, aisHealth} from '../fleet/admin/ais-health.ts';
 // CF-48: trip labelling for the classifier's validation.
-import {listTrips, tripDetail, addLabel, deleteLabel} from '../fleet/admin/labels.ts';
+import {listTrips, tripDetail, addLabel, deleteLabel, approveTrip} from '../fleet/admin/labels.ts';
 import type {AppEnv} from '../env.ts';
 import type {ConsumerDeps} from '../advisor/types.ts';
 
@@ -327,6 +328,7 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.get('/api/admin/fleet/trips/:id', async c => found(await tripDetail(c.env.DB!, c.req.param('id'))));
   admin.post('/api/admin/fleet/trips/:id/labels', async c => answer(await addLabel(c.env.DB!, c.req.param('id'), await body(c.req.raw, 4096), c.var.owner, stamp())));
   admin.post('/api/admin/fleet/labels/:id/delete', async c => answer(await deleteLabel(c.env.DB!, c.req.param('id'))));
+  admin.post('/api/admin/fleet/trips/:id/approve', async c => answer(await approveTrip(c.env.DB!, c.req.param('id'), c.var.owner)));   // N7
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);
