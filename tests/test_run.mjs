@@ -61,6 +61,12 @@ test('a run that fills the window leaves no fishing time; it never reads as a ne
   const run = planRun(brief({windows: [short]}), {name: 'Far reef', nm: 10}, 20, at('2026-10-12T12:00:00Z'));
   assert.equal(run.kind, 'no-time');
   assert.equal(run.runMin, 30);
+  // A short first window the run fills does not hide a later window with fishing time.
+  const later = {...WINDOW, start: '2026-10-12T18:00:00.000Z', end: '2026-10-13T00:00:00.000Z'};
+  const next = planRun(brief({windows: [short, later]}), {name: 'Far reef', nm: 10}, 20, at('2026-10-12T12:00:00Z'));
+  assert.equal(next.kind, 'ok');
+  assert.equal(next.window, later);
+  assert.equal(next.fishMin, 300);
 });
 
 test('no speed, no place: the run asks rather than assumes; no default speed exists', () => {
@@ -129,9 +135,10 @@ const RANKING = {source: 'atlas', label: 'Survey reef atlas', basis: '', picks: 
 
 test('the place: the selected pick, else the top pick, said so; none without a distance', async () => {
   const {runPlace} = await load();
-  assert.deepEqual(runPlace(RANKING, 'b', null), {name: 'Reef b', nm: 3.1, chosen: true});
-  assert.deepEqual(runPlace(RANKING, 'elsewhere', null), {name: 'Reef a', nm: 7.4, chosen: false}, 'a selection outside the screened picks falls back to the top pick');
-  assert.deepEqual(runPlace({...RANKING, picks: [pick('h1', 2, 'habitat')]}, null, 'h1'), {name: 'Reef h1', nm: 2, chosen: true});
+  assert.deepEqual(runPlace(RANKING, 'b', null), {name: 'Reef b', nm: 3.1, chosen: true, unranked: false});
+  assert.deepEqual(runPlace(RANKING, 'elsewhere', null), {name: 'Reef a', nm: 7.4, chosen: false, unranked: true}, 'a selection outside the screened picks falls back to the top pick, flagged');
+  assert.deepEqual(runPlace(RANKING, null, null), {name: 'Reef a', nm: 7.4, chosen: false, unranked: false});
+  assert.deepEqual(runPlace({...RANKING, picks: [pick('h1', 2, 'habitat')]}, null, 'h1'), {name: 'Reef h1', nm: 2, chosen: true, unranked: false});
   assert.equal(runPlace({...RANKING, picks: []}, null, null), null);
   assert.equal(runPlace({...RANKING, picks: [{...pick('a', 1), nm: null}]}, null, null), null, 'no harbor, no distance');
 });
@@ -148,7 +155,8 @@ test('the line renders each state for Boat only, with times in the region\'s zon
   const ok = line();
   assert.match(ok, /data-state="ok"/);
   assert.match(ok, /Up to 4 h 10 min fishing at Reef a\./);
-  assert.match(ok, /Leave 7 am · there 7:25 am · turn back 11:35 am · in by 12 pm/);
+  assert.match(ok, /Leave 7 am · there 7:25 am · turn back 11:35 am · in by 12 pm · window 7 am–12 pm/);
+  assert.doesNotMatch(ok, /app-run-note|outside the ranked list/);
   assert.match(ok, /7\.4 nm straight line · at least 25 min each way at 20 kt · top pick/);
   assert.match(ok, /<details class="ui-popover"[^>]*>.*straight-line distance from Morro Bay at the cruise speed you set/s, 'the method sits in the basis');
 
@@ -159,6 +167,15 @@ test('the line renders each state for Boat only, with times in the region\'s zon
   assert.doesNotMatch(ask, /\d+ kt/, 'no speed is shown or assumed');
 
   assert.match(line({windows: [], tiles: [tile('stale')]}), /No return time from a stale forecast\./);
+  // A window the bar reads caution or unknown at keeps that note beside the run time.
+  const bar = 'Morro Bay: bar caution or unknown at departure or return (estimate); check the bar status';
+  assert.match(line({windows: [{...WINDOW, reasons: ['Harbor entrance and full return route need a separate check', bar]}]}), /<p class="app-run-note">Morro Bay: bar caution or unknown at departure or return \(estimate\); check the bar status\.<\/p>/);
+  // A selection outside the ranked list: the lead says whose times these are.
+  selection.value = 'elsewhere';
+  assert.match(line(), /Your selected place is outside the ranked list, so times are for the top pick\. Up to 4 h 10 min fishing at Reef a\./);
+  selection.value = null;
+  // Places with no distance (no harbor position): said plainly.
+  assert.match(render(h(RunLine, {brief: brief(), ranking: {...RANKING, picks: [{...pick('a', 1), nm: null}]}, now})), /No harbor position to measure from, so no run time\./);
   assert.match(line({windows: [{...WINDOW, end: '2026-10-12T14:30:00.000Z'}]}), /The run to Reef a and back fills the 7 am–7:30 am window at 20 kt\./);
   assert.match(render(h(RunLine, {brief: brief(), ranking: RANKING, now: at('2026-10-12T18:50:00Z')})), /Turn-back time for the 7 am–12 pm window has passed\./);
   assert.match(render(h(RunLine, {brief: brief(), ranking: {...RANKING, picks: []}, now})), /Run time shows once a place to look is listed\./);

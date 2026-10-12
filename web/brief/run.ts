@@ -6,8 +6,9 @@
 // Every input is disclosed and nothing is filled in:
 // - the window is the brief's own (packages/coast buildDaily: the user's
 //   limits or the defaults, alerts, daylight, the hazard rules and the bar at
-//   departure and return); no window means no return time, and the reason
-//   names the input that is missing;
+//   the window's first and last hour); no window means no return time, and
+//   the reason names the input that is missing; a window whose bar reads
+//   caution or unknown keeps that note beside the run time;
 // - the distance is straight-line from the region's harbor (web/ranking.ts),
 //   so the real run is at least this long and the fishing time at most this;
 // - the speed is the one the user typed on this device (web/limits.ts
@@ -70,17 +71,22 @@ export function planRun(brief: Pick<Brief, 'windows' | 'alerts' | 'missing' | 't
   if (!place || !Number.isFinite(place.nm)) return {kind: 'no-place'};
   const runMin = runMinutes(place.nm, speedKn)!;
   const t = now.getTime(), run = runMin * MINUTE;
+  // A short window the run fills does not hide a later one with fishing time.
+  let full: RunState | null = null;
   for (const window of brief.windows) {
     const start = Date.parse(window.start), end = Date.parse(window.end);
     if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     const depart = Math.max(start, ceilTo(t)), turnBack = floorTo(end - run);
     if (turnBack <= t) continue;
     const arrive = depart + run, fishMin = Math.floor((turnBack - arrive) / MINUTE);
-    if (fishMin <= 0) return {kind: 'no-time', window, place, speedKn, runMin};
+    if (fishMin <= 0) { full ??= {kind: 'no-time', window, place, speedKn, runMin}; continue; }
     return {kind: 'ok', window, place, speedKn, runMin, depart: iso(depart), arrive: iso(arrive), turnBack: iso(turnBack), back: window.end, fishMin};
   }
-  return {kind: 'over', window: brief.windows.at(-1)!};
+  return full ?? {kind: 'over', window: brief.windows.at(-1)!};
 }
+
+/** The window's bar note (daily.ts: bar caution or unknown at its first or last hour), shown beside a run time. */
+export const barNote = (window: Window): string | null => window.reasons.find(reason => / bar caution or unknown /.test(reason)) ?? null;
 
 /** "45 min", "2 h", "1 h 50 min". */
 export function durationText(min: number): string {
