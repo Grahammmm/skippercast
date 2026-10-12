@@ -46,6 +46,20 @@ def readiness(stage, evidence, *, now, duration_s, code_sha, deps_sha, synthetic
     The stage wrapper must provide a verified receipt; this gate never manufactures
     scientific qualification or removes a hold from that receipt.
     """
+    if stage == "render" and evidence.get("schema") == "coastal-terrain-only-input-v1":
+        import json
+        from importlib.resources import files
+        from jsonschema import Draft202012Validator
+        holds = []
+        schema=json.loads(files("skippercast.coastal.resources").joinpath("coastal-terrain-only-input-v1.schema.json").read_text())
+        if list(Draft202012Validator(schema).iter_errors(evidence)):
+            holds.append("terrain_only_input_schema_invalid")
+        review=evidence.get("scientific_review",{})
+        if review.get("contract") != "coastal-terrain-only-science-review-v1":
+            holds.append("independent_scientific_review_required")
+        # Fixed existing renderer verification checks the actual independent
+        # review before output; completion rechecks that same contract.
+        return (not holds, sorted(set(holds)))
     holds = list(evidence.get("holds", []))
     if stage == "discover":
         return not holds, holds

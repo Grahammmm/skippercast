@@ -125,6 +125,29 @@ def execute(job, output, *, now):
         base['artifacts'].extend([artifact,*result['outputs'].values()])
         return dict(base,state='done',holds=[],next_job=_next('render',artifact,job))
     if stage == 'render':
+        if manifest.get("schema") == "coastal-terrain-only-input-v1":
+            from .render import terrain_only
+            terrain_root = Path(job["params"]["terrain_root"]).resolve()
+            if not root.is_relative_to(terrain_root) or not out.resolve().is_relative_to(root):
+                raise ValueError("terrain-only queue/output root confinement")
+            if terrain_only.context(manifest) != job["params"]["terrain_context_digest"]:
+                raise ValueError("terrain-only context binding mismatch")
+            checked = terrain_only.verify(terrain_root, manifest, now=now)
+            produced = terrain_only.preview(terrain_root, checked, output_dir=(out/"preview").relative_to(terrain_root),
+                now=now, style=job["params"].get("terrain_style"))
+            path = out/"terrain-only-result.json"
+            write(path, produced)
+            owned = []
+            for artifact in produced["artifacts"]:
+                absolute = resolve(terrain_root, artifact)
+                if not absolute.is_relative_to(root):
+                    raise ValueError("terrain-only artifact outside queue root")
+                owned.append(ref(root, absolute, artifact["contract"]))
+            base.update(state="done", holds=[], artifact=ref(root,path,terrain_only.RESULT),
+                artifacts=owned, terrain_only_context_digest=terrain_only.context(checked),
+                terrain_only_input_root=str(terrain_root))
+            base["usage"]["bytes"] = sum(a["bytes"] for a in owned)
+            return base
         if manifest.get('schema') not in (mapping.SCHEMA,'render-handoff-v2.1'):
             raise ValueError('render input contract unsupported')
         if manifest.get('segment_id') != base['segment_id'] or manifest.get('segment') != job['segment']:

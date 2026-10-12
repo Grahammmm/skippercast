@@ -648,7 +648,30 @@ class Store:
             for ref in artifacts:
                 verify_ref(self.root, ref)
                 self.db.execute("INSERT OR IGNORE INTO artifacts VALUES(?,?,?,?,?)", (ref["sha256"], ref["path"], ref["bytes"], ref.get("kind", ref.get("contract", "artifact")), job_id))
-            if state == "done" and job["stage"] in {"qualify", "map", "render"}:
+            terrain_only_mode = state == "done" and job["stage"] == "render" and result.get("artifact",{}).get("contract") == "coastal-terrain-only-render-v1"
+            if terrain_only_mode:
+                from ..render import terrain_only
+                from ..handoff.common import resolve as terrain_resolve
+                from datetime import datetime, timezone
+                terrain_job = job
+                manifest = json.loads(verify_ref(self.root,terrain_job["input_manifest"]).read_text())
+                terrain_root = Path(terrain_job["params"]["terrain_root"]).resolve()
+                if not self.root.is_relative_to(terrain_root):
+                    raise ValueError("terrain-only input root confinement")
+                checked = terrain_only.verify(terrain_root,manifest,now=datetime.now(timezone.utc))
+                if result.get("terrain_only_context_digest") != terrain_only.context(checked):
+                    raise ValueError("terrain-only completion context mismatch")
+                rendered = json.loads(verify_ref(self.root,result["artifact"]).read_text())
+                if rendered.get("schema") != terrain_only.RESULT or rendered.get("publication_prohibited") is not True or rendered.get("source_accessed") is not False or rendered.get("imagery_used") is not False:
+                    raise ValueError("terrain-only completion private scope invalid")
+                assets=[terrain_resolve(terrain_root,a) for a in rendered["artifacts"]]
+                if not assets or any(not p.is_relative_to(self.root) for p in assets) or len({p.parent for p in assets})!=1:
+                    raise ValueError("terrain-only completion artifacts outside queue root")
+                validated=terrain_only.preview(terrain_root,checked,output_dir=assets[0].parent.relative_to(terrain_root),
+                    now=datetime.now(timezone.utc),style=terrain_job["params"].get("terrain_style"))
+                if validated!=rendered:
+                    raise ValueError("terrain-only completion bytes/binding mismatch")
+            if state == "done" and job["stage"] in {"qualify", "map", "render"} and not terrain_only_mode:
                 from datetime import datetime, timedelta, timezone
                 now = datetime.fromtimestamp(self.clock(), timezone.utc)
                 contract = {"qualify": "private-mapping-input-v2", "map": "coastal-mapping-run-v1", "render": "render-handoff-v2.1"}[job["stage"]]
