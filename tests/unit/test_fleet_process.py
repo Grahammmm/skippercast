@@ -25,6 +25,7 @@ from skippercast.fleet.config import Port, load_region
 from skippercast.fleet.ops import id32
 from tests._support import ROOT
 
+DAY = 24 * HOUR
 MMSI = 999000123
 VESSEL = id32("CA", "test-boat-1")
 T0 = 1_791_190_800_000   # 2026-10-05T09:00:00Z, on the hour
@@ -254,6 +255,24 @@ class RunTests(ProcessTestCase):
         counts = process.hour_counts(self.store, T0, T0 + 2 * HOUR)
         self.assertEqual(counts, {"messages": 3, "watched_messages": 1, "vessels": 3, "max_gap_s": 30 * 60})
         self.assertEqual(process.hour_counts(self.store, T0 + HOUR, T0 + 2 * HOUR)["max_gap_s"], 3600)
+
+    def test_mirrored_events_with_a_legacy_kind_stay_out_of_the_aggregates(self):
+        """Run 38194870723: cells built from pre-rename events were refused (aggregates.cells[7].kind: invalid)."""
+        state = State(self.root / "state.sqlite")
+        d = derive(track(), MMSI, VesselRef(VESSEL), REGION, source="aisstream", window_from=T0,
+                   window_to=T0 + 6 * HOUR, now_ms=T0 + 6 * HOUR, computed_at=iso_utc(T0))
+        legacy = [replace(e, id=id32("legacy", e.id), kind="fishing-drift", started_at=e.started_at - 40 * DAY,
+                          ended_at=e.ended_at - 40 * DAY) for e in d.events[:1]]
+        departures = {t["id"]: (MMSI, process._ms(t["departed_at"]) - 40 * DAY) for t in d.trips}
+        state.replace_events("aisstream", [(MMSI, T0 - 41 * DAY, T0 - 39 * DAY)], legacy, departures)
+        state.close()
+        self.store.write(positions=track())
+        worker = FakeWorker()
+        counts = process.run(REGION, worker, root=self.root, now_ms=T0 + 8 * HOUR, hook_table={})
+        self.assertEqual(counts["aggregates"]["legacy_events"], 1)
+        kinds = {c["kind"] for post in worker.posts("activity", "aggregates") for c in post["aggregates"]["cells"]}
+        self.assertTrue(kinds, "the current trip's cells were posted")
+        self.assertNotIn("fishing-drift", kinds)
 
     def test_state_mirror_replaces_a_window_of_events(self):
         state = State(self.root / "state.sqlite")

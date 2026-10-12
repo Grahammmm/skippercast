@@ -547,6 +547,11 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
     counts = {"cells": 0, "deleted": 0, "requests": 0}
     for season in sorted(seasons):
         events = aggregate.prefer_sources(ctx.state.season_events(season), SOURCE_PRECEDENCE)
+        legacy = aggregate.legacy_events(events)
+        if legacy:
+            log.warning("season %s: %d mirrored events carry a kind the classifier no longer emits; they are left "
+                        "out of the aggregates until a reprocess replaces them", season, legacy)
+            counts["legacy_events"] = counts.get("legacy_events", 0) + legacy
         cells = aggregate.compute(events, params, now_ms=ctx.now_ms, tz=ctx.region.timezone, computed_at=ctx.computed_at)
         known = ctx.state.cells(season)
         full = not known
