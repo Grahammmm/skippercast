@@ -9,7 +9,7 @@ import json
 import math
 import unittest
 
-from skippercast.fleet.ais.aggregate import AggregateParams, compute, grid_cell
+from skippercast.fleet.ais.aggregate import AggregateParams, compute, grid_cell, legacy_events
 from tests.unit.test_fleet_classify import T0, region_thresholds
 from tests.unit.test_fleet_events import HOUR, event, metres, params
 
@@ -73,3 +73,16 @@ class ResolutionByKind(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LegacyKinds(unittest.TestCase):
+    """Events mirrored before the N5 rename keep their old kind; the Worker refuses it (fleet-ais run 38194870723)."""
+
+    def test_events_with_a_kind_the_classifier_no_longer_emits_are_left_out(self):
+        events = [event('v1', 35.0, -121.0), event('v2', 35.0, -121.0, kind='fishing-drift'),
+                  event('v3', 35.2, -121.3, kind='fishing-troll')]
+        cells = compute(events, params(), now_ms=T0 + 48 * HOUR)
+        self.assertEqual({c.kind for c in cells}, {'drift-anchor'})
+        self.assertEqual(sum(c.vessels_n for c in cells if c.season_part is None), 1)
+        self.assertEqual(legacy_events(events), 2)
+        self.assertEqual(legacy_events(events[:1]), 0)

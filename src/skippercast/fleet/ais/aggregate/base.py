@@ -221,6 +221,18 @@ def _local_date(ms: int, zone: ZoneInfo) -> str:
     return datetime.fromtimestamp(ms / 1000, tz=zone).date().isoformat()
 
 
+def legacy_events(events: Iterable[Event]) -> int:
+    """How many events carry a kind the current classifier no longer emits.
+
+    The processor's state mirror keeps every event it ever pushed, so trips
+    classified before a rename (``fishing-drift`` and ``fishing-troll`` became
+    the N5 modes) survive there with their old kind until a reprocess replaces
+    them. The Worker refuses such kinds, so ``build_cells`` leaves them out;
+    the processor logs this count so a reprocess can be planned.
+    """
+    return sum(1 for e in events if e.kind not in EVENT_KINDS)
+
+
 def build_cells(aggregator: Aggregator, events: Iterable[Event], params: AggregateParams, *,
                 now_ms: int | None = None, tz: str = "UTC", computed_at: str | None = None) -> list[Cell]:
     """Bin events with ``aggregator`` and build cells under the shared rules (module docstring).
@@ -242,6 +254,8 @@ def build_cells(aggregator: Aggregator, events: Iterable[Event], params: Aggrega
     groups: dict[tuple, list[Event]] = defaultdict(list)
     centres: dict[str, tuple[float, float]] = {}
     for event in events:
+        if event.kind not in EVENT_KINDS:
+            continue  # a kind from an earlier classifier (legacy_events); the Worker refuses it
         if cutoff is not None and event.ended_at > cutoff:
             continue
         cell_id, lat, lon = aggregator.bin(event, params)
