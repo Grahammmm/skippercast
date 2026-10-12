@@ -24,6 +24,11 @@
 // the static shoreline in place when that fails). FE-61 dropped the v1 shell
 // and its `/?ui=v1` key with the switch. The app at /map stays out: it opens
 // offline only from a pack saved from it.
+//
+// #617: `warm` lists the app's first-paint files the landing does not load
+// itself (appWarm); the landing fetches them into the browser cache after its
+// own first paint, unless the visitor asked to save data, so opening /map
+// does not wait on them.
 import {readdir, readFile, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 
@@ -61,6 +66,15 @@ export function landingShell(manifest) {
   return reachable(manifest, [LANDING_PAGE], new Set(), false);
 }
 
+/**
+ * #617: the app's first-paint files the landing warms after its own first paint (web/landing/warm.ts): the app
+ * page's static graph (no dynamic imports) without what the landing already loaded for its own first paint.
+ */
+export function appWarm(manifest) {
+  const landing = landingShell(manifest);
+  return [...reachable(manifest, ['app.html'], new Set(), false)].filter(f => !landing.has(f)).sort();
+}
+
 /** The install list's hashed files: every script and style a non-v2 page can load, plus the landing's first paint. */
 export function installAssets(manifest, files) {
   const only = v2Only(manifest);
@@ -78,6 +92,7 @@ export async function precacheManifest(dir, buildId) {
     shells: SHELLS,
     assets: installAssets(manifest, await readdir(join(dir, 'assets')).catch(() => [])),
     static: top.filter(n => STATIC.test(n)).map(n => `/${n}`),
+    warm: appWarm(manifest),
     v2: {
       assets: [...reachable(manifest, ['app.html'], OFFLINE_SKIP)].sort(),
       static: glyphs.filter(n => n.endsWith('.pbf')).sort().map(n => `/basemap/glyphs/${n}`),

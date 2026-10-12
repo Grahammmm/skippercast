@@ -16,6 +16,7 @@ import {build} from 'esbuild';
 import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_landing_shoreline.mjs';
 import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, placeLabel, tideReading, tideURL} from '../web/landing/readings.ts';
 import {saveData} from '../web/landing/save-data.ts';
+import {warmApp, warmList} from '../web/landing/warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -332,4 +333,18 @@ test('the Currents preview dims the map only while streamlines are drawn (FE-25 
   const css = readFileSync(join(ROOT, 'web/landing/landing.css'), 'utf8');
   const dims = [...css.matchAll(/^([^{}\n]*maplibregl-canvas[^{}\n]*)\{[^}]*opacity:\s*0\.45/gm)].map(m => m[1].trim());
   assert.deepEqual(dims, ['.landing[data-preview="currents"] .landing-night[data-currents="drawn"] .maplibregl-canvas'], 'the only dimming rule needs drawn streamlines');
+});
+
+test('the landing warms the app\'s first-paint files once, at low priority, and nothing under Save-Data (#617)', async () => {
+  const list = {warm: ['/assets/app.1111111111.js', '/assets/app.2222222222.css', 'https://elsewhere.test/x.js', '/regions/morro-bay/region.json', 7]};
+  assert.deepEqual(warmList(list), ['/assets/app.1111111111.js', '/assets/app.2222222222.css'], 'hashed same-origin assets only, never region data');
+  assert.deepEqual(warmList(null), []);
+  const asked = [];
+  const fetchFn = async (url, init) => { asked.push([url, init?.priority ?? init?.cache]); return {ok: true, json: async () => list, blob: async () => new Blob([])}; };
+  assert.deepEqual(await warmApp(fetchFn, {connection: {saveData: false}}), ['/assets/app.1111111111.js', '/assets/app.2222222222.css']);
+  assert.deepEqual(asked, [['/precache.json', 'no-cache'], ['/assets/app.1111111111.js', 'low'], ['/assets/app.2222222222.css', 'low']]);
+  asked.length = 0;
+  assert.deepEqual(await warmApp(fetchFn, {connection: {saveData: true}}), []);
+  assert.deepEqual(asked, [], 'Save-Data: no request at all');
+  assert.deepEqual(await warmApp(async () => { throw new Error('offline'); }, {}), [], 'a failure is quiet');
 });
