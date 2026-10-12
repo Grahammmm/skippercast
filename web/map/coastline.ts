@@ -18,6 +18,16 @@ export const COASTLINE_PICK = COASTLINE_GLOW;
 
 /** The published shoreline for `region`, relative to the app page. */
 export const shorelineURL = (region: string): string => `regions/${encodeURIComponent(region)}/shoreline.geojson`;
+/**
+ * #617: its overview form (src/skippercast/platform/shoreline.py `overview_shoreline`: simplified to
+ * 10 m, single rocks under 20 m left out; same features and properties), about a fifth of the bytes.
+ */
+export const shorelineOverviewURL = (region: string): string => `regions/${encodeURIComponent(region)}/shoreline-overview.geojson`;
+/** The MapLibre zoom the full shoreline loads from (shoreline.py OVERVIEW_MAX_ZOOM); `?view=` zooms are one more. */
+export const SHORELINE_DETAIL_ZOOM = 12;
+/** The shoreline file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded. */
+export const shorelineFor = (region: string, viewZoom: number, detail = false): string =>
+  detail || viewZoom - 1 >= SHORELINE_DETAIL_ZOOM ? shorelineURL(region) : shorelineOverviewURL(region);
 
 export interface LineLayer {
   id: string; type: 'line'; source: string;
@@ -25,8 +35,8 @@ export interface LineLayer {
 }
 
 /** The GeoJSON source the Chart adds for the coastline. */
-export const coastlineSource = (region: string, base: string) =>
-  ({type: 'geojson' as const, data: new URL(shorelineURL(region), base).href, attribution: layerEntry('coastline').attribution});
+export const coastlineSource = (region: string, base: string, path: string = shorelineURL(region)) =>
+  ({type: 'geojson' as const, data: new URL(path, base).href, attribution: layerEntry('coastline').attribution});
 
 /** Glow under line, both drawn last (§ 9: the coastline glow is the top of the draw order). */
 export function coastlineLayers(p: Palette): LineLayer[] {

@@ -13,6 +13,7 @@ from .coasts import compile_coasts
 from .sectors import compile_sectors
 from .readiness import compile_readiness
 from .shoreline import publish_shoreline
+from .startup_forms import publish_startup_forms
 
 
 def target_options(region, targets):
@@ -105,6 +106,8 @@ def build(root=REPO, now=None):
         # The CUSP shoreline (FE-10) ships beside the package, outside region.assets and the manifest,
         # so v1 offline packs (every manifest asset) stay the same until the v2 Chart reads it.
         publish_shoreline(root, region, output)
+        # #617: light copies of the atlas, the search plans and the shoreline for the map's first view.
+        publish_startup_forms(root, region, output)
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)

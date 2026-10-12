@@ -17,7 +17,7 @@ import type {ReportLocalArea} from '../../packages/coast/src/state/report-bindin
 import {coastOcean} from '../coast-data.ts';
 import {DEFAULT_PROFILE} from '../profile.ts';
 import type {CurrentChoice} from '../state.ts';
-import {COASTLINE_GLOW, coastlineLayers, coastlineSource} from '../map/coastline.ts';
+import {COASTLINE_GLOW, coastlineLayers, coastlineSource, shorelineOverviewURL} from '../map/coastline.ts';
 import {createCurrents, currentsState, regionPlace, type Currents} from '../map/currents.ts';
 import {createEngine, type Engine, type EngineCamera, type MapLibraryModule} from '../map/engine.ts';
 import {chosenCurrent} from '../map/frames.ts';
@@ -91,7 +91,7 @@ export function nightCoastline(p: Palette) {
 /** FE-72's night variant with the coastline drawn last. */
 export function nightStyle(p: Palette, archive: string, page: string, region: string): MapLibre.StyleSpecification {
   const style = basemapStyle(p, {archive, assets: new URL('basemap/', page).href, variant: 'night'});
-  return {...style, sources: {...style.sources, [COASTLINE_SOURCE]: coastlineSource(region, page)}, layers: [...style.layers, ...nightCoastline(p)]} as unknown as MapLibre.StyleSpecification;
+  return {...style, sources: {...style.sources, [COASTLINE_SOURCE]: coastlineSource(region, page, shorelineOverviewURL(region))}, layers: [...style.layers, ...nightCoastline(p)]} as unknown as MapLibre.StyleSpecification;
 }
 
 export type NightState = 'loading' | 'ready' | 'failed';

@@ -13,7 +13,8 @@ import {signal} from '@preact/signals';
 import type {Source} from 'pmtiles';
 import {loadManifest} from '../dist/seafloor-data.js';
 import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
-import {shorelineURL} from './map/coastline.ts';
+import {shorelineOverviewURL, shorelineURL} from './map/coastline.ts';
+import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
 import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
@@ -167,13 +168,13 @@ export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSign
   };
 }
 
-/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, shoreline and tiles. */
+/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, both shoreline forms, the startup copies (#617) and tiles. */
 async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[]) {
   const page = location.href, origin = location.origin, misses: string[] = [];
   const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
   const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
   const files: [string, string, RequestInit][] = [[origin + V2_SHELL, origin + V2_SHELL, {}],
-    ...[BASEMAP_MANIFEST, shorelineURL(id)].map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
+    ...[BASEMAP_MANIFEST, shorelineURL(id), shorelineOverviewURL(id), atlasMarksURL(id), planIndexURL(id)].map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
     ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
   let done = 0;
   for (const [url, key, init] of files) { await store(url, key, init, misses); progress('shell', ++done, files.length); }
