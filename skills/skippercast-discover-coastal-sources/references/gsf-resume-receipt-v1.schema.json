@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"urn:skippercast:gsf-resumable-observation:v1",
+  "type":"object",
+  "required":["schema","method","accepted","source_qualification","habitat","render","config","config_sha256","checkpoint_status","complete_eof","committed_records","accounting","chunks","observations","scan_hold","limitations"],
+  "properties":{
+    "schema":{"const":"gsf-resumable-observation-v1"},
+    "method":{"const":"gsf-sequential-replay-v1"},
+    "accepted":{"const":false},"source_qualification":{"const":"unaccepted"},"habitat":{"const":"unassessed"},"render":{"const":"blocked"},
+    "config_sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+    "checkpoint_status":{"enum":["READY","EOF","NO_PROGRESS","CHUNK_LIMIT","FAILED"]},
+    "complete_eof":{"type":"boolean"},"committed_records":{"type":"integer","minimum":0,"maximum":80000},
+    "accounting":{"type":"object","required":["fread_charged_bytes","replay_charged_records","new_committed_records"],"properties":{"fread_charged_bytes":{"type":"integer","minimum":0,"maximum":250000000},"replay_charged_records":{"type":"integer","minimum":0,"maximum":280000}}},
+    "chunks":{"type":"array","maxItems":8},
+    "observations":{"type":"object","required":["pings","navigation_selected_pings","valid_depths","crs","vertical_datum","sounding_support","grid_resolution"],"properties":{"crs":{"type":"null"},"vertical_datum":{"type":"null"},"sounding_support":{"type":"null"},"grid_resolution":{"type":"null"}}},
+    "scan_hold":{"enum":[null,"scan_limit_before_first_ping","eof_without_pings","no_navigation_selected_pings_eof","no_navigation_selected_pings_partial_scan","selected_pings_without_valid_depths"]},
+    "limitations":{"type":"array","minItems":4}
+  }
+}
