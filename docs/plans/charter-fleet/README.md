@@ -269,3 +269,10 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   and `label import` for agent-proposed labels, with the
   [labelling runbook](../../operations/runbooks/fleet-labelling.md). No labels
   yet; N7b and the labelling run follow.
+- 2026-10-12: N8 skill packaging in review (branch `claude/n8-fleet-skills`,
+  #570): `skills/skippercast-fleet-registry/` and
+  `skills/skippercast-fleet-activity/`, each with modes, guardrails, stop
+  conditions and a counts-only end-of-run report, and a contract test that
+  every command and workflow input they name exists. They run on request over
+  the existing GitHub schedules; Hermes scheduling, Telegram alerts, the host
+  check and the status scripts are still gaps of #468 and #469.
