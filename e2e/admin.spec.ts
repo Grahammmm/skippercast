@@ -6,22 +6,10 @@
 // then approved from the keyboard (a) and the row checked in D1; axe runs on
 // the queue and the Health view. TA-S1: the approved angler share is a social
 // draft, opened in the Posts view (axe). e2e/serve.mjs sets TEXT_ADVISOR_ENABLED=true.
-import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {resolve} from 'node:path';
 import {test, expect, checkA11y} from './fixtures.ts';
+import {d1} from './d1.ts';
 
-const ROOT = resolve(import.meta.dirname, '..');
-const WRANGLER = ['--yes', 'wrangler@4.142.0'];   // the pin e2e/serve.mjs uses
-const CONFIG = resolve(ROOT, 'wrangler.e2e.local.jsonc'), STATE = resolve(ROOT, '.wrangler/e2e-state');
-
-/** Run SQL against the local D1 the dev server uses; the parsed rows of the last statement. */
-function d1(sql: string): Record<string, unknown>[] {
-  const out = execFileSync('npx', [...WRANGLER, 'd1', 'execute', 'skippercast', '--local', '--persist-to', STATE, '--config', CONFIG, '--json', '--command', sql],
-    {cwd: ROOT, encoding: 'utf8', env: {...process.env, WRANGLER_SEND_METRICS: 'false'}, stdio: ['ignore', 'pipe', 'pipe']});
-  const parsed = JSON.parse(out) as {results: Record<string, unknown>[]}[];
-  return parsed.at(-1)?.results ?? [];
-}
 const word = (s: string): string => s.replace(/[^\w-]/g, '');
 
 test('an admin signs in, sees the queue and approves a photo review with the keyboard', async ({page, pageErrors}, info) => {

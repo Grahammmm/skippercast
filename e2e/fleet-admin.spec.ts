@@ -4,33 +4,11 @@
 // e2e/serve.mjs sets FLEET_ENABLED=true; a second test answers the fleet API with 404
 // (the flag off) and checks the fleet tabs and routes are gone. Synthetic data only:
 // the vessels are invented names in a per-project region, never registry rows.
-import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {resolve} from 'node:path';
 import type {Page} from '@playwright/test';
 import {test, expect, checkA11y} from './fixtures.ts';
+import {d1} from './d1.ts';
 
-const ROOT = resolve(import.meta.dirname, '..');
-const WRANGLER = ['--yes', 'wrangler@4.142.0'];   // the pin e2e/serve.mjs uses
-const CONFIG = resolve(ROOT, 'wrangler.e2e.local.jsonc'), STATE = resolve(ROOT, '.wrangler/e2e-state');
-
-/**
- * Run SQL against the local D1 the dev server uses; the parsed rows of the last statement.
- * The running Worker and the other project's test share the SQLite file, so a busy database is retried.
- */
-function d1(sql: string): Record<string, unknown>[] {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const out = execFileSync('npx', [...WRANGLER, 'd1', 'execute', 'skippercast', '--local', '--persist-to', STATE, '--config', CONFIG, '--json', '--command', sql],
-        {cwd: ROOT, encoding: 'utf8', env: {...process.env, WRANGLER_SEND_METRICS: 'false'}, stdio: ['ignore', 'pipe', 'pipe']});
-      const parsed = JSON.parse(out) as {results: Record<string, unknown>[]}[];
-      return parsed.at(-1)?.results ?? [];
-    } catch (e) {
-      if (attempt >= 5 || !/SQLITE_BUSY/.test(String((e as {stderr?: unknown}).stderr ?? e))) throw e;
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500 * attempt);
-    }
-  }
-}
 const word = (s: string): string => s.replace(/[^\w-]/g, '');
 const hex = (s: string): string => createHash('sha256').update(s).digest('hex').slice(0, 32);
 
