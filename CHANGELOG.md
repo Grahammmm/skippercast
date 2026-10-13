@@ -4,7 +4,7 @@
 
 - Forecast queries reuse each model/tile within the request and share timezone formatting across points, preserving values, units and duplicate-model field names while reducing repeated storage reads and computation.
 
-- Manual production deploys require current main and successful Offline checks for that exact commit before dependencies or production writes run; explicit Worker rollback remains available.
+- Production deploys require current main and successful Offline checks for the exact selected commit. Eligibility is checked before checkout, dependencies and production writes; obsolete automatic CI results are held, while explicit Worker rollback remains available.
 
 - Feed publication commits one verified immutable R2 snapshot so failed uploads cannot mix old manifests with new forecast tiles. Forecast queries pin one release; existing URLs and prior data remain available through migration.
 
