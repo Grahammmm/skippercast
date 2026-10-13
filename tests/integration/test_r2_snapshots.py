@@ -7,6 +7,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor
 
 from scripts.publish_r2 import CURRENT, sync
@@ -14,6 +15,12 @@ from scripts.publish_r2 import CURRENT, sync
 
 class Missing(Exception):
     pass
+
+
+class Precondition(RuntimeError):
+    def __init__(self):
+        super().__init__('PreconditionFailed')
+        self.response = {'ResponseMetadata': {'HTTPStatusCode': 412}}
 
 
 class FakeS3:
@@ -48,9 +55,9 @@ class FakeS3:
         with self.lock:
             current = self.objects.get(Key)
             if 'IfMatch' in kwargs and (not current or current['ETag'] != kwargs['IfMatch']):
-                raise RuntimeError('PreconditionFailed')
+                raise Precondition()
             if kwargs.get('IfNoneMatch') == '*' and current:
-                raise RuntimeError('PreconditionFailed')
+                raise Precondition()
             data = bytes(Body)
             stored = b'corrupt' if self.corrupt and self.corrupt(Key) else data
             if self.transform:
@@ -172,6 +179,68 @@ class SnapshotTests(unittest.TestCase):
         self.assertIn(cycle, ['new-a', 'new-b'])
         self.assert_cycle(cycle)
         self.assert_cycle('old', self.old_generation)
+
+    def test_delayed_absence_cannot_overwrite_another_publishers_verified_tile(self):
+        self.write(self.root, 'new')
+        tile_key = 'forecasts/.r2-objects/' + hashlib.sha256((self.root / 'model/tiles/x.json').read_bytes()).hexdigest()
+        missing, verified, bad_done = threading.Event(), threading.Event(), threading.Event()
+        objects = self.s3.objects
+
+        class Race(FakeS3):
+            def get_object(inner, Bucket, Key):
+                if threading.current_thread().name.startswith('bad') and Key == tile_key and Key not in inner.objects:
+                    missing.set()
+                    if not verified.wait(5):
+                        raise AssertionError('valid uploader did not reach snapshot phase')
+                    raise Missing(Key)  # GET linearized before the winner's write, response delayed
+                return super().get_object(Bucket, Key)
+
+            def put_object(inner, Bucket, Key, Body, **kwargs):
+                actor = threading.current_thread().name
+                if actor.startswith('valid') and '.r2-releases/' in Key:
+                    verified.set()
+                    if not bad_done.wait(5):
+                        raise AssertionError('concurrent creator did not finish')
+                if actor.startswith('bad') and Key == tile_key:
+                    Body = bytes(Body).replace(b'new', b'bad')
+                return super().put_object(Bucket, Key, Body, **kwargs)
+
+        self.s3 = Race(); self.s3.objects = objects
+        def publish(actor):
+            threading.current_thread().name = actor
+            try:
+                sync(self.s3, 'bucket', self.root, 'forecasts')
+                return 'success'
+            except Precondition:
+                return 'conflict'
+            finally:
+                if actor == 'bad':
+                    bad_done.set()
+        # Thread names expose actor identity to the fixture; scheduling/IO is unchanged.
+        def uploader_pool(**options):
+            return ThreadPoolExecutor(thread_name_prefix=threading.current_thread().name, **options)
+        with patch('scripts.publish_r2.ThreadPoolExecutor', side_effect=uploader_pool), ThreadPoolExecutor(max_workers=2) as pool:
+            bad = pool.submit(publish, 'bad')
+            self.assertTrue(missing.wait(5))
+            valid = pool.submit(publish, 'valid')
+            result = [valid.result(timeout=10), bad.result(timeout=10)]
+        self.assertCountEqual(result, ['success', 'conflict'])
+        self.assert_cycle('new')
+        self.assert_cycle('old', self.old_generation)
+
+    def test_poisoned_snapshot_retry_and_noop_do_not_overwrite_or_claim_verified(self):
+        self.write(self.root, 'new')
+        self.s3.corrupt = lambda key: '.r2-releases/' in key
+        with self.assertRaisesRegex(RuntimeError, 'snapshot read-back mismatch'):
+            sync(self.s3, 'bucket', self.root, 'forecasts')
+        self.s3.corrupt = None
+        with self.assertRaisesRegex(RuntimeError, 'snapshot read-back mismatch'):
+            sync(self.s3, 'bucket', self.root, 'forecasts')
+        self.assert_cycle('old')
+        self.write(self.root, 'old')
+        self.s3.objects[f'forecasts/.r2-releases/{self.old_generation}.json']['Body'] = b'{}'
+        with self.assertRaisesRegex(RuntimeError, 'snapshot read-back mismatch'):
+            sync(self.s3, 'bucket', self.root, 'forecasts')
 
     def test_lost_final_ack_leaves_complete_new_release_and_retry_is_noop(self):
         self.write(self.root, 'new')

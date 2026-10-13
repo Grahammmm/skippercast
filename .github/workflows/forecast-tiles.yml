@@ -29,8 +29,9 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-          cache: pip
-          cache-dependency-path: requirements-ocean.txt
+          # The shared data runner has a 17 GB pip cache; saving it can exceed
+          # this job's 45-minute timeout after publication. Keep its local cache
+          # and installed tools, but do not upload the whole cache to Actions.
       - name: Install GRIB decoder
         run: python -m pip install -r requirements-ocean.txt -r requirements-publish.txt
       - name: Build and publish tiles
