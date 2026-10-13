@@ -28,6 +28,7 @@
 // forecast when the rail's list includes Currents (#482); v1 keeps `off`.
 import {batch, computed, signal} from '@preact/signals';
 import {DEFAULT_PROFILE, isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
+import {parseGrade, type GradeFilter} from './grade.ts';
 import {canonicalHour, fishLink} from './fish-links.ts';
 import {
   habitatURL, hasCoastTerrain, isCurrentLayer, presentationFromURL, type CurrentLayer, type Presentation,
@@ -39,7 +40,7 @@ export type CoastKey = typeof COAST_KEYS[number];
 /** The History view's pickers (FE-35): station id, measurement and day range, kept as written; packages/coast historyView falls back on anything it does not list. */
 export const HISTORY_KEYS = ['station', 'metric', 'range'] as const;
 /** URL parameters the store owns. `target` is the species/target id. */
-export const URL_KEYS = ['region', 'coast', 'view', 'target', 'hour', 'profile', 'day', 'layers', 'area', 'base', ...HISTORY_KEYS, ...COAST_KEYS] as const;
+export const URL_KEYS = ['region', 'coast', 'view', 'target', 'grade', 'hour', 'profile', 'day', 'layers', 'area', 'base', ...HISTORY_KEYS, ...COAST_KEYS] as const;
 export type UrlKey = typeof URL_KEYS[number];
 export type UrlState = Record<Exclude<UrlKey, CoastKey>, string | null> & Partial<Record<CoastKey, string>> & {selection: string | null};
 export type Units = 'nautical';
@@ -69,6 +70,8 @@ export const coast = signal<string | null>(null);
 /** Map view "latitude,longitude,zoom" as written in ?view=. */
 export const view = signal<string | null>(null);
 export const species = signal<string | null>(null);
+/** The rail's terrain grade filter (?grade=, web/grade.ts); all grades when the link names none. */
+export const grade = signal<GradeFilter>('all');
 /** Selected forecast hour, ISO UTC ("2026-09-30T15:00Z"); null means now. */
 export const hour = signal<string | null>(null);
 /** The spot a shared link points at (?spot= or ?focus=). */
@@ -131,7 +134,7 @@ export function readURL(href: string): UrlState {
   const params = (options.v2 ? fishLink(href) : new URL(href)).searchParams;
   const state: UrlState = {
     region: params.get('region'), coast: params.get('coast'), view: params.get('view'),
-    target: params.get('target'), hour: params.get('hour'),
+    target: params.get('target'), grade: params.get('grade'), hour: params.get('hour'),
     profile: params.get('profile'), day: params.get('day'), layers: params.get('layers'),
     area: params.get('area') || params.get('focus'), base: params.get('base'),
     station: params.get('station'), metric: params.get('metric'), range: params.get('range'),
@@ -258,7 +261,7 @@ export function syncFromURL(href: string = location.href): UrlState {
   if (options.v2 && parsePresentation(state.presentation)) store(STORAGE_KEYS.presentation, shown);
   batch(() => {
     region.value = state.region; coast.value = state.coast; view.value = state.view;
-    species.value = state.target; hour.value = state.hour; selection.value = state.selection;
+    species.value = state.target; grade.value = parseGrade(state.grade); hour.value = state.hour; selection.value = state.selection;
     profile.value = kept.profile; layers.value = kept.layers; base.value = kept.base;
     appView.value = isAppView(state.view) ? state.view : 'coast';
     day.value = parseDay(state.day); area.value = state.area;

@@ -20,7 +20,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
-import {regionPlans, targetGroups, targetsFor, type TargetOption} from '../species.ts';
+import {regionTargets, targetGroups, type TargetOption} from '../species.ts';
 import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
 import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
@@ -33,8 +33,7 @@ const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id]
 
 /** The profile's target list in the current region, plus the link's target when it is not in it. */
 export function targetList(p: Profile, current: string | null): TargetOption[] {
-  const r = region.value, loaded = regionPlans.value;
-  return targetsFor(p, r, loaded && loaded.region === r ? loaded.plans : {}, current);
+  return regionTargets(p, region.value, current);
 }
 export const targetOptions = (p: Profile, current: string | null): string[] => targetList(p, current).map(t => t.id);
 

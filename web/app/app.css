@@ -159,16 +159,22 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
+.app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
 .app-swatch[data-layer="currents-fast"] { background: var(--flow-fast); }
-.app-legend-currents { flex-wrap: wrap; }
+.app-legend-currents, .app-legend-density { flex-wrap: wrap; }
 .app-legend-note { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
 .app-rail-source select { flex: 1; min-width: 0; }
 .app-rail .ui-rail-item { flex-wrap: wrap; }
-/* FE-20: the base choice under the entries, its note ("Chart only", the imagery's dates) beneath it; a legend row with nothing drawn gives its reason under its name. */
-.app-rail-base { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--line); }
-.app-rail-base .app-rail-source { flex: 1 1 0; padding-bottom: 0; }
+.app-rail-look { display: none; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-1); padding-bottom: var(--space-1); border-bottom: 1px solid var(--line); }
+.app-rail-look .app-rail-source { padding-bottom: 0; }
+/* On a computer the command bar holds the target; the phone's sheet has no command bar open beside it. */
+.app-sheet .app-rail-look { display: flex; }
+/* FE-20: the base choice under the entries, its note ("Chart only", the imagery's dates) beneath it; a legend row with nothing drawn gives its reason under its name.
+   #620: the grade filter shares the row and the row takes no width of its own, so the rail grows neither taller nor wider. */
+.app-rail-base { display: flex; flex-wrap: wrap; align-items: center; contain: inline-size; gap: var(--space-1); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--line); }
+.app-rail-base .app-rail-source { flex: 1 1 0; min-width: 0; padding-bottom: 0; }
 .app-rail-base .ui-rail-note { flex-basis: 100%; padding: 0 var(--space-2) var(--space-1); }
 .app-legend-plain { flex-wrap: wrap; }
 /* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */

@@ -71,6 +71,8 @@ export const SEAFLOOR_SOURCE = 'seafloor';
 export const SURVEY_SOURCE = 'survey-habitat';
 export const GEOLOGY_SOURCE = 'geology';
 export const MARKS_SOURCE = 'marks';
+/** The same marks as a density below `?view=` zoom 10 (#620); the Marks entry owns it. */
+export const DENSITY_SOURCE = 'marks-density';
 export const SELECTION_SOURCE = 'selection';
 /** The trip planner's ranked spots (web/map/ranked.ts, #495). */
 export const RANKED_SOURCE = 'trip-ranked';
@@ -142,9 +144,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'clouds', label: 'Clouds', control: 'clouds', presentations: ['chart'], time: ['observed'],
     basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.', task: 'FE-22'}),
   entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart', 'terrain'],
-    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: 'zoom ≥ 10', sources: [MARKS_SOURCE],
-    legend: [{label: 'Reef mark; badge: habitat fit, 3 strongest', swatch: 'mint'}],
-    basis: 'Atlas reef marks, each with its source survey.', task: 'FE-18'}),
+    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: 'zoom ≥ 10; a density below it', sources: [DENSITY_SOURCE, MARKS_SOURCE],
+    legend: [{label: 'Reef mark; badge: habitat fit, 3 strongest', swatch: 'mint'}, {label: 'Habitat candidates, denser here', swatch: 'depth1'}],
+    basis: 'Atlas reef marks, each with its source survey; below zoom 10 they draw as a density weighted by terrain grade and habitat fit.', task: 'FE-18'}),
   entry({id: 'selection', label: 'Selection', control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
     basis: 'The selected mark, outlined.', task: 'FE-18'}),
   entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',

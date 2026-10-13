@@ -456,6 +456,31 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   expect(pageErrors).toEqual([]);
 });
 
+test('#620: zoomed out the marks draw as a habitat candidate density; the rail\'s grade filter writes ?grade= and narrows them', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'rockfish', view: '35.30000,-120.90000,8.5'});
+  const chart = page.locator('.app-chart');
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect(chart).toHaveAttribute('data-density', /^[1-9]\d*$/);
+  const all = Number(await chart.getAttribute('data-marks'));
+  await showLayers(page);
+  const row = page.locator('.app-legend-density');
+  await expect(row).toContainText(/habitat candidates, denser here/);
+  await expect(row.locator('.app-legend-note')).toHaveText('Zoom in to see each reef mark');
+  await expect(row).not.toContainText(/hotspot|fish here/i);
+  const grades = page.getByRole('combobox', {name: 'Grade'});
+  await grades.selectOption('a');
+  await expect.poll(() => params(page).grade).toBe('a');
+  await expect.poll(async () => Number(await chart.getAttribute('data-marks')), {message: 'only grade A marks remain'}).toBeLessThan(all);
+  await expect(row.locator('.app-legend-note')).toHaveText('Grade A only · Zoom in to see each reef mark');
+  await expect(grades).toHaveValue('a');
+  await grades.selectOption('all');
+  await expect.poll(() => params(page).grade).toBeUndefined();
+  await expect.poll(async () => Number(await chart.getAttribute('data-marks'))).toBe(all);
+  await v2.a11y('v2-map-grade-density');
+  expect(pageErrors).toEqual([]);
+});
+
 test('a shared ?spot= names its mark in the terrain too, and Escape clears it', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: '3d', target: 'lingcod', spot: MARK.id});
@@ -589,7 +614,7 @@ test('Clouds loops over the listed GOES frames only, each labelled with its time
   }
   await expect.poll(() => requested.length, {message: 'MapLibre fetches the frames'}).toBeGreaterThan(0);
   expect(blocked, 'the CSP allows nowCOAST for MapLibre').toEqual([]);
-  const note = page.locator('.app-legend-note');
+  const note = page.locator('.app-legend-clouds .app-legend-note');
   await expect(note).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · (?:under 1|\d+) min ago$/);
   const first = await note.textContent();
   await expect(note, 'the loop steps').not.toHaveText(first!, {timeout: 10_000});

@@ -74,3 +74,15 @@ export function targetGroups(list: readonly TargetOption[], profileLabel: string
   const heads: Readonly<Record<TargetGroup, string>> = {link: 'From the link', plan: `Search plans · ${profileLabel}`, profile: `${profileLabel} targets`, coast: 'Coast habitat targets'};
   return (['link', 'profile', 'plan', 'coast'] as const).map(g => ({label: heads[g], options: list.filter(t => (t.group ?? 'profile') === g)})).filter(g => g.options.length);
 }
+
+/** The target list for `profile` in `region` with the region's loaded plans: what the command bar and the rail both list. */
+export function regionTargets(profile: Profile, region: string | null, current: string | null): TargetOption[] {
+  const loaded = regionPlans.value;
+  return targetsFor(profile, region, loaded && loaded.region === region ? loaded.plans : {}, current);
+}
+
+/** The current target's label in `region` (the command bar's own words), for the legend's density line (#620). */
+export function targetLabel(profile: Profile, region: string | null, current: string | null): string {
+  const id = current ?? PROFILE_TABLE[profile].defaultTarget;
+  return regionTargets(profile, region, current).find(t => t.id === id)?.label ?? title(id);
+}

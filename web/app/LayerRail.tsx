@@ -23,6 +23,13 @@
 // package offers it (FE-23), so a link's `?base=chart` can be chosen again.
 // The bases draw on the Chart only; `?base=aerial` where no aerial is offered
 // shows Night, which is what draws.
+// Walkthrough slice 3 (#620): the terrain grade filter (`?grade=`, web/grade.ts)
+// shares the base row and narrows the reef marks, their density below zoom 10 and
+// the seafloor candidates together. In the phone's Layers sheet the rail also opens
+// with the target species ("Look for": the command bar's list, the same `?target=`).
+import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam, parseGrade} from '../grade.ts';
+import {PROFILE_TABLE} from '../profile.ts';
+import {regionTargets, targetGroups} from '../species.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
@@ -32,7 +39,7 @@ import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
 import {currentStatus, setTerrainOption, shownPresentation, terrainOptions, terrainShading} from '../map/stage.ts';
-import {base, current, DEFAULT_CURRENT, isBase, layers, layersParam, setParams, UNSUPPORTED, type Base} from '../state.ts';
+import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
 import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
 
 export {RAIL_ENTRIES, railOn, toggled, type RailEntry} from './rail.ts';
@@ -154,11 +161,32 @@ export function baseNote(shown: Base, offer: AerialBase | null, drawn: boolean):
 }
 const BASE_NOTE = 'app-rail-base-note';
 
+const GRADE_MEANING_ID = 'app-rail-grade-meaning';
+/**
+ * The terrain grade filter (#620), beside the base so the rail grows no taller: it narrows reef marks, their
+ * wide-view density and seafloor candidates; what a grade means is read with the control and shown in the legend.
+ */
+function GradeChoice() {
+  // The description sits outside the label, so the label's text stays "Grade" alone.
+  return (
+    <>
+      <label class="app-rail-source app-rail-grade">Grade
+        <select value={grade.value} aria-describedby={GRADE_MEANING_ID}
+          onChange={event => setParams({grade: gradeParam(parseGrade((event.currentTarget as HTMLSelectElement).value))})}>
+          {GRADE_FILTERS.map(value => <option key={value} value={value}>{GRADE_LABELS[value]}</option>)}
+        </select>
+      </label>
+      <span id={GRADE_MEANING_ID} class="app-visually-hidden">{GRADE_MEANING} Unranked areas show only with All.</span>
+    </>
+  );
+}
+
 function BaseChoice() {
   const offer = aerialOffer.value, drawn = drawsIn('base', shownPresentation.value);
   const value = shownBase(base.value, offer), note = baseNote(value, offer, drawn);
   return (
     <div class="app-rail-base">
+      <GradeChoice />
       <label class="app-rail-source">Base
         <select value={value} disabled={!drawn} aria-describedby={note ? BASE_NOTE : undefined}
           onChange={event => { const next = (event.currentTarget as HTMLSelectElement).value; if (isBase(next)) setParams({base: next}); }}>
@@ -175,10 +203,28 @@ function BaseChoice() {
   );
 }
 
+/** What to look for (#620): the target species at the head of the rail, shown in the phone's sheet only (app.css); on a computer the command bar holds it. */
+export function LookFor() {
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
+  const list = regionTargets(p, region.value, species.value);
+  return (
+    <div class="app-rail-look">
+      {/* "Look for", not "Target": the command bar's Target select stays the one control by that name. */}
+      <label class="app-rail-source app-rail-target">Look for
+        <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
+          {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
+            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value;
   return (
-    <Rail class="app-rail" footer={<BaseChoice />}>
+    <Rail class="app-rail" header={<LookFor />} footer={<BaseChoice />}>
       {RAIL_ENTRIES.map(e => {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (
