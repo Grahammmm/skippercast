@@ -6,7 +6,8 @@
 // regions/<id>/region.json, so any region works: the region file, the startup
 // copies the platform build writes beside it (src/skippercast/platform/
 // startup_forms.py; a region without a shoreline has no overview or poster,
-// and the map asks for them anyway), the protected areas its `assets` name,
+// and the map asks for them anyway), the protected areas its `assets` name
+// with the coverage review the protected-area screen reads beside them,
 // and the regional forecast (edge-cached for five minutes, so the map's read
 // is answered from the cache). Only the chosen region is fetched, nothing
 // under Save-Data, and a failure is quiet: the map loads as it would have.
@@ -15,20 +16,20 @@ import {saveData} from './save-data.ts';
 
 export type WarmState = 'loading' | 'ready' | 'failed' | 'skipped';
 
-/** A same-origin data path a region file may name: no scheme, no parent step, JSON or GeoJSON. */
-const DATA_PATH = /^(?:data|regions)\/[\w./-]+\.(?:geo)?json$/;
+/** The protected-area paths the map's screen accepts (web/map/mpa.ts ASSET, equal by test), so nothing is warmed that the map would refuse. */
+export const ASSET = /^(?:data|regions\/[a-z0-9-]{1,80})\/[A-Za-z0-9._-]{1,120}\.geojson$/;
 
 /**
  * What the map reads first for `region`, given its parsed region.json: the
  * region file itself (read again by the map, so it is warmed too), its startup
- * copies, its protected areas and its forecast. Unknown or unsafe asset paths
+ * copies, its protected areas and coverage review, and its forecast. Unknown or unsafe asset paths
  * are left out.
  */
 export function regionWarmList(region: string, info: unknown): string[] {
   const base = `regions/${encodeURIComponent(region)}`;
   const list = [`${base}/region.json`, `${base}/atlas-marks.json`, `${base}/search-plan-index.json`, `${base}/shoreline-overview.geojson`, `${base}/poster.svg`];
   const mpa = (info as {assets?: {protected_areas?: unknown} | null} | null)?.assets?.protected_areas;
-  if (typeof mpa === 'string' && DATA_PATH.test(mpa) && !mpa.includes('..')) list.push(mpa);
+  if (typeof mpa === 'string' && ASSET.test(mpa)) list.push(mpa, `${base}/coverage.json`);
   list.push(`/api/forecast?region=${encodeURIComponent(region)}`);
   return list;
 }

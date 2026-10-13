@@ -17,7 +17,7 @@ import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_land
 import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, placeLabel, tideReading, tideURL} from '../web/landing/readings.ts';
 import {saveData} from '../web/landing/save-data.ts';
 import {warmApp, warmList} from '../web/landing/warm.ts';
-import {regionWarmList, warmRegion} from '../web/landing/region-warm.ts';
+import {ASSET, regionWarmList, warmRegion} from '../web/landing/region-warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -197,7 +197,7 @@ test('the landing page holds the hero and footer statically; its parts render th
     assert.doesNotMatch(readFileSync(join(ROOT, `web/landing/${file}.tsx`), 'utf8'), /from '(?:[^']*maplibre[^']*|three|[^']*packages\/coast[^']*|\.\.\/state\.ts|\.\.\/app\/[^']*)'/, `${file}.tsx loads no map engine and none of the app's store`);
 });
 
-test('the profile step lists the four profiles with their notes, presses the stored one, and says only that the map is loading or loaded (#622)', async () => {
+test('the profile step lists the four profiles with their notes, presses the stored one, and says only that the map files are loading or ready (#622)', async () => {
   const {ProfileStep, STEP_COPY, PROFILE_NOTES, render, h} = await load();
   const props = {place: 'Morro Bay', onChoose: () => {}, onBack: () => {}};
   const html = render(h(ProfileStep, {...props, warm: 'loading'}));
@@ -206,7 +206,7 @@ test('the profile step lists the four profiles with their notes, presses the sto
   for (const note of Object.values(PROFILE_NOTES)) assert.ok(html.includes(note), note);
   assert.doesNotMatch(html, /aria-pressed/, 'no stored profile: no choice is pressed');
   assert.match(html, /role="status" data-warm="loading">Loading the Morro Bay map…</);
-  assert.match(render(h(ProfileStep, {...props, warm: 'ready'})), /data-warm="ready">Morro Bay map loaded\.</);
+  assert.match(render(h(ProfileStep, {...props, warm: 'ready'})), /data-warm="ready">Morro Bay map files ready\.</);
   for (const warm of ['failed', 'skipped', null]) assert.match(render(h(ProfileStep, {...props, warm})), /role="status"[^>]*><\/p>/, `${warm}: nothing said`);
   const pressed = render(h(ProfileStep, {...props, warm: null, current: 'shore'}));
   assert.deepEqual([...pressed.matchAll(/aria-pressed="(true|false)"[^>]*data-profile="([a-z]+)"|data-profile="([a-z]+)"[^>]*aria-pressed="(true|false)"/g)]
@@ -218,12 +218,14 @@ test('the profile step lists the four profiles with their notes, presses the sto
 test('the region warm-up reads region.json, fetches only that region\'s startup files and its forecast, and is quiet on failure or Save-Data (#622)', async () => {
   const region = JSON.parse(readFileSync(join(ROOT, 'dist/regions/morro-bay/region.json'), 'utf8'));
   assert.deepEqual(regionWarmList('morro-bay', region), ['regions/morro-bay/region.json', 'regions/morro-bay/atlas-marks.json', 'regions/morro-bay/search-plan-index.json',
-    'regions/morro-bay/shoreline-overview.geojson', 'regions/morro-bay/poster.svg', 'data/protected-areas.geojson', '/api/forecast?region=morro-bay']);
+    'regions/morro-bay/shoreline-overview.geojson', 'regions/morro-bay/poster.svg', 'data/protected-areas.geojson', 'regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay']);
+  const mpa = readFileSync(join(ROOT, 'web/map/mpa.ts'), 'utf8').match(/^const ASSET = (\/.*\/);$/m)?.[1];
+  assert.equal(ASSET.toString(), mpa, 'the warm-up accepts exactly the protected-area paths the map does');
   // Another region names its own protected areas; an unsafe or missing path is left out.
   const socal = JSON.parse(readFileSync(join(ROOT, 'dist/regions/southern-california/region.json'), 'utf8'));
   assert.ok(regionWarmList('southern-california', socal).includes('regions/southern-california/protected-areas.geojson'));
   assert.ok(regionWarmList('southern-california', socal).every(p => !p.includes('morro-bay')), 'nothing for a region not chosen');
-  for (const bad of ['https://evil.test/x.json', '../secret.json', 'data/../x.json', 'data/x.txt', null]) assert.ok(!regionWarmList('r', {assets: {protected_areas: bad}}).some(p => p === bad), String(bad));
+  for (const bad of ['https://evil.test/x.geojson', '../secret.geojson', 'data/../x.geojson', 'data/x.json', 'regions/a/b/c.geojson', null]) assert.ok(!regionWarmList('r', {assets: {protected_areas: bad}}).some(p => p === bad), String(bad));
   assert.equal(regionWarmList('r', null).length, 6);
   // The fetches: region.json first, then the rest at low priority, every body read.
   const asked = [];

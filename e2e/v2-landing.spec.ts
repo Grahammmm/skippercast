@@ -9,7 +9,7 @@
 // navigates. #622: the guided first run (port, region warm-up, then profile).
 // The landing itself (FE-07): the readout with source, age and
 // stale state from stubbed feeds at a fixed clock, the saved-port redirect,
-// the port input with a profile pill, the layer dots, axe, no three request,
+// the port input, the layer dots, axe, no three request,
 // and LCP on the throttled mobile profile. FE-25: the live night map after
 // first paint over the synthetic basemap fixture and a synthetic WCOFS packet
 // (the coast bridge is otherwise held), its credit and Currents preview,
@@ -282,9 +282,9 @@ test('the first run asks for the port, warms that region, then asks the profile 
   await expect(step.getByRole('heading', {name: 'How do you fish?'})).toBeFocused();
   await expect(step.locator('.landing-step-place')).toHaveText('Morro Bay');
   await expect(step.locator('[data-profile]')).toHaveCount(4);
-  await expect(step.locator('[role="status"]')).toHaveText('Morro Bay map loaded.');
+  await expect(step.locator('[role="status"]')).toHaveText('Morro Bay map files ready.');
   for (const path of ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
-    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/api/forecast?region=morro-bay'])
+    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'])
     expect(requests, `warmed ${path}`).toContain(path);
   expect(requests.filter(p => /^\/regions\/(?!morro-bay\/)[^/]+\//.test(p)), 'nothing for a region not chosen').toEqual([]);
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY), 'the port is saved only with the profile').toBeNull();
@@ -336,9 +336,9 @@ test('the map reads every warmed file at startup, the static ones from the brows
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
   await input.press('Enter');
-  await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map loaded.');
+  await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
   const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
-    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/api/forecast?region=morro-bay'];
+    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'];
   onMap = true;
   await page.locator('.landing-step [data-profile="boat"]').click();
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();

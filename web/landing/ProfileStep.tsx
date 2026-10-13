@@ -1,7 +1,7 @@
 // The guided first run's second step (#622, walkthrough slice 4): after a
 // port is chosen, "How do you fish?" with the four profiles and what each
 // changes, while the chosen region warms in the background (region-warm.ts).
-// The status line says only that the map files are loading or loaded; a
+// The status line says only that the map files are loading or ready; a
 // failed or skipped warm-up says nothing, because the map loads as it would
 // have. "Change port" goes back to the port step. Focus moves to the heading
 // when the step appears, so keyboard and screen-reader users land on it.
@@ -15,7 +15,7 @@ export const STEP_COPY = {
   intro: 'This sets the depth limit, the species list and the map’s layers. Change it any time from the map.',
   back: 'Change port',
   loading: (place: string): string => `Loading the ${place} map…`,
-  ready: (place: string): string => `${place} map loaded.`,
+  ready: (place: string): string => `${place} map files ready.`,
 } as const;
 
 export type ProfileStepProps = {
