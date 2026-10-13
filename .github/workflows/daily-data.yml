@@ -44,8 +44,9 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-          cache: pip
-          cache-dependency-path: requirements-sst.txt
+          # Keep the shared data runner's local pip cache, but do not upload
+          # its 17 GB contents after publication: that can exceed this job's
+          # 25-minute timeout and cancel an otherwise verified release (#636).
       - name: Install reviewed NOAA NetCDF decoder
         run: python -m pip install -r requirements-sst.txt -r requirements-publish.txt
       - name: Load pinned last30days research engine
