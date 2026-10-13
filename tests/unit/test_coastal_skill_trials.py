@@ -6,7 +6,7 @@ import sys
 
 from tests._support import ROOT
 
-SCRIPT = ROOT / "skills/skippercast-build-coastal-map/scripts/model_trials.py"
+SCRIPT = ROOT / "skills/skippercast-render-coast-3d/scripts/model_trials.py"
 
 
 def run_script(*args):

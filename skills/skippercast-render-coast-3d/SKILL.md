@@ -1,5 +1,5 @@
 ---
-name: skippercast-build-coastal-map
+name: skippercast-render-coast-3d
 description: Improve SkipperCast website 3D coastal terrain and imagery from existing reviewed data. Use for coastal renderer and visual-quality work; use focused data skills for new sources or measured habitat expansion.
 ---
 
@@ -9,7 +9,7 @@ Deliver a visible website improvement using reviewed terrain and imagery. Keep t
 
 ## Select one useful slice
 
-Resume the repository instructions and existing ledger. Confirm the relevant revision and reviewed terrain/imagery coverage using targeted reads. Prefer the requested region when supported; otherwise choose a supported pilot and explain the gap. Do not invent measurements to complete a region.
+Resume the repository instructions and existing ledger. First read the [upstream mapping handoff](references/mapping-handoff.md). Use only completed, reviewed terrain/imagery outputs built by the designated mapping session and accepted for website display. Verify artifact identities, geographic support and permission for website use before selecting a rendering batch. Do not substitute another region’s data or repeat qualification/ingestion. If no suitable handoff is ready, record the missing prerequisite and stop before starting the timed visual run. Do not invent measurements to complete a region.
 
 Choose one visible defect or improvement. Put its region, visual reference, acceptance checks and relevant source identities in the run brief. Current regions, revisions and jobs belong in the ledger, not this skill.
 
