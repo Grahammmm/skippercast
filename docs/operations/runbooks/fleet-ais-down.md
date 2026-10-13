@@ -62,7 +62,9 @@ For a cadence gap, check the workflow is active on default `main`, `ENABLE_FLEET
 is true, `DATA_RUNNER` names an online runner, and the latest **schedule** event
 exists. No run record means there is no runner job yet; an existing queued run
 may instead be waiting on the `fleet-ais` concurrency group. It intentionally
-serializes normal processing and backfill without cancelling either. Backfills
+serializes normal processing and backfill without cancelling the active run.
+A newer pending run can replace an older pending run in the same group; this is
+not an unbounded queue. Backfills
 have a 150-minute timeout; normal runs retain their 25-minute timeout.
 
 The processing step logs run kind, trigger, scheduled cron and source revision,

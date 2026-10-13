@@ -874,7 +874,7 @@ restarts the unit, then fails unless the heartbeat shows messages within 90 s.
 
 ## 11. AIS processor
 
-`fleet-ais.yml`: cron `3,33 * * * *`, `DATA_RUNNER`, `concurrency: fleet-ais`.
+`fleet-ais.yml`: cron `17 * * * *` and `47 * * * *`, `DATA_RUNNER`, `concurrency: fleet-ais`.
 Each run: push heartbeat and hourly counters (`job_state`
 `fleet.ais.<region>.heartbeat`, `fleet_ais_hours`); refresh `watch.json`; run
 MMSI matching; process each watched MMSI from its last closed trip end minus
