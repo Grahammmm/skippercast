@@ -18,6 +18,6 @@ staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT
 git -C "$tree" archive HEAD | tar -x -C "$staging"
 if ! python scripts/publish_r2.py "$staging" "$prefix"; then
-  echo "::error title=R2 publish::$prefix upload failed; the site keeps serving the previous R2 copy"
+  echo "::error title=R2 publish::$prefix upload failed; no partial snapshot is committed (a lost final acknowledgment may have committed a complete release)"
   exit 1
 fi
