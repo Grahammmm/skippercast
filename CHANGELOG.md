@@ -25,6 +25,7 @@
 
 ### Internal
 
+- The AIS processor retains an unfinished full aggregate rebuild that was already authorized to prune. After a restart it replays the complete season with one timestamp before pruning and acknowledges that rebuild only after every chunk succeeds, so interruption cannot silently leave stale remote cells. Incremental uploads and fresh partial-state uploads keep their existing deletion tracking and prune protection (#624, A04).
 - `dist/export-ui.js` and `dist/trip-alerts.js` are retired: the planner's state is `web/planner.ts` (signals) drawn by `web/app/Planner.tsx`, and the alerts are `web/alerts.ts` and `web/app/TripAlerts.tsx`, both loaded on first open. `tests/test_planner.mjs` pins the draft key and shape, ranking, restore and the loading races; `tests/test_alerts.mjs` pins the API bodies; a new signed-in alerts case runs in `e2e/v2-account.spec.ts`.
 - `/api/health` reads its version from `package.json` at build time instead of a literal that had to be bumped by hand with each release.
 - `e2e/d1.ts` is the one `d1()` helper for `e2e/admin.spec.ts` and `e2e/fleet-admin.spec.ts`: it retries `wrangler d1 execute --local` up to five attempts with a growing pause when the running Worker holds the SQLite file (`SQLITE_BUSY` or "database is locked") and rethrows any other failure at once, with wrangler's stdout appended (#579).
