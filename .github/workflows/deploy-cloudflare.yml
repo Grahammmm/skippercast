@@ -55,10 +55,21 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
+      - name: Reject manual non-main deployment before checkout
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # Do not execute a selected branch's scripts before verifying its ref.
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Manual deployment requires main. Select main and dispatch again."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The commit CI tested, not whatever main is by the time this runs.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Require current main and successful exact-SHA CI for manual deploy
+        if: github.event_name == 'workflow_dispatch'
+        run: python3 scripts/check_deploy_source.py
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
