@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 from urllib.error import URLError
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
 spec = importlib.util.spec_from_file_location('check_deploy_source', ROOT / 'scripts/check_deploy_source.py')
 guard = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(guard)
