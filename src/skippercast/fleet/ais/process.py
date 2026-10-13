@@ -39,7 +39,10 @@ listener's raw store. A scheduled run, in order:
 
 ``--from DATE --to DATE`` (region-local days, ``--to`` inclusive) re-runs only
 steps 3 to 5 for trips departing in that window, reading positions up to the
-longest open-trip limit past it, and leaves the resume times alone.
+longest open-trip limit past it, and leaves the resume times alone. Its targets
+come from current eligible registry MMSIs and already approved strong watch
+bindings, read without re-running matching or refreshing the listener. These
+current bindings do not establish historical ownership of an MMSI.
 
 ``ais/state.sqlite`` holds the processor's state: resume times per MMSI and
 source, hourly counters, the listener counters last seen, the events pushed
@@ -81,7 +84,7 @@ from .segment import ActivityThresholds, prepare, split_trips
 from .store import AisStore, ais_root, retention_limits
 
 __all__ = ["SOURCE_RIGHTS", "Context", "Derived", "State", "VesselRef", "Worker", "WorkerError", "derive",
-           "downsample", "hooks", "hour_counts", "main", "registry_targets", "run"]
+           "downsample", "hooks", "hour_counts", "main", "historical_targets", "registry_refs", "registry_targets", "run"]
 
 MINUTE, HOUR, DAY = 60_000, 3_600_000, 86_400_000
 SETTLE_MS = 10 * MINUTE          # positions younger than this wait for the next run
@@ -402,32 +405,57 @@ class Context:
         return iso_utc(self.now_ms)
 
 
-def hooks() -> dict[str, Callable]:
-    """CF-46's ``refresh_watch`` and ``match`` from ``skippercast.fleet.ais.match``, when that module exists."""
+def _match_module():
     name = f"{__package__}.match"
     try:
-        module = importlib.import_module(name)
+        return importlib.import_module(name)
     except ModuleNotFoundError as error:
         if error.name != name:
             raise
-        return {}
+        return None
+
+
+def hooks() -> dict[str, Callable]:
+    """CF-46's ``refresh_watch`` and ``match`` from ``skippercast.fleet.ais.match``, when that module exists."""
+    module = _match_module()
     return {hook: getattr(module, hook) for hook in HOOKS if callable(getattr(module, hook, None))}
 
 
-def registry_targets(worker: Worker, region_id: str) -> dict[int, VesselRef]:
-    """Registry vessels with an MMSI (snapshot pages from the vessels section); an MMSI on two vessels is left out."""
-    found: dict[int, VesselRef | None] = {}
-    cursor = "v:"
+def _registry_vessels(worker: Worker, region_id: str) -> list[dict]:
+    vessels, cursor = [], "v:"
     while cursor and cursor.startswith("v:"):
         page = worker.get("snapshot", region=region_id, cursor=cursor)
-        for vessel in page.get("vessels") or []:
-            mmsi = str(vessel.get("mmsi") or "")
-            if not mmsi.isdigit() or vessel.get("status") == "excluded":
-                continue
-            ref = VesselRef(vessel["id"], vessel.get("vessel_class"), vessel.get("port_id"))
-            found[int(mmsi)] = None if int(mmsi) in found else ref
+        vessels.extend(page.get("vessels") or [])
         cursor = page.get("next")
+    return vessels
+
+
+def registry_refs(vessels: Iterable[Mapping]) -> dict[int, VesselRef]:
+    """Eligible registry MMSIs; preserve the processor's exclusion and duplicate rules."""
+    found: dict[int, VesselRef | None] = {}
+    for vessel in vessels:
+        mmsi = str(vessel.get("mmsi") or "")
+        if not mmsi.isdigit() or vessel.get("status") == "excluded":
+            continue
+        ref = VesselRef(vessel["id"], vessel.get("vessel_class"), vessel.get("port_id"))
+        found[int(mmsi)] = None if int(mmsi) in found else ref
     return {m: ref for m, ref in found.items() if ref is not None}
+
+
+def registry_targets(worker: Worker, region_id: str) -> dict[int, VesselRef]:
+    """Registry vessels with an MMSI; an MMSI on two vessels is left out."""
+    return registry_refs(_registry_vessels(worker, region_id))
+
+
+def historical_targets(worker: Worker, region_id: str) -> dict[int, VesselRef]:
+    """Read current approved registry/watch bindings without scanning, matching or updating the listener."""
+    vessels = _registry_vessels(worker, region_id)
+    targets = registry_refs(vessels)
+    module = _match_module()
+    if module is not None:
+        for mmsi, ref in module.historical_targets(worker, region_id, vessels).items():
+            targets.setdefault(mmsi, ref)   # the registry remains authoritative
+    return targets
 
 
 def push_heartbeat(ctx: Context) -> dict:
@@ -581,7 +609,8 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
 
 def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None = None, source: str = "aisstream",
         window: tuple[int, int] | None = None, mmsis: Iterable[int] | None = None,
-        hook_table: Mapping[str, Callable] | None = None, allow_prune: bool = False) -> dict:
+        hook_table: Mapping[str, Callable] | None = None, allow_prune: bool = False,
+        expected_targets: Mapping[int, VesselRef] | None = None) -> dict:
     """One processor run (module docstring); ``window`` re-runs only that departure window."""
     if source not in STORES:
         raise ValueError(f"no raw store for source {source!r} yet")
@@ -600,13 +629,17 @@ def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None 
             counts["heartbeat"] = push_heartbeat(ctx)
             if "refresh_watch" in table:
                 table["refresh_watch"](ctx)
-        targets = registry_targets(worker, region.id)
+        targets = registry_targets(worker, region.id) if window is None else historical_targets(worker, region.id)
         if window is None and "match" in table:
             for mmsi, ref in (table["match"](ctx) or {}).items():
                 targets.setdefault(mmsi, ref)   # AIS never overrides the registry's MMSI (CF-46 acceptance 3)
         if mmsis is not None:
             wanted = set(mmsis)
+            if window is not None and wanted - targets.keys():
+                raise ValueError("requested historical MMSIs lack approved registry/watch identities")
             targets = {m: ref for m, ref in targets.items() if m in wanted}
+        if expected_targets is not None and targets != dict(expected_targets):
+            raise ValueError("historical target selection changed; retry with the current approved identities")
         counts["trips"], seasons = push_trips(ctx, targets, window)
         counts["aggregates"] = push_aggregates(ctx, seasons, allow_prune)
         if window is None:
