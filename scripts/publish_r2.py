@@ -7,7 +7,7 @@
 Conditions, data and forecasts use immutable SHA-256 objects plus one atomic
 current-release pointer. The Worker resolves ordinary /feeds/<prefix>/<path>
 URLs through that snapshot; a request-scoped reader pins forecast manifest and
-tiles together. Changed objects and the snapshot are read back before the
+tiles together. New and reused objects and the snapshot are read back before the
 conditional pointer update. Failed or competing uploads never expose partial
 releases. Previous bytes and legacy stable keys remain available for rollback;
 this migration does not garbage-collect historical objects. Tiles retain their
@@ -201,8 +201,6 @@ def sync(s3, bucket, source, prefix):
     if any(any(part.startswith('.r2-') for part in Path(key).parts) for key in local):
         raise ValueError('Snapshot contains reserved R2 publication paths')
     body, generation = snapshot_bytes(local)
-    if pointer and pointer['generation'] == generation:
-        return f'R2 {bucket}/{prefix}: snapshot {generation} unchanged.'
     # Each unique byte string has one immutable key, even when several paths share it.
     paths = {sha: Path(source) / key for key, sha in local.items()}
 
@@ -212,29 +210,29 @@ def sync(s3, bucket, source, prefix):
         if hashlib.sha256(data).hexdigest() != sha:
             raise RuntimeError('Source changed during publication; current release unchanged')
         key = f'{prefix}/.r2-objects/{sha}'
+        uploaded = 0
         try:
-            stored = s3.head_object(Bucket=bucket, Key=key)
-            if stored.get('Metadata', {}).get('sha256') == sha and stored.get('ContentLength') == len(data):
-                return 0
-            raise RuntimeError(f'Existing immutable object is inconsistent: {key}')
+            stored = s3.get_object(Bucket=bucket, Key=key)
         except s3.exceptions.NoSuchKey:
-            pass
-        except Exception as error:
-            # boto3 HEAD uses ClientError/404 rather than NoSuchKey.
-            if getattr(error, 'response', {}).get('ResponseMetadata', {}).get('HTTPStatusCode') != 404:
-                raise
-        s3.put_object(Bucket=bucket, Key=key, Body=data, ContentType=TYPES.get(path.suffix, 'application/octet-stream'),
-                      CacheControl='public, max-age=31536000, immutable', Metadata={'sha256': sha})
-        with s3.get_object(Bucket=bucket, Key=key)['Body'] as stream:
+            s3.put_object(Bucket=bucket, Key=key, Body=data, ContentType=TYPES.get(path.suffix, 'application/octet-stream'),
+                          CacheControl='public, max-age=31536000, immutable', Metadata={'sha256': sha})
+            uploaded = 1
+            stored = s3.get_object(Bucket=bucket, Key=key)
+        # Metadata and length are not proof of successful prior verification:
+        # a failed read-back can leave a same-length poisoned object behind.
+        # Reuse only after verifying the actual bytes, including no-op retries.
+        with stored['Body'] as stream:
             digest_read = hashlib.sha256()
             for block in iter(lambda: stream.read(1 << 20), b''):
                 digest_read.update(block)
         if digest_read.hexdigest() != sha:
             raise RuntimeError(f'R2 read-back hash mismatch: {key}; current release unchanged')
-        return 1
+        return uploaded
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         uploaded = sum(pool.map(put_blob, paths.items()))
+    if pointer and pointer['generation'] == generation:
+        return f'R2 {bucket}/{prefix}: snapshot {generation} unchanged; all object bytes verified.'
     snapshot_key = f'{prefix}/.r2-releases/{generation}.json'
     s3.put_object(Bucket=bucket, Key=snapshot_key, Body=body, ContentType='application/json', CacheControl='no-store')
     if s3.get_object(Bucket=bucket, Key=snapshot_key)['Body'].read() != body:

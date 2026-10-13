@@ -25,6 +25,7 @@ class FakeS3:
         self.lock = threading.RLock()
         self.fail = None
         self.corrupt = None
+        self.transform = None
         self.before_commit = None
         self.lost_ack = False
         self.deletes = 0
@@ -52,6 +53,8 @@ class FakeS3:
                 raise RuntimeError('PreconditionFailed')
             data = bytes(Body)
             stored = b'corrupt' if self.corrupt and self.corrupt(Key) else data
+            if self.transform:
+                stored = self.transform(Key, stored)
             self.objects[Key] = {**kwargs, 'Body': stored, 'ETag': '"' + hashlib.sha256(stored).hexdigest() + '"',
                                  'ContentLength': len(stored)}
             if Key.endswith(CURRENT) and self.lost_ack:
@@ -115,9 +118,29 @@ class SnapshotTests(unittest.TestCase):
             sync(self.s3, 'bucket', self.root, 'forecasts')
         self.assert_cycle('old')
         self.s3.corrupt = None
-        with self.assertRaisesRegex(RuntimeError, 'inconsistent'):
+        with self.assertRaisesRegex(RuntimeError, 'read-back hash mismatch'):
             sync(self.s3, 'bucket', self.root, 'forecasts')
         self.assert_cycle('old')
+
+    def test_same_length_poisoned_tile_cannot_be_committed_on_retry(self):
+        self.write(self.root, 'new')
+        tile_sha = hashlib.sha256((self.root / 'model/tiles/x.json').read_bytes()).hexdigest()
+        self.s3.transform = lambda key, data: data.replace(b'new', b'bad') if key.endswith(tile_sha) else data
+        with self.assertRaisesRegex(RuntimeError, 'read-back hash mismatch'):
+            sync(self.s3, 'bucket', self.root, 'forecasts')
+        self.assert_cycle('old')
+        self.s3.transform = None
+        # Metadata, ContentLength and key still describe the intended new bytes.
+        with self.assertRaisesRegex(RuntimeError, 'read-back hash mismatch'):
+            sync(self.s3, 'bucket', self.root, 'forecasts')
+        self.assertEqual(self.s3.objects['forecasts/' + CURRENT]['Body'], self.old_pointer['Body'])
+        self.assert_cycle('old')
+
+    def test_noop_republication_also_verifies_existing_bytes(self):
+        key = 'forecasts/.r2-objects/' + hashlib.sha256((self.root / 'model/tiles/x.json').read_bytes()).hexdigest()
+        self.s3.objects[key]['Body'] = self.s3.objects[key]['Body'].replace(b'old', b'bad')
+        with self.assertRaisesRegex(RuntimeError, 'read-back hash mismatch'):
+            sync(self.s3, 'bucket', self.root, 'forecasts')
 
     def test_snapshot_readback_mismatch_preserves_current(self):
         self.write(self.root, 'new')
