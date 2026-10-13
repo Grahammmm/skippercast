@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from contextlib import closing
 import fcntl
 import importlib.util
 import sqlite3
@@ -239,6 +240,128 @@ def observation():
     }
     row["content_sha256"] = se.digest(se.canonical({k: v for k, v in row.items() if k != "content_sha256"}))
     return row
+
+
+
+
+class RawCoverageTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.fleet = Path(self.temp.name)
+        self.raw = self.fleet / 'synthetic' / 'ais' / 'raw'
+        self.raw.mkdir(parents=True)
+        self.start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+        self.end = self.start + timedelta(days=2)
+        self.days = ['2026-05-31', '2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04']
+
+    def database(self, day, tables=('positions', 'discovery')):
+        path = self.raw / (day + '.sqlite')
+        with closing(sqlite3.connect(path)) as conn, conn:
+            for table in tables:
+                conn.execute(f'create table {table}(mmsi integer,ts integer,received_at integer)')
+        return path
+
+    def summary(self):
+        return se.raw_window_summary(self.fleet, 'synthetic', 999000123, self.start, self.end, self.start, self.end)
+
+    def test_corrupt_file_is_unreadable_not_complete_empty(self):
+        (self.raw / '2026-06-01.sqlite').write_bytes(b'not a sqlite database')
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-unreadable')
+        self.assertEqual(result['unreadable_days'], ['2026-06-01'])
+        self.assertFalse(result['messages_complete'])
+        self.assertEqual(result['messages'], 0)
+
+    def test_one_of_two_requested_days_is_partial_and_reports_missing_days(self):
+        self.database('2026-06-01')
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-partial')
+        self.assertEqual(result['readable_days'], ['2026-06-01'])
+        self.assertIn('2026-06-02', result['missing_days'])
+        self.assertFalse(result['coverage_complete'])
+        self.assertFalse(result['messages_complete'])
+
+    def test_all_scan_days_readable_empty_is_distinct_from_not_retained(self):
+        for day in self.days:
+            self.database(day)
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-readable-empty')
+        self.assertTrue(result['messages_complete'])
+        self.assertEqual(result['messages'], 0)
+        self.assertEqual(result['readable_days'], self.days)
+        self.assertEqual(result['missing_days'], [])
+        self.assertEqual(result['unreadable_days'], [])
+
+    def test_readable_populated_window_filters_identity_and_half_open_event_bounds(self):
+        for day in self.days:
+            self.database(day)
+        begin, end = int(self.start.timestamp()*1000), int(self.end.timestamp()*1000)
+        with closing(sqlite3.connect(self.raw / '2026-06-01.sqlite')) as conn, conn:
+            conn.executemany('insert into positions values(?,?,?)', [(999000123, begin, begin),
+                (999000123, begin+900000, begin+900000), (999000123, end, end), (999000124, begin, begin)])
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-readable')
+        self.assertTrue(result['messages_complete'])
+        self.assertEqual(result['messages'], 2)
+        self.assertEqual(result['gaps'][0]['minutes'], 15)
+        self.assertNotIn('mmsi', result)
+        self.assertNotIn('source', result)
+        self.assertNotIn('lat', result)
+
+    def test_missing_table_holds_entire_day_even_after_positions_were_read(self):
+        path = self.database('2026-06-01', ('positions',))
+        begin = int(self.start.timestamp()*1000)
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.execute('insert into positions values(?,?,?)', (999000123, begin, begin))
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-unreadable')
+        self.assertEqual(result['messages'], 0)
+        self.assertFalse(result['messages_complete'])
+
+    def test_mixed_good_and_corrupt_days_are_partial_with_known_counts_only(self):
+        path = self.database('2026-06-01')
+        begin = int(self.start.timestamp()*1000)
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.execute('insert into positions values(?,?,?)', (999000123, begin, begin))
+        (self.raw / '2026-06-02.sqlite').write_bytes(b'bad database')
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-partial')
+        self.assertEqual(result['messages'], 1)
+        self.assertEqual(result['unreadable_days'], ['2026-06-02'])
+        self.assertFalse(result['messages_complete'])
+
+    def test_store_unavailable_and_window_not_retained_remain_distinct(self):
+        self.assertEqual(self.summary()['coverage'], 'raw-window-not-retained')
+        self.raw.rmdir()
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-store-unavailable')
+        self.assertFalse(result['messages_complete'])
+
+    def test_invalid_receipt_date_is_unreadable_without_exporting_errors(self):
+        path = self.database('2026-06-01')
+        begin = int(self.start.timestamp()*1000)
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.execute('insert into positions values(?,?,?)', (999000123, begin, 9223372036854775807))
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-unreadable')
+        self.assertFalse(result['messages_complete'])
+        self.assertNotIn('error', result)
+
+
+    def test_extreme_real_receipt_timestamp_holds_day_on_python313_and_preserves_database(self):
+        path = self.database('2026-06-01')
+        begin = int(self.start.timestamp()*1000)
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.executemany('insert into positions values(?,?,?)',
+                            [(999000123, begin, begin), (999000123, begin+1000, 1e20)])
+        before = path.read_bytes()
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-unreadable')
+        self.assertEqual(result['unreadable_days'], ['2026-06-01'])
+        self.assertEqual(result['messages'], 0)
+        self.assertFalse(result['messages_complete'])
+        self.assertEqual(path.read_bytes(), before)
 
 
 if __name__ == "__main__":
