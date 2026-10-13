@@ -32,6 +32,7 @@ from skippercast.fleet.ais.sources.marinecadastre import (CorruptDay, DayNotPubl
 from skippercast.fleet.ais.store import RetentionLimits
 from skippercast.fleet.ais.store import AisStore
 from skippercast.fleet.config import load_region
+from skippercast.fleet.ops import id32
 from skippercast.http import FakeSession
 from tests._support import ROOT
 from tests.unit.test_fleet_process import MMSI, PORT, FakeWorker, track
@@ -231,7 +232,10 @@ class BackfillTests(BackfillTestCase):
 
     def test_a_changed_mmsi_list_ingests_the_day_again(self):
         self.run_backfill()
-        _, counts = self.run_backfill(mmsis=[MMSI, OTHER])
+        worker = FakeWorker()
+        # Expanding the ingest set now requires two approved synthetic identities.
+        worker.vessels.append({**worker.vessels[0], "id": id32("CA", "test-boat-2"), "mmsi": str(OTHER)})
+        _, counts = self.run_backfill(worker=worker, mmsis=[MMSI, OTHER])
         self.assertNotIn("skipped", counts["days"][0])
         self.assertEqual({r[0] for r in dump(self.store, DAY)["positions"]}, {MMSI, OTHER})
 
