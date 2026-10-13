@@ -17,7 +17,9 @@ name: Fleet AIS processor
 # so fork code never runs on Hermes.
 on:
   schedule:
-    - cron: "3,33 * * * *"
+    # Keep both half-hour slots away from the start-of-hour scheduling peak.
+    - cron: "17 * * * *"
+    - cron: "47 * * * *"
   workflow_dispatch:
     inputs:
       from:
@@ -75,8 +77,17 @@ jobs:
           BACKFILL_MONTH: ${{ inputs.backfill_month }}
           VALIDATE: ${{ inputs.validate }}
           LABEL_IMPORT: ${{ inputs.label_import }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           set -o pipefail
+          fleet_run_kind=normal
+          if [ -n "$LABEL_IMPORT" ]; then fleet_run_kind=label-import
+          elif [ "$VALIDATE" = "true" ]; then fleet_run_kind=validation
+          elif [ -n "$BACKFILL_MONTH" ]; then fleet_run_kind=backfill
+          elif [ -n "$WINDOW_FROM$WINDOW_TO" ]; then fleet_run_kind=window
+          fi
+          printf 'AIS run kind=%s trigger=%s cron=%s source=%s\n' "$fleet_run_kind" \
+            "${GITHUB_EVENT_NAME:-unknown}" "${SCHEDULE_CRON:-none}" "${GITHUB_SHA:-unknown}"
           # The raw store and processor state live outside any checkout (design.md § 4).
           export SKIPPERCAST_FLEET_VAR="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
           if [ -n "$LABEL_IMPORT" ]; then
