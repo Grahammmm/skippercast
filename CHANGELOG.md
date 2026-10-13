@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Manual production deploys require current main and successful Offline checks for that exact commit before dependencies or production writes run; explicit Worker rollback remains available.
+
 - Feed publication commits one verified immutable R2 snapshot so failed uploads cannot mix old manifests with new forecast tiles. Forecast queries pin one release; existing URLs and prior data remain available through migration.
 
 - The layer rail has a terrain grade filter beside the base, All, A and B, or A only, kept in the link as `?grade=`; on a phone the Layers panel also opens with the target species ("Look for", the same list as the command bar). The filter narrows the reef marks and the seafloor candidates together; unranked search areas show only with All, and the seafloor note counts what the grade left out. Zoomed out below view zoom 10, where the water used to be empty, the target's reef marks now draw as a soft density weighted by terrain grade and habitat fit, labelled "<Target> habitat candidates, denser here", which fades into the individual marks as you zoom in. It is drawn only around surveyed marks that passed the protected-area check, is withheld with them when that check is stale, and is off for Shore. A grade ranks search priority from surveys, not catch (#620).

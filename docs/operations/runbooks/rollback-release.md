@@ -6,7 +6,7 @@
 
 ## How deploys work
 
-- Only a `main` commit that passed **Offline checks** is deployed, and exactly that commit (`.github/workflows/deploy-cloudflare.yml`).
+- Only a `main` commit that passed **Offline checks** is deployed, and exactly that commit (`.github/workflows/deploy-cloudflare.yml`). Manual **deploy** must select `main`; before dependencies or production writes, it checks that the selected SHA is still current main and that its latest push/main Offline checks run succeeded. Missing, pending, failed or unreadable CI metadata stops the deployment; wait for CI and dispatch main again. The source check reads public GitHub metadata without adding credentials or permissions. Automatic CI-triggered deployment and the explicit **rollback** path keep their existing contracts.
 - `scripts/cloudflare_deploy.sh` records a D1 Time Travel bookmark, exports D1 to the private R2 bucket `skippercast-backups` (`d1/<UTC stamp>-<sha>.sql`), applies migrations, records the Worker version live before the deploy ("Live Worker version before this deploy"), then deploys.
 - Each deploy makes **two** Worker deployments a few seconds apart: `wrangler deploy` (the code; its version's message is `<sha> run <run id>`) and `wrangler secret bulk` (a new version of the same code with no message). A bare `wrangler rollback` skips only the newest deployment, so it lands on the code version of the commit you are trying to leave and stays on the same commit (only its secrets upload is undone) (#568). Always roll back to an explicit version id.
 - `scripts/smoke_test.sh` waits for the new build, then checks health, the home page, `/sw.js`, the live feed and that forged identity headers are refused.
