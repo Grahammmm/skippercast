@@ -53,8 +53,21 @@
 .landing-eyebrow { margin: 0; }
 .landing-title { margin: 0; font: var(--weight-semibold) var(--text-40) / var(--leading-heading) var(--font-sans); letter-spacing: -0.01em; }
 .landing-lede { margin: 0; max-width: 34em; color: var(--text); font-size: var(--text-18); }
-.landing-pills { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .landing .port-input { max-width: none; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--panel) 88%, transparent); }
+/* The guided first run's profile step (#622): the port input's panel, the app's first-run choices */
+.landing-step { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--panel) 88%, transparent); }
+.landing-step h2 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
+.landing-step h2:focus { outline: none; }
+.landing-step h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.landing-step-place { margin: 0; color: var(--mint); }
+.landing-step-intro, .landing-step-status { margin: 0; color: var(--muted); font-size: var(--text-13); }
+.landing-step-status { min-height: 1.2em; }
+.landing-step-options { display: grid; gap: var(--space-2); }
+.landing-step-options .ui-button { justify-content: flex-start; text-align: left; padding-block: var(--space-2); }
+.landing-step-options .ui-button span { display: flex; flex-direction: column; gap: var(--space-1); }
+.landing-step-options .ui-button small { color: var(--muted); font-size: var(--text-13); }
+.landing-step-back { align-self: flex-start; }
+@media (min-width: 1024px) { .landing-step-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Readout: the brief's tiles at a smaller size, in the sans face */
 .landing-readout { display: flex; flex-direction: column; gap: var(--space-2); }
