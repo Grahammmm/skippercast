@@ -1,6 +1,7 @@
 // Feed storage for the Worker. Published feeds (conditions, data, forecasts)
 // are read from the R2 bucket bound as FEEDS when present; otherwise from their
-// GitHub branch. Keys mirror the branch layout: '<branch>/<path>'.
+// GitHub branch. Snapshot-backed feeds keep these logical URLs while bytes
+// live at immutable keys; legacy keys remain readable until first migration.
 import {edgeCache, cacheKey, store, tagged} from './edge-cache.ts';
 import type {WaitUntil} from './edge-cache.ts';
 import type {ExternalJSON} from './types.ts';
@@ -17,15 +18,69 @@ export function feedKey(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   if (value.startsWith(RAW)) key = value.slice(RAW.length);
   else if (value.startsWith('/feeds/')) key = value.slice('/feeds/'.length);
-  return key && SAFE.test(key) && BRANCHES.has(key.split('/')[0]!) ? key : null;
+  return key && SAFE.test(key) && BRANCHES.has(key.split('/')[0]!) && !key.split('/').some(p => p.startsWith('.r2-')) ? key : null;
 }
 
-/** Parsed JSON from R2, or undefined when R2 is not bound or lacks the key. */
+type Snapshot = {generation: string; files: Record<string, string>};
+const SNAPSHOTS = new Set(['conditions', 'data', 'forecasts']);
+const HASH = /^[a-f0-9]{64}$/;
+
+/** Capture the bucket and pin each prefix once for a multi-file operation. */
+function resolver(selected: R2Bucket | null) {
+  const snapshots = new Map<string, Promise<Snapshot | null>>();
+  return async (key: string): Promise<{key: string; generation?: string; missing?: boolean}> => {
+    const [prefix, ...parts] = key.split('/');
+    if (!selected || !SNAPSHOTS.has(prefix!)) return {key};
+    if (!snapshots.has(prefix!)) snapshots.set(prefix!, (async () => {
+      const pointer = await selected.get(`${prefix}/.r2-current.json`);
+      if (!pointer) return null; // compatible legacy layout, until the first snapshot
+      const current = await pointer.json() as ExternalJSON;
+      if (current?.schema_version !== 1 || !HASH.test(current?.generation || '')) throw Error('Invalid feed release pointer');
+      const object = await selected.get(`${prefix}/.r2-releases/${current.generation}.json`);
+      if (!object) throw Error('Feed release snapshot unavailable');
+      const bytes = await object.arrayBuffer();
+      const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
+      if (actual !== current.generation) throw Error('Feed release snapshot hash mismatch');
+      const snapshot = JSON.parse(new TextDecoder().decode(bytes));
+      if (snapshot?.schema_version !== 1 || !snapshot.files || typeof snapshot.files !== 'object' || Array.isArray(snapshot.files)) throw Error('Invalid feed release snapshot');
+      return {generation: current.generation, files: snapshot.files};
+    })());
+    const snapshot = await snapshots.get(prefix!)!;
+    if (!snapshot) return {key};
+    const path = parts.join('/');
+    const sha = Object.hasOwn(snapshot.files, path) ? snapshot.files[path] : undefined;
+    if (sha === undefined) return {key, generation: snapshot.generation, missing: true};
+    if (typeof sha !== 'string' || !HASH.test(sha)) throw Error('Invalid feed object hash');
+    return {key: `${prefix}/.r2-objects/${sha}`, generation: snapshot.generation};
+  };
+}
+
+/** Request-scoped reader: manifest and tiles stay in one release during publication. */
+export function createFeedReader(): (url: string) => Promise<ExternalJSON> {
+  const selected = bucket, resolve = resolver(selected);
+  return async url => {
+    const key = feedKey(url);
+    if (selected && key) {
+      const target = await resolve(key);
+      if (target.missing) throw Error('Feed absent from current release');
+      const object = await selected.get(target.key);
+      if (object) return object.json();
+      if (target.generation) throw Error('Feed release object unavailable');
+    }
+    return readUpstreamFeed(url);
+  };
+}
+
+/** Parsed JSON from R2, or undefined for an unbound/absent legacy feed. */
 export async function readBucketJSON(url: string): Promise<ExternalJSON | undefined> {
-  const key = feedKey(url);
-  if (!bucket || !key) return undefined;
-  const object = await bucket.get(key);
-  return object ? object.json() : undefined;
+  const selected = bucket, key = feedKey(url);
+  if (!selected || !key) return undefined;
+  const target = await resolver(selected)(key);
+  if (target.missing) throw Error('Feed absent from current release');
+  const object = await selected.get(target.key);
+  if (object) return object.json();
+  if (target.generation) throw Error('Feed release object unavailable');
+  return undefined;
 }
 
 const contentType = (key: string): string => key.endsWith('.geojson.gz') ? 'application/gzip' : key.endsWith('.json') || key.endsWith('.geojson') ? 'application/json'
@@ -65,21 +120,22 @@ const CONDITIONAL = ['Range', 'If-None-Match', 'If-Modified-Since', 'If-Match', 
  * that range and fills the cache with the whole object after the reply.
  */
 type Fill = (object: {size: number; range?: R2Range; httpEtag?: string; body?: ReadableStream}) => Promise<void>;
-async function fromEdge(request: Request, key: string, headers: Headers, ctx: WaitUntil, build: string | undefined): Promise<{cache: Cache | null; hit?: Response; fill?: Fill}> {
+async function fromEdge(request: Request, key: string, headers: Headers, ctx: WaitUntil, build: string | undefined, selected: R2Bucket, logicalKey = key): Promise<{cache: Cache | null; hit?: Response; fill?: Fill}> {
   const cache = edgeCache();
   if (!cache) return {cache: null};
   const conditional = new Headers();
   for (const name of CONDITIONAL) if (request.headers.has(name)) conditional.set(name, request.headers.get(name)!);
-  const lookup = cacheKey(new URL('/feeds/' + key, request.url), {params: [], build, headers: conditional});
+  const cachePath = key === logicalKey ? key : `${key}/${logicalKey}`;
+  const lookup = cacheKey(new URL('/feeds/' + cachePath, request.url), {params: [], build, headers: conditional});
   try {
     const hit = await cache.match(lookup);
     if (hit) return {cache, hit: tagged(hit, 'hit')};
   } catch { /* fall through to R2 */ }
-  const whole = cacheKey(new URL('/feeds/' + key, request.url), {params: [], build});
+  const whole = cacheKey(new URL('/feeds/' + cachePath, request.url), {params: [], build});
   const snapshot = new Headers(headers);  // before the reply adds range/ETag headers
   const fill: Fill = async object => {
     if (!object || object.size > EDGE_CACHE_MAX_BYTES) return;
-    const full = object.body && !object.range ? object as {size: number; httpEtag: string; body: ReadableStream} : await bucket!.get(key);
+    const full = object.body && !object.range ? object as {size: number; httpEtag: string; body: ReadableStream} : await selected.get(key);
     if (!full?.body) return;
     const copy = new Headers(snapshot);
     copy.set('ETag', full.httpEtag); copy.set('X-Feed-Source', 'r2'); copy.set('Accept-Ranges', 'bytes');
@@ -94,8 +150,12 @@ async function fromEdge(request: Request, key: string, headers: Headers, ctx: Wa
  * the GitHub branch through the fetch cache. Returns null when the path is not a feed.
  */
 export async function serveFeed(request: Request, path: string, assets: Fetcher | undefined, {ctx, build}: {ctx?: WaitUntil; build?: string} = {}): Promise<Response | null> {
-  const key = feedKey(path);
-  if (!key) return null;
+  const logicalKey = feedKey(path);
+  if (!logicalKey) return null;
+  const selected = bucket;
+  const target = await resolver(selected)(logicalKey);
+  if (target.missing) return new Response('Not found', {status: 404, headers: {'Cache-Control': 'no-store'}});
+  const key = target.key;
   // Seafloor source/cache/review prefixes are never feeds. Public archives
   // require a current publication receipt, even when old R2 bytes still exist.
   const seafloor = key.startsWith('tiles/seafloor/');
@@ -117,14 +177,18 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       return new Response('Seafloor screening unavailable or expired', {status: 503, headers: {'Cache-Control': 'no-store'}});
     }
   }
-  const headers = new Headers({'Content-Type': contentType(key), 'Cache-Control': seafloor ? 'no-store' : `public, max-age=${cacheFor(key)}`,
+  const headers = new Headers({'Content-Type': contentType(logicalKey), 'Cache-Control': seafloor ? 'no-store' : `public, max-age=${cacheFor(logicalKey)}`,
     'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*',
-    'Access-Control-Expose-Headers': 'ETag, Content-Range, Content-Length, Accept-Ranges'});
-  if (bucket) {
+    'Access-Control-Expose-Headers': 'ETag, Content-Range, Content-Length, Accept-Ranges, X-Feed-Generation'});
+  if (target.generation) headers.set('X-Feed-Generation', target.generation);
+  if (selected) {
     // Seafloor archives are gated on a live publication receipt and never cached.
-    const edge = seafloor ? {cache: null} : await fromEdge(request, key, headers, ctx, build);
-    if (edge.hit) return edge.hit;
-    const object = await bucket.get(key, {range: request.headers, onlyIf: request.headers}) as R2Object | R2ObjectBody | null;
+    const edge = seafloor ? {cache: null} : await fromEdge(request, key, headers, ctx, build, selected, logicalKey);
+    if (edge.hit) {
+      if (target.generation) edge.hit.headers.set('X-Feed-Generation', target.generation);
+      return edge.hit;
+    }
+    const object = await selected.get(key, {range: request.headers, onlyIf: request.headers}) as R2Object | R2ObjectBody | null;
     if (object) {
       if (publication && object.customMetadata?.sha256 !== expectedHash) {
         return new Response('Seafloor archive revision unavailable', {status: 503, headers});
@@ -150,6 +214,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
       return new Response((object as R2ObjectBody).body, {status: 200, headers});
     }
   }
+  if (target.generation) return new Response('Feed release object unavailable', {status: 503, headers: {'Cache-Control': 'no-store'}});
   if (seafloor) return new Response('Not found', {status: 404, headers});
   if (key.startsWith('tiles/')) {  // map tiles ship with the site until R2 is connected
     const response = assets ? await assets.fetch(new Request(new URL('/' + key, request.url))) : null;
@@ -168,11 +233,12 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
  * A published regional feed as parsed JSON: R2 when bound, else the named
  * cache, else the reviewed GitHub URL. Throws when the feed is unavailable.
  */
-export async function readFeed(url: string): Promise<ExternalJSON> {
+export async function readFeed(url: string): Promise<ExternalJSON> { return createFeedReader()(url); }
+
+async function readUpstreamFeed(url: string): Promise<ExternalJSON> {
   let stage='r2';
   try{
     // Published feeds come from R2 when the bucket is bound; GitHub otherwise.
-    const stored=await readBucketJSON(url);if(stored!==undefined)return stored;
     stage='cache';
     const key=new Request(url);let cache:Cache|null|undefined,cached:Response|undefined;
     // The named cache is optional; a cache failure must never disable public feeds.
