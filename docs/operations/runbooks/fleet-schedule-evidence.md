@@ -41,3 +41,9 @@ The collector prints run/page/trip/revision/assessment counts only. Never query 
 - If a page changes layout, preserve the last successful observations, mark the fetch/layout status, and escalate for deterministic parser review. Do not use an LLM to guess the new layout.
 - A lock conflict exits as `skipped-locked`; leave the active collector alone. A failed run is recorded with a generic error class. Inspect user journal locally; do not copy private logs elsewhere.
 - Before retiring the worktree, update the unit to a reviewed, pinned code path and verify one scheduled run after that update.
+
+## Raw reception coverage
+
+A file's presence does not prove its database or tables were readable. Each AIS candidate reception summary reports the expected, readable, missing and unreadable UTC partition days over the existing inclusive scan range (one day before date_start through one day after date_end). Both positions and discovery must finish reading before a day's matching observations count. A missing table, corrupt/locked database or invalid matching receipt date holds that day; error text and raw rows are not retained. Missing buffer or future days keep the summary partial.
+
+`raw-window-readable` and `raw-window-readable-empty` require every scanned day to be readable. `raw-window-partial` retains counts from complete readable days only; `raw-window-unreadable`, `raw-window-not-retained` and `raw-store-unavailable` distinguish the other holds. `coverage_complete` and `messages_complete` explicitly mark whether counts cover the scan. Zero messages with either flag false is an unknown or incomplete observation, never evidence of vessel absence or an unperformed trip. Receipt gaps describe observed messages only. Existing private assessment JSON is retained; no migration or rewrite is performed.

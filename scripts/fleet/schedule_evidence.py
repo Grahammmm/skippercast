@@ -501,35 +501,60 @@ def read_port_presence(state_path: Path, mmsi: int, port_id: str | None, day: st
 
 def raw_window_summary(fleet_var: Path, region: str, mmsi: int, start: datetime, end: datetime,
                        date_start: datetime, date_end: datetime) -> dict:
-    """Read only event/receipt times. Coordinates and raw message bodies are never selected or retained."""
+    """Summarize readable matching receipt times, never vessel absence or trip proof.
+
+    Completeness covers the existing inclusive one-day-padded scan range. Missing
+    buffer/future days remain partial, rather than being called readable empty.
+    Coordinates, identities, raw bodies and database error text are not retained.
+    """
     raw_dir = fleet_var / region / "ais" / "raw"
-    if not raw_dir.is_dir():
-        return {"coverage": "raw-store-unavailable", "messages": 0, "by_table": {}, "gaps": []}
     first_day = date_start.date() - timedelta(days=1)
     last_day = date_end.date() + timedelta(days=1)
+    expected_days = [(first_day + timedelta(days=i)).isoformat()
+                     for i in range((last_day - first_day).days + 1)]
     by_table: dict[str, int] = {"positions": 0, "discovery": 0}
     observations: dict[str, list[tuple[int, int]]] = {"positions": [], "discovery": []}
-    day = first_day
-    while day <= last_day:
-        path = raw_dir / f"{day.isoformat()}.sqlite"
-        if path.is_file():
+    readable_days, missing_days, unreadable_days = [], [], []
+    store_available = raw_dir.is_dir()
+    for day in expected_days:
+        path = raw_dir / f"{day}.sqlite"
+        if not path.is_file():
+            missing_days.append(day)
+            continue
+        # Commit a day's observations only when both tables were read completely.
+        # A later table/query error cannot leave a misleading partial day count.
+        day_observations = {"positions": [], "discovery": []}
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=2)
             try:
-                conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=2)
-                try:
-                    for table in ("positions", "discovery"):
-                        exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
-                        if not exists:
-                            continue
-                        for ts_ms, received_ms, source in conn.execute(
-                            f"SELECT ts,received_at,source FROM {table} WHERE mmsi=? AND ts>=? AND ts<? ORDER BY received_at",
-                            (mmsi, int(start.timestamp()*1000), int(end.timestamp()*1000))):
-                            by_table[table] += 1
-                            observations[table].append((int(received_ms), int(ts_ms)))
-                finally:
-                    conn.close()
-            except sqlite3.Error:
-                pass
-        day += timedelta(days=1)
+                for table in ("positions", "discovery"):
+                    for ts_ms, received_ms in conn.execute(
+                        f"SELECT ts,received_at FROM {table} WHERE mmsi=? AND ts>=? AND ts<? ORDER BY received_at",
+                        (mmsi, int(start.timestamp()*1000), int(end.timestamp()*1000))):
+                        received_ms, ts_ms = int(received_ms), int(ts_ms)
+                        _millis_stamp(received_ms)  # invalid receipt dates hold this day
+                        day_observations[table].append((received_ms, ts_ms))
+            finally:
+                conn.close()
+        except (sqlite3.Error, ValueError, TypeError, OverflowError):
+            unreadable_days.append(day)
+            continue
+        readable_days.append(day)
+        for table, items in day_observations.items():
+            by_table[table] += len(items)
+            observations[table].extend(items)
+    messages = sum(by_table.values())
+    complete = bool(expected_days) and len(readable_days) == len(expected_days)
+    if not store_available:
+        coverage = "raw-store-unavailable"
+    elif complete:
+        coverage = "raw-window-readable" if messages else "raw-window-readable-empty"
+    elif readable_days:
+        coverage = "raw-window-partial"
+    elif unreadable_days:
+        coverage = "raw-window-unreadable"
+    else:
+        coverage = "raw-window-not-retained"
     gaps = []
     for table, items in observations.items():
         items.sort()
@@ -537,13 +562,13 @@ def raw_window_summary(fleet_var: Path, region: str, mmsi: int, start: datetime,
             gap_ms = right[0] - left[0]
             if gap_ms > POSITION_GAP_MINUTES * 60 * 1000:
                 gaps.append({"table": table,
-                             "from_received_utc": datetime.fromtimestamp(left[0]/1000, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-                             "to_received_utc": datetime.fromtimestamp(right[0]/1000, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+                             "from_received_utc": _millis_stamp(left[0]),
+                             "to_received_utc": _millis_stamp(right[0]),
                              "minutes": round(gap_ms/60000, 2)})
-    files_found = any((raw_dir / f"{(first_day + timedelta(days=i)).isoformat()}.sqlite").is_file()
-                      for i in range((last_day-first_day).days+1))
-    return {"coverage": "raw-days-present" if files_found else "raw-window-not-retained",
-            "messages": sum(by_table.values()), "by_table": by_table,
+    return {"coverage": coverage, "coverage_complete": complete, "messages_complete": complete,
+            "expected_days": expected_days, "readable_days": readable_days,
+            "missing_days": missing_days, "unreadable_days": unreadable_days,
+            "messages": messages, "by_table": by_table,
             "first_received_utc": _millis_stamp(min((x[0] for rows in observations.values() for x in rows), default=None)),
             "last_received_utc": _millis_stamp(max((x[0] for rows in observations.values() for x in rows), default=None)),
             "gaps": gaps}
