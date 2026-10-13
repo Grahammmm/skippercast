@@ -5,8 +5,11 @@ NOAA's daily files arrive 80 to 150 days late, so this fills the months the
 listener never heard. ``fleet-ais.yml`` runs it for one month on a dispatch with
 ``backfill_month``. A run:
 
-1. **targets**: the registry's MMSIs (``process.registry_targets``, the same
-   ``GET /api/fleet/jobs/snapshot`` the processor reads), or only ``--mmsi``.
+1. **targets**: current eligible registry MMSIs and approved strong watch
+   bindings (``process.historical_targets``), narrowed by ``--mmsi`` when given.
+   An unresolved explicit MMSI fails before ingestion. Current bindings do not
+   establish historical ownership; the selected attribution is rechecked before
+   derivation and a changed selection stops processing while preserving raw rows.
 2. **ingest**: every UTC day from the window's first local day to the day after
    its last (a Pacific day ends after UTC midnight) is streamed through
    ``MarineCadastreSource.history``: positions and statics inside the region's
@@ -231,12 +234,15 @@ def backfill(region, worker, *, first: date, last: date, root: Path | None = Non
     if last < first:
         raise ValueError("the backfill window ends before it starts")
     root = Path(root) if root is not None else ais_root(region.id)
-    store = backfill_store(root)
-    source = source if source is not None else MarineCadastreSource(workdir=store.root / "staging")
-    targets = process.registry_targets(worker, region.id)
+    targets = process.historical_targets(worker, region.id)
     wanted = set(targets) if mmsis is None else set(mmsis)
     if not wanted:
-        raise ValueError("no MMSIs to backfill: the registry lists none and no --mmsi was given")
+        raise ValueError("no approved registry/watch MMSIs to backfill")
+    if wanted - targets.keys():
+        raise ValueError("requested backfill MMSIs lack approved registry/watch identities")
+    selected = {m: targets[m] for m in wanted}
+    store = backfill_store(root)
+    source = source if source is not None else MarineCadastreSource(workdir=store.root / "staging")
     window = window_ms(first, last, region.timezone)
     bbox = bbox_of(region.ais)
     now = _now_ms(now_ms)
@@ -257,7 +263,7 @@ def backfill(region, worker, *, first: date, last: date, root: Path | None = Non
         counts["processed"] = None   # nothing of this window is in the store
         return counts
     counts["processed"] = process.run(region, worker, root=root, now_ms=now_ms, source=SOURCE_ID, window=window,
-                                      mmsis=None if mmsis is None else sorted(wanted), allow_prune=allow_prune)
+                                      mmsis=sorted(wanted), allow_prune=allow_prune, expected_targets=selected)
     return counts
 
 
