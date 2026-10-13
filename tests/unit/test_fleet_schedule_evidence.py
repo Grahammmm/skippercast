@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from contextlib import closing
 import fcntl
 import importlib.util
 import sqlite3
@@ -256,7 +257,7 @@ class RawCoverageTests(unittest.TestCase):
 
     def database(self, day, tables=('positions', 'discovery')):
         path = self.raw / (day + '.sqlite')
-        with sqlite3.connect(path) as conn:
+        with closing(sqlite3.connect(path)) as conn, conn:
             for table in tables:
                 conn.execute(f'create table {table}(mmsi integer,ts integer,received_at integer)')
         return path
@@ -296,7 +297,7 @@ class RawCoverageTests(unittest.TestCase):
         for day in self.days:
             self.database(day)
         begin, end = int(self.start.timestamp()*1000), int(self.end.timestamp()*1000)
-        with sqlite3.connect(self.raw / '2026-06-01.sqlite') as conn:
+        with closing(sqlite3.connect(self.raw / '2026-06-01.sqlite')) as conn, conn:
             conn.executemany('insert into positions values(?,?,?)', [(999000123, begin, begin),
                 (999000123, begin+900000, begin+900000), (999000123, end, end), (999000124, begin, begin)])
         result = self.summary()
@@ -311,7 +312,7 @@ class RawCoverageTests(unittest.TestCase):
     def test_missing_table_holds_entire_day_even_after_positions_were_read(self):
         path = self.database('2026-06-01', ('positions',))
         begin = int(self.start.timestamp()*1000)
-        with sqlite3.connect(path) as conn:
+        with closing(sqlite3.connect(path)) as conn, conn:
             conn.execute('insert into positions values(?,?,?)', (999000123, begin, begin))
         result = self.summary()
         self.assertEqual(result['coverage'], 'raw-window-unreadable')
@@ -321,7 +322,7 @@ class RawCoverageTests(unittest.TestCase):
     def test_mixed_good_and_corrupt_days_are_partial_with_known_counts_only(self):
         path = self.database('2026-06-01')
         begin = int(self.start.timestamp()*1000)
-        with sqlite3.connect(path) as conn:
+        with closing(sqlite3.connect(path)) as conn, conn:
             conn.execute('insert into positions values(?,?,?)', (999000123, begin, begin))
         (self.raw / '2026-06-02.sqlite').write_bytes(b'bad database')
         result = self.summary()
@@ -340,12 +341,27 @@ class RawCoverageTests(unittest.TestCase):
     def test_invalid_receipt_date_is_unreadable_without_exporting_errors(self):
         path = self.database('2026-06-01')
         begin = int(self.start.timestamp()*1000)
-        with sqlite3.connect(path) as conn:
+        with closing(sqlite3.connect(path)) as conn, conn:
             conn.execute('insert into positions values(?,?,?)', (999000123, begin, 9223372036854775807))
         result = self.summary()
         self.assertEqual(result['coverage'], 'raw-window-unreadable')
         self.assertFalse(result['messages_complete'])
         self.assertNotIn('error', result)
+
+
+    def test_extreme_real_receipt_timestamp_holds_day_on_python313_and_preserves_database(self):
+        path = self.database('2026-06-01')
+        begin = int(self.start.timestamp()*1000)
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.executemany('insert into positions values(?,?,?)',
+                            [(999000123, begin, begin), (999000123, begin+1000, 1e20)])
+        before = path.read_bytes()
+        result = self.summary()
+        self.assertEqual(result['coverage'], 'raw-window-unreadable')
+        self.assertEqual(result['unreadable_days'], ['2026-06-01'])
+        self.assertEqual(result['messages'], 0)
+        self.assertFalse(result['messages_complete'])
+        self.assertEqual(path.read_bytes(), before)
 
 
 if __name__ == "__main__":

@@ -536,7 +536,7 @@ def raw_window_summary(fleet_var: Path, region: str, mmsi: int, start: datetime,
                         day_observations[table].append((received_ms, ts_ms))
             finally:
                 conn.close()
-        except (sqlite3.Error, ValueError, TypeError, OverflowError):
+        except (sqlite3.Error, ValueError, TypeError, OverflowError, OSError):
             unreadable_days.append(day)
             continue
         readable_days.append(day)
