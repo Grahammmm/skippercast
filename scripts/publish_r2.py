@@ -177,6 +177,21 @@ def snapshot_bytes(files):
     return body, hashlib.sha256(body).hexdigest()
 
 
+def immutable_object(s3, bucket, key, body, **metadata):
+    """Read or create once. A delayed absence response must never permit overwrite."""
+    try:
+        return s3.get_object(Bucket=bucket, Key=key)
+    except s3.exceptions.NoSuchKey:
+        try:
+            s3.put_object(Bucket=bucket, Key=key, Body=body, IfNoneMatch='*', **metadata)
+        except Exception as error:
+            if getattr(error, 'response', {}).get('ResponseMetadata', {}).get('HTTPStatusCode') not in (409, 412):
+                raise
+            # Another creator won. Verify its stored bytes at the caller; a
+            # conflict with no readable winner fails safely rather than retrying PUT.
+        return s3.get_object(Bucket=bucket, Key=key)
+
+
 def sync(s3, bucket, source, prefix):
     """Publish one verified immutable snapshot, then CAS its sole mutable pointer.
 
@@ -210,14 +225,11 @@ def sync(s3, bucket, source, prefix):
         if hashlib.sha256(data).hexdigest() != sha:
             raise RuntimeError('Source changed during publication; current release unchanged')
         key = f'{prefix}/.r2-objects/{sha}'
-        uploaded = 0
-        try:
-            stored = s3.get_object(Bucket=bucket, Key=key)
-        except s3.exceptions.NoSuchKey:
-            s3.put_object(Bucket=bucket, Key=key, Body=data, ContentType=TYPES.get(path.suffix, 'application/octet-stream'),
-                          CacheControl='public, max-age=31536000, immutable', Metadata={'sha256': sha})
-            uploaded = 1
-            stored = s3.get_object(Bucket=bucket, Key=key)
+        # Conditional creation protects even a delayed GET-miss followed by
+        # another publisher's completed write and read-back.
+        stored = immutable_object(s3, bucket, key, data,
+                                  ContentType=TYPES.get(path.suffix, 'application/octet-stream'),
+                                  CacheControl='public, max-age=31536000, immutable', Metadata={'sha256': sha})
         # Metadata and length are not proof of successful prior verification:
         # a failed read-back can leave a same-length poisoned object behind.
         # Reuse only after verifying the actual bytes, including no-op retries.
@@ -227,16 +239,16 @@ def sync(s3, bucket, source, prefix):
                 digest_read.update(block)
         if digest_read.hexdigest() != sha:
             raise RuntimeError(f'R2 read-back hash mismatch: {key}; current release unchanged')
-        return uploaded
+        return sha
 
     with ThreadPoolExecutor(max_workers=16) as pool:
-        uploaded = sum(pool.map(put_blob, paths.items()))
-    if pointer and pointer['generation'] == generation:
-        return f'R2 {bucket}/{prefix}: snapshot {generation} unchanged; all object bytes verified.'
+        verified = len(list(pool.map(put_blob, paths.items())))
     snapshot_key = f'{prefix}/.r2-releases/{generation}.json'
-    s3.put_object(Bucket=bucket, Key=snapshot_key, Body=body, ContentType='application/json', CacheControl='no-store')
-    if s3.get_object(Bucket=bucket, Key=snapshot_key)['Body'].read() != body:
+    stored_snapshot = immutable_object(s3, bucket, snapshot_key, body, ContentType='application/json', CacheControl='no-store')
+    if stored_snapshot['Body'].read() != body:
         raise RuntimeError('R2 snapshot read-back mismatch; current release unchanged')
+    if pointer and pointer['generation'] == generation:
+        return f'R2 {bucket}/{prefix}: snapshot {generation} unchanged; all object and snapshot bytes verified.'
     current = json.dumps({'schema_version': 1, 'generation': generation}, separators=(',', ':')).encode()
     # R2 supports conditional PutObject. A concurrent publisher must fail, never
     # silently supersede a release committed since this publisher started.
@@ -245,7 +257,7 @@ def sync(s3, bucket, source, prefix):
                   CacheControl='no-store', **condition)
     if s3.get_object(Bucket=bucket, Key=pointer_key)['Body'].read() != current:
         raise RuntimeError('R2 current release changed after commit; recheck before retrying')
-    return (f'R2 {bucket}/{prefix}: snapshot {generation}, {uploaded} immutable objects uploaded and verified, '
+    return (f'R2 {bucket}/{prefix}: snapshot {generation}, {verified} immutable objects verified (created only when absent), '
             f'{len(local)} paths committed atomically; previous data retained.')
 
 
