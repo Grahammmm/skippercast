@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move fleet AIS half-hour scheduling to off-hour slots and record trigger, run kind and source revision for cadence verification.
+
 - Forecast queries reuse each model/tile within the request and share timezone formatting across points, preserving values, units and duplicate-model field names while reducing repeated storage reads and computation.
 
 - Production deploys require current main and successful Offline checks for the exact selected commit. Eligibility is checked before checkout, dependencies and production writes; obsolete automatic CI results are held, while explicit Worker rollback remains available.

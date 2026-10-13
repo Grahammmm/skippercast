@@ -492,7 +492,8 @@ class WorkflowTests(unittest.TestCase):
 
     def test_fleet_ais_runs_on_our_runner_every_30_minutes(self):
         text, header = _header("fleet-ais.yml")
-        self.assertIn('cron: "3,33 * * * *"', header)
+        self.assertIn('cron: "17 * * * *"', header)
+        self.assertIn('cron: "47 * * * *"', header)
         self.assertIn("permissions: {}", header)
         self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''", text)
         self.assertIn("group: fleet-ais", header)
