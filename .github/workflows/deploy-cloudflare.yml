@@ -41,7 +41,7 @@ env:
   WRANGLER: npx --yes wrangler@4.142.0
 
 jobs:
-  deploy:
+  source:
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy') ||
       (github.event_name == 'workflow_run' &&
@@ -49,16 +49,91 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      eligible: ${{ steps.current.outputs.eligible }}
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Check current source before checkout or deployment credentials
+        id: current
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          try:
+              event = os.environ.get('GITHUB_EVENT_NAME')
+              if event not in ('workflow_run', 'workflow_dispatch'):
+                  raise ValueError('unsupported deployment event')
+              if os.environ.get('GITHUB_REF') != 'refs/heads/main':
+                  raise ValueError('deployment requires refs/heads/main')
+              repository, selected = os.environ.get('GITHUB_REPOSITORY', ''), os.environ.get('DEPLOY_SHA', '')
+              if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9][A-Za-z0-9_.-]*', repository):
+                  raise ValueError('invalid repository identity')
+              if not re.fullmatch(r'[0-9a-f]{40}', selected):
+                  raise ValueError('invalid selected deployment SHA')
+              request = Request('https://api.github.com/repos/' + repository + '/git/ref/heads/main', headers={
+                  'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
+                  'User-Agent': 'SkipperCast-deploy-source-check'})
+              with urlopen(request, timeout=15) as response:
+                  main = json.load(response)
+              if not isinstance(main, dict) or main.get('ref') != 'refs/heads/main':
+                  raise ValueError('main ref metadata unavailable')
+              current = main.get('object')
+              if (not isinstance(current, dict) or current.get('type') != 'commit'
+                      or not re.fullmatch(r'[0-9a-f]{40}', current.get('sha', '') if isinstance(current.get('sha'), str) else '')):
+                  raise ValueError('main commit metadata unavailable')
+              eligible = current['sha'] == selected
+              if not eligible and event == 'workflow_dispatch':
+                  raise ValueError('selected SHA is no longer current main; dispatch main again')
+              with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+                  output.write('eligible=' + ('true' if eligible else 'false') + '\n')
+              if eligible:
+                  print('Current main source eligible:', selected)
+              else:
+                  print('::notice::Selected CI source is no longer current main; deployment held before checkout.')
+          except (OSError, ValueError, TypeError, KeyError) as error:
+              print('::error::Deployment source eligibility unavailable:', error, file=sys.stderr)
+              sys.exit(1)
+          PY
+
+  deploy:
+    needs: source
+    if: >-
+      needs.source.result == 'success' && needs.source.outputs.eligible == 'true' &&
+      (
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+      )
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
+      - name: Reject manual non-main deployment before checkout
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # Do not execute a selected branch's scripts before verifying its ref.
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Manual deployment requires main. Select main and dispatch again."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The commit CI tested, not whatever main is by the time this runs.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Require current main and successful exact-SHA CI
+        run: python3 scripts/check_deploy_source.py
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
@@ -83,6 +158,8 @@ jobs:
             echo "::error::CLOUDFLARE_SITE_URL is unset, so this deploy could not be smoke-tested. Set the repository variable (docs/cloudflare.md)."
             exit 1
           fi
+      - name: Recheck source immediately before production writes
+        run: python3 scripts/check_deploy_source.py
       - name: Back up D1, migrate and deploy
         id: deploy
         env:

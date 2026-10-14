@@ -7,8 +7,8 @@ SkipperCast runs only on a Cloudflare account the owner controls: the Worker, th
 - **`wrangler.jsonc`**: the Worker (`dist/server/index.js`), the fingerprinted site (`dist/client`), D1 as `DB`, the R2 bucket `skippercast-feeds` as `FEEDS`, and a cron trigger every 15 minutes.
 - **`/feeds/<branch>/<path>`**: the site's single route for published feeds (`conditions`, `data`, `forecasts`). It serves from R2 when the bucket is bound, and otherwise from the GitHub branch through Cloudflare's cache. It supports Range and ETag. The browser uses this route for every feed, so moving storage needs no front-end change. Each response names its source in the `X-Feed-Source` header (`r2`, `github` or `assets`). `/api/health` reports only the service, version and build.
 - **Publishing:**
-  - After each GitHub push, `scripts/publish_branch_r2.sh` mirrors that branch's committed files to R2 under the same path.
-  - `scripts/publish_r2.py` hashes files and uploads only changes. The conditions feed has about 1,500 files, and most don't change each cycle. Data files go before `latest`/`index`/`manifest` pointers, and deletions go last.
+  - After each GitHub push, `scripts/publish_branch_r2.sh` publishes that branch's committed files as one R2 snapshot. Ordinary feed URLs and the GitHub branch layout stay unchanged.
+  - `scripts/publish_r2.py` uploads immutable SHA-256 objects, verifies changed objects and the complete snapshot by read-back, then conditionally commits one release pointer. A conflicting publisher fails rather than replacing a release committed during its upload. Forecast API requests pin the same snapshot for manifest and tile reads. See [R2 snapshot publication](operations/runbooks/r2-snapshots.md) for migration, rollback and retained-object storage.
   - It runs in the live loop (conditions and forecasts) and the daily job (data), and does nothing without credentials.
   - With credentials, an upload error fails the job: the site serves R2 first, so a failed upload would otherwise leave users on stale data. Every `latest.json` carries `published_at` and `run_id` (the GitHub run, or `local`).
   - When the repository variable `FEEDS_PUBLIC_BASE` is set (for example `https://skippercast.g4651.workers.dev`), the live cycle and daily job then fetch `/feeds/<branch>/latest.json` from that site with `scripts/verify_published_feed.py` and fail unless it serves this run.
@@ -64,11 +64,11 @@ Nothing reads branch history: the app, the Worker's GitHub fallback and the coll
 | Prefix | Expires after | Why |
 | --- | --- | --- |
 | `runs/` | 7 days | Run manifests; nothing else deletes them. |
-| `data/history/`, `data/regions/<id>/history/` | 100 days | Backstop. The daily job keeps 90 days and the R2 sync deletes what leaves the snapshot. |
+| `data/history/`, `data/regions/<id>/history/` | 100 days | Backstop. The daily job keeps 90 days and current snapshots stop exposing files that leave the branch; legacy stable objects retain this expiry backstop. |
 | `conditions/regions/<id>/verification-archive/` | 45 days | Backstop. The live job keeps 30 days of rows. |
 | all (multipart uploads) | 7 days | R2's default rule, restated because `set` replaces it. |
 
-R2 counts age from upload, so each backstop expires files some days *after* the pipeline stops referencing them, never before; a file still listed in a feed must not disappear from R2. The backstops catch objects the hash-indexed sync can no longer see, such as after a lost `.r2-sync.json` index. `latest.json`, tiles and other current files have no expiry. To inspect the rules without applying them, run `python3 scripts/r2_lifecycle.py --print`; `npx wrangler r2 bucket lifecycle list skippercast-feeds` shows what is live. If the deploy logs an `R2 lifecycle` warning (most likely the deploy token lacks **Workers R2 Storage · Edit**), the rules were not changed; feeds are unaffected.
+R2 counts age from upload, so each backstop expires files some days *after* the pipeline stops referencing them, never before; a file still listed in a feed must not disappear from R2. The backstops cover legacy stable objects. Immutable snapshot objects and release records are retained during migration and have no automatic expiry or garbage collection; they must never be given a blanket age expiry while current snapshots may reference them. `latest.json`, tiles and other current files have no expiry. To inspect the rules without applying them, run `python3 scripts/r2_lifecycle.py --print`; `npx wrangler r2 bucket lifecycle list skippercast-feeds` shows what is live. If the deploy logs an `R2 lifecycle` warning (most likely the deploy token lacks **Workers R2 Storage · Edit**), the rules were not changed; feeds are unaffected.
 
 ## Cost
 

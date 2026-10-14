@@ -364,7 +364,7 @@ test('N7: fleet-ais.yml label_import runs `label import` on a file under FLEET_V
     return {status: r.status, err: r.stdout + r.stderr, calls: existsSync(join(dir, 'calls')) ? readFileSync(join(dir, 'calls'), 'utf8') : ''};
   };
   try {
-    assert.deepEqual(run({LABEL_IMPORT: 'labels/proposed.json'}), {status: 0, err: '',
+    assert.deepEqual(run({LABEL_IMPORT: 'labels/proposed.json'}), {status: 0, err: 'AIS run kind=label-import trigger=unknown cron=none source=unknown\n',
       calls: `-m skippercast.fleet.ais label import ${join(fleetVar, 'labels', 'proposed.json')}\n`});
     for (const env of [{WINDOW_FROM: '2026-01-01'}, {BACKFILL_MONTH: '2026-01'}, {VALIDATE: 'true'}]) {
       const r = run({LABEL_IMPORT: 'labels/proposed.json', ...env});

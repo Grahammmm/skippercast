@@ -11,10 +11,12 @@ import json
 import math
 from pathlib import Path
 import re
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from skippercast.fleet.ais import process
 from skippercast.fleet.ais.events import iso_utc
@@ -288,6 +290,156 @@ class RunTests(ProcessTestCase):
         self.assertEqual(state.season_events("2026"), [])
 
 
+class AggregateRetryTests(ProcessTestCase):
+    @staticmethod
+    def cells(count, *, season="2026", computed_at=None):
+        return [process.aggregate.Cell(
+            id32("aggregate-retry", season, str(i)), REGION.id, "grid", "{}", f"synthetic-{i}", 10.0, -150.0,
+            season, None, "drift-anchor", 3, 3, 60, "2026-10-05", "2026-10-05", "internal-only",
+            computed_at or iso_utc(T0)) for i in range(count)]
+
+    class Remote(FakeWorker):
+        """Apply cell upserts/deletes and the Worker's computed_at prune, with an injected failure."""
+        def __init__(self, *, fail_at=None, lose_response=False):
+            super().__init__()
+            self.remote = {"stale": {"computed_at": "old"}}
+            self.fail_at, self.lose_response, self.attempts = fail_at, lose_response, 0
+
+        def post(self, path, body):
+            if "aggregates" not in body:
+                return super().post(path, body)
+            self.attempts += 1
+            failing = self.attempts == self.fail_at
+            if failing and not self.lose_response:
+                raise process.WorkerError("synthetic interrupted aggregate upload")
+            a = body["aggregates"]
+            self.remote.update({c["id"]: c for c in a["cells"]})
+            for key in a["delete"]:
+                self.remote.pop(key, None)
+            if "prune" in a:
+                self.remote = {key: row for key, row in self.remote.items() if row["computed_at"] == a["prune"]}
+            result = super().post(path, body)
+            if failing:
+                raise process.WorkerError("synthetic lost aggregate response")
+            return result
+
+    def context(self, worker, now_ms=T0):
+        state = State(self.root / "state.sqlite")
+        self.addCleanup(state.close)
+        return process.Context(REGION, worker, self.store, state, self.root, now_ms)
+
+    def reopen(self, ctx, now_ms):
+        ctx.state.close()
+        return self.context(ctx.worker, now_ms)
+
+    def compute(self, count, *, season="2026"):
+        return patch.object(process.aggregate, "compute", side_effect=lambda *a, **kw:
+                            self.cells(count, season=season, computed_at=kw["computed_at"]))
+
+    def test_failed_full_upload_does_not_acknowledge_partial_local_digests(self):
+        ctx = self.context(self.Remote(fail_at=2))
+        with self.compute(501), self.assertRaises(process.WorkerError):
+            process.push_aggregates(ctx, {"2026"}, allow_prune=True)
+        self.assertEqual(len(ctx.worker.remote), 501, "500 posted cells and the stale remote cell")
+        self.assertEqual(ctx.state.cells("2026"), {}, "the complete season has not been acknowledged")
+
+    def test_restart_replays_pending_season_and_prunes_with_one_new_generation(self):
+        for fail_at in (1, 2):
+            for lose_response in (False, True):
+                with self.subTest(fail_at=fail_at, lose_response=lose_response):
+                    # Each interruption gets its own persistent state and remote store.
+                    self.root = Path(self.tmp.name) / f"failure-{fail_at}-{lose_response}"
+                    self.store = AisStore(self.root)
+                    worker = self.Remote(fail_at=fail_at, lose_response=lose_response)
+                    ctx = self.context(worker)
+                    with self.compute(501), self.assertRaises(process.WorkerError):
+                        process.push_aggregates(ctx, {"2026"}, allow_prune=True)
+                    worker.fail_at = None
+                    retry = self.reopen(ctx, T0 + HOUR)
+                    with self.compute(501):
+                        counts = process.push_aggregates(retry, set())
+                    desired = {c.id for c in self.cells(501)}
+                    self.assertEqual(set(worker.remote), desired)
+                    self.assertEqual(set(retry.state.cells("2026")), desired)
+                    self.assertEqual({c["computed_at"] for c in worker.remote.values()}, {iso_utc(T0 + HOUR)})
+                    self.assertEqual((counts["cells"], counts["requests"]), (501, 2))
+                    self.assertEqual(worker.posts("activity", "aggregates")[-1]["aggregates"]["prune"],
+                                     iso_utc(T0 + HOUR))
+                    with self.compute(501):
+                        self.assertEqual(process.push_aggregates(retry, {"2026"})["requests"], 0)
+
+    def test_restarted_partial_state_does_not_acquire_prune_authority(self):
+        ctx = self.context(self.Remote(fail_at=2))
+        with self.compute(501), self.assertRaises(process.WorkerError):
+            process.push_aggregates(ctx, {"2026"})
+        ctx.worker.fail_at = None
+        retry = self.reopen(ctx, T0 + HOUR)
+        with self.compute(501):
+            process.push_aggregates(retry, {"2026"})
+        self.assertEqual(len(retry.state.cells("2026")), 501)
+        self.assertIn("stale", retry.worker.remote)
+        self.assertFalse(any("prune" in p["aggregates"] for p in retry.worker.posts("activity", "aggregates")))
+
+    def test_pending_empty_season_can_finish_after_a_lost_final_response(self):
+        ctx = self.context(self.Remote(fail_at=1, lose_response=True))
+        with self.compute(0), self.assertRaises(process.WorkerError):
+            process.push_aggregates(ctx, {"2026"}, allow_prune=True)
+        ctx.worker.fail_at = None
+        retry = self.reopen(ctx, T0 + HOUR)
+        with self.compute(0):
+            self.assertEqual(process.push_aggregates(retry, set())["requests"], 1)
+            self.assertEqual(process.push_aggregates(retry, set())["requests"], 0)
+        self.assertEqual(retry.worker.remote, {})
+
+    def test_failed_local_acknowledgement_retains_replay_intent_and_rolls_back_digests(self):
+        ctx = self.context(self.Remote())
+        ctx.state.db.executescript("""CREATE TRIGGER fail_rebuild_ack BEFORE DELETE ON aggregate_rebuilds
+            BEGIN SELECT RAISE(ABORT, 'synthetic local acknowledgement failure'); END;""")
+        with self.compute(501), self.assertRaisesRegex(sqlite3.IntegrityError, "acknowledgement failure"):
+            process.push_aggregates(ctx, {"2026"}, allow_prune=True)
+        self.assertEqual(ctx.state.cells("2026"), {}, "the failed transaction cannot acknowledge any cells")
+        ctx.state.db.execute("DROP TRIGGER fail_rebuild_ack")
+        retry = self.reopen(ctx, T0 + HOUR)
+        with self.compute(501):
+            counts = process.push_aggregates(retry, set())
+        desired = {c.id for c in self.cells(501)}
+        self.assertEqual((counts["cells"], counts["requests"]), (501, 2))
+        self.assertEqual(set(retry.worker.remote), desired)
+        self.assertEqual(set(retry.state.cells("2026")), desired)
+
+    def test_pending_rebuild_cannot_prune_a_different_module(self):
+        ctx = self.context(self.Remote())
+        ctx.state.start_aggregate_rebuild("2026", "another-module")
+        with self.assertRaisesRegex(process.WorkerError, "finish it before changing modules"):
+            process.push_aggregates(ctx, set())
+        self.assertEqual(ctx.worker.posts("activity", "aggregates"), [])
+        self.assertEqual(ctx.worker.remote, {"stale": {"computed_at": "old"}})
+
+    def test_incremental_retry_deletes_an_early_chunk_cell_that_disappears(self):
+        ctx = self.context(self.Remote(fail_at=2))
+        cells = self.cells(502)
+        anchor = cells[0]
+        ctx.state.update_cells("2026", {anchor.id: process._digest(anchor)}, [], full=True)
+        ctx.worker.remote[anchor.id] = anchor.as_row()
+        with self.compute(502), self.assertRaises(process.WorkerError):
+            process.push_aggregates(ctx, {"2026"})
+        vanished = cells[1].id
+        self.assertIn(vanished, ctx.worker.remote)
+        ctx.worker.fail_at = None
+        retry = self.reopen(ctx, T0 + HOUR)
+        current = cells[:1] + cells[2:]
+        with patch.object(process.aggregate, "compute", side_effect=lambda *a, **kw:
+                          [replace(c, computed_at=kw["computed_at"]) for c in current]):
+            counts = process.push_aggregates(retry, {"2026"})
+            self.assertEqual(process.push_aggregates(retry, {"2026"})["requests"], 0)
+        desired = {c.id for c in current}
+        self.assertEqual(counts["deleted"], 1)
+        self.assertEqual(set(retry.state.cells("2026")), desired)
+        self.assertEqual(set(retry.worker.remote), desired | {"stale"})
+        self.assertNotIn(vanished, retry.worker.remote)
+        self.assertFalse(any("prune" in p["aggregates"] for p in retry.worker.posts("activity", "aggregates")))
+
+
 class HookTests(unittest.TestCase):
     def test_process_runs_without_any_watch_or_match_module(self):
         """Acceptance 5: with skippercast.fleet.ais.match and .watch unimportable, a full scheduled run completes.
@@ -340,7 +492,8 @@ class WorkflowTests(unittest.TestCase):
 
     def test_fleet_ais_runs_on_our_runner_every_30_minutes(self):
         text, header = _header("fleet-ais.yml")
-        self.assertIn('cron: "3,33 * * * *"', header)
+        self.assertIn('cron: "17 * * * *"', header)
+        self.assertIn('cron: "47 * * * *"', header)
         self.assertIn("permissions: {}", header)
         self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''", text)
         self.assertIn("group: fleet-ais", header)

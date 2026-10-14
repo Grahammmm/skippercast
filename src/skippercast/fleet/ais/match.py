@@ -86,6 +86,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import logging
+import math
 from typing import Any, Iterable, Mapping
 from zoneinfo import ZoneInfo
 
@@ -98,7 +99,7 @@ from .schedule import SCHEDULE, correlate, load_report_days, rules as schedule_r
 from .watch import write_watch
 
 __all__ = ["SHIP_TYPES", "PRESENCE_DAYS", "STRONG_METHODS", "Static", "Seen", "Decision", "decide", "gate_problem",
-           "match", "refresh_watch", "read_snapshot", "read_watch_rows", "scan", "MatchState"]
+           "match", "refresh_watch", "historical_targets", "read_snapshot", "read_watch_rows", "scan", "MatchState"]
 
 SHIP_TYPES = frozenset({30, 37, 60, 69})   # fishing, pleasure craft, passenger, passenger (no additional information)
 LENGTH_TOLERANCE = 0.2
@@ -215,6 +216,17 @@ class _Vessel:
         return "agrees" if abs(ais_ft - self.length_ft) <= LENGTH_TOLERANCE * self.length_ft else "contradicts"
 
 
+def _rejected_pairs(reviews: Iterable[Mapping]) -> set[tuple[str, int]]:
+    rejected = set()
+    for r in reviews:
+        decision = r.get("decision") or {}
+        if r.get("kind") == "mmsi" and r.get("status") == "decided" and decision.get("action") == "reject-mmsi":
+            vessel = decision.get("vessel_id") or r.get("subject_id")
+            if vessel and str(decision.get("mmsi") or "").isdigit():
+                rejected.add((vessel, int(decision["mmsi"])))
+    return rejected
+
+
 def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], statics: Mapping[int, Static],
            seen: Mapping[int, Seen], presence: Mapping[int, Mapping[str, int]], prior: Mapping[int, Mapping],
            now_ms: int, *, at_sea: Mapping[int, Iterable[str]] | None = None,
@@ -246,13 +258,7 @@ the days it was inside a port geofence (contradictions, schedule.py).
             by_name.setdefault(n, set()).add(v.id)
         if v.call_sign and v.mmsi is None:
             by_call.setdefault(v.call_sign, set()).add(v.id)
-    rejected = set()
-    for r in reviews:
-        decision = r.get("decision") or {}
-        if r.get("kind") == "mmsi" and r.get("status") == "decided" and decision.get("action") == "reject-mmsi":
-            vessel = decision.get("vessel_id") or r.get("subject_id")
-            if vessel and str(decision.get("mmsi") or "").isdigit():
-                rejected.add((vessel, int(decision["mmsi"])))
+    rejected = _rejected_pairs(reviews)
 
     out = Decision([], [], [], {})
 
@@ -607,6 +613,44 @@ def read_watch_rows(worker, region_id: str, status: str | None = None) -> list[d
         cursor = page.get("next")
         if not cursor:
             return rows
+
+
+def historical_targets(worker, region_id: str, vessels: Iterable[Mapping]) -> dict[int, VesselRef]:
+    """Already approved watch-only bindings, rechecked against the current registry and decisions.
+
+    This is selection, not historical matching or proof of past MMSI ownership.
+    Registry-attributed MMSIs are selected by process.registry_refs instead.
+    """
+    fleet = [_Vessel(v) for v in vessels if v.get("status") != "excluded"]
+    ids = Counter(v.id for v in fleet)
+    registered = {v.id for v in fleet if v.row.get("mmsi") not in (None, "")}
+    by_id = {v.id: v for v in fleet if v.row.get("mmsi") in (None, "") and v.id not in registered and ids[v.id] == 1}
+    if not by_id:
+        return {}
+    owners = {v.mmsi for v in fleet if v.mmsi is not None}
+    rows = read_watch_rows(worker, region_id, "watched")
+    reviews, cursor = [], "r:"
+    while cursor and cursor.startswith("r:"):
+        page = worker.get("snapshot", region=region_id, cursor=cursor)
+        reviews.extend(page.get("reviews") or [])
+        cursor = page.get("next")
+    rejected = _rejected_pairs(reviews)
+    # A stored watch row has the Worker's MMSI syntax; ambiguous duplicate rows fail closed.
+    valid = [(int(text), row) for row in rows if (text := str(row.get("mmsi") or ""))
+             and text.isascii() and text.isdigit() and text[0] != "0" and len(text) <= 9]
+    counts = Counter(m for m, _ in valid)
+    targets = {}
+    for mmsi, row in valid:
+        vessel = by_id.get(row.get("vessel_id"))
+        confidence = row.get("confidence")
+        if vessel is None or mmsi in owners or counts[mmsi] != 1 or row.get("status") != "watched":
+            continue
+        if gate_problem(row) is not None or not math.isfinite(confidence) or confidence > 1:
+            continue
+        if row.get("match_method") == "admin" or (vessel.id, mmsi) in rejected:
+            continue   # admin requires a pinned registry MMSI; a rejected watch pair is never revived here
+        targets[mmsi] = vessel.ref
+    return targets
 
 
 def refresh_watch(ctx) -> dict:

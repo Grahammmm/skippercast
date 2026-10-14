@@ -4,7 +4,7 @@ import {Hono} from 'hono';
 import type {Context} from 'hono';
 import {answer as modelAnswer, meta as modelMeta, MODELS as FORECAST_MODELS, QueryError} from '../model-api.js';
 import type {TileStore} from '../model-api.js';
-import {readFeed} from '../feeds.ts';
+import {createFeedReader} from '../feeds.ts';
 import {cached, cacheKey} from '../edge-cache.ts';
 import {deployment, build, PUBLIC_TTL} from '../config.ts';
 import {json} from '../http.ts';
@@ -13,9 +13,12 @@ import {waitUntil} from './util.ts';
 import type {AppEnv} from '../env.ts';
 
 const base = deployment.forecast_feed;
-const store: TileStore = {
-  manifest: model => FORECAST_MODELS[model] ? readFeed(`${base}/${model}/manifest.json`) : null,
-  tile: (model, key) => FORECAST_MODELS[model] && /^-?\d{1,3}_-?\d{1,3}$/.test(key) ? readFeed(`${base}/${model}/tiles/${key}.json`) : null};
+function tileStore(): TileStore {
+  const readFeed = createFeedReader();
+  return {
+    manifest: model => FORECAST_MODELS[model] ? readFeed(`${base}/${model}/manifest.json`) : null,
+    tile: (model, key) => FORECAST_MODELS[model] && /^-?\d{1,3}_-?\d{1,3}$/.test(key) ? readFeed(`${base}/${model}/tiles/${key}.json`) : null};
+}
 
 function respond(c: Context<AppEnv>, compute: () => Promise<unknown>): Promise<Response> {
   const url = new URL(c.req.url);
@@ -29,5 +32,5 @@ function respond(c: Context<AppEnv>, compute: () => Promise<unknown>): Promise<R
 
 export const om = new Hono<AppEnv>();
 const limit = rateLimit('PUBLIC_LIMITER', 'om');
-for (const kind of ['forecast', 'marine']) om.get(`/api/om/v1/${kind}`, limit, c => respond(c, () => modelAnswer(kind, new URL(c.req.url).searchParams, store)));
-om.get('/api/om/data/:model{[a-z0-9_]+}/static/meta.json', limit, c => respond(c, () => modelMeta(c.req.param('model'), store)));
+for (const kind of ['forecast', 'marine']) om.get(`/api/om/v1/${kind}`, limit, c => respond(c, () => modelAnswer(kind, new URL(c.req.url).searchParams, tileStore())));
+om.get('/api/om/data/:model{[a-z0-9_]+}/static/meta.json', limit, c => respond(c, () => modelMeta(c.req.param('model'), tileStore())));

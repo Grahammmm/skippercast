@@ -100,7 +100,7 @@ class SyncTests(unittest.TestCase):
     def test_second_run_uploads_only_changes_and_deletes_removed(self):
         import boto3
         from moto import mock_aws
-        from scripts.publish_r2 import sync
+        from scripts.publish_r2 import sync_legacy as sync
         with mock_aws(), tempfile.TemporaryDirectory() as d:
             s3 = boto3.client('s3', region_name='us-east-1')
             s3.create_bucket(Bucket='feeds')

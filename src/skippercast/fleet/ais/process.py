@@ -34,16 +34,22 @@ listener's raw store. A scheduled run, in order:
    changed are sent, and cells that vanished are deleted. A season the state has
    never seen is sent whole; the Worker prunes that module's other cells of the
    season only with ``--allow-prune`` or when the state predates the season.
+   An interrupted full upload authorized to prune stays pending and is replayed on the next
+   aggregate step, with one timestamp for all cells before any final prune.
 6. **retention** of the raw store (the listener also runs it hourly).
 7. **processed**: ``job_state`` ``fleet.ais.<region>.processed``.
 
 ``--from DATE --to DATE`` (region-local days, ``--to`` inclusive) re-runs only
 steps 3 to 5 for trips departing in that window, reading positions up to the
-longest open-trip limit past it, and leaves the resume times alone.
+longest open-trip limit past it, and leaves the resume times alone. Its targets
+come from current eligible registry MMSIs and already approved strong watch
+bindings, read without re-running matching or refreshing the listener. These
+current bindings do not establish historical ownership of an MMSI.
 
 ``ais/state.sqlite`` holds the processor's state: resume times per MMSI and
 source, hourly counters, the listener counters last seen, the events pushed
-and the aggregate cells' digests, and a run log. If it is lost, re-run the
+and the aggregate cells' digests, unfinished full uploads authorized to prune,
+and a run log. If it is lost, re-run the
 windows still in the raw store (``--from``); events older than the raw store's
 ``raw_days`` then drop out of the aggregates until a backfill (CF-47).
 
@@ -81,7 +87,7 @@ from .segment import ActivityThresholds, prepare, split_trips
 from .store import AisStore, ais_root, retention_limits
 
 __all__ = ["SOURCE_RIGHTS", "Context", "Derived", "State", "VesselRef", "Worker", "WorkerError", "derive",
-           "downsample", "hooks", "hour_counts", "main", "registry_targets", "run"]
+           "downsample", "hooks", "hour_counts", "main", "historical_targets", "registry_refs", "registry_targets", "run"]
 
 MINUTE, HOUR, DAY = 60_000, 3_600_000, 86_400_000
 SETTLE_MS = 10 * MINUTE          # positions younger than this wait for the next run
@@ -184,6 +190,7 @@ CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, mmsi INTEGER NOT NULL, s
 CREATE INDEX IF NOT EXISTS events_window ON events (mmsi, source, departed_ms);
 CREATE INDEX IF NOT EXISTS events_season ON events (season);
 CREATE TABLE IF NOT EXISTS cells (id TEXT PRIMARY KEY, season TEXT NOT NULL, digest TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS aggregate_rebuilds (season TEXT PRIMARY KEY, module TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT, counts TEXT);
 """
 
@@ -253,13 +260,25 @@ class State:
     def cells(self, season: str) -> dict[str, str]:
         return dict(self.db.execute("SELECT id, digest FROM cells WHERE season=?", (season,)).fetchall())
 
+    def aggregate_rebuilds(self) -> dict[str, str]:
+        """Authorized full rebuilds still pending, including seasons a later trip run no longer touches."""
+        return dict(self.db.execute("SELECT season,module FROM aggregate_rebuilds"))
+
+    def start_aggregate_rebuild(self, season: str, module: str) -> None:
+        """Remember existing prune authority before the first remote write."""
+        self.db.execute("INSERT INTO aggregate_rebuilds VALUES(?,?) ON CONFLICT(season) DO UPDATE SET "
+                        "module=excluded.module", (season, module))
+
     def update_cells(self, season: str, digests: Mapping[str, str], deleted: Iterable[str], full: bool) -> None:
+        """Acknowledge uploaded cells; completing a full rebuild clears its intent in the same transaction."""
         with self.db:
             self.db.execute("BEGIN")
             if full:
                 self.db.execute("DELETE FROM cells WHERE season=?", (season,))
             self.db.executemany("DELETE FROM cells WHERE id=?", [(i,) for i in deleted])
             self.db.executemany("INSERT OR REPLACE INTO cells VALUES(?,?,?)", [(i, season, d) for i, d in digests.items()])
+            if full:
+                self.db.execute("DELETE FROM aggregate_rebuilds WHERE season=?", (season,))
 
     def log_run(self, run_id: str, started_at: str, finished_at: str | None, counts: Mapping | None) -> None:
         self.db.execute("INSERT OR REPLACE INTO runs VALUES(?,?,?,?)",
@@ -402,32 +421,57 @@ class Context:
         return iso_utc(self.now_ms)
 
 
-def hooks() -> dict[str, Callable]:
-    """CF-46's ``refresh_watch`` and ``match`` from ``skippercast.fleet.ais.match``, when that module exists."""
+def _match_module():
     name = f"{__package__}.match"
     try:
-        module = importlib.import_module(name)
+        return importlib.import_module(name)
     except ModuleNotFoundError as error:
         if error.name != name:
             raise
-        return {}
+        return None
+
+
+def hooks() -> dict[str, Callable]:
+    """CF-46's ``refresh_watch`` and ``match`` from ``skippercast.fleet.ais.match``, when that module exists."""
+    module = _match_module()
     return {hook: getattr(module, hook) for hook in HOOKS if callable(getattr(module, hook, None))}
 
 
-def registry_targets(worker: Worker, region_id: str) -> dict[int, VesselRef]:
-    """Registry vessels with an MMSI (snapshot pages from the vessels section); an MMSI on two vessels is left out."""
-    found: dict[int, VesselRef | None] = {}
-    cursor = "v:"
+def _registry_vessels(worker: Worker, region_id: str) -> list[dict]:
+    vessels, cursor = [], "v:"
     while cursor and cursor.startswith("v:"):
         page = worker.get("snapshot", region=region_id, cursor=cursor)
-        for vessel in page.get("vessels") or []:
-            mmsi = str(vessel.get("mmsi") or "")
-            if not mmsi.isdigit() or vessel.get("status") == "excluded":
-                continue
-            ref = VesselRef(vessel["id"], vessel.get("vessel_class"), vessel.get("port_id"))
-            found[int(mmsi)] = None if int(mmsi) in found else ref
+        vessels.extend(page.get("vessels") or [])
         cursor = page.get("next")
+    return vessels
+
+
+def registry_refs(vessels: Iterable[Mapping]) -> dict[int, VesselRef]:
+    """Eligible registry MMSIs; preserve the processor's exclusion and duplicate rules."""
+    found: dict[int, VesselRef | None] = {}
+    for vessel in vessels:
+        mmsi = str(vessel.get("mmsi") or "")
+        if not mmsi.isdigit() or vessel.get("status") == "excluded":
+            continue
+        ref = VesselRef(vessel["id"], vessel.get("vessel_class"), vessel.get("port_id"))
+        found[int(mmsi)] = None if int(mmsi) in found else ref
     return {m: ref for m, ref in found.items() if ref is not None}
+
+
+def registry_targets(worker: Worker, region_id: str) -> dict[int, VesselRef]:
+    """Registry vessels with an MMSI; an MMSI on two vessels is left out."""
+    return registry_refs(_registry_vessels(worker, region_id))
+
+
+def historical_targets(worker: Worker, region_id: str) -> dict[int, VesselRef]:
+    """Read current approved registry/watch bindings without scanning, matching or updating the listener."""
+    vessels = _registry_vessels(worker, region_id)
+    targets = registry_refs(vessels)
+    module = _match_module()
+    if module is not None:
+        for mmsi, ref in module.historical_targets(worker, region_id, vessels).items():
+            targets.setdefault(mmsi, ref)   # the registry remains authoritative
+    return targets
 
 
 def push_heartbeat(ctx: Context) -> dict:
@@ -545,7 +589,12 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
     and a fresh or lost state mirrors only the raw store's window."""
     params = aggregate.AggregateParams.from_region(ctx.region)
     counts = {"cells": 0, "deleted": 0, "requests": 0}
-    for season in sorted(seasons):
+    rebuilding = ctx.state.aggregate_rebuilds()
+    for season in sorted(set(seasons) | rebuilding.keys()):
+        pending = rebuilding.get(season)
+        if pending is not None and pending != params.module:
+            raise WorkerError(f"unfinished aggregate rebuild for {season} uses module {pending!r}; "
+                              "finish it before changing modules")
         events = aggregate.prefer_sources(ctx.state.season_events(season), SOURCE_PRECEDENCE)
         legacy = aggregate.legacy_events(events)
         if legacy:
@@ -554,14 +603,16 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
             counts["legacy_events"] = counts.get("legacy_events", 0) + legacy
         cells = aggregate.compute(events, params, now_ms=ctx.now_ms, tz=ctx.region.timezone, computed_at=ctx.computed_at)
         known = ctx.state.cells(season)
-        full = not known
+        full = pending is not None or not known
         digests = {c.id: _digest(c) for c in cells}
         changed = [c for c in cells if full or known.get(c.id) != digests[c.id]]
         deleted = [] if full else sorted(set(known) - set(digests))
         chunks = max(1, -(-len(changed) // CELLS_PER_POST), -(-len(deleted) // CELLS_PER_POST))
         if not full and not changed and not deleted:
             continue
-        prune = full and _may_prune(ctx, season, allow_prune)
+        prune = full and (pending is not None or _may_prune(ctx, season, allow_prune))
+        if prune:
+            ctx.state.start_aggregate_rebuild(season, params.module)
         if full and not prune:
             log.warning("season %s is new to the processor state: sending its cells without pruning older ones "
                         "(run with --allow-prune once the state holds the whole season)", season)
@@ -572,8 +623,14 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
             if prune and k == chunks - 1:
                 body["prune"] = ctx.computed_at
             ctx.worker.post("activity", {"region": ctx.region.id, "aggregates": body})
-            ctx.state.update_cells(season, {c.id: digests[c.id] for c in part}, gone, full and k == 0)
+            if not prune:
+                # Preserve incremental deletion tracking if the computed set changes before retry.
+                ctx.state.update_cells(season, {c.id: digests[c.id] for c in part}, gone, full and k == 0)
             counts["requests"] += 1
+        if prune:
+            # A pending authorized rebuild replays the whole season with one timestamp before
+            # pruning. Acknowledge its complete mirror and clear replay intent atomically.
+            ctx.state.update_cells(season, digests, [], full=True)
         counts["cells"] += len(changed)
         counts["deleted"] += len(deleted)
     return counts
@@ -581,7 +638,8 @@ def push_aggregates(ctx: Context, seasons: Iterable[str], allow_prune: bool = Fa
 
 def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None = None, source: str = "aisstream",
         window: tuple[int, int] | None = None, mmsis: Iterable[int] | None = None,
-        hook_table: Mapping[str, Callable] | None = None, allow_prune: bool = False) -> dict:
+        hook_table: Mapping[str, Callable] | None = None, allow_prune: bool = False,
+        expected_targets: Mapping[int, VesselRef] | None = None) -> dict:
     """One processor run (module docstring); ``window`` re-runs only that departure window."""
     if source not in STORES:
         raise ValueError(f"no raw store for source {source!r} yet")
@@ -600,13 +658,17 @@ def run(region, worker: Worker, *, root: Path | None = None, now_ms: int | None 
             counts["heartbeat"] = push_heartbeat(ctx)
             if "refresh_watch" in table:
                 table["refresh_watch"](ctx)
-        targets = registry_targets(worker, region.id)
+        targets = registry_targets(worker, region.id) if window is None else historical_targets(worker, region.id)
         if window is None and "match" in table:
             for mmsi, ref in (table["match"](ctx) or {}).items():
                 targets.setdefault(mmsi, ref)   # AIS never overrides the registry's MMSI (CF-46 acceptance 3)
         if mmsis is not None:
             wanted = set(mmsis)
+            if window is not None and wanted - targets.keys():
+                raise ValueError("requested historical MMSIs lack approved registry/watch identities")
             targets = {m: ref for m, ref in targets.items() if m in wanted}
+        if expected_targets is not None and targets != dict(expected_targets):
+            raise ValueError("historical target selection changed; retry with the current approved identities")
         counts["trips"], seasons = push_trips(ctx, targets, window)
         counts["aggregates"] = push_aggregates(ctx, seasons, allow_prune)
         if window is None:

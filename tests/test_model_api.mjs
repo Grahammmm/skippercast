@@ -116,3 +116,103 @@ test('scripts/model_api.mjs (the Python pipeline sampler) runs under plain node 
     assert.equal(rejected.status, 3);assert.equal(JSON.parse(rejected.stdout).reason, 'Unknown model');
   } finally { rmSync(root, {recursive: true, force: true}); }
 });
+
+test('repeated models and same-tile points have bounded reads while retaining suffixes and values', async () => {
+  const counts = {manifests: 0, tiles: 0, decodedU: 0};
+  const counted = {
+    manifest: async m => { counts.manifests++; return manifest(m); },
+    tile: async () => {
+      counts.tiles++;
+      const tile = structuredClone(windTile), data = tile.fields.u10.data;
+      Object.defineProperty(tile.fields.u10, 'data', {get() { counts.decodedU++; return data; }});
+      return tile;
+    },
+  };
+  const params = new URLSearchParams({latitude: Array(50).fill('35.25').join(','), longitude: Array(50).fill('-120.75').join(','),
+    models: Array(100).fill('gfs_global').join(','), hourly: Array(100).fill('wind_speed_10m').join(','),
+    forecast_days: '8', timezone: 'UTC', timeformat: 'unixtime', wind_speed_unit: 'kn'});
+  const results = await answer('forecast', params, counted, 3600);
+  assert.equal(results.length, 50);
+  assert.deepEqual(counts, {manifests: 1, tiles: 1, decodedU: 1});
+  for (const r of results) {
+    assert.equal(r.hourly.wind_speed_10m_gfs_global[0], 9.7);
+    assert.equal(r.hourly.wind_speed_10m_gfs_global[6], null);
+    assert.deepEqual(Object.keys(r.hourly), ['time', 'wind_speed_10m_gfs_global']);
+    assert.equal(r.hourly_units.wind_speed_10m_gfs_global, 'kn');
+  }
+  // Request-local memoization must not reuse the preceding request's storage.
+  await answer('forecast', params, counted, 3600);
+  assert.deepEqual(counts, {manifests: 2, tiles: 2, decodedU: 2});
+});
+
+test('both models read each distinct tile once, including a null tile, and retain output order', async () => {
+  const manifests = [], tiles = [];
+  const counted = {
+    manifest: async m => { manifests.push(m); return {tiles: ['35_-121', '36_-121']}; },
+    tile: async (m, key) => { tiles.push(`${m}/${key}`); return key === '35_-121' ? windTile : null; },
+  };
+  const results = await answer('forecast', new URLSearchParams({latitude: '35.25,35.3,36.1,36.2',
+    longitude: '-120.75,-120.8,-120.9,-120.9', models: 'ecmwf_ifs025,gfs_global,ecmwf_ifs025',
+    hourly: 'temperature_2m,wind_speed_10m,temperature_2m', forecast_days: '1', timezone: 'UTC'}), counted, 3600);
+  assert.deepEqual(manifests, ['ecmwf_ifs025', 'gfs_global']);
+  assert.deepEqual(tiles, ['ecmwf_ifs025/35_-121', 'gfs_global/35_-121', 'ecmwf_ifs025/36_-121', 'gfs_global/36_-121']);
+  assert.deepEqual(Object.keys(results[0].hourly), ['time', 'temperature_2m_ecmwf_ifs025', 'wind_speed_10m_ecmwf_ifs025',
+    'temperature_2m_gfs_global', 'wind_speed_10m_gfs_global']);
+  assert.equal(results[0].hourly.temperature_2m_ecmwf_ifs025[0], 15);
+  assert.ok(results[2].hourly.wind_speed_10m_gfs_global.every(v => v === null));
+});
+
+test('duplicate marine variables are computed once without changing units or missing values', async () => {
+  const tile = structuredClone(waveTile), value = tile.fields.wave_height;
+  let accesses = 0;
+  Object.defineProperty(tile.fields, 'wave_height', {get() { accesses++; return value; }});
+  const r = await answer('marine', new URLSearchParams({latitude: '35.05', longitude: '-120.95',
+    hourly: Array(100).fill('wave_height').concat('swell_wave_height').join(','), forecast_days: '1',
+    length_unit: 'imperial', timezone: 'UTC'}), {manifest: async () => manifest('ncep_gfswave016'), tile: async () => tile}, 0);
+  assert.ok(accesses <= 3, `repeated variable caused ${accesses} field reads`);
+  assert.equal(r.hourly.wave_height[0], 6.56);
+  assert.equal(r.hourly_units.wave_height, 'ft');
+  assert.equal(r.hourly.swell_wave_height[0], null);
+});
+
+test('timezone formatter cost stays constant across fifty points and DST time axes remain correct', async () => {
+  const Original = Intl.DateTimeFormat;
+  let constructions = 0;
+  Intl.DateTimeFormat = new Proxy(Original, {construct(target, args) { constructions++; return Reflect.construct(target, args); }});
+  try {
+    const query = {hourly: 'wind_speed_10m', forecast_days: '8', timezone: 'America/Los_Angeles'};
+    const spring = Date.UTC(2026, 2, 8, 12) / 1000;
+    const one = await answer('forecast', new URLSearchParams({...query, latitude: '35.25', longitude: '-120.75'}), store, spring);
+    const oneCost = constructions;
+    constructions = 0;
+    const many = await answer('forecast', new URLSearchParams({...query, latitude: Array(50).fill('35.25').join(','),
+      longitude: Array(50).fill('-120.75').join(',')}), store, spring);
+    assert.equal(constructions, oneCost);
+    assert.ok(constructions <= 4, `formatter budget exceeded: ${constructions}`);
+    assert.deepEqual(one.hourly.time.slice(0, 4), ['2026-03-08T00:00', '2026-03-08T01:00', '2026-03-08T03:00', '2026-03-08T04:00']);
+    assert.equal(one.utc_offset_seconds, -25200);
+    assert.equal(one.timezone_abbreviation, 'PDT');
+    assert.deepEqual(many[49].hourly.time, one.hourly.time);
+    assert.notEqual(many[0].hourly.time, many[1].hourly.time, 'point time arrays remain independently mutable');
+    const fall = await answer('forecast', new URLSearchParams({...query, latitude: '35.25', longitude: '-120.75'}), store,
+      Date.UTC(2026, 10, 1, 12) / 1000);
+    assert.deepEqual(fall.hourly.time.slice(0, 4), ['2026-11-01T00:00', '2026-11-01T01:00', '2026-11-01T01:00', '2026-11-01T02:00']);
+    assert.equal(fall.utc_offset_seconds, -28800);
+    assert.equal(fall.timezone_abbreviation, 'PST');
+  } finally { Intl.DateTimeFormat = Original; }
+});
+
+test('all input validation precedes storage and a tile failure never becomes a cached null response', async () => {
+  let reads = 0;
+  const rejectStore = {manifest: async () => { reads++; return manifest('gfs_global'); },
+    tile: async () => { reads++; throw Error('tile unavailable'); }};
+  for (const bad of [{models: 'gfs_global,unknown'}, {hourly: 'wind_speed_10m,unknown'}, {forecast_days: '9'},
+    {timezone: 'No/Such_Zone'}, {wind_speed_unit: 'unknown'}, {latitude: '35.1,35.2'}]) {
+    await assert.rejects(answer('forecast', new URLSearchParams({latitude: '35.25', longitude: '-120.75', ...bad}), rejectStore, 0));
+    assert.equal(reads, 0);
+  }
+  const valid = new URLSearchParams({latitude: '35.25', longitude: '-120.75', hourly: 'wind_speed_10m'});
+  await assert.rejects(answer('forecast', valid, rejectStore, 0), /tile unavailable/);
+  await assert.rejects(answer('forecast', valid, rejectStore, 0), /tile unavailable/);
+  assert.equal(reads, 4);
+});
