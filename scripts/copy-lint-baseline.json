@@ -5,7 +5,6 @@
   {"file":"dist/charter-grounds.js","rule":"consecutive-not","text":"Captains named “ X ”; they did not publish GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef."},
   {"file":"dist/charter-grounds.js","rule":"method-name","text":"Outline survey depths X ft X · MLLW"},
   {"file":"dist/commercial-ais.html","rule":"consecutive-not","text":"AIS does not cover every boat; detection and classification errors remain possible. Apparent fishing effort is not proof of fishing or catches."},
-  {"file":"dist/export-ui.js","rule":"consecutive-not","text":"Offline notes are a separate HTML file for a phone, tablet or computer, not for import into a plotter. Files do not update automatically."},
   {"file":"dist/forecast.js","rule":"method-name","text":"NOAA GFS Wave 0.16°"},
   {"file":"dist/live-conditions.js","rule":"method-name","text":"X ft MLLW"},
   {"file":"dist/offline-pack.js","rule":"consecutive-not","text":"Street map tiles are not saved; OpenStreetMap does not allow bulk downloads. Planning aid · not a navigation chart."},

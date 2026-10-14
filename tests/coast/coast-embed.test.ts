@@ -12,13 +12,26 @@ import {coastPath} from '../../packages/coast/src/transport.ts';
 const viewerSource=readFileSync(new URL('../../packages/coast/src/coast3d/viewer.ts',import.meta.url),'utf8');
 const sha256=(text:string)=>createHash('sha256').update(text).digest('hex');
 
-// FE-61 deleted the standalone dist/coast.html; these are the sha256 digests of its
-// <main id="scene"> and <dialog id="sources"> markup on main before the deletion.
-test('the embed template is the standalone page\'s scene and sources markup, verbatim',()=>{
+// FE-61 deleted the standalone dist/coast.html; the original digests are the sha256 of its
+// <main id="scene"> and <dialog id="sources"> markup on main before the deletion. The
+// terrain shading controls (coast3d/shading.ts) are the only later additions: undoing
+// exactly SHADING_EDITS must give the original markup back.
+const SHADING_EDITS:[string,string][]=[
+ ['<span>Adapt to view</span>','<span>10 / 30 / 500 ft</span>'],
+ ['<div class="relief"><label for="sun-azimuth">Sun direction <b id="sun-azimuth-label">305°</b></label><input id="sun-azimuth" type="range" min="0" max="360" step="5" value="305"><span>Lighting only</span><span>Heights unchanged</span></div><div class="relief"><label for="photo-mix">Land <b id="photo-mix-label">Photo</b></label><input id="photo-mix" type="range" min="0" max="1" step="0.05" value="1"><span>Shaded relief</span><span>Photo</span></div><div class="layer-row"><label><input id="fixed-ramp" type="checkbox">Fixed depth colours</label><span>0–5,900 ft</span></div><p id="shading-readout" class="note" role="status">The depth colours span the seabed in view.</p>',''],
+ ['<div id="relief-chip" class="relief-chip">Seabed ×5 · land true scale</div>',''],
+ ['Contour lines fade across mixed-source joins to avoid switching depth floors within a triangle.','Contour lines fade across mixed-source joins to avoid switching depth intervals within a triangle.'],
+ [' Depth colours span the depths in the current view and the contour interval adapts to that range, never finer than each source supports (10 ft over lidar, 30 ft over survey and chart estimate, 500 ft over the regional model); the panel names the finest drawn. Hillshade and slope shading light the displayed surface, including any seabed exaggeration the chip names, and add no measurements.',''],
+];
+test('the embed template is the standalone page\'s scene and sources markup plus the shading controls',()=>{
  assert.ok(coastSceneMarkup.startsWith('<main id="scene"')&&coastSceneMarkup.endsWith('</main>'));
  assert.ok(coastSourcesMarkup.startsWith('<dialog id="sources">')&&coastSourcesMarkup.endsWith('</dialog>'));
- assert.equal(sha256(coastSceneMarkup),'b3a1435dd60739023d2785f669aa299444ee5d69ac3c4224266a15d5a653e6a5');
- assert.equal(sha256(coastSourcesMarkup),'086cd7e125c6555bb8681d03af90eee29ce073ec2d00a943c6baa29bde2ebc5c');
+ const undo=(text:string)=>SHADING_EDITS.reduce((t,[now,was])=>{if(!t.includes(now))return t;assert.equal(t.split(now).length,2,now);return t.replace(now,was);},text);
+ for(const [now] of SHADING_EDITS)assert.ok(coastSceneMarkup.includes(now)||coastSourcesMarkup.includes(now),now);
+ assert.equal(sha256(undo(coastSceneMarkup)),'b3a1435dd60739023d2785f669aa299444ee5d69ac3c4224266a15d5a653e6a5');
+ assert.equal(sha256(undo(coastSourcesMarkup)),'086cd7e125c6555bb8681d03af90eee29ce073ec2d00a943c6baa29bde2ebc5c');
+ assert.equal(sha256(coastSceneMarkup),'e27748cde200cec25a8d43a9906e80be84a3d763d909a6ba2fec07f079e3faaf');
+ assert.equal(sha256(coastSourcesMarkup),'38842af57c8b97c0e6feb1148ac450ad634e50a45360cf193caa945b8c3e1bef');
  assert.equal(coastEmbedTemplate,coastSceneMarkup+coastSourcesMarkup);
 });
 
@@ -72,7 +85,7 @@ function fixture(){
   load(){calls.push(['load']);return Promise.resolve(true);}setPerspective(m:unknown){calls.push(['setPerspective',m]);}setLocation(p:unknown){calls.push(['setLocation',p]);}
   setSpecies(id:string){calls.push(['setSpecies',id]);return id!=='tuna';}setHour(at:unknown){calls.push(['setHour',at]);}setDepthLimit(ft:unknown){calls.push(['setDepthLimit',ft]);}
   setCurrentLayer(id:unknown){calls.push(['setCurrentLayer',id]);}selectHabitat(id:unknown){calls.push(['selectHabitat',id]);}setVisible(v:unknown){calls.push(['setVisible',v]);}destroy(){calls.push(['destroy']);}
-  setRelief(v:unknown){calls.push(['setRelief',v]);}setWaterOpacity(v:unknown){calls.push(['setWaterOpacity',v]);}setWaterVisible(v:unknown){calls.push(['setWaterVisible',v]);}setContours(v:unknown){calls.push(['setContours',v]);}
+  setRelief(v:unknown){calls.push(['setRelief',v]);}setWaterOpacity(v:unknown){calls.push(['setWaterOpacity',v]);}setWaterVisible(v:unknown){calls.push(['setWaterVisible',v]);}setContours(v:unknown){calls.push(['setContours',v]);}setSunAzimuth(v:unknown){calls.push(['setSunAzimuth',v]);}setPhotoMix(v:unknown){calls.push(['setPhotoMix',v]);}setFixedRamp(v:unknown){calls.push(['setFixedRamp',v]);}
   setSourceCoverage(v:unknown){calls.push(['setSourceCoverage',v]);}setHabitatVisible(v:unknown){calls.push(['setHabitatVisible',v]);}zoom(d:unknown){calls.push(['zoom',d]);}resetView(){calls.push(['resetView']);}topView(){calls.push(['topView']);}openSources(){calls.push(['openSources']);}}
  const mount=(options?:CoastMountOptions)=>mountCoast(host as unknown as HTMLElement,options,(scene,viewerOptions)=>new FakeViewer(scene,viewerOptions) as never);
  const last=()=>docs.at(-1)!;
@@ -217,9 +230,9 @@ test('the terrain-control methods reach the renderer once and go inert after des
  const f=fixture();
  try{
   const handle=f.mount({chrome:'host'});
-  const run=()=>{handle.setRelief(8);handle.setWaterOpacity(.2);handle.setWaterVisible(false);handle.setContours(false);handle.setSourceCoverage(true);handle.setHabitatVisible(false);handle.zoom('in');handle.zoom('out');handle.resetView();handle.topView();handle.openSources();};
+  const run=()=>{handle.setRelief(8);handle.setWaterOpacity(.2);handle.setWaterVisible(false);handle.setContours(false);handle.setSunAzimuth(200);handle.setPhotoMix(.4);handle.setFixedRamp(true);handle.setSourceCoverage(true);handle.setHabitatVisible(false);handle.zoom('in');handle.zoom('out');handle.resetView();handle.topView();handle.openSources();};
   run();
-  assert.deepEqual(f.calls,[['setRelief',8],['setWaterOpacity',.2],['setWaterVisible',false],['setContours',false],['setSourceCoverage',true],['setHabitatVisible',false],['zoom','in'],['zoom','out'],['resetView'],['topView'],['openSources']]);
+  assert.deepEqual(f.calls,[['setRelief',8],['setWaterOpacity',.2],['setWaterVisible',false],['setContours',false],['setSunAzimuth',200],['setPhotoMix',.4],['setFixedRamp',true],['setSourceCoverage',true],['setHabitatVisible',false],['zoom','in'],['zoom','out'],['resetView'],['topView'],['openSources']]);
   handle.destroy();const before=f.calls.length;run();assert.equal(f.calls.length,before);
  }finally{f.restore();}
 });
@@ -232,14 +245,14 @@ test('host-chrome setters change the scene and readings, target detail and sourc
  const node=(id:string)=>{if(!nodes.has(id))nodes.set(id,{id,value:'all',textContent:'',hidden:false,checked:true,open:false,shown:0,dataset:{},options:[],children:[],min:'',max:'',step:'',
   replaceChildren(){this.children=[];},append(...n:unknown[]){this.children.push(...n);},setAttribute(key:string,value:string){this[key]=value;},showModal(){this.open=true;this.shown++;},close(){this.open=false;}});return nodes.get(id);};
  const lookup=(inRoot:boolean)=>(selector:string)=>{const id=/^\[id="(.+)"\]$/.exec(selector)?.[1]??selector;if(!inRoot)looked.push(id);return rootIds.has(id)===inRoot?node(id):null;};
- Object.assign(node('relief'),{min:'1',max:'12',step:'1',value:'5'});Object.assign(node('water-opacity'),{min:'0',max:'0.8',step:'0.05',value:'0.5'});node('source-coverage').checked=false;node('reading').hidden=true;node('target-detail').hidden=true;
+ Object.assign(node('relief'),{min:'1',max:'12',step:'1',value:'5'});Object.assign(node('sun-azimuth'),{min:'0',max:'360',step:'5',value:'305'});Object.assign(node('photo-mix'),{min:'0',max:'1',step:'0.05',value:'1'});node('fixed-ramp').checked=false;Object.assign(node('water-opacity'),{min:'0',max:'0.8',step:'0.05',value:'0.5'});node('source-coverage').checked=false;node('reading').hidden=true;node('target-detail').hidden=true;
  node('.coverage-key').textContent='Mint: lidar · blue: survey · amber: chart estimate · purple: regional model';
  const views:any[]=[],readings:any[]=[],details:any[]=[],coverage:any[]=[];let seams=0;
  const v:any=Object.create(CoastViewer.prototype);
  Object.assign(v,{root:{querySelector:lookup(true)},options:{managed:true,controls:{querySelector:lookup(false)},onView:(view:unknown)=>views.push(view),onReading:(r:unknown)=>readings.push(r),onTargetDetail:(d:unknown)=>details.push(d),onSourceCoverage:(c:unknown)=>coverage.push(c)},
   host:{dataset:{},clientWidth:800,clientHeight:600},alive:true,visible:true,speciesSupported:true,habitat:new T.Group(),currents:new T.Group(),waters:new T.Group(),terrain:new T.Group(),pins:[],labels:[],features:[],shoreFeatures:[],shoreGeneration:0,reviewed:null,selectedTarget:null,reefIndex:0,readingGeneration:0,depthLimit:300,revision:0,currentGeneration:0,habitatGeneration:0,frame:0,lodTimer:0,
   perspective:'3d',orbit:new T.Vector3(),orthoHeight:1000,camera:new T.PerspectiveCamera(42,1,2,1000000),scene:new T.Scene(),renderer:{setSize(){},render(){},domElement:{addEventListener(){}}},controls:{target:new T.Vector3(),update(){},touches:{},mouseButtons:{}},currentAt:null,currentLayer:null,
-  relief:{value:5},contours:{value:1},sourceColors:{value:0},waterOpacity:{value:.5}});
+  relief:{value:5},contours:{value:1},sourceColors:{value:0},waterOpacity:{value:.5},photoMix:{value:1},fixedRamp:{value:0},sunVector:{value:new T.Vector3()}});
  v.camera.position.set(-3000,3000,3000);v.refine=()=>{};v.refreshCurrents=()=>{};v.refreshHabitat=()=>{};v.drawPins=()=>{};v.drawCoverageSeams=()=>{seams++;};v.geometry=()=>new T.BufferGeometry();
  const mesh=new T.Mesh(new T.BufferGeometry());mesh.userData.grid={};v.terrain.add(mesh);const water=new T.Mesh(mesh.geometry);v.waters.add(water);
  const saved={window:(globalThis as any).window,document:(globalThis as any).document};
@@ -248,10 +261,14 @@ test('host-chrome setters change the scene and readings, target detail and sourc
   v.bind();
   const old=mesh.geometry;v.setRelief(7.4);
   assert.equal(v.relief.value,7);assert.equal(node('relief-label').textContent,'×7');assert.notEqual(mesh.geometry,old,'terrain is rebuilt at the new relief');assert.equal(water.geometry,mesh.geometry);assert.equal(seams,1);
+  assert.equal(node('relief-chip').textContent,'Seabed ×7 · land true scale','the chip discloses the exaggeration');
   v.setRelief(40);assert.equal(v.relief.value,12);v.setRelief(Number.NaN);assert.equal(v.relief.value,12);
   v.setWaterOpacity(.33);assert.equal(v.waterOpacity.value,.35);v.setWaterOpacity(2);assert.equal(v.waterOpacity.value,.8);
   v.setWaterVisible(false);assert.equal(v.waters.visible,false);v.setWaterVisible(true);assert.equal(v.waters.visible,true);
   v.setContours(false);assert.equal(v.contours.value,0);v.setContours(true);assert.equal(v.contours.value,1);
+  v.setSunAzimuth(92);assert.equal(node('sun-azimuth').value,'90');assert.equal(node('sun-azimuth-label').textContent,'90°');assert.ok(Math.abs(v.sunVector.value.x-Math.cos(54*Math.PI/180))<1e-9&&Math.abs(v.sunVector.value.z)<1e-9,'an east sun lights from +x');
+  v.setPhotoMix(.42);assert.equal(v.photoMix.value,.4);assert.equal(node('photo-mix-label').textContent,'40% photo');v.setPhotoMix(-1);assert.equal(node('photo-mix-label').textContent,'Shaded relief');
+  v.setFixedRamp(true);assert.equal(v.fixedRamp.value,1);v.setFixedRamp(false);assert.equal(v.fixedRamp.value,0);
   v.setSourceCoverage(true);assert.equal(v.sourceColors.value,1);v.setSourceCoverage(false);assert.equal(v.sourceColors.value,0);
   v.setHabitatVisible(false);assert.equal(v.habitat.visible,false);
   const distance=()=>v.camera.position.distanceTo(v.controls.target),far=distance();
@@ -274,6 +291,6 @@ test('host-chrome setters change the scene and readings, target detail and sourc
   assert.equal(details.length,1);const detail=details[0];
   assert.deepEqual([detail.id,detail.kind,detail.title],['synthetic-reef','reef','Reviewed reef · grade B']);assert.match(detail.facts,/^Nominal 40–70 ft · physical score 60\/100/);assert.match(detail.evidence,/Fish presence unverified\./);
   assert.equal(node('target-detail').hidden,false);v.selectHabitat(null);assert.deepEqual(details.slice(1),[null]);assert.equal(node('target-detail').hidden,true);
-  for(const id of ['relief','water-opacity','water','contours','source-coverage','habitat','zoom-in','reset','reading','target-detail','.coverage-key'])assert.ok(looked.includes(id),id+' resolves outside the root');
+  for(const id of ['relief','sun-azimuth','photo-mix','fixed-ramp','water-opacity','water','contours','source-coverage','habitat','zoom-in','reset','reading','target-detail','.coverage-key'])assert.ok(looked.includes(id),id+' resolves outside the root');
  }finally{Object.assign(globalThis,saved);}
 });

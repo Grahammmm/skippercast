@@ -1,8 +1,7 @@
 // The trip plan and the offline section (FE-51, design § 6 and § 9). The plan
-// is v1's day planner (web/trip.ts wraps dist/export-ui.js): it draws into
-// #export-content, which Preact creates once and never touches again, inside a
-// modal dialog that follows `#export`, so Back closes it and a reload restores
-// a ranked plan. Offline is this app's own: the chart pack and the coastal
+// is the day planner (web/planner.ts, drawn by Planner.tsx and loaded on first
+// open) inside a modal dialog that follows `#export`, so Back closes it and a
+// reload restores a ranked plan. Offline is this app's own: the chart pack and the coastal
 // snapshots, each with its saved time, and each snapshot product with the time
 // its source assembled it.
 import {useEffect, useRef, useState} from 'preact/hooks';
@@ -11,7 +10,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {region} from '../state.ts';
 import {
-  canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
+  canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
   type PackMeta, type Progress,
 } from '../trip.ts';
 import {regionInfo, zone} from './App.tsx';
@@ -32,13 +31,12 @@ export function packTiles(m: PackMeta): string {
 }
 
 function TripDialog() {
-  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value;
+  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value;
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    // export-ui.js updates its counts and re-checks boundaries while v1's export view shows.
-    if (open && !dialog.open) { dialog.showModal(); document.body.dataset.view = 'export'; dialog.querySelector<HTMLElement>('#export-heading')?.focus(); }
-    if (!open) { if (dialog.open) dialog.close(); delete document.body.dataset.view; }
+    if (open && !dialog.open) { dialog.showModal(); dialog.scrollTop = 0; dialog.querySelector<HTMLElement>('#export-heading')?.focus(); }
+    if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
     <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
@@ -48,7 +46,7 @@ function TripDialog() {
       </div>
       {tripReady.value ? null : <p role="status">{error || 'Loading the trip planner…'}</p>}
       {error ? <Button size="sm" onClick={() => void loadPlanner()}>Try again</Button> : null}
-      <div id="export-content" />
+      {planner ? <planner.View model={planner.model} open={open} /> : null}
     </dialog>
   );
 }
@@ -134,7 +132,7 @@ function CoastalReadings() {
   );
 }
 
-/** Both dialogs at the app's root: the plan's stays mounted, so a layout change keeps the planner's markup; the offline one mounts while open. */
+/** Both dialogs at the app's root: the plan's stays mounted, so a layout change keeps the planner's open sections; the offline one mounts while open. */
 export function Trip() {
   return (
     <>

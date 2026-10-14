@@ -13,7 +13,8 @@ express (design section 3):
 - every binding names a registered adapter and no URL in the file is on an
   off-limits host (``catalog/fleet/off-limits.json``);
 - the AIS bounding box contains every port and landing;
-- season parts cover each month once; thresholds are ordered sensibly;
+- season parts cover each month once; thresholds are ordered sensibly, and
+  ``mmsi_auto`` is at least the watched floor (0.85);
 - ``resolver_overrides`` only touch fields the resolver catalog defines, and
   every resolver priority names a known source kind.
 
@@ -35,7 +36,7 @@ from ..paths import repo_root
 from ..platform.contracts import read_json
 from .adapters import ADAPTERS  # adapter ids a binding may name: the registry in fleet.adapters
 
-__all__ = ["ADAPTERS", "SPECIAL_SOURCES", "FleetConfigError", "FleetRegion", "Port", "Landing", "Ais",
+__all__ = ["ADAPTERS", "SPECIAL_SOURCES", "WATCHED_MIN_CONFIDENCE", "FleetConfigError", "FleetRegion", "Port", "Landing", "Ais",
            "Agency", "Binding", "ResolverRule", "check_document", "load_region", "region_ids", "off_limits_host",
            "point_in_polygon", "ring_is_simple"]
 
@@ -44,6 +45,8 @@ SCHEMA_KIND = "fleet-region"
 
 # Fact sources that are not adapters but can win a field in the resolver.
 SPECIAL_SOURCES = frozenset({"admin", "operator", "osint"})
+# A watched AIS row needs at least this confidence (design section 11; server/fleet/watch.ts WATCHED_MIN).
+WATCHED_MIN_CONFIDENCE = 0.85
 
 
 class FleetConfigError(ValueError):
@@ -372,10 +375,22 @@ def _region_problems(doc, catalogs, root: Path) -> list[str]:
     match = doc["thresholds"]["match"]
     if match["review_min"] > match["auto_merge"]:
         problems.append("thresholds.match: review_min is above auto_merge")
-    if activity["troll"]["min_sog_kn"] >= activity["troll"]["max_sog_kn"]:
-        problems.append("thresholds.activity.troll: min_sog_kn must be below max_sog_kn")
-    if activity["drift"]["max_sog_kn"] >= activity["troll"]["min_sog_kn"]:
-        problems.append("thresholds.activity: drift max_sog_kn must be below troll min_sog_kn")
+    if match["mmsi_auto"] < WATCHED_MIN_CONFIDENCE:
+        problems.append(f"thresholds.match: mmsi_auto is below the watched floor {WATCHED_MIN_CONFIDENCE}")
+    if match["schedule"]["min_days"] > match["schedule"]["min_span_days"]:
+        problems.append("thresholds.match.schedule: min_days is above min_span_days")
+    slow, pelagic = activity["troll_slow"], activity["troll_pelagic"]
+    speeds = (activity["drift"]["max_sog_kn"], slow["min_sog_kn"], slow["max_sog_kn"], pelagic["min_sog_kn"],
+              pelagic["max_sog_kn"])
+    if any(a >= b for a, b in zip(speeds, speeds[1:])):
+        problems.append("thresholds.activity: speeds must rise strictly: drift max_sog_kn < troll_slow min_sog_kn"
+                        " < troll_slow max_sog_kn < troll_pelagic min_sog_kn < troll_pelagic max_sog_kn")
+
+    from .ais.aggregate import AggregateParams  # lazy: the AIS package imports this module
+    try:
+        AggregateParams.from_mapping(doc["thresholds"]["aggregate"])
+    except ValueError as exc:
+        problems.append(str(exc))
 
     catalog_fields = catalogs["resolver"]["fields"]
     for key, override in doc["resolver_overrides"].items():

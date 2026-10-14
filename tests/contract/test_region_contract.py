@@ -96,6 +96,8 @@ SHAPE_MUTATIONS = {
     'aerial without check date': lambda r: r['basemap']['aerial'].pop('checked_at'),
     'aerial empty note': lambda r: r['basemap']['aerial'].update(note=''),
     'aerial undated window': lambda r: r['basemap']['aerial']['acquired'].update(first='May 2022'),
+    'default base unknown': lambda r: r['basemap'].update(default='chart'),
+    'aerial default without an aerial base': lambda r: (r['basemap'].pop('aerial'), r['basemap'].update(default='aerial')),
     'aerial source id': lambda r: r['basemap']['aerial'].update(source='USGS NAIP'),
 }
 

@@ -33,10 +33,14 @@ export type PickKind = 'spot' | 'habitat';
 export interface Pick {
   readonly id: string; readonly kind: PickKind; readonly name: string;
   readonly distance: string; readonly depth: string; readonly fit: string; readonly reason: string;
+  /** Straight-line nautical miles from the harbor (the Boat brief's run time); null without a harbor. */
+  readonly nm: number | null;
 }
 export type RankingSource = 'terrain' | 'atlas';
 /** One source's list: its label and basis sentence (§ 12), its picks, and what to say when it has none. */
-export interface Ranking {readonly source: RankingSource | null; readonly label: string; readonly basis: string; readonly picks: readonly Pick[]; readonly empty: string}
+export interface Ranking {readonly source: RankingSource | null; readonly label: string; readonly basis: string; readonly picks: readonly Pick[]; readonly empty: string;
+  /** The harbor the picks' distances run from; absent before the region's marks load. */
+  readonly harbor?: string}
 
 export interface Origin {readonly latitude: number; readonly longitude: number; readonly name: string}
 /** The region's harbor (region.json `harbor`), the port distances are measured from. */
@@ -46,8 +50,8 @@ export function harborOrigin(data: MarkData | null): Origin | null {
     ? {latitude: h.latitude, longitude: h.longitude, name: typeof h.name === 'string' ? h.name : 'the harbor'} : null;
 }
 
-const distance = (origin: Origin | null, p: {latitude: number; longitude: number}): string =>
-  origin ? `${distanceNm(origin, p).toFixed(1)} nm` : '—';
+const miles = (origin: Origin | null, p: {latitude: number; longitude: number}): number | null => origin ? distanceNm(origin, p) : null;
+const distance = (nm: number | null): string => nm === null ? '—' : `${nm.toFixed(1)} nm`;
 const band = (lo: number, hi: number): string => `~${Math.round(lo)}–${Math.round(hi)} ft`;
 const known = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 
@@ -61,7 +65,8 @@ export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: st
   return rated.slice(0, TOP).map(({t, fit}) => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number];
     const reason = speciesFit(t, target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : 'lingcod')?.reason;
-    return {id: t.id, kind: 'spot', name: t.label, distance: distance(origin, t), depth: band(lo, hi),
+    const nm = miles(origin, t);
+    return {id: t.id, kind: 'spot', name: t.label, distance: distance(nm), nm, depth: band(lo, hi),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
   });
 }
@@ -83,7 +88,8 @@ export function habitatPicks(ranked: readonly HabitatFeature[], region: string, 
     return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude);
   }).slice(0, TOP).map(f => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
-    return {id, kind: 'habitat', name: `Reef habitat ${id}`, distance: distance(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}),
+    const nm = miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude});
+    return {id, kind: 'habitat', name: `Reef habitat ${id}`, distance: distance(nm), nm,
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
       reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
   });
@@ -126,10 +132,10 @@ export function ranking(i: RankingInputs): Ranking {
   const t = i.terrain, field = speciesOptions.find(s => s.id === i.coast);
   if (i.region && hasCoastTerrain(i.region) && t.state === 'ready' && field && field.id !== 'halibut' && field.id !== 'surfperch' && t.expiresAt > i.now) {
     const picks = habitatPicks(t.rank(t.features, field.field, i.now), i.region, i.coast, limit, origin);
-    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty: `No reviewed terrain habitat ${within} for this target.`};
+    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty: `No reviewed terrain habitat ${within} for this target.`, ...(origin ? {harbor: origin.name} : {})};
   }
   if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
   const picks = atlasPicks(i.data, i.screen, i.target, limit, origin);
   const empty = i.screen.status !== 'ready' ? i.screen.note : `No surveyed reef marks ${within} for this target.`;
-  return {source: 'atlas', label: 'Survey reef atlas', basis: ATLAS_BASIS + from, picks, empty};
+  return {source: 'atlas', label: 'Survey reef atlas', basis: ATLAS_BASIS + from, picks, empty, ...(origin ? {harbor: origin.name} : {})};
 }

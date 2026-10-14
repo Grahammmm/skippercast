@@ -4,17 +4,20 @@
     python scripts/publish_r2.py <local-dir> <prefix>      # e.g. var/live-published conditions
     python scripts/publish_r2.py var/runs runs             # run manifests (upload only, never delete)
 
-Keys mirror the GitHub branch layout (`<prefix>/<path>`), so the site's
-/feeds/<prefix>/<path> route serves R2 and GitHub interchangeably. A hash
-index stored at `<prefix>/.r2-sync.json` limits each run to changed files
-(the conditions feed has ~1,500 files; most don't change each cycle). Data
-files upload before pointer files (latest/index/manifest), so readers never
-see a pointer to a file that is not there yet; removed files go last.
+Conditions, data and forecasts use immutable SHA-256 objects plus one atomic
+current-release pointer. The Worker resolves ordinary /feeds/<prefix>/<path>
+URLs through that snapshot; a request-scoped reader pins forecast manifest and
+tiles together. New and reused objects and the snapshot are read back before the
+conditional pointer update. Failed or competing uploads never expose partial
+releases. Previous bytes and legacy stable keys remain available for rollback;
+this migration does not garbage-collect historical objects. Tiles retain their
+separate screened publication contract and legacy change-indexed mirror.
 
 Without CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID this does nothing, so
 pipelines keep working before R2 is set up. With credentials, any upload error
 exits non-zero: the Worker serves R2 first, so a failed upload means users see
-stale data and the publishing job must go red. S3 credentials are derived from
+the last committed release and the publishing job must go red. A lost final
+acknowledgment can leave a complete new release; retry detects it as unchanged. S3 credentials are derived from
 the API token as Cloudflare documents: access key = token id, secret =
 SHA-256 of the token value.
 
@@ -34,6 +37,8 @@ import sys
 from urllib.request import Request, urlopen
 
 INDEX = '.r2-sync.json'
+CURRENT = '.r2-current.json'
+SNAPSHOT_PREFIXES = {'conditions', 'data', 'forecasts'}
 RUN_FILE = re.compile(r'^[a-z][a-z0-9-]{1,63}/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\.json$')
 POINTER = re.compile(r'(^|/)(latest|index|manifest|status|health|intelligence-health|habitat-health)[^/]*\.json$')
 TYPES = {'.json': 'application/json', '.geojson': 'application/json', '.md': 'text/markdown; charset=utf-8',
@@ -138,7 +143,7 @@ def upload_run_manifests(s3, bucket, root):
     return f'R2 {bucket}/runs: {len(keys)} run manifest(s) uploaded and verified.'
 
 
-def sync(s3, bucket, source, prefix):
+def sync_legacy(s3, bucket, source, prefix):
     """Upload changed files (data first, pointers last), delete removed ones, store the index."""
     index_key = f'{prefix}/{INDEX}'
     try:
@@ -164,6 +169,96 @@ def sync(s3, bucket, source, prefix):
     s3.put_object(Bucket=bucket, Key=index_key, Body=json.dumps(local).encode(), ContentType='application/json')
     return (f'R2 {bucket}/{prefix}: {len(uploads)} uploaded ({len(pointers)} pointers last), '
             f'{len(deletions)} removed, {len(local) - len(uploads)} unchanged.')
+
+
+def snapshot_bytes(files):
+    """Canonical, content-addressed snapshot. Independent of run order or clocks."""
+    body = json.dumps({'schema_version': 1, 'files': files}, sort_keys=True, separators=(',', ':')).encode()
+    return body, hashlib.sha256(body).hexdigest()
+
+
+def immutable_object(s3, bucket, key, body, **metadata):
+    """Read or create once. A delayed absence response must never permit overwrite."""
+    try:
+        return s3.get_object(Bucket=bucket, Key=key)
+    except s3.exceptions.NoSuchKey:
+        try:
+            s3.put_object(Bucket=bucket, Key=key, Body=body, IfNoneMatch='*', **metadata)
+        except Exception as error:
+            if getattr(error, 'response', {}).get('ResponseMetadata', {}).get('HTTPStatusCode') not in (409, 412):
+                raise
+            # Another creator won. Verify its stored bytes at the caller; a
+            # conflict with no readable winner fails safely rather than retrying PUT.
+        return s3.get_object(Bucket=bucket, Key=key)
+
+
+def sync(s3, bucket, source, prefix):
+    """Publish one verified immutable snapshot, then CAS its sole mutable pointer.
+
+    Tiles retain their separate screened publication contract. Old stable keys,
+    snapshots and blobs are preserved: migration and rollback never delete data.
+    """
+    if prefix not in SNAPSHOT_PREFIXES:
+        return sync_legacy(s3, bucket, source, prefix)
+    pointer_key = f'{prefix}/{CURRENT}'
+    try:
+        prior = s3.get_object(Bucket=bucket, Key=pointer_key)
+        expected = prior['ETag']
+        prior_body = prior['Body'].read()
+        pointer = json.loads(prior_body)
+        if pointer.get('schema_version') != 1 or not re.fullmatch('[a-f0-9]{64}', pointer.get('generation', '')):
+            raise ValueError('Invalid current R2 release; refusing to overwrite it')
+    except s3.exceptions.NoSuchKey:
+        expected, pointer = None, None
+    local = scan(source)
+    if not local:
+        raise ValueError('Refusing to publish an empty snapshot')
+    if any(any(part.startswith('.r2-') for part in Path(key).parts) for key in local):
+        raise ValueError('Snapshot contains reserved R2 publication paths')
+    body, generation = snapshot_bytes(local)
+    # Each unique byte string has one immutable key, even when several paths share it.
+    paths = {sha: Path(source) / key for key, sha in local.items()}
+
+    def put_blob(item):
+        sha, path = item
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != sha:
+            raise RuntimeError('Source changed during publication; current release unchanged')
+        key = f'{prefix}/.r2-objects/{sha}'
+        # Conditional creation protects even a delayed GET-miss followed by
+        # another publisher's completed write and read-back.
+        stored = immutable_object(s3, bucket, key, data,
+                                  ContentType=TYPES.get(path.suffix, 'application/octet-stream'),
+                                  CacheControl='public, max-age=31536000, immutable', Metadata={'sha256': sha})
+        # Metadata and length are not proof of successful prior verification:
+        # a failed read-back can leave a same-length poisoned object behind.
+        # Reuse only after verifying the actual bytes, including no-op retries.
+        with stored['Body'] as stream:
+            digest_read = hashlib.sha256()
+            for block in iter(lambda: stream.read(1 << 20), b''):
+                digest_read.update(block)
+        if digest_read.hexdigest() != sha:
+            raise RuntimeError(f'R2 read-back hash mismatch: {key}; current release unchanged')
+        return sha
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        verified = len(list(pool.map(put_blob, paths.items())))
+    snapshot_key = f'{prefix}/.r2-releases/{generation}.json'
+    stored_snapshot = immutable_object(s3, bucket, snapshot_key, body, ContentType='application/json', CacheControl='no-store')
+    if stored_snapshot['Body'].read() != body:
+        raise RuntimeError('R2 snapshot read-back mismatch; current release unchanged')
+    if pointer and pointer['generation'] == generation:
+        return f'R2 {bucket}/{prefix}: snapshot {generation} unchanged; all object and snapshot bytes verified.'
+    current = json.dumps({'schema_version': 1, 'generation': generation}, separators=(',', ':')).encode()
+    # R2 supports conditional PutObject. A concurrent publisher must fail, never
+    # silently supersede a release committed since this publisher started.
+    condition = {'IfMatch': expected} if expected else {'IfNoneMatch': '*'}
+    s3.put_object(Bucket=bucket, Key=pointer_key, Body=current, ContentType='application/json',
+                  CacheControl='no-store', **condition)
+    if s3.get_object(Bucket=bucket, Key=pointer_key)['Body'].read() != current:
+        raise RuntimeError('R2 current release changed after commit; recheck before retrying')
+    return (f'R2 {bucket}/{prefix}: snapshot {generation}, {verified} immutable objects verified (created only when absent), '
+            f'{len(local)} paths committed atomically; previous data retained.')
 
 
 def run():

@@ -82,17 +82,106 @@ class StationFailoverTests(TestCase):
                 self.assertEqual(feed["health"]["status"], "degraded")
 
     def test_all_stale_preserves_previous_backup_and_times(self):
-        old = {"station": "46299", "data": {"station": "46299", "sample_at": "2026-09-27T00:00:00Z"},
-               "last_success_at": "2026-09-27T00:01:00Z", "data_retrieved_at": "2026-09-27T00:01:00Z"}
+        old = {"station": "46299", "data": {"station": "46299", "sample_at": (NOW - timedelta(hours=7)).isoformat()},
+               "last_success_at": "2026-09-28T05:01:00Z", "data_retrieved_at": "2026-09-28T05:01:00Z"}
         feed = self.collect_live({"46215": buoy(8), "46299": buoy(9)},
                                  {"schema_version": 1, "sources": {"diablo": old}})
         row = feed["sources"]["diablo"]
         self.assertEqual(row["status"], "retained")
         self.assertEqual(row["data"], old["data"])
         self.assertEqual(row["station"], "46299")
+        self.assertEqual(row["fallback_for"], "46215")
         self.assertEqual(row["data_retrieved_at"], old["data_retrieved_at"])
+        self.assertEqual(row["last_success_at"], old["last_success_at"])
         self.assertIn("46299", row["name"])
         self.assertIn("46299", row["url"])
+
+    def test_newer_stale_reading_beats_older_retained_data(self):
+        # #565: the backup served 10 h ago now reads 3 h old; the primary is staler.
+        old = {"station": "46299", "data": {"station": "46299", "sample_at": (NOW - timedelta(hours=10)).isoformat()},
+               "last_success_at": "2026-09-28T02:01:00Z", "data_retrieved_at": "2026-09-28T02:01:00Z"}
+        row = self.collect_live({"46215": buoy(5), "46299": buoy(3)},
+                                {"schema_version": 1, "sources": {"diablo": old}})["sources"]["diablo"]
+        self.assertEqual((row["status"], row["station"], row["fallback_for"]), ("stale", "46299", "46215"))
+        self.assertEqual(row["data"]["station"], "46299")
+        self.assertEqual(row["data"]["sample_at"], (NOW - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+        self.assertIn("46299", row["name"])
+
+    def test_stale_primary_beats_older_retained_backup(self):
+        # The primary reads 3 h stale; the backup it fell back to earlier fails and holds 9 h old data.
+        old = {"station": "46299", "data": {"station": "46299", "sample_at": (NOW - timedelta(hours=9)).isoformat()},
+               "last_success_at": "2026-09-28T03:01:00Z", "data_retrieved_at": "2026-09-28T03:01:00Z"}
+        row = self.collect_live({"46215": buoy(3), "46299": ValueError("synthetic outage")},
+                                {"schema_version": 1, "sources": {"diablo": old}})["sources"]["diablo"]
+        self.assertEqual((row["status"], row["station"]), ("stale", "46215"))
+        self.assertNotIn("fallback_for", row)
+        self.assertEqual(row["data"]["station"], "46215")
+        self.assertEqual(row["data"]["sample_at"], (NOW - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+        self.assertNotIn("46299", row["name"])
+
+    def test_all_failed_without_previous_reports_the_primary_failure(self):
+        row = self.collect_live({"46215": ValueError("synthetic outage"), "46299": ValueError("synthetic outage")})["sources"]["diablo"]
+        self.assertEqual((row["status"], row["station"], row["data"]), ("failed", "46215", None))
+        self.assertNotIn("fallback_for", row)
+        self.assertIn("synthetic outage", row["issue"])
+
+    def test_previous_station_dropped_from_chain_is_not_retained(self):
+        # A config change removed 46288; its data cannot be served under another station's name and URL.
+        old = {"station": "46288", "data": {"station": "46288", "sample_at": (NOW - timedelta(hours=1)).isoformat()}}
+        row = self.collect_live({"46215": ValueError("synthetic outage"), "46299": ValueError("synthetic outage")},
+                                {"schema_version": 1, "sources": {"diablo": old}})["sources"]["diablo"]
+        self.assertEqual((row["status"], row["station"], row["data"]), ("failed", "46215", None))
+        self.assertNotIn("fallback_for", row)
+
+    def test_missing_rows_fail_over_and_never_outrank_retained_data(self):
+        def reader(statuses):
+            def read(station, old):
+                status = statuses[station]
+                data = {"sample_at": NOW.isoformat(), "valid_cells": 0, "total_cells": 4} if status == "missing" else (
+                       {"sample_at": (NOW - timedelta(hours=1)).isoformat()} if status == "ok" else None)
+                return {"kind": "observation", "status": status, "max_age_hours": 2, "data": data}
+            return read
+        row = ordered_source(["1", "2"], reader({"1": "missing", "2": "ok"}), NOW)
+        self.assertEqual((row["status"], row["station"], row["fallback_for"]), ("ok", "2", "1"))
+        old = {"station": "1", "data": {"sample_at": (NOW - timedelta(hours=6)).isoformat()}}
+        row = ordered_source(["1", "2"], reader({"1": "missing", "2": "failed"}), NOW, old)
+        self.assertEqual((row["status"], row["station"], row["data"]), ("retained", "1", old["data"]))
+        row = ordered_source(["1", "2"], reader({"1": "missing", "2": "missing"}), NOW)
+        self.assertEqual((row["status"], row["station"]), ("missing", "1"))
+
+    def test_partial_fields_keep_the_fresh_primary_and_stay_missing(self):
+        # Wind without waves is still a fresh primary reading: the gaps stay null, never zero, never filled from a backup.
+        t = NOW.strftime("%Y %m %d %H %M")
+        partial = "#YY MM DD hh mm WVHT DPD WTMP WSPD\n#yr mo dy hr mn m sec degC m/s\n" + t + " MM MM 18 4\n"
+        row = self.collect_live({"46215": partial, "46299": buoy()})["sources"]["diablo"]
+        self.assertEqual((row["status"], row["station"]), ("ok", "46215"))
+        self.assertNotIn("fallback_for", row)
+        latest = row["data"]["observations"][0]
+        self.assertIsNone(latest["WVHT"])
+        self.assertIsNone(latest["DPD"])
+        self.assertEqual(latest["WSPD"], 4)
+
+    def test_unknown_clock_never_outranks_a_dated_reading(self):
+        def read(station, old):
+            data = {"sample_at": (NOW - timedelta(hours=4)).isoformat()} if station == "1" else {"note": "no clock"}
+            return {"kind": "observation", "status": "stale", "max_age_hours": 2, "data": data}
+        row = ordered_source(["1", "2"], read, NOW, {"station": "2", "data": {"note": "older, no clock"}})
+        self.assertEqual((row["status"], row["station"]), ("stale", "1"))
+        row = ordered_source(["1", "2"], read, NOW, {"station": "2", "data": {"sample_at": (NOW - timedelta(hours=3)).isoformat()}})
+        self.assertEqual((row["status"], row["station"], row["fallback_for"]), ("retained", "2", "1"))
+
+    def test_bad_clock_and_same_reading_ties(self):
+        def reader(sample):
+            def read(station, old):
+                return {"kind": "observation", "status": "stale", "max_age_hours": 2, "data": {"sample_at": sample}}
+            return read
+        dated = {"station": "1", "data": {"sample_at": (NOW - timedelta(hours=6)).isoformat()}}
+        # A reading stamped 3 h in the future is a bad clock and cannot displace dated retained data.
+        row = ordered_source(["1"], reader((NOW + timedelta(hours=3)).isoformat()), NOW, dated)
+        self.assertEqual((row["status"], row["data"]), ("retained", dated["data"]))
+        # The same reading again is served as the station's own stale read, not relabelled retained.
+        row = ordered_source(["1"], reader(dated["data"]["sample_at"]), NOW, dated)
+        self.assertEqual((row["status"], row["station"]), ("stale", "1"))
 
     def test_error_primary_retains_inside_max_age_then_falls_back(self):
         old = {"station": "46215", "data": {"station": "46215", "sample_at": NOW.isoformat()}}

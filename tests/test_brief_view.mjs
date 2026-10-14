@@ -101,7 +101,7 @@ test('without a regional forecast the wind and swell tiles read "—" and unavai
   assert.match(html, /Reference level: MLLW\./, 'the tide basis names the reference level');
 });
 
-test('the column renders the model: headline, deck, lower-exposure line, caveat, local-report line', async () => {
+test('the column renders the model: verdict and limit first, Details with readings, deck and caveat, lower-exposure line, local-report line', async () => {
   const {Brief, briefFrom, dailyFeed, regionInfo, render, h} = await load();
   const expected = briefFrom(sources(), NOW);
   regionInfo.value = INFO;
@@ -109,7 +109,13 @@ test('the column renders the model: headline, deck, lower-exposure line, caveat,
   try {
     const html = render(h(Brief, {now: NOW}));
     assert.match(html, /<aside class="app-brief" aria-label="Brief" data-basis="regional">/);
-    assert.ok(html.includes(`<h1>${expected.headline}</h1>`));
+    // #616: without this region's forecast the verdict is Unknown and says why; the readings line moves into Details.
+    assert.match(html, /<div class="app-verdict" data-verdict="unknown"><div class="app-verdict-head"><h1><span class="app-verdict-word">Unknown<\/span>/);
+    assert.match(html, /<p class="app-verdict-limit">No forecast for this day yet\.<\/p>/);
+    assert.ok(html.indexOf('app-verdict-limit') < html.indexOf('class="ui-tile"'), 'verdict and limit come before the tiles');
+    assert.match(html, /<details class="app-details"><summary>Details/);
+    assert.ok(html.includes(`<p class="app-readings ui-mono">${expected.headline}</p>`));
+    assert.match(html, /<div class="app-tiles app-tiles--dense">/);
     assert.match(html, /<p class="app-deck">/);
     assert.match(html, /class="ui-eyebrow">Lower exposure</);
     assert.ok(html.includes(expected.caveat));
@@ -117,6 +123,22 @@ test('the column renders the model: headline, deck, lower-exposure line, caveat,
     assert.equal((html.match(/class="ui-tile"/g) || []).length, 4);
     assert.doesNotMatch(html, /best bite|hotspot/i);
   } finally { regionInfo.value = null; dailyFeed.value = null; }
+});
+
+test('#616: with this region\'s forecast the verdict word and its limit lead the column, with the basis named', async () => {
+  const {Brief, dailyFeed, regionInfo, regionalForecast, parseConditionsForecast, render, h} = await load();
+  regionInfo.value = INFO;
+  dailyFeed.value = montereyDaily;
+  regionalForecast.value = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
+  const tomorrow = new Date('2026-10-09T12:00:00Z'); // 5 am PDT, the morning still ahead
+  try {
+    const html = render(h(Brief, {now: tomorrow}));
+    const verdict = /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>/.exec(html);
+    assert.ok(verdict, 'a rated word, not Unknown');
+    assert.match(html, /<p class="app-verdict-limit">[^<]+\.(?: Held at Marginal: [^<]+\.)?<\/p>/);
+    assert.match(html, /reference 23 ft boat, not a bite forecast or a safety clearance/);
+    assert.doesNotMatch(html, /best bite|hotspot|safe passage/i);
+  } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; }
 });
 
 test('a feed for another region, or no region, leaves the brief empty', async () => {
@@ -270,4 +292,39 @@ test('#473: the brief asks for the coast report where the region binds one, with
   bindBriefReport(() => regionPlace({id: 'monterey-point-sur', center: [36.62, -121.9], localAreas: []}, 'boat', ''), other)();
   other.destroy();
   assert.equal(calls.length, before);
+});
+
+test('P5 gaps: an unreadable feed says so and the headline stops waiting; unreadable both, readings unavailable', async () => {
+  const {loadDailyFeed, dailyFeed, feedGaps, FEED_GAP, Headline, BriefGaps, render, h} = await load();
+  const daily = async path => path.startsWith('/feeds/data/') ? new Response(JSON.stringify(montereyDaily), {status: 200}) : new Response('', {status: 503});
+  await loadDailyFeed('monterey-point-sur', daily);
+  assert.deepEqual(feedGaps.value, [FEED_GAP.conditions]);
+  assert.match(render(h(BriefGaps, {brief: null})), /Live buoy feed could not be read/);
+  const conditionsOnly = {schema_version: 1, region_id: 'monterey-point-sur', sources: {diablo: {id: 'diablo', name: 'Monterey Bay', kind: 'observation', url: '', checked_at: NOW.toISOString(), status: 'ok'}}};
+  await loadDailyFeed('monterey-point-sur', async path => path.startsWith('/feeds/data/') ? new Response('', {status: 404}) : new Response(JSON.stringify(conditionsOnly), {status: 200}));
+  assert.deepEqual(feedGaps.value, ['Daily feed could not be read: tide predictions and marine alert checks are missing.']);
+  // A slower load for a region no longer selected does not write its gap lines over the newer one's.
+  const pending = [];
+  const release = () => pending.forEach(resolve => resolve(new Response('', {status: 503})));
+  const slow = loadDailyFeed('monterey-point-sur', () => new Promise(resolve => pending.push(resolve)));
+  assert.deepEqual(feedGaps.value, [], 'a new load starts with no gap lines');
+  await loadDailyFeed('monterey-point-sur', async () => new Response(JSON.stringify(montereyDaily), {status: 200}));
+  release(); await slow;
+  assert.deepEqual(feedGaps.value, []);
+  await loadDailyFeed('monterey-point-sur', async () => new Response('', {status: 503}));
+  assert.deepEqual(feedGaps.value, [FEED_GAP.both]);
+  assert.match(render(h(Headline, {brief: null})), /Readings unavailable\./);
+  await loadDailyFeed('monterey-point-sur', async () => new Response(JSON.stringify(montereyDaily), {status: 200}));
+  assert.deepEqual(feedGaps.value, []);
+  assert.match(render(h(Headline, {brief: null})), /Waiting for readings\./);
+  dailyFeed.value = null;
+});
+
+test('P5 gaps: source gaps stay visible; what the model could not check folds into a disclosure', async () => {
+  const {BriefGaps, render, h} = await load();
+  const html = render(h(BriefGaps, {brief: {gaps: [{id: 'tides', label: 'NOAA tides', status: 'failed', text: 'NOAA tides: latest check failed; no earlier reading on hand.'}],
+    missing: ['Tide curve unavailable for this date', 'Harbor entrance and full return route need a separate check']}}));
+  assert.match(html, /<li data-status="failed">NOAA tides: latest check failed; no earlier reading on hand\.<\/li>/);
+  assert.match(html, /<details class="app-gaps-more"><summary>Not checked in this brief \(2\)<\/summary>/);
+  assert.equal(render(h(BriefGaps, {brief: {gaps: [], missing: []}})), '', 'nothing missing renders nothing');
 });

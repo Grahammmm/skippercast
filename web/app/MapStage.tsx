@@ -10,7 +10,7 @@
 // FE-80: in 2D and 3D the terrain's zoom, reset and top view are the stage's own
 // buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
 import type {ComponentChildren} from 'preact';
-import {useEffect, useRef} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {IconButton} from '../ui/Button.tsx';
 import {Chip} from '../ui/Chip.tsx';
 import type {Presentation} from '../coast-context.ts';
@@ -25,7 +25,8 @@ import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createSwell} from '../map/swell.ts';
-import {choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
+import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
+import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
 import {regionInfo, zone} from './App.tsx';
 
@@ -67,6 +68,25 @@ export function TerrainControls() {
   );
 }
 
+/**
+ * #617: the region's coast outline over the empty Chart until MapLibre's first complete frame (web/map/poster.ts),
+ * placed for the shared camera in a host of the stage's size. Decorative: the map's own coastline replaces it.
+ */
+export function ChartPoster() {
+  const ref = useRef<SVGSVGElement>(null), [size, setSize] = useState<{w: number; h: number} | null>(null);
+  const p = poster.value, c = camera.value;
+  useEffect(() => { const host = ref.current?.parentElement; if (host) setSize({w: host.clientWidth, h: host.clientHeight}); }, [!!p]);
+  if (!p || !c || p.region !== region.value) return null;
+  const at = size ? posterPlacement(p, c, size.w, size.h) : null;
+  return (
+    <svg ref={ref} class="app-poster" aria-hidden="true" focusable="false" viewBox={`0 0 ${p.width} ${p.height}`} width={p.width} height={p.height}
+      style={at ? {transform: `translate(${at.x}px, ${at.y}px) scale(${at.scale})`} : {visibility: 'hidden'}}>
+      <path class="app-poster-glow" d={p.path} />
+      <path class="app-poster-line" d={p.path} />
+    </svg>
+  );
+}
+
 /** Token colours for the renderer; without web/tokens.css the embed keeps its defaults. */
 const palette = () => { try { return coastPalette(readPalette()); } catch { return undefined; } };
 /** The token palette the registry's terrain overlays take their roles from (FE-82). */
@@ -89,6 +109,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
     <section class="app-stage" aria-label="Map">
       <div class="app-map" hidden={shown !== 'chart'}>
         <div class="app-chart" ref={chartHost} hidden={chartFailed.value} />
+        <ChartPoster />
         {chartFailed.value ? <span>Map unavailable.</span> : null}
       </div>
       <div class="app-terrain" ref={terrainHost} hidden={shown === 'chart'} data-coast-theme="tokens" />

@@ -1,5 +1,5 @@
 # Publishing feeds to Cloudflare R2 (scripts/publish_r2.py).
-boto3==1.43.103
+boto3==1.43.108
 # Validate-on-write: feeds are checked against schemas/ before they are written
 # (skippercast.validate.check). The daily and live jobs install this file.
 jsonschema==4.26.0

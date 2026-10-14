@@ -1,27 +1,15 @@
 // The Text Advisor admin (TA-W2, docs/plans/text-advisor/08-website.md § Admin):
 // a passkey account (a Chromium virtual authenticator) gets 404
 // at /admin.html until the admin role is granted the way
-// scripts/advisor/grant-admin.mjs does it, here with `wrangler d1 execute
-// --local` against the state e2e/serve.mjs runs on. A seeded photo review is
+// scripts/advisor/grant-admin.mjs does it, here through e2e/d1.ts (SQL on the
+// running Worker's own local D1, served by e2e/worker.mjs). A seeded photo review is
 // then approved from the keyboard (a) and the row checked in D1; axe runs on
 // the queue and the Health view. TA-S1: the approved angler share is a social
 // draft, opened in the Posts view (axe). e2e/serve.mjs sets TEXT_ADVISOR_ENABLED=true.
-import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {resolve} from 'node:path';
 import {test, expect, checkA11y} from './fixtures.ts';
+import {d1} from './d1.ts';
 
-const ROOT = resolve(import.meta.dirname, '..');
-const WRANGLER = ['--yes', 'wrangler@4.142.0'];   // the pin e2e/serve.mjs uses
-const CONFIG = resolve(ROOT, 'wrangler.e2e.local.jsonc'), STATE = resolve(ROOT, '.wrangler/e2e-state');
-
-/** Run SQL against the local D1 the dev server uses; the parsed rows of the last statement. */
-function d1(sql: string): Record<string, unknown>[] {
-  const out = execFileSync('npx', [...WRANGLER, 'd1', 'execute', 'skippercast', '--local', '--persist-to', STATE, '--config', CONFIG, '--json', '--command', sql],
-    {cwd: ROOT, encoding: 'utf8', env: {...process.env, WRANGLER_SEND_METRICS: 'false'}, stdio: ['ignore', 'pipe', 'pipe']});
-  const parsed = JSON.parse(out) as {results: Record<string, unknown>[]}[];
-  return parsed.at(-1)?.results ?? [];
-}
 const word = (s: string): string => s.replace(/[^\w-]/g, '');
 
 test('an admin signs in, sees the queue and approves a photo review with the keyboard', async ({page, pageErrors}, info) => {
@@ -33,8 +21,13 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   // FE-61: the app's #account link opens the account dialog (web/account.ts), as the v1 Guide's button did;
   // a chosen profile keeps the first-run card from covering it.
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
+  // The dialog also starts a passkey-autofill sign-in (dist/account.js). Clicking Create while that request's
+  // options are still loading lets its ceremony start after the registration and abort or answer it (#579), so
+  // wait for them first (bounded: a browser without autofill never asks).
+  const autofill = page.waitForResponse(r => r.url().endsWith('/api/auth/login/options'), {timeout: 15_000}).catch(() => undefined);
   await page.goto('/map?region=morro-bay#account');
   await expect(page.locator('.account-card')).toBeVisible({timeout: 30_000});
+  await autofill;
   const reloaded = page.waitForEvent('load');   // the app reloads signed in
   await page.locator('#account-create').click();
   await reloaded;
@@ -47,11 +40,12 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   expect((await page.request.get('/admin.html')).status()).toBe(404);
   expect((await page.request.get('/api/admin/reviews')).status()).toBe(404);
 
-  // Grant the role, and seed a contact, a photo and its review (ids unique per project).
-  const tag = word(info.project.name), contact = `e2e-contact-${tag}`, media = `e2e-photo-${tag}`;
+  // Grant the role, and seed a contact, a photo and its review (ids unique per project and attempt, so a retry or
+  // --repeat-each run seeds fresh rows instead of failing on the last attempt's).
+  const tag = word(`${info.project.name}-${info.repeatEachIndex}-${info.retry}`), contact = `e2e-contact-${tag}`, media = `e2e-photo-${tag}`;
   const review = createHash('sha256').update(`e2e:${tag}`).digest('hex').slice(0, 32);
   const now = new Date().toISOString();
-  d1(`UPDATE users SET role='admin' WHERE id='${userId}';`
+  await d1(`UPDATE users SET role='admin' WHERE id='${userId}';`
     + `INSERT INTO advisor_contacts(id,channel,role,language,status,last_seen_at,created_at,updated_at) VALUES('${contact}','web','angler','en','active','${now}','${now}','${now}');`
     + `INSERT INTO advisor_media(id,contact_id,kind,mime,bytes,r2_key,sha256,exif_stripped,has_person,publish_state,credit,created_at) VALUES('${media}','${contact}','image','image/jpeg',1000,'','',0,1,'queued','E2E angler','${now}');`
     + `INSERT INTO advisor_reviews(id,kind,ref_id,reason,status,opened_at) VALUES('${review}','media','${media}','angler_photo','open','${now}');`);
@@ -70,12 +64,12 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await page.keyboard.press('a');
   await expect(page.getByRole('status').filter({hasText: 'Marked approved.'})).toBeVisible();
   await expect(card).toHaveCount(0);
-  expect(d1(`SELECT publish_state FROM advisor_media WHERE id='${media}'`)).toEqual([{publish_state: 'approved'}]);
-  expect(d1(`SELECT status,decided_by FROM advisor_reviews WHERE id='${review}'`)).toEqual([{status: 'approved', decided_by: userId}]);
+  expect(await d1(`SELECT publish_state FROM advisor_media WHERE id='${media}'`)).toEqual([{publish_state: 'approved'}]);
+  expect(await d1(`SELECT status,decided_by FROM advisor_reviews WHERE id='${review}'`)).toEqual([{status: 'approved', decided_by: userId}]);
 
   // TA-S1: the approved angler share became a social draft (fixed caption line: no model in the browser tests); the
   // Posts view lists it with its caption and the surfaces, and the editor opens on it.
-  const post = d1(`SELECT id,status,caption FROM advisor_posts WHERE media_json='["${media}"]'`);
+  const post = await d1(`SELECT id,status,caption FROM advisor_posts WHERE media_json='["${media}"]'`);
   expect(post).toHaveLength(1);
   expect(post[0]!.status).toBe('draft');
   expect(String(post[0]!.caption)).toContain('Photo: E2E angler');
@@ -98,7 +92,7 @@ test('an admin signs in, sees the queue and approves a photo review with the key
 
   // TA-W3: the Skippers view (a seeded pending boat owned by the contact) and that contact, opened by id.
   const boat = `e2e-boat-${tag}`;
-  d1(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,created_at,updated_at) VALUES('${boat}','${boat}','E2E Boat ${tag}','morro-bay','morro-bay','${contact}','pending','${now}','${now}');`);
+  await d1(`INSERT INTO advisor_boats(id,slug,name,port,region,owner_contact_id,status,created_at,updated_at) VALUES('${boat}','${boat}','E2E Boat ${tag}','morro-bay','morro-bay','${contact}','pending','${now}','${now}');`);
   await page.getByRole('link', {name: 'Skippers'}).click();
   await expect(page.getByRole('heading', {level: 1, name: 'Skippers'})).toBeVisible();
   await expect(page.getByRole('heading', {name: 'Invite a skipper'})).toBeVisible();

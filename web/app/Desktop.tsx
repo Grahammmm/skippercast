@@ -1,7 +1,8 @@
-// Desktop layout (FE-05, design § 6): the 332 px brief column beside the map
+// Desktop layout (FE-05, design § 6): the 300 px brief column beside the map
 // stage with its chrome. The brief renders the FE-31 model through
-// web/brief/Brief.tsx (FE-37): headline, deck, four tiles, the lower-exposure
-// window, the caveat, the notice, fleet and local-report lines and the
+// web/brief/Brief.tsx (FE-37): the day verdict and its limit (#616), four
+// tiles on one row, Details (readings line, deck, gaps, caveat), the
+// lower-exposure window, the notice, fleet and local-report lines and the
 // footer; before a brief is in hand it shows its empty state. "Where to look"
 // is web/brief/WhereToLook.tsx (FE-34); the tide sparkline is
 // web/brief/TideSpark.tsx (FE-33). The map is MapStage.tsx (FE-71); in the Conditions view
@@ -18,9 +19,10 @@
 // Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order. The Reports view (FE-52) covers the brief and
 // the map; the stage stays mounted beneath it.
-import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
+import {RunLine} from '../brief/Run.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -40,13 +42,13 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
   return (
     <aside class="app-brief" aria-label="Brief" data-basis={brief?.basis}>
       <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
-      <Headline brief={brief} />
-      <Deck brief={brief} />
-      <BriefTiles brief={brief} />
+      <Verdict brief={brief} now={now} />
+      <BriefTiles brief={brief} dense />
+      <Details brief={brief} />
       <TideSpark brief={brief} now={now} />
       <WhereToLook ranking={ranking} />
       <LowerExposure brief={brief} />
-      <Caveat brief={brief} />
+      <RunLine brief={brief} ranking={ranking} now={now} />
       <BriefLinks brief={brief} />
       <BriefFooter />
     </aside>

@@ -164,28 +164,33 @@ function directionSeries(times, values, targets) {
 
 // ---- time axis and units ----------------------------------------------------------
 
-function offsetSeconds(zone, epoch) {
-  if (zone === 'UTC' || zone === 'GMT') return 0;
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone: zone, hourCycle: 'h23', year: 'numeric',
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'})
-    .formatToParts(new Date(epoch * 1000)).map(p => [p.type, p.value]));
-  const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour % 24, +parts.minute, +parts.second) / 1000;
-  return Math.round((asUTC - epoch) / 60) * 60;
+// Keep formatters within the request, shared by its time axis and points.
+function zoneClock(zone) {
+  if (zone === 'UTC' || zone === 'GMT') return {offset: () => 0, abbreviation: () => zone};
+  const offsetFormat = new Intl.DateTimeFormat('en-US', {timeZone: zone, hourCycle: 'h23', year: 'numeric',
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+  const abbreviationFormat = new Intl.DateTimeFormat('en-US', {timeZone: zone, timeZoneName: 'short'});
+  return {
+    offset(epoch) {
+      const parts = Object.fromEntries(offsetFormat.formatToParts(new Date(epoch * 1000)).map(p => [p.type, p.value]));
+      const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour % 24, +parts.minute, +parts.second) / 1000;
+      return Math.round((asUTC - epoch) / 60) * 60;
+    },
+    abbreviation(epoch) {
+      const part = abbreviationFormat.formatToParts(new Date(epoch * 1000)).find(p => p.type === 'timeZoneName');
+      return part ? part.value : zone;
+    },
+  };
 }
-function localMidnight(zone, now) {
-  const offset = offsetSeconds(zone, now);
+function localMidnight(clock, now) {
+  const offset = clock.offset(now);
   const local = now + offset, midnight = local - (((local % 86400) + 86400) % 86400);
-  return midnight - offsetSeconds(zone, midnight - offset);
+  return midnight - clock.offset(midnight - offset);
 }
-function isoLocal(epoch, zone) {
-  return new Date((epoch + offsetSeconds(zone, epoch)) * 1000).toISOString().slice(0, 16);
+function isoLocal(epoch, clock) {
+  return new Date((epoch + clock.offset(epoch)) * 1000).toISOString().slice(0, 16);
 }
-function zoneAbbreviation(zone, epoch) {
-  if (zone === 'UTC' || zone === 'GMT') return zone;
-  const part = new Intl.DateTimeFormat('en-US', {timeZone: zone, timeZoneName: 'short'}).formatToParts(new Date(epoch * 1000))
-    .find(p => p.type === 'timeZoneName');
-  return part ? part.value : zone;
-}
+
 function validZone(zone) {
   try { new Intl.DateTimeFormat('en-US', {timeZone: zone}); return true; } catch { return false; }
 }
@@ -214,7 +219,8 @@ function parseQuery(kind, params) {
   const lats = list(params, 'latitude').map(Number), lons = list(params, 'longitude').map(Number);
   if (!lats.length || lats.length !== lons.length || lats.length > 50 || [...lats, ...lons].some(v => !Number.isFinite(v)))
     throw new QueryError('latitude and longitude must be matching lists of up to 50 numbers');
-  const models = list(params, 'models').length ? list(params, 'models') : DEFAULT_MODELS[kind];
+  const requestedModels = list(params, 'models');
+  const models = requestedModels.length ? requestedModels : DEFAULT_MODELS[kind];
   for (const m of models) if (MODELS[m]?.kind !== kind) throw new QueryError(`Model ${m} is not available for ${kind}`);
   const hourly = list(params, 'hourly');
   const known = kind === 'marine' ? MARINE_VARS : FORECAST_VARS;
@@ -227,7 +233,10 @@ function parseQuery(kind, params) {
   const speed = params.get('wind_speed_unit') || 'kmh';
   if (!SPEED[speed]) throw new QueryError('Invalid wind_speed_unit');
   const cell = params.get('cell_selection') || (kind === 'marine' ? 'sea' : 'land');
-  return {lats, lons, models, hourly, days, zone, speed, cell,
+  // Repeated names already overwrite the same output fields. Preserve their
+  // suffix contract while executing each validated model/variable only once.
+  return {lats, lons, models: [...new Set(models)], modelSuffix: models.length > 1,
+    hourly: [...new Set(hourly)], days, zone, speed, cell,
     imperial: params.get('length_unit') === 'imperial', fahrenheit: params.get('temperature_unit') === 'fahrenheit',
     inch: params.get('precipitation_unit') === 'inch', unixtime: params.get('timeformat') === 'unixtime'};
 }
@@ -302,30 +311,38 @@ function convertValue(q, v, x) {
 export async function answer(kind, params, store, now = Math.floor(Date.now() / 1000)) {
   const started = Date.now();
   const q = parseQuery(kind, params);
-  const start = localMidnight(q.zone, now);
+  const clock = zoneClock(q.zone);
+  const start = localMidnight(clock, now);
   const targets = Array.from({length: q.days * 24}, (_, i) => start + i * HOUR);
+  const outputTimes = q.unixtime ? targets : targets.map(t => isoLocal(t, clock));
+  const offset = clock.offset(now), abbreviation = clock.abbreviation(now);
   const manifests = Object.fromEntries(await Promise.all(q.models.map(async m => [m, await store.manifest(m)])));
+  const tiles = new Map();
   const results = [];
   for (let p = 0; p < q.lats.length; p++) {
     const lat = q.lats[p], lon = q.lons[p];
     const key = `${Math.floor(lat)}_${Math.floor(lon)}`;
-    const hourly = {time: q.unixtime ? targets : targets.map(t => isoLocal(t, q.zone))};
+    const hourly = {time: [...outputTimes]};
     const units = {time: q.unixtime ? 'unixtime' : 'iso8601'};
     let grid = null;
     for (const m of q.models) {
-      const tile = manifests[m]?.tiles?.includes(key) ? await store.tile(m, key) : null;
+      const tileKey = `${m}/${key}`;
+      if (!tiles.has(tileKey)) {
+        const value = manifests[m]?.tiles?.includes(key) ? store.tile(m, key) : null;
+        tiles.set(tileKey, Promise.resolve(value));
+      }
+      const tile = await tiles.get(tileKey);
       const series = modelSeries(m, tile, q, lat, lon, targets);
       grid = grid || series.grid;
       for (const v of q.hourly) {
-        const name = q.models.length > 1 ? `${v}_${m}` : v;
+        const name = q.modelSuffix ? `${v}_${m}` : v;
         hourly[name] = series[v].map(x => convertValue(q, v, x));
         units[name] = unitFor(q, v);
       }
     }
-    const offset = offsetSeconds(q.zone, now);
     results.push({latitude: grid?.latitude ?? round(lat, 4), longitude: grid?.longitude ?? round(lon, 4),
       generationtime_ms: Date.now() - started, utc_offset_seconds: offset, timezone: q.zone,
-      timezone_abbreviation: zoneAbbreviation(q.zone, now), elevation: 0, hourly_units: units, hourly});
+      timezone_abbreviation: abbreviation, elevation: 0, hourly_units: units, hourly});
   }
   return results.length === 1 ? results[0] : results;
 }

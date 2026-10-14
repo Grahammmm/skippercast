@@ -8,6 +8,8 @@
 // 2. The mobile sheet shows the headline, tiles, top pick and hour slider at
 //    the half detent.
 // 3. axe is clean at both widths (the phone and laptop projects).
+// #616: the brief's first two lines are the day verdict and its limit; the
+// readings line, deck, gaps and caveat fold under Details, which expands.
 // FE-33: the tide sparkline draws the bound coast report's curve through
 // CoastMarkup in token colours; the regional brief (high and low events only)
 // says "Tide series unavailable" and still lists the events.
@@ -68,7 +70,8 @@ test('acceptance 1 and 3: a stale tile shows the stale state and its age; the br
   const water = root.locator('.ui-tile', {hasText: 'Water'});
   await expect(water).toHaveAttribute('data-state', 'stale');
   await expect(water.locator('.ui-tile-stale')).toHaveText('stale');
-  await expect(water.locator('.ui-tile-source')).toContainText('5 h old');
+  // The desktop column's dense tiles drop "old" from the age; the full sheet keeps it.
+  await expect(water.locator('.ui-tile-source')).toContainText(isMobile ? '5 h old' : '5 h');
   await expect(water.locator('.ui-reading')).toHaveText('58.1');
   // No regional forecast yet (FE-32): wind and swell say unavailable instead of a number.
   await expect(root.locator('.ui-tile', {hasText: 'Wind'}).locator('.ui-reading')).toHaveText('—');
@@ -170,3 +173,27 @@ for (const retained of [false, true]) {
     expect(pageErrors).toEqual([]);
   });
 }
+
+test('#616: the brief opens with the day verdict and its limit, and Details expands to the readings, deck and caveat', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', {region: 'morro-bay'});
+  const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
+  await expect(root).toHaveAttribute('data-basis', 'regional');
+  const verdict = root.locator('.app-verdict');
+  await expect(verdict.locator('h1 .app-verdict-word')).toHaveText(/^(Comfortable|Marginal|Rough|Unknown)$/);
+  await expect(verdict.locator('.app-verdict-limit')).toHaveText(/\.$/);
+  // The verdict and its limit come before the tiles and everything else.
+  const order = await root.evaluate(el => [...el.querySelectorAll('.app-verdict-word, .app-verdict-limit, .app-tiles, .app-details')].map(n => n.className));
+  expect(order.slice(0, 3)).toEqual(['app-verdict-word', 'app-verdict-limit', expect.stringContaining('app-tiles')]);
+  if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
+  const details = root.locator('details.app-details');
+  await expect(details.locator('.app-caveat')).toBeHidden();
+  await details.locator(':scope > summary').click();
+  await expect(details).toHaveAttribute('open', '');
+  await expect(details.locator('.app-readings')).toBeVisible();
+  await expect(details.locator('.app-caveat')).toBeVisible();
+  // The basis names the comfort rating and what it is not.
+  await verdict.locator('summary').click();
+  await expect(verdict.locator('.ui-popover-body')).toContainText('not a bite forecast or a safety clearance');
+  if (!isMobile) expect(await root.evaluate(el => el.getBoundingClientRect().width)).toBeLessThanOrEqual(300);
+  expect(pageErrors).toEqual([]);
+});

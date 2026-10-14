@@ -1,5 +1,6 @@
 import {getMoonIllumination, getTimes} from 'suncalc';
 import {assess, freshForecast, freshObservation} from './assessment.ts';
+import {LONG_PERIOD_SWELL} from '../../../web/score.ts';
 import type {Alert, Area, Assessment, BriefMode, County, ForecastHour, Observation, Report, TideEvent, TidePoint, Window} from './types.ts';
 import {freshNearshore, nearshoreAt} from './nearshore.ts';
 import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay, type SpearHour, type SurgeBand} from './spear.ts';
@@ -121,7 +122,7 @@ export type WindowHourInput = {
 export function windowHourHazards({hour,sunrise,sunset,nearJudged,bar,shore,spear,kayak}:WindowHourInput):string[] {
  const out:string[]=[],at=Date.parse(hour.at),rise=sunrise?Date.parse(sunrise):NaN,set=sunset?Date.parse(sunset):NaN;
  if(!Number.isFinite(at)||!Number.isFinite(rise)||!Number.isFinite(set)||at<rise||at+HOUR>set)out.push('darkness');
- const longPeriod=finite(hour.waveFt)&&hour.waveFt>=2.5&&((finite(hour.wavePeriodS)&&hour.wavePeriodS>=15)||(finite(hour.swellPeriodS)&&hour.swellPeriodS>=15));
+ const L=LONG_PERIOD_SWELL,longPeriod=finite(hour.waveFt)&&hour.waveFt>=L.height&&((finite(hour.wavePeriodS)&&hour.wavePeriodS>=L.period)||(finite(hour.swellPeriodS)&&hour.swellPeriodS>=L.period));
  if(longPeriod&&!nearJudged)out.push('long-period swell');
  if(bar?.band==='Hazardous')out.push('hazardous bar');
  if(shore?.surf.sneaker)out.push('sneaker-wave swell');
@@ -286,7 +287,7 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
  if(spear)summaryParts.push(...spearSummary(spear,site?.name??null,county.timezone));
  else if(shore&&shore.hours.length)summaryParts.push(...shoreSummary(shore,site?.name??null,county.timezone,tideEvents));
  else if(kayak&&kayak.hours.length)summaryParts.push(...kayakSummary(kayak,site?.name??null,county.timezone));
- else if(seas.period!==null)summaryParts.push(seas.period>=15?`Long-period waves reach ${seas.period} seconds; check local surge and breaking surf.`:`Wave periods reach ${seas.period} seconds.`);
+ else if(seas.period!==null)summaryParts.push(seas.period>=LONG_PERIOD_SWELL.period?`Long-period waves reach ${seas.period} seconds; check local surge and breaking surf.`:`Wave periods reach ${seas.period} seconds.`);
  if(alerts.length)summaryParts.push(alerts[0]!.headline);
  if(!alertCheckFresh)summaryParts.push('The current marine alert check is unavailable; conditions windows are withheld.');
  if(!forecast||!hours.length)summaryParts.push('A fresh forecast covering this date is needed.');

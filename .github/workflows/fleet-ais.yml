@@ -11,11 +11,15 @@ name: Fleet AIS processor
 # noaa-planning-only. A scheduled run then copies labelled trips' raw positions to
 # ais/validation/ (CF-48), out of retention's reach; a dispatch with `validate` scores the
 # classifier against the hand labels and writes the aggregate report to the summary.
+# A dispatch with `label_import` (N7) posts an agent's proposed labels, a file under
+# FLEET_VAR on the runner, to /api/fleet/jobs/labels for the owner to approve.
 # Raw positions never leave the runner. No pull_request trigger,
 # so fork code never runs on Hermes.
 on:
   schedule:
-    - cron: "3,33 * * * *"
+    # Keep both half-hour slots away from the start-of-hour scheduling peak.
+    - cron: "17 * * * *"
+    - cron: "47 * * * *"
   workflow_dispatch:
     inputs:
       from:
@@ -32,6 +36,9 @@ on:
         type: boolean
         required: false
         default: false
+      label_import:
+        description: "Import agent-proposed labels (N7): a JSON file path relative to FLEET_VAR on the runner; runs alone"
+        required: false
 
 permissions: {}
 
@@ -56,8 +63,10 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-          cache: pip
-          cache-dependency-path: pyproject.toml
+          # No pip cache: on the self-hosted data runner the save step tried to
+          # upload the runner's whole ~/.cache/pip (17 GB) after every run and
+          # hit the 25-minute job timeout, so the run shows as cancelled even
+          # though processing had finished. The install takes about a second.
       - name: Install the fleet extra
         run: python -m pip install -e ".[fleet]"
       - name: Process AIS positions
@@ -67,10 +76,35 @@ jobs:
           WINDOW_TO: ${{ inputs.to }}
           BACKFILL_MONTH: ${{ inputs.backfill_month }}
           VALIDATE: ${{ inputs.validate }}
+          LABEL_IMPORT: ${{ inputs.label_import }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           set -o pipefail
+          fleet_run_kind=normal
+          if [ -n "$LABEL_IMPORT" ]; then fleet_run_kind=label-import
+          elif [ "$VALIDATE" = "true" ]; then fleet_run_kind=validation
+          elif [ -n "$BACKFILL_MONTH" ]; then fleet_run_kind=backfill
+          elif [ -n "$WINDOW_FROM$WINDOW_TO" ]; then fleet_run_kind=window
+          fi
+          printf 'AIS run kind=%s trigger=%s cron=%s source=%s\n' "$fleet_run_kind" \
+            "${GITHUB_EVENT_NAME:-unknown}" "${SCHEDULE_CRON:-none}" "${GITHUB_SHA:-unknown}"
           # The raw store and processor state live outside any checkout (design.md § 4).
           export SKIPPERCAST_FLEET_VAR="${SKIPPERCAST_FLEET_VAR:-$HOME/.local/share/skippercast/fleet}"
+          if [ -n "$LABEL_IMPORT" ]; then
+            if [ -n "$WINDOW_FROM$WINDOW_TO$BACKFILL_MONTH" ] || [ "$VALIDATE" = "true" ]; then
+              echo "::error::label_import runs alone: leave from, to, backfill_month and validate empty"; exit 2
+            fi
+            # A file the labelling session wrote under FLEET_VAR; never a path outside it.
+            case "$LABEL_IMPORT" in
+              /*|..|../*|*/..|*/../*) echo "::error::label_import takes a path relative to FLEET_VAR"; exit 2 ;;
+            esac
+            if [ ! -f "$SKIPPERCAST_FLEET_VAR/$LABEL_IMPORT" ]; then
+              echo "::error::label_import: no such file under FLEET_VAR"; exit 2
+            fi
+            LABEL_IMPORT="$SKIPPERCAST_FLEET_VAR/$LABEL_IMPORT"
+            python -m skippercast.fleet.ais label import "$LABEL_IMPORT"
+            exit 0
+          fi
           if [ "$VALIDATE" = "true" ]; then
             # Sync the labels and copies, then the report: aggregates only, no MMSI, trip or labeller id.
             python -m skippercast.fleet.ais validate --region "$REGION" | tee -a "$GITHUB_STEP_SUMMARY"

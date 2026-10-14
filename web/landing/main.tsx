@@ -15,6 +15,7 @@ import {LandingApp, LandingHead} from './Landing.tsx';
 import {LayerDots} from './LayerDots.tsx';
 import {DEFAULT_REGION} from './readings.ts';
 import {saveData} from './save-data.ts';
+import {warmApp} from './warm.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 import {initTelemetry} from '../telemetry.ts';
 
@@ -67,7 +68,8 @@ function nightMap(): void {
 initTelemetry();
 const profile = storedProfile();
 // A returning visitor goes on to the app; everyone else gets the night map after first paint.
-void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else afterFirstPaint(nightMap); });
+// #617: after first paint the app's own first-paint files are fetched at low priority (warm.ts), so a chosen port opens faster.
+void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else { afterFirstPaint(nightMap); afterFirstPaint(() => void warmApp()); } });
 mount('landing-shore', <Shoreline />);
 mount('landing-credit', <ShorelineCredit />);
 mount('landing-head', <LandingHead href={location.href} />);

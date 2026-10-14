@@ -12,7 +12,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
 
 test('the URL is read and written for the store keys only', () => {
   const href = 'https://skippercast.com/?region=morro-bay&view=35.36000,-120.94000,10&target=halibut&hour=2026-09-30T15:00Z&spot=r12&utm_source=x#forecast';
-  assert.deepEqual(readURL(href), {region: 'morro-bay', coast: null, view: '35.36000,-120.94000,10', target: 'halibut', hour: '2026-09-30T15:00Z', selection: 'r12',
+  assert.deepEqual(readURL(href), {region: 'morro-bay', coast: null, view: '35.36000,-120.94000,10', target: 'halibut', grade: null, hour: '2026-09-30T15:00Z', selection: 'r12',
     profile: null, day: null, layers: null, area: null, base: null, station: null, metric: null, range: null});
   const next = new URL(withParams(href, {hour: null, target: 'reef', region: undefined}));
   assert.equal(next.searchParams.get('hour'), null);
@@ -61,7 +61,7 @@ test('a port in the region already shown keeps the target; another region resets
 
 test('reload sites go through the store; the in-place ones are the ones that are safe', async () => {
   const read = name => readFile(join(ROOT, 'dist', name), 'utf8');
-  for (const name of ['home-port.js', 'coasts.js', 'region.js', 'export-ui.js']) {
+  for (const name of ['home-port.js', 'coasts.js', 'region.js']) {
     const source = await read(name);
     assert.match(source, /from '\.\.\/web\/state\.ts'/, name);
     assert.doesNotMatch(source, /location\.(?:assign|replace)\(/, `${name} navigates through web/state.ts`);

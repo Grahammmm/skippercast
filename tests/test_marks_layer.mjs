@@ -76,7 +76,7 @@ test('marks are points with their fit badge, inside the profile\'s depth limit',
   const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
   assert.equal(boat.features.length, ATLAS.targets.filter(t => markShown(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
-  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3'}});
+  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1}});
   const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);
   assert.ok(spear.features.length > 0 && spear.features.every(f => ATLAS.targets.find(t => t.id === f.properties.id).neighborhood_depth_ft[1] <= 60), 'Spear: 60 ft');
   assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', CHECKED).features.every(f => !('fit' in f.properties)), 'no badge without a fit');
@@ -339,7 +339,8 @@ test('the link\'s spot loads in any presentation; a failed file marks only its l
   t.mock.method(console, 'warn', () => {});
   browser(`${PAGE}?region=morro-bay&presentation=3d&spot=SC26-001`);
   const errors = [];
-  const marks = createMarks({fetchFn: files(['data/atlas.json']), page: () => PAGE, onError: layer => errors.push(layer)});
+  // #617: the atlas's startup copy fails, then the full atlas it falls back to.
+  const marks = createMarks({fetchFn: files(['regions/morro-bay/atlas-marks.json', 'data/atlas.json']), page: () => PAGE, onError: layer => errors.push(layer)});
   assert.equal(spotCard.value, undefined, 'loading: the card keeps its placeholder');
   await settle();
   assert.deepEqual(errors, ['marks']);
@@ -354,6 +355,19 @@ test('the link\'s spot loads in any presentation; a failed file marks only its l
   assert.equal(spotCard.value, null);
   assert.equal(markSources[GEOLOGY_SOURCE].value.features.length > 0, true);
   again.destroy();
+});
+
+test('the marks read the region\'s atlas copy (#617), and the full atlas only when the copy fails', async () => {
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  for (const fail of [[], ['regions/morro-bay/atlas-marks.json']]) {
+    const asked = [], serve = files(fail);
+    const marks = createMarks({fetchFn: url => { asked.push(new URL(url).pathname.slice(1)); return serve(url); }, page: () => PAGE});
+    await settle();
+    assert.equal(markData.value.atlas.targets.length > 0, true);
+    assert.equal(asked.includes('regions/morro-bay/atlas-marks.json'), true);
+    assert.equal(asked.includes('data/atlas.json'), fail.length > 0, fail.length ? 'the full atlas after a failed copy' : 'no full atlas while the copy loads');
+    marks.destroy();
+  }
 });
 
 test('the selection hrefs drop ?focus= too, and a link naming both a spot and a habitat keeps the spot', async () => {

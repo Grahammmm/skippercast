@@ -1,6 +1,6 @@
 /* The v2 app shell (FE-05, docs/plans/front-end/design.md § 6, concept A ·
    Bridge). Loaded after web/tokens.css and web/ui/ui.css by dist/app.html.
-   Desktop (≥ 1,024 px): masthead, command bar, a 332 px brief column beside
+   Desktop (≥ 1,024 px): masthead, command bar, a 300 px brief column beside
    the map stage with its chrome (rail, legend, dock, mark card). Mobile
    (under 1,024 px, FE-06): the map fills the viewport under a floating top
    strip, one bottom sheet and a tab nav, with no horizontal scroll from
@@ -44,11 +44,36 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-window { margin-left: auto; color: var(--text); font-size: var(--text-13); }
 
 /* Brief beside the map stage */
-.app-main { display: grid; grid-template-columns: 332px minmax(0, 1fr); min-height: 0; }
-.app-brief { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
+.app-main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+.app-brief { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border-right: 1px solid var(--line); background: var(--panel); overflow: auto; }
 .app-brief h1 { margin: 0; font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
 .app-brief h2 { margin: 0; }
 .app-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+/* #616: the desktop column's tiles on one row of four, short source lines, detail and basis kept. */
+.app-tiles--dense { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-1); }
+.app-tiles--dense .ui-tile { min-width: 0; padding: var(--space-2) var(--space-1); }
+.app-tiles--dense .ui-tile-label .icon { display: none; }
+.app-tiles--dense .ui-tile-detail, .app-tiles--dense .ui-tile-source { flex-wrap: wrap; overflow-wrap: anywhere; font-size: var(--text-11); }
+.app-tiles--dense .ui-tile:nth-child(n + 3) .ui-popover-body { left: auto; right: 0; }
+/* #616: the day verdict leads the brief; the word takes the verdict's colour, the limit sentence follows. */
+.app-verdict { display: flex; flex-direction: column; gap: var(--space-1); }
+.app-verdict h1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.app-verdict-word { color: var(--text); }
+.app-verdict[data-verdict="comfortable"] .app-verdict-word { color: var(--mint); }
+.app-verdict[data-verdict="marginal"] .app-verdict-word { color: var(--amber); }
+.app-verdict[data-verdict="rough"] .app-verdict-word { color: var(--coral); }
+.app-verdict[data-verdict="unknown"] .app-verdict-word { color: var(--muted); }
+.app-verdict-window { color: var(--muted); font-size: var(--text-13); font-weight: var(--weight-regular); }
+.app-verdict-limit { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
+.app-verdict-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+/* The basis keeps its 44 px target without making the verdict row taller than its heading. */
+.app-verdict .ui-popover { flex: none; margin-block: calc(var(--space-2) * -1); color: var(--muted); }
+.app-details { color: var(--muted); font-size: var(--text-13); }
+.app-details > summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); color: var(--text); cursor: pointer; }
+.app-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-details-gaps { color: var(--amber); }
+.app-details-body { display: flex; flex-direction: column; gap: var(--space-2); }
+.app-readings { margin: 0; color: var(--text); }
 .app-spark { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); color: var(--muted); font-size: var(--text-13); }
 .app-spark-empty { display: grid; place-items: center; min-height: 72px; }
 .app-spark-events { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding: 0; list-style: none; }
@@ -67,6 +92,19 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-empty, .app-caveat { margin: 0; color: var(--muted); font-size: var(--text-13); }
 .app-deck { margin: 0; color: var(--text); font-size: var(--text-15); line-height: var(--leading-body); }
 .app-window { margin: 0; font-size: var(--text-13); }
+/* Roadmap P2: the Boat brief's fishing time and return, under the lower-exposure line. */
+.app-run { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.app-run p { margin: 0; font-size: var(--text-13); }
+.app-run-times { color: var(--text); }
+.app-run-note { color: var(--amber); }
+.app-run-detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--muted); }
+/* Roadmap P5: what the brief is missing and why; sources that are not ok stay visible, unchecked items fold away. */
+.app-gaps { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
+.app-gaps ul { margin: 0; padding: 0; list-style: none; }
+.app-gaps-list li { color: var(--amber); }
+.app-gaps-more { color: var(--muted); }
+.app-gaps-more summary { display: list-item; min-height: var(--touch-min); padding-block: var(--space-2); cursor: pointer; }
+.app-gaps-more li + li { margin-top: var(--space-1); }
 .app-brief-links { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
 .app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-local { color: var(--muted); }
@@ -81,6 +119,11 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* FE-11: MapLibre draws into .app-chart (web/map/chart.ts); its chrome is web/map/chart.css. */
 .app-map .app-chart { position: absolute; inset: 0; }
 .app-map .app-chart[hidden] { display: none; }
+/* #617: the poster (MapStage.tsx ChartPoster) over the empty Chart, drawn as the coastline glow, until the map's first frame. */
+.app-map .app-poster { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; overflow: visible; }
+.app-poster path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.app-poster-glow { stroke: var(--blue); stroke-width: 5px; stroke-opacity: 0.28; }
+.app-poster-line { stroke: var(--muted); stroke-width: 1px; stroke-opacity: 0.85; }
 .app-presentation { position: absolute; right: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); max-width: min(280px, calc(100% - 2 * var(--space-4))); }
 .app-presentation .ui-segmented { box-shadow: var(--elev-2); }
 .app-presentation .ui-chip { min-width: var(--touch-min); }
@@ -116,16 +159,22 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
+.app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
 .app-swatch[data-layer="currents-fast"] { background: var(--flow-fast); }
-.app-legend-currents { flex-wrap: wrap; }
+.app-legend-currents, .app-legend-density { flex-wrap: wrap; }
 .app-legend-note { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
 .app-rail-source select { flex: 1; min-width: 0; }
 .app-rail .ui-rail-item { flex-wrap: wrap; }
-/* FE-20: the base choice under the entries, its note ("Chart only", the imagery's dates) beneath it; a legend row with nothing drawn gives its reason under its name. */
-.app-rail-base { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--line); }
-.app-rail-base .app-rail-source { flex: 1 1 0; padding-bottom: 0; }
+.app-rail-look { display: none; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-1); padding-bottom: var(--space-1); border-bottom: 1px solid var(--line); }
+.app-rail-look .app-rail-source { padding-bottom: 0; }
+/* On a computer the command bar holds the target; the phone's sheet has no command bar open beside it. */
+.app-sheet .app-rail-look { display: flex; }
+/* FE-20: the base choice under the entries, its note ("Chart only", the imagery's dates) beneath it; a legend row with nothing drawn gives its reason under its name.
+   #620: the grade filter shares the row and the row takes no width of its own, so the rail grows neither taller nor wider. */
+.app-rail-base { display: flex; flex-wrap: wrap; align-items: center; contain: inline-size; gap: var(--space-1); margin-top: var(--space-1); padding-top: var(--space-1); border-top: 1px solid var(--line); }
+.app-rail-base .app-rail-source { flex: 1 1 0; min-width: 0; padding-bottom: 0; }
 .app-rail-base .ui-rail-note { flex-basis: 100%; padding: 0 var(--space-2) var(--space-1); }
 .app-legend-plain { flex-wrap: wrap; }
 /* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */
@@ -232,6 +281,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--space-5); }
 .app-sheet h1 { margin: 0; font: var(--weight-semibold) var(--text-22) / var(--leading-heading) var(--font-sans); }
 .app-sheet h2 { margin: 0; }
+.app-sheet .app-verdict-limit { font-size: var(--text-13); }
 .app-sheet .app-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .app-sheet .ui-tile { min-width: 0; padding: var(--space-2) var(--space-1); }
 .app-sheet .ui-tile-label .icon { display: none; }

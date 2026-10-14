@@ -1,6 +1,6 @@
 // SkipperCast service worker: trip-alert notifications and the offline trip pack.
 //
-// A classic script, not a module: trip-alerts.js and offline-pack.js register the
+// A classic script, not a module: web/alerts.ts and web/trip.ts register the
 // same stable '/sw.js' without {type:'module'} (the type is part of a
 // registration, and classic workers run on every browser that has web push).
 // The logic is plain top-level functions so tests/test_sw.mjs loads this exact

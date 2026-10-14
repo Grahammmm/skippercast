@@ -106,12 +106,12 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
 }
 
 /** The card for a run: its status and reasons, review dates, access points, method guidance and the rules link. */
-export function runMark(r: ShownRun, target: string): ChartMark {
+export function runMark(r: ShownRun, target: string, now = Date.now()): ChartMark {
   const p = r.run.properties, guide = shoreGuidance(target);
   const access = r.status.label === 'Blocked' ? '' : ` Public access: ${p.access.map(a => a.name).join('; ')}.`;
   return {
     id: `shore:${p.id}`, name: p.name, kind: `Shore run · ${r.status.label}`,
-    reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p)}.`,
+    reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p, now)}.`,
     source: `NOAA ESI ${p.sourceYear} · ${p.shoreClass} · access points from the California Coastal Commission inventory`,
     basis: `${layerEntry(REGISTRY_ID).basis} ${guide.text} Historical shoreline classification; access points are inventory references, not opening status or directions.`,
     regulations: {href: guide.href, label: guide.label},

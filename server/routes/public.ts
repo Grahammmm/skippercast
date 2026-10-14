@@ -8,12 +8,16 @@ import {json} from '../http.ts';
 import {waitUntil} from './util.ts';
 import type {AppEnv} from '../env.ts';
 import type {ExternalJSON} from '../types.ts';
+import {rateLimit} from '../middleware/rate-limit.ts';
+// The release version, from the one place it is set (tests/contract/test_versions.py keeps the others in step).
+import pkg from '../../package.json' with {type: 'json'};
+import {publicHeatGate, publicHeatRoute} from '../fleet/public-heat.ts';
 
 export const publicApi = new Hono<AppEnv>();
 
 // Public liveness only: which bindings and secrets exist is not published.
 // Feed storage shows per response in X-Feed-Source on /feeds/.
-publicApi.all('/api/health', () => json({service: 'SkipperCast', version: '0.8.0', build: BUILD_ID}));
+publicApi.all('/api/health', () => json({service: 'SkipperCast', version: pkg.version, build: BUILD_ID}));
 
 publicApi.get('/api/habitat', async c => {
   const url = new URL(c.req.url), region = regionById(url.searchParams.get('region'));
@@ -24,6 +28,11 @@ publicApi.get('/api/habitat', async c => {
     const response = json(feed); response.headers.set('Cache-Control', PUBLIC_TTL); return {response};
   });
 });
+
+// Charter fleet public heat map (N6): cells only, 404 unless FLEET_ENABLED and FLEET_PUBLIC_HEAT_ENABLED
+// (server/fleet/public-heat.ts). Nothing else lives under /api/fleet/public/: no events, tracks or boats.
+publicApi.get('/api/fleet/public/heat', publicHeatGate, rateLimit('PUBLIC_LIMITER', 'fleet-heat'), publicHeatRoute);
+publicApi.all('/api/fleet/public/*', () => json({error: 'Not found'}, 404));
 
 publicApi.get('/api/intelligence', c => regionalFeed(c));
 // Edge-cache hits are free; only a miss, which reads and parses the ~1.4 MB

@@ -1,5 +1,5 @@
 // The v2 trip planner, GPX export and offline pack (FE-51, docs/plans/front-end/dev-plan.md).
-// The planner is v1's (web/trip.ts wraps dist/export-ui.js), so the ranked-export flow of
+// The planner (web/planner.ts, #602) keeps v1's controls and ids, so the ranked-export flow of
 // e2e/ranked-export.spec.ts runs here against the v2 app with the same synthetic reefs, pin 01
 // on the Chart included (#495); the same selection downloads the same GPX bytes from both shells (only the creation time
 // differs); a mark card adds its spot; and a region saved from v2 opens offline from the

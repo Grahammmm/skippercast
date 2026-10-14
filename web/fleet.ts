@@ -26,7 +26,7 @@ export type Filters = Partial<Record<FilterName, string>>;
 export const FILTER_LABELS: Readonly<Record<FilterName, string>> = {vessel: 'Boat', port: 'Port', class: 'Vessel class', trip_type: 'Trip type',
   kind: 'Activity type', from: 'From', to: 'To', season: 'Season', season_part: 'Season part'};
 /** v1's event labels (dist/fleet-activity.js `EVENT_STYLE`). */
-const KIND_LABELS: Readonly<Record<string, string>> = {'drift-anchor': 'Drift or anchor', troll: 'Troll'};
+const KIND_LABELS: Readonly<Record<string, string>> = {'drift-anchor': 'Drift or anchor', 'troll-slow': 'Slow troll', 'troll-pelagic': 'Offshore troll'};
 export const VESSELS_NOTE = 'The boat list shows the first 500 boats by name.';
 export const PLANNING_LABEL = 'Leave out NOAA planning-only rows';
 export const HOW_INFERRED = 'Stops and segment kinds come from AIS speed and track shape. Drift or anchor stops are filled circles; troll stops are rings. Dates are each trip\'s local departure date. Heat cells hold no boat, port, class, trip type or source.';

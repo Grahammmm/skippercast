@@ -12,7 +12,9 @@ for every module, so an ``h3`` module later needs no schema or rule change:
 - **Privacy knobs** from ``thresholds.aggregate``, each a pass-through when
   null (the admin views): ``delay_hours`` leaves out events that ended less
   than that long before ``now_ms``; ``min_distinct_vessels`` drops any cell
-  with fewer distinct vessels. ``resolution_m`` is the grid's cell edge.
+  with fewer distinct vessels. ``resolution_m`` is the grid's cell edge, and
+  ``resolution_by_kind`` a coarser edge for named kinds (a multiple of it: the
+  pelagic grid, #469 D22); the cell id carries the edge it was binned at.
 - **Rights** of a cell are the most restrictive of its events' rights
   (``RIGHTS_ORDER``); an unknown tag is an error rather than a guess.
 - **One source per vessel and time** (``prefer_sources``, applied by the
@@ -29,7 +31,7 @@ Pure and deterministic given ``now_ms`` and ``computed_at``; standard library on
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -37,7 +39,7 @@ from typing import Any, Iterable, Mapping, Protocol, Sequence
 from zoneinfo import ZoneInfo
 
 from ...ops import id32
-from ..events import Event, iso_utc
+from ..events import EVENT_KINDS, Event, iso_utc
 
 __all__ = ["RIGHTS_ORDER", "AggregateParams", "Aggregator", "Cell", "build_cells", "compute", "module",
            "most_restrictive", "prefer_sources", "register"]
@@ -96,30 +98,57 @@ def _optional_number(raw: Mapping[str, Any], key: str, *, integer: bool = False,
     return int(value) if integer else float(value)
 
 
+def _resolution_by_kind(plain: Mapping[str, Any], base: float | None) -> dict[str, float]:
+    """``resolution_by_kind``: fishing kind to a cell edge at least ``base`` and a whole multiple of it."""
+    raw = plain.get("resolution_by_kind") or {}
+    if not isinstance(raw, Mapping):
+        raise ValueError("thresholds.aggregate.resolution_by_kind must be an object")
+    out = {}
+    for kind in sorted(raw):
+        where = f"thresholds.aggregate.resolution_by_kind.{kind}"
+        if kind not in EVENT_KINDS:
+            raise ValueError(f"{where}: not a fishing kind ({', '.join(EVENT_KINDS)})")
+        size = raw[kind]
+        if isinstance(size, bool) or not isinstance(size, (int, float)) or size < 1:
+            raise ValueError(f"{where} must be a number of at least 1")
+        if base is not None and (size < base or abs(size / base - round(size / base)) > 1e-9):
+            raise ValueError(f"{where} must be resolution_m ({base:g}) or a whole multiple of it")
+        out[kind] = size
+    return out
+
+
 @dataclass(frozen=True)
 class AggregateParams:
-    """``thresholds.aggregate`` of a region. ``raw`` is the full mapping, stored as ``params_json``."""
+    """``thresholds.aggregate`` of a region. ``raw`` is the full mapping, stored as ``params_json`` and hashed into
+    every cell id, so a new ``resolution_by_kind`` gives new ids; the processor replaces the old cells of the
+    seasons it reprocesses."""
     module: str
     resolution_m: float | None
     min_distinct_vessels: int | None
     delay_hours: float | None
     raw: Mapping[str, Any]
+    resolution_by_kind: Mapping[str, float] = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, thresholds: Mapping[str, Any]) -> "AggregateParams":
         """From a region's ``thresholds`` (or just its ``aggregate`` member)."""
         raw = thresholds["aggregate"] if "aggregate" in thresholds else thresholds
         plain = json.loads(json.dumps(raw, default=dict))
+        resolution_m = _optional_number(plain, "resolution_m", minimum=1)
         return cls(module=str(plain["module"]),
-                   resolution_m=_optional_number(plain, "resolution_m", minimum=1),
+                   resolution_m=resolution_m,
                    min_distinct_vessels=_optional_number(plain, "min_distinct_vessels", integer=True, minimum=1),
                    delay_hours=_optional_number(plain, "delay_hours"),
-                   raw=plain)
+                   raw=plain, resolution_by_kind=_resolution_by_kind(plain, resolution_m))
 
     @classmethod
     def from_region(cls, region) -> "AggregateParams":
         """From a ``config.FleetRegion``."""
         return cls.from_mapping(region.thresholds)
+
+    def resolution_for(self, kind: str) -> float | None:
+        """The cell edge for events of ``kind``: its ``resolution_by_kind`` entry, else ``resolution_m``."""
+        return self.resolution_by_kind.get(kind, self.resolution_m)
 
     @property
     def params_json(self) -> str:
@@ -192,6 +221,18 @@ def _local_date(ms: int, zone: ZoneInfo) -> str:
     return datetime.fromtimestamp(ms / 1000, tz=zone).date().isoformat()
 
 
+def legacy_events(events: Iterable[Event]) -> int:
+    """How many events carry a kind the current classifier no longer emits.
+
+    The processor's state mirror keeps every event it ever pushed, so trips
+    classified before a rename (``fishing-drift`` and ``fishing-troll`` became
+    the N5 modes) survive there with their old kind until a reprocess replaces
+    them. The Worker refuses such kinds, so ``build_cells`` leaves them out;
+    the processor logs this count so a reprocess can be planned.
+    """
+    return sum(1 for e in events if e.kind not in EVENT_KINDS)
+
+
 def build_cells(aggregator: Aggregator, events: Iterable[Event], params: AggregateParams, *,
                 now_ms: int | None = None, tz: str = "UTC", computed_at: str | None = None) -> list[Cell]:
     """Bin events with ``aggregator`` and build cells under the shared rules (module docstring).
@@ -213,6 +254,8 @@ def build_cells(aggregator: Aggregator, events: Iterable[Event], params: Aggrega
     groups: dict[tuple, list[Event]] = defaultdict(list)
     centres: dict[str, tuple[float, float]] = {}
     for event in events:
+        if event.kind not in EVENT_KINDS:
+            continue  # a kind from an earlier classifier (legacy_events); the Worker refuses it
         if cutoff is not None and event.ended_at > cutoff:
             continue
         cell_id, lat, lon = aggregator.bin(event, params)

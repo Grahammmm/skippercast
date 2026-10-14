@@ -16,6 +16,7 @@ import {pointInGeometry} from '../../dist/geo-screen.js';
 import {speciesFit} from '../../dist/species-fit.js';
 import type {CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import {speciesOptions} from '../../packages/coast/src/habitat-types.ts';
+import {gradeAllows, type GradeFilter} from '../grade.ts';
 import {withinDepth, type Profile} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import {CDFW_MPA_PAGE, NOAA_GEA_PAGE, type ScreenSource} from './mpa.ts';
@@ -152,11 +153,26 @@ export function withheld(t: {latitude: number; longitude: number}, screen: MarkS
   return inside.length ? {reading: `Inside ${inside.map(b => b.name).join('; ')}`, inside} : null;
 }
 
-/** The marks the target, profile and run-time screen admit (the profile's depth limit on the deepest nearby depth), with their fit badge. */
-export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen): Collection {
-  return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && !withheld(t, screen)).map(t => {
+/** How much a terrain grade adds to the wide view's density (#620): A strongest; an ungraded mark counts as C. */
+const GRADE_WEIGHT: Readonly<Record<string, number>> = {A: 1, B: 0.6, C: 0.3};
+/**
+ * A mark's weight in the density below zoom 10, 0 to 1: its terrain grade times its habitat fit for the target
+ * (n of 3; two thirds where no screen rates it). Physical search priority only, never a count of fish.
+ */
+export function markWeight(t: AtlasTarget, target: string): number {
+  const fit = markFit(t, target), g = GRADE_WEIGHT[String(t.habitat_grade ?? '').toUpperCase()] ?? GRADE_WEIGHT.C!;
+  return Math.round(g * (fit ? fit.n / 3 : 2 / 3) * 1000) / 1000;
+}
+
+/**
+ * The marks the target, profile, grade filter and run-time screen admit (the profile's depth limit on the deepest
+ * nearby depth), with their fit badge and their density weight.
+ */
+export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen, grades: GradeFilter = 'all'): Collection {
+  return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && gradeAllows(grades, t.habitat_grade)
+    && !withheld(t, screen)).map(t => {
     const fit = markFit(t, target);
-    return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}}};
+    return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}, weight: markWeight(t, target)}};
   }));
 }
 export const surveyFeatures = (data: MarkData | null, target: string): Collection => !data?.survey ? EMPTY

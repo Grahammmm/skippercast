@@ -55,7 +55,8 @@ class Invalid extends Error {}
 
 const ENUMS: Record<string, readonly string[]> = {
   source: ['aisstream', 'marinecadastre', 'datalastic'], rights: FLEET_ENUMS.rights, status: ['open', 'closed', 'truncated'],
-  segment: ['in-port', 'transit', 'fishing-drift', 'fishing-troll', 'gap'], event: ['drift-anchor', 'troll'],
+  segment: ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic', 'uncertain', 'gap'],
+  event: ['drift-anchor', 'troll-slow', 'troll-pelagic'],
   basis: [BASIS], vesselClass: FLEET_ENUMS.vesselClass, tripType: FLEET_ENUMS.tripType,
 };
 const PATTERNS: Record<string, RegExp> = {
@@ -99,7 +100,7 @@ const TRIP = {id: 'id', region: 'token', vessel_id: 'id', mmsi: 'mmsi', depart_p
   trip_type_inferred: 'enum:tripType?', distance_nm: 'num?', max_offshore_nm: 'num?', fishing_min: 'int?', positions_n: 'int?',
   gap_min: 'int?', source: 'enum:source', rights: 'enum:rights', classifier_version: 'token', computed_at: 'iso'};
 const SEGMENT = {id: 'id', trip_id: 'id', seq: 'int', kind: 'enum:segment', started_at: 'iso', ended_at: 'iso', geometry: 'text?',
-  points_n: 'int?', mean_sog: 'num?', straightness: 'num?', heading_var: 'num?'};
+  points_n: 'int?', mean_sog: 'num?', p90_sog: 'num?', distance_nm: 'num?', straightness: 'num?', heading_var: 'num?'};
 const EVENT = {id: 'id', trip_id: 'id', segment_id: 'id', vessel_id: 'id', region: 'token', kind: 'enum:event', lat: 'lat', lon: 'lon',
   radius_m: 'num?', started_at: 'iso', ended_at: 'iso', dwell_min: 'int', port_id: 'token?', vessel_class: 'enum:vesselClass?',
   trip_type: 'enum:tripType?', season: 'season', season_part: 'token?', basis: 'enum:basis', source: 'enum:source',

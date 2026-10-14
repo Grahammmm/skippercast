@@ -95,7 +95,7 @@ test('lookup usage adds billed tokens and searches across paused turns', async (
 });
 
 test('trip alert defaults start from the saved boat; the reference boat keeps 8 / 12 kt and 3 ft', async () => {
-  const { tripDefaults, tripBoat } = await import('../dist/trip-alerts.js');
+  const { tripDefaults, tripBoat } = await import('../web/alerts.ts');
   const { boatFactors } = await import('../dist/boat-handling.js');
   assert.deepEqual(tripDefaults(boatFactors(null)), { wind: 8, gust: 12, sea: 3 });
   const skiff = boatFactors({ loa_ft: 16, hull: 'flat', layout: 'skiff' });

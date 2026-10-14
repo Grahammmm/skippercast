@@ -211,8 +211,10 @@ def _region_shape(region):
         if not isinstance(bindings, list) or len(bindings) != len(set(bindings)):
             raise ValueError("Source bindings must be distinct source ids in preferred order")
     basemap = region.get('basemap', {})
-    if not isinstance(basemap, dict) or set(basemap) - {'aerial'}:
+    if not isinstance(basemap, dict) or set(basemap) - {'aerial', 'default'}:
         raise ValueError('Unknown regional base layer')
+    if basemap.get('default', 'night') not in {'night', 'aerial'} or (basemap.get('default') == 'aerial' and 'aerial' not in basemap):
+        raise ValueError('Default base must be night, or aerial where the region offers an aerial base')
     if 'aerial' in basemap:
         aerial = basemap['aerial']
         acquired = aerial.get('acquired') if isinstance(aerial, dict) else None

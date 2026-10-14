@@ -1,6 +1,6 @@
 // Chips (FE-03, design § 6 and § 7): a pill toggle (aria-pressed) and a
 // Segmented group of them with exactly one on, for the Boat / Shore / Spear
-// profile switch, the landing's profile pills and the time dock's day chips.
+// profile switch and the time dock's day chips.
 import {Button, type ButtonProps} from './Button.tsx';
 import type {IconName} from './icons.tsx';
 

@@ -54,9 +54,7 @@ export interface Env {
   // read only through fleetSettings() in server/fleet/settings.ts (docs/plans/charter-fleet/design.md § 16).
   FLEET_ENABLED?: string;            // "true" turns the fleet on; anything else: every /api/fleet/* route 404s
   FLEET_MAP_ENABLED?: string;        // "true" (with FLEET_ENABLED): the admin map routes /api/fleet/map/*
-  // Front-end rebuild switch (repository variable copied by scripts/wrangler_config.mjs; docs/plans/front-end/design.md § 14);
-  // FE-61 removed the v1 shell and the switch: nothing reads it; the deploy workflow still copies it until that step goes.
-  UI_V2?: string;
+  FLEET_PUBLIC_HEAT_ENABLED?: string; // "true" (with FLEET_ENABLED): the anonymous /api/fleet/public/heat route
   // FE-84's switch from the Fish Worker to SkipperCast's own coast feeds (repository variable copied by
   // scripts/wrangler_config.mjs). FE-62 retired the bridge, so every feed the rights register allows is used:
   // nothing reads it; the deploy workflow still copies it until that step goes.

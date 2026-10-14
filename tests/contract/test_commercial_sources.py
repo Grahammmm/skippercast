@@ -104,6 +104,9 @@ REGISTER_ROW = 'docs/legal/data-rights-register.md#'
 
 # source id -> (register anchor, date listed, offending usages). Remove an
 # entry (and update the register) when the blocker is resolved.
+# The map's startup copies (#617, src/skippercast/platform/startup_forms.py), beside each region package.
+STARTUP_COPIES = ('atlas-marks.json', 'search-plan-index.json', 'shoreline-overview.geojson', 'poster.svg')
+
 KNOWN_BLOCKERS = {
     'open-meteo-api': (REGISTER_ROW + 'b1--open-meteo-free-api-mostly-resolved', '2026-09-28', {
         # Runtime calls were removed in #51/#54; only the committed daily snapshot still carries Open-Meteo data.
@@ -114,27 +117,30 @@ KNOWN_BLOCKERS = {
     }),
     'usgs-point-buchon': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
         'data/atlas.json', 'data/habitat-regions.json', 'data/charter-grounds.json',
-        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json',
+        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json', 'regions/morro-bay/search-plan-index.json',
+        'regions/morro-bay/atlas-marks.json',  # #617: the map's startup copies carry their originals' sources
     }),
     'usgs-morro-bay': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
         'data/atlas.json', 'data/habitat-regions.json', 'data/charter-grounds.json',
-        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json',
+        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json', 'regions/morro-bay/search-plan-index.json',
+        'regions/morro-bay/atlas-marks.json',  # #617: the map's startup copies carry their originals' sources
     }),
     'usgs-point-estero': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
         'data/atlas.json', 'data/habitat-regions.json', 'data/charter-grounds.json',
-        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json',
-        'regions/cambria-san-simeon/survey-habitat.geojson', 'regions/cambria-san-simeon/search-plans.json',
+        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json', 'regions/morro-bay/search-plan-index.json',
+        'regions/morro-bay/atlas-marks.json',  # #617: the map's startup copies carry their originals' sources
+        'regions/cambria-san-simeon/survey-habitat.geojson', 'regions/cambria-san-simeon/search-plans.json', 'regions/cambria-san-simeon/search-plan-index.json',
     }),
     'usgs-csmp-seafloor-character': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
-        'regions/monterey-point-sur/survey-habitat.geojson', 'regions/monterey-point-sur/search-plans.json',
-        'regions/santa-cruz-monterey-bay/survey-habitat.geojson', 'regions/santa-cruz-monterey-bay/search-plans.json',
-        'regions/point-arguello-conception/survey-habitat.geojson', 'regions/point-arguello-conception/search-plans.json',
-        'regions/bodega-point-reyes/survey-habitat.geojson', 'regions/bodega-point-reyes/search-plans.json',
-        'regions/point-arena-bodega/survey-habitat.geojson', 'regions/point-arena-bodega/search-plans.json',
+        'regions/monterey-point-sur/survey-habitat.geojson', 'regions/monterey-point-sur/search-plans.json', 'regions/monterey-point-sur/search-plan-index.json',
+        'regions/santa-cruz-monterey-bay/survey-habitat.geojson', 'regions/santa-cruz-monterey-bay/search-plans.json', 'regions/santa-cruz-monterey-bay/search-plan-index.json',
+        'regions/point-arguello-conception/survey-habitat.geojson', 'regions/point-arguello-conception/search-plans.json', 'regions/point-arguello-conception/search-plan-index.json',
+        'regions/bodega-point-reyes/survey-habitat.geojson', 'regions/bodega-point-reyes/search-plans.json', 'regions/bodega-point-reyes/search-plan-index.json',
+        'regions/point-arena-bodega/survey-habitat.geojson', 'regions/point-arena-bodega/search-plans.json', 'regions/point-arena-bodega/search-plan-index.json',
     }),
     'pmep-hapc': (REGISTER_ROW + 'b4--pmep-habitat-compilation-terms-unreviewed', '2026-09-28', {
-        'regions/big-sur-coast/survey-habitat.geojson', 'regions/big-sur-coast/search-plans.json',
-        'regions/south-big-sur-san-simeon/survey-habitat.geojson', 'regions/south-big-sur-san-simeon/search-plans.json',
+        'regions/big-sur-coast/survey-habitat.geojson', 'regions/big-sur-coast/search-plans.json', 'regions/big-sur-coast/search-plan-index.json',
+        'regions/south-big-sur-san-simeon/survey-habitat.geojson', 'regions/south-big-sur-san-simeon/search-plans.json', 'regions/south-big-sur-san-simeon/search-plan-index.json',
     }),
     'landing-reports': (REGISTER_ROW + 'b5--landing-report-facts', '2026-09-28', {
         'data/charter-grounds.json', 'data/daily-evidence.json',
@@ -216,11 +222,29 @@ def usages():
         shoreline = f"regions/{region['id']}/shoreline.geojson"
         if (ROOT / 'dist' / shoreline).is_file():
             found.add((shoreline, 'noaa-cusp-shoreline'))
+        # #617: the map's startup copies ship beside it too, and carry the sources of the file each derives from.
+        kinds = {path: kind for kind, path in region['assets'].items() if path}
+        for name in STARTUP_COPIES:
+            copy = f"regions/{region['id']}/{name}"
+            if not (ROOT / 'dist' / copy).is_file():
+                continue
+            origin = shoreline if name == 'poster.svg' else json.loads((ROOT / 'dist' / copy).read_text())['derived_from']['path']
+            if origin in (shoreline, f"regions/{region['id']}/shoreline-overview.geojson"):
+                found.add((copy, 'noaa-cusp-shoreline'))
+                continue
+            ids = asset_sources(kinds.get(origin), origin, cache)
+            if ids is None:
+                unmapped.add(f"{region['id']}:{name} from {origin}")
+                continue
+            found.update((copy, ident) for ident in ids)
         for role, ident in (region.get('intelligence') or {}).get('providers', {}).items():
             found.add((f'region.json:intelligence.providers.{role}', ident))
         for role, ident in region.get('pipeline_sources', {}).items():
             found.add((f'region.json:pipeline_sources.{role}', ident))
+        # `basemap.default` names which base opens, not a source; the bound layers carry the source ids.
         for layer, binding in region.get('basemap', {}).items():
+            if layer == 'default':
+                continue
             found.add((f'region.json:basemap.{layer}', binding['source']))
         for need in ('wind-forecast', 'wave-forecast'):
             # Mirrors the scheduled pipeline's model selection (settings.model_ids).

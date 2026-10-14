@@ -65,6 +65,14 @@ export const PROFILE_TABLE: Readonly<Record<Profile, ProfileSemantics>> = {
 
 export const DEFAULT_PROFILE: Profile = 'boat';
 
+/** What each profile changes, in one line (the first-run choices on the landing and in the app); the semantics are the table's. */
+export const PROFILE_NOTES: Readonly<Record<Profile, string>> = {
+  boat: 'Reef marks and seafloor to 300 ft; seafloor and currents on the map.',
+  shore: 'Sandy-shore runs with access and rules; swell and water temp on the map.',
+  spear: 'Reef within 60 ft, nearest fresh nearshore site first; seafloor and swell on the map.',
+  kayak: 'Reef marks within 120 ft, with a wind-first paddling reading; seafloor and currents on the map.',
+};
+
 export function isProfile(value: unknown): value is Profile {
   return typeof value === 'string' && (PROFILES as readonly string[]).includes(value);
 }

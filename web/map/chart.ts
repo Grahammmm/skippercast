@@ -24,10 +24,11 @@ import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams} from '../state.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
-import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, type ChartMark} from './coastline.ts';
+import {loadPoster, poster} from './poster.ts';
+import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineOverviewURL, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
+import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
@@ -53,7 +54,9 @@ export const unavailable = signal<readonly string[]>([]);
 /** True when MapLibre could not start (no WebGL); the stage then shows its "Map unavailable." panel. */
 export const chartFailed = signal(false);
 
-export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string}
+export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string;
+  /** The shoreline file to draw (coastline.ts `shorelineFor`); the full one when absent. */
+  shoreline?: string}
 /** The whole Chart style in § 9 order: the token basemap (or only its water without an archive), the ENC base, the protected areas, habitat, the seafloor (hidden), marks, the ranked trip spots, then the coastline on top. */
 export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   const style = basemapStyle(o.palette, {archive: o.archive ?? '', assets: new URL('basemap/', o.page).href});
@@ -62,7 +65,7 @@ export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   sources[ENC_SOURCE] = {type: 'raster', tiles: [ENC_WMS], tileSize: 512, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, maxzoom: 18, attribution: layerEntry('chart').attribution};
   sources[MPA_SOURCE] = mpaSource();
   sources[SEAFLOOR_SOURCE] = seafloorSource();
-  sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page);
+  sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page, o.shoreline ?? shorelineURL(o.region));
   const marks = markStyle(o.palette), ranked = rankedStyle(o.palette);
   Object.assign(sources, marks.sources, {[RANKED_SOURCE]: ranked.source});
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
@@ -115,6 +118,11 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   const engine = signal<Engine | null>(null);
   const mpas = signal<{region: string; data: MpaResult['data']} | null>(null);
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
+  // #617: the shoreline file drawn now, and the region whose full shoreline has loaded (kept on zooming out: no second request).
+  let drawnShore = '', detailRegion: string | null = null;
+  // #617: the poster (poster.ts) is asked for once, on the first mount, and goes on the first idle or user move.
+  let posterAsked = false, painted = false;
+  const posterDone = (): void => { painted = true; poster.value = null; };
   let currents: Currents | null = null;
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
@@ -127,6 +135,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     host.dataset.view = k;
     if (k === applied || shownPresentation.peek() !== 'chart' || appView.peek() !== 'coast') return;
     applied = k;
+    posterDone();
     camera.value = next;
     clearTimeout(viewTimer);
     viewTimer = setTimeout(() => { if (alive && shownPresentation.peek() === 'chart' && appView.peek() === 'coast') setParams({view: k}); }, viewDelay);
@@ -136,16 +145,25 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     const at = camera.peek(), id = region.peek();
     if (mounting || engine.peek() || chartFailed.peek() || !at || !id) return;
     mounting = true;
+    if (!posterAsked) { posterAsked = true; void loadPoster(id, page(), () => painted, options.fetchFn); }
     try {
       const [library, archive] = await Promise.all([load(), basemapArchive(fetchFn, page())]);
       if (!alive) return;
       if (!archive) markUnavailable('basemap', new Error(`No basemap archive at ${BASEMAP_MANIFEST}`));
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
-        host, camera: start, onMove, onLayerError: markUnavailable, attribution: archive ? attributionFor(['basemap']) : undefined,
+        host, camera: start, onMove,
+        // #617: an overview shoreline that fails falls back to the full one; any other failure marks its layer.
+        onLayerError: (layer, error) => {
+          const id = region.peek();
+          if (layer === 'coastline' && id && drawnShore === shorelineOverviewURL(id)) {
+            console.warn('Overview shoreline unavailable; loading the full shoreline', error);
+            detailRegion = id; drawnShore = shorelineURL(id); engine.peek()?.setData(COASTLINE_SOURCE, new URL(drawnShore, page()).href);
+          } else markUnavailable(layer, error);
+        }, attribution: archive ? attributionFor(['basemap']) : undefined,
         pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
         pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
-        style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek()}),
+        style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = shorelineFor(id, start.zoom)}),
         onPick: (layer, properties, at) => {
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
           if (layer === RANKED_PICK && zoomToGroup(properties)) return;
@@ -157,6 +175,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
         },
         onIdle: () => {
+          if (!painted) { posterDone(); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
           host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
           host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
         },
@@ -172,6 +191,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       show(start);
     } catch (error) {
       console.error('Chart unavailable', error);
+      posterDone();
       if (alive) chartFailed.value = true;
     } finally {
       mounting = false;
@@ -189,7 +209,14 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       drawnRegion = id;
       chartMark.value = null;
       unavailable.value = unavailable.peek().filter(layer => !['coastline', 'marks', 'habitat'].includes(layer));
-      e.setData(COASTLINE_SOURCE, new URL(shorelineURL(id), page()).href);
+    }),
+    // The overview shoreline until the camera reaches the detail zoom, then the full one for the rest of the visit.
+    effect(() => {
+      const e = engine.value, id = region.value, c = camera.value;
+      if (!e || !id || !c) return;
+      const path = shorelineFor(id, c.zoom, detailRegion === id);
+      if (path === shorelineURL(id)) detailRegion = id;
+      if (path !== drawnShore) { drawnShore = path; e.setData(COASTLINE_SOURCE, new URL(path, page()).href); }
     }),
     effect(() => { engine.value?.setVisible(ENC_LAYER, base.value === 'chart'); }),
     // The region's protected areas, checked before they draw; a region change replaces them. They load with the
@@ -204,6 +231,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!e) return;
       e.setData(id, collection);
       if (id === MARKS_SOURCE) host.dataset.marks = String(collection.features.length);
+      if (id === DENSITY_SOURCE) host.dataset.density = String(collection.features.length);
     })),
     // The ranked trip spots, grouped at the camera's zoom; a spot that is cleared or withheld takes its card with it.
     effect(() => {
@@ -236,6 +264,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (!alive) return;
       alive = false;
       clearTimeout(viewTimer);
+      posterDone();
       for (const dispose of disposers) dispose();
       seafloor?.destroy();
       marks.destroy();

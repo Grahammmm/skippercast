@@ -10,7 +10,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Page, Route} from '@playwright/test';
-import {expect, test} from './fixtures.ts';
+import {expect, PIXEL, test} from './fixtures.ts';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
@@ -204,7 +204,7 @@ test('prefers-reduced-motion never auto-plays: the button steps one hour per pre
 
 test('the Chart draws the basemap and the Morro Bay coastline with their attribution', async ({page, pageErrors, v2}) => {
   const fetched: string[] = [];
-  page.on('response', response => { if (/ca-coast-fixture\.pmtiles|shoreline\.geojson/.test(response.url())) fetched.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+  page.on('response', response => { if (/ca-coast-fixture\.pmtiles|shoreline(?:-overview)?\.geojson/.test(response.url())) fetched.push(`${response.status()} ${new URL(response.url()).pathname}`); });
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,11'});
   const chart = page.locator('.app-chart');
@@ -213,15 +213,26 @@ test('the Chart draws the basemap and the Morro Bay coastline with their attribu
   await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('NOAA NGS · CUSP shoreline');
   await expect(chart.locator('.maplibregl-ctrl-scale')).toHaveText(/nm|ft/);
   await expect.poll(() => fetched.some(f => f.startsWith('206 /feeds/tiles/basemap/')), {message: 'the basemap is read by range'}).toBe(true);
-  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline.geojson');
+  // #617: below the detail zoom the Chart draws the overview shoreline only.
+  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline-overview.geojson');
+  expect(fetched.filter(f => f.endsWith('/shoreline.geojson')), 'no full shoreline at the opening zoom').toEqual([]);
   await expect(chart).toHaveAttribute('data-view', '35.38000,-120.88000,11');
   await expect(page.locator('[data-unavailable]')).toHaveCount(0);
   await v2.a11y('v2-map-chart-engine');
+  // At ?view= zoom 13 (MapLibre 12) it opens on the full shoreline, read once.
+  fetched.length = 0;
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,13'});
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline.geojson');
+  await page.waitForTimeout(1000);
+  expect(fetched.filter(f => f.includes('/shoreline')), 'the full shoreline once, no overview').toEqual(['200 /regions/morro-bay/shoreline.geojson']);
   expect(pageErrors).toEqual([]);
 });
 
 test('a failing coastline marks only its layer unavailable; the basemap keeps drawing', async ({page, v2}) => {
-  await page.route('**/regions/morro-bay/shoreline.geojson', route => route.fulfill({status: 503, body: 'Offline map test'}));
+  // #617: a failed overview shoreline falls back to the full one; only when both fail is the layer unavailable.
+  const asked: string[] = [];
+  await page.route(/\/regions\/morro-bay\/shoreline(?:-overview)?\.geojson$/, route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({status: 503, body: 'Offline map test'}); });
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart'});
   if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
@@ -229,6 +240,7 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   await expect(page.locator('[data-unavailable]')).toHaveCount(1);
   await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
 });
 
 test('Chart → 3D → Chart keeps the centre within one zoom step', async ({page, v2}) => {
@@ -444,6 +456,31 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   expect(pageErrors).toEqual([]);
 });
 
+test('#620: zoomed out the marks draw as a habitat candidate density; the rail\'s grade filter writes ?grade= and narrows them', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'rockfish', view: '35.30000,-120.90000,8.5'});
+  const chart = page.locator('.app-chart');
+  await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
+  await expect(chart).toHaveAttribute('data-density', /^[1-9]\d*$/);
+  const all = Number(await chart.getAttribute('data-marks'));
+  await showLayers(page);
+  const row = page.locator('.app-legend-density');
+  await expect(row).toContainText(/habitat candidates, denser here/);
+  await expect(row.locator('.app-legend-note')).toHaveText('Zoom in to see each reef mark');
+  await expect(row).not.toContainText(/hotspot|fish here/i);
+  const grades = page.getByRole('combobox', {name: 'Grade'});
+  await grades.selectOption('a');
+  await expect.poll(() => params(page).grade).toBe('a');
+  await expect.poll(async () => Number(await chart.getAttribute('data-marks')), {message: 'only grade A marks remain'}).toBeLessThan(all);
+  await expect(row.locator('.app-legend-note')).toHaveText('Grade A only · Zoom in to see each reef mark');
+  await expect(grades).toHaveValue('a');
+  await grades.selectOption('all');
+  await expect.poll(() => params(page).grade).toBeUndefined();
+  await expect.poll(async () => Number(await chart.getAttribute('data-marks'))).toBe(all);
+  await v2.a11y('v2-map-grade-density');
+  expect(pageErrors).toEqual([]);
+});
+
 test('a shared ?spot= names its mark in the terrain too, and Escape clears it', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: '3d', target: 'lingcod', spot: MARK.id});
@@ -556,7 +593,6 @@ test('Currents in a region no packet covers draw nothing and say so', async ({pa
 
 // FE-22: the cloud loop over a synthetic GOES index (goes-times.json's shape, times relative to now).
 // nowCOAST answers with a 1×1 PNG; the CSP must let MapLibre fetch it, and only listed times are asked for.
-const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 test('Clouds loops over the listed GOES frames only, each labelled with its time and age', async ({page, pageErrors, v2}) => {
   const MIN = 60_000, newest = Math.floor(Date.now() / MIN) * MIN - 7 * MIN;
   const times = Array.from({length: 24}, (_, i) => new Date(newest - (23 - i) * 5 * MIN).toISOString());
@@ -578,7 +614,7 @@ test('Clouds loops over the listed GOES frames only, each labelled with its time
   }
   await expect.poll(() => requested.length, {message: 'MapLibre fetches the frames'}).toBeGreaterThan(0);
   expect(blocked, 'the CSP allows nowCOAST for MapLibre').toEqual([]);
-  const note = page.locator('.app-legend-note');
+  const note = page.locator('.app-legend-clouds .app-legend-note');
   await expect(note).toHaveText(/^observed \d{1,2}:\d{2} [ap]m · (?:under 1|\d+) min ago$/);
   const first = await note.textContent();
   await expect(note, 'the loop steps').not.toHaveText(first!, {timeout: 10_000});
@@ -600,6 +636,7 @@ test('Clouds loops over the listed GOES frames only, each labelled with its time
 
 // FE-23: the aerial base where the region's package offers it (region.json basemap.aerial). USGS answers with
 // the 1×1 PNG; the CSP must let MapLibre fetch it, only the fixed NAIP service is asked, and only while it is on.
+// Morro Bay opens on Aerial by default (basemap.default), so the link names Night first.
 test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, labelled with its dates', async ({page, pageErrors, v2}) => {
   const requested: string[] = [], blocked: string[] = [];
   await page.route('https://imagery.nationalmap.gov/**', route => {
@@ -608,7 +645,7 @@ test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, lab
   });
   page.on('console', message => { if (/Content Security Policy/i.test(message.text())) blocked.push(message.text()); });
   await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,12'});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,12', base: 'night'});
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   await openLayers(page);
   // FE-20: the rail's one base select; Aerial is listed where the region's package offers it.
@@ -737,7 +774,7 @@ test('the Fleet view: grounds and AIS for a visitor; an admin\'s filters reach t
     const url = new URL(route.request().url());
     asked.push(url.pathname + url.search);
     if (url.pathname.endsWith('/filters')) return route.fulfill({json: {region: url.searchParams.get('region'), vessels: [{id: 'v1', name: 'Test Boat'}], ports: ['morro-bay'],
-      classes: [], trip_types: [], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: [], dates: {min: '2026-06-01', max: '2026-09-30'}}});
+      classes: [], trip_types: [], kinds: ['drift-anchor', 'troll-slow', 'troll-pelagic'], seasons: ['2026'], season_parts: [], dates: {min: '2026-06-01', max: '2026-09-30'}}});
     return route.fulfill({json: {type: 'FeatureCollection', features: [], meta: {next: null, trips: 0, ignored: []}}});
   });
   await page.reload();
@@ -745,9 +782,9 @@ test('the Fleet view: grounds and AIS for a visitor; an admin\'s filters reach t
   await expect(view.getByRole('heading', {name: 'Fleet activity · admin'})).toBeVisible();
   await expect(view).toContainText('Inferred from movement; filters in the Fleet view.');
   await view.getByLabel('Port').selectOption('morro-bay');
-  await view.getByLabel('Activity type').selectOption('troll');
+  await view.getByLabel('Activity type').selectOption('troll-slow');
   await view.getByRole('button', {name: 'Show on map'}).click();
-  await expect.poll(() => asked.find(a => a.startsWith('/api/fleet/map/events')) ?? '').toContain('kind=troll');
+  await expect.poll(() => asked.find(a => a.startsWith('/api/fleet/map/events')) ?? '').toContain('kind=troll-slow');
   const events = new URL(asked.find(a => a.startsWith('/api/fleet/map/events'))!, 'https://s.test');
   expect(events.searchParams.get('port')).toBe('morro-bay');
   expect(events.searchParams.has('vessel'), 'empty filters are left out').toBe(false);
@@ -1030,7 +1067,7 @@ test('in 3D the terrain options sit in the Seafloor entry and the view buttons i
   await page.keyboard.press('ArrowRight');
   await expect(relief).toHaveValue('6');
   await expect(options.getByText('×6')).toBeVisible();
-  for (const name of ['Water & channels', 'Depth contours · 10 / 30 / 500 ft', 'Source coverage', 'Reefs & species pins']) {
+  for (const name of ['Water & channels', 'Depth contours · adapt to view', 'Fixed depth colours', 'Source coverage', 'Reefs & species pins']) {
     const box = options.getByRole('checkbox', {name});
     await box.focus();
     await expect(box, name).toBeFocused();

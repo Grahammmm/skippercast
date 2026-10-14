@@ -50,6 +50,37 @@ To deploy a later `main`, dispatch the workflow again. It never runs on a push o
 5. **The key.** An expired, revoked or mistyped key shows up as the connection ending soon after each subscription (`AIS connection lost ...; reconnecting` repeating in the log, or an error frame in `last_error`) while `last_message_at` stays null. That looks like an egress problem, so do step 4 first. Create a new key at aisstream.io, `gh secret set AISSTREAM_API_KEY`, and dispatch the workflow: it rewrites the env file. Never paste the key into an issue, a PR or a log; [secrets rotation](secrets-rotation.md) covers a leaked key.
 6. **A bad revision.** If the failures started with a deploy (`git_sha` in the heartbeat is the new revision, `app/previous` is the last good one), roll back (below), then fix forward with a PR.
 
+## Processor schedule and publication
+
+The processor's intended cadence is every half hour, at `:17` and `:47` UTC in
+`fleet-ais.yml`. GitHub schedule events are best effort: [they can be delayed or
+dropped](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+These off-hour slots reduce exposure to the start-of-hour peak; changing slots
+alone does not prove that trigger delivery has recovered.
+
+For a cadence gap, check the workflow is active on default `main`, `ENABLE_FLEET`
+is true, `DATA_RUNNER` names an online runner, and the latest **schedule** event
+exists. No run record means there is no runner job yet; an existing queued run
+may instead be waiting on the `fleet-ais` concurrency group. It intentionally
+serializes normal processing and backfill without cancelling the active run.
+A newer pending run can replace an older pending run in the same group; this is
+not an unbounded queue. Backfills
+have a 150-minute timeout; normal runs retain their 25-minute timeout.
+
+The processing step logs run kind, trigger, scheduled cron and source revision,
+without input paths, tokens or vessel identities. Verify a natural `schedule`
+event with `kind=normal`, successful heartbeat/trip/aggregate processing and
+publication, then later scheduled runs, before declaring cadence recovered.
+A manual normal run proves processing; a historical backfill proves its window.
+Neither proves scheduled delivery. The three-hour Worker health threshold is a
+staleness alert, not a half-hour cadence check.
+
+Local `state.sqlite` logs historical and normal runs. Backfill/window runs
+leave the Worker's ordinary heartbeat and processed clocks alone, so a newer
+local finished timestamp is not evidence that ordinary publication advanced.
+Preserve the separate clocks and source/event receipts. Do not restart the live
+listener, change retention or weaken identity checks to repair a missing trigger.
+
 ## Restart
 
 ```bash

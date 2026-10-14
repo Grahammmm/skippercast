@@ -10,7 +10,7 @@ visitor, session or device id.
 | Piece | File |
 | --- | --- |
 | Browser module: batching, opt-out, error capture | `web/telemetry.ts` |
-| Funnel call sites | `dist/home-port.js` (`port_selected`), `dist/export-ui.js` (`spot_saved`) and `dist/offline-pack.js` (`offline_saved`), reached from the v2 app; `web/app/CommandBar.tsx` (`port_selected`) |
+| Funnel call sites | `dist/home-port.js` (`port_selected`), `web/planner.ts` (`spot_saved`) and `dist/offline-pack.js` (`offline_saved`), reached from the v2 app; `web/app/CommandBar.tsx` (`port_selected`) |
 | v2 pages | started in `web/landing/main.tsx` and `web/app/main.tsx` (pinned, with the event set below, by `tests/test_v2_telemetry.mjs`) |
 | Advisor pages | started and tracked in `web/advisor/pages.ts` |
 | Endpoint `POST /api/telemetry` | `server/routes/telemetry.ts` |
@@ -39,7 +39,7 @@ visitor, session or device id.
 | `advisor_port_view`, `advisor_species_view`, `advisor_boat_view` | A Text Advisor port, species or boat page is opened (`web/advisor/pages.ts`; [08 · Telemetry](../plans/text-advisor/08-website.md)) |
 | `advisor_cta` | The "Text SkipperCast" link on one of those pages is followed (sent at once) |
 
-The v2 pages (`landing.html`, `app.html`) start the module in `web/landing/main.tsx` and `web/app/main.tsx`, so they report errors. Of the funnel steps the v2 app sends `port_selected` (the command bar's port chooser), `spot_saved` (a mark card's add to the trip, through `dist/export-ui.js`) and `offline_saved` (the trip panel's save for offline, through `dist/offline-pack.js`); the v2 landing sends no funnel event. `map_viewed`, `forecast_viewed` and `install` were sent only by v1's map, which FE-61 removed: the endpoint still accepts them and the report still lists them, at zero. `tests/test_v2_telemetry.mjs` finds the sent set by following every import from each entry to its `track()` calls.
+The v2 pages (`landing.html`, `app.html`) start the module in `web/landing/main.tsx` and `web/app/main.tsx`, so they report errors. Of the funnel steps the v2 app sends `port_selected` (the command bar's port chooser), `spot_saved` (a mark card's add to the trip, through `web/planner.ts`) and `offline_saved` (the trip panel's save for offline, through `dist/offline-pack.js`); the v2 landing sends no funnel event. `map_viewed`, `forecast_viewed` and `install` were sent only by v1's map, which FE-61 removed: the endpoint still accepts them and the report still lists them, at zero. `tests/test_v2_telemetry.mjs` finds the sent set by following every import from each entry to its `track()` calls.
 
 Each carries the region id when one is shown. The server records a region it does not publish as `other`. An event may also carry `source`, the page URL's `s` parameter when it is one of `txt` (a link in an advisor text), `ig`, `fb` (Instagram and Facebook posts) or `qr` (the printed QR code); any other value is not sent, and the server rejects it. It says where the visit came from, never who made it.
 

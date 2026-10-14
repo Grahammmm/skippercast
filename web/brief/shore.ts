@@ -56,10 +56,14 @@ export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions}: Sho
   return {priority: 3, label: 'Current', reasons: ['Protected-area check current; a fresh nearshore model sample covers this area']};
 }
 
-/** The review dates the card shows. */
-export function shoreReviewLines(run: ShoreRunClocks): string {
-  return `Access checked ${day(run.accessReviewedAt)}, review until ${day(run.accessReviewExpiresAt)} · `
-    + `rules checked ${day(run.legalReviewedAt)}, review until ${day(run.legalReviewExpiresAt)} · source review until ${day(run.reviewExpiresAt)}`;
+/** "review until Oct 10, 2026", or "review expired Oct 10, 2026" once that date has passed: a lapsed review is said, never shown as current. */
+const until = (expires: string, now: number): string =>
+  Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires)}` : 'review date unknown';
+
+/** The review dates the card shows at `now`. */
+export function shoreReviewLines(run: ShoreRunClocks, now = Date.now()): string {
+  return `Access checked ${day(run.accessReviewedAt)}, ${until(run.accessReviewExpiresAt, now)} · `
+    + `rules checked ${day(run.legalReviewedAt)}, ${until(run.legalReviewExpiresAt, now)} · source ${until(run.reviewExpiresAt, now)}`;
 }
 
 export interface ShoreGuidance {readonly text: string; readonly href: string; readonly label: string}

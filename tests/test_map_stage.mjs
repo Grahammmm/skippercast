@@ -6,7 +6,7 @@ import test from 'node:test';
 import {
   HOME_ZOOM, NO_TERRAIN, UNAVAILABLE, UNSUPPORTED_CURRENT, camera, cameraParam, choosePresentation, coastSpecies, createStage,
   currentStatus, locationFor, parseCamera, shownPresentation, spanForZoom, terrainBlocked, terrainFailed, terrainHour, terrainMark,
-  terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainPick, terrainReading,
+  terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 
@@ -38,7 +38,7 @@ function terrain({ready = true, throws = false} = {}) {
   const fake = {calls: [], mounts: 0, destroyed: 0, options: null};
   const handle = {};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible',
-    'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
+    'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
     handle[name] = value => { fake.calls.push([name, value]); return true; };
   }
   // As packages/coast's viewer does: setPerspective reports the new mode through onPerspective, synchronously.
@@ -309,12 +309,14 @@ test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readi
   await tick();
   const o = fake.options;
   assert.equal(o.chrome, 'host', 'the renderer\'s own panels leave the scene');
-  const setters = ['setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible'];
-  assert.deepEqual(setters.map(n => fake.count(n)), [0, 0, 0, 0, 0, 0], 'the defaults are the native controls\' own: nothing to send');
+  const setters = ['setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp'];
+  assert.deepEqual(setters.map(n => fake.count(n)), [0, 0, 0, 0, 0, 0, 0, 0, 0], 'the defaults are the native controls\' own: nothing to send');
 
   setTerrainOption('relief', 9); setTerrainOption('water', false); setTerrainOption('waterOpacity', 0.3);
   setTerrainOption('contours', false); setTerrainOption('sourceCoverage', true);
   assert.deepEqual(setters.slice(0, 5).map(n => fake.last(n)), [9, false, 0.3, false, true]);
+  setTerrainOption('sunAzimuth', 200); setTerrainOption('photoMix', 0.25); setTerrainOption('fixedRamp', true);
+  assert.deepEqual(setters.slice(6).map(n => fake.last(n)), [200, 0.25, true]);
   setTerrainOption('relief', 9);
   assert.equal(fake.count('setRelief'), 1, 'an unchanged option is not sent again');
   setParams({layers: 'currents'});
@@ -332,6 +334,9 @@ test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readi
   assert.equal(terrainReading.value, null);
   o.onSourceCoverage({sources: [reading.source], key: 'Mint: lidar'});
   assert.equal(terrainCoverage.value.key, 'Mint: lidar');
+  const shading = {readout: 'Ramp 61–142 ft in view · contours 10 ft, index 50 ft', rampMinM: 18.6, rampMaxM: 43.3, contourMinorM: 3.048, contourIndexM: 15.24, fixedRamp: false, relief: 5};
+  o.onShading(shading);
+  assert.equal(terrainShading.value, shading, 'the shading readout arrives verbatim');
 
   const a = terrainActions.value;
   a.zoom('in'); a.zoom('out'); a.top(); a.sources();

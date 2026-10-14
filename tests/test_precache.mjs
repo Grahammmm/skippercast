@@ -3,7 +3,7 @@ import test from 'node:test';
 import {mkdtemp, mkdir, writeFile, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {precacheManifest, writePrecache, BUILD_PLACEHOLDER, reachable, v2Only, landingShell} from '../scripts/precache.mjs';
+import {precacheManifest, writePrecache, BUILD_PLACEHOLDER, reachable, v2Only, landingShell, appWarm} from '../scripts/precache.mjs';
 
 // check_client's precache and worker checks run against a real Vite build in
 // tests/test_client_build.mjs; this file covers scripts/precache.mjs itself.
@@ -106,4 +106,7 @@ test('the install list holds the landing\'s first paint (static imports, styles,
   for (const f of ['/assets/NightMap.bbbbbbbbbb.js', '/assets/maplibre.6666666666.js', '/assets/maplibre-gl-worker.7777777777.js', '/assets/app.1111111111.js'])
     assert.ok(!out.assets.includes(f), `${f} stays out of the install list`);
   assert.deepEqual(out.assets, [...new Set(out.assets)].sort(), 'sorted, no duplicates');
+  // #617: the landing warms the app page's static graph, less what the landing loaded itself; never a dynamic import.
+  assert.deepEqual(appWarm(manifest), ['/assets/app.1111111111.js']);
+  assert.deepEqual(out.warm, appWarm(manifest));
 });

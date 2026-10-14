@@ -35,10 +35,10 @@ home=$(get "$SITE/") || fail "home page not served"
 case "$home" in *'<title>'*) ;; *) fail "home page has no <title>";; esac
 echo "home page ok"
 
-# FE-60: /map and /coast. With the v2 shell on (the default) / is the landing,
-# /map the app and /coast redirects to it; with UI_V2=false or a rolled-back
-# Worker / is the v1 shell, /map is dark and answers only with ?ui=v2, and
-# /coast is the standalone page. Either way each must end at a page.
+# FE-60: /map and /coast. On the current Worker / is the landing, /map the app
+# and /coast redirects to it; after a rollback to a Worker built before FE-61
+# / is the v1 shell, /map is dark and answers only with ?ui=v2, and /coast is
+# the standalone page. Either way each must end at a page.
 if has "$home" 'class="landing-body"'; then map_path=/map; else map_path='/map?ui=v2'; fi
 map=$(get "$SITE$map_path") || fail "$map_path not served"
 has "$map" '<title>' || fail "$map_path has no <title>"

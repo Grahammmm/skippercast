@@ -69,13 +69,26 @@ export interface Brief {
   /** The comfort limits the windows used: the profile's defaults, or the user's own (web/limits.ts) with a line saying so. */
   readonly limits: DailyBrief['limits'];
   readonly alerts: readonly Alert[];
+  /** What buildDaily could not check or fill for this day (packages/coast daily.ts). */
   readonly missing: readonly string[];
+  /** The feed sources behind the brief that are not ok, with their status and why (web/brief/model.ts sourceGaps). */
+  readonly gaps: readonly SourceGap[];
   readonly tides: readonly TidePoint[];
   readonly tideEvents: readonly TideEvent[];
   /** The tide heights' reference level (MLLW unless the station says otherwise). */
   readonly tideDatum: string;
   readonly sunrise: string | null;
   readonly sunset: string | null;
+}
+
+/** A brief source that is not ok: stale, retained, failed or missing, kept distinct. */
+export interface SourceGap {
+  readonly id: string;
+  /** The station or source it describes; a backup reads "NDBC 46011 (backup for 46028)". */
+  readonly label: string;
+  readonly status: string;
+  /** One sentence: the label, the status and its age where the data has a clock. */
+  readonly text: string;
 }
 
 /** The landing-reports feed rows the fleet line reads (`data` branch `regions/<id>/latest.json` `reports`). */

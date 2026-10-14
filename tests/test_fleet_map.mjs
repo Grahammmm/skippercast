@@ -52,25 +52,27 @@ const TRIPS = [
 // Events: id, trip, kind, lat, lon, started_at, dwell, event vessel_class (null: from the vessel), event trip_type (null: from the trip).
 const EVENTS = [
   ['e1', 't1', 'drift-anchor', 35.40, -120.95, '2026-06-10T15:00:00Z', 40, 'six-pack', 'half-day'],
-  ['e2', 't2', 'troll', 35.10, -120.80, '2026-07-20T14:00:00Z', 90, 'inspected-party', 'full-day'],
+  ['e2', 't2', 'troll-slow', 35.10, -120.80, '2026-07-20T14:00:00Z', 90, 'inspected-party', 'full-day'],
   ['e3', 't2', 'drift-anchor', 35.12, -120.78, '2026-07-20T17:00:00Z', 60, null, null],
   ['e4', 't3', 'drift-anchor', 34.50, -120.50, '2025-10-06T09:00:00Z', 120, 'long-range', 'multi-day'],
-  ['e5', 't4', 'troll', 35.45, -121.00, '2026-09-01T16:00:00Z', 30, 'six-pack', 'half-day'],
+  ['e5', 't4', 'troll-slow', 35.45, -121.00, '2026-09-01T16:00:00Z', 30, 'six-pack', 'half-day'],
 ];
-// Segments per trip: kind and [lon, lat] points.
+// Segments per trip: kind and [lon, lat] points. Transit keeps statistics only, no geometry (#469 D20).
+// t4's uncertain and in-port segments and t1's gap carry geometry, and the tracks layer still drops them (N6).
 const SEGMENTS = {
-  t1: [['transit', [[-120.86, 35.37], [-120.95, 35.40]]], ['fishing-drift', [[-120.95, 35.40], [-120.951, 35.401], [-120.952, 35.399]]], ['gap', [[-120.952, 35.399], [-120.86, 35.37]]]],
-  t2: [['transit', [[-120.74, 35.17], [-120.80, 35.10]]], ['fishing-troll', [[-120.80, 35.10], [-120.78, 35.12]]], ['in-port', null]],
-  t3: [['transit', [[-120.74, 35.17], [-120.50, 34.50]]]],
-  t4: [['fishing-troll', [[-120.95, 35.42], [-121.00, 35.45]]]],
+  t1: [['transit', null], ['drift-anchor', [[-120.95, 35.40], [-120.951, 35.401], [-120.952, 35.399]]], ['gap', [[-120.952, 35.399], [-120.86, 35.37]]]],
+  t2: [['transit', null], ['troll-slow', [[-120.80, 35.10], [-120.78, 35.12]]], ['in-port', null]],
+  t3: [['transit', null], ['drift-anchor', [[-120.50, 34.50], [-120.501, 34.501]]]],
+  t4: [['troll-slow', [[-120.95, 35.42], [-121.00, 35.45]]], ['uncertain', [[-121.00, 35.45], [-120.99, 35.44]]],
+    ['in-port', [[-120.99, 35.44], [-120.98, 35.43]]]],
 };
 // Aggregate cells: id, cell, lat, lon, season, part, kind, vessels, events, dwell, first, last, rights.
 // c4 and c5 are whole-season cells (part null), which the aggregator writes beside the per-part ones; c5 is undated.
 const CELLS = [
   ['c4', 'g:4', 35.00, -121.20, '2026', null, 'drift-anchor', 2, 2, 200, '2026-06-10', '2026-07-20', 'internal-only'],
-  ['c5', 'g:5', 34.80, -120.60, '2025', null, 'troll', 1, 1, 10, null, null, 'noaa-planning-only'],
+  ['c5', 'g:5', 34.80, -120.60, '2025', null, 'troll-slow', 1, 1, 10, null, null, 'noaa-planning-only'],
   ['c1', 'g:1', 35.40, -120.95, '2026', 'summer', 'drift-anchor', 1, 1, 40, '2026-06-10', '2026-06-10', 'internal-only'],
-  ['c2', 'g:2', 35.10, -120.80, '2026', 'summer', 'troll', 1, 1, 90, '2026-07-20', '2026-07-20', 'internal-only'],
+  ['c2', 'g:2', 35.10, -120.80, '2026', 'summer', 'troll-slow', 1, 1, 90, '2026-07-20', '2026-07-20', 'internal-only'],
   ['c3', 'g:3', 34.50, -120.50, '2025', 'fall', 'drift-anchor', 1, 1, 120, '2025-10-06', '2025-10-06', 'noaa-planning-only'],
 ];
 
@@ -147,7 +149,7 @@ test('acceptance 1: each events filter narrows the seeded fixture as expected', 
     assert.deepEqual(await ids(`${q}&class=six-pack`), ['e1', 'e5']);
     assert.deepEqual(await ids(`${q}&trip_type=full-day`), ['e2', 'e3']);
     assert.deepEqual(await ids(`${q}&trip_type=half-day,multi-day`), ['e1', 'e4', 'e5']);
-    assert.deepEqual(await ids(`${q}&kind=troll`), ['e2', 'e5']);
+    assert.deepEqual(await ids(`${q}&kind=troll-slow`), ['e2', 'e5']);
     assert.deepEqual(await ids(`${q}&kind=drift-anchor`), ['e1', 'e3', 'e4']);
     // The date range is the trip's local departure date: e4 started 2025-10-06 on a trip that left 2025-10-05.
     assert.deepEqual(await ids(`${q}&from=2026-07-01&to=2026-07-31`), ['e2', 'e3']);
@@ -160,10 +162,10 @@ test('acceptance 1: each events filter narrows the seeded fixture as expected', 
     assert.deepEqual(await ids(`${q}&source=marinecadastre`), ['e4']);
     assert.deepEqual(await ids(`${q}&source=aisstream`), ['e1', 'e2', 'e3', 'e5']);
     assert.deepEqual(await ids(`${q}&bbox=-120.9,35.0,-120.7,35.2`), ['e2', 'e3']);
-    assert.deepEqual(await ids(`${q}&vessel=v-sea-example&kind=troll&season_part=fall&bbox=-121.1,35.3,-120.9,35.5`), ['e5']);
+    assert.deepEqual(await ids(`${q}&vessel=v-sea-example&kind=troll-slow&season_part=fall&bbox=-121.1,35.3,-120.9,35.5`), ['e5']);
     assert.deepEqual(await ids(`/api/fleet/map/events?region=elsewhere`), []);
     // The feature: a Point at [lon, lat] with the card's fields.
-    const {features: [e5]} = await get(`${q}&vessel=v-sea-example&kind=troll`);
+    const {features: [e5]} = await get(`${q}&vessel=v-sea-example&kind=troll-slow`);
     assert.deepEqual(e5.geometry, {type: 'Point', coordinates: [-121, 35.45]});
     assert.equal(e5.properties.vessel_name, 'Sea Example');
     assert.equal(e5.properties.port_id, 'morro-bay');
@@ -181,7 +183,7 @@ test('acceptance 1: each tracks filter narrows the seeded trips; segments decode
     assert.deepEqual(await trips(`${q}&port=morro-bay`), ['t1', 't4']);
     assert.deepEqual(await trips(`${q}&class=long-range`), ['t3']);
     assert.deepEqual(await trips(`${q}&trip_type=half-day`), ['t1', 't4']);
-    assert.deepEqual(await trips(`${q}&kind=troll`), ['t2', 't4']);
+    assert.deepEqual(await trips(`${q}&kind=troll-slow`), ['t2', 't4']);
     assert.deepEqual(await trips(`${q}&from=2026-06-01&to=2026-07-31`), ['t1', 't2']);
     assert.deepEqual(await trips(`${q}&season=2025&season_part=fall`), ['t3']);
     assert.deepEqual(await trips(`${q}&season_part=fall`), ['t3', 't4']);
@@ -189,11 +191,16 @@ test('acceptance 1: each tracks filter narrows the seeded trips; segments decode
     // bbox keeps the segments whose extent overlaps it, and the trips that have one.
     const boxed = await get(`${q}&bbox=-121.1,35.4,-120.94,35.5`);
     assert.deepEqual([...new Set(boxed.features.map(f => f.properties.trip_id))].sort(), ['t1', 't4']);
-    assert.deepEqual(boxed.features.map(f => f.id).sort(), ['t1-s0', 't1-s1', 't4-s0']);
+    assert.deepEqual(boxed.features.map(f => f.id).sort(), ['t1-s1', 't4-s0']);
+    // Fishing segments only (N6): uncertain, in-port, gap and transit never reach the layer, geometry or not.
+    const every = await get(q);
+    assert.deepEqual(every.features.map(f => f.id).sort(), ['t1-s1', 't2-s1', 't3-s1', 't4-s0']);
+    assert.ok(every.features.every(f => ['drift-anchor', 'troll-slow', 'troll-pelagic'].includes(f.properties.segment_kind)));
+    assert.deepEqual((await get(`${q}&vessel=v-sea-example&season_part=fall`)).features.map(f => f.id), ['t4-s0']);
     const all = await get(`${q}&vessel=v-tide-runner`);
-    // The in-port segment without geometry is not drawn.
-    assert.deepEqual(all.features.map(f => [f.id, f.properties.segment_kind]), [['t2-s0', 'transit'], ['t2-s1', 'fishing-troll']]);
-    assert.deepEqual(all.features[1].geometry, {type: 'LineString', coordinates: [[-120.8, 35.1], [-120.78, 35.12]]});
+    // Transit and in-port segments without geometry are not drawn: no transit track reaches any view.
+    assert.deepEqual(all.features.map(f => [f.id, f.properties.segment_kind]), [['t2-s1', 'troll-slow']]);
+    assert.deepEqual(all.features[0].geometry, {type: 'LineString', coordinates: [[-120.8, 35.1], [-120.78, 35.12]]});
     assert.equal(all.meta.trips, 1);
     assert.equal(all.features[0].properties.vessel_class, 'inspected-party');
     assert.equal(all.features[0].properties.trip_type, 'full-day');
@@ -228,7 +235,7 @@ test('acceptance 1: heat filters by kind, season, part, dates and bbox, and list
     assert.deepEqual(early.meta.ignored, ['to']);
     const dated = await get(`${q}&season_part=summer&from=2026-07-01&to=2026-07-31`);
     assert.deepEqual([dated.features.map(f => f.id), dated.meta.ignored], [['c2'], []]);
-    const ignored = await get(`${q}&season_part=all&vessel=v-sea-example&class=six-pack&port=morro-bay&trip_type=half-day&source=aisstream&kind=troll`);
+    const ignored = await get(`${q}&season_part=all&vessel=v-sea-example&class=six-pack&port=morro-bay&trip_type=half-day&source=aisstream&kind=troll-slow`);
     assert.deepEqual(ignored.meta.ignored, ['vessel', 'port', 'class', 'trip_type', 'source']);
     assert.deepEqual(ignored.features.map(f => f.id), ['c2', 'c5'], 'kind still applies');
     // season_part=all is also accepted on the per-trip layers.
@@ -331,7 +338,7 @@ test('filters lists the values present for the region', skip, async () => {
     assert.deepEqual(filters.ports, ['morro-bay', 'port-san-luis']);
     assert.deepEqual(filters.classes, ['inspected-party', 'long-range', 'six-pack']);
     assert.deepEqual(filters.trip_types, ['full-day', 'half-day', 'multi-day']);
-    assert.deepEqual(filters.kinds, ['drift-anchor', 'troll']);
+    assert.deepEqual(filters.kinds, ['drift-anchor', 'troll-slow']);
     assert.deepEqual(filters.seasons, ['2026', '2025']);
     assert.deepEqual(filters.season_parts, ['fall', 'summer']);
     assert.deepEqual(filters.sources, ['aisstream', 'marinecadastre']);
