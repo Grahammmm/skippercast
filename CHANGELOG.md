@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A first visit to the home page is now one guided path: pick where you launch, then how you fish (Boat, Shore, Spear or Kayak, each with what it changes), then the map opens. While you pick the profile, the home page fetches that region's map files and forecast in the background, so the map opens on cached or revalidated copies; only the chosen region is fetched, nothing when your browser asks to save data, and "Change port" goes back a step. The port is saved as home once you choose the profile. The profile choices no longer sit beside the port search, and the map no longer asks "How do you fish?" after the home page did; links straight into the map, and returning visitors with a saved home, skip the guided path as before (#622).
 - Move fleet AIS half-hour scheduling to off-hour slots and record trigger, run kind and source revision for cadence verification.
 
 - Forecast queries reuse each model/tile within the request and share timezone formatting across points, preserving values, units and duplicate-model field names while reducing repeated storage reads and computation.

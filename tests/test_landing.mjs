@@ -17,6 +17,7 @@ import {FRAME, projector, shorelineModule, simplify} from '../scripts/build_land
 import {DEFAULT_PLACE, ageText, buoyReadings, compass, feedPath, feedState, fromHarbor, loadReadout, placeLabel, tideReading, tideURL} from '../web/landing/readings.ts';
 import {saveData} from '../web/landing/save-data.ts';
 import {warmApp, warmList} from '../web/landing/warm.ts';
+import {ASSET, regionWarmList, warmRegion} from '../web/landing/region-warm.ts';
 import {RAIL_IDS} from '../web/profile.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -147,6 +148,8 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {LandingHead, LandingApp, NAV} from './web/landing/Landing.tsx';
+      export {ProfileStep, STEP_COPY} from './web/landing/ProfileStep.tsx';
+      export {PROFILE_NOTES} from './web/profile.ts';
       export {Shoreline, ShorelineCredit} from './web/landing/Shoreline.tsx';
       export {SHORELINE} from './web/landing/shoreline-path.ts';
       export {Readout} from './web/landing/Readout.tsx';
@@ -161,7 +164,7 @@ async function load() {
   return components;
 }
 
-test('the landing page holds the hero and footer statically; its parts render the nav, pills, port question and readout; no map engine', async () => {
+test('the landing page holds the hero and footer statically; its parts render the nav, port question and readout; no map engine', async () => {
   const {LandingHead, LandingApp, Shoreline, ShorelineCredit, SHORELINE, NAV, render, h} = await load();
   const page = readFileSync(join(ROOT, 'dist/landing.html'), 'utf8');
   assert.match(page, /<h1 class="landing-title">Know the water before you leave the dock\.<\/h1>/);
@@ -182,17 +185,63 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.match(head, /href="\/map#account">Sign in</, 'FE-61: the app opens the account dialog (web/account.ts)');
   assert.equal(NAV.length, 3);
   const app = render(h(LandingApp, {href: 'https://s.test/?ui=v2', navigate: () => {}, load: false}));
-  assert.deepEqual([...app.matchAll(/data-profile="([a-z]+)"[^>]*>.*?<\/svg>([A-Za-z]+)<\/button>/g)].map(m => [m[1], m[2]]), [['boat', 'Boat'], ['shore', 'Shore'], ['spear', 'Spear'], ['kayak', 'Kayak']]);
-  assert.doesNotMatch(app, /aria-pressed="true"/, 'no pill pressed without a stored profile');
+  // #622: the first run asks for the port first; the profile is its second step, never beside the port input.
   assert.match(app, /Where are you launching\?/);
-  assert.ok(app.indexOf('landing-readout') < app.indexOf('landing-pills'), 'the readings come before any choice (D4)');
+  assert.doesNotMatch(app, /data-profile=/, 'no profile choice on the port step');
+  assert.doesNotMatch(app, /How do you fish\?/);
+  assert.ok(app.indexOf('landing-readout') < app.indexOf('port-input'), 'the readings come before any choice (D4)');
   assert.match(app, /aria-busy="true"/, 'the readout waits for its readings');
   assert.match(app, /href="\/map\?region=morro-bay&amp;view=conditions&amp;ui=v2">Hour by hour on the map</);
-  const pressed = render(h(LandingApp, {href: 'https://s.test/', initialProfile: 'shore', navigate: () => {}, load: false}));
-  assert.match(pressed, /aria-pressed="true"[^>]*data-profile="shore"|data-profile="shore"[^>]*aria-pressed="true"/);
   assert.match(render(h(Shoreline, {})), /<svg class="landing-shore" viewBox="0 0 1000 \d+" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"/);
-  for (const file of ['Landing', 'Readout', 'LayerDots', 'ProfilePills', 'Shoreline', 'main'])
+  for (const file of ['Landing', 'Readout', 'LayerDots', 'ProfileStep', 'Shoreline', 'main'])
     assert.doesNotMatch(readFileSync(join(ROOT, `web/landing/${file}.tsx`), 'utf8'), /from '(?:[^']*maplibre[^']*|three|[^']*packages\/coast[^']*|\.\.\/state\.ts|\.\.\/app\/[^']*)'/, `${file}.tsx loads no map engine and none of the app's store`);
+});
+
+test('the profile step lists the four profiles with their notes, presses the stored one, and says only that the map files are loading or ready (#622)', async () => {
+  const {ProfileStep, STEP_COPY, PROFILE_NOTES, render, h} = await load();
+  const props = {place: 'Morro Bay', onChoose: () => {}, onBack: () => {}};
+  const html = render(h(ProfileStep, {...props, warm: 'loading'}));
+  assert.match(html, /<p class="ui-eyebrow landing-step-place">Morro Bay<\/p><h2 id="landing-step-title" tabindex="-1">How do you fish\?<\/h2>/);
+  assert.deepEqual([...html.matchAll(/data-profile="([a-z]+)"/g)].map(m => m[1]), ['boat', 'shore', 'spear', 'kayak']);
+  for (const note of Object.values(PROFILE_NOTES)) assert.ok(html.includes(note), note);
+  assert.doesNotMatch(html, /aria-pressed/, 'no stored profile: no choice is pressed');
+  assert.match(html, /role="status" data-warm="loading">Loading the Morro Bay map…</);
+  assert.match(render(h(ProfileStep, {...props, warm: 'ready'})), /data-warm="ready">Morro Bay map files ready\.</);
+  for (const warm of ['failed', 'skipped', null]) assert.match(render(h(ProfileStep, {...props, warm})), /role="status"[^>]*><\/p>/, `${warm}: nothing said`);
+  const pressed = render(h(ProfileStep, {...props, warm: null, current: 'shore'}));
+  assert.deepEqual([...pressed.matchAll(/aria-pressed="(true|false)"[^>]*data-profile="([a-z]+)"|data-profile="([a-z]+)"[^>]*aria-pressed="(true|false)"/g)]
+    .map(m => [m[2] ?? m[3], m[1] ?? m[4]]), [['boat', 'false'], ['shore', 'true'], ['spear', 'false'], ['kayak', 'false']]);
+  assert.match(html, />Change port<\/button>/);
+  assert.equal(STEP_COPY.title, 'How do you fish?');
+});
+
+test('the region warm-up reads region.json, fetches only that region\'s startup files and its forecast, and is quiet on failure or Save-Data (#622)', async () => {
+  const region = JSON.parse(readFileSync(join(ROOT, 'dist/regions/morro-bay/region.json'), 'utf8'));
+  assert.deepEqual(regionWarmList('morro-bay', region), ['regions/morro-bay/region.json', 'regions/morro-bay/atlas-marks.json', 'regions/morro-bay/search-plan-index.json',
+    'regions/morro-bay/shoreline-overview.geojson', 'regions/morro-bay/poster.svg', 'data/protected-areas.geojson', 'regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay']);
+  const mpa = readFileSync(join(ROOT, 'web/map/mpa.ts'), 'utf8').match(/^const ASSET = (\/.*\/);$/m)?.[1];
+  assert.equal(ASSET.toString(), mpa, 'the warm-up accepts exactly the protected-area paths the map does');
+  // Another region names its own protected areas; an unsafe or missing path is left out.
+  const socal = JSON.parse(readFileSync(join(ROOT, 'dist/regions/southern-california/region.json'), 'utf8'));
+  assert.ok(regionWarmList('southern-california', socal).includes('regions/southern-california/protected-areas.geojson'));
+  assert.ok(regionWarmList('southern-california', socal).every(p => !p.includes('morro-bay')), 'nothing for a region not chosen');
+  for (const bad of ['https://evil.test/x.geojson', '../secret.geojson', 'data/../x.geojson', 'data/x.json', 'regions/a/b/c.geojson', null]) assert.ok(!regionWarmList('r', {assets: {protected_areas: bad}}).some(p => p === bad), String(bad));
+  assert.equal(regionWarmList('r', null).length, 6);
+  // The fetches: region.json first, then the rest at low priority, every body read.
+  const asked = [];
+  const ok = body => ({ok: true, json: async () => body, blob: async () => new Blob([])});
+  const fetchFn = async (url, init) => { asked.push([url, init?.priority]); return url.endsWith('/region.json') ? ok(region) : url.includes('poster') ? {ok: false, blob: async () => new Blob([])} : ok({}); };
+  const result = await warmRegion('morro-bay', 'https://s.test/', fetchFn, {});
+  assert.equal(result.state, 'ready', 'an optional startup copy missing still reads ready');
+  assert.deepEqual(asked.map(a => a[0]), ['https://s.test/regions/morro-bay/region.json', ...regionWarmList('morro-bay', region).slice(1).map(p => new URL(p, 'https://s.test/').href)]);
+  assert.ok(asked.every(a => a[1] === 'low'));
+  assert.deepEqual(await warmRegion('morro-bay', 'https://s.test/', async () => { throw Error('offline'); }, {}), {state: 'failed', paths: []});
+  assert.equal((await warmRegion('morro-bay', 'https://s.test/', async () => ({ok: false}), {})).state, 'failed');
+  const forecastDown = async url => url.includes('/api/forecast') ? Promise.reject(Error('down')) : ok(region);
+  assert.equal((await warmRegion('morro-bay', 'https://s.test/', forecastDown, {})).state, 'failed');
+  let called = false;
+  assert.deepEqual(await warmRegion('morro-bay', 'https://s.test/', async () => { called = true; return ok(region); }, {connection: {saveData: true}}), {state: 'skipped', paths: []});
+  assert.equal(called, false, 'Save-Data fetches nothing');
 });
 
 test('every readout tile shows a source and an age, a stale one says stale, and the fleet line shows only when given', async () => {

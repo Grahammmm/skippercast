@@ -6,9 +6,10 @@
 // in the address. On the phone (FE-06) the port and locate controls sit in
 // the sheet's area group, so the sheet opens to full first. FE-83: a /coast
 // home opens in v2, Forget clears it everywhere, and denied storage still
-// navigates. The landing itself (FE-07): the readout with source, age and
+// navigates. #622: the guided first run (port, region warm-up, then profile).
+// The landing itself (FE-07): the readout with source, age and
 // stale state from stubbed feeds at a fixed clock, the saved-port redirect,
-// the port input with a profile pill, the layer dots, axe, no three request,
+// the port input, the layer dots, axe, no three request,
 // and LCP on the throttled mobile profile. FE-25: the live night map after
 // first paint over the synthetic basemap fixture and a synthetic WCOFS packet
 // (the coast bridge is otherwise held), its credit and Currents preview,
@@ -17,6 +18,7 @@
 import {readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 import {test, expect, checkA11y, LCP_BUDGET_MS} from './fixtures.ts';
+import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const SHELL = '/map?region=morro-bay&ui=v2';
 const PORT_KEY = 'skippercast-home-port-v1';
@@ -256,26 +258,96 @@ test('a saved port and no parameters open the app there with the stored profile;
   await context.addInitScript(([port, profile]) => { try { localStorage.setItem(port, 'morro-bay'); localStorage.setItem(profile, 'spear'); } catch { /* storage blocked */ } }, [PORT_KEY, PROFILE_KEY]);
   await page.goto('/?ui=v2&from=newsletter');
   await expect(page.locator('h1')).toHaveText('Know the water before you leave the dock.');
-  await expect(page.locator('[data-profile="spear"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Where are you launching?')).toBeVisible();   // #622: the first run starts at the port
   await page.goto('/?ui=v2');
   await expect(page).toHaveURL(/\/map\?/);
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'spear'});
   expect(pageErrors).toEqual([]);
 });
 
-test('a profile pill and a port from the landing input open the app with both and save the port', async ({page, pageErrors, v2}) => {
+// #622 (walkthrough slice 4): the guided first run asks for the port, warms that region while the visitor picks how
+// they fish, then opens the map with both; the port is saved only then, and the app's own profile card never shows.
+test('the first run asks for the port, warms that region, then asks the profile and opens the map with both', async ({page, pageErrors, v2}, info) => {
+  const requests: string[] = [];
+  page.on('request', r => { const u = new URL(r.url()); requests.push(u.pathname + u.search); });
+  await stubLiveFeeds(page);
   await landingFeeds(page);
   await v2.open('landing');
-  await page.locator('.landing-pills [data-profile="shore"]').click();
-  await expect(page.locator('.landing-pills [data-profile="shore"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.landing [data-profile]')).toHaveCount(0);   // no profile choice beside the port input
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
   await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
+  const step = page.locator('.landing-step[data-step="profile"]');
+  await expect(step.getByRole('heading', {name: 'How do you fish?'})).toBeFocused();
+  await expect(step.locator('.landing-step-place')).toHaveText('Morro Bay');
+  await expect(step.locator('[data-profile]')).toHaveCount(4);
+  await expect(step.locator('[role="status"]')).toHaveText('Morro Bay map files ready.');
+  for (const path of ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
+    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'])
+    expect(requests, `warmed ${path}`).toContain(path);
+  expect(requests.filter(p => /^\/regions\/(?!morro-bay\/)[^/]+\//.test(p)), 'nothing for a region not chosen').toEqual([]);
+  expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY), 'the port is saved only with the profile').toBeNull();
+  await checkA11y(page, 'v2-landing-profile-step', info.project.name);
+  // Change port goes back to the port step with the input focused.
+  await step.getByRole('button', {name: 'Change port'}).click();
+  await expect(input).toBeFocused();
+  await input.fill('morro');
+  await input.press('Enter');
+  await step.locator('[data-profile="shore"]').click();
   await expect(page).toHaveURL(/\/map\?/);
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'shore'});
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('morro-bay');
   await expect(page.locator('.app-firstrun')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Explore the coast takes the profile step with nothing to warm, and Save-Data warms nothing', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'connection', {value: {saveData: true}}); });
+  const requests: string[] = [];
+  page.on('request', r => requests.push(new URL(r.url()).pathname));
+  await landingFeeds(page);
+  await v2.open('landing');
+  await page.getByRole('button', {name: 'Explore the coast'}).click();
+  const step = page.locator('.landing-step[data-step="profile"]');
+  await expect(step.locator('.landing-step-place')).toHaveText('Central coast');
+  await expect(step.locator('[role="status"]')).toHaveText('');
+  await step.getByRole('button', {name: 'Change port'}).click();
+  const input = page.getByLabel('Where are you launching?');
+  await input.fill('morro');
+  await input.press('Enter');
+  await expect(step.locator('[role="status"]')).toHaveText('');
+  expect(requests.filter(p => /atlas-marks|search-plan-index|poster\.svg|\/api\/forecast/.test(p)), 'Save-Data: no warm-up').toEqual([]);
+  await step.locator('[data-profile="spear"]').click();
+  await expect(page).toHaveURL(/[?&]profile=spear/);
+  expect(pageErrors).toEqual([]);
+});
+
+// #622: every file the warm-up fetched is one the map then reads at startup (no wasted bytes), and the static ones are
+// answered by the browser cache (a revalidation or a cache hit, never a second full download).
+test('the map reads every warmed file at startup, the static ones from the browser cache', async ({page, pageErrors, v2}, info) => {
+  test.skip(info.project.name !== 'phone', 'checked once');
+  await stubLiveFeeds(page);
+  await landingFeeds(page);
+  const read = new Set<string>();
+  let onMap = false;
+  page.on('request', r => { const u = new URL(r.url()); if (onMap) read.add(u.pathname + u.search); });
+  await v2.open('landing');
+  const input = page.getByLabel('Where are you launching?');
+  await input.fill('morro');
+  await input.press('Enter');
+  await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
+  const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
+    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'];
+  onMap = true;
+  await page.locator('.landing-step [data-profile="boat"]').click();
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect.poll(() => list.filter(p => !read.has(p)), {timeout: 30_000, message: 'the map reads each warmed file'}).toEqual([]);
+  // Committed files: the second read moved no full body (a 304 or a cache hit: fewer bytes over the wire than the body).
+  const sizes = await page.evaluate(paths => performance.getEntriesByType('resource').map(e => e as PerformanceResourceTiming)
+    .filter(e => paths.includes(new URL(e.name).pathname)).map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize})),
+  list.filter(p => !p.startsWith('/api/')));
+  for (const s of sizes) expect(s.transfer, `${s.path} came from the cache (${s.transfer} of ${s.body} bytes moved)`).toBeLessThan(s.body);
   expect(pageErrors).toEqual([]);
 });
 

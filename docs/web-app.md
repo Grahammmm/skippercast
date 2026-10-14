@@ -29,7 +29,7 @@ Open `http://localhost:8787/`. `pnpm build` (`scripts/build-worker.mjs`, `vite.c
 | Path | What it holds |
 | --- | --- |
 | `dist/*.html`, `dist/landing.html`, `dist/app.html` | Page shells that Vite builds; no hand-written bundles or hashes |
-| `web/landing/` | The landing page: port input, profile pills, a readout of current readings |
+| `web/landing/` | The landing page: a readout of current readings and the guided first run (port, then profile, warming the chosen region between; `region-warm.ts`) |
 | `web/app/` | The map app shell: `App.tsx`, `Masthead.tsx`, `CommandBar.tsx`, `Desktop.tsx` (wide layout), `Mobile.tsx` (under 1,024 px: map plus a three-detent bottom sheet and a four-tab nav), `LayerRail.tsx`, `Legend.tsx`, `TimeDock.tsx`, `MapStage.tsx`, `MarkCard.tsx`, `LimitsPanel.tsx`, `FirstRun.tsx`, `AccountMenu.tsx`, `Trip.tsx` |
 | `web/app/views/` | `Conditions.tsx`, `History.tsx`, `Fleet.tsx`, `Reports.tsx` |
 | `web/brief/` | The brief: `model.ts` builds it, `verdict.ts` gives the day verdict, `Brief.tsx`, `Tiles.tsx`, `WhereToLook.tsx`, `TideSpark.tsx` render it, `run.ts` / `Run.tsx` give the run time and return window |

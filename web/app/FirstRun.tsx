@@ -4,19 +4,16 @@
 // which the store persists, so it never shows again. v1's boat preset step
 // moves to the account menu; "tomorrow's answer" is the brief's headline.
 // A home saved on /coast carries its mode, so it is not asked again (FE-83).
+// #622: the landing's guided first run asks before the map opens, so this
+// card is left for links into the map that name no profile.
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
-import {DEFAULT_PROFILE, PROFILE_TABLE, PROFILES, isProfile, type Profile} from '../profile.ts';
+import {DEFAULT_PROFILE, PROFILE_NOTES, PROFILE_TABLE, PROFILES, isProfile, type Profile} from '../profile.ts';
 import {savedHomeMode, type CookieJar} from '../ports.ts';
 import {readURL, setParams, STORAGE_KEYS, type StoreStorage} from '../state.ts';
 
-/** What each profile changes, in one line; the semantics are web/profile.ts's. */
-export const PROFILE_NOTES: Readonly<Record<Profile, string>> = {
-  boat: 'Reef marks and seafloor to 300 ft; seafloor and currents on the map.',
-  shore: 'Sandy-shore runs with access and rules; swell and water temp on the map.',
-  spear: 'Reef within 60 ft, nearest fresh nearshore site first; seafloor and swell on the map.',
-  kayak: 'Reef marks within 120 ft, with a wind-first paddling reading; seafloor and currents on the map.',
-};
+/** Kept here for existing imports; the notes live in web/profile.ts beside the table, shared with the landing's profile step (#622). */
+export {PROFILE_NOTES};
 
 function browserStorage(): StoreStorage | null {
   try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
