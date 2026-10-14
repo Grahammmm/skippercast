@@ -45,11 +45,14 @@ export function pickRun(nm: number | null, speedKn: number | null): string {
   return min === null ? '' : ` · run ≥ ${durationText(min)}`;
 }
 
-/** Boat and Kayak: the range to consider, or the ask for one, opening Your limits at the range field. */
-function RangeControl() {
+/**
+ * Boat and Kayak: the range to consider, or the ask for one, opening Your limits at the range field. Hidden while the
+ * list has no harbor to measure from (before the marks load, or a region without one), where no range is applied.
+ */
+function RangeControl({measured}: {measured: boolean}) {
   const [open, setOpen] = useState(false);
   const p = profile.value;
-  if (!isReachProfile(p)) return null;
+  if (!isReachProfile(p) || !measured) return null;
   const nm = reachFor(p), label = PROFILE_TABLE[p].label;
   return (
     <>
@@ -88,7 +91,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
           ))}
         </ol>
       ) : <p class="app-empty">{r.empty}</p>}
-      <RangeControl />
+      <RangeControl measured={!!r.harbor} />
     </section>
   );
 }

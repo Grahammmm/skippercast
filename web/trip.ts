@@ -111,6 +111,7 @@ async function startPlanner(id: string): Promise<Planner> {
   drawRanked();
   const model = createPlanner({atlas, screen, region: regions.getRegion() as import('./planner.ts').PlannerDeps['region'],
     map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
+    // Read when the planner starts for the region; a range changed later applies to the next region's planner, and the planner measures from its chosen port.
     reachNm: reachFor('boat'),
     getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
     nav: {
