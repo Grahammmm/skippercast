@@ -61,6 +61,16 @@ test('blocked storage keeps the plan in the page and says so', () => {
   p.dispose();
 });
 
+test('the distance filter starts from the saved Boat range (#644), else 20 nm', () => {
+  const make = reachNm => createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {},
+    storage: null, nav: {open() {}, showMap() {}, conditions() {}}, ...(reachNm === undefined ? {} : {reachNm})});
+  for (const [reachNm, distance] of [[undefined, 20], [null, 20], [12.5, 12.5]]) {
+    const p = make(reachNm);
+    assert.equal(p.filters.value.distance, distance, String(reachNm));
+    p.dispose();
+  }
+});
+
 test('Best available ranks distinct reefs, sets the ranked layers, names the plan, moves today to Friday, and draws the set', async () => {
   const {planner: p, emitted, saved} = harness();
   await settle();

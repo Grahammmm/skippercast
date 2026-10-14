@@ -23,6 +23,7 @@ import {createClouds} from '../map/clouds.ts';
 import {createFleetActivity} from '../map/fleet.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
+import {createReach} from '../map/reach.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createSwell} from '../map/swell.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
@@ -101,7 +102,8 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),
-          engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone})]})]});
+          engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
+          engine => createReach({engine, host: chartHost.current!})]})]});
     return () => stage.destroy();
   }, []);
   const shown = shownPresentation.value;

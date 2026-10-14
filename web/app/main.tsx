@@ -10,6 +10,7 @@ import {effect} from '@preact/signals';
 import {configureStore, coast, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
 import {loadCruise, loadLimits} from '../limits.ts';
+import {loadReach} from '../reach.ts';
 import {startTrip} from '../trip.ts';
 import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
@@ -24,6 +25,8 @@ initTelemetry();
 // #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
 loadLimits();
 loadCruise();
+// #644: the range to consider for Boat and Kayak, kept on this device.
+loadReach();
 // The shell shows "No port chosen" until the address changes.
 if (!region.peek() && !coast.peek()) void savedHomeURL(location.href).then(next => location.replace(next));
 const width = matchMedia(NARROW_QUERY);
