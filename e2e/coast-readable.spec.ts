@@ -54,7 +54,7 @@ test('the populated report (forecast, nearshore, buoys, sources) passes axe with
     nearshore: [{areaId: 'central', name: 'Synthetic nearshore site', availability: 'available', freshness: 'current', issuedAt: '2026-10-07T10:00:00Z', fetchedAt: '2026-10-07T11:50:00Z', validThrough: '2026-10-07T15:00:00Z', temporalResolutionMinutes: 180, hours: [{at, waveFt: 2, periodS: 11}]}]};
   await page.route('**/report?fixture=populated', async route => {
     const rendered = await serveCoastPage(new Request('https://skippercast.com/report'), {template: readFileSync(join(dir, shell!), 'utf8'), regions, now,
-      fetcher: async () => new Response(JSON.stringify(report), {headers: {'Content-Type': 'application/json'}})});
+      readReport: async () => new Response(JSON.stringify(report), {headers: {'Content-Type': 'application/json'}})});
     await route.fulfill({status: rendered.status, headers: Object.fromEntries(rendered.headers), body: await rendered.text()});
   });
   expect((await page.goto('/report?fixture=populated'))?.status()).toBe(200);

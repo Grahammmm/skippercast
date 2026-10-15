@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The coast map's report, surface currents, history, terrain and habitat now come only from SkipperCast's own published data; the old SLO Fish Report service is no longer read. When one of SkipperCast's feeds is missing or out of date, that part is shown as unavailable instead of being filled from the old service, and the report leaves out nearshore wave or beach rows it cannot vouch for (FE-62, part b).
 - A first visit to the home page is now one guided path: pick where you launch, then how you fish (Boat, Shore, Spear or Kayak, each with what it changes), then the map opens. While you pick the profile, the home page fetches that region's map files and forecast in the background, so the map opens on cached or revalidated copies; only the chosen region is fetched, nothing when your browser asks to save data, and "Change port" goes back a step. The port is saved as home once you choose the profile. The profile choices no longer sit beside the port search, and the map no longer asks "How do you fish?" after the home page did; links straight into the map, and returning visitors with a saved home, skip the guided path as before (#622).
 - Move fleet AIS half-hour scheduling to off-hour slots and record trigger, run kind and source revision for cadence verification.
 

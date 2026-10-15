@@ -66,13 +66,20 @@ export function landingShell(manifest) {
   return reachable(manifest, [LANDING_PAGE], new Set(), false);
 }
 
+/** A stylesheet a module only names (`import x from '….css?url'`, a manifest `assets` entry, not `css`): a component mounts it later, so it is not first paint. */
+function namedStylesheets(manifest) {
+  return new Set(Object.values(manifest).flatMap(e => (e.assets || []).filter(f => f.endsWith('.css')).map(f => `/${f}`)));
+}
+
 /**
  * #617: the app's first-paint files the landing warms after its own first paint (web/landing/warm.ts): the app
- * page's static graph (no dynamic imports) without what the landing already loaded for its own first paint.
+ * page's static graph (no dynamic imports) without what the landing already loaded for its own first paint, and
+ * without the stylesheets a component mounts on demand (CoastMarkup's shadow-root sheets), which the app page
+ * never loads before it has something to draw with them.
  */
 export function appWarm(manifest) {
-  const landing = landingShell(manifest);
-  return [...reachable(manifest, ['app.html'], new Set(), false)].filter(f => !landing.has(f)).sort();
+  const landing = landingShell(manifest), named = namedStylesheets(manifest);
+  return [...reachable(manifest, ['app.html'], new Set(), false)].filter(f => !landing.has(f) && !named.has(f)).sort();
 }
 
 /** The install list's hashed files: every script and style a non-v2 page can load, plus the landing's first paint. */

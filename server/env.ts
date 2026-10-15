@@ -55,9 +55,10 @@ export interface Env {
   FLEET_ENABLED?: string;            // "true" turns the fleet on; anything else: every /api/fleet/* route 404s
   FLEET_MAP_ENABLED?: string;        // "true" (with FLEET_ENABLED): the admin map routes /api/fleet/map/*
   FLEET_PUBLIC_HEAT_ENABLED?: string; // "true" (with FLEET_ENABLED): the anonymous /api/fleet/public/heat route
-  // FE-84: coast snapshot sources served from SkipperCast's own feeds instead of the Fish Worker (repository variable
-  // copied by scripts/wrangler_config.mjs); read only through coastFeeds() in server/coast-data.ts. Unset: all from Fish.
-  COAST_FEEDS?: string;              // comma list of nearshore, water-quality, ocean, history, report
+  // FE-84's switch from the Fish Worker to SkipperCast's own coast feeds (repository variable copied by
+  // scripts/wrangler_config.mjs). FE-62 retired the bridge, so every feed the rights register allows is used:
+  // nothing reads it; the deploy workflow still copies it until that step goes.
+  COAST_FEEDS?: string;
   // Secrets (wrangler secret put)
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;

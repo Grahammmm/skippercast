@@ -3,7 +3,7 @@
 // stage's shadow root by dynamic import; Chart is MapLibre (FE-11) over the
 // synthetic basemap fixture (tests/fixtures/basemap/tiny.pmtiles, served by
 // range here, since the published archive lives on R2) and the region's
-// committed shoreline. The Fish Worker bridge (/api/coast, /coast-data) never answers
+// committed shoreline. The Worker's coast routes (/api/coast, /coast-data) never answer
 // here: either it is held open, so the terrain stays mounted and loading, or it
 // fails, so the stage must return to Chart with v1's message.
 import {createHash} from 'node:crypto';

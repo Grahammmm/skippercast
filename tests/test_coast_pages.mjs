@@ -10,7 +10,7 @@ const template=readFileSync(new URL('../dist/coast-readable.html',import.meta.ur
 const now=new Date('2026-10-07T12:00:00Z'),at=now.toISOString();
 const report={schemaVersion:1,countyId:'slo',generatedAt:'2026-10-07T11:50:00Z',forecasts:[{id:'central',sourceId:'nws',hours:[{at,windKnots:8,gustKnots:12,waveFt:3,wavePeriodS:12}]}],observations:[{stationId:'46028',observedAt:'2026-10-07T10:30:00Z',waterTempF:56,waveFt:4,wavePeriodS:10,url:'https://www.ndbc.noaa.gov/'}],sources:[{id:'nws',label:'NWS $& <script>',kind:'forecast',outcome:'ok',issuedAt:'2026-10-07T10:00:00Z',fetchedAt:'2026-10-07T11:50:00Z',url:'javascript:alert(1)'}],tides:[],tideEvents:[],alerts:[],catches:[],nearshore:[{areaId:'central',name:'Original CDIP',availability:'available',freshness:'current',issuedAt:'2026-10-07T10:00:00Z',fetchedAt:'2026-10-07T11:50:00Z',validThrough:'2026-10-07T15:00:00Z',temporalResolutionMinutes:180,hours:[{at,waveFt:2,periodS:11},{at:'2026-10-07T15:00:00Z',waveFt:3,periodS:12}]}]};
 const request=(path='/report',init)=>new Request('https://skippercast.com'+path,init);
-const options=(data=report)=>({template,regions,now,fetcher:async()=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}})});
+const options=(data=report)=>({template,regions,now,readReport:async()=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}})});
 const selection=query=>readableSelection(new URL(request('/report'+query).url),regions,now);
 
 test('default readable report explicitly labels SLO reference without native controls or JS',async()=>{
@@ -43,8 +43,23 @@ test('nearshore original sampling remains visible only within supported first/la
  }
 });
 test('public report request strips client identity, range, query and origin',async()=>{
- let seen;const result=await serveCoastPage(request('/report?hour=2026-10-07T12:00Z&token=private',{headers:{Cookie:'session=private',Authorization:'Bearer private',Range:'bytes=2-4',Origin:'https://foreign.test'}}),{...options(),fetcher:async req=>{seen=req;return new Response(JSON.stringify(report),{headers:{'Content-Type':'application/json'}});}});
- assert.equal(result.status,200);assert.equal(seen.url,'https://fish-report.g4651.workers.dev/api/report');assert.equal(seen.method,'GET');assert.equal(seen.redirect,'manual');assert.deepEqual([...seen.headers],[]);assert.doesNotMatch(await result.text(),/token=private/);
+ let seen;const result=await serveCoastPage(request('/report?hour=2026-10-07T12:00Z&token=private',{headers:{Cookie:'session=private',Authorization:'Bearer private',Range:'bytes=2-4',Origin:'https://foreign.test'}}),{...options(),readReport:async req=>{seen=req;return new Response(JSON.stringify(report),{headers:{'Content-Type':'application/json'}});}});
+ assert.equal(result.status,200);assert.equal(seen.url,'https://skippercast.com/api/coast/report');assert.equal(seen.method,'GET');assert.deepEqual([...seen.headers],[]);assert.doesNotMatch(await result.text(),/token=private/);
+});
+test('FE-62: the readable report reads SkipperCast\'s own report feed, and is a gap when none is current',async()=>{
+ const original=globalThis.fetch;let outbound=0;globalThis.fetch=async()=>{outbound++;throw Error('Must not fetch another origin');};
+ try{
+  const empty={get:async()=>null,head:async()=>null};
+  const gap=await serveCoastPage(request('/report'),{template,regions,now,store:empty});
+  assert.equal(gap.status,503);assert.match(await gap.text(),/unavailable|gap/i);
+  assert.equal((await serveCoastPage(request('/feed.xml'),{template,regions,now,store:null})).status,503);
+  const own=JSON.parse(readFileSync(new URL('./fixtures/coast/skippercast-report.json',import.meta.url),'utf8')),generatedAt=new Date(Date.now()-10*60000).toISOString();
+  const bytes=new TextEncoder().encode(JSON.stringify({...own,generatedAt})),reads=[];
+  const store={head:async()=>null,get:async key=>{reads.push(key);return key==='conditions/regions/morro-bay/coast-report.json'?{size:bytes.byteLength,body:new Response(bytes).body,arrayBuffer:async()=>bytes.buffer}:null;}};
+  const feed=await serveCoastPage(request('/feed.xml'),{template,regions,now,store});
+  assert.equal(feed.status,200);assert.match(await feed.text(),new RegExp(generatedAt.slice(0,19)));
+  assert.ok(reads.includes('conditions/regions/morro-bay/coast-report.json'));assert.equal(outbound,0);
+ }finally{globalThis.fetch=original;}
 });
 test('RSS retains assembly and observation dates across reads and deduplicates original observations',async()=>{
  const data={...report,observations:[...report.observations,...report.observations]};
@@ -66,7 +81,7 @@ test('GET/HEAD routes are bounded and missing template fails closed; existing pr
  const post=await serveCoastPage(request('/report',{method:'POST'}),options());assert.equal(post.status,405);assert.equal(post.headers.get('Allow'),'GET, HEAD');
  assert.equal((await serveCoastPage(request('/privacy'),options())).status,404);
  for(const shell of [undefined,template+'<!--COAST_REPORT-->'])assert.equal((await serveCoastPage(request(),{...options(),template:shell})).status,503);
- for(const path of ['/methodology','/about']){const response=await serveCoastPage(request(path),{...options(),fetcher:async()=>{throw Error('Must not fetch');}});assert.equal(response.status,200);assert.doesNotMatch(await response.text(),/<script/);}
+ for(const path of ['/methodology','/about']){const response=await serveCoastPage(request(path),{...options(),readReport:async()=>{throw Error('Must not read the report');}});assert.equal(response.status,200);assert.doesNotMatch(await response.text(),/<script/);}
 });
 test('unreadable observation record fails closed for both text and RSS',async()=>{
  for(const path of ['/report','/feed.xml'])assert.equal((await serveCoastPage(request(path),options({...report,observations:[null]}))).status,503);
@@ -91,7 +106,7 @@ test('legacy area aliases must agree with the reviewed binding at explicit map p
   const result=selection(query);
   if(area===bound){assert.ok(result.context,query);continue;}
   assert.equal(result.context,null,query);assert.match(result.reason,/disagrees/);
-  const html=await(await serveCoastPage(request('/report'+query),{...options(),fetcher:async()=>{throw Error('Conflicting area must not fetch');}})).text();
+  const html=await(await serveCoastPage(request('/report'+query),{...options(),readReport:async()=>{throw Error('Conflicting area must not read the report');}})).text();
   assert.match(html,/supplied legacy report area disagrees/);assert.doesNotMatch(html,/Report assembled/);
  }
 });
