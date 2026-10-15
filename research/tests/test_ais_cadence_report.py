@@ -3,12 +3,15 @@ import contextlib
 import io
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from research.scripts.diagnose_cadence import main, report
+from research.lib.paths import ROOT
 
 
 def run(identity, minute, event='schedule'):
@@ -38,7 +41,8 @@ class PrivateReportTests(unittest.TestCase):
         result = self.assess(*fixture())
         self.assertEqual(result['natural_creation']['status'], 'observed')
         self.assertEqual(result['execution']['max_job_start_delay_seconds'], 0)
-        self.assertEqual(result['publication_freshness']['natural']['status'], 'within_test_bound')
+        self.assertEqual(result['publication_freshness']['natural']['status'], 'unknown')
+        self.assertEqual(result['publication_freshness']['natural']['observed_subset_test_result'], 'within_test_bound')
         self.assertEqual(result['operational_acceptance'], 'not_evaluated')
         self.assertIn('no owner-approved', result['freshness_bound']['policy'])
         self.assertEqual(result['freshness_bound']['proposed_test_minutes'], 40)
@@ -69,11 +73,11 @@ class PrivateReportTests(unittest.TestCase):
         runs = [run(1, 0), run(2, 120, 'workflow_dispatch')]
         result = self.assess(runs, [job(1, 0), job(2, 120)], [published(1, 1), published(2, 121)],
                              observed_at='2026-10-15T02:05:00Z')
-        self.assertEqual(result['publication_freshness']['ordinary']['status'], 'outside_test_bound')
+        self.assertEqual(result['publication_freshness']['ordinary']['observed_subset_test_result'], 'outside_test_bound')
         self.assertEqual(result['publication_freshness']['ordinary']['age_minutes'], 4)
         self.assertEqual(result['publication_freshness']['ordinary']['latest_trigger'], 'workflow_dispatch')
         self.assertEqual(result['publication_freshness']['natural']['age_minutes'], 124)
-        self.assertEqual(result['publication_freshness']['natural']['status'], 'outside_test_bound')
+        self.assertEqual(result['publication_freshness']['natural']['observed_subset_test_result'], 'outside_test_bound')
         self.assertEqual(result['natural_creation']['scheduled_runs'], 1)
 
     def test_backfill_and_validation_are_not_ordinary_publication(self):
@@ -88,7 +92,7 @@ class PrivateReportTests(unittest.TestCase):
                              observed_at='2026-10-15T02:05:00Z')
         self.assertEqual(result['publication_freshness']['natural']['age_minutes'], 4)
         self.assertEqual(result['publication_freshness']['natural']['max_observed_publication_gap_minutes'], 120)
-        self.assertEqual(result['publication_freshness']['natural']['status'], 'outside_test_bound')
+        self.assertEqual(result['publication_freshness']['natural']['observed_subset_test_result'], 'outside_test_bound')
         self.assertEqual(result['execution']['max_job_start_delay_seconds'], 0)
         self.assertTrue(result['trigger_delivery_cause'].startswith('unknown'))
 
@@ -131,6 +135,47 @@ class PrivateReportTests(unittest.TestCase):
         output = json.dumps(self.assess(runs, jobs, pubs))
         self.assertNotIn('synthetic-private', output)
 
+    def cli_report(self, runs, jobs, pubs):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for label, value in (('runs', runs), ('jobs', jobs), ('publications', pubs)):
+                (root / (label + '.json')).write_text(json.dumps(value))
+            output = root / 'report.json'
+            args = [sys.executable, '-B', '-m', 'research.scripts.diagnose_cadence',
+                    '--runs', str(root / 'runs.json'), '--jobs', str(root / 'jobs.json'),
+                    '--publications', str(root / 'publications.json'),
+                    '--observed-at', '2026-10-15T00:35:00Z', '--freshness-bound-minutes', '40',
+                    '--output', str(output)]
+            result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.stdout, '')
+            return result.returncode, json.loads(output.read_text())
+
+    def test_cli_unestablished_window_coverage_cannot_return_zero(self):
+        code, result = self.cli_report(*fixture())
+        self.assertEqual(code, 2)
+        self.assertEqual(result['coverage']['status'], 'unknown')
+        self.assertEqual(result['publication_provenance']['status'], 'unknown')
+        self.assertEqual(result['publication_freshness']['natural']['status'], 'unknown')
+        self.assertEqual(result['publication_freshness']['natural']['observed_subset_test_result'], 'within_test_bound')
+
+    def test_cli_publication_before_all_job_starts_is_unknown(self):
+        runs, jobs, pubs = fixture()
+        jobs = [job(1, 10), job(2, 32)]
+        code, result = self.cli_report(runs, jobs, pubs)
+        self.assertEqual(code, 2)
+        self.assertEqual(result['publication_freshness']['ordinary']['status'], 'unknown')
+        self.assertIn('chronologically invalid', result['publication_freshness']['ordinary']['reason'])
+
+    def test_cli_missing_job_provenance_and_publication_after_jobs_are_unknown(self):
+        runs, jobs, pubs = fixture()
+        for rows, observations in ((None, pubs), ([job(True, 0), jobs[1]], pubs),
+                                   (jobs, [published(1, 2), published(2, 34)])):
+            with self.subTest(rows=rows, observations=observations):
+                code, result = self.cli_report(runs, rows, observations)
+                self.assertEqual(code, 2)
+                self.assertEqual(result['publication_freshness']['ordinary']['status'], 'unknown')
+                self.assertNotIn('age_minutes', result['publication_freshness']['ordinary'])
+
     def test_cli_is_create_only_private_and_keeps_unknown_out_of_summaries(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -154,7 +199,7 @@ class PrivateReportTests(unittest.TestCase):
             self.assertEqual(output.read_bytes(), before)
             output.unlink()
             args += ['--publications', str(root / 'publications.json'), '--freshness-bound-minutes', '40']
-            self.assertEqual(main(args), 0)
+            self.assertEqual(main(args), 2)
             self.assertIsNotNone(json.loads(output.read_text())['input_sha256']['runs'])
             output.unlink()
             (root / 'runs.json').write_text('broken JSON')

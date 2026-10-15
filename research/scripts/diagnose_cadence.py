@@ -10,16 +10,20 @@ Inputs are local JSON exports, never raw AIS positions:
 - jobs: [{run_id, jobs: [{started_at, completed_at, conclusion}]}].
 - publications: optional [{run_id, run_kind: "normal", published_at}]. These
   are explicit successful publication observations supplied by the caller,
-  correlated to Actions runs; job success or local completion is not a proxy.
+  correlated to successful associated job intervals. Caller observations are not
+  authenticated publication provenance; job success is not a publication proxy.
   Historical/backfill/validation/label runs are excluded. Manual normal
   publication can show ordinary freshness but cannot fill natural-run gaps.
 
-Coverage is limited to supplied records. No trigger-slot attribution or lost
+Exhaustive window coverage and export/publication provenance cannot be established
+from these local inputs. Their assessment remains unknown, including when a
+subset meets the selected numeric test. No trigger-slot attribution or lost
 trigger count is inferred. Freshness bounds are caller-selected test values;
 40 minutes is proposed for testing only, never a default operational policy.
 The CLI requires a create-only output path (0600), prints no report publicly,
-and exits 2 for unknown/attention/outside-bound evidence. Exit 0 means that
-supplied diagnostic evidence met the selected test, not operational acceptance.
+and exits 2 after writing a report: this input contract cannot establish
+coverage/provenance and therefore has no success/acceptance exit path. Numeric
+subset results are observations only, never operational acceptance.
 
 Example (40 is a proposed test value, not an approved operating threshold):
 python -m research.scripts.diagnose_cadence --runs /private/runs.json \
@@ -129,7 +133,26 @@ def _execution(selected, job_rows, observed):
         return _unknown('job evidence malformed, ambiguous or chronologically invalid')
 
 
-def _freshness(runs, publications, observed, bound):
+def _publication_job_interval(run, job_rows, published, observed):
+    """Temporal sanity only; matching an interval does not authenticate a publisher."""
+    if not isinstance(job_rows, list):
+        raise ValueError('associated job evidence missing')
+    associated = [row for row in job_rows if isinstance(row, dict) and type(row.get('run_id')) is int
+                  and row['run_id'] == run['id']]
+    if len(associated) != 1 or not isinstance(associated[0].get('jobs'), list) or not associated[0]['jobs']:
+        raise ValueError('associated job evidence missing or ambiguous')
+    intervals = []
+    for job in associated[0]['jobs']:
+        start, end = stamp(job['started_at']), stamp(job['completed_at'])
+        if start < stamp(run['created_at']) or end < start or (observed is not None and end > observed):
+            raise ValueError('invalid associated job chronology')
+        if job.get('conclusion') == 'success':
+            intervals.append((start, end))
+    if not any(start <= published <= end for start, end in intervals):
+        raise ValueError('publication outside successful associated job intervals')
+
+
+def _freshness(runs, job_rows, publications, observed, bound):
     unknown = lambda reason: {'ordinary': _unknown(reason), 'natural': _unknown(reason)}
     if not isinstance(publications, list):
         return unknown('explicit publication evidence missing')
@@ -149,6 +172,7 @@ def _freshness(runs, publications, observed, bound):
             published = stamp(row['published_at'])
             if published < stamp(run['created_at']) or (observed is not None and published > observed):
                 raise ValueError('invalid publication chronology')
+            _publication_job_interval(run, job_rows, published, observed)
             if run['id'] in seen:
                 raise ValueError('ambiguous publication observations')
             seen.add(run['id'])
@@ -165,10 +189,11 @@ def _freshness(runs, publications, observed, bound):
             gaps = [(b[0] - a[0]).total_seconds()/60 for a,b in zip(sorted(records), sorted(records)[1:])]
             status = ('unknown' if observed is None or bound is None or missing else
                       'outside_test_bound' if age > bound or any(gap > bound for gap in gaps) else 'within_test_bound')
-            return {'status': status, 'latest_published_at': latest.isoformat(), 'latest_trigger': trigger,
+            return {'status': 'unknown', 'observed_subset_test_result': status,
+                    'latest_published_at': latest.isoformat(), 'latest_trigger': trigger,
                     'age_minutes': age, 'max_observed_publication_gap_minutes': max(gaps) if gaps else None,
                     'missing_natural_publication_records': missing,
-                    'reason': 'observed age and publication gaps only; window completeness not established'}
+                    'reason': 'observed subset only; exhaustive window coverage and publication provenance not established'}
         return {'ordinary': assess(ordinary), 'natural': assess(natural)}
     except (KeyError, TypeError, ValueError, AttributeError):
         return unknown('publication evidence malformed, uncorrelated or chronologically invalid')
@@ -180,7 +205,10 @@ def report(runs, job_rows, publications=None, *, observed_at=None, freshness_bou
     bound = freshness_bound_minutes
     if bound is not None and (type(bound) not in (int, float) or not math.isfinite(bound) or bound <= 0):
         raise ValueError('freshness test bound must be a finite positive number')
-    result = {'schema_version': 1, 'coverage': 'supplied records only',
+    result = {'schema_version': 1,
+              'coverage': {'status': 'unknown', 'scope': 'supplied records only',
+                           'reason': 'exhaustive window and export provenance not established'},
+              'publication_provenance': _unknown('caller observations and input hashes do not authenticate publication'),
               'operational_acceptance': 'not_evaluated', 'trigger_delivery_cause': UNKNOWN_CAUSE,
               'freshness_bound': {'minutes': bound, 'proposed_test_minutes': PROPOSED_TEST_BOUND_MINUTES,
                                   'policy': 'test value only; no owner-approved operational policy inferred'}}
@@ -209,7 +237,7 @@ def report(runs, job_rows, publications=None, *, observed_at=None, freshness_bou
                                         if observed is not None and selected else None),
         'scope': 'observed creation records; not attributed nominal slots or a lost-trigger count'}
     result['execution'] = _execution(selected, job_rows, observed)
-    result['publication_freshness'] = _freshness(runs, publications, observed, bound)
+    result['publication_freshness'] = _freshness(runs, job_rows, publications, observed, bound)
     return result
 
 
@@ -249,11 +277,10 @@ def main(argv=None):
     with os.fdopen(fd, 'w') as handle:
         json.dump(result, handle, indent=2, allow_nan=False)
         handle.write('\n')
-    fresh = result['publication_freshness']
-    complete = (result['natural_creation']['status'] == 'observed'
-                and result['execution']['status'] == 'observed'
-                and all(fresh[key]['status'] == 'within_test_bound' for key in ('ordinary', 'natural')))
-    return 0 if complete else 2
+    # This local-export contract establishes neither exhaustive coverage nor
+    # authenticated provenance. Do not expose a success exit merely because
+    # recent points in an unqualified subset meet the proposed test value.
+    return 2
 
 
 if __name__ == '__main__':
