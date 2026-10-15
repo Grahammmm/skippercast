@@ -90,6 +90,15 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
     if (next !== detent) onDetent(next);
     if (d.moved) (event.currentTarget as HTMLElement).dataset.dragged = 'true';
   };
+  const onPointerCancel = (event: PointerEvent) => {
+    // Cancellation abandons the gesture; only a normal release chooses a detent.
+    const d = drag.current;
+    drag.current = null;
+    delete (event.currentTarget as HTMLElement).dataset.dragged;
+    if (!d) return;
+    d.sheet.style.transition = '';
+    d.sheet.style.transform = '';
+  };
   const onClick = (event: MouseEvent) => {
     const handle = event.currentTarget as HTMLElement;
     if (handle.dataset.dragged) { delete handle.dataset.dragged; return; }
@@ -100,7 +109,7 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
       <div class="ui-sheet-edge">
         <button type="button" class="ui-sheet-handle" aria-label={`${detent === 'full' ? 'Collapse' : 'Expand'} ${label}`}
           aria-expanded={detent !== 'peek'} data-detent={detent} onClick={onClick} onKeyDown={onKeyDown}
-          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
           <span class="ui-sheet-grip" aria-hidden="true"></span>
         </button>
         {edge}
