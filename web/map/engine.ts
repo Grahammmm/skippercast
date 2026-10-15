@@ -1,6 +1,7 @@
 // MapLibre init for the Chart presentation (FE-11, docs/plans/front-end/design.md
 // § 3, § 3A.2): the PMTiles protocol and the worker URL registered once, a
-// north-up map (no rotation or pitch by any gesture or key), a nautical scale,
+// north-up map (no rotation or pitch by any gesture or key; only the first-view
+// flyover, #646, tilts and turns it and always returns it north up and flat), a nautical scale,
 // zoom buttons, the attribution control, resize with its host, and error
 // routing: a failing source marks only the registry layer that owns it
 // (web/map/layers.ts), so one broken feed never blanks the chart.
@@ -51,6 +52,11 @@ export interface EngineOptions {
   still?: boolean;
 }
 
+/** One leg of the flyover (#646, web/map/flyover.ts): the tilt and turn to reach, in degrees, over `duration` milliseconds. */
+export interface FlyLeg {readonly pitch: number; readonly bearing: number; readonly duration: number}
+/** Input that stops a flyover: the visitor took the map. */
+export const FLY_STOPPERS = ['pointerdown', 'touchstart', 'wheel', 'keydown'] as const;
+
 /** What a GeoJSON source accepts: a URL or GeoJSON. */
 export type SourceData = Parameters<MapLibre.GeoJSONSource['setData']>[0];
 
@@ -99,6 +105,13 @@ export interface Engine {
    * pixels go straight to MapLibre, with no request. Before the style has loaded, the latest per source waits for it.
    */
   setImage(sourceId: string, texture: FieldTexture): void;
+  /**
+   * Fly `legs` in order around the current centre and zoom (#646), then call `done(true)`. Any input on the
+   * host, setCamera, stopFlyover or destroy stops it early (`done(false)`); either way the Chart ends north up
+   * and flat, with gestures still unable to tilt or turn it.
+   */
+  flyover(legs: readonly FlyLeg[], done?: (finished: boolean) => void): void;
+  stopFlyover(): void;
   destroy(): void;
 }
 
@@ -200,8 +213,41 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
   });
 
+  // The flyover (#646): max pitch rises only while it flies; each leg starts at the last one's moveend.
+  let flight: (() => void) | null = null;
+  const smooth = (t: number): number => t * t * (3 - 2 * t);
+  function flyover(legs: readonly FlyLeg[], done?: (finished: boolean) => void): void {
+    flight?.();
+    const center = map.getCenter(), zoom = map.getZoom();
+    let next = 0, over = false;
+    const finish = (finished: boolean): void => {
+      if (over) return;
+      over = true; flight = null;
+      map.off('moveend', step);
+      for (const type of FLY_STOPPERS) host.removeEventListener?.(type, stop, true);
+      if (!finished) map.stop();
+      if (map.getPitch() || map.getBearing()) map.jumpTo({bearing: 0, pitch: 0});
+      map.setMaxPitch(0);
+      done?.(finished);
+    };
+    const stop = (): void => finish(false);
+    function step(): void {
+      if (over) return;
+      const leg = legs[next++];
+      if (!leg) { finish(true); return; }
+      map.easeTo({center, zoom, pitch: leg.pitch, bearing: leg.bearing, duration: leg.duration, easing: smooth});
+    }
+    flight = stop;
+    map.setMaxPitch(Math.max(0, ...legs.map(l => l.pitch)));
+    for (const type of FLY_STOPPERS) host.addEventListener?.(type, stop, {capture: true, passive: true});
+    map.on('moveend', step);
+    step();
+  }
+
   return {
-    setCamera(c) { map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
+    flyover,
+    stopFlyover() { flight?.(); },
+    setCamera(c) { flight?.(); map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
     setVisible(layerId, visible) {
       if (early && !map.getLayer(layerId)) early.visible.set(layerId, visible);
       else { early?.visible.delete(layerId); show(layerId, visible); }
@@ -233,6 +279,6 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
       else { early?.images.delete(sourceId); paint(sourceId, texture); }
     },
-    destroy() { resize?.disconnect(); map.remove(); },
+    destroy() { flight?.(); resize?.disconnect(); map.remove(); },
   };
 }
