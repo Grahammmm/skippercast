@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"southern-california","layer_id":"chlorophyll-observation","bounds":[-118.0,33.0,-117.5,33.5],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1791806400,"cells":[[33.01875,-117.73125,0.11464],[33.43125,-117.65625,0.71653]],"valid_cells":2}]}
