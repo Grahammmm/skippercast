@@ -1,0 +1,6 @@
+# Every page may be crawled; private pages carry their own noindex.
+# server/advisor/pages/sitemap.ts answers this path while the advisor is on.
+User-agent: *
+Allow: /
+
+Sitemap: https://skippercast.com/sitemap.xml

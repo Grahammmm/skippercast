@@ -176,7 +176,7 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.equal(render(h(ShorelineCredit, {})), `<p class="landing-credit">Shoreline: ${SHORELINE.attribution}, surveyed ${SHORELINE.sourceYears[0]}–${SHORELINE.sourceYears.at(-1)}.</p>`);
   for (const id of ['landing-night', 'landing-shore', 'landing-head', 'landing-app', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));
   assert.ok(page.indexOf('id="landing-night"') < page.indexOf('id="landing-shore"'), 'the shoreline paints over the night map until it has drawn');
-  assert.deepEqual([...page.matchAll(/<script\b[^>]*>/g)].map(m => m[0]), ['<script type="module" src="../web/landing/main.tsx">'], 'one module, no inline script');
+  assert.deepEqual([...page.matchAll(/<script\b[^>]*>/g)].map(m => m[0]), ['<script type="application/ld+json">', '<script type="module" src="../web/landing/main.tsx">'], 'one module and one structured-data block, no inline script');
   const head = render(h(LandingHead, {href: 'https://s.test/?ui=v2'}));
   assert.match(head, /href="\/\?ui=v2">SkipperCast</);
   assert.match(head, /href="\/map\?region=morro-bay&amp;view=fleet&amp;ui=v2">Fleet</);

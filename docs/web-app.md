@@ -88,7 +88,19 @@ The private personal Telegram monitor is not wired into the public web app. The 
 
 Dated NOAA buoy readings, airport weather and measured water level come through the public conditions feed. The brief uses measured buoy seas when fresh and labels a forecast fallback. The brief reuses a loaded regional forecast for up to 30 minutes before it asks again (`FORECAST_MAX_AGE_MS` in `web/brief/Brief.tsx`). Refresh intervals for observations are not verified here; see [Sources and the cloud refresh](live-conditions.md).
 
-## Link previews
+## Search and link previews
+
+`dist/landing.html` names `https://skippercast.com/` as its canonical address
+and carries WebSite and Organization JSON-LD; Google reads the site name from
+WebSite structured data on the home page
+([site names](https://developers.google.com/search/docs/appearance/site-names)).
+The map stays `noindex`: with no area in the address it replaces itself with the
+saved home or the landing, so a crawler would see a redirect. `dist/robots.txt` allows every crawler and names `dist/sitemap.xml`, the
+public pages; while the advisor is on, the Worker's robots.txt names that
+sitemap and `/sitemap-advisor.xml`. Admin, chat, data and upload pages also stay
+`noindex`. Google needs no extra file or markup for its AI features
+([AI features](https://developers.google.com/search/docs/appearance/ai-features)),
+so there is no `llms.txt`. `tests/test_site_discovery.mjs` checks all of this.
 
 The initial HTML contains Open Graph and X large-image metadata for
 `https://skippercast.com/`. Crawlers can read the title, description and absolute
