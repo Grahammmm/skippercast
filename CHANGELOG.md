@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Disable Play and Next hour at the forecast horizon's end while keeping earlier hours selectable.
+
 - Keep the mobile sheet at its previous height when a drag is cancelled, and preserve the next tap.
 
 - Search engines and link previews can read the site again. The home page has a canonical address, the share card (title, description and boat image) that went missing with the classic map, and WebSite structured data so Google can show the SkipperCast name; its title and description now say it is for fishing on the Central Coast. `robots.txt` and a new `sitemap.xml` list the public pages, and `/sources` and `/privacy` name their canonical addresses.

@@ -44,16 +44,18 @@ export type DockProps<D extends string> = {
   disabled?: boolean;
   /** prefers-reduced-motion: the button steps one hour per press ("Next hour") instead of playing. */
   stepOnly?: boolean;
+  /** No later hour in the whole forecast horizon; keep the slider and an active Pause usable. */
+  advanceDisabled?: boolean;
   class?: string;
 };
 
-export function Dock<D extends string>({days, day, onDay, playing, onPlay, hour, hours, onHour, hourText, disabled = false, stepOnly = false, class: cls}: DockProps<D>) {
+export function Dock<D extends string>({days, day, onDay, playing, onPlay, hour, hours, onHour, hourText, disabled = false, stepOnly = false, advanceDisabled = false, class: cls}: DockProps<D>) {
   return (
     <div class={['ui-dock', cls].filter(Boolean).join(' ')} role="group" aria-label="Time">
       <Segmented label="Day" options={days} value={day} onChange={onDay} />
       {stepOnly
-        ? <IconButton icon="chevron" label="Next hour" disabled={disabled} onClick={() => onPlay(true)} />
-        : <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} pressed={playing} disabled={disabled} onClick={() => onPlay(!playing)} />}
+        ? <IconButton icon="chevron" label="Next hour" disabled={disabled || advanceDisabled} onClick={() => onPlay(true)} />
+        : <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} pressed={playing} disabled={disabled || (advanceDisabled && !playing)} onClick={() => onPlay(!playing)} />}
       <Range label="Hour" value={hour} max={Math.max(0, hours - 1)} onChange={onHour} valueText={hourText} disabled={disabled} class="ui-dock-range" />
       <output class="ui-dock-readout ui-mono" aria-live="off">{hourText(hour)}</output>
     </div>

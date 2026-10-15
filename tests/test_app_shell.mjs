@@ -388,3 +388,15 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   // FE-61: tests/test_no_v1_map_library.mjs checks that no tracked file names the retired 2D map library.
   assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), ['vendor/simplewebauthn-browser-14.0.0/index.umd.min.js'], 'the only vendored script is the passkey library (FE-50)');
 });
+
+
+test('the time dock disables Play at the complete horizon end while preserving backward selection', async () => {
+  const last = new Date(NOW.getTime() + 168 * 3_600_000).toISOString().slice(0, 16) + 'Z';
+  const html = await renderShell(`${ORIGIN}?region=morro-bay&hour=${last}`);
+  const button = html.match(/<button[^>]*aria-label="Play"[^>]*>/)[0];
+  assert.match(button, / disabled(?:=|>| )/);
+  assert.doesNotMatch(html.match(/<input[^>]*aria-label="Hour"[^>]*>/)[0], / disabled/);
+  const before = new Date(NOW.getTime() + 167 * 3_600_000).toISOString().slice(0, 16) + 'Z';
+  const prior = await renderShell(`${ORIGIN}?region=morro-bay&hour=${before}`);
+  assert.doesNotMatch(prior.match(/<button[^>]*aria-label="Play"[^>]*>/)[0], / disabled/);
+});
