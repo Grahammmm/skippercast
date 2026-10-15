@@ -156,6 +156,12 @@ test('the shoreline loads once per region; a failure claims no distance', async 
   resetShoreLines();
 });
 
+test('the Chart\'s seafloor layer redraws when the diver\'s depth changes, as the marks and the list do', () => {
+  const src = readFileSync(new URL('../web/map/seafloor.ts', import.meta.url), 'utf8');
+  assert.match(src, /effect\(\(\) => \{[^}]*ownSpearDepthFt\.value;[^}]*untracked\(\(\) => void draw\(\)\)/, 'the redraw effect tracks the saved depth');
+  assert.match(src, /limit = depthLimitFt\(p\)/, 'and its note quotes it');
+});
+
 let mod;
 async function load() {
   if (mod) return mod;
@@ -201,6 +207,8 @@ test('Your limits: Spear sets its depth, where from and, from shore, the swim; K
   assert.match(html, /<option value(?:="")?>The harbor<\/option>/);
   for (const p of points) assert.match(html, new RegExp(`value="${p.id}"`));
   assert.match(html, /straight line from the launch, not a route/);
+  launchChoice.value = {};
+  assert.match(render(h(LimitsForm, {profile: 'kayak'})), /straight line from the harbor, not a route/, 'the harbor chosen: the hint says so');
   depth.value = null; spearPlan.value = {from: null, shoreYd: null}; list.value = null; launchChoice.value = {};
 });
 

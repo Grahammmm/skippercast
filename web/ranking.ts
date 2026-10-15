@@ -162,7 +162,7 @@ export function ranking(i: RankingInputs): Ranking {
   const keep: Keep = {maxNm: reach, shore};
   const ranged = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
   const swum = shore ? ` Only places within ${shore.maxYd} yd of the mapped shoreline are listed, measured straight to the simplified overview line, so the distance is approximate and not a swim route.`
-    : i.shore ? ' Your swim limit is not applied: the shoreline to measure from is unavailable.' : '';
+    : i.shore ? ' Your swim limit is not applied: the shoreline to measure from has not loaded, or this region has none.' : '';
   const from = ` ${harbor}.${ranged}${swum} A ranked place is a place to look; fish presence is unverified.`;
   const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
   const extra = {...(origin ? {harbor: origin.name} : {}), ...(reach === null ? {} : {reach})};

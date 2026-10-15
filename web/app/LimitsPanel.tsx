@@ -61,8 +61,8 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
     saveLimits(p, draft);
     if (p === 'boat') saveCruise(cruise);
     if (isReachProfile(p)) saveReach(p, reach);
-    if (p === 'spear') saveSpear({depthFt: depth, from, shoreYd: swim});
-    if (p === 'kayak' && area && launches.length) saveLaunch(area, launch);
+    if (p === 'spear') saveSpear({depthFt: depth, from, shoreYd: from === 'shore' ? swim : ''});
+    if (p === 'kayak' && area && launches.length) saveLaunch(area, launches.some(l => l.id === launch) ? launch : '');
     onDone?.();
   };
   const reset = () => { resetLimits(p); setDraft(draftOf(base)); };
@@ -102,7 +102,7 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
           <label for={`${id}-reach`}>Range to consider <span class="ui-mono">(nm, one way)</span></label>
           <input id={`${id}-reach`} autoFocus={focusReach} name="reach" type="number" inputMode="decimal" min={REACH_BOUNDS[p].min} max={REACH_BOUNDS[p].max} step={REACH_BOUNDS[p].step}
             value={reach} onInput={event => setReach((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-reach-hint`} />
-          <span id={`${id}-reach-hint`} class="app-limits-hint ui-mono">No default · {fmt(REACH_BOUNDS[p].min)}–{fmt(REACH_BOUNDS[p].max)} · straight line from {p === 'kayak' && launches.length ? 'the launch' : 'the harbor'}, not a route · blank clears it</span>
+          <span id={`${id}-reach-hint`} class="app-limits-hint ui-mono">No default · {fmt(REACH_BOUNDS[p].min)}–{fmt(REACH_BOUNDS[p].max)} · straight line from {p === 'kayak' && launch ? 'the launch' : 'the harbor'}, not a route · blank clears it</span>
         </div>
       ) : null}
       {p === 'kayak' && launches.length ? (
@@ -136,7 +136,7 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
               <label for={`${id}-swim`}>Farthest swim from shore <span class="ui-mono">(yd)</span></label>
               <input id={`${id}-swim`} name="swim" type="number" inputMode="numeric" min={SHORE_SWIM_BOUNDS.min} max={SHORE_SWIM_BOUNDS.max} step={SHORE_SWIM_BOUNDS.step}
                 value={swim} onInput={event => setSwim((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-swim-hint`} />
-              <span id={`${id}-swim-hint`} class="app-limits-hint ui-mono">No default · {SHORE_SWIM_BOUNDS.min}–{SHORE_SWIM_BOUNDS.max} · approximate, from the mapped shoreline · blank clears it</span>
+              <span id={`${id}-swim-hint`} class="app-limits-hint ui-mono">No default · {SHORE_SWIM_BOUNDS.min}–{SHORE_SWIM_BOUNDS.max} · approximate, from the mapped shoreline where the region has one · blank clears it</span>
             </div>
           ) : null}
         </>

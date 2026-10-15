@@ -18,7 +18,7 @@ import {
   sourceRightsDetails, tileFeatures, tilesForBounds,
 } from '../../dist/seafloor-data.js';
 import {gradeAllows, type GradeFilter} from '../grade.ts';
-import {PROFILE_TABLE, depthLimitFt, withinDepth, type Profile} from '../profile.ts';
+import {PROFILE_TABLE, depthLimitFt, ownSpearDepthFt, withinDepth, type Profile} from '../profile.ts';
 import {grade, layers, profile, region, species} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {SEAFLOOR_SOURCE} from './layers.ts';
@@ -386,7 +386,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   const on = computed(() => layers.value.includes('seafloor'));
   const disposers = [
     effect(() => { on.value; region.value; untracked(() => void enable()); }),
-    effect(() => { camera.value; shownPresentation.value; profile.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
+    effect(() => { camera.value; shownPresentation.value; profile.value; ownSpearDepthFt.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
   ];
   return {
     mark(id) { const f = drawn.get(id); return f ? seafloorMark(f, view) : null; },
