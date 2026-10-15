@@ -167,6 +167,39 @@ test('first run asks for the profile once and never when the address names one',
 });
 
 for (const [width, height] of [[320, 568], [390, 844]] as const) {
+  test(`Tab from peek reveals every first-run choice on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const card = sheet.locator('.app-firstrun');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await handle.focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('slider', {name: 'Hour', exact: true})).toBeFocused();
+    const controls = card.getByRole('button');
+    await expect(controls).toHaveCount(5);
+    for (const control of await controls.all()) {
+      await page.keyboard.press('Tab');
+      await expect(control).toBeFocused();
+      await expect(sheet).toHaveAttribute('data-detent', 'full');
+      await expect(control).toBeInViewport({ratio: 1});
+      await expect.poll(async () => {
+        const target = (await control.boundingBox())!, tabs = (await page.locator('.app-tabs').boundingBox())!;
+        return target.y + target.height <= tabs.y;
+      }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
+    }
+    // Return to Kayak and choose using only the keyboard.
+    await page.keyboard.press('Shift+Tab');
+    await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=kayak/);
+    await page.reload();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+
   test(`first-run choices stay inside the ${width}px phone sheet and every choice is reachable`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
     await page.setViewportSize({width, height});

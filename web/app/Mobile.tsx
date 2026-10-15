@@ -142,7 +142,10 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
         <ProfileSwitch class="app-profile" />
       </header>
       {appView.value === 'reports' ? <main class="app-mobile-page">{firstRun}<Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
-        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
+        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}
+        onBodyFocus={event => {
+          if ((event.target as Element | null)?.closest('.app-firstrun') && detent !== 'full') setDetent('full');
+        }}>
         {firstRun}
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
