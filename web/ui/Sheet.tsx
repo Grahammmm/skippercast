@@ -50,12 +50,14 @@ export type SheetProps = {
   /** Content pinned at the top edge beside the handle (the hour slider). */
   edge?: ComponentChildren;
   children: ComponentChildren;
+  /** Let the parent reveal body controls when focus enters them. */
+  onBodyFocus?: (event: FocusEvent) => void;
   class?: string;
 };
 
 type Drag = {y: number; base: number; sheet: HTMLElement; moved: boolean};
 
-export function Sheet({label, detent, onDetent, edge, children, class: cls}: SheetProps) {
+export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, class: cls}: SheetProps) {
   const drag = useRef<Drag | null>(null);
   const onKeyDown = (event: KeyboardEvent) => {
     const next = nextDetent(detent, event.key);
@@ -114,7 +116,7 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
         </button>
         {edge}
       </div>
-      <div class="ui-sheet-body">{children}</div>
+      <div class="ui-sheet-body" onFocusIn={onBodyFocus}>{children}</div>
     </section>
   );
 }
