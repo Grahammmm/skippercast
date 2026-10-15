@@ -145,13 +145,23 @@ const hourParam = (ms: number) => new Date(ms).toISOString().slice(0, 16) + 'Z';
 const horizonStart = () => Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
 const urlHour = (page: Page) => new URL(page.url()).searchParams.get('hour');
 
-test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2}) => {
+test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2, isMobile}) => {
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: '3d'});
   const host = page.locator('.app-terrain');
   await expect(host).toHaveAttribute('data-hour', /^\d{4}-\d{2}-\d{2}T\d{2}:00:00\.000Z$/);
-  // Tomorrow is a full day: its chip, then the slider's first or last hour.
-  await page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1).click();
+  // The phone's day chips are in the sheet body, below its initial peek.
+  if (isMobile) {
+    const handle = page.locator('.ui-sheet-handle');
+    await handle.focus();
+    await handle.press('End');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+  }
+  // Tomorrow is a full day: reveal its chip before an actionable click.
+  const tomorrow = page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1);
+  await tomorrow.scrollIntoViewIfNeeded();
+  await expect(tomorrow).toBeInViewport();
+  await tomorrow.click();
   await expect.poll(() => urlHour(page)).not.toBeNull();
   const slider = page.locator('input[aria-label="Hour"]');
   const atStart = await slider.inputValue() === '0';
