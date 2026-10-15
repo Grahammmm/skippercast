@@ -12,14 +12,19 @@
 // Boat and Kayak add the range to consider (#644, web/reach.ts): how far out,
 // one way, "Where to look" and the Chart's reach ring use; blank until the
 // user types one, no default, and also left alone by Reset to defaults.
+// Spear adds the deepest dive (default the table's 60 ft), where the diver
+// dives from, and the farthest swim from shore; Kayak adds the launch the range
+// runs from, one of the region's reviewed launch points (#644, part 2). Reset
+// to defaults leaves these alone too.
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {defaultLimits, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
-import {PROFILE_TABLE, type Profile} from '../profile.ts';
+import {depthLimitFt, PROFILE_TABLE, type Profile} from '../profile.ts';
 import {CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
-import {isReachProfile, REACH_BOUNDS, reachFor, saveReach} from '../reach.ts';
-import {profile} from '../state.ts';
+import {isReachProfile, launchChoice, REACH_BOUNDS, reachFor, saveLaunch, saveReach, saveSpear, SHORE_SWIM_BOUNDS, SPEAR_DEPTH_BOUNDS, spearPlan} from '../reach.ts';
+import {launchPoints} from '../launches.ts';
+import {profile, region} from '../state.ts';
 
 const fmt = (n: number) => Number(n.toFixed(1)).toString();
 
@@ -35,14 +40,19 @@ const draftOf = (limits: ComfortLimits): Draft => ({wind: fmt(limits.wind), gust
 
 /**
  * The form: one number field per limit (and the surge band for spear, the cruise speed for boat, the range to
- * consider for boat and kayak), Save and Reset to defaults. `focusCruise` or `focusReach` marks that field
- * autofocus, so the modal opens on it.
+ * consider for boat and kayak, the launch for kayak, the dive limits for spear), Save and Reset to defaults.
+ * `focusCruise`, `focusReach` or `focusDepth` marks that field autofocus, so the modal opens on it.
  */
-export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean; focusReach?: boolean}) {
+export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach = false, focusDepth = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean; focusReach?: boolean; focusDepth?: boolean}) {
   const id = useId();
   const [draft, setDraft] = useState<Draft>(() => draftOf(limitsFor(p)));
   const [cruise, setCruise] = useState(() => cruiseSpeed.peek() === null ? '' : fmt(cruiseSpeed.peek()!));
   const [reach, setReach] = useState(() => { const nm = reachFor(p); return nm === null ? '' : fmt(nm); });
+  const [depth, setDepth] = useState(() => String(depthLimitFt('spear') ?? PROFILE_TABLE.spear.maxDepthFt));
+  const [from, setFrom] = useState<string>(() => spearPlan.peek().from ?? '');
+  const [swim, setSwim] = useState(() => { const yd = spearPlan.peek().shoreYd; return yd === null ? '' : String(yd); });
+  const area = region.value, launches = launchPoints.value && launchPoints.value.region === area ? launchPoints.value.points : [];
+  const [launch, setLaunch] = useState(() => (area && launchChoice.peek()[area]) || '');
   useEffect(() => setDraft(draftOf(limitsFor(p))), [p]);
   const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p);
   const set = (field: keyof Draft, value: string) => setDraft(prev => ({...prev, [field]: value}));
@@ -51,6 +61,8 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
     saveLimits(p, draft);
     if (p === 'boat') saveCruise(cruise);
     if (isReachProfile(p)) saveReach(p, reach);
+    if (p === 'spear') saveSpear({depthFt: depth, from, shoreYd: swim});
+    if (p === 'kayak' && area && launches.length) saveLaunch(area, launch);
     onDone?.();
   };
   const reset = () => { resetLimits(p); setDraft(draftOf(base)); };
@@ -90,8 +102,44 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
           <label for={`${id}-reach`}>Range to consider <span class="ui-mono">(nm, one way)</span></label>
           <input id={`${id}-reach`} autoFocus={focusReach} name="reach" type="number" inputMode="decimal" min={REACH_BOUNDS[p].min} max={REACH_BOUNDS[p].max} step={REACH_BOUNDS[p].step}
             value={reach} onInput={event => setReach((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-reach-hint`} />
-          <span id={`${id}-reach-hint`} class="app-limits-hint ui-mono">No default · {fmt(REACH_BOUNDS[p].min)}–{fmt(REACH_BOUNDS[p].max)} · straight line from the harbor, not a route · blank clears it</span>
+          <span id={`${id}-reach-hint`} class="app-limits-hint ui-mono">No default · {fmt(REACH_BOUNDS[p].min)}–{fmt(REACH_BOUNDS[p].max)} · straight line from {p === 'kayak' && launches.length ? 'the launch' : 'the harbor'}, not a route · blank clears it</span>
         </div>
+      ) : null}
+      {p === 'kayak' && launches.length ? (
+        <div class="app-limits-field">
+          <label for={`${id}-launch`}>Launch from</label>
+          <select id={`${id}-launch`} name="launch" value={launch} onChange={event => setLaunch((event.currentTarget as HTMLSelectElement).value)} aria-describedby={`${id}-launch-hint`}>
+            <option value="">The harbor</option>
+            {launches.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+          <span id={`${id}-launch-hint`} class="app-limits-hint ui-mono">Listed public launches · the range and distances start here</span>
+        </div>
+      ) : null}
+      {p === 'spear' ? (
+        <>
+          <div class="app-limits-field">
+            <label for={`${id}-depth`}>Deepest dive <span class="ui-mono">(ft)</span></label>
+            <input id={`${id}-depth`} autoFocus={focusDepth} name="depth" type="number" inputMode="numeric" min={SPEAR_DEPTH_BOUNDS.min} max={SPEAR_DEPTH_BOUNDS.max} step={SPEAR_DEPTH_BOUNDS.step}
+              value={depth} onInput={event => setDepth((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-depth-hint`} />
+            <span id={`${id}-depth-hint`} class="app-limits-hint ui-mono">Default {PROFILE_TABLE.spear.maxDepthFt} · {SPEAR_DEPTH_BOUNDS.min}–{SPEAR_DEPTH_BOUNDS.max} · places deeper are left out</span>
+          </div>
+          <div class="app-limits-field">
+            <label for={`${id}-from`}>Diving from</label>
+            <select id={`${id}-from`} name="from" value={from} onChange={event => setFrom((event.currentTarget as HTMLSelectElement).value)}>
+              <option value="">Not set</option>
+              <option value="shore">Shore</option>
+              <option value="boat">A boat</option>
+            </select>
+          </div>
+          {from === 'shore' ? (
+            <div class="app-limits-field">
+              <label for={`${id}-swim`}>Farthest swim from shore <span class="ui-mono">(yd)</span></label>
+              <input id={`${id}-swim`} name="swim" type="number" inputMode="numeric" min={SHORE_SWIM_BOUNDS.min} max={SHORE_SWIM_BOUNDS.max} step={SHORE_SWIM_BOUNDS.step}
+                value={swim} onInput={event => setSwim((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-swim-hint`} />
+              <span id={`${id}-swim-hint`} class="app-limits-hint ui-mono">No default · {SHORE_SWIM_BOUNDS.min}–{SHORE_SWIM_BOUNDS.max} · approximate, from the mapped shoreline · blank clears it</span>
+            </div>
+          ) : null}
+        </>
       ) : null}
       <p id={`${id}-note`} class="app-limits-note">
         Kept on this device only. Suggested windows use these limits. Marine alerts, long-period swell, a hazardous bar, offshore wind and launch surf for a kayak, and daylight still rule hours out whatever you set.

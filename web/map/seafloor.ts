@@ -18,7 +18,7 @@ import {
   sourceRightsDetails, tileFeatures, tilesForBounds,
 } from '../../dist/seafloor-data.js';
 import {gradeAllows, type GradeFilter} from '../grade.ts';
-import {PROFILE_TABLE, withinDepth, type Profile} from '../profile.ts';
+import {PROFILE_TABLE, depthLimitFt, withinDepth, type Profile} from '../profile.ts';
 import {grade, layers, profile, region, species} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {SEAFLOOR_SOURCE} from './layers.ts';
@@ -347,7 +347,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
       return;
     }
     if (token !== loading || !current()) return;
-    const p = profile.peek(), limit = PROFILE_TABLE[p].maxDepthFt;
+    const p = profile.peek(), limit = depthLimitFt(p);
     const admitted = (dedupeById(parts.flatMap(t => t.habitat)) as TileFeature[]).map(f => admitHabitat(f, admit)).filter(f => f !== null);
     const inDepth = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
     const g = grade.peek(), habitat = gradeFiltered(inDepth, g);
