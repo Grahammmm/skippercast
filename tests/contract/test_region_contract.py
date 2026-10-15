@@ -8,6 +8,7 @@ They also cover validate-on-write (validate.check and atomic_json(kind=)).
 """
 from contextlib import nullcontext
 from copy import deepcopy
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import tempfile
@@ -177,12 +178,15 @@ class ImperativeFallback(unittest.TestCase):
 
 
 class AerialDates(unittest.TestCase):
-    def validate_aerial(self, aerial, schema):
+    def validate_aerial(self, aerial, schema, now=None):
         region = morro()
         region['basemap']['aerial'].update(aerial)
         # Exercise the real schema path and its dependency-free fallback.
         with nullcontext() if schema else without_jsonschema():
-            validate_region(region, *load_catalogs(REPO), root=REPO)
+            with mock.patch.object(contracts, 'datetime') as clock:
+                clock.now.return_value = now or datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
+                validate_region(region, *load_catalogs(REPO), root=REPO)
+                clock.now.assert_called_with(timezone.utc)
 
     def test_impossible_calendar_dates_are_rejected_in_every_field(self):
         for schema in (False, True):
@@ -204,12 +208,21 @@ class AerialDates(unittest.TestCase):
                 self.validate_aerial({'checked_at': '9999-12-31'}, schema)
 
     def test_leap_day_and_current_utc_check_are_accepted(self):
-        from datetime import datetime, timezone
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = '2026-10-15'
         for schema in (False, True):
             with self.subTest(schema=schema):
                 self.validate_aerial({'checked_at': today,
                                       'acquired': {'first': '2024-02-29', 'last': today}}, schema)
+
+
+    def test_coverage_check_uses_the_fixed_utc_day_boundary(self):
+        for schema in (False, True):
+            for hour in (0, 23):
+                now = datetime(2026, 10, 15, hour, 59, 59, tzinfo=timezone.utc)
+                with self.subTest(schema=schema, hour=hour):
+                    self.validate_aerial({'checked_at': '2026-10-15'}, schema, now)
+                    with self.assertRaisesRegex(ValueError, 'future'):
+                        self.validate_aerial({'checked_at': '2026-10-16'}, schema, now)
 
 
 @unittest.skipUnless(HAVE_JSONSCHEMA, NEEDS_JSONSCHEMA)
