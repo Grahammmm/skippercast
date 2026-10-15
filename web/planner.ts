@@ -59,6 +59,8 @@ export interface PlannerDeps {
   now?: () => Date;
   loadReefs?: (region: string) => Promise<Reefs>;
   loadPorts?: () => Promise<{ports?: Port[]} | null>;
+  /** The Boat range to consider saved on this device (web/reach.ts, #644): the distance filter starts from it; 20 nm without one. */
+  reachNm?: number | null;
   /** The ranked set the Chart draws (web/trip.ts listens for `skippercast:trip-ranked`). */
   emit?: (detail: RankedDetail) => void;
 }
@@ -109,7 +111,7 @@ export function createPlanner(deps: PlannerDeps) {
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
   const ranked = signal(false), filtersDirty = signal(false), restorePending = signal(!!initial.rankedPlan);
   const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false);
-  const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: 20});
+  const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: deps.reachNm ?? 20});
   const ports = signal<Port[]>([]);
   const scopeStatus = signal(''), actionStatus = signal(''), storageNote = signal(STORAGE_OK);
   /** Bumped when the screen's age or the map may have changed (open, boundaries, each minute while open). */

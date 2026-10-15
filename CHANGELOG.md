@@ -61,6 +61,8 @@
 - `e2e/startup.spec.ts` now measures the v2 app at `/map` (`node scripts/measure_startup.mjs`; FE-61 removed the v1 measurement and its `--v2` flag): each committed startup file is requested once. Its total is printed and now budgeted (see the shoreline bullet below).
 - `dist/regions/<id>/shoreline.geojson` is schema_version 2: the platform build merges import features with identical source properties into one MultiLineString each and rounds coordinates to 5 decimals (under half a zoom-12 CUSP tile unit, so every tile vertex keeps its grid position). The v2 `/map` startup test now holds its static JSON to the unchanged budget (2,529,983 of 2,795,531 bytes).
 
+- Boat and Kayak can set a range to consider under Your limits (nautical miles, one way, kept on this device, no default). The Chart then draws a dashed ring that far from the harbor, labelled as a straight line, not a route; "Where to look" lists only places inside it and says so; Boat picks show their one-way run time at your cruise speed; and the trip planner's distance filter starts from your Boat range. Nothing is derived from a boat model, fuel or horsepower (#644).
+
 ## 0.8.0 — 2026-10-11
 
 - Suggested windows in the brief no longer run through an hour that a hazard rule flags or that the profile grades Rough, for every profile and whatever your limits say: a hazardous harbour bar at any hour of a boat window (not only departure and return), sneaker-wave swell for Shore when the surf is the offshore estimate, long-period swell under a kayak, and Rough Shore or Spear hours. Some windows are shorter or gone as a result. Occasionally a boat window the brief used to drop because its departure or return crossed a hazardous bar now appears as its clean remaining hours (#551).

@@ -143,6 +143,10 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'WCOFS surface forecast at about 4 km, or HF radar observed within 6 hours at 1 or 6 km; arrows follow the toward-bearing and their motion is illustrative.', task: 'FE-15'}),
   entry({id: 'clouds', label: 'Clouds', control: 'clouds', presentations: ['chart'], time: ['observed'],
     basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.', task: 'FE-22'}),
+  // #644: the Boat or Kayak range to consider, around the harbor; under the marks so they stay on top.
+  entry({id: 'reach', label: 'Your range', control: 'always', presentations: ['chart'], gate: 'Boat or Kayak with a saved range', sources: ['reach'],
+    legend: [{label: 'Your range: straight line from the harbor, not a route', swatch: 'blue'}],
+    basis: 'The range to consider you saved on this device, drawn as a straight-line circle around the region\'s harbor; the real route is longer, and the ring says nothing about sea state, the bar or fuel.', task: 'FE-51'}),
   entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: 'zoom ≥ 10; a density below it', sources: [DENSITY_SOURCE, MARKS_SOURCE],
     legend: [{label: 'Reef mark; badge: habitat fit, 3 strongest', swatch: 'mint'}, {label: 'Habitat candidates, denser here', swatch: 'depth1'}],

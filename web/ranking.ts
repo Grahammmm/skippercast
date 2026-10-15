@@ -14,7 +14,9 @@
 //
 // A place without a published depth band is never ranked, so nothing outside the
 // limit can appear. Distance is from the region's harbor (dist/spot-ranking.js
-// `distanceNm`). The fit badge is § 12's one wording; reasons describe terrain,
+// `distanceNm`). With a range to consider (web/reach.ts, #644), only places
+// whose straight-line distance is inside it are ranked; without a harbor
+// position the range cannot be measured and is not applied. The fit badge is § 12's one wording; reasons describe terrain,
 // never fish. Erasable syntax only: tests/test_ranking.mjs imports it.
 import {signal} from '@preact/signals';
 import {distanceNm} from '../dist/spot-ranking.js';
@@ -40,7 +42,9 @@ export type RankingSource = 'terrain' | 'atlas';
 /** One source's list: its label and basis sentence (§ 12), its picks, and what to say when it has none. */
 export interface Ranking {readonly source: RankingSource | null; readonly label: string; readonly basis: string; readonly picks: readonly Pick[]; readonly empty: string;
   /** The harbor the picks' distances run from; absent before the region's marks load. */
-  readonly harbor?: string}
+  readonly harbor?: string;
+  /** The range to consider the picks were kept inside (nm, one way); absent when none applied. */
+  readonly reach?: number}
 
 export interface Origin {readonly latitude: number; readonly longitude: number; readonly name: string}
 /** The region's harbor (region.json `harbor`), the port distances are measured from. */
@@ -54,12 +58,14 @@ const miles = (origin: Origin | null, p: {latitude: number; longitude: number}):
 const distance = (nm: number | null): string => nm === null ? '—' : `${nm.toFixed(1)} nm`;
 const band = (lo: number, hi: number): string => `~${Math.round(lo)}–${Math.round(hi)} ft`;
 const known = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+/** Inside the range: always without one; with one, only a measured distance at or under it. */
+const inside = (nm: number | null, maxNm: number | null): boolean => maxNm === null || (nm !== null && nm <= maxNm);
 
 /** The atlas marks the Chart draws for `target`, inside `limitFt` on their deepest nearby depth, best fit first. */
-export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: string, limitFt: number, origin: Origin | null = harborOrigin(data)): Pick[] {
+export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: string, limitFt: number, origin: Origin | null = harborOrigin(data), maxNm: number | null = null): Pick[] {
   const rated = (data?.atlas?.targets ?? []).filter(t => {
     const [lo, hi] = t.neighborhood_depth_ft ?? [];
-    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen);
+    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen) && inside(miles(origin, t), maxNm);
   }).map(t => ({t, fit: markFit(t, target), score: (t as AtlasTarget & {habitat_score?: number}).habitat_score ?? 0}));
   rated.sort((a, b) => (b.fit?.n ?? 0) - (a.fit?.n ?? 0) || b.score - a.score || a.t.id.localeCompare(b.t.id));
   return rated.slice(0, TOP).map(({t, fit}) => {
@@ -81,11 +87,12 @@ const speciesLabel = (coast: string): string | null => {
  * The region's reviewed terrain habitat, already in packages/coast `rankedHabitat` order for the coast species,
  * inside `limitFt` on its deepest nominal depth, as picks.
  */
-export function habitatPicks(ranked: readonly HabitatFeature[], region: string, coast: string, limitFt: number, origin: Origin | null): Pick[] {
+export function habitatPicks(ranked: readonly HabitatFeature[], region: string, coast: string, limitFt: number, origin: Origin | null, maxNm: number | null = null): Pick[] {
   const field = speciesOptions.find(s => s.id === coast)?.field ?? null, label = speciesLabel(coast);
   return ranked.filter(f => {
     const p = f.properties;
-    return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude);
+    return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude)
+      && inside(miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), maxNm);
   }).slice(0, TOP).map(f => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
     const nm = miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude});
@@ -115,6 +122,8 @@ export async function loadTerrainHabitat(loader: Loader = () => import('./map/co
 export interface RankingInputs {
   readonly region: string | null; readonly profile: Profile; readonly target: string; readonly coast: string;
   readonly data: MarkData | null; readonly screen: MarkScreen; readonly terrain: TerrainHabitat; readonly now: number;
+  /** The range to consider (nm, one way, web/reach.ts); null or absent ranks the whole region. */
+  readonly reachNm?: number | null;
 }
 
 const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-area check, ordered by habitat fit, then the atlas habitat score. '
@@ -125,17 +134,22 @@ const TERRAIN_BASIS = 'Reviewed coastal terrain habitat, screened against protec
 /** The list the brief shows for these inputs: terrain habitat where it binds and loads, else the atlas; one source, never both. */
 export function ranking(i: RankingInputs): Ranking {
   const limit = terrainDepthLimitFt(i.profile);
-  const origin = harborOrigin(i.data), from = ` ${origin?.name ?? 'the harbor'}. A ranked place is a place to look; fish presence is unverified.`;
-  const within = `within ${limit} ft`;
+  const origin = harborOrigin(i.data), harbor = origin?.name ?? 'the harbor';
+  // A range applies only where it can be measured: from a harbor position.
+  const reach = origin && known(i.reachNm) && i.reachNm > 0 ? i.reachNm : null;
+  const kept = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
+  const from = ` ${harbor}.${kept} A ranked place is a place to look; fish presence is unverified.`;
+  const within = reach === null ? `within ${limit} ft` : `within ${limit} ft and ${Number(reach.toFixed(1))} nm of ${harbor}`;
+  const ranged = reach === null ? {} : {reach};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
     return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
   const t = i.terrain, field = speciesOptions.find(s => s.id === i.coast);
   if (i.region && hasCoastTerrain(i.region) && t.state === 'ready' && field && field.id !== 'halibut' && field.id !== 'surfperch' && t.expiresAt > i.now) {
-    const picks = habitatPicks(t.rank(t.features, field.field, i.now), i.region, i.coast, limit, origin);
-    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty: `No reviewed terrain habitat ${within} for this target.`, ...(origin ? {harbor: origin.name} : {})};
+    const picks = habitatPicks(t.rank(t.features, field.field, i.now), i.region, i.coast, limit, origin, reach);
+    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty: `No reviewed terrain habitat ${within} for this target.`, ...(origin ? {harbor: origin.name} : {}), ...ranged};
   }
   if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
-  const picks = atlasPicks(i.data, i.screen, i.target, limit, origin);
+  const picks = atlasPicks(i.data, i.screen, i.target, limit, origin, reach);
   const empty = i.screen.status !== 'ready' ? i.screen.note : `No surveyed reef marks ${within} for this target.`;
-  return {source: 'atlas', label: 'Survey reef atlas', basis: ATLAS_BASIS + from, picks, empty, ...(origin ? {harbor: origin.name} : {})};
+  return {source: 'atlas', label: 'Survey reef atlas', basis: ATLAS_BASIS + from, picks, empty, ...(origin ? {harbor: origin.name} : {}), ...ranged};
 }

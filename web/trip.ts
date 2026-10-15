@@ -20,6 +20,7 @@ import {markSources} from './map/marks.ts';
 import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
 import {camera, cameraParam, type Camera} from './map/stage.ts';
 import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
+import {reachFor} from './reach.ts';
 
 /** The v2 app's page key in a pack (dist/sw.js `V2_SHELL`). */
 export const V2_SHELL = '/map';
@@ -110,6 +111,8 @@ async function startPlanner(id: string): Promise<Planner> {
   drawRanked();
   const model = createPlanner({atlas, screen, region: regions.getRegion() as import('./planner.ts').PlannerDeps['region'],
     map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
+    // Read when the planner starts for the region; a range changed later applies to the next region's planner, and the planner measures from its chosen port.
+    reachNm: reachFor('boat'),
     getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
     nav: {
       open: openTrip,
