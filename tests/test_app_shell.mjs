@@ -207,7 +207,14 @@ test('the helpers behind the controls round-trip through the store keys', async 
 async function renderMobile(href) {
   const {narrow} = await load();
   narrow.value = true;
-  try { return await renderShell(href); } finally { narrow.value = false; }
+  // FirstRun reads the browser address to distinguish a named profile from a new visit.
+  const previousLocation = globalThis.location;
+  globalThis.location = {href};
+  try { return await renderShell(href); } finally {
+    narrow.value = false;
+    if (previousLocation === undefined) delete globalThis.location;
+    else globalThis.location = previousLocation;
+  }
 }
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {

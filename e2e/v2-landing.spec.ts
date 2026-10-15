@@ -166,6 +166,45 @@ test('first run asks for the profile once and never when the address names one',
   expect(pageErrors).toEqual([]);
 });
 
+for (const [width, height] of [[320, 568], [390, 844]] as const) {
+  test(`first-run choices stay inside the ${width}px phone sheet and every choice is reachable`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const card = sheet.locator('.ui-sheet-body > .app-firstrun');
+    await expect(card).toBeVisible();
+    await expect(card).not.toHaveAttribute('aria-modal', 'true');
+    await expect(handle).toBeInViewport();
+    // Real handle clicks can expand through both detents while the choice is due.
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'half');
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    const controls = card.getByRole('button');
+    await expect(controls).toHaveCount(5);
+    for (const control of await controls.all()) {
+      await control.scrollIntoViewIfNeeded();
+      await expect(control).toBeInViewport();
+      const box = (await control.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(await handle.evaluate(el => {
+        const b = el.getBoundingClientRect();
+        return document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)?.closest('.ui-sheet-handle') === el;
+      }), 'the scrolled profile card never covers the handle').toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await card.locator('button[data-profile="kayak"]').click();
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=kayak/);
+    await page.reload();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 // FE-07: synthetic feeds at a fixed clock (no test reads the real time or a live service).
 const NOW = Date.parse('2026-10-07T20:00:00Z');
 const ago = (min: number) => new Date(NOW - min * 60000).toISOString();
