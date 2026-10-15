@@ -89,7 +89,8 @@ test('the install list holds the landing\'s first paint (static imports, styles,
     'index.html': {file: 'assets/index.0123456789.js', isEntry: true, imports: ['_shared.js']},
     'landing.html': {file: 'assets/landing.4444444444.js', isEntry: true, css: ['assets/landing.aaaaaaaaaa.css'], assets: ['assets/font.3333333333.woff2'],
       imports: ['_shared.js', '_hooks.js'], dynamicImports: ['../web/landing/NightMap.tsx']},
-    'app.html': {file: 'assets/app.1111111111.js', isEntry: true, imports: ['_shared.js', '_hooks.js'], dynamicImports: ['../web/map/maplibre.js']},
+    'app.html': {file: 'assets/app.1111111111.js', isEntry: true, css: ['assets/app.2222222222.css'], assets: ['assets/panel.dddddddddd.css', 'assets/mono.eeeeeeeeee.woff2'],
+      imports: ['_shared.js', '_hooks.js'], dynamicImports: ['../web/map/maplibre.js']},
     '../web/landing/NightMap.tsx': {file: 'assets/NightMap.bbbbbbbbbb.js', isDynamicEntry: true, dynamicImports: ['../web/map/maplibre.js']},
     '../web/map/maplibre.js': {file: 'assets/maplibre.6666666666.js', assets: ['assets/maplibre-gl-worker.7777777777.js'], isDynamicEntry: true},
     '_shared.js': {file: 'assets/shared.5555555555.js'},
@@ -106,7 +107,8 @@ test('the install list holds the landing\'s first paint (static imports, styles,
   for (const f of ['/assets/NightMap.bbbbbbbbbb.js', '/assets/maplibre.6666666666.js', '/assets/maplibre-gl-worker.7777777777.js', '/assets/app.1111111111.js'])
     assert.ok(!out.assets.includes(f), `${f} stays out of the install list`);
   assert.deepEqual(out.assets, [...new Set(out.assets)].sort(), 'sorted, no duplicates');
-  // #617: the landing warms the app page's static graph, less what the landing loaded itself; never a dynamic import.
-  assert.deepEqual(appWarm(manifest), ['/assets/app.1111111111.js']);
+  // #617: the landing warms the app page's static graph, less what the landing loaded itself; never a dynamic import,
+  // and never a stylesheet a module only names (`?url`, mounted later by a component), while its fonts are warmed.
+  assert.deepEqual(appWarm(manifest), ['/assets/app.1111111111.js', '/assets/app.2222222222.css', '/assets/mono.eeeeeeeeee.woff2']);
   assert.deepEqual(out.warm, appWarm(manifest));
 });
