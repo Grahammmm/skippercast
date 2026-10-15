@@ -234,7 +234,7 @@ the [classified-habitat production path](references/habitat-expansion-preflight.
 ## Hand off one completed slice for website 3D rendering
 
 When a suitable batch completes, reuse its artifacts and review evidence to save
-one compact private receipt for `skippercast-render-coast-3d`; do not wait for the
+one compact private receipt for `skippercast-build-coastal-map`; do not wait for the
 whole coastline or repeat unchanged qualification. Include terrain path/format,
 coverage and valid support, resolution, units/sign, CRS, depth datum and NoData
 mask; paired imagery path or approved URL, format, coverage and terrain
