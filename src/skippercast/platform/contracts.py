@@ -5,6 +5,7 @@ The web app receives public artifacts only; local paths and credentials stay out
 """
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
 import hashlib
 import ipaddress
 import json
@@ -335,7 +336,15 @@ def validate_region(region, needs, sources, root=REPO):
                 or source['rights']['commercial_use'] != 'allowed' or not source['rights']['attribution']
                 or not endpoint or urlsplit(public_url(endpoint)).hostname not in source['allowed_hosts']):
             raise ValueError('Aerial base needs a reviewed live-tile source on a fixed host, cleared for commercial use')
-        if not aerial['acquired']['first'] <= aerial['acquired']['last'] <= aerial['checked_at']:
+        try:
+            first = date.fromisoformat(aerial['acquired']['first'])
+            last = date.fromisoformat(aerial['acquired']['last'])
+            checked = date.fromisoformat(aerial['checked_at'])
+        except ValueError:
+            raise ValueError('Aerial acquisition window and coverage check need real calendar dates') from None
+        if checked > datetime.now(timezone.utc).date():
+            raise ValueError('Aerial coverage check cannot be in the future (UTC)')
+        if not first <= last <= checked:
             raise ValueError('Aerial acquisition window must precede its coverage check')
     for asset in region["assets"].values():
         if asset is not None:
