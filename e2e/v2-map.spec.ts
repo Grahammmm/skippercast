@@ -151,7 +151,7 @@ test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2}) => 
   const host = page.locator('.app-terrain');
   await expect(host).toHaveAttribute('data-hour', /^\d{4}-\d{2}-\d{2}T\d{2}:00:00\.000Z$/);
   // Tomorrow is a full day: its chip, then the slider's first or last hour.
-  await page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1).evaluate(b => (b as HTMLButtonElement).click());
+  await page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1).click();
   await expect.poll(() => urlHour(page)).not.toBeNull();
   const slider = page.locator('input[aria-label="Hour"]');
   const atStart = await slider.inputValue() === '0';
@@ -201,6 +201,28 @@ test('prefers-reduced-motion never auto-plays: the button steps one hour per pre
   await v2.a11y('v2-dock-reduced-motion');
   expect(pageErrors).toEqual([]);
 });
+
+for (const reduced of [false, true]) {
+  test(`the final forecast hour disables ${reduced ? 'Next hour' : 'Play'} and the slider can return to earlier hours`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(isMobile, 'the playback control is in the desktop dock');
+    await page.clock.setFixedTime(new Date('2026-10-05T20:00:00Z'));
+    await page.emulateMedia({reducedMotion: reduced ? 'reduce' : 'no-preference'});
+    const end = Date.parse('2026-10-12T20:00:00Z');
+    await v2.open('app', {region: 'morro-bay', hour: hourParam(end - HOUR_MS)});
+    const forward = page.getByRole('button', {name: reduced ? 'Next hour' : 'Play', exact: true});
+    await expect(forward).toBeEnabled();
+    await forward.click();
+    await expect.poll(() => urlHour(page)).toBe(hourParam(end));
+    await expect(forward).toBeDisabled();
+    const slider = page.getByRole('slider', {name: 'Hour', exact: true});
+    await expect(slider).toBeEnabled();
+    await slider.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect.poll(() => urlHour(page)).toBe(hourParam(end - HOUR_MS));
+    await expect(forward).toBeEnabled();
+    expect(pageErrors).toEqual([]);
+  });
+}
 
 test('the Chart draws the basemap and the Morro Bay coastline with their attribution', async ({page, pageErrors, v2}) => {
   const fetched: string[] = [];
