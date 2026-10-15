@@ -166,6 +166,29 @@ test('first run asks for the profile once and never when the address names one',
   expect(pageErrors).toEqual([]);
 });
 
+test('a 200ms pointer press chooses Boat without moving the half-height sheet', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(!isMobile, 'phone layout only');
+  await page.setViewportSize({width: 390, height: 844});
+  await v2.open('app', {region: 'morro-bay'});
+  const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+  const card = sheet.locator('.app-firstrun'), boat = card.locator('button[data-profile="boat"]');
+  await handle.click();
+  await expect(sheet).toHaveAttribute('data-detent', 'half');
+  await expect(boat).toBeInViewport({ratio: 1});
+  // Hover waits for the half-height transition to settle before beginning the press.
+  await boat.hover();
+  const before = (await boat.boundingBox())!;
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  await expect(sheet, 'pointer-generated focus must retain the press target').toHaveAttribute('data-detent', 'half');
+  const held = (await boat.boundingBox())!;
+  expect(held.y).toBeCloseTo(before.y, 1);
+  await page.mouse.up();
+  await expect(card).toHaveCount(0);
+  await expect(page).toHaveURL(/[?&]profile=boat/);
+  expect(pageErrors).toEqual([]);
+});
+
 for (const [width, height] of [[320, 568], [390, 844]] as const) {
   test(`Tab from peek reveals every first-run choice on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');

@@ -91,7 +91,7 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   return (
     <div class="app-dock" ref={dock}>
       <Dock days={dayOptions(now, tz, state.day)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
-        stepOnly={reduced} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
+        stepOnly={reduced} advanceDisabled={nextHour(state.at, now) === null} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
         onHour={i => selectHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz) : hourText(localParts(new Date(at(i)), tz).hour)} />
       <span class="app-dock-zone ui-mono">{zoneName(now, tz)}</span>
     </div>

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Keep first-run profile choices inside the mobile sheet so small-screen visitors can reach every choice and the sheet handle.
+- Disable Play and Next hour at the forecast horizon's end while keeping earlier hours selectable.
 
 - Keep the mobile sheet at its previous height when a drag is cancelled, and preserve the next tap.
 
