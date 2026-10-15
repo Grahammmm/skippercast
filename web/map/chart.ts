@@ -221,7 +221,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     // The first Chart view loads MapLibre; a terrain-only visit never does.
     effect(() => { if (shownPresentation.value === 'chart' && camera.value && region.value) void mount(); }),
     // The shared camera moves the chart, hidden or shown, unless the chart is already there.
-    effect(() => { const e = engine.value, c = camera.value; if (e && c && cameraParam(c) !== applied) { show(c); e.setCamera(c); } }),
+    // A flyover stops first, so its moveend at the old centre still matches `applied` and writes nothing.
+    effect(() => { const e = engine.value, c = camera.value; if (e && c && cameraParam(c) !== applied) { e.stopFlyover(); show(c); e.setCamera(c); } }),
     effect(() => {
       const e = engine.value, id = region.value;
       if (!e || !id || id === drawnRegion) return;

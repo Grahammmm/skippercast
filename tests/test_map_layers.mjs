@@ -154,8 +154,9 @@ function library() {
     remove() { this.removed = true; }
     // The flyover (#646): eases are recorded; the pitch and bearing stay as the last ease or jump left them.
     off(type, fn) { this.handlers[type] = (this.handlers[type] ?? []).filter(f => f !== fn); }
-    easeTo(o) { (this.eases ??= []).push(o); }
-    stop() {}
+    easeTo(o) { (this.eases ??= []).push(o); this.easing = true; }
+    // As MapLibre's: stopping a running ease fires moveend where the camera is.
+    stop() { if (this.easing) { this.easing = false; this.fire('moveend'); } }
     getPitch() { return 0; }
     getBearing() { return 0; }
     setMaxPitch(p) { this.maxPitch = p; }
@@ -335,7 +336,7 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
 test('the first idle of a home-framed Chart flies once (#646); a linked view or a closed gate never does', async t => {
   t.mock.method(console, 'warn', () => {});
   const open = linked => ({reduced: false, saveData: false, hidden: false, linked, seen: false});
-  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  const nav = browser(`${PAGE}?region=morro-bay&presentation=chart`);
   let run = chartStage({flyoverGate: open});
   await tick(); await tick();
   let [map] = run.fake.maps;
@@ -343,6 +344,20 @@ test('the first idle of a home-framed Chart flies once (#646); a linked view or 
   assert.equal(run.host.dataset.flyover, 'flying');
   assert.equal(map.eases.length, 1, 'one flight, on the first idle only');
   assert.equal(map.maxPitch, 50);
+  camera.value = {latitude: 35.2, longitude: -120.7, zoom: 11};  // a camera move from outside the map (a region change, Back)
+  await tick();
+  assert.equal(run.host.dataset.flyover, 'stopped', 'a new camera stops it');
+  assert.equal(nav.params().get('view'), null, 'stopping writes no ?view=');
+  assert.deepEqual(camera.value, {latitude: 35.2, longitude: -120.7, zoom: 11}, 'the new camera stands');
+  assert.equal(map.maxPitch, 0);
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  run = chartStage({flyoverGate: open});
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(run.host.dataset.flyover, 'flying');
   setParams({presentation: '3d'});
   assert.equal(run.host.dataset.flyover, 'stopped', 'another presentation stops it');
   assert.equal(map.maxPitch, 0);

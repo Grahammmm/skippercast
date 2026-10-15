@@ -9,9 +9,10 @@ const FLYOVER_KEY = 'skippercast-flyover-v1';
 
 test.beforeEach(async ({page}) => {
   await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
-  // The shared fixture marks the flyover as seen; this spec starts a fresh session once (a reload keeps the session).
+  // The shared fixture marks the flyover as seen unless `e2e-flyover-fresh` is set; this spec sets it, and clears the
+  // flyover key once (a reload keeps the session), whichever init script runs first.
   await page.addInitScript(key => {
-    try { if (!sessionStorage.getItem('e2e-flyover-fresh')) { sessionStorage.setItem('e2e-flyover-fresh', '1'); sessionStorage.removeItem(key); } } catch { /* storage blocked */ }
+    try { if (sessionStorage.getItem('e2e-flyover-fresh') !== 'cleared') { sessionStorage.setItem('e2e-flyover-fresh', 'cleared'); sessionStorage.removeItem(key); } } catch { /* storage blocked */ }
   }, FLYOVER_KEY);
 });
 
