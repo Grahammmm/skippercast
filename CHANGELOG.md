@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Keep first-run profile choices inside the mobile sheet so small-screen visitors can reach every choice and the sheet handle.
+- Disable Play and Next hour at the forecast horizon's end while keeping earlier hours selectable.
+
+- Keep the mobile sheet at its previous height when a drag is cancelled, and preserve the next tap.
+
 - Search engines and link previews can read the site again. The home page has a canonical address, the share card (title, description and boat image) that went missing with the classic map, and WebSite structured data so Google can show the SkipperCast name; its title and description now say it is for fishing on the Central Coast. `robots.txt` and a new `sitemap.xml` list the public pages, and `/sources` and `/privacy` name their canonical addresses.
 - A first visit to the home page is now one guided path: pick where you launch, then how you fish (Boat, Shore, Spear or Kayak, each with what it changes), then the map opens. While you pick the profile, the home page fetches that region's map files and forecast in the background, so the map opens on cached or revalidated copies; only the chosen region is fetched, nothing when your browser asks to save data, and "Change port" goes back a step. The port is saved as home once you choose the profile. The profile choices no longer sit beside the port search, and the map no longer asks "How do you fish?" after the home page did; links straight into the map, and returning visitors with a saved home, skip the guided path as before (#622).
 - Move fleet AIS half-hour scheduling to off-hour slots and record trigger, run kind and source revision for cadence verification.

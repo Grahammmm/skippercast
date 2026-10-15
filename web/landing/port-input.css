@@ -45,3 +45,7 @@
 .app-firstrun-options .ui-button { justify-content: flex-start; text-align: left; }
 .app-firstrun-options .ui-button span { display: flex; flex-direction: column; gap: var(--space-1); }
 .app-firstrun-options .ui-button small { color: var(--muted); font-size: var(--text-13); }
+
+/* On the phone the first-run choice belongs to the sheet/page's scroll area,
+   leaving its handle, time controls and navigation reachable. */
+.app-mobile .app-firstrun { position: static; width: auto; max-width: 100%; box-sizing: border-box; transform: none; margin-bottom: var(--space-3); }

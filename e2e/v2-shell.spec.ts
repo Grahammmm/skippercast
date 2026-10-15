@@ -166,6 +166,36 @@ test.describe('phone', () => {
   test.skip(({isMobile}) => !isMobile, 'the phone project only');
 
   for (const width of [320, 390]) {
+    test(`at ${width} px cancelled drags retain every detent and the next tap still works`, async ({page, pageErrors, v2}) => {
+      await v2.open('app', AREA, width === 320 ? 'narrow' : 'phone');
+      const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+      for (const [detent, dy] of [['peek', -120], ['half', -400], ['half', 120], ['full', 120], ['peek', -20], ['half', 0]] as const) {
+        await handle.focus();
+        await page.keyboard.press('Home');
+        if (detent === 'half') await page.keyboard.press('ArrowUp');
+        if (detent === 'full') await page.keyboard.press('End');
+        await expect(sheet).toHaveAttribute('data-detent', detent);
+        // Let the real CSS transition finish before starting the captured drag.
+        await sheet.evaluate(async el => { await Promise.all(el.getAnimations().map(a => a.finished)); });
+        const box = (await handle.boundingBox())!;
+        const x = box.x + box.width / 2, y = box.y + box.height / 2;
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        await page.mouse.move(x, y + dy);
+        if (dy) expect(await sheet.evaluate(el => el.style.transform)).toMatch(/^translateY\(/);
+        await handle.dispatchEvent('pointercancel', {pointerId: 1, clientX: x, clientY: y + dy});
+        await expect(sheet, `${detent}, cancelled ${dy}px`).toHaveAttribute('data-detent', detent);
+        expect(await sheet.evaluate(el => [el.style.transform, el.style.transition])).toEqual(['', '']);
+        // dispatchEvent simulates cancellation; release the real mouse capture separately.
+        await handle.evaluate(el => { try { el.releasePointerCapture(1); } catch { /* not captured */ } });
+        await page.mouse.move(4, 4);
+        await page.mouse.up();
+        await handle.click();
+        await expect(sheet, 'the next tap steps exactly once').toHaveAttribute('data-detent', {peek: 'half', half: 'full', full: 'peek'}[detent]);
+      }
+      expect(pageErrors).toEqual([]);
+    });
+
     test(`at ${width} px the sheet peeks over the map, the detents move by drag and keyboard, and targets are 44 px`, async ({page, pageErrors, v2}) => {
       await v2.open('app', AREA, width === 320 ? 'narrow' : 'phone');
       const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');

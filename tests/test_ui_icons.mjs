@@ -141,3 +141,22 @@ test('the primitives are accessible as drawn: real buttons, names, pressed state
   assert.equal(nextDetent('full', 'ArrowUp'), 'full');
   assert.deepEqual(DETENTS.map(stepDetent), ['half', 'full', 'peek']);
 });
+
+
+test('the dock renders reduced-motion stepping and disables only forward movement at the horizon end', async () => {
+  const {Dock, render, h} = await ui();
+  const props = {days: [{value: 'today', label: 'Today'}], day: 'today', onDay: noop,
+    playing: false, onPlay: noop, hour: 23, hours: 24, onHour: noop, hourText: () => '11 pm'};
+  const button = (html, name) => html.match(new RegExp(`<button[^>]*aria-label="${name}"[^>]*>`))?.[0];
+  for (const stepOnly of [false, true]) {
+    const label = stepOnly ? 'Next hour' : 'Play';
+    const html = render(h(Dock, {...props, stepOnly, advanceDisabled: true}));
+    assert.match(button(html, label), / disabled(?:=|>| )/);
+    assert.doesNotMatch(html.match(/<input[^>]*aria-label="Hour"[^>]*>/)[0], / disabled/);
+    assert.equal(button(html, stepOnly ? 'Play' : 'Next hour'), undefined);
+    assert.doesNotMatch(button(render(h(Dock, {...props, stepOnly})), label), / disabled/,
+      'the last hour of an ordinary day can advance into the next day');
+  }
+  assert.doesNotMatch(button(render(h(Dock, {...props, playing: true, advanceDisabled: true})), 'Pause'), / disabled/);
+  assert.match(button(render(h(Dock, {...props, disabled: true})), 'Play'), / disabled/);
+});

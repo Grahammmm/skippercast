@@ -62,7 +62,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
 export function App({now = new Date()}: {now?: Date} = {}) {
   return (
     <>
-      {narrow.value ? <><Mobile now={now} /><FirstRun /></> : (
+      {narrow.value ? <Mobile now={now} firstRun={<FirstRun />} /> : (
         <div class="app">
           <Masthead />
           <CommandBar now={now} />
