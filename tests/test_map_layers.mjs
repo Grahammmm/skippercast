@@ -149,9 +149,16 @@ function library() {
     getLayer(id) { return this.loaded && this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
     setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
     getSource(id) { return this.loaded && this.options.style.sources[id] ? {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
-    queryRenderedFeatures(_point, {layers}) { return fake.features.filter(f => layers.includes(f.layer.id)); }
+    queryRenderedFeatures(point, options) { const {layers} = options ?? point; return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
     remove() { this.removed = true; }
+    // The flyover (#646): eases are recorded; the pitch and bearing stay as the last ease or jump left them.
+    off(type, fn) { this.handlers[type] = (this.handlers[type] ?? []).filter(f => f !== fn); }
+    easeTo(o) { (this.eases ??= []).push(o); }
+    stop() {}
+    getPitch() { return 0; }
+    getBearing() { return 0; }
+    setMaxPitch(p) { this.maxPitch = p; }
   }
   const control = kind => class { constructor(options) { this.kind = kind; this.options = options; } };
   fake.module = {
@@ -261,7 +268,7 @@ function serveDist(url) {
   return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
 }
 
-function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette} = {}) {
+function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
@@ -272,7 +279,7 @@ function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}
   };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
-    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
+    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0, flyoverGate})]});
   return {fake, land, host, stage, fetches};
 }
 
@@ -323,6 +330,48 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.equal(map.visibility[ENC_LAYER], 'none');
   stage.destroy();
   assert.equal(map.removed, true, 'the stage destroys its renderers');
+});
+
+test('the first idle of a home-framed Chart flies once (#646); a linked view or a closed gate never does', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const open = linked => ({reduced: false, saveData: false, hidden: false, linked, seen: false});
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  let run = chartStage({flyoverGate: open});
+  await tick(); await tick();
+  let [map] = run.fake.maps;
+  map.fire('idle'); map.fire('idle');
+  assert.equal(run.host.dataset.flyover, 'flying');
+  assert.equal(map.eases.length, 1, 'one flight, on the first idle only');
+  assert.equal(map.maxPitch, 50);
+  setParams({presentation: '3d'});
+  assert.equal(run.host.dataset.flyover, 'stopped', 'another presentation stops it');
+  assert.equal(map.maxPitch, 0);
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart&view=35.38000,-120.88000,12`);
+  run = chartStage({flyoverGate: open});
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(run.host.dataset.flyover, undefined, 'a link that names a view is not toured');
+  assert.equal(map.eases, undefined);
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  run = chartStage({flyoverGate: () => ({...open(false), reduced: true})});
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(map.eases, undefined, 'reduced motion never moves the camera');
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  run = chartStage();
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(map.eases, undefined, 'outside a browser the default gate never flies');
+  run.stage.destroy();
 });
 
 test('Chart → 3D → Chart keeps the centre within one zoom step', async t => {

@@ -17,19 +17,23 @@
 // The trip planner's ranked spots (#495, web/map/ranked.ts) draw above the marks;
 // the host's `data-ranked` and `data-ranked-drawn` report how many ranked spots
 // both screens admit and how many pins MapLibre drew in view.
+// The first idle of a visit's first Chart view may fly the camera (#646,
+// web/map/flyover.ts); the host's `data-flyover` reads flying, done or stopped.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
-import {appView, base, habitat, region, selection, setParams} from '../state.ts';
+import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
+import {harborOrigin} from '../ranking.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
 import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineOverviewURL, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
+import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
-import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markSources, markStyle} from './marks.ts';
+import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {RANKED_PICK, RANKED_PIN, drawnSpots, rankedFeatures, rankedMark, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
@@ -107,12 +111,14 @@ export interface ChartOptions {
   /** The region's zone and report place, for the Currents layer (FE-15, web/map/currents.ts). */
   zone?: () => string;
   place?: CurrentsOptions['place'];
+  /** The flyover's browser gates (#646), given whether the link names a place; flyover.ts `browserGate` by default. */
+  flyoverGate?: (linked: boolean) => FlyoverGate;
 }
 
 const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 
 export function createChart(options: ChartOptions): {destroy(): void} {
-  const {host, layers = [], load = loadLibrary, palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
+  const {host, layers = [], load = loadLibrary, palette = () => readPalette(), page = () => location.href, viewDelay = 400, flyoverGate = browserGate} = options;
   // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
   const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);
@@ -127,6 +133,18 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
   const marks = createMarks({fetchFn, page, onError: markUnavailable});
+  // #646: asked once, at the first idle of the first mount, and only if nothing moved the camera before it.
+  let flyAsked = false;
+  const flyIfFirst = (e: Engine): void => {
+    if (flyAsked) return;
+    flyAsked = true;
+    const at = camera.peek(), linked = !!(view.peek() || selection.peek() || habitat.peek());
+    if (!at || shownPresentation.peek() !== 'chart' || appView.peek() !== 'coast' || !mayFly(flyoverGate(linked))) return;
+    const data = markData.peek(), harbor = data && data.region.id === region.peek() ? harborOrigin(data) : null;
+    markFlyoverSeen();
+    host.dataset.flyover = 'flying';
+    e.flyover(flyoverLegs(at, harbor), finished => { if (alive) host.dataset.flyover = finished ? 'done' : 'stopped'; });
+  };
 
   const onMove = (seen: Camera): void => {
     const next = parseCamera(cameraParam(seen));
@@ -175,7 +193,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
         },
         onIdle: () => {
-          if (!painted) { posterDone(); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
+          if (!painted) { posterDone(); flyIfFirst(e); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
+          else flyAsked = true;
           host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
           host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
         },
@@ -219,6 +238,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       if (path !== drawnShore) { drawnShore = path; e.setData(COASTLINE_SOURCE, new URL(path, page()).href); }
     }),
     effect(() => { engine.value?.setVisible(ENC_LAYER, base.value === 'chart'); }),
+    // Another presentation or view, or a selection, ends a flyover where it is, north up.
+    effect(() => { if (shownPresentation.value !== 'chart' || appView.value !== 'coast' || selection.value || habitat.value) engine.peek()?.stopFlyover(); }),
     // The region's protected areas, checked before they draw; a region change replaces them. They load with the
     // region, whatever the presentation, because the terrain drapes the same areas (FE-82).
     effect(() => { const id = region.value; if (id) void loadRegionMpas(id); }),

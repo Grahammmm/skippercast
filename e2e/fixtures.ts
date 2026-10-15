@@ -60,6 +60,8 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
     await stubBoundaryChecks(context);
     // A returning visitor who finished the first-run steps; tests open area links.
     await context.addInitScript(() => { try { localStorage.setItem('skippercast-first-run-v1', 'done'); } catch { /* storage blocked */ } });
+    // The Chart flyover (#646) has run this session, so the camera stays still; e2e/v2-flyover.spec.ts clears it.
+    await context.addInitScript(() => { try { sessionStorage.setItem('skippercast-flyover-v1', '1'); } catch { /* storage blocked */ } });
     await use(context);
   },
   pageErrors: async ({page}, use) => {
