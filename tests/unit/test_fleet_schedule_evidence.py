@@ -59,12 +59,32 @@ class ScheduleEvidenceTests(unittest.TestCase):
             conn.close()
 
     def test_only_machine_readable_status_marker_is_explicit(self):
-        cancel = b'<div data-trip-id="1" data-status="cancelled"><div class="trip-info">Dolphin 1/2 Day</div></div>'
-        self.assertEqual(se.explicit_annotations(cancel, "1/2 Day"), ("explicitly-cancelled", None))
-        substitution = b'<div data-trip-id="1" class="trip-substituted" data-substitute-vessel="Replacement"><div class="trip-info">Dolphin 1/2 Day</div></div>'
-        self.assertEqual(se.explicit_annotations(substitution, "1/2 Day"), ("explicitly-substituted", "Replacement"))
-        prose = b'<div data-trip-id="1"><div class="trip-info">Dolphin 1/2 Day</div><div class="trip-comments">Cancelled due to weather</div></div>'
-        self.assertEqual(se.explicit_annotations(prose, "1/2 Day"), (None, None))
+        def row(marker='', comment=''):
+            return (f'<div data-trip-id="1" {marker}><div class="trip-info"><strong>Fixture Boat</strong>'
+                    f'<br>1/2 Day</div><div class="trip-depart">10-1-26<br>6:00 AM</div>'
+                    f'<div class="trip-comments">{comment}</div></div>').encode()
+        args = ('1/2 Day', '2026-10-01', '06:00', 'Fixture Boat')
+        self.assertEqual(se.explicit_annotations(row('data-status="cancelled"'), *args), ('explicitly-cancelled', None))
+        self.assertEqual(se.explicit_annotations(row('class="trip-substituted" data-substitute-vessel="Replacement"'), *args),
+                         ('explicitly-substituted', 'Replacement'))
+        self.assertEqual(se.explicit_annotations(row(comment='Cancelled due to weather'), *args), (None, None))
+
+    def test_status_marker_binds_exact_departure_and_abstains_on_ambiguity(self):
+        def row(ident, boat='Fixture Boat', trip='Full Day', day='10-1-26', clock='6:00 AM', marker=''):
+            return (f'<div data-trip-id="{ident}" {marker}><div class="trip-info"><strong>{boat}</strong>'
+                    f'<br>{trip}</div><div class="trip-depart">{day}<br>{clock}</div></div>').encode()
+        cancelled = row('one', marker='data-status="cancelled"')
+        other = row('two', day='10-2-26')
+        args = ('Full Day', '2026-10-02', '06:00', 'Fixture Boat')
+        self.assertEqual(se.explicit_annotations(cancelled + other, *args), (None, None))
+        for unrelated in (row('one', clock='7:00 AM', day='10-2-26', marker='data-status="cancelled"'),
+                          row('one', boat='Another Boat', day='10-2-26', marker='data-status="cancelled"'),
+                          row('one', trip='Extended Full Day', day='10-2-26', marker='data-status="cancelled"')):
+            self.assertEqual(se.explicit_annotations(unrelated + other, *args), (None, None))
+        exact = row('two', day='10-2-26', marker='data-status="cancelled"')
+        self.assertEqual(se.explicit_annotations(exact, *args), ('explicitly-cancelled', None))
+        self.assertEqual(se.explicit_annotations(exact + row('duplicate', day='10-2-26'), *args), (None, None))
+        self.assertEqual(se.explicit_annotations(exact, 'Full Day', '2026-10-02', None, 'Fixture Boat'), (None, None))
 
     def test_discovered_boat_parses_with_prior_index_provenance_and_counts_assessments(self):
         # Reproduces the live failure: source_pages already contains discovered
@@ -264,6 +284,30 @@ class RawCoverageTests(unittest.TestCase):
 
     def summary(self):
         return se.raw_window_summary(self.fleet, 'synthetic', 999000123, self.start, self.end, self.start, self.end)
+
+    def test_multiday_window_includes_return_partitions_and_missing_buffer_is_partial(self):
+        start = datetime(2026, 10, 1, 14, tzinfo=timezone.utc)
+        end = datetime(2026, 10, 4, 20, tzinfo=timezone.utc)
+        day_start = start.replace(hour=7)
+        day_end = day_start + timedelta(days=1)
+        for day in ('2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04'):
+            self.database(day)
+        at = int(datetime(2026, 10, 4, 18, tzinfo=timezone.utc).timestamp() * 1000)
+        with closing(sqlite3.connect(self.raw / '2026-10-04.sqlite')) as conn, conn:
+            conn.execute('insert into positions values(?,?,?)', (999000123, at, at))
+        def summary():
+            return se.raw_window_summary(self.fleet, 'synthetic', 999000123, start, end, day_start, day_end)
+        result = summary()
+        self.assertEqual(result['messages'], 1)
+        self.assertIn('2026-10-04', result['readable_days'])
+        self.assertEqual(result['missing_days'], ['2026-10-05'])
+        self.assertFalse(result['messages_complete'])
+        self.assertEqual(result['coverage'], 'raw-window-partial')
+        self.database('2026-10-05')
+        result = summary()
+        self.assertEqual(result['messages'], 1)
+        self.assertTrue(result['coverage_complete'])
+        self.assertEqual(result['coverage'], 'raw-window-readable')
 
     def test_corrupt_file_is_unreadable_not_complete_empty(self):
         (self.raw / '2026-06-01.sqlite').write_bytes(b'not a sqlite database')

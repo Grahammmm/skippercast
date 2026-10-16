@@ -30,7 +30,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from skippercast.fleet.config import FleetRegion, load_region  # noqa: E402
 from skippercast.fleet.net import FleetSession, Skipped  # noqa: E402
-from skippercast.fleet.adapters.landing_pages import _Page, fleet_entries, parse_html  # noqa: E402
+from skippercast.fleet.adapters.landing_pages import (
+    _Page, fleet_entries, local_date, local_time, offering_name_norm, parse_html,
+)  # noqa: E402
 from skippercast.fleet.adapters.teck_reports import teck_client  # noqa: E402
 
 PARSER_VERSION = "fleet-schedule-evidence-v1"
@@ -378,24 +380,41 @@ def due_boat_pages(conn: sqlite3.Connection, limit: int) -> list[sqlite3.Row]:
     return (seeds + fair)[:limit]
 
 
-def explicit_annotations(body: bytes, trip_name: str) -> tuple[str | None, str | None]:
-    """Accept only machine-readable status markers; never inspect comments or arbitrary text."""
+def explicit_annotations(body: bytes, trip_name: str, day: str, departs: str | None,
+                         boat_name: str) -> tuple[str | None, str | None]:
+    """Bind machine markers to one exact boat/offering/date/time group, else abstain."""
+    if not departs:
+        return None, None
     root = parse_html(body.decode("utf-8", "replace"))
-    wanted = name_key(trip_name)
+    groups = {}
     for node in root.iter():
-        if not node.attrs.get("data-trip-id"):
+        ident = node.attrs.get("data-trip-id")
+        if ident and "scale-group" not in node.classes:
+            groups.setdefault(ident, []).append(node)
+    matches = []
+    for nodes in groups.values():
+        def part(cls):
+            found = {id(n): n for cell in nodes for n in [cell, *cell.iter()] if cls in n.classes}
+            return next(iter(found.values())) if len(found) == 1 else None
+        info, depart = part("trip-info") or part("trip-name"), part("trip-depart")
+        strong = info.find("strong") if info else None
+        if strong is None or offering_name_norm(strong.text()) != offering_name_norm(boat_name):
             continue
-        info = node.find(cls="trip-info") or node.find(cls="trip-name")
-        if not info or wanted not in name_key(info.text(frozenset({"trip-comments", "trip-icons"}))):
+        lines = [line for line in info.lines(frozenset({"charter-alert", "trip-icons", "trip-comments"}))
+                 if line != strong.text()]
+        if (not lines or offering_name_norm(lines[0]) != offering_name_norm(trip_name)
+                or depart is None or local_date(depart.text()) != day or local_time(depart.text()) != departs):
             continue
-        classes = node.classes
-        status = (node.attrs.get("data-status") or "").strip().lower()
-        if status in {"cancelled", "canceled"} or "trip-cancelled" in classes or "trip-canceled" in classes:
-            return "explicitly-cancelled", None
-        if status in {"substituted", "substitution"} or "trip-substituted" in classes:
-            substitute = (node.attrs.get("data-substitute-vessel") or "").strip()
-            return "explicitly-substituted", substitute[:120] or None
-    return None, None
+        markers = set()
+        for node in nodes:
+            status = (node.attrs.get("data-status") or "").strip().lower()
+            if status in {"cancelled", "canceled"} or node.classes & {"trip-cancelled", "trip-canceled"}:
+                markers.add(("explicitly-cancelled", None))
+            if status in {"substituted", "substitution"} or "trip-substituted" in node.classes:
+                substitute = (node.attrs.get("data-substitute-vessel") or "").strip()
+                markers.add(("explicitly-substituted", substitute[:120] or None))
+        matches.append(next(iter(markers)) if len(markers) == 1 else (None, None))
+    return matches[0] if len(matches) == 1 else (None, None)
 
 
 def record_observation(conn: sqlite3.Connection, row: dict) -> tuple[bool, int]:
@@ -503,13 +522,14 @@ def raw_window_summary(fleet_var: Path, region: str, mmsi: int, start: datetime,
                        date_start: datetime, date_end: datetime) -> dict:
     """Summarize readable matching receipt times, never vessel absence or trip proof.
 
-    Completeness covers the existing inclusive one-day-padded scan range. Missing
+    Completeness covers the full observation and departure-day windows, with
+    inclusive one-day padding in UTC. Missing
     buffer/future days remain partial, rather than being called readable empty.
     Coordinates, identities, raw bodies and database error text are not retained.
     """
     raw_dir = fleet_var / region / "ais" / "raw"
-    first_day = date_start.date() - timedelta(days=1)
-    last_day = date_end.date() + timedelta(days=1)
+    first_day = min(start, date_start).astimezone(timezone.utc).date() - timedelta(days=1)
+    last_day = max(end, date_end).astimezone(timezone.utc).date() + timedelta(days=1)
     expected_days = [(first_day + timedelta(days=i)).isoformat()
                      for i in range((last_day - first_day).days + 1)]
     by_table: dict[str, int] = {"positions": 0, "discovery": 0}
@@ -757,7 +777,8 @@ def collect_run(region: FleetRegion, db_path: Path, fleet_var: Path, max_pages: 
                                                  departure.retrieved_at or stamp())
                     explicit, substitute = (None, None)
                     if raw_body:
-                        explicit, substitute = explicit_annotations(raw_body, departure.offering.name)
+                        explicit, substitute = explicit_annotations(raw_body, departure.offering.name,
+                                                                 departure.date, departure.departs_local, candidate.name)
                     if explicit:
                         projection["schedule_status"] = explicit
                         projection["cancellation_evidence"] = explicit if explicit == "explicitly-cancelled" else None
