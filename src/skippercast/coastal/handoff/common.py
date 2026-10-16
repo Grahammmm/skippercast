@@ -43,7 +43,17 @@ def confined(root, relative, *, existing=True):
 
 
 def ref(root, path, contract, *, cap=MAX_SOURCE_BYTES):
-    path = confined(root, Path(path).relative_to(Path(root).resolve()) if Path(path).is_absolute() else path)
+    path = Path(path)
+    if path.is_absolute():
+        # Accept the caller's declared root spelling as well as its canonical
+        # spelling (for example macOS /var and /private/var). Do not resolve the
+        # artifact itself: confined must still see traversal and child symlinks.
+        declared_root = Path(root).absolute()
+        try:
+            path = path.relative_to(declared_root)
+        except ValueError:
+            path = path.relative_to(declared_root.resolve())
+    path = confined(root, path)
     size = path.stat().st_size
     if size > cap:
         raise ValueError('artifact byte cap exceeded')

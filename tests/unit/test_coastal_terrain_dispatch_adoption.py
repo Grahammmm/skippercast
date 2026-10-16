@@ -8,7 +8,8 @@ from skippercast.coastal.coordinator.store import Store
 class FinishProof(unittest.TestCase):
  def _finish(self,mutation=None):
   with tempfile.TemporaryDirectory() as tmp:
-   root=Path(tmp);job={'job_id':'job:synthetic','stage':'render','segment_id':'seg:3310:0:0:5000','code_sha':'a'*64,'deps_sha':'b'*64,'params_sha':'c'*64,'input_manifest_sha':'d'*64,'lease_token':'token','params':{'terrain_root':str(root)},'input_manifest':{'contract':'coastal-terrain-only-input-v1','path':'input.json'},'budget':{'wall_s':120,'bytes':1024,'requests':0}}
+   # Store.__init__ canonicalizes root; this fixture bypasses that constructor.
+   root=Path(tmp).resolve();job={'job_id':'job:synthetic','stage':'render','segment_id':'seg:3310:0:0:5000','code_sha':'a'*64,'deps_sha':'b'*64,'params_sha':'c'*64,'input_manifest_sha':'d'*64,'lease_token':'token','params':{'terrain_root':str(root)},'input_manifest':{'contract':'coastal-terrain-only-input-v1','path':'input.json'},'budget':{'wall_s':120,'bytes':1024,'requests':0}}
    geography={'segment_id':job['segment_id'],'region':'synthetic-geographic-region'}
    stored={'state':'running','record_json':json.dumps(job),'attempts':1,'max_attempts':1,'result_sha':None,'stage':'render'}
    st=Store.__new__(Store);st.root=root;st.clock=lambda:100.;st.policy={'max_attempts':1};st.db=MagicMock()
