@@ -3,7 +3,8 @@
 // (first-run.js presets and the exact-boat sheet), saved-trip alerts (TripAlerts.tsx) and the
 // take-it-with-you entries. A real button with aria-expanded; opening moves
 // focus into the panel, arrows and Home/End move between its controls,
-// Escape or a click outside closes it and returns focus to the button.
+// Escape closes it and returns focus to the button; clicking or focusing
+// outside closes it without moving focus back.
 // The account and boat actions are web/account.ts, which wraps the v1 modules
 // unchanged; the alerts are web/alerts.ts; the trip plan and the offline
 // section are web/trip.ts (FE-51).
@@ -58,8 +59,10 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   const close = () => { setOpen(false); trigger.current?.focus(); };
   /** Close first so the v1 dialogs return focus to the menu button. */
   const run = (action: () => unknown) => () => { close(); void action(); };
+  const onDismissKey = (event: KeyboardEvent) => {
+    if (open && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
+  };
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return; }
     const items = [...(panel.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
     const at = items.indexOf(document.activeElement as HTMLElement);
     const to = event.key === 'ArrowDown' ? at + 1 : event.key === 'ArrowUp' ? at - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : null;
@@ -69,7 +72,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   };
 
   return (
-    <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined}>
+    <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} onKeyDown={onDismissKey}>
       <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id}
         onClick={() => setOpen(!open)}><Icon name="user" size={18} />{accountLabel(s)}</button>
       <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label="Account, boat and alerts" role="group">
