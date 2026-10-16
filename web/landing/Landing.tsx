@@ -26,19 +26,13 @@ export const NAV = [
   {label: 'How it’s built', href: '/sources'},
 ] as const;
 
-/** Keep the ui switch on a link into the v2 pages, so a preview stays in the new shell. */
-export function keepUI(href: string, path: string): string {
-  const ui = new URL(href).searchParams.get('ui');
-  return ui ? `${path}${path.includes('?') ? '&' : '?'}ui=${encodeURIComponent(ui)}` : path;
-}
-
-export function LandingHead({href}: {href: string}) {
+export function LandingHead(_props: {href: string}) {
   return (
     <header class="landing-head">
-      <a class="landing-brand" href={keepUI(href, '/')}>SkipperCast</a>
+      <a class="landing-brand" href="/">SkipperCast</a>
       <nav aria-label="Site">
         <ul class="landing-nav">
-          {NAV.map(item => <li key={item.label}><a href={item.href.startsWith('/map') ? keepUI(href, item.href) : item.href}>{item.label}</a></li>)}
+          {NAV.map(item => <li key={item.label}><a href={item.href}>{item.label}</a></li>)}
           <li><a href="/map#account">Sign in</a></li>
         </ul>
       </nav>
@@ -97,7 +91,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
   };
   return (
     <>
-      <Readout data={readout} fleet={fleet} conditions={keepUI(href, `/map?region=${DEFAULT_REGION}&view=conditions`)} />
+      <Readout data={readout} fleet={fleet} conditions={`/map?region=${DEFAULT_REGION}&view=conditions`} />
       {choice
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
         : <PortInput ports={ports} onChoose={choose} onExplore={explore} autoFocus={back} />}
