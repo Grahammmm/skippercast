@@ -375,6 +375,28 @@ class Store:
                 return False, ["segment_mismatch"]
             if manifest.get("synthetic") and not record.get("synthetic"):
                 return False, ["synthetic_not_real_evidence"]
+            if job["stage"] == "render" and manifest.get("schema") == "coastal-terrain-only-input-v1":
+                from datetime import datetime, timedelta, timezone
+                from ..render import terrain_only
+                from ..handoff.common import validate_derived_geotiff
+                params = job["params"]
+                terrain_root = Path(params["terrain_root"]).resolve(strict=True)
+                if not self.root.is_relative_to(terrain_root):
+                    raise ValueError("terrain-only input root confinement")
+                now = datetime.fromtimestamp(self.clock(), timezone.utc)
+                checked = terrain_only.verify(terrain_root, manifest, now=now,
+                    minimum_valid_until=now+timedelta(seconds=job["budget"]["wall_s"]))
+                if terrain_only.context(checked) != params["terrain_context_digest"]:
+                    raise ValueError("terrain-only context binding mismatch")
+                # Hash and confine derived assets before spending a lease or a
+                # worker attempt. No native reader or rendering is invoked.
+                for name, contract in (("terrain", "coastal-normalized-terrain-v1"),
+                                       ("mask", "coastal-native-support-v2"),
+                                       ("uncertainty", "coastal-derived-uncertainty-m-v1")):
+                    if name in checked:
+                        validate_derived_geotiff(terrain_root, checked[name],
+                            contract=contract, cap=terrain_only.MAX_FILE_BYTES)
+                return True, []
             if job["stage"] == "map":
                 from datetime import datetime, timedelta, timezone
                 from skippercast.coastal.handoff.mapping_input import verify
