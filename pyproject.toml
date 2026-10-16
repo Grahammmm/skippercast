@@ -85,3 +85,8 @@ markers = [
     "claims: pins a statement to committed research receipts or outputs; every test under research/tests/",
     "network: reaches the network; skipped unless SKIPPERCAST_NETWORK=1 (CI is offline)",
 ]
+
+[tool.setuptools.package-data]
+"skippercast.coastal.resources" = ["*.schema.json"]
+"skippercast.coastal.coordinator" = ["policy.json"]
+"skippercast.coastal.render" = ["terrain_demo_*.js"]

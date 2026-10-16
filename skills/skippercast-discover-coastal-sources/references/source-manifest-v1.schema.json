@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skippercast:coastal-source-manifest:v1",
+  "title": "Coastal discovery source manifest (not mapping handoff)",
+  "type": "object",
+  "required": ["schema", "method_revision", "source_revision", "policy_revision", "region", "bbox", "plan_sha256", "status", "manifest_status", "mapping_accepted", "selected_slice_ids", "candidates", "requests"],
+  "properties": {
+    "schema": {"const": "coastal-source-v1"},
+    "method_revision": {"type": "string"},
+    "source_revision": {"type": "string"},
+    "policy_revision": {"type": "string"},
+    "region": {"type": "string", "minLength": 1},
+    "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+    "plan_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "status": {"const": "FINALIZED"},
+    "manifest_status": {"enum": ["PARTIAL", "BLOCKED"]},
+    "mapping_accepted": {"const": false},
+    "selected_slice_ids": {"type": "array", "maxItems": 0},
+    "requests": {"type": "array", "maxItems": 16},
+    "candidates": {"type": "array", "maxItems": 40, "items": {"$ref": "#/$defs/candidate"}}
+  },
+  "$defs": {
+    "readiness": {
+      "type": "object", "required": ["status", "accepted", "blockers"],
+      "properties": {"status": {"type": "string"}, "accepted": {"const": false}, "blockers": {"type": "array", "items": {"type": "string"}}}
+    },
+    "candidate": {
+      "type": "object",
+      "required": ["source_id", "publisher_id", "catalog_id", "provenance", "metadata", "extent", "access_url", "cache", "acquisition_recipe", "unknowns", "rejection_reasons", "alternate_of", "terrain", "habitat", "render", "fitness", "expires_at", "next_action"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "catalog_id": {"type": "string", "minLength": 1},
+        "provenance": {"type": "object", "required": ["catalog_url", "response_sha256", "response_body_path", "request_id", "checked_at"], "properties": {"response_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "checked_at": {"type": "string", "format": "date-time"}}},
+        "metadata": {"type": "object", "required": ["crs", "resolution", "vertical_datum", "vertical_sign", "z_units", "rights", "size_bytes", "source_hash", "source_date", "acquisition_date", "format", "quality", "limitations", "processing_requirements", "task_fit"]},
+        "extent": {"type": "object", "required": ["bbox", "bbox_crs", "catalog_geometry", "overlap_test", "actual_data_support", "actual_support_status"], "properties": {"overlap_test": {"const": "bbox_only"}, "actual_data_support": {"type": "null"}, "actual_support_status": {"const": "unverified"}}},
+        "cache": {"type": "object", "required": ["path", "sha256", "status"], "properties": {"status": {"enum": ["not_acquired", "sample_acquired_unqualified"]}}},
+        "terrain": {"allOf": [{"$ref": "#/$defs/readiness"}, {"properties": {"status": {"enum": ["candidate_for_qualification", "blocked"]}}}]},
+        "habitat": {"allOf": [{"$ref": "#/$defs/readiness"}, {"properties": {"status": {"const": "unassessed"}}}]},
+        "render": {"allOf": [{"$ref": "#/$defs/readiness"}, {"properties": {"status": {"const": "blocked"}}}]},
+        "fitness": {"type": "object", "required": ["kind", "known_criteria", "score", "maximum", "actual_support", "ranking_limit"], "properties": {"kind": {"const": "metadata-completeness triage only"}, "actual_support": {"const": "unknown"}}},
+        "unknowns": {"type": "array", "items": {"type": "string"}},
+        "rejection_reasons": {"type": "array", "items": {"type": "string"}},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "next_action": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

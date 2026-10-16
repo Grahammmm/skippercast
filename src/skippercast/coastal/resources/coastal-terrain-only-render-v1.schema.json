@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/coastal-terrain-only-render-v1.schema.json",
+  "title": "Internal terrain-only diagnostic render receipt",
+  "type": "object",
+  "required": ["schema", "state", "source_accessed", "imagery_used", "internal_diagnostic", "publication_prohibited", "website", "habitat"],
+  "properties": {
+    "schema": {"const": "coastal-terrain-only-render-v1"},
+    "state": {"enum": ["done", "held"]},
+    "source_accessed": {"const": false}, "imagery_used": {"const": false},
+    "internal_diagnostic": {"const": true}, "publication_prohibited": {"const": true},
+    "website": {"const": "held"}, "habitat": {"const": "unassessed"},
+    "render_binding": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "acceptance_context_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "display_z": {"const": "negative_depth_m_positive_up"},
+    "artifacts": {"type": "array", "minItems": 2, "maxItems": 2}
+  },
+  "allOf": [{"if": {"properties": {"state": {"const": "done"}}}, "then": {"required": ["render_binding", "acceptance_context_sha256", "acceptance", "style", "camera", "artifacts", "vertical", "crs", "affine", "display_z", "color_range_m", "contour_levels_m", "limitations"]}}]
+}

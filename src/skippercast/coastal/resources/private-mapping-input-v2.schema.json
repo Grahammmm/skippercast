@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "Measured private mapping input v2",
+  "required": [
+    "schema",
+    "segment_id",
+    "source",
+    "window",
+    "declared_vertical",
+    "rights",
+    "synthetic",
+    "native_facts",
+    "valid_support",
+    "facts_digest",
+    "machine_holds",
+    "review",
+    "publication_prohibited",
+    "segment"
+  ],
+  "properties": {
+    "schema": {
+      "const": "private-mapping-input-v2"
+    },
+    "segment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "contract"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*\\.\\.).+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "contract": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "window": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "declared_vertical": {
+      "type": "object"
+    },
+    "rights": {
+      "type": "object",
+      "required": [
+        "private_use",
+        "evidence"
+      ]
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "native_facts": {
+      "type": "object",
+      "required": [
+        "header",
+        "observed_vertical",
+        "vertical",
+        "source",
+        "raw_valid_values_sha256",
+        "valid_count",
+        "valid_fraction",
+        "support",
+        "libs",
+        "implementation"
+      ]
+    },
+    "valid_support": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "contract"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*\\.\\.).+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "contract": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "facts_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "machine_holds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "review": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "path",
+            "sha256",
+            "bytes",
+            "contract"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^(?!/)(?!.*\\.\\.).+$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "contract": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "publication_prohibited": {
+      "const": true
+    },
+    "segment": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "$id": "https://skippercast.com/schemas/private-mapping-input-v2.schema.json"
+}

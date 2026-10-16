@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/forecast-manifest.schema.json",
+  "title": "SkipperCast forecast model manifest",
+  "description": "<model>/manifest.json on the forecasts branch, written by forecast.build.manifest_for(). server/model-api.js loads a tile only when its key is listed in tiles, and answers /static/meta.json-style queries from meta. Model ids are the four the sampler implements (server/model-api.js MODELS); adding one needs a sampler change, so the enum is deliberate.",
+  "type": "object",
+  "required": [
+    "schema_version", "model", "name", "provider", "kind", "cycle", "cycle_iso", "built_at",
+    "build_seconds", "times", "fields", "tiles", "grid", "documentation", "notes", "meta"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model": {"$ref": "#/$defs/model_id"},
+    "name": {"type": "string", "minLength": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "kind": {"enum": ["wind", "wave"]},
+    "cycle": {"type": "integer", "description": "Initialization time, epoch seconds."},
+    "cycle_iso": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "built_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "build_seconds": {"type": "integer", "minimum": 0},
+    "times": {"$ref": "#/$defs/times"},
+    "fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}},
+    "tiles": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/tile_key"}},
+    "grid": {
+      "type": "object",
+      "required": ["dlat", "dlon", "resolution_km"],
+      "properties": {
+        "dlat": {"type": "number", "exclusiveMinimum": 0},
+        "dlon": {"type": "number", "exclusiveMinimum": 0},
+        "resolution_km": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "documentation": {"$ref": "common.schema.json#/$defs/https_url"},
+    "notes": {"type": "string"},
+    "meta": {
+      "description": "Mirrors Open-Meteo /static/meta.json; alert-policy.js reads last_run_initialisation_time and data_end_time.",
+      "type": "object",
+      "required": [
+        "last_run_initialisation_time", "last_run_modification_time", "last_run_availability_time",
+        "data_end_time", "temporal_resolution_seconds", "update_interval_seconds"
+      ],
+      "properties": {
+        "last_run_initialisation_time": {"type": "integer"},
+        "last_run_modification_time": {"type": "integer"},
+        "last_run_availability_time": {"type": "integer"},
+        "data_end_time": {"type": "integer"},
+        "temporal_resolution_seconds": {"type": "integer", "exclusiveMinimum": 0},
+        "update_interval_seconds": {"type": "integer", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "model_id": {"enum": ["gfs_global", "ecmwf_ifs025", "ncep_gfswave016", "ecmwf_wam"]},
+    "tile_key": {"description": "South-west corner of a 1-degree tile: <lat>_<lon>.", "type": "string", "pattern": "^-?\\d{1,2}_-?\\d{1,3}$"},
+    "times": {"description": "Valid times, epoch seconds, ascending.", "type": "array", "minItems": 1, "items": {"type": "integer"}}
+  }
+}

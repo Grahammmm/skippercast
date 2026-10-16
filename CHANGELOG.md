@@ -4,6 +4,7 @@
 
 - Add the private California schedule-evidence collector and opt-in timer installer, preserving source revisions and distinguishing incomplete AIS reception coverage from readable empty windows. Source integration does not activate collection or change the existing AIS listener (#599, #624).
 
+- Add the current coastal source-discovery, mapping and 3D-rendering skills, with bounded source preparation and separate private terrain, habitat and publication acceptance. Keep the older coastal rendering name as a compatibility entry point.
 - Show the protected-area legend swatch only when boundary geometry is drawn, retaining warnings and official rules links while it is unavailable.
 
 - Reject impossible aerial acquisition dates and future coverage-check dates when validating regional configuration.

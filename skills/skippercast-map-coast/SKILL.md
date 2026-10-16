@@ -1,9 +1,22 @@
 ---
 name: skippercast-map-coast
-description: Expand measured 0–300 ft coastal habitat coverage using original survey qualification, cached physical mapping, rankings and final-screen publication. Use for new survey batches, stalled mapping or regional rollout; distinguish maintenance from geographic expansion.
+description: Map reviewed coastal terrain or measured 0–300 ft habitat using original survey qualification and cached physical outputs. Choose private terrain, habitat or publication scope explicitly; distinguish maintenance from geographic expansion.
 ---
 
 # Execute measured coastal habitat expansion
+
+## Shared implementation and private trials
+
+Choose the requested mode before selecting gates. An authorized private
+data-only terrain assignment requires native qualification, retained masks,
+vertical semantics, geographic support and independent artifact review.
+Imagery, habitat/substrate interpretation, rankings, fishing export and public
+release apply only when requested. Read the
+[mode-specific gates and trial lessons](../skippercast-discover-coastal-sources/references/coastal-pipeline.md#operating-modes-and-bounded-trial-lessons).
+The habitat and publication sections below govern those modes; they are not
+blanket prerequisites for a private terrain handoff.
+
+Follow [the shared coastal pipeline contract](../skippercast-discover-coastal-sources/references/coastal-pipeline.md) before a new run. Private mapping requires machine-produced mapping-input v2 facts, explicit source and normalized vertical semantics, geographic support checks, and a separate independent review. Historical v1 evidence cannot promote a new run. Private terrain does not establish habitat, imagery or website readiness.
 
 Map bottom features suitable for lingcod and rockfish, initially Monterey–Point
 Conception at nominal 0–91.44 m. Habitat suitability does not require proof that
@@ -11,9 +24,52 @@ fish are present. Preserve the distinction in map labels. Read current
 `AGENTS.md` and `CONTRIBUTING.md`; use existing `skippercast.seafloor` commands,
 catalogs, grades and progress storage. Paths are relative to the checkout.
 
+## Source preparation and real end-to-end trials
+
+For release integration or a timed end-to-end trial, read
+[source preparation and real trial acceptance](references/source-preparation-and-trials.md).
+Pin the actual source and packaged dependency closure; preserve charged attempts
+and geographic support. Source tests, package inspection and static previews have
+separate acceptance scopes. Preparation does not authorize native, browser or
+publication execution.
+
+## Resolve source readiness before a mapping assignment
+
+For an assigned region without usable reviewed inputs, use
+[coastal source discovery](../skippercast-discover-coastal-sources/SKILL.md)
+first, or reuse its still-valid versioned source manifest. A negative cache
+envelope check closes only the cache route: an authorized source-discovery
+assignment allows one finite external catalog/acquisition branch within the
+same budget. Record terrain, habitat and rendering readiness separately.
+Missing paired imagery holds the paired-imagery rendering lane, while
+private terrain qualification and an assigned data-only preview can proceed
+through their own reviewed contracts. Discovery candidates and downloaded samples are preparation
+evidence; they do not replace native-mask qualification, independent artifact
+acceptance or the v2 render handoff.
+Read any attached source-quality assessment before choosing an input: preserve
+its exact sample/window scope, source hashes, supported reader, usefulness
+decision and unresolved blockers. A bounded quality sample can guide the next
+qualification step; it cannot certify a whole survey or accept habitat/rendering.
+
+## Select one useful artifact assignment
+
+Start from the compact checkpoint and [bounded artifact procedure](references/bounded-artifacts.md).
+Declare the requested output class: public habitat, private mapping handoff,
+render preview or one preparation deliverable. Choose one region/source-window
+and acceptance test. A private artifact counts for an explicitly private
+assignment, while public map-growth goals still require actual screened readback.
+Keep provisional/rejected results and precise holds; neither is final habitat.
+
+Use the deterministic command runner for wall-time, attempt, restart and observed
+usage bounds. Propose 60 wall minutes for a future assignment; it is a ceiling,
+not authorization to start a run, extend one or fill spare time. Reuse the same
+mission checkpoint across stage names, repairs and model changes. Use one small
+qualified worker only when useful and an independent reviewer when artifacts
+exist; no fixed observer pool or model polling. Stop early at a blocked path.
+
 ## Deliver the appropriate level of detail
 
-Choose one visitor-visible batch with an explicit acceptance test before
+For a public-habitat assignment, choose one visitor-visible batch with an explicit acceptance test before
 research. First reuse rights-qualified measured rough patches whose only
 physical hold is insufficient surrounding support for a grade. The separate
 search-area screen can release these as unranked, limited-confidence outlines;
@@ -29,7 +85,7 @@ quality hold stays held until evidence resolves the specific issue. Unknown
 substrate stays unknown. Retain shallow 4–24ft knowledge separately for future
 shore-fishing and spearfishing layers.
 
-Keep the first batch bounded to one reach and its regional publication. Reuse
+Keep the first batch bounded to one reach; public-habitat tasks include its regional publication. Reuse
 hash-verified physical outputs when only the display/screen policy changes.
 Acceptance is a newly usable map outline with accurate labels, current source
 rights and whole-polygon restrictions, verified archive/map readback, and no
@@ -39,8 +95,8 @@ habitat and new measurement area. A green job or diagnostic is not that release.
 ## Start from the smallest current state
 
 Before dispatch or pixel processing, use the [run progress control](references/progress-control.md).
-Record one publication path, the shared active-work allowance and downstream
-readiness in the existing checkpoint. Run its offline guard at stage boundaries.
+Record the selected private artifact acceptance path or requested publication
+path, the shared active-work allowance and downstream readiness in the existing checkpoint. Run its offline guard at stage boundaries.
 An overnight deadline is an observation window, not an allowance for continuous
 model work. Private proofs and code fixes do not reset a stalled map-growth run.
 When the owner requests repeated timed tests, follow the [round improvement
@@ -186,9 +242,9 @@ claiming additional area. Never add overlapping source or PR totals. Record:
 No-growth refreshes are maintenance. A downloaded source, document, adapter or
 successful CI run is not new coastline. A pipeline fix is useful progress only
 when a reproducible test or real-run receipt demonstrates the blocker removed.
-If no new batch is runnable, inspect a retained gap only when the run progress
+For a publication assignment, if no new batch is runnable, inspect a retained gap only when the run progress
 control still permits work and its downstream publication path is executable.
-Otherwise save the dependency and stop active expansion; do not substitute
+Otherwise save the dependency and stop active expansion. For an explicitly private assignment, use its artifact acceptance test and bounded handoff path. Do not substitute
 another source proof or maintenance run for the missing release.
 
 After two unsuccessful attempts, change approach. After 20 active investigation
@@ -231,28 +287,29 @@ bookkeeping alone is not publication.
 For the classified-habitat opt-ins, production command and release gates, follow
 the [classified-habitat production path](references/habitat-expansion-preflight.md#production-path).
 
-## Hand off one completed slice for website 3D rendering
+## Hand off a validated incremental slice
 
-When a suitable batch completes, reuse its artifacts and review evidence to save
-one compact private receipt for `skippercast-build-coastal-map`; do not wait for the
-whole coastline or repeat unchanged qualification. Include terrain path/format,
-coverage and valid support, resolution, units/sign, CRS, depth datum and NoData
-mask; paired imagery path or approved URL, format, coverage and terrain
-alignment; upstream revision, source identities, artifact hashes, attribution
-and rights permitting website display; exact review receipts and explicit
-website-display acceptance for these artifacts; remaining holds; and the
-existing loader/manifest or minimal loading instructions.
+Use the [versioned render handoff contract](references/render-handoff-contract.md)
+and its offline validator. Save exact artifact identities, CRS/units/datum, valid
+support masks, source rights/citations, confidence/quality flags, review receipts,
+loader/preview instructions and incremental added/updated/removed coverage IDs.
+Preserve failed/skipped areas with next actions. Reuse artifacts and review;
+do not wait for the whole coast or requalify unchanged inputs.
 
-Use `READY` only when both terrain and imagery are complete, hash-identified,
-reviewed and explicitly accepted for website display with applicable rights,
-restriction and publication gates satisfied. Otherwise use `BLOCKED`, name the
-missing prerequisites and preserve completed artifacts. Private proofs, running
-jobs, generic source rights and fishing-habitat qualification are not website
-acceptance. Keep terrain-display acceptance separate from habitat qualification,
-rankings, fishing exports and new measurement credit. Do not promote a sparse
-support mask to full rectangular coverage or substitute an unapproved imagery
-service. Report blockers promptly; no new offline work is required for a receipt.
-Keep current private paths and batch-specific evidence in the receipt, not here.
+For the paired-imagery website contract, terrain, reviewed imagery, alignment,
+applicable restrictions and exact website-display acceptance are required for
+each accepted slice. For assigned private data-only terrain, use the reviewed
+terrain-only contract and retain its private label, masks and science review;
+absence of imagery or habitat interpretation is not a failed terrain gate.
+READY describes all supplied work accepted; PARTIAL permits only complete accepted
+slices while other slices stay blocked; BLOCKED selects none. Partial geography
+never promotes incomplete qualification. Keep terrain display separate from
+habitat acceptance, ranking/export and new measurement credit.
+
+End with the [retrospective](references/bounded-artifacts.md#accounting-and-retrospective),
+including attempts and useful outputs in their own units. Recommend any
+evidence-backed skill change for a separate reviewed revision; never rewrite
+the skill during an active run or start another run automatically.
 
 Reconcile installed skills after changing the canonical repository version.
 Historical baselines, resolved failures and old PR ordering are preserved in
