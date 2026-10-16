@@ -413,6 +413,48 @@ test('the legend row says what the drawing covers, links the official rules and 
   chartFailed.value = false;
 });
 
+test('the MPA swatch only keys drawn geometry and preserves boundary warnings and terrain independence', async () => {
+  const {MpaRow, mpaState: state, chartFailed, unavailable: failedLayers, render, h, state: store} = await components();
+  store.configureStore({v2: true, storage: null});
+  store.syncFromURL(`${PAGE}?region=morro-bay&layers=none`);
+  chartFailed.value = false;
+  failedLayers.value = [];
+  const swatch = /class="app-swatch" data-layer="mpas"/;
+  try {
+    for (const status of ['idle', 'loading', 'unavailable']) {
+      state.value = {status, note: 'Boundary status remains visible.', detail: '', checked: null, count: 8};
+      const html = render(h(MpaRow, {}));
+      assert.doesNotMatch(html, swatch, status);
+      assert.match(html, /Official rules and boundaries/);
+      assert.match(html, status === 'idle' ? /Loading boundaries/ : /Boundary status remains visible/);
+    }
+    for (const status of ['complete', 'partial', 'incomplete']) {
+      state.value = {status, note: 'Keep the boundary qualification warning.', detail: '', checked: '2026-09-21', count: 8};
+      const html = render(h(MpaRow, {}));
+      assert.match(html, swatch, status);
+      assert.match(html, /Keep the boundary qualification warning/);
+      state.value = {...state.value, count: 0};
+      assert.doesNotMatch(render(h(MpaRow, {})), swatch, `${status}, no geometry`);
+    }
+    state.value = {status: 'complete', note: 'Checked boundaries.', detail: '', checked: '2026-09-21', count: 8};
+    failedLayers.value = ['mpas'];
+    assert.doesNotMatch(render(h(MpaRow, {})), swatch, 'Chart boundary source error');
+    failedLayers.value = [];
+    chartFailed.value = true;
+    assert.doesNotMatch(render(h(MpaRow, {})), swatch, 'Chart startup error');
+    for (const presentation of ['2d', '3d']) {
+      store.syncFromURL(`${PAGE}?region=morro-bay&layers=none&presentation=${presentation}`);
+      failedLayers.value = ['mpas'];
+      assert.match(render(h(MpaRow, {})), swatch, `${presentation} ignores unrelated Chart errors`);
+    }
+  } finally {
+    chartFailed.value = false;
+    failedLayers.value = [];
+    state.value = {status: 'idle', note: '', detail: '', checked: null, count: 0};
+    store.syncFromURL(`${PAGE}?region=morro-bay&layers=none`);
+  }
+});
+
 test('FE-82: an area picked on the terrain fills the mark card in 2D and 3D, never on the Chart', async () => {
   const {MarkCard, currentMark, terrainPick, render, h, state: store} = await components();
   store.configureStore({v2: true, storage: null});
