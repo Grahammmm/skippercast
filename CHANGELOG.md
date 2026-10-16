@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reject impossible aerial acquisition dates and future coverage-check dates when validating regional configuration.
+
 - Keep first-run profile choices inside the mobile sheet so small-screen visitors can reach every choice and the sheet handle.
 - Disable Play and Next hour at the forecast horizon's end while keeping earlier hours selectable.
 
