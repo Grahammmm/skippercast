@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restore each fishing profile’s chosen Currents source when switching profiles, including observed HFR and explicit Off choices.
+
+- Stop forwarding the retired `ui` switch from home-page navigation links; legacy links continue to open the same pages.
+
 - Add the private California schedule-evidence collector and opt-in timer installer, preserving source revisions and distinguishing incomplete AIS reception coverage from readable empty windows. Source integration does not activate collection or change the existing AIS listener (#599, #624).
 
 - Add the current coastal source-discovery, mapping and 3D-rendering skills, with bounded source preparation and separate private terrain, habitat and publication acceptance. Keep the older coastal rendering name as a compatibility entry point.

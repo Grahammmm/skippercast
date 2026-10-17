@@ -97,7 +97,7 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   go({});
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.boat.defaultLayers);
   assert.equal(s.current.value, 'wcofs', 'the boat profile\'s default Currents is drawn (#482)');
-  // The rail writes ?layers= (and Currents its source); a profile switch drops them with the target.
+  // The rail writes ?layers= and its Currents source; an unchosen profile uses its defaults.
   go({layers: 'seafloor,currents,clouds', current: 'hfr-6', target: 'vermilion'});
   let params = go(s.profilePatch('shore'));
   assert.deepEqual(['layers', 'current', 'target'].filter(key => params.has(key)), []);
@@ -105,11 +105,11 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.shore.defaultLayers);
   assert.equal(s.current.value, 'off');
   assert.deepEqual(pressed(railItems(m.render(m.h(m.LayerRail)))), ['Water temp', 'Swell']);
-  // Each profile keeps its own last list; one never chosen gets its defaults.
+  // Each profile keeps its own last list and Currents source; an unchosen one gets its defaults.
   go({layers: 'swell'});
   go(s.profilePatch('boat'));
   assert.deepEqual(s.layers.value, ['seafloor', 'currents', 'clouds']);
-  assert.equal(s.current.value, 'wcofs', 'the source is not stored: the list turns on the default');
+  assert.equal(s.current.value, 'hfr-6', 'the profile restores its chosen Currents source with its list');
   go(s.profilePatch('shore'));
   assert.deepEqual(s.layers.value, ['swell']);
   go(s.profilePatch('spear'));
