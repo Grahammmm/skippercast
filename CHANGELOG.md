@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Withhold terrain waypoints when the current protected-area or closure screen is unavailable or rejects them; clarify that Chart reef density limits do not apply to reviewed terrain.
+
 - Use the daily-selected water observation in the brief, share overlapping Fleet directory probes without caching settled results, and format charter research dates consistently in the legend.
 
 - Collect Chart rendered-feature counts only when diagnostics are explicitly enabled.
