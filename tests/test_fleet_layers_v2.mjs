@@ -10,6 +10,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
+import {session} from '../web/account.ts';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import * as v1 from '../dist/fleet-activity.js';
@@ -98,7 +99,7 @@ function harness({admin, flags}) {
   const view = {size: () => ({width: 400, height: 300}), unproject: (x, y) => ({lon: -121 + x / 1000, lat: 35.5 - y / 1000}), on: () => () => {}};
   const engine = signal({view, setOverlay: (layer, o, before) => calls.push(['overlay', layer, o && o.layers.map(l => l.id), before ?? null]),
     setData: (id, data) => calls.push(['data', id, data.features.length])});
-  return {asked, calls, engine, fetchFn};
+  return {asked, calls, engine, fetchFn, setAdmin: value => { admin = value; }};
 }
 
 function open(t, h, layers = 'fleet') {
@@ -166,6 +167,54 @@ test('an admin with both flags gets the options; each loads for the map\'s bound
   for (const name of ACTIVITY) toggleActivity(name, false);
   await until(() => h.calls.at(-1)[2] === null, 'the overlay leaves');
   assert.equal(activityStatus.value, '');
+});
+
+test('session changes invalidate cached access and drawn features; disposal ignores pending checks', async t => {
+  const h = harness({admin: true, flags: true});
+  const fleet = open(t, h);
+  await until(() => activityAccess.value, 'initial admin admitted');
+  toggleActivity('events', true);
+  await until(() => fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), 'initial features loaded');
+  h.setAdmin(false);
+  session.value = {state: 'signed-out'};
+  assert.equal(activityAccess.value, false, 'revoke immediately on session change');
+  assert.equal(fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), null, 'old features cannot be picked');
+  assert.equal(h.calls.at(-1)[2], null, 'old overlay removed');
+  await until(() => h.asked.filter(u => u === '/api/session').length === 2, 'logout rechecks');
+  h.setAdmin(true);
+  session.value = {state: 'signed-in', name: 'Synthetic admin'};
+  await until(() => activityAccess.value, 'login rechecks cached denial');
+  await until(() => fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), 'login reloads features');
+  session.value = {state: 'signed-out'};
+  fleet.destroy();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activityAccess.value, false, 'pending access cannot republish after disposal');
+  assert.equal(fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), null);
+  const count = h.asked.length;
+  session.value = {state: 'signed-in', name: 'Synthetic admin'};
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.asked.length, count, 'disposed session subscription removed');
+});
+
+test('a superseded or disposed access response cannot restore admin access', async t => {
+  const h = harness({admin: true, flags: true});
+  const pending = [];
+  const fetchFn = h.fetchFn;
+  h.fetchFn = url => url === '/api/session' ? new Promise(resolve => pending.push(resolve)) : fetchFn(url);
+  const fleet = open(t, h);
+  await until(() => pending.length === 1, 'first session request pending');
+  session.value = {state: 'signed-out'};
+  await until(() => pending.length === 2, 'replacement session request pending');
+  pending[1]({ok: true, json: async () => ({is_admin: false})});
+  pending[0]({ok: true, json: async () => ({is_admin: true})});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activityAccess.value, false, 'old admin response ignored');
+  session.value = {state: 'signed-in', name: 'Synthetic admin'};
+  await until(() => pending.length === 3, 'third request pending');
+  fleet.destroy();
+  pending[2]({ok: true, json: async () => ({is_admin: true})});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activityAccess.value, false, 'disposed admin response ignored');
 });
 
 test('Accept 1: the rail offers the activity layers only with access; the legend keys them with v1\'s status line', async () => {

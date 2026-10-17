@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Link charter-trip summaries to their existing published fishing-report sources.
+
+- Recheck Fleet access when the signed-in session changes, including while an earlier check is pending.
+- Keep the nearshore rings explanation visible when the swell field is unavailable.
+
 - Withhold terrain waypoints when the current protected-area or closure screen is unavailable or rejects them; clarify that Chart reef density limits do not apply to reviewed terrain.
 
 - Use the daily-selected water observation in the brief, share overlapping Fleet directory probes without caching settled results, and format charter research dates consistently in the legend.
@@ -67,6 +72,8 @@
 - The new home page and map now send the site's anonymous usage statistics: uncaught error reports (scrubbed message, script file name, line and column, build, hashed request id) and three visit steps, each with the region, build and `s` visit source: `port_selected` (a port chosen in the map's port chooser), `spot_saved` (a spot added to the trip) and `offline_saved` (a region saved for offline). The new home page sends error reports only. No cookies or identifiers, and nothing under Do Not Track or Global Privacy Control. The privacy notice now describes exactly what is collected, where it is stored (Cloudflare Workers Analytics Engine, kept three months) and that the daily operations report copies step counts and the top scrubbed errors into public GitHub Actions run summaries. The v1 About text no longer says there is no analytics.
 
 ### Internal
+
+- Add regression coverage for perspective-mode isolation and camera behavior.
 
 - The AIS processor retains an unfinished full aggregate rebuild that was already authorized to prune. After a restart it replays the complete season with one timestamp before pruning and acknowledges that rebuild only after every chunk succeeds, so interruption cannot silently leave stale remote cells. Incremental uploads and fresh partial-state uploads keep their existing deletion tracking and prune protection (#624, A04).
 - Historical AIS reruns and MarineCadastre backfills now read eligible registry MMSIs plus already approved strong watch mappings, preserving registry precedence, exclusions and ambiguous-MMSI holds. Unresolved explicit targets fail before ingestion, and a changed selected mapping stops derivation while preserving acquired raw rows. Current bindings do not prove past MMSI ownership; NOAA-derived rows retain their planning-only rights (#624, A01).
