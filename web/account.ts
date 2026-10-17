@@ -21,6 +21,8 @@ export type Session =
   | {readonly state: 'signed-in'; readonly name: string | null};
 
 export const session = signal<Session>({state: 'loading'});
+let sessionRequest: Promise<Session> | null = null;
+let sessionGeneration = 0;
 
 /** The /api/session answer as the menu reads it: offline on any failure, disabled when the site offers no sign in. */
 export function readSession(data: unknown, ok = true): Session {
@@ -32,14 +34,29 @@ export function readSession(data: unknown, ok = true): Session {
   return {state: 'signed-in', name};
 }
 
-export async function refreshSession(fetchFn: typeof fetch = fetch): Promise<Session> {
-  let next: Session;
-  try {
-    const response = await fetchFn('/api/session', {signal: AbortSignal.timeout(20000)});
-    next = readSession(await response.json().catch(() => null), response.ok);
-  } catch { next = {state: 'offline'}; }
-  session.value = next;
-  return next;
+/** Mount initialization: share pending reads and reuse settled sessions across layout remounts. */
+export function ensureSession(fetchFn: typeof fetch = fetch): Promise<Session> {
+  if (sessionRequest) return sessionRequest;
+  const current = session.peek();
+  if (current.state !== 'loading' && current.state !== 'offline') return Promise.resolve(current);
+  return refreshSession(fetchFn);
+}
+
+/** Always fetch; only the latest requested read may update shared state. Offline reads remain retryable. */
+export function refreshSession(fetchFn: typeof fetch = fetch): Promise<Session> {
+  const generation = ++sessionGeneration;
+  sessionRequest = (async (): Promise<Session> => {
+    try {
+      const response = await fetchFn('/api/session', {signal: AbortSignal.timeout(20000)});
+      return readSession(await response.json().catch(() => null), response.ok);
+    } catch { return {state: 'offline'}; }
+  })().then(next => {
+    if (generation === sessionGeneration) session.value = next;
+    return next;
+  }).finally(() => {
+    if (generation === sessionGeneration) sessionRequest = null;
+  });
+  return sessionRequest;
 }
 
 /** The trigger's text: the account name, "Account", or "Sign in". */

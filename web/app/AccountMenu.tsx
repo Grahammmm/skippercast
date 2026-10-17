@@ -12,7 +12,7 @@ import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
-import {accountLabel, boat, choosePreset, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, refreshSession, session, type Session} from '../account.ts';
+import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
 import {region, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 
@@ -43,7 +43,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   const s = session.value, b = boat.value, regionId = region.value;
 
   useEffect(() => {
-    void refreshSession();
+    void ensureSession();
     return followAccountHash(() => { setOpen(false); setAlerts(false); });
   }, []);
   useEffect(() => {
