@@ -464,6 +464,10 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   await expect(chart).toHaveAttribute('data-marks', /^[1-9]\d*$/);
   const box = (await chart.boundingBox())!;
+  await expect.poll(() => chart.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+  }), {message: 'the chart target stays clear of the layer rail'}).toBe(true);
   await expect(async () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     expect(params(page).spot).toBe(MARK.id);
@@ -618,7 +622,7 @@ test('Currents stand still under reduced motion and pause while the page is hidd
 test('Currents in a region no packet covers draw nothing and say so', async ({page, v2}) => {
   await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', current: 'wcofs'});
   await openLayers(page);
-  await expect(page.locator('.ui-rail-item', {hasText: 'Currents'}).locator('.ui-rail-note')).toHaveText('no packet for this region');
+  await expect(page.locator('.ui-rail-item', {hasText: 'Currents'}).locator('.ui-rail-note')).toHaveText('Currents unavailable: no local surface-current packet covers this region yet.');
   await expect(page.locator('[data-reason="currents"]')).toHaveText('Currents unavailable: no local surface-current packet covers this region yet.');
   await expect(page.locator('canvas.chart-flow')).toHaveCount(0);
 });

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Wrap full current-rejection reasons within the desktop layer rail so chart marks and selected-mark actions remain clickable.
+
 - Defer the daily feed until the map shell has had a paint opportunity, and keep source freshness, day choices and dock controls on one advancing clock.
 
 - Explain rejected current grids in the rail and cancel obsolete landing warm-ups with deadlines through response bodies.
