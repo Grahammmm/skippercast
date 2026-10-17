@@ -412,14 +412,14 @@ const mapAttr = async (page: Page, name: string) => Number(await page.locator('.
 
 test('protected areas draw with the ds582 credit, are named from zoom 11 and open their card with the official rules page', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},10`});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},10`});
   const chart = page.locator('.app-chart');
   await expect(chart).toHaveAttribute('data-mpa', 'complete');
   await expect.poll(() => mapAttr(page, 'data-mpa-drawn'), {message: 'outlines drawn in view'}).toBeGreaterThan(0);
   await expect(chart).toHaveAttribute('data-mpa-labels', '0');
   await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('CDFW ds582 · CC BY 4.0');
 
-  await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},11`}));
+  await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},11`}));
   await expect.poll(() => mapAttr(page, 'data-mpa-labels'), {message: 'names placed at zoom 11'}).toBeGreaterThan(0);
   const box = (await chart.locator('canvas.maplibregl-canvas').boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);

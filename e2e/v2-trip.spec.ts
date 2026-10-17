@@ -90,7 +90,7 @@ async function rankBest(page: Page, gate: {hold: boolean; release: () => void; s
 
 test('the ranked export runs in v2: best reefs, complete outlines, a restored plan, and changed data require reranking', async ({page, pageErrors, v2, isMobile}, info) => {
   const reefs = await rankedReefs(page);
-  await v2.open('app', AREA);
+  await v2.open('app', {...AREA, diagnostics: '1'});
   await openPlan(page, isMobile);
   await rankBest(page, reefs.gate);
   await expect(page.locator('#export-spot-list')).toContainText('#1 · Strong · 90% confidence');
