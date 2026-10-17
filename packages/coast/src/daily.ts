@@ -11,7 +11,7 @@ import {clampLimits, defaultLimits, limitsText, looserFields, sameLimits, strict
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
- date:string;label:string;headline:string;summary:string;status:'Caution'|'Mixed'|'Unknown';confidence:string;
+ date:string;label:string;headline:string;summary:string;status:'Caution'|'Mixed'|'Unknown';confidence:string;provisional:boolean;
  hours:ForecastHour[];wind:{min:number|null;max:number|null;gust:number|null};seas:{min:number|null;max:number|null;period:number|null};
  air:{min:number|null;max:number|null};rainPct:number|null;tempObservation:Observation|null;
  tides:TidePoint[];tideEvents:TideEvent[];tideRange:{min:number|null;max:number|null};windows:Window[];
@@ -301,7 +301,7 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
  if(mode==='kayak')summaryParts.push('Check your launch, landing, drift and the paddle back locally, and leave your plan with someone ashore.');
  if(limitsLine)summaryParts.push(limitsLine);
  if(day.provisional)summaryParts.push('This outlook is provisional; check again closer to departure.');
- return {date,label:day.label,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore,bar,kayak,limits:{values:mine,custom,loosened,text:limitsLine}};
+ return {date,label:day.label,provisional:day.provisional,headline,summary:summaryParts.join(' '),status,confidence:day.provisional?'Low · provisional':status==='Unknown'?'Limited · missing local data':'Low · local checks required',hours,wind,seas,air,rainPct,tempObservation,tides,tideEvents,tideRange,windows,...astronomy,alerts,missing,issuedAt:source?.issuedAt??null,spear,shore,bar,kayak,limits:{values:mine,custom,loosened,text:limitsLine}};
 }
 
 const lower=(text:string)=>text.charAt(0).toLowerCase()+text.slice(1);

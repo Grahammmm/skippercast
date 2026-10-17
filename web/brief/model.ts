@@ -125,7 +125,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now, tideSource?.outcome === 'error');
 
   return {
-    basis, profile, date: daily.date, label: daily.label, provisional: daily.confidence.includes('provisional'),
+    basis, profile, date: daily.date, label: daily.label, provisional: daily.provisional,
     headline: daily.headline, deck: daily.summary, status: daily.status, confidence: daily.confidence,
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area, now), fleet: fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now),
