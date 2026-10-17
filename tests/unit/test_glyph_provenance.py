@@ -7,7 +7,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/basemap/build_glyphs.py'
+from tests._support import ROOT
+
+SCRIPT = ROOT / 'scripts/basemap/build_glyphs.py'
 spec = importlib.util.spec_from_file_location('build_glyphs', SCRIPT)
 build = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build)
