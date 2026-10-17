@@ -2,8 +2,10 @@
 
 ## Unreleased
 
+- Defer the daily feed until the map shell has had a paint opportunity, and keep source freshness, day choices and dock controls on one advancing clock.
+
 - Explain rejected current grids in the rail and cancel obsolete landing warm-ups with deadlines through response bodies.
-- Bound concurrent coast-data object reads with a shared isolate admission queue, preserving same-key sharing and independent failures.
+- Bound cold coast-data verification reads with shared isolate admission; reject saturation immediately while preserving same-key sharing and independent failures.
 - Internal: freeze historical regulations-wrapper regression inputs and report deterministic glyph-build provenance without changing published glyphs or claiming current-law or native-render acceptance.
 
 - Use the daily-selected water observation in the brief, share overlapping Fleet directory probes without caching settled results, and format charter research dates consistently in the legend.
