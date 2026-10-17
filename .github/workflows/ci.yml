@@ -6,6 +6,12 @@ on:
   pull_request:
   # Bot pull requests opened with GITHUB_TOKEN (seafloor.yml) dispatch this run.
   workflow_dispatch:
+    inputs:
+      sc_b02_focused:
+        description: "Run the reviewed SC-B02 candidate once on the dedicated branch"
+        type: boolean
+        required: false
+        default: false
 
 # PRs get one full check suite; obsolete PR revisions should not fill the queue.
 # Main and manually dispatched bot-PR checks are never interrupted here.
@@ -18,6 +24,7 @@ permissions:
 
 jobs:
   survey-science:
+    if: github.event_name != 'workflow_dispatch' || !inputs.sc_b02_focused || github.ref != 'refs/heads/codex/sc-b02-focused-ci'
     # Self-hosted CI is opt-in only after its complete setup is verified.
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
@@ -65,6 +72,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
   e2e:
+    if: github.event_name != 'workflow_dispatch' || !inputs.sc_b02_focused || github.ref != 'refs/heads/codex/sc-b02-focused-ci'
     # Browser tests (P4-09a): Playwright + axe against the built site under
     # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
     # Self-hosted CI is opt-in only after its complete setup is verified.
@@ -101,6 +109,7 @@ jobs:
           path: test-results/
           retention-days: 7
   check:
+    if: github.event_name != 'workflow_dispatch' || !inputs.sc_b02_focused || github.ref != 'refs/heads/codex/sc-b02-focused-ci'
     # Self-hosted CI is opt-in only after its complete setup is verified.
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
@@ -211,3 +220,74 @@ jobs:
       - name: Production dependencies have no high or critical advisories
         if: matrix.python == '3.13'
         run: pnpm audit --prod --audit-level high
+
+  sc-b02-focused:
+    # The delivery branch carries an inert patch, so normal jobs retain their
+    # complete test discovery. Only this job materializes the original candidate.
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.sc_b02_focused &&
+      github.ref == 'refs/heads/codex/sc-b02-focused-ci'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Scan the delivery branch and verify the immutable patch
+        run: |
+          mkdir -p sc-b02-evidence
+          echo "run=$GITHUB_RUN_ID attempt=$GITHUB_RUN_ATTEMPT delivery=$GITHUB_SHA" > sc-b02-evidence/run.txt
+          test "$GITHUB_RUN_ATTEMPT" -eq 1
+          python3 scripts/check_repository.py
+          echo "19a0e4d700bb7c8a4a411b92df3ae01c954bb7451d576bbeb6ec2087d46e2867  .github/fixtures/sc-b02-candidate.patch" | sha256sum --check --strict
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 037db980a26bfaf4f81cb78e80712ae2ede83849
+          path: sc-b02-candidate
+      - name: Materialize and scan the exact retained B02 tree
+        working-directory: sc-b02-candidate
+        run: |
+          mkdir -p ../sc-b02-evidence
+          git apply --index ../.github/fixtures/sc-b02-candidate.patch
+          test "$(git write-tree)" = dcc6d76ae9bf65d2faa0b834eb8d5227a092b902
+          echo "8f6e68bc9fe64518ebe559e0a84aaec5cd89e17ba06a197637d5b3a5baae7615  tests/test_sc_b02_region_identity.mjs" | sha256sum --check --strict
+          python3 scripts/check_repository.py
+          git diff --cached --stat > ../sc-b02-evidence/source-stat.txt
+          cat > ../sc-b02-evidence/source.txt <<'EOF'
+          base=037db980a26bfaf4f81cb78e80712ae2ede83849
+          retained_candidate=118140d87f95197253699e24c3f98aea56711069
+          tree=dcc6d76ae9bf65d2faa0b834eb8d5227a092b902
+          EOF
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.23.3"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.34.7
+          dest: ${{ runner.temp }}/setup-pnpm
+      - name: Install the unchanged locked web dependencies
+        working-directory: sc-b02-candidate
+        run: pnpm install --frozen-lockfile
+      - name: Install the pinned Playwright Chromium on the supported hosted runner
+        working-directory: sc-b02-candidate
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run the retained eighteen cases once and retain the exit status
+        working-directory: sc-b02-candidate
+        run: |
+          node --version > ../sc-b02-evidence/runtime.txt
+          pnpm --version >> ../sc-b02-evidence/runtime.txt
+          if node --test --test-concurrency=1 --test-force-exit tests/test_sc_b02_region_identity.mjs > ../sc-b02-evidence/acceptance.log 2>&1; then
+            status=0
+          else
+            status=$?
+          fi
+          echo "$status" > ../sc-b02-evidence/exit-code.txt
+          cat ../sc-b02-evidence/acceptance.log
+          test "$status" -eq 0
+          test "$(find ../sc-b02-evidence -maxdepth 1 -name '*.json' | wc -l)" -eq 18
+      - name: Retain B02 evidence on success or failure
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sc-b02-focused-${{ github.run_id }}-${{ github.run_attempt }}
+          path: sc-b02-evidence/
+          if-no-files-found: warn
+          retention-days: 14
