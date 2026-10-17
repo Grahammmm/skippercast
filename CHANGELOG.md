@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Collect Chart rendered-feature counts only when diagnostics are explicitly enabled.
+
 - Reuse settled session state across account-menu remounts while explicit refreshes still fetch the session.
 - Preserve exact `#account` intent through port and home URL resolution.
 
