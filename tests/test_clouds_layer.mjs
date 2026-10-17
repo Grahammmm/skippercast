@@ -61,6 +61,23 @@ test('labels name the acquisition time and age; the rail says why nothing draws'
   const now = new Date(NOW), cloud = index();
   assert.equal(frameLabel('2026-10-02T02:53:00.000Z', now, TZ), 'observed 7:53 pm · 7 min ago');
   assert.equal(frameLabel('2026-10-02T02:59:40.000Z', now, TZ), 'observed 7:59 pm · under 1 min ago');
+  for (const [offset, expected] of [
+    [-60_000, 'observed 7:59 pm · 1 min ago'],
+    [-59_999, 'observed 7:59 pm · 1 min ago'],
+    [-30_000, 'observed 7:59 pm · 1 min ago'],
+    [-29_999, 'observed 7:59 pm · under 1 min ago'],
+    [-1, 'observed 7:59 pm · under 1 min ago'],
+    [0, 'observed 8:00 pm · under 1 min ago'],
+  ]) assert.equal(frameLabel(iso(NOW + offset), now, TZ), expected, `acquisition offset ${offset} ms`);
+  for (const offset of [1, 29_999, 30_000, 59_999, 60_000, 7 * MIN]) {
+    const at = iso(NOW + offset);
+    const clock = offset < MIN ? '8:00 pm' : offset === MIN ? '8:01 pm' : '8:07 pm';
+    const expected = `observed ${clock} · age unavailable (future timestamp)`;
+    assert.equal(frameLabel(at, now, TZ), expected, `future acquisition offset ${offset} ms`);
+    assert.equal(cloudStatus(cloud, [at], now, now, TZ), expected, 'the rail preserves the future acquisition time');
+    assert.doesNotMatch(expected, /ago|forecast/i);
+  }
+  assert.equal(frameLabel(iso(NOW + 1), now, 'UTC'), 'observed 3:00 am · age unavailable (future timestamp)');
   assert.equal(cloudStatus(cloud, ['2026-10-02T02:53:00.000Z'], now, now, TZ), 'observed 7:53 pm · 7 min ago', 'the newest frame drawn');
   assert.equal(cloudStatus(null, [], now, now, TZ), NO_FRAMES);
   assert.equal(cloudStatus(cloud, [], new Date('2026-10-02T17:00:00Z'), now, TZ), OTHER_DAY, 'tomorrow');
