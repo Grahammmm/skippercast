@@ -106,11 +106,12 @@ export function MpaRow() {
   // The Chart's own failures say nothing about the terrain's drape (FE-82).
   const chart = shownPresentation.value === 'chart';
   const s = shownMpaState(mpaState.value, {sourceFailed: chart && unavailable.value.includes('mpas'), mapFailed: chart && chartFailed.value});
+  const drawn = s.count > 0 && (s.status === 'complete' || s.status === 'partial' || s.status === 'incomplete');
   const marks = markNote.value, withheld = !!marks && (markScreen.value.status === 'stale' || markScreen.value.status === 'unavailable');
   return (
     <li class="app-legend-mpa" data-mpa={s.status}>
       <span class="app-legend-mpa-head">
-        <span class="app-swatch" data-layer="mpas" aria-hidden="true"></span>{layerEntry('mpas').label}
+        {drawn ? <span class="app-swatch" data-layer="mpas" aria-hidden="true"></span> : null}{layerEntry('mpas').label}
         <Popover iconOnly summary="Protected areas basis">
           {layerEntry('mpas').basis} {s.detail ? <>{s.detail} </> : null}Regional selection by SkipperCast from <a href={DS582_METADATA} target="_blank" rel="noopener">CDFW
           Marine Region GIS Lab, California MPAs ds582</a>, <a href={CC_BY_4} target="_blank" rel="noopener">CC BY 4.0</a>.

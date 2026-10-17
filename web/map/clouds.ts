@@ -55,9 +55,11 @@ export function clockText(at: string, tz: string): string {
   return `${p.hour}:${p.minute} ${(p.dayPeriod ?? '').toLowerCase()}`;
 }
 
-/** A frame's label: when it was observed and how long ago, at `now`. */
+/** A frame's label: its acquisition time and age, or unavailable age for a future timestamp. */
 export function frameLabel(at: string, now: Date, tz: string): string {
-  const minutes = Math.round((now.getTime() - Date.parse(at)) / MINUTE);
+  const age = now.getTime() - Date.parse(at);
+  if (age < 0) return `observed ${clockText(at, tz)} · age unavailable (future timestamp)`;
+  const minutes = Math.round(age / MINUTE);
   return `observed ${clockText(at, tz)} · ${minutes < 1 ? 'under 1 min' : `${minutes} min`} ago`;
 }
 

@@ -178,9 +178,9 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.ok(page.indexOf('id="landing-night"') < page.indexOf('id="landing-shore"'), 'the shoreline paints over the night map until it has drawn');
   assert.deepEqual([...page.matchAll(/<script\b[^>]*>/g)].map(m => m[0]), ['<script type="application/ld+json">', '<script type="module" src="../web/landing/main.tsx">'], 'one module and one structured-data block, no inline script');
   const head = render(h(LandingHead, {href: 'https://s.test/?ui=v2'}));
-  assert.match(head, /href="\/\?ui=v2">SkipperCast</);
-  assert.match(head, /href="\/map\?region=morro-bay&amp;view=fleet&amp;ui=v2">Fleet</);
-  assert.match(head, /href="\/map\?region=morro-bay&amp;view=reports&amp;ui=v2">Reports</);
+  assert.match(head, /href="\/">SkipperCast</);
+  assert.match(head, /href="\/map\?region=morro-bay&amp;view=fleet">Fleet</);
+  assert.match(head, /href="\/map\?region=morro-bay&amp;view=reports">Reports</);
   assert.match(head, /href="\/sources">How it’s built</); // served by shellFor (#475, tests/test_worker_routes.mjs)
   assert.match(head, /href="\/map#account">Sign in</, 'FE-61: the app opens the account dialog (web/account.ts)');
   assert.equal(NAV.length, 3);
@@ -191,10 +191,25 @@ test('the landing page holds the hero and footer statically; its parts render th
   assert.doesNotMatch(app, /How do you fish\?/);
   assert.ok(app.indexOf('landing-readout') < app.indexOf('port-input'), 'the readings come before any choice (D4)');
   assert.match(app, /aria-busy="true"/, 'the readout waits for its readings');
-  assert.match(app, /href="\/map\?region=morro-bay&amp;view=conditions&amp;ui=v2">Hour by hour on the map</);
+  assert.match(app, /href="\/map\?region=morro-bay&amp;view=conditions">Hour by hour on the map</);
   assert.match(render(h(Shoreline, {})), /<svg class="landing-shore" viewBox="0 0 1000 \d+" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"/);
   for (const file of ['Landing', 'Readout', 'LayerDots', 'ProfileStep', 'Shoreline', 'main'])
     assert.doesNotMatch(readFileSync(join(ROOT, `web/landing/${file}.tsx`), 'utf8'), /from '(?:[^']*maplibre[^']*|three|[^']*packages\/coast[^']*|\.\.\/state\.ts|\.\.\/app\/[^']*)'/, `${file}.tsx loads no map engine and none of the app's store`);
+});
+
+// FE-61 retired shell selection; old ui links still open the same destinations.
+test('landing navigation ignores retired ui values and preserves destination queries and account fragment', async () => {
+  const {LandingHead, LandingApp, render, h} = await load();
+  const links = html => [...html.matchAll(/href="([^"]+)"/g)].map(m => m[1].replaceAll('&amp;', '&'));
+  const headLinks = ['/', '/map?region=morro-bay&view=fleet', '/map?region=morro-bay&view=reports', '/sources', '/map#account'];
+  const props = {load: false, navigate: () => {}};
+  const appLinks = links(render(h(LandingApp, {...props, href: 'https://s.test/'})));
+  assert.ok(appLinks.includes('/map?region=morro-bay&view=conditions'));
+  for (const query of ['', '?ui=', '?ui=v1', '?ui=v2', '?ui=v3', '?ui=v1&ui=v2', '?ui=a%26view%3Dreports&utm_source=friend']) {
+    const href = `https://s.test/${query}#saved`;
+    assert.deepEqual(links(render(h(LandingHead, {href}))), headLinks, query);
+    assert.deepEqual(links(render(h(LandingApp, {...props, href}))), appLinks, query);
+  }
 });
 
 test('the profile step lists the four profiles with their notes, presses the stored one, and says only that the map files are loading or ready (#622)', async () => {

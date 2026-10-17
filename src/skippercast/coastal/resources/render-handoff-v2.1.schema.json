@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "Measured private render handoff v2.1",
+  "required": [
+    "schema",
+    "run",
+    "facts",
+    "facts_digest",
+    "review",
+    "slices",
+    "selected_slice_ids",
+    "website_selected_slice_ids",
+    "state",
+    "publication_prohibited",
+    "synthetic",
+    "segment_id",
+    "segment",
+    "rights"
+  ],
+  "properties": {
+    "schema": {
+      "const": "render-handoff-v2.1"
+    },
+    "run": {
+      "type": "object"
+    },
+    "facts": {
+      "type": "object",
+      "required": [
+        "mapping_digest",
+        "native_facts_digest",
+        "terrain",
+        "mask",
+        "vertical",
+        "imagery",
+        "alignment"
+      ]
+    },
+    "facts_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "review": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "path",
+            "sha256",
+            "bytes",
+            "contract"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^(?!/)(?!.*\\.\\.).+$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "contract": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "slices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "terrain",
+          "mask",
+          "imagery",
+          "alignment",
+          "vertical",
+          "private_preview",
+          "website_display"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "terrain": {
+            "type": "object",
+            "required": [
+              "path",
+              "sha256",
+              "bytes",
+              "contract"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^(?!/)(?!.*\\.\\.).+$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "contract": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "mask": {
+            "type": "object",
+            "required": [
+              "path",
+              "sha256",
+              "bytes",
+              "contract"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^(?!/)(?!.*\\.\\.).+$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "contract": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "imagery": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "path",
+                  "sha256",
+                  "bytes",
+                  "contract"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "pattern": "^(?!/)(?!.*\\.\\.).+$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alignment": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "path",
+                  "sha256",
+                  "bytes",
+                  "contract"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "pattern": "^(?!/)(?!.*\\.\\.).+$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vertical": {
+            "type": "object"
+          },
+          "private_preview": {
+            "type": "object",
+            "required": [
+              "state",
+              "holds"
+            ]
+          },
+          "website_display": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "held"
+              },
+              "holds": {
+                "type": "array",
+                "contains": {
+                  "const": "product_loader_support_contract_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "selected_slice_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "website_selected_slice_ids": {
+      "const": []
+    },
+    "state": {
+      "enum": [
+        "PARTIAL",
+        "BLOCKED",
+        "PRIVATE_PREVIEW_READY"
+      ]
+    },
+    "publication_prohibited": {
+      "const": true
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "segment_id": {
+      "type": "string"
+    },
+    "segment": {
+      "type": "object"
+    },
+    "rights": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "$id": "https://skippercast.com/schemas/render-handoff-v2.1.schema.json"
+}

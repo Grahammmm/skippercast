@@ -1,0 +1,35 @@
+{
+  "schema": "coastal-coordinator-policy-v1",
+  "segment": {
+    "crs": "EPSG:3310",
+    "size_m": 5000,
+    "planning_cell_m": 250
+  },
+  "watermarks": {
+    "high": 3,
+    "low": 1,
+    "held_cap": 5
+  },
+  "max_attempts": 2,
+  "lease_s": 30,
+  "worker_network": false,
+  "slots": {
+    "discover": 1,
+    "acquire": 1,
+    "qualify": 1,
+    "map": 1,
+    "render": 1
+  },
+  "budgets": {
+    "wall_s": 3600,
+    "bytes": 262144000,
+    "requests": 16
+  },
+  "reprocess_stale": false,
+  "publication": false,
+  "stagnation_s": 1800,
+  "storage": {
+    "minimum_free_bytes": 1073741824,
+    "job_output_bytes": 67108864
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/daily-feed.schema.json",
+  "title": "SkipperCast daily evidence feed",
+  "description": "latest.json and history/<date>.json on the data branch (and regions/<id>/latest.json), written by pipeline.collect.collect(). The fail-closed rules are part of the contract: catch_probability and bite_score must stay null, report coordinates and depths stay null (a landing port is not a catch position), and a source marked ok must carry data. published_at/run_id (PR #30) are optional but come as a pair.",
+  "type": "object",
+  "required": [
+    "schema_version", "generated_at", "completed_at", "schedule", "region_id", "scope", "bounds",
+    "landing_names", "report_window", "sources", "reports", "catch_probability", "bite_score",
+    "regulations", "limitations", "health"
+  ],
+  "allOf": [{"$ref": "common.schema.json#/$defs/publication"}],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "completed_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "published_at": true,
+    "run_id": true,
+    "schedule": {
+      "type": "object",
+      "required": ["cron", "timezone", "max_delay_hours"],
+      "properties": {
+        "cron": {"type": "string"},
+        "timezone": {"type": "string"},
+        "max_delay_hours": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "region_id": {"$ref": "common.schema.json#/$defs/id"},
+    "scope": {"type": "string"},
+    "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+    "landing_names": {"$ref": "common.schema.json#/$defs/string_list"},
+    "report_window": {
+      "type": "object",
+      "required": ["start", "end", "days"],
+      "properties": {
+        "start": {"$ref": "common.schema.json#/$defs/date"},
+        "end": {"$ref": "common.schema.json#/$defs/date"},
+        "days": {"type": "integer", "minimum": 1}
+      }
+    },
+    "sources": {"$ref": "common.schema.json#/$defs/sources_map"},
+    "reports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "date", "boat", "port", "catches", "species", "source_url", "coordinates", "depth_ft"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+          "date": {"$ref": "common.schema.json#/$defs/date"},
+          "boat": {"type": "string"},
+          "port": {"type": "string"},
+          "trip_type": {"type": ["string", "null"]},
+          "anglers": {"type": ["integer", "null"], "minimum": 0},
+          "ground": {"type": ["string", "null"]},
+          "ground_id": {"type": ["string", "null"]},
+          "catches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["species", "label", "count", "disposition"],
+              "properties": {
+                "species": {"type": "string"},
+                "label": {"type": "string"},
+                "count": {"type": "integer", "minimum": 0},
+                "disposition": {"enum": ["reported", "released"]}
+              }
+            }
+          },
+          "species": {"$ref": "common.schema.json#/$defs/string_list"},
+          "source_url": {"$ref": "common.schema.json#/$defs/https_url"},
+          "boat_source_url": {"type": "string"},
+          "fishing_hours": {"type": ["number", "null"]},
+          "coordinates": {"description": "Landing reports do not publish catch positions; never fill this.", "type": "null"},
+          "depth_ft": {"description": "Landing reports do not publish depths; never fill this.", "type": "null"}
+        }
+      }
+    },
+    "catch_probability": {"description": "Forbidden until calibrated (collect.validate).", "type": "null"},
+    "bite_score": {"description": "Forbidden until calibrated (collect.validate).", "type": "null"},
+    "regulations": {
+      "description": "regulations.regulatory_snapshot(); the legal-review contract is checked by regulation_review, not here.",
+      "type": "object",
+      "required": ["schema_version", "species", "sources", "checks"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "species": {"type": "object"},
+        "sources": {"type": "object"},
+        "checks": {"type": "object"},
+        "rules_review_status": {"type": "string"}
+      }
+    },
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "health": {
+      "type": "object",
+      "required": ["status", "critical_available", "recent_report_days_ok", "sources_ok", "sources_total", "issues"],
+      "properties": {
+        "status": {"$ref": "common.schema.json#/$defs/health_status"},
+        "critical_available": {"type": "boolean"},
+        "recent_report_days_ok": {"type": "integer", "minimum": 0},
+        "sources_ok": {"type": "integer", "minimum": 0},
+        "sources_total": {"type": "integer", "minimum": 0},
+        "issues": {"$ref": "common.schema.json#/$defs/string_list"}
+      }
+    }
+  },
+  "additionalProperties": false
+}

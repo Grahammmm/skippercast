@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/regions-index.schema.json",
+  "title": "SkipperCast feed regions index",
+  "description": "regions/index.json on the data and conditions branches, written by scripts/refresh_regions.py: one row per refreshed region. PR #34 (P2-04) adds failed rows (status 'failed', error_class, error, completed_at null, issues ['refresh-failed']); both shapes validate. A row with error_class must be a failed row with a null completed_at; a region whose collection finished but whose health is 'failed' has no error_class. The intelligence-health.json and habitat-health.json summaries use the same rows without the top-level completed_at, so it is optional.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "regions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "completed_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "region_id",
+          "status",
+          "completed_at",
+          "issues"
+        ],
+        "properties": {
+          "region_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "status": {
+            "$ref": "common.schema.json#/$defs/health_status"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null only on a row for a refresh that raised (PR #34)."
+          },
+          "issues": {
+            "$ref": "common.schema.json#/$defs/string_list"
+          },
+          "coverage_gaps": {
+            "$ref": "common.schema.json#/$defs/string_list"
+          },
+          "forecast_coverage": {
+            "anyOf": [
+              {
+                "$ref": "intelligence-feed.schema.json#/$defs/forecast_coverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_class": {
+            "type": "string",
+            "minLength": 1
+          },
+          "error": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "additionalProperties": false,
+        "dependentSchemas": {
+          "error_class": {
+            "required": [
+              "error"
+            ],
+            "properties": {
+              "status": {
+                "const": "failed"
+              },
+              "completed_at": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

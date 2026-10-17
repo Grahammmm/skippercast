@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Reuse settled session state across account-menu remounts while explicit refreshes still fetch the session.
+- Preserve exact `#account` intent through port and home URL resolution.
+
+- Show “age unavailable (future timestamp)” for cloud acquisitions ahead of the clock, retaining their acquisition time and existing past-age formatting.
+
+- Carry the existing local-calendar provisional flag through the brief model, independently of confidence wording.
+
+- Keep a selected swell card open when only the other swell source refreshes; still clear it when its own data changes or disappears.
+
+- Validate the nearshore sample label’s site prefix before removing it; add regression coverage for sampling time/cadence and legacy home-profile and port URL behavior.
+
+- Restore each fishing profile’s chosen Currents source when switching profiles, including observed HFR and explicit Off choices.
+
+- Stop forwarding the retired `ui` switch from home-page navigation links; legacy links continue to open the same pages.
+
+- Add the private California schedule-evidence collector and opt-in timer installer, preserving source revisions and distinguishing incomplete AIS reception coverage from readable empty windows. Source integration does not activate collection or change the existing AIS listener (#599, #624).
+
+- Add the current coastal source-discovery, mapping and 3D-rendering skills, with bounded source preparation and separate private terrain, habitat and publication acceptance. Keep the older coastal rendering name as a compatibility entry point.
+- Show the protected-area legend swatch only when boundary geometry is drawn, retaining warnings and official rules links while it is unavailable.
+
 - Reject impossible aerial acquisition dates and future coverage-check dates when validating regional configuration.
 
 - Keep first-run profile choices inside the mobile sheet so small-screen visitors can reach every choice and the sheet handle.
