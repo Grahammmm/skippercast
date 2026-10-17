@@ -49,7 +49,10 @@ async function clickChart(page: Page, at: {latitude: number; longitude: number})
   const world = 256 * 2 ** zoom, x = (l: number) => (l + 180) / 360 * world;
   const y = (l: number) => { const s = Math.sin(l * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * world; };
   const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
-  await page.mouse.click(box.x + box.width / 2 + x(at.longitude) - x(lon), box.y + box.height / 2 + y(at.latitude) - y(lat));
+  const point = {x: box.x + box.width / 2 + x(at.longitude) - x(lon), y: box.y + box.height / 2 + y(at.latitude) - y(lat)};
+  expect(await page.evaluate(({x, y}) => !!document.elementFromPoint(x, y)?.closest('.app-chart'), point),
+    'the ranked pin target stays clear of the layer rail').toBe(true);
+  await page.mouse.click(point.x, point.y);
 }
 
 /** The account button: in the masthead, or (phone) in the sheet's footer with the sheet lifted to full (e2e/v2-account.spec.ts). */
@@ -165,7 +168,12 @@ test('a reef mark joins the trip from its card, and GPX opens the plan with it',
   const card = page.getByRole('region', {name: 'Selected mark'});
   await expect(card.getByRole('heading')).toHaveText('Southern rocky rise');
   // Morro Bay's atlas marks are research coordinates, so the card says what it saves (v1's wording).
-  await card.getByRole('button', {name: 'Save research reference'}).click();
+  const save = card.getByRole('button', {name: 'Save research reference'});
+  await expect.poll(() => save.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+  }), {message: 'the selected-mark action stays clear of the layer rail'}).toBe(true);
+  await save.click();
   await expect(card.getByRole('button', {name: 'Added to trip'})).toBeVisible();
   await expect((await accountMenu(page, isMobile)).getByRole('button', {name: 'Trip plan and GPX · 1 saved'})).toBeVisible();
   await page.keyboard.press('Escape');

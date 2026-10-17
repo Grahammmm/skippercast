@@ -122,3 +122,88 @@ test('the stand-in forecast passes the checks loadMarine applies to the shared f
     assert.equal(model.data[0].hourly.time.length, 192);
   }
 });
+
+// v2 entry scheduling: exercise real signals and Brief loader with controlled frames/fetches.
+let v2;
+async function v2Startup() {
+  if (v2) return v2;
+  const [{build}, {mkdtemp}, {tmpdir}, {join}, {pathToFileURL}, {rendererPlugins}] = await Promise.all([
+    import('esbuild'), import('node:fs/promises'), import('node:os'), import('node:path'), import('node:url'), import('./helpers/esbuild-url.mjs'),
+  ]);
+  const out = join(await mkdtemp(join(tmpdir(), 'p02-startup-')), 'startup.mjs');
+  await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+    export {deferDailyFeed} from './web/app/main.tsx';
+    export {dailyFeed, feedGaps, loadDailyFeed, regionalForecast} from './web/brief/Brief.tsx';
+    export {signal} from '@preact/signals';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  v2 = await import(pathToFileURL(out).href);
+  return v2;
+}
+function controlledPaint() {
+  let id = 0;
+  const callbacks = new Map();
+  return {frame: fn => {callbacks.set(++id, fn); return id;}, cancel: id => callbacks.delete(id),
+    paint() {const pending = [...callbacks.values()]; callbacks.clear(); for (const fn of pending) fn(0);},
+    get pending() {return callbacks.size;}};
+}
+const v2Feed = id => ({schema_version: 1, region_id: id, generated_at: '2026-10-08T20:00:00Z', sources: {
+  buoy: {id: 'buoy', kind: 'observation', checked_at: '2026-10-08T19:00:00Z', status: 'ok', data: {observations: [{time: '2026-10-08T18:00:00Z'}]}},
+}});
+
+test('v2 daily feed waits for a paint opportunity, then requests the latest region once', async () => {
+  const m = await v2Startup(), paint = controlledPaint(), selected = m.signal('old'), calls = [];
+  const forecast = {region: 'latest', retrieved: 42}; m.regionalForecast.value = forecast;
+  const stop = m.deferDailyFeed({current: () => selected.value, loaded: () => undefined,
+    load: async id => {calls.push(id);}, frame: paint.frame, cancel: paint.cancel});
+  assert.deepEqual(calls, [], 'no daily fetch in the startup task');
+  paint.paint(); assert.deepEqual(calls, [], 'first animation frame is still before paint');
+  selected.value = 'latest'; assert.deepEqual(calls, []);
+  paint.paint(); assert.deepEqual(calls, ['latest']);
+  paint.paint(); assert.deepEqual(calls, ['latest'], 'no repeated frame request');
+  assert.equal(m.regionalForecast.peek(), forecast, 'critical forecast data and retrieval clock are untouched');
+  selected.value = 'third'; assert.deepEqual(calls, ['latest', 'third']);
+  stop(); selected.value = 'fourth'; assert.deepEqual(calls, ['latest', 'third']);
+});
+
+test('v2 deferred real loader rejects stale completion and preserves source clocks', async () => {
+  const m = await v2Startup(), paint = controlledPaint(), selected = m.signal('alpha'), pending = [];
+  m.dailyFeed.value = null;
+  const fetchFn = url => new Promise(resolve => pending.push({url, resolve}));
+  const loads = [];
+  const stop = m.deferDailyFeed({current: () => selected.value, loaded: () => m.dailyFeed.peek()?.region_id,
+    load: id => {const done = m.loadDailyFeed(id, fetchFn); loads.push(done); return done;}, frame: paint.frame, cancel: paint.cancel});
+  assert.equal(pending.length, 0);
+  paint.paint(); assert.equal(pending.length, 0);
+  paint.paint(); assert.equal(pending.length, 2, 'one load reads daily and conditions');
+  selected.value = 'beta'; assert.equal(pending.length, 4);
+  const beta = v2Feed('beta');
+  for (const req of pending.slice(2)) req.resolve(Response.json(beta));
+  await loads[1]; assert.equal(m.dailyFeed.peek().region_id, 'beta');
+  assert.equal(m.dailyFeed.peek().sources.buoy.data.observations[0].time, beta.sources.buoy.data.observations[0].time);
+  for (const req of pending.slice(0, 2)) req.resolve(Response.json(v2Feed('alpha')));
+  await loads[0]; assert.equal(m.dailyFeed.peek().region_id, 'beta', 'late alpha cannot replace beta');
+  assert.deepEqual(m.feedGaps.peek(), []);
+  stop();
+});
+
+test('v2 deferred load failure is reported by Brief without a retry loop', async () => {
+  const m = await v2Startup(), paint = controlledPaint(), selected = m.signal('failed');
+  let calls = 0, done;
+  const stop = m.deferDailyFeed({current: () => selected.value, loaded: () => undefined,
+    load: id => {calls++; done = m.loadDailyFeed(id, async () => {throw new Error('offline');}); return done;}, frame: paint.frame, cancel: paint.cancel});
+  paint.paint(); paint.paint(); await done;
+  assert.equal(m.dailyFeed.peek(), null); assert.match(m.feedGaps.peek().join(' '), /could not be read/);
+  paint.paint(); assert.equal(calls, 1);
+  stop();
+});
+
+test('v2 cancel before paint and an empty or already loaded region perform no daily load', async () => {
+  const m = await v2Startup();
+  for (const [id, loaded, cancel] of [['x', undefined, true], [null, undefined, false], ['x', 'x', false]]) {
+    const paint = controlledPaint(); let calls = 0;
+    const stop = m.deferDailyFeed({current: () => id, loaded: () => loaded, load: async () => {calls++;}, frame: paint.frame, cancel: paint.cancel});
+    if (cancel) stop();
+    paint.paint(); paint.paint(); assert.equal(calls, 0);
+    stop(); assert.equal(paint.pending, 0);
+  }
+});

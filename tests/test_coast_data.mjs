@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import catalog from '../catalog/sources.json' with {type: 'json'};
 globalThis.REGIONS = {};
 globalThis.DEPLOYMENT = {allowed_origins:['https://skippercast.com']};
-const {coastTarget, coastFeeds, serveCoastData} = await import('../server/coast-data.ts');
+const {coastTarget, coastFeeds, serveCoastData, CoastReadAdmission} = await import('../server/coast-data.ts');
 
 const request = (path, init) => new Request('https://skippercast.com' + path, init);
 const snapshot = {schemaVersion:1, countyId:'slo', generatedAt:'2026-10-06T12:00:00Z', observations:[]};
@@ -205,7 +205,7 @@ test('concurrent first reads of one object hash it once', async () => {
 
 // Hold cold object bodies independently; pointer reads stay promise-only so one
 // event-loop checkpoint can drain same-key joiners after the manifest is warm.
-async function gatedAssets(t, files) {
+async function gatedAssets(t, files, admission) {
   const {store, entries} = await published(files);
   const get = store.get.bind(store), pointer = await get('coast/current.json');
   const pointerBytes = await pointer.arrayBuffer();
@@ -213,7 +213,7 @@ async function gatedAssets(t, files) {
   let closed = false, active = 0, peak = 0, bridgeCalls = 0;
   const fetcher = async () => { bridgeCalls++; throw Error('Must not reach the bridge'); };
   const send = (path, init) => {
-    const job = serveCoastData(request(path, init), fetcher, store);
+    const job = serveCoastData(request(path, init), fetcher, store, undefined, admission);
     jobs.push(job); return job;
   };
   // Cache only the release, not an asset's verified etag.
@@ -245,7 +245,7 @@ async function gatedAssets(t, files) {
     if (closed) gate.body.resolve();
     gates.set(key, gate); return gate;
   };
-  return {send, arm, counts, entries, stats: () => ({active, peak, bridgeCalls})};
+  return {send, arm, counts, entries, store, stats: () => ({active, peak, bridgeCalls})};
 }
 
 test('distinct cold R2 keys overlap while same-key ranges share a read', {timeout: 5000}, async t => {
@@ -313,6 +313,121 @@ test('a shared R2 read rejection fails closed, leaves another key running and pe
   assert.deepEqual(new Uint8Array(await unaffected.arrayBuffer()), bytesB);
   assert.equal(f.counts.get(gb.key), 1);
   assert.deepEqual(f.stats(), {active: 0, peak: 2, bridgeCalls: 0});
+});
+
+test('cold admission defaults to two keys, shares a slot and permits retry after saturation', {timeout: 5000}, async t => {
+  const paths = ['a', 'b', 'c'].map(id => `/data/coast-wide/admission-count-${id}.bin`);
+  const contents = paths.map(path => new TextEncoder().encode(path));
+  const f = await gatedAssets(t, Object.fromEntries(paths.map((path, i) => [path, {bytes: contents[i]}])));
+  const gates = paths.map(f.arm);
+  const a = f.send('/coast-data' + paths[0]);
+  const shared = f.send('/coast-data' + paths[0], {method: 'HEAD'});
+  const b = f.send('/coast-data' + paths[1]);
+  await Promise.all(gates.slice(0, 2).map(g => g.entered.promise));
+  const refused = await f.send('/coast-data' + paths[2]);
+  assert.equal(refused.status, 503); await refused.body.cancel();
+  assert.equal(f.counts.get(gates[2].key), undefined, 'saturation refuses before R2 get');
+  assert.equal(f.counts.get(gates[0].key), 1, 'same-key HEAD shares one slot');
+  assert.deepEqual(f.stats(), {active: 2, peak: 2, bridgeCalls: 0});
+  gates[0].body.resolve();
+  const [whole, head] = await Promise.all([a, shared]);
+  assert.equal(whole.status, 200); assert.deepEqual(new Uint8Array(await whole.arrayBuffer()), contents[0]);
+  assert.equal(head.status, 200); assert.equal(await head.text(), '');
+  const retry = f.send('/coast-data' + paths[2]);
+  await gates[2].entered.promise;
+  assert.equal(f.counts.get(gates[2].key), 1);
+  gates[2].body.resolve(); gates[1].body.resolve();
+  for (const [job, expected] of [[retry, contents[2]], [b, contents[1]]]) {
+    const response = await job; assert.equal(response.status, 200);
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), expected);
+  }
+  assert.deepEqual(f.stats(), {active: 0, peak: 2, bridgeCalls: 0});
+});
+
+test('configured cold byte budget admits equality and releases rejected reservations', {timeout: 5000}, async t => {
+  const paths = ['a', 'b', 'c'].map(id => `/data/coast-wide/admission-bytes-${id}.bin`);
+  const contents = [new Uint8Array(20).fill(71), new Uint8Array(12).fill(72), new Uint8Array(1).fill(73)];
+  // Three slots isolate the byte ceiling from the distinct-key ceiling.
+  const f = await gatedAssets(t, Object.fromEntries(paths.map((path, i) => [path, {bytes: contents[i]}])),
+    new CoastReadAdmission({maxConcurrent: 3, maxBytes: 32}));
+  const gates = paths.map(f.arm);
+  const a = f.send('/coast-data' + paths[0]), b = f.send('/coast-data' + paths[1]);
+  await Promise.all(gates.slice(0, 2).map(g => g.entered.promise));
+  const refused = await f.send('/coast-data' + paths[2]);
+  assert.equal(refused.status, 503); await refused.body.cancel();
+  assert.equal(f.counts.get(gates[2].key), undefined, '20 + 12 fits; another byte does not');
+  gates[0].body.reject(Error('synthetic admitted body failure'));
+  const failed = await a; assert.equal(failed.status, 503); await failed.body.cancel();
+  const c = f.send('/coast-data' + paths[2]);
+  await gates[2].entered.promise;
+  gates[2].body.resolve();
+  const small = await c; assert.equal(small.status, 200); assert.deepEqual(new Uint8Array(await small.arrayBuffer()), contents[2]);
+  const retried = f.arm(paths[0]), retry = f.send('/coast-data' + paths[0]);
+  await retried.entered.promise;
+  assert.equal(f.counts.get(retried.key), 2, 'rejected key and all its bytes were released');
+  assert.equal(f.counts.get(gates[1].key), 1, 'the other admitted key remains intact');
+  retried.body.resolve(); gates[1].body.resolve();
+  for (const [job, expected] of [[retry, contents[0]], [b, contents[1]]]) {
+    const response = await job; assert.equal(response.status, 200);
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), expected);
+  }
+  assert.deepEqual(f.stats(), {active: 0, peak: 2, bridgeCalls: 0});
+});
+
+test('default cold byte reservation is exactly 32 MiB without allocating archives', async () => {
+  const admission = new CoastReadAdmission(), gate = Promise.withResolvers(), started = Promise.withResolvers();
+  const mb = 1024 * 1024, bytes = new Uint8Array([1]);
+  let calls = 0;
+  const held = admission.read('logical-31MiB', 31 * mb, async () => { started.resolve(); await gate.promise; return bytes; });
+  try {
+    await started.promise;
+    await assert.rejects(admission.read('logical-overflow', mb + 1, async () => { calls++; return bytes; }), /admission unavailable/);
+    assert.equal(calls, 0);
+    assert.equal(await admission.read('logical-1MiB', mb, async () => bytes), bytes, 'exact aggregate equality fits');
+    for (const invalid of [0, undefined, NaN, 32 * mb + 1]) {
+      await assert.rejects(admission.read('logical-invalid', invalid, async () => { calls++; return bytes; }), /admission unavailable/);
+    }
+    assert.equal(calls, 0);
+  } finally { gate.resolve(); await held; }
+  assert.equal(await admission.read('logical-32MiB', 32 * mb, async () => bytes), bytes, 'successful completion releases the full reservation');
+});
+
+test('unknown or mismatched R2 size fails before body read and releases cold admission', async () => {
+  const path = '/data/coast-wide/admission-metadata.bin', bytes = new TextEncoder().encode('synthetic metadata admission');
+  const {store, entries} = await published({[path]: {bytes}}), get = store.get.bind(store);
+  const key = 'coast/objects/' + entries[path].sha256, admission = new CoastReadAdmission({maxConcurrent: 1, maxBytes: bytes.length});
+  let size, gets = 0, reads = 0, cancelled = 0, bridgeCalls = 0, mode = 'bad-size';
+  store.get = async (wanted, options) => {
+    if (wanted !== key) return get(wanted, options);
+    gets++;
+    if (mode === 'get-error') throw Error('synthetic R2 get failure');
+    const object = await get(wanted, options);
+    if (mode === 'good') return object;
+    return {...object, size, body: {cancel: async () => { cancelled++; await object.body.cancel(); }},
+      arrayBuffer: async () => { reads++; return object.arrayBuffer(); }};
+  };
+  const fetcher = async () => { bridgeCalls++; throw Error('Must not reach the bridge'); };
+  const send = () => serveCoastData(request('/coast-data' + path), fetcher, store, undefined, admission);
+  const overBudget = await serveCoastData(request('/coast-data' + path), fetcher, store, undefined, new CoastReadAdmission({maxBytes: bytes.length - 1}));
+  assert.equal(overBudget.status, 503); await overBudget.body.cancel();
+  assert.equal(gets, 0, 'entry over the configured budget never reaches object get');
+  for (size of [undefined, bytes.length + 1]) {
+    const failed = await send(); assert.equal(failed.status, 503); await failed.body.cancel();
+  }
+  assert.equal(reads, 0); assert.equal(cancelled, 2);
+  mode = 'get-error';
+  const failed = await send(); assert.equal(failed.status, 503); await failed.body.cancel();
+  mode = 'good';
+  const retry = await send(); assert.equal(retry.status, 200);
+  assert.deepEqual(new Uint8Array(await retry.arrayBuffer()), bytes);
+  assert.equal(bridgeCalls, 0);
+});
+
+test('cold admission configuration rejects unusable limits', () => {
+  for (const value of [0, -1, NaN, Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => new CoastReadAdmission({maxConcurrent: value}), RangeError);
+    assert.throws(() => new CoastReadAdmission({maxBytes: value}), RangeError);
+  }
 });
 
 test("the renderer's verified-asset and habitat HEAD checks pass against R2 and fail on tampering", async () => {

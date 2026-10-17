@@ -131,7 +131,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-presentation .ui-chip { min-width: var(--touch-min); }
 .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
 .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
-.app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
+/* Keep full rejection reasons in the right column instead of widening over chart and card targets. */
+.app-rail { position: absolute; top: var(--space-4); right: var(--space-4); max-width: min(280px, calc(50% - var(--space-4))); }
+.app-rail .ui-rail-text { min-width: 0; overflow-wrap: anywhere; }
 /* FE-80: the terrain's zoom, reset and top view as one group styled and placed as the Chart's MapLibre zoom control (web/map/chart.css). */
 .app-terrain-controls { position: absolute; right: var(--space-4); bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); overflow: hidden; }
 .app-terrain-controls .ui-button { width: var(--touch-min); height: var(--touch-min); border: 0; border-radius: 0; color: var(--text); }

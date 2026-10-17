@@ -15,6 +15,8 @@ import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {region, setRegionDefaultBase} from '../state.ts';
+import type {BriefTile} from '../brief/types.ts';
+import {ageText} from '../brief/Tiles.tsx';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
 export const NARROW_QUERY = '(max-width: 1023px)';
@@ -39,6 +41,32 @@ export const zone = (): string => regionInfo.value?.timezone ?? DEFAULT_ZONE;
 export type Freshness = {state: 'ok' | 'stale' | 'offline' | 'unknown'; /** The oldest age, as shown ("4 min"); null before any reading. */ age: string | null};
 export const freshness = signal<Freshness>({state: 'unknown', age: null});
 
+/** Read original tile clocks, never the time a response arrived or a refresh began. */
+export function freshnessFrom(tiles: readonly BriefTile[] | null, now: Date, online = true, failed = false): Freshness {
+  const ages = (tiles ?? []).map(tile => tile.at === null ? NaN : now.getTime() - Date.parse(tile.at));
+  const known = ages.filter(Number.isFinite);
+  const age = known.length ? ageText(Math.max(...known)) : null;
+  if (!online) return {state: 'offline', age};
+  if (!tiles) return {state: failed ? 'stale' : 'unknown', age};
+  const complete = ['wind', 'swell', 'water', 'tide'].every(id => tiles.some(tile => tile.id === id));
+  const fresh = complete && !failed && tiles.every((tile, i) => tile.state === 'fresh' && !tile.lastGood
+    && Number.isFinite(ages[i]) && ages[i]! >= -3_600_000 && ages[i]! <= tile.limitMs);
+  return {state: fresh ? 'ok' : 'stale', age};
+}
+
+/** One clock for the shell, source ages, day chips and dock; also catch up after suspension. */
+export const appNow = signal(new Date());
+export function startAppClock({read = () => new Date(), repeat = (tick: () => void) => setInterval(tick, 30_000),
+  cancel = (timer: ReturnType<typeof setInterval>) => clearInterval(timer),
+  events = globalThis.window as EventTarget | undefined} = {}): () => void {
+  const tick = () => { appNow.value = read(); };
+  tick();
+  const timer = repeat(tick);
+  const names = ['focus', 'pageshow', 'visibilitychange'];
+  for (const name of names) events?.addEventListener(name, tick);
+  return () => { cancel(timer); for (const name of names) events?.removeEventListener(name, tick); };
+}
+
 /** Load the region's name, centre and zone for `id`; a failed fetch leaves the masthead's placeholders. */
 /** `fetchFn` defaults to the shared static read, so the masthead and the Chart ask for region.json once. */
 export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch): Promise<RegionInfo | null> {
@@ -59,7 +87,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
 }
 
 /** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). The trip dialogs keep their place across layouts. */
-export function App({now = new Date()}: {now?: Date} = {}) {
+export function App({now = appNow.value}: {now?: Date} = {}) {
   return (
     <>
       {narrow.value ? <Mobile now={now} firstRun={<FirstRun />} /> : (
