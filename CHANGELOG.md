@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Validate the nearshore sample label’s site prefix before removing it; add regression coverage for sampling time/cadence and legacy home-profile and port URL behavior.
+
 - Restore each fishing profile’s chosen Currents source when switching profiles, including observed HFR and explicit Off choices.
 
 - Stop forwarding the retired `ui` switch from home-page navigation links; legacy links continue to open the same pages.
