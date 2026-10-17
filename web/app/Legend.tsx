@@ -156,6 +156,8 @@ function WaterTempRow() {
 /** The Swell row (on the Chart): the drawn hour's reading, scale, model run and valid hour, or why nothing draws. */
 function SwellRow() {
   const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value;
+  const fieldReason = !f && r?.rings.length && reason.startsWith('Swell unavailable:')
+    ? `Swell field unavailable:${reason.slice('Swell unavailable:'.length)} Nearshore rings remain visible.` : reason;
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}Swell
@@ -164,7 +166,7 @@ function SwellRow() {
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
       {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span>{ringSummary(r, new Date())}</p> : null}
-      {reason ? <p class="app-legend-note" data-reason="swell">{reason}</p> : null}
+      {fieldReason ? <p class="app-legend-note" data-reason="swell">{fieldReason}</p> : null}
     </li>
   );
 }
