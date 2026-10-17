@@ -201,6 +201,65 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
   assert.equal(nearshoreState.value, null);
 });
 
+test('ring identity changes preserve the field card and invalidate only nearshore cards', async t => {
+  const reportSignal = signal({data: report()}), binding = signal({areaId: 'central', localAreaId: 'morro-bay'});
+  const {s, e} = await swell(t, {body: withGrid(), place: () => ({regionId: 'morro-bay'}),
+    data: {coastReport: reportSignal, coastBinding: binding}});
+  const fieldCard = s.reading({lon: -121.5, lat: 35.3});
+  assert.equal(fieldCard?.name, 'Primary swell', 'open a real field reading');
+  chartMark.value = fieldCard;
+  e.calls.length = 0;
+  const refreshed = () => report([site({fetchedAt: iso(NOW - 30 * MIN)})]);
+  reportSignal.value = {data: refreshed()};
+  assert.strictEqual(chartMark.value, fieldCard, 'a changed ring key keeps the same field card');
+  assert.deepEqual(e.calls.map(c => c[0]), ['overlay', 'image', 'data', 'data', 'data'], 'combined overlay redraw is retained');
+  assert.deepEqual(e.overlay.layers.map(l => l.id), [...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER]);
+
+  const ringCard = s.pick.mark(NEARSHORE_LAYER, {id: 'SL345'});
+  assert.ok(ringCard);
+  chartMark.value = ringCard;
+  e.calls.length = 0;
+  reportSignal.value = {data: refreshed()};
+  assert.strictEqual(chartMark.value, ringCard, 'the same ring key preserves its card');
+  assert.deepEqual(e.calls, [], 'unchanged identities do not redraw');
+  reportSignal.value = {data: report()};
+  assert.equal(chartMark.value, null, 'a changed ring key withdraws its card');
+
+  chartMark.value = s.pick.mark(NEARSHORE_LAYER, {id: 'SL345'});
+  reportSignal.value = {data: report([])};
+  assert.equal(chartMark.value, null, 'ring removal withdraws its card');
+  reportSignal.value = {data: report()};
+  chartMark.value = fieldCard;
+  binding.value = null;
+  assert.strictEqual(chartMark.value, fieldCard, 'ring removal keeps the field card');
+  assert.deepEqual(e.overlay.layers.map(l => l.id), FIELD);
+
+  const other = {id: 'mpa:synthetic'};
+  chartMark.value = other;
+  binding.value = {areaId: 'central', localAreaId: 'morro-bay'};
+  reportSignal.value = {data: refreshed()};
+  setParams({layers: 'none'});
+  s.destroy();
+  assert.strictEqual(chartMark.value, other, 'refresh, layer removal and destruction preserve an unrelated card');
+});
+
+test('field changes preserve unchanged ring cards; destruction clears either owned card', async t => {
+  const {s, e} = await swell(t, {body: withGrid(), place: () => ({regionId: 'morro-bay'}),
+    data: {coastReport: signal({data: report()}), coastBinding: signal({areaId: 'central', localAreaId: 'morro-bay'})}});
+  const ringCard = s.pick.mark(NEARSHORE_LAYER, {id: 'SL345'});
+  assert.ok(ringCard);
+  chartMark.value = ringCard;
+  setParams({region: 'santa-cruz-monterey-bay'});
+  assert.strictEqual(chartMark.value, ringCard, 'field removal preserves an unchanged ring identity');
+  assert.deepEqual(e.overlay.layers.map(l => l.id), [NEARSHORE_HIT, NEARSHORE_LAYER]);
+  setParams({region: 'morro-bay'});
+  await flush();
+  assert.strictEqual(chartMark.value, ringCard, 'field arrival preserves the ring card');
+  assert.deepEqual(e.overlay.layers.map(l => l.id), [...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER]);
+  s.destroy();
+  assert.equal(chartMark.value, null, 'destroy clears a nearshore card');
+});
+
 test('a small ring has a transparent 44 px hit circle under it that opens the same card', async t => {
   const {s} = await swell(t, {place: () => ({regionId: 'morro-bay'}), data: {coastReport: signal({data: report()}), coastBinding: signal({areaId: 'central', localAreaId: 'morro-bay'})}});
   const [hit, ring] = swellOverlay(sentinel, {field: false, rings: true}).layers;
