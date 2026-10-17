@@ -98,10 +98,10 @@ export function currentPort(ports: readonly Port[], region: string | null, saved
   return inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
-/** The app with `params` replacing the area keys; ui and any unrelated parameter stay. */
+/** The app with `params` replacing the area keys; unrelated parameters and exact #account intent stay. */
 function appURL(href: string, params: Record<string, string | undefined>): string {
   const url = new URL(href);
-  url.pathname = '/map'; url.hash = '';
+  url.pathname = '/map'; url.hash = url.hash === '#account' ? '#account' : '';
   for (const key of AREA_KEYS) url.searchParams.delete(key);
   for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value);
   return url.href;
@@ -112,10 +112,10 @@ export const portURL = (href: string, port: Port, profile?: Profile | null): str
 /** "Explore the coast": the app over the central coast with no port. */
 export const exploreURL = (href: string): string => appURL(href, {coast: 'central'});
 
-/** The landing, keeping the ui switch so a preview stays in v2. */
+/** The landing, keeping the ui switch and exact #account intent through home resolution. */
 export function landingURL(href: string): string {
   const url = new URL(href), ui = url.searchParams.get('ui');
-  url.pathname = '/'; url.hash = ''; url.search = '';
+  url.pathname = '/'; url.hash = url.hash === '#account' ? '#account' : ''; url.search = '';
   if (ui) url.searchParams.set('ui', ui);
   return url.href;
 }

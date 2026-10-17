@@ -199,6 +199,46 @@ test('/map with no area loads the directory only for a saved port and reads the 
   assert.equal(await savedHomeURL(BARE, saved, null, async () => { throw Error('offline'); }), 'https://skippercast.com/?ui=v2', 'a failed directory opens the landing');
 });
 
+// Pure URL acceptance only: opening/closing the account dialog remains browser acceptance.
+test('SC-B05: URL helpers retain only the exact explicit account fragment', () => {
+  const native = {native: {v: 1, place: 'cambria', mode: 'spear'}};
+  const helpers = [
+    href => portURL(href, sanDiego, 'shore'), exploreURL, landingURL,
+    href => homeURL(href, {port: sanDiego}),
+    href => homeURL(href, native), href => homeURL(href, null),
+  ];
+  for (const helper of helpers) {
+    const ordinary = helper(HREF);
+    for (const fragment of ['', '#', '#x', '#Account', '#account/extra', '#account?next=x', '#%61ccount']) {
+      assert.equal(helper(HREF.replace('#x', fragment)), ordinary, `${fragment}: no account intent`);
+    }
+    assert.equal(helper(HREF.replace('#x', '#account')), ordinary + '#account', 'only exact #account survives');
+  }
+});
+
+test('SC-B05: regionless home resolution preserves explicit account intent across storage outcomes', async () => {
+  const cases = [
+    ['fresh', () => memory(), () => jar(), PORTS, '/', 0],
+    ['unavailable', () => null, () => null, PORTS, '/', 0],
+    ['blocked', () => denied, () => deniedJar, PORTS, '/', 0],
+    ['saved port', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'san-diego'); return s; }, () => deniedJar, PORTS, '/map?region=southern-california', 1],
+    ['saved place', () => { const s = memory(); s.setItem(HOME_PLACE_KEY, JSON.stringify({v: 1, place: 'cambria', mode: 'spear'})); return s; }, () => jar(), PORTS, '/map?place=cambria&profile=spear', 0],
+    ['legacy cookie', () => memory(), () => jar(legacyCookie('avila', 'shore')), PORTS, '/map?place=avila&profile=shore', 0],
+    ['missing saved port', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'missing'); return s; }, () => jar(), PORTS, '/', 1],
+    ['missing port with place fallback', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'missing'); s.setItem(HOME_PLACE_KEY, JSON.stringify({v: 1, place: 'cambria', mode: 'spear'})); return s; }, () => jar(), PORTS, '/map?place=cambria&profile=spear', 1],
+    ['offline directory', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'san-diego'); return s; }, () => jar(), null, '/', 1],
+  ];
+  for (const [name, storage, cookies, ports, destination, expectedLoads] of cases) {
+    for (const fragment of ['', '#account', '#x', '#Account', '#account/extra', '#%61ccount']) {
+      let loads = 0;
+      const load = async () => { loads++; if (ports === null) throw Error('offline'); return ports; };
+      const result = await savedHomeURL('https://s.test/map' + fragment, storage(), cookies(), load);
+      assert.equal(result, 'https://s.test' + destination + (fragment === '#account' ? '#account' : ''), `${name}: ${fragment}`);
+      assert.equal(loads, expectedLoads, `${name}: directory demand unchanged`);
+    }
+  }
+});
+
 test('forget clears the home for v2, v1 and /coast; forgetting on either of them clears what v2 reads', () => {
   const storage = memory(), cookies = jar();
   asLocalStorage(storage, () => saveBrowserPreferences(cookies, {v: 1, place: 'morro', mode: 'shore'}, true));

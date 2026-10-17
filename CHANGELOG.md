@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reuse settled session state across account-menu remounts while explicit refreshes still fetch the session.
+- Preserve exact `#account` intent through port and home URL resolution.
+
 - Show “age unavailable (future timestamp)” for cloud acquisitions ahead of the clock, retaining their acquisition time and existing past-age formatting.
 
 - Carry the existing local-calendar provisional flag through the brief model, independently of confidence wording.
