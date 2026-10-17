@@ -108,7 +108,8 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
       site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now);
   }
 
-  const observation = report.observations.filter(item => item.stationId === county.temperatureStationId && finite(item.waterTempF))
+  // Use the model's selected reading; retain the latest reading during an outage or on a future day.
+  const observation = daily.tempObservation ?? report.observations.filter(item => item.stationId === county.temperatureStationId && finite(item.waterTempF))
     .sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt))[0];
   const buoyName = observation ? stationText({id: observation.stationId, backupFor: context.buoyBackupFor ?? null}) : '';
   const water = tile('water', 'Water', observation?.waterTempF ?? null, '°F', observation ? `buoy ${buoyName}` : 'no fresh buoy',

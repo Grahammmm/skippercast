@@ -289,3 +289,48 @@ test('coast and regional adapters preserve provisional and model parity for ever
     }
   }
 });
+
+
+test('Water follows the daily temperature selection, including its source and retained state', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  const base = report.observations.find(o => o.stationId === slo.temperatureStationId);
+  const selected = {...base, waterTempF: 53.25, observedAt: new Date(now.getTime() - 30 * 60_000).toISOString(), url: 'https://example.test/selected-buoy'};
+  const future = {...base, waterTempF: 68, observedAt: new Date(now.getTime() + 2 * 3_600_000).toISOString(), url: 'https://example.test/future-buoy'};
+  const stale = {...base, waterTempF: 49, observedAt: new Date(now.getTime() - 4 * 3_600_000).toISOString()};
+  for (const retained of [false, true]) {
+    const input = {...report, observations: [stale, future, selected, {...selected, stationId: 'other', waterTempF: 70}],
+      sources: [...report.sources, {id: 'selected-buoy', kind: 'observation', label: 'Selected buoy', url: selected.url, outcome: retained ? 'error' : 'ok', fetchedAt: selected.observedAt}]};
+    for (const profile of PROFILES) {
+      const daily = buildDaily(input, slo, area, profile, date, now);
+      assert.equal(daily.tempObservation, selected);
+      const brief = buildCoastBrief({report: input, county: slo, areaId: area.id, profile, date, now});
+      const water = tile(brief, 'water');
+      assert.equal(water.value, Number(daily.tempObservation.waterTempF.toFixed(1)));
+      assert.equal(water.at, selected.observedAt);
+      assert.equal(water.sourceUrl, selected.url);
+      assert.match(water.source, /NDBC/);
+      assert.equal(water.state, retained ? 'stale' : 'fresh');
+      assert.equal(water.lastGood, retained ? true : undefined);
+      assert.equal(brief.profile, profile);
+      assert.equal(brief.basis, 'coast-report');
+    }
+  }
+});
+
+test('Water keeps the latest finite station reading when daily has no selected observation', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  const base = report.observations.find(o => o.stationId === slo.temperatureStationId);
+  const stale = {...base, waterTempF: 51, observedAt: new Date(now.getTime() - 4 * 3_600_000).toISOString()};
+  for (const observations of [[stale], []]) {
+    const input = {...report, observations};
+    assert.equal(buildDaily(input, slo, area, 'boat', date, now).tempObservation, null);
+    const water = tile(buildCoastBrief({report: input, county: slo, areaId: area.id, profile: 'boat', date, now}), 'water');
+    assert.equal(water.value, observations.length ? 51 : null);
+    assert.equal(water.at, observations.length ? stale.observedAt : null);
+    assert.equal(water.state, observations.length ? 'stale' : 'unavailable');
+  }
+  const tomorrow = '2026-10-09';
+  assert.equal(buildDaily(report, slo, area, 'boat', tomorrow, now).tempObservation, null);
+  const water = tile(buildCoastBrief({report, county: slo, areaId: area.id, profile: 'boat', date: tomorrow, now}), 'water');
+  assert.equal(water.value, 57.6);
+});
