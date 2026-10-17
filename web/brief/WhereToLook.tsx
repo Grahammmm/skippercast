@@ -17,8 +17,10 @@ import {hasCoastTerrain} from '../coast-context.ts';
 import {markData, markScreen, picked, spotHref} from '../map/marks.ts';
 import {coastSpecies, habitatHref} from '../map/stage.ts';
 import {cruiseSpeed} from '../limits.ts';
-import {PROFILE_TABLE} from '../profile.ts';
-import {isReachProfile, nmText, reachFor} from '../reach.ts';
+import {launchOrigin, loadLaunchPoints} from '../launches.ts';
+import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
+import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
+import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {loadTerrainHabitat, ranking, terrainHabitat, type Pick, type Ranking} from '../ranking.ts';
 import {habitat, navigate, profile, region, selection, species} from '../state.ts';
 import {durationText, runMinutes} from './run.ts';
@@ -27,8 +29,12 @@ export type {Pick, Ranking};
 
 /** The list for the address and loaded data now, read from the signals so the brief re-renders when they change. */
 export function currentRanking(now = Date.now()): Ranking {
-  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
-  return ranking({region: region.value, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: terrainHabitat.value, now, reachNm: reachFor(p)});
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, id = region.value;
+  // #644: Kayak measures from its chosen launch; Spear from shore keeps to the swim limit once the shoreline loads.
+  const maxYd = p === 'spear' ? shoreSwimLimit() : null, lines = shoreLines.value;
+  return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: terrainHabitat.value, now, reachNm: reachFor(p),
+    origin: p === 'kayak' ? launchOrigin(id) : null,
+    shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null}});
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would. */
@@ -49,15 +55,16 @@ export function pickRun(nm: number | null, speedKn: number | null): string {
  * Boat and Kayak: the range to consider, or the ask for one, opening Your limits at the range field. Hidden while the
  * list has no harbor to measure from (before the marks load, or a region without one), where no range is applied.
  */
-function RangeControl({measured}: {measured: boolean}) {
+function RangeControl({measured}: {measured: string | undefined}) {
   const [open, setOpen] = useState(false);
   const p = profile.value;
+  if (p === 'spear') return <DiveControl />;
   if (!isReachProfile(p) || !measured) return null;
-  const nm = reachFor(p), label = PROFILE_TABLE[p].label;
+  const nm = reachFor(p), label = PROFILE_TABLE[p].label, from = measured || 'the harbor';
   return (
     <>
       <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-reach={nm ?? undefined} onClick={() => setOpen(true)}
-        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} straight line from the harbor`}>
+        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} straight line from ${from}`}>
         {nm === null ? 'Set range' : `Range ${nmText(nm)}`}
       </Button>
       <LimitsDialog open={open} onClose={() => setOpen(false)} title={`Your limits · ${label}`}>
@@ -67,9 +74,35 @@ function RangeControl({measured}: {measured: boolean}) {
   );
 }
 
+/** The words for Spear's dive limits: the depth, then where from and the swim when set. */
+export function diveText(depthFt: number, plan: {from: 'shore' | 'boat' | null; shoreYd: number | null}): string {
+  const from = plan.from === 'boat' ? ' · from a boat' : plan.from === 'shore' ? plan.shoreYd === null ? ' · from shore' : ` · ${plan.shoreYd} yd from shore` : '';
+  return `To ${depthFt} ft${from}`;
+}
+
+/** Spear: its dive limits, opening Your limits at the depth field. */
+function DiveControl() {
+  const [open, setOpen] = useState(false);
+  const depth = depthLimitFt('spear') ?? 0;
+  return (
+    <>
+      <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-dive={depth} onClick={() => setOpen(true)} title="Your dive limits">
+        {diveText(depth, spearPlan.value)}
+      </Button>
+      <LimitsDialog open={open} onClose={() => setOpen(false)} title="Your limits · Spear">
+        <LimitsForm profile="spear" focusDepth onDone={() => setOpen(false)} />
+      </LimitsDialog>
+    </>
+  );
+}
+
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const r = given ?? currentRanking(), id = region.value, boat = profile.value === 'boat', speed = cruiseSpeed.value;
   useEffect(() => { if (id && hasCoastTerrain(id)) void loadTerrainHabitat(); }, [id]);
+  // #644: Kayak's launch list and, for Spear from shore, the shoreline, each loaded once per region when needed.
+  const p = profile.value, swimming = p === 'spear' && shoreSwimLimit() !== null;
+  useEffect(() => { if (id && p === 'kayak') void loadLaunchPoints(id); }, [id, p]);
+  useEffect(() => { if (id && swimming) void loadShoreLines(id); }, [id, swimming]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
       <div class="app-where-head">
@@ -91,7 +124,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
           ))}
         </ol>
       ) : <p class="app-empty">{r.empty}</p>}
-      <RangeControl measured={!!r.harbor} />
+      <RangeControl measured={r.harbor} />
     </section>
   );
 }

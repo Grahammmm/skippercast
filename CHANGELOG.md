@@ -89,6 +89,7 @@
 - `dist/regions/<id>/shoreline.geojson` is schema_version 2: the platform build merges import features with identical source properties into one MultiLineString each and rounds coordinates to 5 decimals (under half a zoom-12 CUSP tile unit, so every tile vertex keeps its grid position). The v2 `/map` startup test now holds its static JSON to the unchanged budget (2,529,983 of 2,795,531 bytes).
 
 - Boat and Kayak can set a range to consider under Your limits (nautical miles, one way, kept on this device, no default). The Chart then draws a dashed ring that far from the harbor, labelled as a straight line, not a route; "Where to look" lists only places inside it and says so; Boat picks show their one-way run time at your cruise speed; and the trip planner's distance filter starts from your Boat range. Nothing is derived from a boat model, fuel or horsepower (#644).
+- Spear sets its own deepest dive (10 to 100 ft, 60 by default), whether it dives from shore or a boat, and from shore the farthest swim; "Where to look" keeps to them, measuring the swim to the mapped shoreline as an approximate straight line. Kayak can start its range and distances from one of the region's listed public launches instead of the harbor (#644).
 
 ## 0.8.0 — 2026-10-11
 

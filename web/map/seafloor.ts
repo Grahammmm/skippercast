@@ -18,7 +18,7 @@ import {
   sourceRightsDetails, tileFeatures, tilesForBounds,
 } from '../../dist/seafloor-data.js';
 import {gradeAllows, type GradeFilter} from '../grade.ts';
-import {PROFILE_TABLE, withinDepth, type Profile} from '../profile.ts';
+import {PROFILE_TABLE, depthLimitFt, ownSpearDepthFt, withinDepth, type Profile} from '../profile.ts';
 import {grade, layers, profile, region, species} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {SEAFLOOR_SOURCE} from './layers.ts';
@@ -347,7 +347,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
       return;
     }
     if (token !== loading || !current()) return;
-    const p = profile.peek(), limit = PROFILE_TABLE[p].maxDepthFt;
+    const p = profile.peek(), limit = depthLimitFt(p);
     const admitted = (dedupeById(parts.flatMap(t => t.habitat)) as TileFeature[]).map(f => admitHabitat(f, admit)).filter(f => f !== null);
     const inDepth = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
     const g = grade.peek(), habitat = gradeFiltered(inDepth, g);
@@ -386,7 +386,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   const on = computed(() => layers.value.includes('seafloor'));
   const disposers = [
     effect(() => { on.value; region.value; untracked(() => void enable()); }),
-    effect(() => { camera.value; shownPresentation.value; profile.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
+    effect(() => { camera.value; shownPresentation.value; profile.value; ownSpearDepthFt.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
   ];
   return {
     mark(id) { const f = drawn.get(id); return f ? seafloorMark(f, view) : null; },
