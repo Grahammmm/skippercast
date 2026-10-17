@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use the daily-selected water observation in the brief, share overlapping Fleet directory probes without caching settled results, and format charter research dates consistently in the legend.
+
 - Collect Chart rendered-feature counts only when diagnostics are explicitly enabled.
 
 - Reuse settled session state across account-menu remounts while explicit refreshes still fetch the session.
