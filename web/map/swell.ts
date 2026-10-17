@@ -273,8 +273,11 @@ export function createSwell(o: SwellOptions): {
     const t = now(), report = data.coastReport.value?.data ?? null;
     return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
   });
-  let alive = true, drawnKey = '', drawnShape = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
-  const withdraw = (): void => { if (/^(?:swell|nearshore):/.test(chartMark.peek()?.id ?? '')) chartMark.value = null; };
+  let alive = true, drawnKey = '', drawnFieldKey = '', drawnRingKey = '', drawnShape = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  const withdraw = (owner?: 'swell' | 'nearshore'): void => {
+    const id = chartMark.peek()?.id ?? '';
+    if (owner ? id.startsWith(`${owner}:`) : /^(?:swell|nearshore):/.test(id)) chartMark.value = null;
+  };
 
   async function read(id: string): Promise<void> {
     const kept = load.peek().region === id ? load.peek().forecast : null, at = now().getTime();
@@ -310,7 +313,10 @@ export function createSwell(o: SwellOptions): {
     effect(() => {
       const e = engine.value, f = status.value.drawn, r = rings.value, key = `${f?.key ?? ''}#${r?.key ?? ''}`;
       if (!e || (key === drawnKey && e === drawnOn)) return;
-      if (key !== drawnKey) withdraw();
+      // Cards belong to their own data: a ring refresh must not withdraw a field reading (or vice versa).
+      if ((f?.key ?? '') !== drawnFieldKey) withdraw('swell');
+      if ((r?.key ?? '') !== drawnRingKey) withdraw('nearshore');
+      drawnFieldKey = f?.key ?? ''; drawnRingKey = r?.key ?? '';
       // A field arriving under rings already drawn would add its layers above them (the engine adds
       // only missing layers, under MPA_FILL): redraw the overlay whole so the rings stay on top.
       const shape = `${f ? 'field' : ''}+${r ? 'rings' : ''}`;

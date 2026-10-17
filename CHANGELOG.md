@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep a selected swell card open when only the other swell source refreshes; still clear it when its own data changes or disappears.
+
 - Validate the nearshore sample label’s site prefix before removing it; add regression coverage for sampling time/cadence and legacy home-profile and port URL behavior.
 
 - Restore each fishing profile’s chosen Currents source when switching profiles, including observed HFR and explicit Off choices.
