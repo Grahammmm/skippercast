@@ -105,8 +105,39 @@ test('the preference uses v1\'s key, so v1 reads the port v2 saved', () => {
   assert.equal(savePort('x', throwing), false);
 });
 
+test('choosing a different port clears stale place and habitat while keeping unrelated URL parameters', () => {
+  const href = HREF.replace('#x', '&place=cambria&habitat=kelp#x');
+  const url = new URL(portURL(href, sanDiego, 'shore'));
+  assert.equal(url.origin, 'https://skippercast.com');
+  assert.equal(url.pathname, '/map');
+  assert.equal(url.hash, '');
+  assert.equal(url.searchParams.has('place'), false);
+  assert.equal(url.searchParams.has('habitat'), false);
+  assert.deepEqual([...url.searchParams.entries()].sort(), [
+    ['profile', 'shore'], ['region', 'southern-california'], ['ui', 'v2'], ['utm_source', 'friend'],
+  ]);
+  assert.equal(currentPort(PORTS, url.searchParams.get('region'), sanDiego.id), sanDiego);
+});
+
 const BARE = 'https://skippercast.com/map?ui=v2';
 const legacyCookie = (place, mode) => preferenceHeader({v: 1, place, mode}, true).split(';')[0];
+
+for (const {name, stored, mode} of [
+  {name: 'invalid', stored: 'skiff', mode: 'shore'},
+  {name: 'missing', stored: null, mode: 'shore'},
+  {name: 'valid', stored: 'boat', mode: 'boat'},
+]) {
+  test(`legacy cookie fallback with a ${name} stored profile resolves and persists the intended v2 mode (FE-83)`, () => {
+    const storage = memory(), cookies = jar(legacyCookie('avila', 'shore'));
+    if (stored !== null) storage.setItem(STORAGE_KEYS.profile, stored);
+    const cookieBefore = cookies.cookie;
+    assert.deepEqual(resolveHome(PORTS, storage, cookies.cookie), {native: {v: 1, place: 'avila', mode}});
+    assert.equal(storage.map.get(STORAGE_KEYS.profile), mode);
+    assert.deepEqual(JSON.parse(storage.map.get(HOME_PLACE_KEY)), {v: 1, place: 'avila', mode: 'shore'});
+    assert.equal(cookies.cookie, cookieBefore);
+    assert.deepEqual(resolveHome(PORTS, storage, ''), {native: {v: 1, place: 'avila', mode}}, 'the migrated home resolves without the cookie');
+  });
+}
 
 test('a port saved in v2 is the home v1 and /coast read, replacing an older /coast home (FE-83)', () => {
   assert.equal(HOME_PLACE_KEY, COAST_PLACE_KEY);
