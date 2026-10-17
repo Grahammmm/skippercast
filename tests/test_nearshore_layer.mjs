@@ -78,6 +78,21 @@ test('rings are sized by height on the stated scale; the card names the site, th
   assert.equal(ringMark(r, 'nope', NOW, TZ), null);
 });
 
+test('sample text preserves time zone and cadence for normal, separator and Unicode site names', () => {
+  for (const name of ['Morro Rock', '岩 · 🐟 · Cayucos', ' · ', '']) {
+    for (const [minutes, cadence] of [[60, '1h model sampling'], [120, '2h model sampling'], [30, '30min model sampling'], [null, 'model sample spacing unreported']]) {
+      const r = ringsOf([site({name, temporalResolutionMinutes: minutes})]);
+      for (const [zone, time] of [[TZ, /sample Oct 9, 1:00\s?PM PDT/], ['UTC', /sample Oct 9, 8:00\s?PM UTC/]]) {
+        const mark = ringMark(r, 'SL345', NOW, zone);
+        assert.equal(mark.name, name);
+        assert.match(mark.source, time);
+        assert.ok(mark.source.startsWith('CDIP MOP · sample '));
+        assert.ok(mark.source.endsWith(` · ${cadence} · issued 6 h ago`));
+      }
+    }
+  }
+});
+
 /** A browser just big enough for navigate(). */
 function browser(href) {
   globalThis.location = {href};
@@ -97,6 +112,16 @@ function engine() {
 }
 /** A forecast feed whose region has no grid (Santa Cruz shape), so only rings can draw. */
 const noGrid = {region_id: 'morro-bay', retrieved: NOW - HOUR, requested_points: [['a', 35.4, -121.0], ['b', 35.3, -121.1]], models: {}};
+/** Synthetic 3 × 3 offshore grid with a fresh run covering AT. */
+function withGrid() {
+  const issued = Date.parse('2026-10-09T06:00:00Z') / 1000, hours = Array.from({length: 48}, (_, k) => issued + k * 3600);
+  const series = () => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
+    hourly: {time: hours, swell_wave_height: hours.map(() => 3), swell_wave_period: hours.map(() => 12), swell_wave_direction: hours.map(() => 290)}});
+  const points = [];
+  for (const lat of [35.05, 35.3, 35.55]) for (const lon of [-121.75, -121.5, -121.25]) points.push([`offshore-${points.length}`, lat, lon]);
+  return {region_id: 'morro-bay', retrieved: NOW - HOUR, requested_points: points,
+    models: {[WAVE_MODEL.id]: {data: points.map(series), meta: {last_run_initialisation_time: issued, data_end_time: hours.at(-1)}}}};
+}
 const flush = () => new Promise(resolve => setImmediate(resolve));
 async function swell(t, {place = undefined, data = undefined, body = noGrid, href = `${PAGE}?region=morro-bay&layers=swell&hour=${AT_PARAM}`, clock = () => NOW} = {}) {
   try { t.mock.timers.enable({apis: ['setTimeout']}); } catch { /* already on for this test */ }
@@ -121,6 +146,26 @@ test('outside a report binding Swell renders exactly as before FE-27', async t =
   // And with a grid, the field's overlay is FE-17's, with no ring source.
   assert.deepEqual(swellOverlay(sentinel), swellOverlay(sentinel, {field: true, rings: false}));
   assert.deepEqual(Object.keys(swellOverlay(sentinel).sources), [SWELL_SOURCE, ISOLINE_SOURCE, STROKE_SOURCE]);
+});
+
+test('with a grid, unbound Swell matches no-place engine calls and keeps only the field drawn', async t => {
+  const body = withGrid();
+  const before = await swell(t, {body});
+  assert.deepEqual(before.e.calls.slice(-4), [
+    ['overlay', FIELD, MPA_FILL], ['image', SWELL_SOURCE],
+    ['data', ISOLINE_SOURCE, undefined], ['data', STROKE_SOURCE, undefined],
+  ], 'the synthetic grid really draws');
+  before.s.destroy();
+  for (const snapshot of [null, {data: report()}]) {
+    const unbound = await swell(t, {body, place: () => ({regionId: 'morro-bay'}),
+      data: {coastReport: signal(snapshot), coastBinding: signal(null)}});
+    assert.deepEqual(unbound.e.calls, before.e.calls, 'missing report and stray unbound report preserve no-place calls');
+    assert.deepEqual(unbound.e.overlay.layers.map(l => l.id), FIELD);
+    assert.deepEqual(Object.keys(unbound.e.overlay.sources), [SWELL_SOURCE, ISOLINE_SOURCE, STROKE_SOURCE]);
+    assert.equal(unbound.e.calls.some(c => c[0] === 'data' && c[1] === NEARSHORE_SOURCE), false);
+    assert.equal(nearshoreState.value, null);
+    unbound.s.destroy();
+  }
 });
 
 test('in a binding the rings draw above the field, follow the hour, leave with their window and open the card', async t => {
@@ -198,13 +243,7 @@ test('a field arriving after the rings draws under them: swell-nearshore stays d
   t.after(() => s.destroy());
   await flush();
   assert.deepEqual(map.layers, ['water', NEARSHORE_HIT, NEARSHORE_LAYER, MPA_FILL, 'coastline'], 'the rings alone');
-  const issued = Date.parse('2026-10-09T06:00:00Z') / 1000, hours = Array.from({length: 48}, (_, k) => issued + k * 3600);
-  const series = () => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
-    hourly: {time: hours, swell_wave_height: hours.map(() => 3), swell_wave_period: hours.map(() => 12), swell_wave_direction: hours.map(() => 290)}});
-  const points = [];
-  for (const lat of [35.05, 35.3, 35.55]) for (const lon of [-121.75, -121.5, -121.25]) points.push([`offshore-${points.length}`, lat, lon]);
-  answer({ok: true, json: async () => ({region_id: 'morro-bay', retrieved: NOW - HOUR, requested_points: points,
-    models: {[WAVE_MODEL.id]: {data: points.map(series), meta: {last_run_initialisation_time: issued, data_end_time: hours.at(-1)}}}})});
+  answer({ok: true, json: async () => withGrid()});
   await flush(); await flush();
   assert.deepEqual(map.layers, ['water', ...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER, MPA_FILL, 'coastline'], 'the field under the rings, the rings directly under mpa-fill');
 });

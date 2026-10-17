@@ -101,10 +101,13 @@ export function ringMark(r: Rings, id: unknown, now: Date, tz: string): ChartMar
   const {site, hour} = ring, from = finite(hour.directionDeg) ? ` · from ${compass(hour.directionDeg)} ${Math.round(hour.directionDeg)}°` : '';
   const issued = site.issuedAt ? ` · issued ${age(now.getTime() - Date.parse(site.issuedAt))} ago` : '';
   const depth = finite(site.waterDepthM) ? ` The site is in ${site.waterDepthM} m of water (${site.depthDatum}).` : '';
+  const label = nearshoreSampleLabel(site, hour, tz), prefix = `${site.name} · `;
+  // Keep the shared time/cadence formatting, but validate its name prefix before stripping it.
+  if (!label.startsWith(prefix)) throw new Error('Nearshore sample label is missing its site prefix');
   return {
     id: `nearshore:${site.id}|${hour.at}`, name: site.name, kind: 'Nearshore model site',
     reading: `${ring.waveFt.toFixed(1)} ft${finite(hour.periodS) ? ` · ${hour.periodS.toFixed(1)} s` : ''}${from}`,
-    source: `${r.product} · ${nearshoreSampleLabel(site, hour, tz).slice(site.name.length + 3)}${issued}`,
+    source: `${r.product} · ${label.slice(prefix.length)}${issued}`,
     basis: `${ringBasis(r.product)}${depth}`,
   };
 }
