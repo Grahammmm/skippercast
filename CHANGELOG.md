@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show “age unavailable (future timestamp)” for cloud acquisitions ahead of the clock, retaining their acquisition time and existing past-age formatting.
+
 - Carry the existing local-calendar provisional flag through the brief model, independently of confidence wording.
 
 - Keep a selected swell card open when only the other swell source refreshes; still clear it when its own data changes or disappears.
