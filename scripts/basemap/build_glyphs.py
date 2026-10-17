@@ -15,16 +15,16 @@ computed on a 4x supersampled rendering and averaged down.
     python scripts/basemap/build_glyphs.py      # needs fonttools, brotli, Pillow, numpy, scipy
 
 Output: dist/basemap/glyphs/dm-sans-medium/{0-255,8192-8447}.pbf; update their
-hashes in scripts/web-vendor-sha256.json after a rebuild.
+hashes in scripts/web-vendor-sha256.json after a rebuild. The final stdout
+line is a deterministic JSON provenance receipt for that build; retain it with
+the rebuild evidence. It does not identify versions used for older artifacts.
 """
+import hashlib
+import json
+from importlib.metadata import PackageNotFoundError, version
 from io import BytesIO
 from pathlib import Path
 
-import numpy as np
-from fontTools.ttLib import TTFont
-from fontTools.varLib.instancer import instantiateVariableFont
-from PIL import ImageFont
-from scipy.ndimage import distance_transform_edt
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "web/fonts/dm-sans-latin.woff2"
@@ -55,6 +55,9 @@ def zigzag(n):
 
 
 def glyph(font, ascender, code):
+    import numpy as np
+    from scipy.ndimage import distance_transform_edt
+
     char = chr(code)
     advance = round(font.getlength(char) / SCALE)
     mask, (ox, oy) = font.getmask2(char, mode="L", anchor="ls")
@@ -81,7 +84,34 @@ def glyph(font, ascender, code):
             + field(5, zigzag(left)) + field(6, zigzag(-top - ascender)) + field(7, advance))
 
 
+def build_provenance(source, outputs, version_lookup=version):
+    """Describe this build, never infer versions for previously committed glyphs.
+
+    No timestamps or absolute paths: identical inputs, outputs and dependency
+    versions yield the same receipt. Missing distribution metadata stays unknown.
+    """
+    dependencies = {}
+    for name in ("fonttools", "Pillow", "numpy", "scipy", "Brotli"):
+        try:
+            dependencies[name] = version_lookup(name)
+        except PackageNotFoundError:
+            dependencies[name] = "UNKNOWN"
+    return {
+        "dependencies": dependencies,
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "parameters": dict(weight=WEIGHT, size=SIZE, border=BORDER, radius=RADIUS,
+                           cutoff=CUTOFF, scale=SCALE, ranges=list(RANGES), stack=STACK),
+        "outputs": {path.name: {"bytes": path.stat().st_size,
+                                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                    for path in sorted(outputs)},
+    }
+
+
 def main():
+    from fontTools.ttLib import TTFont
+    from fontTools.varLib.instancer import instantiateVariableFont
+    from PIL import ImageFont
+
     source = TTFont(SOURCE)
     source.flavor = None
     instance = instantiateVariableFont(source, {"wght": WEIGHT})
@@ -91,13 +121,17 @@ def main():
     font = ImageFont.truetype(BytesIO(data.getvalue()), SIZE * SCALE, layout_engine=ImageFont.Layout.BASIC)
     codes = set(instance.getBestCmap())
     OUT.mkdir(parents=True, exist_ok=True)
+    outputs = []
     for start in RANGES:
         name = f"{start}-{start + 255}"
         glyphs = b"".join(field(3, glyph(font, ascender, c)) for c in range(start, start + 256) if c in codes)
         stack = field(1, STACK.encode()) + field(2, name.encode()) + glyphs
         path = OUT / f"{name}.pbf"
         path.write_bytes(field(1, stack))
+        outputs.append(path)
         print(f"{path.relative_to(ROOT)}: {path.stat().st_size} bytes")
+
+    print(json.dumps(build_provenance(SOURCE, outputs), sort_keys=True))
 
 
 if __name__ == "__main__":

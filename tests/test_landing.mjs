@@ -412,3 +412,144 @@ test('the landing warms the app\'s first-paint files once, at low priority, and 
   assert.deepEqual(asked, [], 'Save-Data: no request at all');
   assert.deepEqual(await warmApp(async () => { throw new Error('offline'); }, {}), [], 'a failure is quiet');
 });
+
+// SC-B11 uses synthetic hook/JSX adapters to exercise the actual Landing
+// callbacks without a browser, DOM, network, or account ceremony.
+async function loadLandingLifecycle() {
+  const hooks = `
+    const slots = [], effects = []; let cursor = 0;
+    export const begin = () => { cursor = 0; };
+    export const useState = initial => { const i = cursor++; if (!(i in slots)) slots[i] = initial;
+      return [slots[i], value => { slots[i] = typeof value === 'function' ? value(slots[i]) : value; }]; };
+    export const useRef = initial => { const i = cursor++; return slots[i] ??= {current: initial}; };
+    export const useEffect = (effect, deps) => { const i = cursor++; const old = slots[i];
+      if (!old || deps.some((v, j) => v !== old.deps[j])) {
+        old?.cleanup?.(); const entry = {deps}; slots[i] = entry;
+        effects.push(() => { entry.cleanup = effect(); });
+      } };
+    export const flush = () => { while (effects.length) effects.shift()(); };
+    export const unmount = () => { for (const slot of slots) slot?.cleanup?.(); };
+  `;
+  const modules = {
+    'preact/hooks': hooks,
+    'preact/jsx-runtime': `export const Fragment = 'fragment'; export const jsx = (type, props) => ({type, props}); export const jsxs = jsx;`,
+    '../ports.ts': `export const loadPorts = async () => []; export const savePort = () => {}; export const portURL = () => '/map'; export const exploreURL = () => 'https://s.test/map';`,
+    './readings.ts': `export const DEFAULT_REGION = 'morro-bay'; export const loadReadout = async () => null;`,
+    './PortInput.tsx': `export const PortInput = () => null;`,
+    './Readout.tsx': `export const Readout = () => null;`,
+    '../ui/Button.tsx': `export const Button = () => null;`,
+  };
+  const out = join(await mkdtemp(join(tmpdir(), 'landing-lifecycle-')), 'lifecycle.mjs');
+  await build({
+    stdin: {resolveDir: ROOT, loader: 'ts', contents: `export {LandingApp} from './web/landing/Landing.tsx'; export {ProfileStep} from './web/landing/ProfileStep.tsx'; export {begin, flush, unmount} from 'preact/hooks';`},
+    plugins: [{name: 'synthetic-landing', setup(b) {
+      b.onResolve({filter: /.*/}, args => Object.hasOwn(modules, args.path) ? {path: args.path, namespace: 'synthetic'} : undefined);
+      b.onLoad({filter: /.*/, namespace: 'synthetic'}, args => ({contents: modules[args.path], loader: 'js'}));
+    }}],
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true,
+    logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+  });
+  return import(pathToFileURL(out).href);
+}
+
+const settleWarm = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+const deferredWarm = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return {promise, resolve, reject}; };
+const warmReply = () => ({ok: true, json: async () => ({}), blob: async () => new Blob([])});
+
+test('SC-B11: A→B→A identity, obsolete completion, change/explore/navigation/unmount cancellation and enabled selection', async () => {
+  const m = await loadLandingLifecycle();
+  const requests = [];
+  const props = {href: 'https://s.test/', navigate: () => {}, warm: (region, signal) => {
+    const request = {...deferredWarm(), region, signal}; requests.push(request); return request.promise;
+  }};
+  const draw = () => { m.begin(); const node = m.LandingApp(props); m.flush(); return node.props.children[1]; };
+  const choose = async region => { draw().props.onChoose({id: region, region, name: region}); await settleWarm(); };
+  const back = () => draw().props.onBack();
+  await choose('A'); back();
+  assert.equal(requests[0].signal.aborted, true, 'Change port aborts');
+  await choose('B'); back(); await choose('A');
+  assert.equal(requests[1].signal.aborted, true);
+  requests[0].resolve({state: 'ready'}); requests[1].reject(Error('obsolete'));
+  await settleWarm();
+  assert.equal(draw().props.warm, 'loading', 'old A success and B failure cannot publish into new A');
+  requests[2].resolve({state: 'ready'}); await settleWarm();
+  assert.equal(draw().props.warm, 'ready');
+  back(); await choose('C'); draw().props.onChoose('boat');
+  assert.equal(requests[3].signal.aborted, true, 'navigation aborts');
+  back(); draw().props.onExplore();
+  assert.equal(draw().props.warm, null);
+  back(); await choose('D');
+  m.unmount(); assert.equal(requests[4].signal.aborted, true, 'unmount aborts');
+  requests[4].resolve({state: 'ready'}); await settleWarm();
+  assert.equal(draw().props.warm, 'loading', 'unmounted completion cannot publish');
+  // Render the actual profile step with the same synthetic JSX adapter.
+  // All profile buttons remain actionable for each warm-up state.
+  for (const warm of ['loading', 'ready', 'failed', 'skipped']) {
+    m.begin(); let picked;
+    const step = m.ProfileStep({place: 'A', warm, onChoose: p => { picked = p; }, onBack: () => {}});
+    const buttons = step.props.children[3].props.children;
+    assert.equal(buttons.length, 4);
+    for (const button of buttons) {
+      assert.equal(button.props.disabled, undefined);
+      button.props.onClick(); assert.equal(picked, button.props['data-profile']);
+    }
+    assert.equal(step.props.children[4].props.role, 'status');
+  }
+});
+
+test('SC-B11: deadlines include stalled manifest and required/optional bodies', {timeout: 1000}, async () => {
+  for (const target of ['manifest', 'atlas-marks.json', 'poster.svg']) {
+    const signals = [];
+    const fetchFn = async (url, init) => {
+      const reply = warmReply();
+      if (target === 'manifest' && url.endsWith('region.json')) reply.json = () => new Promise(() => {});
+      if (url.endsWith(target)) reply.blob = () => new Promise(() => {});
+      signals.push([url, init.signal]); return reply;
+    };
+    const result = await warmRegion('A', 'https://s.test/', fetchFn, {}, {timeoutMs: 15});
+    assert.equal(result.state, target === 'poster.svg' ? 'ready' : 'failed', target);
+    assert.ok(signals.some(([url, signal]) => signal.aborted && (target === 'manifest' ? url.endsWith('region.json') : url.endsWith(target))));
+    if (target === 'manifest') assert.equal(signals.length, 1, 'no follow-up after manifest timeout');
+  }
+});
+
+test('SC-B11: cancellation settles stalled headers and bodies and skips already-aborted work', {timeout: 1000}, async () => {
+  for (const phase of ['headers', 'manifest', 'body']) {
+    const controller = new AbortController(); const started = deferredWarm(); const signals = [];
+    const fetchFn = async (url, init) => {
+      signals.push(init.signal);
+      if (phase === 'headers') { started.resolve(); return new Promise(() => {}); }
+      const reply = warmReply();
+      if (phase === 'manifest') reply.json = () => { started.resolve(); return new Promise(() => {}); };
+      if (phase === 'body' && !url.endsWith('region.json')) reply.blob = () => { started.resolve(); return new Promise(() => {}); };
+      return reply;
+    };
+    const promise = warmRegion('A', 'https://s.test/', fetchFn, {}, {signal: controller.signal});
+    await started.promise; controller.abort();
+    assert.equal((await promise).state, 'failed');
+    assert.ok(signals.slice(phase === 'body' ? 1 : 0).some(signal => signal.aborted), phase);
+  }
+  const controller = new AbortController(); controller.abort(); let called = false;
+  assert.equal((await warmRegion('A', 'https://s.test/', async () => { called = true; }, {}, {signal: controller.signal})).state, 'failed');
+  assert.equal(called, false);
+});
+
+test('SC-B11: optional HTTP/network/body failures remain distinct from required failures', async () => {
+  for (const target of ['poster.svg', 'shoreline-overview.geojson', 'atlas-marks.json', '/api/forecast?region=A']) {
+    for (const failure of ['http', 'network', 'body']) {
+      const fetchFn = async url => {
+        if (!url.endsWith(target)) return warmReply();
+        if (failure === 'network') throw Error('offline');
+        return {...warmReply(), ok: failure !== 'http', blob: async () => { if (failure === 'body') throw Error('broken body'); return new Blob([]); }};
+      };
+      const result = await warmRegion('A', 'https://s.test/', fetchFn, {});
+      assert.equal(result.state, ['poster.svg', 'shoreline-overview.geojson'].includes(target) ? 'ready' : 'failed', `${target}/${failure}`);
+    }
+  }
+});
+
+test('SC-B11: Save-Data skips every request even with cancellation options', async () => {
+  let calls = 0;
+  const result = await warmRegion('A', 'https://s.test/', async () => { calls++; }, {connection: {saveData: true}}, {signal: new AbortController().signal, timeoutMs: 1});
+  assert.deepEqual(result, {state: 'skipped', paths: []}); assert.equal(calls, 0);
+});

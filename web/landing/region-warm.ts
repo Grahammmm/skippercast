@@ -34,22 +34,60 @@ export function regionWarmList(region: string, info: unknown): string[] {
   return list;
 }
 
+/** A deadline covers headers and body consumption; optional files get their own budget. */
+export const WARM_TIMEOUT_MS = 10_000;
+export type WarmOptions = {signal?: AbortSignal; timeoutMs?: number};
+
+async function readWarm<T>(url: string, fetchFn: typeof fetch, read: (response: Response) => Promise<T>, {signal, timeoutMs = WARM_TIMEOUT_MS}: WarmOptions): Promise<T> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener('abort', abort, {once: true});
+  let rejectAbort: () => void = () => {};
+  const aborted = new Promise<never>((_, reject) => {
+    rejectAbort = () => reject(new Error('Warm-up cancelled or timed out'));
+    controller.signal.addEventListener('abort', rejectAbort, {once: true});
+  });
+  const timer = setTimeout(abort, timeoutMs);
+  try {
+    if (signal?.aborted) controller.abort();
+    if (controller.signal.aborted) return await aborted;
+    // Race body consumption too: a stalled body (or a non-cooperative fetch)
+    // cannot leave the caller loading after the deadline or cancellation.
+    return await Promise.race([
+      fetchFn(url, {priority: 'low', signal: controller.signal} as RequestInit).then(response => {
+        if (controller.signal.aborted) throw new Error('Warm-up cancelled');
+        return read(response);
+      }),
+      aborted,
+    ]);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abort);
+    controller.signal.removeEventListener('abort', rejectAbort);
+  }
+}
+
 /**
  * Fetch `region`'s startup files once (resolved against `page`); resolves
- * with what happened and the paths asked for. Never rejects.
+ * with what happened and the paths asked for. Never rejects. The manifest
+ * and each subsequent body have a bounded deadline; cancellation stops all.
  */
-export async function warmRegion(region: string, page: string, fetchFn: typeof fetch = (...a) => fetch(...a), nav: unknown = globalThis.navigator): Promise<{state: Exclude<WarmState, 'loading'>; paths: string[]}> {
+export async function warmRegion(region: string, page: string, fetchFn: typeof fetch = (...a) => fetch(...a), nav: unknown = globalThis.navigator, options: WarmOptions = {}): Promise<{state: Exclude<WarmState, 'loading'>; paths: string[]}> {
   if (saveData(nav)) return {state: 'skipped', paths: []};
-  const low = {priority: 'low'} as RequestInit;
   try {
     const first = `regions/${encodeURIComponent(region)}/region.json`;
-    const response = await fetchFn(new URL(first, page).href, low);
-    if (!response.ok) return {state: 'failed', paths: [first]};
-    const paths = regionWarmList(region, await response.json());
+    const info = await readWarm(new URL(first, page).href, fetchFn, async response => {
+      if (!response.ok) throw new Error('Region unavailable');
+      return response.json();
+    }, options);
+    const paths = regionWarmList(region, info);
     const rest = paths.filter(p => p !== first);
-    const results = await Promise.all(rest.map(p => fetchFn(new URL(p, page).href, low).then(r => r.blob().then(() => r.ok), () => false)));
-    // The startup copies are optional per region (see above), so only the files every region has decide "ready".
+    const results = await Promise.all(rest.map(p => readWarm(new URL(p, page).href, fetchFn, async response => {
+      await response.blob();
+      return response.ok;
+    }, options).catch(() => false)));
+    // The startup copies are optional per region, including failed body reads.
     const required = rest.map((p, i) => ({p, ok: results[i]})).filter(e => !/\/(?:shoreline-overview\.geojson|poster\.svg)$/.test(e.p));
-    return {state: required.every(e => e.ok) ? 'ready' : 'failed', paths};
+    return {state: options.signal?.aborted ? 'failed' : required.every(e => e.ok) ? 'ready' : 'failed', paths};
   } catch { return {state: 'failed', paths: []}; }
 }

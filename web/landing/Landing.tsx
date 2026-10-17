@@ -50,40 +50,52 @@ export type LandingAppProps = {
   /** Start loading the ports and readings, and warm a chosen region (off for string rendering in tests). */
   load?: boolean;
   /** The region warm-up (region-warm.ts by default; tests pass stand-ins). */
-  warm?: (region: string) => Promise<{state: WarmState}>;
+  warm?: (region: string, signal: AbortSignal) => Promise<{state: WarmState}>;
 };
 
 /** Where the profile step leads: a port (warmed) or the central coast (nothing to warm). */
 type Choice = {place: string; port: Port | null};
 const EXPLORE_PLACE = 'Central coast';
 
-export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true, warm = region => warmRegion(region, href)}: LandingAppProps) {
+export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true, warm = (region, signal) => warmRegion(region, href, undefined, undefined, {signal})}: LandingAppProps) {
   const [ports, setPorts] = useState<Port[] | null>(null);
   const [readout, setReadout] = useState<Data | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [warmth, setWarmth] = useState<WarmState | null>(null);
-  /** The region being warmed, so an answer for an earlier choice is ignored; and whether the visitor came back from step 2. */
-  const warming = useRef<string | null>(null);
+  /** Each invocation has its own identity, including A → B → A choices. */
+  const warming = useRef<AbortController | null>(null);
+  const cancelWarm = () => {
+    const previous = warming.current;
+    warming.current = null;
+    previous?.abort();
+  };
+  useEffect(() => cancelWarm, [href, load]);
   const [back, setBack] = useState(false);
   useEffect(() => {
     if (!load) return;
     loadPorts().then(setPorts, () => setPorts([]));
     void loadReadout().then(setReadout);
   }, [load]);
-  // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.
+  // Step 1 → 2: cancel the preceding invocation before starting another.
   const choose = (port: Port) => {
+    cancelWarm();
     setChoice({place: port.name, port});
     if (!load) return;
     const region = port.region;
-    warming.current = region;
+    const request = new AbortController();
+    warming.current = request;
     setWarmth('loading');
-    void warm(region).then(r => { if (warming.current === region) setWarmth(r.state); }, () => { if (warming.current === region) setWarmth('failed'); });
+    void Promise.resolve().then(() => {
+      if (request.signal.aborted) return {state: 'failed' as const};
+      return warm(region, request.signal);
+    }).then(r => { if (warming.current === request) setWarmth(r.state); }, () => { if (warming.current === request) setWarmth('failed'); });
   };
-  const explore = () => { warming.current = null; setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
-  const restart = () => { warming.current = null; setChoice(null); setWarmth(null); setBack(true); };
+  const explore = () => { cancelWarm(); setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
+  const restart = () => { cancelWarm(); setChoice(null); setWarmth(null); setBack(true); };
   // Step 2: the profile opens the app; only now is the port saved as home.
   const finish = (profile: Profile) => {
     if (!choice) return;
+    cancelWarm();
     if (choice.port) { savePort(choice.port.id); navigate(portURL(href, choice.port, profile)); return; }
     const url = new URL(exploreURL(href));
     url.searchParams.set('profile', profile);
