@@ -182,11 +182,20 @@ export function legendKey(view: 'terrain' | 'fit'): [Tone, string][] {
   return [...ranked, ['search', 'Rough-bottom search area · unranked'], ['interpreted', 'Interpreted rock habitat · unranked'], ['cell', 'Surveyed 250 m cell']];
 }
 
-/** The legend's survey line, "Surveys a (2010), b (2008) and 2 more": at most three named. */
-export function surveyLine(surveys: readonly string[]): string {
-  const named = surveys.slice(0, 3).join(', '), more = surveys.length - 3;
-  return `${surveys.length === 1 ? 'Survey' : 'Surveys'} ${named}${more > 0 ? ` and ${more} more` : ''}`;
+const SURVEY = /^(.*) \((\d{4}|unknown)\)$/;
+/**
+ * The legend's survey note, "4 surveys, 2006–2010" (#697): the drawn surveys counted with their year range,
+ * since their ids are source file names. The ids stay in the basis popover (`surveyList`).
+ */
+export function surveySummary(surveys: readonly string[]): string {
+  const parsed = surveys.map(s => s.match(SURVEY)), ids = new Set(parsed.map((m, i) => m ? m[1] : surveys[i]));
+  const years = parsed.map(m => Number(m?.[2])).filter(Number.isFinite).sort((a, b) => a - b);
+  const undated = parsed.some(m => !m || m[2] === 'unknown'), first = years[0], last = years.at(-1);
+  const range = first === undefined ? '' : first === last ? `, ${first}` : `, ${first}–${last}`;
+  return `${ids.size} ${ids.size === 1 ? 'survey' : 'surveys'}${range}${undated ? (range ? ', some undated' : ', undated') : ''}`;
 }
+/** Every drawn survey with its year, for the basis popover: "Surveys drawn: a (2010), b (2008)." */
+export const surveyList = (surveys: readonly string[]): string => `Surveys drawn: ${surveys.join(', ')}.`;
 
 /** The mark card for a drawn feature: what it is, its nominal depth, its survey, and its basis with the source credits. */
 export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
