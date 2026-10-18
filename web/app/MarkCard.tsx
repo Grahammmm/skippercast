@@ -161,7 +161,9 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
       <div class="app-mark-basis">
-        <Popover>{selected.basis}</Popover>
+        <Popover>{selected.basis}{selected.terms?.map(t => (
+          <p key={t.href}><a href={t.href} target="_blank" rel="noopener" aria-label={`${t.label} (publisher's page, opens in a new tab)`}>{t.label}</a></p>
+        ))}</Popover>
         {sources ? <Button variant="quiet" size="sm" icon="info" onClick={() => sources.sources()}>Terrain sources</Button> : null}
       </div>
     </section>

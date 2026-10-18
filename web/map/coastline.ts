@@ -61,6 +61,8 @@ export interface ChartMark {
   readonly withheld?: boolean;
   /** The trip plan's spot this card reviews in the planner (a ranked trip spot, #495). */
   readonly trip?: string;
+  /** The source publishers' own terms pages (https only), linked beside the basis as v1's "Publisher terms" was. */
+  readonly terms?: readonly {readonly href: string; readonly label: string}[];
 }
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
