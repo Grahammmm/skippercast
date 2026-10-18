@@ -106,7 +106,7 @@ export async function openAccount() {
   document.body.classList.add('choosing-home-port');
   const $ = sel => scrim.querySelector(sel), body = $('#account-body');
   const status = message => { const el = $('#account-status'); if (el) el.textContent = message; };
-  open = {close};
+  const self = open = {close};   // this dialog; a close or a newer dialog replaces it
 
   function close() {
     try { webauthn()?.WebAuthnAbortService?.cancelCeremony(); } catch { /* nothing pending */ }
@@ -132,12 +132,12 @@ export async function openAccount() {
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
     if (!supported()) { busy(true); status('This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.'); return; }
-    // #597: once the person taps Create or Sign in, a passkey-autofill request still waiting for its options must
-    // not start: its ceremony would abort theirs through the shared WebAuthn abort service.
+    // #597: once the person taps Create or Sign in, or this dialog is closed or replaced, a passkey-autofill request
+    // still waiting for its options must not start: its ceremony would abort theirs through the shared abort service.
     let manual = false;
     const signIn = async (autofill = false) => {
       const options = await api('auth/login/options', {method: 'POST', body: {}});
-      if (autofill && (manual || !open)) return;
+      if (autofill && (manual || open !== self)) return;
       const response = await webauthn().startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
       await api('auth/login/verify', {method: 'POST', body: {response}});
       status('Signed in.'); finish();
