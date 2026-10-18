@@ -25,6 +25,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {LayerRail, baseNote, baseOptions, shownBase} from './web/app/LayerRail.tsx';
       export {Legend} from './web/app/Legend.tsx';
+      export {mpaState} from './web/map/mpa.ts';
       export {RAIL_ENTRIES} from './web/app/rail.ts';
       export {CHART_ONLY, drawsIn} from './web/map/layers.ts';
       export {seafloorState} from './web/map/seafloor.ts';
@@ -96,7 +97,7 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   go({});
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.boat.defaultLayers);
   assert.equal(s.current.value, 'wcofs', 'the boat profile\'s default Currents is drawn (#482)');
-  // The rail writes ?layers= (and Currents its source); a profile switch drops them with the target.
+  // The rail writes ?layers= and its Currents source; an unchosen profile uses its defaults.
   go({layers: 'seafloor,currents,clouds', current: 'hfr-6', target: 'vermilion'});
   let params = go(s.profilePatch('shore'));
   assert.deepEqual(['layers', 'current', 'target'].filter(key => params.has(key)), []);
@@ -104,11 +105,11 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.shore.defaultLayers);
   assert.equal(s.current.value, 'off');
   assert.deepEqual(pressed(railItems(m.render(m.h(m.LayerRail)))), ['Water temp', 'Swell']);
-  // Each profile keeps its own last list; one never chosen gets its defaults.
+  // Each profile keeps its own last list and Currents source; an unchosen one gets its defaults.
   go({layers: 'swell'});
   go(s.profilePatch('boat'));
   assert.deepEqual(s.layers.value, ['seafloor', 'currents', 'clouds']);
-  assert.equal(s.current.value, 'wcofs', 'the source is not stored: the list turns on the default');
+  assert.equal(s.current.value, 'hfr-6', 'the profile restores its chosen Currents source with its list');
   go(s.profilePatch('shore'));
   assert.deepEqual(s.layers.value, ['swell']);
   go(s.profilePatch('spear'));
@@ -122,19 +123,20 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   t.after(() => {
     for (const [signal, value] of reset) signal.value = value;
   });
-  const reset = [m.seafloorState, m.currentsState, m.waterTempState, m.swellState, m.cloudStamp, m.currentStatus, m.groundsState, m.aisOn, m.aisState].map(signal => [signal, signal.value]);
+  const reset = [m.mpaState, m.seafloorState, m.currentsState, m.waterTempState, m.swellState, m.cloudStamp, m.currentStatus, m.groundsState, m.aisOn, m.aisState].map(signal => [signal, signal.value]);
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor,currents,water-temp,swell,fleet,clouds`);
   m.swellState.value = {...m.swellState.value, drawn: null, reason: 'Swell unavailable: no forecast grid for this region.'};
   m.currentsState.value = {...m.currentsState.value, drawn: null, note: 'loading', reason: 'Loading the surface-current packet.'};
   m.waterTempState.value = {...m.waterTempState.value, drawn: null, reason: 'Water temp unavailable: no analysis for this region.'};
   let html = m.render(m.h(m.Legend));
-  assert.deepEqual(swatches(html), ['mpas'], 'nothing draws: only the protected areas\' outline, which the Chart always draws');
+  assert.deepEqual(swatches(html), [], 'nothing draws, including boundaries that have not loaded');
   assert.equal(reasons(html)['charter-grounds'], 'Loading charter grounds.', 'FE-21: the grounds say why they do not draw');
   assert.equal(reasons(html).currents, 'Loading the surface-current packet.');
   assert.match(reasons(html)['water-temp'], /^Water temp unavailable/);
   assert.match(reasons(html).swell, /^Swell unavailable/);
   // Each key appears once its layer draws (synthetic states).
+  m.mpaState.value = {status: 'complete', note: '', detail: '', checked: '2026-09-21', count: 8};
   m.seafloorState.value = {status: 'ready', note: '', view: 'terrain', fit: null, surveys: [], credits: [], drawn: 3};
   m.currentsState.value = {...m.currentsState.value, drawn: {}, note: 'forecast Wed 5 am', reason: ''};
   m.waterTempState.value = {...m.waterTempState.value, drawn: {range: [57, 65], product: 'Synthetic analysis', stamp: 'Oct 8'}, reason: ''};

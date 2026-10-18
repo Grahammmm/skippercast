@@ -258,18 +258,24 @@ test('toggling Swell adds the texture, isolines and strokes only; off removes th
 });
 
 test('an hour change replaces the texture, isolines and strokes in the same turn, before the next frame', async t => {
-  const {e} = await layer(t, {palette: grey});
+  const {s, e} = await layer(t, {palette: grey});
+  chartMark.value = s.reading({lon: -121.5, lat: 35.3});
+  assert.equal(chartMark.value?.name, 'Primary swell');
   const first = e.images.at(-1)[1], key = swellState.value.drawn.key;
   e.calls.length = 0;
   setParams({hour: '2026-10-09T23:00Z'});
   // Synchronous: no await between the hour and the new pixels, so MapLibre's next frame draws them.
   assert.deepEqual(e.calls, [['overlay', [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER]], ['image', SWELL_SOURCE], ['data', ISOLINE_SOURCE], ['data', STROKE_SOURCE]]);
   assert.notEqual(swellState.value.drawn.key, key);
+  assert.equal(chartMark.value, null, 'an hour change withdraws the old field card');
   assert.notDeepEqual(e.images.at(-1)[1].data, first.data, 'three hours later the swell is 1.5 ft higher: new pixels');
   assert.equal(swellState.value.note, 'valid Fri 4 pm · run 12 h old');
   e.calls.length = 0;
+  chartMark.value = s.reading({lon: -121.5, lat: 35.3});
+  assert.ok(chartMark.value);
   setParams({hour: '2026-10-12T23:00Z'});
   assert.deepEqual(e.calls, [['overlay', null]], 'an hour past the run removes the field at once');
+  assert.equal(chartMark.value, null, 'field removal withdraws its card');
 });
 
 test('a failed refresh keeps the last good run; a region change withdraws the field at once', async t => {
@@ -289,8 +295,11 @@ test('a failed refresh keeps the last good run; a region change withdraws the fi
   assert.equal(asked.length, 2, 'read again after 30 minutes');
   assert.ok(swellState.value.drawn, 'the last good run still draws');
   assert.equal(e.images.length, 1, 'and is not repainted');
+  chartMark.value = s.reading({lon: -121.5, lat: 35.3});
+  assert.ok(chartMark.value);
   setParams({region: 'santa-cruz-monterey-bay'});
   assert.equal(e.overlay, null, 'the field goes with the region, before its feed answers');
+  assert.equal(chartMark.value, null, 'a region change withdraws the field card');
   await flush();
   assert.equal(swellState.value.reason, 'Swell unavailable: the regional wave forecast failed to load.');
   fail = false;
@@ -298,6 +307,10 @@ test('a failed refresh keeps the last good run; a region change withdraws the fi
   await flush();
   assert.ok(e.overlay, 'back in Morro Bay, its feed draws again');
   assert.equal(e.images.length, 2);
+  chartMark.value = s.reading({lon: -121.5, lat: 35.3});
+  assert.ok(chartMark.value);
+  s.destroy();
+  assert.equal(chartMark.value, null, 'destroy clears a field card');
 });
 
 test('in the stack the water temperature sits under the swell field, whichever is drawn first', () => {

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://skippercast.com/schemas/jurisdiction.schema.json",
+  "title": "SkipperCast jurisdiction",
+  "description": "jurisdictions/<id>.json (not jurisdictions/reviews/, which are review records). Binding to the regulations registry (matching watch URLs, authority hosts, normalizers) is checked by pipeline.regulations.validate_bindings.",
+  "type": "object",
+  "required": ["schema_version", "id", "regulations_asset", "watches", "authority_hosts", "required_source_ids"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "common.schema.json#/$defs/id"},
+    "regulations_asset": {"type": "string", "pattern": "^[^/\\\\][^\\\\]*\\.json$"},
+    "watches": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "common.schema.json#/$defs/id"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["name", "url"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "url": {"$ref": "common.schema.json#/$defs/https_url"},
+          "format": {"enum": ["html", "pdf", "ecfr"]},
+          "keywords": {"$ref": "common.schema.json#/$defs/string_list"},
+          "title": {"type": ["integer", "string"]},
+          "section": {"type": ["integer", "string"]}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"format": {"const": "ecfr"}}, "required": ["format"]},
+            "then": {"required": ["title", "section"]}
+          },
+          {
+            "if": {"not": {"required": ["format"]}},
+            "then": {"required": ["keywords"]}
+          },
+          {
+            "if": {"properties": {"format": {"const": "html"}}, "required": ["format"]},
+            "then": {"required": ["keywords"]}
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    "authority_hosts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"}
+    },
+    "required_source_ids": {
+      "type": "array",
+      "items": {"$ref": "common.schema.json#/$defs/id"}
+    }
+  },
+  "additionalProperties": false
+}

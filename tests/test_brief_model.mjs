@@ -8,7 +8,7 @@ import montereyForecast from './fixtures/brief/monterey-forecast.json' with {typ
 const {buildDaily} = await import('../packages/coast/src/daily.ts');
 const {slo} = await import('../packages/coast/src/counties.ts');
 const {PROFILE_TABLE, PROFILES} = await import('../web/profile.ts');
-const {buildBrief, buildCoastBrief, buildRegionalBrief, fleetLine, regionalReport, sourceGaps, TILE_LIMIT_MS, LOCAL_REPORT_LINE} = await import('../web/brief/model.ts');
+const {briefFromDaily, buildBrief, buildCoastBrief, buildRegionalBrief, fleetLine, regionalReport, sourceGaps, TILE_LIMIT_MS, LOCAL_REPORT_LINE} = await import('../web/brief/model.ts');
 
 // Same clock as tests/test_coast_data.mjs: the fixture report is fresh ten minutes after it was assembled.
 const now = new Date(Date.parse(report.generatedAt) + 10 * 60_000);
@@ -30,6 +30,7 @@ test('acceptance 1: the Morro Bay brief carries buildDaily output unchanged for 
       assert.equal(brief.deck, daily.summary);
       assert.equal(brief.status, daily.status);
       assert.equal(brief.confidence, daily.confidence);
+      assert.equal(brief.provisional, daily.provisional);
       assert.equal(brief.label, daily.label);
       assert.deepEqual(brief.windows, daily.windows);
       assert.deepEqual(brief.alerts, daily.alerts);
@@ -227,4 +228,109 @@ test('P5 gaps: the coast brief lists only the failed checks behind this area\'s 
   const brief = coast(fail(['nws-central', 'ndbc-46215', 'coops-tides', 'coops-tide-events', 'nws-alerts']));
   assert.deepEqual(brief.gaps.map(g => g.id), ['nws-central', 'ndbc-46215', 'nws-alerts', 'coops-tides']);
   assert.match(brief.gaps[0].text, /^NWS · Morro Bay & Point Estero: latest check failed; last fetched \d+ (min|h|d) ago\.$/);
+});
+
+
+test('provisional uses the local calendar across UTC midnight and the local day boundary', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  for (const [clock, dates] of [
+    ['2026-10-09T00:30:00Z', ['2026-10-08', '2026-10-09', '2026-10-10']],
+    ['2026-10-09T06:59:59Z', ['2026-10-08', '2026-10-09', '2026-10-10']],
+    ['2026-10-09T07:00:00Z', ['2026-10-09', '2026-10-10', '2026-10-11']],
+  ]) {
+    for (const [index, day] of dates.entries()) {
+      const daily = buildDaily(report, slo, area, 'boat', day, new Date(clock));
+      assert.equal(daily.provisional, index === 2, `${clock}: ${day}`);
+      assert.equal(daily.label, index === 0 ? 'Today' : index === 1 ? 'Tomorrow' : daily.label);
+    }
+  }
+});
+
+test('briefFromDaily follows the explicit provisional flag despite contradictory confidence copy', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  for (const [day, expected, confidence] of [
+    ['2026-10-08', false, 'Low · provisional'],
+    ['2026-10-10', true, 'Low · local checks required'],
+  ]) {
+    const daily = buildDaily(report, slo, area, 'boat', day, new Date('2026-10-08T19:00:00Z'));
+    assert.equal(daily.provisional, expected);
+    const brief = briefFromDaily({...daily, confidence}, 'coast-report', {report, county: slo, area, profile: 'boat', now});
+    assert.equal(brief.provisional, expected);
+    assert.equal(brief.confidence, confidence);
+  }
+});
+
+test('coast and regional adapters preserve provisional and model parity for every profile and outlook day', () => {
+  const clock = new Date('2026-10-08T19:00:00Z');
+  const coastArea = slo.areas.find(a => a.id === 'central');
+  const converted = regionalReport(montereyDaily, montereyForecast, montereyPlace);
+  for (const profile of PROFILES) {
+    for (const [day, expected] of [['2026-10-08', false], ['2026-10-09', false], ['2026-10-10', true]]) {
+      for (const [daily, briefs] of [
+        [buildDaily(report, slo, coastArea, profile, day, clock), [
+          buildCoastBrief({report, county: slo, areaId: 'central', profile, date: day, now: clock}),
+          buildBrief({context: {...morroContext, profile}, coast: {report, county: slo}, regional, profile, date: day, now: clock}),
+        ]],
+        [buildDaily(converted.report, converted.county, converted.area, profile, day, clock), [
+          buildRegionalBrief({...regional, profile, date: day, now: clock}),
+          buildBrief({context: {...montereyContext, profile}, coast: {report, county: slo}, regional, profile, date: day, now: clock}),
+        ]],
+      ]) {
+        assert.equal(daily.provisional, expected);
+        for (const brief of briefs) {
+          assert.equal(brief.provisional, daily.provisional);
+          assert.equal(brief.headline, daily.headline);
+          assert.equal(brief.deck, daily.summary);
+          for (const key of ['label', 'status', 'confidence', 'windows', 'alerts', 'missing', 'tides', 'tideEvents', 'sunrise', 'sunset']) {
+            assert.deepEqual(brief[key], daily[key], `${profile}: ${day}: ${brief.basis}: ${key}`);
+          }
+        }
+      }
+    }
+  }
+});
+
+
+test('Water follows the daily temperature selection, including its source and retained state', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  const base = report.observations.find(o => o.stationId === slo.temperatureStationId);
+  const selected = {...base, waterTempF: 53.25, observedAt: new Date(now.getTime() - 30 * 60_000).toISOString(), url: 'https://example.test/selected-buoy'};
+  const future = {...base, waterTempF: 68, observedAt: new Date(now.getTime() + 2 * 3_600_000).toISOString(), url: 'https://example.test/future-buoy'};
+  const stale = {...base, waterTempF: 49, observedAt: new Date(now.getTime() - 4 * 3_600_000).toISOString()};
+  for (const retained of [false, true]) {
+    const input = {...report, observations: [stale, future, selected, {...selected, stationId: 'other', waterTempF: 70}],
+      sources: [...report.sources, {id: 'selected-buoy', kind: 'observation', label: 'Selected buoy', url: selected.url, outcome: retained ? 'error' : 'ok', fetchedAt: selected.observedAt}]};
+    for (const profile of PROFILES) {
+      const daily = buildDaily(input, slo, area, profile, date, now);
+      assert.equal(daily.tempObservation, selected);
+      const brief = buildCoastBrief({report: input, county: slo, areaId: area.id, profile, date, now});
+      const water = tile(brief, 'water');
+      assert.equal(water.value, Number(daily.tempObservation.waterTempF.toFixed(1)));
+      assert.equal(water.at, selected.observedAt);
+      assert.equal(water.sourceUrl, selected.url);
+      assert.match(water.source, /NDBC/);
+      assert.equal(water.state, retained ? 'stale' : 'fresh');
+      assert.equal(water.lastGood, retained ? true : undefined);
+      assert.equal(brief.profile, profile);
+      assert.equal(brief.basis, 'coast-report');
+    }
+  }
+});
+
+test('Water keeps the latest finite station reading when daily has no selected observation', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  const base = report.observations.find(o => o.stationId === slo.temperatureStationId);
+  const stale = {...base, waterTempF: 51, observedAt: new Date(now.getTime() - 4 * 3_600_000).toISOString()};
+  for (const observations of [[stale], []]) {
+    const input = {...report, observations};
+    assert.equal(buildDaily(input, slo, area, 'boat', date, now).tempObservation, null);
+    const water = tile(buildCoastBrief({report: input, county: slo, areaId: area.id, profile: 'boat', date, now}), 'water');
+    assert.equal(water.value, observations.length ? 51 : null);
+    assert.equal(water.at, observations.length ? stale.observedAt : null);
+    assert.equal(water.state, observations.length ? 'stale' : 'unavailable');
+  }
+  const tomorrow = '2026-10-09';
+  assert.equal(buildDaily(report, slo, area, 'boat', tomorrow, now).tempObservation, null);
+  const water = tile(buildCoastBrief({report, county: slo, areaId: area.id, profile: 'boat', date: tomorrow, now}), 'water');
+  assert.equal(water.value, 57.6);
 });

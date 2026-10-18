@@ -152,11 +152,11 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   // Target and area menus show the link's values.
   assert.match(html, /<label>Target<select><optgroup label="Shore targets"><option value="surfperch">Barred surfperch<\/option><option selected value="halibut">California halibut<\/option><\/optgroup><\/select>/, 'the coast targets\' names (FE-30)');
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
-  // Rail and legend: swell and water temp on, the rest off; the protected areas always draw on the Chart (FE-19).
+  // Rail and legend: swell and water temp on, the rest off; protected areas stay listed while their geometry loads (FE-19).
   const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
   assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
   assert.match(coastView, /class="app-legend-water-temp"/);
-  assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no colour key until a layer draws (FE-20)');
+  assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
@@ -207,7 +207,14 @@ test('the helpers behind the controls round-trip through the store keys', async 
 async function renderMobile(href) {
   const {narrow} = await load();
   narrow.value = true;
-  try { return await renderShell(href); } finally { narrow.value = false; }
+  // FirstRun reads the browser address to distinguish a named profile from a new visit.
+  const previousLocation = globalThis.location;
+  globalThis.location = {href};
+  try { return await renderShell(href); } finally {
+    narrow.value = false;
+    if (previousLocation === undefined) delete globalThis.location;
+    else globalThis.location = previousLocation;
+  }
 }
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
@@ -256,7 +263,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
   assert.equal(count(panel, /class="ui-rail-item"/g), 6);
   assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
-  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no cloud key until a frame shows (FE-20)');
+  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
   assert.deepEqual(toggleLayers('brief', 'peek'), {panel: 'layers', detent: 'half'});
   assert.deepEqual(toggleLayers('brief', 'full'), {panel: 'layers', detent: 'full'});
@@ -387,4 +394,16 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
     'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50), then the trip plan (FE-51)');
   // FE-61: tests/test_no_v1_map_library.mjs checks that no tracked file names the retired 2D map library.
   assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), ['vendor/simplewebauthn-browser-14.0.0/index.umd.min.js'], 'the only vendored script is the passkey library (FE-50)');
+});
+
+
+test('the time dock disables Play at the complete horizon end while preserving backward selection', async () => {
+  const last = new Date(NOW.getTime() + 168 * 3_600_000).toISOString().slice(0, 16) + 'Z';
+  const html = await renderShell(`${ORIGIN}?region=morro-bay&hour=${last}`);
+  const button = html.match(/<button[^>]*aria-label="Play"[^>]*>/)[0];
+  assert.match(button, / disabled(?:=|>| )/);
+  assert.doesNotMatch(html.match(/<input[^>]*aria-label="Hour"[^>]*>/)[0], / disabled/);
+  const before = new Date(NOW.getTime() + 167 * 3_600_000).toISOString().slice(0, 16) + 'Z';
+  const prior = await renderShell(`${ORIGIN}?region=morro-bay&hour=${before}`);
+  assert.doesNotMatch(prior.match(/<button[^>]*aria-label="Play"[^>]*>/)[0], / disabled/);
 });

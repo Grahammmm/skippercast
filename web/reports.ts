@@ -82,9 +82,9 @@ export function watchFrom(catalog: Catalog, coast: Coast, status: Status, now = 
   })};
 }
 
-export interface CharterRow {readonly label: string; readonly ground: string; readonly trips: number; readonly boats: number; readonly latest: string | null}
+export interface CharterRow {readonly label: string; readonly ground: string; readonly trips: number; readonly boats: number; readonly latest: string | null; readonly sources: readonly {date: string; boat: string; url: string}[]}
 export interface Charters {readonly audit: string; readonly rows: readonly CharterRow[]; readonly more: number}
-type Ground = {label: string; reported_ground: string; precision: string; reports: {species: string[]; date: string; boat: string}[]};
+type Ground = {label: string; reported_ground: string; precision: string; reports: {species: string[]; date: string; boat: string; source_url?: unknown}[]};
 
 /** Grounds with trips reported for `species`, newest report first (not a ranking); broad regional names left out, as v1 does. */
 export function chartersFrom(evidence: {audit_date?: unknown; grounds?: unknown} | null, species: string): Charters | null {
@@ -92,7 +92,9 @@ export function chartersFrom(evidence: {audit_date?: unknown; grounds?: unknown}
   const all = (evidence.grounds as Ground[]).filter(g => g.precision !== 'Broad regional name')
     .map(g => ({g, s: reportSummary(g, species)})).filter(({s}) => s.trips > 0)
     .sort((a, b) => String(b.s.latest).localeCompare(String(a.s.latest)) || a.g.label.localeCompare(b.g.label))
-    .map(({g, s}) => ({label: g.label, ground: g.reported_ground, trips: s.trips, boats: s.boats.length, latest: s.latest}));
+    .map(({g, s}) => ({label: g.label, ground: g.reported_ground, trips: s.trips, boats: s.boats.length, latest: s.latest,
+      sources: g.reports.filter(r => r.species.some(id => matchesTargetSpecies(id, species)))
+        .flatMap(r => { const url = https(r.source_url); return url ? [{date: r.date, boat: r.boat, url}] : []; })}));
   return {audit: evidence.audit_date, rows: all.slice(0, CHARTER_LIMIT), more: Math.max(0, all.length - CHARTER_LIMIT)};
 }
 

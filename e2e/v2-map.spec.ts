@@ -145,13 +145,23 @@ const hourParam = (ms: number) => new Date(ms).toISOString().slice(0, 16) + 'Z';
 const horizonStart = () => Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
 const urlHour = (page: Page) => new URL(page.url()).searchParams.get('hour');
 
-test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2}) => {
+test('the terrain receives the dock\'s hour', async ({page, pageErrors, v2, isMobile}) => {
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: '3d'});
   const host = page.locator('.app-terrain');
   await expect(host).toHaveAttribute('data-hour', /^\d{4}-\d{2}-\d{2}T\d{2}:00:00\.000Z$/);
-  // Tomorrow is a full day: its chip, then the slider's first or last hour.
-  await page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1).evaluate(b => (b as HTMLButtonElement).click());
+  // The phone's day chips are in the sheet body, below its initial peek.
+  if (isMobile) {
+    const handle = page.locator('.ui-sheet-handle');
+    await handle.focus();
+    await handle.press('End');
+    await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+  }
+  // Tomorrow is a full day: reveal its chip before an actionable click.
+  const tomorrow = page.getByRole('group', {name: 'Day'}).getByRole('button').nth(1);
+  await tomorrow.scrollIntoViewIfNeeded();
+  await expect(tomorrow).toBeInViewport();
+  await tomorrow.click();
   await expect.poll(() => urlHour(page)).not.toBeNull();
   const slider = page.locator('input[aria-label="Hour"]');
   const atStart = await slider.inputValue() === '0';
@@ -201,6 +211,28 @@ test('prefers-reduced-motion never auto-plays: the button steps one hour per pre
   await v2.a11y('v2-dock-reduced-motion');
   expect(pageErrors).toEqual([]);
 });
+
+for (const reduced of [false, true]) {
+  test(`the final forecast hour disables ${reduced ? 'Next hour' : 'Play'} and the slider can return to earlier hours`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(isMobile, 'the playback control is in the desktop dock');
+    await page.clock.setFixedTime(new Date('2026-10-05T20:00:00Z'));
+    await page.emulateMedia({reducedMotion: reduced ? 'reduce' : 'no-preference'});
+    const end = Date.parse('2026-10-12T20:00:00Z');
+    await v2.open('app', {region: 'morro-bay', hour: hourParam(end - HOUR_MS)});
+    const forward = page.getByRole('button', {name: reduced ? 'Next hour' : 'Play', exact: true});
+    await expect(forward).toBeEnabled();
+    await forward.click();
+    await expect.poll(() => urlHour(page)).toBe(hourParam(end));
+    await expect(forward).toBeDisabled();
+    const slider = page.getByRole('slider', {name: 'Hour', exact: true});
+    await expect(slider).toBeEnabled();
+    await slider.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect.poll(() => urlHour(page)).toBe(hourParam(end - HOUR_MS));
+    await expect(forward).toBeEnabled();
+    expect(pageErrors).toEqual([]);
+  });
+}
 
 test('the Chart draws the basemap and the Morro Bay coastline with their attribution', async ({page, pageErrors, v2}) => {
   const fetched: string[] = [];
@@ -380,14 +412,14 @@ const mapAttr = async (page: Page, name: string) => Number(await page.locator('.
 
 test('protected areas draw with the ds582 credit, are named from zoom 11 and open their card with the official rules page', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},10`});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},10`});
   const chart = page.locator('.app-chart');
   await expect(chart).toHaveAttribute('data-mpa', 'complete');
   await expect.poll(() => mapAttr(page, 'data-mpa-drawn'), {message: 'outlines drawn in view'}).toBeGreaterThan(0);
   await expect(chart).toHaveAttribute('data-mpa-labels', '0');
   await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('CDFW ds582 · CC BY 4.0');
 
-  await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', view: `${BUCHON},11`}));
+  await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},11`}));
   await expect.poll(() => mapAttr(page, 'data-mpa-labels'), {message: 'names placed at zoom 11'}).toBeGreaterThan(0);
   const box = (await chart.locator('canvas.maplibregl-canvas').boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);

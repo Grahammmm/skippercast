@@ -18,7 +18,8 @@ that to ``dist/regions/<region>/shore-habitat.geojson``.
     python scripts/collect_shore_habitat.py --sources DIR         # offline rebuild from saved responses
 
 An offline rebuild verifies each saved response against its recorded sha256 and
-keeps the recorded fetch times, so it reproduces the committed asset byte for byte.
+the selected region's source URL, and keeps the recorded fetch times, so it
+reproduces the committed asset byte for byte.
 Saved responses hold the full inventory (photos, phones), so keep them under var/.
 """
 import argparse
@@ -124,15 +125,17 @@ def download(region):
     return bodies, receipts
 
 
-def load_saved(directory, now):
+def load_saved(directory, region, now):
     """Saved responses and their receipts; the receipt clock is kept, never advanced."""
     directory = Path(directory)
+    urls = source_urls(region)
     receipts = json.loads((directory / 'receipts.json').read_text())
     bodies = {}
     for key, name in SOURCE_FILES.items():
         r, body = receipts.get(key), (directory / name).read_bytes()
         at = parse_time(r.get('fetchedAt') if isinstance(r, dict) else None)
-        if at is None or at > now.timestamp() + 3600 or r.get('responseSha256') != hashlib.sha256(body).hexdigest():
+        if (at is None or at > now.timestamp() + 3600 or r.get('url') != urls[key]
+                or r.get('responseSha256') != hashlib.sha256(body).hexdigest()):
             raise ValueError('Missing or invalid saved source receipt: ' + key)
         bodies[key] = body
     return bodies, receipts
@@ -245,7 +248,7 @@ def main(argv=None):
     p.add_argument('--output', type=Path)
     args = p.parse_args(argv)
     if args.sources:
-        bodies, receipts = load_saved(args.sources, datetime.now(timezone.utc))
+        bodies, receipts = load_saved(args.sources, args.region, datetime.now(timezone.utc))
     else:
         bodies, receipts = download(args.region)
     asset = build_asset(args.region, bodies, receipts)

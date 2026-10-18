@@ -23,6 +23,7 @@ import {
   assessMpas, covers, loadMpas, mpaLayers, mpaMark, mpaState, shownMpaState, snapshotEnvelope, validSnapshot,
 } from '../web/map/mpa.ts';
 import {chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
+import {RANKED_PIN} from '../web/map/ranked.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {createStage} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -268,7 +269,7 @@ test('a clicked area shows its name, designation and citation, the source and ch
 
 /** A fake MapLibre just big enough for the Chart: sources, layers, data, clicks and idle. */
 function library() {
-  const fake = {maps: [], features: [], rendered: {}};
+  const fake = {maps: [], features: [], rendered: {}, countQueries: []};
   class FakeMap {
     constructor(options) { this.options = options; this.handlers = {}; this.data = {}; this.zoom = options.zoom; fake.maps.push(this); this.keyboard = this.touchZoomRotate = {disableRotation() {}}; }
     on(type, fn) { (this.handlers[type] ??= []).push(fn); }
@@ -282,6 +283,7 @@ function library() {
     getSource(id) { return this.options.style.sources[id] ? {setData: data => { this.data[id] = data; }} : undefined; }
     queryRenderedFeatures(a, b) {
       const layers = (b ?? a).layers;
+      if (!b) fake.countQueries.push(...layers);
       return b ? fake.features.filter(f => layers.includes(f.layer.id)) : Array.from({length: fake.rendered[layers[0]] ?? 0}, () => ({}));
     }
     resize() {}
@@ -293,7 +295,7 @@ function library() {
   return fake;
 }
 
-function chart(href, fetchFn) {
+function chart(href, fetchFn, diagnostics) {
   globalThis.location = {href};
   globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
   globalThis.dispatchEvent = () => true;
@@ -304,14 +306,43 @@ function chart(href, fetchFn) {
   const manifest = {ok: false, json: async () => ({})};
   const stage = createStage({host: {shadowRoot: {replaceChildren() {}}}, load: async () => ({styles: [], mountCoast: () => ({})}), center: () => [35.37, -120.86],
     doc: {hidden: false, addEventListener() {}, removeEventListener() {}}, viewDelay: 0,
-    renderers: [() => createChart({host, load: async () => fake.module, palette: () => sentinel, page: () => PAGE, viewDelay: 0,
+    renderers: [() => createChart({host, diagnostics, load: async () => fake.module, palette: () => sentinel, page: () => href, viewDelay: 0,
       fetchFn: async url => (url.includes('/feeds/') ? manifest : fetchFn(url))})]});
   return {fake, host, stage};
 }
 
+test('Chart idle counts require diagnostics; ordinary state and picking work in either mode', async t => {
+  t.mock.method(console, 'warn', () => {});
+  for (const [name, query, diagnostics, enabled] of [
+    ['default off', '', undefined, false],
+    ['explicit on', '', true, true],
+    ['URL opt-in', '&diagnostics=1', undefined, true],
+    ['explicit false overrides URL', '&diagnostics=1', false, false],
+    ['other URL value stays off', '&diagnostics=true', undefined, false],
+  ]) {
+    const {fake, host, stage} = chart(`${PAGE}?region=morro-bay${query}`, serveDist, diagnostics);
+    try {
+      await settle();
+      const [map] = fake.maps;
+      assert.ok(map, name);
+      assert.equal(host.dataset.mpa, 'complete', name);
+      assert.equal(map.data[MPA_SOURCE].features.length, 8, name);
+      fake.rendered[MPA_FILL] = 5; fake.rendered[MPA_LABEL] = 3; fake.rendered[RANKED_PIN] = 2;
+      map.fire('idle'); map.fire('idle');
+      assert.deepEqual(fake.countQueries, enabled ? [MPA_FILL, MPA_LABEL, RANKED_PIN, MPA_FILL, MPA_LABEL, RANKED_PIN] : [], name);
+      assert.deepEqual([host.dataset.mpaDrawn, host.dataset.mpaLabels, host.dataset.rankedDrawn],
+        enabled ? ['5', '3', '2'] : [undefined, undefined, undefined], name);
+      fake.features = [{layer: {id: MPA_FILL}, properties: map.data[MPA_SOURCE].features.find(f => f.properties.NAME === 'Cambria SMCA').properties}];
+      map.fire('click', {point: {x: 1, y: 1}});
+      assert.equal(chartMark.value.name, 'Cambria State Marine Conservation Area', name);
+      assert.equal(fake.countQueries.length, enabled ? 6 : 0, 'picking is separate from count queries');
+    } finally { stage.destroy(); }
+  }
+});
+
 test('the Chart draws the region\'s checked areas, reports their state and labels, and a click opens the area\'s card', async t => {
   t.mock.method(console, 'warn', () => {});
-  const {fake, host, stage} = chart(`${PAGE}?region=morro-bay`, serveDist);
+  const {fake, host, stage} = chart(`${PAGE}?region=morro-bay`, serveDist, true);
   await settle();
   const [map] = fake.maps;
   assert.equal(mpaState.value.status, 'complete');
@@ -411,6 +442,48 @@ test('the legend row says what the drawing covers, links the official rules and 
   state.value = {status: 'complete', note: 'CDFW ds582 snapshot for this region, checked 2026-09-21.', detail: '', checked: '2026-09-21', count: 8};
   assert.match(render(h(Legend, {})), /<ul><li class="app-legend-mpa" data-mpa="complete">/);
   chartFailed.value = false;
+});
+
+test('the MPA swatch only keys drawn geometry and preserves boundary warnings and terrain independence', async () => {
+  const {MpaRow, mpaState: state, chartFailed, unavailable: failedLayers, render, h, state: store} = await components();
+  store.configureStore({v2: true, storage: null});
+  store.syncFromURL(`${PAGE}?region=morro-bay&layers=none`);
+  chartFailed.value = false;
+  failedLayers.value = [];
+  const swatch = /class="app-swatch" data-layer="mpas"/;
+  try {
+    for (const status of ['idle', 'loading', 'unavailable']) {
+      state.value = {status, note: 'Boundary status remains visible.', detail: '', checked: null, count: 8};
+      const html = render(h(MpaRow, {}));
+      assert.doesNotMatch(html, swatch, status);
+      assert.match(html, /Official rules and boundaries/);
+      assert.match(html, status === 'idle' ? /Loading boundaries/ : /Boundary status remains visible/);
+    }
+    for (const status of ['complete', 'partial', 'incomplete']) {
+      state.value = {status, note: 'Keep the boundary qualification warning.', detail: '', checked: '2026-09-21', count: 8};
+      const html = render(h(MpaRow, {}));
+      assert.match(html, swatch, status);
+      assert.match(html, /Keep the boundary qualification warning/);
+      state.value = {...state.value, count: 0};
+      assert.doesNotMatch(render(h(MpaRow, {})), swatch, `${status}, no geometry`);
+    }
+    state.value = {status: 'complete', note: 'Checked boundaries.', detail: '', checked: '2026-09-21', count: 8};
+    failedLayers.value = ['mpas'];
+    assert.doesNotMatch(render(h(MpaRow, {})), swatch, 'Chart boundary source error');
+    failedLayers.value = [];
+    chartFailed.value = true;
+    assert.doesNotMatch(render(h(MpaRow, {})), swatch, 'Chart startup error');
+    for (const presentation of ['2d', '3d']) {
+      store.syncFromURL(`${PAGE}?region=morro-bay&layers=none&presentation=${presentation}`);
+      failedLayers.value = ['mpas'];
+      assert.match(render(h(MpaRow, {})), swatch, `${presentation} ignores unrelated Chart errors`);
+    }
+  } finally {
+    chartFailed.value = false;
+    failedLayers.value = [];
+    state.value = {status: 'idle', note: '', detail: '', checked: null, count: 0};
+    store.syncFromURL(`${PAGE}?region=morro-bay&layers=none`);
+  }
 });
 
 test('FE-82: an area picked on the terrain fills the mark card in 2D and 3D, never on the Chart', async () => {

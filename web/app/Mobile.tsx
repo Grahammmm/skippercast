@@ -17,6 +17,7 @@
 // of the brief. Every piece is the desktop's, composed in this order. The
 // Reports view (FE-52) opens from the sheet's footer and replaces the sheet
 // with its page over the map.
+import type {ComponentChildren} from 'preact';
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -121,7 +122,7 @@ export function LayersPanel({onClose}: {onClose: () => void}) {
   );
 }
 
-export function Mobile({now = new Date()}: {now?: Date} = {}) {
+export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: ComponentChildren} = {}) {
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
@@ -140,8 +141,14 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' ? <main class="app-mobile-page"><Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
-        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
+      {appView.value === 'reports' ? <main class="app-mobile-page">{firstRun}<Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
+        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}
+        onBodyFocus={event => {
+          const target = event.target as Element | null;
+          // Pointer focus must not move a pressed choice before its click is delivered.
+          if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') setDetent('full');
+        }}>
+        {firstRun}
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />

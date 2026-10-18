@@ -34,7 +34,10 @@ async function load() {
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
-    plugins: rendererPlugins,
+    // Reports rendering never opens the trip dialog's deferred Chart renderer.
+    plugins: [...rendererPlugins, {name: 'reports-trip-renderer', setup: b => {
+      b.onResolve({filter: /^\.\/map\/maplibre\.js$/}, args => ({path: args.path, external: true}));
+    }}],
   });
   mod = await import(pathToFileURL(out).href);
   return mod;
@@ -111,7 +114,7 @@ test('acceptance 2: the page shows no publisher prose or photos', async () => {
     discussions: {status: 'current', checkedQueries: 3, totalQueries: 4, generatedAt: iso(3_600_000),
       candidates: [{url: 'https://forum.example/t/1', title: 'Fixture thread title', source: 'Fixture forum', published_at: iso(86_400_000), summary: 'PUBLISHER PROSE', image: 'https://img.example/b.jpg'}]},
     watch: {coast: 'Central', checked: true, items: [{name: 'Yellowtail', located: false, links: []}]},
-    charters: {audit: '2026-09-21', more: 0, rows: [{label: 'Fixture Rock', ground: 'Fixture Rock', trips: 3, boats: 2, latest: '2026-09-17'}]},
+    charters: {audit: '2026-09-21', more: 0, rows: [{label: 'Fixture Rock', ground: 'Fixture Rock', trips: 3, boats: 2, latest: '2026-09-17', sources: []}]},
   };
   const html = render(h(ReportsBody, {data, catches: null}));
   assert.doesNotMatch(html, /PUBLISHER PROSE|img\.example|<img|<picture/);
@@ -171,4 +174,30 @@ test('loadReports: each failed source leaves only its own section unavailable', 
     assert.match(render(h(DiscussionsSection, {discussions: data.discussions})), /Recent discussion search is unavailable/);
     assert.match(render(h(EvidenceSection, {evidence: null})), /No catch score is assumed/);
   } finally { globalThis.fetch = original; }
+});
+
+// Attribution goes through the public mapping, not hand-injected renderer fields.
+test('charter source links retain matched public trips, safe URLs and escaped labels', async () => {
+  const {chartersFrom, ChartersSection, render, h} = await load();
+  const valid = {date: '2026-09-17', boat: '<b>Fixture & boat</b>', species: ['lingcod'], source_url: 'https://reports.example/trip?a=1&b=2'};
+  const invalid = [undefined, 'not a URL', 'http://reports.example/trip', 'javascript:alert(1)', 'https://user:secret@reports.example/trip'];
+  const reports = [valid, ...invalid.map((source_url, i) => ({date: '2026-09-16', boat: `Other ${i}`, species: ['lingcod'], source_url, boat_source_url: 'https://boats.example/not-a-trip'})),
+    {date: '2026-09-20', boat: 'Non-target boat', species: ['halibut'], source_url: 'https://reports.example/non-target'}];
+  const ground = {label: '<img src=x> & Reef', reported_ground: '<script>ground</script>', precision: 'Named landmark vicinity', reports};
+  const data = chartersFrom({audit_date: '2026-09-21', grounds: [ground, {...ground, label: 'Broad', precision: 'Broad regional name'}]}, 'reef');
+  assert.equal(data.rows.length, 1);
+  const row = data.rows[0];
+  assert.deepEqual([row.trips, row.boats, row.latest], [6, 6, '2026-09-17']);
+  assert.deepEqual(row.sources, [{date: valid.date, boat: valid.boat, url: valid.source_url}]);
+  const html = render(h(ChartersSection, {charters: data}));
+  assert.match(html, /6 reported trips · 6 boats · latest report Sep 17, 2026/);
+  assert.match(html, /href="https:\/\/reports.example\/trip\?a=1&amp;b=2" target="_blank" rel="noopener noreferrer">Sep 17, 2026 · &lt;b>Fixture &amp; boat&lt;\/b><\/a>/);
+  assert.match(html, /&lt;img src=x> &amp; Reef/);
+  assert.match(html, /&lt;script>ground&lt;\/script>/);
+  assert.doesNotMatch(html, /<img|<script|Non-target|non-target|boats.example|javascript:|user:secret/);
+  const absent = chartersFrom({audit_date: '2026-09-21', grounds: [{...ground, reports: reports.slice(1, 6)}]}, 'reef');
+  assert.deepEqual(absent.rows[0].sources, []);
+  const absentHTML = render(h(ChartersSection, {charters: absent}));
+  assert.doesNotMatch(absentHTML, /<a|Source reports:/);
+  assert.match(absentHTML, /5 reported trips · 5 boats · latest report Sep 16, 2026/);
 });

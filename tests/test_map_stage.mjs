@@ -234,16 +234,58 @@ test('Chart, 2D and 3D each select themselves from any other; the renderer\'s pe
   assert.equal(fake.mounts, 1);
   let from = '2d';
   for (const next of ['chart', '2d', '3d', 'chart', '3d', '2d', 'chart', '2d']) {
+    const perspectiveCalls = fake.count('setPerspective');
     choosePresentation(next);
     assert.equal(nav.params().get('presentation'), next, `${from} → ${next}: the address keeps the choice`);
     assert.equal(shownPresentation.value, next, `${from} → ${next}: the stage shows it`);
     for (const key of ['region', 'profile', 'target', 'hour', 'habitat', 'view']) assert.ok(nav.params().get(key), `${from} → ${next}: ${key} kept`);
     assert.equal(fake.last('setVisible') ?? true, next !== 'chart', `${from} → ${next}: terrain visibility`);
     if (next !== 'chart') assert.equal(fake.last('setPerspective') ?? '2d', next, `${from} → ${next}: the camera mode`);
+    else assert.equal(fake.count('setPerspective'), perspectiveCalls, `${from} → Chart: hiding terrain sends no camera mode`);
     from = next;
   }
   assert.equal(fake.mounts, 1, 'mounted once');
   s.destroy();
+});
+
+test('FE-60: a renderer 3D control callback from 2D updates presentation without an echo or stale Chart override', async () => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=2d&profile=spear&target=rockfish&hour=2026-10-06T03:00Z&habitat=reef:r1&view=35.5,-121,10`);
+  const fake = terrain();
+  const {stage: s} = stage(fake);
+  try {
+    await tick();
+    const kept = [...nav.params()].filter(([key]) => key !== 'presentation');
+    const assertPresentation = (mode, visible) => {
+      assert.equal(nav.params().get('presentation'), mode, 'the address follows the selected presentation');
+      assert.equal(shownPresentation.value, mode, 'the stage follows the selected presentation');
+      assert.equal(fake.last('setVisible') ?? fake.options.initial.visible, visible, 'terrain visibility follows the presentation');
+      assert.deepEqual([...nav.params()].filter(([key]) => key !== 'presentation'), kept, 'the other shared state is preserved');
+    };
+    assert.equal(fake.options.initial.perspective, '2d');
+    assertPresentation('2d', true);
+    const perspectiveCalls = fake.count('setPerspective');
+    fake.options.onPerspective('3d');
+    assertPresentation('3d', true);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls, 'the renderer control is not echoed back');
+
+    choosePresentation('chart');
+    assertPresentation('chart', false);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls, 'Chart sends no perspective to the renderer');
+    fake.options.onPerspective('2d');
+    assertPresentation('chart', false);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls, 'a hidden renderer callback cannot echo or replace Chart');
+
+    choosePresentation('2d');
+    assertPresentation('2d', true);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls + 1, 'returning from Chart sends the chosen mode once');
+    assert.equal(fake.last('setPerspective'), '2d');
+    fake.options.onPerspective('3d');
+    assertPresentation('3d', true);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls + 1, 'the next renderer control also has no recursive echo');
+    assert.equal(fake.mounts, 1, 'all transitions reuse the renderer');
+  } finally {
+    s.destroy();
+  }
 });
 
 test('a graphics or asset failure returns the stage to Chart with v1\'s message', async () => {

@@ -22,6 +22,7 @@
 import {computed, effect, signal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, layers, region} from '../state.ts';
+import {session} from '../account.ts';
 import {ACTIVITY_LAYERS, fleetBefore, type Collection, type FleetLayerOptions} from './charter-grounds.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Engine, MapView, Overlay} from './engine.ts';
@@ -153,23 +154,37 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
   /** The state-level fleet region for the loaded coastal region (v1's `fleetRegion`); null until both are known. */
   const coastal = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region : null; });
   const access = signal<{region: string; fleet: string | null; choices: Record<string, unknown> | null} | null>(null);
+  const sessionGeneration = signal(0);
   const bbox = signal<string>('');
   const results = signal<{key: string; data: Partial<Record<Activity, LayerResult>>} | null>(null);
+  let disposed = false;
   let v1: V1 | null = null, controller: AbortController | null = null, drawn = false, drawnOn: Engine | null = null, unwatch: (() => void) | null = null;
   const checks = new Map<string, Promise<{fleet: string; choices: Record<string, unknown>} | null>>();
 
   const disposers = [
-    // v1's access check, once per region, and only once the entry is on.
+    // Account refreshes publish a new session object, including logout/offline.
+    // Drop both positive and negative answers before checking the new session.
     effect(() => {
+      session.value;
+      checks.clear();
+      controller?.abort(); controller = null;
+      results.value = null;
+      access.value = null;
+      // Pending access is already null: explicitly schedule a fresh session check.
+      sessionGeneration.value = sessionGeneration.peek() + 1;
+    }),
+    // v1's access check, once per region and session, only while asked.
+    effect(() => {
+      sessionGeneration.value;
       const r = coastal.value;
-      if (!asked.value || !r || access.peek()?.region === r.id) return;
+      if (!asked.value || !r || access.value?.region === r.id) return;
       let check = checks.get(r.id);
       if (!check) checks.set(r.id, check = loadV1().then(async m => {
         v1 = m;
         const fleet = m.fleetRegion(r), choices = fleet ? await m.fleetAccess(fleet, fetchFn) as Record<string, unknown> | null : null;
         return fleet && choices ? {fleet, choices} : null;
       }, () => null));
-      void check.then(a => { if (coastal.peek()?.id === r.id) access.value = {region: r.id, fleet: a?.fleet ?? null, choices: a?.choices ?? null}; });
+      void check.then(a => { if (!disposed && checks.get(r.id) === check && coastal.peek()?.id === r.id) access.value = {region: r.id, fleet: a?.fleet ?? null, choices: a?.choices ?? null}; });
     }),
     effect(() => {
       const a = access.value;
@@ -220,8 +235,13 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
   const owner: Record<string, Activity> = {[HEAT]: 'heat', [TRACKS]: 'tracks', [TRACKS_DASHED]: 'tracks', [EVENTS]: 'events'};
   return {
     destroy() {
+      disposed = true;
+      checks.clear();
       for (const dispose of disposers) dispose();
       unwatch?.(); controller?.abort();
+      results.value = null;
+      if (drawn) drawnOn?.setOverlay('fleet-activity', null);
+      drawn = false;
       activityAccess.value = false; activityChoices.value = null; activityStatus.value = '';
     },
     pick: {layers: [EVENTS, TRACKS, TRACKS_DASHED, HEAT] as const, ordered: true, mark: (layer: string, properties: Record<string, unknown> | null): ChartMark | null => {

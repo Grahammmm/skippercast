@@ -199,7 +199,7 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
   const lib = library(), host = {dataset: {}};
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => ({styles: [], mountCoast: () => ({})}),
     center: () => [35.37, -120.86], viewDelay: 0, doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
-    renderers: [() => createChart({host, load: async () => lib.module, fetchFn: files, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
+    renderers: [() => createChart({host, diagnostics: true, load: async () => lib.module, fetchFn: files, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
   await settle();
   markScreen.value = marksReady();
   const [map] = lib.maps;

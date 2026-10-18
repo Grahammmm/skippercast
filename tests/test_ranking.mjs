@@ -13,7 +13,7 @@ import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
-import {CHECKING, assessScreen, markFit} from '../web/map/habitat.ts';
+import {CHECKING, SCREEN_MAX_AGE_MS, assessScreen, markFit} from '../web/map/habitat.ts';
 import {TOP, atlasPicks, habitatPicks, harborOrigin, loadTerrainHabitat, ranking, terrainHabitat} from '../web/ranking.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -89,7 +89,7 @@ test('terrain picks: packages/coast order, this region, inside the limit, one so
   // Elsewhere, or with the release unavailable or expired, the atlas ranks alone.
   assert.equal(ranking(inputs({region: 'southern-california', terrain: READY})).source, 'atlas');
   assert.equal(ranking(inputs({terrain: {...READY, expiresAt: NOW - 1}})).source, 'atlas');
-  assert.deepEqual(habitatPicks(rankedHabitat(FEATURES, 'fit_lingcod', NOW), 'morro-bay', 'lingcod', 300, null).map(p => p.distance), ['—', '—', '—', '—']);
+  assert.deepEqual(habitatPicks(rankedHabitat(FEATURES, 'fit_lingcod', NOW), CHECKED, 'morro-bay', 'lingcod', 300, null).map(p => p.distance), ['—', '—', '—', '—']);
 });
 
 test('shore lists no ranked place here; the runs rank on the Chart', () => {
@@ -116,6 +116,122 @@ test('wording per § 12: labels, fits, reasons and the basis promise nothing abo
     for (const text of [r.label, r.basis, r.empty, ...r.picks.flatMap(p => [p.name, p.fit, p.reason])]) assert.doesNotMatch(text, CLAIMS, text);
     if (r.source) assert.match(r.basis, /fish presence is unverified/);
   }
+});
+
+// Synthetic current boundaries, independent of the reviewed release's own screen.
+// The reef polygon is deliberately unrelated to its waypoint: admission checks the latter.
+const area = (name, west, east, Type) => ({type: 'Feature', properties: {NAME: name, Type}, geometry: {
+  type: 'Polygon', coordinates: [[[west, 35], [east, 35], [east, 35.2], [west, 35.2], [west, 35]]],
+}});
+const AREAS = [area('Synthetic protected area', -121, -120.9)];
+const CLOSURES = [area('Synthetic groundfish closure', -120.8, -120.7, 'GEA')];
+const SCREEN_INPUT = {areas: AREAS, checkedAt: new Date(NOW).toISOString(), live: false,
+  closures: {areas: CLOSURES, checkedAt: new Date(NOW).toISOString()}};
+const SCREENED = assessScreen(SCREEN_INPUT, NOW);
+const currentTerrain = (features, patch = {}) => ranking(inputs({terrain: {...READY, features}, screen: SCREENED, ...patch}));
+const pickIds = r => r.picks.map(p => p.id);
+const atlasMark = (id, latitude, longitude) => ({id, label: id, latitude, longitude, neighborhood_depth_ft: [40, 80],
+  metrics: {relief_210m_m: 8, rugose_or_bedrock_fraction_210m: 0.8, rough_habitat_within_250m_ha: 6, plane_residual_rms_250m_m: 1.5}});
+const SCREEN_DATA = {...DATA, atlas: {targets: [atlasMark('atlas-allowed', 35.3, -120.95),
+  atlasMark('atlas-closed', 35.1, -120.95), atlasMark('atlas-edge', 35, -120.95)]}};
+
+test('terrain current screen: allows the waypoint outside mapped areas and describes the current check', () => {
+  const r = currentTerrain([reef('allowed')]);
+  assert.equal(SCREENED.status, 'ready');
+  assert.equal(r.source, 'terrain');
+  assert.deepEqual(pickIds(r), ['allowed']);
+  assert.equal(r.picks[0].fit, 'Fits lingcod habitat 2 of 3');
+  assert.match(r.basis, /passes the current protected-area and closure check/);
+  assert.match(r.basis, /fish presence is unverified/);
+  assert.doesNotMatch(r.basis, CLAIMS);
+});
+
+test('terrain current screen: withholds protected-area interiors and boundary contact using waypoint fields', () => {
+  for (const latitude of [35.1, 35]) {
+    const r = currentTerrain([reef('withheld', {waypoint_latitude: latitude, waypoint_longitude: -120.95})]);
+    assert.equal(r.source, 'terrain');
+    assert.deepEqual(r.picks, [], `waypoint latitude ${latitude} is withheld despite its reviewed-release pass`);
+    assert.equal(r.empty, 'No reviewed terrain habitat passes the current protected-area and closure check within 300 ft for this target.');
+  }
+});
+
+test('terrain current screen: withholds closure interiors and boundary contact', () => {
+  for (const latitude of [35.1, 35]) {
+    assert.deepEqual(currentTerrain([reef('closure', {waypoint_latitude: latitude, waypoint_longitude: -120.75})]).picks, []);
+  }
+});
+
+test('terrain current screen: missing, checking, unavailable and stale checks withhold every terrain pick', () => {
+  const old = new Date(NOW - SCREEN_MAX_AGE_MS - 1).toISOString();
+  const unavailable = assessScreen({...SCREEN_INPUT, areas: null}, NOW);
+  const stale = assessScreen({...SCREEN_INPUT, checkedAt: old}, NOW);
+  const staleClosure = assessScreen({...SCREEN_INPUT, closures: {...SCREEN_INPUT.closures, checkedAt: old}}, NOW);
+  const missingClosure = assessScreen({...SCREEN_INPUT, closures: null}, NOW);
+  assert.equal(unavailable.status, 'unavailable');
+  assert.equal(stale.status, 'stale');
+  assert.equal(staleClosure.status, 'stale');
+  assert.equal(missingClosure.status, 'stale');
+  for (const screen of [undefined, null, CHECKING, unavailable, stale, staleClosure, missingClosure]) {
+    const r = currentTerrain([reef('otherwise-allowed')], {screen});
+    assert.equal(r.source, 'terrain', 'no fallback to atlas while terrain is withheld');
+    assert.deepEqual(r.picks, []);
+    assert.equal(r.empty, (screen ?? CHECKING).note);
+  }
+});
+
+test('terrain current screen: rejects high-ranked waypoints before top-N and keeps admitted order', () => {
+  const admitted = [reef('a', {fit_lingcod: 3, terrain_score: 90}), reef('b', {terrain_score: 90}),
+    reef('c', {terrain_score: 80}), reef('d', {terrain_score: 70}), reef('e', {terrain_score: 60})];
+  const closed = reef('closed-first', {fit_lingcod: 3, terrain_score: 100, waypoint_latitude: 35.1});
+  const features = [...admitted].reverse().concat(closed);
+  assert.equal(rankedHabitat(features, 'fit_lingcod', NOW)[0].id, 'closed-first');
+  const r = currentTerrain(features);
+  assert.equal(r.picks.length, TOP);
+  assert.deepEqual(pickIds(r), ['a', 'b', 'c', 'd'], 'the next allowed waypoint fills the rejected high-rank slot');
+});
+
+test('terrain current screen: retains region, species, depth, reach and waypoint validity filters', () => {
+  const origin = {name: 'Synthetic harbor', latitude: 35.3, longitude: -120.95};
+  const data = {...DATA, region: {...DATA.region, harbor: origin}};
+  const invalid = {terrain_score: 100, fit_lingcod: 3};
+  const features = [reef('allowed', {waypoint_latitude: 35.3001}),
+    reef('other-region', {...invalid, region: 'cambria-san-simeon'}), reef('wrong-species', {...invalid, fit_lingcod: 1}),
+    reef('deep', {...invalid, depth_max_ft: 301}), reef('unknown-depth', {...invalid, depth_max_ft: null}),
+    reef('far', {...invalid, waypoint_latitude: 35.5}), reef('no-waypoint', {...invalid, waypoint_longitude: null})];
+  const r = currentTerrain(features, {data, reachNm: 1});
+  assert.deepEqual(pickIds(r), ['allowed']);
+  assert.equal(r.reach, 1);
+  assert.equal(r.harbor, 'Synthetic harbor');
+  assert.ok(r.picks[0].nm > 0 && r.picks[0].nm <= 1);
+  assert.match(r.empty, /within 300 ft and 1 nm of Synthetic harbor/);
+  assert.deepEqual(currentTerrain([reef('too-deep-for-spear')], {profile: 'spear'}).picks, []);
+});
+
+test('terrain current screen: retains reviewed-release feature gates independently of the current check', () => {
+  const invalid = {fit_lingcod: 3, terrain_score: 100};
+  const r = currentTerrain([reef('allowed'), reef('not-exportable', {...invalid, exportable: false}),
+    reef('release-rejected', {...invalid, screen_status: 'fail'}), reef('feature-expired', {...invalid, screen_expires_at: EARLIER})]);
+  assert.deepEqual(pickIds(r), ['allowed']);
+});
+
+test('terrain current screen: expired whole release still falls back to the independently screened atlas', () => {
+  for (const expiresAt of [NOW, NOW - 1]) {
+    const r = currentTerrain([reef('expired-release')], {data: SCREEN_DATA, terrain: {...READY, expiresAt}});
+    assert.equal(r.source, 'atlas');
+    assert.deepEqual(pickIds(r), ['atlas-allowed']);
+    assert.deepEqual(r.picks, atlasPicks(SCREEN_DATA, SCREENED, 'lingcod', 300));
+  }
+});
+
+test('terrain current screen: atlas screening and its withholding copy remain unchanged', () => {
+  const r = ranking(inputs({data: SCREEN_DATA, screen: SCREENED}));
+  assert.equal(r.source, 'atlas');
+  assert.deepEqual(pickIds(r), ['atlas-allowed']);
+  assert.equal(r.empty, 'No surveyed reef marks within 300 ft for this target.');
+  assert.match(r.basis, /^Survey reef atlas marks that pass the current protected-area check/);
+  const pending = ranking(inputs({data: SCREEN_DATA, screen: CHECKING}));
+  assert.deepEqual(pending.picks, []);
+  assert.equal(pending.empty, CHECKING.note);
 });
 
 let view;

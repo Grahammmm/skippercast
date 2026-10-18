@@ -3,6 +3,50 @@
 ## Unreleased
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
+- Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.
+
+- Remove the retired offline-pack card adapter while retaining saved-pack storage and the current trip interface.
+- Remove the unused legacy boat-button bootstrap while preserving the account menu's exact-boat sheet.
+- Verify saved shore-source receipts against their selected region and recognize only the reviewed nowCOAST satellite endpoint in commercial-source checks.
+
+- Link charter-trip summaries to their existing published fishing-report sources.
+
+- Recheck Fleet access when the signed-in session changes, including while an earlier check is pending.
+- Keep the nearshore rings explanation visible when the swell field is unavailable.
+
+- Withhold terrain waypoints when the current protected-area or closure screen is unavailable or rejects them; clarify that Chart reef density limits do not apply to reviewed terrain.
+
+- Use the daily-selected water observation in the brief, share overlapping Fleet directory probes without caching settled results, and format charter research dates consistently in the legend.
+
+- Collect Chart rendered-feature counts only when diagnostics are explicitly enabled.
+
+- Reuse settled session state across account-menu remounts while explicit refreshes still fetch the session.
+- Preserve exact `#account` intent through port and home URL resolution.
+
+- Show “age unavailable (future timestamp)” for cloud acquisitions ahead of the clock, retaining their acquisition time and existing past-age formatting.
+
+- Carry the existing local-calendar provisional flag through the brief model, independently of confidence wording.
+
+- Keep a selected swell card open when only the other swell source refreshes; still clear it when its own data changes or disappears.
+
+- Validate the nearshore sample label’s site prefix before removing it; add regression coverage for sampling time/cadence and legacy home-profile and port URL behavior.
+
+- Restore each fishing profile’s chosen Currents source when switching profiles, including observed HFR and explicit Off choices.
+
+- Stop forwarding the retired `ui` switch from home-page navigation links; legacy links continue to open the same pages.
+
+- Add the private California schedule-evidence collector and opt-in timer installer, preserving source revisions and distinguishing incomplete AIS reception coverage from readable empty windows. Source integration does not activate collection or change the existing AIS listener (#599, #624).
+
+- Add the current coastal source-discovery, mapping and 3D-rendering skills, with bounded source preparation and separate private terrain, habitat and publication acceptance. Keep the older coastal rendering name as a compatibility entry point.
+- Show the protected-area legend swatch only when boundary geometry is drawn, retaining warnings and official rules links while it is unavailable.
+
+- Reject impossible aerial acquisition dates and future coverage-check dates when validating regional configuration.
+
+- Keep first-run profile choices inside the mobile sheet so small-screen visitors can reach every choice and the sheet handle.
+- Disable Play and Next hour at the forecast horizon's end while keeping earlier hours selectable.
+
+- Keep the mobile sheet at its previous height when a drag is cancelled, and preserve the next tap.
+
 - Search engines and link previews can read the site again. The home page has a canonical address, the share card (title, description and boat image) that went missing with the classic map, and WebSite structured data so Google can show the SkipperCast name; its title and description now say it is for fishing on the Central Coast. `robots.txt` and a new `sitemap.xml` list the public pages, and `/sources` and `/privacy` name their canonical addresses.
 - A first visit to the home page is now one guided path: pick where you launch, then how you fish (Boat, Shore, Spear or Kayak, each with what it changes), then the map opens. While you pick the profile, the home page fetches that region's map files and forecast in the background, so the map opens on cached or revalidated copies; only the chosen region is fetched, nothing when your browser asks to save data, and "Change port" goes back a step. The port is saved as home once you choose the profile. The profile choices no longer sit beside the port search, and the map no longer asks "How do you fish?" after the home page did; links straight into the map, and returning visitors with a saved home, skip the guided path as before (#622).
 - Move fleet AIS half-hour scheduling to off-hour slots and record trigger, run kind and source revision for cadence verification.
@@ -35,6 +79,8 @@
 - The new home page and map now send the site's anonymous usage statistics: uncaught error reports (scrubbed message, script file name, line and column, build, hashed request id) and three visit steps, each with the region, build and `s` visit source: `port_selected` (a port chosen in the map's port chooser), `spot_saved` (a spot added to the trip) and `offline_saved` (a region saved for offline). The new home page sends error reports only. No cookies or identifiers, and nothing under Do Not Track or Global Privacy Control. The privacy notice now describes exactly what is collected, where it is stored (Cloudflare Workers Analytics Engine, kept three months) and that the daily operations report copies step counts and the top scrubbed errors into public GitHub Actions run summaries. The v1 About text no longer says there is no analytics.
 
 ### Internal
+
+- Add regression coverage for perspective-mode isolation and camera behavior.
 
 - The AIS processor retains an unfinished full aggregate rebuild that was already authorized to prune. After a restart it replays the complete season with one timestamp before pruning and acknowledges that rebuild only after every chunk succeeds, so interruption cannot silently leave stale remote cells. Incremental uploads and fresh partial-state uploads keep their existing deletion tracking and prune protection (#624, A04).
 - Historical AIS reruns and MarineCadastre backfills now read eligible registry MMSIs plus already approved strong watch mappings, preserving registry precedence, exclusions and ambiguous-MMSI holds. Unresolved explicit targets fail before ingestion, and a changed selected mapping stops derivation while preserving acquired raw rows. Current bindings do not prove past MMSI ownership; NOAA-derived rows retain their planning-only rights (#624, A01).
