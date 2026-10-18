@@ -7,6 +7,7 @@
 // here: either it is held open, so the terrain stays mounted and loading, or it
 // fails, so the stage must return to Chart with v1's message.
 import {createHash} from 'node:crypto';
+import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Page, Route} from '@playwright/test';
@@ -1083,11 +1084,17 @@ test('Swell draws nothing for a stale run or points that form no grid, and says 
 // FE-80: the renderer mounts with host chrome; its options live in the Seafloor entry and its view buttons in the stage.
 test('in 3D the terrain options sit in the Seafloor entry and the view buttons in the stage; keyboard reaches each and axe is clean', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
+  // The held dataset fetch aborts after the renderer's real 20 s timeout; the keyboard and axe sequence outlasts it on
+  // CI (#422 trace: Chart fallback at 20.9 s). A synthetic terrain loads once the held mount is checked.
+  const terrain = await syntheticTerrain(page);
   await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
   const host = page.locator('.app-terrain');
   await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene'))).toBe(true);
   expect(await host.evaluate(el => ['.layers', '.view-controls', '#reading', '#target-detail'].filter(q => el.shadowRoot!.querySelector(q))),
     'no native panel in the root').toEqual([]);
+  expect(await host.evaluate(el => !!el.shadowRoot!.getElementById('loading')), 'still loading while the terrain is held').toBe(true);
+  terrain.release();
+  await expect.poll(() => host.evaluate(el => !el.shadowRoot!.getElementById('loading')), {message: 'the synthetic terrain loads'}).toBe(true);
   await showLayers(page);
   const options = page.locator('.app-rail-terrain');
   const summary = options.locator('summary');
