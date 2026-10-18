@@ -21,7 +21,7 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
-import {activeAlerts, alertCheckCurrent, beachNotices, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {profile, region, species} from '../state.ts';
@@ -143,6 +143,9 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   // Refresh model coverage and source visibility every RECHECK_MS.
   const tick = signal(0);
   const timer = setInterval(() => { tick.value++; }, RECHECK_MS);
+  // An alert or source clock that turns by the next tick (at it included) re-checks a second after it, past
+  // every strict boundary; a threshold landing exactly on a tick or on a report's arrival is not dropped.
+  let soon: ReturnType<typeof setTimeout> | undefined;
   const on = computed(() => profile.value === 'shore');
   const target = computed(() => species.value ?? PROFILE_TABLE[profile.value].defaultTarget);
   const shown = computed(() => {
@@ -152,6 +155,13 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   });
   let drawn = false, drawnOn: Engine | null = null;
   const disposers = [
+    effect(() => {
+      const r = report.value;
+      void tick.value;
+      clearTimeout(soon);
+      const t = now(), next = r ? nextShoreChange(r, t) : null;
+      if (next !== null && next - t <= RECHECK_MS) soon = setTimeout(() => { tick.value++; }, next - t + 1000);
+    }),
     effect(() => {
       const id = region.value;
       if (!on.value || !id || pkg.peek()?.region === id) return;
@@ -177,7 +187,7 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
     return r ? runMark(r, target.peek()) : null;
   };
   return {
-    destroy() { clearInterval(timer); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0}; },
+    destroy() { clearInterval(timer); clearTimeout(soon); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0}; },
     pick: {layers: [ACCESS_HIT, RUNS_HIT] as const, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => pick(properties?.id)},
   };
 }
