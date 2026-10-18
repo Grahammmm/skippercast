@@ -6,6 +6,11 @@
     "max_bytes": 729723,
     "target_bytes": 409600
   },
+  "precache": {
+    "comment": "Service-worker precache budgets (#422 FE-51 follow-up), checked by scripts/check_client.mjs after the Vite build: raw bytes of every file precache.json lists. `install` is what every visitor's worker stores (assets and static files; the shell pages are not counted). `pack_shell` is the v2 app shell an offline pack stores when someone saves a region (precache.json `v2`: MapLibre, its worker, the app and the glyphs). Each max is the 2026-10-18 measurement (build a257bf69dd: 400,678 and 2,532,577 bytes) + 10%; lower them as slices cut more.",
+    "install_raw_max": 440746,
+    "pack_shell_raw_max": 2785835
+  },
   "bundles": {
     "comment": "v2 page budgets (FE-09; docs/plans/front-end/design.md § 13), checked by scripts/check_client.mjs after the Vite build: gzipped bytes of each page's initial JavaScript (its entry and every static import; dynamic imports load after first paint) and of its stylesheets. The JavaScript numbers are the design's (landing 180 KB, app 350 KB); the CSS numbers are this task's choice.",
     "app.html": {"js_gzip_max": 358400, "css_gzip_max": 49152},
