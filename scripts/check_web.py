@@ -295,10 +295,11 @@ BUNDLED_LIBRARIES = {"maplibre-gl": "MapLibre GL JS", "pmtiles": "PMTiles"}
 def check_bundled_licence_versions():
     """The licences page and NOTICE name the bundled library versions package.json pins.
 
-    A dependency bump left both on MapLibre 6.11.2 after 6.12.0 shipped (#422 FE-11 follow-up).
+    A dependency bump left both on MapLibre 6.11.2 after 6.12.0 shipped (#422, SC-FE422-body-14-02).
     """
     pins = json.loads((ROOT / "package.json").read_text())["dependencies"]
     for package, name in BUNDLED_LIBRARIES.items():
+        assert re.fullmatch(r"\d+\.\d+\.\d+", pins.get(package, "")), f"package.json must pin {package} to an exact version for the licences page, found {pins.get(package)!r}"
         for path in (WEB / "licenses.html", ROOT / "NOTICE.md"):
             found = re.findall(rf"{re.escape(name)} (\d+\.\d+\.\d+)", path.read_text())
             assert found and set(found) == {pins[package]}, f"{path.relative_to(ROOT)} must name {name} {pins[package]}, found {found}"

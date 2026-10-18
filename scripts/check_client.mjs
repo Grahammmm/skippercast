@@ -136,7 +136,10 @@ for (const [page, budget] of Object.entries(budgets)) {
 // 6b. Precache budgets: raw bytes of what every visitor's worker installs and of
 // what an offline pack stores for the v2 app shell (FE-51). Missing files are
 // reported by section 5; here they count as zero.
-const precacheBudget = JSON.parse(await readFile(budgetFile, 'utf8')).precache || {};
+// The repository's budget file must carry both keys; a misspelled or missing key fails rather than switching a check off.
+const precacheBudget = JSON.parse(await readFile(budgetFile, 'utf8')).precache;
+const defaultBudget = !process.argv[4];
+if (defaultBudget && !precacheBudget) problems.push(`${budgetFile} has no "precache" budgets`);
 if (precache) {
   const raw = async paths => { let n = 0; for (const p of paths) n += await readFile(join(dir, p.slice(1))).then(b => b.length, () => 0); return n; };
   const sizes = {
@@ -145,8 +148,9 @@ if (precache) {
   };
   measured.push(`precache install ${sizes.install} B, pack shell ${sizes.pack_shell} B raw`);
   for (const [name, size] of Object.entries(sizes)) {
-    const max = precacheBudget[`${name}_raw_max`];
-    if (Number.isFinite(max) && size > max) problems.push(`precache ${name.replace('_', ' ')} is ${size} B raw, over its budget of ${max} B (${budgetFile})`);
+    const max = precacheBudget?.[`${name}_raw_max`];
+    if (precacheBudget && !Number.isFinite(max)) problems.push(`${budgetFile}: precache.${name}_raw_max is missing or not a number`);
+    else if (Number.isFinite(max) && size > max) problems.push(`precache ${name.replace('_', ' ')} is ${size} B raw, over its budget of ${max} B (${budgetFile})`);
   }
 }
 

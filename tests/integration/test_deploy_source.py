@@ -3,6 +3,7 @@ import copy
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -122,6 +123,8 @@ class DeploySourceTests(unittest.TestCase):
         # The workflow supplies only its own token under contents: read; never a repository secret.
         text = (ROOT / '.github/workflows/deploy-cloudflare.yml').read_text()
         self.assertIn('permissions:\n  contents: read\n', text)
+        keys = [line for line in text.splitlines() if re.match(r'\s*permissions:', line)]
+        self.assertEqual(keys, ['permissions:'], 'no job widens the top-level contents: read')
         tokens = [line.strip() for line in text.splitlines() if 'SOURCE_READ_TOKEN:' in line]
         self.assertEqual(tokens, ['SOURCE_READ_TOKEN: ${{ github.token }}'] * 3)
 
