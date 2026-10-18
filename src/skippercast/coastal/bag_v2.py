@@ -16,6 +16,15 @@ def inspect_metadata(path, survey_id):
         if root['metadata'].size > 1_000_000:
             raise ValueError('Oversized BAG metadata')
         xml = root['metadata'][:].tobytes().decode('utf-8').rstrip('\0')
+    return parse_metadata(xml, survey_id)
+
+
+def parse_metadata(xml, survey_id):
+    """Parse already-read XML; this pure function does not authenticate a file.
+
+    Native callers must first guard the container and check regular-grid and
+    metadata-size bounds. ``inspect_metadata`` is the guarded file entry point.
+    """
     result = bag_metadata(xml, survey_id, strict=True)
     # Audited format semantics, not an invented external-document checksum.
     # BAG FSD 2.0 / Release 2.0.1 (2022-12-01), axiomatic definitions:

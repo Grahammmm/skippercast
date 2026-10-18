@@ -77,18 +77,23 @@ def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha
             raise ValueError('native north-up metric projected grid required')
         metadata = None
         if ds.driver == 'BAG':
-            from skippercast.coastal.bag_v2 import inspect_metadata
+            from skippercast.coastal.bag_v2 import parse_metadata
             import h5py
             with h5py.File(source) as bag:
                 for name in ('elevation','uncertainty','metadata'):
                     if isinstance(bag['BAG_root'].get(name,getlink=True),h5py.ExternalLink):
                         raise ValueError('BAG external links refused')
-                xml = bag['BAG_root']['metadata'][:].tobytes().decode().rstrip('\0')
+                bag_root = bag['BAG_root']
+                if 'varres_refinements' in bag_root and bag_root['varres_refinements'].size:
+                    raise ValueError('Variable-resolution BAG requires a native-refinement adapter; overview rejected')
+                if bag_root['metadata'].size > 1_000_000:
+                    raise ValueError('Oversized BAG metadata')
+                xml = bag_root['metadata'][:].tobytes().decode().rstrip('\0')
             if hashlib.sha256(xml.encode()).hexdigest() != metadata_sha256:
                 raise ValueError('BAG embedded metadata hash mismatch')
             from urllib.parse import urlparse
             survey_id = Path(urlparse(source_row['url']).path).name.split('_')[0]
-            metadata = inspect_metadata(source, survey_id)
+            metadata = parse_metadata(xml, survey_id)
             from skippercast.seafloor.adapters.regular_bag_window import read_original_regular_bag_window
             native = read_original_regular_bag_window(source, source_row, win,
                                                       expected_metadata_sha256=metadata_sha256)
@@ -157,15 +162,21 @@ def produce(root, source_ref, *, segment_id, window, vertical, rights, output_di
     return payload
 
 
-def verify(root, manifest, *, now, minimum_valid_until=None):
+def _verify_with_observation(root, manifest, *, now, minimum_valid_until=None):
+    """Return checked facts and the same freshly authenticated native arrays.
+
+    Keep this internal: callers must honor ``ready`` before consuming arrays.
+    The observation is never persisted or reused across verification calls.
+    """
     document = load(root, manifest, contract=SCHEMA)
     if document.get('schema') != SCHEMA:
         raise ValueError('mapping input contract mismatch')
     if document.get('publication_prohibited') is not True:
         raise ValueError('mapping input publication prohibition required')
-    facts, holds, _, valid, transform, crs, _ = observe(root, document['source'], window=document['window'],
+    observation = observe(root, document['source'], window=document['window'],
                         vertical=document['declared_vertical'], source_row=document.get('source_row'),
                         metadata_sha256=document.get('metadata_sha256'))
+    facts, holds, _, valid, transform, crs, _ = observation
     holds.extend(bind_segment(root,document.get('segment'),document['segment_id'],facts))
     facts.update(rights=document.get('rights'),synthetic=document.get('synthetic'))
     if digest(facts) != document.get('facts_digest') or digest(facts) != digest(document['native_facts']):
@@ -186,8 +197,15 @@ def verify(root, manifest, *, now, minimum_valid_until=None):
         raise ValueError('machine holds changed')
     holds.extend(review_holds(root, document.get('review'), digest(facts), now=now,
                               minimum_valid_until=minimum_valid_until))
-    return dict(ready=not holds, holds=sorted(set(holds)), facts_digest=digest(facts), facts=facts,
-                synthetic=document.get('synthetic') is True)
+    checked = dict(ready=not holds, holds=sorted(set(holds)), facts_digest=digest(facts), facts=facts,
+                   synthetic=document.get('synthetic') is True)
+    return checked, observation
+
+
+def verify(root, manifest, *, now, minimum_valid_until=None):
+    checked, _ = _verify_with_observation(root, manifest, now=now,
+                                         minimum_valid_until=minimum_valid_until)
+    return checked
 
 
 validate_handoff = verify
