@@ -1,9 +1,47 @@
-diff --git a/tests/test_sc_b02_region_identity.mjs b/tests/test_sc_b02_region_identity.mjs
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 0b47d811398cd81a84889bd876bab1589a896eb0..cae3244ed0c1c0e74f1deace7cf80e69887c27fa 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,6 +2,10 @@
+ 
+ ## Unreleased
+ 
++- Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
++
++- Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.
++
+ - Link charter-trip summaries to their existing published fishing-report sources.
+ 
+ - Recheck Fleet access when the signed-in session changes, including while an earlier check is pending.
+diff --git a/e2e/README-sc-b02.md b/e2e/README-sc-b02.md
 new file mode 100644
-index 00000000..7772eacc
+index 0000000000000000000000000000000000000000..344956befe19332b378011616085eb911a25a090
 --- /dev/null
-+++ b/tests/test_sc_b02_region_identity.mjs
-@@ -0,0 +1,296 @@
++++ b/e2e/README-sc-b02.md
+@@ -0,0 +1,17 @@
++# B02 focused browser acceptance
++
++[sc-b02-region-identity.mjs](sc-b02-region-identity.mjs) is the isolated B02 browser acceptance harness. It uses Node's test runner to drive Playwright against bundled real app source with synthetic responses and GPU-free renderer handles.
++
++Run from the repository root on the separately qualified hosted Chromium route:
++
++```sh
++node --test --test-concurrency=1 --test-force-exit e2e/sc-b02-region-identity.mjs
++```
++
++This browser harness belongs beside the browser tests. It is outside the Node-only `tests/test_*.mjs` matrix and is not a Playwright `.spec.ts` file collected by `pnpm e2e`. Moving it does not turn its assertions into optional checks: the bounded B02 hosted acceptance is a required separate release gate. There is no skip-on-missing-browser fallback.
++
++Keep all 18 serial scenarios (nine each at 390x844 and 1280x800), the seven desktop disclosures, the ordinary Reset click, the retry-revisit, explicit plan-loader and real aerial-callback assertions. Stop at the first failing scenario. Success requires no skipped scenarios and exactly 18 new root identity JSON snapshots under `../sc-b02-evidence/`; disclosure/control JSON and screenshots stay in their nested directories.
++
++The retained `sc-b02-focused` job runs only for its explicit dispatch input on `codex/sc-b02-focused-ci`. Before dispatch, its owner must bind this composition's exact base, source head/tree, full patch hash and relocated fixture hash in a newly reviewed immutable delivery. Preserve its qualified hosted runner and pinned dependency/browser route, one-attempt guard, source scans, exit handling and evidence upload. An old delivery's pins do not cover this source.
++
++Browser/runtime qualification, the remaining B02 attempt budget and actual final source/delivery review are prerequisites. This fixture must never be launched as a way to discover or repair an unsupported local browser environment. Normal required CI and deployment verification remain separate gates.
+diff --git a/e2e/sc-b02-region-identity.mjs b/e2e/sc-b02-region-identity.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d90be00aeaf358da2a10ac311fcac077548ea0d
+--- /dev/null
++++ b/e2e/sc-b02-region-identity.mjs
+@@ -0,0 +1,427 @@
 +// SC-B02 only. Real main/App, URL store, chooser, responsive shell and stage camera;
 +// synthetic deferred static responses and GPU-free renderer handles. No Worker,
 +// providers, shared test configuration or browser/dependency installation.
@@ -13,7 +51,7 @@ index 00000000..7772eacc
 +import {resolve} from 'node:path';
 +import {build} from 'esbuild';
 +import {chromium, expect} from '@playwright/test';
-+import {rendererPlugins} from './helpers/esbuild-url.mjs';
++import {rendererPlugins} from '../tests/helpers/esbuild-url.mjs';
 +
 +const ROOT = resolve(import.meta.dirname, '..');
 +const EVIDENCE = resolve(ROOT, '../sc-b02-evidence');
@@ -35,10 +73,11 @@ index 00000000..7772eacc
 +      import * as plans from './web/species.ts';
 +      import {camera, terrainActions} from './web/map/stage.ts';
 +      import {effect} from '@preact/signals';
++      import {aerialOffer} from './web/map/aerial.ts';
 +      const moves = [];
 +      effect(() => { const c = camera.value; if(c) moves.push({...c}); });
 +      globalThis.__b02 = {app, state, plans, camera, terrainActions, moves,
-+        place: () => globalThis.__b02Chart?.place?.() ?? null};
++        place: () => globalThis.__b02Chart?.place?.() ?? null, aerial: () => aerialOffer.value};
 +    `},
 +    bundle: true, write: false, format: 'iife', platform: 'browser', logLevel: 'silent',
 +    jsx: 'automatic', jsxImportSource: 'preact', plugins: [{name: 'sc-b02-renderer-handles', setup(b) {
@@ -48,7 +87,7 @@ index 00000000..7772eacc
 +      // Preserve the real chart's exports; replace only its hardware factory.
 +      b.onLoad({filter: /web\/map\/chart\.ts$/}, args => ({loader: 'ts', contents:
 +        readFileSync(args.path, 'utf8').replace('export function createChart(options:', 'function unusedCreateChart(options:') +
-+        '\nexport function createChart(options) { globalThis.__b02Chart = options; return {destroy() {}}; }'}));
++        '\nexport function createChart(options) { globalThis.__b02Chart = options; const aerial = options.layers[3](signal(null)); return {destroy() { aerial.destroy(); }}; }'}));
 +      b.onResolve({filter: /^\.\/terrain\.js$/}, () => ({path: 'sc-b02-terrain', namespace: 'sc-b02'}));
 +      b.onLoad({filter: /.*/, namespace: 'sc-b02'}, () => ({loader: 'js', contents: `
 +        export const styles = [];
@@ -96,7 +135,7 @@ index 00000000..7772eacc
 +async function snapshot(page) {
 +  return page.evaluate(() => ({region: __b02.state.region.value, info: __b02.app.currentRegionInfo(), raw: __b02.app.regionInfo.value,
 +    zone: __b02.app.zone(), load: __b02.app.regionLoad.value, plans: __b02.plans.regionPlans.value,
-+    camera: __b02.camera.value, moves: __b02.moves.length, place: __b02.place()}));
++    camera: __b02.camera.value, moves: __b02.moves.length, place: __b02.place(), aerial: __b02.aerial()}));
 +}
 +async function current(page, id, suffix = '') {
 +  await expect.poll(async () => (await snapshot(page)).info?.id).toBe(id);
@@ -138,6 +177,95 @@ index 00000000..7772eacc
 +  await dialog.locator(`[data-port="${id === A ? 'morro-bay' : 'san-diego'}"]`).click();
 +  await expect(dialog).not.toBeVisible();
 +  await expect.poll(() => new URL(page.url()).searchParams.get('region')).toBe(id);
++}
++
++// Retain layout geometry beside (not among) the eighteen identity snapshots.
++async function controlEvidence(page, viewportName, phase) {
++  const bounds = await page.evaluate(() => {
++    const rect = element => {
++      if (!element) return null;
++      const {x, y, width, height, top, right, bottom, left} = element.getBoundingClientRect();
++      return {x, y, width, height, top, right, bottom, left};
++    };
++    const stage = document.querySelector('.app-stage');
++    const rail = stage.querySelector(':scope > .app-rail');
++    const controls = stage.querySelector('.app-terrain-controls');
++    return {stage: rect(stage), rail: rect(rail), controls: rect(controls),
++      gap: parseFloat(getComputedStyle(stage).getPropertyValue('--space-3')),
++      scroll: rail ? {top: rail.scrollTop, height: rail.scrollHeight, clientHeight: rail.clientHeight} : null,
++      note: rect(rail?.querySelector('#app-rail-base-note')),
++      buttons: [...controls.querySelectorAll('button')].map(button => {
++        const box = rect(button), hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
++        return {label: button.getAttribute('aria-label'), ...box, receivesPointer: hit === button || button.contains(hit)};
++      })};
++  });
++  const directory = resolve(EVIDENCE, 'control-bounds');
++  mkdirSync(directory, {recursive: true});
++  writeFileSync(resolve(directory, `${viewportName}-${phase}.json`), JSON.stringify(bounds, null, 2));
++  await page.screenshot({path: resolve(directory, `${viewportName}-${phase}.png`)});
++  if (viewportName === 'laptop') {
++    assert.ok(bounds.rail.bottom + bounds.gap <= bounds.controls.top + 1, 'rail leaves a gap above the complete terrain control stack');
++    assert.deepEqual(bounds.buttons.map(button => button.label), ['Zoom in', 'Zoom out', 'Reset map view', 'View from above']);
++    for (const button of bounds.buttons) assert.equal(button.receivesPointer, true, `${button.label} receives an ordinary pointer click`);
++  }
++  return bounds;
++}
++
++// Exercise every real basis disclosure without changing its native open state
++// programmatically. Long bodies may scroll vertically; every line must fit
++// horizontally and be reachable within the rail's actual scroll range.
++async function disclosureEvidence(page) {
++  const rail = page.locator('.app-stage > .app-rail');
++  const directory = resolve(EVIDENCE, 'disclosure-bounds');
++  mkdirSync(directory, {recursive: true});
++  const labels = ['Seafloor basis', 'Currents basis', 'Water temp basis', 'Swell basis', 'Charter fleet basis', 'Clouds basis', 'Base basis'];
++  await expect(rail.locator('.ui-popover')).toHaveCount(7);
++  for (const [index, label] of labels.entries()) {
++    // aria-label is on summary itself, including Base's icon-only trigger.
++    const trigger = rail.locator(`summary[aria-label="${label}"]`);
++    const details = rail.locator(`.ui-popover:has(> summary[aria-label="${label}"])`);
++    await trigger.focus();
++    await expect(trigger).toBeFocused();
++    await page.keyboard.press('Enter');
++    await expect(details).toHaveAttribute('open', '');
++    const body = details.locator('.ui-popover-body');
++    await expect(body).toBeVisible();
++    const bounds = await body.evaluate(element => {
++      const rail = element.closest('.app-rail'), box = rail.getBoundingClientRect();
++      const left = box.left + rail.clientLeft, top = box.top + rail.clientTop;
++      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
++      const lines = [];
++      while (walker.nextNode()) {
++        if (!walker.currentNode.textContent.trim()) continue;
++        const range = document.createRange(); range.selectNodeContents(walker.currentNode);
++        for (const r of range.getClientRects()) lines.push({left: r.left, right: r.right,
++          start: r.top - top + rail.scrollTop, end: r.bottom - top + rail.scrollTop});
++      }
++      return {text: element.textContent, left, right: left + rail.clientWidth,
++        clientHeight: rail.clientHeight, scrollHeight: rail.scrollHeight,
++        scrollWidth: rail.scrollWidth, clientWidth: rail.clientWidth, lines};
++    });
++    assert.ok(bounds.text.trim().length > 30, `${label}: explanation retained`);
++    assert.ok(bounds.lines.length > 0, `${label}: rendered text lines`);
++    assert.ok(bounds.scrollWidth <= bounds.clientWidth + 1, `${label}: no horizontal clipping or scrolling`);
++    for (const line of bounds.lines) {
++      assert.ok(line.left >= bounds.left - 1 && line.right <= bounds.right + 1, `${label}: complete line fits horizontally`);
++      assert.ok(line.start >= 0 && line.end <= bounds.scrollHeight + 1, `${label}: complete line reachable vertically`);
++    }
++    // Scroll the beginning into view, then let native Tab reveal the source link.
++    await rail.evaluate((element, start) => { element.scrollTop = start; }, Math.max(0, bounds.lines[0].start - 4));
++    await page.screenshot({path: resolve(directory, `laptop-${index}-start.png`)});
++    await page.keyboard.press('Tab');
++    const source = body.getByRole('link', {name: 'How it’s built'});
++    await expect(source).toBeFocused();
++    await expect(source).toBeInViewport({ratio: 1});
++    await controlEvidence(page, 'laptop', `disclosure-${index}-open`);
++    await page.screenshot({path: resolve(directory, `laptop-${index}-end.png`)});
++    writeFileSync(resolve(directory, `laptop-${index}.json`), JSON.stringify({label, ...bounds}, null, 2));
++    await trigger.focus();
++    await page.keyboard.press('Space');
++    await expect(details).not.toHaveAttribute('open');
++  }
 +}
 +
 +// One invocation, serial subcases. Stop creating subcases at the first failure.
@@ -187,19 +315,37 @@ index 00000000..7772eacc
 +            await answer(page, 'search-plan-index', A, 0, plan(A));
 +            await current(page, A);
 +            const before = await snapshot(page);
-+            await page.evaluate(() => { __b02.app.regionInfo.value = {id: 'southern-california', name: 'OBSOLETE', center: [1, 2], timezone: 'Pacific/Honolulu'}; });
++            // Invoke the real aerial factory through MapStage's registered callback; its engine is null, so no tiles/GPU run.
++            const aerial = {source: 'usgs-naip', first: '2022-05-13', last: '2022-05-29', checkedAt: '2026-10-01', note: 'Synthetic dated imagery', byDefault: false};
++            await page.evaluate(({info, aerial}) => { __b02.app.regionInfo.value = {...info, aerial}; }, {info: before.info, aerial});
++            await expect.poll(async () => (await snapshot(page)).aerial).toEqual(aerial);
++            await page.evaluate(aerial => { __b02.app.regionInfo.value = {id: 'southern-california', name: 'OBSOLETE', center: [1, 2], timezone: 'Pacific/Honolulu', aerial}; }, aerial);
 +            await expect(page.locator('.app-location')).not.toContainText('OBSOLETE');
 +            const guarded = await snapshot(page);
 +            assert.equal(guarded.info, null); assert.equal(guarded.place, null); assert.equal(guarded.zone, __DEFAULT_ZONE);
++            assert.equal(guarded.aerial, null, 'real aerial callback withdraws another region’s offer');
 +            assert.equal(guarded.moves, before.moves);
 +            await page.evaluate(info => { __b02.app.regionInfo.value = info; }, before.info);
++            await expect.poll(async () => (await snapshot(page)).aerial).toBe(null);
 +            await page.getByRole('button', {name: '2D', exact: true}).click();
 +            await expect(page.getByRole('button', {name: 'Reset map view', exact: true})).toBeVisible();
++            await controlEvidence(page, name, 'before-reset');
++            if (name === 'laptop') {
++              const note = page.locator('.app-stage > .app-rail #app-rail-base-note');
++              await expect(note).toHaveText('Chart only');
++              await note.scrollIntoViewIfNeeded();
++              await expect(note).toBeInViewport();
++              const scrolled = await controlEvidence(page, name, 'rail-scrolled');
++              assert.ok(scrolled.scroll.top > 0, 'the complete rail remains reachable by scrolling');
++              assert.ok(scrolled.note.top >= scrolled.rail.top && scrolled.note.bottom <= scrolled.rail.bottom, 'the base note stays readable inside the scrolled rail');
++            }
 +            await page.evaluate(() => __b02.state.setParams({view: '34,-119,11'}));
 +            await expect.poll(async () => (await snapshot(page)).camera.latitude).toBe(34);
 +            await page.getByRole('button', {name: 'Reset map view', exact: true}).click();
 +            await current(page, A);
 +            assert.match(new URL(page.url()).searchParams.get('view'), /^35\.34000,-120\.97000,/);
++            await controlEvidence(page, name, 'after-reset');
++            if (name === 'laptop') await disclosureEvidence(page);
 +          } else {
 +            if (scenario === 'failed B' || scenario.startsWith('stalled B')) {
 +              await answer(page, 'region', A); await answer(page, 'search-plan-index', A, 0, plan(A)); await current(page, A);
@@ -245,6 +391,17 @@ index 00000000..7772eacc
 +              await waitRead(page, 'search-plans', B);
 +              await answer(page, 'search-plans', B, 0, plan(B));
 +              await current(page, B);
++              // Preserve loadPlans' explicit-ID API without exposing another region's targets.
++              const direct = await page.evaluate(async data => {
++                await __b02.plans.loadPlans(data.region_id, async () => new Response(JSON.stringify(data)));
++                return __b02.plans.regionPlans.value;
++              }, plan(A, '-direct'));
++              assert.equal(direct.region, A);
++              await expect(page.getByRole('option', {name: `Plan ${A}-direct`, exact: true})).toHaveCount(0);
++              await page.evaluate(() => { void __b02.plans.loadPlans('southern-california'); });
++              await waitRead(page, 'search-plan-index', B, 2);
++              await answer(page, 'search-plan-index', B, 1, plan(B));
++              await current(page, B);
 +            } else {
 +              if (scenario === 'failed B') {
 +                await answer(page, 'region', B, 0, {}, 503);
@@ -285,6 +442,18 @@ index 00000000..7772eacc
 +              await answer(page, 'region', B, n); await answer(page, 'search-plan-index', B, n, plan(B));
 +              if (scenario.startsWith('stalled B')) await page.clock.runFor(32);
 +              await current(page, B);
++              // Revisit the recovered region after retry; the poisoned original shared read must not return.
++              await choose(page, A);
++              await waitRead(page, 'search-plan-index', A, 2);
++              await answer(page, 'search-plan-index', A, 1, plan(A));
++              await current(page, A);
++              await page.goBack();
++              await expect.poll(() => new URL(page.url()).searchParams.get('region')).toBe(B);
++              await waitRead(page, 'search-plan-index', B, n + 2);
++              await answer(page, 'search-plan-index', B, n + 1, plan(B));
++              if (scenario.startsWith('stalled B')) await page.clock.runFor(32);
++              await current(page, B);
++              assert.equal(await count(page, 'region', B), n + 1, 'revisit reuses successful retry metadata instead of the stalled original');
 +            }
 +          }
 +          assert.deepEqual(errors, [], 'no uncaught browser errors');
@@ -300,8 +469,66 @@ index 00000000..7772eacc
 +    }
 +  }
 +});
+diff --git a/tests/test_layer_rail.mjs b/tests/test_layer_rail.mjs
+index d07d798156adbdb547ad02a705fe98a0622cb821..ab2c60a0cc72c4d65a27caa9b642e8a461c6249c 100644
+--- a/tests/test_layer_rail.mjs
++++ b/tests/test_layer_rail.mjs
+@@ -29,7 +29,7 @@ async function load() {
+       export {RAIL_ENTRIES} from './web/app/rail.ts';
+       export {CHART_ONLY, drawsIn} from './web/map/layers.ts';
+       export {seafloorState} from './web/map/seafloor.ts';
+-      export {currentsState} from './web/map/currents.ts';
++      export {currentsState, currentsStatus} from './web/map/currents.ts';
+       export {waterTempState} from './web/map/sst.ts';
+       export {swellState} from './web/map/swell.ts';
+       export {cloudStamp} from './web/map/clouds.ts';
+@@ -118,6 +118,44 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
+   s.configureStore({storage: null});
+ });
+ 
++test('undrawable current grids expose the rejection reason in the rail and legend; a supported frame keeps its source and time', async t => {
++  const m = await load(), s = m.state, previous = m.currentsState.value;
++  t.after(() => { m.currentsState.value = previous; });
++  s.configureStore({v2: true, storage: null});
++  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=currents&current=wcofs`);
++  const now = new Date('2026-10-07T12:00:00Z');
++  const grid = (width, height, step) => Array.from({length: width * height}, (_, i) => ({
++    lon: -121 + (i % width) * step, lat: 35 + Math.floor(i / width) * step,
++    uMs: 1, vMs: 0, speedKnots: 1.943844492, towardDeg: 90,
++  }));
++  const field = cells => ({id: 'wcofs', kind: 'forecast', label: 'Synthetic original WCOFS', surfaceOnly: true,
++    fetchedAt: now.toISOString(), issuedAt: '2026-10-07T09:00:00Z', nativeResolutionKm: 4, sampleStride: 1,
++    frames: [{validAt: now.toISOString(), cells}]});
++  const ragged = grid(3, 3, .01);
++  ragged[4] = {...ragged[4], lon: ragged[4].lon + .003};
++  for (const [name, cells] of [['coarse', grid(3, 3, .2)], ['ragged', ragged], ['over 10000 cells', grid(101, 100, .01)]]) {
++    const state = m.currentsStatus('wcofs', 'ready', {currents: [field(cells)]}, now, now, 'UTC');
++    assert.equal(state.drawn, null, name);
++    assert.match(state.note, /^grid cannot be drawn/, name);
++    assert.match(state.reason, /NOAA WCOFS forecast frame valid Wed 12 pm.*without bridging gaps.*no other source is shown/, name);
++    m.currentsState.value = state;
++    assert.equal(railItems(m.render(m.h(m.LayerRail))).Currents.note, state.reason, `${name}: visible rail reason`);
++    const legend = m.render(m.h(m.Legend));
++    assert.equal(reasons(legend).currents, state.reason, `${name}: visible legend reason`);
++    assert.deepEqual(swatches(legend), [], `${name}: no drawn-current key`);
++  }
++  const valid = field(grid(3, 3, .01));
++  const state = m.currentsStatus('wcofs', 'ready', {currents: [valid]}, now, now, 'UTC');
++  assert.equal(state.drawn.field, valid, 'exact chosen source retained');
++  assert.equal(state.drawn.frame, valid.frames[0], 'exact chosen frame retained');
++  assert.ok(state.drawn.surface.quads.length > 0, 'supported grid can draw');
++  assert.equal(state.reason, '');
++  assert.equal(state.note, 'forecast Wed 12 pm');
++  m.currentsState.value = state;
++  assert.equal(railItems(m.render(m.h(m.LayerRail))).Currents.note, state.note);
++  assert.deepEqual(swatches(m.render(m.h(m.Legend))), ['currents', 'currents-fast']);
++});
++
+ test('the legend shows a colour key only while its layer draws, and says why otherwise (Accept 3)', async t => {
+   const m = await load(), s = m.state;
+   t.after(() => {
 diff --git a/web/app/App.tsx b/web/app/App.tsx
-index a839c3b4..867c170d 100644
+index a839c3b4e893873bbdf21a734d8066220775da3f..6d9ef4ab4a153b43de1285d51acfcfe81767b463 100644
 --- a/web/app/App.tsx
 +++ b/web/app/App.tsx
 @@ -4,7 +4,7 @@
@@ -321,7 +548,7 @@ index a839c3b4..867c170d 100644
  import {region, setRegionDefaultBase} from '../state.ts';
  
  /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
-@@ -33,29 +34,86 @@ export interface RegionInfo {
+@@ -33,29 +34,90 @@ export interface RegionInfo {
  export const regionInfo = signal<RegionInfo | null>(null);
  /** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
  export const DEFAULT_ZONE = 'America/Los_Angeles';
@@ -337,6 +564,8 @@ index a839c3b4..867c170d 100644
 +export const regionLoad = signal<{id: string; state: 'loading' | 'ready' | 'error'} | null>(null);
 +let regionGeneration = 0;
 +let regionRequest: AbortController | null = null;
++// A successful retry supersedes a shared static response whose headers/body may still be stalled.
++const recoveredRegionInfo = new Map<string, RegionInfo>();
 +// Invalidate even when a caller has not started the next read yet (including Back/Forward).
 +effect(() => {
 +  const id = region.value;
@@ -391,6 +620,7 @@ index a839c3b4..867c170d 100644
 -    regionInfo.value = info;
 -    if (id === region.peek()) setRegionDefaultBase(aerial?.byDefault ? 'aerial' : 'night');
 +    const read = async (): Promise<RegionInfo | null> => {
++      if (!retry && fetchFn === sharedFetch && recoveredRegionInfo.has(id)) return recoveredRegionInfo.get(id)!;
 +      const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal: controller.signal, ...(retry ? {cache: 'reload' as const} : {})});
 +      if (!response.ok) return null;
 +      const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}};
@@ -405,6 +635,7 @@ index a839c3b4..867c170d 100644
 +    const info = await Promise.race([read(), aborted]);
 +    if (!current()) return null;
 +    if (!info) { regionLoad.value = {id, state: 'error'}; return null; }
++    if (retry && fetchFn === sharedFetch) recoveredRegionInfo.set(id, info);
 +    batch(() => {
 +      regionInfo.value = info;
 +      regionLoad.value = {id, state: 'ready'};
@@ -423,8 +654,25 @@ index a839c3b4..867c170d 100644
  }
  
  /** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). The trip dialogs keep their place across layouts. */
+diff --git a/web/app/LayerRail.tsx b/web/app/LayerRail.tsx
+index 5c5ac42305226128faf716e5231bf0d992db92fd..52d50de43d623d321021890d027c59a6e8149c29 100644
+--- a/web/app/LayerRail.tsx
++++ b/web/app/LayerRail.tsx
+@@ -50,7 +50,11 @@ export function chooseCurrent(value: string): void {
+ }
+ 
+ /** The Currents entry's note: the Chart's frame state, or the terrain renderer's own status line. */
+-const currentsNote = (): string => shownPresentation.value === 'chart' ? currentsState.value.note : currentStatus.value;
++const currentsNote = (): string => {
++  if (shownPresentation.value !== 'chart') return currentStatus.value;
++  const state = currentsState.value;
++  return state.drawn ? state.note : state.reason || state.note;
++};
+ 
+ /** The one `?current=` control, shared by the Currents rail entry and the Conditions view (FE-32). */
+ export function CurrentSource() {
 diff --git a/web/app/MapStage.tsx b/web/app/MapStage.tsx
-index d06ad34f..2bee8c26 100644
+index d06ad34f08bdc1a3bf7ad651e84b81af6addb5bd..2bee8c264b29efea2621ce7f666bdffc58e28b57 100644
 --- a/web/app/MapStage.tsx
 +++ b/web/app/MapStage.tsx
 @@ -29,7 +29,7 @@ import {createSwell} from '../map/swell.ts';
@@ -452,7 +700,7 @@ index d06ad34f..2bee8c26 100644
            engine => createReach({engine, host: chartHost.current!})]})]});
      return () => stage.destroy();
 diff --git a/web/app/Masthead.tsx b/web/app/Masthead.tsx
-index bb8a349e..2a608b9d 100644
+index bb8a349eac12f8837f10b1296bbd4168d882d530..2a608b9d5d3af1c3cfeca641824623e42a874691 100644
 --- a/web/app/Masthead.tsx
 +++ b/web/app/Masthead.tsx
 @@ -11,7 +11,7 @@ import {useEffect} from 'preact/hooks';
@@ -486,8 +734,50 @@ index bb8a349e..2a608b9d 100644
    );
  }
  
+diff --git a/web/app/app.css b/web/app/app.css
+index b3e00c1d9cef63ad2f00c37e11f8ae7e8915f585..a9555c6e0335dcddd4508ed4e620970a349e810a 100644
+--- a/web/app/app.css
++++ b/web/app/app.css
+@@ -113,7 +113,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
+ .app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
+ 
+ /* Map stage and its chrome */
+-.app-stage { position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
++.app-stage { --app-terrain-controls-bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); --app-terrain-controls-height: calc(4 * var(--touch-min) + 2px); position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
+ .app-map { position: absolute; inset: 0; z-index: var(--z-map); display: grid; place-items: center; color: var(--muted); }
+ /* FE-71: the terrain host (packages/coast mounts in its shadow root), the Chart / 2D / 3D toggle and the stage's status line. */
+ .app-terrain { position: absolute; inset: 0; z-index: var(--z-map); }
+@@ -132,8 +132,27 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
+ .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
+ .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
+ .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
++/* Reserve all four terrain buttons, their outer borders and a gap. Long desktop
++   rails scroll within the remaining space; the phone's sheet keeps its layout. */
++@media (min-width: 1024px) {
++  .app-stage > .app-rail {
++    box-sizing: border-box;
++    width: min(280px, calc(100% - 2 * var(--space-4)));
++    max-height: calc(100% - var(--space-4) - var(--app-terrain-controls-bottom) - var(--app-terrain-controls-height) - var(--space-3));
++    overflow-y: auto;
++  }
++  /* Absolute, end-aligned popovers escape a narrow scroll origin. Open basis
++     details instead occupy a full row and grow the same scrollable content. */
++  .app-stage > .app-rail .ui-popover[open] { flex-basis: 100%; min-width: 0; }
++  .app-stage > .app-rail .ui-popover[open] > .ui-popover-body {
++    position: static; box-sizing: border-box; width: 100%; max-width: none;
++    overflow-wrap: anywhere;
++  }
++  .app-stage > .app-rail .ui-rail-toggle { min-width: 0; }
++  .app-stage > .app-rail .ui-rail-text { min-width: 0; overflow-wrap: anywhere; }
++}
+ /* FE-80: the terrain's zoom, reset and top view as one group styled and placed as the Chart's MapLibre zoom control (web/map/chart.css). */
+-.app-terrain-controls { position: absolute; right: var(--space-4); bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); overflow: hidden; }
++.app-terrain-controls { position: absolute; right: var(--space-4); bottom: var(--app-terrain-controls-bottom); z-index: var(--z-map-chrome); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); overflow: hidden; }
+ .app-terrain-controls .ui-button { width: var(--touch-min); height: var(--touch-min); border: 0; border-radius: 0; color: var(--text); }
+ .app-terrain-controls .ui-button + .ui-button { border-top: 1px solid var(--line); }
+ @media (max-width: 1023px) { .app-terrain-controls { top: calc(var(--app-strip, 84px) + 2 * var(--touch-min) + var(--space-5) + var(--space-4)); bottom: auto; } }
 diff --git a/web/species.ts b/web/species.ts
-index 5abd2653..07d84b3c 100644
+index 5abd2653a2251899dafdfe33154e24dab8d4e8bb..3d9a4d027e7490356927de35ee317ab60dbc3d13 100644
 --- a/web/species.ts
 +++ b/web/species.ts
 @@ -8,7 +8,8 @@
@@ -524,13 +814,14 @@ index 5abd2653..07d84b3c 100644
      if (!response.ok) return null;
      const json = await response.json() as {region_id?: unknown; profiles?: unknown};
      const plans = json.profiles && typeof json.profiles === 'object' && !Array.isArray(json.profiles) ? json.profiles as Record<string, Plan> : null;
-@@ -43,8 +55,29 @@ async function readPlans(url: string, id: string, fetchFn: typeof fetch): Promis
+@@ -43,8 +55,30 @@ async function readPlans(url: string, id: string, fetchFn: typeof fetch): Promis
   * the plans' geometry), else `regions/<id>/search-plans.json`; a failure leaves the profile's own species.
   */
  export async function loadPlans(id: string, fetchFn: typeof fetch = fetch): Promise<void> {
 -  const plans = await readPlans(planIndexURL(id), id, fetchFn) ?? await readPlans(`regions/${encodeURIComponent(id)}/search-plans.json`, id, fetchFn);
 -  if (plans) regionPlans.value = {region: id, plans};
-+  if (id !== region.peek()) return;
++  // Explicit callers may load any keyed region; a selection change still invalidates that read.
++  const selectedRegion = region.peek();
 +  const generation = ++planGeneration;
 +  planRequest?.abort();
 +  const controller = planRequest = new AbortController();
@@ -546,7 +837,7 @@ index 5abd2653..07d84b3c 100644
 +      return index ?? (controller.signal.aborted ? null : await readPlans(`regions/${encodeURIComponent(id)}/search-plans.json`, id, fetchFn, controller.signal));
 +    };
 +    const plans = await Promise.race([read(), aborted]);
-+    if (plans && generation === planGeneration && id === region.peek()) regionPlans.value = {region: id, plans};
++    if (plans && generation === planGeneration && selectedRegion === region.peek()) regionPlans.value = {region: id, plans};
 +  } catch { /* The profile's own targets remain available on failure or timeout. */ }
 +  finally {
 +    clearTimeout(timer);

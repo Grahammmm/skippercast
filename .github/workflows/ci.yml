@@ -223,7 +223,7 @@ jobs:
 
   sc-b02-focused:
     # The delivery branch carries an inert patch, so normal jobs retain their
-    # complete test discovery. Only this job materializes the original candidate.
+    # complete test discovery. Only this job materializes the reviewed B02/P03 composition.
     if: >-
       github.event_name == 'workflow_dispatch' && inputs.sc_b02_focused &&
       github.ref == 'refs/heads/codex/sc-b02-focused-ci'
@@ -237,24 +237,24 @@ jobs:
           echo "run=$GITHUB_RUN_ID attempt=$GITHUB_RUN_ATTEMPT delivery=$GITHUB_SHA" > sc-b02-evidence/run.txt
           test "$GITHUB_RUN_ATTEMPT" -eq 1
           python3 scripts/check_repository.py
-          echo "19a0e4d700bb7c8a4a411b92df3ae01c954bb7451d576bbeb6ec2087d46e2867  .github/fixtures/sc-b02-candidate.patch" | sha256sum --check --strict
+          echo "44c9b04668cbc6467109727a3bb3dcae92c6e39a1e9caf0e59cd9b7b18e53923  .github/fixtures/sc-b02-candidate.patch" | sha256sum --check --strict
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: 037db980a26bfaf4f81cb78e80712ae2ede83849
+          ref: 18fbc67edd19afe70aee70af47d0111f686d297f
           path: sc-b02-candidate
-      - name: Materialize and scan the exact retained B02 tree
+      - name: Materialize and scan the reviewed B02/P03 tree
         working-directory: sc-b02-candidate
         run: |
           mkdir -p ../sc-b02-evidence
           git apply --index ../.github/fixtures/sc-b02-candidate.patch
-          test "$(git write-tree)" = dcc6d76ae9bf65d2faa0b834eb8d5227a092b902
-          echo "8f6e68bc9fe64518ebe559e0a84aaec5cd89e17ba06a197637d5b3a5baae7615  tests/test_sc_b02_region_identity.mjs" | sha256sum --check --strict
+          test "$(git write-tree)" = fcd38bdf60936f1ebf0f97ae064300af57e92d66
+          echo "c0a48c14e38f33637c8200f5f4e2685fc7d08ba05243c5f4507de36d34d25744  e2e/sc-b02-region-identity.mjs" | sha256sum --check --strict
           python3 scripts/check_repository.py
           git diff --cached --stat > ../sc-b02-evidence/source-stat.txt
           cat > ../sc-b02-evidence/source.txt <<'EOF'
-          base=037db980a26bfaf4f81cb78e80712ae2ede83849
-          retained_candidate=118140d87f95197253699e24c3f98aea56711069
-          tree=dcc6d76ae9bf65d2faa0b834eb8d5227a092b902
+          base=18fbc67edd19afe70aee70af47d0111f686d297f
+          retained_candidate=2c90f67380425a1435909e087bd31eebbda31eb0
+          tree=fcd38bdf60936f1ebf0f97ae064300af57e92d66
           EOF
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -274,7 +274,7 @@ jobs:
         run: |
           node --version > ../sc-b02-evidence/runtime.txt
           pnpm --version >> ../sc-b02-evidence/runtime.txt
-          if node --test --test-concurrency=1 --test-force-exit tests/test_sc_b02_region_identity.mjs > ../sc-b02-evidence/acceptance.log 2>&1; then
+          if node --test --test-concurrency=1 --test-force-exit e2e/sc-b02-region-identity.mjs > ../sc-b02-evidence/acceptance.log 2>&1; then
             status=0
           else
             status=$?
