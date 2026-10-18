@@ -275,12 +275,16 @@ test('SC-B02 focused region identity acceptance', {timeout: 180_000}, async t =>
             const aerial = {source: 'usgs-naip', first: '2022-05-13', last: '2022-05-29', checkedAt: '2026-10-01', note: 'Synthetic dated imagery', byDefault: false};
             await page.evaluate(({info, aerial}) => { __b02.app.regionInfo.value = {...info, aerial}; }, {info: before.info, aerial});
             await expect.poll(async () => (await snapshot(page)).aerial).toEqual(aerial);
+            // Valid metadata can publish a fresh home camera; isolate the wrong-region transition below.
+            await current(page, A);
+            const valid = await snapshot(page);
             await page.evaluate(aerial => { __b02.app.regionInfo.value = {id: 'southern-california', name: 'OBSOLETE', center: [1, 2], timezone: 'Pacific/Honolulu', aerial}; }, aerial);
             await expect(page.locator('.app-location')).not.toContainText('OBSOLETE');
             const guarded = await snapshot(page);
             assert.equal(guarded.info, null); assert.equal(guarded.place, null); assert.equal(guarded.zone, __DEFAULT_ZONE);
             assert.equal(guarded.aerial, null, 'real aerial callback withdraws another region’s offer');
-            assert.equal(guarded.moves, before.moves);
+            assert.equal(guarded.moves, valid.moves);
+            assert.deepEqual(guarded.camera, valid.camera);
             await page.evaluate(info => { __b02.app.regionInfo.value = info; }, before.info);
             await expect.poll(async () => (await snapshot(page)).aerial).toBe(null);
             await page.getByRole('button', {name: '2D', exact: true}).click();
