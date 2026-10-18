@@ -9,7 +9,9 @@
 //
 // Expiry is honoured: a run past its source review is not drawn (the terrain's
 // rule, packages/coast viewer `loadShore`); only a protected-area check that is
-// not current holds guidance; a run or
+// not current, a marine alert check that is not current (or no coast report), a marine
+// alert for the area or a county beach-health notice holds
+// guidance (web/brief/shore.ts); a run or
 // access point inside a protected area is blocked and draws muted without pins.
 // Review age does not set priority; all original dates remain visible on the card.
 // The terrain draws its own shore features (packages/coast), so this is Chart only.
@@ -19,7 +21,7 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
-import {shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachNotices, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {profile, region, species} from '../state.ts';
@@ -74,8 +76,14 @@ export function insideAreas(run: Run, screen: MarkScreen): string[] | null {
 /** The runs that draw at `now`, ranked, each with its status. */
 export function shownRuns(pkg: ShorePackage | null, screen: MarkScreen, report: Report | null, now: number): ShownRun[] {
   const runs = (pkg?.features ?? []).filter(f => f?.geometry?.type === 'MultiLineString' && f.properties?.region === pkg!.regionId && shoreShown(f.properties, now));
-  return rankRuns(runs.map(run => ({run, name: run.properties.name, status: shoreStatus(run.properties, {
-    now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, run.properties.areaId, new Date(now)).length > 0})})));
+  return rankRuns(runs.map(run => {
+    const area = run.properties.areaId;
+    return {run, name: run.properties.name, status: shoreStatus(run.properties, {
+      now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, area, new Date(now)).length > 0,
+      alertCheck: !!report && alertCheckCurrent(report, now),
+      alerts: report ? activeAlerts(report.alerts ?? [], area, now).map(a => a.event) : [],
+      notices: report ? beachNotices(report, area, now).map(n => n.name) : []})};
+  }));
 }
 
 /** The two GeoJSON sources: runs with their priority, and the access points of runs that are not blocked. */
