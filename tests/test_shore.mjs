@@ -13,7 +13,7 @@ import {markScreen} from '../web/map/marks.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {SEAFLOOR_CELLS} from '../web/map/seafloor.ts';
 import {
-  ACCESS_HIT, ACCESS_PIN, ACCESS_SOURCE, RUNS_HIT, RUNS_LINE, RUNS_SOURCE, createShore, insideAreas, runMark, shoreCollections, shoreOverlay, shoreState, shoreURL, shownRuns,
+  ACCESS_HIT, ACCESS_PIN, ACCESS_SOURCE, RECHECK_MS, RUNS_HIT, RUNS_LINE, RUNS_SOURCE, createShore, insideAreas, runMark, shoreCollections, shoreOverlay, shoreState, shoreURL, shownRuns,
 } from '../web/map/shore.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
@@ -255,6 +255,7 @@ test('the next hold change: an alert expiring or entering the day ahead, or a so
     'an alert entering the day ahead');
   assert.equal(nextShoreChange({...base, alerts: [{event: 'X', effective: 'not a date', expires: 'not a date'}]}, NOW), NOW + HOUR, 'unparseable clocks set no time');
   assert.equal(nextShoreChange({alerts: [], sources: []}, NOW), null);
+  assert.equal(nextShoreChange(base, NOW + HOUR), NOW + HOUR, 'a threshold at now is kept: the strict checks flip just after it');
 });
 
 test('an alert expiring before the routine tick releases the hold just after it ends', async t => {
@@ -276,5 +277,37 @@ test('an alert expiring before the routine tick releases the hold just after it 
   clock = NOW + 5 * 60_000 + 1000;
   t.mock.timers.tick(5 * 60_000 + 1000);
   assert.equal(shoreState.value.held, 0, 'released at expiry, not at the 10-minute tick');
+});
+
+test('a threshold exactly one routine interval ahead, or at a report\'s arrival, still re-checks just after it', async t => {
+  t.mock.timers.enable({apis: ['setTimeout', 'setInterval']});
+  globalThis.location = {href: 'https://s.test/map?region=morro-bay&profile=shore'};
+  configureStore({v2: true, storage: null});
+  syncFromURL(location.href);
+  let clock = NOW;
+  const fetchFn = async url => ({ok: true, json: async () => json(`dist/${new URL(url).pathname.slice(1)}`)});
+  const engine = signal({setOverlay() {}, setData() {}});
+  // An alert entering the day ahead exactly at the first routine tick.
+  const report = signal({...checked(NOW), alerts: [{event: 'Gale Warning', effective: iso(NOW + 24 * HOUR + RECHECK_MS), expires: null}]});
+  markScreen.value = READY;
+  const shore = createShore({engine, fetchFn, page: () => location.href, palette: () => sentinel, now: () => clock, report});
+  t.after(() => { shore.destroy(); markScreen.value = CHECKING; });
+  await flush(); await flush();
+  const unblocked = shownRuns(PACKAGE, READY, checked(NOW), NOW).filter(r => r.status.label !== 'Blocked').length;
+  assert.equal(shoreState.value.held, 0, 'not yet in the day ahead');
+  clock = NOW + RECHECK_MS;
+  t.mock.timers.tick(RECHECK_MS);
+  assert.equal(shoreState.value.held, 0, 'at the tick the strict window has not opened');
+  clock = NOW + RECHECK_MS + 1000;
+  t.mock.timers.tick(1000);
+  assert.equal(shoreState.value.held, unblocked, 'held a second later, not at the next routine tick');
+
+  // A report arriving exactly as its alert check turns 2 h old.
+  clock = NOW + RECHECK_MS + 5000;
+  report.value = {...checked(NOW), alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(clock - 2 * HOUR)}]};
+  assert.equal(shoreState.value.held, 0, 'still current at exactly 2 h');
+  clock += 1000;
+  t.mock.timers.tick(1000);
+  assert.equal(shoreState.value.held, unblocked, 'held as soon as the check passes 2 h');
 });
 

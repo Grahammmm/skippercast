@@ -143,7 +143,8 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   // Refresh model coverage and source visibility every RECHECK_MS.
   const tick = signal(0);
   const timer = setInterval(() => { tick.value++; }, RECHECK_MS);
-  // An alert or source clock that turns before the next tick re-checks then (a second late, past the boundary).
+  // An alert or source clock that turns by the next tick (at it included) re-checks a second after it, past
+  // every strict boundary; a threshold landing exactly on a tick or on a report's arrival is not dropped.
   let soon: ReturnType<typeof setTimeout> | undefined;
   const on = computed(() => profile.value === 'shore');
   const target = computed(() => species.value ?? PROFILE_TABLE[profile.value].defaultTarget);
@@ -159,7 +160,7 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
       void tick.value;
       clearTimeout(soon);
       const t = now(), next = r ? nextShoreChange(r, t) : null;
-      if (next !== null && next - t < RECHECK_MS) soon = setTimeout(() => { tick.value++; }, next - t + 1000);
+      if (next !== null && next - t <= RECHECK_MS) soon = setTimeout(() => { tick.value++; }, next - t + 1000);
     }),
     effect(() => {
       const id = region.value;

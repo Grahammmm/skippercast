@@ -117,9 +117,10 @@ export function beachNotices(report: ShoreReportPart, areaId: string, now: numbe
 }
 
 /**
- * The next moment after `now` at which a hold input can change on its own: an alert expiring or
- * entering the day ahead, the alert check passing 2 h, or the beach-health source passing 3 h.
- * Null when none is ahead. The Chart re-checks then instead of on its next routine tick.
+ * The next threshold at or after `now` at which a hold input can change on its own: an alert expiring or
+ * entering the day ahead, the alert check passing 2 h, or the beach-health source passing 3 h. A threshold
+ * equal to `now` is kept: the strict comparisons (`effective < now + 24 h`, `age <= 2 h`) only flip just
+ * after it, so the caller re-checks a moment later. Null when none is ahead.
  */
 export function nextShoreChange(report: ShoreReportPart & {readonly alerts?: readonly ShoreAlert[]}, now: number): number | null {
   const at = (s: string | null | undefined, plus = 0): number => { const t = s ? Date.parse(s) : NaN; return Number.isFinite(t) ? t + plus : NaN; };
@@ -127,7 +128,7 @@ export function nextShoreChange(report: ShoreReportPart & {readonly alerts?: rea
   const times = [
     ...(report.alerts ?? []).flatMap(a => [at(a.expires), at(a.effective, -24 * HOUR)]),
     fetched('nws-alerts', 2 * HOUR), fetched(BEACH_HEALTH_SOURCE, BEACH_HEALTH_MAX_AGE_MS),
-  ].filter(t => Number.isFinite(t) && t > now);
+  ].filter(t => Number.isFinite(t) && t >= now);
   return times.length ? Math.min(...times) : null;
 }
 
