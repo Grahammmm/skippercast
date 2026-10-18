@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use target-specific atlas explanations only for supported lingcod and rockfish screens; keep neutral terrain descriptions for other admitted targets. Add terrain-type and age-formatting regression coverage.
+
 - Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.
 
 - Remove the retired offline-pack card adapter while retaining saved-pack storage and the current trip interface.

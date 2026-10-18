@@ -60,6 +60,30 @@ test('atlas picks: the top four admitted marks inside the limit, best fit first,
   assert.equal(harborOrigin(DATA).name, 'Morro Bay');
 });
 
+test('atlas reasons use only the selected target screen, otherwise neutral terrain', () => {
+  const mark = {id: 'synthetic-reef', label: 'Synthetic reef', latitude: 0, longitude: 0,
+    neighborhood_depth_ft: [40, 80], terrain_interpretation: 'Synthetic surveyed reef terrain.',
+    metrics: {relief_210m_m: 8, rugose_or_bedrock_fraction_210m: 0.8,
+      rough_habitat_within_250m_ha: 6, plane_residual_rms_250m_m: 1}};
+  const data = {...DATA, atlas: {targets: [mark]}};
+  const screen = {...CHECKED, boundaries: []};
+  for (const target of ['lingcod', 'rockfish', 'rockfish-reef', 'gopher-rockfish', 'cabezon', 'cabezon-shallow-reef', 'reef', 'all']) {
+    const [pick] = atlasPicks(data, screen, target, 100);
+    assert.ok(pick, target);
+    const expected = target === 'lingcod' ? '8.0 m local relief; 80% mapped rough cover.'
+      : ['rockfish', 'rockfish-reef', 'gopher-rockfish'].includes(target) ? '6.0 ha nearby rough habitat; 80% mapped rough cover.'
+      : mark.terrain_interpretation;
+    assert.equal(pick.reason, expected, target);
+    assert.equal(pick.fit, markFit(mark, target)?.line ?? 'Habitat fit unrated for this target');
+    assert.deepEqual(atlasPicks(data, screen, target, 79), [], 'depth gate');
+    assert.deepEqual(atlasPicks(data, screen, target, 100, {latitude: 1, longitude: 1, name: 'Synthetic harbor'}, 1), [], 'range gate');
+    assert.deepEqual(atlasPicks(data, CHECKING, target, 100), [], 'screen gate');
+  }
+  const noText = {...data, atlas: {targets: [{...mark, terrain_interpretation: undefined}]}};
+  assert.equal(atlasPicks(noText, screen, 'cabezon', 100)[0].reason, 'Surveyed reef terrain.');
+  assert.deepEqual(atlasPicks(data, screen, 'unknown-target', 100), [], 'unknown target remains ineligible');
+});
+
 test('items outside the limit, without a depth band, or withheld by the screen never appear', () => {
   const best = ATLAS.targets.find(t => t.id === atlasPicks(DATA, CHECKED, 'lingcod', 300)[0].id);
   const deep = {...best, id: 'ZZ-deep', neighborhood_depth_ft: [200, 301]}, unknown = {...best, id: 'ZZ-unknown', neighborhood_depth_ft: undefined};
