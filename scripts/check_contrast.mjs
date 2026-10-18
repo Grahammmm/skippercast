@@ -386,8 +386,8 @@ export const SURFACE_SOURCE_SHA256 = {
   "panelCss": "b8d678a03e534fb214291f5d32891dec2d54fb87efca710df2291cf8ac042573",
   "bridgeCss": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
   "tokensCss": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
-  "appCss": "88b36191bfe213808d0cbedd53e319869a7bdb100893d5ce23b261d625bc13fd",
-  "legendTsx": "253103cece12e39c87eee197a69a59d3406211894617f02f069aad559614f1ea"
+  "appCss": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
+  "legendTsx": "dcf37cbfcc29ca2f3b24194b9eaf7ecf603a928d768c9e9b5f0a1150651691cb"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

@@ -229,7 +229,6 @@ function FleetRow() {
   );
 }
 
-/** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
 /** The ranked trip plan's pins, while the Chart draws any. */
 export function RankedRow() {
   const n = drawnSpots.value.length, entry = layerEntry('trip-ranked');
@@ -242,6 +241,7 @@ export function RankedRow() {
   );
 }
 
+/** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
 export function DensityRow() {
   const n = densityShown.value;
   if (n === null) return null;
