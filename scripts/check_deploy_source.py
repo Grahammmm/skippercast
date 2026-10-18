@@ -1,6 +1,8 @@
 """Require the current main SHA and successful push/main CI for a manual deploy.
 
-Uses public GitHub metadata without credentials. Network/metadata failures stop
+Reads public GitHub metadata, sending only the workflow's read-only token
+(SOURCE_READ_TOKEN, `github.token` under `contents: read`) when it is set, so the
+shared runners' anonymous rate limit cannot fail a deploy. Network/metadata failures stop
 before dependency execution or production writes. This is a workflow source
 check, not an access-control boundary against repository administrators.
 """
@@ -9,7 +11,21 @@ import os
 import re
 import sys
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+
+class RefuseRedirect(HTTPRedirectHandler):
+    """No metadata redirect is followed: urllib would copy Authorization to any target, another host or plain HTTP included."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(newurl, code, 'deploy source metadata redirect refused', headers, fp)
+
+
+_OPENER = build_opener(RefuseRedirect)
+
+
+def urlopen(request, timeout):
+    return _OPENER.open(request, timeout=timeout)
 
 
 class SourceError(ValueError):
@@ -17,11 +33,14 @@ class SourceError(ValueError):
 
 
 def public_metadata(path):
-    request = Request('https://api.github.com' + path, headers={
+    headers = {
         'Accept': 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2026-03-10',
         'User-Agent': 'SkipperCast-deploy-source-check',
-    })
+    }
+    if os.environ.get('SOURCE_READ_TOKEN'):
+        headers['Authorization'] = 'Bearer ' + os.environ['SOURCE_READ_TOKEN']
+    request = Request('https://api.github.com' + path, headers=headers)
     with urlopen(request, timeout=15) as response:
         return json.load(response)
 
