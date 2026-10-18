@@ -12,7 +12,7 @@ import {PMTiles} from 'pmtiles';
 import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatures as tileFeaturesV2} from '../dist/seafloor-data.js';
 import {
   EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
-  publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyLine, toneOf, viewBounds,
+  publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
@@ -99,8 +99,12 @@ test('v2: grade and fit draw on the depth ramp from palette tokens; the key keep
   assert.deepEqual(terrain.slice(0, 3).map(([, label]) => label), Object.values(GRADE_STYLE).map(s => s.label));
   assert.deepEqual(fit.slice(0, 3).map(([, label]) => label), Object.values(FIT_STYLE).map(s => s.label).reverse());
   for (const [, label] of [...terrain, ...fit]) assert.doesNotMatch(label, FORBIDDEN);
-  assert.equal(surveyLine(['a (2010)']), 'Survey a (2010)');
-  assert.equal(surveyLine(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)', 'e (2004)']), 'Surveys a (2010), b (2008), c (2008) and 2 more');
+  // #697: the legend counts the surveys and spans their years; the ids (source file names) move to the basis popover.
+  assert.equal(surveySummary(['a (2010)']), '1 survey, 2010');
+  assert.equal(surveySummary(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)']), '4 surveys, 2006–2010');
+  assert.equal(surveySummary(['a (2010)', 'a (unknown)']), '1 survey, 2010, some undated', 'one survey, its cells undated');
+  assert.equal(surveySummary(['a (unknown)', 'b (unknown)']), '2 surveys, undated');
+  assert.equal(surveyList(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)', 'e (2004)']), 'Surveys drawn: a (2010), b (2008), c (2008), d (2006), e (2004).', 'every survey, none elided');
 });
 
 test('v2: the mark card names the candidate, its nominal depth, survey and year, and carries basis and credits', async () => {

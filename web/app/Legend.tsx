@@ -50,7 +50,7 @@ import {currentsState} from '../map/currents.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
-import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
+import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
@@ -68,7 +68,7 @@ function SeafloorRow() {
       {ready ? <span class="app-swatch" data-layer="seafloor" aria-hidden="true"></span> : null}Seafloor
       <Popover iconOnly summary="Seafloor basis">
         <p>{layerEntry('seafloor').basis}</p>
-        {s.credits.map(credit => <p key={credit}>{credit}</p>)}
+        {[...s.credits, ...(s.surveys.length ? [surveyList(s.surveys)] : [])].map(line => <p key={line}>{line}</p>)}
       </Popover>
       {ready ? (
         <div class="app-legend-detail">
@@ -76,7 +76,7 @@ function SeafloorRow() {
             options={[{value: 'terrain', label: 'Terrain grade'}, {value: 'fit', label: `${s.fit[0]!.toUpperCase()}${s.fit.slice(1)} fit`}]} /> : null}
           <p class="app-legend-title">{s.view === 'fit' ? 'Physical habitat fit, not catch probability' : 'Terrain grade'}</p>
           <ul>{legendKey(s.view).map(([tone, label]) => <li key={tone}><span class="app-key" data-tone={tone} aria-hidden="true"></span>{label}</li>)}</ul>
-          {s.surveys.length ? <p class="app-legend-note" data-surveys="seafloor">{surveyLine(s.surveys)}</p> : null}
+          {s.surveys.length ? <p class="app-legend-note" data-surveys="seafloor">{surveySummary(s.surveys)}</p> : null}
         </div>
       ) : null}
       {s.note ? <p class="app-legend-note" data-reason="seafloor">{s.note}</p> : null}

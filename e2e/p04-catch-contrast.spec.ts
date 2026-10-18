@@ -27,6 +27,7 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // `.app-swatch[data-layer="trip-ranked"]` rule, which the Reports catch flow never
 // renders; check_contrast.mjs changes only SURFACE_SOURCE_SHA256 and its line
 // citations, not `contrast()`, the one export this spec reads. Both rebound.
+// #697 (legend survey summary): check_contrast.mjs changes only the Legend.tsx hash; rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
@@ -45,7 +46,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "cd7e77dd03f847f141a966eade20937e34803f12dc53c20a4d806a0003ade173",
+  "scripts/check_contrast.mjs": "0ce027d990d2e99057bf080b1fe5a3fbbd799ef768eecdff8b320ae040db4d9f",
   "package.json": "7483a8ec51735e5c4c28c85a873fc9af7d461e67d3b84f74e3dfa15d0e2132a0",
   "pnpm-lock.yaml": "eb62f9e39973b0b646acabedb510a4bf23936298b84a8cb577f2a2eb0143735c",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
