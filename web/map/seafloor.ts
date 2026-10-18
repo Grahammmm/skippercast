@@ -70,7 +70,33 @@ const parse = (value: unknown): unknown => {
 };
 const KINDS: Readonly<Record<string, SeafloorFeature['kind']>> = {habitat: 'candidate', 'search-area': 'search', 'classified-area': 'interpreted'};
 const NOTICE = 'Planning only. Not a navigation chart. Check current CDFW regulations.';
-const CELL_BASIS = 'Surveyed 250 m cell: at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.';
+/** What admitted habitat features say about each depth survey: its year and vertical datum (#422 FE-14 follow-up). */
+export type SurveyFacts = ReadonlyMap<string, {readonly year: number | 'unknown'; readonly datum: string}>;
+/**
+ * A coverage cell's basis: its survey, and that survey's year and datum only when an admitted habitat feature of the
+ * exact same survey states them; otherwise it says they are not recorded for the cell. Nothing else is inferred.
+ */
+export function cellBasis(sourceId: string, facts: SurveyFacts = new Map()): string {
+  const f = sourceId === 'unknown' ? undefined : facts.get(sourceId);
+  const survey = sourceId === 'unknown' ? 'an unnamed survey' : `survey ${sourceId}`;
+  const known = f ? `${f.year === 'unknown' ? 'year unknown' : f.year}, vertical datum ${f.datum}` : 'year and vertical datum not recorded for this cell';
+  return `Surveyed 250 m cell from ${survey} (${known}): at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.`;
+}
+/**
+ * Each admitted habitat feature's survey year and datum, by survey id. "unknown" states nothing and is skipped; a survey
+ * stated with two different datums or years states neither.
+ */
+export function surveyFacts(habitat: readonly SeafloorFeature[]): SurveyFacts {
+  const out = new Map<string, {year: number | 'unknown'; datum: string}>(), mixed = new Set<string>();
+  for (const f of habitat) {
+    const datum = habitatDetails(f.properties).source.datum, id = f.survey.id, year = f.survey.year;
+    if (id === 'unknown' || mixed.has(id) || !datum || datum === 'unknown' || year === 'unknown') continue;
+    const seen = out.get(id);
+    if (seen && (seen.datum !== datum || seen.year !== year)) { out.delete(id); mixed.add(id); continue; }
+    out.set(id, {year, datum});
+  }
+  return out;
+}
 
 /** A habitat feature that may draw, with its basis and rights, or null for anything held, unscreened or uncredited. */
 export function admitHabitat(feature: TileFeature, pub: Publication): SeafloorFeature | null {
@@ -95,12 +121,13 @@ export function admitHabitat(feature: TileFeature, pub: Publication): SeafloorFe
 }
 
 /** A coverage cell (tier 1 or more) of a screened reach, carrying the publication's credits; blank water stays blank. */
-export function admitCell(feature: TileFeature, pub: Publication): SeafloorFeature | null {
+export function admitCell(feature: TileFeature, pub: Publication, facts?: SurveyFacts): SeafloorFeature | null {
   const p = feature.properties ?? {};
   if (typeof p.id !== 'string' || !p.id || typeof p.reach !== 'string' || !pub.screened.has(p.reach)) return null;
   if (!(Number(p.tier) >= 1) || !pub.rights.length) return null;
+  const id = typeof p.source_id === 'string' && p.source_id ? p.source_id : 'unknown';
   return {id: `cell:${p.id}`, kind: 'cell', reach: p.reach, properties: p, geometry: feature.geometry,
-    survey: {id: typeof p.source_id === 'string' ? p.source_id : 'unknown', year: 'unknown'}, basis: CELL_BASIS, rights: pub.rights};
+    survey: {id, year: facts?.get(id)?.year ?? 'unknown'}, basis: cellBasis(id, facts), rights: pub.rights};
 }
 
 /** The publication's credits from its manifest, for the coverage cells. */
@@ -364,7 +391,8 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const admitted = (dedupeById(parts.flatMap(t => t.habitat)) as TileFeature[]).map(f => admitHabitat(f, admit)).filter(f => f !== null);
     const inDepth = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
     const g = grade.peek(), habitat = gradeFiltered(inDepth, g);
-    const cells = (dedupeById(parts.flatMap(t => t.cells)) as TileFeature[]).map(f => admitCell(f, admit)).filter(f => f !== null);
+    const facts = surveyFacts(admitted);
+    const cells = (dedupeById(parts.flatMap(t => t.cells)) as TileFeature[]).map(f => admitCell(f, admit, facts)).filter(f => f !== null);
     const key = fitKey(species.peek(), p), fit = key && habitat.some(f => f.kind === 'candidate' && Object.hasOwn(f.properties, key)) ? key : null;
     view = seafloorView.peek() === 'fit' && fit ? fit : 'terrain';
     drawn = new Map(habitat.map(f => [f.id, f]));

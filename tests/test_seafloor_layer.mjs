@@ -12,7 +12,7 @@ import {PMTiles} from 'pmtiles';
 import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatures as tileFeaturesV2} from '../dist/seafloor-data.js';
 import {
   EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
-  publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
+  cellBasis, publicationRights, seafloorLayers, surveyFacts, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
@@ -73,6 +73,16 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
   const cell = admitCell(cells[0], PUB);
   assert.deepEqual(cell.rights.map(r => r.credit), ['Fixture Survey Lab']);
   assert.match(cell.basis, /coverage only, with no habitat rank\.$/);
+  // #422 FE-14 follow-up: a cell's basis names its survey, and the year and datum only from habitat of that exact survey.
+  assert.match(cell.basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(year and vertical datum not recorded for this cell\):/);
+  const facts = surveyFacts(admitted);
+  assert.deepEqual(facts.get('fixture-survey-2m'), {year: 2010, datum: 'NAVD88'}, 'the fixture candidates state 2010 and NAVD88');
+  assert.match(admitCell(cells[0], PUB, facts).basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(2010, vertical datum NAVD88\):/);
+  assert.equal(admitCell(cells[0], PUB, facts).survey.year, 2010);
+  assert.match(cellBasis('other-survey', facts), /from survey other-survey \(year and vertical datum not recorded for this cell\)/, 'no borrowing across surveys');
+  assert.match(cellBasis('unknown', facts), /from an unnamed survey \(year and vertical datum not recorded/);
+  const conflicting = [...admitted, {...admitted[0], properties: {...admitted[0].properties, vertical_datum: 'MLLW'}}];
+  assert.equal(surveyFacts(conflicting).has('fixture-survey-2m'), false, 'a survey seen with two datums states neither');
   assert.equal(admitCell(cells[0], {...PUB, rights: publicationRights({source_attribution: ['x']})}), null, 'cells need the publication\'s credits and use notice');
 });
 
