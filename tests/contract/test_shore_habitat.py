@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 from skippercast import validate
 from skippercast.platform.build import compile_shore_habitat
@@ -63,8 +64,15 @@ def synthetic_bodies(fetched_at):
     shore, access = synthetic_sources()
     data = {'noaa': shore, 'access': access, 'terms': {'licenseInfo': '<div>Synthetic <b>terms</b></div>'}}
     bodies = {k: json.dumps(v).encode() for k, v in data.items()}
-    receipts = {k: importer.receipt(f'https://example.org/{k}', body, fetched_at) for k, body in bodies.items()}
+    urls = importer.source_urls('morro-bay')
+    receipts = {k: importer.receipt(urls[k], body, fetched_at) for k, body in bodies.items()}
     return bodies, receipts
+
+
+def write_saved_sources(directory, bodies, receipts):
+    for key, name in importer.SOURCE_FILES.items():
+        (Path(directory) / name).write_bytes(bodies[key])
+    (Path(directory) / 'receipts.json').write_text(json.dumps(receipts))
 
 
 class CommittedAsset(unittest.TestCase):
@@ -166,11 +174,13 @@ class Importer(unittest.TestCase):
         bodies, receipts = synthetic_bodies('2026-10-03T00:00:00.000Z')
         now = datetime(2026, 10, 7, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as tmp:
-            for key, name in importer.SOURCE_FILES.items():
-                (Path(tmp) / name).write_bytes(bodies[key])
-            (Path(tmp) / 'receipts.json').write_text(json.dumps(receipts))
-            loaded, kept = importer.load_saved(tmp, now)
+            write_saved_sources(tmp, bodies, receipts)
+            receipt_bytes = (Path(tmp) / 'receipts.json').read_bytes()
+            loaded, kept = importer.load_saved(tmp, 'morro-bay', now)
             self.assertEqual((loaded, kept), (bodies, receipts))
+            self.assertEqual((Path(tmp) / 'receipts.json').read_bytes(), receipt_bytes)
+            self.assertEqual(importer.build_asset('morro-bay', loaded, kept),
+                             importer.build_asset('morro-bay', bodies, receipts))
             for corrupt in (lambda r: r.pop('noaa'), lambda r: r['access'].update(fetchedAt='invalid'),
                             lambda r: r['terms'].update(fetchedAt='2099-01-01T00:00:00Z'),
                             lambda r: r['access'].update(responseSha256=hashlib.sha256(b'other').hexdigest())):
@@ -178,7 +188,58 @@ class Importer(unittest.TestCase):
                 corrupt(changed)
                 (Path(tmp) / 'receipts.json').write_text(json.dumps(changed))
                 with self.assertRaisesRegex(ValueError, 'saved source receipt'):
-                    importer.load_saved(tmp, now)
+                    importer.load_saved(tmp, 'morro-bay', now)
+
+    def test_offline_rebuild_rejects_missing_or_tampered_source_urls(self):
+        bodies, receipts = synthetic_bodies('2026-10-03T00:00:00.000Z')
+        now = datetime(2026, 10, 7, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            for key in importer.SOURCE_FILES:
+                for url in (None, '', 42, 'https://example.org/other', receipts[key]['url'] + '&other=1'):
+                    with self.subTest(key=key, url=url):
+                        changed = copy.deepcopy(receipts)
+                        if url is None:
+                            changed[key].pop('url')
+                        else:
+                            changed[key]['url'] = url
+                        write_saved_sources(tmp, bodies, changed)
+                        with self.assertRaisesRegex(ValueError, 'saved source receipt: ' + key):
+                            importer.load_saved(tmp, 'morro-bay', now)
+
+    def test_offline_rebuild_rejects_source_key_url_swaps(self):
+        bodies, receipts = synthetic_bodies('2026-10-03T00:00:00.000Z')
+        now = datetime(2026, 10, 7, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            for key in importer.SOURCE_FILES:
+                for other in importer.SOURCE_FILES:
+                    if key == other:
+                        continue
+                    with self.subTest(key=key, other=other):
+                        changed = copy.deepcopy(receipts)
+                        changed[key]['url'] = receipts[other]['url']
+                        write_saved_sources(tmp, bodies, changed)
+                        with self.assertRaisesRegex(ValueError, 'saved source receipt: ' + key):
+                            importer.load_saved(tmp, 'morro-bay', now)
+
+    def test_offline_rebuild_binds_urls_to_the_selected_region(self):
+        bodies, receipts = synthetic_bodies('2026-10-03T00:00:00.000Z')
+        now = datetime(2026, 10, 7, tzinfo=timezone.utc)
+        # A second synthetic region exercises the bbox without adding a real source.
+        with mock.patch.dict(importer.SITES, {'synthetic-other': {'bbox': (-122, 36, -121, 37)}}):
+            urls = importer.source_urls('synthetic-other')
+            with tempfile.TemporaryDirectory() as tmp:
+                for key in ('noaa', 'access'):
+                    with self.subTest(key=key):
+                        changed = copy.deepcopy(receipts)
+                        changed[key]['url'] = urls[key]
+                        write_saved_sources(tmp, bodies, changed)
+                        with self.assertRaisesRegex(ValueError, 'saved source receipt: ' + key):
+                            importer.load_saved(tmp, 'morro-bay', now)
+                selected = copy.deepcopy(receipts)
+                for key in selected:
+                    selected[key]['url'] = urls[key]
+                write_saved_sources(tmp, bodies, selected)
+                self.assertEqual(importer.load_saved(tmp, 'synthetic-other', now), (bodies, selected))
 
 
 class BuildCopy(unittest.TestCase):

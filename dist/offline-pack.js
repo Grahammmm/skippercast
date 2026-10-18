@@ -6,9 +6,8 @@
 import {getRegion, getRegionDirectory, localContext} from './region.js';
 import {chartLayers} from './chart-map.js';
 import {track} from '../web/telemetry.ts';
-import {PACK_PREFIX, PACK_META, SHARED_FILES, planTiles, tileURL, tileKey, packRequests, stampedHeaders, formatBytes, relativeTime} from './offline-core.js';
+import {PACK_PREFIX, PACK_META, SHARED_FILES, planTiles, tileURL, tileKey, packRequests, stampedHeaders} from './offline-core.js';
 
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const CONCURRENCY = 4;
 
 /** Saved packs, newest first: [{cache, meta}]. */
@@ -132,66 +131,4 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
     await caches.delete(name);
     throw error;
   }
-}
-
-function packRow({cache, meta}, now) {
-  const when = relativeTime(meta.saved_at, now) || '';
-  const tiles = meta.tiles.saved ? `${meta.tiles.saved}${meta.tiles.saved < meta.tiles.planned ? ` of ${meta.tiles.planned}` : ''} chart tiles (zoom ${meta.tiles.min_zoom}–${meta.tiles.max_zoom})` : 'no chart tiles';
-  const gaps = meta.missing?.length ? ` · ${meta.missing.length} items could not be saved` : '';
-  return `<li><div><strong>${esc(meta.region_name)}</strong><span class="small">Saved ${esc(when)} · <time datetime="${esc(meta.saved_at)}">${esc(new Date(meta.saved_at).toLocaleString())}</time> · ${esc(formatBytes(meta.bytes))} · ${esc(tiles)}${esc(gaps)}</span></div><button type="button" data-delete-pack="${esc(cache)}">Delete</button></li>`;
-}
-
-/** Render the "Offline trip pack" card into `host`. */
-export function initOfflinePack(host, {sessionStart = 0} = {}) {
-  if (!host) return;
-  if (!('caches' in self) || !('serviceWorker' in navigator)) {
-    host.innerHTML = '<p>This browser cannot save SkipperCast for offline use.</p>';
-    return;
-  }
-  host.innerHTML = `<p>Save this region before you lose signal: the map layers, fishing rules, protected areas, the latest forecast and NOAA chart tiles (zoom 8–12). Saved data shows its saved time when you are offline.</p>
-    <div class="offline-pack-actions"><button type="button" class="primary" id="offline-pack-save">Save this region for offline</button><button type="button" id="offline-pack-cancel" hidden>Cancel</button></div>
-    <div id="offline-pack-progress" hidden><progress max="1" value="0"></progress><p class="small" role="status" aria-live="polite"></p></div>
-    <h3 class="offline-pack-heading">Saved regions</h3><ul id="offline-pack-list" class="offline-pack-list"></ul>
-    <p class="small">Street map tiles are not saved; OpenStreetMap does not allow bulk downloads. Planning aid · not a navigation chart.</p>`;
-  const save = host.querySelector('#offline-pack-save'), cancel = host.querySelector('#offline-pack-cancel');
-  const box = host.querySelector('#offline-pack-progress'), bar = box.querySelector('progress'), status = box.querySelector('p');
-  const list = host.querySelector('#offline-pack-list');
-  let controller = null;
-  async function refresh() {
-    save.textContent = `Save ${getRegion().name} for offline`;
-    const packs = await listPacks().catch(() => []);
-    const now = Date.now();
-    list.innerHTML = packs.length ? packs.map(p => packRow(p, now)).join('') : '<li class="small">Nothing saved on this device yet.</li>';
-  }
-  list.addEventListener('click', async event => {
-    const name = event.target.closest('[data-delete-pack]')?.dataset.deletePack;
-    if (!name) return;
-    await caches.delete(name);
-    status.textContent = 'Saved region deleted.'; box.hidden = false; bar.hidden = true;
-    refresh();
-  });
-  cancel.addEventListener('click', () => controller?.abort());
-  save.addEventListener('click', async () => {
-    if (controller) return;
-    if (!navigator.onLine) { box.hidden = false; bar.hidden = true; status.textContent = 'You are offline. Connect to save this region; saved regions are unchanged.'; return; }
-    controller = new AbortController();
-    save.disabled = true; cancel.hidden = false; box.hidden = false; bar.hidden = false; bar.value = 0;
-    const label = {files: 'Saving data and rules', tiles: 'Saving chart tiles'};
-    try {
-      const meta = await savePack({signal: controller.signal, sessionStart, progress: ({phase, done, total, bytes}) => {
-        bar.max = Math.max(1, total); bar.value = done;
-        status.textContent = `${label[phase]} · ${done} of ${total} · ${formatBytes(bytes)}`;
-      }});
-      const gaps = meta.missing.length ? ` ${meta.missing.length} items could not be saved; they will be missing offline.` : '';
-      const capped = meta.tiles.max_zoom !== meta.tiles.requested_max_zoom ? ` Chart tiles stop at zoom ${meta.tiles.max_zoom} to stay under ${meta.tiles.planned} tiles.` : '';
-      status.textContent = `Saved ${meta.region_name} · ${formatBytes(meta.bytes)}.${gaps}${capped}`;
-    } catch (error) {
-      status.textContent = error?.name === 'AbortError' ? 'Cancelled. Nothing new was saved.' : `Could not save: ${error?.message || error}`;
-    } finally {
-      controller = null; save.disabled = false; cancel.hidden = true; bar.hidden = true;
-      refresh();
-    }
-  });
-  host.closest('details')?.addEventListener('toggle', refresh);
-  refresh();
 }
