@@ -165,12 +165,19 @@ test('Accept 2: the basis sentences are v1\'s, verbatim, and the commercial AIS 
     'Local sportfishing-charter identity remains unverified.']) {
     assert.ok(`${card.reading} ${card.basis}`.includes(s));
   }
-  // The commercial AIS page is byte for byte as before FE-21, except FE-61's back link: the v1 shell's
-  // index.html#map is gone, so it opens the app at /map.
+  // The commercial AIS page's content is byte for byte as before FE-21, except FE-61's back link: the v1 shell's
+  // index.html#map is gone, so it opens the app at /map. FE-61 part 2 moved only its head and wrapper onto the
+  // v2 tokens and the readable pages' sheet, so the pin covers the <main> content, which is unchanged.
   assert.equal((html.match(/href="\/map"/g) || []).length, 1);
-  assert.deepEqual({html: createHash('sha256').update(html.replace('<a href="/map">', '<a href="index.html#map">')).digest('hex')}, PINNED);
+  const main = html.match(/<main id="content">([\s\S]*)<\/main>/)?.[1] ?? '';
+  assert.deepEqual({main: createHash('sha256').update(main.replace('<a href="/map">', '<a href="index.html#map">')).digest('hex')}, PINNED);
+  assert.match(html, /<link rel="stylesheet" href="\.\.\/web\/tokens\.css"><link rel="stylesheet" href="coast-readable\.css">/);
+  assert.doesNotMatch(html, /href="(?:tokens|styles)\.css"/, 'no v1 sheet');
   assert.ok(groundMark(GROUNDS.grounds[0], GROUNDS).basis.startsWith(layerEntry('charter-grounds').basis));
 });
 
-/** sha256 of dist/commercial-ais.html and dist/commercial-ais.js on main before FE-21. */
-const PINNED = {html: '096874dd13a971e64ea321fd30e652048416c1aaf7335e00e72569f71a341f8e'};
+/**
+ * sha256 of dist/commercial-ais.html's <main> content as it was before FE-21. Until FE-61 part 2 this pinned the
+ * whole page (096874dd…, before FE-21); that page's <main> content hashes to this value.
+ */
+const PINNED = {main: 'f8f4339ad2caf92af03d93e709d5c5760011bc9efee8a3ef28b1daa0beb455d3'};

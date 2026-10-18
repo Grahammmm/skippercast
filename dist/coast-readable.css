@@ -66,6 +66,8 @@ body.coast-readable {
 .coast-readable dl { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .coast-readable dt { color: var(--muted); font-size: var(--text-13); }
 .coast-readable dd { margin: 0; font-weight: var(--weight-medium); }
+/* The research page's wide tables scroll inside the column. */
+.coast-readable .forecast-table-wrap { overflow-x: auto; }
 /* FE-61 part 2: the legal pages' draft notice, an amber edge on the panel. */
 .coast-readable .legal-draft { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); border-left: 4px solid var(--amber); background: var(--panel); color: var(--text); }
 /* The licences page's collapsed licence texts. */
