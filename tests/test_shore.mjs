@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {CDFW_RULES_URL, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
+import {BEACH_HEALTH_SOURCE, CDFW_RULES_URL, activeAlerts, beachNotices, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 import {layerEntry} from '../web/map/layers.ts';
 import {markScreen} from '../web/map/marks.ts';
@@ -43,6 +43,51 @@ test('priority: Current, No surf model, Hold and Blocked from protected areas an
   assert.equal(shoreShown({reviewExpiresAt: iso(NOW - 1)}, NOW), false, 'past its source review a run is not shown');
   const ranked = rankRuns([{name: 'B', status: {priority: 0}}, {name: 'C', status: {priority: 3}}, {name: 'A', status: {priority: 0}}]);
   assert.deepEqual(ranked.map(r => r.name), ['C', 'A', 'B']);
+});
+
+test('a marine alert or a county beach-health notice holds a run, as the original Fish rules do (#422)', () => {
+  const run = clocks(NOW);
+  assert.deepEqual(shoreStatus(run, {now: NOW, inside: [], conditions: true, alerts: ['Small Craft Advisory']}),
+    {priority: 0, label: 'Hold', reasons: ['Marine alert: Small Craft Advisory']});
+  assert.deepEqual(shoreStatus(run, {now: NOW, inside: [], conditions: false, notices: ['Synthetic Beach']}),
+    {priority: 0, label: 'Hold', reasons: ['Beach-health notice: Synthetic Beach']});
+  assert.deepEqual(shoreStatus(run, {now: NOW, inside: null, conditions: true, alerts: ['Gale Warning'], notices: ['Synthetic Beach']}).reasons,
+    ['Protected-area check not current', 'Marine alert: Gale Warning', 'Beach-health notice: Synthetic Beach'], 'every hold reason is said');
+  assert.equal(shoreStatus(run, {now: NOW, inside: ['Synthetic SMR'], conditions: true, alerts: ['Gale Warning']}).label, 'Blocked', 'Blocked still wins');
+  assert.equal(shoreStatus(run, {now: NOW, inside: [], conditions: true, alerts: [], notices: []}).label, 'Current');
+
+  const alert = (o = {}) => ({event: 'Small Craft Advisory', effective: iso(NOW - HOUR), expires: iso(NOW + HOUR), ...o});
+  assert.equal(activeAlerts([alert()], 'a1', NOW).length, 1, 'in effect now, any area');
+  assert.equal(activeAlerts([alert({areaIds: ['a1']})], 'a1', NOW).length, 1);
+  assert.equal(activeAlerts([alert({areaIds: ['a2']})], 'a1', NOW).length, 0, 'another area');
+  assert.equal(activeAlerts([alert({expires: iso(NOW - 1)})], 'a1', NOW).length, 0, 'expired');
+  assert.equal(activeAlerts([alert({effective: iso(NOW + 23 * HOUR), expires: null})], 'a1', NOW).length, 1, 'starts within a day');
+  assert.equal(activeAlerts([alert({effective: iso(NOW + 25 * HOUR)})], 'a1', NOW).length, 0, 'starts later');
+  assert.equal(activeAlerts([alert({effective: 'not a date', expires: 'not a date'})], 'a1', NOW).length, 1, 'bad clocks count as in effect');
+
+  const source = (o = {}) => ({id: BEACH_HEALTH_SOURCE, outcome: 'ok', fetchedAt: iso(NOW - HOUR), ...o});
+  const beach = (status, areaId = 'a1') => ({areaId, name: `Beach ${status}`, status, url: 'https://example.org/beach'});
+  const report = (o = {}) => ({sources: [source()], waterQuality: [beach('Advisory'), beach('Beach Open'), beach('Closed', 'a2'), beach('Warning')], ...o});
+  assert.deepEqual(beachNotices(report(), 'a1', NOW).map(b => b.name), ['Beach Advisory', 'Beach Warning'], 'notices only, this area only');
+  assert.deepEqual(beachNotices(report({sources: [source({fetchedAt: iso(NOW - 4 * HOUR)})]}), 'a1', NOW), [], 'a stale county source says nothing');
+  assert.deepEqual(beachNotices(report({sources: [source({outcome: 'error'})]}), 'a1', NOW), []);
+  assert.deepEqual(beachNotices(report({sources: []}), 'a1', NOW), []);
+});
+
+test('the Chart holds the runs of an area under a marine alert or beach notice', () => {
+  const plain = shownRuns(PACKAGE, READY, null, NOW).find(r => r.status.label !== 'Blocked');
+  assert.ok(plain, 'an unblocked run');
+  const area = plain.run.properties.areaId;
+  const base = {alerts: [], sources: [{id: BEACH_HEALTH_SOURCE, outcome: 'ok', fetchedAt: iso(NOW - HOUR)}], waterQuality: [], nearshore: []};
+  const held = (report) => shownRuns(PACKAGE, READY, report, NOW).find(r => r.run.id === plain.run.id).status;
+  assert.equal(held(base).label, 'No surf model');
+  assert.deepEqual(held({...base, alerts: [{event: 'Gale Warning', effective: null, expires: iso(NOW + HOUR), areaIds: [area]}]}),
+    {priority: 0, label: 'Hold', reasons: ['Marine alert: Gale Warning']});
+  assert.deepEqual(held({...base, waterQuality: [{areaId: area, name: 'Synthetic Beach', status: 'Closed', url: 'https://example.org/b'}]}),
+    {priority: 0, label: 'Hold', reasons: ['Beach-health notice: Synthetic Beach']});
+  const card = runMark(shownRuns(PACKAGE, READY, {...base, alerts: [{event: 'Gale Warning', effective: null, expires: null}]}, NOW).find(r => r.run.id === plain.run.id), 'surfperch', NOW);
+  assert.match(card.kind, /· Hold$/);
+  assert.match(card.reading, /^Marine alert: Gale Warning\./, 'the card says why');
 });
 
 test('review dates never set guidance priority or imply current reviews', () => {
