@@ -2,6 +2,7 @@
 from pathlib import Path
 import html
 import re
+import sys
 ROOT = Path(__file__).resolve().parents[2]
 
 def inline(text):
@@ -32,5 +33,12 @@ while i<len(lines):
     else:
         while i<len(lines) and lines[i].strip() and not lines[i].startswith(('#','|','- ')):line+=' '+lines[i];i+=1
         out.append('<p>'+inline(line)+'</p>')
-page='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Species & ocean research · SkipperCast</title><link rel="stylesheet" href="styles.css"></head><body><header class="masthead"><a class="brand" href="./">⌁ SkipperCast</a><a class="download" href="./#guide">Back to the guide</a></header><main class="source-page">'+'\n'.join(out)+'</main></body></html>'
-(ROOT/'dist/species-research.html').write_text(page+'\n')
+page=('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+      '<title>Species & ocean research · SkipperCast</title><meta name="color-scheme" content="dark"><link rel="icon" href="app-icon.svg">'
+      '<!-- FE-61 part 2: the v2 tokens and the readable pages\' sheet (FE-86), as sources.html. -->'
+      '<link rel="stylesheet" href="../web/tokens.css"><link rel="stylesheet" href="coast-readable.css"></head>'
+      '<body class="coast-readable"><a class="skip-link" href="#content">Skip to content</a><header><a class="brand" href="./">SkipperCast</a>'
+      '<nav aria-label="Public information"><a href="/map">Back to the map</a><a href="/sources">Sources &amp; methods</a></nav></header>'
+      '<main id="content">'+'\n'.join(out)+'</main></body></html>')
+target=Path(sys.argv[1]) if len(sys.argv)>1 else ROOT/'dist/species-research.html'
+target.write_text(page+'\n')

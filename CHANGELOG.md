@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The species research and commercial AIS pages use the app's visual system, like the sources page; their text is unchanged.
+- The species research and commercial AIS pages use the app's visual system, like the sources page. Their text is unchanged, except the species research page's chart paragraph, which now names the NOAA chart layer groups the map requests.
 - The terms, privacy and licences pages use the app's visual system, like the sources page, with the draft notice kept prominent.
 - The Seafloor legend summarises its surveys ("4 surveys, 2006–2010") instead of listing raw source file names; every survey is still listed in its basis.
 - After a brief nautical-chart (ENC) tile failure the Chart drops its "chart detail unavailable" note as soon as a fresh chart tile loads for the same region, instead of keeping it until the page is reloaded. Other layer failures stay reported.
