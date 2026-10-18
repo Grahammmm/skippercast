@@ -70,7 +70,10 @@ export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: st
   rated.sort((a, b) => (b.fit?.n ?? 0) - (a.fit?.n ?? 0) || b.score - a.score || a.t.id.localeCompare(b.t.id));
   return rated.slice(0, TOP).map(({t, fit}) => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number];
-    const reason = speciesFit(t, target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : 'lingcod')?.reason;
+    // Only the two supported species screens can supply a target-specific reason.
+    const species = target === 'lingcod' ? 'lingcod'
+      : target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : null;
+    const reason = species ? speciesFit(t, species)?.reason : null;
     const nm = miles(origin, t);
     return {id: t.id, kind: 'spot', name: t.label, distance: distance(nm), nm, depth: band(lo, hi),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
