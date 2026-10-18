@@ -521,6 +521,30 @@ test('a SkipperCast report keeps Fish nearshore and beach rows only for the sour
   assert.deepEqual([alone.nearshore, alone.waterQuality, alone.sources], [undefined, undefined, own.sources]);
 });
 
+test('Fish enrichment preserves processing failure provenance with successful and failed source rows', async () => {
+  const own = reportFeed(), store = feedStore({[REPORT]: own});
+  const processing = {id: 'enrichment-processing', outcome: 'error', fetchedAt: ago(1), error: 'Synthetic enrichment processing failure'};
+  for (const outcome of ['ok', 'error']) {
+    const sources = [
+      {id: 'cdip-SL345', outcome, fetchedAt: ago(2)},
+      {id: 'slo-beach-water-quality', outcome, fetchedAt: ago(1)},
+      processing,
+    ];
+    const packet = {...fishReport, sources: [fishReport.sources[0], null, ...sources],
+      nearshore: outcome === 'ok' ? fishReport.nearshore : null, waterQuality: null};
+    const r = await serveCoastData(request('/api/coast/report'), async () => response(packet), store, coastFeeds('report'));
+    assert.equal(r.status, 200);
+    const report = await r.json();
+    assert.deepEqual(report.sources, [...own.sources, ...sources]);
+    assert.deepEqual(report.nearshore, outcome === 'ok' ? fishReport.nearshore : []);
+    assert.deepEqual(report.waterQuality, []);
+  }
+  // An unavailable Fish packet leaves the original report intact.
+  const r = await serveCoastData(request('/api/coast/report'), async () => response(null), store, coastFeeds('report'));
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), own);
+});
+
 test('a stale, future or malformed report feed falls back to the Fish report exactly as before', async () => {
   for (const [feed, reason] of [[reportFeed(ago(2.1)), 'stale'], [reportFeed(ago(-0.5)), 'stale'], [{...reportFeed(), countyId: 'monterey'}, 'invalid'],
     [{...reportFeed(), sources: [{id: 'nws-alerts', outcome: 'partial', fetchedAt: ago(0)}]}, 'invalid'], [{...reportFeed(), tides: null}, 'invalid']]) {

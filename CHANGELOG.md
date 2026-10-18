@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Refresh conditional coastal jobs when the CDIP, beach-health or GOES collector adapters change.
+
+- Preserve Fish enrichment failure provenance and use configured coastal feed context for readable reports and RSS, retaining reviewed fallback and privacy behavior.
+
+- Apply one-second pacing to default National Weather Service coast-report requests while preserving injected sessions and other provider limits.
+
 - Use target-specific atlas explanations only for supported lingcod and rockfish screens; keep neutral terrain descriptions for other admitted targets. Add terrain-type and age-formatting regression coverage.
 
 - Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.
