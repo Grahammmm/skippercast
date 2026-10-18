@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Shore runs on the Chart go on Hold, with the reason on the card, while a marine alert covers the area or the county posts a beach-health advisory, closure or warning there.
 - A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
 - The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
 - The licences page and NOTICE name the MapLibre GL JS version the app ships (6.12.0), and a check keeps them in step with future updates.
