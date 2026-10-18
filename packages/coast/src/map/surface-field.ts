@@ -35,8 +35,8 @@ export function surfaceField(points:FieldPoint[],opts:{step?:[number,number];max
   return Array.from({length:dimensions},(_,i)=>c.reduce((n,p,j)=>n+p!.values[i]*weights[j],0));
  }};
 }
-export const temperatureColors=['#244f9d','#188eb5','#39c6c2','#a6dda0','#efd477','#f18a65'];
-export const currentColors=['#245893','#228fab','#4bcbbb','#d2e59a','#f6c876','#ec8e68'];
+// The ramps are colour data in ../palette.ts (#711), the one module allowed literals; re-exported here unchanged.
+export {temperatureColors,currentColors} from '../palette.ts';
 export function fieldColor(value:number,low:number,high:number,palette:string[]):[number,number,number]{
  const f=Math.max(0,Math.min(palette.length-1,(value-low)/Math.max(high-low,1e-9)*(palette.length-1))),i=Math.min(palette.length-2,Math.floor(f)),t=f-i;
  const a=parseInt(palette[i].slice(1),16),b=parseInt(palette[i+1].slice(1),16);

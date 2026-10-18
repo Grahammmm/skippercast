@@ -6,11 +6,11 @@
    variable; custom properties inherit into shadow roots. Load web/tokens.css
    in the document first. scripts/check_tokens.mjs lints this file: no literals.
    panel.css (FE-77) maps its many v1 shades onto these roles. The legend
-   ramps of fish's map layers, which v2 does not draw (--coast-reef-*,
-   --coast-reef-fit-*, --coast-shore-*, --coast-current-*, --coast-wave-*,
-   --coast-bathy-*), have no web/tokens.css ramp (design § 5), so they are not
-   mapped and keep their v1 colours under the opt-in too; FE-61 adds tokens
-   for them or drops those legends. */
+   ramps of fish's map layers (--coast-reef-*, --coast-reef-fit-*,
+   --coast-shore-*, --coast-current-*, --coast-wave-*, --coast-bathy-*)
+   read web/tokens.css cartography ramps that keep their v1 stops, in
+   order (#711), in both themes; they are mapped after the surface-
+   temperature ramp below. */
 
 [data-coast-theme="tokens"],
 :host([data-coast-theme="tokens"]) {
@@ -51,6 +51,32 @@
   --coast-sst-3: var(--sst-3);
   --coast-sst-4: var(--sst-4);
   --coast-sst-5: var(--sst-5);
+  --coast-bathy-0: var(--bathy-0);
+  --coast-bathy-1: var(--bathy-1);
+  --coast-bathy-2: var(--bathy-2);
+  --coast-bathy-3: var(--bathy-3);
+  --coast-bathy-4: var(--bathy-4);
+  --coast-bathy-5: var(--bathy-5);
+  --coast-bathy-6: var(--bathy-6);
+  --coast-current-0: var(--current-0);
+  --coast-current-1: var(--current-1);
+  --coast-current-2: var(--current-2);
+  --coast-current-3: var(--current-3);
+  --coast-current-4: var(--current-4);
+  --coast-current-5: var(--current-5);
+  --coast-reef-0: var(--reef-0);
+  --coast-reef-1: var(--reef-1);
+  --coast-reef-2: var(--reef-2);
+  --coast-reef-3: var(--reef-3);
+  --coast-reef-4: var(--reef-4);
+  --coast-reef-fit-0: var(--reef-fit-0);
+  --coast-reef-fit-1: var(--reef-fit-1);
+  --coast-shore-0: var(--shore-0);
+  --coast-shore-1: var(--shore-1);
+  --coast-shore-2: var(--shore-2);
+  --coast-wave-0: var(--wave-0);
+  --coast-wave-1: var(--wave-1);
+  --coast-wave-2: var(--wave-2);
   --coast-sans: var(--font-sans);
   --coast-mono: var(--font-mono);
 }
