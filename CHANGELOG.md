@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- After a brief nautical-chart (ENC) tile failure the Chart drops its "chart detail unavailable" note as soon as a fresh chart tile loads for the same region, instead of keeping it until the page is reloaded. Other layer failures stay reported.
 - While a ranked trip plan's numbered pins show on the Chart, the legend keys them and links their basis.
 - Shore runs on the Chart go on Hold, with the reason on the card, while a marine alert covers the area, the marine alert check is not current, or the county posts a beach-health advisory, closure or warning there.
 - A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
