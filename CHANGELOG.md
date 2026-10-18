@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
 - The licences page and NOTICE name the MapLibre GL JS version the app ships (6.12.0), and a check keeps them in step with future updates.
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).

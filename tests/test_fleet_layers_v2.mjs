@@ -161,7 +161,7 @@ test('an admin with both flags gets the options; each loads for the map\'s bound
   toggleActivity('heat', true);
   await until(() => activityStatus.value.includes('heat'), 'heat loads');
   assert.deepEqual(activityOn.value, ['events', 'heat']);
-  assert.equal(activityStatus.value, '2 stops · 1 heat cells · inferred from movement.');
+  assert.equal(activityStatus.value, '2 stops · 1 heat cell · inferred from movement.');
   assert.ok(fleet.pick.mark(FLEET_HEAT, {key: 'c1'}).reading.endsWith(v1.INFERRED));
 
   for (const name of ACTIVITY) toggleActivity(name, false);
@@ -249,6 +249,7 @@ test('Accept 1: the rail offers the activity layers only with access; the legend
 
 test('Accept 3: v1\'s fleet-activity.js is byte for byte as before FE-24, with N5\'s mode names', async () => {
   // Re-pinned by charter-fleet N5, which renamed the event and segment kinds in EVENT_STYLE and SEGMENT_STYLE.
+  // Re-pinned again for statusText's singular counts ("1 stop", #422 FE-24 follow-up).
   const sha = createHash('sha256').update(await readFile(new URL('dist/fleet-activity.js', ROOT))).digest('hex');
-  assert.equal(sha, '41c7a9aaa56a660751df582889aa4506fc3a6a68aec5785b708c95b69804b576');
+  assert.equal(sha, '845efe4f02007b9d4756174b3716c8befffa123c3502cae435fbbecae9f5509d');
 });

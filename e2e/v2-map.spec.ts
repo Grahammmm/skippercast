@@ -766,7 +766,7 @@ test('an admin gets the fleet activity layers under Charter fleet; a stop opens 
   expect(asked, 'no layer loads until one is on').toEqual(['/api/fleet/map/filters']);
   await events.check();
   const row = page.locator('.app-legend-fleet');
-  await expect(row.locator('[data-reason="fleet-activity"]')).toHaveText('1 stops · inferred from movement.');
+  await expect(row.locator('[data-reason="fleet-activity"]')).toHaveText('1 stop · inferred from movement.');
   await expect(row.locator('.app-swatch[data-layer="fleet-events"]')).toHaveCount(1);
   await v2.a11y('v2-map-fleet-admin');
   await hideLayers(page);
