@@ -29,7 +29,7 @@ async function load() {
       export {RAIL_ENTRIES} from './web/app/rail.ts';
       export {CHART_ONLY, drawsIn} from './web/map/layers.ts';
       export {seafloorState} from './web/map/seafloor.ts';
-      export {currentsState} from './web/map/currents.ts';
+      export {currentsState, currentsStatus} from './web/map/currents.ts';
       export {waterTempState} from './web/map/sst.ts';
       export {swellState} from './web/map/swell.ts';
       export {cloudStamp} from './web/map/clouds.ts';
@@ -116,6 +116,44 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.spear.defaultLayers);
   assert.equal(s.current.value, 'off');
   s.configureStore({storage: null});
+});
+
+test('undrawable current grids expose the rejection reason in the rail and legend; a supported frame keeps its source and time', async t => {
+  const m = await load(), s = m.state, previous = m.currentsState.value;
+  t.after(() => { m.currentsState.value = previous; });
+  s.configureStore({v2: true, storage: null});
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=currents&current=wcofs`);
+  const now = new Date('2026-10-07T12:00:00Z');
+  const grid = (width, height, step) => Array.from({length: width * height}, (_, i) => ({
+    lon: -121 + (i % width) * step, lat: 35 + Math.floor(i / width) * step,
+    uMs: 1, vMs: 0, speedKnots: 1.943844492, towardDeg: 90,
+  }));
+  const field = cells => ({id: 'wcofs', kind: 'forecast', label: 'Synthetic original WCOFS', surfaceOnly: true,
+    fetchedAt: now.toISOString(), issuedAt: '2026-10-07T09:00:00Z', nativeResolutionKm: 4, sampleStride: 1,
+    frames: [{validAt: now.toISOString(), cells}]});
+  const ragged = grid(3, 3, .01);
+  ragged[4] = {...ragged[4], lon: ragged[4].lon + .003};
+  for (const [name, cells] of [['coarse', grid(3, 3, .2)], ['ragged', ragged], ['over 10000 cells', grid(101, 100, .01)]]) {
+    const state = m.currentsStatus('wcofs', 'ready', {currents: [field(cells)]}, now, now, 'UTC');
+    assert.equal(state.drawn, null, name);
+    assert.match(state.note, /^grid cannot be drawn/, name);
+    assert.match(state.reason, /NOAA WCOFS forecast frame valid Wed 12 pm.*without bridging gaps.*no other source is shown/, name);
+    m.currentsState.value = state;
+    assert.equal(railItems(m.render(m.h(m.LayerRail))).Currents.note, state.reason, `${name}: visible rail reason`);
+    const legend = m.render(m.h(m.Legend));
+    assert.equal(reasons(legend).currents, state.reason, `${name}: visible legend reason`);
+    assert.deepEqual(swatches(legend), [], `${name}: no drawn-current key`);
+  }
+  const valid = field(grid(3, 3, .01));
+  const state = m.currentsStatus('wcofs', 'ready', {currents: [valid]}, now, now, 'UTC');
+  assert.equal(state.drawn.field, valid, 'exact chosen source retained');
+  assert.equal(state.drawn.frame, valid.frames[0], 'exact chosen frame retained');
+  assert.ok(state.drawn.surface.quads.length > 0, 'supported grid can draw');
+  assert.equal(state.reason, '');
+  assert.equal(state.note, 'forecast Wed 12 pm');
+  m.currentsState.value = state;
+  assert.equal(railItems(m.render(m.h(m.LayerRail))).Currents.note, state.note);
+  assert.deepEqual(swatches(m.render(m.h(m.Legend))), ['currents', 'currents-fast']);
 });
 
 test('the legend shows a colour key only while its layer draws, and says why otherwise (Accept 3)', async t => {

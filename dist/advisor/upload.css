@@ -6,9 +6,18 @@ body.upload-page {
   min-height: 100vh;
   background: var(--surface);
   color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: var(--text-16);
-  line-height: var(--leading-body);
+  font: var(--text-16) / var(--leading-body) var(--font-sans);
+  /* The shorthand must preserve the font properties these longhands inherited. */
+  font-style: inherit;
+  font-variant: inherit;
+  font-weight: inherit;
+  font-stretch: inherit;
+  font-size-adjust: inherit;
+  font-language-override: inherit;
+  font-kerning: inherit;
+  font-optical-sizing: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
   display: flex;
   justify-content: center;
   align-items: flex-start;

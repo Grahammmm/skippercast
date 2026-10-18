@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Coastal readiness inspection
+
+- Add coastal queue status and imported-code identity commands with explicit hold, attempt, dependency and schema receipts. Document the separate installed, native, science and operational readiness gates with synthetic unit coverage.
+
+- Refine report and advisor contrast surfaces while preserving fail-closed contrast checks through the CI adoption test.
+
+- Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
+
+- Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.
+
+- Refresh conditional coastal jobs when the CDIP, beach-health or GOES collector adapters change.
+
+- Preserve Fish enrichment failure provenance and use configured coastal feed context for readable reports and RSS, retaining reviewed fallback and privacy behavior.
+
+- Apply one-second pacing to default National Weather Service coast-report requests while preserving injected sessions and other provider limits.
+
 - Use target-specific atlas explanations only for supported lingcod and rockfish screens; keep neutral terrain descriptions for other admitted targets. Add terrain-type and age-formatting regression coverage.
 
 - Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.

@@ -28,6 +28,9 @@
 }
 
 :root {
+  /* QR paper stays white in both themes, including its CSS padding. */
+  --qr-paper: #fff;
+
   /* Colour (dark, default) */
   --bg: #07131d;
   --bg-deep: #020b12;

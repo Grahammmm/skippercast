@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 globalThis.REGIONS={};
 globalThis.DEPLOYMENT={allowed_origins:['https://skippercast.com']};
+const {coastFeeds,serveCoastData}=await import('../server/coast-data.ts');
 const {serveCoastPage,readableSelection}=await import('../server/coast-pages.ts');
 const regions=Object.fromEntries(['morro-bay','cambria-san-simeon'].map(id=>[id,JSON.parse(readFileSync(new URL('../regions/'+id+'/region.json',import.meta.url)))]));
 const template=readFileSync(new URL('../dist/coast-readable.html',import.meta.url),'utf8');
@@ -144,4 +145,40 @@ test('FE-86 methodology and about link to the sources page; the pages need nothi
   assert.equal(response.headers.get('Content-Security-Policy'),CSP,path);
  }
  assert.doesNotMatch(template,/<style|<script|\sstyle=|https?:\/\//i,'no inline style or script and no other origin');
+});
+
+
+test('readable and RSS use the same approved configured report as the coast API',async()=>{
+ const clock=new Date(),generatedAt=clock.toISOString(),observedAt=new Date(clock.getTime()-60000).toISOString();
+ const own={...structuredClone(report),generatedAt,catchStatus:'unavailable',visibility:{},observations:[{stationId:'configured<&',observedAt,waterTempF:61}],sources:[]};
+ const bytes=new TextEncoder().encode(JSON.stringify(own)),keys=[];
+ const store={get:async key=>{keys.push(key);return key==='conditions/regions/morro-bay/coast-report.json'?{size:bytes.length,arrayBuffer:async()=>bytes.buffer}:null;},head:async()=>null};
+ const feeds=coastFeeds('report');assert.ok(feeds.has('report'));
+ const seen=[];const fetcher=async req=>{seen.push(req);return new Response('unavailable',{status:503});};
+ const configured={...options(),now:clock,store,feeds,fetcher};
+ const api=await serveCoastData(request('/api/coast/report'),fetcher,store,feeds);assert.equal(api.status,200);
+ const expected=await api.json();assert.equal(expected.generatedAt,generatedAt);assert.equal(expected.observations[0].stationId,'configured<&');
+ for(const path of ['/report','/feed.xml']){
+  const init={headers:{Cookie:'private=synthetic',Authorization:'Bearer synthetic',Referer:'https://private.example/'}};
+  const response=await serveCoastPage(request(path,init),configured),body=await response.text();
+  assert.equal(response.status,200);assert.match(body,/configured&lt;&amp;/);assert.ok(body.includes(path==='/report'?generatedAt:new Date(generatedAt).toUTCString()));
+  assert.ok(body.includes(path==='/report'?observedAt:new Date(observedAt).toUTCString()));assert.doesNotMatch(body,/46028|private=synthetic|Bearer synthetic/);
+  const head=await serveCoastPage(request(path,{method:'HEAD'}),configured);assert.equal(head.status,200);assert.equal(await head.text(),'');
+ }
+ assert.ok(keys.includes('conditions/regions/morro-bay/coast-report.json'));
+ for(const req of seen)for(const header of ['Cookie','Authorization','Referer','Origin'])assert.equal(req.headers.get(header),null);
+});
+
+test('unusable configured report and unavailable bridge cannot fabricate a readable report or RSS',async()=>{
+ const generatedAt=new Date().toISOString();
+ const invalid={...report,generatedAt,countyId:'other',catchStatus:'unavailable',visibility:{}};
+ for(const mode of ['missing','failed','invalid','expired']){
+  const data=mode==='expired'?{...invalid,countyId:'slo',generatedAt:'2000-01-01T00:00:00Z'}:invalid;
+  const bytes=new TextEncoder().encode(JSON.stringify(data));
+  const store={get:async()=>{if(mode==='failed')throw new Error('synthetic store failure');return mode==='missing'?null:{size:bytes.length,arrayBuffer:async()=>bytes.buffer};},head:async()=>null};
+  for(const path of ['/report','/feed.xml']){
+   const response=await serveCoastPage(request(path),{...options(),store,feeds:coastFeeds('report'),fetcher:async()=>new Response('unavailable',{status:503})});
+   assert.equal(response.status,503,mode+' '+path);const body=await response.text();assert.match(body,/unavailable/i);assert.doesNotMatch(body,/<lastBuildDate>|Report assembled|46028/);
+  }
+ }
 });

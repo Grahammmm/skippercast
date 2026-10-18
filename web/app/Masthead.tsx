@@ -11,7 +11,7 @@ import {useEffect} from 'preact/hooks';
 import {CHAT_ENTRY, CHAT_PATH} from '../advisor/entry.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {APP_VIEWS, appView, region, setParams, withParams, type AppView} from '../state.ts';
-import {freshness, regionInfo} from './App.tsx';
+import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 
 export const VIEW_LABELS: Readonly<Record<AppView, string>> = {coast: 'Coast', conditions: 'Conditions', history: 'History', fleet: 'Fleet', reports: 'Reports'};
@@ -43,11 +43,17 @@ export function Brand() {
 }
 
 export function Location() {
-  const info = regionInfo.value;
+  const info = currentRegionInfo();
+  const load = regionLoad.value;
+  const state = load?.id === region.value ? load.state : null;
   return (
-    <span class="app-location ui-mono" data-region={region.value ?? ''}>
-      {info ? `${info.name} ${coordinates(info.center)}` : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
-    </span>
+    <>
+      <span class="app-location ui-mono" data-region={region.value ?? ''}>
+        {info ? `${info.name} ${coordinates(info.center)}` : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
+      </span>
+      {state === 'loading' ? <span role="status">Loading region…</span> : null}
+      {state === 'error' ? <span role="status">Region details unavailable. <button type="button" onClick={retryRegion}>Retry region details</button></span> : null}
+    </>
   );
 }
 

@@ -6,9 +6,18 @@ body.chat-page {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-sans);
-  font-size: var(--text-15);
-  line-height: var(--leading-body);
+  font: var(--text-15) / var(--leading-body) var(--font-sans);
+  /* The shorthand must preserve the font properties these longhands inherited. */
+  font-style: inherit;
+  font-variant: inherit;
+  font-weight: inherit;
+  font-stretch: inherit;
+  font-size-adjust: inherit;
+  font-language-override: inherit;
+  font-kerning: inherit;
+  font-optical-sizing: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
 }
 .chat-page-main { max-width: 640px; margin: 0 auto; padding: var(--space-6) var(--space-4) 0; }
 .chat-page-brand { margin: 0 0 var(--space-3); font-weight: var(--weight-semibold); }
@@ -21,9 +30,18 @@ body.chat-page {
   right: var(--space-4);
   bottom: var(--space-4);
   z-index: var(--z-modal);
-  font-family: var(--font-sans);
-  font-size: var(--text-15);
-  line-height: var(--leading-body);
+  font: var(--text-15) / var(--leading-body) var(--font-sans);
+  /* The shorthand must preserve the font properties these longhands inherited. */
+  font-style: inherit;
+  font-variant: inherit;
+  font-weight: inherit;
+  font-stretch: inherit;
+  font-size-adjust: inherit;
+  font-language-override: inherit;
+  font-kerning: inherit;
+  font-optical-sizing: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
   color: var(--text);
 }
 .chat-launcher, .chat-send {
