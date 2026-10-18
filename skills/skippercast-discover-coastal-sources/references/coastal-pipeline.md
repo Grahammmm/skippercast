@@ -8,11 +8,26 @@ The host coordinator stores geographic EPSG:3310 segments in SQLite, with fenced
 
 ```sh
 python -m skippercast.coastal.cli --root REPO --db var/coastal/coordinator.sqlite status
-python -m skippercast.coastal.cli --root REPO --db var/coastal/coordinator.sqlite enqueue --segments SEGMENTS.json --stage discover --input INPUT_REF.json --params PARAMS.json --budget BUDGET.json
-python -m skippercast.coastal.cli --root REPO --db var/coastal/coordinator.sqlite run --until UTC_EPOCH_DEADLINE --max-jobs 5
+python -m skippercast.coastal.cli --root REPO identity
 ```
 
-Use a reviewed, bounded run specification and the current policy before enqueueing. Preserve the mission allowance across retries. The fixed stage dispatcher accepts authenticated job files; never introduce caller-supplied executable commands. An expired lease is not proof that its process stopped. Resolve uncertain process identity before retrying.
+These inspection commands do not create a queue, enqueue, recover or dispatch
+workers. Identity reports actual imported code and packaged schema bytes,
+distribution metadata when present and dependency versions when available. It
+does not certify an installed wheel, native-library usability or real output.
+Keep its machine-local paths in the private run receipt. A source-checkout
+invocation is not installed-package acceptance.
+
+The coordinator's existing dedicated source-free launcher is
+`python -m skippercast.coastal.coordinator.source_free`; its command syntax and
+preconditions are described in the [private terrain runbook below](#private-terrain-runbook).
+The generic `coastal.cli enqueue` and `coastal.cli run` examples formerly shown
+here had no matching module and are not execution routes. Use a reviewed,
+bounded run specification and the current policy before enqueueing. Preserve the
+mission allowance across retries. The fixed stage dispatcher accepts
+authenticated job files; never introduce caller-supplied executable commands.
+An expired lease is not proof that its process stopped. Resolve uncertain
+process identity before retrying.
 
 The initial coordinator lane is `discover -> acquire -> qualify -> map -> render`. Here discovery inspects a supplied frozen local catalog; acquisition verifies existing cached bytes. Receipts must say that no external request or transfer occurred. External finite discovery/acquisition use the existing host-side bounded discovery procedure and approved endpoints; the isolated worker remains network-restricted. Do not label cache reuse as a new public search or imply all catalogs were examined.
 
@@ -28,11 +43,14 @@ habitat and website acceptance separate.
 
 Use the shared bounded runner: an independent supervisor, process identity and actual cleanup enforce deadlines. An environment variable or written deadline alone is insufficient. Keep unavailable model usage unknown and accounting conservative when receipts are incomplete. Preserve immutable bounds and stop on uncertainty instead of resetting reservations.
 
-```sh
-python -m skippercast.coastal.hermes_preflight --root REPO --out var/coastal/preflight.json --context host --skill-path SKILL_PATH
-```
-
-Optional hash-bound native fixture arguments appear in `--help`. Host imports, fixture reads, cancellation and artifact roundtrips establish only host evidence. Actual protected Hermes invocation and external artifact return require evidence from that runtime and the applicable explicit approval. Keep the durable coordinator outside a temporary gateway. A caller-provided context label cannot establish worker readiness.
+The historical `skippercast.coastal.hermes_preflight` example has no module in
+the accepted source tree. Do not invoke it or treat a substitute command as a
+passed preflight. An optional agent gateway is not required for the standalone
+source-free route. Host imports, fixture reads, cancellation and artifact
+roundtrips establish only host evidence. Actual protected gateway invocation and
+external artifact return, when requested, need evidence from that runtime and
+the applicable explicit approval. Keep the durable coordinator outside a
+temporary gateway. A caller-provided context label cannot establish readiness.
 
 ## Trial and audit
 
@@ -125,3 +143,165 @@ These lessons come from completed bounded real-data and source-free recovery
 receipts. Keep their exact paths, hashes, dates, failed-attempt evidence and scope
 in the private self-audit/run receipt; examples do not grant current execution,
 installation, deployment or publication authority.
+
+## Contributor handoff and production acceptance
+
+The intended experience is a useful, reproducible private terrain preview from
+reviewed source cells: choose a finite region, retain the source's real spacing
+and holes, qualify depth and uncertainty, map only accepted support, then inspect
+the rendered cores at a fixed camera. Discovery leads do not become measured
+terrain automatically. Terrain does not establish habitat or paired imagery.
+Public fishing layers, interactive website behavior and publication retain their
+own contracts.
+
+All three definitions already live under `skills/`:
+`skippercast-discover-coastal-sources`, `skippercast-map-coast` and
+`skippercast-render-coast-3d`. Reuse their existing references and helpers rather
+than creating a second skill bundle. The versioned Mapping definition also
+links `references/source-preparation-and-trials.md`; qualify that reference when
+comparing an installed skill to the repository.
+
+```mermaid
+flowchart LR
+  A[Finite source inventory and rights] --> B[Native window and masks]
+  B --> C[Independent science acceptance]
+  C --> D[Registered source-free mapping]
+  D --> E[Private terrain-only preview]
+  E --> F[Independent output review]
+  Q[SQLite identities, leases, charges and recovery] --- B
+  Q --- D
+  Q --- E
+```
+
+The host owns durable state; the fixed dispatcher runs bounded workers. An
+accepted native producer can supply a registered retained qualification to the
+source-free bridge. That bridge must preserve original-source isolation and
+science/review lineage. This is architecture, not evidence that an integrated
+production mission has run.
+
+### Current proof and missing evidence
+
+At accepted source `1a450b9866081a17be54aea5673b2f1de53f019f`, the prior
+[PR657](https://github.com/Grahammmm/skippercast/pull/657) integration and
+[PR660](https://github.com/Grahammmm/skippercast/pull/660) terrain-only admission
+repair are reusable. Their retained reports describe 54 tests/65 subtests and
+32 synthetic/admission cases respectively. Those reports do not establish the
+current installed package, immutable real-data bundle or completed real render.
+Site CI and deployment are separate evidence. Current skill lessons acknowledge
+bounded real-data/recovery work; recover its actual immutable receipts rather
+than denying it or promoting prose to production acceptance.
+
+| Dependency task | Deliverable and inputs | Acceptance and authority |
+| --- | --- | --- |
+| COAST-PROD-01: inspection interface | `coastal.cli` status/identity and `tests/unit/test_coastal_cli.py`, using existing queue/schema/code identity contracts | Temporary synthetic queue retains held attempts and charges; absent/corrupt/escaping inputs fail honestly. No worker launch. Independent exact source review and normal PR checks precede integration. |
+| COAST-PROD-02: installed closure | Existing package/wheel/build receipt, exact dependency and skill hashes, packaged resources and supported launcher identity | Compare actual installed consumer and canonical/declared-root positive plus traversal/symlink/hash/byte-cap negative receipts. Source-checkout inspection is insufficient. Missing environment or installation is a separate qualified task, not an implicit install instruction. |
+| COAST-PROD-03: recover retained real inputs | Existing mission/checkpoint, window/affine/CRS, masks, raw/normalized pairs, derived outputs, rights and complete charged ledger | Original producer supplies immutable locators/hashes; no source reopen or reacquisition to reconstruct missing records. Science owner supplies the corresponding independent attestation. Keep unavailable evidence unknown. |
+| COAST-PROD-04: private handoff | Accepted native producer/result identity and exact source-free plan, registered arrays and terrain-only input/review | Independent science/artifact review covers support, sign/scale/units, nominal datum, geography, uncertainty and the requested context/horizon. Imagery is optional for this explicitly terrain-only scope. Preserve genuine holds. |
+| COAST-PROD-05: real preview | Same accepted terrain bytes, pinned loader/renderer and finite private output reservation | Actual output proves holes/disjoint cores, geography and depth; independently inspect fixed-camera preview. Existing exhausted native/provider/render operations are not renewed by source preparation or these docs. Execution needs its applicable bounded authority. |
+| COAST-PROD-06: integrated operations | Same mission/queue identity, accepted stage outputs, original charges and supervisor evidence | Demonstrate idempotent resume, interrupted-worker recovery, child cleanup, artifact return, observable held/failed states and complete cost/usage bounds. Preserve uncertain processes and terminal failures. Public/paired website acceptance follows separately. |
+
+Use these task IDs in contributor issues and PR descriptions. They are dependency
+labels, not already-open issue numbers or assigned authorizations. Existing
+reviewers and publisher serialize exact scopes; this document grants neither
+account access nor a new retry allowance.
+
+### Private terrain runbook
+
+1. Recover original immutable receipts before any run. Match the native producer,
+   source-free mapping plan and independently accepted terrain-only packet to the
+   same window/support identities. Keep actual storage paths and precise private
+   geometry outside Git. Do not infer support from a survey envelope or sum
+   overlapping windows.
+2. Inspect code/package identity and the existing queue using the commands above
+   in the already-qualified environment. `metadata_found: false`, missing native
+   dependencies or a mismatched skill/entrypoint remains a qualification gap.
+   Record source-checked, packaged, installed and runtime-accepted separately.
+3. For a separately admitted retained source-free mission, the existing launcher
+   accepts `--root ROOT --database ROOT_RELATIVE_DB status`; its `import`
+   operation requires `--source-root`, `--source-db`, `--plan` and
+   `--deadline-epoch`; `enqueue` requires `--manifest` and `--index`; `run`
+   requires `--deadline-epoch` and an explicit finite `--max-jobs` of at most
+   three. These are syntax references, not instructions to launch a held mission.
+   Do not point a new command at an old exhausted queue to create fresh attempts.
+4. Keep the accepted original database/output receipts closed and recoverable.
+   The existing source-free import/recovery contracts reject unresolved WAL or
+   journal state and require producer/result and stopped-process proof. An
+   uncertain worker is not retried merely because its lease expired.
+5. Preserve masks, raw/normalized lineage, uncertainty semantics and nominal
+   datum limitations. Render only the explicitly accepted slices. Record the
+   preview and independent review; a PNG alone does not prove interaction,
+   cgroup containment, reboot recovery or installed equivalence.
+   The existing private preview module is
+   `python -m skippercast.coastal.render.terrain_only`, with required `--root`,
+   `--acceptance` (the independently accepted JSON packet) and `--output-dir`
+   arguments. Its optional `--context-only` only prints a review context; it
+   neither approves science nor renders. Prepare the exact packet and review
+   horizon before any separately authorized preview. A standalone map followed
+   by a standalone preview is not an integrated coordinator acceptance run.
+6. Retain original charges and immutable failed receipts. Roll back a proposed
+   source change by omitting/reverting that reviewed delta, never deleting source
+   originals or resetting a terminal mission. Review current state before any
+   supported recovery. Do not deploy a data preview as a public map.
+
+### Reproducible synthetic inspection checks
+
+In the existing approved Python 3.11+ test environment, the focused suite is:
+
+```sh
+python -m unittest -f tests.unit.test_coastal_cli
+```
+
+It uses only temporary synthetic queues, existing package resources and module
+inspection. It never dispatches native, mapping or rendering jobs. It also
+checks the module entrypoint from an artifact directory. Running it against a
+source checkout proves that mode only; it does not build/install a wheel or
+establish native rendering. The normal PR suite still applies. No dependency
+installation or new CI workflow is introduced here.
+
+### Public evidence manifest and source retrieval
+
+Publish code, synthetic fixtures, evidence summaries and public PR/run links.
+For a real-data handoff, record source identifier and official retrieval URL,
+retrieval date, reviewed rights, expected byte count/hash, producer code and
+dependency pins, window/support identity, normalized output hashes, review
+identity/context/validity and original charge totals. Separate reported values
+from locally byte-verified values. Never commit credentials, exact private cache
+locations, restricted datasets or sensitive operational details.
+
+For example, the retained public-source assertion for NOAA H13323 identifies
+`H13323_MB_VR_MLLW.bag` at
+`https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13323/BAG/H13323_MB_VR_MLLW.bag`,
+with reported source SHA256
+`a7a10f65bed5ad18d06711ec30f935d373a3ec7c8a0d09f24e177721d36ba96c`.
+This is a retrieval/hash reference, not a download instruction, a current rights
+review or an independently verified window/output. Large source bytes stay in
+the approved private artifact store; authorized contributors obtain them through
+the owner-approved retrieval route. Missing receipt fields remain missing.
+
+The following source-preparation manifest binds the focused synthetic check only.
+Its source hashes can be compared with the owning PR; it contains no private run
+locators and makes no real-data acceptance claim.
+
+```json
+{
+  "schema": "coastal-source-preparation-evidence-v1",
+  "date_utc": "2026-10-18",
+  "accepted_base": "1a450b9866081a17be54aea5673b2f1de53f019f",
+  "source_files": {
+    "src/skippercast/coastal/cli.py": "8e18b824d98568b858722eef45eb292883f8c0d5ae5f274ca58c476f9e95fe2e",
+    "tests/unit/test_coastal_cli.py": "ceffc584a478f092f03e856bc8b2fb083a5aa55eb9220693a9a1c2e5dc331d95"
+  },
+  "focused_check": {
+    "command": "python -m unittest -f tests.unit.test_coastal_cli",
+    "python": "3.11.16",
+    "mode": "source-checkout; not an installed distribution",
+    "tests": 12,
+    "result": "PASS",
+    "worker_dispatches": 0
+  },
+  "installed_package_acceptance": "UNVERIFIED",
+  "native_acceptance": "NOT_RUN",
+  "render_acceptance": "NOT_RUN",
+  "authority": "source preparation and synthetic checks only; no exhausted cycle renewed"
+}
+```
