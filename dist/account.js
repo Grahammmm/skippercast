@@ -132,14 +132,18 @@ export async function openAccount() {
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
     if (!supported()) { busy(true); status('This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.'); return; }
+    // #597: once the person taps Create or Sign in, a passkey-autofill request still waiting for its options must
+    // not start: its ceremony would abort theirs through the shared WebAuthn abort service.
+    let manual = false;
     const signIn = async (autofill = false) => {
       const options = await api('auth/login/options', {method: 'POST', body: {}});
+      if (autofill && (manual || !open)) return;
       const response = await webauthn().startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
       await api('auth/login/verify', {method: 'POST', body: {response}});
       status('Signed in.'); finish();
     };
     $('#account-create').addEventListener('click', async () => {
-      busy(true); status('Follow your device to create a passkey…');
+      manual = true; busy(true); status('Follow your device to create a passkey…');
       try {
         const name = $('#account-name').value.trim();
         const options = await api('auth/register/options', {method: 'POST', body: {display_name: name}});
@@ -149,7 +153,7 @@ export async function openAccount() {
       } catch (error) { status(passkeyMessage(error)); busy(false); }
     });
     $('#account-signin').addEventListener('click', async () => {
-      busy(true); status('Choose your SkipperCast passkey…');
+      manual = true; busy(true); status('Choose your SkipperCast passkey…');
       try { await signIn(false); } catch (error) { status(passkeyMessage(error)); busy(false); }
     });
     // Passkey autofill: suggestions appear in the name field where supported.
