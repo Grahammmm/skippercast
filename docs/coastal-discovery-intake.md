@@ -51,10 +51,10 @@ BAG checks remain unchanged.
 ## Candidate deduplication and proposed backpressure
 
 Candidate identity hashes the identity namespace (native raw SHA, archive SHA,
-or unresolved publisher lead ID), private-terrain purpose and exact proposed
+or unresolved lead ID plus exact publisher URL), private-terrain purpose and exact proposed
 scope. Transport URL, cache spelling, budget and code version do not create a
 second metadata candidate. Different scopes remain separate candidates.
-Unknown raw sources with different lead IDs are not guessed to be identical.
+Unknown raw sources with different lead IDs or URLs are not guessed to be identical.
 
 Every distinct descriptor and its retained evidence survives grouping. Exact
 repeated descriptors are counted separately. Conflicting source facts, datum,

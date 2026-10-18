@@ -147,7 +147,7 @@ def held_inventory(root,plan,*,now,horizon):
         if url.scheme!="https" or not url.hostname or url.username or url.password or url.fragment:
             raise ValueError("exact HTTPS source locator required")
         identity=(native["kind"]+":"+native["sha256"] if native["sha256"]
-                  else "unresolved-lead:"+lead["lead_id"])
+                  else "unresolved-lead:"+digest([lead["lead_id"],native["url"]]))
         # Deliberately distinct from Store's path/code/dependency/budget job key.
         key=digest(["coastal-metadata-scope-v1",identity,lead["purpose"],scope])
         groups.setdefault(key,[]).append(dict(descriptor=item["lead"],record=lead))

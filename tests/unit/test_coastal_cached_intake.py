@@ -143,6 +143,14 @@ def test_unknown_raw_identity_retains_distinct_leads(tmp_path):
     assert all("native_source_identity_unresolved" in e["holds"] for e in result["candidates"])
 
 
+def test_unknown_hash_same_lead_id_different_publishers_do_not_collapse(tmp_path):
+    first = lead(); first["source"].update(sha256=None, bytes=None)
+    second = deepcopy(first); second["source"]["url"] = "https://different.example.org/source.bag"
+    result = evaluate(tmp_path, plan(tmp_path, [first, second], limit=1))
+    assert len(result["candidates"]) == 2
+    assert result["backpressure"]["over_proposed_limit"]
+
+
 @pytest.mark.parametrize("change", [
     lambda r: r.update(execution_authorized=True),
     lambda r: r["source"].update(member={"sha256": "b" * 64}),
