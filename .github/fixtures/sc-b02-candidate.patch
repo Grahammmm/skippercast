@@ -38,10 +38,10 @@ index 0000000000000000000000000000000000000000..344956befe19332b378011616085eb91
 +Browser/runtime qualification, the remaining B02 attempt budget and actual final source/delivery review are prerequisites. This fixture must never be launched as a way to discover or repair an unsupported local browser environment. Normal required CI and deployment verification remain separate gates.
 diff --git a/e2e/sc-b02-region-identity.mjs b/e2e/sc-b02-region-identity.mjs
 new file mode 100644
-index 0000000000000000000000000000000000000000..3d90be00aeaf358da2a10ac311fcac077548ea0d
+index 0000000000000000000000000000000000000000..9a74c699a49610316e863694f6679616dc6777ba
 --- /dev/null
 +++ b/e2e/sc-b02-region-identity.mjs
-@@ -0,0 +1,427 @@
+@@ -0,0 +1,431 @@
 +// SC-B02 only. Real main/App, URL store, chooser, responsive shell and stage camera;
 +// synthetic deferred static responses and GPU-free renderer handles. No Worker,
 +// providers, shared test configuration or browser/dependency installation.
@@ -319,12 +319,16 @@ index 0000000000000000000000000000000000000000..3d90be00aeaf358da2a10ac311fcac07
 +            const aerial = {source: 'usgs-naip', first: '2022-05-13', last: '2022-05-29', checkedAt: '2026-10-01', note: 'Synthetic dated imagery', byDefault: false};
 +            await page.evaluate(({info, aerial}) => { __b02.app.regionInfo.value = {...info, aerial}; }, {info: before.info, aerial});
 +            await expect.poll(async () => (await snapshot(page)).aerial).toEqual(aerial);
++            // Valid metadata can publish a fresh home camera; isolate the wrong-region transition below.
++            await current(page, A);
++            const valid = await snapshot(page);
 +            await page.evaluate(aerial => { __b02.app.regionInfo.value = {id: 'southern-california', name: 'OBSOLETE', center: [1, 2], timezone: 'Pacific/Honolulu', aerial}; }, aerial);
 +            await expect(page.locator('.app-location')).not.toContainText('OBSOLETE');
 +            const guarded = await snapshot(page);
 +            assert.equal(guarded.info, null); assert.equal(guarded.place, null); assert.equal(guarded.zone, __DEFAULT_ZONE);
 +            assert.equal(guarded.aerial, null, 'real aerial callback withdraws another region’s offer');
-+            assert.equal(guarded.moves, before.moves);
++            assert.equal(guarded.moves, valid.moves);
++            assert.deepEqual(guarded.camera, valid.camera);
 +            await page.evaluate(info => { __b02.app.regionInfo.value = info; }, before.info);
 +            await expect.poll(async () => (await snapshot(page)).aerial).toBe(null);
 +            await page.getByRole('button', {name: '2D', exact: true}).click();

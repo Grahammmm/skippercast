@@ -237,7 +237,7 @@ jobs:
           echo "run=$GITHUB_RUN_ID attempt=$GITHUB_RUN_ATTEMPT delivery=$GITHUB_SHA" > sc-b02-evidence/run.txt
           test "$GITHUB_RUN_ATTEMPT" -eq 1
           python3 scripts/check_repository.py
-          echo "44c9b04668cbc6467109727a3bb3dcae92c6e39a1e9caf0e59cd9b7b18e53923  .github/fixtures/sc-b02-candidate.patch" | sha256sum --check --strict
+          echo "0ccf0304234b5ffd505db7a875b0ce51fbb332fb185015bf527e97ec6968e3a8  .github/fixtures/sc-b02-candidate.patch" | sha256sum --check --strict
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: 18fbc67edd19afe70aee70af47d0111f686d297f
@@ -247,14 +247,14 @@ jobs:
         run: |
           mkdir -p ../sc-b02-evidence
           git apply --index ../.github/fixtures/sc-b02-candidate.patch
-          test "$(git write-tree)" = fcd38bdf60936f1ebf0f97ae064300af57e92d66
-          echo "c0a48c14e38f33637c8200f5f4e2685fc7d08ba05243c5f4507de36d34d25744  e2e/sc-b02-region-identity.mjs" | sha256sum --check --strict
+          test "$(git write-tree)" = 83c730997a798519e5015714e1866ce84e232414
+          echo "ae1b7e883542ab747cd023bb0f17c096aeb5b8466245975fcf4608ad89a0839e  e2e/sc-b02-region-identity.mjs" | sha256sum --check --strict
           python3 scripts/check_repository.py
           git diff --cached --stat > ../sc-b02-evidence/source-stat.txt
           cat > ../sc-b02-evidence/source.txt <<'EOF'
           base=18fbc67edd19afe70aee70af47d0111f686d297f
-          retained_candidate=2c90f67380425a1435909e087bd31eebbda31eb0
-          tree=fcd38bdf60936f1ebf0f97ae064300af57e92d66
+          retained_candidate=25a8bbb9532747b66700c94c362c7714143ddf17
+          tree=83c730997a798519e5015714e1866ce84e232414
           EOF
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
