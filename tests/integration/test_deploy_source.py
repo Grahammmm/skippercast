@@ -101,7 +101,7 @@ class DeploySourceTests(unittest.TestCase):
                 self.assertEqual(status, 1)
                 self.assertEqual(writes, [])
 
-    def test_public_metadata_uses_no_authorization_or_new_credentials(self):
+    def test_public_metadata_sends_only_the_workflow_read_token(self):
         class Response:
             def __enter__(self):
                 return self
@@ -109,12 +109,21 @@ class DeploySourceTests(unittest.TestCase):
                 pass
             def read(self):
                 return b'{"ok":true}'
-        with patch.object(guard, 'urlopen', return_value=Response()) as open_url:
+        env = {k: v for k, v in os.environ.items() if k != 'SOURCE_READ_TOKEN'}
+        with patch.dict(os.environ, env, clear=True), patch.object(guard, 'urlopen', return_value=Response()) as open_url:
             self.assertEqual(guard.public_metadata('/repos/' + REPO + '/git/ref/heads/main'), {'ok': True})
         request = open_url.call_args.args[0]
         self.assertEqual(request.full_url, 'https://api.github.com/repos/' + REPO + '/git/ref/heads/main')
-        self.assertIsNone(request.get_header('Authorization'))
+        self.assertIsNone(request.get_header('Authorization'), 'no token set: anonymous, as before')
         self.assertEqual(open_url.call_args.kwargs['timeout'], 15)
+        with patch.dict(os.environ, {'SOURCE_READ_TOKEN': 'read-only'}), patch.object(guard, 'urlopen', return_value=Response()) as open_url:
+            guard.public_metadata('/repos/' + REPO + '/git/ref/heads/main')
+        self.assertEqual(open_url.call_args.args[0].get_header('Authorization'), 'Bearer read-only')
+        # The workflow supplies only its own token under contents: read; never a repository secret.
+        text = (ROOT / '.github/workflows/deploy-cloudflare.yml').read_text()
+        self.assertIn('permissions:\n  contents: read\n', text)
+        tokens = [line.strip() for line in text.splitlines() if 'SOURCE_READ_TOKEN:' in line]
+        self.assertEqual(tokens, ['SOURCE_READ_TOKEN: ${{ github.token }}'] * 3)
 
     def test_workflow_guard_precedes_dependencies_and_keeps_rollback_separate(self):
         text = (ROOT / '.github/workflows/deploy-cloudflare.yml').read_text()

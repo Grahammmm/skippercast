@@ -54,6 +54,9 @@ jobs:
       eligible: ${{ steps.current.outputs.eligible }}
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      # The workflow's own read-only token (permissions: contents: read), only so the
+      # metadata read is not refused by the shared runners' anonymous rate limit (#422).
+      SOURCE_READ_TOKEN: ${{ github.token }}
     steps:
       - name: Check current source before checkout or deployment credentials
         id: current
@@ -77,9 +80,11 @@ jobs:
                   raise ValueError('invalid repository identity')
               if not re.fullmatch(r'[0-9a-f]{40}', selected):
                   raise ValueError('invalid selected deployment SHA')
-              request = Request('https://api.github.com/repos/' + repository + '/git/ref/heads/main', headers={
-                  'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
-                  'User-Agent': 'SkipperCast-deploy-source-check'})
+              headers = {'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
+                         'User-Agent': 'SkipperCast-deploy-source-check'}
+              if os.environ.get('SOURCE_READ_TOKEN'):
+                  headers['Authorization'] = 'Bearer ' + os.environ['SOURCE_READ_TOKEN']
+              request = Request('https://api.github.com/repos/' + repository + '/git/ref/heads/main', headers=headers)
               with urlopen(request, timeout=15) as response:
                   main = json.load(response)
               if not isinstance(main, dict) or main.get('ref') != 'refs/heads/main':
@@ -133,6 +138,8 @@ jobs:
           # The commit CI tested, not whatever main is by the time this runs.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Require current main and successful exact-SHA CI
+        env:
+          SOURCE_READ_TOKEN: ${{ github.token }}
         run: python3 scripts/check_deploy_source.py
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -159,6 +166,8 @@ jobs:
             exit 1
           fi
       - name: Recheck source immediately before production writes
+        env:
+          SOURCE_READ_TOKEN: ${{ github.token }}
         run: python3 scripts/check_deploy_source.py
       - name: Back up D1, migrate and deploy
         id: deploy
