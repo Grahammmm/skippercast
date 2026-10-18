@@ -116,6 +116,21 @@ export function beachNotices(report: ShoreReportPart, areaId: string, now: numbe
   return (report.waterQuality ?? []).filter(item => item.areaId === areaId && BEACH_NOTICE_STATUS.test(item.status));
 }
 
+/**
+ * The next moment after `now` at which a hold input can change on its own: an alert expiring or
+ * entering the day ahead, the alert check passing 2 h, or the beach-health source passing 3 h.
+ * Null when none is ahead. The Chart re-checks then instead of on its next routine tick.
+ */
+export function nextShoreChange(report: ShoreReportPart & {readonly alerts?: readonly ShoreAlert[]}, now: number): number | null {
+  const at = (s: string | null | undefined, plus = 0): number => { const t = s ? Date.parse(s) : NaN; return Number.isFinite(t) ? t + plus : NaN; };
+  const fetched = (id: string, maxAge: number) => at(report.sources.find(item => item.id === id)?.fetchedAt, maxAge);
+  const times = [
+    ...(report.alerts ?? []).flatMap(a => [at(a.expires), at(a.effective, -24 * HOUR)]),
+    fetched('nws-alerts', 2 * HOUR), fetched(BEACH_HEALTH_SOURCE, BEACH_HEALTH_MAX_AGE_MS),
+  ].filter(t => Number.isFinite(t) && t > now);
+  return times.length ? Math.min(...times) : null;
+}
+
 /** "review until Oct 10, 2026", or "review expired Oct 10, 2026" once that date has passed: a lapsed review is said, never shown as current. */
 const until = (expires: string, now: number): string =>
   Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires)}` : 'review date unknown';

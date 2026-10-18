@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {BEACH_HEALTH_SOURCE, CDFW_RULES_URL, activeAlerts, beachNotices, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
+import {BEACH_HEALTH_SOURCE, CDFW_RULES_URL, activeAlerts, beachNotices, nextShoreChange, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 import {layerEntry} from '../web/map/layers.ts';
 import {markScreen} from '../web/map/marks.ts';
@@ -245,3 +245,36 @@ test('Accept 3: visible only with profile=shore', async t => {
   assert.equal(shoreState.value.drawn, 0);
   assert.equal(shore.pick.mark(RUNS_HIT, {id}), null);
 });
+
+test('the next hold change: an alert expiring or entering the day ahead, or a source going stale', () => {
+  const source = (id, age) => ({id, outcome: 'ok', fetchedAt: iso(NOW - age)});
+  const base = {alerts: [], sources: [source('nws-alerts', HOUR), source(BEACH_HEALTH_SOURCE, HOUR)]};
+  assert.equal(nextShoreChange(base, NOW), NOW + HOUR, 'the alert check goes stale at 2 h');
+  assert.equal(nextShoreChange({...base, alerts: [{event: 'Gale Warning', effective: null, expires: iso(NOW + 5 * 60_000)}]}, NOW), NOW + 5 * 60_000, 'an expiry');
+  assert.equal(nextShoreChange({...base, alerts: [{event: 'Gale Warning', effective: iso(NOW + 24 * HOUR + 60_000), expires: null}]}, NOW), NOW + 60_000,
+    'an alert entering the day ahead');
+  assert.equal(nextShoreChange({...base, alerts: [{event: 'X', effective: 'not a date', expires: 'not a date'}]}, NOW), NOW + HOUR, 'unparseable clocks set no time');
+  assert.equal(nextShoreChange({alerts: [], sources: []}, NOW), null);
+});
+
+test('an alert expiring before the routine tick releases the hold just after it ends', async t => {
+  t.mock.timers.enable({apis: ['setTimeout', 'setInterval']});
+  globalThis.location = {href: 'https://s.test/map?region=morro-bay&profile=shore'};
+  configureStore({v2: true, storage: null});
+  syncFromURL(location.href);
+  let clock = NOW;
+  const fetchFn = async url => ({ok: true, json: async () => json(`dist/${new URL(url).pathname.slice(1)}`)});
+  const engine = signal({setOverlay() {}, setData() {}});
+  const report = signal({...checked(NOW), alerts: [{event: 'Gale Warning', effective: null, expires: iso(NOW + 5 * 60_000)}]});
+  markScreen.value = READY;
+  const shore = createShore({engine, fetchFn, page: () => location.href, palette: () => sentinel, now: () => clock, report});
+  t.after(() => { shore.destroy(); markScreen.value = CHECKING; });
+  await flush(); await flush();
+  const unblocked = shownRuns(PACKAGE, READY, checked(NOW), NOW).filter(r => r.status.label !== 'Blocked').length;
+  assert.ok(unblocked > 0);
+  assert.equal(shoreState.value.held, unblocked, 'held while the gale warning runs');
+  clock = NOW + 5 * 60_000 + 1000;
+  t.mock.timers.tick(5 * 60_000 + 1000);
+  assert.equal(shoreState.value.held, 0, 'released at expiry, not at the 10-minute tick');
+});
+
