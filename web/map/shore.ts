@@ -9,7 +9,8 @@
 //
 // Expiry is honoured: a run past its source review is not drawn (the terrain's
 // rule, packages/coast viewer `loadShore`); only a protected-area check that is
-// not current, a marine alert for the area or a county beach-health notice holds
+// not current, a marine alert check that is not current (or no coast report), a marine
+// alert for the area or a county beach-health notice holds
 // guidance (web/brief/shore.ts); a run or
 // access point inside a protected area is blocked and draws muted without pins.
 // Review age does not set priority; all original dates remain visible on the card.
@@ -20,7 +21,7 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
-import {activeAlerts, beachNotices, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachNotices, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {profile, region, species} from '../state.ts';
@@ -79,6 +80,7 @@ export function shownRuns(pkg: ShorePackage | null, screen: MarkScreen, report: 
     const area = run.properties.areaId;
     return {run, name: run.properties.name, status: shoreStatus(run.properties, {
       now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, area, new Date(now)).length > 0,
+      alertCheck: !!report && alertCheckCurrent(report, now),
       alerts: report ? activeAlerts(report.alerts ?? [], area, now).map(a => a.event) : [],
       notices: report ? beachNotices(report, area, now).map(n => n.name) : []})};
   }));

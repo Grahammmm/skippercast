@@ -32,6 +32,8 @@ const READY = screenAt(SNAPSHOT.features, NOW);
 /** Every clock current for 30 days from `now`. */
 const clocks = now => ({reviewExpiresAt: iso(now + 30 * 24 * HOUR), accessReviewedAt: iso(now - 24 * HOUR), accessReviewExpiresAt: iso(now + 30 * 24 * HOUR),
   legalReviewedAt: iso(now - 24 * HOUR), legalReviewExpiresAt: iso(now + 30 * 24 * HOUR), checkedAt: iso(now - 24 * HOUR)});
+/** A coast report whose marine alert check is current at `now`, with no alerts, notices or model samples. */
+const checked = now => ({alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(now - HOUR)}], waterQuality: [], nearshore: []});
 
 test('priority: Current, No surf model, Hold and Blocked from protected areas and model coverage', () => {
   const run = clocks(NOW);
@@ -55,6 +57,8 @@ test('a marine alert or a county beach-health notice holds a run, as the origina
     ['Protected-area check not current', 'Marine alert: Gale Warning', 'Beach-health notice: Synthetic Beach'], 'every hold reason is said');
   assert.equal(shoreStatus(run, {now: NOW, inside: ['Synthetic SMR'], conditions: true, alerts: ['Gale Warning']}).label, 'Blocked', 'Blocked still wins');
   assert.equal(shoreStatus(run, {now: NOW, inside: [], conditions: true, alerts: [], notices: []}).label, 'Current');
+  assert.deepEqual(shoreStatus(run, {now: NOW, inside: [], conditions: true, alertCheck: false}),
+    {priority: 0, label: 'Hold', reasons: ['Marine alert check not current']});
 
   const alert = (o = {}) => ({event: 'Small Craft Advisory', effective: iso(NOW - HOUR), expires: iso(NOW + HOUR), ...o});
   assert.equal(activeAlerts([alert()], 'a1', NOW).length, 1, 'in effect now, any area');
@@ -75,10 +79,10 @@ test('a marine alert or a county beach-health notice holds a run, as the origina
 });
 
 test('the Chart holds the runs of an area under a marine alert or beach notice', () => {
-  const plain = shownRuns(PACKAGE, READY, null, NOW).find(r => r.status.label !== 'Blocked');
+  const plain = shownRuns(PACKAGE, READY, checked(NOW), NOW).find(r => r.status.label !== 'Blocked');
   assert.ok(plain, 'an unblocked run');
   const area = plain.run.properties.areaId;
-  const base = {alerts: [], sources: [{id: BEACH_HEALTH_SOURCE, outcome: 'ok', fetchedAt: iso(NOW - HOUR)}], waterQuality: [], nearshore: []};
+  const base = {alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - HOUR)}, {id: BEACH_HEALTH_SOURCE, outcome: 'ok', fetchedAt: iso(NOW - HOUR)}], waterQuality: [], nearshore: []};
   const held = (report) => shownRuns(PACKAGE, READY, report, NOW).find(r => r.run.id === plain.run.id).status;
   assert.equal(held(base).label, 'No surf model');
   assert.deepEqual(held({...base, alerts: [{event: 'Gale Warning', effective: null, expires: iso(NOW + HOUR), areaIds: [area]}]}),
@@ -88,6 +92,13 @@ test('the Chart holds the runs of an area under a marine alert or beach notice',
   const card = runMark(shownRuns(PACKAGE, READY, {...base, alerts: [{event: 'Gale Warning', effective: null, expires: null}]}, NOW).find(r => r.run.id === plain.run.id), 'surfperch', NOW);
   assert.match(card.kind, /· Hold$/);
   assert.match(card.reading, /^Marine alert: Gale Warning\./, 'the card says why');
+  // An alert list is only as current as its check (packages/coast daily.ts): a stale, failed or missing check, or no report, holds.
+  const unchecked = ['Marine alert check not current'];
+  for (const sources of [[{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - 3 * HOUR)}], [{id: 'nws-alerts', outcome: 'error', fetchedAt: iso(NOW - HOUR)}], []]) {
+    assert.deepEqual(held({...base, sources}), {priority: 0, label: 'Hold', reasons: unchecked}, JSON.stringify(sources));
+  }
+  assert.deepEqual(held(null), {priority: 0, label: 'Hold', reasons: unchecked}, 'no coast report, no alert check');
+  assert.equal(held({...base, sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - 2 * HOUR)}]}).label, 'No surf model', 'two hours old is still current');
 });
 
 test('review dates never set guidance priority or imply current reviews', () => {
@@ -110,7 +121,7 @@ test('review dates never set guidance priority or imply current reviews', () => 
 });
 
 test('committed expired access and rules dates remain visible without blanket Hold', () => {
-  const runs = shownRuns(PACKAGE, READY, null, NOW);
+  const runs = shownRuns(PACKAGE, READY, checked(NOW), NOW);
   assert.equal(runs.length, PACKAGE.features.length);
   const unblocked = runs.filter(r => r.status.label !== 'Blocked');
   assert.ok(unblocked.length > 0);
@@ -131,12 +142,12 @@ test('committed expired access and rules dates remain visible without blanket Ho
 test('Accept 1: access expiry does not hold guidance; source publication visibility stays enforced', () => {
   const access = Date.parse(PACKAGE.features[0].properties.accessReviewExpiresAt);
   for (const now of [access - 2 * HOUR, access, access + HOUR]) {
-    const runs = shownRuns(PACKAGE, screenAt(SNAPSHOT.features, now), null, now);
+    const runs = shownRuns(PACKAGE, screenAt(SNAPSHOT.features, now), checked(now), now);
     assert.equal(runs.length, PACKAGE.features.length);
     for (const r of runs) assert.ok(['No surf model', 'Blocked'].includes(r.status.label), r.name);
   }
   const late = Date.parse(PACKAGE.features[0].properties.reviewExpiresAt) + HOUR;
-  assert.deepEqual(shownRuns(PACKAGE, screenAt(SNAPSHOT.features, late), null, late), [], 'source publication visibility remains separate from guidance priority');
+  assert.deepEqual(shownRuns(PACKAGE, screenAt(SNAPSHOT.features, late), checked(late), late), [], 'source publication visibility remains separate from guidance priority');
 });
 
 test('Accept 2: a run inside a protected area is blocked and loses its access pins', () => {
@@ -146,7 +157,7 @@ test('Accept 2: a run inside a protected area is blocked and loses its access pi
   const screen = screenAt([box], NOW);
   assert.deepEqual(insideAreas(target, screen), ['Synthetic SMR']);
   assert.equal(insideAreas(target, CHECKING), null, 'no answer while the check is not current');
-  const runs = shownRuns(pkg, screen, null, NOW);
+  const runs = shownRuns(pkg, screen, checked(NOW), NOW);
   const blocked = runs.find(r => r.run.id === target.id);
   assert.deepEqual(blocked.status, {priority: 0, label: 'Blocked', reasons: ['Inside Synthetic SMR']});
   const {access, runs: lines} = shoreCollections(runs);
@@ -165,14 +176,14 @@ test('a protected access point blocks a run even with an expired rules review', 
   const screen = screenAt([box], NOW);
   assert.deepEqual(insideAreas({...target, properties: {...target.properties, access: []}}, screen), [], 'line is outside');
   assert.deepEqual(insideAreas(target, screen), ['Synthetic access restriction']);
-  const runs = shownRuns(PACKAGE, screen, null, NOW);
+  const runs = shownRuns(PACKAGE, screen, checked(NOW), NOW);
   const blocked = runs.find(r => r.run.id === target.id);
   assert.equal(blocked.status.label, 'Blocked');
   assert.equal(shoreCollections(runs).access.features.filter(f => f.properties.id === target.id).length, 0);
 });
 
 test('the card shows review dates, method guidance and the official rules link, and never promises fish', () => {
-  const [r] = shownRuns(PACKAGE, READY, null, NOW);
+  const [r] = shownRuns(PACKAGE, READY, checked(NOW), NOW);
   const card = runMark(r, 'surfperch', NOW);
   assert.match(card.kind, /^Shore run · (No surf model|Blocked)$/);
   assert.match(card.reading, /Access checked .+, review (until|expired) .+ · rules checked .+ · source review until/);
@@ -193,7 +204,7 @@ test('the card shows review dates, method guidance and the official rules link, 
 });
 
 test('the overlay: a soft --amber run tinted by priority, muted on hold, and pins with 44 px targets', () => {
-  const o = shoreOverlay(sentinel, shoreCollections(shownRuns(PACKAGE, READY, null, NOW)));
+  const o = shoreOverlay(sentinel, shoreCollections(shownRuns(PACKAGE, READY, checked(NOW), NOW)));
   assert.deepEqual(o.layers.map(l => l.id), [RUNS_HIT, RUNS_LINE, ACCESS_HIT, ACCESS_PIN]);
   assert.deepEqual(Object.keys(o.sources), [RUNS_SOURCE, ACCESS_SOURCE]);
   const line = o.layers.find(l => l.id === RUNS_LINE).paint;

@@ -3,8 +3,9 @@
 // separate gate in shoreShown; the importer still rejects closed/nonpublic access.
 //
 // - Blocked (0): a current protected-area check finds the run or an access point inside.
-// - Hold (0): the protected-area check is not current, a marine alert for the area is in
-//   effect or starts within a day, or the county posts a beach-health advisory, closure or
+// - Hold (0): the protected-area check is not current, the marine alert check is not current
+//   (packages/coast daily.ts: `nws-alerts` fetched OK within 2 h), a marine alert for the area
+//   is in effect or starts within a day, or the county posts a beach-health advisory, closure or
 //   warning for the area (#422: the original Fish shore rules hold for both).
 // - No surf model (2): no fresh nearshore model sample covers the area.
 // - Current (3): the protected-area check and nearshore sample are current.
@@ -34,6 +35,8 @@ export interface ShoreInputs {
   readonly inside: readonly string[] | null;
   /** True when a fresh nearshore model sample covers the run's area. */
   readonly conditions: boolean;
+  /** False while the marine alert check is not current (`alertCheckCurrent`); then no alert list can be trusted. */
+  readonly alertCheck?: boolean;
   /** Marine alerts for the run's area in effect now or within a day (`activeAlerts`), by event name. */
   readonly alerts?: readonly string[];
   /** The area's beaches under a fresh county advisory, closure or warning (`beachNotices`), by name. */
@@ -55,10 +58,11 @@ const day = (s: string): string => Number.isFinite(Date.parse(s))
 export const shoreShown = (run: Pick<ShoreRunClocks, 'reviewExpiresAt'>, now: number): boolean => time(run.reviewExpiresAt) > now;
 
 /** The run's priority and label at `now`. */
-export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions, alerts = [], notices = []}: ShoreInputs): ShoreStatus {
+export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions, alertCheck = true, alerts = [], notices = []}: ShoreInputs): ShoreStatus {
   if (inside && inside.length) return {priority: 0, label: 'Blocked', reasons: [`Inside ${inside.join('; ')}`]};
   const held = [
     ...(inside ? [] : ['Protected-area check not current']),
+    ...(alertCheck ? [] : ['Marine alert check not current']),
     ...alerts.map(event => `Marine alert: ${event}`),
     ...notices.map(name => `Beach-health notice: ${name}`),
   ];
@@ -81,6 +85,13 @@ export function activeAlerts(alerts: readonly ShoreAlert[], areaId: string, now:
     const effective = alert.effective ? Date.parse(alert.effective) : -Infinity, expires = alert.expires ? Date.parse(alert.expires) : Infinity;
     return (Number.isNaN(effective) || effective < now + 24 * HOUR) && (Number.isNaN(expires) || expires > now);
   });
+}
+
+/** packages/coast daily.ts' rule: the `nws-alerts` source fetched OK within 2 h (1 h of clock skew). */
+export function alertCheckCurrent(report: ShoreReportPart, now: number): boolean {
+  const source = report.sources.find(item => item.id === 'nws-alerts');
+  const age = source ? now - Date.parse(source.fetchedAt) : NaN;
+  return source?.outcome === 'ok' && Number.isFinite(age) && age >= -HOUR && age <= 2 * HOUR;
 }
 
 /** The county beach-health source (packages/coast enrichment). */
