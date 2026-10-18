@@ -1,36 +1,24 @@
 #!/usr/bin/env node
 // WCAG 2.x contrast check for the documented text/background token pairs, in
-// both themes of both token files: dist/tokens.css (v1, light default) and
-// web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
+// both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
+// FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
 // Values are read from the files, so editing a token re-runs the check.
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 
 const MIN = 4.5;
 // [foreground, background, what the pair is used for]
-export const PAIRS = [
-  ...['surface', 'card', 'brand-tint'].flatMap(bg => [
-    ['ink', bg, 'primary text'],
-    ['ink-2', bg, 'secondary text'],
-    ['brand', bg, 'links and brand text'],
-  ]),
-  ...['go', 'caution', 'rough', 'unknown'].flatMap(fg => ['surface', 'card'].map(bg => [fg, bg, 'status text'])),
-  ['on-brand', 'brand', 'primary button label'],
-  ['on-deep', 'deep', 'masthead text'],
-];
 export const PAIRS_V2 = [
   ...['bg', 'bg-deep', 'panel', 'panel-2'].flatMap(bg => [['text', bg, 'body text and readings'], ['muted', bg, 'labels, units and ages']]),
   ...['mint', 'blue', 'coral', 'amber'].flatMap(fg => ['panel', 'panel-2'].map(bg => [fg, bg, 'reading text'])),
   ['bg', 'mint', 'primary button label'],
 ];
 
-// Which rule holds each theme's tokens. v1: light is :root and dark overrides
-// it (the auto and dark blocks must match). v2: dark is :root, light overrides.
+// Which rule holds each theme's tokens: dark is :root and light overrides it.
 export const FILES = {
-  'dist/tokens.css': {pairs: PAIRS, base: 'light', overlay: 'dark', selectors: {light: ':root', dark: ':root[data-theme="dark"]', auto: ':root[data-theme="auto"]'}},
   'web/tokens.css': {pairs: PAIRS_V2, base: 'dark', overlay: 'light', selectors: {dark: ':root', light: ':root[data-theme="light"]'}},
 };
-const V1 = FILES['dist/tokens.css'];
+const V2 = FILES['web/tokens.css'];
 
 // Custom properties declared directly inside the rule whose selector matches.
 function block(css, selector) {
@@ -41,7 +29,7 @@ function block(css, selector) {
   return Object.fromEntries([...body.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(m => [m[1], m[2].toLowerCase()]));
 }
 
-export function themes(css, spec = V1) {
+export function themes(css, spec = V2) {
   const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const base = block(text, spec.selectors[spec.base]);
   const overlay = block(text, spec.selectors[spec.overlay]);
@@ -62,7 +50,7 @@ export function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-export function check(css, spec = V1) {
+export function check(css, spec = V2) {
   const failures = [], rows = [];
   for (const [name, tokens] of Object.entries(themes(css, spec))) {
     for (const [fg, bg, use] of spec.pairs) {
@@ -446,7 +434,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const named = process.argv.slice(2).filter(a => !a.startsWith('--'));
   let failed = false, count = 0;
   for (const file of named.length ? named : Object.keys(FILES)) {
-    const spec = FILES[file.replace(/^\.\//, '')] || V1;
+    const spec = FILES[file.replace(/^\.\//, '')] || V2;
     const {failures, rows} = check(readFileSync(named.length ? file : new URL(file, root), 'utf8'), spec);
     if (process.argv.includes('--verbose')) console.log(rows.map(r => `${file}: ${r}`).join('\n'));
     if (failures.length) { failed = true; console.error(`Contrast check failed in ${file}:\n  ${failures.join('\n  ')}`); }

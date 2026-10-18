@@ -31,6 +31,8 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // FE-61 part 3 group 2: panel.css drops only the v1 literal fallbacks of bridged --coast-* roles (the host always
 // applies tokens-bridge.css, so they never render); check_contrast.mjs rebinds that hash and its catch contract's
 // fallback-free forms, with catch and surface results unchanged and contrast() untouched. Both rebound.
+// FE-61 Accept 2: check_contrast.mjs drops only the retired v1 dist/tokens.css spec, its pairs and the v1 defaults
+// (now web/tokens.css); contrast(), the one export this spec reads, is unchanged. Rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
@@ -49,7 +51,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "f381712369e57e6252bd6990ea41ab79635cf8d1ac027b96458fda039f2bb815",
+  "scripts/check_contrast.mjs": "0e5ca98e57abb44d23ecaf23375168cc7f33944f9b311cc5ffcbec7ec8b33c58",
   "package.json": "7483a8ec51735e5c4c28c85a873fc9af7d461e67d3b84f74e3dfa15d0e2132a0",
   "pnpm-lock.yaml": "eb62f9e39973b0b646acabedb510a4bf23936298b84a8cb577f2a2eb0143735c",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
