@@ -195,7 +195,7 @@ test('v2: toggling Seafloor adds and removes exactly its layers; held reaches an
   const state = seafloorState.value;
   assert.deepEqual({...state, note: undefined}, {status: 'ready', note: undefined, view: 'fit', fit: 'lingcod', drawn: 5,
     surveys: ['fixture-survey-2m (2010)', 'fixture-survey-2m (unknown)'], credits: ['Fixture Survey Lab']});
-  assert.equal(state.note, '2 candidates · 2 unranked in view');
+  assert.equal(state.note, '2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth');
   assert.equal(rig.layer.mark('fixture-candidate-a').kind, 'Terrain grade A · fits lingcod habitat 3 of 3');
   for (const id of ['fixture-held', 'fixture-held-reach', 'fixture-uncredited', '3310:fx:2']) assert.equal(rig.layer.mark(id), null, id);
 
@@ -214,6 +214,16 @@ test('v2: toggling Seafloor adds and removes exactly its layers; held reaches an
   assert.equal(rig.timers.size, 0, 'off cancels the expiry check');
 });
 
+test('v2: the status lines carry v1\'s counts and caveat when the manifest states them (#422 FE-14 follow-up)', async t => {
+  const rig = seafloorRig({manifest: {layers: {habitat: 3968, cells: 10101}, reach_inputs: {a: {}, b: {}, c: {}}}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.equal(seafloorState.value.note, '2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth · 3 published reach inputs in this region');
+  camera.value = {latitude: 35.353, longitude: -120.948, zoom: 9};
+  await settle();
+  assert.equal(seafloorState.value.note, 'Zoom in to see seafloor candidates · 3968 screened candidates across 3 published reach inputs');
+});
+
 test('v2: a view with cells and no candidates empties the source when it zooms out, leaves the archive or needs too many tiles', async t => {
   const onlyCells = LEDGER.replace('"morro-bay-fx1","region":"morro-bay","status":"habitat-screened"', '"morro-bay-fx1","region":"morro-bay","status":"terrain-pending"')
     .replace('"morro-bay-fx3","region":"morro-bay","status":"unassessed"', '"morro-bay-fx3","region":"morro-bay","status":"habitat-screened"');
@@ -222,10 +232,10 @@ test('v2: a view with cells and no candidates empties the source when it zooms o
   t.after(() => rig.layer.destroy());
   await settle();
   assert.deepEqual(drawnIds(rig), ['cell:3310:fx:3'], 'only the screened reach\'s cell');
-  assert.equal(seafloorState.value.note, '0 candidates · 0 unranked in view');
+  assert.equal(seafloorState.value.note, '0 candidates in view · unverified; nominal depth');
   for (const [move, note] of [
     [{latitude: 35.353, longitude: -120.948, zoom: 9}, 'Zoom in to see seafloor candidates'],
-    [{latitude: 35.0, longitude: -122.5, zoom: 13}, 'No published seafloor survey in this view; the rest of the coast is unassessed'],
+    [{latitude: 35.0, longitude: -122.5, zoom: 13}, 'No published seafloor survey in this view · the rest of the coast is not assessed'],
     [{latitude: 35.353, longitude: -120.948, zoom: 10.5}, 'Zoom in to load seafloor candidates'],
   ]) {
     camera.value = {latitude: 35.353, longitude: -120.948, zoom: 13};
@@ -244,7 +254,7 @@ test('v2: Spear leaves out candidates deeper than its limit; a target without pu
   t.after(() => rig.layer.destroy());
   await settle();
   assert.deepEqual(drawnIds(rig), ['cell:3310:fx:1', 'fixture-candidate-a', 'fixture-interpreted', 'fixture-search']);
-  assert.equal(seafloorState.value.note, '1 candidate · 2 unranked in view · 1 deeper than the Spear limit (60 ft nominal) left out');
+  assert.equal(seafloorState.value.note, '1 candidate in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth · 1 deeper than the Spear limit (60 ft nominal) left out');
   assert.deepEqual([seafloorState.value.view, seafloorState.value.fit], ['terrain', null], 'cabezon fit is not in this publication');
 });
 

@@ -351,7 +351,7 @@ test('Seafloor draws screened candidates and cells in Chart, names its surveys, 
   await showLayers(page);
   const row = page.locator('.app-legend-seafloor');
   await expect(row.locator('[data-surveys="seafloor"]')).toHaveText('1 survey, 2010, some undated');
-  await expect(row.locator('[data-reason="seafloor"]')).toHaveText('2 candidates · 2 unranked in view');
+  await expect(row.locator('[data-reason="seafloor"]')).toHaveText('2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth');
   await expect(row.locator('.app-legend-title')).toHaveText('Physical habitat fit, not catch probability');
   await expect(row.locator('.app-key')).toHaveCount(7);
   await row.getByRole('group', {name: 'Colour seafloor by'}).getByRole('button', {name: 'Terrain grade'}).click();

@@ -344,11 +344,16 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (!at || !head || !reader || !admit) return;
     const ready = (note: string, more: Partial<SeafloorState> = {}) => publish({status: 'ready', note, ...more});
     const clear = (note: string) => { if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); o.onHide?.(); } ready(note); };
-    if (at.zoom < MIN_VIEW_ZOOM) return clear('Zoom in to see seafloor candidates');
+    // v1's status lines (dist/seafloor-layer.js before FE-61), with v2's "candidates": the counts, and the caveat in view.
+    const m = manifest as {layers?: {habitat?: number}; reach_inputs?: Record<string, unknown>} | null;
+    const reaches = Object.keys(m?.reach_inputs ?? {}).length;
+    const screenedCount = m?.layers?.habitat;
+    if (at.zoom < MIN_VIEW_ZOOM) return clear(['Zoom in to see seafloor candidates',
+      Number.isFinite(screenedCount) && reaches ? `${screenedCount} screened candidates across ${reaches} published reach inputs` : ''].filter(Boolean).join(' · '));
     const {width, height} = o.size();
     const [w, s, e, n] = viewBounds(at, width, height);
     const box: [number, number, number, number] = [Math.max(w, head.minLon), Math.max(s, head.minLat), Math.min(e, head.maxLon), Math.min(n, head.maxLat)];
-    if (box[0] >= box[2] || box[1] >= box[3]) return clear('No published seafloor survey in this view; the rest of the coast is unassessed');
+    if (box[0] >= box[2] || box[1] >= box[3]) return clear('No published seafloor survey in this view · the rest of the coast is not assessed');
     const wanted = tilesForBounds(box, Math.min(TILE_ZOOM, head.maxZoom)) as [number, number, number][];
     if (wanted.length > MAX_TILES) return clear('Zoom in to load seafloor candidates');
     const token = ++loading;
@@ -371,9 +376,13 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     engine.setData(SEAFLOOR_SOURCE, collection([...cells, ...habitat], view));
     filled = cells.length + habitat.length > 0;
     const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - inDepth.length, graded = inDepth.length - habitat.length;
-    ready([`${ranked} candidate${ranked === 1 ? '' : 's'} · ${habitat.length - ranked} unranked in view`,
+    const search = habitat.filter(f => f.kind === 'search').length, interpreted = habitat.filter(f => f.kind === 'interpreted').length;
+    const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+    ready([`${plural(ranked, 'candidate')} in view`, search ? plural(search, 'unranked search area') : '',
+      interpreted ? plural(interpreted, 'unranked interpreted area') : '', 'unverified; nominal depth',
       deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : '',
-      graded ? `${graded} below grade ${g === 'a' ? 'A' : 'B'} or unranked left out` : ''].filter(Boolean).join(' · '), {
+      graded ? `${graded} below grade ${g === 'a' ? 'A' : 'B'} or unranked left out` : '',
+      reaches ? `${reaches} published reach inputs in this region` : ''].filter(Boolean).join(' · '), {
       view: view === 'terrain' ? 'terrain' : 'fit', fit: fit ? fitName(fit) : null, drawn: habitat.length + cells.length,
       surveys: [...new Set(habitat.map(f => `${f.survey.id} (${f.survey.year})`))].sort(),
       credits: [...new Set([...habitat, ...cells].flatMap(f => f.rights.map(r => r.credit)))],
