@@ -156,6 +156,8 @@ function WaterTempRow() {
 /** The Swell row (on the Chart): the drawn hour's reading, scale, model run and valid hour, or why nothing draws. */
 function SwellRow() {
   const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value;
+  const fieldReason = !f && r?.rings.length && reason.startsWith('Swell unavailable:')
+    ? `Swell field unavailable:${reason.slice('Swell unavailable:'.length)} Nearshore rings remain visible.` : reason;
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}Swell
@@ -164,7 +166,7 @@ function SwellRow() {
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
       {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span>{ringSummary(r, new Date())}</p> : null}
-      {reason ? <p class="app-legend-note" data-reason="swell">{reason}</p> : null}
+      {fieldReason ? <p class="app-legend-note" data-reason="swell">{fieldReason}</p> : null}
     </li>
   );
 }
@@ -190,16 +192,24 @@ function CloudsLegendRow({label}: {label: string}) {
   );
 }
 
+// Match the charter card's date-only UTC display; omit malformed or rolled-over dates.
+function researchDate(value: string | null): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) return null;
+  return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+}
+
 /**
  * The Charter fleet row (FE-21): the charter grounds' hatched key while they draw, else why not, and the
  * commercial AIS option's heat key and v1's status line while it is on; each with v1's basis sentences.
  */
 function FleetRow() {
-  const g = groundsState.value, a = aisState.value, ais = aisOn.value && a.offered, chart = shownPresentation.value === 'chart';
+  const g = groundsState.value, audit = researchDate(g.audit), a = aisState.value, ais = aisOn.value && a.offered, chart = shownPresentation.value === 'chart';
   return (
     <li class="app-legend-fleet">
       {g.drawn ? <span class="app-swatch" data-layer="charter-grounds" aria-hidden="true"></span> : null}{layerEntry('charter-grounds').label}
-      <Popover iconOnly summary="Charter grounds basis">{layerEntry('charter-grounds').basis}{g.audit ? ` Research checked ${g.audit}.` : ''}</Popover>
+      <Popover iconOnly summary="Charter grounds basis">{layerEntry('charter-grounds').basis}{audit ? ` Research checked ${audit}.` : ''}</Popover>
       {g.drawn ? <p class="app-legend-note ui-mono" data-stamp="charter-grounds">{g.drawn} named vicinit{g.drawn === 1 ? 'y' : 'ies'} · no verified charter AIS</p> : null}
       {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds">{g.note || NOTES.loading}</p> : null}
       {ais ? <>

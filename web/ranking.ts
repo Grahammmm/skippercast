@@ -26,7 +26,7 @@ import {hasCoastTerrain} from './coast-context.ts';
 import {yardsFromShore} from './shore-distance.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
 import type {HabitatFeature} from './map/coast-ranking.js';
-import {fitLine, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
+import {CHECKING, fitLine, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
 
 /** How many places the brief lists (§ 10). */
 export const TOP = 4;
@@ -98,13 +98,14 @@ const speciesLabel = (coast: string): string | null => {
 
 /**
  * The region's reviewed terrain habitat, already in packages/coast `rankedHabitat` order for the coast species,
- * inside `limitFt` on its deepest nominal depth, as picks.
+ * inside `limitFt` on its deepest nominal depth and admitted by the current waypoint screen, as picks.
  */
-export function habitatPicks(ranked: readonly HabitatFeature[], region: string, coast: string, limitFt: number, origin: Origin | null, keep: Keep = KEEP_ALL): Pick[] {
+export function habitatPicks(ranked: readonly HabitatFeature[], screen: MarkScreen, region: string, coast: string, limitFt: number, origin: Origin | null, keep: Keep = KEEP_ALL): Pick[] {
   const field = speciesOptions.find(s => s.id === coast)?.field ?? null, label = speciesLabel(coast);
   return ranked.filter(f => {
     const p = f.properties;
     return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude)
+      && !withheld({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, screen)
       && kept(keep, miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), swim(keep, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}));
   }).slice(0, TOP).map(f => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
@@ -148,7 +149,7 @@ export interface RankingInputs {
 
 const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-area check, ordered by habitat fit, then the atlas habitat score. '
   + 'Depths are the nominal range near each mark in the survey\'s own vertical reference; distances are straight-line from';
-const TERRAIN_BASIS = 'Reviewed coastal terrain habitat, screened against protected areas, ordered by species fit, then the physical terrain score. '
+const TERRAIN_BASIS = 'Reviewed coastal terrain habitat that passes the current protected-area and closure check, ordered by species fit, then the physical terrain score. '
   + 'Depths are nominal; distances are straight-line from';
 
 /** The list the brief shows for these inputs: terrain habitat where it binds and loads, else the atlas; one source, never both. */
@@ -170,8 +171,10 @@ export function ranking(i: RankingInputs): Ranking {
     return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
   const t = i.terrain, field = speciesOptions.find(s => s.id === i.coast);
   if (i.region && hasCoastTerrain(i.region) && t.state === 'ready' && field && field.id !== 'halibut' && field.id !== 'surfperch' && t.expiresAt > i.now) {
-    const picks = habitatPicks(t.rank(t.features, field.field, i.now), i.region, i.coast, limit, origin, keep);
-    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty: `No reviewed terrain habitat ${within} for this target.`, ...extra};
+    const screen = i.screen ?? CHECKING;
+    const picks = habitatPicks(t.rank(t.features, field.field, i.now), screen, i.region, i.coast, limit, origin, keep);
+    const empty = screen.status !== 'ready' ? screen.note : `No reviewed terrain habitat passes the current protected-area and closure check ${within} for this target.`;
+    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty, ...extra};
   }
   if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
   const picks = atlasPicks(i.data, i.screen, i.target, limit, origin, keep);

@@ -8,15 +8,15 @@
 // Chart view (web/map/maplibre.js), after the app's first paint. The Seafloor
 // rail entry draws the region's seafloor publication (web/map/seafloor.ts, FE-14).
 // The region's protected areas (FE-19, web/map/mpa.ts) draw under the seafloor,
-// always on; the host's `data-mpa`, `data-mpa-drawn` and `data-mpa-labels`
-// report their state and what MapLibre drew in view. Habitat, geology, reef
-// marks and the selection (FE-18) come from web/map/marks.ts.
+// always on; the host's `data-mpa` reports their state. With diagnostics enabled,
+// `data-mpa-drawn` and `data-mpa-labels` report what MapLibre drew in view.
+// Habitat, geology, reef marks and the selection (FE-18) come from web/map/marks.ts.
 // Registry layers with run-time sources (FE-22's clouds, FE-16's water
 // temperature) are created with the Chart and draw through its engine
 // (`layers`, Engine.setOverlay); a click on open water asks them for a reading.
 // The trip planner's ranked spots (#495, web/map/ranked.ts) draw above the marks;
 // the host's `data-ranked` and `data-ranked-drawn` report how many ranked spots
-// both screens admit and how many pins MapLibre drew in view.
+// both screens admit and, with diagnostics enabled, how many pins MapLibre drew in view.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
@@ -104,6 +104,8 @@ export interface ChartOptions {
   page?: () => string;
   /** Milliseconds a settled chart move waits before it is written to `?view=`. */
   viewDelay?: number;
+  /** Report rendered-feature counts for debugging; defaults to the page URL's exact `diagnostics=1` opt-in. */
+  diagnostics?: boolean;
   /** The region's zone and report place, for the Currents layer (FE-15, web/map/currents.ts). */
   zone?: () => string;
   place?: CurrentsOptions['place'];
@@ -113,6 +115,7 @@ const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 
 export function createChart(options: ChartOptions): {destroy(): void} {
   const {host, layers = [], load = loadLibrary, palette = () => readPalette(), page = () => location.href, viewDelay = 400} = options;
+  const diagnostics = options.diagnostics ?? (new URL(page()).searchParams.get('diagnostics') === '1');
   // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
   const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);
@@ -176,8 +179,10 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         },
         onIdle: () => {
           if (!painted) { posterDone(); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
-          host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
-          host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
+          if (diagnostics) {
+            host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
+            host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
+          }
         },
       });
       // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).

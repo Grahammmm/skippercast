@@ -169,3 +169,53 @@ test('the view: grounds and the AIS 2024 option for everyone; the form, "inferre
   m.activityAccess.value = false;
   m.activityChoices.value = null;
 });
+
+test('directory probes share only concurrent requests for the same page and fetcher', async () => {
+  const ports = async () => [
+    {id: 'alpha', region: 'one', status: 'active'},
+    {id: 'beta', region: 'one', status: 'active'},
+    {id: 'gamma', region: 'two', status: 'active'},
+  ];
+  const pending = [];
+  const fetcher = (url, init) => new Promise((resolve, reject) => pending.push({url, init, resolve, reject}));
+  const first = boatDirectory('one', null, fetcher, ports);
+  const duplicate = boatDirectory('one', null, fetcher, ports);
+  const saved = boatDirectory('one', 'beta', fetcher, ports);
+  const changedRegion = boatDirectory('two', null, fetcher, ports);
+  const independent = [];
+  const otherFetcher = async url => { independent.push(url); return {ok: false}; };
+  assert.deepEqual(await boatDirectory('one', null, otherFetcher, ports), []);
+  assert.deepEqual(independent, ['/ports/alpha'], 'another fetcher does not share a pending gate result');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(pending.map(p => p.url), ['/ports/alpha', '/ports/beta', '/ports/gamma']);
+  for (const p of pending) {
+    assert.deepEqual(p.init, {method: 'HEAD', credentials: 'omit', cache: 'no-store'});
+    p.resolve({ok: true});
+  }
+  assert.deepEqual((await first).map(p => p.id), ['alpha', 'beta']);
+  assert.deepEqual(await duplicate, await first);
+  assert.deepEqual((await saved).map(p => p.id), ['beta', 'alpha']);
+  assert.deepEqual((await changedRegion).map(p => p.id), ['gamma']);
+
+  const off = boatDirectory('one', null, fetcher, ports);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 4, 'settled success is rechecked so switching off hides links');
+  pending[3].resolve({ok: false, status: 404});
+  assert.deepEqual(await off, []);
+  const retry = boatDirectory('one', null, fetcher, ports);
+  const retryDuplicate = boatDirectory('one', null, fetcher, ports);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 5, '404 is not cached');
+  pending[4].reject(Error('offline'));
+  assert.deepEqual(await retry, []);
+  assert.deepEqual(await retryDuplicate, []);
+  const recovered = boatDirectory('one', null, fetcher, ports);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 6, 'failed request is not cached');
+  pending[5].resolve({ok: true});
+  assert.equal((await recovered).length, 2);
+  const noPorts = async () => { throw Error('must not load for empty region'); };
+  assert.deepEqual(await boatDirectory(null, null, fetcher, noPorts), []);
+  assert.deepEqual(await boatDirectory('empty', null, fetcher, ports), []);
+  assert.equal(pending.length, 6);
+});

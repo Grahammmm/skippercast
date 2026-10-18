@@ -137,8 +137,44 @@ test('account.js returns to the hash before #account, else a bare hash the app d
   assert.deepEqual(calls, [[{v: 2}, '', '/map?region=morro-bay']]);
 });
 
-test('v1 boat-profile.js exposes its sheet to the menu without changing v1', () => {
+test('the account menu opens the real boat sheet without the retired button and closing restores focus', async () => {
   const source = readFileSync(new URL('../dist/boat-profile.js', import.meta.url), 'utf8');
   assert.match(source, /export \{sheet as openBoatProfile\};/);
-  assert.match(source, /button\.addEventListener\('click', sheet\)/);
+  const {openBoatSheet} = await import('../web/account.ts');
+  const previous = Object.fromEntries(['document', 'localStorage'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  const events = new Map(), classes = new Set(), mounted = [];
+  let focused = 0, restored = 0, removed = false;
+  const control = name => ({addEventListener(type, listener) { events.set(`${name}:${type}`, listener); }});
+  const controls = new Map(['#boat-form', '#boat-lookup', '#boat-save', '.home-port-close'].map(name => [name, control(name)]));
+  controls.set('#boat-query', {focus() { focused++; }});
+  const scrim = {innerHTML: '', className: '', querySelector: name => controls.get(name) ?? null,
+    addEventListener(type, listener) { events.set(`scrim:${type}`, listener); }, remove() { removed = true; }};
+  try {
+    Object.defineProperty(globalThis, 'localStorage', {configurable: true, value: {getItem() { return null; }}});
+    Object.defineProperty(globalThis, 'document', {configurable: true, value: {
+      activeElement: {focus() { restored++; }},
+      createElement(tag) { assert.equal(tag, 'div'); return scrim; },
+      getElementById() { throw Error('The live sheet must not depend on the retired boat-button'); },
+      body: {append(element) { mounted.push(element); }, classList: {add(name) { classes.add(name); }, remove(name) { classes.delete(name); }}},
+    }});
+    await openBoatSheet();
+    assert.deepEqual(mounted, [scrim]);
+    assert.equal(scrim.className, 'home-port-scrim boat-scrim');
+    assert.match(scrim.innerHTML, /role="dialog" aria-modal="true" aria-labelledby="boat-title"/);
+    assert.match(scrim.innerHTML, /Rate conditions for your boat/);
+    assert.match(scrim.innerHTML, /id="boat-form"/);
+    assert.match(scrim.innerHTML, /id="boat-save"/);
+    assert.equal(focused, 1, 'the make/model field receives focus');
+    assert.ok(classes.has('choosing-home-port'));
+    assert.equal(typeof events.get('#boat-lookup:click'), 'function');
+    assert.equal(typeof events.get('#boat-save:click'), 'function');
+    events.get('.home-port-close:click')();
+    assert.equal(removed, true);
+    assert.equal(classes.has('choosing-home-port'), false);
+    assert.equal(restored, 1);
+  } finally {
+    for (const [key, descriptor] of Object.entries(previous)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key];
+    }
+  }
 });
