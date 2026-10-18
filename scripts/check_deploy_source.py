@@ -11,7 +11,21 @@ import os
 import re
 import sys
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+
+class RefuseRedirect(HTTPRedirectHandler):
+    """No metadata redirect is followed: urllib would copy Authorization to any target, another host or plain HTTP included."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(newurl, code, 'deploy source metadata redirect refused', headers, fp)
+
+
+_OPENER = build_opener(RefuseRedirect)
+
+
+def urlopen(request, timeout):
+    return _OPENER.open(request, timeout=timeout)
 
 
 class SourceError(ValueError):

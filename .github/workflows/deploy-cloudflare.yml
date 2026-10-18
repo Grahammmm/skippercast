@@ -67,7 +67,13 @@ jobs:
           import re
           import sys
           from pathlib import Path
-          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError
+          from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+          class RefuseRedirect(HTTPRedirectHandler):
+              # urllib would copy Authorization to a redirect target, another host or plain HTTP included.
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise HTTPError(newurl, code, 'deploy source metadata redirect refused', headers, fp)
 
           try:
               event = os.environ.get('GITHUB_EVENT_NAME')
@@ -85,7 +91,7 @@ jobs:
               if os.environ.get('SOURCE_READ_TOKEN'):
                   headers['Authorization'] = 'Bearer ' + os.environ['SOURCE_READ_TOKEN']
               request = Request('https://api.github.com/repos/' + repository + '/git/ref/heads/main', headers=headers)
-              with urlopen(request, timeout=15) as response:
+              with build_opener(RefuseRedirect).open(request, timeout=15) as response:
                   main = json.load(response)
               if not isinstance(main, dict) or main.get('ref') != 'refs/heads/main':
                   raise ValueError('main ref metadata unavailable')

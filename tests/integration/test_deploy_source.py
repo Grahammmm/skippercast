@@ -125,6 +125,56 @@ class DeploySourceTests(unittest.TestCase):
         tokens = [line.strip() for line in text.splitlines() if 'SOURCE_READ_TOKEN:' in line]
         self.assertEqual(tokens, ['SOURCE_READ_TOKEN: ${{ github.token }}'] * 3)
 
+    def redirect_servers(self):
+        """Origin A answers 302 to origin B (another port); B records any request and its Authorization."""
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        import threading
+        seen = []
+        class Target(BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen.append(self.headers.get('Authorization'))
+                self.send_response(200); self.end_headers(); self.wfile.write(b'{}')
+            def log_message(self, *args):
+                pass
+        b = ThreadingHTTPServer(('127.0.0.1', 0), Target)
+        class Redirect(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(302); self.send_header('Location', 'http://127.0.0.1:%d/elsewhere' % b.server_port); self.end_headers()
+            def log_message(self, *args):
+                pass
+        a = ThreadingHTTPServer(('127.0.0.1', 0), Redirect)
+        for server in (a, b):
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            self.addCleanup(server.server_close)
+            self.addCleanup(server.shutdown)
+        return 'http://127.0.0.1:%d/repos/x/git/ref/heads/main' % a.server_port, seen
+
+    def assert_refuses_redirects(self, open_url, handler):
+        from urllib.request import Request
+        start, seen = self.redirect_servers()
+        with self.assertRaises(OSError):
+            open_url(Request(start, headers={'Authorization': 'Bearer read-only'}), timeout=5)
+        self.assertEqual(seen, [], 'a cross-origin redirect target receives no request, so no token')
+        request = Request('https://api.github.com/repos/' + REPO + '/git/ref/heads/main', headers={'Authorization': 'Bearer read-only'})
+        for target in ('http://api.github.com/repos/' + REPO + '/git/ref/heads/main', 'https://example.org/'):
+            with self.subTest(target=target), self.assertRaises(OSError):
+                handler().redirect_request(request, None, 301, 'Moved', {}, target)
+
+    def test_script_metadata_reader_refuses_redirects(self):
+        self.assert_refuses_redirects(guard.urlopen, guard.RefuseRedirect)
+
+    def test_inline_source_check_refuses_redirects(self):
+        from urllib.request import build_opener
+        text = (ROOT / '.github/workflows/deploy-cloudflare.yml').read_text()
+        source = text.split('\n  source:', 1)[1].split('\n  deploy:', 1)[0]
+        block = source.split("python3 - <<'PY'\n", 1)[1].split('          try:', 1)[0]
+        namespace = {}
+        exec('\n'.join(line[10:] for line in block.splitlines()), namespace)
+        self.assertNotRegex(source, r'(?<![\w.])urlopen\(', 'the inline check never uses the redirect-following urlopen')
+        self.assertIn('build_opener(RefuseRedirect).open(request, timeout=15)', source)
+        handler = namespace['RefuseRedirect']
+        self.assert_refuses_redirects(lambda request, timeout: build_opener(handler).open(request, timeout=timeout), handler)
+
     def test_workflow_guard_precedes_dependencies_and_keeps_rollback_separate(self):
         text = (ROOT / '.github/workflows/deploy-cloudflare.yml').read_text()
         deploy, rollback = text.split('\n  rollback:', 1)
