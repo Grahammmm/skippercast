@@ -9,6 +9,7 @@ import {
   terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
+import {dockTime} from '../web/hour.ts';
 
 const ORIGIN = 'https://s.test/map';
 const NOW = new Date('2026-10-05T20:17:00Z');
@@ -104,6 +105,10 @@ test('the flow table: profile sets the depth limit, target the species, hour, ca
   assert.deepEqual(terrainState({...base, hour: '2026-10-06T03:00Z'}).hour, new Date('2026-10-06T03:00:00Z'));
   assert.deepEqual(terrainState(base).hour, new Date('2026-10-05T20:00:00Z'), 'no hour: the current whole UTC hour');
   assert.deepEqual(terrainHour('nonsense', NOW), new Date('2026-10-05T20:00:00Z'));
+  for (const [value, dayValue] of [['2026-10-06T03:00Z', null], ['2026-10-06T03:00Z', '2026-10-07'], ['2026-10-12T23:00Z', null], ['2026-12-01T00:00Z', null]]) {
+    assert.deepEqual(terrainHour(value, NOW, dayValue, 'America/Los_Angeles'), new Date(dockTime(dayValue, value, NOW, 'America/Los_Angeles').at),
+      `?hour=${value} (day ${dayValue}) reads the same hour as the dock, inside or outside the horizon`);
+  }
   assert.equal(terrainState(base).location, null, 'no camera, no move');
   assert.deepEqual(terrainState({...base, camera: {latitude: 35.4, longitude: -120.9, zoom: 11}}).location, {latitude: 35.4, longitude: -120.9, span: 14600});
   assert.equal(terrainState({...base, current: 'wcofs'}).currentLayer, 'wcofs');
