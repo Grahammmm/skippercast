@@ -39,6 +39,10 @@ export interface EngineOptions {
   onMove(camera: EngineCamera): void;
   /** A source error, routed to the registry layer that owns the source. */
   onLayerError(layer: string, error: unknown): void;
+  /** A loaded tile from the same source and context in which its request began. */
+  onSourceTileLoaded?(sourceId: string): void;
+  /** Changes invalidate pending tile recovery (for example, on a region change). */
+  sourceContext?(): unknown;
   /** A click: the first feature under it in `pickLayers`, or null for empty water, and where it fell. */
   onPick?(layer: string | null, properties: Record<string, unknown> | null, at: {lon: number; lat: number} | null): void;
   pickLayers?: readonly string[];
@@ -159,6 +163,23 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     const layer = overlayOf(event.sourceId) ?? sourceLayer(event.sourceId);
     if (layer) options.onLayerError(layer, event.error);
     else console.error('Chart error', event.error);
+  });
+  // Metadata, idle and errored tiles are not recovery. Keep the request's actual
+  // source object and context so late events cannot recover a replacement view.
+  const tileRequests = new WeakMap<object, {id: string; source: unknown; context: unknown}>();
+  map.on('sourcedataloading', event => {
+    if (!options.onSourceTileLoaded || !event.tile || typeof event.tile !== 'object') return;
+    const source = map.getSource(event.sourceId);
+    if (source) tileRequests.set(event.tile, {id: event.sourceId, source, context: options.sourceContext?.()});
+  });
+  map.on('sourcedata', event => {
+    if (!event.tile || typeof event.tile !== 'object') return;
+    const request = tileRequests.get(event.tile);
+    tileRequests.delete(event.tile);
+    if (request && event.tile.state === 'loaded' && request.id === event.sourceId &&
+        request.source === map.getSource(event.sourceId) && request.context === options.sourceContext?.()) {
+      options.onSourceTileLoaded?.(event.sourceId);
+    }
   });
   map.on('moveend', () => {
     const c = map.getCenter();

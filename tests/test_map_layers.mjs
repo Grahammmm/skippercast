@@ -130,7 +130,7 @@ function library() {
   const fake = {maps: [], workerUrls: [], protocols: [], features: []};
   class FakeMap {
     constructor(options) {
-      this.options = options; this.handlers = {}; this.controls = []; this.jumps = []; this.visibility = {}; this.data = {};
+      this.options = options; this.handlers = {}; this.controls = []; this.jumps = []; this.visibility = {}; this.data = {}; this.sources = {};
       this.center = {lat: options.center[1], lng: options.center[0]}; this.zoom = options.zoom; this.removed = false;
       this.keyboard = {disableRotation: () => { this.keyboardRotation = false; }};
       this.touchZoomRotate = {disableRotation: () => { this.touchRotation = false; }};
@@ -148,7 +148,7 @@ function library() {
     get loaded() { return this.styled ?? !fake.lateStyle; }
     getLayer(id) { return this.loaded && this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
     setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
-    getSource(id) { return this.loaded && this.options.style.sources[id] ? {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
+    getSource(id) { return this.loaded && this.options.style.sources[id] ? this.sources[id] ??= {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
     queryRenderedFeatures(point, options) { const {layers} = options ?? point; return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
     remove() { this.removed = true; }
@@ -172,6 +172,17 @@ function library() {
   };
   return fake;
 }
+
+test('the MapLibre fake filters layers for both point and options-only rendered queries', () => {
+  const fake = library();
+  const map = new fake.module.lib.Map({center: [0, 0], zoom: 1});
+  const selected = {layer: {id: 'selected'}}, unrelated = {layer: {id: 'unrelated'}};
+  fake.features = [selected, unrelated];
+  assert.deepEqual(map.queryRenderedFeatures({layers: ['selected']}), [selected]);
+  assert.deepEqual(map.queryRenderedFeatures([10, 20], {layers: ['selected']}), [selected]);
+  assert.deepEqual(map.queryRenderedFeatures({layers: []}), []);
+  assert.deepEqual(map.queryRenderedFeatures([10, 20], {layers: []}), []);
+});
 
 test('MapLibre init: north up, nautical scale, worker and protocol once, and errors routed to their layer', t => {
   const fake = library(), errors = [], moves = [];
@@ -430,6 +441,60 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   assert.equal(map.data[COASTLINE_SOURCE], 'https://s.test/regions/cambria-san-simeon/shoreline-overview.geojson');
   stage.destroy();
   assert.deepEqual(unavailable.value, []);
+});
+
+test('ENC recovers only from a loaded tile of the current source and region generation', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&base=chart`);
+  const {fake, stage} = chartStage({manifest: null});
+  t.after(() => stage.destroy());
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const fail = () => map.fire('error', {sourceId: ENC_SOURCE, error: new Error('ENC 503')});
+  const begin = (sourceId = ENC_SOURCE) => {
+    const tile = {state: 'loading'};
+    map.fire('sourcedataloading', {sourceId, tile});
+    return tile;
+  };
+  const complete = (tile, sourceId = ENC_SOURCE) => {
+    tile.state = 'loaded';
+    map.fire('sourcedata', {sourceId, tile});
+  };
+  fail();
+  assert.deepEqual(unavailable.value, ['basemap', 'chart']);
+  map.fire('idle');
+  map.fire('sourcedata', {sourceId: ENC_SOURCE, sourceDataType: 'metadata', isSourceLoaded: true});
+  complete({state: 'loading'});
+  const errored = begin(); errored.state = 'errored';
+  map.fire('sourcedata', {sourceId: ENC_SOURCE, tile: errored});
+  complete(begin(COASTLINE_SOURCE), COASTLINE_SOURCE);
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'idle, metadata, untracked, failed and unrelated tiles cannot recover ENC');
+
+  const replaced = begin();
+  map.sources[ENC_SOURCE] = {};
+  complete(replaced);
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'a replaced source cannot recover from its old tile');
+  const wrongSource = begin();
+  complete(wrongSource, COASTLINE_SOURCE);
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'the completion must name the request source');
+
+  const stale = begin();
+  setParams({region: 'cambria-san-simeon'});
+  await tick();
+  fail();
+  complete(stale);
+  assert.ok(unavailable.value.includes('chart'), 'old-region success cannot clear the current failure');
+  const away = begin();
+  setParams({region: 'morro-bay'});
+  await tick();
+  complete(away);
+  complete(stale);
+  assert.ok(unavailable.value.includes('chart'), 'switching back does not revive old requests');
+
+  complete(begin());
+  assert.deepEqual(unavailable.value, ['basemap'], 'verified ENC recovery preserves an unrelated failure');
+  fail();
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'a later failure is still reported');
 });
 
 test('a shoreline click fills the mark card; empty water clears it; no WebGL fails only the Chart', async t => {

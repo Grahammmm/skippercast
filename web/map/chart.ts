@@ -133,6 +133,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   let posterAsked = false, painted = false;
   const posterDone = (): void => { painted = true; poster.value = null; };
   let currents: Currents | null = null;
+  let sourceContext = {};
   let viewTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (c: Camera): void => { applied = cameraParam(c); host.dataset.view = applied; };
   const marks = createMarks({fetchFn, page, onError: markUnavailable});
@@ -174,6 +175,10 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
         host, camera: start, onMove,
+        sourceContext: () => sourceContext,
+        onSourceTileLoaded: sourceId => {
+          if (alive && sourceId === ENC_SOURCE) unavailable.value = unavailable.peek().filter(layer => layer !== 'chart');
+        },
         // #617: an overview shoreline that fails falls back to the full one; any other failure marks its layer.
         onLayerError: (layer, error) => {
           const id = region.peek();
@@ -223,6 +228,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   }
 
   const disposers = [
+    // A fresh token also rejects an old request after switching away and back.
+    effect(() => { region.value; sourceContext = {}; }),
     // The first Chart view loads MapLibre; a terrain-only visit never does.
     effect(() => { if (shownPresentation.value === 'chart' && camera.value && region.value) void mount(); }),
     // The shared camera moves the chart, hidden or shown, unless the chart is already there.
