@@ -182,3 +182,14 @@ test('unusable configured report and unavailable bridge cannot fabricate a reada
   }
  }
 });
+test('FE-61 legal pages: licence summaries keep a 44 px target and dark panels do not print (#703 review)',()=>{
+ const css=readFileSync(new URL('../dist/coast-readable.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+ const rule=(text,selector)=>text.match(new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\{([^}]*)\\}'))?.[1]??'';
+ const summary=rule(css,'.coast-readable summary');
+ assert.match(summary,/min-height:\s*var\(--touch-min\)/,'the summary is at least the touch minimum');
+ assert.doesNotMatch(summary,/display\s*:/,'it stays a list item, keeping the disclosure marker');
+ const print=css.slice(css.indexOf('@media print'));
+ const reset=rule(print,'.coast-readable .legal-draft, .coast-readable details pre');
+ assert.match(reset,/background:\s*none/);assert.match(reset,/color:\s*inherit/,'ink on paper in print');
+});
+

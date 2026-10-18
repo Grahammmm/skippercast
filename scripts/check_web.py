@@ -281,7 +281,9 @@ def check_legal_pages():
     for name in LEGAL_PAGES:
         text = (WEB / name).read_text()
         assert "Draft — pending review by counsel" in text, name
-        assert 'href="styles.css"' in text, name
+        # FE-61 part 2: the v2 tokens and the readable pages' sheet, as sources.html; no v1 sheet.
+        assert 'href="../web/tokens.css"' in text and 'href="coast-readable.css"' in text, name
+        assert 'href="styles.css"' not in text and 'href="tokens.css"' not in text, name
     assert "href: '/sources'" in (ROOT / "web/landing/Landing.tsx").read_text(), "the landing links the sources page"
     parser = AssetParser()
     parser.feed((WEB / "sources.html").read_text())
