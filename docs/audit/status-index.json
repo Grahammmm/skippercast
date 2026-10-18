@@ -10,8 +10,8 @@
   "counts": {
     "unique": 230,
     "review_subset": 132,
-    "released": 50,
-    "review_subset_released": 24
+    "released": 57,
+    "review_subset_released": 30
   },
   "counting_rules": [
     "132 is a subset of230, never an extra132 findings.",
@@ -51,6 +51,20 @@
       ],
       "evidence": "https://github.com/Grahammmm/DeFlock-Campaign-Tool/pull/130",
       "result": "Containment source approved; original designated13-case qualification12pass1fail,5Linux executed0skip. Held for exact diagnosis; no retry grant."
+    },
+    {
+      "ids": [
+        "SC-FE422-body-14-03",
+        "SC-FE422-body-14-02",
+        "SC-FE422-6099598435-02",
+        "SC-FE422-body-12-01",
+        "SC-FE422-6072335404-02",
+        "SC-FE422-body-14-04",
+        "SC-FE422-6103259253-03",
+        "SC-FE422-6083097601-03"
+      ],
+      "evidence": "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359",
+      "result": "ClaudePR688 plus689\u2013696 all merged and verified site-live. Seven exact source/site rows credited after clause reconciliation;692partial.695/698/697/699/700/701 notadditional originalclosures."
     }
   ],
   "original_report_gaps": "Private/full original mapping, installed Flock and Reunion report/evidence gaps remain in the coordinator record. Do not retrieve restricted reports or infer extra findings. Export only approved engineering clauses.",
@@ -453,7 +467,7 @@
       "title": "terrainHour rebuilds the 169-hour horizon on every terrain camera change when ?hour= parses.",
       "review_cohort_132": true,
       "baseline_stage": "conditional_source_or_acceptance",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true
       },
@@ -466,7 +480,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/691",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Original quoted source/site clause closed by exact reviewed merge and verified site delivery. No broader native/provider/scientific/legal/installed acceptance inferred; historical baseline stage remains preserved."
     },
     {
       "id": "SC-FE422-body-12-02",
@@ -637,7 +658,7 @@
       "title": "dist/licenses.html still lists MapLibre 5.24.0; vendored copy is now unused.",
       "review_cohort_132": true,
       "baseline_stage": "missing_specific_scope_evidence",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true
       },
@@ -650,7 +671,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/689",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Original quoted source/site clause closed by exact reviewed merge and verified site delivery. No broader native/provider/scientific/legal/installed acceptance inferred; historical baseline stage remains preserved."
     },
     {
       "id": "SC-FE422-body-14-03",
@@ -659,7 +687,7 @@
       "title": "One failing ENC tile marks Chart detail unavailable until chart destruction.",
       "review_cohort_132": false,
       "baseline_stage": "focused_acceptance_passed_review_integration_pending",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true
       },
@@ -672,7 +700,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": "packets/ENC-RECOVERY.md",
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/688",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6252008268"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Original quoted source/site clause closed by exact reviewed merge and verified site delivery. No broader native/provider/scientific/legal/installed acceptance inferred; historical baseline stage remains preserved."
     },
     {
       "id": "SC-FE422-body-14-04",
@@ -681,7 +716,7 @@
       "title": "Precache grows about 1.7 MB raw; review FE51 cache budget.",
       "review_cohort_132": true,
       "baseline_stage": "missing_specific_scope_evidence",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true
       },
@@ -694,7 +729,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/693",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Original quoted source/site clause closed by exact reviewed merge and verified site delivery. No broader native/provider/scientific/legal/installed acceptance inferred; historical baseline stage remains preserved."
     },
     {
       "id": "SC-FE422-body-15",
@@ -1200,7 +1242,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "partial_clause_deployed_other_clauses_open",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/692",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Only Publisher terms clause addressed; survey/datum and status wording remain open."
     },
     {
       "id": "SC-FE422-6072335404-03",
@@ -1592,7 +1641,7 @@
       "title": "`web/map/layers.ts` (`trip-ranked` legend): low. Legend.tsx renders only rail entries and MPAs, so this entry never appears.",
       "review_cohort_132": true,
       "baseline_stage": "conditional_source_or_acceptance",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true
       },
@@ -1605,7 +1654,15 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/696",
+        "https://github.com/Grahammmm/skippercast/actions/runs/39151579989",
+        "https://github.com/Grahammmm/skippercast/actions/runs/39152392343"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Exact ranked-trip legend original source/site clause closed by independently reviewed head and verified combined deployment; no native/provider/installed acceptance inferred."
     },
     {
       "id": "SC-FE422-6083097601-04",
@@ -1929,7 +1986,7 @@
       "title": "`dist/fleet-activity.js` `statusText` (v1, unchanged by #511) \u2014 low \u2014 \"1 stops \u00b7 inferred from movement.\" singular/plural; as",
       "review_cohort_132": true,
       "baseline_stage": "conditional_source_or_acceptance",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true,
         "locally_tested": true,
@@ -1944,7 +2001,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/690",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Original quoted source/site clause closed by exact reviewed merge and verified site delivery. No broader native/provider/scientific/legal/installed acceptance inferred; historical baseline stage remains preserved."
     },
     {
       "id": "SC-FE422-6099599993-01",
@@ -2343,7 +2407,7 @@
       "title": "`web/brief/shore.ts`: compare the restated priority rules with `fish/src/opportunity.ts` when that checkout is reachable.",
       "review_cohort_132": true,
       "baseline_stage": "missing_specific_scope_evidence",
-      "released_exact_original_scope": false,
+      "released_exact_original_scope": true,
       "positive_stage_flags_at_baseline": {
         "planned": true
       },
@@ -2356,7 +2420,14 @@
       "evidence_limit": "Original clause, exact adoption proof and any restricted evidence remain with coordinator; title/stage alone does not grant implementation or acceptance.",
       "task_packet": null,
       "assignment": "unassigned; request coordinator scope/path confirmation",
-      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
+      "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution.",
+      "current_verified_stage": "released_exact_original_source_site_scope",
+      "current_stage_evidence_public": [
+        "https://github.com/Grahammmm/skippercast/pull/694",
+        "https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6253172359"
+      ],
+      "current_assignment": "delivered source/site scope; no active Claude source reservation inferred",
+      "current_scope_limit": "Original quoted source/site clause closed by exact reviewed merge and verified site delivery. No broader native/provider/scientific/legal/installed acceptance inferred; historical baseline stage remains preserved."
     },
     {
       "id": "SC-FE422-6103593275-01",
@@ -5128,5 +5199,121 @@
       "assignment": "unassigned; request coordinator scope/path confirmation",
       "attempt_rule": "Preserve original per-item ledger. No runtime retry granted by this index. Exhausted, denied and unknown allowances require their exact disposition before execution."
     }
-  ]
+  ],
+  "current_status_semantics": "current_verified_stage/current_stage_evidence_public supersede baseline_stage for current delivery status. Historical baseline50/230 and24/132 preserved below; seven exact source/site rows newly credited after clause reconciliation, not by PR count.132 is subset of230.",
+  "release_reconciliation": {
+    "baseline": {
+      "unique": 230,
+      "review_subset": 132,
+      "released": 50,
+      "review_subset_released": 24
+    },
+    "newly_released_ids": [
+      "SC-FE422-body-14-03",
+      "SC-FE422-body-14-02",
+      "SC-FE422-6099598435-02",
+      "SC-FE422-body-12-01",
+      "SC-FE422-body-14-04",
+      "SC-FE422-6103259253-03",
+      "SC-FE422-6083097601-03"
+    ],
+    "new_overall": 7,
+    "new_subset": 6,
+    "current": {
+      "unique": 230,
+      "review_subset": 132,
+      "released": 57,
+      "review_subset_released": 30
+    },
+    "remaining_unreleased": 173,
+    "subset_remaining_unreleased": 102,
+    "not_credited": {
+      "SC-FE422-6072335404-02": "PR692 publisher terms clause only; survey/datum and status wording remain open",
+      "PR695": "Deployment recurrence follow-up, no additional canonicalID",
+      "PR698": "ENC release-note follow-up, no additionalID",
+      "issue697_PR699": "New survey-summary follow-up outside inventory",
+      "PR700_PR701": "Guard/alert follow-ups pending exact review; no additional original closure claimed"
+    },
+    "basis": "Exact quoted canonical clause -> independent source review -> merged final head -> verified site behavior. Native/provider/installed gates remain separate. Independent docs/counting review and publisher required before merge.",
+    "final_combined_release": {
+      "merge": "c48a085ff39e6413003caaf871756e9074aed6e3",
+      "build": "cfd7e8d7dc",
+      "main_CI": "https://github.com/Grahammmm/skippercast/actions/runs/39151579989",
+      "deploy_smoke": "https://github.com/Grahammmm/skippercast/actions/runs/39152392343",
+      "result": "Original CI4/4PASS; deploy/smokePASSattempt1; publichealth200. All689\u2013696live;688previouslylive."
+    }
+  },
+  "remaining_work_view": {
+    "unreleased_records": 173,
+    "unreleased_subset_records": 102,
+    "by_category": {
+      "review_finding": 57,
+      "follow_up_task": 32,
+      "test_gap": 7,
+      "original_finding": 57,
+      "mapping_sourced_finding": 10,
+      "supplemental_finding": 8,
+      "separate_no_change_audit": 2
+    },
+    "meaning": "Rows without full credited release, not173 demonstrated current defects. Original report gaps, no-change audits, dependent follow-up groups and holds remain distinct. All record IDs/dependency refs/history below are preserved.",
+    "next_actions": [
+      {
+        "ids": [
+          "SC-FE422-6072335404-02"
+        ],
+        "owner": "Coordinator assigns seafloor source/UI owner",
+        "next": "Publisher terms restored; establish source-backed survey/datum basis and settle status wording, then review only remaining clauses. New survey-summary follow-up697/699 is not blanket closure."
+      },
+      {
+        "ids": [
+          "SC-FE422-6104247313-02"
+        ],
+        "owner": "Regional collector owner/coordinator",
+        "next": "Bind station prediction-series input and explicit collector/UI assignment before regional tide-curve work; request is not an assignment."
+      },
+      {
+        "ids": [
+          "SC-FE422-body-01"
+        ],
+        "owner": "Existing shoreline/frontend evidence owner",
+        "next": "Supply retained original shoreline replacement/extract/rebuild provenance and current visible claim evidence; do not reacquire or redesign without an exact missing scope."
+      },
+      {
+        "ids": [
+          "SC-MAP-02",
+          "SC-MAP-10",
+          "SC-MAP-11"
+        ],
+        "owner": "Original coastal artifact/science owner",
+        "next": "Supply accepted terrain/mask/optional uncertainty references, matching science review and mission/checkpoint lineage before native acceptance. Published code/installed skill subgates are not full native delivery."
+      },
+      {
+        "ids": [
+          "FLOCK-C11"
+        ],
+        "owner": "Existing Flock pipeline owner",
+        "next": "Keep generic source131/133 separate from real provider schema, installed occurrence/digestion/trigger adoption and held containment130. Obtain qualified page/schema evidence without retrying the stopped acquisition boundary."
+      }
+    ],
+    "active_followups_outside_new_original_credit": [
+      {
+        "PR": 698,
+        "next": "ENC changelog follow-up, merged as5bf02078; Task85 observes automatic main CI/deployment. No additional canonical closure."
+      },
+      {
+        "PR": 699,
+        "issue": 697,
+        "next": "App-only survey-summary exact-head review/normalCI; preserve full provenance and contrast bindings; measure resulting readability/performance separately"
+      },
+      {
+        "PR": 700,
+        "next": "Review guard-hardening follow-ups on exact head/currentCI; no automatic new original-row credit"
+      },
+      {
+        "PR": 701,
+        "next": "Review timely Shore alert/start/expiry/staleness updates on exact head/currentCI; no automatic extra original-row credit"
+      }
+    ],
+    "assignment_rule": "Existing issue422 coordinator confirmation and sole publisher govern; this view creates no new worker, execution budget, provider/native authority or held-lane restart."
+  }
 }
