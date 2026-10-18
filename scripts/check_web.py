@@ -289,10 +289,26 @@ def check_legal_pages():
     assert not missing, ("sources.html", sorted(missing))
 
 
+BUNDLED_LIBRARIES = {"maplibre-gl": "MapLibre GL JS", "pmtiles": "PMTiles"}
+
+
+def check_bundled_licence_versions():
+    """The licences page and NOTICE name the bundled library versions package.json pins.
+
+    A dependency bump left both on MapLibre 6.11.2 after 6.12.0 shipped (#422 FE-11 follow-up).
+    """
+    pins = json.loads((ROOT / "package.json").read_text())["dependencies"]
+    for package, name in BUNDLED_LIBRARIES.items():
+        for path in (WEB / "licenses.html", ROOT / "NOTICE.md"):
+            found = re.findall(rf"{re.escape(name)} (\d+\.\d+\.\d+)", path.read_text())
+            assert found and set(found) == {pins[package]}, f"{path.relative_to(ROOT)} must name {name} {pins[package]}, found {found}"
+
+
 def main():
     assert (WEB / "landing.html").is_file() and (WEB / "app.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
+    check_bundled_licence_versions()
     sinks = markup_sinks()
     assert not sinks, f"markup written into the DOM outside {MARKUP_HOST} (mount packages/coast markup through it): {sinks}"
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
