@@ -29,7 +29,7 @@ import {createSwell} from '../map/swell.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
-import {regionInfo, zone} from './App.tsx';
+import {currentRegionInfo, zone} from './App.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
   {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
@@ -97,11 +97,11 @@ const overlayPalette = () => { try { return readPalette(); } catch { return unde
 export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const place = () => regionPlace(regionInfo.value, profile.value, species.value ?? '');
-    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => regionInfo.value?.center ?? null, zone,
+    const place = () => regionPlace(currentRegionInfo(), profile.value, species.value ?? '');
+    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
-          engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),
+          engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!})]})]});
     return () => stage.destroy();

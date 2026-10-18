@@ -8,7 +8,8 @@
 // target the link names that the list lacks stays first and explicit.
 //
 // Erasable syntax only: tests/test_species_profile.mjs imports it by type stripping.
-import {signal} from '@preact/signals';
+import {effect, signal} from '@preact/signals';
+import {region} from './state.ts';
 import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
 import {coastTarget, hasCoastTerrain} from './coast-context.ts';
 import {METHOD_RULES, PROFILE_TABLE, speciesForProfile, type PlanLike, type Profile} from './profile.ts';
@@ -27,10 +28,21 @@ export interface TargetOption {readonly id: string; readonly label: string; read
 /** The region's search plans, keyed by region so another region's never lists. */
 export const regionPlans = signal<{region: string; plans: Readonly<Record<string, Plan>>} | null>(null);
 
+export const PLAN_READ_TIMEOUT_MS = 10_000;
+let planGeneration = 0;
+let planRequest: AbortController | null = null;
+effect(() => {
+  const id = region.value;
+  planGeneration++;
+  planRequest?.abort();
+  planRequest = null;
+  if (regionPlans.peek()?.region !== id) regionPlans.value = null;
+});
+
 /** A search plan file's profiles when it is `id`'s; null otherwise. */
-async function readPlans(url: string, id: string, fetchFn: typeof fetch): Promise<Record<string, Plan> | null> {
+async function readPlans(url: string, id: string, fetchFn: typeof fetch, signal: AbortSignal): Promise<Record<string, Plan> | null> {
   try {
-    const response = await fetchFn(url);
+    const response = await fetchFn(url, {signal});
     if (!response.ok) return null;
     const json = await response.json() as {region_id?: unknown; profiles?: unknown};
     const plans = json.profiles && typeof json.profiles === 'object' && !Array.isArray(json.profiles) ? json.profiles as Record<string, Plan> : null;
@@ -43,8 +55,30 @@ async function readPlans(url: string, id: string, fetchFn: typeof fetch): Promis
  * the plans' geometry), else `regions/<id>/search-plans.json`; a failure leaves the profile's own species.
  */
 export async function loadPlans(id: string, fetchFn: typeof fetch = fetch): Promise<void> {
-  const plans = await readPlans(planIndexURL(id), id, fetchFn) ?? await readPlans(`regions/${encodeURIComponent(id)}/search-plans.json`, id, fetchFn);
-  if (plans) regionPlans.value = {region: id, plans};
+  // Explicit callers may load any keyed region; a selection change still invalidates that read.
+  const selectedRegion = region.peek();
+  const generation = ++planGeneration;
+  planRequest?.abort();
+  const controller = planRequest = new AbortController();
+  let rejectAborted: (() => void) | undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    rejectAborted = () => reject(new Error('Plan read cancelled or timed out'));
+    controller.signal.addEventListener('abort', rejectAborted, {once: true});
+  });
+  const timer = setTimeout(() => controller.abort(), PLAN_READ_TIMEOUT_MS);
+  try {
+    const read = async (): Promise<Record<string, Plan> | null> => {
+      const index = await readPlans(planIndexURL(id), id, fetchFn, controller.signal);
+      return index ?? (controller.signal.aborted ? null : await readPlans(`regions/${encodeURIComponent(id)}/search-plans.json`, id, fetchFn, controller.signal));
+    };
+    const plans = await Promise.race([read(), aborted]);
+    if (plans && generation === planGeneration && selectedRegion === region.peek()) regionPlans.value = {region: id, plans};
+  } catch { /* The profile's own targets remain available on failure or timeout. */ }
+  finally {
+    clearTimeout(timer);
+    if (rejectAborted) controller.signal.removeEventListener('abort', rejectAborted);
+    if (planRequest === controller) planRequest = null;
+  }
 }
 
 /**
