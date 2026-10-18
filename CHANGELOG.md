@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
+- Refine report and advisor contrast surfaces while preserving fail-closed contrast checks through the CI adoption test.
+
 - Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
 
 - Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.

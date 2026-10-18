@@ -2862,7 +2862,7 @@ body.app-body.map-focused #expand-map {
 .catch-trip header small { display: block; margin-top: 5px; color: var(--coast-muted, #8ba5b7); font-size: 10px; }
 .catch-counts { margin: 18px 0; display: grid; gap: 7px; }
 .catch-counts > div { position: relative; display: flex; justify-content: space-between; gap: 15px; padding: 7px 9px; background: var(--coast-panel, #0c1c29); border-radius: 3px; overflow: hidden; }
-.catch-bar { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--coast-mint-wash, #26524b88), var(--coast-mint-glow, #428c7855)); }
+.catch-bar { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-panel, #0c1c29)); }
 .catch-counts dt, .catch-counts dd { position: relative; font-size: 12px; margin: 0; }
 .catch-counts dt small { color: var(--coast-muted, #9bbcaf); margin-left: 5px; }
 .catch-counts dd { font-family: var(--coast-mono, ui-monospace,monospace); color: var(--coast-mint, #bce8d4); }
