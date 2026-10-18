@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
+
+- Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.
+
 - Refresh conditional coastal jobs when the CDIP, beach-health or GOES collector adapters change.
 
 - Preserve Fish enrichment failure provenance and use configured coastal feed context for readable reports and RSS, retaining reviewed fallback and privacy behavior.
