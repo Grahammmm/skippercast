@@ -351,6 +351,11 @@ test('the mark card shows a Chart selection, then the terrain\'s on the Chart, t
     assert.equal(currentMark.value, shore, 'a Chart click wins');
     const html = render(h(MarkCard, {}));
     assert.match(html, /<h2 tabindex="-1">Shoreline<\/h2>.*Lidar · ±2 m stated.*NOAA NGS CUSP · source date 2010-11-01/s);
+    chartMark.value = {...shore, terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}]};
+    assert.match(render(h(MarkCard, {})), /<a href="https:\/\/example.org\/terms" target="_blank" rel="noopener" aria-label="Publisher terms \(publisher's page, opens in a new tab\)">Publisher terms<\/a>/,
+      'a mark with publisher terms links them inside its basis');
+    assert.doesNotMatch(html, /Publisher terms/, 'a mark without them has none');
+    chartMark.value = shore;
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&spot=r12`);
     assert.equal(currentMark.value.name, 'r12', 'in the terrain its own panel speaks; the atlas mark stays');
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);

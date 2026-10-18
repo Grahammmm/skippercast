@@ -195,10 +195,14 @@ export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
     ? [`Terrain grade ${d.grade}`, view === 'terrain' ? '' : [1, 2, 3].includes(fit as number) ? `fits ${fitName(view)} habitat ${fit} of 3` : `${fitName(view)} fit unknown`].filter(Boolean).join(' · ')
     : f.kind === 'search' ? 'Rough-bottom search area · unranked' : 'Interpreted rock habitat · unranked';
   const notice = typeof f.properties.planning_notice === 'string' ? f.properties.planning_notice : NOTICE;
+  // v1's "Publisher terms" (#488 dropped it): one link per distinct https page, named by its credit when there are several.
+  const pages = f.rights.filter((r, i, all) => r.policyURL && all.findIndex(o => o.policyURL === r.policyURL) === i);
+  const terms = pages.map(r => ({href: r.policyURL, label: pages.length > 1 ? `Publisher terms: ${r.credit}` : 'Publisher terms'}));
   return {
     id: `seafloor:${f.id}`, name: f.kind === 'candidate' ? HABITAT_LABEL : d.title, kind, reading: d.depth,
     source: `Survey ${f.survey.id} · ${f.survey.year} · ${d.source.resolution} grid`,
     basis: [f.basis, ...f.rights.map(r => `${r.credit} ${r.notice}`), notice].join(' '),
+    ...(terms.length ? {terms} : {}),
   };
 }
 

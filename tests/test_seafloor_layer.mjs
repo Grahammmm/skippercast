@@ -108,7 +108,8 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   const [a, , search] = habitat.map(f => admitHabitat(f, PUB));
   const mark = seafloorMark(a, 'fit_lingcod');
   assert.deepEqual({...mark, basis: undefined}, {id: 'seafloor:fixture-candidate-a', name: 'Habitat candidate, unverified',
-    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined});
+    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined,
+    terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}]});
   assert.ok(mark.basis.startsWith(a.basis));
   assert.match(mark.basis, /Fixture Survey Lab Synthetic test credit; never survey data\. Planning only\. Not a navigation chart\. Check current CDFW regulations\.$/);
   assert.equal(seafloorMark(a, 'terrain').kind, 'Terrain grade A');
@@ -116,6 +117,11 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   assert.equal(seafloorMark(search, 'fit_lingcod').kind, 'Rough-bottom search area · unranked');
   assert.equal(seafloorMark(search, 'fit_lingcod').name, 'Measured rough-bottom search area');
   for (const m of [mark, seafloorMark(search, 'terrain')]) assert.doesNotMatch(Object.values(m).join(' '), FORBIDDEN);
+  // v1's "Publisher terms": one link per distinct page, named by credit when there are several; none without a page.
+  const right = a.rights[0], other = {...right, credit: 'Other Lab', policyURL: 'https://example.net/terms'};
+  assert.deepEqual(seafloorMark({...a, rights: [right, {...right, credit: 'Same page'}, other]}, 'terrain').terms, [
+    {href: 'https://example.org/terms', label: 'Publisher terms: Fixture Survey Lab'}, {href: 'https://example.net/terms', label: 'Publisher terms: Other Lab'}]);
+  assert.equal(seafloorMark({...a, rights: [{...right, policyURL: ''}]}, 'terrain').terms, undefined);
 });
 
 test('v2: view bounds follow web-mercator spans for a north-up camera', () => {
