@@ -39,6 +39,10 @@ async function load() {
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
+      export {Legend, RankedRow} from './web/app/Legend.tsx';
+      export {rankedSpots} from './web/map/ranked.ts';
+      export {markScreen} from './web/map/marks.ts';
+      export {CHECKING, assessScreen} from './web/map/habitat.ts';
       export {terrainMark, terrainReading} from './web/map/stage.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
@@ -411,4 +415,23 @@ test('the time dock disables Play at the complete horizon end while preserving b
   const before = new Date(NOW.getTime() + 167 * 3_600_000).toISOString().slice(0, 16) + 'Z';
   const prior = await renderShell(`${ORIGIN}?region=morro-bay&hour=${before}`);
   assert.doesNotMatch(prior.match(/<button[^>]*aria-label="Play"[^>]*>/)[0], / disabled/);
+});
+
+test('the legend keys the ranked trip spots while the Chart draws them (#422)', async () => {
+  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const spot = {id: 's1', name: 'Spot 1', latitude: 35.37, longitude: -120.9, trip_rank: 1};
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    assert.equal(render(h(RankedRow, {})), '', 'no plan, no row');
+    rankedSpots.value = [spot];
+    markScreen.value = CHECKING;
+    assert.equal(render(h(RankedRow, {})), '', 'no spot drawn while the marks\' screen is checking');
+    markScreen.value = assessScreen({areas: [], checkedAt: new Date(Date.now() - 60_000).toISOString(), live: false, closures: undefined}, Date.now());
+    const html = render(h(Legend, {}));
+    assert.match(html, /<li class="app-legend-ranked"><span class="app-swatch" data-layer="trip-ranked" aria-hidden="true"><\/span>Ranked trip spot; number: the planner(&#39;|')s order/);
+    assert.match(html, /Ranked trip spots basis/);
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+    assert.equal(render(h(RankedRow, {})), '', 'the terrain draws no ranked pins, so no row');
+  } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
 });
