@@ -18,7 +18,7 @@ test.beforeEach(async ({page}) => {
 
 test('acceptance 1: the first Chart view flies once and ends where it started', async ({page, pageErrors, v2}) => {
   test.setTimeout(60_000);
-  await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', diagnostics: '1'});
   const chart = page.locator('.app-chart');
   await expect(chart).toHaveAttribute('data-flyover', 'flying');
   const start = await chart.getAttribute('data-view');
@@ -33,7 +33,7 @@ test('acceptance 1: the first Chart view flies once and ends where it started', 
 });
 
 test('acceptance 2: a tap mid-flight stops it', async ({page, pageErrors, v2}) => {
-  await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', diagnostics: '1'});
   const chart = page.locator('.app-chart');
   await expect(chart).toHaveAttribute('data-flyover', 'flying');
   await chart.locator('canvas').first().dispatchEvent('pointerdown');
@@ -43,13 +43,13 @@ test('acceptance 2: a tap mid-flight stops it', async ({page, pageErrors, v2}) =
 
 test('acceptance 3: reduced motion and a linked view never fly', async ({page, pageErrors, v2}) => {
   await page.emulateMedia({reducedMotion: 'reduce'});
-  await v2.open('app', {region: 'morro-bay', profile: 'boat'});
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', diagnostics: '1'});
   const chart = page.locator('.app-chart');
   await expect(chart).toHaveAttribute('data-mpa-drawn', /\d/);
   await expect(chart).not.toHaveAttribute('data-flyover', /./);
   await page.emulateMedia({reducedMotion: 'no-preference'});
   await page.evaluate(() => sessionStorage.removeItem('e2e-flyover-fresh'));  // the next load starts unseen again
-  await v2.open('app', {region: 'morro-bay', profile: 'boat', view: '35.38000,-120.88000,11'});
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', view: '35.38000,-120.88000,11', diagnostics: '1'});
   await expect(chart).toHaveAttribute('data-mpa-drawn', /\d/);
   await expect(chart).not.toHaveAttribute('data-flyover', /./);
   expect(pageErrors).toEqual([]);
