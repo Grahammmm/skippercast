@@ -1,0 +1,288 @@
+// BODY09 rendered acceptance candidate. NOT RUN by its author. Execute only
+// after exact-source review, final-source binding and a separate surviving run grant.
+// Actual Reports -> CatchCards -> CoastMarkup -> catchSheet; no replacement count DOM.
+import {test, expect, type Locator, type Page, type TestInfo} from '@playwright/test';
+import {build, type Plugin} from 'esbuild';
+import {readFileSync} from 'node:fs';
+import {resolve, relative} from 'node:path';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {coastReportFixture} from './coast-report-fixture.ts';
+import {backingContrast, pngPixels} from './p04-paint-evidence.ts';
+
+const ROOT = resolve(import.meta.dirname, '..');
+const ORIGIN = 'http://p04-body09.test';
+const NOW = new Date('2026-10-08T19:00:00Z');
+const hash = (b: string | Buffer) => createHash('sha256').update(b).digest('hex');
+const read = (p: string) => readFileSync(resolve(ROOT, p));
+const STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'packages/coast/panel.css', 'packages/coast/tokens-bridge.css'];
+const FONTS = ['web/fonts/dm-sans-latin.woff2', 'web/fonts/jetbrains-mono-latin.woff2'];
+const INPUTS = [...STYLES, ...FONTS, 'web/app/views/Reports.tsx', 'web/app/CoastMarkup.tsx',
+  'packages/coast/src/ui/catches.ts', 'packages/coast/src/counties.ts', 'web/coast-data.ts',
+  'scripts/check_contrast.mjs', 'package.json', 'pnpm-lock.yaml', 'e2e/coast-report-fixture.ts',
+  'e2e/p04-catch-contrast.spec.ts', 'e2e/p04-paint-evidence.ts', 'e2e/p04-catch.config.ts'];
+// Immutable named-source bindings from the reviewed base. Fixture/self hashes
+// are recorded below and additionally bound by task85's sealed execution packet.
+const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
+  "web/tokens.css": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
+  "web/ui/ui.css": "bd194b2e3c9f9409dfc05fc17e400cbf5215959828c8e3c998d0f68e8b13b175",
+  "web/app/app.css": "6d390aa8c14e5e09493232ad2e77be253eac1c5e5a7666a1940c0ee8c3c698ab",
+  "packages/coast/panel.css": "b8d678a03e534fb214291f5d32891dec2d54fb87efca710df2291cf8ac042573",
+  "packages/coast/tokens-bridge.css": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
+  "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
+  "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
+  "web/app/views/Reports.tsx": "8ef399a5024b6bf2b232934647c40029674e8f661ea3391b037460ca66246af1",
+  "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
+  "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
+  "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
+  "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
+  "scripts/check_contrast.mjs": "80f2ad687ce6f1c8d1dba73c28e22948b034ec4c03f4353da33f3ed27e083c14",
+  "package.json": "7483a8ec51735e5c4c28c85a873fc9af7d461e67d3b84f74e3dfa15d0e2132a0",
+  "pnpm-lock.yaml": "eb62f9e39973b0b646acabedb510a4bf23936298b84a8cb577f2a2eb0143735c",
+  "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
+};
+function qualifiedInputs() {
+  const actual = Object.fromEntries(INPUTS.map(p => [p, hash(read(p))]));
+  expect(Object.fromEntries(Object.keys(REVIEWED_SOURCE_INPUTS).map(p => [p,actual[p]])),
+    'reviewed source bindings; changed final source requires applicability review').toEqual(REVIEWED_SOURCE_INPUTS);
+  const path = process.env.P04_BODY09_INPUT_MANIFEST;
+  if (path) {
+    const expected = JSON.parse(readFileSync(path, 'utf8')) as Record<string,string>;
+    expect(Object.keys(expected).sort()).toEqual([...INPUTS].sort());
+    expect(actual, 'operator sealed exact final fixture/resource inputs').toEqual(expected);
+  }
+  return {manifestPath: path ?? null, manifestSha256: path ? hash(readFileSync(path)) : null, inputs: actual};
+}
+const urlImports: Plugin = {name: 'p04-production-url-assets', setup(b) {
+  b.onResolve({filter: /\?url$/}, args => ({path: resolve(args.resolveDir, args.path.replace(/\?url$/, '')), namespace: 'p04-url'}));
+  b.onLoad({filter: /.*/, namespace: 'p04-url'}, args => {
+    const p = relative(ROOT, args.path).replaceAll('\\', '/');
+    if (!STYLES.includes(p)) throw Error('Unqualified production URL asset ' + p);
+    return {contents: `export default ${JSON.stringify('/' + p)};`, loader: 'js'};
+  });
+  // Same deferred renderer seam as existing Reports/coast-markup fixtures.
+  // Reports never mounts either GPU factory. Fail if either is actually requested.
+  b.onResolve({filter: /^\.\/(?:map\/)?(?:terrain|maplibre)\.js$/}, args => ({path: args.path, external: true}));
+}};
+async function productionBundle() {
+  const result = await build({stdin: {resolveDir: ROOT, loader: 'tsx', contents: `
+    import {h, render} from 'preact';
+    import {Reports, reportsData} from './web/app/views/Reports.tsx';
+    import {coastData, coastReport} from './web/coast-data.ts';
+    import {region, profile, species, configureStore, startURLSync} from './web/state.ts';
+    window.mountP04Reports = async () => {
+      configureStore({v2:true,storage:null});startURLSync();
+      const now = new Date(${JSON.stringify(NOW.toISOString())});
+      if(region.value !== 'morro-bay' || profile.value !== 'boat' || species.value !== 'lingcod') throw Error('Wrong Reports URL state');
+      reportsData.value = {key: 'morro-bay:lingcod', data: {evidence:null,
+        discussions:{status:'unavailable', candidates:[], checkedQueries:0, totalQueries:0}, watch:null, charters:null}};
+      coastData.setPlace({regionId:'morro-bay', point:{latitude:35.34,longitude:-120.97},
+        localAreas:[{id:'estero-bay',bounds:[-122,34,-120,36]}], profile:'boat',target:'lingcod',at:now});
+      await coastData.load('report');
+      if(!coastReport.value) throw Error('Synthetic report was not admitted by the real coast client');
+      render(h(Reports,{now}), document.getElementById('mount'));
+      window.p04ReportGeneratedAt = coastReport.value.data.generatedAt;
+    };`},
+    bundle: true, write: false, metafile: true, format: 'iife', platform: 'browser',
+    logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [urlImports],
+  });
+  const moduleInputs = Object.fromEntries(Object.keys(result.metafile!.inputs)
+    .filter(p => p !== '<stdin>' && !p.startsWith('p04-url:'))
+    .map(p => [p, hash(readFileSync(resolve(ROOT, p)))]));
+  return {script: result.outputFiles[0]!.text, moduleInputs};
+}
+
+// Entire DOM/ancestor and hit-test audit is re-used for controls. Unsupported
+// paint/occlusion fails closed; it is never discarded as a sample to make green.
+async function audit(row: Locator) {
+  return row.evaluate(element => {
+    const dd = element.querySelector('dd')!, bar = element.querySelector<HTMLElement>('.catch-bar')!;
+    const shadow = element.getRootNode() as ShadowRoot, host = shadow.host as HTMLElement;
+    const rect = (e: Element) => {const b = e.getBoundingClientRect(); return {x:b.x,y:b.y,width:b.width,height:b.height,right:b.right,bottom:b.bottom};};
+    const rgba = (colour: string) => {const canvas = document.createElement('canvas');canvas.width=canvas.height=1;
+      const c=canvas.getContext('2d')!;c.fillStyle=colour;c.fillRect(0,0,1,1);return [...c.getImageData(0,0,1,1).data];};
+    const token = (name: string) => rgba(getComputedStyle(host).getPropertyValue(name).trim());
+    const composedParent = (e: Element): Element | null => e.parentElement ?? ((e.getRootNode() as ShadowRoot).host ?? null);
+    const describe = (e: Element) => e.tagName.toLowerCase() + (e.className ? '.' + String(e.className).trim().replaceAll(' ', '.') : '');
+    const issues: string[] = [], chain: Record<string, string>[] = [];
+    const ancestors = new Set<Element>();
+    for (let node: Element | null = dd; node; node = composedParent(node)) {
+      ancestors.add(node);
+      const s = getComputedStyle(node);
+      const p = {element:describe(node), color:s.color, background:s.backgroundColor, image:s.backgroundImage,
+        opacity:s.opacity, filter:s.filter, backdropFilter:s.backdropFilter, mixBlendMode:s.mixBlendMode,
+        transform:s.transform, visibility:s.visibility, display:s.display, textShadow:s.textShadow,
+        clipPath:s.clipPath, maskImage:s.maskImage, overflow:s.overflow, zIndex:s.zIndex};
+      chain.push(p);
+      if (s.opacity !== '1' || s.filter !== 'none' || s.backdropFilter !== 'none' || s.mixBlendMode !== 'normal' || s.transform !== 'none'
+        || s.visibility !== 'visible' || s.display === 'none' || s.clipPath !== 'none' || s.maskImage !== 'none') issues.push('unsupported_ancestor:' + describe(node));
+      if (s.textShadow !== 'none') issues.push('text_shadow:' + describe(node));
+      if (s.backgroundImage !== 'none') issues.push('unexpected_ancestor_background:' + describe(node));
+      for (const pseudo of ['::before','::after']) {
+        const ps = getComputedStyle(node, pseudo);
+        if (ps.content !== 'none' && ps.content !== 'normal' && ps.display !== 'none') issues.push('unqualified_pseudo:' + describe(node) + pseudo);
+      }
+    }
+    const sheets = [...shadow.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map(l => ({href:l.href, loaded:!!l.sheet,disabled:l.disabled}));
+    if (sheets.length !== 2 || sheets.some(l => !l.loaded || l.disabled) || !sheets.some(l => l.href.endsWith('/packages/coast/panel.css'))
+      || !sheets.some(l => l.href.endsWith('/packages/coast/tokens-bridge.css'))) issues.push('bridge_or_panel_not_loaded');
+    if (host.dataset.coastTheme !== 'tokens') issues.push('missing_token_optin');
+    const ds=getComputedStyle(dd), rs=getComputedStyle(element), bs=getComputedStyle(bar);
+    const foreground=rgba(ds.color), panel=token('--panel'), mint=token('--mint');
+    if (foreground.join() !== mint.join()) issues.push('count_foreground_not_mint');
+    if (rgba(rs.backgroundColor).join() !== panel.join() || panel[3] !== 255) issues.push('row_background_not_opaque_panel');
+    if (ds.backgroundImage !== 'none' || rgba(ds.backgroundColor)[3] !== 0) issues.push('unqualified_dd_background');
+    // Browser resolves the declared production gradient against the actual host tokens.
+    const probe=document.createElement('i');probe.style.cssText='position:absolute;left:-10000px;';
+    probe.style.backgroundImage='linear-gradient(90deg in srgb, var(--coast-mint-wash), var(--coast-panel))';
+    shadow.append(probe);const expectedGradient=getComputedStyle(probe).backgroundImage;probe.remove();
+    if (expectedGradient === 'none' || bs.backgroundImage !== expectedGradient) issues.push('gradient_cascade_mismatch');
+    if (bs.opacity !== '1' || bs.filter !== 'none' || bs.mixBlendMode !== 'normal' || bs.transform !== 'none' || bs.backdropFilter !== 'none') issues.push('unsupported_bar_paint');
+    if (bs.display === 'none' || bs.visibility !== 'visible') issues.push('bar_hidden');
+    if (bs.position !== 'absolute' || bs.zIndex !== 'auto' || ds.position !== 'relative' || ds.zIndex !== 'auto'
+      || !(bar.compareDocumentPosition(dd) & Node.DOCUMENT_POSITION_FOLLOWING) || rs.overflow !== 'hidden') issues.push('unqualified_paint_order');
+    if (!document.fonts.check('12px "JetBrains Mono"') || !ds.fontFamily.includes('JetBrains Mono')) issues.push('count_font_unloaded');
+    const range=document.createRange();range.selectNodeContents(dd);const text=range.getBoundingClientRect();
+    const boxes={row:rect(element),dd:rect(dd),bar:rect(bar),text:{x:text.x,y:text.y,width:text.width,height:text.height,right:text.right,bottom:text.bottom}};
+    const deep = (x:number,y:number) => {let e=document.elementFromPoint(x,y);while(e?.shadowRoot){const next=e.shadowRoot.elementFromPoint(x,y);if(!next||next===e)break;e=next;}return e;};
+    const hits=[];
+    for (const fx of [.1,.5,.9]) for (const fy of [.2,.5,.8]) {
+      const x=text.x+text.width*fx,y=text.y+text.height*fy,top=deep(x,y);
+      const ok=!!top&&(top===dd||dd.contains(top));hits.push({x,y,top:top?describe(top):null,ok});if(!ok)issues.push('count_occluded');
+    }
+    if (text.width <= 0 || text.height <= 0 || text.x < 0 || text.y < 0 || text.right > innerWidth || text.bottom > innerHeight) issues.push('count_outside_viewport');
+    // Geometry also catches pointer-events:none overlays that hit-testing alone cannot see.
+    const overlaps: Record<string,unknown>[]=[];
+    const visit=(root:Document|ShadowRoot) => {
+      for(const e of root.querySelectorAll('*')) {
+        if(e.shadowRoot)visit(e.shadowRoot);
+        if(ancestors.has(e)||dd.contains(e)||e===bar)continue;
+        const b=e.getBoundingClientRect(),s=getComputedStyle(e);
+        if(s.display==='none'||s.visibility!=='visible'||Number(s.opacity)===0)continue;
+        if(Math.min(b.right,text.right)<=Math.max(b.left,text.left)||Math.min(b.bottom,text.bottom)<=Math.max(b.top,text.top))continue;
+        const painted=rgba(s.backgroundColor)[3]!==0||s.backgroundImage!=='none'||!!e.textContent?.trim()||e instanceof SVGElement||['IMG','CANVAS','VIDEO'].includes(e.tagName);
+        if(painted){overlaps.push({element:describe(e),box:rect(e),background:s.backgroundColor,image:s.backgroundImage,opacity:s.opacity,pointerEvents:s.pointerEvents,zIndex:s.zIndex});issues.push('unexpected_overlap');}
+      }
+    };
+    visit(document);
+    const overlap=Math.max(0,Math.min(boxes.bar.right,text.right)-Math.max(boxes.bar.x,text.x));
+    return {issues:[...new Set(issues)],text:dd.textContent,theme:document.documentElement.dataset.theme,
+      foreground,panel,mint,gradient:bs.backgroundImage,expectedGradient,barComputed:{position:bs.position,zIndex:bs.zIndex,opacity:bs.opacity,filter:bs.filter},
+      rowComputed:{overflow:rs.overflow,borderRadius:rs.borderRadius},countComputed:{font:ds.font,color:ds.color,position:ds.position,zIndex:ds.zIndex},
+      boxes,textBarOverlapFraction:overlap/text.width,ancestors:chain,hitTests:hits,overlaps,sheets};
+  });
+}
+async function evidence(page: Page, row: Locator, info: TestInfo, name: string) {
+  await row.scrollIntoViewIfNeeded();
+  await expect(row.locator('dd')).toBeVisible();
+  const before=await audit(row);
+  expect(before.issues, name + ' paint and visibility contract').toEqual([]);
+  // Viewport screenshots and getBoundingClientRect share CSS-pixel coordinates.
+  const viewport=page.viewportSize();
+  expect(viewport, name+' configured viewport is required').not.toBeNull();
+  const layout=await page.evaluate(()=>({width:innerWidth,height:innerHeight,scale:visualViewport?.scale??null}));
+  expect({width:layout.width,height:layout.height}, name+' layout coordinates equal capture viewport').toEqual(viewport);
+  expect(layout.scale, name+' no mobile shrink-to-fit or pinch zoom').toBe(1);
+  const visible=await page.screenshot({scale:'css',animations:'disabled'});
+  const visiblePixels=pngPixels(visible);
+  expect({width:visiblePixels.width,height:visiblePixels.height}, name+' visible PNG uses viewport CSS pixels').toEqual(viewport);
+  await info.attach(name+'-visible',{body:visible,contentType:'image/png'});
+  // Observe the actual backing behind the glyph bounds. Only glyph colour is
+  // temporarily transparent; no backing, gradient, layout or ancestor is replaced.
+  const style=await row.locator('dd').getAttribute('style');
+  let backing: Buffer;
+  try {
+    await row.locator('dd').evaluate(e => (e as HTMLElement).style.setProperty('color','transparent','important'));
+    backing=await page.screenshot({scale:'css',animations:'disabled'});
+  } finally {
+    await row.locator('dd').evaluate((e,original) => {if(original===null)e.removeAttribute('style');else e.setAttribute('style',original);},style);
+  }
+  const after=await audit(row);
+  expect(after, name+' exact restored production paint').toEqual(before);
+  const text=before.boxes.text;
+  const backingPixels=pngPixels(backing!);
+  expect({width:backingPixels.width,height:backingPixels.height}, name+' backing PNG uses viewport CSS pixels').toEqual(viewport);
+  const measured=backingContrast(backing!,before.foreground,{x:text.x,y:text.y,width:text.width,height:text.height});
+  await info.attach(name+'-glyph-free-backing',{body:backing!,contentType:'image/png'});
+  await info.attach(name+'-computed-and-pixels',{body:JSON.stringify({before,after,viewport,
+    visibleSha256:hash(visible),backingSha256:hash(backing!),measured,
+    method:'Primary image is real production UI; secondary image temporarily clears dd glyph colour only, then exact computed state is restored. Ratios use computed opaque foreground and every whole backing pixel beneath text rectangle.'},null,2),contentType:'application/json'});
+  expect(measured.samples).toBeGreaterThan(0);
+  expect(measured.minimum, name+' actual backing-pixel contrast').toBeGreaterThanOrEqual(4.5);
+  // Independent meaningful failure control for the reused ratio helper, not a proof rerun.
+  const same=measured.backgrounds[0]!.colour;
+  const matching=[1,3,5].map(i=>parseInt(same.slice(i,i+2),16)).concat(255);
+  expect(backingContrast(backing!,matching,{x:text.x,y:text.y,width:text.width,height:text.height}).minimum, 'foreground=actual backing must fail4.5').toBe(1);
+  return before;
+}
+
+test('BODY09 real Reports counts: light/dark paint, overlap, backing and fail-closed controls', async ({page,browser},info) => {
+  const bindings=qualifiedInputs(), {script,moduleInputs}=await productionBundle();
+  const report=coastReportFixture(NOW.getTime());
+  report.catches=report.catches.slice(0,1);
+  report.catches[0]!.species=[{name:'Synthetic full bar',count:100,disposition:'reported'},
+    {name:'Synthetic partial bar',count:25,disposition:'reported'},{name:'Synthetic zero bar',count:0,disposition:'reported'}];
+  const unexpected: string[]=[], errors:string[]=[], served:Record<string,string>={};
+  page.on('pageerror',e=>errors.push(String(e)));
+  await page.clock.setFixedTime(NOW);
+  // Every request is handled here before any server/provider; no Worker is started by the dedicated config.
+  await page.route('**/*',route=>{
+    const url=new URL(route.request().url()),path=url.pathname.slice(1);
+    if(url.origin!==ORIGIN){unexpected.push(url.href);return route.abort('blockedbyclient');}
+    if(path==='__p04/')return route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>BODY09 production Reports</title>${STYLES.slice(0,3).map(p=>`<link rel="stylesheet" href="/${p}">`).join('')}<style>#mount{padding:16px;max-width:760px;margin:0 auto;}</style></head><body><main id="mount"></main><script src="/__p04/host.js"></script></body></html>`});
+    if(path==='__p04/host.js'){served[path]=hash(script);return route.fulfill({contentType:'text/javascript',body:script});}
+    if(path==='api/coast/report'){served[path]=hash(JSON.stringify(report));return route.fulfill({json:report});}
+    if([...STYLES,...FONTS].includes(path)){const body=read(path);served[path]=hash(body);return route.fulfill({body,contentType:path.endsWith('.css')?'text/css':'font/woff2'});}
+    unexpected.push(url.href);return route.abort('blockedbyclient');
+  });
+  await page.goto(ORIGIN+'/__p04/?region=morro-bay&view=reports&profile=boat&target=lingcod');
+  await page.evaluate(()=> (window as unknown as {mountP04Reports():Promise<void>}).mountP04Reports());
+  const host=page.locator('.app-reports [data-renderer="catchSheet"]');
+  const rows=host.locator('.catch-counts > div');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.locator('dd')).toHaveText(['100','25','0']);
+  const results:unknown[]=[];
+  for(const theme of ['dark','light']) {
+    await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;},theme);
+    await expect.poll(()=>host.evaluate(e=>{const links=[...e.shadowRoot!.querySelectorAll<HTMLLinkElement>('link')];return links.length===2&&links.every(l=>!!l.sheet&&!l.disabled);})).toBe(true);
+    await page.evaluate(async()=>{await document.fonts.load('15px "DM Sans"');await document.fonts.load('12px "JetBrains Mono"');await document.fonts.ready;});
+    for(const [i,kind] of ['full','partial','zero'].entries()) {
+      const got=await evidence(page,rows.nth(i),info,`${theme}-${kind}`);
+      expect(got.theme).toBe(theme);
+      if(kind==='full')expect(got.textBarOverlapFraction).toBeGreaterThan(.99);
+      else expect(got.textBarOverlapFraction).toBe(0);
+      if(kind==='partial')expect(got.boxes.bar.width).toBeGreaterThan(0);
+      if(kind==='zero')expect(got.boxes.bar.width).toBe(0);
+      results.push({theme,kind,foreground:got.foreground,panel:got.panel});
+    }
+    await info.attach(theme+'-reports-visible',{body:await page.screenshot({fullPage:true,scale:'css',animations:'disabled'}),contentType:'image/png'});
+  }
+  expect((results[0] as {foreground:number[]}).foreground).not.toEqual((results[3] as {foreground:number[]}).foreground);
+  // Controls are mutations after primary evidence, restored in finally; never count as production passes.
+  const controls=[];
+  await rows.first().scrollIntoViewIfNeeded();
+  await host.evaluate(e=>{e.shadowRoot!.querySelector<HTMLLinkElement>('link[href$="tokens-bridge.css"]')!.disabled=true;});
+  try {const got=await audit(rows.first());expect(got.issues).toContain('bridge_or_panel_not_loaded');controls.push({id:'missing-bridge',issues:got.issues});}
+  finally {await host.evaluate(e=>{e.shadowRoot!.querySelector<HTMLLinkElement>('link[href$="tokens-bridge.css"]')!.disabled=false;});}
+  await expect.poll(async()=> (await audit(rows.first())).issues).toEqual([]);
+  await rows.first().locator('dd').evaluate(e=>(e as HTMLElement).style.setProperty('color','var(--coast-panel)','important'));
+  try {const got=await audit(rows.first());expect(got.issues).toContain('count_foreground_not_mint');controls.push({id:'cascade-mismatch',issues:got.issues});}
+  finally {await rows.first().locator('dd').evaluate(e=>e.removeAttribute('style'));}
+  await host.evaluate(e=>(e as HTMLElement).style.opacity='.5');
+  try {const got=await audit(rows.first());expect(got.issues.some(s=>s.startsWith('unsupported_ancestor:'))).toBe(true);controls.push({id:'ancestor-opacity',issues:got.issues});}
+  finally {await host.evaluate(e=>e.removeAttribute('style'));}
+  const box=await rows.first().locator('dd').boundingBox();expect(box).not.toBeNull();
+  await page.evaluate(b=>{const e=document.createElement('div');e.id='p04-control-overlay';e.style.cssText=`position:fixed;left:${b!.x}px;top:${b!.y}px;width:${b!.width}px;height:${b!.height}px;background:black;z-index:2147483647;`;document.body.append(e);},box);
+  try {const got=await audit(rows.first());expect(got.issues).toContain('count_occluded');controls.push({id:'overlay',issues:got.issues});}
+  finally {await page.locator('#p04-control-overlay').evaluate(e=>e.remove());}
+  expect((await audit(rows.first())).issues).toEqual([]);
+  expect(errors,'uncaught errors').toEqual([]);
+  expect(unexpected,'no unstubbed/server/provider/GPU requests').toEqual([]);
+  for(const p of [...STYLES,...FONTS])expect(served[p],p+' actually served exact bytes').toBe(bindings.inputs[p]);
+  await info.attach('provenance-and-controls',{body:JSON.stringify({bindings,moduleInputs,bundleSha256:hash(script),served,
+    gitHead:execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT,encoding:'utf8'}).trim(),
+    gitTree:execFileSync('git',['rev-parse','HEAD^{tree}'],{cwd:ROOT,encoding:'utf8'}).trim(),
+    runtime:process.version,browser:browser.version(),project:info.project.name,viewport:page.viewportSize(),
+    date:NOW.toISOString(),url:page.url(),reportSha256:hash(JSON.stringify(report)),results,controls,
+    scope:'Actual production Reports/CatchCards/CoastMarkup/catchSheet in a finite local route host, not full map/shell/GPU/native or legacy fallback acceptance.'},null,2),contentType:'application/json'});
+});

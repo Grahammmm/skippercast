@@ -8,9 +8,18 @@ body.adv-page {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-sans);
-  font-size: var(--text-15);
-  line-height: var(--leading-body);
+  font: var(--text-15) / var(--leading-body) var(--font-sans);
+  /* The shorthand must preserve the font properties these longhands inherited. */
+  font-style: inherit;
+  font-variant: inherit;
+  font-weight: inherit;
+  font-stretch: inherit;
+  font-size-adjust: inherit;
+  font-language-override: inherit;
+  font-kerning: inherit;
+  font-optical-sizing: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
   /* Room for the floating chat button. */
   padding-bottom: calc(var(--touch-min) + var(--space-6));
 }
@@ -80,7 +89,23 @@ body.adv-page {
 .adv-table { width: 100%; border-collapse: collapse; font-size: var(--text-13); font-variant-numeric: tabular-nums; }
 .adv-table th, .adv-table td { text-align: left; vertical-align: top; padding: var(--space-2); border-bottom: 1px solid var(--line); }
 .adv-table th { color: var(--muted); font-size: var(--text-11); font-weight: var(--weight-medium); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; white-space: nowrap; }
-.adv-table td:first-child { font-family: var(--font-mono); white-space: nowrap; }
+.adv-table td:first-child {
+  font: var(--text-13) / var(--leading-body) var(--font-mono);
+  font-size: inherit;
+  line-height: inherit;
+  /* The shorthand must preserve the font properties these longhands inherited. */
+  font-style: inherit;
+  font-variant: inherit;
+  font-weight: inherit;
+  font-stretch: inherit;
+  font-size-adjust: inherit;
+  font-language-override: inherit;
+  font-kerning: inherit;
+  font-optical-sizing: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  white-space: nowrap;
+}
 .adv-table td:last-child { min-width: 12rem; }
 
 .adv-tag, .adv-badge, .adv-state {
@@ -132,7 +157,7 @@ body.adv-page {
 .adv-cta-text { flex: 1 1 260px; }
 .adv-cta-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 /* The QR code stays dark on white so every phone camera reads it. */
-.adv-cta-qr { width: 132px; height: 132px; background: #fff; border-radius: var(--radius-sm); padding: var(--space-1); }
+.adv-cta-qr { width: 132px; height: 132px; background: var(--qr-paper); border-radius: var(--radius-sm); padding: var(--space-1); }
 .adv-page .adv-button {
   display: inline-flex;
   align-items: center;

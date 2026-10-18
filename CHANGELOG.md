@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refine report and advisor contrast surfaces while preserving fail-closed contrast checks through the CI adoption test.
+
 - Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
 
 - Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.
