@@ -172,7 +172,7 @@ jobs:
       - name: Forecast handling and GPX checks
         run: node --test tests/test_*.mjs
       - name: Design token contrast (WCAG 4.5:1, light and dark)
-        run: node scripts/check_contrast.mjs --verbose
+        run: node --test tests/test_contrast_ci_adoption.mjs
       # Guide 5.8: no two "not" sentences in a row, and no GFS/ECMWF/MLLW/datum
       # outside a disclosure. Existing copy is in scripts/copy-lint-baseline.json,
       # which may only shrink relative to the base branch.

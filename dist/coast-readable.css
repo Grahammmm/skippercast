@@ -36,7 +36,20 @@ body.coast-readable {
 .coast-readable h3 { margin: 0 0 var(--space-2); font: var(--weight-semibold) var(--text-15) / var(--leading-heading) var(--font-sans); }
 .coast-readable p, .coast-readable li { max-width: 80ch; }
 .coast-readable time, .coast-readable code, .coast-readable dd {
-  font-family: var(--font-mono); font-size: var(--text-13); font-variant-numeric: tabular-nums;
+  font: var(--text-13) / var(--leading-body) var(--font-mono);
+  line-height: inherit;
+  /* The shorthand must preserve the font properties these longhands inherited. */
+  font-style: inherit;
+  font-variant: inherit;
+  font-weight: inherit;
+  font-stretch: inherit;
+  font-size-adjust: inherit;
+  font-language-override: inherit;
+  font-kerning: inherit;
+  font-optical-sizing: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Scope note and explicit gaps: the reading text stays --text on a raised tile; the edge marks the kind. */
