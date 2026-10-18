@@ -77,7 +77,7 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
   assert.match(cell.basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(year and vertical datum not recorded for this cell\):/);
   const facts = surveyFacts(admitted);
   assert.deepEqual(facts.get('fixture-survey-2m'), {year: 2010, datum: 'NAVD88'}, 'the fixture candidates state 2010 and NAVD88');
-  assert.match(admitCell(cells[0], PUB, facts).basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(2010, vertical datum NAVD88\):/);
+  assert.match(admitCell(cells[0], PUB, facts).basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(2010, nominal depth in vertical datum NAVD88\):/);
   assert.equal(admitCell(cells[0], PUB, facts).survey.year, 2010);
   assert.match(cellBasis('other-survey', facts), /from survey other-survey \(year and vertical datum not recorded for this cell\)/, 'no borrowing across surveys');
   assert.match(cellBasis('unknown', facts), /from an unnamed survey \(year and vertical datum not recorded/);

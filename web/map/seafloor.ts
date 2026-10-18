@@ -79,7 +79,7 @@ export type SurveyFacts = ReadonlyMap<string, {readonly year: number | 'unknown'
 export function cellBasis(sourceId: string, facts: SurveyFacts = new Map()): string {
   const f = sourceId === 'unknown' ? undefined : facts.get(sourceId);
   const survey = sourceId === 'unknown' ? 'an unnamed survey' : `survey ${sourceId}`;
-  const known = f ? `${f.year === 'unknown' ? 'year unknown' : f.year}, vertical datum ${f.datum}` : 'year and vertical datum not recorded for this cell';
+  const known = f ? `${f.year === 'unknown' ? 'year unknown' : f.year}, nominal depth in vertical datum ${f.datum}` : 'year and vertical datum not recorded for this cell';
   return `Surveyed 250 m cell from ${survey} (${known}): at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.`;
 }
 /**
