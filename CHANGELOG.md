@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Coastal readiness inspection
+
+- Add coastal queue status and imported-code identity commands with explicit hold, attempt, dependency and schema receipts. Document the separate installed, native, science and operational readiness gates with synthetic unit coverage.
+
 - Refine report and advisor contrast surfaces while preserving fail-closed contrast checks through the CI adoption test.
 
 - Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
