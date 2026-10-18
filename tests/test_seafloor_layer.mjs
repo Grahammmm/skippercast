@@ -215,13 +215,22 @@ test('v2: toggling Seafloor adds and removes exactly its layers; held reaches an
 });
 
 test('v2: the status lines carry v1\'s counts and caveat when the manifest states them (#422 FE-14 follow-up)', async t => {
-  const rig = seafloorRig({manifest: {layers: {habitat: 3968, cells: 10101}, reach_inputs: {a: {}, b: {}, c: {}}}});
+  // Production's mix: layers.habitat (3968) also counts the unranked search and interpreted areas; only habitat_counts.habitat are candidates.
+  const rig = seafloorRig({manifest: {layers: {habitat: 3968, cells: 10101}, habitat_counts: {habitat: 3064, 'search-area': 81, 'classified-area': 823},
+    reach_inputs: {a: {}, b: {}, c: {}}}});
   t.after(() => rig.layer.destroy());
   await settle();
   assert.equal(seafloorState.value.note, '2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth · 3 published reach inputs in this region');
   camera.value = {latitude: 35.353, longitude: -120.948, zoom: 9};
   await settle();
-  assert.equal(seafloorState.value.note, 'Zoom in to see seafloor candidates · 3968 screened candidates across 3 published reach inputs');
+  assert.equal(seafloorState.value.note, 'Zoom in to see seafloor candidates · 3064 screened candidates across 3 published reach inputs', 'candidates only, not the layer total');
+  rig.layer.destroy();
+  const totalOnly = seafloorRig({manifest: {layers: {habitat: 3968}, reach_inputs: {a: {}}}});
+  t.after(() => totalOnly.layer.destroy());
+  await settle();
+  camera.value = {latitude: 35.353, longitude: -120.948, zoom: 9};
+  await settle();
+  assert.equal(seafloorState.value.note, 'Zoom in to see seafloor candidates', 'without per-status counts the mixed total is never called candidates');
 });
 
 test('v2: a view with cells and no candidates empties the source when it zooms out, leaves the archive or needs too many tiles', async t => {

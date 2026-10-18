@@ -345,9 +345,10 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const ready = (note: string, more: Partial<SeafloorState> = {}) => publish({status: 'ready', note, ...more});
     const clear = (note: string) => { if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); o.onHide?.(); } ready(note); };
     // v1's status lines (dist/seafloor-layer.js before FE-61), with v2's "candidates": the counts, and the caveat in view.
-    const m = manifest as {layers?: {habitat?: number}; reach_inputs?: Record<string, unknown>} | null;
+    // The candidate count is the publisher's per-status habitat_counts.habitat; layers.habitat also counts unranked areas.
+    const m = manifest as {habitat_counts?: {habitat?: number}; reach_inputs?: Record<string, unknown>} | null;
     const reaches = Object.keys(m?.reach_inputs ?? {}).length;
-    const screenedCount = m?.layers?.habitat;
+    const screenedCount = m?.habitat_counts?.habitat;
     if (at.zoom < MIN_VIEW_ZOOM) return clear(['Zoom in to see seafloor candidates',
       Number.isFinite(screenedCount) && reaches ? `${screenedCount} screened candidates across ${reaches} published reach inputs` : ''].filter(Boolean).join(' · '));
     const {width, height} = o.size();
