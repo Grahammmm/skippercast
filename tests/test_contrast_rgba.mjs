@@ -236,11 +236,15 @@ test('catch production: continuous light/dark proof and uncovered panel', () => 
 test('catch production: rejects translucent endpoint and changed interpolation/selector', () => {
   const [panel, bridge, tokens] = catchSources();
   for (const changed of [
-    panel.replace('90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-panel, #0c1c29)', '90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-mint-glow, #428c7855)'),
+    // FE-61 part 3: panel.css reads the bridged roles without v1 literal fallbacks.
+    panel.replace('90deg in srgb, var(--coast-mint-wash), var(--coast-panel)', '90deg in srgb, var(--coast-mint-wash), var(--coast-mint-glow)'),
     panel.replace('90deg in srgb, var(--coast-mint-wash', '90deg in oklab, var(--coast-mint-wash'),
     panel.replace('.catch-counts dd {', '.unrelated dd {'),
     panel + '\n.catch-counts dd {color: red;}',
-  ]) assert.equal(checkCatchGradient(changed, bridge, tokens).failures[0].status, 'resolution_error');
+  ]) {
+    assert.notEqual(changed, panel, 'each mutation must actually change the sheet');
+    assert.equal(checkCatchGradient(changed, bridge, tokens).failures[0].status, 'resolution_error');
+  }
 });
 test('catch production: actual role mutations fail at equality and missing binding', () => {
   const [panel, bridge, tokens] = catchSources();
