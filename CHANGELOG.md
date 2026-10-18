@@ -3,6 +3,16 @@
 ## Unreleased
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
+- Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
+
+- Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.
+
+- Refresh conditional coastal jobs when the CDIP, beach-health or GOES collector adapters change.
+
+- Preserve Fish enrichment failure provenance and use configured coastal feed context for readable reports and RSS, retaining reviewed fallback and privacy behavior.
+
+- Apply one-second pacing to default National Weather Service coast-report requests while preserving injected sessions and other provider limits.
+
 - Use target-specific atlas explanations only for supported lingcod and rockfish screens; keep neutral terrain descriptions for other admitted targets. Add terrain-type and age-formatting regression coverage.
 
 - Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.
