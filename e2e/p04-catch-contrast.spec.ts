@@ -23,6 +23,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
   'e2e/p04-catch-contrast.spec.ts', 'e2e/p04-paint-evidence.ts', 'e2e/p04-catch.config.ts'];
 // Immutable named-source bindings from the reviewed base. Fixture/self hashes
 // are recorded below and additionally bound by task85's sealed execution packet.
+// Applicability review, #696 (ranked trip spots legend row): app.css adds only a
+// `.app-swatch[data-layer="trip-ranked"]` rule, which the Reports catch flow never
+// renders; check_contrast.mjs changes only SURFACE_SOURCE_SHA256 and its line
+// citations, not `contrast()`, the one export this spec reads. Both rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
@@ -31,7 +35,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/MapStage.tsx": "25a446d17624bf555b684077e0a56091cfa6f32a94a03560aaa5be54a85bd367",
   "web/tokens.css": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
   "web/ui/ui.css": "bd194b2e3c9f9409dfc05fc17e400cbf5215959828c8e3c998d0f68e8b13b175",
-  "web/app/app.css": "8988a9b40ef129e0ffd353f95a3f56b507d02fba0b741fa9bd7fc7682a9e8f2d",
+  "web/app/app.css": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
   "packages/coast/panel.css": "b8d678a03e534fb214291f5d32891dec2d54fb87efca710df2291cf8ac042573",
   "packages/coast/tokens-bridge.css": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -41,7 +45,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "0aac155b1fd3ccbbc744d3193a441945a4acb2f345004304ffaaef3e297fa9e0",
+  "scripts/check_contrast.mjs": "cd7e77dd03f847f141a966eade20937e34803f12dc53c20a4d806a0003ade173",
   "package.json": "7483a8ec51735e5c4c28c85a873fc9af7d461e67d3b84f74e3dfa15d0e2132a0",
   "pnpm-lock.yaml": "eb62f9e39973b0b646acabedb510a4bf23936298b84a8cb577f2a2eb0143735c",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

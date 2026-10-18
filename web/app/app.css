@@ -180,6 +180,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
+.app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
 .app-swatch[data-layer="currents-fast"] { background: var(--flow-fast); }

@@ -32,6 +32,8 @@
 // FE-82: protected areas, reef marks and charter grounds also drape on the
 // terrain, so the protected areas' row and the Charter fleet row show there too;
 // commercial AIS still draws on the Chart only and says so.
+// Ranked trip spots (FE-51, #495): while the Chart draws a ranked trip plan's
+// pins, a row keys them with the registry's label and basis (#422).
 // FE-80: in 2D and 3D the Seafloor row is the terrain's: its depth ramp, the
 // terrain basis, the screened candidates as "Chart only", and while Source
 // coverage is on the renderer's colour key and its sources with their dates, verbatim.
@@ -54,6 +56,7 @@ import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swe
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
+import {drawnSpots} from '../map/ranked.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES, railOn} from './rail.ts';
@@ -226,6 +229,18 @@ function FleetRow() {
   );
 }
 
+/** The ranked trip plan's pins, while the Chart draws any. */
+export function RankedRow() {
+  const n = drawnSpots.value.length, entry = layerEntry('trip-ranked');
+  if (!n || shownPresentation.value !== 'chart') return null;
+  return (
+    <li class="app-legend-ranked">
+      <span class="app-swatch" data-layer="trip-ranked" aria-hidden="true"></span>{entry.legend[0]?.label ?? entry.label}
+      <Popover iconOnly summary="Ranked trip spots basis"><p>{entry.basis}</p></Popover>
+    </li>
+  );
+}
+
 /** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
 export function DensityRow() {
   const n = densityShown.value;
@@ -260,6 +275,7 @@ export function Legend() {
           : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
+        <RankedRow />
         <DensityRow />
         <MpaRow />
       </ul>
