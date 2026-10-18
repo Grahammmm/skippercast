@@ -14,6 +14,8 @@
 //   shell `/` (#497), never MapLibre; its `v2` offline list resolves.
 // - The v2 pages stay within their gzipped JavaScript and CSS budgets
 //   (scripts/startup-budget.json "bundles"; FE-09, front-end design § 13).
+// - The install precache and the offline pack's app shell stay within their raw
+//   byte budgets (scripts/startup-budget.json "precache"; FE-51).
 import {readdir, readFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
@@ -128,6 +130,23 @@ for (const [page, budget] of Object.entries(budgets)) {
   for (const kind of ['js', 'css']) {
     const max = budget[`${kind}_gzip_max`];
     if (Number.isFinite(max) && size[kind] > max) problems.push(`${page}: initial ${kind === 'js' ? 'JavaScript' : 'CSS'} ${size[kind]} B gzipped exceeds its budget of ${max} B (${budgetFile})`);
+  }
+}
+
+// 6b. Precache budgets: raw bytes of what every visitor's worker installs and of
+// what an offline pack stores for the v2 app shell (FE-51). Missing files are
+// reported by section 5; here they count as zero.
+const precacheBudget = JSON.parse(await readFile(budgetFile, 'utf8')).precache || {};
+if (precache) {
+  const raw = async paths => { let n = 0; for (const p of paths) n += await readFile(join(dir, p.slice(1))).then(b => b.length, () => 0); return n; };
+  const sizes = {
+    install: await raw([...(precache.assets || []), ...(precache.static || [])]),
+    pack_shell: await raw([...(precache.v2?.assets || []), ...(precache.v2?.static || [])]),
+  };
+  measured.push(`precache install ${sizes.install} B, pack shell ${sizes.pack_shell} B raw`);
+  for (const [name, size] of Object.entries(sizes)) {
+    const max = precacheBudget[`${name}_raw_max`];
+    if (Number.isFinite(max) && size > max) problems.push(`precache ${name.replace('_', ' ')} is ${size} B raw, over its budget of ${max} B (${budgetFile})`);
   }
 }
 
