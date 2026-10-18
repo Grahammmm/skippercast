@@ -131,7 +131,8 @@ for (const [page, budget] of Object.entries(budgets)) {
   }
 }
 
-// 7. The v2 app loads three and the coast renderer only by dynamic import on the
+// 7. The Chart loads MapLibre and PMTiles only by dynamic import (FE-11).
+// The v2 app loads three and the coast renderer only by dynamic import on the
 // first terrain choice (FE-71, front-end design § 3A.2): nothing the app entry
 // imports statically may come from three or packages/coast's renderer. Shared
 // chunks carry no `src` in the manifest, so each one is matched by its source
@@ -139,6 +140,8 @@ for (const [page, budget] of Object.entries(budgets)) {
 // its code (three.core sets window.__THREE__; the renderer warns as "THREE.").
 const RENDERER_SRC = /(?:^|\/)node_modules\/(?:\.pnpm\/three@[^/]+\/node_modules\/)?three\/|packages\/coast\/src\/(?:coast3d\/|embed\.ts)/;
 const RENDERER_CHUNK = /^(?:three|viewer|embed|OrbitControls)(?:\.|$)/i;
+const CHART_SRC = /(?:^|\/)node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:maplibre-gl|pmtiles)\//;
+const CHART_CHUNK = /^(?:maplibre-gl|pmtiles)(?:\.|$)/i;
 const THREE_MARKERS = ['__THREE__', 'THREE.WebGLRenderer'];
 const chunkName = name => posix.basename(name).replace(/^_/, '');
 if (manifest['app.html']) {
@@ -148,7 +151,9 @@ if (manifest['app.html']) {
     if (!e || seen.has(key)) return;
     seen.add(key);
     const named = [e.src, key].some(n => n && RENDERER_SRC.test(n)) || [key, e.name, e.file].some(n => n && RENDERER_CHUNK.test(chunkName(n)));
+    const chart = [e.src, key].some(n => n && CHART_SRC.test(n)) || [key, e.name, e.file].some(n => n && CHART_CHUNK.test(chunkName(n)));
     const code = e.file.endsWith('.js') ? await readFile(join(dir, e.file), 'utf8').catch(() => '') : '';
+    if (chart) problems.push(`app.html statically imports ${e.src || key} (MapLibre and PMTiles load by dynamic import only)`);
     if (named) problems.push(`app.html statically imports ${e.src || key} (three and the coast renderer load by dynamic import only)`);
     else if (THREE_MARKERS.some(marker => code.includes(marker))) problems.push(`app.html statically imports ${e.file}, which contains three`);
     for (const next of e.imports || []) await walk(next);

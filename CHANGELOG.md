@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.
+
 - Remove the retired offline-pack card adapter while retaining saved-pack storage and the current trip interface.
 - Remove the unused legacy boat-button bootstrap while preserving the account menu's exact-boat sheet.
 - Verify saved shore-source receipts against their selected region and recognize only the reviewed nowCOAST satellite endpoint in commercial-source checks.
