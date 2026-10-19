@@ -103,23 +103,7 @@ jobs:
           retention-days: 30
       - name: Report NOAA ENC danger-source coverage
         if: always()
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
-              out.write('\n## NOAA ENC danger review\n')
-              for scope in ('santa-barbara-island', 'point-reyes-tomales', 'h11967-greenwood-tile'):
-                  path = Path(f'var/research-daily/enc-hazards/{scope}.geojson')
-                  if not path.is_file():
-                      raise SystemExit(f'NOAA ENC danger-layer refresh produced no {scope} snapshot')
-                  data = json.loads(path.read_text())
-                  if (data.get('status') != 'charted-danger-screen-only'
-                          or data.get('scope_id') != scope
-                          or len(data.get('query_receipts', [])) != 18):
-                      raise SystemExit(f'NOAA ENC danger-layer review incomplete: {scope}')
-                  out.write(f"{scope}: {len(data['features'])} charted features across 18 complete layer queries; retrieved {data['checked_at']}. Not navigation clearance.\n")
-          PY
+        run: python research/scripts/report_enc_hazard_coverage.py
       - name: Report native-product discovery coverage
         if: always()
         run: |
