@@ -44,8 +44,8 @@ function staticRefs() {
   };
 }
 
-// One stylesheet per page, in document order. Pages share tokens.css and
-// styles.css; left as separate links, Vite would split the shared sheets into
+// One stylesheet per page, in document order. Pages share sheets (the v2
+// tokens and readable or advisor sheets); left as separate links, Vite would split the shared sheets into
 // a common chunk and emit it after the page's own sheet, reversing the
 // cascade. Instead each page's local <link rel="stylesheet"> tags become one
 // generated NAME.page.css that @imports them in their original order, so the
