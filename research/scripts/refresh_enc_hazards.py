@@ -10,7 +10,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
+import time
 import urllib.parse
 import urllib.request
 
@@ -20,21 +22,53 @@ SERVICES = ("enc_harbour", "enc_approach", "enc_coastal")
 LAYERS = ("Obstruction_point", "Underwater_Awash_Rock_point", "Wreck_point",
           "Obstruction_line", "Obstruction_area", "Wreck_area")
 
+# NOAA's encdirect ArcGIS host intermittently answers a valid request with HTTP
+# 200 and a JSON body {"error": {"code": 500, "message": "...Could not find
+# service. Service may be stopped or it may not be configured."}}. That is a
+# transient upstream state on the reviewed host, not a changed or removed
+# source, so a bounded retry on the same URL is safe. Anything else still fails
+# closed: a real error, a redirect, an oversized or malformed response, or a
+# missing layer aborts the refresh exactly as before.
+TRANSIENT_ATTEMPTS = 5
+TRANSIENT_MAX_WAIT = 60.0
+TRANSIENT_MARKERS = ("Could not find service", "may be stopped or it may not be configured")
+
+
+class EncUpstreamUnavailable(ValueError):
+    """NOAA ENC Direct stayed unavailable after the bounded retry budget."""
+
+
+def _transient_unavailable(error) -> bool:
+    """True only for the exact observed transient upstream 500 signature."""
+    if not isinstance(error, dict) or error.get("code") != 500:
+        return False
+    message = str(error.get("message", ""))
+    return all(marker in message for marker in TRANSIENT_MARKERS)
+
 
 def fetch_json(url):
     if not url.startswith(BASE + "/"):
         raise ValueError("ENC URL is outside the reviewed NOAA host and service")
     request = urllib.request.Request(url, headers={"User-Agent": "SkipperCast NOAA ENC hazard review/1.0"})
-    with urllib.request.urlopen(request, timeout=35) as response:
-        if response.status != 200 or response.url != url:
-            raise ValueError("ENC source status or redirect changed")
-        raw = response.read(6_000_001)
-    if not raw or len(raw) > 6_000_000:
-        raise ValueError("ENC response is empty or oversized")
-    result = json.loads(raw)
-    if "error" in result:
-        raise ValueError("ENC service reported an error: " + str(result["error"])[:180])
-    return result, hashlib.sha256(raw).hexdigest()
+    for attempt in range(TRANSIENT_ATTEMPTS):
+        with urllib.request.urlopen(request, timeout=35) as response:
+            if response.status != 200 or response.url != url:
+                raise ValueError("ENC source status or redirect changed")
+            raw = response.read(6_000_001)
+        if not raw or len(raw) > 6_000_000:
+            raise ValueError("ENC response is empty or oversized")
+        result = json.loads(raw)
+        error = result.get("error") if isinstance(result, dict) else None
+        if error is None:
+            return result, hashlib.sha256(raw).hexdigest()
+        if not _transient_unavailable(error):
+            raise ValueError("ENC service reported an error: " + str(error)[:180])
+        if attempt == TRANSIENT_ATTEMPTS - 1:
+            raise EncUpstreamUnavailable(
+                "NOAA ENC Direct stayed unavailable after %d attempts: %s"
+                % (TRANSIENT_ATTEMPTS, str(error.get("message", ""))[:180]))
+        time.sleep(min(TRANSIENT_MAX_WAIT, 2.0 * 2 ** attempt))
+    raise AssertionError("unreachable")
 
 
 def query_layer(service, layer, layer_id, bounds):
@@ -123,7 +157,36 @@ def main():
             raise ValueError("Research-only ENC output must stay under var/review/")
     elif not output.is_relative_to((ROOT / "dist/regions" / scopes[0]["region_id"]).resolve()):
         raise ValueError("ENC output escaped its regional package")
-    print(json.dumps(refresh(scopes[0], output)))
+    try:
+        result = refresh(scopes[0], output)
+    except EncUpstreamUnavailable as error:
+        _record_unavailable(scopes[0], output, error)
+        return
+    print(json.dumps(result))
+
+
+def _record_unavailable(scope, output, error):
+    """Record an explicit upstream outage receipt and warn without failing.
+
+    The receipt is the difference between "NOAA was down and we know it" and a
+    silently missing snapshot: the coverage reporter only downgrades a scope to
+    a warning when this exact receipt is present, and still fails closed on any
+    missing, corrupt or incomplete snapshot without one.
+    """
+    receipt = {"schema_version": 1, "scope_id": scope["id"],
+        "region_id": scope["region_id"], "status": "upstream_unavailable",
+        "checked_at": datetime.now(timezone.utc).isoformat(), "source_url": BASE,
+        "message": str(error)[:180],
+        "limitations": "NOAA ENC Direct did not answer after bounded retries; no charted-danger snapshot was produced this run. Not navigation clearance."}
+    output.parent.mkdir(parents=True, exist_ok=True)
+    receipt_path = output.parent / (scope["id"] + ".unavailable.json")
+    receipt_path.write_text(json.dumps(receipt, separators=(",", ":")) + "\n")
+    print(f"::warning title=NOAA ENC Direct unavailable::{scope['id']}: {error}")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a") as handle:
+            handle.write(f"- {scope['id']}: upstream_unavailable (NOAA ENC Direct did not answer); "
+                         f"no charted-danger snapshot this run. Receipt: {receipt_path.name}\n")
 
 
 if __name__ == "__main__":
