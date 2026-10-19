@@ -12,8 +12,9 @@ import {PMTiles} from 'pmtiles';
 import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatures as tileFeaturesV2} from '../dist/seafloor-data.js';
 import {
   EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
-  publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyLine, toneOf, viewBounds,
+  cellBasis, publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
+import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
@@ -73,6 +74,10 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
   const cell = admitCell(cells[0], PUB);
   assert.deepEqual(cell.rights.map(r => r.credit), ['Fixture Survey Lab']);
   assert.match(cell.basis, /coverage only, with no habitat rank\.$/);
+  // #422 FE-14 follow-up: a cell's basis names its survey; year and datum stay unknown (no revision binding on cells).
+  assert.match(cell.basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(year and vertical datum not recorded for this cell\):/);
+  assert.equal(cell.survey.year, 'unknown');
+  assert.match(cellBasis('unknown'), /from an unnamed survey \(year and vertical datum not recorded/);
   assert.equal(admitCell(cells[0], {...PUB, rights: publicationRights({source_attribution: ['x']})}), null, 'cells need the publication\'s credits and use notice');
 });
 
@@ -99,8 +104,12 @@ test('v2: grade and fit draw on the depth ramp from palette tokens; the key keep
   assert.deepEqual(terrain.slice(0, 3).map(([, label]) => label), Object.values(GRADE_STYLE).map(s => s.label));
   assert.deepEqual(fit.slice(0, 3).map(([, label]) => label), Object.values(FIT_STYLE).map(s => s.label).reverse());
   for (const [, label] of [...terrain, ...fit]) assert.doesNotMatch(label, FORBIDDEN);
-  assert.equal(surveyLine(['a (2010)']), 'Survey a (2010)');
-  assert.equal(surveyLine(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)', 'e (2004)']), 'Surveys a (2010), b (2008), c (2008) and 2 more');
+  // #697: the legend counts the surveys and spans their years; the ids (source file names) move to the basis popover.
+  assert.equal(surveySummary(['a (2010)']), '1 survey, 2010');
+  assert.equal(surveySummary(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)']), '4 surveys, 2006–2010');
+  assert.equal(surveySummary(['a (2010)', 'a (unknown)']), '1 survey, 2010, some undated', 'one survey, its cells undated');
+  assert.equal(surveySummary(['a (unknown)', 'b (unknown)']), '2 surveys, undated');
+  assert.equal(surveyList(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)', 'e (2004)']), 'Surveys drawn: a (2010), b (2008), c (2008), d (2006), e (2004).', 'every survey, none elided');
 });
 
 test('v2: the mark card names the candidate, its nominal depth, survey and year, and carries basis and credits', async () => {
@@ -108,7 +117,8 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   const [a, , search] = habitat.map(f => admitHabitat(f, PUB));
   const mark = seafloorMark(a, 'fit_lingcod');
   assert.deepEqual({...mark, basis: undefined}, {id: 'seafloor:fixture-candidate-a', name: 'Habitat candidate, unverified',
-    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined});
+    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined,
+    terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}]});
   assert.ok(mark.basis.startsWith(a.basis));
   assert.match(mark.basis, /Fixture Survey Lab Synthetic test credit; never survey data\. Planning only\. Not a navigation chart\. Check current CDFW regulations\.$/);
   assert.equal(seafloorMark(a, 'terrain').kind, 'Terrain grade A');
@@ -116,6 +126,11 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   assert.equal(seafloorMark(search, 'fit_lingcod').kind, 'Rough-bottom search area · unranked');
   assert.equal(seafloorMark(search, 'fit_lingcod').name, 'Measured rough-bottom search area');
   for (const m of [mark, seafloorMark(search, 'terrain')]) assert.doesNotMatch(Object.values(m).join(' '), FORBIDDEN);
+  // v1's "Publisher terms": one link per distinct page, named by credit when there are several; none without a page.
+  const right = a.rights[0], other = {...right, credit: 'Other Lab', policyURL: 'https://example.net/terms'};
+  assert.deepEqual(seafloorMark({...a, rights: [right, {...right, credit: 'Same page'}, other]}, 'terrain').terms, [
+    {href: 'https://example.org/terms', label: 'Publisher terms: Fixture Survey Lab'}, {href: 'https://example.net/terms', label: 'Publisher terms: Other Lab'}]);
+  assert.equal(seafloorMark({...a, rights: [{...right, policyURL: ''}]}, 'terrain').terms, undefined);
 });
 
 test('v2: view bounds follow web-mercator spans for a north-up camera', () => {
@@ -326,4 +341,49 @@ test('v2: expiry hides candidates before the refresh answers, and a late tile ne
   late.tileHold.release();
   await settle();
   assert.ok(late.calls.every(c => c[0] !== 'data' || c[2] === 0), 'no features after off');
+});
+
+// #706: a person can open a drawn coverage cell's basis. Fixture cell 3310:fx:1 spans about -120.987 to -120.970,
+// 35.344 to 35.358 and overlaps candidate fixture-candidate-a east of -120.981; 3310:fx:2 lies in held reach fx2.
+const CELL_ONLY = {lon: -120.985, lat: 35.35}, OVERLAP = {lon: -120.975, lat: 35.35}, HELD_CELL = {lon: -120.961, lat: 35.337};
+test('v2: a drawn coverage cell opens its own card: its survey, year and datum not recorded, the credits, and no depth or fit', async t => {
+  const rig = seafloorRig();
+  t.after(() => rig.layer.destroy());
+  await settle();
+  const card = rig.layer.cellAt(CELL_ONLY);
+  assert.deepEqual({...card, basis: undefined}, {id: 'seafloor:cell:3310:fx:1', name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank',
+    reading: 'Depth not given for this cell', source: 'Survey fixture-survey-2m · year and vertical datum not recorded for this cell', basis: undefined});
+  assert.ok(card.basis.startsWith(cellBasis('fixture-survey-2m')), 'the cell\'s own basis');
+  assert.match(card.basis, /Fixture Survey Lab .*Planning only\. Not a navigation chart\./, 'with the publication\'s credits and notice');
+  assert.doesNotMatch(`${card.kind} ${card.reading} ${card.source}`, /grade|fits|\bft\b|candidate/i, 'no terrain grade, fit or depth from the habitat branch');
+  assert.doesNotMatch(card.basis, FORBIDDEN);
+  assert.equal(rig.layer.cellAt(HELD_CELL), null, 'a held reach\'s cell never draws and never opens');
+  assert.equal(rig.layer.cellAt({lon: -120.5, lat: 35.0}), null, 'open water outside every cell');
+  assert.equal(rig.layer.mark('cell:3310:fx:1'), null, 'cells are not habitat marks');
+});
+
+test('v2: a cell reads only where nothing more specific is picked, and goes with an expired or hidden publication', async t => {
+  const rig = seafloorRig({manifest: {expires_at: '2030-01-01T00:01:00Z'}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  const cell = p => rig.layer.cellAt(p), habitat = rig.layer.mark('fixture-candidate-a');
+  assert.ok(cell(OVERLAP) && habitat, 'the candidate overlaps the cell');
+  // The candidate's pick wins over the cell under it; the cell comes before the current and water-temperature readings.
+  const field = () => ({id: 'current:x', name: 'Surface current', kind: '', reading: '', source: '', basis: ''});
+  assert.equal(clickMark(habitat, OVERLAP, [cell, field]), habitat);
+  assert.equal(clickMark(null, OVERLAP, [cell, field]).id, 'seafloor:cell:3310:fx:1');
+  assert.equal(clickMark(null, {lon: -120.5, lat: 35.0}, [cell, field]).id, 'current:x', 'no cell: the field reading');
+  assert.equal(clickMark(null, null, [cell, field]), null);
+
+  rig.clock = Date.parse('2030-01-01T00:02:00Z');
+  assert.equal(cell(CELL_ONLY), null, 'past expires_at the cell reads nothing, at the click');
+  assert.deepEqual([seafloorState.value.status, seafloorState.value.note], ['expired', EXPIRED]);
+
+  const off = seafloorRig();
+  t.after(() => off.layer.destroy());
+  await settle();
+  assert.ok(off.layer.cellAt(CELL_ONLY));
+  off.layers('currents');
+  await settle();
+  assert.equal(off.layer.cellAt(CELL_ONLY), null, 'off withdraws the cells');
 });

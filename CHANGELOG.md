@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
+- The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
+- The species research and commercial AIS pages use the app's visual system, like the sources page. Their text is unchanged, except the species research page's chart paragraph, which now names the NOAA chart layer groups the map requests.
+- The terms, privacy and licences pages use the app's visual system, like the sources page, with the draft notice kept prominent.
+- The Seafloor legend summarises its surveys ("4 surveys, 2006–2010") instead of listing raw source file names; every survey is still listed in its basis.
+- After a brief nautical-chart (ENC) tile failure the Chart drops its "chart detail unavailable" note as soon as a fresh chart tile loads for the same region, instead of keeping it until the page is reloaded. Other layer failures stay reported.
+- While a ranked trip plan's numbered pins show on the Chart, the legend keys them and links their basis.
+- Shore runs on the Chart go on Hold, with the reason on the card, while a marine alert covers the area, the marine alert check is not current, or the county posts a beach-health advisory, closure or warning there.
+- A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
+- The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
+- The licences page and NOTICE name the MapLibre GL JS version the app ships (6.12.0), and a check keeps them in step with future updates.
+
+- The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
 ### Coastal readiness inspection
 
 - Add coastal queue status and imported-code identity commands with explicit hold, attempt, dependency and schema receipts. Document the separate installed, native, science and operational readiness gates with synthetic unit coverage.

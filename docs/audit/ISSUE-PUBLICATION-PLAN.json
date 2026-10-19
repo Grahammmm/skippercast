@@ -1,0 +1,18 @@
+{
+  "state": "Prepared; actual issue creation through existing authorized publishers only",
+  "skippercast": {
+    "title": "Integrate reviewed ENC transient-tile recovery on current main",
+    "packet": "docs/audit/packets/ENC-RECOVERY.md",
+    "ids": [
+      "SC-FE422-body-14-03"
+    ],
+    "instruction": "Reuse an existing exact tracking issue if one already owns this clause; publisher confirms before creating one. Insert actual issue URL into first Claude prompt after publication."
+  },
+  "flock": {
+    "reuse": "https://github.com/Grahammmm/DeFlock-Campaign-Tool/issues/128",
+    "instruction": "Existing intake/review/publication issues4/5/6 and current PR130 remain; no Claude Flock batch while owner active. Later child issues require exact source gap and owner release."
+  },
+  "reunion": {
+    "instruction": "No currently ready independent Claude implementation assigned. Link existing original-scope issue if present; create no filler issue or new portrait task. Visitor/report gaps remain conditional."
+  }
+}

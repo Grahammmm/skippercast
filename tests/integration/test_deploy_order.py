@@ -34,7 +34,7 @@ class DeploymentOrderTests(unittest.TestCase):
                    'GITHUB_SHA': current, 'DEPLOY_SHA': selected, 'GITHUB_OUTPUT': str(output)}
             stdout, stderr = io.StringIO(), io.StringIO()
             code = 0
-            with patch.dict(os.environ, env), patch('urllib.request.urlopen', side_effect=read), \
+            with patch.dict(os.environ, env), patch('urllib.request.OpenerDirector.open', side_effect=read), \
                     contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 try:
                     exec(compile(SCRIPT, 'workflow-source-gate', 'exec'), {'__name__': '__main__'})

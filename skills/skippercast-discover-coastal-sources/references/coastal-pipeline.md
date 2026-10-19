@@ -2,6 +2,38 @@
 
 The implementation is `skippercast.coastal`. Use the reviewed package and existing approved environment under the repository dependency policy. Skill scripts are compatibility entry points, not separate scientific implementations. Package resources include schemas and the pinned whole-ping GSF adapter. Do not install services or change isolation, access, credentials or model routing as part of a run.
 
+## Canonical source and installed mirrors
+
+The reviewed GitHub repository `Grahammmm/skippercast` is the single development
+source for these skills:
+
+- `skills/skippercast-discover-coastal-sources/`
+- `skills/skippercast-map-coast/`
+- `skills/skippercast-render-coast-3d/`
+
+Develop changes in an isolated repository branch, using the existing coordinator
+backlog and exact file ownership. Obtain independent review and use the designated
+publisher for normal protected-branch integration. A local installation, newer
+file timestamp, unmerged branch or stale host checkout is not a replacement for
+the approved source revision. All three skills share this contract; do not create
+another implementation or tracker for an installed copy.
+
+Installed directories such as `~/.codex/skills/<skill-name>/` are execution
+mirrors. Before a run, bind their actual file hashes to the selected reviewed
+commit, tree and repository paths. Record the runtime/package identity separately;
+matching skill text alone does not establish native or rendering acceptance.
+If local content differs, preserve it and reconcile useful changes through the
+same repository review flow before synchronization. Do not overwrite unreviewed
+customizations or treat them as accepted source.
+
+The assigned installer records a new, immutable installation manifest with the
+approved commit/tree, source paths and hashes, installed destination, exact
+preimages/postimages and per-file metadata. Preserve observed permissions,
+ownership and relevant platform metadata, and verify unchanged unowned files.
+Keep backups and earlier receipts; do not rerun an old installer against new
+inputs. A successful synchronization means the installed bytes match that
+approved revision, with any preserved metadata differences explicit.
+
 ## Evidence and stages
 
 The host coordinator stores geographic EPSG:3310 segments in SQLite, with fenced leases and input/code/dependency/parameter identities. Asset hashes identify bytes, not geographic segments. A bounded invocation is a command, not a persistent service:

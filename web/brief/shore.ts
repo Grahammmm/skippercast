@@ -3,7 +3,10 @@
 // separate gate in shoreShown; the importer still rejects closed/nonpublic access.
 //
 // - Blocked (0): a current protected-area check finds the run or an access point inside.
-// - Hold (0): the protected-area check is not current.
+// - Hold (0): the protected-area check is not current, the marine alert check is not current
+//   (packages/coast daily.ts: `nws-alerts` fetched OK within 2 h), a marine alert for the area
+//   is in effect or starts within a day, or the county posts a beach-health advisory, closure or
+//   warning for the area (#422: the original Fish shore rules hold for both).
 // - No surf model (2): no fresh nearshore model sample covers the area.
 // - Current (3): the protected-area check and nearshore sample are current.
 // The rank orders places to check, not legal permission or a prediction of fish.
@@ -32,6 +35,12 @@ export interface ShoreInputs {
   readonly inside: readonly string[] | null;
   /** True when a fresh nearshore model sample covers the run's area. */
   readonly conditions: boolean;
+  /** False while the marine alert check is not current (`alertCheckCurrent`); then no alert list can be trusted. */
+  readonly alertCheck?: boolean;
+  /** Marine alerts for the run's area in effect now or within a day (`activeAlerts`), by event name. */
+  readonly alerts?: readonly string[];
+  /** The area's beaches under a fresh county advisory, closure or warning (`beachNotices`), by name. */
+  readonly notices?: readonly string[];
 }
 
 export interface ShoreStatus {
@@ -49,11 +58,78 @@ const day = (s: string): string => Number.isFinite(Date.parse(s))
 export const shoreShown = (run: Pick<ShoreRunClocks, 'reviewExpiresAt'>, now: number): boolean => time(run.reviewExpiresAt) > now;
 
 /** The run's priority and label at `now`. */
-export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions}: ShoreInputs): ShoreStatus {
+export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions, alertCheck = true, alerts = [], notices = []}: ShoreInputs): ShoreStatus {
   if (inside && inside.length) return {priority: 0, label: 'Blocked', reasons: [`Inside ${inside.join('; ')}`]};
-  if (!inside) return {priority: 0, label: 'Hold', reasons: ['Protected-area check not current']};
+  const held = [
+    ...(inside ? [] : ['Protected-area check not current']),
+    ...(alertCheck ? [] : ['Marine alert check not current']),
+    ...alerts.map(event => `Marine alert: ${event}`),
+    ...notices.map(name => `Beach-health notice: ${name}`),
+  ];
+  if (held.length) return {priority: 0, label: 'Hold', reasons: held};
   if (!conditions) return {priority: 2, label: 'No surf model', reasons: ['No fresh nearshore model sample for this area']};
   return {priority: 3, label: 'Current', reasons: ['Protected-area check current; a fresh nearshore model sample covers this area']};
+}
+
+const HOUR = 3_600_000;
+
+/** A marine alert as the coast report carries it (packages/coast/src/types.ts `Alert`). */
+export interface ShoreAlert {readonly event: string; readonly effective: string | null; readonly expires: string | null; readonly areaIds?: readonly string[]}
+/**
+ * Alerts for `areaId` in effect at `now` or starting within a day: packages/coast daily.ts
+ * `relevantAlerts`' rule over that span. An unparseable clock counts as in effect.
+ */
+export function activeAlerts(alerts: readonly ShoreAlert[], areaId: string, now: number): ShoreAlert[] {
+  return alerts.filter(alert => {
+    if (alert.areaIds && !alert.areaIds.includes(areaId)) return false;
+    const effective = alert.effective ? Date.parse(alert.effective) : -Infinity, expires = alert.expires ? Date.parse(alert.expires) : Infinity;
+    return (Number.isNaN(effective) || effective < now + 24 * HOUR) && (Number.isNaN(expires) || expires > now);
+  });
+}
+
+/** packages/coast daily.ts' rule: the `nws-alerts` source fetched OK within 2 h (1 h of clock skew). */
+export function alertCheckCurrent(report: ShoreReportPart, now: number): boolean {
+  const source = report.sources.find(item => item.id === 'nws-alerts');
+  const age = source ? now - Date.parse(source.fetchedAt) : NaN;
+  return source?.outcome === 'ok' && Number.isFinite(age) && age >= -HOUR && age <= 2 * HOUR;
+}
+
+/** The county beach-health source (packages/coast enrichment). */
+export const BEACH_HEALTH_SOURCE = 'slo-beach-water-quality';
+/** A published status that is a notice; "Beach Open" is not. The v1 rule (packages/coast presentation.ts reportPanel, ui/briefing.ts). */
+export const BEACH_NOTICE_STATUS = /advisory|closed|warning/i;
+const BEACH_HEALTH_MAX_AGE_MS = 3 * HOUR, BEACH_HEALTH_SKEW_MS = 5 * 60_000;
+export interface ShoreWaterQuality {readonly areaId?: string; readonly name: string; readonly status: string; readonly advisory?: string | null; readonly url: string}
+export interface ShoreReportPart {
+  readonly sources: readonly {readonly id: string; readonly outcome: string; readonly fetchedAt: string}[];
+  readonly waterQuality?: readonly ShoreWaterQuality[];
+}
+/**
+ * The area's beaches under an advisory, closure or warning, decided as v1 does: from the
+ * status, and only while the county source fetched cleanly within 3 h. The advisory text is not
+ * the test: the county writes one for open beaches too ("There are no advisory notes at this time.").
+ */
+export function beachNotices(report: ShoreReportPart, areaId: string, now: number): ShoreWaterQuality[] {
+  const health = report.sources.find(item => item.id === BEACH_HEALTH_SOURCE);
+  const age = health ? now - Date.parse(health.fetchedAt) : NaN;
+  if (health?.outcome !== 'ok' || !(age >= -BEACH_HEALTH_SKEW_MS && age < BEACH_HEALTH_MAX_AGE_MS)) return [];
+  return (report.waterQuality ?? []).filter(item => item.areaId === areaId && BEACH_NOTICE_STATUS.test(item.status));
+}
+
+/**
+ * The next threshold at or after `now` at which a hold input can change on its own: an alert expiring or
+ * entering the day ahead, the alert check passing 2 h, or the beach-health source passing 3 h. A threshold
+ * equal to `now` is kept: the strict comparisons (`effective < now + 24 h`, `age <= 2 h`) only flip just
+ * after it, so the caller re-checks a moment later. Null when none is ahead.
+ */
+export function nextShoreChange(report: ShoreReportPart & {readonly alerts?: readonly ShoreAlert[]}, now: number): number | null {
+  const at = (s: string | null | undefined, plus = 0): number => { const t = s ? Date.parse(s) : NaN; return Number.isFinite(t) ? t + plus : NaN; };
+  const fetched = (id: string, maxAge: number) => at(report.sources.find(item => item.id === id)?.fetchedAt, maxAge);
+  const times = [
+    ...(report.alerts ?? []).flatMap(a => [at(a.expires), at(a.effective, -24 * HOUR)]),
+    fetched('nws-alerts', 2 * HOUR), fetched(BEACH_HEALTH_SOURCE, BEACH_HEALTH_MAX_AGE_MS),
+  ].filter(t => Number.isFinite(t) && t >= now);
+  return times.length ? Math.min(...times) : null;
 }
 
 /** "review until Oct 10, 2026", or "review expired Oct 10, 2026" once that date has passed: a lapsed review is said, never shown as current. */

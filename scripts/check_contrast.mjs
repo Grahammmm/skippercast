@@ -1,36 +1,24 @@
 #!/usr/bin/env node
 // WCAG 2.x contrast check for the documented text/background token pairs, in
-// both themes of both token files: dist/tokens.css (v1, light default) and
-// web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
+// both themes of web/tokens.css (v2, dark default; design.md § 5). Fails under 4.5:1.
+// FE-61 Accept 2 retired v1 dist/tokens.css once no page loaded it.
 // Values are read from the files, so editing a token re-runs the check.
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 
 const MIN = 4.5;
 // [foreground, background, what the pair is used for]
-export const PAIRS = [
-  ...['surface', 'card', 'brand-tint'].flatMap(bg => [
-    ['ink', bg, 'primary text'],
-    ['ink-2', bg, 'secondary text'],
-    ['brand', bg, 'links and brand text'],
-  ]),
-  ...['go', 'caution', 'rough', 'unknown'].flatMap(fg => ['surface', 'card'].map(bg => [fg, bg, 'status text'])),
-  ['on-brand', 'brand', 'primary button label'],
-  ['on-deep', 'deep', 'masthead text'],
-];
 export const PAIRS_V2 = [
   ...['bg', 'bg-deep', 'panel', 'panel-2'].flatMap(bg => [['text', bg, 'body text and readings'], ['muted', bg, 'labels, units and ages']]),
   ...['mint', 'blue', 'coral', 'amber'].flatMap(fg => ['panel', 'panel-2'].map(bg => [fg, bg, 'reading text'])),
   ['bg', 'mint', 'primary button label'],
 ];
 
-// Which rule holds each theme's tokens. v1: light is :root and dark overrides
-// it (the auto and dark blocks must match). v2: dark is :root, light overrides.
+// Which rule holds each theme's tokens: dark is :root and light overrides it.
 export const FILES = {
-  'dist/tokens.css': {pairs: PAIRS, base: 'light', overlay: 'dark', selectors: {light: ':root', dark: ':root[data-theme="dark"]', auto: ':root[data-theme="auto"]'}},
   'web/tokens.css': {pairs: PAIRS_V2, base: 'dark', overlay: 'light', selectors: {dark: ':root', light: ':root[data-theme="light"]'}},
 };
-const V1 = FILES['dist/tokens.css'];
+const V2 = FILES['web/tokens.css'];
 
 // Custom properties declared directly inside the rule whose selector matches.
 function block(css, selector) {
@@ -41,7 +29,7 @@ function block(css, selector) {
   return Object.fromEntries([...body.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map(m => [m[1], m[2].toLowerCase()]));
 }
 
-export function themes(css, spec = V1) {
+export function themes(css, spec = V2) {
   const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const base = block(text, spec.selectors[spec.base]);
   const overlay = block(text, spec.selectors[spec.overlay]);
@@ -62,7 +50,7 @@ export function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-export function check(css, spec = V1) {
+export function check(css, spec = V2) {
   const failures = [], rows = [];
   for (const [name, tokens] of Object.entries(themes(css, spec))) {
     for (const [fg, bg, use] of spec.pairs) {
@@ -269,13 +257,14 @@ export function checkCatchGradient(panelCss, bridgeCss, tokensCss) {
   try {
     const clean = css => css.replace(/\/\*[\s\S]*?\*\//g, '');
     const normalize = value => value.trim().replace(/\s+/g, ' ');
+    // FE-61 part 3: panel.css reads the bridge's roles without v1 literal fallbacks.
     const contract = {
       '.catch-counts': 'margin: 18px 0; display: grid; gap: 7px;',
-      '.catch-counts > div': 'position: relative; display: flex; justify-content: space-between; gap: 15px; padding: 7px 9px; background: var(--coast-panel, #0c1c29); border-radius: 3px; overflow: hidden;',
-      '.catch-bar': 'position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-panel, #0c1c29));',
+      '.catch-counts > div': 'position: relative; display: flex; justify-content: space-between; gap: 15px; padding: 7px 9px; background: var(--coast-panel); border-radius: 3px; overflow: hidden;',
+      '.catch-bar': 'position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg in srgb, var(--coast-mint-wash), var(--coast-panel));',
       '.catch-counts dt, .catch-counts dd': 'position: relative; font-size: 12px; margin: 0;',
-      '.catch-counts dt small': 'color: var(--coast-muted, #9bbcaf); margin-left: 5px;',
-      '.catch-counts dd': 'font-family: var(--coast-mono, ui-monospace,monospace); color: var(--coast-mint, #bce8d4);',
+      '.catch-counts dt small': 'color: var(--coast-muted); margin-left: 5px;',
+      '.catch-counts dd': 'font-family: var(--coast-mono); color: var(--coast-mint);',
     };
     const seen = new Set();
     for (const match of clean(panelCss).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -383,11 +372,11 @@ export function boundSurfaceContrast(request = {}) {
 // parser proves the cascade. A changed source must be reviewed/rebound; default
 // CLI and generic missing-background behavior remain unchanged pending review.
 export const SURFACE_SOURCE_SHA256 = {
-  "panelCss": "b8d678a03e534fb214291f5d32891dec2d54fb87efca710df2291cf8ac042573",
-  "bridgeCss": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
-  "tokensCss": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
-  "appCss": "8988a9b40ef129e0ffd353f95a3f56b507d02fba0b741fa9bd7fc7682a9e8f2d",
-  "legendTsx": "74cd0f27c127349e5bf64ee84447522cac75e889e784a4aa4d556631599a0dd6"
+  "panelCss": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
+  "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
+  "tokensCss": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
+  "appCss": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
+  "legendTsx": "966f7bd7b57e91c7da8523d7045cb07fcb49f7a2f7e6ea0b60b4b624cc5ba18f"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -408,8 +397,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,157,185,201; Legend.tsx:255'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:157,168,214; Legend.tsx:74,169,255'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,157,186,202; Legend.tsx:270'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:157,168,215; Legend.tsx:77,172,270'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,
@@ -445,7 +434,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const named = process.argv.slice(2).filter(a => !a.startsWith('--'));
   let failed = false, count = 0;
   for (const file of named.length ? named : Object.keys(FILES)) {
-    const spec = FILES[file.replace(/^\.\//, '')] || V1;
+    const spec = FILES[file.replace(/^\.\//, '')] || V2;
     const {failures, rows} = check(readFileSync(named.length ? file : new URL(file, root), 'utf8'), spec);
     if (process.argv.includes('--verbose')) console.log(rows.map(r => `${file}: ${r}`).join('\n'));
     if (failures.length) { failed = true; console.error(`Contrast check failed in ${file}:\n  ${failures.join('\n  ')}`); }

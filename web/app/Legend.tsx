@@ -32,6 +32,8 @@
 // FE-82: protected areas, reef marks and charter grounds also drape on the
 // terrain, so the protected areas' row and the Charter fleet row show there too;
 // commercial AIS still draws on the Chart only and says so.
+// Ranked trip spots (FE-51, #495): while the Chart draws a ranked trip plan's
+// pins, a row keys them with the registry's label and basis (#422).
 // FE-80: in 2D and 3D the Seafloor row is the terrain's: its depth ramp, the
 // terrain basis, the screened candidates as "Chart only", and while Source
 // coverage is on the renderer's colour key and its sources with their dates, verbatim.
@@ -48,12 +50,13 @@ import {currentsState} from '../map/currents.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
-import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
+import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
+import {drawnSpots} from '../map/ranked.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES, railOn} from './rail.ts';
@@ -65,7 +68,7 @@ function SeafloorRow() {
       {ready ? <span class="app-swatch" data-layer="seafloor" aria-hidden="true"></span> : null}Seafloor
       <Popover iconOnly summary="Seafloor basis">
         <p>{layerEntry('seafloor').basis}</p>
-        {s.credits.map(credit => <p key={credit}>{credit}</p>)}
+        {[...s.credits, ...(s.surveys.length ? [surveyList(s.surveys)] : [])].map(line => <p key={line}>{line}</p>)}
       </Popover>
       {ready ? (
         <div class="app-legend-detail">
@@ -73,7 +76,7 @@ function SeafloorRow() {
             options={[{value: 'terrain', label: 'Terrain grade'}, {value: 'fit', label: `${s.fit[0]!.toUpperCase()}${s.fit.slice(1)} fit`}]} /> : null}
           <p class="app-legend-title">{s.view === 'fit' ? 'Physical habitat fit, not catch probability' : 'Terrain grade'}</p>
           <ul>{legendKey(s.view).map(([tone, label]) => <li key={tone}><span class="app-key" data-tone={tone} aria-hidden="true"></span>{label}</li>)}</ul>
-          {s.surveys.length ? <p class="app-legend-note" data-surveys="seafloor">{surveyLine(s.surveys)}</p> : null}
+          {s.surveys.length ? <p class="app-legend-note" data-surveys="seafloor">{surveySummary(s.surveys)}</p> : null}
         </div>
       ) : null}
       {s.note ? <p class="app-legend-note" data-reason="seafloor">{s.note}</p> : null}
@@ -226,6 +229,18 @@ function FleetRow() {
   );
 }
 
+/** The ranked trip plan's pins, while the Chart draws any. */
+export function RankedRow() {
+  const n = drawnSpots.value.length, entry = layerEntry('trip-ranked');
+  if (!n || shownPresentation.value !== 'chart') return null;
+  return (
+    <li class="app-legend-ranked">
+      <span class="app-swatch" data-layer="trip-ranked" aria-hidden="true"></span>{entry.legend[0]?.label ?? entry.label}
+      <Popover iconOnly summary="Ranked trip spots basis"><p>{entry.basis}</p></Popover>
+    </li>
+  );
+}
+
 /** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
 export function DensityRow() {
   const n = densityShown.value;
@@ -260,6 +275,7 @@ export function Legend() {
           : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
+        <RankedRow />
         <DensityRow />
         <MpaRow />
       </ul>

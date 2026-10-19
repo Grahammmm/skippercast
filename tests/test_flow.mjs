@@ -11,6 +11,7 @@ import {CURRENTS_BASIS, createCurrents, currentMark, currentsState, currentsStat
 import {readPalette} from '../web/map/palette.ts';
 import {UNSUPPORTED_CURRENT} from '../web/map/stage.ts';
 import {appView, current, hour, presentation, region, UNSUPPORTED} from '../web/state.ts';
+import {feedServer, wcofsFeed} from './helpers/wcofs-feed.mjs';
 
 const NOW = new Date('2026-10-07T12:20:00Z'), AT = new Date('2026-10-07T12:00:00Z'), TZ = 'America/Los_Angeles';
 const WEST = -121.0, NORTH = 35.5, STEP = 0.04, N = 8;
@@ -308,4 +309,30 @@ test('a reading is withdrawn with its frame: at the frame\'s own deadline, on of
     assert.equal(hidden, 1, what);
     each.currents.destroy();
   }
+});
+
+test('a place with no local packet draws its region\'s WCOFS feed; radar and off never ask for it (#482)', async t => {
+  const page = 'https://s.test/map', regionId = 'test-coast';
+  const times = ['2026-10-07T09:00:00Z', '2026-10-07T12:00:00Z', '2026-10-07T15:00:00Z'].map(s => Date.parse(s) / 1000);
+  const grids = [{bounds: [-121.02, 35.2, -120.7, 35.52], cells: cells().map(c => [c.lat, c.lon])}];
+  const server = feedServer(wcofsFeed({region: regionId, times, grids, issuedAt: '2026-10-07T03:00:00Z', retrievedAt: '2026-10-07T11:50:00Z', flow: () => [0.3, 0.1]}),
+    {page, region: regionId});
+  choose('off');
+  const h = harness({ocean: null, options: {place: () => ({regionId}), fetchFn: server.fetchFn, page: () => page}});
+  h.data.coastStatus.value = {ocean: 'unbound', report: 'unbound', history: 'unbound'};
+  t.after(() => { h.currents.destroy(); current.value = 'off'; hour.value = null; });
+  current.value = 'hfr-1';
+  assert.equal(currentsState.value.note, 'no radar for this region');
+  current.value = 'wcofs';
+  assert.equal(currentsState.value.note, 'loading');
+  // The SHA-256 check is asynchronous and slow under a loaded suite: wait for the note to change, at most 5 s.
+  for (const end = Date.now() + 5000; currentsState.value.note === 'loading' && Date.now() < end;) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(server.asked.length, 2, 'the manifest and its one tile, once');
+  assert.equal(currentsState.value.note, 'forecast Wed 5 am');
+  assert.ok(Number(h.dash().dataset.paths) > 0, 'streamlines draw');
+  current.value = 'off';
+  current.value = 'wcofs';
+  assert.equal(server.asked.length, 2, 'read once within the hour');
+  h.data.coastStatus.value = {ocean: 'loading', report: 'idle', history: 'idle'};
+  assert.equal(currentsState.value.note, 'loading', 'a bound place follows its packet, not the feed');
 });
