@@ -155,6 +155,8 @@ function engine() {
   });
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
+/** Waits until `done()` (the tiles' SHA-256 checks are asynchronous and slow under a loaded suite), at most 5 s. */
+async function until(done) { for (const end = Date.now() + 5000; !done() && Date.now() < end;) await new Promise(resolve => setTimeout(resolve, 5)); }
 
 test('a place with no local report draws its region\'s feed; a bound place never asks for it', async t => {
   browser(`${PAGE}?region=${REGION}&layers=none`);
@@ -169,7 +171,7 @@ test('a place with no local report draws its region\'s feed; a bound place never
 
   setParams({layers: 'water-temp'});
   assert.equal(railNotes.value['water-temp'], 'loading');
-  for (let i = 0; i < 100 && waterTempState.value.note === 'loading'; i++) await settle();   // the tiles' SHA-256 checks are asynchronous
+  await until(() => waterTempState.value.note !== 'loading');
   assert.equal(s.asked.length, 3, 'the manifest and its two tiles');
   assert.equal(waterTempState.value.note, 'analysis Oct 15 · 24 h old');
   assert.equal(railNotes.value['water-temp'], 'analysis Oct 15 · 24 h old');
