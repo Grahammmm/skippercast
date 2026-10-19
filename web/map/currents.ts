@@ -5,8 +5,10 @@
 //
 // - Data: the ocean packet of the coast data client (web/coast-data.ts, FE-74),
 //   requested only while a source is chosen, for the region's place when it
-//   binds a local report (Morro Bay and Cambria today). Elsewhere the rail says
-//   no packet covers the region and nothing draws.
+//   binds a local report (Morro Bay and Cambria today). Elsewhere the region's
+//   own published WCOFS surface forecast (web/map/habitat-feed.ts, #482), its
+//   tiles checked by SHA-256 in the browser; HF radar is published only in the
+//   packet. A region whose feed lists no forecast draws nothing and says why.
 // - Frames: exactly the chosen product at the dock's hour through frames.ts
 //   (packages/coast `selectedCurrent`, `selectCurrentFrame`). Without a fresh
 //   frame nothing draws and the rail and legend give the reason and the last
@@ -23,6 +25,7 @@
 // Erasable syntax only: tests/test_flow.mjs drives it with a fake map view.
 import {computed, effect, signal} from '@preact/signals';
 import {coastData, type CoastData, type CoastStatus} from '../coast-data.ts';
+import {regionalCurrents, type RegionalCurrents} from './habitat-feed.ts';
 import type {OceanData} from '../../packages/coast/src/ocean-types.ts';
 import type {CoastReportContext, ReportLocalArea} from '../../packages/coast/src/state/report-binding.ts';
 import type {Profile} from '../profile.ts';
@@ -96,14 +99,32 @@ export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean
   if (status === 'error' || status === 'invalid') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the surface-current packet failed to load, and no other source is shown.'};
   if (status === 'expired') return {...OFF, note: 'expired', reason: 'Currents unavailable: the surface-current packet passed its age limit, and no other source is shown.'};
   if (!ocean) return {...OFF, note: 'loading', reason: 'Loading the surface-current packet.'};
-  const drawn = chosenCurrent(ocean.currents, choice, at, now), name = CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice;
+  return fieldsStatus(choice, ocean.currents, at, now, tz);
+}
+
+/** What the layer shows from the region's own feed (`null` while it loads) for a place with no local report. */
+export function regionalCurrentsStatus(choice: CurrentChoice, feed: RegionalCurrents | null, at: Date, now: Date, tz: string): CurrentsStatus {
+  if (choice === 'off') return OFF;
+  if (choice === UNSUPPORTED) return {...OFF, note: 'unsupported source', reason: UNSUPPORTED_CURRENT};
+  if (choice !== 'wcofs') return {...OFF, note: 'no radar for this region',
+    reason: `Currents unavailable: ${CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice} is published only where a local surface-current packet covers the region; the NOAA WCOFS forecast may be.`};
+  if (!feed) return {...OFF, note: 'loading', reason: 'Loading the region\'s surface-current forecast.'};
+  if (feed.state === 'none') return {...OFF, note: 'no forecast for this region', reason: 'Currents unavailable: no surface-current forecast covers this region yet.'};
+  if (feed.state === 'error') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the region\'s surface-current forecast failed to load or failed its checks, and no other source is shown.'};
+  // A listed forecast that was not loaded names its last frame, as a stale packet's does.
+  return fieldsStatus(choice, feed.state === 'ready' ? [feed.field] : [{id: 'wcofs', frames: feed.validAt.map(validAt => ({validAt}))}], at, now, tz);
+}
+
+/** The chosen product's frame for `at` among `fields`, its grid, or why nothing draws. */
+function fieldsStatus(choice: CurrentChoice, fields: readonly unknown[], at: Date, now: Date, tz: string): CurrentsStatus {
+  const drawn = chosenCurrent(fields, choice, at, now), name = CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice;
   if (drawn) {
     const time = frameTime(drawn.frame.validAt, tz), surface = frameField(drawn.field, drawn.frame);
     if (!surface) return {...OFF, note: `grid cannot be drawn · ${time}`,
       reason: `Currents unavailable: the ${name} frame valid ${time} is not a grid that can be drawn without bridging gaps (too sparse, too coarse, irregular or too large), and no other source is shown.`};
     return {drawn: {...drawn, surface}, note: `${drawn.field.kind === 'forecast' ? 'forecast' : 'observed'} ${time}`, reason: '', basis: sourceBasis(drawn, now)};
   }
-  const last = lastFrame(ocean.currents, choice, at);
+  const last = lastFrame(fields, choice, at);
   return {...OFF, note: `no fresh frame${last ? ` · last ${frameTime(last, tz)}` : ''}`,
     reason: `Currents unavailable: no fresh ${name} frame for this hour${last ? `; the last was valid ${frameTime(last, tz)}` : ''}.`};
 }
@@ -145,6 +166,9 @@ export interface CurrentsOptions {
   motion?: Pick<MediaQueryList, 'matches' | 'addEventListener' | 'removeEventListener'> | null;
   frames?: {request(step: (t: number) => void): number; cancel(id: number): void};
   now?: () => Date;
+  /** For the regional feed of a place with no local report. */
+  fetchFn?: typeof fetch;
+  page?: () => string;
   /** The drawn frame was withdrawn (off, another source or hour, its deadline, or the Chart left): a reading of it is stale. */
   onHide?: () => void;
   /** The source to draw; by default the rail's `?current=`. The landing's night map (FE-25) picks its own. */
@@ -174,11 +198,20 @@ export function createCurrents(o: CurrentsOptions): Currents {
   const tick = signal(0), hidden = signal(!!doc?.hidden), reduced = signal(!!motion?.matches);
   // Re-chosen on the same clock as the frame, so a picked source that goes stale gives way.
   const choice = computed(() => { void tick.value; return o.source ? o.source() : current.value; });
+  const ocean = computed(() => o.place?.() !== null ? data.coastStatus.value.ocean : 'loading');
+  /** The regional feed's latest result for a region, null while its first read is in flight. */
+  const feed = signal<{region: string; result: RegionalCurrents | null} | null>(null);
   const status = computed(() => {
     void tick.value;
-    const at = terrainHour(hour.value, now(), day.value, zone()), known = o.place?.() !== null;
-    return currentsStatus(choice.value, known ? data.coastStatus.value.ocean : 'loading', data.coastOcean.value?.data ?? null, at, now(), zone());
+    const at = terrainHour(hour.value, now(), day.value, zone()), place = o.place?.() ?? null;
+    if (ocean.value === 'unbound' && place) {
+      const f = feed.value;
+      return regionalCurrentsStatus(choice.value, f?.region === place.regionId ? f.result : null, at, now(), zone());
+    }
+    return currentsStatus(choice.value, ocean.value, data.coastOcean.value?.data ?? null, at, now(), zone());
   });
+  let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
+  const fetchFn = o.fetchFn ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), page = o.page ?? (() => location.href);
   const shown = computed(() => status.value.drawn !== null && (o.shown ? o.shown() : shownPresentation.value === 'chart' && appView.value === 'coast'));
   const drawnKey = computed(() => { const d = status.value.drawn; return d ? `${d.field.id}|${d.field.fetchedAt}|${d.frame.validAt}` : ''; });
 
@@ -251,6 +284,18 @@ export function createCurrents(o: CurrentsOptions): Currents {
       data.setPlace(place);
       void data.load('ocean');
     }),
+    // A place with no local packet reads its region's WCOFS forecast, again after an hour while it stays chosen.
+    effect(() => {
+      void tick.value;
+      const place = o.place?.() ?? null, id = place?.regionId ?? '', t = now().getTime();
+      if (choice.value !== 'wcofs' || !place || ocean.value !== 'unbound' || (id === feedRegion && t - feedAt < HOUR_MS)) return;
+      feedAbort?.abort();
+      const abort = feedAbort = new AbortController();
+      if (id !== feedRegion) feed.value = {region: id, result: null};
+      feedRegion = id; feedAt = t;
+      regionalCurrents(id, {fetchFn, page: page(), now: new Date(t), signal: abort.signal})
+        .then(result => { if (!abort.signal.aborted) feed.value = {region: id, result}; }, () => { /* aborted by a newer read */ });
+    }),
     effect(() => { currentsState.value = status.value; }),
     // Re-judge the frame at its own deadline and at the next whole hour (the dock's default hour moves on).
     effect(() => {
@@ -293,6 +338,7 @@ export function createCurrents(o: CurrentsOptions): Currents {
       for (const dispose of disposers) dispose();
       for (const off of unlisten) off();
       clearTimeout(timer);
+      feedAbort?.abort();
       stop();
       base?.remove(); dash?.remove();
       doc?.removeEventListener('visibilitychange', visibility);

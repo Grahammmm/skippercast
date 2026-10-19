@@ -616,11 +616,11 @@ test('Currents stand still under reduced motion and pause while the page is hidd
   expect(pageErrors).toEqual([]);
 });
 
-test('Currents in a region no packet covers draw nothing and say so', async ({page, v2}) => {
+test('Currents in a region no packet or forecast covers draw nothing and say so', async ({page, v2}) => {
   await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', current: 'wcofs'});
   await openLayers(page);
-  await expect(page.locator('.ui-rail-item', {hasText: 'Currents'}).locator('.ui-rail-note')).toHaveText('Currents unavailable: no local surface-current packet covers this region yet.');
-  await expect(page.locator('[data-reason="currents"]')).toHaveText('Currents unavailable: no local surface-current packet covers this region yet.');
+  await expect(page.locator('.ui-rail-item', {hasText: 'Currents'}).locator('.ui-rail-note')).toHaveText('Currents unavailable: no surface-current forecast covers this region yet.');
+  await expect(page.locator('[data-reason="currents"]')).toHaveText('Currents unavailable: no surface-current forecast covers this region yet.');
   await expect(page.locator('canvas.chart-flow')).toHaveCount(0);
 });
 
