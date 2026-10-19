@@ -39,3 +39,29 @@ test('under the opt-in every series role resolves to an opaque colour readable a
     }
   }
 });
+
+// #711 review: seasonChart's 10th–90th percentile range is data. Its 16 px band is a faint fill (stroke-opacity .2,
+// too faint to read on its own); full-opacity end caps at p10 and p90 carry the range, on the season card's panel.
+const PANEL_CSS = read('packages/coast/panel.css');
+const composite = (fg, bg, alpha) => '#' + [1, 3, 5].map(i => Math.round(parseInt(fg.slice(i, i + 2), 16) * alpha + parseInt(bg.slice(i, i + 2), 16) * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+test('the seasonal percentile range ends are drawn at full opacity and read at 3:1 or more on the season card, in both themes', () => {
+  const season = HISTORY.slice(HISTORY.indexOf('function seasonChart'), HISTORY.indexOf('\n}', HISTORY.indexOf('function seasonChart')));
+  const band = season.match(/<line x1="\$\{x\(i\)\}" x2="\$\{x\(i\)\}" y1="\$\{y\(m\.p10!\)\}" y2="\$\{y\(m\.p90!\)\}" style="stroke:\$\{spec\.color\}" stroke-width="16" stroke-linecap="round" stroke-opacity="(\.\d+)"\/>/);
+  assert.ok(band, 'the faint band is still drawn');
+  const caps = season.match(/\[m\.p10!,m\.p90!\]\.map\(v=>`(<line class="season-range-end"[^`]*\/>)`\)/);
+  assert.ok(caps, 'an end cap at each of p10 and p90');
+  assert.match(caps[1], /style="stroke:\$\{spec\.color\}"/);
+  assert.doesNotMatch(caps[1], /opacity/, 'the caps are opaque');
+  // The chart sits in .season-card, whose background is the coast panel.
+  assert.match(HISTORY, /class="season-card">[\s\S]*\$\{seasonChart\(/);
+  assert.match(PANEL_CSS, /\.season-card \{\n  background: var\(--coast-panel\);/);
+  const roles = Object.values(SERIES.history).map(([role]) => role), alpha = Number(band[1]);
+  for (const [theme, colours] of Object.entries(bridged(read(BRIDGE), read('web/tokens.css')))) {
+    for (const role of roles) {
+      const fg = colours[role], bg = colours.panel;
+      assert.ok(contrast(fg, bg) >= 3, `${theme}: --coast-${role} range end on the season card ${contrast(fg, bg).toFixed(2)}:1`);
+      // Negative control: the band alone stays below the graphics threshold, which is why the caps exist.
+      assert.ok(contrast(composite(fg, bg, alpha), bg) < 3, `${theme}: --coast-${role} band at ${alpha} is a fill, not the readable range`);
+    }
+  }
+});
