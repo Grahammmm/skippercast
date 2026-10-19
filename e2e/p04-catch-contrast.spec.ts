@@ -41,6 +41,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // #711 part B (chart series): tokens-bridge.css adds only --coast-series-gust and --coast-series-violet before
 // --coast-sans (cited lines unchanged); no Reports catch colour. check_contrast.mjs rebinds only that hash, with catch
 // and surface results unchanged and contrast() untouched. Both rebound.
+// #730 (npm-minor-and-patch group): package.json and pnpm-lock.yaml change only dependency version pins
+// (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
+// preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
+// the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
@@ -60,8 +64,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   "scripts/check_contrast.mjs": "32e6c43cbd87fe14536cef1835a1b1b4bb79f92662529ba98df249a91fa4d7c5",
-  "package.json": "7483a8ec51735e5c4c28c85a873fc9af7d461e67d3b84f74e3dfa15d0e2132a0",
-  "pnpm-lock.yaml": "eb62f9e39973b0b646acabedb510a4bf23936298b84a8cb577f2a2eb0143735c",
+  "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
+  "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
