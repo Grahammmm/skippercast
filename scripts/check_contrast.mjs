@@ -373,7 +373,7 @@ export function boundSurfaceContrast(request = {}) {
 // CLI and generic missing-background behavior remain unchanged pending review.
 export const SURFACE_SOURCE_SHA256 = {
   "panelCss": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
-  "bridgeCss": "3fb0345da4e44a2471745eef93674d621a8554bb8d11c0e584c0bc14131649a8",
+  "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "tokensCss": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
   "appCss": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
   "legendTsx": "966f7bd7b57e91c7da8523d7045cb07fcb49f7a2f7e6ea0b60b4b624cc5ba18f"

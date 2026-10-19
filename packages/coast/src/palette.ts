@@ -41,6 +41,9 @@ export const DEFAULT_COAST_PALETTE:Readonly<CoastPalette>=Object.freeze({
 // (`overlayPalette`). The names are v2's web/map/palette.ts keys, so v2 passes
 // the Palette it read from web/tokens.css as is. There are no defaults here:
 // an overlay draws only in colours its host read from the tokens.
+/** The v1 printable report's series on light paper (presentation.ts trendChart, reportPanel), as data (#711). */
+export const REPORT_COLORS=Object.freeze({wind:'#147a83',seas:'#338bab',tide:'#b68648',grid:'#d9e5e5',window:'#38a490',pointer:'#183e4d',
+ windSpark:'#18848d',waveSpark:'#3b88ac',nearshoreSpark:'#437b87',tideSpark:'#b58c54'});
 /** Surface-temperature ramp, cold to warm: web/tokens.css --sst-0…5 (map/surface-field.ts fieldColor takes hex). */
 export const temperatureColors=['#244f9d','#188eb5','#39c6c2','#a6dda0','#efd477','#f18a65'];
 /** Surface-current speed ramp, slow to fast: web/tokens.css --current-0…5, panel.css .current-gradient. */

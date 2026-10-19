@@ -77,6 +77,10 @@
   --coast-wave-0: var(--wave-0);
   --coast-wave-1: var(--wave-1);
   --coast-wave-2: var(--wave-2);
+  /* Chart series without a single v2 role (#711): gusts a lighter mint than wind, and the violet rows (nearshore
+     waves, wave period) between blue and coral. */
+  --coast-series-gust: color-mix(in srgb, var(--mint) 55%, var(--text));
+  --coast-series-violet: color-mix(in srgb, var(--blue) 55%, var(--coral));
   --coast-sans: var(--font-sans);
   --coast-mono: var(--font-mono);
 }
