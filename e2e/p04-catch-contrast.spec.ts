@@ -28,6 +28,9 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // renders; check_contrast.mjs changes only SURFACE_SOURCE_SHA256 and its line
 // citations, not `contrast()`, the one export this spec reads. Both rebound.
 // #697 (legend survey summary): check_contrast.mjs changes only the Legend.tsx hash; rebound.
+// FE-61 part 3 group 2: panel.css drops only the v1 literal fallbacks of bridged --coast-* roles (the host always
+// applies tokens-bridge.css, so they never render); check_contrast.mjs rebinds that hash and its catch contract's
+// fallback-free forms, with catch and surface results unchanged and contrast() untouched. Both rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
@@ -37,7 +40,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/tokens.css": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
   "web/ui/ui.css": "bd194b2e3c9f9409dfc05fc17e400cbf5215959828c8e3c998d0f68e8b13b175",
   "web/app/app.css": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
-  "packages/coast/panel.css": "b8d678a03e534fb214291f5d32891dec2d54fb87efca710df2291cf8ac042573",
+  "packages/coast/panel.css": "4d68d4d3817d0d0560870aad0598da38141440fe8142d949c50b96e9604eeee3",
   "packages/coast/tokens-bridge.css": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -46,7 +49,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "0ce027d990d2e99057bf080b1fe5a3fbbd799ef768eecdff8b320ae040db4d9f",
+  "scripts/check_contrast.mjs": "f381712369e57e6252bd6990ea41ab79635cf8d1ac027b96458fda039f2bb815",
   "package.json": "7483a8ec51735e5c4c28c85a873fc9af7d461e67d3b84f74e3dfa15d0e2132a0",
   "pnpm-lock.yaml": "eb62f9e39973b0b646acabedb510a4bf23936298b84a8cb577f2a2eb0143735c",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

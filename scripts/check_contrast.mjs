@@ -269,13 +269,14 @@ export function checkCatchGradient(panelCss, bridgeCss, tokensCss) {
   try {
     const clean = css => css.replace(/\/\*[\s\S]*?\*\//g, '');
     const normalize = value => value.trim().replace(/\s+/g, ' ');
+    // FE-61 part 3: panel.css reads the bridge's roles without v1 literal fallbacks.
     const contract = {
       '.catch-counts': 'margin: 18px 0; display: grid; gap: 7px;',
-      '.catch-counts > div': 'position: relative; display: flex; justify-content: space-between; gap: 15px; padding: 7px 9px; background: var(--coast-panel, #0c1c29); border-radius: 3px; overflow: hidden;',
-      '.catch-bar': 'position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-panel, #0c1c29));',
+      '.catch-counts > div': 'position: relative; display: flex; justify-content: space-between; gap: 15px; padding: 7px 9px; background: var(--coast-panel); border-radius: 3px; overflow: hidden;',
+      '.catch-bar': 'position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg in srgb, var(--coast-mint-wash), var(--coast-panel));',
       '.catch-counts dt, .catch-counts dd': 'position: relative; font-size: 12px; margin: 0;',
-      '.catch-counts dt small': 'color: var(--coast-muted, #9bbcaf); margin-left: 5px;',
-      '.catch-counts dd': 'font-family: var(--coast-mono, ui-monospace,monospace); color: var(--coast-mint, #bce8d4);',
+      '.catch-counts dt small': 'color: var(--coast-muted); margin-left: 5px;',
+      '.catch-counts dd': 'font-family: var(--coast-mono); color: var(--coast-mint);',
     };
     const seen = new Set();
     for (const match of clean(panelCss).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -383,7 +384,7 @@ export function boundSurfaceContrast(request = {}) {
 // parser proves the cascade. A changed source must be reviewed/rebound; default
 // CLI and generic missing-background behavior remain unchanged pending review.
 export const SURFACE_SOURCE_SHA256 = {
-  "panelCss": "b8d678a03e534fb214291f5d32891dec2d54fb87efca710df2291cf8ac042573",
+  "panelCss": "4d68d4d3817d0d0560870aad0598da38141440fe8142d949c50b96e9604eeee3",
   "bridgeCss": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
   "tokensCss": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
   "appCss": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
