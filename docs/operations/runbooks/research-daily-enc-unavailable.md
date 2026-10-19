@@ -44,16 +44,35 @@ so one transient response aborted the whole three-service refresh.
 - Any other error — a different message, a non-500 code, a redirect, an empty
   or oversized body, or malformed JSON — still fails closed immediately with no
   retry.
-- If the transient outage outlives the retry budget, `fetch_json` raises
-  `EncUpstreamUnavailable`; `main()` writes an explicit
-  `<scope>.unavailable.json` receipt and emits a `::warning`, exiting green.
-  It never fabricates an empty hazard snapshot.
+- The 18 concurrent layer queries are fully drained instead of letting
+  `ThreadPoolExecutor.map` raise the first exception in submission order. A real
+  parse/validation/host-control error outranks an isolated outage no matter
+  which one finishes first; only when every failure is the transient outage does
+  the run classify as upstream-unavailable.
+- Every scope invocation writes a `<scope>.run-status.json` record that is
+  `in-progress` at the start, then terminal `success` (snapshot written) or
+  `upstream_unavailable` (receipt written), or `failed` on a hard error before
+  the process exits non-zero. If the transient outage outlives the retry
+  budget, `main()` writes an explicit `<scope>.unavailable.json` receipt and a
+  `::warning`, exiting green; it never fabricates an empty hazard snapshot.
 
 `research/scripts/report_enc_hazard_coverage.py` is the standalone inventory
-reporter the workflow now calls (previously an inline block): it reports a
-valid snapshot, downgrades only an explicit `upstream_unavailable` receipt to a
-warning, and fails closed on a missing, corrupt, incomplete, or unexpected
-snapshot or receipt. Absence alone is never accepted as an outage.
+reporter the workflow calls (previously an inline block). Its entry point
+(`main`) uses `report_bound`, which binds each scope to its current-invocation
+`run-status.json` record rather than trusting whatever snapshot or receipt
+happens to be on disk:
+
+- `success` — report the coverage from the snapshot named by the status, only
+  when the snapshot's `checked_at` matches the status record.
+- `upstream_unavailable` — report the outage from the receipt named by the
+  status, and label any historical valid snapshot as "last-known" (not current).
+- missing, corrupt, mismatched, `in-progress`, `failed` or any other nonterminal
+  status — fail closed (exit non-zero).
+
+A prior snapshot or receipt can therefore never satisfy a new run: a fresh
+invocation overwrites the status record first, and a later `success` retires an
+obsolete active outage without erasing its receipt. The low-level `report()`
+helper (per-scope snapshot/receipt logic) is unchanged and remains unit-tested.
 
 No new hosts were added; all requests still go to the reviewed
 `encdirect.noaa.gov` host and are rejected otherwise by the existing
@@ -72,19 +91,32 @@ PYTHONPATH=src python research/scripts/refresh_enc_hazards.py \
 
 ## Verify
 
-Offline (no network, stdlib only; runs in the CI `check` job):
+### Offline (no network, no GIS packages)
+
+Runs the retry/outage unit tests and the invocation-binding integration
+regressions (which mock only `urllib.request.urlopen` and `time.sleep`). This is
+what the CI `check` job runs; it needs `pytest` (a dev tool from
+`requirements-test.txt`, installed with `pip install -e '.[test]'` — not a
+standard-library module):
 
 ```bash
-python -m pytest research/tests/test_enc_hazard_upstream_status.py -q
+pip install -e '.[test]'
+python -m pytest \
+  research/tests/test_enc_hazard_upstream_status.py \
+  research/tests/test_enc_hazard_invocation_binding.py -q
 ```
 
-With the survey stack (GIS test that imports `audit_enc_context_overlap`):
+### Offline with the survey stack (GIS / pyproj)
+
+The `research/tests/gis/` tree also imports `audit_enc_context_overlap` and
+needs the survey stack:
 
 ```bash
+pip install -e '.[survey]'
 python -m pytest research/tests/gis/test_enc_hazard_refresh.py -q
 ```
 
-Live, three scopes then the reporter:
+### Live, three scopes then the reporter
 
 ```bash
 mkdir -p var/research-daily/enc-hazards
@@ -95,8 +127,11 @@ done
 python research/scripts/report_enc_hazard_coverage.py --directory var/research-daily/enc-hazards
 ```
 
-The reporter exits non-zero only when a snapshot is missing or invalid without
-an explicit `upstream_unavailable` receipt.
+The reporter exits non-zero whenever any scope's current-invocation status is
+not a terminal `success` or `upstream_unavailable` (including a missing, corrupt,
+mismatched, in-progress or failed status). A scope is reported healthy only on a
+matching `success` snapshot or an explicit current `upstream_unavailable`
+receipt.
 
 ## Inventory-job validation (three consecutive green runs)
 
@@ -109,5 +144,6 @@ merged:
 2. For each run, record the run id and timestamp, confirm the "Refresh NOAA ENC
    danger review" steps and the "Report NOAA ENC danger-source coverage" step
    are green, and confirm each scope either produced a snapshot (18 layer
-   queries) or an explicit `upstream_unavailable` receipt.
+   queries) or an explicit `upstream_unavailable` receipt bound to that run's
+   `run-status.json`.
 3. A red run for any other reason breaks the streak; fix and restart the count.
