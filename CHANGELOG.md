@@ -111,6 +111,8 @@
 
 ### Internal
 
+- The research-daily NOAA ENC hazard step retries NOAA's transient "Could not find service" 500 (bounded, capped backoff) on the same reviewed host; if NOAA stays down it writes an explicit `upstream_unavailable` receipt and the inventory report warns instead of failing, while a missing, corrupt or incomplete snapshot still fails closed. No new hosts were added. See [research-daily ENC unavailable](docs/operations/runbooks/research-daily-enc-unavailable.md).
+
 - Add regression coverage for perspective-mode isolation and camera behavior.
 
 - The AIS processor retains an unfinished full aggregate rebuild that was already authorized to prune. After a restart it replays the complete season with one timestamp before pruning and acknowledges that rebuild only after every chunk succeeds, so interruption cannot silently leave stale remote cells. Incremental uploads and fresh partial-state uploads keep their existing deletion tracking and prune protection (#624, A04).
