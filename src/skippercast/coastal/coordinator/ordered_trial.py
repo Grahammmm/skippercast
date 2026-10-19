@@ -19,6 +19,7 @@ PREPARATION = "coastal-ordered-trial-preparation-v1"
 ACTION = "coastal-ordered-trial-action-v1"
 STATE = "coastal-ordered-trial-state-v1"
 WINDOWS = [[4046,3531,32,32],[3958,3474,32,32],[3764,3429,32,32],[3859,3366,32,32]]
+SUPPORTED_WINDOW_SIDES = (32, 64, 128)
 LARGER_SCOPE = "coastal-ordered-four128-v2"
 LARGER_RUNTIME = "coastal-managed-eight-copy-four128-v1"
 SCOPE_REVIEW = "coastal-ordered-scope-review-v1"
@@ -50,7 +51,7 @@ def validate_scope_review(root,grant,*,now,horizon):
     if domain.get("execution_profile")!=CONTAINED or domain.get("window_count")!=4:
         raise ValueError("contained four-window admission required")
     side=domain.get("window_side")
-    if side==32:
+    if side in SUPPORTED_WINDOW_SIDES and side != 128:
         if grant.get("ordered_scope_contract") is not None or grant.get("geographic_review") is not None:
             raise ValueError("legacy scope cannot inherit a new geographic admission")
         return None
@@ -214,6 +215,10 @@ def prepare(root, grant_ref, request_refs, *, start_epoch, deadline_epoch,
             raise ValueError("exact nonrefundable continuation source carry required")
     review=validate_scope_review(root,grant,now=start,horizon=end)
     windows=domain["window_set"]
+    # The verified 32-cell trial stays pinned to its four historical windows so it
+    # reproduces the prior 4,096 pairs byte-identically. 64 and 128 admit their own
+    # windows inside the same supported-side gate (128 is further bound by the
+    # larger-scope review above); this is a trial-preservation guard, not a size pin.
     if domain["window_side"]==32 and windows!=WINDOWS:
         raise ValueError("fixed ordered four-window scope required")
     from ..authenticated_v1.source_reuse import source_volume_cap

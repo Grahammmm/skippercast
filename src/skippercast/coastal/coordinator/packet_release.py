@@ -8,7 +8,7 @@ import copy,math,os
 from pathlib import Path
 from .authenticated import INPUT_CONTRACT,metadata_document,validate_input,_source_identity
 from .loop import implementation_hashes
-from .ordered_trial import LARGER_SCOPE,LARGER_WINDOWS,validate_scope_review,validate_scope_packet,validate_larger_runtime
+from .ordered_trial import LARGER_SCOPE,LARGER_WINDOWS,SUPPORTED_WINDOW_SIDES,validate_scope_review,validate_scope_packet,validate_larger_runtime
 from ..authenticated_v1.profiles import profile,grant_identity,prepare_window_batch
 from ..authenticated_v1.policy import policy_for_profile,policy_sha
 from ..handoff.common import digest,epoch,ref,write
@@ -26,8 +26,8 @@ def _horizon(now,horizon):
 def _grant_context(grant,code,deps):
     grant_identity(grant);_source_identity(grant['source'])
     selected=profile(grant.get('execution_profile'),grant)
-    if selected['name']!='coastal-contained-windows-v3' or selected['side'] not in (32,128) or selected['window_count']!=4:
-        raise ValueError('only contained-v3 four32 or explicit four128 admission supported')
+    if selected['name']!='coastal-contained-windows-v3' or selected['side'] not in SUPPORTED_WINDOW_SIDES or selected['window_count']!=4:
+        raise ValueError('only contained-v3 four-window 32/64/128 admission supported')
     if selected['side']==128 and (grant.get('ordered_scope_contract')!=LARGER_SCOPE or grant.get('window_set')!=LARGER_WINDOWS):
         raise ValueError('explicit exact ordered four128 scope required')
     if grant.get('code_sha')!=code or grant.get('deps_sha')!=deps:
