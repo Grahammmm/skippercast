@@ -620,7 +620,7 @@ Phases 0–4 and FE-71 … FE-83, FE-86 ─► FE-60 ─► FE-61;  FE-84 ─►
 - **Light theme switch** (US-L1): a `data-theme` toggle in the account menu,
   the light contrast pass, map style day variant on the app; the token
   bridge's opt-in carries it into `packages/coast`.
-- **Admin restyle** (US-L3): `web/admin` on `web/tokens.css`.
+- **Admin restyle** (US-L3): `web/admin` on `web/tokens.css`. Status: DONE (#729). Agent: Claude.
 - **Second active region on the landing** (US-L2): region-aware readings
   once another region leaves preview.
 - **Terrain for further regions**: each is a mapping-pipeline task for
