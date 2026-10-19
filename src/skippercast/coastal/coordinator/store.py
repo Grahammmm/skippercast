@@ -539,6 +539,14 @@ class Store:
                         self.db.execute("UPDATE jobs SET state='held',holds_json=? WHERE job_id=?", (json.dumps(["budget_authority_invalid:"+str(exc)]), row["job_id"]))
                         self.event(row["job_id"], "budget_authority_invalid", {"reason": str(exc)})
                         continue
+                    if (decision.reason == "failed_uncertain" and not job.get("execution_contract")
+                            and not job.get("sourcefree_contract")):
+                        # Another generic execution awaits explicit recovery. That
+                        # pauses the mission; it is no verdict on this job, which
+                        # stays queued (unclaimed, unreserved) so recovery can
+                        # resume it. Dedicated lanes keep their own stop rules.
+                        self.event(row["job_id"], "budget_paused_uncertain", {"reason": decision.reason})
+                        continue
                     if not decision.allowed or any(job["budget"][key] > decision.remaining[key]
                         for key in (("bytes","requests") if job.get("execution_contract") else ("wall_s","bytes","requests"))):
                         self.db.execute("UPDATE jobs SET state='held',holds_json=? WHERE job_id=?", (json.dumps([decision.reason or "budget_exhausted"]), row["job_id"]))
