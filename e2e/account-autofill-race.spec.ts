@@ -6,8 +6,15 @@
 import type {Route} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 
-/** Records every passkey-autofill ceremony (conditional get) and whether Create had already been tapped; it survives the reload. */
+/**
+ * Records every passkey-autofill ceremony (conditional get) and whether Create had already been tapped; it survives the
+ * reload. Create is marked when its click is dispatched (capture phase, before the dialog's own handler), not before
+ * Playwright's click: a dialog's own autofill that starts in between is a valid pre-Create ceremony, not a late one.
+ */
 const recordAutofill = () => {
+  document.addEventListener('click', event => {
+    if ((event.target as Element | null)?.closest?.('#account-create')) sessionStorage.setItem('create-tapped', '1');
+  }, true);
   const get = navigator.credentials.get.bind(navigator.credentials);
   navigator.credentials.get = (options?: CredentialRequestOptions) => {
     if (options?.mediation === 'conditional') {
@@ -41,13 +48,13 @@ test('Create tapped before the autofill options return still creates the account
 
   const registering = page.waitForRequest(r => r.url().endsWith('/api/auth/register/options'));
   const reloaded = page.waitForEvent('load');   // the app reloads signed in
-  await page.evaluate(() => sessionStorage.setItem('create-tapped', '1'));
   await page.locator('#account-create').click();
   await registering;
   await held!.continue();                       // the autofill options arrive after Create began
   await page.unroute('**/api/auth/login/options');
 
   await reloaded;
+  expect(await page.evaluate(() => sessionStorage.getItem('create-tapped')), 'the Create click was marked when it was dispatched').toBe('1');
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);
   expect(await autofillAfterCreate(page), 'no passkey-autofill ceremony starts once Create was tapped').toBe(0);
   expect(pageErrors).toEqual([]);
@@ -77,13 +84,13 @@ test('a closed dialog\'s late autofill cannot abort Create in the dialog that re
 
   const registering = page.waitForRequest(r => r.url().endsWith('/api/auth/register/options'));
   const reloaded = page.waitForEvent('load');
-  await page.evaluate(() => sessionStorage.setItem('create-tapped', '1'));
   await page.locator('#account-create').click();
   await registering;
   await first!.continue();                                  // dialog A's options arrive after B's Create began
   await page.unroute('**/api/auth/login/options');
 
   await reloaded;
+  expect(await page.evaluate(() => sessionStorage.getItem('create-tapped')), 'the Create click was marked when it was dispatched').toBe('1');
   await expect.poll(async () => (await (await page.request.get('/api/session')).json()).signedIn).toBe(true);
   expect(await autofillAfterCreate(page), 'no passkey-autofill ceremony starts once Create was tapped').toBe(0);
   expect(pageErrors).toEqual([]);
