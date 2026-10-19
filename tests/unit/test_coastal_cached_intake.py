@@ -3,13 +3,13 @@ from copy import deepcopy
 import hashlib
 from importlib.resources import files
 import json
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 
 from skippercast.coastal import cached_inventory as ci
+from tests._support import ROOT
 
 
 def reference(path):
@@ -52,7 +52,7 @@ def evaluate(tmp_path, value):
 
 def test_packaged_schema_matches_canonical():
     packaged = files("skippercast.coastal.resources").joinpath("coastal-discovery-lead-v1.schema.json").read_bytes()
-    canonical = Path(__file__).resolve().parents[2] / "schemas/coastal-discovery-lead-v1.schema.json"
+    canonical = ROOT / "schemas/coastal-discovery-lead-v1.schema.json"
     assert canonical.read_bytes() == packaged
     Draft202012Validator.check_schema(json.loads(packaged))
 
