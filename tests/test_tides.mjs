@@ -81,8 +81,8 @@ test('the sparkline is tideChart: chart() in mini mode over the day with night s
   assert.equal(args[0][0].unit, 'ft MLLW');
   assert.equal(args[5].mini, true);
   assert.ok(args[5].sunrise && args[5].sunset, 'night shading from the day\'s sunrise and sunset');
-  // briefing.ts writes the literal hue; with it the markup is identical.
-  assert.equal(chart(...sparkArgs(brief, at, slo.timezone, '#eabd76')), tideChart(state(at)));
+  // briefing.ts writes the amber role with its v1 hue as the fallback (#711); with it the markup is identical.
+  assert.equal(chart(...sparkArgs(brief, at, slo.timezone, 'var(--coast-amber,#eabd76)')), tideChart(state(at)));
   assert.match(chart(...args), /style="stroke:var\(--coast-amber\)"/);
 });
 

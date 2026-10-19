@@ -14,6 +14,7 @@ export const PALETTE_TOKENS = {
   mint: 'mint', blue: 'blue', coral: 'coral', amber: 'amber',
   depth0: 'depth-0', depth1: 'depth-1', depth2: 'depth-2', depth3: 'depth-3',
   sst0: 'sst-0', sst1: 'sst-1', sst2: 'sst-2', sst3: 'sst-3', sst4: 'sst-4', sst5: 'sst-5',
+  current0: 'current-0', current1: 'current-1', current2: 'current-2', current3: 'current-3', current4: 'current-4', current5: 'current-5',
   swell0: 'swell-0', swell1: 'swell-1', swell2: 'swell-2', swell3: 'swell-3',
   flow: 'flow', flowFast: 'flow-fast', mpaFill: 'mpa-fill', mpaFillOpacity: 'mpa-fill-opacity', mpaLine: 'mpa-line',
 } as const;
@@ -42,9 +43,10 @@ export function readPalette(read: TokenReader = cssTokenReader()): Palette {
   return Object.freeze(palette as Record<PaletteKey, string>);
 }
 
-/** Depth (shallow to deep), surface temperature (cold to warm) and swell height (low to high) ramps, in token order. */
-export function ramps(p: Palette): {depth: string[]; sst: string[]; swell: string[]} {
-  return {depth: [p.depth0, p.depth1, p.depth2, p.depth3], sst: [p.sst0, p.sst1, p.sst2, p.sst3, p.sst4, p.sst5], swell: [p.swell0, p.swell1, p.swell2, p.swell3]};
+/** Depth (shallow to deep), surface temperature (cold to warm), swell height (low to high) and current speed (slow to fast) ramps, in token order. */
+export function ramps(p: Palette): {depth: string[]; sst: string[]; swell: string[]; current: string[]} {
+  return {depth: [p.depth0, p.depth1, p.depth2, p.depth3], sst: [p.sst0, p.sst1, p.sst2, p.sst3, p.sst4, p.sst5], swell: [p.swell0, p.swell1, p.swell2, p.swell3],
+    current: [p.current0, p.current1, p.current2, p.current3, p.current4, p.current5]};
 }
 
 /**

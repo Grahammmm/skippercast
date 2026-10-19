@@ -832,21 +832,21 @@ p {
   background:
     linear-gradient(
       90deg,
-      var(--coast-reef-0, #3c7381),
-      var(--coast-reef-1, #3e9fa2),
-      var(--coast-reef-2, #5ac8b4),
-      var(--coast-reef-3, #d8df92),
-      var(--coast-reef-4, #f6d47e));
+      var(--coast-reef-0),
+      var(--coast-reef-1),
+      var(--coast-reef-2),
+      var(--coast-reef-3),
+      var(--coast-reef-4));
 }
 .sst-gradient {background:linear-gradient(90deg,var(--coast-sst-0),var(--coast-sst-1),var(--coast-sst-2),var(--coast-sst-3),var(--coast-sst-4),var(--coast-sst-5));}
-.current-gradient {background:linear-gradient(90deg,var(--coast-current-0, #245893),var(--coast-current-1, #228fab),var(--coast-current-2, #4bcbbb),var(--coast-current-3, #d2e59a),var(--coast-current-4, #f6c876),var(--coast-current-5, #ec8e68));}
+.current-gradient {background:linear-gradient(90deg,var(--coast-current-0),var(--coast-current-1),var(--coast-current-2),var(--coast-current-3),var(--coast-current-4),var(--coast-current-5));}
 .wave-gradient {
   background:
     linear-gradient(
       90deg,
-      var(--coast-wave-0, #336d93),
-      var(--coast-wave-1, #69b9ee),
-      var(--coast-wave-2, #b8b6fc));
+      var(--coast-wave-0),
+      var(--coast-wave-1),
+      var(--coast-wave-2));
 }
 .cloud-gradient {
   background:
@@ -2690,13 +2690,13 @@ body:not(.app-body) footer {
   background:
     linear-gradient(
       90deg,
-      var(--coast-bathy-0, #82e6d6),
-      var(--coast-bathy-1, #38bcb5),
-      var(--coast-bathy-2, #287db8),
-      var(--coast-bathy-3, #394aae),
-      var(--coast-bathy-4, #6d41b6),
-      var(--coast-bathy-5, #a64b99),
-      var(--coast-bathy-6, #e9828c));
+      var(--coast-bathy-0),
+      var(--coast-bathy-1),
+      var(--coast-bathy-2),
+      var(--coast-bathy-3),
+      var(--coast-bathy-4),
+      var(--coast-bathy-5),
+      var(--coast-bathy-6));
 }
 .brief-advisory {
   display: flex;
@@ -2901,16 +2901,16 @@ body.app-body.map-focused #expand-map {
   background:
     linear-gradient(
       90deg,
-      var(--coast-reef-fit-0, #549ca1) 0 50%,
-      var(--coast-reef-fit-1, #b2dca2) 50% 100%);
+      var(--coast-reef-fit-0) 0 50%,
+      var(--coast-reef-fit-1) 50% 100%);
 }
 .shore-gradient {
   background:
     linear-gradient(
       90deg,
-      var(--coast-shore-0, #83aec4) 0 33.33%,
-      var(--coast-shore-1, #e9cc72) 33.33% 66.66%,
-      var(--coast-shore-2, #6deabd) 66.66% 100%);
+      var(--coast-shore-0) 0 33.33%,
+      var(--coast-shore-1) 33.33% 66.66%,
+      var(--coast-shore-2) 66.66% 100%);
 }
 .wind-direction {
   font: 400 28px var(--coast-mono);
