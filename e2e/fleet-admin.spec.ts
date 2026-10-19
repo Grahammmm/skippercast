@@ -103,6 +103,37 @@ test('an admin decides a fleet review, edits a vessel field and sees it pinned',
   expect(pageErrors).toEqual([]);
 });
 
+test('the fleet trip detail fits a phone screen without horizontal page scroll', async ({page, pageErrors}, info) => {
+  test.setTimeout(120_000);
+  const userId = await signInAsAdmin(page);
+  // Unique per project and attempt, like the review test above.
+  const tag = word(`${info.project.name}-${info.repeatEachIndex}-${info.retry}`), region = `e2e-${tag}`;
+  const trip = hex(`e2e-fleet-trip:${tag}`), vessel = hex(`e2e-fleet-trip-vessel:${tag}`), name = `E2E Tern ${tag}`;
+  const segment = hex(`e2e-fleet-trip-seg:${tag}`), label = hex(`e2e-fleet-trip-label:${tag}`);
+  const now = new Date().toISOString();
+  const departed = new Date(Date.now() - 3 * 3600_000).toISOString();   // inside the trip's window
+  const returned = new Date(Date.now() - 1 * 3600_000).toISOString();
+  await d1(`INSERT INTO fleet_vessels(id,region,slug,name,name_norm,port_id,status,profile_status,first_seen_at,last_seen_at,created_at,updated_at)
+      VALUES('${vessel}','${region}','e2e-tern-${tag}','${name}','E2ETERN${tag.toUpperCase()}','morro-bay','active','hidden','${now}','${now}','${now}','${now}');`
+    + `INSERT INTO fleet_trips(id,region,vessel_id,mmsi,departed_at,returned_at,local_date,season,status,distance_nm,max_offshore_nm,fishing_min,source,rights,classifier_version,computed_at)
+      VALUES('${trip}','${region}','${vessel}','366000000','${departed}','${returned}','${departed.slice(0, 10)}','2026','closed',12,4,90,'synthetic','public','e2e','${now}');`
+    + `INSERT INTO fleet_segments(id,trip_id,seq,kind,started_at,ended_at,mean_sog,straightness,heading_var)
+      VALUES('${segment}','${trip}',1,'drift-anchor','${departed}','${returned}',1.2,0.9,10);`
+    + `INSERT INTO fleet_segment_labels(id,trip_id,started_at,ended_at,label,labeller,basis,created_at)
+      VALUES('${label}','${trip}','${departed}','${returned}','drift-anchor','${userId}','synthetic e2e label','${now}');`);
+
+  // The trip detail renders the labels and segments tables; their "Delete"/"Use range" headers are
+  // visually-hidden (position: absolute), and at phone width those escape an unpositioned .admin-scroll
+  // and widen the page. Assert the page itself never scrolls horizontally at phone width.
+  await page.setViewportSize({width: 375, height: 812});
+  await page.goto(`/admin.html#fleet-trip/${trip}`);
+  await expect(page.getByRole('heading', {level: 1, name: new RegExp(name)})).toBeVisible();
+  await expect(page.getByRole('table').first()).toBeVisible();
+  const widths = await page.evaluate(() => ({scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth}));
+  expect(widths.scroll, `the trip detail overflows horizontally at phone width (page ${widths.scroll}px, viewport ${widths.client}px)`).toBeLessThanOrEqual(widths.client);
+  expect(pageErrors).toEqual([]);
+});
+
 test('the fleet tabs and routes are hidden while the fleet is off', async ({page, pageErrors}) => {
   test.setTimeout(120_000);
   await signInAsAdmin(page);
