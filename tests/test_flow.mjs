@@ -325,7 +325,8 @@ test('a place with no local packet draws its region\'s WCOFS feed; radar and off
   assert.equal(currentsState.value.note, 'no radar for this region');
   current.value = 'wcofs';
   assert.equal(currentsState.value.note, 'loading');
-  for (let i = 0; i < 100 && currentsState.value.note === 'loading'; i++) await new Promise(resolve => setImmediate(resolve));   // the SHA-256 check is asynchronous
+  // The SHA-256 check is asynchronous and slow under a loaded suite: wait for the note to change, at most 5 s.
+  for (const end = Date.now() + 5000; currentsState.value.note === 'loading' && Date.now() < end;) await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(server.asked.length, 2, 'the manifest and its one tile, once');
   assert.equal(currentsState.value.note, 'forecast Wed 5 am');
   assert.ok(Number(h.dash().dataset.paths) > 0, 'streamlines draw');
