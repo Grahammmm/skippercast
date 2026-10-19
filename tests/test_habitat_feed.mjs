@@ -1,4 +1,4 @@
-// #491: Water temp outside a report binding. web/map/habitat-feed.ts reads the region's published
+// #491 and #482: Water temp and Currents outside a report binding. web/map/habitat-feed.ts reads the region's published
 // habitat-dynamics manifest and its SHA-256-checked surface-temperature tiles; web/map/sst.ts judges the
 // result with the report's gate (age, the dock's hour, the grid). The manifest and tiles here are
 // synthetic, in the pipeline's shape (src/skippercast/pipeline/habitat_dynamics.py).
@@ -6,11 +6,14 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {habitatManifestURL, habitatTileURL, regionalSST} from '../web/map/habitat-feed.ts';
+import {validCurrentField} from '../packages/coast/src/state/current-layer.ts';
+import {regionalCurrentsStatus} from '../web/map/currents.ts';
+import {habitatManifestURL, habitatTileURL, regionalCurrents, regionalSST} from '../web/map/habitat-feed.ts';
 import {railNotes} from '../web/map/layers.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {createWaterTemp, regionalStatus, waterTempState} from '../web/map/sst.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
+import {feedServer, wcofsFeed} from './helpers/wcofs-feed.mjs';
 
 const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', REGION = 'test-coast', HOUR = 3_600_000;
 const SAMPLE_AT = '2026-10-15T12:00:00Z', TIME = Date.parse(SAMPLE_AT) / 1000;
@@ -188,4 +191,64 @@ test('a place with no local report draws its region\'s feed; a bound place never
   assert.equal(e.overlay, null);
   await settle();
   assert.equal(s.asked.length, 3);
+});
+
+// #482: the region's WCOFS surface forecast for Currents, through packages/coast `selectedCurrent`.
+const C_NOW = new Date('2026-10-07T12:20:00Z'), C_AT = new Date('2026-10-07T12:00:00Z');
+const C_TIMES = ['2026-10-07T09:00:00Z', '2026-10-07T12:00:00Z', '2026-10-07T15:00:00Z'].map(t => Date.parse(t) / 1000);
+/** 8 × 8 cells 0.04° apart, split into two tiles by column; (0, 0) is dry. */
+const C_GRIDS = [0, 1].map(k => {
+  const cells = [];
+  for (let j = 0; j < 8; j++) for (let i = k * 4; i < k * 4 + 4; i++) cells.push([+(35.5 - j * 0.04).toFixed(6), +(-121 + i * 0.04).toFixed(6)]);
+  return {bounds: [-121.02 + k * 0.16, 35.2, -120.86 + k * 0.16, 35.52], cells};
+});
+const cFeed = (extra = {}) => wcofsFeed({region: REGION, times: C_TIMES, grids: C_GRIDS, issuedAt: '2026-10-07T03:00:00Z', retrievedAt: '2026-10-07T11:50:00Z',
+  flow: (lat, lon) => (lat === 35.5 && lon === -121 ? null : [0.3, -0.4]), ...extra});
+const cRead = (f, opts) => regionalCurrents(REGION, {fetchFn: feedServer(f, {page: PAGE, region: REGION, ...opts}).fetchFn, page: PAGE, now: C_NOW});
+
+test('a checked WCOFS layer becomes the packet\'s CurrentField, wet cells only, speed and toward-bearing from u and v', async () => {
+  const got = await cRead(cFeed());
+  assert.equal(got.state, 'ready');
+  const {frames, ...field} = got.field;
+  assert.deepEqual(field, {id: 'wcofs', kind: 'forecast', label: 'NOAA WCOFS surface-current forecast', url: 'https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html',
+    fetchedAt: '2026-10-07T11:50:00Z', issuedAt: '2026-10-07T03:00:00Z', sampleAt: null, nativeResolutionKm: 4, sampleStride: 1, horizontalDatum: 'NAD83', surfaceOnly: true,
+    attribution: 'NOAA National Ocean Service · WCOFS', license: 'public-domain-us-gov', limitations: 'Synthetic test forecast.'});
+  assert.deepEqual(frames.map(f => f.validAt), ['2026-10-07T09:00:00.000Z', '2026-10-07T12:00:00.000Z', '2026-10-07T15:00:00.000Z']);
+  assert.equal(frames[1].cells.length, 63, 'the dry cell is left out');
+  const c = frames[1].cells[0];
+  assert.ok(Math.abs(c.speedKnots - 0.5 * 1.94384449) < 1e-9);
+  assert.ok(Math.abs(c.towardDeg - (Math.atan2(0.3, -0.4) * 180 / Math.PI + 360) % 360) < 1e-9, 'toward the south-south-east');
+  assert.ok(validCurrentField(got.field), 'packages/coast accepts it as a current field');
+});
+
+test('WCOFS tiles are read only for an ok or retained layer issued inside its own limit; a failed tile refuses it', async () => {
+  for (const status of ['stale', 'error']) {
+    const s = feedServer(cFeed({status}), {page: PAGE, region: REGION});
+    const got = await regionalCurrents(REGION, {fetchFn: s.fetchFn, page: PAGE, now: C_NOW});
+    assert.deepEqual(got, {state: 'listed', validAt: ['2026-10-07T09:00:00.000Z', '2026-10-07T12:00:00.000Z', '2026-10-07T15:00:00.000Z'], layerStatus: status});
+    assert.equal(s.asked.length, 1, `${status}: no tile is fetched`);
+  }
+  assert.equal((await cRead(cFeed({issuedAt: '2026-10-05T03:00:00Z'}))).state, 'listed', 'issued past its own 36 hours');
+  assert.deepEqual(await cRead(cFeed(), {manifestStatus: 404}), {state: 'none'});
+  assert.deepEqual(await cRead(cFeed({record: (r, k) => (k ? {...r, sha256: '0'.repeat(64)} : r)})), {state: 'error'});
+  assert.deepEqual(await cRead(cFeed({tile: (t, k) => (k ? {...t, layer_id: 'sst-analysis'} : t)})), {state: 'error'});
+  assert.deepEqual(await cRead(cFeed({tile: (t, k) => (k ? {...t, frames: [...t.frames, t.frames[0]]} : t)})), {state: 'error'}, 'a repeated frame');
+});
+
+test('Currents from the feed: the forecast frame and its grid, its last frame when stale, and radar only from a packet', async () => {
+  const ready = await cRead(cFeed());
+  assert.equal(regionalCurrentsStatus('off', ready, C_AT, C_NOW, TZ).note, '');
+  assert.equal(regionalCurrentsStatus('wcofs', null, C_AT, C_NOW, TZ).note, 'loading');
+  const drawn = regionalCurrentsStatus('wcofs', ready, C_AT, C_NOW, TZ);
+  assert.equal(drawn.note, 'forecast Wed 5 am');
+  assert.equal(drawn.drawn.frame.validAt, '2026-10-07T12:00:00.000Z');
+  assert.match(drawn.basis, /^NOAA WCOFS surface forecast, about 4 km, issued 9 h ago;/);
+  assert.equal(regionalCurrentsStatus('wcofs', ready, C_AT, new Date('2026-10-07T18:00:00Z'), TZ).note, 'no fresh frame · last Wed 5 am',
+    'packages/coast\'s six-hour retrieval limit applies to the feed as to the packet');
+  assert.equal(regionalCurrentsStatus('wcofs', {state: 'listed', validAt: ['2026-10-07T09:00:00.000Z'], layerStatus: 'stale'}, C_AT, C_NOW, TZ).note, 'no fresh frame · last Wed 2 am');
+  assert.deepEqual([regionalCurrentsStatus('wcofs', {state: 'none'}, C_AT, C_NOW, TZ).note, regionalCurrentsStatus('wcofs', {state: 'error'}, C_AT, C_NOW, TZ).note],
+    ['no forecast for this region', 'unavailable']);
+  const radar = regionalCurrentsStatus('hfr-1', ready, C_AT, C_NOW, TZ);
+  assert.deepEqual([radar.note, radar.drawn], ['no radar for this region', null]);
+  assert.equal(radar.reason, 'Currents unavailable: Observed HF radar · 1 km is published only where a local surface-current packet covers the region; the NOAA WCOFS forecast may be.');
 });
