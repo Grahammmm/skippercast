@@ -103,7 +103,7 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'relief', label: 'Terrain relief', control: 'seafloor', presentations: ['terrain'],
     basis: 'Reviewed regional terrain and imagery, checked by hash in the browser before it draws.', task: 'FE-80'}),
   entry({id: 'water-temp', label: 'Water temp', control: 'water-temp', presentations: ['chart'], time: ['observed'], legend: [{label: 'Cold to warm', swatch: 'sst0'}],
-    basis: 'The bound coast report\'s daily sea-surface temperature analysis, named with its product, grid and age where it draws and withheld 72 hours after analysis; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),
+    basis: 'The bound coast report\'s daily sea-surface temperature analysis, or else the region\'s own published analysis checked by hash in the browser, named with its product, grid and age where it draws and withheld past its 72-hour age limit; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),
   entry({id: 'water-temp-contours', label: 'Water temp contours', control: 'water-temp', presentations: ['chart'], time: ['observed'],
     basis: 'Half-degree Fahrenheit contours of the same analysis, labelled at whole degrees.', task: 'FE-16'}),
   entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],

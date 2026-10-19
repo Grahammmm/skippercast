@@ -14,7 +14,7 @@ import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
-import {fieldColor, temperatureColors} from '../packages/coast/src/map/surface-field.ts';
+import {currentColors, fieldColor, temperatureColors} from '../packages/coast/src/map/surface-field.ts';
 import {FILES, themes} from '../scripts/check_contrast.mjs';
 import {chartMark} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
@@ -64,6 +64,16 @@ test('the token ramp equals packages/coast temperatureColors, in every theme', a
     assert.deepEqual(ramps(palette).sst, temperatureColors, `${theme}: --sst-0 … --sst-5 through palette.ts`);
   }
   assert.equal(temperatureColors.length, 6);
+});
+
+test('the current-speed token ramp equals packages/coast currentColors and the panel legend, in every theme (#711)', async () => {
+  const css = await readFile(new URL('../packages/coast/panel.css', import.meta.url), 'utf8');
+  const tokens = await readFile(new URL('../web/tokens.css', import.meta.url), 'utf8');
+  for (const [theme, colours] of Object.entries(themes(tokens, FILES['web/tokens.css']))) {
+    const palette = readPalette(name => colours[name] ?? (name === 'mpa-fill-opacity' ? '0.08' : ''));
+    assert.deepEqual(ramps(palette).current, currentColors, `${theme}: --current-0 … --current-5 through palette.ts`);
+  }
+  assert.match(css, /\.current-gradient \{background:linear-gradient\(90deg,var\(--coast-current-0\),var\(--coast-current-1\),var\(--coast-current-2\),var\(--coast-current-3\),var\(--coast-current-4\),var\(--coast-current-5\)\);\}/);
 });
 
 test('the texture paints exactly the field\'s support, in the ramp\'s colours, feathered inward at gaps', () => {

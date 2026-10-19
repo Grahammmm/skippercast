@@ -61,6 +61,17 @@ export const chartFailed = signal(false);
 export interface ChartStyleOptions {palette: Palette; archive: string | null; page: string; region: string; base: string;
   /** The shoreline file to draw (coastline.ts `shorelineFor`); the full one when absent. */
   shoreline?: string}
+/**
+ * A click's card: the picked feature's (a mark, a seafloor candidate, a protected area, any drawn layer's pick), else
+ * the first reading at the point: a drawn seafloor coverage cell (#706), then the drawn surface current (FE-15) or
+ * water temperature (FE-16). A cell never displaces a more specific pick.
+ */
+export function clickMark(other: ChartMark | null, at: {lon: number; lat: number} | null, readings: readonly ((at: {lon: number; lat: number}) => ChartMark | null)[]): ChartMark | null {
+  if (other || !at) return other;
+  for (const read of readings) { const mark = read(at); if (mark) return mark; }
+  return null;
+}
+
 /** The whole Chart style in § 9 order: the token basemap (or only its water without an archive), the ENC base, the protected areas, habitat, the seafloor (hidden), marks, the ranked trip spots, then the coastline on top. */
 export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   const style = basemapStyle(o.palette, {archive: o.archive ?? '', assets: new URL('basemap/', o.page).href});
@@ -197,8 +208,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
             : layer === MPA_FILL ? mpaMark(properties) : layer === RANKED_PICK ? rankedMark(properties)
             : drawn.find(l => layer !== null && l.pick?.layers.includes(layer))?.pick?.mark(layer!, properties) ?? null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
-          // A click on nothing else reads the drawn surface current (FE-15), else the drawn water temperature (FE-16).
-          chartMark.value = chartPick(layer, properties, other ?? (at && fieldReading(at)));
+          chartMark.value = chartPick(layer, properties, clickMark(other, at, [p => seafloor?.cellAt(p) ?? null, fieldReading]));
         },
         onIdle: () => {
           if (!painted) { posterDone(); flyIfFirst(e); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }

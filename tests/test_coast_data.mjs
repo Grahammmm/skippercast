@@ -196,11 +196,14 @@ test('concurrent first reads of one object hash it once', async () => {
   const cold = tile.map(v => v * 3);  // bytes no earlier test verified
   const {store, entries} = await published({'/api/habitat/tiles?region=morro-bay': {bytes: cold, habitatRelease, expiresAt: '2099-01-01T00:00:00Z'}});
   const key = 'coast/objects/' + entries['/api/habitat/tiles?region=morro-bay'].sha256;
+  // Only an unpinned whole read hashes; a request that arrives after the hash has finished reads its pinned etag instead.
+  const get = store.get.bind(store), whole = [];
+  store.get = (k, options = {}) => { if (k === key && !options.onlyIf && !options.range) whole.push(k); return get(k, options); };
   const parts = await Promise.all([0, 8, 16, 24].map(start => serveCoastData(request('/api/coast/habitat/tiles?region=morro-bay',
     {headers: {Range: `bytes=${start}-${start + 7}`}}), noBridge, store)));
   assert.deepEqual(parts.map(r => r.status), [206, 206, 206, 206]);
   assert.deepEqual(new Uint8Array(await parts[1].arrayBuffer()), cold.slice(8, 16));
-  assert.equal(store.reads.filter(k => k === key).length, 1);
+  assert.equal(whole.length, 1, 'one unpinned whole-object read hashes it');
 });
 
 // Hold cold object bodies independently; pointer reads stay promise-only so one

@@ -227,4 +227,5 @@ rebuild does not widen what the public sees.
 - **US-L2. Second active region in the landing.** The landing input already
   lists every port; preview regions open with their existing preview banner.
 - **US-L3. Admin restyle.** `web/admin` keeps its current look until the
-  public shell is done; a token pass is backlog.
+  public shell is done; the token pass landed (#729): it reads only
+  `web/tokens.css` names, and a test keeps it that way.

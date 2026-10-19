@@ -14,14 +14,6 @@ import {
 const BLACK = [0, 0, 0, 1], WHITE = [255, 255, 255, 1];
 const PROVENANCE = 'Synthetic unit fixture: uniform solid backing';
 const declarations = values => Object.entries(values).map(([key, value]) => `--${key}: ${value};`).join('\n');
-const V1_CSS = `:root {
-${declarations({surface: '#000000', card: '#000000', 'brand-tint': '#000000',
-  ink: '#ffffff', 'ink-2': '#ffffff', brand: '#ffffff', go: '#ffffff',
-  caution: '#ffffff', rough: '#ffffff', unknown: '#ffffff',
-  'on-brand': '#000000', deep: '#000000', 'on-deep': '#ffffff'})}
-}
-:root[data-theme="dark"] { }
-:root[data-theme="auto"] { }`;
 const V2_CSS = `:root {
 ${declarations({bg: '#000000', 'bg-deep': '#000000', panel: '#000000', 'panel-2': '#000000',
   text: '#ffffff', muted: '#ffffff', mint: '#ffffff', blue: '#ffffff', coral: '#ffffff', amber: '#ffffff'})}
@@ -167,7 +159,7 @@ test('classification uses exact 4.5 and the immediately preceding float', () => 
 });
 
 test('opaque checks retain both themes, full pair counts and failure sensitivity', () => {
-  for (const [css, spec] of [[V1_CSS, FILES['dist/tokens.css']], [V2_CSS, FILES['web/tokens.css']]]) {
+  for (const [css, spec] of [[V2_CSS, FILES['web/tokens.css']]]) {
     const result = check(css, spec);
     assert.deepEqual(result.failures, []);
     assert.equal(result.rows.length, 2 * spec.pairs.length);
@@ -195,7 +187,6 @@ test('default CLI fails closed on unresolved synthetic requests in this Node pro
     for (const dir of ['scripts', 'dist', 'web', 'packages/coast']) mkdirSync(join(root, dir), {recursive: true});
     const script = join(root, 'scripts/check_contrast.mjs');
     writeFileSync(script, readFileSync(new URL('../scripts/check_contrast.mjs', import.meta.url)));
-    writeFileSync(join(root, 'dist/tokens.css'), V1_CSS);
     writeFileSync(join(root, 'web/tokens.css'), V2_CSS);
     writeFileSync(join(root, 'packages/coast/tokens-bridge.css'), BRIDGE_CSS);
     process.argv = [process.execPath, script];
@@ -236,11 +227,15 @@ test('catch production: continuous light/dark proof and uncovered panel', () => 
 test('catch production: rejects translucent endpoint and changed interpolation/selector', () => {
   const [panel, bridge, tokens] = catchSources();
   for (const changed of [
-    panel.replace('90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-panel, #0c1c29)', '90deg in srgb, var(--coast-mint-wash, #26524b88), var(--coast-mint-glow, #428c7855)'),
+    // FE-61 part 3: panel.css reads the bridged roles without v1 literal fallbacks.
+    panel.replace('90deg in srgb, var(--coast-mint-wash), var(--coast-panel)', '90deg in srgb, var(--coast-mint-wash), var(--coast-mint-glow)'),
     panel.replace('90deg in srgb, var(--coast-mint-wash', '90deg in oklab, var(--coast-mint-wash'),
     panel.replace('.catch-counts dd {', '.unrelated dd {'),
     panel + '\n.catch-counts dd {color: red;}',
-  ]) assert.equal(checkCatchGradient(changed, bridge, tokens).failures[0].status, 'resolution_error');
+  ]) {
+    assert.notEqual(changed, panel, 'each mutation must actually change the sheet');
+    assert.equal(checkCatchGradient(changed, bridge, tokens).failures[0].status, 'resolution_error');
+  }
 });
 test('catch production: actual role mutations fail at equality and missing binding', () => {
   const [panel, bridge, tokens] = catchSources();

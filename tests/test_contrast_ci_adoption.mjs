@@ -45,7 +45,8 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
   assert.deepEqual(bridged.failures, []);
   assert.equal(bridged.rows.length, 2 * PAIRS_BRIDGE.length);
   opaquePairs += bridged.rows.length;
-  assert.equal(opaquePairs, 112);
+  // 2 × (17 web/tokens.css + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css (2 × 19).
+  assert.equal(opaquePairs, 74);
   assert.ok(checkBridge(bridge.replace('--coast-text: var(--text);', '--coast-text: var(--panel);'), tokens).failures.length > 0);
 
   // Run the real approved explicit CLI, without importing/rerunning its math suite.
@@ -62,7 +63,7 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
 
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'contrast-ci-adoption-')));
   try {
-    for (const path of [SCRIPT, ...Object.values(SOURCES), 'dist/tokens.css']) {
+    for (const path of [SCRIPT, ...Object.values(SOURCES)]) {
       mkdirSync(dirname(join(scratch, path)), {recursive: true});
       writeFileSync(join(scratch, path), read(path));
     }

@@ -272,6 +272,14 @@ def markup_sinks(root=ROOT):
 LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
+def check_no_v1_sheets():
+    """FE-61 Accept 2: no page loads the retired v1 tokens.css or styles.css, and neither file returns."""
+    for page in sorted(WEB.glob("*.html")):
+        text = page.read_text()
+        assert not re.search(r'href="(?:\./)?(?:tokens|styles)\.css"', text), page.name
+    assert not (WEB / "tokens.css").exists() and not (WEB / "styles.css").exists(), "v1 sheets are retired"
+
+
 def check_legal_pages():
     """Terms, privacy and licences exist, say they are drafts, and are reachable.
 
@@ -281,7 +289,9 @@ def check_legal_pages():
     for name in LEGAL_PAGES:
         text = (WEB / name).read_text()
         assert "Draft — pending review by counsel" in text, name
-        assert 'href="styles.css"' in text, name
+        # FE-61 part 2: the v2 tokens and the readable pages' sheet, as sources.html; no v1 sheet.
+        assert 'href="../web/tokens.css"' in text and 'href="coast-readable.css"' in text, name
+        assert 'href="styles.css"' not in text and 'href="tokens.css"' not in text, name
     assert "href: '/sources'" in (ROOT / "web/landing/Landing.tsx").read_text(), "the landing links the sources page"
     parser = AssetParser()
     parser.feed((WEB / "sources.html").read_text())
@@ -309,6 +319,7 @@ def main():
     assert (WEB / "landing.html").is_file() and (WEB / "app.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
+    check_no_v1_sheets()
     check_bundled_licence_versions()
     sinks = markup_sinks()
     assert not sinks, f"markup written into the DOM outside {MARKUP_HOST} (mount packages/coast markup through it): {sinks}"

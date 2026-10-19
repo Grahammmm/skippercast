@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
+- The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
+- The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
+- The species research and commercial AIS pages use the app's visual system, like the sources page. Their text is unchanged, except the species research page's chart paragraph, which now names the NOAA chart layer groups the map requests.
+- The terms, privacy and licences pages use the app's visual system, like the sources page, with the draft notice kept prominent.
 - The Seafloor legend summarises its surveys ("4 surveys, 2006–2010") instead of listing raw source file names; every survey is still listed in its basis.
 - After a brief nautical-chart (ENC) tile failure the Chart drops its "chart detail unavailable" note as soon as a fresh chart tile loads for the same region, instead of keeping it until the page is reloaded. Other layer failures stay reported.
 - While a ranked trip plan's numbered pins show on the Chart, the legend keys them and links their basis.

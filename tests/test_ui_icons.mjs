@@ -81,9 +81,12 @@ test('the primitives carry no colour or font literal, no emoji, and resolve ever
   for (const name of ['ui-button', 'ui-popover-summary', 'ui-range', 'ui-sheet-handle']) {
     assert.ok(rules.some(r => r.selector === `.${name}` && /(?:min-)?height: var\(--touch-min\)/.test(r.body)), `${name} is a 44 px target`);
   }
+  // At the touch minimum, or above it by a positive px headroom (#600: a measured box can round a hair under 44 px).
+  const atLeastTouch = value => value === 'var(--touch-min)' || /^calc\(var\(--touch-min\) \+ (?:\d+(?:\.\d+)?|\.\d+)px\)$/.test(value);
+  for (const bad of ['calc(var(--touch-min) - 1px)', '40px', 'var(--space-6)', 'calc(var(--touch-min) + -1px)']) assert.equal(atLeastTouch(bad), false, bad);
   for (const {selector, body} of rules) {
     if (!INTERACTIVE.test(selector) || /::/.test(selector)) continue;
-    for (const [, prop, value] of body.matchAll(/(?:^|;)\s*((?:min-)?height):\s*([^;]+)/g)) assert.equal(value.trim(), 'var(--touch-min)', `${selector} ${prop}`);
+    for (const [, prop, value] of body.matchAll(/(?:^|;)\s*((?:min-)?height):\s*([^;]+)/g)) assert.ok(atLeastTouch(value.trim()), `${selector} ${prop}: ${value.trim()}`);
   }
   assert.match(css, /:focus-visible \{ outline: 2px solid var\(--focus\)/);
 });

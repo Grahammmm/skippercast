@@ -138,6 +138,8 @@ test('with storage denied the chooser still navigates', async ({page, pageErrors
   await expect(dialog.getByRole('button', {name: 'Forget saved home'})).toHaveCount(0);
   const input = dialog.locator('input[type="search"]');
   await input.fill('san d');
+  // #605: Enter submits the rendered top match; wait until the directory has loaded and matched, as above.
+  await expect(dialog.locator('[data-port]')).toHaveText([/San Diego/]);
   await input.press('Enter');
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/[?&]region=southern-california/);

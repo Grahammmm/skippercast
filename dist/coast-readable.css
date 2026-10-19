@@ -66,6 +66,15 @@ body.coast-readable {
 .coast-readable dl { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .coast-readable dt { color: var(--muted); font-size: var(--text-13); }
 .coast-readable dd { margin: 0; font-weight: var(--weight-medium); }
+/* The research page's wide tables scroll inside the column. */
+.coast-readable .forecast-table-wrap { overflow-x: auto; }
+/* FE-61 part 2: the legal pages' draft notice, an amber edge on the panel. */
+.coast-readable .legal-draft { margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); border-left: 4px solid var(--amber); background: var(--panel); color: var(--text); }
+/* The licences page's collapsed licence texts. */
+/* Each licence text's summary keeps a 44 px target; it stays a list item, so the disclosure marker and keyboard behaviour remain. */
+.coast-readable summary { min-height: var(--touch-min); padding: var(--space-3) 0; cursor: pointer; }
+.coast-readable details { margin: var(--space-2) 0 var(--space-5); }
+.coast-readable details pre { overflow-x: auto; padding: var(--space-3); background: var(--panel); border-radius: var(--radius-sm); }
 .coast-readable .small { color: var(--muted); font-size: var(--text-13); }
 
 .coast-readable table { width: 100%; margin: var(--space-4) 0; border-collapse: collapse; }
@@ -95,6 +104,8 @@ body.coast-readable {
   body.coast-readable { background: Canvas; color: CanvasText; }
   .coast-readable article, .coast-readable .source, .coast-readable .scope, .coast-readable .gap { background: none; }
   .coast-readable dt, .coast-readable .small, .coast-readable footer { color: inherit; }
+  /* The draft notice and licence texts print as ink on paper, not light text on a dark panel. */
+  .coast-readable .legal-draft, .coast-readable details pre { background: none; color: inherit; }
   .coast-readable header nav, .coast-readable .skip-link { display: none; }
   .coast-readable article { break-inside: avoid; }
   .coast-readable a { color: inherit; }
