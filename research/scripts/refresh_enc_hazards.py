@@ -33,6 +33,11 @@ TRANSIENT_ATTEMPTS = 5
 TRANSIENT_MAX_WAIT = 60.0
 TRANSIENT_MARKERS = ("Could not find service", "may be stopped or it may not be configured")
 
+# Per-scope record of this invocation's outcome, written next to the snapshot
+# (or outage receipt). The inventory reporter binds each scope to this file, so
+# a stale snapshot or receipt from an earlier run can never satisfy a new one.
+RUN_STATUS_SUFFIX = ".run-status.json"
+
 
 class EncUpstreamUnavailable(ValueError):
     """NOAA ENC Direct stayed unavailable after the bounded retry budget."""
@@ -98,11 +103,41 @@ def query_layer(service, layer, layer_id, bounds):
         "data_url": data_url, "data_sha256": data_sha}
 
 
+def _run_status_path(scope, output):
+    """Path of the per-scope current-invocation status record."""
+    return output.parent / (scope["id"] + RUN_STATUS_SUFFIX)
+
+
+def _write_run_status(scope, output, status, checked_at=None, artifact=None):
+    """Atomically record this invocation's authoritative outcome for a scope.
+
+    The inventory reporter binds each scope to this file. A terminal ``success``
+    or ``upstream_unavailable`` status is the only thing that satisfies a run;
+    an in-progress, failed, missing, mismatched or corrupt status fails closed.
+    A fresh invocation overwrites the file first (``in-progress``), so a stale
+    snapshot or receipt from an earlier run can never stand in for this one.
+    """
+    payload = {"schema_version": 1, "scope_id": scope["id"],
+               "region_id": scope["region_id"], "status": status,
+               "source_url": BASE}
+    if checked_at is not None:
+        payload["checked_at"] = checked_at
+    if artifact is not None:
+        payload["artifact"] = artifact
+    path = _run_status_path(scope, output)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
+    temporary.replace(path)
+    return path
+
+
 def refresh(scope, output):
     bounds = scope["bounds"]
     if (len(bounds) != 4 or not -125 <= bounds[0] < bounds[2] <= -116
             or not 32 <= bounds[1] < bounds[3] <= 42):
         raise ValueError("ENC review bounds must be a bounded California envelope")
+    _write_run_status(scope, output, "in-progress")
     jobs = []
     for service in SERVICES:
         url = f"{BASE}/{service}/MapServer?f=pjson"
@@ -116,8 +151,25 @@ def refresh(scope, output):
             if full not in names:
                 raise ValueError("Required NOAA ENC layer missing: " + full)
             jobs.append((service, layer, names[full], bounds))
+    # Drain every submitted concurrent query instead of letting the first
+    # exception in submission order win. A real parse/validation/host-control
+    # error outranks an isolated outage no matter which future finished first.
+    rows = []
+    outage = None
+    hard = None
     with ThreadPoolExecutor(max_workers=5) as pool:
-        rows = list(pool.map(lambda args: query_layer(*args), jobs))
+        futures = [pool.submit(query_layer, *args) for args in jobs]
+        for future in futures:
+            try:
+                rows.append(future.result())
+            except EncUpstreamUnavailable as error:
+                outage = outage or error
+            except Exception as error:  # noqa: BLE001 - drain every future
+                hard = hard or error
+    if hard is not None:
+        raise hard
+    if outage is not None:
+        raise outage
     features = [feature for batch, _ in rows for feature in batch]
     receipts = [receipt for _, receipt in rows]
     result = {"schema_version": 1, "type": "FeatureCollection",
@@ -130,6 +182,7 @@ def refresh(scope, output):
     temporary = output.with_suffix(output.suffix + ".tmp")
     temporary.write_text(json.dumps(result, separators=(",", ":")) + "\n")
     temporary.replace(output)
+    _write_run_status(scope, output, "success", result["checked_at"], output.name)
     return {"scope_id": scope["id"], "features": len(features),
         "queried_layers": len(receipts), "checked_at": result["checked_at"], "output": str(output)}
 
@@ -162,6 +215,11 @@ def main():
     except EncUpstreamUnavailable as error:
         _record_unavailable(scopes[0], output, error)
         return
+    except Exception:
+        # Any real error (not the isolated outage signature) fails the run and
+        # must not leave the scope looking like a prior success.
+        _write_run_status(scopes[0], output, "failed")
+        raise
     print(json.dumps(result))
 
 
@@ -181,6 +239,8 @@ def _record_unavailable(scope, output, error):
     output.parent.mkdir(parents=True, exist_ok=True)
     receipt_path = output.parent / (scope["id"] + ".unavailable.json")
     receipt_path.write_text(json.dumps(receipt, separators=(",", ":")) + "\n")
+    _write_run_status(scope, output, "upstream_unavailable", receipt["checked_at"],
+                      scope["id"] + ".unavailable.json")
     print(f"::warning title=NOAA ENC Direct unavailable::{scope['id']}: {error}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
