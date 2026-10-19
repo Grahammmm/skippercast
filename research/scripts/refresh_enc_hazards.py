@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -37,6 +38,31 @@ TRANSIENT_MARKERS = ("Could not find service", "may be stopped or it may not be 
 # (or outage receipt). The inventory reporter binds each scope to this file, so
 # a stale snapshot or receipt from an earlier run can never satisfy a new one.
 RUN_STATUS_SUFFIX = ".run-status.json"
+
+# Identity of one workflow run/attempt (or one local operator run). Every scope
+# refreshed in that run records it in its run-status, and the reporter accepts a
+# scope only when the recorded identity equals the identity it expects, so a
+# terminal status or artifact left by an earlier run, or by an earlier attempt of
+# the same run, can never satisfy a later one. Resolution order: an explicit
+# ``--invocation``, then ``ENC_INVOCATION_ID``, then GitHub Actions'
+# ``github:<GITHUB_RUN_ID>:<GITHUB_RUN_ATTEMPT>`` (a rerun bumps the attempt).
+# ``report_enc_hazard_coverage.resolve_invocation`` must stay identical.
+INVOCATION_ENV = "ENC_INVOCATION_ID"
+INVOCATION_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,199}")
+
+
+def resolve_invocation(explicit=None, environ=None):
+    """Return this run's invocation identity, or None when none is defined."""
+    environ = os.environ if environ is None else environ
+    candidate = explicit if explicit is not None else (environ.get(INVOCATION_ENV) or None)
+    if candidate is None:
+        run_id, attempt = environ.get("GITHUB_RUN_ID"), environ.get("GITHUB_RUN_ATTEMPT")
+        if not (run_id and attempt):
+            return None
+        candidate = f"github:{run_id}:{attempt}"
+    if not isinstance(candidate, str) or not INVOCATION_PATTERN.fullmatch(candidate):
+        raise ValueError("Invalid ENC invocation identity")
+    return candidate
 
 
 class EncUpstreamUnavailable(ValueError):
@@ -108,7 +134,8 @@ def _run_status_path(scope, output):
     return output.parent / (scope["id"] + RUN_STATUS_SUFFIX)
 
 
-def _write_run_status(scope, output, status, checked_at=None, artifact=None):
+def _write_run_status(scope, output, status, checked_at=None, artifact=None,
+                      invocation=None, artifact_sha256=None):
     """Atomically record this invocation's authoritative outcome for a scope.
 
     The inventory reporter binds each scope to this file. A terminal ``success``
@@ -116,14 +143,18 @@ def _write_run_status(scope, output, status, checked_at=None, artifact=None):
     an in-progress, failed, missing, mismatched or corrupt status fails closed.
     A fresh invocation overwrites the file first (``in-progress``), so a stale
     snapshot or receipt from an earlier run can never stand in for this one.
+    ``invocation`` names the run/attempt; ``artifact_sha256`` pins the exact
+    bytes of the named snapshot or receipt so a replaced artifact fails closed.
     """
     payload = {"schema_version": 1, "scope_id": scope["id"],
                "region_id": scope["region_id"], "status": status,
-               "source_url": BASE}
+               "source_url": BASE, "invocation": invocation}
     if checked_at is not None:
         payload["checked_at"] = checked_at
     if artifact is not None:
         payload["artifact"] = artifact
+    if artifact_sha256 is not None:
+        payload["artifact_sha256"] = artifact_sha256
     path = _run_status_path(scope, output)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -132,12 +163,12 @@ def _write_run_status(scope, output, status, checked_at=None, artifact=None):
     return path
 
 
-def refresh(scope, output):
+def refresh(scope, output, invocation=None):
     bounds = scope["bounds"]
     if (len(bounds) != 4 or not -125 <= bounds[0] < bounds[2] <= -116
             or not 32 <= bounds[1] < bounds[3] <= 42):
         raise ValueError("ENC review bounds must be a bounded California envelope")
-    _write_run_status(scope, output, "in-progress")
+    _write_run_status(scope, output, "in-progress", invocation=invocation)
     jobs = []
     for service in SERVICES:
         url = f"{BASE}/{service}/MapServer?f=pjson"
@@ -180,9 +211,11 @@ def refresh(scope, output):
         "features": features}
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(output.suffix + ".tmp")
-    temporary.write_text(json.dumps(result, separators=(",", ":")) + "\n")
+    body = (json.dumps(result, separators=(",", ":")) + "\n").encode()
+    temporary.write_bytes(body)
     temporary.replace(output)
-    _write_run_status(scope, output, "success", result["checked_at"], output.name)
+    _write_run_status(scope, output, "success", result["checked_at"], output.name,
+                      invocation=invocation, artifact_sha256=hashlib.sha256(body).hexdigest())
     return {"scope_id": scope["id"], "features": len(features),
         "queried_layers": len(receipts), "checked_at": result["checked_at"], "output": str(output)}
 
@@ -192,7 +225,11 @@ def main():
     parser.add_argument("--scope", required=True)
     parser.add_argument("--output", type=Path,
         help="Optional unpublished var/ review or data-feed output")
+    parser.add_argument("--invocation",
+        help="Run identity shared with the coverage reporter (default: $ENC_INVOCATION_ID, "
+             "else github:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT)")
     args = parser.parse_args()
+    invocation = resolve_invocation(args.invocation)
     config = json.loads((ROOT / "research/catalog/noaa-enc-hazard-scopes.json").read_text())
     if config.get("source_url") != BASE or config.get("schema_version") != 1:
         raise ValueError("Unreviewed NOAA ENC provider config")
@@ -211,19 +248,19 @@ def main():
     elif not output.is_relative_to((ROOT / "dist/regions" / scopes[0]["region_id"]).resolve()):
         raise ValueError("ENC output escaped its regional package")
     try:
-        result = refresh(scopes[0], output)
+        result = refresh(scopes[0], output, invocation=invocation)
     except EncUpstreamUnavailable as error:
-        _record_unavailable(scopes[0], output, error)
+        _record_unavailable(scopes[0], output, error, invocation=invocation)
         return
     except Exception:
         # Any real error (not the isolated outage signature) fails the run and
         # must not leave the scope looking like a prior success.
-        _write_run_status(scopes[0], output, "failed")
+        _write_run_status(scopes[0], output, "failed", invocation=invocation)
         raise
     print(json.dumps(result))
 
 
-def _record_unavailable(scope, output, error):
+def _record_unavailable(scope, output, error, invocation=None):
     """Record an explicit upstream outage receipt and warn without failing.
 
     The receipt is the difference between "NOAA was down and we know it" and a
@@ -234,13 +271,15 @@ def _record_unavailable(scope, output, error):
     receipt = {"schema_version": 1, "scope_id": scope["id"],
         "region_id": scope["region_id"], "status": "upstream_unavailable",
         "checked_at": datetime.now(timezone.utc).isoformat(), "source_url": BASE,
-        "message": str(error)[:180],
+        "invocation": invocation, "message": str(error)[:180],
         "limitations": "NOAA ENC Direct did not answer after bounded retries; no charted-danger snapshot was produced this run. Not navigation clearance."}
     output.parent.mkdir(parents=True, exist_ok=True)
     receipt_path = output.parent / (scope["id"] + ".unavailable.json")
-    receipt_path.write_text(json.dumps(receipt, separators=(",", ":")) + "\n")
+    body = (json.dumps(receipt, separators=(",", ":")) + "\n").encode()
+    receipt_path.write_bytes(body)
     _write_run_status(scope, output, "upstream_unavailable", receipt["checked_at"],
-                      scope["id"] + ".unavailable.json")
+                      receipt_path.name, invocation=invocation,
+                      artifact_sha256=hashlib.sha256(body).hexdigest())
     print(f"::warning title=NOAA ENC Direct unavailable::{scope['id']}: {error}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:

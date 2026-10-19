@@ -98,6 +98,8 @@ def write_json(path, payload):
 
 class EncHazardInvocationBindingTests(unittest.TestCase):
     SCOPE = "santa-barbara-island"
+    PRIOR = "run-prior"
+    INVOCATION = "run-current"
 
     def setUp(self):
         (enc.ROOT / "var").mkdir(exist_ok=True)
@@ -107,7 +109,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         return Path(directory.name)
 
-    def _run(self, scope, output, plan):
+    def _run(self, scope, output, plan, invocation=INVOCATION):
         opener = make_opener(plan)
         stdout = io.StringIO()
         error = None
@@ -115,7 +117,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
             with patch.object(enc.urllib.request, "urlopen", side_effect=opener), \
                  patch.object(enc.time, "sleep"), \
                  patch("sys.argv", ["refresh_enc_hazards.py", "--scope", scope, "--output", str(output)]), \
-                 patch.dict("os.environ", {"GITHUB_STEP_SUMMARY": ""}), \
+                 patch.dict("os.environ", {"GITHUB_STEP_SUMMARY": "", "ENC_INVOCATION_ID": invocation}), \
                  contextlib.redirect_stdout(stdout):
                 enc.main()
         except Exception as exc:  # noqa: BLE001 - capture the hard failure
@@ -140,7 +142,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.assertEqual(status["status"], "success")
         self.assertEqual(status["checked_at"], snapshot["checked_at"])
         self.assertEqual(status["artifact"], output.name)
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [])
         self.assertIn("charted features across 18 complete layer queries", lines[1])
 
@@ -153,7 +155,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         status = self._status(directory)
         self.assertEqual(status["status"], "upstream_unavailable")
         self.assertEqual(status["checked_at"], receipt["checked_at"])
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [])
         self.assertIn("upstream_unavailable", lines[1])
 
@@ -162,7 +164,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.assertIsInstance(error, ValueError)
         self.assertIn("empty or oversized", str(error))
         self.assertEqual(self._status(directory)["status"], "failed")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [self.SCOPE])
 
     def test_malformed_data_fails_closed(self):
@@ -170,7 +172,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.assertIsInstance(error, ValueError)
         self.assertIn("Incomplete or changed ENC", str(error))
         self.assertEqual(self._status(directory)["status"], "failed")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [self.SCOPE])
 
     def test_mixed_outage_then_hard_error_raises_hard_not_outage(self):
@@ -184,7 +186,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.assertFalse(output.is_file())
         self.assertFalse((directory / (self.SCOPE + ".unavailable.json")).is_file())
         self.assertEqual(self._status(directory)["status"], "failed")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [self.SCOPE])
         self.assertNotIn("upstream_unavailable", lines[1])
 
@@ -197,7 +199,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.assertFalse(output.is_file())
         self.assertFalse((directory / (self.SCOPE + ".unavailable.json")).is_file())
         self.assertEqual(self._status(directory)["status"], "failed")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [self.SCOPE])
 
     def test_success_then_outage_reports_outage_and_last_known_snapshot(self):
@@ -205,14 +207,14 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         # snapshot, which is only labeled last-known.
         directory = self._directory()
         output = directory / (self.SCOPE + ".geojson")
-        error, _ = self._run(self.SCOPE, output, {"default": "ok"})
+        error, _ = self._run(self.SCOPE, output, {"default": "ok"}, invocation=self.PRIOR)
         self.assertIsNone(error)
         first = json.loads(output.read_text())["checked_at"]
         error, _ = self._run(self.SCOPE, output, {"default": "transient"})
         self.assertIsNone(error)
         status = self._status(directory)
         self.assertEqual(status["status"], "upstream_unavailable")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [])
         self.assertIn("upstream_unavailable", lines[1])
         self.assertIn("last-known charted-danger snapshot from " + first, "\n".join(lines))
@@ -220,13 +222,13 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
     def test_outage_then_success_retires_outage(self):
         directory = self._directory()
         output = directory / (self.SCOPE + ".geojson")
-        error, _ = self._run(self.SCOPE, output, {"default": "transient"})
+        error, _ = self._run(self.SCOPE, output, {"default": "transient"}, invocation=self.PRIOR)
         self.assertIsNone(error)
         self.assertTrue((directory / (self.SCOPE + ".unavailable.json")).is_file())
         error, _ = self._run(self.SCOPE, output, {"default": "ok"})
         self.assertIsNone(error)
         self.assertEqual(self._status(directory)["status"], "success")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [])
         self.assertIn("charted features across 18 complete layer queries", lines[1])
         self.assertNotIn("upstream_unavailable", "\n".join(lines))
@@ -246,7 +248,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         self.assertIsNone(error)
         fresh = json.loads(output.read_text())["checked_at"]
         self.assertNotEqual(fresh, "2000-01-01T00:00:00Z")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [])
         self.assertIn(fresh, lines[1])
         self.assertNotIn("2000-01-01", "\n".join(lines))
@@ -255,14 +257,14 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         directory = self._directory()
         output = directory / (self.SCOPE + ".geojson")
         # Prior invocation produced a valid snapshot and terminal status.
-        error, _ = self._run(self.SCOPE, output, {"default": "ok"})
+        error, _ = self._run(self.SCOPE, output, {"default": "ok"}, invocation=self.PRIOR)
         self.assertIsNone(error)
         self.assertEqual(self._status(directory)["status"], "success")
         # New invocation hard-fails; the prior success must not satisfy the run.
         error, _ = self._run(self.SCOPE, output, {"enc_harbour": {0: "malformed_count"}})
         self.assertIsInstance(error, ValueError)
         self.assertEqual(self._status(directory)["status"], "failed")
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [self.SCOPE])
         self.assertIn("failed", lines[1])
 
@@ -272,7 +274,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
             output = directory / (scope + ".geojson")
             error, _ = self._run(scope, output, {"default": "ok"})
             self.assertIsNone(error)
-        lines, unhealthy = reporter.report_bound(directory)
+        lines, unhealthy = reporter.report_bound(directory, invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [])
         self.assertEqual(len([line for line in lines if "charted features across" in line]), 3)
 
@@ -281,7 +283,7 @@ class EncHazardInvocationBindingTests(unittest.TestCase):
         write_json(directory / (self.SCOPE + ".geojson"), {
             "status": "charted-danger-screen-only", "scope_id": self.SCOPE,
             "query_receipts": [{}] * 18, "features": [], "checked_at": "2000-01-01T00:00:00Z"})
-        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,))
+        lines, unhealthy = reporter.report_bound(directory, (self.SCOPE,), invocation=self.INVOCATION)
         self.assertEqual(unhealthy, [self.SCOPE])
         self.assertIn("no current invocation status", lines[1])
 

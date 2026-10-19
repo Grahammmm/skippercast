@@ -58,21 +58,50 @@ so one transient response aborted the whole three-service refresh.
 
 `research/scripts/report_enc_hazard_coverage.py` is the standalone inventory
 reporter the workflow calls (previously an inline block). Its entry point
-(`main`) uses `report_bound`, which binds each scope to its current-invocation
-`run-status.json` record rather than trusting whatever snapshot or receipt
-happens to be on disk:
+(`main`) uses `report_bound`, which binds each scope to the `run-status.json`
+record written for the **expected invocation** rather than trusting whatever
+snapshot or receipt happens to be on disk.
 
-- `success` — report the coverage from the snapshot named by the status, only
-  when the snapshot's `checked_at` matches the status record.
-- `upstream_unavailable` — report the outage from the receipt named by the
-  status, and label any historical valid snapshot as "last-known" (not current).
-- missing, corrupt, mismatched, `in-progress`, `failed` or any other nonterminal
-  status — fail closed (exit non-zero).
+### Invocation identity
 
-A prior snapshot or receipt can therefore never satisfy a new run: a fresh
-invocation overwrites the status record first, and a later `success` retires an
-obsolete active outage without erasing its receipt. The low-level `report()`
-helper (per-scope snapshot/receipt logic) is unchanged and remains unit-tested.
+One invocation is one workflow run attempt, or one named local operator run.
+The three refresh commands and the reporter resolve the same identity, in this
+order:
+
+1. an explicit `--invocation <id>` argument;
+2. the `ENC_INVOCATION_ID` environment variable;
+3. in GitHub Actions, `github:<GITHUB_RUN_ID>:<GITHUB_RUN_ATTEMPT>`. Every step
+   of a job sees the same value, and a rerun bumps the attempt, so attempt 2
+   never inherits attempt 1's output.
+
+The identity must match `[A-Za-z0-9][A-Za-z0-9._:-]{0,199}`; otherwise the
+refresh fails before any request. Each refresh records the identity in
+`<scope>.run-status.json` (and in an outage receipt), along with the artifact
+file name and the SHA-256 of its bytes. A refresh run with no identity records
+`"invocation": null`, which no reporter accepts.
+
+A scope is healthy only when **all** of these hold:
+
+- the reporter has an expected identity (with none, every scope fails closed);
+- the scope's status names exactly that identity (a status from an earlier run
+  or attempt, including a skipped scope's leftover `success`, `failed` or
+  `upstream_unavailable`, fails closed);
+- the status is terminal:
+  - `success`: the status names `<scope>.geojson`, whose bytes hash to the
+    recorded `artifact_sha256`, and whose `scope_id` and `checked_at` match.
+    Coverage is then reported from that snapshot;
+  - `upstream_unavailable`: the status names `<scope>.unavailable.json`, which
+    must pass the same hash, scope, `checked_at` and identity checks. The
+    outage is reported, and any historical valid snapshot is labeled
+    "last-known" (not current).
+- Anything else fails closed (exit non-zero): a missing, corrupt or
+  non-object status, `in-progress`, `failed`, or an artifact that is renamed,
+  missing, corrupt or has replaced bytes.
+
+A prior snapshot, receipt or status can therefore never satisfy a new run or
+attempt. A later `success` retires an obsolete outage without erasing its
+receipt. The low-level `report()` helper (per-scope snapshot/receipt logic) is
+unchanged and still unit-tested.
 
 No new hosts were added; all requests still go to the reviewed
 `encdirect.noaa.gov` host and are rejected otherwise by the existing
@@ -103,8 +132,13 @@ standard-library module):
 pip install -e '.[test]'
 python -m pytest \
   research/tests/test_enc_hazard_upstream_status.py \
-  research/tests/test_enc_hazard_invocation_binding.py -q
+  research/tests/test_enc_hazard_invocation_binding.py \
+  research/tests/test_enc_hazard_run_identity.py -q
 ```
+
+`test_enc_hazard_run_identity.py` keeps the review probe as regressions: a
+leftover status from an earlier run or attempt, a prior outage, a status naming
+the wrong artifact, and replaced artifact bytes must each fail the reporter.
 
 ### Offline with the survey stack (GIS / pyproj)
 
@@ -116,9 +150,13 @@ pip install -e '.[survey]'
 python -m pytest research/tests/gis/test_enc_hazard_refresh.py -q
 ```
 
-### Live, three scopes then the reporter
+### Live, three scopes then the reporter (local equivalent of one run)
+
+Name the run once and use that name for all four commands. A fresh name per
+run is what stops output from an earlier local run counting as this one:
 
 ```bash
+export ENC_INVOCATION_ID="local-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p var/research-daily/enc-hazards
 for scope in santa-barbara-island point-reyes-tomales h11967-greenwood-tile; do
   python research/scripts/refresh_enc_hazards.py \
@@ -127,11 +165,15 @@ done
 python research/scripts/report_enc_hazard_coverage.py --directory var/research-daily/enc-hazards
 ```
 
-The reporter exits non-zero whenever any scope's current-invocation status is
-not a terminal `success` or `upstream_unavailable` (including a missing, corrupt,
-mismatched, in-progress or failed status). A scope is reported healthy only on a
-matching `success` snapshot or an explicit current `upstream_unavailable`
-receipt.
+`--invocation "$ENC_INVOCATION_ID"` on each command is equivalent. In GitHub
+Actions no setup is needed: every step derives
+`github:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT`.
+
+The reporter exits non-zero when it has no expected identity, or when any
+scope's status is from another invocation or is not a bound terminal `success`
+or `upstream_unavailable` (see "Invocation identity" above). A scope is
+reported healthy only on this invocation's hash-matched `success` snapshot, or
+on this invocation's explicit `upstream_unavailable` receipt.
 
 ## Inventory-job validation (three consecutive green runs)
 
@@ -144,6 +186,7 @@ merged:
 2. For each run, record the run id and timestamp, confirm the "Refresh NOAA ENC
    danger review" steps and the "Report NOAA ENC danger-source coverage" step
    are green, and confirm each scope either produced a snapshot (18 layer
-   queries) or an explicit `upstream_unavailable` receipt bound to that run's
-   `run-status.json`.
+   queries) or an explicit `upstream_unavailable` receipt, with a
+   `run-status.json` whose `invocation` is `github:<run id>:<attempt>` for that
+   run (the reporter's summary heading prints the identity it expected).
 3. A red run for any other reason breaks the streak; fix and restart the count.
