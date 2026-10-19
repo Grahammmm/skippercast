@@ -38,7 +38,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
   "web/app/MapStage.tsx": "25a446d17624bf555b684077e0a56091cfa6f32a94a03560aaa5be54a85bd367",
   "web/tokens.css": "abab7f60f6ca701455bdf0957ff8654b8ad0ed30ba996306da5c7493e753af31",
-  "web/ui/ui.css": "bd194b2e3c9f9409dfc05fc17e400cbf5215959828c8e3c998d0f68e8b13b175",
+  "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
   "web/app/app.css": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
   "packages/coast/panel.css": "4d68d4d3817d0d0560870aad0598da38141440fe8142d949c50b96e9604eeee3",
   "packages/coast/tokens-bridge.css": "52dcf122b10be1f6e7bd04326131a6a9c388eef9efda91fb25a49bb79c22ff9e",
