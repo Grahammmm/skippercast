@@ -112,22 +112,29 @@ test('the commit production serves is traced from the live version\'s provenance
   assert.equal(liveCommit(laterLive, later), CUR_SHA);
 });
 
-test('a version_upload trigger is a code upload, like upload', () => {
-  const tagged = (id, at, message) => ({id, metadata: {created_on: at},
-    annotations: {'workers/triggered_by': 'version_upload', 'workers/message': message}});
-  // wrangler deploy 4.142.0 labels its versions "version_upload"; the message still names the commit.
-  const vUpload = tagged('f2b6afc8-0000-4000-8000-000000000001', '2026-10-20T17:08:00.000Z', `${CUR_SHA} run 39463174683`);
-  const prod = [deployment('d1', '2026-10-20T17:08:00.000Z', vUpload.id, 'wrangler')];
-  const traced = traceLiveCommit(prod, [vUpload]);
-  assert.equal(traced.commit, CUR_SHA, traced.reason);
-  assert.equal(liveCommit(prod, [vUpload]), CUR_SHA);
-  // A version_upload whose message is free-form or missing still names no commit.
-  for (const message of [undefined, `hotfix on top of ${CUR_SHA}`]) {
-    const untagged = tagged('f2b6afc8-0000-4000-8000-000000000002', '2026-10-20T17:08:00.000Z', message);
-    const got = traceLiveCommit([deployment('d1', '2026-10-20T17:08:00.000Z', untagged.id, 'wrangler')], [untagged]);
-    assert.equal(got.commit, '', got.reason);
-    assert.match(got.reason, /no "<sha> run <id>" deploy message/);
-  }
+test('a version made by "version_upload" (the pipeline\'s own wrangler deploy) is traced like "upload"', () => {
+  // Cloudflare annotates the pipeline's `wrangler deploy --message "<sha> run <id>"` as "version_upload".
+  const code = (id, at, message, triggeredBy) => ({
+    id, metadata: {created_on: at, source: 'wrangler', author_email: 'ci@example.com'},
+    annotations: message ? {'workers/message': message, 'workers/triggered_by': triggeredBy}
+                         : {'workers/triggered_by': triggeredBy},
+  });
+  const vCode = code(CUR_CODE, '2026-10-11T09:00:00.000Z', `${CUR_SHA} run 38173947179`, 'version_upload');
+  const versions = [VERSIONS[0], VERSIONS[1], vCode, VERSIONS[3]];
+  assert.equal(liveCommit(DEPLOYMENTS.slice(0, 3), versions), CUR_SHA, 'the code upload itself');
+  assert.equal(liveCommit(DEPLOYMENTS, versions), CUR_SHA, 'a secrets change chained onto the version_upload');
+
+  // A free-form message names no commit, whatever the trigger.
+  const freeform = code(CUR_CODE, '2026-10-11T09:00:00.000Z', `hotfix on top of ${CUR_SHA}`, 'version_upload');
+  const freeformTrace = traceLiveCommit(DEPLOYMENTS.slice(0, 3), [VERSIONS[0], VERSIONS[1], freeform, VERSIONS[3]]);
+  assert.equal(freeformTrace.commit, '');
+  assert.match(freeformTrace.reason, /no "<sha> run <id>" deploy message/);
+
+  // A version_upload with no message is unknown, never guessed.
+  const missing = code(CUR_CODE, '2026-10-11T09:00:00.000Z', null, 'version_upload');
+  const missingTrace = traceLiveCommit(DEPLOYMENTS.slice(0, 3), [VERSIONS[0], VERSIONS[1], missing, VERSIONS[3]]);
+  assert.equal(missingTrace.commit, '');
+  assert.match(missingTrace.reason, /no "<sha> run <id>" deploy message/);
 });
 
 test('the production listing shape (version_upload at 100%, "<sha> run <id>") is traced', () => {

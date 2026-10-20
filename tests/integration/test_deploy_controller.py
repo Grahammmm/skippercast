@@ -100,6 +100,9 @@ def step(name):
 
 
 def code(version_id, at, sha, trigger='version_upload'):
+    # Cloudflare annotates the pipeline's own `wrangler deploy --message "<sha> run <id>"`
+    # as "version_upload", not "upload" (the value offline fixtures used to assume). The
+    # trigger parameter keeps the older "upload" vocabulary covered.
     return {'id': version_id, 'metadata': {'created_on': at, 'source': 'wrangler'},
             'annotations': {'workers/triggered_by': trigger, 'workers/message': sha + ' run 1'}}
 
