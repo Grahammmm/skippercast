@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Temp contrast, a new map layer that is off by default: it shows the change in sea-surface temperature per nautical mile in the region's published daily analysis. It draws only cells whose change exceeds the summed analysis error and is withheld past 72 hours (CI6-03).
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.

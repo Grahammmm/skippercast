@@ -1,7 +1,8 @@
 // The region's published ocean layers (#491, #482): `habitat-dynamics.json` from the conditions feed
 // (src/skippercast/pipeline/habitat_dynamics.py) and the tiles it lists, read in the browser for a
 // place that binds no local coast report: the surface-temperature analysis for Water temp and the
-// WCOFS surface forecast for Currents.
+// WCOFS surface forecast for Currents. Temp contrast (CI6-03) reads the same analysis with its two
+// gradient fields for every region, bound or not (`regionalContrast`).
 //
 // - Checks, as the retired v1 loader's (dist/habitat-data.js before FE-61): the manifest names its
 //   own region; each tile path sits in that region's folder; each tile's bytes match the manifest's
@@ -93,6 +94,8 @@ interface Layer {
   readonly maxAgeMs: number;
   readonly product: string;
   readonly fetchedAt: string | null;
+  /** The source's own credit line (`rights.attribution`), or ''. */
+  readonly credit: string;
   readonly url: string;
 }
 
@@ -112,6 +115,7 @@ function layerOf(data: unknown, regionId: string, id: string, kind: string, need
   return {id, raw: l, fields: l.fields as string[], resolution: l.resolution_degrees as [number, number], stride, status: l.status, maxAgeMs: l.max_age_hours * HOUR,
     frames: l.frames as {time: number}[], tiles: l.tiles as Record<string, unknown>[], sourceId: typeof l.source_id === 'string' && l.source_id ? l.source_id : id,
     product: productName(source.name), fetchedAt: instant(source.data_retrieved_at),
+    credit: object(source.rights) && typeof source.rights.attribution === 'string' ? source.rights.attribution.trim() : '',
     url: typeof source.url === 'string' && /^https:\/\//.test(source.url) ? source.url : typeof l.source_url === 'string' ? l.source_url : ''};
 }
 
@@ -191,6 +195,64 @@ export async function regionalSST(regionId: string, o: ReadOptions): Promise<Reg
     }
     return {state: 'ready', product: layer.product, maxAgeMs: layer.maxAgeMs, sst: {sourceId: layer.sourceId, analysedAt: analysedAt!, fetchedAt: layer.fetchedAt,
       nativeResolutionDeg: lat, sampleSpacingDeg: lat * layer.stride, points, url: layer.url, kind: 'analysis'}};
+  } catch (error) {
+    if (o.signal?.aborted) throw error;
+    return {state: 'error'};
+  }
+}
+
+/** One analysis cell for Temp contrast, in the tile's own units (°C, °C per km); null where the tile has none. */
+export interface ContrastSample {
+  readonly lat: number;
+  readonly lon: number;
+  readonly tempC: number | null;
+  readonly errorC: number | null;
+  /** The pipeline's centred native-grid gradient (habitat_dynamics.py `gradients`). */
+  readonly gradientCPerKm: number | null;
+  /** 1 where the change across a pair of neighbours exceeds their summed analysis error, 0 where it does not, null where it cannot be judged. */
+  readonly supported: 0 | 1 | null;
+}
+
+/** What the region's feed offers Temp contrast: the same layer as Water temp, with its two gradient fields. */
+export type RegionalContrast =
+  | {readonly state: 'none'}
+  | {readonly state: 'error'}
+  /** Listed but not loaded, as for Water temp, or the layer carries no gradient fields (`gradients: false`). */
+  | {readonly state: 'listed'; readonly product: string; readonly analysedAt: string | null; readonly maxAgeMs: number; readonly layerStatus: string; readonly gradients: boolean}
+  /** Every tile passed: the latest frame's cells, open water only. */
+  | {readonly state: 'ready'; readonly product: string; readonly sourceId: string; readonly analysedAt: string; readonly fetchedAt: string; readonly maxAgeMs: number;
+    /** Native spacing (latitude, longitude) times the layer's stride, degrees: the neighbour spacing and the drawn cell's size. */
+    readonly spacingDeg: readonly [number, number]; readonly nativeResolutionDeg: number; readonly url: string; readonly credit: string; readonly samples: readonly ContrastSample[]};
+
+const GRADIENT_FIELDS = ['temperature_gradient_c_per_km', 'thermal_contrast_supported'] as const;
+
+/**
+ * The region's surface-temperature analysis with its gradient fields, for Temp contrast. The same checks and gate
+ * as `regionalSST`: tiles are read only for a layer whose own status is `ok` or `retained`, whose latest frame is
+ * within its own age limit at `now`, and that names its retrieval. A layer without the two gradient fields is listed,
+ * never drawn.
+ */
+export async function regionalContrast(regionId: string, o: ReadOptions): Promise<RegionalContrast> {
+  try {
+    const found = await manifestLayer(regionId, o, data => layerOf(data, regionId, SST_LAYER_ID, 'analysis', ['temperature_c', 'analysis_error_c']));
+    if (typeof found === 'string') return {state: found};
+    const {layer, manifestURL, get} = found, latest = populated(layer).at(-1) ?? null;
+    const analysedAt = latest === null ? instant(layer.raw.sample_at) : new Date(latest * 1000).toISOString();
+    const age = analysedAt === null ? NaN : o.now.getTime() - Date.parse(analysedAt);
+    const gradients = GRADIENT_FIELDS.every(f => layer.fields.includes(f));
+    if (!gradients || !loads(layer) || latest === null || !(age < layer.maxAgeMs) || !layer.fetchedAt)
+      return {state: 'listed', product: layer.product, analysedAt, maxAgeMs: layer.maxAgeMs, layerStatus: layer.status, gradients};
+    const rows = await allRows(get, manifestURL, regionId, layer);
+    const [t, e, g, s] = ['temperature_c', 'analysis_error_c', ...GRADIENT_FIELDS].map(f => layer.fields.indexOf(f)) as [number, number, number, number];
+    const value = (v: unknown): number | null => numeric(v) ? v : null;
+    const samples = (rows.get(latest) ?? []).map((r): ContrastSample => {
+      const error = value(r[e]), flag = r[s];
+      return {lat: r[0] as number, lon: r[1] as number, tempC: value(r[t]), errorC: error !== null && error >= 0 ? error : null, gradientCPerKm: value(r[g]),
+        supported: flag === 1 || flag === true ? 1 : flag === 0 || flag === false ? 0 : null};
+    });
+    const [lat, lon] = layer.resolution;
+    return {state: 'ready', product: layer.product, sourceId: layer.sourceId, analysedAt: analysedAt!, fetchedAt: layer.fetchedAt, maxAgeMs: layer.maxAgeMs,
+      spacingDeg: [lat * layer.stride, lon * layer.stride], nativeResolutionDeg: lat, url: layer.url, credit: layer.credit, samples};
   } catch (error) {
     if (o.signal?.aborted) throw error;
     return {state: 'error'};

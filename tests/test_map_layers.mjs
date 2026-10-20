@@ -26,7 +26,7 @@ const sentinel = readPalette(name => `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
-const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'swell', 'mpas', 'habitat',
+const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'swell', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
   'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'coastline'];
 
@@ -38,7 +38,7 @@ test('the registry is in § 9 draw order and every entry declares its presentati
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
     assert.match(e.basis, /^[A-Z].+\.$/, `${e.id} basis is one sentence`);
-    assert.match(e.task, /^FE-\d+$/);
+    assert.match(e.task, /^(FE|CI\d+)-\d+$/, `${e.id} names its dev-plan or roadmap task`);
   }
   assert.equal(new Set(LAYERS.map(e => e.id)).size, LAYERS.length, 'ids are unique');
   const owned = LAYERS.flatMap(e => e.sources);

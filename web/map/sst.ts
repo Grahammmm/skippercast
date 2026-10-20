@@ -38,6 +38,7 @@ import type {Report} from '../../packages/coast/src/types.ts';
 import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
+import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
@@ -281,8 +282,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under the swell field when it is drawn, else under the protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, MPA_FILL]);
+      // § 9 order: under Temp contrast, else the swell field, else the protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),
