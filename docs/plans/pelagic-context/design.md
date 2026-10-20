@@ -287,10 +287,22 @@ search of `web/`, `dist/*.js` and `packages/coast/src` on this branch finds
 no search-strip code. This design does not revive the strips or their
 priority tiers. The step should be marked retired in that doc.
 
-This answer was checked directly on this branch because the CI6-12
-read-only card (t_02a40500) had not run when this was written; CI6-12 should
-confirm it, and the doc update belongs to whichever card the orchestrator
-assigns.
+This is CI6-12's answer. The read-only card (t_02a40500, completed
+2026-10-20) answered B3:
+
+> Retired in v2: section 5 still describes three-cell search strips
+> (`docs/species-search-plans.md:11`), but there is no matching strip
+> implementation in `web/`, `dist/*.js` or `packages/coast/src`; the old
+> `dist/search-plan-data.js` was deleted by `dabb9c249` (Remove the v1 shell
+> and v1 coastal modules, #561; see deletion in that commit).
+
+Each piece of that evidence was rechecked against `origin/main` 253ff7052.
+`docs/species-search-plans.md:11` is the strip step. `git show --stat
+dabb9c249` lists `dist/search-plan-data.js` as deleted. A case-insensitive
+search for `search.strip`, `searchStrip` and `ocean-transition` in `web/`,
+`dist/*.js` and `packages/coast/src` returns no files. Marking the step
+retired in species-search-plans.md is left to whichever card the orchestrator
+assigns; this PR stays design-only.
 
 ## 6. Owner decisions (acceptance 5)
 
