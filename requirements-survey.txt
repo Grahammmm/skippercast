@@ -14,3 +14,5 @@ pyshp==3.1.6
 pypdf==6.19.0
 laspy[lazrs]==2.7.0
 lazrs==0.8.2
+# Coastal mapping validates its input and review contracts (terrain_only.verify).
+jsonschema==4.26.0

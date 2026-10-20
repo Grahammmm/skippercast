@@ -28,7 +28,9 @@ overlapping footprints, so cores are never merged.
 Nothing here reads a source, downloads or writes outside ``<prep-root>``
 (renders go to ``core-<X>/<output-dir>``; the receipt defaults to
 ``<prep-root>/t13-receipt.json``). Exit codes: 0 PASS, 3 PARTIAL (some cores
-held by their reviewer, the rest pass), 1 FAIL, 2 usage error.
+held by their reviewer, the rest pass), 1 FAIL, 2 usage error or a missing
+dependency (numpy, rasterio, and for ``run`` jsonschema; one stderr line names
+them before any core is touched).
 
     PYTHONPATH=src python -B research/scripts/check_terrain_acceptance.py run \\
         --prep-root <prep-root> --expect-cores 4 [--style style.json]
@@ -36,6 +38,7 @@ held by their reviewer, the rest pass), 1 FAIL, 2 usage error.
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib
 import json
 import os
 from pathlib import Path
@@ -644,6 +647,30 @@ def git_identity(pythonpath):
         return dict(sha=None, dirty=None, checkout=str(top))
 
 
+def preflight_modules(args):
+    """Modules this run imports: the checks need numpy and rasterio; ``run`` also
+    launches the renderer, whose ``terrain_only.verify`` needs jsonschema. A
+    renderer on another ``--python`` reports its own missing jsonschema as the
+    ``terrain_only_dependency:jsonschema`` hold."""
+    names = ['numpy', 'rasterio']
+    if args.mode == 'run' and Path(args.python).resolve() == Path(sys.executable).resolve():
+        names.append('jsonschema')
+    return names
+
+
+def missing_dependencies(names):
+    """The per-name dependency loop of coastal/cli.py runtime_identity and
+    coordinator/loop.py implementation_hashes, but importing each module:
+    installed metadata alone does not prove it loads in this interpreter."""
+    missing = []
+    for name in names:
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            missing.append(name)
+    return missing
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('run', 'verify'))
@@ -661,6 +688,11 @@ def main(argv=None):
     parser.add_argument('--timeout-s', type=int, default=RENDER_TIMEOUT_S)
     parser.add_argument('--reviewer', default='opus-coder', help='recorded as the requested reviewer')
     args = parser.parse_args(argv)
+
+    missing = missing_dependencies(preflight_modules(args))
+    if missing:
+        print(f"{', '.join(missing)} required: install skippercast[survey] into {sys.prefix}", file=sys.stderr)
+        return 2
 
     prep_root = args.prep_root.resolve()
     receipt_path = (args.receipt or prep_root / 't13-receipt.json').resolve()

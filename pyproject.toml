@@ -33,6 +33,8 @@ survey = [
     "pypdf==6.19.0",
     "laspy[lazrs]==2.7.0",
     "lazrs==0.8.2",
+    # Coastal mapping validates its input and review contracts (terrain_only.verify).
+    "jsonschema==4.26.0",
 ]
 # Publishing feeds to Cloudflare R2 (requirements-publish.txt). jsonschema turns on
 # validate-on-write, so a feed that does not match schemas/ is never published.
