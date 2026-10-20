@@ -1,7 +1,10 @@
 """SC-4 source census and complete disposition coverage; no private data needed."""
+import ast
 from collections import Counter
 import hashlib
 import json
+import os
+from pathlib import Path
 import re
 import sys
 
@@ -196,10 +199,56 @@ def test_committed_supplemental_counts_and_test_handoff():
         assert set(paths) <= {r["path"] for r in tests}
 
 
-@pytest.mark.parametrize("candidate", ["discover.py", "quality.py"])
-def test_vertical_quality_coverage_travels_with_both_candidates(candidate):
+def coastal_references(source):
+    """Find all imported names and qualified references without executing source."""
+    names = {
+        alias.name
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.ImportFrom) and node.module == "skippercast.coastal"
+        for alias in node.names
+    }
+    # Include dotted imports, attributes and string-based patch/import targets.
+    names.update(re.findall(r"\bskippercast\.coastal\.([A-Za-z_]\w*)\b", source))
+    return names
+
+
+def test_coastal_references_include_all_names_and_nested_imports():
+    source = '''
+from skippercast.coastal import discover as d, quality as q
+def nested():
+    from skippercast.coastal import (
+        formats as f,
+        gsf_resume,
+    )
+import skippercast.coastal.holds as h
+skippercast.coastal.quality.inspect_native()
+target = "skippercast.coastal.formats.inspect_gsf"
+raise RuntimeError("source must never execute")
+'''
+    assert coastal_references(source) == {
+        "discover", "quality", "formats", "gsf_resume", "holds",
+    }
+
+
+def test_snapshot_importers_are_in_candidate_handoffs():
+    snapshot_path = os.environ.get("SKIPPERCAST_COASTAL_SNAPSHOT", "")
+    if not snapshot_path or not Path(snapshot_path).exists():
+        pytest.skip("Retained coastal source snapshot unavailable; committed inventory checked separately")
+    snapshot = Path(snapshot_path)
+    evidence = json.loads(REPORT.read_text())
     text = REPORT.with_suffix(".md").read_text()
     table = text.split("| Candidate | Required test files |", 1)[1].split("In particular,", 1)[0]
     handoffs = re.findall(r"^\| `([^`]+\.py)` \| (.+) \| (.+) \|$", table, re.M)
-    required = next(required for name, required, _ in handoffs if name == candidate)
-    assert "tests/gis/test_quality_vertical.py" in re.findall(r"`([^`]+\.py)`", required)
+    candidates = {
+        name.removesuffix(".py"): set(re.findall(r"`([^`]+\.py)`", required + shared))
+        for name, required, shared in handoffs
+    }
+    missing = []
+    for row in evidence["snapshot_only_tests"]:
+        source = audit.source_bytes(snapshot / row["path"], snapshot)
+        assert audit.identity(source) == {key: row[key] for key in ("bytes", "sha256")}, row["path"]
+        references = coastal_references(source.decode("utf-8"))
+        for candidate, paths in candidates.items():
+            if candidate in references and row["path"] not in paths:
+                missing.append(f"{candidate}.py: {row['path']}")
+    assert not missing, "Missing snapshot importer handoffs:\n" + "\n".join(missing)
