@@ -10,23 +10,38 @@ located through the T08-FIX task `t_e210296e`, not an assumed Git tag. Its
 uncommitted source bytes are the authority for this comparison. The comparison
 baseline is main at `bde9c6dff45dfdf7b813ee217f0bfde058d4b274`; a later merge
 requires a new comparison, not a silent change of this baseline.
+During review rework, main advanced to `10ea2783f93099bb487d77f4cdfea9db084696e6`
+(Grahammmm/skippercast#734 merged). A second source census at that revision
+matched the pinned inventory exactly apart from `main_revision`; the historical
+baseline remains unchanged. Main-only additions are not snapshot-only paths.
 
 This implements Fable audit S1 / Part 2 SC-4 (audit SHA256
 `41fdd644cefe0138ecd6fdb6cc734b56054bf3cc0d488c3e927a40f84595e842`).
-The exact census replaces the audit's approximate “17–25”: recursively compare
-all Python source paths in `src/skippercast/coastal/`, including package
-initializers, against the pinned Git tree. There are **68 snapshot Python
-files: 17 absent paths, 31 byte-identical paths, and 20 differing existing
-paths**. The latter are not missing modules and are not ports authorized here.
-Skill helpers, C readers, JSON schemas, tests, and research harnesses are not
-additional Python modules in this census.
+The audit's approximate “17–25” is resolved here into explicitly scoped counts,
+not a claim that the whole snapshot contains only 17 absent Python files.
+The coastal package census recursively compares `src/skippercast/coastal/**/*.py`,
+including initializers, against the pinned Git tree: **68 files, comprising
+17 absent paths, 31 byte-identical paths, and 20 differing existing paths**.
+SC-4 does not inventory function-level drift within those 20 existing paths;
+they are not ports authorized here.
+
+A supplemental absent-path census scans Python files under `src/`, `scripts/`,
+`skills/`, `research/`, and `tests/`, excluding `.git`, `.venv`, `__pycache__`,
+`node_modules`, and `var` directories. It finds **3 additional non-test modules,
+78 test/fixture files under tests/, and 1 research test**: **99 snapshot-only
+Python files** across the admitted scopes. It does not scan arbitrary snapshot
+root directories or count C/JSON resources as Python modules.
 
 [Machine-readable evidence](coastal-snapshot-2026-10-20.json) records all 68
 paths, byte counts and full SHA256s on both sides, the sorted snapshot-source
-manifest digest, six existing skill-script counterparts, and separately the
-snapshot-only packaged resources. The resource list is dependency context, not
-an instruction to copy them. The snapshot path label alone is not an integrity
-pin; the per-file hashes are. Only source and resource files were read: no
+manifest digest, six existing skill-script counterparts, and separate path,
+byte-count and SHA256 lists for all 3 supplemental modules, all 79 test/fixture
+files, the Hermes adapter's `SKILL.md`, and snapshot-only packaged resources.
+The resource list is dependency context, not an instruction to copy them.
+Resources are assumed flat; a missing directory, nested directory or symlink
+fails closed rather than silently omitting dependencies. The snapshot path
+label alone is not an integrity pin; the per-file hashes are. Only source,
+test, documentation and resource files were read: no
 survey bytes, mission databases, canonical ledgers, or live receipts.
 
 Definitions:
@@ -35,14 +50,14 @@ Definitions:
   stage. This is not a mandate to copy the snapshot implementation. Reconcile
   with the existing owner and implementation first; conditional GSF work is
   not a prerequisite for a BAG-only mission.
-- **retire**: remove this *snapshot package path* from the phase-4 port queue.
+- **retire**: remove this *snapshot source path* from the phase-4 port queue.
   Preserve the snapshot, historical receipts and existing skill helpers. This
   does not delete code or declare unrelated broader-source/browser use cases
   complete; explicit future scope may reopen a row.
 - All dispositions are proposals for independent review, not scientific,
   installed-runtime, execution, or publication acceptance.
 
-## Complete disposition table
+## Coastal package disposition table
 
 Snapshot anchors below are relative to `src/skippercast/coastal/` in the
 hash-pinned snapshot. Main anchors refer to the baseline above. Each absent
@@ -68,16 +83,72 @@ module appears exactly once.
 | `validate_handoff.py` | retire | Optional paired website-display v2 consumer, not the terrain-only SC-5 gate: requires imagery and website-display review (109–135). The tracked map skill `scripts/validate_handoff.py` already implements this legacy consumer; main also has distinct `handoff/render.py` verification. Do not equate those different contracts or port a duplicate solely because this package path is absent. |
 | `validate_terrain_display_handoff.py` | retire | Render → website, outside private preview: requires `terrain-display-handoff-v1` schema (22–23) and display rights/loader/accessibility/performance review (197–210); that schema is absent from main package resources. Preserve this candidate with its schema for a separately specified website consumer. Main terrain-only science/render acceptance is not public display acceptance. |
 
-Totals: **5 needed-by-stage candidates, 12 scoped retirements; 17/17 covered**.
+Package totals: **5 needed-by-stage candidates, 12 scoped retirements; 17/17
+absent package paths covered** (not function-level coverage).
 The five candidates form discovery/sample-observation consolidation work;
 three (`formats`, `gsf_resume`, `holds`) are conditional on admitting GSF.
 There is no recommendation to copy all five to complete a BAG-only chain.
+
+## Outside the coastal package
+
+These anchors are relative to the snapshot root, not the coastal package.
+The supplemental JSON scope reproduces these three missing non-test paths.
+
+| Snapshot module | Disposition | Stage / reason and main alternative or follow-up |
+| --- | --- | --- |
+| `scripts/build_schema_resources.py` | needed-by-stage | SC-6 installed closure: `build` (12–26) mirrors canonical schemas into package resources; `--check` (29–40) detects drift without writes. Retain as a build-time reconciliation candidate, not proof that main's wheel is closed. Reconcile current schema/resource ownership before any port; carry `tests/contract/test_coastal_package.py:27–57` for byte-exact registry and no-mutation checks. No schema copied or builder executed here. |
+| `skills/hermes/skippercast-coastal/tool.py` | retire | Optional Hermes adapter, together with its hash-recorded `SKILL.md`: lines 4–7 call `coastal.cli.main` with `--client`, which pinned main's inspection-only CLI does not expose. Retire alongside `hermes_client.py` and `hermes_preflight.py`, rather than installing a broken adapter or restoring queue/review writes. The skill's lines 8–12 explicitly say uninstalled and require separate access authorization. Preserve both historical files; no profile or gateway changes. |
+| `skills/skippercast-discover-coastal-sources/scripts/asset_selection.py` | retire | Compatibility shim (2–6), importing the absent `coastal.asset_selection.main`. Retire together with the package row, not as an independent missing selection capability. SC-3 keeps ownership of the frozen-catalog bridge; retain the shim as historical invocation evidence without claiming its historical handoff is pipeline-ready. |
+
+Non-test totals across both tables: **6 needed-by-stage, 14 retire; 20/20
+snapshot-only non-test Python paths covered**. This adds one SC-6 build-time
+candidate, not a sixth discovery-family candidate or a new SC-5 prerequisite.
+
+## Test and fixture handoff
+
+The JSON's `snapshot_only_tests` records **78 tests/fixture Python files under
+tests/ plus 1 research test**, each with its relative path, bytes and SHA256.
+They are retained as source evidence, not copied or run. Many exercise modules
+already on main; missing tests are not evidence that their subjects are missing.
+The 12 package retirements (14 with the supplemental shims) create no automatic
+test-port requirement. They do not authorize deleting any historical tests.
+
+For each of the five package candidates, the following tests must travel with
+the capability during reconciliation (port or adapt with equivalent coverage,
+not blindly restore obsolete interfaces). Paths are snapshot-root relative.
+
+| Candidate | Required test files | Shared fixture / closure dependencies |
+| --- | --- | --- |
+| `discover.py` | `tests/unit/test_coastal_source_discovery.py`; `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_formats_native.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `formats.py` | `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_coastal_source_formats_native.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `gsf_resume.py` | `tests/unit/test_gsf_resume.py`; `tests/integration/test_coastal_gsf_recovery.py` | `tests/coastal_gsf_support.py`; `tests/contract/test_coastal_package.py` |
+| `holds.py` | `tests/unit/test_coastal_source_formats.py`; `tests/unit/test_gsf_resume.py`; `tests/integration/test_coastal_gsf_recovery.py` | `tests/coastal_support.py`; `tests/coastal_gsf_support.py`; `tests/contract/test_coastal_package.py` |
+| `quality.py` | `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_quality_native.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/unit/test_coastal_source_formats.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+
+In particular, `test_coastal_source_formats.py:90–121` exercises the shared hold
+classifier without native decoding; `test_gsf_resume.py:97–101` exercises its
+continuation result. `test_coastal_gsf_recovery.py:16–80` covers parent-loss
+recovery without renewing reservations or deadlines. The shared package test
+mixes retained and retired CLI cases: preserve applicable resource/CLI checks,
+but do not reinstate retired paths just to satisfy its old module list.
+Also reconcile the existing `tests/_support.py` helpers (`ROOT`, `FakeClock`),
+test configuration, versioned schemas, and pinned optional reader dependencies.
+Passing an optional-reader absence branch is not evidence of native GSF coverage.
+
+The supplemental `research/tests/test_coastal_four128_runtime.py` is
+**needed-by-stage (bounded execution/runtime regression)**: it covers clocks,
+finite resource argv, read-only interrupted SQLite evidence and review bindings
+(25–134) for `research/scripts/coastal_four128_runtime.py`, already on main.
+Retain/reconcile these tests with the current runtime owner rather than treating
+them as a missing runtime port or executing the historical harness. This is the
+one research-test entry in the JSON, separate from the 20 non-test dispositions.
 
 ## Dependency and ownership handoff
 
 1. **SC-2 / SC-3, not a new discovery implementation:** Grahammmm/skippercast#734
    was OPEN at observed head `0b9f0d8869c7e6187f59f353863e2760855c6807` during
-   this audit; it is not evidence in the pinned main census. SC-2 owns the
+   the initial audit and has since merged at the revision noted above; it is
+   not evidence in the historical pinned-main census. SC-2 owns the
    governed live discovery route; SC-3 owns the catalog-to-coordinator bridge.
    Use the discovery-family rows to reconcile equivalent capabilities and
    explicitly defer unsupported source formats, not to enlarge their tasks
@@ -123,12 +194,14 @@ Expected output:
 
 ```text
 PASS: source inventory matches; {"different": 20, "identical": 31, "snapshot-only": 17}
+Snapshot-only scopes: {"coastal_modules": 17, "outside_package_modules": 3, "python_total": 99, "research_tests": 1, "tests": 78}
 ```
 
 The script compares actual source bytes with Git objects and emits stable,
 host-path-free metadata. The JSON can be reproduced without network access;
 the local snapshot is required and absence is an explicit error. Its digest
 is an integrity check, not semantic acceptance of the dispositions. Acceptance
-also checks unique table coverage against the 17 absent paths, counterparty
-paths at the baseline, and a documentation/research-only Git diff. Product/GIS
+also checks unique table coverage against the 20 absent non-test paths, all 79
+test/fixture identities, the five candidates' test handoff, counterparty paths
+at the baseline, and a documentation/research-only Git diff. Product/GIS
 execution and the full app build are not evidence required for this inventory.

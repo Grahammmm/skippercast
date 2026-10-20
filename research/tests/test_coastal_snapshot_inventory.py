@@ -20,6 +20,12 @@ def source(tmp_path, monkeypatch):
     for name, data in {"same.py": b"same\n", "changed.py": b"after\n", "discover.py": b"raise RuntimeError('never import')\n"}.items():
         (base / name).write_bytes(data)
     (base / "resources/new.schema.json").write_text("{}")
+    for name in ("scripts/build_schema_resources.py", "tests/unit/test_fixture.py",
+                 "research/tests/test_runtime.py", "tests/var/ignored.py",
+                 "var/never_read.py", "skills/hermes/skippercast-coastal/SKILL.md"):
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("raise RuntimeError('never execute snapshot')\n")
     tracked = {
         audit.PREFIX + "same.py": b"same\n",
         audit.PREFIX + "changed.py": b"before\n",
@@ -47,6 +53,15 @@ def test_census_reads_without_importing_and_is_stable(source):
     assert row["path"] == audit.PREFIX + "discover.py"
     assert row["skill_counterpart"]["byte_identical_to_snapshot"] is False
     assert len(result["snapshot_only_resources"]) == 1
+    assert result["snapshot_only_counts"] == {
+        "coastal_modules": 1, "outside_package_modules": 1,
+        "tests": 1, "research_tests": 1, "python_total": 4,
+    }
+    assert [r["path"] for r in result["snapshot_only_outside_package"]] == ["scripts/build_schema_resources.py"]
+    assert [r["path"] for r in result["snapshot_only_tests"]] == [
+        "research/tests/test_runtime.py", "tests/unit/test_fixture.py",
+    ]
+    assert len(result["snapshot_only_documents"]) == 1
     assert str(root) not in json.dumps(result)
 
 
@@ -61,6 +76,45 @@ def test_symlink_source_fails(source):
     (base / "alias.py").symlink_to(base / "same.py")
     with pytest.raises(ValueError, match="symlink"):
         audit.inventory(root, root, "fixture")
+
+
+@pytest.mark.parametrize("name", ["tests/alias.py", "scripts/alias.py"])
+def test_supplemental_symlink_fails(source, name):
+    root, base = source
+    (root / name).symlink_to(base / "same.py")
+    with pytest.raises(ValueError, match="symlink"):
+        audit.inventory(root, root, "fixture")
+
+
+def test_symlink_directory_fails(source):
+    root, base = source
+    (root / "tests/alias").symlink_to(base, target_is_directory=True)
+    with pytest.raises(ValueError, match="symlink source directory"):
+        audit.inventory(root, root, "fixture")
+
+
+def test_missing_resources_fails_clearly(source):
+    root, base = source
+    (base / "resources").rename(base / "old-resources")
+    with pytest.raises(ValueError, match="resources directory missing"):
+        audit.inventory(root, root, "fixture")
+
+
+def test_nested_resources_fail_closed(source):
+    root, base = source
+    (base / "resources/nested").mkdir()
+    with pytest.raises(ValueError, match="nested resource"):
+        audit.inventory(root, root, "fixture")
+
+
+@pytest.mark.parametrize("name", ["tests/unit/test_fixture.py", "research/tests/test_runtime.py",
+                                  "scripts/build_schema_resources.py",
+                                  "skills/hermes/skippercast-coastal/SKILL.md"])
+def test_supplemental_hash_detects_drift(source, name):
+    root, _ = source
+    before = audit.inventory(root, root, "fixture")
+    (root / name).write_text("changed source\n")
+    assert before != audit.inventory(root, root, "fixture")
 
 
 def test_check_detects_changed_source(source, monkeypatch, capsys):
@@ -92,8 +146,51 @@ def test_committed_inventory_and_dispositions_are_complete():
     text = REPORT.with_suffix(".md").read_text()
     dispositions = re.findall(r"^\| `([^`]+\.py)` \| (retire|needed-by-stage) \| (.+) \|$", text, re.M)
     absent = {row["path"].removeprefix(audit.PREFIX) for row in rows if row["comparison"] == "snapshot-only"}
-    assert len(dispositions) == len({path for path, _, _ in dispositions}) == len(absent) == 17
+    absent.update(row["path"] for row in evidence["snapshot_only_outside_package"])
+    assert len(dispositions) == len({path for path, _, _ in dispositions}) == len(absent) == 20
     assert {path for path, _, _ in dispositions} == absent
-    assert Counter(decision for _, decision, _ in dispositions) == {"retire": 12, "needed-by-stage": 5}
+    assert Counter(decision for _, decision, _ in dispositions) == {"retire": 14, "needed-by-stage": 6}
     assert all(len(reason) > 80 for _, _, reason in dispositions)
     assert "/home/" not in text + REPORT.read_text()
+
+
+def test_committed_supplemental_counts_and_test_handoff():
+    evidence = json.loads(REPORT.read_text())
+    assert evidence["schema"] == "coastal-snapshot-inventory-v2"
+    assert evidence["supplemental_scope"] == [name + "/**/*.py" for name in audit.SOURCE_DIRS]
+    assert evidence["excluded_directories"] == sorted(audit.EXCLUDED_DIRS)
+    outside = evidence["snapshot_only_outside_package"]
+    tests = evidence["snapshot_only_tests"]
+    assert {r["path"] for r in outside} == {
+        "scripts/build_schema_resources.py", "skills/hermes/skippercast-coastal/tool.py",
+        "skills/skippercast-discover-coastal-sources/scripts/asset_selection.py",
+    }
+    counts = {
+        "coastal_modules": sum(r["comparison"] == "snapshot-only" for r in evidence["modules"]),
+        "outside_package_modules": len(outside),
+        "tests": sum(r["path"].startswith("tests/") for r in tests),
+        "research_tests": sum(r["path"].startswith("research/tests/") for r in tests),
+    }
+    counts["python_total"] = sum(counts.values())
+    assert counts == evidence["snapshot_only_counts"] == {
+        "coastal_modules": 17, "outside_package_modules": 3,
+        "tests": 78, "research_tests": 1, "python_total": 99,
+    }
+    assert len(tests) == len({r["path"] for r in tests}) == 79
+    assert [r["path"] for r in tests if r["path"].startswith("research/")] == [
+        "research/tests/test_coastal_four128_runtime.py",
+    ]
+    assert [r["path"] for r in evidence["snapshot_only_documents"]] == list(audit.SUPPORTING_DOCUMENTS)
+    for row in outside + tests + evidence["snapshot_only_documents"]:
+        assert re.fullmatch(r"[0-9a-f]{64}", row["sha256"])
+        assert isinstance(row["bytes"], int) and row["bytes"] > 0
+    text = REPORT.with_suffix(".md").read_text()
+    table = text.split("| Candidate | Required test files |", 1)[1].split("In particular,", 1)[0]
+    handoffs = re.findall(r"^\| `([^`]+\.py)` \| (.+) \| (.+) \|$", table, re.M)
+    assert {r[0] for r in handoffs} == {
+        "discover.py", "formats.py", "gsf_resume.py", "holds.py", "quality.py",
+    }
+    for _, required, shared in handoffs:
+        paths = re.findall(r"`([^`]+\.py)`", required + shared)
+        assert len(paths) >= 3
+        assert set(paths) <= {r["path"] for r in tests}
