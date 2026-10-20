@@ -27,11 +27,14 @@ export function waypointTitle(t,rank=t.trip_rank) {
   const depth=t.neighborhood_depth_ft.map(n=>Math.round(n)).join('-');
   return `${String(rank).padStart(2,'0')} ${t.trip_species==='lingcod'?'LC':t.trip_species==='rockfish'?'RF':'LR'} H${t.trip_fit} C${t.evidence_confidence.percent}% ${depth}ft`;
 }
-export function bestSpots(atlas,screen,{species='reef',count=20,maxDepth=300,bounds=null,origin=null,maxDistanceNm=Infinity,minSeparationNm=.15,minConfidence=60}={}) {
+// CI6-01B: `place` is the region's land/water check (web/land-water.ts): only a spot it confirms as
+// water is ranked. Without one every spot is unconfirmed and withheld (fail-closed). `stats.withheld`
+// counts the spots that passed every other filter but were withheld by it.
+export function bestSpots(atlas,screen,{species='reef',count=20,maxDepth=300,bounds=null,origin=null,maxDistanceNm=Infinity,minSeparationNm=.15,minConfidence=60,place=null,stats=null}={}) {
   if(!screen?.ready()) throw Error('Refresh protected-area checks before selecting spots.');
   if(!['reef','lingcod','rockfish'].includes(species)) throw Error('Best reef spots supports lingcod and rockfish.');
   if(!finite(maxDepth)||maxDepth<=0||maxDepth>300||!Number.isInteger(count)||count<1||count>50) throw Error('Invalid trip filters.');
-  const byArea=new Set(), selected=[];
+  const byArea=new Set(), selected=[];let withheld=0;
   const eligible=atlas.targets.filter(t=>{
     const [lo,hi]=t.neighborhood_depth_ft||[];
     return t.canonical_habitat && t.evidence_confidence?.percent>=minConfidence && finite(lo)&&finite(hi)&&lo>=0&&hi<=maxDepth
@@ -40,12 +43,13 @@ export function bestSpots(atlas,screen,{species='reef',count=20,maxDepth=300,bou
         const a=atlas.areas.find(a=>a.id===id);return a&&screen.geometryAllowed(a.geometry);
       }) && (!bounds||(t.longitude>=bounds[0]&&t.latitude>=bounds[1]&&t.longitude<=bounds[2]&&t.latitude<=bounds[3]))
       && (!origin||distanceNm(origin,t)<=maxDistanceNm);
-  }).map(t=>({...t,trip_fit:fits(t,species),trip_species:species})).sort((a,b)=>b.trip_fit-a.trip_fit
+  }).filter(t=>{const water=typeof place==='function'&&place(t)?.state==='water';if(!water)withheld++;return water;}).map(t=>({...t,trip_fit:fits(t,species),trip_species:species})).sort((a,b)=>b.trip_fit-a.trip_fit
     ||b.evidence_confidence.percent-a.evidence_confidence.percent||b.habitat_score-a.habitat_score||a.id.localeCompare(b.id));
   for(const t of eligible){
     if(t.area_ids.some(id=>byArea.has(id))||selected.some(s=>distanceNm(s,t)<minSeparationNm))continue;
     t.trip_rank=selected.length+1;t.name=waypointTitle(t);t.distance_nm=origin?distanceNm(origin,t):null;
     for(const id of t.area_ids)byArea.add(id);selected.push(t);if(selected.length===count)break;
   }
+  if(stats)stats.withheld=withheld;
   return selected;
 }

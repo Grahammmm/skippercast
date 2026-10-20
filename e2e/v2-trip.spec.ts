@@ -35,6 +35,19 @@ async function rankedReefs(page: Page) {
   const manifest = () => ({region: 'morro-bay', status: 'ready', archive_sha256: 'a'.repeat(64), expires_at, export_file: 'habitat-export.geojson.gz',
     export_sha256: createHash('sha256').update(gzipSync(bytes)).digest('hex'), export_bytes: gzipSync(bytes).length, export_decoded_bytes: Buffer.byteLength(bytes)});
   await page.route('**/feeds/tiles/seafloor/manifest-morro-bay.json', r => r.fulfill({json: manifest()}));
+  // CI6-01B: the planner ranks only places the land/water check (web/land-water.ts) confirms as water. Most of these
+  // synthetic reefs lie offshore in zoom-12 tiles NOAA did not serve, which the check leaves unknown and withholds, so
+  // the committed index is extended with those tiles as clean water. The check itself is covered by
+  // e2e/land-water.spec.ts and tests/test_land_water.mjs; served tiles keep their committed cells.
+  await page.route('**/regions/morro-bay/land-water.json', async route => {
+    const response = await route.fetch(), index = await response.json(), n = 2 ** index.constants.tile_zoom;
+    for (let i = 0; i < 25; i++) {
+      const lon = -121.17 + i * .007 + .001, lat = 35.431;
+      const key = `${index.constants.tile_zoom}/${Math.floor((lon + 180) / 360 * n)}/${Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n)}`;
+      index.tiles[key] ??= `w${index.constants.grid ** 2}`;
+    }
+    await route.fulfill({response, json: index});
+  });
   const gate = {hold: false, release: () => {}, started: () => {}};
   await page.route('**/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson.gz', async r => {
     if (gate.hold) { gate.hold = false; gate.started(); await new Promise<void>(resolve => { gate.release = resolve; }); }
