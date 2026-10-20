@@ -54,8 +54,10 @@ class Opener:
 
 LISTING = (f'<a href="H11952_MB_2m_MLLW_1of1.bag">bag</a> <a href="../DR/">dr</a> '
            f'<a href="https://evil.example.test/x.bag">offsite</a>').encode()
+# The fixture CRS must be one discover.known_crs accepts without pyproj: core CI
+# runs with no GIS packages, where only CRS84/EPSG:4326/EPSG:3857 are known.
 ARCGIS = json.dumps(dict(spatialReference=dict(wkid=4326), features=[dict(
-    attributes=dict(NCEI_ID="H11952-bag", SURVEY_ID="H11952", crs="EPSG:26910",
+    attributes=dict(NCEI_ID="H11952-bag", SURVEY_ID="H11952", crs="EPSG:4326",
                     DOWNLOAD_URL=BASE + "BAG/H11952_MB_2m_MLLW_1of1.bag"),
     geometry=dict(xmin=-120.6, ymin=34.45, xmax=-120.5, ymax=34.55))])).encode()
 
@@ -148,7 +150,7 @@ def test_second_run_diff_reports_unchanged_and_changed(tmp_path):
     opener = Opener({BASE + "BAG/": LISTING, BASE + "footprints.json": ARCGIS})
     ld.run(plan(), tmp_path / "one", runner=runner_for(opener))
     moved = json.loads(ARCGIS)
-    moved["features"][0]["attributes"]["crs"] = "EPSG:26911"
+    moved["features"][0]["attributes"]["crs"] = "EPSG:3857"
     opener2 = Opener({BASE + "BAG/": LISTING, BASE + "footprints.json": json.dumps(moved).encode()})
     receipt = ld.run(plan(), tmp_path / "two", previous=tmp_path / "one" / "catalog.json",
                      runner=runner_for(opener2))
