@@ -102,6 +102,19 @@ absent managed mission and writes staging metadata verbatim through
 place. Fresh mission/scratch/tag checks and the 75-minute document-5 expiry
 margin are preserved. Native execution remains a separate admitted task step.
 
+## Pre-review dry validation
+
+Before requesting independent review of a live config, the author must run the
+dry full-path validation against the candidate evidence role documents: build
+the four held packets from the candidate `coastal-rights-evidence-v1` document
+and the grant/templates via `packet_release.canonical_packet`, then run
+`validate_acquisition_package` in both held and released mode on an absent
+scratch root and confirm `PASS_METADATA_ONLY`. This is the check that would have
+caught the revision-4 issuance failure (a rights document missing
+`product_title`) before any `issue`/`assemble` ran; its committed coverage is
+`tests/contract/test_coastal_four128_rights_full_path.py`, and it never runs
+prepare/issue/assemble against real project data.
+
 ## Charge ledger and authority boundary
 
 `research/catalog/coastal-four128-charge-ledger.json` is a repository-reviewed

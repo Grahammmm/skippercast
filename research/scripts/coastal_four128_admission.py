@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import time
+from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = 'coastal-four128-admission-config-v1'
@@ -386,6 +387,58 @@ def runtime(cfg):
     return rt
 
 
+FAILURE_RECEIPT_SCHEMA = 'coastal-four128-config-issuance-failure-v1'
+
+
+def _failed_issuance_receipt_path(cfg):
+    """Receipt path for a prepare failure that assemble() cannot misread.
+
+    assemble() reads the issuance receipt and refuses any schema other than
+    ``coastal-four128-config-issuance-v1``, so a failure receipt at the primary
+    path fails closed while preserving the retained stage. We keep the primary
+    path only when it still satisfies the same distinct-JSON-preserve shape
+    assemble() requires (``fresh_run``'s receipt checks); otherwise we write a
+    sibling ``<issuance_receipt>.failed.json`` so the failure is recorded
+    without occupying the path a later issuance would expect.
+    """
+    receipt = path(cfg['issuance_receipt'])
+    project = path(cfg['project_root'])
+    mission = path(cfg['mission_root'])
+    stage = path(cfg['staging_root'])
+    assembly = path(cfg['assembly_receipt'])
+    acceptable = (receipt != assembly and receipt.suffix == '.json'
+                  and receipt.is_relative_to(project / 'outputs')
+                  and not receipt.is_relative_to(mission)
+                  and not receipt.is_relative_to(stage))
+    return receipt if acceptable else Path(str(receipt) + '.failed.json')
+
+
+def _report_prepare_failure(cfg, config_sha, exc) -> NoReturn:
+    """Surface the prepare child's HOLD diagnostics, write a receipt, exit 1.
+
+    The prepare child raises ``ValueError(package)`` carrying the HOLD reasons on
+    stderr; ``subprocess.run(check=True, capture_output=True)`` used to discard
+    that. Relay it, keep the last stdout line, and record a failed-issuance
+    receipt without touching the retained staging bytes.
+    """
+    stderr = (exc.stderr or '').strip()
+    stdout = (exc.stdout or '').strip()
+    if stderr:
+        print('prepare failed (stderr):\n' + stderr, file=sys.stderr)
+    lines = stdout.splitlines()
+    if lines:
+        print('prepare last stdout line: ' + lines[-1], file=sys.stderr)
+    receipt_path = _failed_issuance_receipt_path(cfg)
+    report = dict(schema=FAILURE_RECEIPT_SCHEMA, status='ISSUANCE_FAILED_STAGE_PRESERVED',
+                  config_sha256=config_sha, head=cfg['head'], run_tag=cfg['run_tag'],
+                  staging_root=str(path(cfg['staging_root'])),
+                  prepare=dict(returncode=exc.returncode, stderr=stderr[-4000:],
+                               stdout_tail=lines[-1] if lines else ''),
+                  source_reads=0, network_requests=0, units_started=0)
+    write_new(receipt_path, encoded(report))
+    raise SystemExit(1)
+
+
 def issue(cfg, config_sha):
     stage, mission = fresh_run(cfg, stage_absent=True)
     controls, origin = live_code(cfg)
@@ -426,7 +479,10 @@ def issue(cfg, config_sha):
         '--budget-amendment', str(path(cfg['inputs']['amendment']['path'])), '--prospective-released-bytes']
     if policy:
         argv += ['--support-policy', policy]
-    result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=300)
+    try:
+        result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=300)
+    except subprocess.CalledProcessError as exc:
+        _report_prepare_failure(cfg, config_sha, exc)
     package = json.loads(result.stdout.strip().splitlines()[-1])
     index, grant, amendment = prepare_inputs(cfg, package)
     require((index['code_sha'], index['deps_sha']) == implementation_hashes(ROOT), 'current implementation identity differs')

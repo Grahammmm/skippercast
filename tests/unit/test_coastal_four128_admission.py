@@ -373,6 +373,64 @@ def test_issue_pipeline_with_synthetic_prepare_and_real_renderer(tmp_path, monke
     assert json.loads(Path(cfg['issuance_receipt']).read_text()) == report
 
 
+def test_issue_surfaces_prepare_stderr_and_writes_failure_receipt(tmp_path, monkeypatch, capsys):
+    cfg, kwargs = fixture(tmp_path)
+    stage = Path(cfg['staging_root'])
+    prepared = tmp_path / 'prepared'
+    stage.rename(prepared)
+    cfg['inputs']['selection'] = put(tmp_path / 'selected.json', dict(
+        LARGER_WINDOWS=cfg['windows'], LARGER_BOUNDS=cfg['bounds'], code_head=cfg['head']))
+    rt = _load('coastal_four128_runtime', {})
+    monkeypatch.setattr(rt, 'PROJECT', tmp_path)
+    monkeypatch.setattr(adm, 'runtime', lambda cfg: rt)
+    monkeypatch.setattr(adm, 'live_code', lambda cfg: (kwargs['controls'], cfg['head']))
+    monkeypatch.setattr(adm, 'git', lambda *args: (cfg['head'] + '\n').encode())
+    monkeypatch.setattr(adm.time, 'time', lambda: NOW)
+    import coastal_four128_resources as runtime_resources
+    from skippercast.coastal.coordinator import loop
+    monkeypatch.setattr(runtime_resources, 'budget_limits_bytes', lambda raw: cfg['limits'])
+    monkeypatch.setattr(loop, 'implementation_hashes', lambda root: (kwargs['index']['code_sha'], kwargs['index']['deps_sha']))
+    monkeypatch.setattr(adm, 'evidence_summary', lambda cfg, now: {})
+
+    stderr_text = "ValueError: {'status': 'HOLD', 'packets': [{'reason': 'independent source-specific rights binding invalid'}]}\n"
+    stdout_text = '{"schema": "coastal-four128-prospective-package-v1"}\n'
+
+    def prepare(argv, **options):
+        raise subprocess.CalledProcessError(1, argv, output=stdout_text, stderr=stderr_text)
+
+    monkeypatch.setattr(adm.subprocess, 'run', prepare)
+    with pytest.raises(SystemExit) as excinfo:
+        adm.issue(cfg, 'f' * 64)
+    assert excinfo.value.code == 1
+
+    captured = capsys.readouterr()
+    assert 'prepare failed (stderr):' in captured.err
+    assert 'independent source-specific rights binding invalid' in captured.err
+    assert 'prepare last stdout line:' in captured.err
+
+    receipt_path = Path(cfg['issuance_receipt'])
+    assert receipt_path.is_file()
+    receipt = json.loads(receipt_path.read_text())
+    assert receipt['schema'] == 'coastal-four128-config-issuance-failure-v1'
+    assert receipt['status'] == 'ISSUANCE_FAILED_STAGE_PRESERVED'
+    assert receipt['config_sha256'] == 'f' * 64
+    assert receipt['head'] == cfg['head'] and receipt['run_tag'] == cfg['run_tag']
+    assert receipt['prepare']['returncode'] == 1
+    assert 'independent source-specific rights binding invalid' in receipt['prepare']['stderr']
+    assert receipt['prepare']['stdout_tail'] == stdout_text.strip()
+    assert not Path(cfg['mission_root']).exists()
+
+
+def test_failed_issuance_receipt_path_prefers_primary_and_falls_back(tmp_path):
+    cfg = base_config(tmp_path)
+    assert adm._failed_issuance_receipt_path(cfg) == Path(cfg['issuance_receipt'])
+    # A primary path that collides with the assembly receipt cannot be used:
+    # assemble()'s distinct-JSON preserve checks would refuse it, so the failure
+    # receipt falls back to a sibling .failed.json.
+    cfg['issuance_receipt'] = cfg['assembly_receipt']
+    assert adm._failed_issuance_receipt_path(cfg) == Path(cfg['assembly_receipt'] + '.failed.json')
+
+
 @pytest.mark.parametrize('mutation', ['expired', 'held', 'author', 'selection', 'staged'])
 def test_evidence_negative_controls(tmp_path, mutation):
     cfg = base_config(tmp_path)
