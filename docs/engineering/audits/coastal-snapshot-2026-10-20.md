@@ -119,11 +119,11 @@ not blindly restore obsolete interfaces). Paths are snapshot-root relative.
 
 | Candidate | Required test files | Shared fixture / closure dependencies |
 | --- | --- | --- |
-| `discover.py` | `tests/unit/test_coastal_source_discovery.py`; `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_formats_native.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `discover.py` | `tests/unit/test_coastal_source_discovery.py`; `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/gis/test_quality_vertical.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
 | `formats.py` | `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_coastal_source_formats_native.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
 | `gsf_resume.py` | `tests/unit/test_gsf_resume.py`; `tests/integration/test_coastal_gsf_recovery.py` | `tests/coastal_gsf_support.py`; `tests/contract/test_coastal_package.py` |
 | `holds.py` | `tests/unit/test_coastal_source_formats.py`; `tests/unit/test_gsf_resume.py`; `tests/integration/test_coastal_gsf_recovery.py` | `tests/coastal_support.py`; `tests/coastal_gsf_support.py`; `tests/contract/test_coastal_package.py` |
-| `quality.py` | `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_quality_native.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/unit/test_coastal_source_formats.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `quality.py` | `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_quality_native.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_quality_vertical.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
 
 In particular, `test_coastal_source_formats.py:90–121` exercises the shared hold
 classifier without native decoding; `test_gsf_resume.py:97–101` exercises its
@@ -131,6 +131,10 @@ continuation result. `test_coastal_gsf_recovery.py:16–80` covers parent-loss
 recovery without renewing reservations or deadlines. The shared package test
 mixes retained and retired CLI cases: preserve applicable resource/CLI checks,
 but do not reinstate retired paths just to satisfy its old module list.
+`test_quality_vertical.py:8–46` covers unknown vertical sign, conflicting
+declared elevation versus a compound depth axis, and recording scale/offset
+without applying them. It exercises both discovery and quality and must remain
+in both candidates' handoffs; negative values alone do not establish sign.
 Also reconcile the existing `tests/_support.py` helpers (`ROOT`, `FakeClock`),
 test configuration, versioned schemas, and pinned optional reader dependencies.
 Passing an optional-reader absence branch is not evidence of native GSF coverage.

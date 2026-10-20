@@ -194,3 +194,12 @@ def test_committed_supplemental_counts_and_test_handoff():
         paths = re.findall(r"`([^`]+\.py)`", required + shared)
         assert len(paths) >= 3
         assert set(paths) <= {r["path"] for r in tests}
+
+
+@pytest.mark.parametrize("candidate", ["discover.py", "quality.py"])
+def test_vertical_quality_coverage_travels_with_both_candidates(candidate):
+    text = REPORT.with_suffix(".md").read_text()
+    table = text.split("| Candidate | Required test files |", 1)[1].split("In particular,", 1)[0]
+    handoffs = re.findall(r"^\| `([^`]+\.py)` \| (.+) \| (.+) \|$", table, re.M)
+    required = next(required for name, required, _ in handoffs if name == candidate)
+    assert "tests/gis/test_quality_vertical.py" in re.findall(r"`([^`]+\.py)`", required)
