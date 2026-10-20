@@ -111,6 +111,8 @@
 
 ### Internal
 
+- Design only, no app change: `docs/plans/pelagic-context/design.md` sets what albacore and bluefin pelagic context may show at a selected hour (separate dated evidence lines, only WCOFS lines change with the hour, bluefin keeps no temperature range, no score, rank or probability), the held-out validation test a search priority must pass first (not evaluable on the data held today, so priority stays off), and records that the species-search-plans search strips were retired with the v1 map (#561).
+
 - The research-daily NOAA ENC hazard step retries NOAA's transient "Could not find service" 500 (bounded, capped backoff) on the same reviewed host; if NOAA stays down it writes an explicit `upstream_unavailable` receipt and the inventory report warns instead of failing, while a missing, corrupt or incomplete snapshot still fails closed. Each run attempt has its own identity (`github:<run id>:<attempt>`, or `ENC_INVOCATION_ID` locally), so output from an earlier run or attempt, or a status naming the wrong artifact, never counts. No new hosts were added. See [research-daily ENC unavailable](docs/operations/runbooks/research-daily-enc-unavailable.md).
 
 - Add regression coverage for perspective-mode isolation and camera behavior.
