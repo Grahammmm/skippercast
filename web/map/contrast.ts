@@ -239,7 +239,7 @@ export function createContrast(o: ContrastOptions): {reading(at: {lon: number; l
       if (k !== drawnKey) withdraw();
       drawnKey = k; drawnOn = e;
       if (!d) { e.setOverlay(REGISTRY_ID, null); return; }
-      e.setOverlay(REGISTRY_ID, contrastOverlay(palette()), [SWELL_LAYER, MPA_FILL]);
+      e.setOverlay(REGISTRY_ID, contrastOverlay(palette()), [SWELL_LAYER, 'wind-casing', MPA_FILL]);
       e.setData(CONTRAST_SOURCE, contrastFeatures(d));
     }),
     // Re-judge at the age limit and at the next whole hour (the dock's default hour moves on).
