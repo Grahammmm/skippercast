@@ -10,13 +10,35 @@ from coastal_four128_resources import budget_limits_bytes,FRESH_SOURCE
 from skippercast.coastal.handoff.common import ref,write,load
 from skippercast.coastal.coordinator.loop import implementation_hashes
 from skippercast.coastal.coordinator.packet_release import build_acquisition_package,validate_acquisition_package
-from skippercast.coastal.coordinator.ordered_trial import LARGER_SCOPE,LARGER_RUNTIME,LARGER_WINDOWS
+from skippercast.coastal.coordinator.ordered_trial import LARGER_SCOPE,LARGER_RUNTIME,scope_windows
+from skippercast.coastal.authenticated_v1.profiles import CONTAINED,PARTIAL_SUPPORT
 from skippercast.coastal.output_writer import declaration,COMPACT_V3_PROFILE
+
+def scope_for(support_policy):
+    """Pinned window set for an explicit support policy; None keeps the strict default.
+
+    Geometry comes only from the shared ordered_trial.scope_windows pin, never
+    from the command line."""
+    if support_policy not in (None,PARTIAL_SUPPORT):raise ValueError('unsupported support policy')
+    probe=dict(execution_profile=CONTAINED,window_side=128,window_count=4)
+    if support_policy:probe['support_policy']=support_policy
+    windows,_=scope_windows(probe)
+    return copy.deepcopy(windows)
+
+def apply_scope(grant,support_policy):
+    """Bind the opt-in policy into the grant; strict grants carry no policy key."""
+    windows=scope_for(support_policy)
+    grant['window_set']=copy.deepcopy(windows)
+    if support_policy:grant['support_policy']=support_policy
+    else:grant.pop('support_policy',None)
+    return windows
 
 def main():
  a=argparse.ArgumentParser()
  a.add_argument("--staging-root",type=Path,required=True)
  a.add_argument("--mission-root",type=Path,required=True)
+ # Opt-in SC-5 partial support; absent keeps the strict all-pairs policy and windows.
+ a.add_argument("--support-policy",choices=[PARTIAL_SUPPORT],default=None)
  # Fresh independent four128 role documents (scope, rights, strict trial policy,
  # scientific preflight). The expired 2026-10-11 copies are never re-admitted.
  a.add_argument("--evidence-root",type=Path,required=True)
@@ -73,7 +95,7 @@ def main():
   grant.pop(field,None)
  grant.update(execution_authorized=False,code_sha=code,deps_sha=deps,
   ordered_scope_contract=LARGER_SCOPE,larger_runtime_contract=LARGER_RUNTIME,
-  window_side=128,window_count=4,window_set=copy.deepcopy(LARGER_WINDOWS),
+  window_side=128,window_count=4,
   geographic_review=scope,independent_preflight=science,carry=carry,
   source_volume_cap_bytes=FRESH_SOURCE,prior_effective_bytes=prior,
   prior_effective_source_bytes=prior,cumulative_limit_bytes=limit,
@@ -81,10 +103,11 @@ def main():
   output_retention=retention,
   output_root=str(mission),publication=False,
   meaning="Prospective approved four128 native-grid target. Source and all pixel quality remain unverified; no historical-support promotion.")
+ windows=apply_scope(grant,x.support_policy)
  held=put("grant-held.json",grant)
  seg=load(root,segment);scope_doc=load(root,scope)
  templates=[]
- for label,window in zip("ABCD",LARGER_WINDOWS):
+ for label,window in zip("ABCD",windows):
   packet=json.loads((old/("acquire_"+label+"_real_released.json")).read_text())
   col,row,side,_=window
   safety=scope_doc["safety_bbox_native"]
@@ -121,7 +144,8 @@ def main():
   cumulative_limit_bytes=limit,budget_amendment=amendment,
   prior_scratch_bytes=limits["scratch_prior_bytes"],scratch_limit_bytes=limits["scratch_limit_bytes"],synthetic=False,
   runtime_review_pending=True,execution_authorized=False,
-  status="PROSPECTIVE_ONLY_NO_RUNTIME_AUTHORITY"))
+  status="PROSPECTIVE_ONLY_NO_RUNTIME_AUTHORITY",
+  **({"support_policy":x.support_policy} if x.support_policy else {})))
  catalog=[]
  for path in sorted((root/"metadata").iterdir()):
   doc=json.loads(path.read_text());catalog.append(ref(root,path,doc["schema"]))
@@ -132,6 +156,7 @@ def main():
   source_row_preserved_fields=sorted(load(root,requests[0])["source_row"]),
   runtime_review_pending=True,managed_ledger_created=False,Store_created=False,Budget_created=False,
   clocks_created=False,units_started=0,original_source_reads=0)
+ if x.support_policy:out["support_policy"]=x.support_policy
  write(root/"prospective-package.json",out)
  print(json.dumps(out,sort_keys=True))
 
