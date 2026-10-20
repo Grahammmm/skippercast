@@ -23,7 +23,10 @@ function reefs(n = 5, sha = 'a'.repeat(64)) {
     area_ids: [`area-${i}`], terrain_interpretation: 'Raised structure', source_url: 'https://example.org/s', evidence_status: 'Fish presence unverified.',
   }));
   const areas = targets.map((t, i) => ({id: `area-${i}`, target_ids: [t.id], geometry: {type: 'Polygon', coordinates: [ring(t.longitude, t.latitude)]}}));
-  return {targets, areas, publication: {export_sha256: sha, status: 'ready', expires_at: '2026-10-20T00:00:00Z', region: 'test-coast'}, source_validation_date: '2026-10-01'};
+  // `expires_at` is a far-future constant, not a date near the test's frozen NOW:
+  // buildExport compares against the real clock (its `now` default), so a near date
+  // would "expire" once wall-clock time passes it and fail the export guards below.
+  return {targets, areas, publication: {export_sha256: sha, status: 'ready', expires_at: '2099-12-31T00:00:00Z', region: 'test-coast'}, source_validation_date: '2026-10-01'};
 }
 const ATLAS = {targets: [{id: 'old-1', label: 'Old 1', latitude: 0.5, longitude: 0.5, habitat_grade: 'B', center_depth_ft: 80, neighborhood_depth_ft: [70, 90]}], areas: [], drifts: []};
 
