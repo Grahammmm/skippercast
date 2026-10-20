@@ -8,7 +8,8 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from .common import confined, digest, load, ref, resolve, review_holds, write, validate_native_source, validate_derived_geotiff
+from .common import (confined, digest, load, ref, resolve, review_holds, write, native_container,
+                     validate_native_source, validate_derived_geotiff)
 
 SCHEMA = 'private-mapping-input-v2'
 MAX_CELLS = 262_144
@@ -53,28 +54,51 @@ def _support(valid, transform, crs):
                 valid_cells=int(valid.sum()), mask_sha256=_array_hash(valid.astype('uint8')))
 
 
+def _degree_axes(crs):
+    """True for a 2-D geographic CRS whose two axes are both plain degrees."""
+    import math
+    axes = crs.axis_info[:2]
+    return (crs.is_geographic and len(axes) == 2
+            and all(abs(a.unit_conversion_factor - math.pi/180) <= 1e-12 for a in axes))
+
+
 def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha256=None):
     import numpy as np
     import rasterio
     from rasterio.windows import Window
     from pyproj import CRS
     from skippercast.coastal import vertical as semantics
-    source = validate_native_source(root, source_ref)
+    source = validate_native_source(root, source_ref, netcdf=True)
+    netcdf = native_container(source) == 'netcdf'
     if (not isinstance(window, list) or len(window) != 4
             or any(type(v) is not int for v in window)
             or min(window[:2]) < 0 or min(window[2:]) <= 0 or window[2]*window[3] > MAX_CELLS):
         raise ValueError('explicit bounded integer native window required')
     win = Window(*window)
     with rasterio.open(source) as ds:
-        if ds.driver not in ('GTiff', 'BAG') or not ds.crs:
+        if netcdf != (ds.driver == 'netCDF'):
+            raise ValueError('netCDF driver/container mismatch')
+        if netcdf and (ds.count != 1 or ds.subdatasets):
+            raise ValueError('single-variable 2-D netCDF grid required')
+        if ds.driver not in ('GTiff', 'BAG', 'netCDF') or not ds.crs:
             raise ValueError('only native GeoTIFF/regular BAG supported')
         if win.col_off + win.width > ds.width or win.row_off + win.height > ds.height:
             raise ValueError('window outside source')
         auxiliary = [ref(root,Path(name),'native-raster-auxiliary-v1') for name in ds.files if Path(name).resolve() != source]
         crs = CRS.from_user_input(ds.crs).to_2d()
-        if (not crs.is_projected or any(abs(a.unit_conversion_factor-1)>1e-10 for a in crs.axis_info[:2])
+        # netCDF only: a north-up geographic (degree) grid such as NOAA CRM is
+        # read as native cells; the map stage holds it rather than taking
+        # derivatives with degree spacing. GeoTIFF/BAG keep the metric gate.
+        geographic = netcdf and _degree_axes(crs)
+        if (not (geographic or crs.is_projected)
+                or (not geographic and any(abs(a.unit_conversion_factor-1)>1e-10 for a in crs.axis_info[:2]))
                 or ds.transform.b or ds.transform.d or ds.transform.a <= 0 or ds.transform.e >= 0):
-            raise ValueError('native north-up metric projected grid required')
+            raise ValueError('native north-up metric projected grid required' if not netcdf else
+                             'native north-up metric projected or geographic-degree netCDF grid required')
+        if geographic:
+            left, bottom, right, top = ds.window_bounds(win)
+            if not (-180 <= left < right <= 180 and -90 <= bottom < top <= 90):
+                raise ValueError('geographic netCDF window outside longitude/latitude range')
         metadata = None
         if ds.driver == 'BAG':
             from skippercast.coastal.bag_v2 import parse_metadata
@@ -122,6 +146,12 @@ def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha
                       resolution_m=list(ds.res), dtypes=list(ds.dtypes), nodata=ds.nodata if ds.nodata is None or np.isfinite(ds.nodata) else 'NaN',
                       scales=list(ds.scales), offsets=list(ds.offsets), units=list(ds.units),
                       descriptions=list(ds.descriptions), tags=ds.tags())
+        if netcdf:
+            # Degrees are never reported as metres; GeoTIFF/BAG headers are unchanged.
+            header.update(netcdf_variable=ds.tags(1).get('NETCDF_VARNAME'),
+                          horizontal_units='degree' if geographic else 'metre',
+                          resolution_m=None if geographic else list(ds.res),
+                          resolution_deg=list(ds.res) if geographic else None)
         depth = semantics.to_depth(raw, block, valid=valid) if not holds and block else None
         if not valid.any():
             holds.append('native_support_empty')

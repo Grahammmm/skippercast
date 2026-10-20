@@ -250,6 +250,13 @@ def test_window_is_bounded_like_the_acquire_dispatch_gate(world):
     assert _single(world, window=[0, 0, 1024, 1024])["state"] == "selected"
 
 
+def test_cached_netcdf_grid_is_a_native_suffix(world):
+    # PC-2: a cached CRM netCDF subset passes the lstat gate; acquire reads the bytes.
+    source = fx.cache_file(world["root"], "sources/crm_socal_1as_vers2_subset.nc", data=b"CDF\x01synthetic")
+    assert bridge.cached_source(world["root"], source)["path"] == "sources/crm_socal_1as_vers2_subset.nc"
+    assert bridge.NATIVE_SUFFIXES == (".bag", ".tif", ".tiff", ".nc")
+
+
 def test_run_writes_native_jobs_inside_root_and_enqueue_feeds_acquire(world, tmp_path):
     from skippercast.coastal.coordinator.store import Store
     from tests._coastal_operations import policy

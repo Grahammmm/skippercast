@@ -88,5 +88,17 @@ review and rendering keep their own holds. For example, if a plan declares no
 vertical contract, the acquire stage holds on `vertical_*` instead of
 guessing one.
 
+A cached source may be a native BAG, a GeoTIFF or a local netCDF grid (`.nc`,
+such as a NOAA CRM subset). The acquire and qualify stages read a netCDF
+container only when it is netCDF classic, or netCDF-4 whose whole HDF5 tree is
+local (no soft or external links, no virtual or external-storage datasets), and
+only as one 2-D variable. Any GDAL sidecar next to it (`crm.nc.aux.xml`,
+`.msk`, `.ovr`, `.aux`, `crm.aux`, any case, including symlinks) is refused
+before GDAL opens the file, because a mask or overview can point GDAL at
+another dataset. A geographic (degree) netCDF grid
+is read as native cells and qualified, but the map stage holds it as
+`native_geographic_grid_derivatives_unsupported`: slope and rugosity need
+metric spacing and the pipeline does not resample.
+
 The bridge depends only on the catalog file's schema, not on the discovery
 module. Integration with live discovery waits for #734 to merge.
