@@ -155,5 +155,5 @@ def test_scan_requires_an_isolated_bytecode_free_interpreter(tmp_path, flags):
 
 def test_the_plan_command_is_the_isolated_bytecode_free_form():
     text = (ROOT / SCRIPT).read_text()
-    assert 'scan = [python, "-I", "-B", str(Path(__file__).resolve()), "scan"' in text
+    assert 'scan = [python, "-I", "-B", str(' in text and '"scan", "--amendment"' in text
     assert json.dumps(topo.IMPORTED_TREES) == '["src/skippercast", "research/scripts"]'
