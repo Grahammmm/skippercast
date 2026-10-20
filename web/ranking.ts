@@ -46,6 +46,11 @@ export interface Ranking {readonly source: RankingSource | null; readonly label:
   /** The range to consider the picks were kept inside (nm, one way); absent when none applied. */
   readonly reach?: number}
 
+/**
+ * Where a run distance starts: a named harbor or launch from published data, never the device's position.
+ * "Use my location" (web/ports.ts `locatePort`) only suggests the nearest listed port; tests/test_ranking.mjs
+ * fails if any other web/ file reads the device position.
+ */
 export interface Origin {readonly latitude: number; readonly longitude: number; readonly name: string}
 /** The region's harbor (region.json `harbor`), the port distances are measured from. */
 export function harborOrigin(data: MarkData | null): Origin | null {
@@ -142,7 +147,8 @@ export function ranking(i: RankingInputs): Ranking {
   // A range applies only where it can be measured: from a harbor position.
   const reach = origin && known(i.reachNm) && i.reachNm > 0 ? i.reachNm : null;
   const kept = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
-  const from = ` ${harbor}.${kept} A ranked place is a place to look; fish presence is unverified.`;
+  // Without a harbor position no distance is measured, and the basis says so rather than naming one.
+  const from = `${origin ? ` ${harbor}.` : ' the region\'s harbor, which has no published position here, so no distance is shown.'}${kept} A ranked place is a place to look; fish presence is unverified.`;
   const within = reach === null ? `within ${limit} ft` : `within ${limit} ft and ${Number(reach.toFixed(1))} nm of ${harbor}`;
   const ranged = reach === null ? {} : {reach};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
