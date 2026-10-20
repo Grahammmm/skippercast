@@ -89,7 +89,10 @@ def context(document):
 
 
 def verify(root, acceptance, *, now, minimum_valid_until=None):
-    import jsonschema
+    try:
+        import jsonschema
+    except ImportError as error:  # a hold, not a crash part-way through a run
+        raise ValueError('terrain_only_dependency:jsonschema') from error
     document = load(root, acceptance, contract=INPUT)
     schema = json.loads(files('skippercast.coastal.resources').joinpath(INPUT + '.schema.json').read_text())
     try:

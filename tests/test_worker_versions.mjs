@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {liveVersion, commitOf, rollbackTarget} from '../scripts/worker_versions.mjs';
+import {liveVersion, commitOf, rollbackTarget, liveCommit, traceLiveCommit} from '../scripts/worker_versions.mjs';
 
 // Modelled on deploy run 38173947179 (#568): the previous commit's code and secrets
 // deployments, then the failed commit's code (be6f…) and secrets (04a1…) deployments.
@@ -97,6 +97,74 @@ test('the CLI prints the live version and the rollback target', () => {
   assert.equal(run.stdout.trim(), PREV_SECRETS);
   run = cli(DEPLOYMENTS, VERSIONS, 'commit', '@versions.json', PREV_CODE);
   assert.equal(run.stdout.trim(), PREV_SHA);
+});
+
+test('the commit production serves is traced from the live version\'s provenance', () => {
+  assert.equal(liveCommit(DEPLOYMENTS, VERSIONS), CUR_SHA, 'live is the secrets upload made right after its code deploy');
+  assert.equal(liveCommit(DEPLOYMENTS.slice(0, 3), VERSIONS), CUR_SHA, 'live is the code upload itself');
+  const codeLive = [...DEPLOYMENTS, deployment('d5', '2026-10-11T10:00:00.000Z', PREV_CODE, 'wrangler')];
+  assert.equal(liveCommit(codeLive, VERSIONS), PREV_SHA, 'a rollback to an older code version');
+  const rolledBack = [...DEPLOYMENTS, deployment('d5', '2026-10-11T10:00:00.000Z', PREV_SECRETS, 'wrangler')];
+  assert.equal(liveCommit(rolledBack, VERSIONS), PREV_SHA, 'a rollback to the previous commit\'s secrets upload');
+  // A later secrets change on top of the secrets upload: the chain is followed.
+  const later = [...VERSIONS, version('05050505-0000-4000-8000-000000000005', '2026-10-11T12:00:00.000Z')];
+  const laterLive = [...DEPLOYMENTS, deployment('d5', '2026-10-11T12:00:00.000Z', '05050505-0000-4000-8000-000000000005', 'wrangler')];
+  assert.equal(liveCommit(laterLive, later), CUR_SHA);
+});
+
+test('a live commit that cannot be traced is unknown, never guessed', () => {
+  const unknown = (deployments, versions, reason) => {
+    const traced = traceLiveCommit(deployments, versions);
+    assert.equal(traced.commit, '', `${reason}: ${traced.reason}`);
+    assert.equal(liveCommit(deployments, versions), '');
+    return traced.reason;
+  };
+  // Sol's probe: an untagged CODE upload is live; the older tagged version must not be named.
+  const HAND = '0a0a0a0a-0000-4000-8000-00000000000a';
+  const untagged = [...VERSIONS, {id: HAND, metadata: {created_on: '2026-10-11T11:00:00.000Z'}, annotations: {'workers/triggered_by': 'upload'}}];
+  const handLive = [...DEPLOYMENTS, deployment('d5', '2026-10-11T11:00:00.000Z', HAND, 'wrangler')];
+  assert.match(unknown(handLive, untagged, 'untagged code upload'), /no "<sha> run <id>" deploy message/);
+  // A hand-labelled upload whose message merely contains a sha.
+  const labelled = [...VERSIONS, version(HAND, '2026-10-11T11:00:00.000Z', `hotfix on top of ${PREV_SHA}`)];
+  unknown(handLive, labelled, 'free-form message');
+  // A version with no or another trigger.
+  for (const trigger of [undefined, 'rollback', 'promotion']) {
+    const odd = [...VERSIONS, {id: HAND, metadata: {created_on: '2026-10-11T11:00:00.000Z'},
+      annotations: {...(trigger ? {'workers/triggered_by': trigger} : {}), 'workers/message': `${PREV_SHA} run 1`}}];
+    assert.match(unknown(handLive, odd, `trigger ${trigger}`), /no traceable commit/);
+  }
+  // A staged upload between the code version and a secrets change: the secrets change's code is not provable.
+  const STAGED = '0b0b0b0b-0000-4000-8000-00000000000b';
+  const SECRET2 = '0c0c0c0c-0000-4000-8000-00000000000c';
+  const staged = [...VERSIONS, version(STAGED, '2026-10-11T11:00:00.000Z', `${PREV_SHA} run 5`), version(SECRET2, '2026-10-11T11:30:00.000Z')];
+  const stagedLive = [...DEPLOYMENTS, deployment('d5', '2026-10-11T11:30:00.000Z', SECRET2, 'wrangler')];
+  assert.match(unknown(stagedLive, staged, 'staged upload'), /was not the 100% deployment then/);
+  // A secrets change made after a rollback (dashboard): the newest version was not live when it was made.
+  const afterRollback = [...VERSIONS, version(SECRET2, '2026-10-11T11:30:00.000Z')];
+  const rollbackThenSecret = [...DEPLOYMENTS, deployment('d5', '2026-10-11T11:00:00.000Z', PREV_CODE, 'wrangler'),
+    deployment('d6', '2026-10-11T11:30:00.000Z', SECRET2, 'wrangler')];
+  assert.match(unknown(rollbackThenSecret, afterRollback, 'secrets after rollback'), /was not the 100% deployment then/);
+  // Split traffic, missing versions or deployments, and malformed listings.
+  const split = [...DEPLOYMENTS, {id: 'g', created_on: '2026-10-11T10:00:00Z',
+    versions: [{version_id: CUR_SECRETS, percentage: 50}, {version_id: PREV_SECRETS, percentage: 50}]}];
+  assert.match(unknown(split, VERSIONS, 'split'), /split traffic/);
+  assert.match(unknown(DEPLOYMENTS, VERSIONS.slice(0, 3), 'live missing'), /not in the versions listing/);
+  assert.match(unknown(DEPLOYMENTS, [VERSIONS[3]], 'code version cut off'), /created before secrets change/);
+  assert.match(unknown(DEPLOYMENTS.slice(3), VERSIONS, 'deployment history cut off'), /was not the 100% deployment then/);
+  assert.match(unknown([], VERSIONS, 'no deployments'), /no Worker deployment/);
+  unknown({}, VERSIONS, 'not a list');
+  unknown([{...DEPLOYMENTS[3], created_on: 'soon'}], VERSIONS, 'bad deployment time');
+  unknown(DEPLOYMENTS, [...VERSIONS, {id: 'x', metadata: {}}], 'bad version time');
+});
+
+test('the live-commit CLI prints the traced commit or exits 1 with the reason', () => {
+  let run = cli(DEPLOYMENTS, VERSIONS, 'live-commit', '@deployments.json', '@versions.json');
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(run.stdout.trim(), CUR_SHA);
+  run = cli(DEPLOYMENTS, [VERSIONS[1], VERSIONS[3]], 'live-commit', '@deployments.json', '@versions.json');
+  assert.equal(run.status, 1);
+  assert.equal(run.stdout, '');
+  assert.match(run.stderr, /^the commit production serves is unknown: /);
 });
 
 test('the CLI exits 1 with a message when there is nothing to roll back to', () => {
