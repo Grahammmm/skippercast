@@ -11,6 +11,15 @@ from tests._support import ROOT
 from tests.unit.test_coastal_four128_budget import SIGNED_V7, V7_LIMITS, amendment
 
 SIDE = topo.SIDE
+REAL_GUARD = topo.source_guard
+
+
+@pytest.fixture(autouse=True)
+def no_worktree_guard(monkeypatch):
+    # plan() resolves the guard at call time; the real guard is exercised on fake
+    # code roots below (and in test_coastal_four128_mask_topology_boundary.py), so a
+    # stray cache elsewhere in a developer checkout cannot change these results.
+    monkeypatch.setattr(topo, 'source_guard', lambda root=None: [])
 
 
 def empty():
@@ -259,24 +268,141 @@ def test_resource_envelope_and_clean_head(tmp_path):
         def __init__(self, out):
             self.stdout = out
 
+    calls = []
+
     def git(outputs):
         it = iter(outputs)
-        return lambda *a, **k: Done(next(it))
-    assert topo.clean_head('a' * 40, run=git(['a' * 40 + '\n', ''])) == 'a' * 40
-    for outputs in (['b' * 40, ''], ['a' * 40, ' M research/scripts/x.py']):
+        return lambda argv, **k: calls.append(argv) or Done(next(it))
+    assert topo.clean_head('a' * 40, run=git(['a' * 40 + '\n', '', ''])) == 'a' * 40
+    # The third query lists IGNORED entries (stale bytecode, stray modules) in the imported trees.
+    assert calls[2][-3:] == ['--', 'src/skippercast', 'research/scripts'] and '--ignored' in calls[2]
+    for head, outputs in (('a' * 40, ['b' * 40, '', '']),
+                          ('a' * 40, ['a' * 40, ' M research/scripts/x.py', '']),
+                          ('a' * 40, ['a' * 40, '?? src/skippercast/stray.py', '']),
+                          ('a' * 40, ['a' * 40, '', '!! src/skippercast/coastal/__pycache__/x.pyc']),
+                          ('a' * 40, ['a' * 40, '', '!! research/scripts/__pycache__/']),
+                          ('a' * 7, ['a' * 7, '', '']), (None, ['', '', ''])):
         with pytest.raises(ValueError, match='clean reviewed head'):
-            topo.clean_head('a' * 40, run=git(outputs))
+            topo.clean_head(head, run=git(outputs))
+
+
+def fake_code_root(tmp_path):
+    root = tmp_path / 'code'
+    for tree in topo.IMPORTED_TREES:
+        (root / tree).mkdir(parents=True)
+    guard = root / topo.GUARD_RELATIVE
+    guard.parent.mkdir(parents=True)
+    guard.write_bytes((ROOT / topo.GUARD_RELATIVE).read_bytes())
+    (root / 'src/skippercast/__init__.py').write_text('')
+    (root / 'research/scripts/coastal_four128_resources.py').write_text('')
+    return root
+
+
+def test_source_guard_covers_every_imported_tree(tmp_path):
+    root = fake_code_root(tmp_path)
+    assert REAL_GUARD(root) == [str(root / t) for t in topo.IMPORTED_TREES]
+    hazards = [('src/skippercast/__pycache__', 'dir', 'bytecode'),
+               ('src/skippercast/coastal/x.cpython-312.pyc', 'file', 'bytecode'),
+               ('research/scripts/__pycache__', 'dir', 'bytecode'),
+               ('research/scripts/coastal_four128_resources.pyc', 'file', 'bytecode'),
+               ('src/skippercast/linked.py', 'link', 'symlink'),
+               ('research/scripts/linked.py', 'link', 'symlink')]
+    for rel, kind, message in hazards:
+        p = root / rel
+        if kind == 'dir':
+            p.mkdir()
+        elif kind == 'file':
+            p.write_bytes(b'')
+        else:
+            p.symlink_to(root / 'src/skippercast/__init__.py')
+        with pytest.raises(ValueError, match=message):
+            REAL_GUARD(root)
+        p.rmdir() if kind == 'dir' else p.unlink()
+    assert REAL_GUARD(root)
+    # The guard itself must be a regular reviewed file, loaded from source.
+    guard = root / topo.GUARD_RELATIVE
+    guard.rename(guard.with_name('real.py'))
+    guard.symlink_to(guard.with_name('real.py'))
+    with pytest.raises(ValueError, match='regular file'):
+        REAL_GUARD(root)
+
+
+def test_scan_checks_head_and_guard_before_any_project_import(tmp_path, monkeypatch):
+    order = []
+    monkeypatch.setattr(topo, 'pinned_geometry', lambda: order.append('import') or True)
+    monkeypatch.setattr(topo, 'amendment_reference', lambda p: order.append('amendment') or {})
+
+    def refuse(step):
+        def fail(*a):
+            order.append(step)
+            raise ValueError('synthetic ' + step + ' refusal')
+        return fail
+    opened = []
+    for git, guard, expected in ((refuse('head'), lambda: order.append('guard'), ['head']),
+                                 (lambda h: order.append('head') or h, refuse('guard'), ['head', 'guard'])):
+        order.clear()
+        with pytest.raises(ValueError, match='synthetic'):
+            topo.scan(tmp_path / 'amendment.json', 'a' * 40, project=tmp_path, opener=opened.append,
+                      envelope=lambda: {}, git=git, guard=guard)
+        assert order == expected
+    assert opened == [] and not (tmp_path / 'outputs').exists()
+
+
+def test_plan_runs_the_guard_before_any_project_import(tmp_path, monkeypatch):
+    order = []
+    monkeypatch.setattr(topo, 'pinned_geometry', lambda: order.append('import') or True)
+
+    def refuse(root=None):
+        order.append('guard')
+        raise ValueError('synthetic guard refusal')
+    with pytest.raises(ValueError, match='synthetic guard'):
+        topo.plan(tmp_path / 'amendment.json', project=tmp_path, guard=refuse)
+    assert order == ['guard']
+
+
+def test_attempt_claim_is_atomic_durable_and_never_reused(tmp_path):
+    out = tmp_path / 'outputs' / topo.OUTPUT_NAME
+    claim = topo.claim_attempt(out, dict(run_tag=topo.RUN_TAG))
+    raw = (out / topo.CLAIM_NAME).read_bytes()
+    assert claim == dict(name=topo.CLAIM_NAME, sha256=topo.digest(raw), bytes=len(raw))
+    doc = json.loads(raw)
+    assert doc['status'] == 'ATTEMPT_CLAIMED_SOLE_OPEN_CONSUMED' and doc['refund'] is False and doc['retry'] is False
+    # A racer that passed the absence check still loses at the atomic mkdir.
+    with pytest.raises(ValueError, match='already claimed'):
+        topo.claim_attempt(out, dict(run_tag=topo.RUN_TAG))
+    assert (out / topo.CLAIM_NAME).read_bytes() == raw
+    # A failure record never replaces the claim, and only one is kept.
+    assert topo.record_failure(out, 'read', OSError('x' * 5000)) == out / topo.FAILURE_NAME
+    failure = json.loads((out / topo.FAILURE_NAME).read_text())
+    assert failure['phase'] == 'read' and len(failure['error']) == topo.FAILURE_MESSAGE_CHARS
+    assert topo.record_failure(out, 'receipt', OSError('again')) is None
+    assert sorted(p.name for p in out.iterdir()) == [topo.CLAIM_NAME, topo.FAILURE_NAME]
+    with pytest.raises(ValueError, match='bounded reservation'):
+        topo.claim_attempt(tmp_path / 'big', dict(blob='x' * topo.CLAIM_MAX_BYTES))
+    assert not (tmp_path / 'big').exists()
+    linked = tmp_path / 'linked-outputs'
+    linked.symlink_to(tmp_path / 'outputs')
+    with pytest.raises(ValueError, match='symlink'):
+        topo.claim_attempt(linked / 'x', {})
 
 
 def test_receipt_is_bounded_and_never_overwritten(tmp_path):
     out = tmp_path / 'outputs' / topo.OUTPUT_NAME
-    path, sha, size = topo.write_receipt(out, dict(schema=topo.SCHEMA))
+    with pytest.raises(ValueError, match='claimed attempt'):
+        topo.write_receipt(out, dict(schema=topo.SCHEMA))
+    assert not out.exists()
+    claim = topo.claim_attempt(out, {})
+    path, sha, size = topo.write_receipt(out, dict(schema=topo.SCHEMA), claimed_bytes=claim['bytes'])
     assert path.read_bytes() == topo.encoded(dict(schema=topo.SCHEMA)) and size == len(path.read_bytes())
     with pytest.raises(FileExistsError):
         topo.write_receipt(out, dict(schema=topo.SCHEMA))
+    other = tmp_path / 'other'
+    topo.claim_attempt(other, {})
+    # The whole output root (claim + failure reserve + receipt) stays inside 1 MiB.
     with pytest.raises(ValueError, match='1 MiB'):
-        topo.write_receipt(tmp_path / 'other', dict(blob='x' * topo.RECEIPT_MAX_BYTES))
-    assert not (tmp_path / 'other').exists()
+        topo.write_receipt(other, dict(blob='x' * (topo.RECEIPT_MAX_BYTES - topo.FAILURE_MAX_BYTES)),
+                           claimed_bytes=1)
+    assert not (other / topo.RECEIPT_NAME).exists()
 
 
 def test_script_is_source_free_except_the_scan_path():

@@ -17,6 +17,13 @@ Subcommands
   scan    the ONE charged open (later admitted card only; never on CI): no source
           re-hash, no second open, no retries, no alternate windows, search or
           relocation, no h5py/metadata pass. Writes one bounded JSON receipt.
+          Order: exact clean head (git only) -> the reviewed source guard over
+          every imported project tree (loaded from source, never imported) ->
+          first project import -> amendment/plan checks -> an atomic, durable
+          attempt claim inside the reserved output root -> the one open. The
+          claim is never deleted or refunded: a failed, killed or concurrent
+          attempt leaves it in place and every later invocation refuses before
+          touching the source.
   verify  source-free: recompute every component and the --require-holes gate
           from the receipt's row runs alone.
 
@@ -50,7 +57,15 @@ BOUNDS = (728359, 3818155, 730151, 3819179)
 COUNT_ONLY_MASK_INVALID = (14, 4, 299, 18)
 OUTPUT_NAME = "sc5-partial-" + RUN_TAG + "-prescan"
 RECEIPT_NAME = "mask-topology-receipt.json"
-RECEIPT_MAX_BYTES = 1048576  # signed retained prescan_reservation_bytes
+CLAIM_NAME = "attempt-claim.json"      # written before the open; never deleted
+FAILURE_NAME = "attempt-failure.json"  # best-effort record of a failed attempt
+RECEIPT_MAX_BYTES = 1048576  # signed retained prescan_reservation_bytes: the whole output root
+CLAIM_MAX_BYTES = 4096
+FAILURE_MAX_BYTES = 4096
+FAILURE_MESSAGE_CHARS = 1024
+# Project trees this tool imports from (shared pins, the charge-ledger binding).
+IMPORTED_TREES = ("src/skippercast", "research/scripts")
+GUARD_RELATIVE = "src/skippercast/coastal/_source_bootstrap.py"
 MAX_RUNS_PER_WINDOW = 4096
 MAX_COMPONENTS_PER_WINDOW = 1024
 LABELS = "ABCD"
@@ -311,9 +326,12 @@ def pinned_geometry():
     return True
 
 
-def plan(amendment, *, project=None, head=None):
-    """Everything that needs no source access. Never opens or stats the source."""
+def plan(amendment, *, project=None, head=None, guard=None):
+    """Everything that needs no source access. Never opens or stats the source.
+
+    The reviewed source guard runs before the first project import here too."""
     project = Path(project) if project else project_root()
+    (guard or source_guard)()
     pinned_geometry()
     reference = amendment_reference(amendment)
     out = output_root(project)
@@ -351,14 +369,32 @@ def resource_envelope(read=lambda p: Path(p).read_text()):
     return dict(cgroup=membership[3:], readings=readings)
 
 
-def clean_head(head, run=subprocess.run):
-    actual = run(["git", "-C", str(code_root()), "rev-parse", "HEAD"], check=True, capture_output=True,
+def clean_head(head, run=subprocess.run, root=None):
+    """Exact reviewed head, no tracked/untracked change, and no IGNORED entry (stale
+    bytecode, stray modules) inside the imported project trees. git only; imports nothing."""
+    root = str(root or code_root())
+    actual = run(["git", "-C", root, "rev-parse", "HEAD"], check=True, capture_output=True,
                  text=True).stdout.strip()
-    dirty = run(["git", "-C", str(code_root()), "status", "--porcelain"], check=True, capture_output=True,
-                text=True).stdout.strip()
-    if actual != head or dirty:
+    dirty = run(["git", "-C", root, "status", "--porcelain", "--untracked-files=all"], check=True,
+                capture_output=True, text=True).stdout.strip()
+    ignored = run(["git", "-C", root, "status", "--porcelain", "--ignored", "--untracked-files=all", "--",
+                   *IMPORTED_TREES], check=True, capture_output=True, text=True).stdout.strip()
+    if type(head) is not str or len(head) != 40 or actual != head or dirty or ignored:
         raise ValueError("pre-scan must run from the exact clean reviewed head")
     return actual
+
+
+def source_guard(root=None):
+    """The supervisor's reviewed pre-import guard, loaded from source (never imported),
+    over every project tree this tool imports. Refuses bytecode, symlinks, special files."""
+    import stat
+    root = Path(root) if root else code_root()
+    guard = root / GUARD_RELATIVE
+    if not stat.S_ISREG(os.lstat(guard).st_mode):
+        raise ValueError("reviewed source guard must be a regular file")
+    namespace = {"__name__": "_coastal_source_guard"}
+    exec(compile(guard.read_bytes(), str(guard), "exec"), namespace)
+    return [namespace["guard_project_source"](root / tree) for tree in IMPORTED_TREES]
 
 
 def open_source(path, opener):
@@ -405,7 +441,7 @@ def read_windows(dataset):
                          transform=list(dataset.transform)[:6], driver=dataset.driver)
 
 
-def build_receipt(records, header, *, started, finished, reference, head, envelope, source):
+def build_receipt(records, header, *, started, finished, reference, head, envelope, source, attempt=None):
     met, reasons = require_holes(records)
     comparison = [dict(label=r["label"], count_only_mask_invalid=n, observed_unsupported=r["unsupported_cells"],
                        equal=r["unsupported_cells"] == n) for r, n in zip(records, COUNT_ONLY_MASK_INVALID)]
@@ -419,7 +455,7 @@ def build_receipt(records, header, *, started, finished, reference, head, envelo
                     access="one rasterio/GDAL BAG open; two masked band reads per pinned window"),
         budget=dict(reference, this_open_bytes=SOURCE_BYTES,
                     meaning="charged in advance by signed amendment v7; no refund; not a runtime admission"),
-        resource_envelope=envelope, grid=dict(shape=list(GRID_SHAPE), affine=list(AFFINE), header=header),
+        resource_envelope=envelope, attempt=attempt, grid=dict(shape=list(GRID_SHAPE), affine=list(AFFINE), header=header),
         windows=records, native_bounds=list(BOUNDS), count_only_comparison=comparison,
         require_holes=dict(REQUIRE_HOLES, met=met, reasons=reasons),
         network_requests=0, downloads=0, cash_usd=0, managed_mission_writes=0, retries=0,
@@ -429,43 +465,112 @@ def build_receipt(records, header, *, started, finished, reference, head, envelo
                        "uncertainty UNVERIFIED; independent review required before any admission.")
 
 
-def write_receipt(out, document):
-    raw = encoded(document)
-    if len(raw) > RECEIPT_MAX_BYTES:
-        raise ValueError("receipt exceeds the signed 1 MiB retained reservation")
-    out.mkdir(parents=True, exist_ok=False)
-    path = out / RECEIPT_NAME
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o444)
+def _durable_exclusive(path, raw):
+    """Create path exclusively (never overwrite), fsync it and its directory."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o444)
     with os.fdopen(fd, "wb") as handle:
         handle.write(raw)
+        handle.flush()
+        os.fsync(handle.fileno())
+    directory = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def claim_attempt(out, record):
+    """Atomically consume the sole pre-scan attempt BEFORE any source access.
+
+    mkdir is the atomic claim: of any number of racing processes exactly one creates
+    the output root; the rest refuse. The claim file is written and fsynced before the
+    opener is called and is never deleted, refunded or retried."""
+    raw = encoded(dict(record, schema=SCHEMA + "-attempt-claim",
+                       status="ATTEMPT_CLAIMED_SOLE_OPEN_CONSUMED", refund=False, retry=False))
+    if len(raw) > CLAIM_MAX_BYTES:
+        raise ValueError("attempt claim exceeds its bounded reservation")
+    parent = out.parent
+    if parent.is_symlink():
+        raise ValueError("pre-scan outputs directory must not be a symlink")
+    parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.mkdir(out, 0o755)
+    except FileExistsError:
+        raise ValueError("pre-scan attempt already claimed; preserve it, never rerun") from None
+    _durable_exclusive(out / CLAIM_NAME, raw)
+    return dict(name=CLAIM_NAME, sha256=digest(raw), bytes=len(raw))
+
+
+def record_failure(out, phase, error):
+    """Best effort: note why the claimed attempt failed. Never removes the claim."""
+    message = (type(error).__name__ + ": " + str(error))[:FAILURE_MESSAGE_CHARS]
+    raw = encoded(dict(schema=SCHEMA + "-attempt-failure", run_tag=RUN_TAG, phase=phase, error=message,
+                       opens=len(OPENS), status="ATTEMPT_FAILED_CLAIM_RETAINED", refund=False, retry=False,
+                       recorded_utc=dt.datetime.now(dt.timezone.utc).isoformat()))
+    if len(raw) > FAILURE_MAX_BYTES:
+        return None
+    try:
+        _durable_exclusive(out / FAILURE_NAME, raw)
+    except OSError:
+        return None
+    return out / FAILURE_NAME
+
+
+def write_receipt(out, document, *, claimed_bytes=0):
+    """Write the receipt into the already-claimed output root, inside the 1 MiB reservation."""
+    raw = encoded(document)
+    if claimed_bytes + FAILURE_MAX_BYTES + len(raw) > RECEIPT_MAX_BYTES:
+        raise ValueError("receipt exceeds the signed 1 MiB retained reservation")
+    if out.is_symlink() or not out.is_dir() or not (out / CLAIM_NAME).is_file():
+        raise ValueError("receipt requires the claimed attempt output root")
+    path = out / RECEIPT_NAME
+    _durable_exclusive(path, raw)
     return path, digest(raw), len(raw)
 
 
-def scan(amendment, head, *, project=None, opener=None, envelope=resource_envelope, git=clean_head):
+def scan(amendment, head, *, project=None, opener=None, envelope=resource_envelope, git=clean_head,
+         guard=source_guard):
     import contextlib
     project = Path(project) if project else project_root()
+    # 1-2. Nothing from the project is imported until the exact clean head and the
+    # reviewed source guard over every imported tree have passed.
+    checked_head = git(head)
+    guard()
+    # 3. First project imports, then every remaining source-free check.
     pinned_geometry()
     reference = amendment_reference(amendment)
     out = output_root(project)
     source = project / SOURCE_RELATIVE
-    checked_head = git(head)
     limits = envelope()
-    with contextlib.ExitStack() as stack:
-        if opener is None:
-            import rasterio
-            stack.enter_context(rasterio.Env(GDAL_PAM_ENABLED="NO", GDAL_NUM_THREADS="1",
-                                             CPL_VSIL_CURL_ALLOWED_EXTENSIONS="none"))
-            opener = lambda path: rasterio.open(path, driver="BAG")  # noqa: E731
-        started = dt.datetime.now(dt.timezone.utc).isoformat()
-        dataset = stack.enter_context(contextlib.closing(open_source(source, opener)))
-        records, header = read_windows(dataset)
-    finished = dt.datetime.now(dt.timezone.utc).isoformat()
-    document = build_receipt(records, header, started=started, finished=finished, reference=reference,
-                             head=checked_head, envelope=limits, source=source)
-    verify_receipt(document)
-    path, sha, size = write_receipt(out, document)
+    rasterio = None
+    if opener is None:
+        import rasterio
+        opener = lambda path: rasterio.open(path, driver="BAG")  # noqa: E731
+    # 4. Durable, atomic claim of the sole attempt BEFORE the opener is called.
+    started = dt.datetime.now(dt.timezone.utc).isoformat()
+    attempt = claim_attempt(out, dict(run_tag=RUN_TAG, code_head=checked_head, claimed_utc=started,
+                                      pid=os.getpid(), source=str(source),
+                                      amendment_sha256=reference["sha256"], opens_before_claim=len(OPENS)))
+    phase = "open"
+    try:
+        with contextlib.ExitStack() as stack:
+            if rasterio is not None:
+                stack.enter_context(rasterio.Env(GDAL_PAM_ENABLED="NO", GDAL_NUM_THREADS="1",
+                                                 CPL_VSIL_CURL_ALLOWED_EXTENSIONS="none"))
+            dataset = stack.enter_context(contextlib.closing(open_source(source, opener)))
+            phase = "read"
+            records, header = read_windows(dataset)
+        phase = "receipt"
+        finished = dt.datetime.now(dt.timezone.utc).isoformat()
+        document = build_receipt(records, header, started=started, finished=finished, reference=reference,
+                                 head=checked_head, envelope=limits, source=source, attempt=attempt)
+        verify_receipt(document)
+        path, sha, size = write_receipt(out, document, claimed_bytes=attempt["bytes"])
+    except BaseException as error:
+        record_failure(out, phase, error)  # the claim itself stays: no refund, no retry
+        raise
     return dict(receipt=str(path), sha256=sha, bytes=size, opens=len(OPENS), require_holes=document["require_holes"],
-                status=document["status"])
+                status=document["status"], attempt=attempt)
 
 
 def main(argv=None):
@@ -489,6 +594,8 @@ def main(argv=None):
         raw = p.read_bytes()
         out = dict(receipt=str(p), sha256=digest(raw), **verify_receipt(json.loads(raw)))
     else:
+        if not (sys.flags.isolated and sys.flags.dont_write_bytecode):
+            raise SystemExit("scan requires an isolated, bytecode-free interpreter (python -I -B)")
         out = scan(args.amendment, args.code_head)
     print(json.dumps(out, sort_keys=True))
     return 0 if args.action != "verify" or out["met"] else 2
