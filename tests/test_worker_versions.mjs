@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {liveVersion, commitOf, rollbackTarget} from '../scripts/worker_versions.mjs';
+import {liveVersion, commitOf, rollbackTarget, liveCommit} from '../scripts/worker_versions.mjs';
 
 // Modelled on deploy run 38173947179 (#568): the previous commit's code and secrets
 // deployments, then the failed commit's code (be6f…) and secrets (04a1…) deployments.
@@ -97,6 +97,24 @@ test('the CLI prints the live version and the rollback target', () => {
   assert.equal(run.stdout.trim(), PREV_SECRETS);
   run = cli(DEPLOYMENTS, VERSIONS, 'commit', '@versions.json', PREV_CODE);
   assert.equal(run.stdout.trim(), PREV_SHA);
+});
+
+test('the commit production serves comes from the live version or, for a secrets upload, the code version before it', () => {
+  assert.equal(liveCommit(DEPLOYMENTS, VERSIONS), CUR_SHA, 'live is the secrets upload; its code version names the commit');
+  const codeLive = [...DEPLOYMENTS, deployment('d5', '2026-10-11T10:00:00.000Z', PREV_CODE, 'wrangler')];
+  assert.equal(liveCommit(codeLive, VERSIONS), PREV_SHA, 'a rollback to an older code version');
+  const rolledBack = [...DEPLOYMENTS, deployment('d5', '2026-10-11T10:00:00.000Z', PREV_SECRETS, 'wrangler')];
+  assert.equal(liveCommit(rolledBack, VERSIONS), PREV_SHA, 'a rollback to the previous commit\'s secrets upload');
+  assert.equal(liveCommit(DEPLOYMENTS, VERSIONS.slice(0, 3)), '', 'live version missing from the listing');
+  assert.equal(liveCommit(DEPLOYMENTS, [VERSIONS[1], VERSIONS[3]]), '', 'no version names a commit');
+  assert.equal(liveCommit([], VERSIONS), '');
+  let run = cli(DEPLOYMENTS, VERSIONS, 'live-commit', '@deployments.json', '@versions.json');
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(run.stdout.trim(), CUR_SHA);
+  run = cli(DEPLOYMENTS, [VERSIONS[1], VERSIONS[3]], 'live-commit', '@deployments.json', '@versions.json');
+  assert.equal(run.status, 1);
+  assert.equal(run.stdout, '');
+  assert.match(run.stderr, /name no commit/);
 });
 
 test('the CLI exits 1 with a message when there is nothing to roll back to', () => {

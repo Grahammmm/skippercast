@@ -10,6 +10,7 @@
 //   node scripts/worker_versions.mjs live <deployments.json>
 //   node scripts/worker_versions.mjs rollback-target <deployments.json> <versions.json>   (the version live before the current commit's deploy)
 //   node scripts/worker_versions.mjs commit <versions.json> <version-id>
+//   node scripts/worker_versions.mjs live-commit <deployments.json> <versions.json>   (the commit production serves)
 // Each prints one id (or sha) and exits 1 with a message on stderr when there is none.
 import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
@@ -52,6 +53,17 @@ export function rollbackTarget(deployments = [], versions = [], {excludeCommit} 
     .sort((a, b) => created(b) - created(a))[0]?.id ?? '';
 }
 
+// The commit production serves: the live version's own commit or, when the live version is a
+// secrets upload (no message), the commit of the newest earlier version that has one. The deploy
+// workflow holds a deploy of that commit or an older one. Returns '' when it cannot be named.
+export function liveCommit(deployments = [], versions = []) {
+  const liveId = liveVersion(deployments);
+  const live = versions.find(v => v.id === liveId);
+  if (!live) return '';
+  return commitOf(live) ?? versions.filter(v => v.id !== liveId && created(v) < created(live))
+    .sort((a, b) => created(b) - created(a)).map(commitOf).find(Boolean) ?? '';
+}
+
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
@@ -75,11 +87,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
     answer = rollbackTarget(deployments, versions);
     missing = 'no earlier Worker version from before the current commit\'s deploy to roll back to';
+  } else if (command === 'live-commit' && files.length === 2) {
+    answer = liveCommit(readJson(files[0]), readJson(files[1]));
+    missing = 'the live version and the versions before it name no commit';
   } else if (command === 'commit' && files.length === 2) {
     answer = commitOf(readJson(files[0]).find(v => v.id === files[1])) ?? '';
     missing = `version ${files[1]} has no commit in its deploy message`;
   } else {
-    console.error('usage: worker_versions.mjs live <deployments.json> | rollback-target <deployments.json> <versions.json> (the version live before the current commit\'s deploy) | commit <versions.json> <version-id>');
+    console.error('usage: worker_versions.mjs live <deployments.json> | rollback-target <deployments.json> <versions.json> (the version live before the current commit\'s deploy) | commit <versions.json> <version-id> | live-commit <deployments.json> <versions.json>');
     process.exit(2);
   }
   if (!answer) { console.error(missing); process.exit(1); }
