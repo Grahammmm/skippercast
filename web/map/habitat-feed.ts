@@ -36,7 +36,7 @@ export type RegionalSST =
   /** The region publishes no manifest, or no surface-temperature layer in it. */
   | {readonly state: 'none'}
   /** The manifest or one of its tiles could not be read or failed a check. */
-  | {readonly state: 'error'}
+  | {readonly state: 'error'; readonly network?: true}
   /** Listed but not loaded: the layer's status is not `ok`/`retained`, or it was already past its age limit. */
   | {readonly state: 'listed'; readonly product: string; readonly analysedAt: string | null; readonly maxAgeMs: number; readonly layerStatus: string}
   /** Every tile passed: the analysis, in the coast report's shape. */
@@ -45,7 +45,7 @@ export type RegionalSST =
 /** What the region's feed offers Currents: only the WCOFS forecast is published per region. */
 export type RegionalCurrents =
   | {readonly state: 'none'}
-  | {readonly state: 'error'}
+  | {readonly state: 'error'; readonly network?: true}
   /** Listed but not loaded: its frame times, so the rail can name the last one. */
   | {readonly state: 'listed'; readonly validAt: readonly string[]; readonly layerStatus: string}
   /** Every tile passed: the forecast as the packet's `CurrentField`, for `selectedCurrent`. */
@@ -141,8 +141,15 @@ export async function tileRows(bytes: ArrayBuffer, record: Record<string, unknow
 
 type Get = (url: string) => Promise<Response>;
 interface ReadOptions {fetchFn: typeof fetch; page: string; now: Date; signal?: AbortSignal}
-const getter = (o: ReadOptions): Get => url =>
-  o.fetchFn(url, {signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS)});
+class NetworkReadError extends Error {}
+const getter = (o: ReadOptions): Get => async url => {
+  try {
+    return await o.fetchFn(url, {signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS)});
+  } catch (error) {
+    if (error instanceof TypeError) throw new NetworkReadError('Ocean data could not be fetched');
+    throw error;
+  }
+};
 
 /** Every tile's rows, merged by frame time; one failed tile throws. */
 async function allRows(get: Get, manifestURL: string, regionId: string, layer: Layer): Promise<Map<number, unknown[][]>> {
@@ -193,7 +200,7 @@ export async function regionalSST(regionId: string, o: ReadOptions): Promise<Reg
       nativeResolutionDeg: lat, sampleSpacingDeg: lat * layer.stride, points, url: layer.url, kind: 'analysis'}};
   } catch (error) {
     if (o.signal?.aborted) throw error;
-    return {state: 'error'};
+    return error instanceof NetworkReadError ? {state: 'error', network: true} : {state: 'error'};
   }
 }
 
@@ -227,6 +234,6 @@ export async function regionalCurrents(regionId: string, o: ReadOptions): Promis
       limitations: typeof layer.raw.limitations === 'string' ? layer.raw.limitations : ''}};
   } catch (error) {
     if (o.signal?.aborted) throw error;
-    return {state: 'error'};
+    return error instanceof NetworkReadError ? {state: 'error', network: true} : {state: 'error'};
   }
 }
