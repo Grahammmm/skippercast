@@ -2,6 +2,13 @@
 
 Rasterio reads packed samples without applying GDAL scales/offsets. Sample sign
 distributions never establish a convention. No operation transforms datums.
+
+Deep-band datum classes (G3, 2026-10-20): EGM2008, instantaneous sea level and
+an unstated datum are admitted only in a block that declares depth lane M
+(300-600 ft) or D (>600 ft). No uncertainty bound is required. Every admitted
+block carries a fixed ``deep_datum`` record marking it not for navigation, and
+depth normalization drops its cells shallower than the lane floor. A block with
+no ``depth_lane`` is lane S (0-300 ft), which keeps the survey-grade datum set.
 """
 from copy import deepcopy
 import hashlib
@@ -12,6 +19,20 @@ import re
 VERSION = 'vertical-v1'
 FIELDS = ('sign', 'units', 'datum', 'scale', 'offset', 'scale_offset_applied')
 DATUMS = {'MLLW', 'MSL', 'NAVD88', 'ellipsoid:WGS84'}
+DEEP_DATUMS = {'EGM2008', 'instantaneous-sea-level', 'unstated'}
+LANES = ('S', 'M', 'D')
+DEEP_LANES = ('M', 'D')
+LANE_FLOOR_M = {'M': 91.44, 'D': 182.88}
+DEEP_DATUM_SCHEMA = 'vertical-deep-datum-v1'
+DEEP_DATUM_NOTES = {
+    'EGM2008': 'Heights relative to the EGM2008 geoid; no offset to a tidal chart datum is applied.',
+    'instantaneous-sea-level': 'Soundings relative to the water surface at survey time; tides are not removed.',
+    'unstated': 'The source raster states no vertical datum.',
+}
+_DEEP_ALIASES = {'egm2008': 'EGM2008', 'egm2008 height': 'EGM2008', 'egm2008 geoid': 'EGM2008',
+                 'egm08': 'EGM2008', 'instantaneous sea level': 'instantaneous-sea-level',
+                 'instantaneous-sea-level': 'instantaneous-sea-level', 'unstated': 'unstated',
+                 'not stated': 'unstated', 'not-stated': 'unstated'}
 
 
 class VerticalHold(ValueError):
@@ -52,7 +73,49 @@ def _datum(crs):
         return 'NAVD88'
     if 'mean sea level' in name or name.startswith('msl '):
         return 'MSL'
+    if 'egm2008' in name or 'egm08' in name:
+        return 'EGM2008'
     return None
+
+
+def _datum_tag(value):
+    """Canonical deep-class names; every other tag value stays as written."""
+    return _DEEP_ALIASES.get(str(value).strip().lower(), value)
+
+
+def deep_datum_record(datum, lane):
+    """The fixed G3 label for an admitted deep-band datum; reviews cannot alter it."""
+    return {'schema': DEEP_DATUM_SCHEMA, 'datum_class': datum, 'depth_lane': lane,
+            'lane_floor_m': LANE_FLOOR_M[lane], 'uncertainty_bound_m': None,
+            'uncertainty_bound_required': False, 'uncertainty_status': 'datum_offset_unbounded',
+            'note': DEEP_DATUM_NOTES[datum], 'navigation': 'not-for-navigation',
+            'chart_datum': False, 'datum_transform': False,
+            'policy': 'G3 2026-10-20: lanes M and D admit EGM2008, instantaneous-sea-level and '
+                      'unstated datums without an uncertainty bound; outputs are not for navigation.'}
+
+
+def is_deep(block):
+    """True when the block uses a deep-band datum class in lane M or D."""
+    return _deep_class(block) and block.get('depth_lane') in DEEP_LANES
+
+
+def _deep_class(block):
+    datum = block.get('datum') if isinstance(block, dict) else None
+    return isinstance(datum, str) and datum in DEEP_DATUMS
+
+
+def _statement_holds(block):
+    statement = block.get('datum_statement')
+    if statement is None:
+        return []
+    if (block.get('datum') not in ('EGM2008', 'instantaneous-sea-level')
+            or not isinstance(statement, dict)
+            or set(statement) != {'kind', 'sha256', 'locator'}
+            or statement.get('kind') != 'source_metadata'
+            or not re.fullmatch('[a-f0-9]{64}', str(statement.get('sha256')))
+            or not isinstance(statement.get('locator'), str) or not statement['locator'].strip()):
+        return ['vertical_datum_statement_invalid']
+    return []
 
 
 def from_raster(dataset, *, source_sha256=None, bag_metadata=None):
@@ -84,7 +147,7 @@ def from_raster(dataset, *, source_sha256=None, bag_metadata=None):
         if 'datum_realization' in context:
             hints['datum_realization'].append(context['datum_realization'])
         if 'vertical_datum' in context:
-            hints['datum'].append(context['vertical_datum'])
+            hints['datum'].append(_datum_tag(context['vertical_datum']))
         if 'scale_offset_applied' in context:
             value = context['scale_offset_applied'].lower()
             hints['scale_offset_applied'].append({'true': True, 'false': False}.get(value, value))
@@ -163,10 +226,21 @@ def validate(block):
     if not isinstance(block, dict) or block.get('schema', VERSION) != VERSION:
         return ['vertical_contract_missing_or_unsupported']
     for key, allowed in (('sign', {'positive_up', 'positive_down'}), ('units', {'m', 'ft'}),
-                         ('datum', DATUMS)):
+                         ('datum', DATUMS | DEEP_DATUMS)):
         value = block.get(key)
         if not isinstance(value, str) or value not in allowed:
             holds.append('vertical_' + key + ('_unknown' if value in (None, 'unknown', '') else '_unsupported'))
+    if 'depth_lane' in block and block['depth_lane'] not in LANES:
+        holds.append('vertical_depth_lane_unsupported')
+    elif _deep_class(block):
+        lane = block.get('depth_lane', 'S')
+        if lane not in DEEP_LANES:
+            holds.append('vertical_datum_deep_lane_only')
+        elif block.get('deep_datum') != deep_datum_record(block['datum'], lane):
+            holds.append('vertical_deep_datum_metadata_invalid')
+        holds.extend(_statement_holds(block))
+    elif 'deep_datum' in block or 'datum_statement' in block:
+        holds.append('vertical_deep_datum_metadata_invalid')
     if not _number(block.get('scale')) or block.get('scale', 0) <= 0:
         holds.append('vertical_scale_unsupported')
     if not _number(block.get('offset')):
@@ -206,6 +280,8 @@ def resolve(declared, observed, evidence=None):
     block.setdefault('schema', VERSION)
     block.setdefault('datum_realization', 'unknown')
     block.setdefault('conflicts', [])
+    if is_deep(block):
+        block.setdefault('deep_datum', deep_datum_record(block['datum'], block['depth_lane']))
     items = deepcopy(evidence if evidence is not None else block.get('evidence', []))
     block['evidence'] = items
     holds = validate(block) + list(observed.get('conflicts', []))
@@ -216,7 +292,12 @@ def resolve(declared, observed, evidence=None):
     if not re.fullmatch('[a-f0-9]{64}', str(observed.get('source_sha256'))):
         holds.append('vertical_source_hash_required')
     for key in FIELDS:
-        if facts.get(key) is None or facts.get(key) == 'unknown':
+        if key == 'datum' and facts.get(key) is None and is_deep(block):
+            # G3: a raster header that states no datum is the 'unstated' class.
+            # EGM2008 / instantaneous sea level then need the source's own statement.
+            if block['datum'] != 'unstated' and 'datum_statement' not in block:
+                holds.append('vertical_datum_statement_required')
+        elif facts.get(key) is None or facts.get(key) == 'unknown':
             holds.append('vertical_' + key + '_unobserved')
         elif block.get(key) != facts[key]:
             holds.append('vertical_' + key + '_conflict')
@@ -272,6 +353,9 @@ def to_depth(values, block, *, valid=None, nodata=None):
     if block['sign'] == 'positive_up':
         raw = -raw
     mask &= np.isfinite(raw)
+    if is_deep(block):
+        # Deep-band datum classes never yield lane S (0-300 ft) depths.
+        mask &= np.where(mask, raw, -np.inf) >= LANE_FLOOR_M[block['depth_lane']]
     return np.where(mask, raw, np.nan)
 
 
@@ -280,13 +364,19 @@ def normalized(block):
     holds = validate(block)
     if holds:
         raise VerticalHold(holds)
-    return {'schema': VERSION, 'sign': 'positive_down', 'units': 'm', 'datum': block['datum'],
-            'datum_realization': block.get('datum_realization', 'unknown'), 'scale': 1.0,
-            'offset': 0.0, 'scale_offset_applied': True, 'evidence': deepcopy(block['evidence']),
-            'conflicts': [], 'storage': 'normalized_depth',
-            'lineage': {'source_vertical': deepcopy(block), 'source_vertical_sha256': digest(block),
-                        'operations': ['apply_unapplied_scale_offset', 'convert_units_to_m',
-                                       'convert_sign_to_positive_down'], 'datum_transform': False}}
+    result = {'schema': VERSION, 'sign': 'positive_down', 'units': 'm', 'datum': block['datum'],
+              'datum_realization': block.get('datum_realization', 'unknown'), 'scale': 1.0,
+              'offset': 0.0, 'scale_offset_applied': True, 'evidence': deepcopy(block['evidence']),
+              'conflicts': [], 'storage': 'normalized_depth',
+              'lineage': {'source_vertical': deepcopy(block), 'source_vertical_sha256': digest(block),
+                          'operations': ['apply_unapplied_scale_offset', 'convert_units_to_m',
+                                         'convert_sign_to_positive_down'], 'datum_transform': False}}
+    if is_deep(block):
+        result.update(depth_lane=block['depth_lane'], deep_datum=deepcopy(block['deep_datum']))
+        if 'datum_statement' in block:
+            result['datum_statement'] = deepcopy(block['datum_statement'])
+        result['lineage']['operations'].append('drop_cells_shallower_than_lane_floor')
+    return result
 
 
 def normalized_from_raster(dataset, *, source_sha256):
