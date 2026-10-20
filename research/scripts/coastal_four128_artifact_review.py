@@ -2,8 +2,10 @@
 import argparse,datetime as dt,hashlib,json,os,sys,time,subprocess
 from pathlib import Path
 # Same roots as coastal_four128_runtime (the review unit inherits them via --setenv);
-# defaults keep the 2026-10-11 attempt's identity readable.
-N=Path(os.environ.get('SKIPPERCAST_FOUR128_MISSION_ROOT','/home/user/skippercast-data/2026-10-07-pge-south/outputs/ordered-four128-approved-20261011'))
+# defaults keep the 2026-10-11 attempt's identity readable. One project root from the
+# operator's home, never a literal home path (scripts/check_repository.py).
+PROJECT=Path.home()/'skippercast-data'/'2026-10-07-pge-south'
+N=Path(os.environ.get('SKIPPERCAST_FOUR128_MISSION_ROOT',str(PROJECT/'outputs/ordered-four128-approved-20261011')))
 DEFAULT_ROOT=N
 R=N/'execution'
 CONTEXT_PATH=N/'control/release-context.json'
@@ -23,13 +25,13 @@ def configure(root=DEFAULT_ROOT):
     assert CONTEXT['mode'] in ('synthetic_rehearsal','real_continuation')
     if FIXTURE:
         assert CONTEXT['rehearsal_synthetic'] is True and CONTEXT['source']['sha256']!=CONTEXT['real_source_sha256']
-        allowed=Path('/home/user/skippercast-data/2026-10-07-pge-south/scratch/source-reuse-admission-engineering-20261011')
+        allowed=PROJECT/'scratch/source-reuse-admission-engineering-20261011'
         assert N.is_relative_to(allowed)
     else:
         assert N==DEFAULT_ROOT and CONTEXT['source']['sha256']==CONTEXT['real_source_sha256'] and CONTEXT.get('rehearsal_synthetic') is False
     R=Path(CONTEXT['execution_root'])
 
-W=Path(os.environ.get('SKIPPERCAST_FOUR128_CODE_ROOT','/home/user/skippercast-data/2026-10-07-pge-south/work/source-reuse-admission-20261011'))
+W=Path(os.environ.get('SKIPPERCAST_FOUR128_CODE_ROOT',str(PROJECT/'work/source-reuse-admission-20261011')))
 sys.dont_write_bytecode=True;sys.path.insert(0,str(W/'src'))
 sys.path.insert(0,str(Path(__file__).parent))
 from coastal_four128_runtime import gate, index, put, closed_sqlite

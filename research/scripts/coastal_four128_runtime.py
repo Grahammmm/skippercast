@@ -4,14 +4,18 @@ from pathlib import Path
 # Mission root, code root and interpreter were pinned to the 2026-10-11 attempt.
 # A fresh run names its own (absent) mission root and the exact checkout/venv it
 # runs from; defaults keep the historical attempt's identity readable.
-HISTORICAL_MISSION=Path('/home/user/skippercast-data/2026-10-07-pge-south/outputs/ordered-four128-approved-20261011')
+# Every default hangs off one project root taken from the operator's home, never a
+# literal home path (scripts/check_repository.py). No extra override: transient
+# units get the same HOME, so driver and units resolve the same root.
+PROJECT=Path.home()/'skippercast-data'/'2026-10-07-pge-south'
+HISTORICAL_MISSION=PROJECT/'outputs/ordered-four128-approved-20261011'
 N=Path(os.environ.get('SKIPPERCAST_FOUR128_MISSION_ROOT',str(HISTORICAL_MISSION)))
-W=Path(os.environ.get('SKIPPERCAST_FOUR128_CODE_ROOT','/home/user/skippercast-data/2026-10-07-pge-south/work/source-reuse-admission-20261011'))
-PYTHON=os.environ.get('SKIPPERCAST_FOUR128_PYTHON','/home/user/skippercast-data/2026-10-07-pge-south/repo/.venv/bin/python')
+W=Path(os.environ.get('SKIPPERCAST_FOUR128_CODE_ROOT',str(PROJECT/'work/source-reuse-admission-20261011')))
+PYTHON=os.environ.get('SKIPPERCAST_FOUR128_PYTHON',str(PROJECT/'repo/.venv/bin/python'))
 R=N/'execution'; M=N/'mapping-execution'
 sys.dont_write_bytecode=True
 sys.path.insert(0,str(W/'src'))
-sys.path.insert(0,'/home/user/skippercast-data/2026-10-07-pge-south/work/combined-coastal-integration-20261009/var/python-integration-dependencies')
+sys.path.insert(0,str(PROJECT/'work/combined-coastal-integration-20261009/var/python-integration-dependencies'))
 sys.path.insert(0,str(Path(__file__).parent))
 from coastal_four128_resources import capture,UNITS,CONTROL_UNITS,SLICE,RUN_TAG,HISTORICAL_RUN_TAG
 from coastal_four128_resources import budget_limits,BUDGET_AMENDMENT,FRESH_SOURCE,TRIAL_SCRATCH
@@ -43,7 +47,7 @@ from skippercast.coastal.coordinator.source_free import policy as mapping_policy
 from skippercast.coastal.handoff.common import load,write,ref,epoch
 ROOTS=[str(N)]
 # Slice, unit and scratch names follow SKIPPERCAST_FOUR128_RUN_TAG (coastal_four128_resources).
-SCRATCH=Path('/home/user/skippercast-data/2026-10-07-pge-south/scratch/four128-approved-'+RUN_TAG)
+SCRATCH=PROJECT/('scratch/four128-approved-'+RUN_TAG)
 # Cumulative source prior/limit and scratch prior/limit are not constants: they come
 # from the signed budget amendment the released grant names (see budget_limits).
 WALL=3600

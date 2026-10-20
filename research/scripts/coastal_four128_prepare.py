@@ -2,7 +2,8 @@
 import argparse,copy,json,sys,time
 from pathlib import Path
 
-B=Path("/home/user/skippercast-data/2026-10-07-pge-south")
+# Project root from the operator's home (no literal home path: scripts/check_repository.py).
+B=Path.home()/"skippercast-data"/"2026-10-07-pge-south"
 W=Path(__file__).resolve().parents[2]
 sys.path[:0]=[str(W/"src"),str(B/"work/combined-coastal-integration-20261009/var/python-integration-dependencies"),str(Path(__file__).resolve().parent)]
 from coastal_four128_resources import budget_limits,FRESH_SOURCE
