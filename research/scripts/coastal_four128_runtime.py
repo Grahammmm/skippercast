@@ -104,10 +104,14 @@ def control_ceiling(path):
             return 8192
     raise ValueError('unreviewed finite control family: '+str(path))
 
+def control_bytes(doc):
+    """Exact bytes put() commits for one control document."""
+    return (json.dumps(doc,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n').encode()
+
 def put(path,doc,root=R):
     if path.exists():raise ValueError('preserve existing artifact: '+str(path))
     grant=load(R,json.loads((R/'metadata/live-index.json').read_text())['grant'])
-    raw=(json.dumps(doc,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n').encode()
+    raw=control_bytes(doc)
     if len(raw)>control_ceiling(path):raise ValueError('bounded immutable control family receipt')
     manager=ManagedOutputs(N,grant,receipt_digest(grant))
     if not manager.write_bytes(manager.relative_path(path),raw,role='control',max_bytes=len(raw),
@@ -429,14 +433,37 @@ def unit_command(key,extra=(),*,runtime=180,wait=True):
         if key not in ('watchdog','driver'):argv+=[key,*extra]
     return argv
 
+def read_loadavg(path='/proc/loadavg'):
+    """1-, 5- and 15-minute load averages, or None when unreadable.
+
+    Launch receipts record this before and after each bounded launch so a slow or
+    timed-out launch shows host load without journalctl. Tests replace it."""
+    try:
+        fields=Path(path).read_text().split()
+        values=[float(v) for v in fields[:3]]
+    except (OSError,ValueError):
+        return None
+    if len(values)!=3 or not all(0<=v<1e6 for v in values):return None
+    return values
+
 def bounded_command(name,argv,*,seconds=200):
     from skippercast.coastal.runner import run_bounded
     d,grant=index()
+    observed=[]
+    load_before=read_loadavg();called=time.monotonic()
     outcome=run_bounded(argv,intent=N/('control/launcher-'+name+'.json'),
                         scratch=N/('control/launcher-'+name),timeout_s=seconds,grace_s=1,
-                        output_limit_bytes=2048,managed_output=managed_configuration_for(grant,'control',32768))
+                        output_limit_bytes=2048,managed_output=managed_configuration_for(grant,'control',32768),
+                        identity_callback=lambda identity:observed.append(time.monotonic()))
+    finished=time.monotonic();load_after=read_loadavg()
+    # Additive fields: every known reader of launch receipts uses .get() and no
+    # reader checks the exact key set, so the schema stays v1.
     receipt=dict(schema='coastal-four128-launch-v1',name=name,argv=argv,status=outcome.status,rc=outcome.rc,
-                 elapsed_seconds=outcome.elapsed,intent=outcome.intent_path,stdout=outcome.stdout_path,stderr=outcome.stderr_path)
+                 elapsed_seconds=outcome.elapsed,intent=outcome.intent_path,stdout=outcome.stdout_path,stderr=outcome.stderr_path,
+                 loadavg_before=load_before,loadavg_after=load_after,
+                 launch_wall_seconds=round(finished-called,3),
+                 # When the runner parent first saw its child's identity (10 ms poll); None if never.
+                 child_observed_seconds=round(observed[0]-called,3) if observed else None)
     put(N/('control/launch-'+name+'.json'),receipt,root=N)
     if outcome.status!='ok' or outcome.rc!=0:raise ValueError('finite command held; no retry: '+name)
     return receipt
@@ -647,6 +674,28 @@ def native_worker_ready():
     namespace['guard_project_source'](package)
     return str(bootstrap)
 
+# Optional quiescence gate: when this is set to a positive number, run() refuses to
+# start the outer clock while the host 1-minute load average is above it. Unset
+# (the default) leaves the gate off.
+QUIESCENCE_ENV='SKIPPERCAST_FOUR128_MAX_LOAD1'
+
+def host_quiescent():
+    """The host is quiet enough to start the outer clock, or the gate is off.
+
+    Returns None when the gate is off, else the 1-minute load average that passed.
+    Checked before any clock or receipt, like native_worker_ready()."""
+    import math
+    raw=os.environ.get(QUIESCENCE_ENV,'').strip()
+    if not raw:return None
+    try:threshold=float(raw)
+    except ValueError:raise ValueError(QUIESCENCE_ENV+' must be a number') from None
+    if not math.isfinite(threshold) or threshold<=0:raise ValueError(QUIESCENCE_ENV+' must be a positive finite number')
+    load=read_loadavg()
+    if load is None:raise ValueError('quiescence gate set but /proc/loadavg is unreadable')
+    if load[0]>threshold:
+        raise ValueError('host not quiescent: 1-minute load average '+str(load[0])+' above '+QUIESCENCE_ENV+'='+raw)
+    return load[0]
+
 def run():
     # External observer owns no scientific subprocesses; all driver/phase supervisors are in SLICE.
     fresh_run_identity()
@@ -654,6 +703,8 @@ def run():
     _,grant=index();limits=limits_for(grant);audit();bound=initial_capacity()
     if (N/'control/run-started.json').exists() or (N/'control/outer-clock.json').exists():
         raise ValueError('finite batch already attempted; no retry or clock reset')
+    # Sampled last, just before the clock starts, so the refusal reflects current load.
+    host_quiescent()
     utc=time.time();mono=time.monotonic();boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
     clock=dict(schema='coastal-four128-outer-clock-v1',start_epoch=utc,start_monotonic=mono,
                deadline_epoch=utc+WALL,deadline_monotonic=mono+WALL,wall_seconds=WALL,boot_id=boot,
