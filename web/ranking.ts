@@ -23,6 +23,7 @@ import {distanceNm} from '../dist/spot-ranking.js';
 import {speciesFit} from '../dist/species-fit.js';
 import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
 import {hasCoastTerrain} from './coast-context.ts';
+import {yardsFromShore} from './shore-distance.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
 import type {HabitatFeature} from './map/coast-ranking.js';
 import {CHECKING, fitLine, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
@@ -61,11 +62,23 @@ const known = (n: unknown): n is number => typeof n === 'number' && Number.isFin
 /** Inside the range: always without one; with one, only a measured distance at or under it. */
 const inside = (nm: number | null, maxNm: number | null): boolean => maxNm === null || (nm !== null && nm <= maxNm);
 
+/** What keeps a place in the list beyond depth and the screen (#644): the range from the origin, and Spear's swim from shore. */
+export interface Keep {
+  readonly maxNm: number | null;
+  /** Spear from shore: the overview shoreline and the farthest swim (yards). */
+  readonly shore: {readonly lines: readonly (readonly number[])[][]; readonly maxYd: number} | null;
+}
+export const KEEP_ALL: Keep = Object.freeze({maxNm: null, shore: null});
+/** Yards from shore, rounded to 25 for display, when the shore filter applies; else null. */
+const swim = (keep: Keep, p: {latitude: number; longitude: number}): number | null => keep.shore ? yardsFromShore(p, keep.shore.lines) : null;
+const kept = (keep: Keep, nm: number | null, yd: number | null): boolean => inside(nm, keep.maxNm) && (!keep.shore || (yd !== null && yd <= keep.shore.maxYd));
+const swimText = (yd: number): string => `~${Math.max(25, Math.round(yd / 25) * 25)} yd from shore`;
+
 /** The atlas marks the Chart draws for `target`, inside `limitFt` on their deepest nearby depth, best fit first. */
-export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: string, limitFt: number, origin: Origin | null = harborOrigin(data), maxNm: number | null = null): Pick[] {
+export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: string, limitFt: number, origin: Origin | null = harborOrigin(data), keep: Keep = KEEP_ALL): Pick[] {
   const rated = (data?.atlas?.targets ?? []).filter(t => {
     const [lo, hi] = t.neighborhood_depth_ft ?? [];
-    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen) && inside(miles(origin, t), maxNm);
+    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen) && kept(keep, miles(origin, t), swim(keep, t));
   }).map(t => ({t, fit: markFit(t, target), score: (t as AtlasTarget & {habitat_score?: number}).habitat_score ?? 0}));
   rated.sort((a, b) => (b.fit?.n ?? 0) - (a.fit?.n ?? 0) || b.score - a.score || a.t.id.localeCompare(b.t.id));
   return rated.slice(0, TOP).map(({t, fit}) => {
@@ -74,8 +87,8 @@ export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: st
     const species = target === 'lingcod' ? 'lingcod'
       : target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : null;
     const reason = species ? speciesFit(t, species)?.reason : null;
-    const nm = miles(origin, t);
-    return {id: t.id, kind: 'spot', name: t.label, distance: distance(nm), nm, depth: band(lo, hi),
+    const nm = miles(origin, t), yd = swim(keep, t);
+    return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
   });
 }
@@ -90,17 +103,17 @@ const speciesLabel = (coast: string): string | null => {
  * The region's reviewed terrain habitat, already in packages/coast `rankedHabitat` order for the coast species,
  * inside `limitFt` on its deepest nominal depth and admitted by the current waypoint screen, as picks.
  */
-export function habitatPicks(ranked: readonly HabitatFeature[], screen: MarkScreen, region: string, coast: string, limitFt: number, origin: Origin | null, maxNm: number | null = null): Pick[] {
+export function habitatPicks(ranked: readonly HabitatFeature[], screen: MarkScreen, region: string, coast: string, limitFt: number, origin: Origin | null, keep: Keep = KEEP_ALL): Pick[] {
   const field = speciesOptions.find(s => s.id === coast)?.field ?? null, label = speciesLabel(coast);
   return ranked.filter(f => {
     const p = f.properties;
     return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude)
       && !withheld({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, screen)
-      && inside(miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), maxNm);
+      && kept(keep, miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), swim(keep, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}));
   }).slice(0, TOP).map(f => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
-    const nm = miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude});
-    return {id, kind: 'habitat', name: `Reef habitat ${id}`, distance: distance(nm), nm,
+    const at = {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, nm = miles(origin, at), yd = swim(keep, at);
+    return {id, kind: 'habitat', name: `Reef habitat ${id}`, distance: yd === null ? distance(nm) : swimText(yd), nm,
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
       reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
   });
@@ -128,6 +141,13 @@ export interface RankingInputs {
   readonly data: MarkData | null; readonly screen: MarkScreen; readonly terrain: TerrainHabitat; readonly now: number;
   /** The range to consider (nm, one way, web/reach.ts); null or absent ranks the whole region. */
   readonly reachNm?: number | null;
+  /** Where distances run from instead of the harbor (Kayak's chosen launch, web/launches.ts); null or absent: the harbor. */
+  readonly origin?: Origin | null;
+  /**
+   * Spear from shore (web/reach.ts `shoreSwimLimit`): the farthest swim in yards, and the region's overview shoreline
+   * (web/shore-distance.ts); lines null while loading or unavailable, so the limit is not applied and the basis says so.
+   */
+  readonly shore?: {readonly maxYd: number; readonly lines: readonly (readonly number[])[][] | null} | null;
 }
 
 const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-area check, ordered by habitat fit, then the atlas habitat score. '
@@ -138,24 +158,29 @@ const TERRAIN_BASIS = 'Reviewed coastal terrain habitat that passes the current 
 /** The list the brief shows for these inputs: terrain habitat where it binds and loads, else the atlas; one source, never both. */
 export function ranking(i: RankingInputs): Ranking {
   const limit = terrainDepthLimitFt(i.profile);
-  const origin = harborOrigin(i.data), harbor = origin?.name ?? 'the harbor';
-  // A range applies only where it can be measured: from a harbor position.
+  const origin = i.origin ?? harborOrigin(i.data), harbor = origin?.name ?? 'the harbor';
+  // A range applies only where it can be measured: from a harbor or launch position.
   const reach = origin && known(i.reachNm) && i.reachNm > 0 ? i.reachNm : null;
-  const kept = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
-  const from = ` ${harbor}.${kept} A ranked place is a place to look; fish presence is unverified.`;
-  const within = reach === null ? `within ${limit} ft` : `within ${limit} ft and ${Number(reach.toFixed(1))} nm of ${harbor}`;
-  const ranged = reach === null ? {} : {reach};
+  // A swim limit applies only once the shoreline has loaded; until then the basis says it is not applied.
+  const shore = i.shore && i.shore.lines ? {lines: i.shore.lines, maxYd: i.shore.maxYd} : null;
+  const keep: Keep = {maxNm: reach, shore};
+  const ranged = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
+  const swum = shore ? ` Only places within ${shore.maxYd} yd of the mapped shoreline are listed, measured straight to the simplified overview line, so the distance is approximate and not a swim route.`
+    : i.shore ? ' Your swim limit is not applied: the shoreline to measure from has not loaded, or this region has none.' : '';
+  const from = ` ${harbor}.${ranged}${swum} A ranked place is a place to look; fish presence is unverified.`;
+  const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
+  const extra = {...(origin ? {harbor: origin.name} : {}), ...(reach === null ? {} : {reach})};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
     return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
   const t = i.terrain, field = speciesOptions.find(s => s.id === i.coast);
   if (i.region && hasCoastTerrain(i.region) && t.state === 'ready' && field && field.id !== 'halibut' && field.id !== 'surfperch' && t.expiresAt > i.now) {
     const screen = i.screen ?? CHECKING;
-    const picks = habitatPicks(t.rank(t.features, field.field, i.now), screen, i.region, i.coast, limit, origin, reach);
+    const picks = habitatPicks(t.rank(t.features, field.field, i.now), screen, i.region, i.coast, limit, origin, keep);
     const empty = screen.status !== 'ready' ? screen.note : `No reviewed terrain habitat passes the current protected-area and closure check ${within} for this target.`;
-    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty, ...(origin ? {harbor: origin.name} : {}), ...ranged};
+    return {source: 'terrain', label: 'Reviewed terrain habitat', basis: TERRAIN_BASIS + from, picks, empty, ...extra};
   }
   if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
-  const picks = atlasPicks(i.data, i.screen, i.target, limit, origin, reach);
+  const picks = atlasPicks(i.data, i.screen, i.target, limit, origin, keep);
   const empty = i.screen.status !== 'ready' ? i.screen.note : `No surveyed reef marks ${within} for this target.`;
-  return {source: 'atlas', label: 'Survey reef atlas', basis: ATLAS_BASIS + from, picks, empty, ...(origin ? {harbor: origin.name} : {}), ...ranged};
+  return {source: 'atlas', label: 'Survey reef atlas', basis: ATLAS_BASIS + from, picks, empty, ...extra};
 }

@@ -307,3 +307,16 @@ test('clicking selects the mark or the habitat (one at a time) and opens the car
   const source = await readFile(join(ROOT, 'web/brief/WhereToLook.tsx'), 'utf8');
   assert.doesNotMatch(source, CLAIMS);
 });
+
+test('terrain current screen and Spear limits both apply: a pick must pass the check and sit within the depth and swim', () => {
+  // A north-south shore line at -120.96: allowed (35.3, -120.95) and withheld (35.1, -120.95) are both ~1,000 yd off it.
+  const lines = [[[-120.96, 34.9], [-120.96, 35.5]]];
+  const spear = patch => currentTerrain([reef('near-allowed', {depth_max_ft: 55}), reef('near-withheld', {depth_max_ft: 55, waypoint_latitude: 35.1}),
+    reef('too-deep', {depth_max_ft: 80})], {profile: 'spear', coast: 'cabezon-shallow-reef', target: 'cabezon-shallow-reef', ...patch});
+  assert.deepEqual(pickIds(spear({})), ['near-allowed'], 'the check withholds one, the 60 ft limit the other');
+  assert.deepEqual(pickIds(spear({shore: {maxYd: 1200, lines}})), ['near-allowed'], 'within the swim, and still never the withheld one');
+  assert.match(spear({shore: {maxYd: 1200, lines}}).picks[0].distance, /^~\d+ yd from shore$/);
+  const far = spear({shore: {maxYd: 500, lines}});
+  assert.deepEqual(far.picks, [], 'outside the swim');
+  assert.equal(far.empty, 'No reviewed terrain habitat passes the current protected-area and closure check within 60 ft and 500 yd of shore for this target.');
+});
