@@ -47,6 +47,27 @@ SCRATCH=Path('/home/user/skippercast-data/2026-10-07-pge-south/scratch/four128-a
 # Cumulative source prior/limit and scratch prior/limit are not constants: they come
 # from the signed budget amendment the released grant names (see budget_limits).
 WALL=3600
+# Seconds the driver/watchdog unit's RuntimeMaxSec leaves for its own launch
+# (bounded runner + systemd-run start-up), equal to the outer cleanup reserve.
+# Attempt 3 (2026-10-19) sized the units at deadline-2 s and a 4.2 s launch under
+# host load overshot the 0.5 s deadline margin control_envelope() requires.
+LAUNCH_ALLOWANCE_S=15
+
+def unit_runtime_for(deadline_monotonic,now_monotonic):
+    """RuntimeMaxSec for a driver/watchdog unit launched now under the outer deadline.
+
+    The unit's hard deadline is its actual start + this runtime; any launch latency
+    up to LAUNCH_ALLOWANCE_S-0.5 s keeps it within the deadline margin."""
+    import math
+    runtime=math.floor(deadline_monotonic-now_monotonic)-LAUNCH_ALLOWANCE_S
+    if runtime<=0:
+        raise ValueError('outer deadline leaves no control unit runtime after the '
+                         +str(LAUNCH_ALLOWANCE_S)+' s launch allowance')
+    return runtime
+
+def hard_deadline_within(started,runtime,deadline_monotonic):
+    """The unit's actual hard deadline stays at least 0.5 s inside the outer deadline."""
+    return started+runtime<=deadline_monotonic-.5
 
 def limits_for(grant):
     """Exact cumulative accounting bound into one released grant."""
@@ -468,7 +489,7 @@ def control_envelope(kind):
             or props['InvocationID']=='0'*32 or props.get('KillMode')!='control-group' or props.get('KillSignal')!='9'
             or props.get('MemoryMax')!='1073741824' or props.get('TasksMax')!='32'
             or props.get('CPUQuotaPerSecUSec')!='2s' or not clock['start_monotonic']<=started<=mono
-            or not 0<actual_runtime<=3600 or actual_deadline>clock['deadline_monotonic']-.5
+            or not 0<actual_runtime<=3600 or not hard_deadline_within(started,actual_runtime,clock['deadline_monotonic'])
             or len(os.sched_getaffinity(0))>2):
         raise ValueError('actual bounded shared control envelope differs')
     return dict(schema='coastal-four128-parent-envelope-v1',kind=kind,properties=props,
@@ -497,9 +518,9 @@ def live_watchdog():
 def start():
     index();audit();clock=load_clock()
     put(N/'control/driver-envelope.json',control_envelope('driver'),root=N)
-    runtime=__import__('math').floor(clock['deadline_monotonic']-time.monotonic())-2
+    runtime=unit_runtime_for(clock['deadline_monotonic'],time.monotonic())
     bounded_command('watchdog-start',unit_command('watchdog',runtime=runtime,wait=False),seconds=10)
-    end=time.monotonic()+5
+    end=time.monotonic()+30
     while not (N/'control/parent-envelope.json').exists() and time.monotonic()<end:time.sleep(.1)
     if not (N/'control/parent-envelope.json').exists():raise ValueError('actual watchdog envelope absent')
     live_watchdog()
@@ -645,8 +666,9 @@ def run():
                  'Description','s','Skippercast private finite four128 trial','CPUQuotaPerSecUSec','t','2000000',
                  'MemoryMax','t','3221225472','MemorySwapMax','t','0','TasksMax','t','96','0']
         bounded_command('init-slice',command,seconds=10)
-        remaining=__import__('math').floor(clock['deadline_monotonic']-time.monotonic())
-        bounded_command('driver-start',unit_command('driver',runtime=remaining-2),seconds=remaining-15)
+        now=time.monotonic();remaining=__import__('math').floor(clock['deadline_monotonic']-now)
+        runtime=unit_runtime_for(clock['deadline_monotonic'],now)
+        bounded_command('driver-start',unit_command('driver',runtime=runtime),seconds=remaining-15)
         marker=N/'control/batch-completed.json'
         if marker.is_symlink() or not marker.is_file():raise ValueError('no completed finite batch marker')
         doc=json.loads(marker.read_text())

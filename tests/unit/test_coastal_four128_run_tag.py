@@ -3,7 +3,7 @@
 A fresh trial must not reuse the 2026-10-11 attempt's transient names or scratch,
 and a name collision must hold the run before any clock or receipt is written.
 """
-import importlib
+import importlib.util
 import os
 import sys
 import tempfile
@@ -17,12 +17,16 @@ SCRIPTS = ROOT / "research" / "scripts"
 
 
 def _load(name, env):
-    if str(SCRIPTS) not in sys.path:
-        sys.path.insert(0, str(SCRIPTS))
+    # Load by file location (no sys.path edits, tests/contract/test_test_layout.py);
+    # the runtime module adds its own directory to find coastal_four128_resources.
     with mock.patch.dict(os.environ, env):
         for module in ("coastal_four128_runtime", "coastal_four128_resources"):
             sys.modules.pop(module, None)
-        return importlib.import_module(name)
+        spec = importlib.util.spec_from_file_location(name, SCRIPTS / (name + ".py"))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
 
 
 class RunTagNaming(unittest.TestCase):

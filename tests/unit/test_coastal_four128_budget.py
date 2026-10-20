@@ -9,7 +9,7 @@ shortfall exactly, and a revision-1 amendment that omits attempt 2 is refused.
 """
 import copy
 import hashlib
-import importlib
+import importlib.util
 import json
 import os
 import sys
@@ -33,12 +33,16 @@ SIGNED_V2 = (SIGNED / "four128-budget-amendment-v2.json",
 
 
 def _load(name, env):
-    if str(SCRIPTS) not in sys.path:
-        sys.path.insert(0, str(SCRIPTS))
+    # Load by file location (no sys.path edits, tests/contract/test_test_layout.py);
+    # the runtime module adds its own directory to find coastal_four128_resources.
     with mock.patch.dict(os.environ, env):
         for module in MODULES:
             sys.modules.pop(module, None)
-        return importlib.import_module(name)
+        spec = importlib.util.spec_from_file_location(name, SCRIPTS / (name + ".py"))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
 
 
 def amendment_v1():
@@ -196,13 +200,16 @@ MISSIONS = Path.home() / "skippercast-data/2026-10-07-pge-south/outputs/t08-four
 PRIOR_RETAINED_BASE = 40773417
 RETAINED_CAP = 167772160
 TRIAL_OUTPUT_TOTAL = 33554432
-ATTEMPT_LEDGERS = {  # ledger sha256, complete actual bytes, open reserved bytes
+ATTEMPT_LEDGERS = {  # ledger sha256, complete actual bytes, open reserved bytes, plan prior bytes
     "mission-attempt1-failed-init-slice":
-        ("01bf091aaffb17db9f70cdcc2030d51a136aad28680d938e5ba5aa2d42f6074f", 183752, 36864),
+        ("01bf091aaffb17db9f70cdcc2030d51a136aad28680d938e5ba5aa2d42f6074f", 183752, 36864, PRIOR_RETAINED_BASE),
     "mission-attempt2-failed-native-bootstrap-missing":
-        ("15b3d9c14a9188cb98e9e7b6404c15787c811e1dde625a600ad6c281a9bd115a", 254423, 4194304),
+        ("15b3d9c14a9188cb98e9e7b6404c15787c811e1dde625a600ad6c281a9bd115a", 254423, 4194304, PRIOR_RETAINED_BASE),
+    # Attempt 3 ran under the carry after attempts 1-2 (45,442,760 B).
+    "mission-attempt3-failed-driver-envelope-deadline":
+        ("0ee13e07c4724edfff37c1609f940d149ccfa179b983f718039c11af0bb16bc5", 195467, 65536, 45442760),
 }
-NEW_PRIOR_RETAINED = 45442760
+NEW_PRIOR_RETAINED = 45703763
 
 
 def charged(ledger):
@@ -215,15 +222,19 @@ def charged(ledger):
 
 
 class RetainedOutputCarry(unittest.TestCase):
-    def test_new_prior_carries_both_failed_attempts(self):
-        total = sum(complete + reserved for _, complete, reserved in ATTEMPT_LEDGERS.values())
-        self.assertEqual(total, 220616 + 4448727)
+    def test_new_prior_carries_every_failed_attempt(self):
+        total = sum(complete + reserved for _, complete, reserved, _ in ATTEMPT_LEDGERS.values())
+        self.assertEqual(total, 220616 + 4448727 + 261003)
         self.assertEqual(NEW_PRIOR_RETAINED, PRIOR_RETAINED_BASE + total)
         self.assertLessEqual(NEW_PRIOR_RETAINED + TRIAL_OUTPUT_TOTAL, RETAINED_CAP)
+        # Attempt 3's ledger planned under the carry of attempts 1-2 (the previous pin).
+        first_two = sum(c + r for name, (_, c, r, _) in ATTEMPT_LEDGERS.items() if "attempt3" not in name)
+        self.assertEqual(ATTEMPT_LEDGERS["mission-attempt3-failed-driver-envelope-deadline"][3],
+                         PRIOR_RETAINED_BASE + first_two)
 
     def test_attempt_ledgers_on_this_machine(self):
         """Recompute from the preserved ledgers when present (read-only; CI uses the pins)."""
-        for name, (sha256, complete, reserved) in ATTEMPT_LEDGERS.items():
+        for name, (sha256, complete, reserved, plan_prior) in ATTEMPT_LEDGERS.items():
             path = MISSIONS / name / "managed-output.json"
             if not path.is_file():
                 continue
@@ -232,7 +243,7 @@ class RetainedOutputCarry(unittest.TestCase):
                 self.assertEqual(hashlib.sha256(data).hexdigest(), sha256)
                 ledger = json.loads(data)
                 self.assertEqual(charged(ledger), (complete, reserved))
-                self.assertEqual(ledger["plan"]["prior_retained_bytes"], PRIOR_RETAINED_BASE)
+                self.assertEqual(ledger["plan"]["prior_retained_bytes"], plan_prior)
                 self.assertEqual(ledger["plan"]["cumulative_cap_bytes"], RETAINED_CAP)
 
 
