@@ -45,6 +45,8 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-17 (tide station selection): App.tsx only configures the tide selector
+// from region metadata; the Reports catch flow and its contrast results are unaffected.
 // CI6-03 (Temp contrast layer): web/tokens.css adds only theme-invariant --contrast-0/1/2 after --swell-3; app.css
 // adds only `.app-legend-sst-contrast` to an existing flex-wrap rule and an `.app-swatch[data-layer="sst-contrast"]`
 // rule; MapStage.tsx adds only the createContrast chart layer. The Reports catch flow mounts none of them.
@@ -52,7 +54,7 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // surface results unchanged and contrast() untouched. All four rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
-  "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
+  "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
   "web/app/MapStage.tsx": "bc6e972a3d72aba79c8600b790aa12d7600ff03a7dabf882e17c11728d2b1443",

@@ -14,6 +14,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {lintFile} from '../scripts/check_tokens.mjs';
+import {waterState} from './helpers/land-water.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const APP_FILES = ['web/app', 'web/app/views'].flatMap(dir => readdirSync(join(ROOT, dir)).filter(name => name.includes('.')).map(name => `${dir}/${name}`));
@@ -44,6 +45,7 @@ async function load() {
       export {chartMark} from './web/map/chart.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
       export {rankedSpots} from './web/map/ranked.ts';
+      export {landWater} from './web/land-water.ts';
       export {markScreen} from './web/map/marks.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
       export {terrainMark, terrainReading} from './web/map/stage.ts';
@@ -446,9 +448,10 @@ test('the time dock disables Play at the complete horizon end while preserving b
 });
 
 test('the legend keys the ranked trip spots while the Chart draws them (#422)', async () => {
-  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state} = await load();
+  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state, landWater} = await load();
   state.configureStore({v2: true, storage: memory()});
   const spot = {id: 's1', name: 'Spot 1', latitude: 35.37, longitude: -120.9, trip_rank: 1};
+  landWater.value = waterState('morro-bay', [spot]);
   try {
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
     assert.equal(render(h(RankedRow, {})), '', 'no plan, no row');
