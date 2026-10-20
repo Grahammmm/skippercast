@@ -367,7 +367,7 @@ _CONTAINED_SEGMENT = {
     'schema': 'coastal-segment-v1',
     'segment_id': 'synthetic-scope-segment',
     'crs': 'EPSG:26910',
-    'bbox': [728871, 3818923, 729383, 3819435],
+    'bbox': list(LARGER_BOUNDS),
     'region': 'synthetic',
     'synthetic': True,
 }

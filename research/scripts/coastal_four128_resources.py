@@ -39,6 +39,11 @@ ENV = {"PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
 # one source admission (36,757,568 B) that stays charged as uncertain. Attempt 1
 # charged no source bytes. A revision-1 amendment, which omits that charge, is
 # refused.
+# Revision 3 of the amendment (2026-10-20T04:06Z) adds attempt 4, which held at
+# B-acquire (window B had 18 mask-invalid cells) after three source reservations
+# (110,272,704 B, charged), and the two read-only window pre-scan opens of the
+# cached BAG (73,515,136 B, charged in advance, never refunded). A revision-2
+# amendment, which omits both, is refused.
 BUDGET_AMENDMENT = "coastal-four128-budget-amendment-v1"
 AMENDMENT_STATUS = "SIGNED_DELEGATED_BUDGET_AUTHORITY"
 AMENDMENT_SIGNERS = ("fable-2nd-look", "astra-orchestrator")
@@ -46,7 +51,10 @@ HARNESS_AUTHOR = "opus-coder"
 PRE_FAILURE_SOURCE_PRIOR = 821491388
 FAILED_TRIAL_SOURCE_CHARGED = 73515136
 FAILED_TRIAL2_SOURCE_CHARGED = 36757568
-SOURCE_PRIOR_FLOOR = PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED + FAILED_TRIAL2_SOURCE_CHARGED
+FAILED_TRIAL4_SOURCE_CHARGED = 110272704
+PRESCAN_SOURCE_CHARGED = 73515136
+SOURCE_PRIOR_FLOOR = (PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED + FAILED_TRIAL2_SOURCE_CHARGED
+                      + FAILED_TRIAL4_SOURCE_CHARGED + PRESCAN_SOURCE_CHARGED)
 RECORDED_SOURCE_LIMIT = 1115551932
 FRESH_SOURCE = 294060544
 SCRATCH_PRIOR_FLOOR = 1616905649
@@ -77,6 +85,7 @@ def budget_limits(doc):
     if not isinstance(source, dict) or not isinstance(scratch, dict):
         raise ValueError("source and scratch accounting required")
     keys = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
+            "failed_trial_4_charged_bytes", "window_prescan_charged_bytes",
             "prior_effective_bytes", "previous_cumulative_limit_bytes", "additional_bytes",
             "cumulative_limit_bytes", "fresh_allowance_bytes")
     if any(not _exact_int(source.get(k)) for k in keys):
@@ -85,8 +94,11 @@ def budget_limits(doc):
     if (source["pre_failure_prior_bytes"] != PRE_FAILURE_SOURCE_PRIOR
             or source["failed_trial_charged_bytes"] != FAILED_TRIAL_SOURCE_CHARGED
             or source["failed_trial_2_charged_bytes"] != FAILED_TRIAL2_SOURCE_CHARGED
+            or source["failed_trial_4_charged_bytes"] != FAILED_TRIAL4_SOURCE_CHARGED
+            or source["window_prescan_charged_bytes"] != PRESCAN_SOURCE_CHARGED
             or prior != (source["pre_failure_prior_bytes"] + source["failed_trial_charged_bytes"]
-                         + source["failed_trial_2_charged_bytes"])
+                         + source["failed_trial_2_charged_bytes"] + source["failed_trial_4_charged_bytes"]
+                         + source["window_prescan_charged_bytes"])
             or prior < SOURCE_PRIOR_FLOOR
             or source["previous_cumulative_limit_bytes"] != RECORDED_SOURCE_LIMIT
             or source["fresh_allowance_bytes"] != FRESH_SOURCE

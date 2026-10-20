@@ -23,8 +23,11 @@ SUPPORTED_WINDOW_SIDES = (32, 64, 128)
 LARGER_SCOPE = "coastal-ordered-four128-v2"
 LARGER_RUNTIME = "coastal-managed-eight-copy-four128-v1"
 SCOPE_REVIEW = "coastal-ordered-scope-review-v1"
-LARGER_WINDOWS = [[3890,3488,128,128],[4018,3488,128,128],[3890,3360,128,128],[4018,3360,128,128]]
-LARGER_BOUNDS = [728871,3818923,729383,3819435]
+# T08-FIX3 (G option A, Fable ruling 2026-10-19 21:50 PDT): attempt 4's block at
+# origin [3890,3360] had mask-invalid cells in B and D, so the whole 2x2 block
+# moved one column west to the fully valid block the window pre-scan selected.
+LARGER_WINDOWS = [[3762,3488,128,128],[3890,3488,128,128],[3762,3360,128,128],[3890,3360,128,128]]
+LARGER_BOUNDS = [728615,3818923,729127,3819435]
 LARGER_AFFINE = [2,0,721091,0,-2,3826155]
 
 def validate_larger_runtime(grant):
