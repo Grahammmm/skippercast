@@ -9,6 +9,9 @@
 // still shows the top pick), which opens Your limits at that
 // field; the list keeps only places inside it. With a cruise speed, a Boat
 // pick shows its one-way straight-line run time, a lower bound.
+// CI6-01B: the list ranks only places its land/water check confirms as water
+// (web/land-water.ts); the region's index loads with the brief, and the lines file
+// only when a place falls in a cell the index leaves mixed.
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -19,6 +22,7 @@ import {coastSpecies, habitatHref} from '../map/stage.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor} from '../reach.ts';
+import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
 import {loadTerrainHabitat, ranking, terrainHabitat, type Pick, type Ranking} from '../ranking.ts';
 import {habitat, navigate, profile, region, selection, species} from '../state.ts';
 import {durationText, runMinutes} from './run.ts';
@@ -28,7 +32,8 @@ export type {Pick, Ranking};
 /** The list for the address and loaded data now, read from the signals so the brief re-renders when they change. */
 export function currentRanking(now = Date.now()): Ranking {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
-  return ranking({region: region.value, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: terrainHabitat.value, now, reachNm: reachFor(p)});
+  return ranking({region: region.value, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: terrainHabitat.value, now, reachNm: reachFor(p),
+    place: placeFor(landWater.value, region.value)});
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would. */
@@ -69,7 +74,12 @@ function RangeControl({measured}: {measured: boolean}) {
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const r = given ?? currentRanking(), id = region.value, boat = profile.value === 'boat', speed = cruiseSpeed.value;
+  // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
+  // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
+  const lw = landWater.value, wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
   useEffect(() => { if (id && hasCoastTerrain(id)) void loadTerrainHabitat(); }, [id]);
+  useEffect(() => { if (id) void loadLandWater(id); }, [id]);
+  useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
       <div class="app-where-head">
