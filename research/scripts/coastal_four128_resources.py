@@ -26,6 +26,84 @@ ENV = {"PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
        "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1",
        "GDAL_NUM_THREADS": "1", "PROJ_NETWORK": "OFF"}
 
+# Cumulative source-read and scratch accounting for a fresh four128 trial.
+# The 2026-10-11 authority (approved-trial-budget-arithmetic-v1) set source prior
+# 821,491,388 B under a 1,115,551,932 B cap and a 2 GiB cumulative scratch maximum.
+# The failed 2026-10-11 attempt then charged two conservative source reservations
+# (its Budget ledger: 73,515,136 B) and carried its full 536,870,912 B scratch
+# reservation. Those charges stay charged: a fresh eight-copy trial needs explicit
+# extra authority, recorded in one signed amendment the harness reads instead of
+# constants. Floors refuse any prior that omits the failed attempt.
+BUDGET_AMENDMENT = "coastal-four128-budget-amendment-v1"
+AMENDMENT_STATUS = "SIGNED_DELEGATED_BUDGET_AUTHORITY"
+AMENDMENT_SIGNERS = ("fable-2nd-look", "astra-orchestrator")
+HARNESS_AUTHOR = "opus-coder"
+PRE_FAILURE_SOURCE_PRIOR = 821491388
+FAILED_TRIAL_SOURCE_CHARGED = 73515136
+SOURCE_PRIOR_FLOOR = PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED
+RECORDED_SOURCE_LIMIT = 1115551932
+FRESH_SOURCE = 294060544
+SCRATCH_PRIOR_FLOOR = 1616905649
+RECORDED_SCRATCH_LIMIT = 2147483648
+TRIAL_SCRATCH = 536870912
+
+
+def _exact_int(value):
+    return type(value) is int and value >= 0
+
+
+def budget_limits(doc):
+    """Validate a signed budget amendment and return the bound quantities.
+
+    The extra allowance must equal the shortfall exactly (no margin), nothing is
+    refunded, no download is authorised, and the harness author cannot sign."""
+    if not isinstance(doc, dict) or doc.get("schema") != BUDGET_AMENDMENT:
+        raise ValueError("signed four128 budget amendment required")
+    signer = doc.get("signer")
+    if (doc.get("status") != AMENDMENT_STATUS or not isinstance(signer, dict)
+            or signer.get("profile") not in AMENDMENT_SIGNERS
+            or signer.get("profile") == HARNESS_AUTHOR
+            or not isinstance(signer.get("model"), str) or not signer["model"]
+            or "opus" in signer["model"].lower()
+            or doc.get("author_under_review") != HARNESS_AUTHOR):
+        raise ValueError("budget amendment must be signed by delegated authority, not the harness author")
+    source, scratch = doc.get("source"), doc.get("scratch")
+    if not isinstance(source, dict) or not isinstance(scratch, dict):
+        raise ValueError("source and scratch accounting required")
+    keys = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "prior_effective_bytes",
+            "previous_cumulative_limit_bytes", "additional_bytes", "cumulative_limit_bytes",
+            "fresh_allowance_bytes")
+    if any(not _exact_int(source.get(k)) for k in keys):
+        raise ValueError("exact integer source accounting required")
+    prior, cap = source["prior_effective_bytes"], source["cumulative_limit_bytes"]
+    if (source["pre_failure_prior_bytes"] != PRE_FAILURE_SOURCE_PRIOR
+            or source["failed_trial_charged_bytes"] != FAILED_TRIAL_SOURCE_CHARGED
+            or prior != source["pre_failure_prior_bytes"] + source["failed_trial_charged_bytes"]
+            or prior < SOURCE_PRIOR_FLOOR
+            or source["previous_cumulative_limit_bytes"] != RECORDED_SOURCE_LIMIT
+            or source["fresh_allowance_bytes"] != FRESH_SOURCE
+            or source["additional_bytes"] != max(0, prior + FRESH_SOURCE - RECORDED_SOURCE_LIMIT)
+            or cap != RECORDED_SOURCE_LIMIT + source["additional_bytes"]
+            or prior + FRESH_SOURCE > cap
+            or source.get("refunds") is not False or source.get("downloads") != 0):
+        raise ValueError("source amendment must carry the failed charges and add exactly the shortfall")
+    keys = ("charged_prior_bytes", "previous_cumulative_maximum_bytes", "additional_bytes",
+            "cumulative_maximum_bytes", "trial_reservation_bytes")
+    if any(not _exact_int(scratch.get(k)) for k in keys):
+        raise ValueError("exact integer scratch accounting required")
+    sprior, scap = scratch["charged_prior_bytes"], scratch["cumulative_maximum_bytes"]
+    if (sprior < SCRATCH_PRIOR_FLOOR
+            or scratch["previous_cumulative_maximum_bytes"] != RECORDED_SCRATCH_LIMIT
+            or scratch["trial_reservation_bytes"] != TRIAL_SCRATCH
+            or scratch["additional_bytes"] != max(0, sprior + TRIAL_SCRATCH - RECORDED_SCRATCH_LIMIT)
+            or scap != RECORDED_SCRATCH_LIMIT + scratch["additional_bytes"]
+            or sprior + TRIAL_SCRATCH > scap
+            or scratch.get("refunds") is not False):
+        raise ValueError("scratch amendment must carry the failed reservation and add exactly the shortfall")
+    return dict(source_prior_bytes=prior, source_limit_bytes=cap,
+                scratch_prior_bytes=sprior, scratch_limit_bytes=scap)
+
+
 def launch_command(phase, python, wrapper):
     if phase not in UNITS:
         raise ValueError("fixed phase required")

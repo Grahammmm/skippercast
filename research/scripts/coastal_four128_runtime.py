@@ -14,6 +14,7 @@ sys.path.insert(0,str(W/'src'))
 sys.path.insert(0,'/home/user/skippercast-data/2026-10-07-pge-south/work/combined-coastal-integration-20261009/var/python-integration-dependencies')
 sys.path.insert(0,str(Path(__file__).parent))
 from coastal_four128_resources import capture,UNITS,CONTROL_UNITS,SLICE,RUN_TAG,HISTORICAL_RUN_TAG
+from coastal_four128_resources import budget_limits,BUDGET_AMENDMENT,FRESH_SOURCE,TRIAL_SCRATCH
 from skippercast.coastal.receipts import managed_writes, atomic_json, digest as receipt_digest
 from skippercast.coastal.output_writer import ManagedOutputs
 
@@ -43,9 +44,20 @@ from skippercast.coastal.handoff.common import load,write,ref,epoch
 ROOTS=[str(N)]
 # Slice, unit and scratch names follow SKIPPERCAST_FOUR128_RUN_TAG (coastal_four128_resources).
 SCRATCH=Path('/home/user/skippercast-data/2026-10-07-pge-south/scratch/four128-approved-'+RUN_TAG)
-PRIOR_SOURCE=821491388
-SOURCE_LIMIT=1115551932
+# Cumulative source prior/limit and scratch prior/limit are not constants: they come
+# from the signed budget amendment the released grant names (see budget_limits).
 WALL=3600
+
+def limits_for(grant):
+    """Exact cumulative accounting bound into one released grant."""
+    amendment=metadata_document(R,grant.get('approved_budget_amendment') or {},BUDGET_AMENDMENT)
+    limits=budget_limits(amendment)
+    if (grant.get('prior_effective_bytes')!=limits['source_prior_bytes']
+            or grant.get('prior_effective_source_bytes')!=limits['source_prior_bytes']
+            or grant.get('cumulative_limit_bytes')!=limits['source_limit_bytes']
+            or grant.get('source_volume_cap_bytes')!=FRESH_SOURCE):
+        raise ValueError('grant source accounting differs from signed budget amendment')
+    return limits
 
 def control_ceiling(path):
     path=Path(path)
@@ -139,15 +151,24 @@ def index():
         path=W/item['path']
         if path.is_symlink() or path.stat().st_size!=item['bytes'] or hashlib.sha256(path.read_bytes()).hexdigest()!=item['sha256']:
             raise ValueError('runtime control code changed')
+    limits=limits_for(grant)
     output_carry=metadata_document(R,d['prior_output_carry'],'coastal-source-reuse-engineering-carry-v1')
     scratch_carry=metadata_document(R,d['prior_scratch_carry'],'coastal-source-reuse-engineering-carry-v1')
     if (output_carry.get('closed') is not True or scratch_carry.get('closed') is not True
             or output_carry['retained_output']['cumulative_prior_bytes']!=grant['output_retention']['prior_retained_bytes']
             or type(d['prior_scratch_bytes']) is not int
             or d['prior_scratch_bytes']!=scratch_carry['scratch']['charged_prior_bytes']
-            or d['prior_scratch_bytes']+536870912>2147483648):
+            or d['prior_scratch_bytes']!=limits['scratch_prior_bytes']
+            or scratch_carry['scratch'].get('cumulative_maximum_bytes')!=limits['scratch_limit_bytes']
+            or d['prior_scratch_bytes']+TRIAL_SCRATCH>limits['scratch_limit_bytes']):
         raise ValueError('exact retained/scratch carry quantities differ from reviewed grant/index')
-    metadata_document(R,d['carry'],'coastal-authenticated-carry-v1')
+    carry=metadata_document(R,d['carry'],'coastal-authenticated-carry-v1')
+    if (carry.get('prior_effective_bytes')!=limits['source_prior_bytes']
+            or carry.get('cumulative_limit_bytes')!=limits['source_limit_bytes']
+            or carry.get('remaining_bytes')!=limits['source_limit_bytes']-limits['source_prior_bytes']
+            or carry.get('refunds') is not False
+            or carry.get('budget_amendment')!=grant['approved_budget_amendment']):
+        raise ValueError('source carry differs from signed budget amendment')
     science=metadata_document(R,d['independent_preflight'],d['independent_preflight']['contract'])
     if science.get('native_operations',0)!=0:raise ValueError('preflight native assertion differs')
     now=time.time()
@@ -180,7 +201,7 @@ def prepref():
     p=R/'metadata/live-preparation.json'
     return ref(R,p,'coastal-ordered-trial-preparation-v1')
 def execute(key,request=None,mapping_plan=None,hold=None):
-    d,grant=index();gate(key);ur,unit=envelope(key)
+    d,grant=index();limits=limits_for(grant);gate(key);ur,unit=envelope(key)
     if key=='probe':
         put(N/'control/resource-probe.json',dict(schema='coastal-ordered-resource-probe-v1',unit=unit,native_operations=0,Store_created=False,Budget_created=False),root=N)
         return dict(state='resource_probe_pass',native_operations=0)
@@ -191,8 +212,8 @@ def execute(key,request=None,mapping_plan=None,hold=None):
         # Nativemission retains exactactual first-unit origin; earlierouterwatchdog remains authoritative.
         preparation=prepare(R,d['grant'],d['requests'],start_epoch=start,deadline_epoch=start+3600,
             start_monotonic=unit['phase_unit_start_monotonic'],boot_id=unit['boot_id'],
-            cumulative_limit_bytes=SOURCE_LIMIT,prior_effective_bytes=PRIOR_SOURCE,
-            output_roots=ROOTS,scratch_roots=[str(SCRATCH)],output_cap_bytes=33554432,scratch_cap_bytes=536870912)
+            cumulative_limit_bytes=limits['source_limit_bytes'],prior_effective_bytes=limits['source_prior_bytes'],
+            output_roots=ROOTS,scratch_roots=[str(SCRATCH)],output_cap_bytes=33554432,scratch_cap_bytes=TRIAL_SCRATCH)
         put(R/'metadata/live-preparation.json',preparation)
         outer=load_clock()
         put(N/'control/native-clock-binding.json',dict(schema='coastal-four128-clock-binding-v1',
@@ -232,10 +253,10 @@ def supplied(path):
     if set(d)!={'path','bytes','sha256','contract'}:raise ValueError('exact descriptor')
     load(R,d,contract=d['contract']);return d
 def preflight():
-    d,grant=index()
+    d,grant=index();limits=limits_for(grant)
     now=time.time()
     p=prepare(R,d['grant'],d['requests'],start_epoch=now,deadline_epoch=now+3600,
-        cumulative_limit_bytes=SOURCE_LIMIT,prior_effective_bytes=PRIOR_SOURCE,output_roots=ROOTS,scratch_roots=[str(SCRATCH)],output_cap_bytes=33554432,scratch_cap_bytes=536870912)
+        cumulative_limit_bytes=limits['source_limit_bytes'],prior_effective_bytes=limits['source_prior_bytes'],output_roots=ROOTS,scratch_roots=[str(SCRATCH)],output_cap_bytes=33554432,scratch_cap_bytes=TRIAL_SCRATCH)
     return dict(schema='coastal-ordered-driver-preflight-v1',source_allowance_sufficient=p['source_allowance_sufficient'],
         execution_authorized=grant['execution_authorized'],actual_unit_unverified=True,native_operations=0,
         Store_created=False,Budget_created=False,inventory=inventory(p),aggregate_inventory=audit(),
@@ -261,7 +282,9 @@ def audit():
                 if path.is_symlink():raise ValueError('trial scratch link')
                 if path.is_file():scratch+=path.stat().st_size
     d=json.loads((R/'metadata/live-index.json').read_text())
-    if scratch>536870912 or scratch+d['prior_scratch_bytes']>2147483648:
+    limits=limits_for(load(R,d['grant']))
+    if (d['prior_scratch_bytes']!=limits['scratch_prior_bytes'] or scratch>TRIAL_SCRATCH
+            or scratch+d['prior_scratch_bytes']>limits['scratch_limit_bytes']):
         raise ValueError('cumulative scratch allowance exhausted')
     return dict(**result,trial_scratch_bytes=scratch,prior_scratch_bytes=d['prior_scratch_bytes'])
 
@@ -578,13 +601,14 @@ def fresh_run_identity():
 def run():
     # External observer owns no scientific subprocesses; all driver/phase supervisors are in SLICE.
     fresh_run_identity()
-    index();audit();bound=initial_capacity()
+    _,grant=index();limits=limits_for(grant);audit();bound=initial_capacity()
     if (N/'control/run-started.json').exists() or (N/'control/outer-clock.json').exists():
         raise ValueError('finite batch already attempted; no retry or clock reset')
     utc=time.time();mono=time.monotonic();boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
     clock=dict(schema='coastal-four128-outer-clock-v1',start_epoch=utc,start_monotonic=mono,
                deadline_epoch=utc+WALL,deadline_monotonic=mono+WALL,wall_seconds=WALL,boot_id=boot,
-               source_prior_bytes=PRIOR_SOURCE,new_source_allowance=294060544,cleanup_reserve_seconds=15)
+               source_prior_bytes=limits['source_prior_bytes'],source_limit_bytes=limits['source_limit_bytes'],
+               new_source_allowance=FRESH_SOURCE,cleanup_reserve_seconds=15)
     put(N/'control/outer-clock.json',clock,root=N)
     put(N/'control/finite-capacity-preflight.json',bound,root=N)
     put(N/'control/run-started.json',dict(schema='coastal-four128-run-started-v1',started_epoch=utc,

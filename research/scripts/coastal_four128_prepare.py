@@ -4,7 +4,8 @@ from pathlib import Path
 
 B=Path("/home/user/skippercast-data/2026-10-07-pge-south")
 W=Path(__file__).resolve().parents[2]
-sys.path[:0]=[str(W/"src"),str(B/"work/combined-coastal-integration-20261009/var/python-integration-dependencies")]
+sys.path[:0]=[str(W/"src"),str(B/"work/combined-coastal-integration-20261009/var/python-integration-dependencies"),str(Path(__file__).resolve().parent)]
+from coastal_four128_resources import budget_limits,FRESH_SOURCE
 from skippercast.coastal.handoff.common import ref,write,load
 from skippercast.coastal.coordinator.loop import implementation_hashes
 from skippercast.coastal.coordinator.packet_release import build_acquisition_package,validate_acquisition_package
@@ -21,6 +22,9 @@ def main():
  # Retained-output authority is an owner decision: no defaults.
  a.add_argument("--cumulative-cap-bytes",type=int,required=True)
  a.add_argument("--prior-retained-bytes",type=int,required=True)
+ # Cumulative source-read and scratch accounting: one signed delegated-authority
+ # amendment that carries the failed 2026-10-11 charges. No defaults, no constants.
+ a.add_argument("--budget-amendment",type=Path,required=True)
  a.add_argument("--prospective-released-bytes",action="store_true")
  x=a.parse_args()
  root=x.staging_root.absolute();mission=x.mission_root.absolute()
@@ -32,6 +36,11 @@ def main():
  if evidence==historical or not evidence.is_dir() or evidence.is_symlink():
   raise ValueError("fresh independent evidence root required; expired 2026-10-11 documents are not re-admitted")
  retention=declaration(x.prior_retained_bytes,x.cumulative_cap_bytes,profile=COMPACT_V3_PROFILE)
+ amendment_path=x.budget_amendment.absolute()
+ if amendment_path.is_symlink() or not amendment_path.is_file():
+  raise ValueError("signed budget amendment file required")
+ limits=budget_limits(json.loads(amendment_path.read_text()))
+ prior,limit=limits["source_prior_bytes"],limits["source_limit_bytes"]
  root.mkdir(parents=True)
  old=B/"outputs/ordered-coastal-rehearsed-live-20261010/execution/metadata"
  def put(name,doc):
@@ -52,11 +61,12 @@ def main():
  trial=copy_role("independent-four128-strict-trial-policy.json")
  science=copy_role("independent-four128-scientific-preflight.json")
  arithmetic=copy_role("approved-trial-budget-arithmetic-v1.json",historical)
+ amendment=copy_role(amendment_path.name,amendment_path.parent)
  code,deps=implementation_hashes(root)
  carry=put("carry.json",dict(schema="coastal-authenticated-carry-v1",
-  cumulative_limit_bytes=1115551932,prior_effective_bytes=821491388,
-  remaining_bytes=294060544,synthetic=False,refunds=False,
-  meaning="New eight-copy authority; previous settled ledgers preserved. No clock or source reservation."))
+  cumulative_limit_bytes=limit,prior_effective_bytes=prior,
+  remaining_bytes=limit-prior,synthetic=False,refunds=False,budget_amendment=amendment,
+  meaning="New eight-copy authority; failed 2026-10-11 charges carried, previous settled ledgers preserved. No clock or source reservation."))
  grant=json.loads((old/"grant-real-released.json").read_text())
  for field in ("owner_authorization","carry","meaning","independent_preflight"):
   grant.pop(field,None)
@@ -64,9 +74,9 @@ def main():
   ordered_scope_contract=LARGER_SCOPE,larger_runtime_contract=LARGER_RUNTIME,
   window_side=128,window_count=4,window_set=copy.deepcopy(LARGER_WINDOWS),
   geographic_review=scope,independent_preflight=science,carry=carry,
-  source_volume_cap_bytes=294060544,prior_effective_bytes=821491388,
-  prior_effective_source_bytes=821491388,cumulative_limit_bytes=1115551932,
-  approved_budget_arithmetic=arithmetic,
+  source_volume_cap_bytes=FRESH_SOURCE,prior_effective_bytes=prior,
+  prior_effective_source_bytes=prior,cumulative_limit_bytes=limit,
+  approved_budget_arithmetic=arithmetic,approved_budget_amendment=amendment,
   output_retention=retention,
   output_root=str(mission),publication=False,
   meaning="Prospective approved four128 native-grid target. Source and all pixel quality remain unverified; no historical-support promotion.")
@@ -106,8 +116,9 @@ def main():
  index=put("prospective-index.json",dict(schema="coastal-ordered-live-index-v1",
   grant=finalgrant,requests=requests,carry=carry,independent_preflight=science,
   code_sha=code,deps_sha=deps,release_validator=validation,
-  source_volume_cap_bytes=294060544,prior_effective_bytes=821491388,
-  cumulative_limit_bytes=1115551932,synthetic=False,
+  source_volume_cap_bytes=FRESH_SOURCE,prior_effective_bytes=prior,
+  cumulative_limit_bytes=limit,budget_amendment=amendment,
+  prior_scratch_bytes=limits["scratch_prior_bytes"],scratch_limit_bytes=limits["scratch_limit_bytes"],synthetic=False,
   runtime_review_pending=True,execution_authorized=False,
   status="PROSPECTIVE_ONLY_NO_RUNTIME_AUTHORITY"))
  catalog=[]
