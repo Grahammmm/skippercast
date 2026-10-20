@@ -20,7 +20,13 @@
     "cambria-san-simeon": ["cambria", "centralcoastfishing"],
     "morro-bay": ["morrobay", "avilabeach", "centralcoastfishing"],
     "point-arguello-conception": ["pointconception", "centralcoastfishing"],
-    "southern-california": ["socalfishing", "sportfishing"]
+    "southern-california": ["socalfishing", "sportfishing"],
+    "santa-barbara-channel": ["santabarbarafishing", "socalfishing"],
+    "channel-islands-north": ["channelislands", "socalfishing"],
+    "santa-monica-palos-verdes": ["santamonicabay", "socalfishing"],
+    "san-pedro-orange-county": ["orangecountyfishing", "socalfishing"],
+    "san-diego": ["sandiegofishing", "socalfishing"],
+    "outer-islands-borderland": ["catalinaisland", "socalfishing"]
   },
   "species": {
     "rockfish": ["rockfish", "rockcod"],
