@@ -8,6 +8,7 @@ import './coast/surface-field.test.ts';
 import './coast/habitat-lifecycle.test.ts';
 import './coast/coast-streaming-seams.test.ts';
 import './coast/coast-shading.test.ts';
+import './coast/bottom-loader.test.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {coastPath} from '../packages/coast/src/transport.ts';
