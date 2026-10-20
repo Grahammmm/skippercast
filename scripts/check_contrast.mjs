@@ -375,8 +375,8 @@ export const SURFACE_SOURCE_SHA256 = {
   "panelCss": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
-  "appCss": "06d7540fe086ad8bbd250bbd15721f48368a07dfa9ec8ea8e7da9124ddbc6acc",
-  "legendTsx": "cd3ad7f45a2d906168295efee34e3aef86fc9821fd248293da98ac9fd5c90603"
+  "appCss": "8a550d59481c70301e5c506bdef04cc2d4b286ae14068d7ed0c9eed66d7a110a",
+  "legendTsx": "ad3a42dac65927af22c1f4c3828d755f983db11ae8a55df97a59ddf85e51813a"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -397,8 +397,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,157,186,202; Legend.tsx:287'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:157,168,217; Legend.tsx:80,189,287'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,157,188,205; Legend.tsx:322'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:157,168,220; Legend.tsx:85,203,322'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

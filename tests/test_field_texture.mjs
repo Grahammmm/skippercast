@@ -21,6 +21,7 @@ import {CONTRAST_LAYER} from '../web/map/contrast.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {MAX_TEXTURE, TABLE_SIZE, colourTable, fieldTexture, textureSize} from '../web/map/field.ts';
 import {railNotes} from '../web/map/layers.ts';
+import {DEPTH_BOTTOM} from '../web/map/depth-contours.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {ramps, readPalette} from '../web/map/palette.ts';
 import {
@@ -211,7 +212,7 @@ test('a rejected replacement grid hides the previous texture and contours', t =>
   const {w, e, data, asked} = layer(t);
   assert.deepEqual(asked, [['place', 'morro-bay'], ['load', 'report']], 'the report is asked for while Water temp is on');
   assert.deepEqual(e.overlay.layers.map(l => l.id), [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS]);
-  assert.deepEqual(e.before, [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', MPA_FILL], 'under Temp contrast, else swell, else wind, else the protected areas (§ 9 order)');
+  assert.deepEqual(e.before, [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL], 'under Temp contrast, else swell, wind, depth contours, or protected areas (§ 9 order)');
   assert.equal(e.images.length, 1);
   assert.equal(e.images[0][0], SST_SOURCE);
   assert.ok(e.data.some(([id, d]) => id === CONTOUR_SOURCE && d.features.length > 0));
