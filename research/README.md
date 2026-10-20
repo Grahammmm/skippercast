@@ -96,8 +96,9 @@ depth, so a vision-capable reviewer must still look at the previews.
 pass starts in a new empty root with its own `HOME` and `TMPDIR`. The script
 hashes guarded read-only trees before and after each pass and compares the
 declared outputs between passes. It writes one report covering COAST-PROD-01
-to COAST-PROD-06. An id with no mapped step is `NO_RECEIPT` and a declared hold
-is `HELD`. Neither counts as a PASS.
+to COAST-PROD-06. Each id can be backed by rerun steps, by earlier receipts
+cited with a pinned sha256, or by both. An id with neither is `NO_RECEIPT` and
+a declared hold is `HELD`. Neither counts as a PASS.
 
 Both scripts produce private, review-required evidence. They never read sources,
 download or publish.

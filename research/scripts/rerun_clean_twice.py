@@ -10,11 +10,13 @@ stores, retained evidence) are hashed before and after every pass and must not
 change.
 
 After both passes the declared deterministic outputs are compared by sha256.
-Each COAST-PROD id is PASS only when it maps to at least one step and every
-mapped step passed in every pass (expected exit code, receipt present, receipt
-checks hold), its deterministic outputs are identical across passes and the
-guards are unchanged. An id with no steps is NO_RECEIPT; a declared hold is
-HELD; neither is ever PASS. The overall verdict is PASS only when all six are.
+Each COAST-PROD id is PASS only when it maps to at least one step or cited
+receipt, every mapped step passed in every pass (expected exit code, receipt
+present, receipt checks hold), its deterministic outputs are identical across
+passes, every cited receipt exists, matches its pinned sha256 and passes its
+checks, and the guards are unchanged. An id with neither is NO_RECEIPT; a
+declared hold is HELD; neither is ever PASS. The overall verdict is PASS only
+when all six are.
 
 Spec::
 
@@ -29,6 +31,8 @@ Spec::
                 "receipt": "t13-receipt.json",
                 "receipt_checks": [{"pointer": "/verdict", "equals": "PASS"}]}],
      "coast_prod": {"COAST-PROD-04": {"steps": ["render"], "description": "..."},
+                    "COAST-PROD-03": {"evidence": [{"path": "/abs/earlier/receipt.json",
+                                      "sha256": "<pin>", "receipt_checks": [...]}]},
                     "COAST-PROD-06": {"held": "GPU qualification held"}}}
 
 Placeholders in argv, cwd and env values: ``{root}`` (this pass root),
@@ -175,8 +179,13 @@ def load_spec(path):
         missing = sorted(set(value.get('steps', [])) - set(ids))
         if missing:
             problems.append(f'{key}: unknown steps {missing}')
-        if value.get('held') and value.get('steps'):
-            problems.append(f'{key}: a held id cannot also map steps')
+        if value.get('held') and (value.get('steps') or value.get('evidence')):
+            problems.append(f'{key}: a held id cannot also map steps or evidence')
+        for item in value.get('evidence', []):
+            if not isinstance(item, dict) or not Path(item.get('path', '')).is_absolute():
+                problems.append(f'{key}: evidence needs an absolute path')
+            elif any('pointer' not in c or not ({'equals', 'exists'} & set(c)) for c in item.get('receipt_checks', [])):
+                problems.append(f'{key}: evidence check needs pointer and equals/exists')
     for item in spec.get('stage_inputs', []):
         if not Path(item.get('from', '')).is_absolute():
             problems.append('stage_inputs.from must be absolute')
@@ -258,27 +267,38 @@ def run_step(step, spec, root, mapping):
                 outputs[Path(match).relative_to(root).as_posix()] = sha256_file(match)
     receipt = None
     if step.get('receipt'):
-        path = confined_relative(root, step['receipt'])
-        if not path.is_file():
-            problems.append(f'receipt missing: {step["receipt"]}')
-        else:
-            receipt = dict(path=step['receipt'], sha256=sha256_file(path), bytes=path.stat().st_size)
-            try:
-                document = json.loads(path.read_text(encoding='utf-8'))
-            except ValueError as error:
-                problems.append(f'receipt not JSON: {error}')
-                document = None
-            for check in step.get('receipt_checks', []) if document is not None else []:
-                try:
-                    value = pointer_get(document, check['pointer'])
-                except (KeyError, IndexError, ValueError, TypeError):
-                    problems.append(f'receipt {check["pointer"]} missing')
-                    continue
-                if 'equals' in check and value != check['equals']:
-                    problems.append(f'receipt {check["pointer"]} = {value!r}, expected {check["equals"]!r}')
+        receipt, receipt_problems = check_receipt(confined_relative(root, step['receipt']),
+                                                  step.get('receipt_checks', []), label=step['receipt'])
+        problems.extend(receipt_problems)
     return dict(id=step['id'], argv=argv, cwd=cwd, exit_code=code, ok=not problems, problems=problems,
                 wall_s=round(time.monotonic() - started, 3), outputs=outputs, receipt=receipt,
                 stdout_tail=(out or '')[-800:], stderr_tail=(err or '')[-800:])
+
+
+def check_receipt(path, checks, *, label, pin=None):
+    """Hash a JSON receipt and apply pointer checks; returns (ref or None, problems)."""
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        return None, [f'receipt missing: {label}']
+    found = dict(path=label, sha256=sha256_file(path), bytes=path.stat().st_size)
+    problems = []
+    if pin and found['sha256'] != pin:
+        problems.append(f'receipt {label} sha256 {found["sha256"]} != pinned {pin}')
+    if not checks:
+        return found, problems
+    try:
+        document = json.loads(path.read_text(encoding='utf-8'))
+    except ValueError as error:
+        return found, [*problems, f'receipt not JSON: {error}']
+    for check in checks:
+        try:
+            value = pointer_get(document, check['pointer'])
+        except (KeyError, IndexError, ValueError, TypeError):
+            problems.append(f'receipt {label} {check["pointer"]} missing')
+            continue
+        if 'equals' in check and value != check['equals']:
+            problems.append(f'receipt {label} {check["pointer"]} = {value!r}, expected {check["equals"]!r}')
+    return found, problems
 
 
 def run_pass(spec, number, work_base, spec_dir, guards_before):
@@ -331,11 +351,11 @@ def evaluate(spec, passes, comparison):
         if entry and entry.get('held'):
             prod[pid] = dict(status='HELD', reason=entry['held'], description=entry.get('description'))
             continue
-        if not entry or not entry.get('steps'):
-            prod[pid] = dict(status='NO_RECEIPT', reason='no step mapped to this id in the spec')
+        if not entry or not (entry.get('steps') or entry.get('evidence')):
+            prod[pid] = dict(status='NO_RECEIPT', reason='no step or cited receipt mapped to this id in the spec')
             continue
         reasons = []
-        for sid in entry['steps']:
+        for sid in entry.get('steps', []):
             for p in passes:
                 outcome = next((s for s in p['steps'] if s['id'] == sid), None)
                 if outcome is None or not outcome['ok']:
@@ -344,15 +364,21 @@ def evaluate(spec, passes, comparison):
             cmp = comparison.get(sid, {})
             if cmp.get('differing'):
                 reasons.append(f'step {sid}: outputs differ across passes: {cmp["differing"]}')
-        if not guards_ok:
+        if entry.get('steps') and not guards_ok:
             reasons.append('guarded paths changed during a pass')
-        if not staged_ok:
+        if entry.get('steps') and not staged_ok:
             reasons.append('input staging failed')
         receipts = [dict(p=p['number'], step=s['id'], **s['receipt']) for p in passes for s in p['steps']
-                    if s['id'] in entry['steps'] and s.get('receipt')]
-        prod[pid] = dict(status='FAIL' if reasons else 'PASS', reasons=reasons, steps=entry['steps'],
+                    if s['id'] in entry.get('steps', []) and s.get('receipt')]
+        for item in entry.get('evidence', []):
+            found, problems = check_receipt(item['path'], item.get('receipt_checks', []), label=item['path'],
+                                            pin=item.get('sha256'))
+            reasons.extend(problems)
+            if found:
+                receipts.append(dict(cited=True, **found))
+        prod[pid] = dict(status='FAIL' if reasons else 'PASS', reasons=reasons, steps=entry.get('steps', []),
                          description=entry.get('description'), receipts=receipts)
-    verdict = 'PASS' if all(v['status'] == 'PASS' for v in prod.values()) else 'NOT_PASS'
+    verdict = 'PASS' if (all(v['status'] == 'PASS' for v in prod.values()) and guards_ok and staged_ok) else 'NOT_PASS'
     return verdict, prod, guards_ok
 
 

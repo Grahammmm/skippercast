@@ -164,6 +164,8 @@ def test_existing_work_base_is_refused(tools, capsys):
     dict(coast_prod={'COAST-PROD-07': dict(steps=['good'])}),
     dict(coast_prod={'COAST-PROD-01': dict(steps=['nope'])}),
     dict(coast_prod={'COAST-PROD-01': dict(steps=['good'], held='x')}),
+    dict(coast_prod={'COAST-PROD-01': dict(evidence=[dict(path='relative.json')])}),
+    dict(coast_prod={'COAST-PROD-01': dict(held='x', evidence=[dict(path='/abs.json')])}),
     dict(passes=1),
     dict(work_base='relative/dir'),
     dict(steps=[dict(id='good', argv=['x'], receipt='../escape.json')]),
@@ -181,6 +183,38 @@ def test_work_base_inside_a_guard_is_refused(tools, capsys):
     spec = spec_for(tools, [good_step(tools)], all_six(), work_base=str(tools['guard'] / 'work'))
     code, out = run(spec, capsys)
     assert code == 2 and 'inside guard' in out['error']
+
+
+def cited(tools, name='earlier.json', verdict='PASS'):
+    path = tools['root'] / name
+    path.write_text(json.dumps(dict(verdict=verdict)))
+    return path
+
+
+def test_cited_receipts_count_only_when_present_pinned_and_checked(tools, capsys):
+    good = cited(tools)
+    pin = module.sha256_file(good)
+    prod = all_six()
+    prod['COAST-PROD-02'] = dict(evidence=[dict(path=str(good), sha256=pin,
+                                               receipt_checks=[dict(pointer='/verdict', equals='PASS')])])
+    prod['COAST-PROD-03'] = dict(evidence=[dict(path=str(tools['root'] / 'absent.json'))])
+    prod['COAST-PROD-05'] = dict(evidence=[dict(path=str(good), sha256='0' * 64)])
+    prod['COAST-PROD-06'] = dict(evidence=[dict(path=str(cited(tools, 'held.json', 'HELD')),
+                                               receipt_checks=[dict(pointer='/verdict', equals='PASS')])])
+    code, out = run(spec_for(tools, [good_step(tools)], prod), capsys)
+    assert code == 1
+    assert out['coast_prod'] == {'COAST-PROD-01': 'PASS', 'COAST-PROD-02': 'PASS', 'COAST-PROD-03': 'FAIL',
+                                 'COAST-PROD-04': 'PASS', 'COAST-PROD-05': 'FAIL', 'COAST-PROD-06': 'FAIL'}
+    receipts = report(tools)['coast_prod']['COAST-PROD-02']['receipts']
+    assert receipts == [dict(cited=True, path=str(good), sha256=pin, bytes=good.stat().st_size)]
+
+
+def test_all_cited_evidence_can_pass_with_the_rerun_steps(tools, capsys):
+    good = cited(tools)
+    prod = {pid: dict(evidence=[dict(path=str(good), sha256=module.sha256_file(good))]) for pid in PROD}
+    prod['COAST-PROD-04'] = dict(steps=['good'], evidence=[dict(path=str(good))])
+    code, out = run(spec_for(tools, [good_step(tools)], prod), capsys)
+    assert code == 0 and out['verdict'] == 'PASS'
 
 
 def test_dry_run_prints_plan_without_creating_anything(tools, capsys):
