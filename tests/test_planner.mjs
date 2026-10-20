@@ -46,7 +46,7 @@ test('downloaded notes follow the coordinate choice while GPX positions remain d
   const {planner: p} = harness();
   p.add('old-1'); p.setResearch(true);
   try {
-    for (const [mode, expected] of [['dd', '0.5000° N, 0.5000° E'], ['ddm', '0° 30.000′ N, 0° 30.000′ E'], ['dms', '0° 30′ 00.00″ N, 0° 30′ 00.00″ E']]) {
+    for (const [mode, expected] of [['dd', '0.50000° N, 0.50000° E'], ['ddm', '0° 30.000′ N, 0° 30.000′ E'], ['dms', '0° 30′ 00.00″ N, 0° 30′ 00.00″ E']]) {
       coordinates.value = mode;
       assert.ok((await (await p.exportFile('notes')).text()).includes(expected));
       const gpx = await (await p.exportFile('gpx')).text();

@@ -4,7 +4,7 @@ import {formatCoordinate, formatCoordinates} from '../dist/coordinates.js';
 import {configureStore, coordinates, loadCoordinateFormat, setCoordinateFormat, STORAGE_KEYS, syncFromURL} from '../web/state.ts';
 
 test('three display formats and all hemispheres', () => {
-  assert.equal(formatCoordinates(35.125, -120.5), '35.1250° N, 120.5000° W');
+  assert.equal(formatCoordinates(35.125, -120.5), '35.12500° N, 120.50000° W');
   assert.equal(formatCoordinates(-35.125, 120.5, 'ddm'), '35° 07.500′ S, 120° 30.000′ E');
   assert.equal(formatCoordinates(35.125, -120.5, 'dms'), '35° 07′ 30.00″ N, 120° 30′ 00.00″ W');
 });
@@ -16,7 +16,7 @@ test('rounding carries without 60 minutes or seconds at poles and antimeridian',
       for (const value of [boundary, boundary - 0.0000001]) {
         assert.equal(formatCoordinate(value * sign, axis, 'ddm'), `${boundary}° 00.000′ ${suffix}`);
         assert.equal(formatCoordinate(value * sign, axis, 'dms'), `${boundary}° 00′ 00.00″ ${suffix}`);
-        assert.equal(formatCoordinate(value * sign, axis), `${boundary}.0000° ${suffix}`);
+        assert.equal(formatCoordinate(value * sign, axis), `${boundary}.00000° ${suffix}`);
       }
     }
   }

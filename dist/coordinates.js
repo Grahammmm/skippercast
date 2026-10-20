@@ -8,7 +8,7 @@ export function formatCoordinate(value, axis, format = 'dd') {
   const negative = value < 0 || Object.is(value, -0);
   const hemisphere = axis === 'latitude' ? (negative ? 'S' : 'N') : (negative ? 'W' : 'E');
   const mode = coordinateFormat(format), magnitude = Math.abs(value);
-  if (mode === 'dd') return `${magnitude.toFixed(4)}° ${hemisphere}`;
+  if (mode === 'dd') return `${magnitude.toFixed(5)}° ${hemisphere}`;
   // Round total units first so seconds/minutes carry into the next degree.
   const scale = mode === 'ddm' ? 60000 : 360000;
   const total = Math.round(magnitude * scale), degrees = Math.floor(total / scale), rest = total % scale;

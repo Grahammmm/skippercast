@@ -72,7 +72,7 @@ test('coordinate choice is exposed in settings and used by the plan rows', async
     getVisible: () => [t], loadPorts: async () => null, nav: {}, emit() {}});
   model.add(t.id);
   try {
-    for (const [mode, label, expected] of [['dd', 'Decimal degrees', '0.5000° S, 0.5000° E'], ['ddm', 'Degrees and decimal minutes', '0° 30.000′ S, 0° 30.000′ E'], ['dms', 'Degrees minutes seconds', '0° 30′ 00.00″ S, 0° 30′ 00.00″ E']]) {
+    for (const [mode, label, expected] of [['dd', 'Decimal degrees', '0.50000° S, 0.50000° E'], ['ddm', 'Degrees and decimal minutes', '0° 30.000′ S, 0° 30.000′ E'], ['dms', 'Degrees minutes seconds', '0° 30′ 00.00″ S, 0° 30′ 00.00″ E']]) {
       state.setCoordinateFormat(mode);
       assert.ok(render(h(Planner, {model, open: false})).includes(expected));
       assert.match(render(h(AccountMenu, {})), new RegExp(`aria-pressed="true"[^>]*>${label}</button>`));
@@ -372,7 +372,7 @@ test('the mark card shows a Chart selection, then the terrain\'s on the Chart, t
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&spot=r12&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef));
     assert.deepEqual(terrainCard(reef).position, {latitude: 35.38, longitude: -120.88});
-    for (const [mode, expected] of [['dd', '35.3800° N, 120.8800° W'], ['ddm', '35° 22.800′ N, 120° 52.800′ W'], ['dms', '35° 22′ 48.00″ N, 120° 52′ 48.00″ W']]) {
+    for (const [mode, expected] of [['dd', '35.38000° N, 120.88000° W'], ['ddm', '35° 22.800′ N, 120° 52.800′ W'], ['dms', '35° 22′ 48.00″ N, 120° 52′ 48.00″ W']]) {
       state.setCoordinateFormat(mode);
       assert.ok(render(h(MarkCard, {})).includes(expected));
     }
@@ -407,7 +407,7 @@ test('FE-80: in 2D and 3D a terrain reading is the card, with the renderer\'s la
     terrainReading.value = reading;
     assert.deepEqual(currentMark.value, readingCard(reading));
     const html = render(h(MarkCard, {}));
-    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-mono">35\.3700° N, 120\.8600° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
+    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-mono">35\.37000° N, 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef), 'the Chart has no terrain reading');
   } finally { terrainMark.value = null; terrainReading.value = null; }
