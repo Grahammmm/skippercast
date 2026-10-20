@@ -20,7 +20,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
-import {regionTargets, targetGroups, type TargetOption} from '../species.ts';
+import {optionText, regionMenu, regionTargets, type TargetOption} from '../species.ts';
 import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
 import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
@@ -52,15 +52,16 @@ export function TargetSelect() {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
-  const list = targetList(p, species.value).filter(t => !q || t.id === target || t.label.toLowerCase().includes(q));
+  const groups = regionMenu(p, region.value, species.value).map(g => ({...g, options: g.options.filter(t => !q || t.id === target || t.label.toLowerCase().includes(q))}))
+    .filter(g => g.options.length);
   return (
     <div class="app-target" role="group" aria-label="Target species">
       <input type="search" class="app-target-search" aria-label="Find a target" placeholder="Find a target" value={query}
         onInput={event => setQuery((event.currentTarget as HTMLInputElement).value)} />
       <label>Target
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
-          {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
-            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>
+          {groups.map(g => (
+            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id} disabled={t.group === 'other'}>{optionText(t)}</option>)}</optgroup>
           ))}
         </select>
       </label>
