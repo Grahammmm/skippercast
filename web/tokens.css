@@ -62,6 +62,10 @@
   --swell-1: #2b68a6;
   --swell-2: #73bfff;
   --swell-3: #e0f0ff;
+  /* Temp contrast (CI6-03): weaker to stronger surface-temperature change per distance. */
+  --contrast-0: #6d41b6;
+  --contrast-1: #c25aa8;
+  --contrast-2: #ffc2dc;
   --flow: #dffcf6;
   --flow-fast: #fff0bf;
   --mpa-fill: #e8a877;
