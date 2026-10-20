@@ -39,7 +39,7 @@ from pathlib import Path
 import re
 from urllib.parse import urlparse
 
-from .common import confined, ref, resolve, validate_native_source
+from .common import confined, ref, resolve, validate_derived_geotiff, validate_native_source
 
 SCHEMA = 'coastal-vr-refinement-receipt-v1'
 TABLE_CONTRACT = 'coastal-vr-refinement-supergrids-v1'
@@ -349,6 +349,49 @@ def _bounded(groups):
                              f'the {MAX_OUTPUT_CELLS} cell cap')
 
 
+def _expected_tags(model, source_sha256, metadata_sha256, placement):
+    """The complete dataset tag set of an output; verify requires exactly this."""
+    return dict(AREA_OR_POINT='Area', vertical_sign='positive_up',
+                vertical_datum=model['metadata']['vertical_datum'], scale_offset_applied='false',
+                not_for_navigation='true', vr_source_sha256=source_sha256, vr_metadata_sha256=metadata_sha256,
+                vr_placement=placement, vr_receipt_schema=SCHEMA)
+
+
+def _check_header(ds, model, group, tags, name):
+    """Prove an opened output is the self-describing grid emit writes for ``group``.
+
+    Every fact ``mapping_input.observe`` and ``vertical.from_raster`` read is
+    fixed here from the source, not from the receipt: driver, bands, CRS,
+    full north-up affine, shape, nodata, units, scales, offsets, descriptions,
+    tags, and a nodata-only validity mask with no overviews or RPCs.
+    """
+    from pyproj import CRS
+    from rasterio.enums import MaskFlags
+    from rasterio.transform import from_origin
+    dx, dy = group['resolution']
+    expected_transform = from_origin(group['origin'][0], group['origin'][1], dx, dy)
+    problems = []
+    if ds.driver != 'GTiff' or ds.count != 2 or ds.dtypes != ('float32', 'float32'):
+        problems.append('driver/bands')
+    if not ds.crs or not CRS.from_user_input(ds.crs).equals(model['crs']):
+        problems.append('crs')
+    if ds.transform != expected_transform or ds.shape != (group['height'], group['width']):
+        problems.append('transform/shape')
+    if ds.nodatavals != (model['nodata'], model['nodata']):
+        problems.append('nodata')
+    if (ds.units != ('m', 'm') or ds.scales != (1.0, 1.0) or ds.offsets != (0.0, 0.0)
+            or ds.descriptions != ('elevation', 'uncertainty')):
+        problems.append('units/scales/offsets/descriptions')
+    if ds.tags() != tags or ds.tags(1) or ds.tags(2):
+        problems.append('vertical/lineage tags')
+    if (any(flags != [MaskFlags.nodata] for flags in ds.mask_flag_enums)
+            or ds.overviews(1) or ds.overviews(2) or ds.rpcs or ds.gcps[0]):
+        problems.append('mask/overviews/rpcs')
+    if problems:
+        raise ValueError(f"output {name} header differs from source-derived expectation: {', '.join(problems)}")
+    return expected_transform
+
+
 def plan(root, source_ref, *, source_row, metadata_sha256):
     """Describe both placements of a VR BAG without writing anything.
 
@@ -396,6 +439,7 @@ def emit(root, source_ref, *, source_row, metadata_sha256, output_dir, placement
         raise ValueError('output directory must be new or empty')
     out.mkdir(parents=True, exist_ok=True)
     nodata = model['nodata']
+    tags = _expected_tags(model, source_ref['sha256'], metadata_sha256, placement)
     outputs = []
     for group in groups:
         elevation, uncertainty, covered = _fill(model, group)
@@ -411,13 +455,13 @@ def emit(root, source_ref, *, source_row, metadata_sha256, output_dir, placement
             ds.set_band_description(2, 'uncertainty')
             ds.set_band_unit(1, 'm')
             ds.set_band_unit(2, 'm')
-            ds.update_tags(vertical_sign='positive_up', vertical_datum=model['metadata']['vertical_datum'],
-                           scale_offset_applied='false', not_for_navigation='true',
-                           vr_source_sha256=source_ref['sha256'], vr_metadata_sha256=metadata_sha256,
-                           vr_placement=placement, vr_receipt_schema=SCHEMA)
+            ds.update_tags(**{k: v for k, v in tags.items() if k != 'AREA_OR_POINT'})
+        artifact = ref(root, path, OUTPUT_CONTRACT)
+        with rasterio.open(validate_derived_geotiff(root, artifact, contract=OUTPUT_CONTRACT)) as ds:
+            _check_header(ds, model, group, tags, group['id'])
         valid = _valid(elevation, nodata)
         outputs.append(dict(
-            id=group['id'], artifact=ref(root, path, OUTPUT_CONTRACT),
+            id=group['id'], artifact=artifact,
             resolution_m=[dx, dy], lattice_anchor=list(group['anchor']), transform=list(transform)[:6],
             shape=[group['height'], group['width']], supergrids=len(group['members']),
             refinement_cells=int(covered.sum()), valid_cells=int(valid.sum()),
@@ -483,11 +527,22 @@ def verify(root, receipt):
         raise ValueError('VR placement policy invalid')
     model = _read_source(root, receipt['source'], receipt['source_row'], receipt['metadata_sha256'])
     _gdal_probe(model, _probe_sample(model['supergrids']))
+    # Placement is re-derived from the source. The receipt and the outputs must
+    # agree with it; they never define it.
+    groups = {group['id']: group for group in _place(model, placement)}
+    _bounded(list(groups.values()))
+    bag = receipt.get('bag')
+    if (not isinstance(bag, dict) or bag.get('vertical_datum') != model['metadata']['vertical_datum']
+            or bag.get('vertical_wkt') != model['metadata']['vertical_wkt'] or bag.get('nodata') != model['nodata']
+            or bag.get('horizontal_crs') != model['crs'].to_wkt()):
+        raise ValueError('receipt BAG semantics differ from source')
     table = _read_table(resolve(root, receipt['supergrid_table'], contract=TABLE_CONTRACT))
     source = {(sg['row'], sg['col']): sg for sg in model['supergrids']}
     if [(int(r['row']), int(r['col'])) for r in table] != sorted(source):
         raise ValueError('supergrid table differs from the source active supergrids')
     outputs = {o['id']: o for o in receipt['outputs']}
+    if len(outputs) != len(receipt['outputs']) or set(outputs) != set(groups):
+        raise ValueError('receipt outputs differ from the source-derived refinement classes')
     members = {name: [] for name in outputs}
     for line in table:
         sg = source[(int(line['row']), int(line['col']))]
@@ -497,25 +552,25 @@ def verify(root, receipt):
                                      'native_left', 'native_top')]
         if stated != expected or int(line['cells']) != sg['nx'] * sg['ny']:
             raise ValueError(f"supergrid {sg['row']},{sg['col']} receipt differs from source")
-        if line['output'] not in members:
-            raise ValueError('supergrid assigned to an unknown output')
+        if [line['output'], int(line['col_off']), int(line['row_off'])] != [sg['output'], sg['col_off'], sg['row_off']]:
+            raise ValueError(f"supergrid {sg['row']},{sg['col']} placement differs from source-derived placement")
         members[line['output']].append((sg, line))
     nodata = np.float32(model['nodata'])
+    tags = _expected_tags(model, receipt['source']['sha256'], receipt['metadata_sha256'], placement)
     totals = dict(outputs=0, supergrids=0, refinement_cells=0, valid_cells=0)
     for name, output in outputs.items():
-        path = validate_native_source(root, output['artifact'])
+        group = groups[name]
+        # Self-contained bytes only: masks, PAM, overviews and world files are refused before GDAL.
+        path = validate_derived_geotiff(root, output['artifact'], contract=OUTPUT_CONTRACT)
         with rasterio.open(path) as ds:
-            from pyproj import CRS
-            if (ds.driver != 'GTiff' or ds.count != 2 or ds.dtypes != ('float32', 'float32')
-                    or not CRS.from_user_input(ds.crs).equals(model['crs'])
-                    or list(ds.shape) != output['shape'] or list(ds.transform)[:6] != output['transform']
-                    or list(ds.res) != output['resolution_m'] or ds.nodata != model['nodata']
-                    or ds.tags().get('vr_source_sha256') != receipt['source']['sha256']
-                    or ds.tags().get('vr_placement') != placement):
-                raise ValueError(f'output {name} header differs from receipt')
+            transform = _check_header(ds, model, group, tags, name)
             elevation, uncertainty = ds.read(1), ds.read(2)
-            transform = ds.transform
-        dx, dy = output['resolution_m']
+            # Validity as observe sees it: GDAL's mask, finiteness and the explicit sentinel.
+            effective = (ds.read_masks(1) > 0) & _valid(elevation, nodata)
+        dx, dy = group['resolution']
+        if (output['transform'] != list(transform)[:6] or output['shape'] != [group['height'], group['width']]
+                or output['resolution_m'] != [dx, dy] or output['lattice_anchor'] != list(group['anchor'])):
+            raise ValueError(f'output {name} receipt geometry differs from source-derived placement')
         covered = np.zeros(elevation.shape, dtype=bool)
         valid_cells = 0
         for sg, line in members[name]:
@@ -544,6 +599,7 @@ def verify(root, receipt):
             raise ValueError(f'output {name} holds values outside every refinement')
         if (int(covered.sum()) != output['refinement_cells'] or valid_cells != output['valid_cells']
                 or int(_valid(elevation, nodata).sum()) != valid_cells
+                or int(effective.sum()) != valid_cells
                 or len(members[name]) != output['supergrids']
                 or _hash_arrays(elevation, uncertainty) != output['values_sha256']):
             raise ValueError(f'output {name} totals differ from receipt')

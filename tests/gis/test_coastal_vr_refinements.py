@@ -2,6 +2,7 @@
 from collections import Counter
 import hashlib
 import json
+import re
 
 import h5py
 import numpy as np
@@ -302,6 +303,148 @@ def test_verify_rejects_changed_cells_placement_and_invented_values(vr_bag):
         vr.verify(root, changed)
     with pytest.raises(ValueError, match='artifact bytes/hash changed'):
         vr.verify(root, receipt)
+
+
+def rebound(root, receipt, path, **output_fields):
+    """The receipt an attacker would write after changing an output: fresh byte reference."""
+    changed = json.loads(json.dumps(receipt))
+    output = next(o for o in changed['outputs'] if o['artifact']['path'] == path.relative_to(root).as_posix())
+    output['artifact'] = ref(root, path, vr.OUTPUT_CONTRACT)
+    output.update(output_fields)
+    return changed
+
+
+def siblings(path):
+    return sorted(p.name for p in path.parent.iterdir() if p.name.startswith(path.stem))
+
+
+def test_external_mask_sidecar_with_unchanged_receipt_is_refused_before_gdal(vr_bag, monkeypatch):
+    root = vr_bag[0]
+    receipt = emit(vr_bag)
+    output = receipt['outputs'][0]
+    path = root / output['artifact']['path']
+    pristine = path.read_bytes()
+    height, width = output['shape']
+    before, *_ = mapping_input.observe(root, output['artifact'], window=[0, 0, width, height], vertical={})
+    assert before['valid_count'] == output['valid_cells'] > 0
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=False), rasterio.open(path, 'r+') as ds:
+        ds.write_mask(np.zeros(ds.shape, dtype='uint8'))
+    assert path.read_bytes() == pristine and siblings(path) == [path.name, path.name + '.msk']
+    # The danger: the unchanged receipt still binds the TIFF bytes, yet observe now sees no cells.
+    facts, *_ = mapping_input.observe(root, output['artifact'], window=[0, 0, width, height], vertical={})
+    assert facts['valid_count'] == 0
+    opened = []
+    real_open = rasterio.open
+    monkeypatch.setattr(rasterio, 'open', lambda target, *a, **k: opened.append(str(target)) or real_open(target, *a, **k))
+    with pytest.raises(ValueError, match='unbound derived GeoTIFF sidecar refused before GDAL'):
+        vr.verify(root, receipt)
+    assert str(path) not in opened
+
+
+@pytest.mark.parametrize('suffix', ['.tif.MSK', '.tif.aux.xml', '.tif.ovr', '.tfw', '.aux', '.TIF.Aux.Xml'])
+def test_every_derived_output_sidecar_variant_is_refused(vr_bag, suffix):
+    root = vr_bag[0]
+    receipt = emit(vr_bag)
+    path = root / receipt['outputs'][1]['artifact']['path']
+    path.with_name(path.stem + suffix).write_bytes(b'x')
+    with pytest.raises(ValueError, match='sidecar refused before GDAL'):
+        vr.verify(root, receipt)
+
+
+def test_internal_mask_or_overviews_with_a_refreshed_byte_reference_are_refused(vr_bag):
+    root = vr_bag[0]
+    receipt = emit(vr_bag)
+    path = root / receipt['outputs'][0]['artifact']['path']
+    pristine = path.read_bytes()
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(path, 'r+') as ds:
+        ds.write_mask(np.zeros(ds.shape, dtype='uint8'))
+    assert siblings(path) == [path.name] and path.read_bytes() != pristine
+    with pytest.raises(ValueError, match='header differs from source-derived expectation: mask'):
+        vr.verify(root, rebound(root, receipt, path))
+    path.write_bytes(pristine)
+    with rasterio.open(path, 'r+') as ds:
+        ds.build_overviews([2])
+    assert siblings(path) == [path.name]
+    with pytest.raises(ValueError, match='mask/overviews'):
+        vr.verify(root, rebound(root, receipt, path))
+    path.write_bytes(pristine)
+    assert vr.verify(root, receipt)['ok']
+
+
+def test_rebound_rotated_flipped_or_shifted_grids_are_refused(vr_bag):
+    from affine import Affine
+    root = vr_bag[0]
+    receipt = emit(vr_bag)
+    output = receipt['outputs'][0]
+    path = root / output['artifact']['path']
+    pristine = path.read_bytes()
+    a, _, c, _, e, f = output['transform']
+    height = output['shape'][0]
+    for forged in (Affine(0, 2, 432000, -2, 0, 3701986),           # rotated (reviewer reproduction)
+                   Affine(a, 0, c, 0, -e, f + height * e),         # south-up flip of the same footprint
+                   Affine(a, 0, c + a, 0, e, f),                   # whole grid one cell east
+                   Affine(a * 2, 0, c, 0, e * 2, f)):              # doubled cell size
+        path.write_bytes(pristine)
+        with rasterio.open(path, 'r+') as ds:
+            ds.transform = forged
+        assert siblings(path) == [path.name]
+        changed = rebound(root, receipt, path, transform=list(forged)[:6],
+                          resolution_m=[abs(forged.a) or 2.0, abs(forged.e) or 2.0])
+        with pytest.raises(ValueError, match='header differs from source-derived expectation: transform/shape'):
+            vr.verify(root, changed)
+    path.write_bytes(pristine)
+    # The receipt alone cannot restate geometry either.
+    for field, value in (('transform', [a, 0, c + a, 0, e, f]), ('resolution_m', [3.0, 3.0]),
+                         ('lattice_anchor', [0.0, 0.0])):
+        with pytest.raises(ValueError, match='receipt geometry differs'):
+            vr.verify(root, rebound(root, receipt, path, **{field: value}))
+    assert vr.verify(root, receipt)['ok']
+
+
+def _set_tags(**tags):
+    return lambda ds: ds.update_tags(**tags)
+
+
+@pytest.mark.parametrize('change, problem', [
+    (_set_tags(vertical_datum='NAVD88', vertical_sign='positive_down', not_for_navigation='false'),
+     'vertical/lineage tags'),
+    (_set_tags(vertical_datum='NAVD88'), 'vertical/lineage tags'),
+    (_set_tags(vertical_sign='positive_down'), 'vertical/lineage tags'),
+    (_set_tags(not_for_navigation='false'), 'vertical/lineage tags'),
+    (_set_tags(scale_offset_applied='true'), 'vertical/lineage tags'),
+    (_set_tags(z_units='ft'), 'vertical/lineage tags'),
+    (_set_tags(vr_metadata_sha256='0' * 64), 'vertical/lineage tags'),
+    (lambda ds: ds.update_tags(1, vertical_sign='positive_down'), 'vertical/lineage tags'),
+    (lambda ds: ds.set_band_unit(1, 'ft'), 'units/scales/offsets/descriptions'),
+    (lambda ds: setattr(ds, 'scales', (0.3048, 1.0)), 'units/scales/offsets/descriptions'),
+    (lambda ds: setattr(ds, 'offsets', (-1.0, 0.0)), 'units/scales/offsets/descriptions'),
+    (lambda ds: ds.set_band_description(1, 'depth'), 'units/scales/offsets/descriptions'),
+    (lambda ds: setattr(ds, 'nodata', -9999.0), 'nodata'),
+    (lambda ds: setattr(ds, 'crs', 'EPSG:32611'), 'crs'),
+])
+def test_rebound_vertical_semantics_and_prohibition_changes_are_refused(vr_bag, change, problem):
+    root = vr_bag[0]
+    receipt = emit(vr_bag)
+    path = root / receipt['outputs'][0]['artifact']['path']
+    with rasterio.open(path, 'r+') as ds:
+        change(ds)
+    assert siblings(path) == [path.name]
+    with pytest.raises(ValueError, match='header differs from source-derived expectation: .*' + re.escape(problem)):
+        vr.verify(root, rebound(root, receipt, path))
+
+
+def test_receipt_semantics_must_match_the_source(vr_bag):
+    root = vr_bag[0]
+    receipt = emit(vr_bag)
+    for field, value in (('vertical_datum', 'NAVD88'), ('nodata', -9999.0), ('vertical_wkt', 'x')):
+        changed = json.loads(json.dumps(receipt))
+        changed['bag'][field] = value
+        with pytest.raises(ValueError, match='receipt BAG semantics differ from source'):
+            vr.verify(root, changed)
+    changed = json.loads(json.dumps(receipt))
+    changed['outputs'].pop()
+    with pytest.raises(ValueError, match='source-derived refinement classes'):
+        vr.verify(root, changed)
 
 
 def test_source_guards(vr_bag, tmp_path):
