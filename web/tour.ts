@@ -4,7 +4,7 @@ export const TOUR_STEPS = [
   {title: 'Time dock', text: 'Use the day buttons and hour slider below the map to choose a forecast time. Check the displayed time before reading a layer.'},
   {title: 'Layer list', text: 'Use the layer list beside the map, or open Layers on a phone. Each layer explains its source and limits; unavailable layers are not evidence of clear conditions.'},
   {title: 'Save for offline', text: 'Open the account menu and choose Save for offline after choosing a port. Review what is saved and its date before leaving your connection.'},
-  {title: 'Evidence-limit line', text: 'Open Details under the brief to read the limit: habitat describes a place to look, while fish presence is unverified. A map layer is not a safety clearance.'},
+  {title: 'Evidence-limit line', text: 'Open Details under the brief to read what this brief cannot tell you for your activity. A map layer is not a safety clearance.'},
 ] as const;
 
 export type TourState = number | null;

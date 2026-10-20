@@ -41,7 +41,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(false);
   const [tour, setTour] = useState<TourState>(null);
-  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null), tourWasOpen = useRef(false);
   const id = useId();
   const s = session.value, b = boat.value, regionId = region.value;
 
@@ -59,11 +59,15 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('focusin', away); };
   }, [open]);
 
+  useEffect(() => {
+    if (tour !== null) tourWasOpen.current = true;
+    else if (tourWasOpen.current) { tourWasOpen.current = false; trigger.current?.focus(); }
+  }, [tour]);
+
   const close = () => { setOpen(false); trigger.current?.focus(); };
   const tourAction = (action: TourAction) => {
     const next = tourTransition(tour, action);
     setTour(next);
-    if (next === null) trigger.current?.focus();
   };
   /** Close first so the v1 dialogs return focus to the menu button. */
   const run = (action: () => unknown) => () => { close(); void action(); };
