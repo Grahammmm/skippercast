@@ -47,10 +47,13 @@ NATIVE_JOB = "coastal-native-job-v1"
 MAX_SOURCES = 4                         # distinct sources per bridge plan
 MAX_WINDOWS = 64                        # deterministic 512x512 windows per source (G5: N = 64)
 MAX_JOBS = MAX_SOURCES * MAX_WINDOWS    # acquire jobs per plan (N x sources)
+LEGACY_MAX_JOBS = MAX_SOURCES           # single-window plans keep today's 4-job cap
 MAX_TOTAL_BYTES = 2 * 1024**3          # the acquire stage's default per-job byte ceiling
 MAX_WALL_S = 3600
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024    # catalog / plan metadata read bound
 MAX_WINDOW_CELLS = MAX_CELLS            # the acquire stage's own bound (mapping_input.observe)
+WINDOW_TILE = 512                       # canonical window-set tile size in native cells
+MAX_GRID_EXTENT = MAX_WINDOWS * WINDOW_TILE  # bound on a window-set grid's native extent
 NATIVE_SUFFIXES = (".bag", ".tif", ".tiff")
 GEOGRAPHIC = ("CRS84", "EPSG:4326")
 HEX64 = re.compile("[0-9a-f]{64}")
@@ -155,30 +158,74 @@ def _selection_windows(selection):
     return [selection.get("window")]
 
 
-def _check_tiling(windows, grid):
-    """A window set tiles its declared native grid without overlap or gap, row-major.
+def _window_bbox(anchor, cell, x, y, w, h):
+    """A window's CRS84 footprint from its native cells and the tiling metadata.
 
-    ``grid`` is the owner's declared native sub-grid (``width``, ``height`` in cells) that
-    the listed windows cover exactly. Overlap, gap, out-of-bounds and out-of-order sets are
-    refused before any write. Called only for window sets whose windows are all well-formed.
+    ``anchor`` is the CRS84 ``[west, north]`` corner of the source's north-west
+    valid cell and ``cell`` its size in CRS84 degrees ``[east, south]`` (both
+    positive for a north-up raster).
     """
-    if not isinstance(grid, dict) or set(grid) != {"width", "height"}:
-        raise ValueError("window-set grid needs exactly width and height")
-    width, height = grid["width"], grid["height"]
-    if type(width) is not int or type(height) is not int or width <= 0 or height <= 0:
-        raise ValueError("window-set grid width and height must be positive integers")
-    area = 0
-    for index, (x, y, w, h) in enumerate(windows):
-        if x < 0 or y < 0 or x + w > width or y + h > height:
-            raise ValueError("window outside the declared source grid")
-        area += w * h
-        for x2, y2, w2, h2 in windows[:index]:
-            if x < x2 + w2 and x2 < x + w and y < y2 + h2 and y2 < y + h:
-                raise ValueError("windows overlap")
-    if area != width * height:
-        raise ValueError("windows do not tile the declared source grid without gap")
-    if windows != sorted(windows, key=lambda w: (w[1], w[0])):
-        raise ValueError("windows must be listed row-major from the north-west corner")
+    west, north = anchor
+    dx, dy = cell
+    return [west + x * dx, north - (y + h) * dy, west + (x + w) * dx, north - y * dy]
+
+
+def _canonical_tiles(tile, width, height):
+    """The deterministic row-major tiling of a native grid, with source-edge clipping."""
+    return [[x, y, min(tile, width - x), min(tile, height - y)]
+            for y in range(0, height, tile) for x in range(0, width, tile)]
+
+
+def _expected_windows(tile, width, height, anchor, cell, segment):
+    """The canonical tiling restricted to tiles whose footprint intersects the segment bbox."""
+    bbox = segment["bbox_crs84"]
+    return [w for w in _canonical_tiles(tile, width, height)
+            if _overlaps(_window_bbox(anchor, cell, *w), bbox)]
+
+
+def _check_window_set(selection, segment):
+    """Validate a window-set selection and return its ordered windows (G5).
+
+    A window set must declare its native geometry as ``tiling``: the canonical
+    ``tile`` size (512), the valid grid's ``width`` and ``height`` in native cells,
+    the CRS84 ``anchor`` of the source's north-west valid cell, and the ``cell``
+    size in CRS84 degrees. Its ``windows`` must be exactly the deterministic tiling
+    of that grid, row-major from the anchor, restricted to tiles whose footprint
+    intersects the segment bbox.
+
+    Every violation -- a missing or malformed ``tiling``, an over-cap window, a
+    non-canonical shape, an out-of-bounds, duplicated, out-of-order or bbox-miss
+    window -- is refused here before any write. A missing ``tiling`` never silently
+    bypasses the geometry, bounds, uniqueness and index-order checks.
+    """
+    windows = selection["windows"]
+    for window in windows:
+        if (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)
+                and window[2] * window[3] > MAX_WINDOW_CELLS):
+            raise ValueError(f"native_window_bound: {selection['source_id']} window exceeds "
+                             f"{MAX_WINDOW_CELLS} cells, the acquire stage's bound")
+    tiling = selection.get("tiling")
+    if not isinstance(tiling, dict) or set(tiling) != {"tile", "width", "height", "anchor", "cell"}:
+        raise ValueError("window-set tiling needs exactly tile, width, height, anchor and cell")
+    tile = tiling["tile"]
+    if type(tile) is not int or tile != WINDOW_TILE:
+        raise ValueError("window-set tile must be 512 native cells")
+    width, height = tiling["width"], tiling["height"]
+    if (type(width) is not int or type(height) is not int
+            or not 1 <= width <= MAX_GRID_EXTENT or not 1 <= height <= MAX_GRID_EXTENT):
+        raise ValueError("window-set grid width and height must be positive integers within the grid bound")
+    anchor = tiling["anchor"]
+    if not isinstance(anchor, list) or len(anchor) != 2 or any(type(v) not in (int, float) for v in anchor):
+        raise ValueError("window-set anchor must be two CRS84 numbers")
+    cell = tiling["cell"]
+    if (not isinstance(cell, list) or len(cell) != 2 or any(type(v) not in (int, float) for v in cell)
+            or cell[0] <= 0 or cell[1] <= 0):
+        raise ValueError("window-set cell size must be two positive CRS84 degrees")
+    expected = _expected_windows(tile, width, height, anchor, cell, segment)
+    if windows != expected:
+        raise ValueError("windows must be exactly the deterministic tiling restricted to "
+                         "segment-bbox tiles, in row-major order")
+    return windows
 
 
 def _hash_binding(declared, sha256):
@@ -256,24 +303,25 @@ def check_plan(plan, catalog_raw, catalog):
         raise ValueError("each selection names one distinct source_id")
     total_windows = 0
     for s in selections:
-        windows = _selection_windows(s)
-        if len(windows) > MAX_WINDOWS:
-            raise ValueError(f"window_set_size: {s['source_id']} carries {len(windows)} windows, "
-                             f"above the {MAX_WINDOWS}-window per-source cap")
-        total_windows += len(windows)
-        if total_windows > MAX_JOBS:
-            raise ValueError(f"plan carries {total_windows} windows, above the {MAX_JOBS}-job cap")
-        well_formed = True
-        for window in windows:
+        if "windows" in s:
+            raw = s.get("windows")
+            if not isinstance(raw, list) or not raw:
+                raise ValueError("window-set selections need a non-empty windows list")
+            if len(raw) > MAX_WINDOWS:
+                raise ValueError(f"window_set_size: {s['source_id']} carries {len(raw)} windows, "
+                                 f"above the {MAX_WINDOWS}-window per-source cap")
+            windows = _check_window_set(s, segment)
+        else:
+            window = s.get("window")
             if (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)
                     and window[2] * window[3] > MAX_WINDOW_CELLS):
                 # A window the acquire stage would refuse never reaches the queue.
                 raise ValueError(f"native_window_bound: {s['source_id']} window exceeds "
                                  f"{MAX_WINDOW_CELLS} cells, the acquire stage's bound")
-            if not (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)):
-                well_formed = False
-        if "windows" in s and well_formed and s.get("grid") is not None:
-            _check_tiling(windows, s["grid"])
+            windows = [window]
+        total_windows += len(windows)
+        if total_windows > MAX_JOBS:
+            raise ValueError(f"plan carries {total_windows} windows, above the {MAX_JOBS}-job cap")
     return segment, selections
 
 
@@ -390,16 +438,30 @@ def _freeze(path, value):
     return raw
 
 
+def _caps(plan, checked):
+    """The caps block: today's shape for single-window plans, raised for window sets.
+
+    A single-window plan keeps its pre-G5 receipt byte-for-byte, so its caps block
+    carries only the legacy keys with ``max_jobs`` = 4. A window-set plan reports the
+    raised N x sources job cap plus the per-source window cap.
+    """
+    common = dict(max_total_bytes=MAX_TOTAL_BYTES,
+                  plan_max_total_bytes=plan["max_total_bytes"],
+                  selected_bytes=checked["selected_bytes"],
+                  acquire_budget=plan["budget"])
+    if any("windows" in s for s in checked["selections"].values()):
+        return dict(max_jobs=MAX_JOBS, max_sources=MAX_SOURCES,
+                    max_windows_per_source=MAX_WINDOWS, **common)
+    return dict(max_jobs=LEGACY_MAX_JOBS, **common)
+
+
 def _receipt(schema, plan, checked):
     selected = [d for d in checked["decisions"] if d["state"] == "selected"]
     return dict(schema=schema, plan_sha256=digest(plan), catalog=checked["catalog_ref"],
                 segment_id=checked["segment"]["segment_id"], decisions=checked["decisions"],
                 selected_source_ids=[d["source_id"] for d in selected],
                 held_source_ids=[d["source_id"] for d in checked["decisions"] if d["state"] != "selected"],
-                caps=dict(max_jobs=MAX_JOBS, max_sources=MAX_SOURCES, max_windows_per_source=MAX_WINDOWS,
-                          max_total_bytes=MAX_TOTAL_BYTES,
-                          plan_max_total_bytes=plan["max_total_bytes"], selected_bytes=checked["selected_bytes"],
-                          acquire_budget=plan["budget"]),
+                caps=_caps(plan, checked),
                 network_requests=0, source_opens=0, source_bytes_read=0,
                 review_required=True, mapping_accepted=False, execution_authorized=False,
                 note=("Source-free bridge: catalog and plan JSON read, cached sources lstat-checked only. "

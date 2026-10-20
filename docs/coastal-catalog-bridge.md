@@ -66,26 +66,43 @@ These caps are fixed and checked before anything is written:
 
 A selection may carry a `windows` list instead of a single `window`: the
 deterministic 512 x 512 tiling of one source, listed row-major from the
-source's north-west corner. Each window becomes one acquire job, so a
+source's north-west valid cell. Each window becomes one acquire job, so a
 window-set plan enqueues one job per window through the ordinary
 `Store.enqueue`, and `enqueue` returns the job ids in that index order. The
 receipt lists every window with its `window_index`, its `window` and the
 `sha256` of its native-job manifest.
 
+A window-set selection must also declare the source's native geometry as
+`tiling`, so the bridge can prove the tiling without opening the raster:
+
+- `tile`: the canonical tile size, fixed at `512` native cells;
+- `width`, `height`: the valid grid's dimensions in native cells;
+- `anchor`: the CRS84 `[west, north]` corner of the source's north-west valid
+  cell;
+- `cell`: the CRS84 cell size in degrees as `[east, south]` (both positive for
+  a north-up raster).
+
+The bridge re-derives the deterministic tiling from that geometry (row-major
+from the anchor, with the source-edge tiles clipped when the grid is not a
+multiple of 512), restricts it to the tiles whose CRS84 footprint intersects
+the segment's `bbox_crs84`, and requires the plan's `windows` to be exactly
+that set in row-major order. So a non-canonical shape, an out-of-bounds,
+duplicated or out-of-order window, and any tile outside the segment bbox, all
+refuse the plan before any write. A missing or malformed `tiling` is refused,
+never silently accepted. The anchor and cell size are owner-supplied native
+geometry from the frozen catalog; the bridge never opens or reprojects the
+raster itself.
+
 Each window is still held to the acquire stage's own bound of 262,144 cells
 (the per-job cap is unchanged), a window set is capped at `MAX_WINDOWS` (64)
 per source, and the whole plan at `MAX_JOBS` (N x sources). A 65th window is
 refused as `window_set_size` and an over-cap window as `native_window_bound`,
-both before any write. When a window-set selection also declares `grid`
-(`width`, `height` in native cells), the bridge proves the windows tile that
-grid without overlap or gap, in row-major order; overlap, gap, out-of-bounds
-and out-of-order sets are refused before any write. The deterministic tiling
-itself (which tiles intersect the segment bbox, and the source's north-west
-valid cell) is the owner's to compute from the frozen catalog; the bridge
-governs the result, it does not open the raster.
+both before any write.
 
-A single-window selection (today's shape) is unchanged: its receipt is
-byte-identical to today's except for the caps block, which this card raises.
+A single-window selection (today's shape) is unchanged: its receipt stays
+byte-identical to today's, caps block included. The raised job cap (`N x
+sources`) and the `max_sources` / `max_windows_per_source` keys appear only on
+window-set receipts.
 
 ## Commands
 

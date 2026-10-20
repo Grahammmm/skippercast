@@ -89,3 +89,61 @@ def test_frozen_catalog_lead_is_read_by_the_real_acquire_stage(ops, tmp_path, mo
     holds = json.loads(job["holds_json"])
     assert holds and all(h.startswith("vertical_") for h in holds)
     assert ops.store.db.execute("SELECT COUNT(*) FROM jobs WHERE stage!='acquire'").fetchone()[0] == 0
+
+
+def _tiles(width, height, tile=512):
+    return [[x, y, min(tile, width - x), min(tile, height - y)]
+            for y in range(0, height, tile) for x in range(0, width, tile)]
+
+
+def _window_bbox(anchor, cell, x, y, w, h):
+    west, north = anchor
+    dx, dy = cell
+    return [west + x * dx, north - (y + h) * dy, west + (x + w) * dx, north - y * dy]
+
+
+def _overlaps(a, b):
+    w1, s1, e1, n1 = a
+    w2, s2, e2, n2 = b
+    return min(e1, e2) > max(w1, w2) and min(n1, n2) > max(s1, s2)
+
+
+def test_window_set_plan_tiles_a_real_geotiff_and_restricts_to_the_segment(tmp_path, monkeypatch):
+    """Acceptance (b) against a real raster: the bridge derives the canonical tiling from the
+    plan-bound transform and restricts it to tiles intersecting the segment bbox."""
+    monkeypatch.setattr(socket, "create_connection",
+                        lambda *a, **k: pytest.fail("bridge/enqueue must not open a connection"))
+    west, north, dx, dy = -120.6, 34.6, 0.0001, 0.0001   # dy is the southward cell size
+    width, height = 1500, 1000                            # partial edges (not a multiple of 512)
+    raster = tmp_path / "sources/synthetic.tif"
+    raster.parent.mkdir(parents=True)
+    with rasterio.open(raster, "w", driver="GTiff", width=width, height=height, count=1,
+                       dtype="float32", crs="OGC:CRS84",
+                       transform=from_origin(west, north, dx, -dy)) as ds:
+        ds.write(np.arange(width * height, dtype="float32").reshape(1, height, width))
+    source = dict(path="sources/synthetic.tif", sha256=hashlib.sha256(raster.read_bytes()).hexdigest(),
+                  bytes=raster.stat().st_size, contract="native-raster-v1")
+
+    anchor, cell = [west, north], [dx, dy]
+    # The segment bbox is the south-east clipped tile only.
+    se = [1024, 512, min(512, width - 1024), min(512, height - 512)]
+    segment = _window_bbox(anchor, cell, *se)
+    expected = [w for w in _tiles(width, height) if _overlaps(_window_bbox(anchor, cell, *w), segment)]
+    assert expected == [se] == [[1024, 512, 476, 488]]
+
+    footprint = [anchor[0], anchor[1] - height * cell[1], anchor[0] + width * cell[0], anchor[1]]
+    rows = [fx.candidate("synthetic.tif", bbox=footprint, size=source["bytes"],
+                         source_hash=source["sha256"])]
+    catalog = fx.frozen_catalog(rows)
+    catalog_path = tmp_path / "catalog.json"
+    sha = fx.write_catalog(catalog_path, catalog)
+    selection = fx.window_set(rows[0]["source_id"], source, expected,
+                              tiling=fx.tiling(width, height, anchor=anchor, cell=cell))
+    plan = fx.plan(catalog, sha, [selection], bbox=segment,
+                   budget=dict(fx.BUDGET, bytes=20_000_000), max_total_bytes=20_000_000)
+
+    allow = Allowlist([fx.HOST])
+    root = tmp_path
+    dry = bridge.dry_run(root, catalog_path, plan, tmp_path / "dry", allowlist=allow)
+    assert [w["window"] for w in dry["would_enqueue"]] == expected
+    assert [w["window_index"] for w in dry["would_enqueue"]] == [0]

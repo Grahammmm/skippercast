@@ -79,11 +79,20 @@ def selection(source_id, source, window=None, **extra):
                 rights=dict(private_use=True, evidence=[]), **extra)
 
 
-def window_set(source_id, source, windows, grid=None, **extra):
+def window_set(source_id, source, windows, tiling=None, **extra):
     """A G5 window-set selection: a deterministic tiling of one source into multiple windows."""
     value = dict(source_id=source_id, source=source, windows=windows, vertical=None,
                  rights=dict(private_use=True, evidence=[]))
-    if grid is not None:
-        value["grid"] = grid
+    if tiling is not None:
+        value["tiling"] = tiling
     value.update(extra)
     return value
+
+
+def tiling(width, height, *, tile=512, anchor=(-120.6, 34.6), cell=(0.0001, 0.0001)):
+    """Window-set native geometry: the grid, the CRS84 NW-valid-cell anchor and the cell size.
+
+    ``anchor`` is ``[west, north]`` of the north-west valid cell's north-west corner and
+    ``cell`` the CRS84 degrees per cell as ``[east, south]`` (both positive).
+    """
+    return dict(tile=tile, width=width, height=height, anchor=list(anchor), cell=list(cell))
