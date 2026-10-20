@@ -81,6 +81,19 @@ Use the historical config structure as the field reference, with these changes:
 - `issuance_receipt`, `assembly_receipt`: distinct, absent receipt paths outside
   the mission and staging roots; `window_scope_change`: reviewed context rationale.
 
+Before requesting config review, authors must run a read-only, source-free dry
+validation on a temporary metadata copy of the candidate evidence role documents:
+build all four packets with `packet_release.canonical_packet`, then require
+`validate_acquisition_package` to return `PASS_METADATA_ONLY` for every packet in
+both held and prospective-released mode (toggle execution flags only in copies).
+Check the rights document's source-specific bindings, including `product_title`
+against each template's `source_row.title`, and retain the validation output with
+the exact candidate/config hashes for review. Run
+`tests/contract/test_four128_candidate_documents.py` as the fixture regression;
+passing fixtures alone does not validate a live candidate. No prepare, issue,
+assemble, native source/cache read, network request, or unit launch is part of
+this dry check, and a metadata PASS is not scientific or execution acceptance.
+
 The reviewer records the SHA256 of the completed config in the task. Both
 commands require that exact pin; it is a binding check, not a substitute for
 independent review or budget authority:
@@ -94,7 +107,12 @@ python -B research/scripts/coastal_four128_admission.py assemble \
 
 Issuance invokes the existing metadata-only prepare CLI into an absent staging
 root, checks accounting/geometry/identities/evidence and runs the runtime review
-validator before writing the issuance files. Assembly verifies the issuance
+validator before writing the issuance files. If prepare fails, issuance prints
+its stderr and final stdout line, exits 1 without retry, and preserves the stage.
+A diagnostic `ISSUANCE_FAILED_STAGE_PRESERVED` receipt is exclusively created at
+`<issuance_receipt>.failed.json`; the successful issuance path remains absent,
+so assembly cannot mistake the diagnostic for issuance authority. Existing
+failure receipts are never overwritten. Assembly verifies the issuance
 config binding and controls, checks the pinned historical context, creates the
 absent managed mission and writes staging metadata verbatim through
 `ManagedOutputs`. It then runs the real runtime `preflight` CLI. It never calls
@@ -187,6 +205,7 @@ that needs independent review, not scientific acceptance.
 ```sh
 PYTHONPATH=src:. PYTHONDONTWRITEBYTECODE=1 python -B -m pytest \
   tests/unit/test_coastal_four128_admission.py \
+  tests/contract/test_four128_candidate_documents.py \
   tests/unit/test_coastal_four128_budget.py \
   tests/unit/test_coastal_four128_mask_topology.py \
   tests/gis/test_coastal_four128_mask_topology_scan.py \
