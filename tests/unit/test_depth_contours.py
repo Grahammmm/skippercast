@@ -4,6 +4,7 @@ import json
 import pytest
 
 from skippercast.platform import depth_contours as dc
+from tests._support import ROOT
 
 REGION = {'id': 'test-bay', 'bounds': [-121.2, 35.0, -120.7, 35.6],
           'source_bindings': {'bathymetry': ['survey-a', 'survey-b']}}
@@ -144,8 +145,7 @@ def test_publish_writes_both_forms_with_the_age_limit_and_enforces_the_budget(tm
 
 
 def test_the_committed_morro_bay_publication_is_within_budget_and_says_its_datum():
-    from pathlib import Path
-    root = Path(__file__).resolve().parents[2]
+    root = ROOT
     for name, budget in (('depth-contours.geojson', dc.MAX_BYTES), ('depth-contours-overview.geojson', dc.OVERVIEW_MAX_BYTES)):
         path = root / 'dist/regions/morro-bay' / name
         assert path.stat().st_size <= budget, name
