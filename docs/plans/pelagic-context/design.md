@@ -191,12 +191,42 @@ outcome data is examined, and not changed afterwards:
   valid time (docs/dynamic-species-method.md L59). A bucket or product that
   fails gets no priority even if another passes.
 
+### 4.1a As-of rule: only what was held at the cutoff
+
+A sample or valid time is not an availability time. A forward test may use
+an input only if SkipperCast **held** it before the event's cutoff (the
+start of the trip or, if that is unknown, 00:00 local on the event date).
+This applies to every product, satellite as well as forecast, and follows
+docs/bite-evidence.md L62 ("environmental sample times available before the
+trip").
+
+- **Availability is the original receipt.** For a `history/*.json`
+  snapshot it is that file's own `sources.<id>.data_retrieved_at` (and
+  `requests[].retrieved_at`), as first committed on the `data` branch. For
+  a WCOFS frame it is the archive's own retrieval time for that cycle. A
+  later re-download, a reprocessed file or a later revision of the same
+  date never stands in for the original.
+- **Freshness is judged as it was then.** The input's age is computed from
+  its sample time to the cutoff, and the display age limits (satellite
+  72 h, section 2; WCOFS cycle 36 h, section 3) apply at the cutoff. An
+  input that was already stale then is excluded, even if a fresher copy
+  arrived afterwards.
+- **Join on the receipt, not the sample.** At `data` commit 858deae33,
+  `history/2026-10-19.json` has SST `sample_at` 2026-10-18T12:00Z but
+  `data_retrieved_at` 2026-10-19T17:34:39Z. That sample is usable for a trip
+  starting after 17:34 UTC on October 19, never for an October 18 trip.
+  Across the 26 snapshots the receipt lags the sample by 25.5 to 74.6 hours.
+- **Missing receipt, no forward test.** An input without an original
+  receipt, or available only after the cutoff, is excluded from the forward
+  test. It may appear only in an analysis labelled **retrospective**, and a
+  retrospective result can never pass section 4.3 or turn priority on.
+
 ### 4.2 Outcome data that SkipperCast holds or could lawfully hold
 
 | Data | Status | Usable for | Limit |
 | --- | --- | --- | --- |
 | Morro Bay and Avila landing-report facts (SoCalFishReports daily boat totals), `history/*.json` on the `data` branch | Held. At `data` commit 858deae33 (2026-10-19): 149 distinct reports, 47 dates, 2026-08-22 to 2026-10-18. Albacore: 0. Bluefin: 3 reports on 3 dates, none with a named ground | Dated, port-level presence of positive reports only | No positions, no zero-catch effort, selected sample (docs/bite-evidence.md); publisher terms unreviewed for paid use (Blocker B5, docs/legal/data-rights-register.md) |
-| Daily satellite SST samples in the same history files | Held since 2026-09-21 | The environmental side of a satellite test | One product (Geo-Polar 0.05°); MUR and earlier products are not comparable |
+| Daily satellite SST samples in the same history files | Held since 2026-09-21, mixed products. At 858deae33: 26 snapshots. 2026-09-21 to 09-24 (4) are MUR `jplMURSST41`, native 0.01°, stride 5. 2026-09-25 to 10-19 (22) are Geo-Polar Blended Night 0.05° (`dataset` names an OSPO `Geo_Polar_Blended_Night` file), with 19 distinct `sample_at` days because some snapshots repeat an earlier sample | The environmental side of a satellite test, filtered by product **and** receipt (section 4.1a) | Only the Geo-Polar subset, selected by each snapshot's own `sources.sst.data.dataset`, is eligible. MUR snapshots are a different product and grid and are excluded, not pooled. A repeated sample counts once, at its first receipt |
 | WCOFS frames at issue time | **Not held.** The `conditions` branch keeps one commit, so past cycles are overwritten | Forecast-hour tests | Needs an archive (NEEDS G 2) |
 | NOAA public HMS and albacore troll logbook products (InPort item 20828 describes catch and effort from 1964) | Not held; public access level and aggregation unverified | Positioned catch and effort at the published resolution | Must pass a Skill 1 source review first (NEEDS G 1); a coarse aggregate can only validate at its own resolution |
 | RecFIN / CDFW published CPFV aggregates (`recfin` in catalog/sources.json, `candidate`) | Not held; terms unreviewed | Regional effort and catch context | CPFV logbooks themselves are confidential (FGC § 8022, register L117); only published aggregates are lawful |
@@ -215,8 +245,9 @@ All of the following, on held-out data, or the priority stays off:
 2. **Effort-normalised lift above 1.** Over the held-out dates, the share
    of positive events inside flagged cells divided by the share of effort
    inside flagged cells, with a 95% interval from a block bootstrap over
-   dates whose lower bound is above 1. Cells without valid data at the
-   event's time are excluded from both shares, not counted as unflagged.
+   dates whose lower bound is above 1. Cells without valid data held at the
+   event's cutoff (section 4.1a) are excluded from both shares, not counted
+   as unflagged.
 3. **Better than simple baselines.** The rule's lift interval must sit above
    the lift of (a) day-of-year season alone and (b) for albacore,
    temperature-in-range alone. A rule that only reproduces where boats
