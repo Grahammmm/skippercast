@@ -198,16 +198,15 @@ print(json.dumps(dict(ok=True, status=result['status'])))
 '''
 
 
-def driver(tmp_path):
-    script = tmp_path / 'driver.py'
-    script.write_text(DRIVER)
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=str(ROOT) + os.pathsep + str(ROOT / 'src'))
-    return script, env
-
-
 def spawn(tmp_path, mode, gate='-'):
-    script, env = driver(tmp_path)
-    argv = [sys.executable, '-B', str(script), mode, str(tmp_path), str(synthetic_amendment(tmp_path)),
+    # Driver and amendment are written once: rewriting them while an earlier racer
+    # starts up would hand it a truncated file.
+    script, amendment = tmp_path / 'driver.py', tmp_path / 'amendment.json'
+    if not script.exists():
+        script.write_text(DRIVER)
+        synthetic_amendment(tmp_path)
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=str(ROOT) + os.pathsep + str(ROOT / 'src'))
+    argv = [sys.executable, '-B', str(script), mode, str(tmp_path), str(amendment),
             str(tmp_path / 'opener-calls'), gate]
     return subprocess.Popen(argv, env=env, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -245,6 +244,7 @@ def test_concurrent_invocations_open_the_source_once(tmp_path):
     procs = [spawn(tmp_path, 'slow', str(gate)) for _ in range(4)]
     gate.write_text('go')
     results = [finish(p) for p in procs]
+    assert all(r is not None for _, r, _ in results), results  # every racer reached scan()
     winners = [r for code, r, _ in results if code == 0 and r['ok']]
     losers = [r for code, r, _ in results if code == 3]
     assert len(winners) == 1 and len(losers) == 3, results
