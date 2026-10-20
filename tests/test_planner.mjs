@@ -95,6 +95,35 @@ test('Best available ranks distinct reefs, sets the ranked layers, names the pla
   p.dispose();
 });
 
+// CI6-01A: the planner's distances run from the chosen listed port, never the device position.
+test('Best available measures distance from the chosen port; without one there is no distance and no device fallback', async () => {
+  const {distanceNm} = await import('../dist/spot-ranking.js');
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), calls = [];
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, writable: true, value: {geolocation: {
+    getCurrentPosition(ok) { calls.push('get'); ok({coords: {latitude: 0.5, longitude: 0.5}}); }, watchPosition() { calls.push('watch'); return 1; }, clearWatch() {}}}});
+  try {
+    const ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}, {id: 'p2', name: 'Launch 2', region: 'test-coast', match: [0.05, 0.03]}];
+    for (const id of ['p1', 'p2']) {
+      const {planner: p} = harness({ports});
+      await settle();
+      p.setFilter('port', id);
+      await p.selectBest();
+      const [lat, lon] = ports.find(x => x.id === id).match;
+      assert.equal(p.ranked.value, true, p.scopeStatus.value);
+      for (const t of p.spots.value) assert.equal(t.distance_nm, distanceNm({latitude: lat, longitude: lon}, t), `${t.id} from ${id}`);
+      p.dispose();
+    }
+    const {planner: none} = harness({ports: []});
+    await settle();
+    assert.equal(none.filters.value.port, '');
+    await none.selectBest();
+    assert.equal(none.ranked.value, true, none.scopeStatus.value);
+    assert.ok(none.spots.value.length > 0 && none.spots.value.every(t => t.distance_nm === null), 'no port, no distance');
+    none.dispose();
+    assert.deepEqual(calls, [], 'the planner never asks for the device position');
+  } finally { if (saved) Object.defineProperty(globalThis, 'navigator', saved); else delete globalThis.navigator; }
+});
+
 test('a selection made while Best available loads wins over its answer', async () => {
   let release;
   const {planner: p} = harness({loadReefs: () => new Promise(resolve => { release = () => resolve(reefs()); })});
