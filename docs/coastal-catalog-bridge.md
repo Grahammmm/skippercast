@@ -40,8 +40,13 @@ is held, and the receipt records the reasons:
 - its cached ref passes the `lstat` checks above. When the catalog states a
   size, the ref must match it. When the catalog states a SHA-256, the ref must
   match that too. Any other hash is recorded as `unknown`, not trusted;
-- its native window is a list of four integers with at most 1,048,576 cells,
-  the same bound as the Store's acquire dispatch gate.
+- its native window is a list of four integers with at most 262,144 cells,
+  the acquire stage's own bound (`mapping_input.MAX_CELLS`, enforced by
+  `mapping_input.observe`). The Store's acquire dispatch gate uses the same
+  constant, so a window the acquire stage would refuse is never queued: a
+  well-formed window above the bound refuses the whole plan before any write
+  (`native_window_bound`), and the dispatch gate holds such a job as
+  `native_window_bound`. The acquire bound is not raised to meet the bridge.
 
 ## Caps
 
@@ -87,6 +92,20 @@ records zero requests. Qualification, vertical semantics, rights, mapping
 review and rendering keep their own holds. For example, if a plan declares no
 vertical contract, the acquire stage holds on `vertical_*` instead of
 guessing one.
+
+Deep-band datums (G3, 2026-10-20): a plan may declare `depth_lane` `M`
+(300-600 ft) or `D` (>600 ft) in its vertical contract. Only then does
+`coastal.vertical` admit the `EGM2008`, `instantaneous-sea-level` and
+`unstated` datum classes. `unstated` needs a raster header that names no
+datum. A named class needs either a header that states it or a
+`datum_statement` that cites the source metadata by hash; a null, empty or
+malformed statement is held, never read as an absent one. The block then
+carries a fixed `deep_datum` record: no uncertainty bound is required, the
+output is not for navigation, the datum is not a chart datum and no datum
+transform is applied. Cells shallower than the lane floor (91.44 m for M,
+182.88 m for D) are dropped from depth and native support. A contract with no
+`depth_lane` is lane S, which keeps MLLW, MSL, NAVD88 and ellipsoid:WGS84 and
+holds a deep class on `vertical_datum_deep_lane_only`.
 
 The bridge depends only on the catalog file's schema, not on the discovery
 module. Integration with live discovery waits for #734 to merge.

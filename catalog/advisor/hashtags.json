@@ -7,6 +7,7 @@
   "angler": ["anglerphoto"],
   "regions": {
     "crescent-city": ["crescentcity", "northcoastfishing"],
+    "trinidad-klamath": ["trinidad", "klamath", "northcoastfishing"],
     "humboldt-bay-cape-mendocino": ["humboldtbay", "eureka", "northcoastfishing"],
     "shelter-cove-north-mendocino": ["sheltercove", "lostcoast", "northcoastfishing"],
     "fort-bragg-point-arena": ["fortbragg", "noyoharbor", "mendocinocoast"],

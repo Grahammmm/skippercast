@@ -245,9 +245,65 @@ def test_symlinked_cached_source_is_held(world):
     assert "symlink" in decision["holds"][0]
 
 
-def test_window_is_bounded_like_the_acquire_dispatch_gate(world):
-    assert _single(world, window=[0, 0, 1025, 1024])["state"] == "held"
-    assert _single(world, window=[0, 0, 1024, 1024])["state"] == "selected"
+def test_window_cap_is_the_acquire_stage_cap():
+    from skippercast.coastal.handoff import mapping_input
+    assert bridge.MAX_WINDOW_CELLS == mapping_input.MAX_CELLS == 262_144
+
+
+def test_window_is_bounded_like_the_acquire_stage(world):
+    assert _single(world, window=[0, 0, 512, 512])["state"] == "selected"
+    # Malformed windows stay per-candidate holds.
+    assert _single(world, window=[0, 0, 0, 4])["state"] == "held"
+    assert _single(world, window=[0, 0, True, 4])["state"] == "held"
+
+
+@pytest.mark.parametrize("window", [[0, 0, 262_145, 1], [0, 0, 513, 512], [0, 0, 1024, 1024]])
+def test_check_plan_refuses_a_window_the_acquire_stage_refuses(world, window):
+    sel = fx.selection(world["rows"][0]["source_id"], world["source"], window=window)
+    path, plan = rebuild(world, world["rows"], [sel])
+    raw = path.read_bytes()
+    with pytest.raises(ValueError, match="native_window_bound"):
+        bridge.check_plan(plan, raw, json.loads(raw))
+    out = world["tmp"] / "refused"
+    with pytest.raises(ValueError, match="native_window_bound"):
+        bridge.dry_run(world["root"], path, plan, out, allowlist=ALLOW)
+    assert not out.exists()
+
+
+def test_dispatch_gate_holds_a_window_the_acquire_stage_refuses(world):
+    """A 262,145-cell native job reaching the Store is held before dispatch, not at acquire."""
+    from skippercast.coastal.coordinator.stages import verify_ref
+    from skippercast.coastal.coordinator.store import Store
+    from tests._coastal_operations import policy
+    source = fx.cache_file(world["root"], "sources/synthetic.tif", data=b"II*\x00synthetic")
+    rows = [fx.candidate("synthetic.tif", size=source["bytes"], source_hash=source["sha256"])]
+    path, plan = rebuild(world, rows, [fx.selection(rows[0]["source_id"], source)])
+    receipt = bridge.run(world["root"], path, plan, world["root"] / "bridge", allowlist=ALLOW)
+    store = Store(world["root"] / "var/coastal/coordinator.sqlite", root=world["root"], policy=policy())
+    try:
+        store.add_segment(dict(schema="coastal-segment-v1", segment_id=plan["segment"]["segment_id"],
+                               region="t12-operations", crs="EPSG:3310", bbox=[0, 0, 5000, 5000],
+                               bbox_crs84=fx.SEGMENT_BBOX, synthetic=True))
+        ref = dict(path=receipt["output"]["path"], sha256=receipt["output"]["sha256"],
+                   bytes=receipt["output"]["bytes"], kind="input", contract=bridge.RECEIPT)
+        [job_id] = bridge.enqueue(store, ref, code_sha="a" * 64, deps_sha="b" * 64)
+        job = json.loads(store.db.execute("SELECT record_json FROM jobs WHERE job_id=?",
+                                          (job_id,)).fetchone()[0])
+        manifest = json.loads(verify_ref(world["root"], job["input_manifest"]).read_text())
+
+        def gate(window, name):
+            raw = (json.dumps(dict(manifest, window=window), sort_keys=True) + "\n").encode()
+            (world["root"] / name).write_bytes(raw)
+            job_ref = dict(job["input_manifest"], path=name, sha256=bridge._sha(raw), bytes=len(raw))
+            return store._evidence_gate(dict(job, input_manifest=job_ref))
+
+        assert gate([0, 0, 512, 512], "at-cap.json") == (True, [])
+        assert gate([0, 0, 262_144, 1], "at-cap-strip.json") == (True, [])
+        assert gate([0, 0, 262_145, 1], "over-cap.json") == (False, ["native_window_bound"])
+        assert gate([0, 0, 1024, 1024], "old-cap.json") == (False, ["native_window_bound"])
+        assert gate([0, 0, True, 4], "bool.json") == (False, ["native_window_bound"])
+    finally:
+        store.close()
 
 
 def test_run_writes_native_jobs_inside_root_and_enqueue_feeds_acquire(world, tmp_path):

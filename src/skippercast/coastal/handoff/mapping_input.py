@@ -113,6 +113,15 @@ def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha
         observed = semantics.from_raster(ds, source_sha256=source_ref['sha256'], bag_metadata=metadata)
         resolved = semantics.resolve(vertical, observed)
         block, holds = resolved['block'], list(resolved['holds'])
+        depth = semantics.to_depth(raw, block, valid=valid) if not holds and block else None
+        lane_trim = None
+        if depth is not None and semantics.is_deep(block):
+            # G3 deep-band datums: cells shallower than the lane floor are not support here.
+            kept = valid & np.isfinite(depth)
+            lane_trim = dict(depth_lane=block['depth_lane'],
+                             lane_floor_m=semantics.LANE_FLOOR_M[block['depth_lane']],
+                             cells_dropped_shallower_than_floor=int((valid & ~kept).sum()))
+            valid = kept
         tr = ds.window_transform(win)
         support = _support(valid, tr, crs)
         support['support_kind'] = 'native_grid_node_footprints' if ds.driver == 'BAG' else 'native_grid_cell_footprints'
@@ -122,7 +131,6 @@ def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha
                       resolution_m=list(ds.res), dtypes=list(ds.dtypes), nodata=ds.nodata if ds.nodata is None or np.isfinite(ds.nodata) else 'NaN',
                       scales=list(ds.scales), offsets=list(ds.offsets), units=list(ds.units),
                       descriptions=list(ds.descriptions), tags=ds.tags())
-        depth = semantics.to_depth(raw, block, valid=valid) if not holds and block else None
         if not valid.any():
             holds.append('native_support_empty')
         facts = dict(header=header, observed_vertical=observed, vertical=block, source=source_ref, source_auxiliary=auxiliary,
@@ -131,6 +139,8 @@ def observe(root, source_ref, *, window, vertical, source_row=None, metadata_sha
                      valid_count=int(valid.sum()), valid_fraction=float(valid.mean()), support=support,
                      depth_values_sha256=_array_hash(np.where(valid, depth, 0).astype('<f4')) if depth is not None else None,
                      libs=libraries(), implementation=implementation())
+        if lane_trim is not None:
+            facts['deep_lane_support'] = lane_trim
         return facts, sorted(set(holds)), raw, valid, tr, crs, depth
 
 

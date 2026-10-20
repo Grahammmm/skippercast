@@ -100,8 +100,10 @@ def step(name):
 
 
 def code(version_id, at, sha):
+    # Cloudflare annotates the pipeline's own `wrangler deploy --message "<sha> run <id>"`
+    # as "version_upload", not "upload" (the value offline fixtures used to assume).
     return {'id': version_id, 'metadata': {'created_on': at, 'source': 'wrangler'},
-            'annotations': {'workers/triggered_by': 'upload', 'workers/message': sha + ' run 1'}}
+            'annotations': {'workers/triggered_by': 'version_upload', 'workers/message': sha + ' run 1'}}
 
 
 def secrets(version_id, at):
@@ -277,7 +279,7 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
 
     def test_unknown_production_holds_on_every_event_without_writes(self):
         untagged = VERSIONS + [{'id': 'v-hand', 'metadata': {'created_on': '2026-10-20T13:00:00Z'},
-                                'annotations': {'workers/triggered_by': 'upload'}}]
+                                'annotations': {'workers/triggered_by': 'version_upload'}}]
         cases = {
             'untagged code upload live': dict(versions=untagged,
                                               deployments=DEPLOYMENTS + [deployment('d3', '2026-10-20T13:00:00Z', ('v-hand', 100))]),

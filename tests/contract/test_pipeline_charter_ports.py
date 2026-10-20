@@ -22,9 +22,14 @@ class CharterPortTests(unittest.TestCase):
         # receive Morro Bay/Avila rows (flagged for review in P2-08).
         ports = load_catalogs()[1]['landing-reports']['report_ports']
         for path in sorted((REPO / 'regions').glob('*/region.json')):
-            if json.loads(path.read_text())['status'] == 'draft':
-                continue  # drafts are never collected (scripts/refresh_regions.py) and need no legal review yet
             with self.subTest(region=path.parent.name):
+                region = json.loads(path.read_text())
+                rules = json.loads((REPO / 'dist' / region['assets']['regulations']).read_text())
+                if region['status'] == 'draft' and region['id'] not in {r['id'] for r in rules['reviewed_regions']}:
+                    # A draft footprint outside its jurisdiction's legal review is never collected.
+                    with self.assertRaisesRegex(ValueError, 'need a regulatory review'):
+                        settings(path.parent.name)
+                    continue
                 self.assertEqual(settings(path.parent.name)['report_ports'], ports)
 
     def test_output_matches_the_hard_coded_parser_byte_for_byte(self):
