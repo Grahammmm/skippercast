@@ -119,11 +119,11 @@ not blindly restore obsolete interfaces). Paths are snapshot-root relative.
 
 | Candidate | Required test files | Shared fixture / closure dependencies |
 | --- | --- | --- |
-| `discover.py` | `tests/unit/test_coastal_source_discovery.py`; `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/gis/test_quality_vertical.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
-| `formats.py` | `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_coastal_source_formats_native.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `discover.py` | `tests/unit/test_coastal_source_discovery.py`; `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/gis/test_quality_vertical.py`; `tests/gis/test_coastal_source_quality_native.py`; `tests/unit/test_coastal_source_formats.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `formats.py` | `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/unit/test_gsf_resume.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
 | `gsf_resume.py` | `tests/unit/test_gsf_resume.py`; `tests/integration/test_coastal_gsf_recovery.py` | `tests/coastal_gsf_support.py`; `tests/contract/test_coastal_package.py` |
 | `holds.py` | `tests/unit/test_coastal_source_formats.py`; `tests/unit/test_gsf_resume.py`; `tests/integration/test_coastal_gsf_recovery.py` | `tests/coastal_support.py`; `tests/coastal_gsf_support.py`; `tests/contract/test_coastal_package.py` |
-| `quality.py` | `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_quality_native.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_quality_vertical.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
+| `quality.py` | `tests/unit/test_coastal_source_quality.py`; `tests/gis/test_coastal_source_quality_native.py`; `tests/gis/test_coastal_source_formats_native.py`; `tests/unit/test_coastal_source_formats.py`; `tests/gis/test_quality_vertical.py`; `tests/unit/test_gsf_resume.py` | `tests/coastal_support.py`; `tests/gis/coastal_native_support.py`; `tests/contract/test_coastal_package.py` |
 
 In particular, `test_coastal_source_formats.py:90–121` exercises the shared hold
 classifier without native decoding; `test_gsf_resume.py:97–101` exercises its
@@ -209,3 +209,11 @@ also checks unique table coverage against the 20 absent non-test paths, all 79
 test/fixture identities, the five candidates' test handoff, counterparty paths
 at the baseline, and a documentation/research-only Git diff. Product/GIS
 execution and the full app build are not evidence required for this inventory.
+
+To verify importer coverage, set `SKIPPERCAST_COASTAL_SNAPSHOT="$SNAPSHOT"`
+when running `pytest research/tests/test_coastal_snapshot_inventory.py`.
+The gated test reads every hash-pinned snapshot-only test in the JSON and checks
+all `from skippercast.coastal import ...` names (including aliases and nested
+imports) and `skippercast.coastal.<name>` references against the candidate rows.
+It never imports or executes snapshot code. Without the retained source checkout,
+only this source-derived check skips; the committed-output checks still run.
