@@ -93,12 +93,18 @@ supported cells, holes and connected regions; it does not judge geography or
 depth, so a vision-capable reviewer must still look at the previews.
 
 `research/scripts/rerun_clean_twice.py` runs a declared step list twice. Each
-pass starts in a new empty root with its own `HOME` and `TMPDIR`. The script
-hashes guarded read-only trees before and after each pass and compares the
-declared outputs between passes. It writes one report covering COAST-PROD-01
-to COAST-PROD-06. Each id can be backed by rerun steps, by earlier receipts
-cited with a pinned sha256, or by both. An id with neither is `NO_RECEIPT` and
-a declared hold is `HELD`. Neither counts as a PASS.
+pass starts in a new empty root with its own `HOME`, `TMPDIR` and `XDG_*`
+directories; a spec or step `env` that tries to set one of these is refused.
+The script hashes guarded read-only trees before and after each pass and
+compares the declared outputs between passes. It writes one report covering
+COAST-PROD-01 to COAST-PROD-06. Each id can be backed by rerun steps that write
+a checked JSON receipt, by earlier receipts cited with a pinned sha256 and at
+least one `equals` check, or by both. A receipt whose top-level verdict is not
+`PASS`, or whose status is a hold or failure, never backs an id. An id with
+neither is `NO_RECEIPT` and a declared hold is `HELD`. Neither counts as a
+PASS. The overall verdict also needs every declared step to succeed in both
+passes with identical declared outputs, so cited receipts cannot stand in for
+a failed or nondeterministic rerun.
 
 Both scripts produce private, review-required evidence. They never read sources,
 download or publish.

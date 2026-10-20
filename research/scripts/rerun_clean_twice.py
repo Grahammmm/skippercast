@@ -4,19 +4,31 @@ A JSON spec (schema ``coastal-clean-rerun-spec-v1``) lists the steps. Each
 pass gets a brand-new, empty root under ``work_base`` (``pass-1``, ``pass-2``);
 ``work_base`` itself must not exist yet, so no earlier output can leak in.
 Declared inputs are copied into each pass root and hash-checked. Every step
-runs with ``HOME``, ``TMPDIR`` and ``XDG_CACHE_HOME`` inside its pass root and
-``PYTHONDONTWRITEBYTECODE=1``. ``guard_paths`` (mission roots, canonical
-stores, retained evidence) are hashed before and after every pass and must not
-change.
+runs with ``HOME``, ``TMPDIR``/``TMP``/``TEMP`` and the ``XDG_*`` directories
+inside its pass root and ``PYTHONDONTWRITEBYTECODE=1``. These isolation
+variables belong to the driver: a spec or step ``env`` that sets one is
+refused, and the driver applies its own values last. ``guard_paths`` (mission
+roots, canonical stores, retained evidence) are hashed before and after every
+pass and must not change.
 
 After both passes the declared deterministic outputs are compared by sha256.
+Evidence is never optional. A step mapped to a COAST-PROD id must declare a
+JSON ``receipt`` and at least one ``equals`` receipt check; a cited receipt
+must carry a 64-hex ``sha256`` pin and at least one ``equals`` check. Every
+receipt must be a JSON object; a top-level ``verdict`` must be ``PASS`` and a
+top-level ``status``/``outcome`` must not be a hold or failure value, whatever
+the checks say.
+
 Each COAST-PROD id is PASS only when it maps to at least one step or cited
 receipt, every mapped step passed in every pass (expected exit code, receipt
 present, receipt checks hold), its deterministic outputs are identical across
-passes, every cited receipt exists, matches its pinned sha256 and passes its
-checks, and the guards are unchanged. An id with neither is NO_RECEIPT; a
-declared hold is HELD; neither is ever PASS. The overall verdict is PASS only
-when all six are.
+passes, every cited receipt exists, matches its pin and passes its checks, it
+has at least one receipt, and the guards are unchanged. An id with neither is
+NO_RECEIPT; a declared hold is HELD; neither is ever PASS. The overall verdict
+is PASS only when all six are PASS **and** every declared step passed in every
+pass **and** every step's deterministic outputs are identical across passes,
+mapped to an id or not: cited earlier evidence never stands in for a failed
+or nondeterministic clean rerun.
 
 Spec::
 
@@ -32,7 +44,8 @@ Spec::
                 "receipt_checks": [{"pointer": "/verdict", "equals": "PASS"}]}],
      "coast_prod": {"COAST-PROD-04": {"steps": ["render"], "description": "..."},
                     "COAST-PROD-03": {"evidence": [{"path": "/abs/earlier/receipt.json",
-                                      "sha256": "<pin>", "receipt_checks": [...]}]},
+                                      "sha256": "<64-hex pin>",
+                                      "receipt_checks": [{"pointer": "/verdict", "equals": "PASS"}]}]},
                     "COAST-PROD-06": {"held": "GPU qualification held"}}}
 
 Placeholders in argv, cwd and env values: ``{root}`` (this pass root),
@@ -61,6 +74,14 @@ REPORT_SCHEMA = 'coastal-clean-rerun-report-v1'
 PROD_IDS = tuple(f'COAST-PROD-0{n}' for n in range(1, 7))
 DEFAULT_GUARD_MAX_BYTES = 8 * 1024 ** 3
 BASE_ENV_KEYS = ('PATH', 'LANG', 'LC_ALL', 'TZ')
+# Set by the driver for every step; a spec or step env may not override them.
+ISOLATION_ENV_KEYS = ('HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME',
+                      'XDG_STATE_HOME', 'XDG_RUNTIME_DIR', 'PYTHONDONTWRITEBYTECODE', 'PYTHONPYCACHEPREFIX',
+                      'PYTHONUSERBASE', 'SKIPPERCAST_CLEAN_RERUN_PASS')
+# Top-level receipt status/outcome values that can never back a PASS.
+NOT_PASS_VALUES = frozenset({'HELD', 'HOLD', 'FAIL', 'FAILED', 'FAILURE', 'NOT_PASS', 'BLOCKED', 'ERROR',
+                             'PARTIAL', 'NO_RECEIPT', 'PENDING', 'SKIPPED', 'INCOMPLETE'})
+SHA256_HEX = frozenset('0123456789abcdef')
 
 
 def sha256_file(path):
@@ -139,6 +160,21 @@ def confined_relative(root, relative):
     return Path(root) / rel
 
 
+def valid_checks(checks):
+    """Receipt checks are well-formed and include at least one exact ``equals`` acceptance check."""
+    return (isinstance(checks, list) and bool(checks)
+            and all(isinstance(c, dict) and isinstance(c.get('pointer'), str) and ({'equals', 'exists'} & set(c))
+                    for c in checks)
+            and any('equals' in c for c in checks))
+
+
+def env_problems(label, env):
+    if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        return [f'{label}: env must map strings to strings']
+    reserved = sorted(set(env) & set(ISOLATION_ENV_KEYS))
+    return [f'{label}: env may not set driver-owned isolation variables {reserved}'] if reserved else []
+
+
 def load_spec(path):
     spec = json.loads(Path(path).read_text(encoding='utf-8'))
     problems = []
@@ -148,6 +184,7 @@ def load_spec(path):
         problems.append('work_base must be an absolute path')
     if spec.get('passes', 2) < 2:
         problems.append('passes must be >= 2')
+    problems.extend(env_problems('spec', spec.get('env', {})))
     steps = spec.get('steps')
     if not isinstance(steps, list) or not steps:
         problems.append('steps must be a non-empty list')
@@ -155,19 +192,21 @@ def load_spec(path):
     ids = [s.get('id') for s in steps]
     if len(set(ids)) != len(ids) or not all(isinstance(i, str) and i for i in ids):
         problems.append('step ids must be unique non-empty strings')
+    by_id = {s.get('id'): s for s in steps}
     for step in steps:
         if not isinstance(step.get('argv'), list) or not step['argv'] or not all(isinstance(a, str) for a in step['argv']):
             problems.append(f'step {step.get("id")}: argv must be a non-empty list of strings')
+        problems.extend(env_problems(f'step {step.get("id")}', step.get('env', {})))
         for rel in [*step.get('deterministic_outputs', []), *([step['receipt']] if step.get('receipt') else [])]:
             try:
                 confined_relative('/r', rel)
             except ValueError as error:
                 problems.append(f'step {step.get("id")}: {error}')
-        for check in step.get('receipt_checks', []):
-            if 'pointer' not in check or not ({'equals', 'exists'} & set(check)):
-                problems.append(f'step {step.get("id")}: receipt check needs pointer and equals/exists')
         if step.get('receipt_checks') and not step.get('receipt'):
             problems.append(f'step {step.get("id")}: receipt_checks need a receipt')
+        if step.get('receipt') and not valid_checks(step.get('receipt_checks')):
+            problems.append(f'step {step.get("id")}: a receipt needs receipt_checks with pointer and equals/exists, '
+                            'including at least one equals check')
     prod = spec.get('coast_prod', {})
     unknown = sorted(set(prod) - set(PROD_IDS))
     if unknown:
@@ -181,11 +220,20 @@ def load_spec(path):
             problems.append(f'{key}: unknown steps {missing}')
         if value.get('held') and (value.get('steps') or value.get('evidence')):
             problems.append(f'{key}: a held id cannot also map steps or evidence')
+        for sid in value.get('steps', []):
+            if sid in by_id and not by_id[sid].get('receipt'):
+                problems.append(f'{key}: mapped step {sid} declares no receipt; a receipt-less step cannot back a '
+                                'COAST-PROD id (leave it unmapped: it still has to pass)')
         for item in value.get('evidence', []):
-            if not isinstance(item, dict) or not Path(item.get('path', '')).is_absolute():
+            if not isinstance(item, dict) or not isinstance(item.get('path'), str) or not Path(item['path']).is_absolute():
                 problems.append(f'{key}: evidence needs an absolute path')
-            elif any('pointer' not in c or not ({'equals', 'exists'} & set(c)) for c in item.get('receipt_checks', [])):
-                problems.append(f'{key}: evidence check needs pointer and equals/exists')
+                continue
+            pin = item.get('sha256')
+            if not (isinstance(pin, str) and len(pin) == 64 and set(pin) <= SHA256_HEX):
+                problems.append(f'{key}: evidence {item["path"]} needs a 64-hex lowercase sha256 pin')
+            if not valid_checks(item.get('receipt_checks')):
+                problems.append(f'{key}: evidence {item["path"]} needs receipt_checks with pointer and '
+                                'equals/exists, including at least one equals check')
     for item in spec.get('stage_inputs', []):
         if not Path(item.get('from', '')).is_absolute():
             problems.append('stage_inputs.from must be absolute')
@@ -220,23 +268,32 @@ def stage(spec, root):
     return staged
 
 
-def step_env(spec, root, mapping):
-    env = {k: os.environ[k] for k in BASE_ENV_KEYS if k in os.environ}
+def isolation_env(root, mapping):
+    """Driver-owned per-pass state directories; applied last so nothing can point a pass at shared state."""
     home = Path(root) / '.home'
     tmp = Path(root) / '.tmp'
     home.mkdir(exist_ok=True)
     tmp.mkdir(exist_ok=True)
-    env.update(HOME=str(home), TMPDIR=str(tmp), XDG_CACHE_HOME=str(home / '.cache'),
-               PYTHONDONTWRITEBYTECODE='1', SKIPPERCAST_CLEAN_RERUN_PASS=mapping['pass'])
+    return dict(HOME=str(home), TMPDIR=str(tmp), TMP=str(tmp), TEMP=str(tmp),
+                XDG_CACHE_HOME=str(home / '.cache'), XDG_CONFIG_HOME=str(home / '.config'),
+                XDG_DATA_HOME=str(home / '.local' / 'share'), XDG_STATE_HOME=str(home / '.local' / 'state'),
+                PYTHONDONTWRITEBYTECODE='1', SKIPPERCAST_CLEAN_RERUN_PASS=mapping['pass'])
+
+
+def step_env(spec, step, root, mapping):
+    env = {k: os.environ[k] for k in BASE_ENV_KEYS if k in os.environ}
     env.update(expand(spec.get('env', {}), mapping))
+    env.update(expand(step.get('env', {}), mapping))
+    for key in ISOLATION_ENV_KEYS:  # load_spec refuses these; drop any that slipped through
+        env.pop(key, None)
+    env.update(isolation_env(root, mapping))
     return env
 
 
 def run_step(step, spec, root, mapping):
     argv = expand(step['argv'], mapping)
     cwd = expand(step.get('cwd', '{root}'), mapping)
-    env = step_env(spec, root, mapping)
-    env.update(expand(step.get('env', {}), mapping))
+    env = step_env(spec, step, root, mapping)
     started = time.monotonic()
     log_dir = Path(root) / '.rerun-logs'
     log_dir.mkdir(exist_ok=True)
@@ -276,21 +333,33 @@ def run_step(step, spec, root, mapping):
 
 
 def check_receipt(path, checks, *, label, pin=None):
-    """Hash a JSON receipt and apply pointer checks; returns (ref or None, problems)."""
+    """Hash a JSON receipt and apply the built-in verdict rule plus pointer checks; returns (ref or None, problems).
+
+    The ref is returned only when the receipt is usable evidence; a receipt that exists but fails is reported in
+    ``problems`` and never counted as a receipt.
+    """
     path = Path(path)
     if path.is_symlink() or not path.is_file():
         return None, [f'receipt missing: {label}']
     found = dict(path=label, sha256=sha256_file(path), bytes=path.stat().st_size)
     problems = []
-    if pin and found['sha256'] != pin:
+    if pin is not None and found['sha256'] != pin:
         problems.append(f'receipt {label} sha256 {found["sha256"]} != pinned {pin}')
     if not checks:
-        return found, problems
+        problems.append(f'receipt {label} has no acceptance checks')
     try:
         document = json.loads(path.read_text(encoding='utf-8'))
-    except ValueError as error:
-        return found, [*problems, f'receipt not JSON: {error}']
-    for check in checks:
+    except (ValueError, UnicodeDecodeError) as error:
+        return None, [*problems, f'receipt {label} not JSON: {error}']
+    if not isinstance(document, dict):
+        return None, [*problems, f'receipt {label} is not a JSON object']
+    if 'verdict' in document and document['verdict'] != 'PASS':
+        problems.append(f'receipt {label} verdict = {document["verdict"]!r}, not PASS')
+    for key in ('status', 'outcome'):
+        value = document.get(key)
+        if isinstance(value, str) and value.strip().upper().replace('-', '_').replace(' ', '_') in NOT_PASS_VALUES:
+            problems.append(f'receipt {label} {key} = {value!r} is a hold/failure value')
+    for check in checks or []:
         try:
             value = pointer_get(document, check['pointer'])
         except (KeyError, IndexError, ValueError, TypeError):
@@ -298,7 +367,7 @@ def check_receipt(path, checks, *, label, pin=None):
             continue
         if 'equals' in check and value != check['equals']:
             problems.append(f'receipt {label} {check["pointer"]} = {value!r}, expected {check["equals"]!r}')
-    return found, problems
+    return (None if problems else found), problems
 
 
 def run_pass(spec, number, work_base, spec_dir, guards_before):
@@ -376,15 +445,39 @@ def evaluate(spec, passes, comparison):
             reasons.extend(problems)
             if found:
                 receipts.append(dict(cited=True, **found))
+        if not receipts:
+            reasons.append('no usable receipt backs this id')
         prod[pid] = dict(status='FAIL' if reasons else 'PASS', reasons=reasons, steps=entry.get('steps', []),
                          description=entry.get('description'), receipts=receipts)
-    verdict = 'PASS' if (all(v['status'] == 'PASS' for v in prod.values()) and guards_ok and staged_ok) else 'NOT_PASS'
-    return verdict, prod, guards_ok
+    # Independent of the per-id mapping: every declared rerun must succeed in every pass and every declared
+    # deterministic output must match, so cited earlier evidence never stands in for a failed clean rerun.
+    rerun_problems = []
+    for step in spec['steps']:
+        for p in passes:
+            outcome = next((s for s in p['steps'] if s['id'] == step['id']), None)
+            if outcome is None or not outcome.get('ok'):
+                rerun_problems.append(f'pass {p["number"]} step {step["id"]}: ' +
+                                      ('; '.join(outcome['problems']) if outcome else 'not run'))
+        if step.get('deterministic_outputs') and comparison.get(step['id'], {}).get('identical') is not True:
+            rerun_problems.append(f'step {step["id"]}: deterministic outputs not identical across passes '
+                                  f'(differing {comparison.get(step["id"], {}).get("differing")})')
+    if not staged_ok:
+        rerun_problems.append('input staging failed')
+    if not guards_ok:
+        rerun_problems.append('guarded paths changed during a pass')
+    not_pass = sorted(k for k, v in prod.items() if v['status'] != 'PASS')
+    if not_pass:
+        rerun_problems.append('COAST-PROD ids not PASS: ' + ', '.join(not_pass))
+    verdict = 'NOT_PASS' if rerun_problems else 'PASS'
+    return verdict, prod, guards_ok, rerun_problems
 
 
 def markdown(report):
     lines = [f'# Clean rerun x{len(report["passes"])}: {report["name"]}', '',
-             f'Verdict: **{report["verdict"]}** (PASS needs all six COAST-PROD ids PASS).', '',
+             f'Verdict: **{report["verdict"]}** (PASS needs all six COAST-PROD ids PASS, every step ok in every '
+             'pass and every deterministic output identical).', '',
+             *[f'- {reason}' for reason in report.get('verdict_reasons', [])],
+             *([''] if report.get('verdict_reasons') else []),
              f'Spec sha256 `{report["spec_sha256"]}`; work base `{report["work_base"]}`.', '',
              '| id | status | detail |', '| --- | --- | --- |']
     for pid, value in report['coast_prod'].items():
@@ -429,8 +522,9 @@ def main(argv=None):
     guards_before = {g: manifest_digest(tree_manifest(g)) for g in spec.get('guard_paths', [])}
     passes = [run_pass(spec, n, work_base, spec_dir, guards_before) for n in range(1, spec.get('passes', 2) + 1)]
     comparison = compare_passes(passes, spec)
-    verdict, prod, guards_ok = evaluate(spec, passes, comparison)
+    verdict, prod, guards_ok, verdict_reasons = evaluate(spec, passes, comparison)
     report = dict(schema=REPORT_SCHEMA, name=spec.get('name', args.spec.stem), verdict=verdict,
+                  verdict_reasons=verdict_reasons,
                   created_at=datetime.now(timezone.utc).isoformat(timespec='seconds'),
                   spec=str(args.spec.resolve()), spec_sha256=sha256_file(args.spec), work_base=str(work_base),
                   driver_sha256=sha256_file(__file__), guards=guards_before, guards_unchanged=guards_ok,
