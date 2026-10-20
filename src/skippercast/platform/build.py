@@ -13,6 +13,7 @@ from .coasts import compile_coasts
 from .sectors import compile_sectors
 from .readiness import compile_readiness
 from .shoreline import publish_shoreline
+from .land_water import publish_land_water
 from .startup_forms import publish_startup_forms
 
 
@@ -108,6 +109,8 @@ def build(root=REPO, now=None):
         publish_shoreline(root, region, output)
         # #617: light copies of the atlas, the search plans and the shoreline for the map's first view.
         publish_startup_forms(root, region, output)
+        # CI6-01B: the land/water screen for ranked places, derived from that shoreline (docs/land-water-method.md).
+        publish_land_water(root, region, output)
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)
