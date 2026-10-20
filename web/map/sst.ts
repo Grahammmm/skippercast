@@ -41,6 +41,7 @@ import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
@@ -281,8 +282,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under the swell field when it is drawn, else under the protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, MPA_FILL]);
+      // § 9 order: under the swell field when it is drawn, else under the depth contours (CI6-13), else under the protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, DEPTH_BOTTOM, MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),

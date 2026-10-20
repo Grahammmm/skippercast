@@ -62,9 +62,10 @@ test('the registry entry is always on in Chart and on the terrain, has no rail e
   assert.equal(e.attribution, MPA_ATTRIBUTION);
   assert.equal(MPA_ATTRIBUTION, 'CDFW ds582 · CC BY 4.0', 'on the map: creator, dataset, licence; the legend\'s basis names the GIS Lab and links both');
   assert.equal(source.rights.attribution, 'CDFW Marine Region GIS Lab');
-  // § 9: above the swell field, under the habitat polygons.
+  // § 9: above the swell field and the depth contours, under the habitat polygons.
   const ids = LAYERS.map(l => l.id);
-  assert.equal(ids.indexOf('mpas'), ids.indexOf('swell') + 1);
+  assert.equal(ids.indexOf('mpas'), ids.indexOf('depth-contours') + 1, 'above the depth contours (CI6-13), which sit on the swell');
+  assert.equal(ids.indexOf('depth-contours'), ids.indexOf('swell') + 1);
   assert.equal(ids.indexOf('habitat'), ids.indexOf('mpas') + 1);
 });
 

@@ -37,6 +37,9 @@
 // FE-80: in 2D and 3D the Seafloor row is the terrain's: its depth ramp, the
 // terrain basis, the screened candidates as "Chart only", and while Source
 // coverage is on the renderer's colour key and its sources with their dates, verbatim.
+// Depth contours (CI6-13) are always on, Chart only: while they draw, their row keys
+// the contour and the dashed survey edge and names each survey, its date and datum;
+// withheld or failed contours say so, and a region without any shows no row.
 import {IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {GRADE_LABELS, GRADE_MEANING} from '../grade.ts';
@@ -47,6 +50,7 @@ import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
+import {contourState} from '../map/depth-contours.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
@@ -258,6 +262,26 @@ export function DensityRow() {
   );
 }
 
+/** The depth contours (CI6-13): the key and surveys while they draw, or why they do not; nothing where none are published. */
+export function DepthContoursRow() {
+  const s = contourState.value, entry = layerEntry('depth-contours');
+  if (shownPresentation.value !== 'chart' || !['drawn', 'withheld', 'failed'].includes(s.status)) return null;
+  const drawn = s.status === 'drawn';
+  return (
+    <li class="app-legend-depth-contours">
+      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{entry.label}
+      <Popover iconOnly summary="Depth contours basis">
+        <p>{entry.basis}</p>
+        {s.sources.map(x => <p key={x.source_id}>{x.name} · surveyed {x.survey_date} · {x.vertical_datum}</p>)}
+      </Popover>
+      {drawn ? <p class="app-legend-note" data-key="depth-contours">{entry.legend[0]?.label}</p> : null}
+      {drawn ? <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{entry.legend[1]?.label}</p> : null}
+      {drawn ? <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `surveyed ${x.survey_date} · ${x.vertical_datum}`))].join('; ')} · not for navigation</p> : null}
+      {s.note ? <p class="app-legend-note" data-reason="depth-contours">{s.note}</p> : null}
+    </li>
+  );
+}
+
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
 const PlainRow = ({id, label, reason}: {id: string; label: string; reason: string}) => (
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
@@ -277,6 +301,7 @@ export function Legend() {
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />
         <DensityRow />
+        <DepthContoursRow />
         <MpaRow />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}
