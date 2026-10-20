@@ -895,7 +895,7 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
   await page.locator('[aria-label="Profile"] button', {hasText: 'Shore'}).click();
   await expect.poll(() => params(page).profile).toBe('shore');
   expect(params(page).layers, 'a switch drops the link\'s list').toBeUndefined();
-  await expect.poll(() => pressedEntries(page)).toEqual(['Water temp', 'Swell']);
+  await expect.poll(() => pressedEntries(page)).toEqual(['Water temp', 'Swell + wind']);
   await page.locator('[aria-label="Profile"] button', {hasText: 'Boat'}).click();
   await expect.poll(() => pressedEntries(page), 'Boat\'s own list comes back').toEqual(['Seafloor', 'Currents']);
 

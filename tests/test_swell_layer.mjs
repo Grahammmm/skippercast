@@ -247,7 +247,7 @@ test('toggling Swell adds the texture, isolines and strokes only; off removes th
   await flush();
   assert.deepEqual(asked, ['https://s.test/api/forecast?region=morro-bay']);
   assert.deepEqual(e.calls, [['overlay', [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER]], ['image', SWELL_SOURCE], ['data', ISOLINE_SOURCE], ['data', STROKE_SOURCE]]);
-  assert.deepEqual(e.before, [DEPTH_BOTTOM, MPA_FILL], 'under the depth contours, else the protected areas (§ 9 order)');
+  assert.deepEqual(e.before, ['wind-casing', DEPTH_BOTTOM, MPA_FILL], 'under wind, depth contours and protected areas (§ 9 order)');
   assert.equal(railNotes.value.swell, 'valid Fri 1 pm · run 12 h old');
   assert.equal(swellState.value.drawn.field.quads.length, 4);
   chartMark.value = s.reading({lon: -121.5, lat: 35.3});
@@ -375,7 +375,7 @@ test('the legend gives the hour\'s reading, the fixed scale and the model run as
   assert.match(legend, /data-scale="swell">0 ft<span class="app-swatch" data-layer="swell" aria-hidden="true"><\/span><span class="app-visually-hidden"> to <\/span>15\+ ft</);
   assert.match(legend, /data-stamp="swell">NOAA GFS-Wave model forecast · run Oct 8, 11 pm · 12 h old · valid Fri Oct 9, 1 pm</);
   assert.match(legend, /A model forecast, not a buoy observation\./);
-  assert.match(m.render(m.h(m.LayerRail)), /Swell<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);
+  assert.match(m.render(m.h(m.LayerRail)), /Swell \+ wind<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);
   m.swellState.value = swellStatus(true, {state: 'error', region: 'morro-bay', forecast: null, at: 0}, AT, NOW, TZ);
   const none = m.render(m.h(m.Legend));
   assert.doesNotMatch(none, /data-range="swell"|data-stamp="swell"/);
