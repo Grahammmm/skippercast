@@ -137,6 +137,20 @@ test('a version made by "version_upload" (the pipeline\'s own wrangler deploy) i
   assert.match(missingTrace.reason, /no "<sha> run <id>" deploy message/);
 });
 
+test('the production listing shape (version_upload at 100%, "<sha> run <id>") is traced', () => {
+  // Regression for #766's hold: production served a wrangler deploy whose trigger Cloudflare
+  // labelled "version_upload" rather than "upload".
+  const SHA = 'ad1118ef747a35bcfb2fc401020399d24fbe6d7a';
+  const LIVE = 'f2b6afc8-b6d7-4a20-86df-44df78a55a76';
+  const versions = [{id: LIVE, metadata: {created_on: '2026-10-20T17:08:00.000Z'},
+    annotations: {'workers/triggered_by': 'version_upload', 'workers/message': `${SHA} run 39463174683`}}];
+  const deployments = [{id: 'd1', created_on: '2026-10-20T17:08:00.000Z', source: 'wrangler',
+    strategy: 'percentage', versions: [{version_id: LIVE, percentage: 100}]}];
+  const traced = traceLiveCommit(deployments, versions);
+  assert.equal(traced.commit, SHA, traced.reason);
+  assert.equal(liveCommit(deployments, versions), SHA);
+});
+
 test('a live commit that cannot be traced is unknown, never guessed', () => {
   const unknown = (deployments, versions, reason) => {
     const traced = traceLiveCommit(deployments, versions);
