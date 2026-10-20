@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 const {createPlanner, nextFriday, planFit} = await import('../web/planner.ts');
 const {draftKey} = await import('../dist/trip-export.js');
+const {coordinates} = await import('../web/state.ts');
 
 const NOW = new Date('2026-10-12T18:00:00Z');  // Monday, Pacific
 const REGION = {id: 'test-coast', name: 'Test Coast', timezone: 'America/Los_Angeles', mpa: {bounds: [-10, -10, 10, 10]}};
@@ -43,6 +44,20 @@ function harness({stored = null, loadReefs, ports = [{id: 'p1', name: 'Port 1', 
   return {planner, store, emitted, nav, saved: () => JSON.parse(store.get(draftKey(REGION.id)))};
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('downloaded notes follow the coordinate choice while GPX positions remain decimal degrees', async () => {
+  const {planner: p} = harness();
+  p.add('old-1'); p.setResearch(true);
+  try {
+    for (const [mode, expected] of [['dd', '0.50000° N, 0.50000° E'], ['ddm', '0° 30.000′ N, 0° 30.000′ E'], ['dms', '0° 30′ 00.00″ N, 0° 30′ 00.00″ E']]) {
+      coordinates.value = mode;
+      assert.ok((await (await p.exportFile('notes')).text()).includes(expected));
+      const gpx = await (await p.exportFile('gpx')).text();
+      assert.match(gpx, /lat="0\.5" lon="0\.5"/);
+      assert.doesNotMatch(gpx, /[°′″]/);
+    }
+  } finally { coordinates.value = 'dd'; p.dispose(); }
+});
 
 test('a draft saved before the port opens with its ids, name, date, layers and coverage, under the same key', () => {
   const v1 = JSON.stringify({ids: ['old-1', 'gone'], rankedPlan: null, name: 'Sunday reef', date: '2026-10-18', avoidScope: 'region',
@@ -96,6 +111,35 @@ test('Best available ranks distinct reefs, sets the ranked layers, names the pla
   assert.deepEqual(emitted.at(-1).targets.map(t => t.id), d.ids);
   assert.deepEqual(p.spots.value.map(t => t.trip_rank), [1, 2, 3, 4, 5], 'the list shows only ranked reefs, in rank order');
   p.dispose();
+});
+
+// CI6-01A: the planner's distances run from the chosen listed port, never the device position.
+test('Best available measures distance from the chosen port; without one there is no distance and no device fallback', async () => {
+  const {distanceNm} = await import('../dist/spot-ranking.js');
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), calls = [];
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, writable: true, value: {geolocation: {
+    getCurrentPosition(ok) { calls.push('get'); ok({coords: {latitude: 0.5, longitude: 0.5}}); }, watchPosition() { calls.push('watch'); return 1; }, clearWatch() {}}}});
+  try {
+    const ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}, {id: 'p2', name: 'Launch 2', region: 'test-coast', match: [0.05, 0.03]}];
+    for (const id of ['p1', 'p2']) {
+      const {planner: p} = harness({ports});
+      await settle();
+      p.setFilter('port', id);
+      await p.selectBest();
+      const [lat, lon] = ports.find(x => x.id === id).match;
+      assert.equal(p.ranked.value, true, p.scopeStatus.value);
+      for (const t of p.spots.value) assert.equal(t.distance_nm, distanceNm({latitude: lat, longitude: lon}, t), `${t.id} from ${id}`);
+      p.dispose();
+    }
+    const {planner: none} = harness({ports: []});
+    await settle();
+    assert.equal(none.filters.value.port, '');
+    await none.selectBest();
+    assert.equal(none.ranked.value, true, none.scopeStatus.value);
+    assert.ok(none.spots.value.length > 0 && none.spots.value.every(t => t.distance_nm === null), 'no port, no distance');
+    none.dispose();
+    assert.deepEqual(calls, [], 'the planner never asks for the device position');
+  } finally { if (saved) Object.defineProperty(globalThis, 'navigator', saved); else delete globalThis.navigator; }
 });
 
 test('a selection made while Best available loads wins over its answer', async () => {

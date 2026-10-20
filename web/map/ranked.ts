@@ -169,6 +169,7 @@ export function rankedCard(t: RankedTarget, region: RegionData | null): ChartMar
     regulations: regulationsLink(region ?? {id: ''}),
     basis: [t.terrain_interpretation, t.special_note, t.evidence_status].filter(Boolean).join(' '),
     trip: t.id,
+    position: {latitude: t.latitude, longitude: t.longitude},
   };
 }
 

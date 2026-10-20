@@ -6,7 +6,7 @@
 // features are synthetic, ranked by packages/coast's own `rankedHabitat`. Offline.
 import assert from 'node:assert/strict';
 import {mkdtemp, readFile} from 'node:fs/promises';
-import {readFileSync} from 'node:fs';
+import {readFileSync, readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
@@ -15,6 +15,8 @@ import {build} from 'esbuild';
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
 import {CHECKING, SCREEN_MAX_AGE_MS, assessScreen, markFit} from '../web/map/habitat.ts';
 import {TOP, atlasPicks as checkedAtlasPicks, habitatPicks as checkedHabitatPicks, harborOrigin, loadTerrainHabitat, ranking, terrainHabitat} from '../web/ranking.ts';
+import {distanceNm} from '../dist/spot-ranking.js';
+import {locatePort} from '../web/ports.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -268,7 +270,7 @@ async function loadView() {
   const out = join(await mkdtemp(join(tmpdir(), 'where-')), 'where.mjs');
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {WhereToLook, choosePick} from './web/brief/WhereToLook.tsx';
+      export {WhereToLook, choosePick, pickRun} from './web/brief/WhereToLook.tsx';
       export {picked} from './web/map/marks.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
@@ -310,4 +312,121 @@ test('clicking selects the mark or the habitat (one at a time) and opens the car
   assert.match(html, /<details class="ui-popover ui-popover--icon"[^>]*><summary[^>]*aria-label="About the reviewed terrain habitat ranking"/);
   const source = await readFile(join(ROOT, 'web/brief/WhereToLook.tsx'), 'utf8');
   assert.doesNotMatch(source, CLAIMS);
+});
+
+// CI6-01A: a run distance is measured from the chosen harbor or launch, never from the device.
+// A decoy device fix stands in for the browser's location; nothing on these paths may read it.
+const DEVICE = {latitude: 35.62, longitude: -121.18};
+function trapGeolocation() {
+  const calls = [];
+  const fix = ok => ok({coords: {...DEVICE, accuracy: 10}, timestamp: NOW});
+  const geolocation = {getCurrentPosition(ok) { calls.push('getCurrentPosition'); fix(ok); }, watchPosition(ok) { calls.push('watchPosition'); fix(ok); return 1; }, clearWatch() {}};
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', {value: {...globalThis.navigator, geolocation}, configurable: true, writable: true});
+  return {calls, restore() { if (saved) Object.defineProperty(globalThis, 'navigator', saved); else delete globalThis.navigator; }};
+}
+const withHarbor = harbor => ({...DATA, region: {...DATA.region, harbor}});
+const {harbor: _harbor, ...NO_HARBOR_REGION} = DATA.region;
+const NO_HARBOR = {...DATA, region: {...NO_HARBOR_REGION, position: DEVICE, location: DEVICE}};
+const SPREAD = ['n-1', 'n-2', 'n-3', 'n-4'].map((id, i) => reef(id, {waypoint_latitude: 35.28 + 0.02 * i, waypoint_longitude: -120.95 - 0.02 * i, terrain_score: 90 - i}));
+const placeOf = {
+  atlas: id => ATLAS.targets.find(t => t.id === id),
+  terrain: id => { const p = SPREAD.find(f => f.id === id).properties; return {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}; },
+};
+
+test('run distance: both sources measure from the chosen harbor or launch, and never read the device position', () => {
+  const geo = trapGeolocation();
+  try {
+    const origins = [{name: 'Synthetic harbor', latitude: 35.37, longitude: -120.86}, {name: 'Synthetic launch', latitude: 35.1, longitude: -120.7}];
+    const seen = {atlas: new Set(), terrain: new Set()};
+    for (const origin of origins) {
+      const data = withHarbor(origin);
+      for (const r of [ranking(inputs({data})), ranking(inputs({data, terrain: {...READY, features: SPREAD}}))]) {
+        assert.equal(r.harbor, origin.name, `${r.source} names the run origin`);
+        assert.ok(r.basis.includes(`straight-line from ${origin.name}.`), r.basis);
+        assert.equal(r.picks.length, TOP, `${r.source}: ${r.picks.map(p => p.id)} ${r.empty}`);
+        for (const p of r.picks) {
+          const at = placeOf[r.source](p.id), nm = distanceNm(origin, at);
+          assert.equal(p.nm, nm, `${r.source} ${p.id} from ${origin.name}`);
+          assert.equal(p.distance, `${nm.toFixed(1)} nm`);
+          assert.notEqual(p.nm, distanceNm(DEVICE, at), 'not from the device');
+          seen[r.source].add(p.distance);
+        }
+      }
+    }
+    assert.ok(seen.atlas.size > TOP && seen.terrain.size > TOP, 'moving the origin moves every source\'s distances');
+    // An explicit origin argument is the one used, for both sources.
+    const launch = origins[1];
+    for (const p of atlasPicks(withHarbor(origins[0]), CHECKED, 'lingcod', 300, launch)) assert.equal(p.nm, distanceNm(launch, placeOf.atlas(p.id)));
+    for (const p of habitatPicks(SPREAD, CHECKED, 'morro-bay', 'lingcod', 300, launch)) assert.equal(p.nm, distanceNm(launch, placeOf.terrain(p.id)));
+    // Only a published harbor with a finite position is an origin; device-like fields on the region are ignored.
+    assert.equal(harborOrigin(NO_HARBOR), null);
+    assert.equal(harborOrigin({...NO_HARBOR, region: {...NO_HARBOR.region, harbor: {name: 'No position'}}}), null);
+    assert.equal(harborOrigin({...NO_HARBOR, region: {...NO_HARBOR.region, harbor: {name: 'Bad', latitude: NaN, longitude: -120}}}), null);
+    assert.deepEqual(geo.calls, [], 'ranking never asks for the device position');
+  } finally { geo.restore(); }
+});
+
+test('run origin: only the port chooser reads the device position, and it hands back a listed port', async () => {
+  const files = [];
+  const walk = dir => { for (const e of readdirSync(dir, {withFileTypes: true})) {
+    const path = join(dir, e.name);
+    if (e.isDirectory()) walk(path); else if (/\.(?:ts|tsx|js|mjs)$/.test(e.name)) files.push(path);
+  } };
+  walk(join(ROOT, 'web'));
+  // The hand-written v1 scripts at the top of dist/ (dist/client and dist/server are the built bundle).
+  for (const name of readdirSync(join(ROOT, 'dist'))) if (/\.m?js$/.test(name)) files.push(join(ROOT, 'dist', name));
+  const DEVICE_READ = /\bgeolocation\b|getCurrentPosition|watchPosition|\.coords\b/;
+  const readers = files.filter(f => DEVICE_READ.test(readFileSync(f, 'utf8'))).map(f => f.slice(ROOT.length)).sort();
+  assert.deepEqual(readers, ['dist/home-port.js', 'web/landing/PortInput.tsx', 'web/ports.ts'],
+    'a new reader of the device position must not feed a run distance; review it and extend this list only if it suggests a listed port');
+  // Each reader turns the fix straight into the nearest listed port; PortInput only passes geolocation to locatePort.
+  for (const f of ['dist/home-port.js', 'web/ports.ts']) {
+    const text = readFileSync(join(ROOT, f), 'utf8');
+    const used = text.match(/position\.coords\.\w+/g) ?? [];
+    assert.deepEqual(used, ['position.coords.latitude', 'position.coords.longitude'], f);
+    assert.match(text, /closestPort\(ports, position\.coords\.latitude, position\.coords\.longitude\)/, f);
+  }
+  const input = readFileSync(join(ROOT, 'web/landing/PortInput.tsx'), 'utf8');
+  assert.doesNotMatch(input, /getCurrentPosition|watchPosition|\.coords\b/);
+  // locatePort answers with the directory's own port object, not the fix.
+  const port = (id, match) => ({id, name: id, region: 'morro-bay', status: 'active', forecast_point: id, forecast_name: id, match});
+  const ports = [port('near', [35.6, -121.15]), port('far', [34.4, -119.7])];
+  const geo = trapGeolocation();
+  try {
+    const found = await locatePort(ports, globalThis.navigator.geolocation);
+    assert.equal(found.ok, true);
+    assert.equal(found.port, ports[0], 'the listed port itself');
+    assert.doesNotMatch(JSON.stringify(found), new RegExp(String(DEVICE.latitude)), 'the device fix is not carried along');
+    assert.deepEqual(geo.calls, ['getCurrentPosition']);
+  } finally { geo.restore(); }
+});
+
+test('run distance: without a harbor position every pick shows the no-distance dash, never a device figure', async () => {
+  const geo = trapGeolocation();
+  try {
+    for (const terrain of [{state: 'unavailable'}, {...READY, features: SPREAD}]) {
+      const r = ranking(inputs({data: NO_HARBOR, terrain, reachNm: 5}));
+      assert.ok(r.picks.length > 0, `${r.source} still ranks`);
+      for (const p of r.picks) {
+        assert.equal(p.distance, '—', `${r.source} ${p.id}`);
+        assert.equal(p.nm, null);
+      }
+      assert.equal(r.harbor, undefined);
+      assert.equal(r.reach, undefined, 'a range cannot be measured without a harbor, so none is applied');
+      assert.ok(r.basis.includes('straight-line from the region\'s harbor, which has no published position here, so no distance is shown.'), r.basis);
+      assert.doesNotMatch(r.basis, /\d nm/);
+    }
+    assert.ok(atlasPicks(NO_HARBOR, CHECKED, 'lingcod', 300).every(p => p.distance === '—' && p.nm === null), 'the default origin is the harbor, and there is none');
+    assert.ok(habitatPicks(SPREAD, CHECKED, 'morro-bay', 'lingcod', 300, null).every(p => p.distance === '—' && p.nm === null));
+    // The row shows the dash; without a distance no run time is added, whatever the cruise speed.
+    const {WhereToLook, pickRun, state, render, h} = await loadView();
+    assert.equal(pickRun(null, 18), '');
+    browser(state, 'https://s.test/map?region=morro-bay');
+    const r = ranking(inputs({data: NO_HARBOR}));
+    const html = render(h(WhereToLook, {ranking: r}));
+    assert.equal((html.match(/<span class="ui-mono">— · ~\d+–\d+ ft<\/span>/g) ?? []).length, r.picks.length, html);
+    assert.doesNotMatch(html, /\d nm\b/);
+    assert.deepEqual(geo.calls, [], 'no device fix fills the gap');
+  } finally { geo.restore(); }
 });

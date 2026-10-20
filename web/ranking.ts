@@ -57,6 +57,11 @@ export interface Ranking {readonly source: RankingSource | null; readonly label:
   /** Some place waits on the land/water lines file; the list shows once it loads. */
   readonly pending?: boolean}
 
+/**
+ * Where a run distance starts: a named harbor or launch from published data, never the device's position.
+ * "Use my location" (web/ports.ts `locatePort`) only suggests the nearest listed port; tests/test_ranking.mjs
+ * fails if any other web/ file reads the device position.
+ */
 export interface Origin {readonly latitude: number; readonly longitude: number; readonly name: string}
 /** The region's harbor (region.json `harbor`), the port distances are measured from. */
 export function harborOrigin(data: MarkData | null): Origin | null {
@@ -169,7 +174,8 @@ export function ranking(i: RankingInputs): Ranking {
   // A range applies only where it can be measured: from a harbor position.
   const reach = origin && known(i.reachNm) && i.reachNm > 0 ? i.reachNm : null;
   const kept = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
-  const from = ` ${harbor}.${kept} ${LAND_WATER_BASIS} A ranked place is a place to look; fish presence is unverified.`;
+  // Without a harbor position no distance is measured, and the basis says so rather than naming one.
+  const from = `${origin ? ` ${harbor}.` : ' the region\'s harbor, which has no published position here, so no distance is shown.'}${kept} ${LAND_WATER_BASIS} A ranked place is a place to look; fish presence is unverified.`;
   const place = i.place ?? NO_LAND_WATER;
   /** The basis, the list and the empty line once the land/water check has run. */
   const checked = (s: Screened, basis: string, empty: string) => ({

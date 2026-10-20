@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Ranked places (Where to look, the trip planner's Best available and its pins on the Chart) are now checked against the NOAA shoreline: only places confirmed on water are ranked. A place on land, within 25 m of the shoreline, or outside the shoreline's coverage is withheld, and the basis counts it ("N spots withheld: land/water not confirmed"). Regions without a shoreline rank no places until one is imported. This is a planning screen, not a navigation boundary.
+- Temp contrast, a new map layer that is off by default: it shows the change in sea-surface temperature per nautical mile in the region's published daily analysis. It draws only cells whose change exceeds the summed analysis error and is withheld past 72 hours (CI6-03).
+- Offline packs now remind you to check before leaving coverage and explain missing water-temperature and current data instead of leaving the layer blank without an offline reason.
+- Choose decimal degrees, degrees and decimal minutes, or degrees minutes seconds in the account menu for mark positions, trip plans and downloaded notes. GPX coordinates remain decimal degrees.
 - Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
@@ -16,6 +19,7 @@
 - A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
 - The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
 - The licences page and NOTICE name the MapLibre GL JS version the app ships (6.14.0), and a check keeps them in step with future updates.
+- "Where to look" distances always run from the region's harbor, never from your device's location; where a region has no published harbor position, each place shows a dash and the basis says no distance is shown.
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
 ### Coastal readiness inspection

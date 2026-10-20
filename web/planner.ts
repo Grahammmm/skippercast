@@ -21,6 +21,7 @@ import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {track} from './telemetry.ts';
 import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
+import {coordinates} from './state.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -216,6 +217,7 @@ export function createPlanner(deps: PlannerDeps) {
       await portsLoaded;
       const loaded = await loadReefs(region.id);
       if (mine !== revision) return;
+      // Distances run from the chosen listed port (web/ranking.ts `Origin`), never the device position; no port, no distance.
       const port = ports.value.find(p => p.id === f.port);
       if (f.scope === 'map' && !map.getSize().x) throw Error('Open the map first to choose its area.');
       if (f.depth > 300 || f.depth < 25 || !Number.isFinite(f.distance) || f.distance <= 0) throw Error('Choose a depth from 25–300 ft and a positive distance.');
@@ -290,7 +292,7 @@ export function createPlanner(deps: PlannerDeps) {
     const d = draft.value, result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
-      ? new File([offlineNotes(result, region, {...d, date: d.date || today}) as string], `${base}.html`, {type: 'text/html'})
+      ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
       : new File([result.gpx], `${base}.gpx`, {type: 'application/gpx+xml'});
   }
   const save = (file: File): void => {

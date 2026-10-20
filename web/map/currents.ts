@@ -35,6 +35,7 @@ import type {MapView} from './engine.ts';
 import {drawBase, drawDashes, fastSpeed, flowPaths, frameField, screenVector, type FlowPath} from './flow.ts';
 import {chosenCurrent, type CurrentField, type CurrentFrame} from './frames.ts';
 import {layerEntry} from './layers.ts';
+import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offline.ts';
 import type {Palette} from './palette.ts';
 import {shownPresentation, terrainHour, UNSUPPORTED_CURRENT} from './stage.ts';
 import {vectorReading, type SurfaceField} from './surface-field.js';
@@ -92,9 +93,10 @@ function lastFrame(fields: readonly unknown[], choice: string, at: Date): string
 }
 
 /** What the layer shows for a source choice, the packet's state and the dock's hour `at`. */
-export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean: OceanData | null, at: Date, now: Date, tz: string): CurrentsStatus {
+export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean: OceanData | null, at: Date, now: Date, tz: string, offline = false): CurrentsStatus {
   if (choice === 'off') return OFF;
   if (choice === UNSUPPORTED) return {...OFF, note: 'unsupported source', reason: UNSUPPORTED_CURRENT};
+  if (offline && status === 'error' && !ocean) return {...OFF, note: NOT_SAVED, reason: COAST_NOT_SAVED};
   if (status === 'unbound') return {...OFF, note: 'no packet for this region', reason: 'Currents unavailable: no local surface-current packet covers this region yet.'};
   if (status === 'error' || status === 'invalid') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the surface-current packet failed to load, and no other source is shown.'};
   if (status === 'expired') return {...OFF, note: 'expired', reason: 'Currents unavailable: the surface-current packet passed its age limit, and no other source is shown.'};
@@ -103,12 +105,13 @@ export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean
 }
 
 /** What the layer shows from the region's own feed (`null` while it loads) for a place with no local report. */
-export function regionalCurrentsStatus(choice: CurrentChoice, feed: RegionalCurrents | null, at: Date, now: Date, tz: string): CurrentsStatus {
+export function regionalCurrentsStatus(choice: CurrentChoice, feed: RegionalCurrents | null, at: Date, now: Date, tz: string, offline = false): CurrentsStatus {
   if (choice === 'off') return OFF;
   if (choice === UNSUPPORTED) return {...OFF, note: 'unsupported source', reason: UNSUPPORTED_CURRENT};
   if (choice !== 'wcofs') return {...OFF, note: 'no radar for this region',
     reason: `Currents unavailable: ${CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice} is published only where a local surface-current packet covers the region; the NOAA WCOFS forecast may be.`};
   if (!feed) return {...OFF, note: 'loading', reason: 'Loading the region\'s surface-current forecast.'};
+  if (offline && feed.state === 'error' && feed.network) return {...OFF, note: NOT_SAVED, reason: TILES_NOT_SAVED};
   if (feed.state === 'none') return {...OFF, note: 'no forecast for this region', reason: 'Currents unavailable: no surface-current forecast covers this region yet.'};
   if (feed.state === 'error') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the region\'s surface-current forecast failed to load or failed its checks, and no other source is shown.'};
   // A listed forecast that was not loaded names its last frame, as a stale packet's does.
@@ -196,6 +199,7 @@ export function createCurrents(o: CurrentsOptions): Currents {
   const motion = o.motion !== undefined ? o.motion : typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   const frames = o.frames ?? {request: step => requestAnimationFrame(step), cancel: id => cancelAnimationFrame(id)};
   const tick = signal(0), hidden = signal(!!doc?.hidden), reduced = signal(!!motion?.matches);
+  const connection = watchOffline();
   // Re-chosen on the same clock as the frame, so a picked source that goes stale gives way.
   const choice = computed(() => { void tick.value; return o.source ? o.source() : current.value; });
   const ocean = computed(() => o.place?.() !== null ? data.coastStatus.value.ocean : 'loading');
@@ -206,9 +210,9 @@ export function createCurrents(o: CurrentsOptions): Currents {
     const at = terrainHour(hour.value, now(), day.value, zone()), place = o.place?.() ?? null;
     if (ocean.value === 'unbound' && place) {
       const f = feed.value;
-      return regionalCurrentsStatus(choice.value, f?.region === place.regionId ? f.result : null, at, now(), zone());
+      return regionalCurrentsStatus(choice.value, f?.region === place.regionId ? f.result : null, at, now(), zone(), connection.offline.value);
     }
-    return currentsStatus(choice.value, ocean.value, data.coastOcean.value?.data ?? null, at, now(), zone());
+    return currentsStatus(choice.value, ocean.value, data.coastOcean.value?.data ?? null, at, now(), zone(), connection.offline.value);
   });
   let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
   const fetchFn = o.fetchFn ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), page = o.page ?? (() => location.href);
@@ -335,6 +339,7 @@ export function createCurrents(o: CurrentsOptions): Currents {
       return d && shown.peek() ? currentMark(d, d.surface, at, zone(), now()) : null;
     },
     destroy() {
+      connection.destroy();
       for (const dispose of disposers) dispose();
       for (const off of unlisten) off();
       clearTimeout(timer);
