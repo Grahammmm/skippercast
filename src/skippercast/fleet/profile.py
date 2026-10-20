@@ -7,6 +7,8 @@ schemas/fleet-profile.schema.json and pass the policy checks below, which the
 schema cannot express:
 
 - no `source_url` (in a provenance object or a conflict) on an off-limits host (D7);
+- every provenance `source_url` an https URL with a host and no credentials (the
+  schema admits `http://`; ingest stores only https, `ops.https_url`);
 - a value on an off-limits host (a booking link, an Instagram or Facebook handle
   or URL) only when it was read off a page (`method` `page`): the operator's
   site, a landing page or a report site, never a search result or a guess;
@@ -45,6 +47,7 @@ from .. import validate
 from ..platform.contracts import REPO
 from .adapters.base import Fact, Offering, offering_name_norm
 from .normalize import slugify
+from .ops import https_url
 
 __all__ = ["CONFIDENCE_CAP", "DROPPED", "KIND", "MAX_NOTES", "OFF_LIMITS_FILE", "RIGHTS", "SOURCE_ID", "WEBMAIL_DOMAINS",
            "ProfileFacts", "load_off_limits", "offering_names", "policy_errors", "profile_facts", "profiled_at", "provenance",
@@ -130,6 +133,9 @@ def policy_errors(doc, off_limits=None):
         if _on_host(source_host, hosts):
             errors.append(f"{path}: source_url on an off-limits host ({source_host})")
             continue
+        if isinstance(prov.get("source_url"), str) and https_url(prov["source_url"]) is None:
+            errors.append(f"{path}: source_url must be an https URL with a host and no credentials "
+                          "(ingest stores no other)")
         value = prov.get("value")
         off_limits_value = (isinstance(value, str) and _mentions_host(value, hosts)) or path.startswith(social_paths)
         if off_limits_value and prov.get("method") != "page":

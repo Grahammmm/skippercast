@@ -350,6 +350,28 @@ class ProfileIngestTests(unittest.TestCase):
                 self.assertEqual(profiled[other["vessel_id"]], "2026-10-06T08:17:00.000Z")
                 self.assertIsNone(profiled[doc["vessel_id"]], "a refused profile moves nothing forward")
 
+    def test_text_in_a_numeric_field_or_an_http_source_refuses_the_record(self):
+        """T17: the junk earlier agent runs wrote (review text as a rating, http:// sources) never reaches a fact."""
+        reputation = {"google_rating": None, "google_reviews": None, "other": [leaf("4.8 stars on the landing page")]}
+        cases = {"rating-text.json": (kelp(reputation=reputation), "numbers only"),
+                 "length-text.json": (kelp(length_ft=leaf("sixty-five feet")), "boat/length_ft"),
+                 "http-source.json": (kelp(passengers_max=leaf(44, url="http://kelp-test-charters.example/")),
+                                      "must be an https URL")}
+        for name, (doc, expected) in cases.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                p, folder = Registry(tmp), Path(tmp) / "profiles"
+                p.run(DAY0, *baseline(DAY0))
+                write(folder, name, doc)
+                write(folder, "valid.json", party())
+                run, result = p.ingest(day(1), folder)
+                self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                 ("partial", 1, 1))
+                (refused,) = json.loads((run.dir / "profiles-ingest.json").read_text())["refused"]
+                self.assertEqual(refused["file"], name)
+                self.assertTrue(any(expected in e for e in refused["errors"]), refused)
+                facts = [f for f in p.rows("fleet_vessel_facts") if f["vessel_id"] == KELP and f["source_id"] == "osint"]
+                self.assertEqual(facts, [], "nothing of a refused profile is stored")
+
     def test_a_missing_profiles_directory_fails_the_step(self):
         with self.assertRaises(FileNotFoundError):
             self.p.ingest(day(1), self.dir / "absent")

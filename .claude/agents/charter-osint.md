@@ -94,6 +94,9 @@ API adapter, never from scraping Google.
 3. Every value carries provenance: `source_url`, `retrieved_at` (UTC ISO),
    `method` (page, api, search, inference), `confidence` (0–1). Unknown is
    `null`, never a guess. Note conflicting values rather than picking one.
+   `source_url` is the `https://` URL of the page the value was read on
+   (`http://` and other schemes are refused). Numeric fields hold numbers:
+   `reputation.other[]` values are a rating or a count, never text.
 
 ## Off-limits sources (D7)
 

@@ -86,6 +86,20 @@ class PolicyTests(unittest.TestCase):
                 doc['boat']['reputation']['other'] = [prov(value)]
                 self.assertEqual(profile.policy_errors(doc) == [], ok)
 
+    def test_source_url_must_be_https(self):
+        """T17: the schema admits http://, ingest stores only https; validation refuses the record up front."""
+        doc = load('party.json')
+        for url, ok in (('https://operator.example/fleet', True), ('http://operator.example/fleet', False),
+                        ('https://user:pw@operator.example/', False), ('https://localhost/', False),
+                        ('https://operator.example/a b', False)):
+            with self.subTest(url):
+                doc['boat']['reputation']['other'] = [prov(37, source=url)]
+                errors = profile.policy_errors(doc)
+                self.assertEqual(errors == [], ok, errors)
+                if not ok:
+                    self.assertEqual(errors, ['boat.reputation.other[0]: source_url must be an https URL with a host '
+                                              'and no credentials (ingest stores no other)'])
+
     def test_notes_are_capped(self):
         doc = load('party.json')
         doc['notes'] = 'x' * profile.MAX_NOTES
