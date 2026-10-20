@@ -3,8 +3,38 @@ import copy
 LARGER = 'coastal-four-window-128-v2'
 CONTAINED = 'coastal-contained-windows-v3'
 MANAGED_EIGHT_COPY = 'coastal-managed-eight-copy-four128-v1'
+# SC-5 (G option A, 2026-10-20): a separate pinned support policy for contained
+# windows. Mask-invalid cells stay unsupported/nodata instead of holding the
+# window; every supported cell keeps the strict depth/uncertainty limits. Absent
+# means the strict all-pairs policy, so strict identities and digests are unchanged.
+PARTIAL_SUPPORT = 'coastal-contained-partial-support-v1'
+ORDERED_SCOPE = 'coastal-ordered-four128-v2'
+# The only window set the partial policy may admit: four non-overlapping,
+# segment-contained 128 windows with 14/4/299/18 mask-invalid cells from the
+# FIX3 pre-scan (hole-candidates.json sha256 024d474a8832...). Pinned here, at
+# the shared authority boundary, so every grant/packet/policy path enforces it.
+PARTIAL_WINDOWS = [[4402,3872,128,128],[3762,3744,128,128],[3634,3616,128,128],[4018,3488,128,128]]
+def support_policy(name=None, configuration=None):
+    config=configuration or {};value=config.get('support_policy')
+    if value is None:return None
+    if name!=CONTAINED or value!=PARTIAL_SUPPORT:raise ValueError('unsupported contained support policy')
+    side=config.get('window_side');count=config.get('window_count')
+    if type(side) is not int or side!=128 or type(count) is not int or count!=4:
+        raise ValueError('partial support is pinned to the ordered four128 scope')
+    return value
+def _partial_grant(grant):
+    """Fail closed: a partial grant always carries the pinned set and full ordered authority."""
+    if grant.get('window_set')!=PARTIAL_WINDOWS:
+        raise ValueError('partial support is pinned to the ordered four128 window set')
+    if (grant.get('ordered_scope_contract')!=ORDERED_SCOPE
+        or grant.get('larger_runtime_contract')!=MANAGED_EIGHT_COPY
+        or any(grant.get(key) is None for key in ('geographic_review','output_retention','output_root'))
+        or grant.get('source_reuse_contract') is not None
+        or grant.get('saved_area_continuation_contract') is not None):
+        raise ValueError('partial support requires the ordered four128 geographic/output/runtime authority')
 def profile(name=None, configuration=None):
     if name not in (None,LARGER,CONTAINED):raise ValueError('unsupported authenticated execution profile')
+    support_policy(name,configuration)
     side=128 if name else 16;count=4 if name else 1
     if name==CONTAINED:
         config=configuration or {};side=config.get('window_side');count=config.get('window_count')
@@ -29,6 +59,9 @@ def grant_identity(grant):
                 if a[0]<b[0]+side and b[0]<a[0]+side and a[1]<b[1]+side and b[1]<a[1]+side:
                     raise ValueError('contained native windows overlap')
         result.update(execution_profile=CONTAINED,window_side=side,window_count=count,window_set=copy.deepcopy(windows))
+        if support_policy(CONTAINED,grant) is not None:
+            _partial_grant(grant)
+            result['support_policy']=PARTIAL_SUPPORT
     elif chosen['name']:
         windows=grant.get('window_set')
         if (not isinstance(windows,list) or len(windows)!=4 or
@@ -84,6 +117,7 @@ def validate_grant_packet(grant,packet):
         if any(packet.get(k)!=grant[k] for k in ('ordered_scope_contract','geographic_review','output_retention','output_root')):
             raise ValueError('packet ordered geometry/output contract differs from immutable grant')
     if packet.get('execution_profile')!=selected['name']:raise ValueError('input profile differs from immutable grant')
+    if packet.get('support_policy')!=domain.get('support_policy'):raise ValueError('packet support policy differs from immutable grant')
     if selected['name']==CONTAINED and any(packet.get(k)!=domain[k] for k in ('window_side','window_count')):
         raise ValueError('contained input shape/count differs from immutable grant')
     if any(packet.get(key)!=domain[key] for key in ('source','source_root','source_relative_path')):

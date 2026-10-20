@@ -9,6 +9,8 @@ from .handoff.common import confined, digest, load, ref, write, validate_derived
 
 BATCH = 'coastal-contained-derived-batch-v1'
 LIMITATION = 'Private contained-window diagnostic; gaps are unobserved, no shared field or seam continuity claim.'
+PARTIAL_LIMITATION = ('Partial-support policy: mask-invalid native cells are unsupported nodata holes, '
+                      'not soundings; nothing is interpolated across them.')
 
 
 def _acceptance(item, refs):
@@ -16,6 +18,7 @@ def _acceptance(item, refs):
     original_crs=item['crs'].to_string()
     stored_crs=rasterio.crs.CRS.from_user_input(item['crs'].to_wkt()).to_string()
     limitations=item['facts']['support']['limitations']+[LIMITATION]
+    if item.get('support_policy') is not None:limitations.append(PARTIAL_LIMITATION)
     if stored_crs!=original_crs:
         limitations.append('Stored-raster CRS spelling is canonical; the original qualified CRS and any BoundCRS operation remain bound in upstream evidence. No coordinate transformation was applied.')
     return dict(schema='coastal-terrain-only-input-v1',creator_id='coastal-contained-derived-batch',
@@ -29,12 +32,18 @@ def _acceptance(item, refs):
         internal_diagnostic=True,publication_prohibited=True,website='held',habitat='unassessed')
 
 
+def _support_policy(observation):
+    """Declared contained support policy; None is the strict all-pairs policy."""
+    from .authenticated_v1.profiles import CONTAINED, support_policy
+    return support_policy(CONTAINED, observation)
+
+
 def _prepare(root, packets, side, now, horizon, *, declared_window_count=None):
     from affine import Affine
     from pyproj import CRS
     from shapely.geometry import box
     import numpy as np
-    from .authenticated_v1.profiles import CONTAINED
+    from .authenticated_v1.profiles import CONTAINED,PARTIAL_SUPPORT
     if (type(side)!=int or not 1<=side<=128 or not isinstance(packets,list)
             or not 1<=len(packets)<=4):
         raise ValueError('one to four common-side bounded windows required')
@@ -58,12 +67,32 @@ def _prepare(root, packets, side, now, horizon, *, declared_window_count=None):
             data=derived.arrays(root,item['result']['arrays'],side=side)
             pair=(~data['elevation_mask'] & ~data['uncertainty_mask']
                   & np.isfinite(data['raw_elevation_data']) & np.isfinite(data['raw_uncertainty_data']))
-            if (not item['valid'].all() or int(facts['valid_count'])!=side*side
-                    or np.any(item['depth']<0) or np.any(item['depth']>91.44)
-                    or np.any(item['uncertainty']<=0) or np.any(item['uncertainty']>1)):
-                raise ValueError('contained strict all-pairs depth and uncertainty science gate required')
-            if not np.array_equal(pair,item['valid']):
+            valid=item['valid']
+            if _support_policy(obs) is None:
+                if (not valid.all() or int(facts['valid_count'])!=side*side
+                        or np.any(item['depth']<0) or np.any(item['depth']>91.44)
+                        or np.any(item['uncertainty']<=0) or np.any(item['uncertainty']>1)):
+                    raise ValueError('contained strict all-pairs depth and uncertainty science gate required')
+            else:
+                from .authenticated_v1.policy import policy_for_profile,policy_sha
+                config=dict(window_side=side,window_count=count,support_policy=PARTIAL_SUPPORT)
+                selected=policy_for_profile(CONTAINED,config)
+                supported=int(valid.sum())
+                # Holes stay unsupported nodata and must be exactly the native mask-invalid
+                # cells (no unmasked raw-NaN holes); every supported cell keeps the strict limits.
+                if (item['result'].get('policy_sha256')!=policy_sha(CONTAINED,config)
+                        or not np.array_equal(valid,~data['elevation_mask'] & ~data['uncertainty_mask'])
+                        or int(facts['valid_count'])!=supported
+                        or supported<selected['minimum_supported_pairs']
+                        or side*side-supported<selected['minimum_unsupported_pairs']
+                        or not np.all(np.isfinite(item['depth'][valid])) or not np.all(np.isfinite(item['uncertainty'][valid]))
+                        or np.any(item['depth'][valid]<0) or np.any(item['depth'][valid]>91.44)
+                        or np.any(item['uncertainty'][valid]<=0) or np.any(item['uncertainty'][valid]>1)):
+                    raise ValueError('contained partial-support depth and uncertainty science gate required')
+            if not np.array_equal(pair,valid):
                 raise ValueError('exact native finite-pair support required')
+        info['support_policy']=_support_policy(obs)
+        if item is not None:item['support_policy']=info['support_policy']
         if (obs.get('execution_profile')!=CONTAINED or obs.get('window_side')!=side
                 or obs.get('window_count')!=count):
             raise ValueError('contained qualification profile/configuration binding required')
@@ -75,11 +104,11 @@ def _prepare(root, packets, side, now, horizon, *, declared_window_count=None):
             raise ValueError('registered native metric two metre square required')
         info['box']=box(tr.c,tr.f-2*side,tr.c+2*side,tr.f)
         items.append(item);infos.append(info)
-    identity=lambda x:(x['source'],x['segment_id'],x['crs'].to_wkt(),x['synthetic'],
+    identity=lambda x:(x['source'],x['support_policy'],x['segment_id'],x['crs'].to_wkt(),x['synthetic'],
                         x['transform'].c-2*x['native_window'][0],
                         x['transform'].f+2*x['native_window'][1])
     if any(identity(i)!=identity(infos[0]) for i in infos):
-        raise ValueError('one source, segment, grid and synthetic identity required')
+        raise ValueError('one source, segment, support policy, grid and synthetic identity required')
     windows=[i['native_window'] for i in infos]
     if windows!=sorted(windows,key=lambda w:(-w[1],w[0])):
         raise ValueError('deterministic south-first then eastward window ordering required')

@@ -145,6 +145,7 @@ def run(request_path,output_path):
         selected=profile(packet.get('execution_profile'),packet);selected_sha=policy_sha(selected['name'],packet)
         if selected['name']=='coastal-contained-windows-v3' and any(packet.get(k)!=job.get(k) for k in ('window_side','window_count')):raise ValueError('contained worker binding changed')
         if packet.get('execution_profile')!=job.get('execution_profile'):raise ValueError('execution profile grant changed')
+        if packet.get('support_policy')!=(job.get('source_domain_grant') or {}).get('support_policy'):raise ValueError('support policy grant changed')
         if packet.get('policy_sha256')!=selected_sha or packet.get('trial_policy_sha256')!=packet.get('trial_policy_evidence',{}).get('sha256'):
             raise ValueError('exact fixed-patch code policy and independently approved evidence required')
         deadline=validate_clock(job)
@@ -203,6 +204,7 @@ def run(request_path,output_path):
                 mask_writer=mask_writer if manager else None,write_observation=manager is None,**args)
             if selected['name']:observation['execution_profile']=selected['name']
             if selected['name']=='coastal-contained-windows-v3':observation.update(window_side=selected['side'],window_count=selected['window_count'])
+            if packet.get('support_policy') is not None:observation['support_policy']=packet['support_policy']
             observation['plan']=plan_ref
             observation['source_root']=source_root
             observation['source_relative_path']=job['source_relative_path']

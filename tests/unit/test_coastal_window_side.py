@@ -29,7 +29,7 @@ What this module covers:
 """
 import pytest
 
-from skippercast.coastal.authenticated_v1.profiles import CONTAINED, grant_identity, profile
+from skippercast.coastal.authenticated_v1.profiles import CONTAINED, PARTIAL_SUPPORT, grant_identity, profile
 from skippercast.coastal.authenticated_v1.policy import policy_for_profile, policy_sha
 from skippercast.coastal.coordinator.authenticated import EXECUTION_CONTRACT, INPUT_CONTRACT
 from skippercast.coastal.coordinator.loop import implementation_hashes
@@ -39,6 +39,8 @@ from skippercast.coastal.coordinator.ordered_trial import (
     LARGER_RUNTIME,
     LARGER_SCOPE,
     LARGER_WINDOWS,
+    PARTIAL_BOUNDS,
+    PARTIAL_WINDOWS,
     SCOPE_REVIEW,
     SUPPORTED_WINDOW_SIDES,
     WINDOWS,
@@ -426,7 +428,7 @@ def _contained_rights_evidence(source, row):
     }
 
 
-def _contained_spec(window, source, review):
+def _contained_spec(window, source, review, segment=_CONTAINED_SEGMENT):
     c, r, w, h = window
     center = [721091 + 2 * (c + w / 2), 3826155 - 2 * (r + h / 2)]
     return {
@@ -441,7 +443,7 @@ def _contained_spec(window, source, review):
         'native_window': window,
         'center_native': center,
         'safety_bbox_native': review['safety_bbox_native'],
-        'segment': _CONTAINED_SEGMENT,
+        'segment': segment,
         'ordered_scope_contract': LARGER_SCOPE,
         'scope_basis': 'new_native_grid_target',
         'historical_support_qualified': False,
@@ -455,11 +457,25 @@ def _contained_review(source):
     return review
 
 
-def _run_prepare_128(root):
-    """Write a complete valid 128 grant + review + four packets; run prepare."""
+def _run_prepare_128(root, partial=False):
+    """Write a complete valid 128 grant + review + four packets; run prepare.
+
+    ``partial`` admits the SC-5 partial-support policy with its own pinned
+    window set, segment bounds, scope review and trial policy evidence.
+    """
     source = _source()
     code_sha, deps_sha = implementation_hashes(str(root))
     review = _contained_review(source)
+    windows, segment, trial = LARGER_WINDOWS, _CONTAINED_SEGMENT, _contained_trial(source)
+    if partial:
+        windows = PARTIAL_WINDOWS
+        segment = dict(_CONTAINED_SEGMENT, bbox=list(PARTIAL_BOUNDS))
+        review.update(window_set=PARTIAL_WINDOWS, native_bounds=PARTIAL_BOUNDS, segment=segment,
+                      support_policy=PARTIAL_SUPPORT, safety_bbox_native=[728000, 3818000, 730500, 3820000])
+        trial.update(support_policy=PARTIAL_SUPPORT, minimum_supported_pairs=128 * 128 // 2,
+                     minimum_unsupported_pairs=1, unsupported_cells='mask_invalid_only_as_nodata',
+                     required_nominally_eligible_pairs='all_mask_valid')
+        trial['product_uncertainty']['required_quality_pairs'] = 'all_mask_valid'
     output_retention = declaration(0, 32 * 1024 * 1024, profile=COMPACT_V2_PROFILE)
     grant = {
         'schema': GRANT_CONTRACT,
@@ -469,7 +485,7 @@ def _run_prepare_128(root):
         'execution_profile': CONTAINED,
         'window_side': 128,
         'window_count': 4,
-        'window_set': LARGER_WINDOWS,
+        'window_set': windows,
         'code_sha': code_sha,
         'deps_sha': deps_sha,
         'ordered_scope_contract': LARGER_SCOPE,
@@ -478,20 +494,22 @@ def _run_prepare_128(root):
         'output_root': str(root),
         'larger_runtime_contract': LARGER_RUNTIME,
     }
+    if partial:
+        grant['support_policy'] = PARTIAL_SUPPORT
     review_ref = _write_metadata(root, 'scope-review.json', review, SCOPE_REVIEW)
     grant['geographic_review'] = review_ref
     grant_ref = _write_metadata(root, 'grant.json', grant, GRANT_CONTRACT)
 
-    trial_ref = _write_metadata(root, 'trial.json', _contained_trial(source),
+    trial_ref = _write_metadata(root, 'trial.json', trial,
                                 'coastal-bounded-patch-quality-policy-v3')
-    segment_ref = _write_metadata(root, 'segment.json', _CONTAINED_SEGMENT,
+    segment_ref = _write_metadata(root, 'segment.json', segment,
                                   'coastal-segment-v1')
     row = _contained_row(source)
     rights = _contained_rights_evidence(source, row)
     rights_ref = _write_metadata(root, 'rights.json', rights, 'coastal-rights-evidence-v1')
 
     request_refs = []
-    for i, window in enumerate(LARGER_WINDOWS):
+    for i, window in enumerate(windows):
         packet = {
             'schema': INPUT_CONTRACT,
             'execution_contract': EXECUTION_CONTRACT,
@@ -514,7 +532,7 @@ def _run_prepare_128(root):
             'trial_policy_sha256': trial_ref['sha256'],
             'source_row': row,
             'metadata_sha256': None,
-            'fixed_center_plan': _contained_spec(window, source, review),
+            'fixed_center_plan': _contained_spec(window, source, review, segment),
             'window': None,
             'ordered_scope_contract': LARGER_SCOPE,
             'geographic_review': review_ref,
@@ -522,6 +540,8 @@ def _run_prepare_128(root):
             'output_root': str(root),
             'larger_runtime_contract': LARGER_RUNTIME,
         }
+        if partial:
+            packet['support_policy'] = PARTIAL_SUPPORT
         packet['scientific_policy'] = policy_for_profile(CONTAINED, packet)
         packet['policy_sha256'] = policy_sha(CONTAINED, packet)
         request_refs.append(_write_metadata(root, 'packet-%d.json' % i, packet, INPUT_CONTRACT))
@@ -554,6 +574,43 @@ def test_prepare_128_runs_full_larger_scope(tmp_path):
     assert prepared.get('ordered_scope_contract') == LARGER_SCOPE
     assert prepared.get('larger_runtime_contract') == LARGER_RUNTIME
     assert prepared.get('larger_execution_ready') is True
+
+
+@pytest.mark.gis
+def test_prepare_128_runs_partial_support_scope(tmp_path):
+    """SC-5: the partial-support grant passes the same no-mock 128 admission.
+
+    It binds its own policy SHA, the pinned PARTIAL_WINDOWS set and a trial
+    policy that declares the partial support floor.
+    """
+    root = tmp_path / 'root'
+    root.mkdir()
+    prepared = _run_prepare_128(root, partial=True)
+    assert prepared['window_set'] == PARTIAL_WINDOWS
+    assert prepared['grant_identity']['support_policy'] == PARTIAL_SUPPORT
+    assert prepared['execution_authorized'] is False
+    assert prepared['native_operations'] == 0
+    assert prepared.get('larger_execution_ready') is True
+
+
+@pytest.mark.gis
+def test_prepare_128_partial_requires_partial_trial_evidence(tmp_path, monkeypatch):
+    """A trial policy without the partial declarations cannot admit a partial packet."""
+    import sys
+    module = sys.modules[__name__]
+    real_write = module._write_metadata
+
+    def write_stripped(root_, name, document, contract):
+        if name == 'trial.json':
+            document = {k: v for k, v in document.items()
+                        if k not in ('support_policy', 'minimum_supported_pairs',
+                                     'minimum_unsupported_pairs', 'unsupported_cells')}
+        return real_write(root_, name, document, contract)
+    monkeypatch.setattr(module, '_write_metadata', write_stripped)
+    root = tmp_path / 'root'
+    root.mkdir()
+    with pytest.raises(ValueError, match='trial support policy binding invalid'):
+        _run_prepare_128(root, partial=True)
 
 
 # ---------------------------------------------------------------------------
@@ -637,3 +694,160 @@ def test_32_cell_trial_prepare_plan_is_byte_identical_to_baseline(tmp_path):
     # The authenticated byte comparison of the FULL prepare() plan against the
     # verified a32850a6 baseline.
     assert _normalized_prepare_digest(prepared) == TRIAL_32_PREPARE_DIGEST
+
+
+# ---------------------------------------------------------------------------
+# SC-5 review round 1 (P1): the partial policy is enforced on the direct native
+# admission path (grant/packet authority, validate_input, Store enqueue), not
+# only inside the ordered-trial preparation. Each case starts from the real,
+# no-mock partial prepare fixture and changes exactly one thing.
+# ---------------------------------------------------------------------------
+
+def _load_metadata(root, name):
+    import json
+    return json.loads((root / 'metadata' / name).read_text())
+
+
+def _native_input(root, packet, name='native-probe-packet.json'):
+    """The shared native input gate used by enqueue, worker authorization and completion."""
+    from skippercast.coastal.coordinator.authenticated import validate_input
+    descriptor = _write_metadata(root, name, packet, INPUT_CONTRACT)
+    code_sha, deps_sha = implementation_hashes(str(root))
+    return validate_input(root, descriptor, stage='acquire', segment=_load_metadata(root, 'segment.json'),
+                          code_sha=code_sha, deps_sha=deps_sha, now=100.0, mission_deadline=3700.0,
+                          expected_source=packet['source'], source_root=packet['source_root'],
+                          source_relative_path=packet['source_relative_path'])
+
+
+def _partial_fixture(tmp_path, partial=True):
+    root = tmp_path / 'root'
+    root.mkdir()
+    _run_prepare_128(root, partial=partial)
+    return root, _load_metadata(root, 'grant.json'), _load_metadata(root, 'packet-0.json')
+
+
+_ORDERED_FIELDS = ('ordered_scope_contract', 'geographic_review', 'output_retention', 'output_root',
+                   'larger_runtime_contract')
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize('partial', [True, False])
+def test_native_admission_accepts_valid_partial_and_strict_controls(tmp_path, partial):
+    from skippercast.coastal.authenticated_v1.profiles import validate_grant_packet
+    root, grant, packet = _partial_fixture(tmp_path, partial)
+    assert validate_grant_packet(grant, packet).get('support_policy') == (PARTIAL_SUPPORT if partial else None)
+    assert _native_input(root, packet)['fixed_center_plan']['native_window'] == grant['window_set'][0]
+
+
+@pytest.mark.gis
+def test_native_admission_refuses_round1_unscoped_unpinned_reproduction(tmp_path):
+    """The exact round-1 reproduction: scope stripped and window moved to [4403,3872]."""
+    from skippercast.coastal.authenticated_v1.profiles import validate_grant_packet
+    root, grant, packet = _partial_fixture(tmp_path)
+    for field in _ORDERED_FIELDS:
+        grant.pop(field, None)
+        packet.pop(field, None)
+    grant['window_set'][0][0] += 1
+    packet['fixed_center_plan']['native_window'][0] += 1
+    packet['fixed_center_plan']['center_native'][0] += 2
+    with pytest.raises(ValueError, match='ordered four128'):
+        validate_grant_packet(grant, packet)
+    with pytest.raises(ValueError, match='ordered four128'):
+        _native_input(root, packet)
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize('field', _ORDERED_FIELDS)
+def test_native_admission_refuses_partial_packet_without_ordered_scope(tmp_path, field):
+    from skippercast.coastal.authenticated_v1.profiles import validate_grant_packet
+    root, grant, packet = _partial_fixture(tmp_path)
+    packet.pop(field)
+    with pytest.raises(ValueError, match='differs from immutable grant'):
+        validate_grant_packet(grant, packet)
+    with pytest.raises(ValueError):
+        _native_input(root, packet)
+    stripped = dict(grant)
+    stripped.pop(field)
+    with pytest.raises(ValueError, match='ordered|runtime|geometry'):
+        grant_identity(stripped)
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize('change', ['side', 'count'])
+def test_native_admission_refuses_partial_wrong_shape(tmp_path, change):
+    root, grant, packet = _partial_fixture(tmp_path)
+    if change == 'side':
+        packet.update(window_side=64)
+    else:
+        packet.update(window_count=1)
+    with pytest.raises(ValueError, match='pinned to the ordered four128 scope'):
+        _native_input(root, packet)
+    with pytest.raises(ValueError, match='pinned to the ordered four128 scope'):
+        grant_identity(dict(grant, window_side=packet['window_side'], window_count=packet['window_count']))
+
+
+@pytest.mark.gis
+def test_native_admission_refuses_partial_changed_window(tmp_path):
+    from skippercast.coastal.authenticated_v1.profiles import validate_grant_packet
+    root, grant, packet = _partial_fixture(tmp_path)
+    packet['fixed_center_plan']['native_window'][0] += 1
+    packet['fixed_center_plan']['center_native'][0] += 2
+    with pytest.raises(ValueError, match='window outside'):
+        validate_grant_packet(grant, packet)
+    with pytest.raises(ValueError, match='geometry differs from scope review'):
+        _native_input(root, packet)
+    # A strict-set window under the partial policy is equally refused.
+    packet = _load_metadata(root, 'packet-0.json')
+    packet['fixed_center_plan'] = _contained_spec(LARGER_WINDOWS[0], packet['source'],
+                                                  _load_metadata(root, 'scope-review.json'),
+                                                  _load_metadata(root, 'segment.json'))
+    with pytest.raises(ValueError, match='geometry differs from scope review'):
+        _native_input(root, packet)
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize('fault', ['missing', 'no_support_policy', 'strict_window_set', 'expired',
+                                   'not_independent'])
+def test_native_admission_refuses_partial_missing_or_invalid_review(tmp_path, fault):
+    root, grant, packet = _partial_fixture(tmp_path)
+    if fault == 'missing':
+        packet['geographic_review'] = None
+    else:
+        review = _load_metadata(root, 'scope-review.json')
+        if fault == 'no_support_policy':
+            review.pop('support_policy')
+        elif fault == 'strict_window_set':
+            review.update(window_set=LARGER_WINDOWS)
+        elif fault == 'expired':
+            review.update(valid_until=3000.0)  # ends before the 3700 s mission deadline
+        else:
+            review.update(independent=False)
+        packet['geographic_review'] = _write_metadata(root, 'faulty-scope-review.json', review, SCOPE_REVIEW)
+    with pytest.raises(ValueError):
+        _native_input(root, packet)
+
+
+@pytest.mark.gis
+def test_store_enqueue_refuses_partial_grant_before_reservation(tmp_path):
+    """Store.enqueue_authenticated fails closed before any Budget/ledger is touched."""
+    from skippercast.coastal.coordinator.store import Store
+    root, grant, packet = _partial_fixture(tmp_path)
+
+    class Refuse:
+        def __getattr__(self, name):
+            raise AssertionError('enqueue reached ' + name + ' before refusing the partial grant')
+
+    def enqueue(trusted, manifest):
+        fake = Refuse()
+        fake.__dict__.update(policy={'authenticated': trusted}, root=root)
+        return Store.enqueue_authenticated(fake, 'seg', 'acquire', code_sha='c' * 64, deps_sha='d' * 64,
+                                           input_manifest=manifest, unit_ref={}, carry_ref={})
+
+    unscoped = {k: v for k, v in grant.items() if k not in _ORDERED_FIELDS}
+    with pytest.raises(ValueError, match='ordered four128'):
+        enqueue(unscoped, {})
+    moved = dict(packet)
+    moved['fixed_center_plan'] = dict(packet['fixed_center_plan'], native_window=[4403, 3872, 128, 128])
+    manifest = _write_metadata(root, 'enqueue-probe-packet.json', moved, INPUT_CONTRACT)
+    with pytest.raises(ValueError, match='window outside'):
+        enqueue(grant, manifest)
