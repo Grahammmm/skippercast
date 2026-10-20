@@ -93,7 +93,8 @@ Deep-band datums (G3, 2026-10-20): a plan may declare `depth_lane` `M`
 `coastal.vertical` admit the `EGM2008`, `instantaneous-sea-level` and
 `unstated` datum classes. `unstated` needs a raster header that names no
 datum. A named class needs either a header that states it or a
-`datum_statement` that cites the source metadata by hash. The block then
+`datum_statement` that cites the source metadata by hash; a null, empty or
+malformed statement is held, never read as an absent one. The block then
 carries a fixed `deep_datum` record: no uncertainty bound is required, the
 output is not for navigation, the datum is not a chart datum and no datum
 transform is applied. Cells shallower than the lane floor (91.44 m for M,

@@ -105,9 +105,10 @@ def _deep_class(block):
 
 
 def _statement_holds(block):
-    statement = block.get('datum_statement')
-    if statement is None:
+    # Key presence, not truthiness: a present null or empty statement is malformed.
+    if 'datum_statement' not in block:
         return []
+    statement = block['datum_statement']
     if (block.get('datum') not in ('EGM2008', 'instantaneous-sea-level')
             or not isinstance(statement, dict)
             or set(statement) != {'kind', 'sha256', 'locator'}
@@ -295,7 +296,7 @@ def resolve(declared, observed, evidence=None):
         if key == 'datum' and facts.get(key) is None and is_deep(block):
             # G3: a raster header that states no datum is the 'unstated' class.
             # EGM2008 / instantaneous sea level then need the source's own statement.
-            if block['datum'] != 'unstated' and 'datum_statement' not in block:
+            if block['datum'] != 'unstated' and block.get('datum_statement') is None:
                 holds.append('vertical_datum_statement_required')
         elif facts.get(key) is None or facts.get(key) == 'unknown':
             holds.append('vertical_' + key + '_unobserved')

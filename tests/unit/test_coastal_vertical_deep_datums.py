@@ -87,9 +87,29 @@ def test_named_deep_class_needs_header_or_source_statement():
         assert result['holds'] == ['vertical_datum_statement_required']
 
 
+@pytest.mark.parametrize('lane', ['M', 'D'])
+@pytest.mark.parametrize('datum', ['EGM2008', 'instantaneous-sea-level'])
+@pytest.mark.parametrize('statement', [None, {}], ids=['null', 'empty'])
+def test_present_but_empty_statement_is_not_evidence(datum, lane, statement):
+    # Review round 1: a JSON null statement must not count as the source's statement.
+    observed = observation(None)
+    block = declared(observed, datum, depth_lane=lane, datum_statement=statement)
+    result = vertical.resolve(block, observed)
+    assert result['block'] is None
+    assert 'vertical_datum_statement_invalid' in result['holds']
+    if statement is None:
+        assert 'vertical_datum_statement_required' in result['holds']
+    with pytest.raises(vertical.VerticalHold):
+        vertical.require_resolved(block, observed)
+    # The structural check alone (to_depth / normalized path) also refuses it.
+    admitted = vertical.require_resolved(declared(observed, datum, depth_lane=lane, datum_statement=STATEMENT),
+                                         observed)
+    assert vertical.validate(dict(admitted, datum_statement=statement)) == ['vertical_datum_statement_invalid']
+
+
 @pytest.mark.parametrize('statement', [
     dict(STATEMENT, kind='operator_declaration'), dict(STATEMENT, sha256='short'),
-    dict(STATEMENT, locator=' '), dict(STATEMENT, extra=1), 'EGM2008'])
+    dict(STATEMENT, locator=' '), dict(STATEMENT, extra=1), 'EGM2008', None, {}, []])
 def test_malformed_source_statement_held(statement):
     observed = observation(None)
     result = vertical.resolve(declared(observed, 'EGM2008', depth_lane='M', datum_statement=statement), observed)
