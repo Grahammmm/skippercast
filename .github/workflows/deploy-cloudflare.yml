@@ -10,7 +10,10 @@ name: Deploy to Cloudflare
 # Only a main commit that passed "Offline checks" is deployed, and exactly that
 # commit. After deploying, the site is smoke-tested; a failure rolls the Worker
 # back to the version that was live before the deploy (recorded by the deploy
-# script) and checks the site no longer serves the failed build. D1 migrations are forward-only:
+# script) and checks the site no longer serves the failed build. When that commit is
+# no longer current main the deploy is held (nothing deployed, production unchanged):
+# the run still ends in success but shows a HELD warning, a "held" job and a step summary.
+# D1 migrations are forward-only:
 # the deploy script backs up the database first (docs/operations/runbooks/rollback-release.md).
 on:
   workflow_run:
@@ -52,6 +55,7 @@ jobs:
     timeout-minutes: 3
     outputs:
       eligible: ${{ steps.current.outputs.eligible }}
+      held: ${{ steps.current.outputs.held }}
     env:
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       # The workflow's own read-only token (permissions: contents: read), only so the
@@ -102,16 +106,41 @@ jobs:
               eligible = current['sha'] == selected
               if not eligible and event == 'workflow_dispatch':
                   raise ValueError('selected SHA is no longer current main; dispatch main again')
+              held = ('HELD: Offline-checks commit ' + selected + ' is no longer current main (' + current['sha']
+                      + '); nothing deployed; production unchanged. The deploy for current main runs when its'
+                      + ' own Offline checks pass.')
               with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
                   output.write('eligible=' + ('true' if eligible else 'false') + '\n')
+                  if not eligible:
+                      output.write('held=' + held + '\n')
+              # Visibility only: an absent step summary never changes the gate's result.
+              if os.environ.get('GITHUB_STEP_SUMMARY'):
+                  with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+                      if eligible:
+                          summary.write('Deploying `' + selected + '`\n')
+                      else:
+                          summary.write('**' + held + '** Offline-checks commit: `' + selected
+                                        + '`; current main: `' + current['sha'] + '`\n')
               if eligible:
                   print('Current main source eligible:', selected)
               else:
-                  print('::notice::Selected CI source is no longer current main; deployment held before checkout.')
+                  print('::warning::' + held)
           except (OSError, ValueError, TypeError, KeyError) as error:
               print('::error::Deployment source eligibility unavailable:', error, file=sys.stderr)
               sys.exit(1)
           PY
+
+  held:
+    # Shows a held deploy in the run's job list as a succeeded job, not only skipped ones.
+    needs: source
+    if: needs.source.result == 'success' && needs.source.outputs.eligible == 'false' && github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Deployment held (nothing deployed; production unchanged)
+        env:
+          HELD: ${{ needs.source.outputs.held }}
+        run: echo "::warning::$HELD"
 
   deploy:
     needs: source
