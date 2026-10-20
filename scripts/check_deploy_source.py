@@ -6,12 +6,19 @@ commit (DEPLOY_SHA) after checkout and again immediately before production write
 the commit must be current main or an ancestor of it, and the latest exact-SHA
 push/main Offline checks run must have succeeded.
 
+The workflow runs this file from its own revision (the "controller"), not from the
+candidate checkout, so a newer controller can deploy an older candidate. With
+DEPLOY_TREE set, the checkout there must be exactly DEPLOY_SHA.
+
 With --production it also compares the selected commit with the commit production
-serves (PRODUCTION_SHA, read from Cloudflare by the workflow) and writes
-hold=true|false and reason=... to GITHUB_OUTPUT. A deploy is held, not failed, when
+serves and writes hold=true|false and reason=... to GITHUB_OUTPUT. The workflow
+passes PRODUCTION_STATE: "unconfigured" (no Cloudflare credentials: the deploy
+script writes nothing), "known" (PRODUCTION_SHA is the traced live commit) or
+anything else, which means the live commit could not be traced (PRODUCTION_REASON
+says why). A deploy is held, not failed, when production's commit is unknown, or
 production already serves that commit or a newer one. A manual dispatch may
 redeploy the commit production serves (to apply changed variables or secrets),
-but never an older one.
+but never an older one, and never over an unknown production.
 
 Reads public GitHub metadata, sending only the workflow's read-only token
 (SOURCE_READ_TOKEN, `github.token` under `contents: read`) when it is set, so the
@@ -22,6 +29,7 @@ check, not an access-control boundary against repository administrators.
 import json
 import os
 import re
+import subprocess
 import sys
 from urllib.parse import urlencode
 from urllib.error import HTTPError
@@ -116,10 +124,27 @@ def verify_source(repository, ref, sha, read=public_metadata):
     return latest['id']
 
 
-def production_hold(repository, sha, production, event, read=public_metadata):
-    """Why a deploy of sha is held, given the commit production serves; None means deploy."""
-    if not production:
+def verify_checkout(tree, sha, run=subprocess.run):
+    """The candidate checkout at tree must be exactly sha: a moved or substituted tree is never deployed."""
+    try:
+        head = run(['git', '-C', tree, 'rev-parse', '--verify', 'HEAD^{commit}'], capture_output=True, text=True,
+                   timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise SourceError('the candidate checkout could not be read: ' + str(error)) from None
+    if head.returncode != 0 or head.stdout.strip() != sha:
+        raise SourceError('the candidate checkout is ' + (head.stdout.strip() or 'unreadable') + ', not ' + sha)
+
+
+def production_hold(repository, sha, production, event, read=public_metadata, state='known', unknown=''):
+    """Why a deploy of sha is held, given the commit production serves; None means deploy.
+
+    state 'unconfigured' (no Cloudflare credentials) never holds: nothing is written then.
+    Any state other than 'known', or a known state without a commit, holds on every event."""
+    if state == 'unconfigured':
         return None
+    if state != 'known' or not production:
+        return ('the commit production serves could not be traced (' + (unknown or 'no live commit was read')
+                + '), so it cannot be compared; roll production back to a version a deploy named or check it by hand')
     if not is_sha(production):
         raise SourceError('invalid production commit')
     if production == sha:
@@ -150,9 +175,13 @@ def main(argv=()):
     repository = os.environ.get('GITHUB_REPOSITORY', '')
     sha = os.environ.get('DEPLOY_SHA') or os.environ.get('GITHUB_SHA', '')
     live = os.environ.get('PRODUCTION_SHA', '')
+    state = os.environ.get('PRODUCTION_STATE', '')
     try:
+        if os.environ.get('DEPLOY_TREE'):
+            verify_checkout(os.environ['DEPLOY_TREE'], sha)
         run_id = verify_source(repository, os.environ.get('GITHUB_REF', ''), sha)
-        reason = production_hold(repository, sha, live, os.environ.get('GITHUB_EVENT_NAME', '')) if production else None
+        reason = production_hold(repository, sha, live, os.environ.get('GITHUB_EVENT_NAME', ''), state=state,
+                                 unknown=os.environ.get('PRODUCTION_REASON', '')) if production else None
     except (SourceError, OSError, ValueError, TypeError) as error:
         print(f'::error::Deployment source check failed: {error}', file=sys.stderr)
         return 1
@@ -161,8 +190,10 @@ def main(argv=()):
         return 0
     if reason:
         print(f'::warning title=Deploy held::{reason}. Nothing was deployed.')
+    elif state == 'unconfigured':
+        print(f'Cloudflare is not configured; the deploy step writes nothing for {sha}.')
     else:
-        print(f'Deploying {sha}; production serves {live or "a version that names no commit (or Cloudflare is unconfigured)"}.')
+        print(f'Deploying {sha}; production serves {live}.')
     if os.environ.get('GITHUB_OUTPUT'):
         with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
             output.write('hold=' + ('true' if reason else 'false') + '\n')

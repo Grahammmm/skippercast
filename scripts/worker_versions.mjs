@@ -10,7 +10,7 @@
 //   node scripts/worker_versions.mjs live <deployments.json>
 //   node scripts/worker_versions.mjs rollback-target <deployments.json> <versions.json>   (the version live before the current commit's deploy)
 //   node scripts/worker_versions.mjs commit <versions.json> <version-id>
-//   node scripts/worker_versions.mjs live-commit <deployments.json> <versions.json>   (the commit production serves)
+//   node scripts/worker_versions.mjs live-commit <deployments.json> <versions.json>   (the commit production serves, traced; exit 1 when unknown)
 // Each prints one id (or sha) and exits 1 with a message on stderr when there is none.
 import {readFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
@@ -53,15 +53,63 @@ export function rollbackTarget(deployments = [], versions = [], {excludeCommit} 
     .sort((a, b) => created(b) - created(a))[0]?.id ?? '';
 }
 
-// The commit production serves: the live version's own commit or, when the live version is a
-// secrets upload (no message), the commit of the newest earlier version that has one. The deploy
-// workflow holds a deploy of that commit or an older one. Returns '' when it cannot be named.
+// The exact message cloudflare_deploy.sh gives a code version ("<sha> run <run id>"), or null.
+// Stricter than commitOf: a free-form message that happens to contain a sha names no commit.
+const DEPLOY_MESSAGE = /^([0-9a-f]{40}) run [0-9]+$/;
+const stamp = value => {
+  const at = Date.parse(value ?? '');
+  return Number.isFinite(at) ? at : null;
+};
+const fullTraffic = deployment => {
+  const served = Array.isArray(deployment?.versions) ? deployment.versions : [];
+  return served.length === 1 && Number(served[0]?.percentage) === 100 ? served[0].version_id ?? '' : '';
+};
+
+// The commit production serves, traced from the live version's provenance, with the reason
+// when it cannot be traced ({commit: '', reason}). The deploy workflow holds a deploy of that
+// commit or an older one, and holds every deploy when the commit cannot be traced.
+//   - A code upload (workers/triggered_by "upload") names its commit in the deploy message.
+//   - A secrets change ("secret") copies the code of the version created just before it, and
+//     Cloudflare refuses one unless that version is deployed; so it is traced to that version
+//     only when the newest deployment older than the change served that version at 100%.
+//     Chains of secrets changes are followed the same way.
+//   - Anything else (split traffic, an untagged or hand-labelled upload, another trigger, a
+//     version or deployment missing from the listings) is unknown, never guessed.
+export function traceLiveCommit(deployments = [], versions = []) {
+  const unknown = reason => ({commit: '', reason});
+  if (!Array.isArray(deployments) || !Array.isArray(versions)) return unknown('the Wrangler listings are not lists');
+  if (deployments.some(d => stamp(d?.created_on) === null)) return unknown('a deployment has no valid creation time');
+  if (versions.some(v => stamp(v?.metadata?.created_on) === null)) return unknown('a version has no valid creation time');
+  const history = [...deployments].sort((a, b) => stamp(b.created_on) - stamp(a.created_on));
+  if (!history.length) return unknown('no Worker deployment exists');
+  let id = fullTraffic(history[0]);
+  if (!id) return unknown('the newest deployment does not serve exactly one version at 100% (split traffic)');
+  const byCreation = [...versions].sort((a, b) => stamp(b.metadata.created_on) - stamp(a.metadata.created_on));
+  for (let hops = 0; hops <= versions.length; hops++) {
+    const version = versions.find(v => v?.id === id);
+    if (!version) return unknown(`version ${id} is not in the versions listing`);
+    const at = stamp(version.metadata.created_on);
+    const trigger = version.annotations?.['workers/triggered_by'];
+    if (trigger === 'upload') {
+      const match = DEPLOY_MESSAGE.exec(version.annotations?.['workers/message'] ?? '');
+      return match ? {commit: match[1], reason: `version ${id} was deployed from ${match[1]}`}
+        : unknown(`code version ${id} has no "<sha> run <id>" deploy message`);
+    }
+    if (trigger !== 'secret') return unknown(`version ${id} was made by ${trigger ? `"${trigger}"` : 'an unrecorded trigger'}, so its code has no traceable commit`);
+    const before = byCreation.find(v => stamp(v.metadata.created_on) < at);
+    if (!before) return unknown(`the version created before secrets change ${id} is not in the versions listing`);
+    const servedThen = history.find(d => stamp(d.created_on) < at);
+    if (!servedThen || fullTraffic(servedThen) !== before.id) {
+      return unknown(`secrets change ${id} cannot be traced: version ${before.id}, created just before it, was not the 100% deployment then`);
+    }
+    id = before.id;
+  }
+  return unknown('the version history does not end in a code upload');
+}
+
+// The commit production serves, or '' when it cannot be traced (see traceLiveCommit).
 export function liveCommit(deployments = [], versions = []) {
-  const liveId = liveVersion(deployments);
-  const live = versions.find(v => v.id === liveId);
-  if (!live) return '';
-  return commitOf(live) ?? versions.filter(v => v.id !== liveId && created(v) < created(live))
-    .sort((a, b) => created(b) - created(a)).map(commitOf).find(Boolean) ?? '';
+  return traceLiveCommit(deployments, versions).commit;
 }
 
 function readJson(path) {
@@ -88,8 +136,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     answer = rollbackTarget(deployments, versions);
     missing = 'no earlier Worker version from before the current commit\'s deploy to roll back to';
   } else if (command === 'live-commit' && files.length === 2) {
-    answer = liveCommit(readJson(files[0]), readJson(files[1]));
-    missing = 'the live version and the versions before it name no commit';
+    const traced = traceLiveCommit(readJson(files[0]), readJson(files[1]));
+    answer = traced.commit;
+    missing = `the commit production serves is unknown: ${traced.reason}`;
   } else if (command === 'commit' && files.length === 2) {
     answer = commitOf(readJson(files[0]).find(v => v.id === files[1])) ?? '';
     missing = `version ${files[1]} has no commit in its deploy message`;

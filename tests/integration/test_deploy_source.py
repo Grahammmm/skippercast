@@ -92,7 +92,6 @@ class DeploySourceTests(unittest.TestCase):
 
     def test_production_guard_holds_the_live_commit_and_anything_older(self):
         older, newer = 'b' * 40, 'c' * 40
-        self.assertEqual(self.production(''), (None, []))
         self.assertEqual(self.production(older, {'status': 'ahead', 'ahead_by': 2, 'behind_by': 0}),
                          (None, ['/repos/' + REPO + '/compare/' + older + '...' + SHA + '?per_page=1']))
         for event in ('workflow_run', 'workflow_dispatch'):
@@ -102,6 +101,20 @@ class DeploySourceTests(unittest.TestCase):
         # The live commit itself: an automatic run holds; a manual dispatch may redeploy it (new vars or secrets).
         self.assertEqual(self.production(SHA), ('production already serves ' + SHA, []))
         self.assertEqual(self.production(SHA, event='workflow_dispatch'), (None, []))
+
+    def test_unknown_production_holds_on_every_event_and_only_unconfigured_passes(self):
+        for event in ('workflow_run', 'workflow_dispatch'):
+            for production, state, unknown in (('', 'known', ''), ('', 'unknown', 'split traffic'), ('', '', ''),
+                                               ('b' * 40, 'unknown', 'x'), ('', 'Unconfigured', '')):
+                with self.subTest(event=event, state=state, production=production):
+                    requests = []
+                    reason = guard.production_hold(REPO, SHA, production, event, requests.append, state=state, unknown=unknown)
+                    self.assertIn('the commit production serves could not be traced', reason)
+                    if unknown:
+                        self.assertIn('(' + unknown + ')', reason)
+                    self.assertEqual(requests, [], 'nothing is compared with an unknown production')
+            with self.subTest(event=event, state='unconfigured'):
+                self.assertIsNone(guard.production_hold(REPO, SHA, '', event, None, state='unconfigured'))
 
     def test_production_off_main_waits_for_a_person(self):
         from urllib.error import HTTPError
@@ -122,16 +135,25 @@ class DeploySourceTests(unittest.TestCase):
     def test_cli_production_writes_hold_outputs_and_never_fails_a_hold(self):
         env = {'GITHUB_REPOSITORY': REPO, 'GITHUB_REF': 'refs/heads/main', 'DEPLOY_SHA': SHA,
                'GITHUB_EVENT_NAME': 'workflow_run', 'PRODUCTION_SHA': SHA}
+        cases = [(SHA, 'known', 'true', 'production already serves ' + SHA), ('', 'unconfigured', 'false', ''),
+                 ('', 'unknown', 'true', 'the commit production serves could not be traced (split traffic)'),
+                 ('', None, 'true', 'the commit production serves could not be traced (no live commit was read)')]
         with tempfile.TemporaryDirectory() as temp:
-            for live, hold in ((SHA, 'true'), ('', 'false')):
-                output = Path(temp) / ('out-' + hold)
-                with self.subTest(live=live), patch.dict(os.environ, {**env, 'PRODUCTION_SHA': live, 'GITHUB_OUTPUT': str(output)}), \
+            for n, (live, state, hold, reason) in enumerate(cases):
+                output = Path(temp) / ('out-%d' % n)
+                case = {**env, 'PRODUCTION_SHA': live, 'GITHUB_OUTPUT': str(output), 'PRODUCTION_REASON': 'split traffic'}
+                if state is None:
+                    del case['PRODUCTION_REASON']
+                else:
+                    case['PRODUCTION_STATE'] = state
+                clean = {k: v for k, v in os.environ.items() if k not in ('PRODUCTION_STATE', 'PRODUCTION_REASON', 'DEPLOY_TREE')}
+                with self.subTest(state=state), patch.dict(os.environ, {**clean, **case}, clear=True), \
                         patch.object(guard, 'verify_source', return_value=101) as verify:
                     self.assertEqual(guard.main(['--production']), 0)
                     verify.assert_called_once_with(REPO, 'refs/heads/main', SHA)
                 lines = output.read_text().splitlines()
                 self.assertEqual(lines[0], 'hold=' + hold)
-                self.assertEqual(lines[1], 'reason=' + ('production already serves ' + SHA if hold == 'true' else ''))
+                self.assertTrue(lines[1].startswith('reason=' + reason), lines[1])
             # Without --production nothing is compared or written.
             with patch.dict(os.environ, {**env, 'GITHUB_OUTPUT': str(Path(temp) / 'plain')}), \
                     patch.object(guard, 'verify_source', return_value=101), patch.object(guard, 'production_hold') as hold:
@@ -139,6 +161,26 @@ class DeploySourceTests(unittest.TestCase):
                 hold.assert_not_called()
             self.assertFalse((Path(temp) / 'plain').exists())
             self.assertEqual(guard.main(['--other']), 2)
+
+    def test_the_candidate_checkout_must_be_exactly_the_selected_commit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            git = ['git', '-C', temp, '-c', 'user.name=t', '-c', 'user.email=t@example.com']
+            subprocess.run(['git', 'init', '-q', temp], check=True)
+            subprocess.run(git + ['commit', '-q', '--allow-empty', '-m', 'candidate'], check=True)
+            head = subprocess.run(git + ['rev-parse', 'HEAD'], check=True, capture_output=True, text=True).stdout.strip()
+            guard.verify_checkout(temp, head)
+            with self.assertRaisesRegex(guard.SourceError, 'the candidate checkout is ' + head + ', not ' + SHA):
+                guard.verify_checkout(temp, SHA)
+            with self.assertRaisesRegex(guard.SourceError, 'unreadable'):
+                guard.verify_checkout(str(Path(temp) / 'missing'), head)
+            # The CLI stops before any metadata read or production comparison.
+            env = {'GITHUB_REPOSITORY': REPO, 'GITHUB_REF': 'refs/heads/main', 'DEPLOY_SHA': SHA, 'DEPLOY_TREE': temp,
+                   'PRODUCTION_STATE': 'unconfigured', 'GITHUB_OUTPUT': str(Path(temp) / 'out')}
+            for argv in ([], ['--production']):
+                with self.subTest(argv=argv), patch.dict(os.environ, env), patch.object(guard, 'verify_source') as verify:
+                    self.assertEqual(guard.main(argv), 1)
+                    verify.assert_not_called()
+            self.assertFalse((Path(temp) / 'out').exists())
 
     def test_non_success_and_wrong_provenance_fail(self):
         cases = [('status', 'queued'), ('status', 'in_progress'), ('conclusion', None),
@@ -267,7 +309,7 @@ class DeploySourceTests(unittest.TestCase):
         deploy, rollback = text.split('\n  rollback:', 1)
         first = deploy.index('Reject manual non-main deployment before checkout')
         checkout = deploy.index('- uses: actions/checkout')
-        ci = deploy.index('run: python3 scripts/check_deploy_source.py')
+        ci = deploy.index('run: python3 "$CONTROLLER/scripts/check_deploy_source.py"')
         self.assertLess(first, checkout)
         self.assertLess(checkout, ci)
         for later in ('- uses: actions/setup-node', 'Install locked web dependencies', 'id: deploy'):

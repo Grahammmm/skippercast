@@ -217,10 +217,13 @@ class SourceSelectionTests(unittest.TestCase):
         # The selected commit is what is checked out, rechecked and named in the Worker version.
         self.assertIn('ref: ${{ needs.source.outputs.sha }}', deploy)
         self.assertIn('DEPLOY_SHA: ${{ needs.source.outputs.sha }}', deploy)
-        self.assertNotIn('GITHUB_SHA', deploy)
+        # GITHUB_SHA (the newer main head) appears only to relabel a pre-change deploy script.
+        uses = [line.strip() for line in deploy.splitlines() if 'GITHUB_SHA' in line and not line.strip().startswith('#')]
+        self.assertEqual(uses, ['GITHUB_SHA="$DEPLOY_SHA" bash scripts/cloudflare_deploy.sh'])
         script = (ROOT / 'scripts/cloudflare_deploy.sh').read_text()
         self.assertIn('--message "${DEPLOY_SHA:-${GITHUB_SHA:-local}} run ${GITHUB_RUN_ID:-local}"', script)
-        check = deploy.index('run: python3 scripts/check_deploy_source.py')
+        guard_run = 'run: python3 "$CONTROLLER/scripts/check_deploy_source.py"'
+        check = deploy.index(guard_run)
         check_step = deploy[deploy.rfind('      - name:', 0, check):check]
         self.assertNotIn('if:', check_step, 'all eligible deployments recheck exact CI')
         self.assertLess(check, deploy.index('- uses: actions/setup-node'))
@@ -230,15 +233,18 @@ class SourceSelectionTests(unittest.TestCase):
         self.assertGreater(production, deploy.index('Require a smoke-test address before deploying'))
         self.assertLess(production, final)
         self.assertLess(final, write)
-        self.assertEqual(deploy.count('run: python3 scripts/check_deploy_source.py'), 2)
-        self.assertIn('run: python3 scripts/check_deploy_source.py --production', deploy[final:write])
-        self.assertIn('PRODUCTION_SHA: ${{ steps.production.outputs.sha }}', deploy[final:write])
+        self.assertEqual(deploy.count(guard_run), 2)
+        self.assertIn(guard_run + ' --production', deploy[final:write])
+        for line in ('PRODUCTION_STATE: ${{ steps.production.outputs.state }}', 'PRODUCTION_SHA: ${{ steps.production.outputs.sha }}',
+                     'PRODUCTION_REASON: ${{ steps.production.outputs.reason }}'):
+            self.assertIn(line, deploy[final:write])
         self.assertIn("if: steps.recheck.outputs.hold == 'false'", deploy[write:write + 200])
         # Reading production only lists; every Wrangler write happens in the deploy step or a rollback.
         read_step = deploy[production:final]
         commands = sorted(line.split('$WRANGLER ', 1)[1].split()[0:2] for line in read_step.splitlines() if '$WRANGLER ' in line)
         self.assertEqual(commands, [['deployments', 'list'], ['versions', 'list']])
-        self.assertIn('worker_versions.mjs live-commit', read_step)
+        self.assertIn('node "$CONTROLLER/scripts/worker_versions.mjs" live-commit', read_step)
+        self.assertNotIn('exit 1', read_step, 'an unreadable production is a hold, decided by the recheck')
         self.assertIn("if: steps.deploy.outputs.deployed == 'true'", deploy, 'the smoke test is unchanged')
         self.assertIn("if: failure() && steps.deploy.outputs.deployed == 'true'", deploy, 'the rollback is unchanged')
         self.assertNotIn('needs: source', ROLLBACK)
@@ -289,7 +295,10 @@ class ReportTests(unittest.TestCase):
                  ({'DEPLOY_HELD': 'true', 'DEPLOY_REASON': 'production already serves ' + D, 'DEPLOYED': ''}, D,
                   'production already serves ' + D),
                  ({'DEPLOY_RESULT': 'skipped', 'DEPLOYED': '', 'DEPLOY_HELD': ''}, D, 'did not run'),
-                 ({'DEPLOYED': '', 'PRODUCTION_SHA': ''}, D, 'not configured')]
+                 ({'DEPLOYED': '', 'PRODUCTION_SHA': '', 'PRODUCTION_STATE': 'unconfigured'}, D, 'not configured'),
+                 ({'DEPLOYED': '', 'PRODUCTION_SHA': '', 'PRODUCTION_STATE': 'known'}, D, 'reported no deployment'),
+                 ({'DEPLOY_HELD': 'true', 'DEPLOYED': '', 'PRODUCTION_SHA': '', 'PRODUCTION_STATE': 'unknown',
+                   'DEPLOY_REASON': 'the commit production serves could not be traced (split traffic)'}, D, 'could not be traced')]
         for overrides, sha, why in cases:
             with self.subTest(why=why):
                 code, posts, summary, stdout = self.report(**overrides)
@@ -314,6 +323,14 @@ class ReportTests(unittest.TestCase):
         self.assertNotIn('secrets.', REPORT)
         self.assertNotIn('actions/checkout', REPORT)
         self.assertIn('REPORT_TOKEN: ${{ github.token }}', REPORT)
+        self.assertIn('PRODUCTION_STATE: ${{ needs.deploy.outputs.production_state }}', REPORT)
+        self.assertIn('production_state: ${{ steps.production.outputs.state }}', DEPLOY_JOB)
+
+    def test_one_held_report_path(self):
+        # #765's current-main-only `held` job and source output are folded into the report job.
+        self.assertNotIn('\n  held:\n', WORKFLOW)
+        self.assertNotIn('outputs.held', SOURCE)
+        self.assertEqual(WORKFLOW.count("python3 - <<'PY'"), 2, 'the source selection and the report')
 
 
 if __name__ == '__main__':

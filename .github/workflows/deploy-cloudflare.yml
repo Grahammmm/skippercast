@@ -10,8 +10,11 @@ name: Deploy to Cloudflare
 # The newest main commit whose "Offline checks" passed is deployed: never one with
 # failed or pending checks, and never one older than production serves. The source
 # job walks main's first parents from the head, so a merge landing while CI runs no
-# longer holds the commit CI just passed. A run that ships nothing reports "held"
-# (a neutral check run, a warning and the job summary), not a plain success.
+# longer holds the commit CI just passed. The deploy job runs its guards from this
+# workflow's own revision (the controller), so an older candidate's scripts are never
+# trusted, and it holds when the commit production serves cannot be traced. A run
+# that ships nothing reports "held" (a neutral check run, a warning and the job
+# summary), not a plain success.
 # After deploying, the site is smoke-tested; a failure rolls the Worker
 # back to the version that was live before the deploy (recorded by the deploy
 # script) and checks the site no longer serves the failed build. D1 migrations are forward-only:
@@ -201,6 +204,7 @@ jobs:
       held: ${{ steps.recheck.outputs.hold }}
       reason: ${{ steps.recheck.outputs.reason }}
       production: ${{ steps.production.outputs.sha }}
+      production_state: ${{ steps.production.outputs.state }}
       deployed: ${{ steps.deploy.outputs.deployed }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -220,10 +224,30 @@ jobs:
         with:
           # The selected commit CI tested, not whatever main is by the time this runs.
           ref: ${{ needs.source.outputs.sha }}
+      # The deploy controller: the source guard and the live-commit helper from this workflow's
+      # own revision. The candidate may predate them (an older checked ancestor), so its copies
+      # of these scripts are never run; only its build and its deploy script are.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .deploy-controller
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/check_deploy_source.py
+            scripts/worker_versions.mjs
+          sparse-checkout-cone-mode: false
+      - name: Move the deploy controller out of the candidate tree
+        run: |
+          # Out of the tree the build and the deploy script see.
+          rm -rf "$RUNNER_TEMP/deploy-controller"
+          mv .deploy-controller "$RUNNER_TEMP/deploy-controller"
+          echo "CONTROLLER=$RUNNER_TEMP/deploy-controller" >> "$GITHUB_ENV"
       - name: Require a main commit with successful exact-SHA CI
         env:
           SOURCE_READ_TOKEN: ${{ github.token }}
-        run: python3 scripts/check_deploy_source.py
+          # The checkout must be exactly DEPLOY_SHA.
+          DEPLOY_TREE: ${{ github.workspace }}
+        run: python3 "$CONTROLLER/scripts/check_deploy_source.py"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
@@ -251,29 +275,43 @@ jobs:
       - name: Read the commit production serves
         id: production
         run: |
-          # Read-only Wrangler listings, before any production write: the recheck below holds a
-          # deploy of the commit production already serves, or of one older than it.
+          # Read-only Wrangler listings, before any production write. The recheck below holds a
+          # deploy when production's commit is unknown, is this commit or is newer. Only missing
+          # credentials count as unconfigured (the deploy script then writes nothing); a listing
+          # that fails or a live version that cannot be traced is unknown, which holds.
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "Cloudflare is not configured; there is no production version to compare."
+            echo "state=unconfigured" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           mkdir -p var
-          node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.production.jsonc
-          $WRANGLER deployments list --json --config wrangler.production.jsonc > var/deployments.json
-          $WRANGLER versions list --json --config wrangler.production.jsonc > var/versions.json
-          if live=$(node scripts/worker_versions.mjs live-commit var/deployments.json var/versions.json); then
-            echo "Production serves commit $live"
-            echo "sha=$live" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::The live Worker version names no commit, so this deploy is not compared with production."
+          state=unknown
+          sha=""
+          why="the Worker deployment or version listing could not be read"
+          if node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.production.jsonc &&
+             $WRANGLER deployments list --json --config wrangler.production.jsonc > var/deployments.json &&
+             $WRANGLER versions list --json --config wrangler.production.jsonc > var/versions.json; then
+            if sha=$(node "$CONTROLLER/scripts/worker_versions.mjs" live-commit var/deployments.json var/versions.json 2> var/live-commit.err); then
+              state=known
+              why=""
+              echo "Production serves commit $sha"
+            else
+              sha=""
+              why=$(tr '\n' ' ' < var/live-commit.err | cut -c 1-300)
+            fi
           fi
-          rm -f var/deployments.json var/versions.json wrangler.production.jsonc
+          if [ "$state" = unknown ]; then echo "::warning title=Production commit unknown::$why"; fi
+          { echo "state=$state"; echo "sha=$sha"; echo "reason=$why"; } >> "$GITHUB_OUTPUT"
+          rm -f var/deployments.json var/versions.json var/live-commit.err wrangler.production.jsonc
       - name: Recheck source immediately before production writes
         id: recheck
         env:
           SOURCE_READ_TOKEN: ${{ github.token }}
+          DEPLOY_TREE: ${{ github.workspace }}
+          PRODUCTION_STATE: ${{ steps.production.outputs.state }}
           PRODUCTION_SHA: ${{ steps.production.outputs.sha }}
-        run: python3 scripts/check_deploy_source.py --production
+          PRODUCTION_REASON: ${{ steps.production.outputs.reason }}
+        run: python3 "$CONTROLLER/scripts/check_deploy_source.py" --production
       - name: Back up D1, migrate and deploy
         id: deploy
         if: steps.recheck.outputs.hold == 'false'
@@ -355,7 +393,9 @@ jobs:
           WORKERS_INVOCATION_LOGS: ${{ vars.WORKERS_INVOCATION_LOGS }}
         run: |
           mkdir -p var
-          bash scripts/cloudflare_deploy.sh
+          # GITHUB_SHA is set for the script too: a candidate older than DEPLOY_SHA support labels
+          # its Worker version and D1 backup with GITHUB_SHA, which is otherwise the newer main head.
+          GITHUB_SHA="$DEPLOY_SHA" bash scripts/cloudflare_deploy.sh
       - name: Smoke-test the deployed site (/, /map, /coast and the APIs)
         id: smoke
         if: steps.deploy.outputs.deployed == 'true'
@@ -446,6 +486,7 @@ jobs:
       DEPLOY_REASON: ${{ needs.deploy.outputs.reason }}
       DEPLOYED: ${{ needs.deploy.outputs.deployed }}
       PRODUCTION_SHA: ${{ needs.deploy.outputs.production }}
+      PRODUCTION_STATE: ${{ needs.deploy.outputs.production_state }}
     steps:
       - name: Report deployed or held
         run: |
@@ -477,9 +518,12 @@ jobs:
               conclusion, sha, title = 'success', selected, 'Deployed ' + selected[:9]
               text = ('deployed ' + selected + ' (' + (env.get('SOURCE_REASON') or 'selected') + ') and its smoke test passed'
                       + ('; production served ' + production + ' before' if production else ''))
-          else:
+          elif env.get('PRODUCTION_STATE') == 'unconfigured':
               conclusion, sha, title = 'neutral', selected, 'Not deployed: Cloudflare is not configured'
               text = 'CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is unset, so nothing was deployed'
+          else:
+              conclusion, sha, title = 'neutral', selected, held
+              text = 'the deploy step reported no deployment of ' + selected
           lines = ['### Deploy to Cloudflare: ' + ('deployed' if conclusion == 'success' else 'HELD (nothing deployed)'), '',
                    '- Outcome: ' + title, '- Why: ' + text, '- Triggered by: `' + (trigger or 'unknown') + '`',
                    '- Selected: `' + (selected or 'none') + '`', '- Production before this run: `' + (production or 'not read') + '`']
