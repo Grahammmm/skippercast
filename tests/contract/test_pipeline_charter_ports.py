@@ -22,6 +22,8 @@ class CharterPortTests(unittest.TestCase):
         # receive Morro Bay/Avila rows (flagged for review in P2-08).
         ports = load_catalogs()[1]['landing-reports']['report_ports']
         for path in sorted((REPO / 'regions').glob('*/region.json')):
+            if json.loads(path.read_text())['status'] == 'draft':
+                continue  # drafts are never collected (scripts/refresh_regions.py) and need no legal review yet
             with self.subTest(region=path.parent.name):
                 self.assertEqual(settings(path.parent.name)['report_ports'], ports)
 

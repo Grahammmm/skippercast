@@ -98,7 +98,8 @@ class RegionIsolationTests(unittest.TestCase):
                              {'morro-bay': 'KeyError'})
 
     def test_majority_failure_fails_the_job(self):
-        regions = sorted(p.parent.name for p in (REPO / 'regions').glob('*/region.json'))
+        regions = sorted(p.parent.name for p in (REPO / 'regions').glob('*/region.json')
+                         if json.loads(p.read_text())['status'] != 'draft')  # refresh skips drafts
         broken = [r for r in regions if r != 'morro-bay'][:len(regions) // 2 + 1]
         with tempfile.TemporaryDirectory() as directory:
             _, rows, _ = self.run_live(raising_for(*broken), directory)
