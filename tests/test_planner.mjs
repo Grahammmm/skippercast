@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 const {createPlanner, nextFriday, planFit} = await import('../web/planner.ts');
 const {draftKey} = await import('../dist/trip-export.js');
+const {coordinates} = await import('../web/state.ts');
 
 const NOW = new Date('2026-10-12T18:00:00Z');  // Monday, Pacific
 const REGION = {id: 'test-coast', name: 'Test Coast', timezone: 'America/Los_Angeles', mpa: {bounds: [-10, -10, 10, 10]}};
@@ -40,6 +41,20 @@ function harness({stored = null, loadReefs, ports = [{id: 'p1', name: 'Port 1', 
   return {planner, store, emitted, nav, saved: () => JSON.parse(store.get(draftKey(REGION.id)))};
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('downloaded notes follow the coordinate choice while GPX positions remain decimal degrees', async () => {
+  const {planner: p} = harness();
+  p.add('old-1'); p.setResearch(true);
+  try {
+    for (const [mode, expected] of [['dd', '0.50000° N, 0.50000° E'], ['ddm', '0° 30.000′ N, 0° 30.000′ E'], ['dms', '0° 30′ 00.00″ N, 0° 30′ 00.00″ E']]) {
+      coordinates.value = mode;
+      assert.ok((await (await p.exportFile('notes')).text()).includes(expected));
+      const gpx = await (await p.exportFile('gpx')).text();
+      assert.match(gpx, /lat="0\.5" lon="0\.5"/);
+      assert.doesNotMatch(gpx, /[°′″]/);
+    }
+  } finally { coordinates.value = 'dd'; p.dispose(); }
+});
 
 test('a draft saved before the port opens with its ids, name, date, layers and coverage, under the same key', () => {
   const v1 = JSON.stringify({ids: ['old-1', 'gone'], rankedPlan: null, name: 'Sunday reef', date: '2026-10-18', avoidScope: 'region',
