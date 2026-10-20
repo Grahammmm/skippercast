@@ -46,6 +46,9 @@ class FakeClock:
 # Every test under a `gis/` directory may import any of them at module level.
 GIS_PACKAGES = ('affine', 'h5py', 'laspy', 'lazrs', 'lerc', 'numpy', 'pyproj', 'pypdf',
                 'rasterio', 'scipy', 'shapefile', 'shapely')
+# Also in requirements-survey.txt, but pinned identically in the `test` extra that every
+# CI job installs, so tests outside gis/ may import them too. They are not GIS packages.
+SHARED_SURVEY_PACKAGES = ('jsonschema',)
 # Set by the survey-science CI job: a missing package is then an error, not a quiet omission.
 REQUIRE_GIS = 'SKIPPERCAST_REQUIRE_GIS'
 # Opt in to tests marked `network`; every other run is offline.
