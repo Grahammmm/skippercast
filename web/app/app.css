@@ -204,7 +204,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-plain { flex-wrap: wrap; }
 /* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */
 .app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-1), var(--sst-2), var(--sst-3), var(--sst-4), var(--sst-5)); }
-.app-legend-water-temp, .app-legend-swell { flex-wrap: wrap; }
+.app-legend-water-temp, .app-legend-swell, .app-legend-sst-contrast { flex-wrap: wrap; }
+/* CI6-03: Temp contrast's fixed scale, weaker to stronger change per nautical mile. */
+.app-swatch[data-layer="sst-contrast"] { background: linear-gradient(90deg, var(--contrast-0), var(--contrast-1), var(--contrast-2)); }
 .app-legend-range { color: var(--text); font-size: var(--text-11); }
 /* FE-17: the swell ramp, low to high, and its fixed scale as a wider swatch between its ends. */
 .app-swatch[data-layer="swell"] { background: linear-gradient(90deg, var(--swell-0), var(--swell-1), var(--swell-2), var(--swell-3)); }

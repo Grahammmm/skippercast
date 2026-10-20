@@ -9,6 +9,10 @@
 // A selection revision guards the slow calls: a change made while Best available
 // or a restore loads wins over that call's answer, as in v1.
 //
+// CI6-01B: Best available and a restore first load the region's land/water check
+// (web/land-water.ts); only spots it confirms as water are ranked or restored, and
+// the status counts the ones it withheld.
+//
 // Erasable syntax only: the node tests import this file by type stripping.
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
 import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, readDraft} from '../dist/trip-export.js';
@@ -16,6 +20,7 @@ import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {track} from './telemetry.ts';
+import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates} from './state.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
@@ -64,6 +69,8 @@ export interface PlannerDeps {
   reachNm?: number | null;
   /** The ranked set the Chart draws (web/trip.ts listens for `skippercast:trip-ranked`). */
   emit?: (detail: RankedDetail) => void;
+  /** The region's land/water check for these spots (web/land-water.ts `ensureLandWater`). */
+  landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
 }
 
 const LOADING = 'Loading current screened reefs…';
@@ -101,6 +108,7 @@ export function createPlanner(deps: PlannerDeps) {
   const now = deps.now ?? (() => new Date());
   const loadReefs = deps.loadReefs ?? reefTrip;
   const emit = deps.emit ?? dispatch;
+  const landWater = deps.landWater ?? ((id: string, spots: readonly Target[]) => ensureLandWater(id, spots));
   const today = new Intl.DateTimeFormat('en-CA', {timeZone: region.timezone, year: 'numeric', month: '2-digit', day: '2-digit'}).format(now());
   let raw: string | null = null;
   try { raw = storage?.getItem(draftKey(region.id)) ?? null; } catch { /* storage blocked */ }
@@ -213,10 +221,13 @@ export function createPlanner(deps: PlannerDeps) {
       const port = ports.value.find(p => p.id === f.port);
       if (f.scope === 'map' && !map.getSize().x) throw Error('Open the map first to choose its area.');
       if (f.depth > 300 || f.depth < 25 || !Number.isFinite(f.distance) || f.distance <= 0) throw Error('Choose a depth from 25–300 ft and a positive distance.');
+      const place = await landWater(region.id, loaded.targets), stats = {withheld: 0};
+      if (mine !== revision) return;
       const best = rankBest(loaded, screen, {species: f.species, count: f.limit, maxDepth: f.depth, maxDistanceNm: f.distance,
         bounds: f.scope === 'map' ? [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] : null,
-        origin: port ? {latitude: port.match[0], longitude: port.match[1]} : null});
-      if (!best.length) throw Error('No ranked reefs meet these filters and current checks. Widen the area or distance; no weaker spots were added.');
+        origin: port ? {latitude: port.match[0], longitude: port.match[1]} : null, place, stats});
+      const held = withheldNote(stats.withheld);
+      if (!best.length) throw Error(`No ranked reefs meet these filters and current checks.${held ? ` ${held}` : ''} Widen the area or distance; no weaker spots were added.`);
       canonical = loaded;
       const d = draft.value, ids = best.map(t => t.id);
       const name = d.name === 'My fishing day' ? 'Lingcod + rockfish' : d.name, date = d.date === today ? nextFriday(today) : d.date;
@@ -227,7 +238,7 @@ export function createPlanner(deps: PlannerDeps) {
         persist({...d, ids, name, date, layers: {...RANKED_LAYERS},
           rankedPlan: {sha256: loaded.publication.export_sha256, species: f.species, priorities: best.map(t => ({id: t.id, rank: t.trip_rank!}))}});
         ranked.value = true;
-        scopeStatus.value = `${best.length} distinct reef spots ranked. Waypoints + reef outlines only. ${best.length < f.limit ? 'Fewer than your requested limit qualified. ' : ''}Check conditions for ${date} before committing to the trip.`;
+        scopeStatus.value = `${best.length} distinct reef spots ranked. Waypoints + reef outlines only. ${best.length < f.limit ? 'Fewer than your requested limit qualified. ' : ''}${held ? `${held} ` : ''}Check conditions for ${date} before committing to the trip.`;
       });
     } catch (error) {
       if (mine === revision) scopeStatus.value = (error as Error).message;
@@ -247,6 +258,9 @@ export function createPlanner(deps: PlannerDeps) {
       if (!restorePending.value || !plan || mine !== revision) return;
       if (plan.sha256 !== loaded.publication.export_sha256) throw Error('Saved reef data changed. Select Best available again; your saved selections have been retained for review.');
       if (plan.priorities.some(p => !loaded.targets.some(t => t.id === p.id))) throw Error('Saved reefs are unavailable. Select Best available again.');
+      const saved = loaded.targets.filter(t => plan.priorities.some(p => p.id === t.id)), place = await landWater(region.id, saved);
+      if (!restorePending.value || mine !== revision) return;
+      if (saved.some(t => place(t).state !== 'water')) throw Error('A saved spot is not confirmed on water by the current land/water check. Select Best available again.');
       canonical = loaded;
       batch(() => {
         tripAtlas.value = {...tripAtlas.value, publication: loaded.publication, source_validation_date: loaded.source_validation_date, areas: [...atlas.areas, ...loaded.areas],

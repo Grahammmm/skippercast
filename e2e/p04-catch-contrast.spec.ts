@@ -49,15 +49,23 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // contour row to the wrapping legend rows; MapStage.tsx only adds createDepthContours to the Chart's layers. The
 // Reports catch flow renders neither, and check_contrast.mjs rebinds only the surface-proof hashes and cited lines
 // (moved, byte-identical), with contrast() untouched. All three rebound.
+// CI6-03 (Temp contrast layer): web/tokens.css adds only theme-invariant --contrast-0/1/2 after --swell-3; app.css
+// adds only `.app-legend-sst-contrast` to an existing flex-wrap rule and an `.app-swatch[data-layer="sst-contrast"]`
+// rule; MapStage.tsx adds only the createContrast chart layer. The Reports catch flow mounts none of them.
+// check_contrast.mjs rebinds only the tokens/app/Legend surface hashes and their shifted line citations, with
+// surface results unchanged and contrast() untouched. All four rebound.
+// CI6-13 merge-forward onto CI6-03: the union of both entries above and nothing else. app.css carries both sides'
+// rules unchanged; MapStage.tsx adds both chart layers; check_contrast.mjs rebinds the union's surface hashes and
+// shifted line citations, with contrast() untouched. All four rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
-  "web/app/MapStage.tsx": "ff712418a2cbf0a0c227c30f7c60950fcfa13eeb0685940f1a395f4f9badc3c9",
-  "web/tokens.css": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
+  "web/app/MapStage.tsx": "07ef795cbffbf66931582be07bafd5adbe6d00f5d167858dad0a28bcde14d1c7",
+  "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
-  "web/app/app.css": "54040a2d70c97cd45ebd80da322bbe8281474a524b704bdece9e54fa919d3053",
+  "web/app/app.css": "8a550d59481c70301e5c506bdef04cc2d4b286ae14068d7ed0c9eed66d7a110a",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -67,7 +75,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "1527ea2df130f425cb82c8842ef4804517e2254c7e9cd67a98040ea0e5fc0548",
+  "scripts/check_contrast.mjs": "d6f2fe14b39649ac16f8ddd350cb5b5c161de1f96ecddb7ce2ee8983018a6de5",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

@@ -20,6 +20,7 @@ import {sample as v1Sample} from '../dist/marine-data.js';
 import {fieldColor} from '../packages/coast/src/map/surface-field.ts';
 import {FILES, luminance, themes} from '../scripts/check_contrast.mjs';
 import {chartMark} from '../web/map/chart.ts';
+import {CONTRAST_LAYER} from '../web/map/contrast.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {WAVE_MODEL, latticePoints, parseForecast, sample, swellPoints} from '../web/map/forecast-grid.ts';
 import {forecastTime} from '../web/map/frames.ts';
@@ -334,7 +335,7 @@ test('in the stack the water temperature sits under the swell field, and both un
   const swellIds = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER], sstIds = [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS];
   // The `before` lists the layers pass (sst.ts, swell.ts, depth-contours.ts), in every order they can arrive.
   const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
-  const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), [SWELL_LAYER, DEPTH_BOTTOM, MPA_FILL]),
+  const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, SWELL_LAYER, DEPTH_BOTTOM, MPA_FILL]),
     swell: e => e.setOverlay('swell', swellOverlay(sentinel), [DEPTH_BOTTOM, MPA_FILL]), contours: e => e.setOverlay('depth-contours', contours, MPA_FILL)};
   const orders = [['sst', 'swell', 'contours'], ['sst', 'contours', 'swell'], ['swell', 'sst', 'contours'], ['swell', 'contours', 'sst'], ['contours', 'sst', 'swell'], ['contours', 'swell', 'sst']];
   for (const order of orders) {
