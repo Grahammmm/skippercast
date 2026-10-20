@@ -104,7 +104,13 @@ compares the declared outputs between passes. It writes one report covering
 COAST-PROD-01 to COAST-PROD-06. Each id can be backed by rerun steps that write
 a checked JSON receipt, by earlier receipts cited with a pinned sha256 and at
 least one `equals` check, or by both. A receipt whose top-level verdict is not
-`PASS`, or whose status is a hold or failure, never backs an id. An id with
+`PASS`, or whose status is a hold or failure, never backs an id. The top-level
+`verdict` must be exactly `"PASS"`: qualified or inexact forms such as
+`PASS_WITH_GAPS`, `PASS (qualified)`, `pass` or `"PASS "` are rejected, and
+there is no allow-list for them. Put qualifiers in other fields, such as
+`qualifications`, `gaps` or `notes`. A top-level `status` or `outcome` must not
+carry a hold or failure value (for example `HELD`, `FAIL`, `BLOCKED`,
+`PARTIAL` or `PENDING`, in any case). An id with
 neither is `NO_RECEIPT` and a declared hold is `HELD`. Neither counts as a
 PASS. The overall verdict also needs every declared step to succeed in both
 passes with identical declared outputs, so cited receipts cannot stand in for
