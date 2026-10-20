@@ -406,7 +406,7 @@ class Store:
             if job["stage"] in {"acquire", "qualify"} and manifest.get("schema") == "coastal-native-job-v1":
                 # Dispatch starts measurement; it is not scientific qualification.
                 from skippercast.coastal.handoff.common import validate_native_source
-                validate_native_source(self.root, manifest["source"])
+                validate_native_source(self.root, manifest["source"], netcdf=True)
                 window = manifest["window"]
                 if len(window) != 4 or any(not isinstance(v, int) for v in window) or min(window) < 0 or not 0 < window[2]*window[3] <= 1048576:
                     return False, ["native_window_bound"]

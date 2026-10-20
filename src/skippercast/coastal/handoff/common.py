@@ -141,47 +141,95 @@ def review_holds(root, review, facts_digest, *, now, minimum_valid_until=None, s
     return sorted(set(holds))
 
 
-def validate_native_source(root, artifact):
-    """Inspect permitted containers before GDAL can follow any source links."""
+TIFF_SIGNATURES = (b'II*\x00', b'MM\x00*', b'II+\x00', b'MM\x00+')
+HDF5_SIGNATURE = b'\x89HDF\r\n\x1a\n'
+# netCDF classic, 64-bit offset and CDF-5. None of them can reference another file.
+NETCDF_CLASSIC_SIGNATURES = (b'CDF\x01', b'CDF\x02', b'CDF\x05')
+
+
+def _local_hdf5_tree(h5py, start, label):
+    """Refuse soft/external links and virtual/external-storage datasets below ``start``."""
+    visited, pending, total = set(), [start], 0
+    while pending:
+        group = pending.pop()
+        address = h5py.h5o.get_info(group.id).addr
+        if address in visited:
+            continue
+        visited.add(address)
+        for name in group:
+            total += 1
+            if total > 1024:
+                raise ValueError(f'{label} container link bound exceeded')
+            if not isinstance(group.get(name, getlink=True), h5py.HardLink):
+                raise ValueError(f'{label} external/soft links refused before GDAL')
+            item = group[name]
+            if isinstance(item, h5py.Group):
+                pending.append(item)
+            elif isinstance(item, h5py.Dataset):
+                if item.is_virtual or item.external:
+                    raise ValueError(f'{label} virtual/external-storage datasets refused before GDAL')
+            else:
+                raise ValueError(f'{label} container object unsupported')
+
+
+def _no_netcdf_sidecars(path):
+    # GDAL's PAM would let an unbound .aux.xml override georeferencing or nodata.
+    for auxiliary in (Path(str(path)+'.aux.xml'), path.with_suffix('.aux'), Path(str(path)+'.ovr')):
+        if auxiliary.exists() or auxiliary.is_symlink():
+            raise ValueError('netCDF sidecar refused before GDAL')
+
+
+def native_container(path):
+    """Classify a local source by its bytes: 'tiff', 'bag', 'netcdf' or None.
+
+    A netCDF-4 file is HDF5 without a ``BAG_root``; the classification never
+    decides admission, which stays with ``validate_native_source``.
+    """
+    with Path(path).open('rb') as stream:
+        magic = stream.read(8)
+    if magic[:4] in TIFF_SIGNATURES:
+        return 'tiff'
+    if magic[:4] in NETCDF_CLASSIC_SIGNATURES:
+        return 'netcdf'
+    if magic != HDF5_SIGNATURE:
+        return None
+    import h5py
+    with h5py.File(path, 'r') as source:
+        return 'netcdf' if source.get('BAG_root', getlink=True) is None else 'bag'
+
+
+def validate_native_source(root, artifact, *, netcdf=False):
+    """Inspect permitted containers before GDAL can follow any source links.
+
+    ``netcdf=True`` additionally admits a local netCDF container (classic, or
+    netCDF-4 whose whole HDF5 tree is local) for the bridge-lane reader only.
+    """
     path = resolve(root, artifact)
     with path.open('rb') as stream:
         magic = stream.read(8)
-    if magic[:4] in (b'II*\x00', b'MM\x00*', b'II+\x00', b'MM\x00+'):
+    if magic[:4] in TIFF_SIGNATURES:
         for auxiliary in (Path(str(path)+'.aux.xml'),Path(str(path)+'.ovr'),Path(str(path)+'.msk'),path.with_suffix('.aux')):
             if auxiliary.exists() or auxiliary.is_symlink():
                 ref(root,auxiliary,'native-raster-auxiliary-v1')
         return path
-    if magic != b'\x89HDF\r\n\x1a\n':
+    if netcdf and magic[:4] in NETCDF_CLASSIC_SIGNATURES:
+        _no_netcdf_sidecars(path)
+        return path
+    if magic != HDF5_SIGNATURE:
         raise ValueError('native container signature unsupported; VRT/network readers refused')
     import h5py
     with h5py.File(path, 'r') as source:
         link = source.get('BAG_root', getlink=True)
+        if netcdf and link is None:
+            _local_hdf5_tree(h5py, source, 'netCDF-4')
+            _no_netcdf_sidecars(path)
+            return path
         if not isinstance(link, h5py.HardLink):
             raise ValueError('BAG_root must be a local hard link')
         root_group = source['BAG_root']
         if not isinstance(root_group, h5py.Group):
             raise ValueError('BAG_root must be a local group')
-        visited, pending, total = set(), [root_group], 0
-        while pending:
-            group = pending.pop()
-            address = h5py.h5o.get_info(group.id).addr
-            if address in visited:
-                continue
-            visited.add(address)
-            for name in group:
-                total += 1
-                if total > 1024:
-                    raise ValueError('BAG container link bound exceeded')
-                if not isinstance(group.get(name, getlink=True), h5py.HardLink):
-                    raise ValueError('BAG external/soft links refused before GDAL')
-                item = group[name]
-                if isinstance(item, h5py.Group):
-                    pending.append(item)
-                elif isinstance(item, h5py.Dataset):
-                    if item.is_virtual or item.external:
-                        raise ValueError('BAG virtual/external-storage datasets refused before GDAL')
-                else:
-                    raise ValueError('BAG container object unsupported')
+        _local_hdf5_tree(h5py, root_group, 'BAG')
         for name in ('elevation', 'uncertainty', 'metadata'):
             if name not in root_group or not isinstance(root_group[name], h5py.Dataset):
                 raise ValueError('BAG required local datasets missing')

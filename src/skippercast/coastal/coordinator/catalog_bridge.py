@@ -45,7 +45,7 @@ MAX_TOTAL_BYTES = 2 * 1024**3          # the acquire stage's default per-job byt
 MAX_WALL_S = 3600
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024    # catalog / plan metadata read bound
 MAX_WINDOW_CELLS = 1048576              # same bound as the Store's acquire dispatch gate
-NATIVE_SUFFIXES = (".bag", ".tif", ".tiff")
+NATIVE_SUFFIXES = (".bag", ".tif", ".tiff", ".nc")
 GEOGRAPHIC = ("CRS84", "EPSG:4326")
 HEX64 = re.compile("[0-9a-f]{64}")
 
@@ -156,7 +156,7 @@ def cached_source(root, source):
     if not isinstance(source.get("contract"), str) or not source["contract"]:
         raise ValueError("cached source contract required")
     if not path.lower().endswith(NATIVE_SUFFIXES):
-        raise ValueError("cached source must be a native BAG or GeoTIFF")
+        raise ValueError("cached source must be a native BAG or GeoTIFF, or a netCDF grid")
     cursor, info = Path(root), None
     for part in Path(path).parts:
         cursor = cursor / part

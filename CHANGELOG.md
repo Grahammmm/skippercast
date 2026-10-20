@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Coastal discovery keeps plain `.nc` file links from THREDDS listings (HTTPServer only, never OPeNDAP or subset services), and the bridge-lane acquire and qualify stages read a local netCDF grid such as a NOAA CRM subset. Geographic grids are held at the map stage instead of being resampled.
 - Temp contrast, a new map layer that is off by default: it shows the change in sea-surface temperature per nautical mile in the region's published daily analysis. It draws only cells whose change exceeds the summed analysis error and is withheld past 72 hours (CI6-03).
 - Offline packs now remind you to check before leaving coverage and explain missing water-temperature and current data instead of leaving the layer blank without an offline reason.
 - Choose decimal degrees, degrees and decimal minutes, or degrees minutes seconds in the account menu for mark positions, trip plans and downloaded notes. GPX coordinates remain decimal degrees.
