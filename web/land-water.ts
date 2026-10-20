@@ -205,18 +205,45 @@ export const landWaterLinesURL = (region: string): string => `regions/${encodeUR
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 const page = (): string => globalThis.location?.href ?? 'http://localhost/';
 
-/** Load `region`'s index once; a missing or failed one leaves the region unavailable (every place unknown). */
-export async function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(...a)): Promise<LandWaterState> {
+// The request in flight for each file. A second caller for the same region (and, for the lines,
+// the same index) awaits that request instead of starting one or reading its loading snapshot,
+// so whoever awaits a loader gets the region's settled state: ready or unavailable, lines loaded
+// or failed. A region switch or reset replaces the job; the replaced request then writes nothing
+// and its callers get the newer state, which a classifier for the old region reads as pending.
+// A job's work starts on the next microtask, after it is recorded, so even a fetch that throws
+// at once settles through the job.
+interface Job {readonly region: string; readonly model: LandWaterModel | null; readonly promise: Promise<LandWaterState>}
+let indexJob: Job | null = null;
+let linesJob: Job | null = null;
+
+function startJob(region: string, model: LandWaterModel | null, work: (current: () => boolean) => Promise<LandWaterState>, slot: 'index' | 'lines'): Job {
+  let job: Job | null = null;
+  const current = (): boolean => (slot === 'index' ? indexJob : linesJob) === job;
+  job = {region, model, promise: Promise.resolve().then(() => work(current))};
+  if (slot === 'index') indexJob = job; else linesJob = job;
+  return job;
+}
+
+/**
+ * Load `region`'s index once and resolve with its settled state; a missing or failed one leaves the region
+ * unavailable (every place unknown). Concurrent callers share one request.
+ */
+export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(...a)): Promise<LandWaterState> {
   const now = landWater.peek();
-  if (now.region === region && now.state !== 'idle') return now;
+  if (now.region === region && (now.state === 'ready' || now.state === 'unavailable')) return Promise.resolve(now);
+  if (indexJob?.region === region) return indexJob.promise;
+  linesJob = null;
   landWater.value = {...IDLE, region, state: 'loading'};
-  let model: LandWaterModel | null = null;
-  try {
-    const r = await fetchFn(new URL(landWaterURL(region), page()).href);
-    model = r.ok ? landWaterModel(await r.json(), region) : null;
-  } catch { model = null; }
-  if (landWater.peek().region !== region) return landWater.peek();
-  return landWater.value = {...IDLE, region, state: model ? 'ready' : 'unavailable', model};
+  return startJob(region, null, async current => {
+    let model: LandWaterModel | null = null;
+    try {
+      const r = await fetchFn(new URL(landWaterURL(region), page()).href);
+      model = r.ok ? landWaterModel(await r.json(), region) : null;
+    } catch { model = null; }
+    if (!current()) return landWater.peek();
+    indexJob = null;
+    return landWater.value = {...IDLE, region, state: model ? 'ready' : 'unavailable', model};
+  }, 'index').promise;
 }
 
 async function sha256(text: string): Promise<string> {
@@ -224,29 +251,44 @@ async function sha256(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Load the lines file for the ready region once; one whose bytes or source differ from the index's counts as failed. */
-export async function loadLandWaterLines(region: string, fetchFn: Fetch = (...a) => fetch(...a)): Promise<LandWaterState> {
-  const now = landWater.peek();
-  if (now.region !== region || now.state !== 'ready' || now.lines !== null || now.linesLoading) return now;
+/**
+ * Load the lines file for the ready region once and resolve with the state once it has loaded or failed; one whose
+ * bytes or source differ from the index's counts as failed. Concurrent callers share one request.
+ */
+export function loadLandWaterLines(region: string, fetchFn: Fetch = (...a) => fetch(...a)): Promise<LandWaterState> {
+  const now = landWater.peek(), model = now.model;
+  if (now.region !== region || now.state !== 'ready' || !model || now.lines !== null) return Promise.resolve(now);
+  if (linesJob?.region === region && linesJob.model === model) return linesJob.promise;
   landWater.value = {...now, linesLoading: true};
-  let lines: LandWaterLines | false = false;
-  try {
-    const r = await fetchFn(new URL(landWaterLinesURL(region), page()).href);
-    const text = r.ok ? await r.text() : '';
-    lines = text && await sha256(text) === now.model!.linesSha256 ? landWaterLines(JSON.parse(text), now.model!) ?? false : false;
-  } catch { lines = false; }
-  const later = landWater.peek();
-  if (later.region !== region || later.model !== now.model) return later;
-  return landWater.value = {...later, lines, linesLoading: false};
+  return startJob(region, model, async current => {
+    let lines: LandWaterLines | false = false;
+    try {
+      const r = await fetchFn(new URL(landWaterLinesURL(region), page()).href);
+      const text = r.ok ? await r.text() : '';
+      lines = text && await sha256(text) === model.linesSha256 ? landWaterLines(JSON.parse(text), model) ?? false : false;
+    } catch { lines = false; }
+    const later = landWater.peek();
+    if (!current() || later.region !== region || later.model !== model) return later;
+    linesJob = null;
+    return landWater.value = {...later, lines, linesLoading: false};
+  }, 'lines').promise;
 }
 
-/** Load what classifying `points` in `region` needs (the planner awaits this before it ranks), and return the classifier. */
+/** Whether any of `points` waits on the lines file under `model` (falls in a mixed cell). */
+export function needsLines(model: LandWaterModel | null, points: readonly Point[]): boolean {
+  return !!model && points.some(p => { const at = placeOf(model, null, p); return at.state === 'unknown' && at.reason === 'pending'; });
+}
+
+/**
+ * Load what classifying `points` in `region` needs (the planner awaits this before it ranks) and return the classifier,
+ * bound to the settled state: never to a loading snapshot, whoever started the requests.
+ */
 export async function ensureLandWater(region: string, points: readonly Point[], fetchFn?: Fetch): Promise<Place> {
   let state = await loadLandWater(region, fetchFn);
-  if (state.state === 'ready' && state.lines === null && points.some(p => placeOf(state.model, null, p).state === 'unknown'
-    && (placeOf(state.model, null, p) as {reason: UnknownReason}).reason === 'pending')) state = await loadLandWaterLines(region, fetchFn);
+  if (state.region === region && state.state === 'ready' && state.lines === null && needsLines(state.model, points))
+    state = await loadLandWaterLines(region, fetchFn);
   return placeFor(state, region);
 }
 
-/** Tests: forget the loaded region. */
-export function resetLandWater(): void { landWater.value = IDLE; }
+/** Tests: forget the loaded region and any request in flight. */
+export function resetLandWater(): void { indexJob = null; linesJob = null; landWater.value = IDLE; }

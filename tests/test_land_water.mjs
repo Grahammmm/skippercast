@@ -114,6 +114,124 @@ test('loading: the index once, the lines file only when a place needs it, checke
   assert.deepEqual(placeFor(landWater.value, null)(at(400, 600)), {state: 'unknown', reason: 'unavailable'});
 });
 
+// Sol review round 1, must-fix 2: a second caller awaits the request in flight, never a loading snapshot.
+const FILES = {'land-water.json': JSON.stringify(fixture('coast.json')), 'land-water-lines.json': readFileSync(new URL('./fixtures/land-water/coast.lines.json', import.meta.url), 'utf8')};
+const NEAR = at(1973, 600), FAR = at(400, 600);
+/** A fetch whose answers wait until released; `calls` lists the files asked for. */
+function deferredFetch(answer = name => new Response(FILES[name])) {
+  const calls = [], held = [];
+  const fetchFn = url => {
+    const name = url.split('/').pop();
+    calls.push(name);
+    return new Promise((resolve, reject) => held.push(() => { try { resolve(answer(name)); } catch (e) { reject(e); } }));
+  };
+  return {fetchFn, calls, release: () => { while (held.length) held.shift()(); }};
+}
+const NO_FETCH = () => { throw new Error('a second request for the same file'); };
+const tick = () => new Promise(r => setImmediate(r));
+/** Resolves `promise` into `box.value`, so a test can see whether it has settled yet. */
+const watch = promise => { const box = {done: false, promise}; promise.then(v => { box.done = true; box.value = v; }); return box; };
+
+test('concurrent index loads share one request and every caller gets the settled index', async () => {
+  resetLandWater();
+  const d = deferredFetch();
+  const first = loadLandWater('fixture', d.fetchFn);
+  const second = watch(ensureLandWater('fixture', [FAR], NO_FETCH));
+  const third = watch(loadLandWater('fixture', NO_FETCH));
+  await tick();
+  assert.equal(second.done || third.done, false, 'no caller resolves while the index is in flight');
+  assert.equal(landWater.value.state, 'loading');
+  d.release();
+  assert.equal((await first).state, 'ready');
+  await Promise.all([second.promise, third.promise]);
+  assert.deepEqual(second.value(FAR), {state: 'water'}, 'the second caller\'s classifier is bound to the loaded index');
+  assert.equal(third.value.state, 'ready');
+  assert.deepEqual(d.calls, ['land-water.json']);
+  resetLandWater();
+});
+
+test('a failed index request settles every waiting caller as unavailable', async () => {
+  for (const answer of [() => new Response('', {status: 404}), () => { throw new Error('offline'); }]) {
+    resetLandWater();
+    const d = deferredFetch(answer);
+    const first = ensureLandWater('fixture', [FAR], d.fetchFn), second = ensureLandWater('fixture', [NEAR], NO_FETCH);
+    await tick();
+    d.release();
+    for (const place of await Promise.all([first, second])) assert.deepEqual(place(FAR), {state: 'unknown', reason: 'unavailable'});
+    assert.equal(landWater.value.state, 'unavailable');
+    assert.deepEqual(d.calls, ['land-water.json']);
+  }
+  // A fetch that throws before it returns a promise still settles through the shared request.
+  resetLandWater();
+  const state = await loadLandWater('fixture', () => { throw new Error('at once'); });
+  assert.equal(state.state, 'unavailable');
+  resetLandWater();
+});
+
+test('concurrent lines loads share one request and every caller gets the loaded lines', async () => {
+  resetLandWater();
+  await loadLandWater('fixture', async name => new Response(FILES[name.split('/').pop()]));
+  const d = deferredFetch();
+  const first = watch(ensureLandWater('fixture', [NEAR], d.fetchFn));
+  await tick();
+  const second = watch(ensureLandWater('fixture', [NEAR], NO_FETCH));
+  const third = watch(loadLandWaterLines('fixture', NO_FETCH));
+  await tick();
+  assert.equal(first.done || second.done || third.done, false, 'no caller resolves while the lines file is in flight');
+  assert.equal(landWater.value.linesLoading, true);
+  d.release();
+  await Promise.all([first.promise, second.promise, third.promise]);
+  assert.deepEqual(first.value(NEAR), {state: 'water'});
+  assert.deepEqual(second.value(NEAR), {state: 'water'}, 'the second caller is not left pending');
+  assert.ok(third.value.lines);
+  assert.deepEqual(d.calls, ['land-water-lines.json']);
+  resetLandWater();
+});
+
+test('a failed lines request settles every waiting caller as unavailable for a mixed cell, water for a clean one', async () => {
+  resetLandWater();
+  await loadLandWater('fixture', async name => new Response(FILES[name.split('/').pop()]));
+  const d = deferredFetch(() => new Response('', {status: 500}));
+  const first = ensureLandWater('fixture', [NEAR], d.fetchFn);
+  await tick();
+  const second = ensureLandWater('fixture', [NEAR], NO_FETCH);
+  await tick();
+  d.release();
+  for (const place of await Promise.all([first, second])) {
+    assert.deepEqual(place(NEAR), {state: 'unknown', reason: 'unavailable'});
+    assert.deepEqual(place(FAR), {state: 'water'});
+  }
+  assert.equal(landWater.value.lines, false);
+  assert.equal(landWater.value.linesLoading, false);
+  resetLandWater();
+});
+
+test('a region switch: the replaced request writes nothing and its callers never read water', async () => {
+  resetLandWater();
+  const index = deferredFetch();
+  const stale = ensureLandWater('fixture', [FAR], index.fetchFn);
+  await tick();
+  assert.equal((await loadLandWater('other', async () => new Response('', {status: 404}))).region, 'other');
+  index.release();
+  assert.deepEqual((await stale)(FAR), {state: 'unknown', reason: 'pending'}, 'a classifier for the old region is not water');
+  assert.equal(landWater.value.region, 'other', 'the late index did not overwrite the newer region');
+  // The same for the lines file.
+  resetLandWater();
+  await loadLandWater('fixture', async name => new Response(FILES[name.split('/').pop()]));
+  const lines = deferredFetch();
+  const staleLines = ensureLandWater('fixture', [NEAR], lines.fetchFn);
+  await tick();
+  await loadLandWater('other', async () => new Response('', {status: 404}));
+  lines.release();
+  assert.notEqual((await staleLines)(NEAR).state, 'water');
+  assert.equal(landWater.value.region, 'other');
+  assert.equal(landWater.value.lines, null, 'late lines are not written into another region');
+  // Back to the first region: it loads afresh.
+  const again = await ensureLandWater('fixture', [NEAR], async name => new Response(FILES[name.split('/').pop()]));
+  assert.deepEqual(again(NEAR), {state: 'water'});
+  resetLandWater();
+});
+
 test('the index grid agrees with the lines file at every clean cell (the committed Morro Bay product)', () => {
   const mb = landWaterModel(dist('regions/morro-bay/land-water.json'), 'morro-bay');
   const mbLines = landWaterLines(dist('regions/morro-bay/land-water-lines.json'), mb);

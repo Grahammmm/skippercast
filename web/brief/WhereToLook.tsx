@@ -74,9 +74,12 @@ function RangeControl({measured}: {measured: boolean}) {
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const r = given ?? currentRanking(), id = region.value, boat = profile.value === 'boat', speed = cruiseSpeed.value;
+  // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
+  // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
+  const lw = landWater.value, wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
   useEffect(() => { if (id && hasCoastTerrain(id)) void loadTerrainHabitat(); }, [id]);
   useEffect(() => { if (id) void loadLandWater(id); }, [id]);
-  useEffect(() => { if (id && r.pending) void loadLandWaterLines(id); }, [id, r.pending]);
+  useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
       <div class="app-where-head">

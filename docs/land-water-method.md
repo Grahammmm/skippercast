@@ -295,6 +295,14 @@ Self-test on injected geometry (`--self-test`, 14 of 14 pass):
   gives `unavailable`. `pending` is the only reason not listed in step 10. It
   is transient: until the lines file loads, the list shows "Checking land and
   water for these places…" in place of picks.
+- Loading (implementation review, round 1). Each file has one request in
+  flight per region. A second caller awaits that request, so a caller that
+  awaits the check (the planner) always gets the settled state: ready or
+  unavailable, lines loaded or failed. A region switch replaces the request.
+  The late answer then writes nothing, and a classifier for the old region
+  stays `pending`, never water. The brief asks for the lines file once the
+  index is ready and a candidate still waits on it. Before this fix, a list
+  that was pending on a slow index stayed pending.
 - Ranking keeps water places only and counts the rest:
   - `web/ranking.ts` (terrain and atlas sources) adds the count to the basis.
   - The planner's `dist/spot-ranking.js` `bestSpots` (`place`,
@@ -323,7 +331,13 @@ Self-test on injected geometry (`--self-test`, 14 of 14 pass):
     - the acceptance item 4 cases on the fixtures;
     - agreement between the grid and the lines on more than 3,000 random
       clean-cell points of the committed product;
-    - the committed-data check.
+    - the committed-data check;
+    - concurrent and failed index and lines requests, and region switches.
+  - `e2e/land-water.spec.ts` mounts the app. With a delayed index whose cells
+    are all mixed, the brief loads the lines file and ranks the water places.
+    With the committed index, the lines file is never requested.
+    `e2e/v2-trip.spec.ts` extends the index with its synthetic offshore reefs'
+    unserved tiles as clean water, so its export flow still ranks 20 spots.
 - The read-only probe's after-removal comparison now uses the resolved
   mainland, as the round-2 review's nonblocking finding asked. The result is
   unchanged: removal changes the parity of no waypoint.
