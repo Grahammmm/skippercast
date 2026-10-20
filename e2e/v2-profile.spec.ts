@@ -4,8 +4,9 @@
 // Fish's ?mode= win over the stored profile. The coast data bridge is held open, so the terrain
 // mounts and waits; marks come from the committed Morro Bay atlas. FE-54: the menu groups the
 // search plans, the profile's own species and the coast targets, and its search field narrows it.
+// CI6-02: each option reads its state from region data, and the region's unavailable targets list disabled.
 import {readFileSync} from 'node:fs';
-import type {Page} from '@playwright/test';
+import type {Locator, Page} from '@playwright/test';
 import {expect, test} from './fixtures.ts';
 
 const TINY = readFileSync(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
@@ -27,11 +28,15 @@ test.beforeEach(async ({page, v2: _v2}) => {
 
 const profileChip = (page: Page, name: string) => page.locator('[aria-label="Profile"] button', {hasText: name});
 const params = (page: Page) => Object.fromEntries(new URL(page.url()).searchParams);
-/** The target menu's values in order; on a phone it sits at the end of the brief sheet. */
+/** The target menu's selectable values in order; on a phone it sits at the end of the brief sheet. */
 async function targets(page: Page): Promise<string[]> {
   const select = page.locator('label:has-text("Target") select');
-  return select.locator('option').evaluateAll(options => options.map(o => (o as HTMLOptionElement).value));
+  return select.locator('option:not([disabled])').evaluateAll(options => options.map(o => (o as HTMLOptionElement).value));
 }
+/** CI6-02: the region's unavailable targets, which a picker lists but cannot select. */
+const unavailable = (select: Locator) => select.locator('option[disabled]').evaluateAll(options => options.map(o => (o as HTMLOptionElement).value));
+/** CI6-02: what each option reads, name then state, keyed by value. */
+const optionTexts = (select: Locator) => select.locator('option').evaluateAll(options => Object.fromEntries(options.map(o => [(o as HTMLOptionElement).value, o.textContent])));
 const marks = async (page: Page) => Number(await page.locator('.app-chart').getAttribute('data-marks'));
 
 test('Shore hides reef marks and lists surfperch first on the Chart and in the terrain; Spear keeps marks within 60 ft', async ({page, pageErrors, v2}) => {
@@ -67,6 +72,8 @@ test('?profile= and Fish ?mode= win over the stored profile; an unsupported targ
   await expect(profileChip(page, 'Spear')).toHaveAttribute('aria-pressed', 'true');
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'shore', target: 'yellowtail'});
   await expect.poll(() => targets(page)).toEqual(['yellowtail', 'surfperch', 'halibut']);
+  await expect.poll(() => unavailable(page.locator('label:has-text("Target") select')), 'listed, not selectable').toEqual(['lobster']);
+  await expect(page.locator('label:has-text("Target") select option[value="yellowtail"]'), 'Shore has no plan for it here').toHaveText('Yellowtail · not researched in this region');
   await expect(page.locator('label:has-text("Target") select')).toHaveValue('yellowtail');
   expect(params(page).target).toBe('yellowtail');
   expect(pageErrors).toEqual([]);
@@ -80,13 +87,40 @@ test('the target menu groups plans by method and coast targets, and search narro
     ['Boat targets', ['lingcod']],
     ['Search plans · Boat', ['reef', 'halibut', 'salmon', 'albacore', 'bluefin', 'dungeness']],
     ['Coast habitat targets', ['rockfish-reef', 'gopher-rockfish', 'cabezon-shallow-reef']],
+    ['Other targets', ['lobster']],
   ]);
+  // CI6-02: each target reads its state beside its name, in the command bar and in the rail's Look for
+  // (shown in the phone's sheet only, the same menu); the region's unavailable target is listed, never selectable.
+  const states = {
+    lingcod: 'Lingcod · ranked by mapped habitat',
+    reef: 'Lingcod & rockfish · ranked by mapped habitat',
+    halibut: 'California halibut · search plan only',
+    salmon: 'Chinook salmon · search plan only',
+    albacore: 'Albacore tuna · search plan only',
+    bluefin: 'Pacific bluefin tuna · search plan only',
+    dungeness: 'Dungeness crab · search plan only',
+    'rockfish-reef': 'Reef rockfish · ranked by mapped habitat',
+    'gopher-rockfish': 'Gopher rockfish · ranked by mapped habitat',
+    'cabezon-shallow-reef': 'Cabezon · ranked by mapped habitat',
+    lobster: 'Lobster · not researched in this region',
+  };
+  const lookFor = page.locator('.app-rail-look select');
+  await expect.poll(() => optionTexts(select)).toEqual(states);
+  expect(await unavailable(select)).toEqual(['lobster']);
   await page.getByRole('searchbox', {name: 'Find a target'}).fill('salm');
   await expect.poll(() => targets(page)).toEqual(['lingcod', 'salmon']);
+  expect(await unavailable(select), 'search narrows the unavailable targets too').toEqual([]);
   await expect(select, 'the chosen target stays listed and chosen').toHaveValue('lingcod');
   await select.selectOption('salmon');
   await expect.poll(() => params(page).target).toBe('salmon');
   await page.getByRole('searchbox', {name: 'Find a target'}).fill('');
   await expect.poll(async () => (await targets(page)).length).toBe(10);
+  expect(await unavailable(select)).toEqual(['lobster']);
+  await expect(select.locator('option[value="salmon"]')).toHaveText('Chinook salmon · search plan only');
+  // The rail's Look for lists the same menu (mounted in the phone's Layers sheet; hidden on a computer).
+  if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
+  await expect.poll(() => optionTexts(lookFor)).toEqual(states);
+  expect(await unavailable(lookFor)).toEqual(['lobster']);
+  await expect(lookFor, 'both pickers follow the one ?target=').toHaveValue('salmon');
   expect(pageErrors).toEqual([]);
 });

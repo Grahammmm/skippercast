@@ -45,11 +45,17 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-02 (#769, species honesty in the target picker): web/species.ts adds a TargetState per menu option
+// (targetState, regionMenu, optionText) and two region signals (regionUnavailable, regionAtlas) reset by its
+// existing region effect; web/app/App.tsx adds an optional RegionInfo.unavailableTargets that loadRegion fills
+// and publishes; web/app/LayerRail.tsx changes only Look for's option text and disables the region's unavailable
+// targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
+// menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
-  "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
+  "web/species.ts": "c375f21a58e70a0523e95f3be786ab3cfa417e8b0e208c671b240aa48c554a14",
+  "web/app/App.tsx": "f49938b31c81df492ca7bfd065959a9af00d1e4a066a83270fe683da5302f504",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
-  "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
+  "web/app/LayerRail.tsx": "46e42485435483269872176bb53cba563d042ad7ea02cdddcb5372f031026d85",
   "web/app/MapStage.tsx": "25a446d17624bf555b684077e0a56091cfa6f32a94a03560aaa5be54a85bd367",
   "web/tokens.css": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
