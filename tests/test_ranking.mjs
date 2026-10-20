@@ -14,7 +14,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
 import {CHECKING, SCREEN_MAX_AGE_MS, assessScreen, markFit} from '../web/map/habitat.ts';
-import {TOP, atlasPicks, habitatPicks, harborOrigin, loadTerrainHabitat, ranking, terrainHabitat} from '../web/ranking.ts';
+import {TOP, atlasPicks as checkedAtlasPicks, habitatPicks as checkedHabitatPicks, harborOrigin, loadTerrainHabitat, ranking, terrainHabitat} from '../web/ranking.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -36,7 +36,11 @@ const FEATURES = [
   reef('m-expired', {screen_expires_at: EARLIER, fit_lingcod: 3}), reef('c-1', {region: 'cambria-san-simeon', fit_lingcod: 3}),
 ];
 const READY = {state: 'ready', features: FEATURES, expiresAt: NOW + 3600000, rank: rankedHabitat};
-const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW, ...patch});
+// These tests cover the other filters: every place is water here. The land/water check has its own (test_land_water.mjs).
+const WATER = () => ({state: 'water'});
+const atlasPicks = (data, screen, target, limit, origin = harborOrigin(data), maxNm = null) => checkedAtlasPicks(data, screen, target, limit, origin, maxNm, WATER);
+const habitatPicks = (ranked, screen, region, coast, limit, origin, maxNm = null) => checkedHabitatPicks(ranked, screen, region, coast, limit, origin, maxNm, WATER);
+const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW, place: WATER, ...patch});
 const upper = depth => Number(/–(\d+) ft$/.exec(depth)[1]);
 
 test('atlas picks: the top four admitted marks inside the limit, best fit first, labelled by source', () => {

@@ -486,14 +486,16 @@ def main():
         unavailable.append(f'defects without a local witness {len(gross)}')
 
     # 7. parity, coverage, waypoints
-    def classifier(names, source):
-        polys = [close(mainland[0], names)] + [c for name, c in source if name != 'mainland']
+    def classifier(names, source, as_resolved=False):
+        # as_resolved: the curves exactly as given, the resolved mainland included (the step-0 review's
+        # nonblocking finding: the after-removal comparison must not reinstate the original mainland).
+        polys = [c for _, c in source] if as_resolved else [close(mainland[0], names)] + [c for name, c in source if name != 'mainland']
         polys = [[(x / UNIT, y / UNIT) for x, y in r] for r in polys]
         polys = [(r, box(r)) for r in polys]
         return polys, lambda pt, skip=None: sum(1 for i, (r, bb) in enumerate(polys) if i != skip and inside(pt, r, bb)) % 2
     other = 'SW,NW' if args.land_corners == 'SE,NE' else 'SE,NE'
     polys, parity = classifier(args.land_corners.split(','), parity_curves)
-    _, parity_after = classifier(args.land_corners.split(','), resolved)
+    _, parity_after = classifier(args.land_corners.split(','), resolved, as_resolved=True)
     in_land = [r for i, (r, bb) in enumerate(polys[1:], start=1) if parity(r[0], skip=i)]
     print(f'7. parity curves besides the mainland {len(polys) - 1}: lying in water (bound land) {len(polys) - 1 - len(in_land)}, '
           f'lying in land (bound water) {len(in_land)} {[(len(r), box(r)) for r in in_land]}')

@@ -7,10 +7,13 @@
 // draws nothing. Pins are numbered in the planner's order (`trip_rank`), never a forecast
 // of fish. As in v1, spots within 44 px of an earlier pin at the camera's zoom join it
 // ("1 +4"); a click on such a pin zooms to its spots, and a lone pin opens the one mark
-// card with v1's lines and "Review & export". Erasable syntax only: Node tests import it.
+// card with v1's lines and "Review & export". CI6-01B: a pin draws only where the
+// region's land/water check (web/land-water.ts) confirms water, as the planner ranked
+// it; while that check loads, or without one, no pin draws. Erasable syntax only: Node tests import it.
 import {computed, signal} from '@preact/signals';
 import {manifestState} from '../../dist/seafloor-data.js';
-import {setParams} from '../state.ts';
+import {landWater, placeFor} from '../land-water.ts';
+import {region, setParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {regulationsLink, withheld, type Collection, type RegionData} from './habitat.ts';
 import {RANKED_SOURCE} from './layers.ts';
@@ -52,9 +55,12 @@ export const rankedSpots = signal<readonly RankedTarget[]>([]);
 /**
  * The ranked spots the Chart draws: those the marks' run-time screen (#492) also shows, so the
  * Chart never draws a spot it withholds as a mark; while that screen is checking, stale or
- * unavailable, none. Ranks stay the planner's.
+ * unavailable, none. Only spots the land/water check confirms as water draw. Ranks stay the planner's.
  */
-export const drawnSpots = computed(() => { const s = markScreen.value; return rankedSpots.value.filter(t => !withheld(t, s)); });
+export const drawnSpots = computed(() => {
+  const s = markScreen.value, place = placeFor(landWater.value, region.value);
+  return rankedSpots.value.filter(t => !withheld(t, s) && place(t).state === 'water');
+});
 
 /**
  * v1's draw gate (dist/trip-ranking-layer.js): nothing unless the screen is current, the plan has

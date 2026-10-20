@@ -1,9 +1,8 @@
 # Land or water for ranked places: method note (CI6-01B step 0)
 
-Status: round 2, 2026-10-20, revised after the round-1 gate review (sol-reviewer,
-STEP0 CHANGES REQUIRED, reviewed head 22982a78). No guard code merges before
-this note is approved. Evidence comes from
-`research/scripts/assess_land_water_feasibility.py` (read-only). It ran on the
+Status: approved at step 0 (round 2, sol-reviewer, STEP0 APPROVED at 90aa40ba,
+2026-10-20) and implemented as described under "Implementation" below. Evidence
+comes from `research/scripts/assess_land_water_feasibility.py` (read-only). It ran on the
 published Morro Bay shoreline, which is byte-identical from b2474f6d through
 `origin/main` 573b6682a, and on terrain habitat release 4c24f963f09b…, whose
 detail file matched its manifest sha256 cb4d9cbb…. Every topology test in it is
@@ -251,45 +250,85 @@ Self-test on injected geometry (`--self-test`, 14 of 14 pass):
 | two 300 m rings crossing; an island crossing the mainland | no witness, unavailable |
 | island touching the mainland at a vertex without crossing | available |
 
-## Where it goes (after approval)
+## Implementation
 
-- `src/skippercast/platform/land_water.py`, run by
-  `PYTHONPATH=src python -m skippercast.platform.build`, writes
-  `dist/regions/<id>/land-water.json`. That file is generated output. It holds:
-  - the parity curves after removal;
-  - the seam joins;
-  - the served-tile list;
-  - the constants, the census counts and provenance;
-  - the status, available or unavailable with its causes.
-  The edge test reads the published shoreline itself. The file loads only
-  when a ranked list or planner needs it, never at first paint. The PR will
-  add a size note against `scripts/startup-budget.json`.
-- `web/land-water.ts` classifies a point. Ranking calls it from
-  `web/ranking.ts` (terrain and atlas sources), `dist/spot-ranking.js`
-  `bestSpots` (the planner) and `web/map/ranked.ts` (the Chart's pins).
+- `src/skippercast/platform/land_water.py` runs steps 1-10 inside
+  `PYTHONPATH=src python -m skippercast.platform.build` and writes two
+  generated files beside the published shoreline. A region without a
+  shoreline gets neither, and stale copies are removed.
+  - `dist/regions/<id>/land-water.json` is the index, 5,150 bytes for Morro
+    Bay. It holds:
+    - the status: available, or unavailable with its causes;
+    - the constants and the census counts;
+    - the shoreline's sha256 and the lines file's sha256;
+    - for each of the 29 served zoom-12 tiles, a 32 × 32 grid of cells,
+      run-length encoded. Each cell is `w`, `l` or `m`.
+
+    A cell is clean (`w` or `l`) only when every published line and seam
+    join stays more than `EDGE_M` + 1 m from the whole cell, and no parity
+    curve after removal touches it. Every point in a clean cell is then
+    outside the edge band and has the parity of the cell's centre, which the
+    build computes by even-odd over the parity curves after removal. The extra
+    1 m covers the difference between the build's per-tile metre scale and the
+    client's per-point one. Inside each tile, cells are evenly spaced in Web
+    Mercator, which is how the client looks them up.
+  - `dist/regions/<id>/land-water-lines.json` is the lines file, 278,928
+    bytes. It holds every published line, the seam join (the edge band) and
+    the parity curves after removal, as delta-encoded integers on the
+    5-decimal grid.
+
+  Splitting the product into two files departs from the single file planned
+  at step 0. The reason is the startup budget: the brief ranks places at first
+  paint, and the lines file alone would exceed the budget's headroom. Only the
+  index loads at first paint. The lines file loads only when a candidate falls
+  in an `m` cell, and none of today's 156 waypoints does. The client checks the
+  lines file's bytes against the index's sha256 and refuses a mismatch.
+- `web/land-water.ts` classifies a point by these checks, in order:
+  1. A point that is not strictly inside the bounds, or has no finite
+     position, is `outside-bounds`.
+  2. A point in a tile NOAA did not serve is `unserved-tile`.
+  3. A point in a clean cell takes the cell's label.
+  4. A point in an `m` cell is `pending` until the lines file loads. Then it
+     is `edge` within 25 m of a line, otherwise land or water by even-odd.
+
+  A missing, unavailable or malformed product, or a lines file that fails,
+  gives `unavailable`. `pending` is the only reason not listed in step 10. It
+  is transient: until the lines file loads, the list shows "Checking land and
+  water for these places…" in place of picks.
+- Ranking keeps water places only and counts the rest:
+  - `web/ranking.ts` (terrain and atlas sources) adds the count to the basis.
+  - The planner's `dist/spot-ranking.js` `bestSpots` (`place`,
+    `stats.withheld`) adds it to the status line.
+  - `web/planner.ts` loads the check before Best available. It refuses to
+    restore a saved plan that has a spot not confirmed as water.
+  - `web/map/ranked.ts` draws a pin only where the check says water.
+
+  Where a region has no check, every place is withheld (decision 4, the
+  recommended option).
 - Tests:
-  - a pytest of the builder on injected geometry: every row of the self-test
-    table above, each seam condition violated in turn, a node of degree 3, a
-    non-degenerate self-paired chain, a second bound-to-bound path, and
-    fixtures copying today's real cases (a vertex resting on a segment without
-    crossing, a collinear overlap at a seam, a small marsh self-crossing);
-  - `node --test` cases for the classifier and ranking. The fixture has a
-    mainland crossing the region edge to edge, an island ring and an enclosed
-    water ring. The cases cover:
-    - a mainland interior point (land, withheld);
-    - an island interior point (land, withheld);
-    - an offshore point (water, kept);
-    - a point in the water ring (water);
-    - an edge point, and a point just beyond the edge on the water side
-      (kept);
-    - the review's 50 m mid-tile coast gap (unavailable: all unknown, no
-      guarantee shown);
-    - a missing file;
-    - malformed geometry: an empty line, a ring under 4 positions, an
-      unclosed "island", non-numeric coordinates, and a 200 m bowtie. Each
-      gives unknown, never land or water.
+  - `tests/unit/test_land_water.py` tests the builder on injected geometry. It
+    covers:
+    - the self-test rows and each seam condition;
+    - a node of degree 3, a non-degenerate self-paired chain and a second
+      bound-to-bound path;
+    - the land corners and a vertex resting on the coast;
+    - the changed-mainland regression: the parity curves carry the resolved
+      mainland;
+    - that the committed Morro Bay product equals a rebuild.
 
-## Committed-data check (acceptance item 5, preview)
+    It also writes the node fixtures in `tests/fixtures/land-water/`, and it
+    fails when they drift.
+  - `tests/test_land_water.mjs` tests the classifier, the ranking and the
+    planner. It covers:
+    - the acceptance item 4 cases on the fixtures;
+    - agreement between the grid and the lines on more than 3,000 random
+      clean-cell points of the committed product;
+    - the committed-data check.
+- The read-only probe's after-removal comparison now uses the resolved
+  mainland, as the round-2 review's nonblocking finding asked. The result is
+  unchanged: removal changes the parity of no waypoint.
+
+## Committed-data check (acceptance item 5)
 
 Today's waypoints come from both sources: 132 atlas targets
 (`dist/data/atlas.json`) and the 24 Morro Bay terrain waypoints in release

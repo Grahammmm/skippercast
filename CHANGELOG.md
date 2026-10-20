@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Ranked places (Where to look, the trip planner's Best available and its pins on the Chart) are now checked against the NOAA shoreline: only places confirmed on water are ranked. A place on land, within 25 m of the shoreline, or outside the shoreline's coverage is withheld, and the basis counts it ("N spots withheld: land/water not confirmed"). Regions without a shoreline rank no places until one is imported. This is a planning screen, not a navigation boundary.
 - Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.

@@ -16,7 +16,9 @@ import {
   NO_PLAN, RANKED_PICK, RANKED_PIN, drawnSpots, fitCamera, rankedCard, rankedFeatures, rankedSpots, rankedStyle, recheckPlan, screenRanked, zoomToGroup,
 } from '../web/map/ranked.ts';
 import {createStage, terrainFailed} from '../web/map/stage.ts';
-import {configureStore, syncFromURL} from '../web/state.ts';
+import {configureStore, region, syncFromURL} from '../web/state.ts';
+import {landWater} from '../web/land-water.ts';
+import {waterState} from './helpers/land-water.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -38,6 +40,8 @@ const reefs = Array.from({length: 20}, (_, i) => {
 });
 // The planner's order is the ranks; the event may list them in any order.
 const PLAN = {targets: reefs.map(r => r.target).reverse(), areas: reefs.map(r => r.area), publication};
+// Every synthetic reef is in a clean water cell: these tests are about the other draw gates (land/water: test_land_water.mjs).
+landWater.value = waterState('morro-bay', reefs.map(r => r.target));
 /** A screen that is current and withholds the named points and areas. */
 const screen = ({ready = true, points = [], areas = []} = {}) => ({
   ready: () => ready,
@@ -113,6 +117,8 @@ test('the every-minute re-check keeps a plan its publication still matches; a ch
 
 test('a spot the marks\' run-time screen (#492) withholds is not drawn, the others keep their ranks; no ready screen, no pins', () => {
   rankedSpots.value = screenRanked(PLAN, screen(), new Map(), 'morro-bay');
+  const before = region.value;
+  region.value = 'morro-bay';
   try {
     for (const s of [CHECKING, marksStale(), marksUnavailable()]) {
       markScreen.value = s;
@@ -124,7 +130,7 @@ test('a spot the marks\' run-time screen (#492) withholds is not drawn, the othe
     assert.deepEqual(rankedFeatures(drawnSpots.value, 16).features.map(f => f.properties.rank)[0], 2, 'pin 2 keeps its number');
     markScreen.value = marksReady();
     assert.equal(drawnSpots.value.length, 20);
-  } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
+  } finally { rankedSpots.value = []; markScreen.value = CHECKING; region.value = before; }
 });
 
 test('the style: a 44 px target, a numbered disc and a "+n", all from the palette', () => {
