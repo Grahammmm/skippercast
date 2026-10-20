@@ -21,6 +21,8 @@ import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedP
 import {camera, cameraParam, type Camera} from './map/stage.ts';
 import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
 import {reachFor} from './reach.ts';
+import {tideSelection} from './tide-selection.ts';
+import {saveTidePack} from './tide-stations.ts';
 
 /** The v2 app's page key in a pack (dist/sw.js `V2_SHELL`). */
 export const V2_SHELL = '/map';
@@ -174,6 +176,8 @@ export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSign
 /** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, both shoreline forms, the startup copies (#617) and tiles. */
 async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[]) {
   const page = location.href, origin = location.origin, misses: string[] = [];
+  const tideURLs = await tideSelection.packURLs(id);
+  await saveTidePack(tideURLs, put, signal);
   const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
   const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
   const files: [string, string, RequestInit][] = [[origin + V2_SHELL, origin + V2_SHELL, {}],
