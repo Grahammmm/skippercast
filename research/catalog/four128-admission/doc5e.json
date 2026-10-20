@@ -1,0 +1,115 @@
+{
+  "bounds": [
+    728615,
+    3818923,
+    729127,
+    3819435
+  ],
+  "code_root": "~/repos/skippercast/.worktrees/t_ac690fbf",
+  "controller_sha256": "ef83bd845a665ae28c4a67c0d09cf3ea1ea5d8c50f52f4c33c53e6a376931bc1",
+  "controls": {
+    "research/scripts/coastal_four128_artifact_review.py": "111a9c16d1bf96de9403e6a76fcbdabf4598429dd583663644e9b411da693a9d",
+    "research/scripts/coastal_four128_resources.py": "9cac6047f066cfd07f2f52a3ab3d1d47e365b5c9a2120f1174af33a0ba889f7c",
+    "research/scripts/coastal_four128_runtime.py": "7d344165fdb5694098d7a11946d6a2cef66befea41ad84b5ad88219e1158004f"
+  },
+  "docs": {
+    "independent-four128-rights-review": "coastal-rights-evidence-v1",
+    "independent-four128-scientific-preflight": "coastal-ordered-independent-scientific-preflight-v1",
+    "independent-four128-scope-review": "coastal-ordered-scope-review-v1",
+    "independent-four128-strict-trial-policy": "coastal-bounded-patch-quality-policy-v3"
+  },
+  "evidence_root": "~/agent-work/t08a/admission-v2",
+  "head": "ed28dc6991df75c5c7318fe974c7868965085af4",
+  "inputs": {
+    "amendment": {
+      "bytes": 7522,
+      "path": "~/agent-work/t08a/budget/four128-budget-amendment-v4.json",
+      "sha256": "0d970656a2ec3e5adfd0093033b49b942df377784fcd85bd9516da8237e320d6"
+    },
+    "issuer": {
+      "bytes": 24653,
+      "path": "~/agent-work/t08/doc5_issue_v5.py",
+      "sha256": "0f820abc1642c45aced408c6b07b0c28c42375aa2ba5210f0130a31885628a0d"
+    },
+    "package": {
+      "bytes": 5653,
+      "path": "~/skippercast-data/2026-10-07-pge-south/scratch/t08-four128-20261019-staging-doc5e/prospective-package.json",
+      "sha256": "a9281e0194ef1230e2fa928955e6fada0690c4fd195e4330cd21d6e686f0f129"
+    },
+    "prior_carry": {
+      "bytes": 16260,
+      "path": "~/skippercast-data/2026-10-07-pge-south/outputs/ordered-four128-approved-20261011/execution/metadata/closed-engineering-carry.json",
+      "sha256": "fcba46f9e323742e99da798b4aaa7679e69321f6a5ab76de91f39fa529c5ef83"
+    },
+    "receipt": {
+      "bytes": 7290,
+      "path": "~/agent-work/t08/doc5e-receipt.json",
+      "sha256": "f7346d2fad38eab0dbfcdafbe6d2961e5969247a7881047026fada3b0cd659d9"
+    },
+    "selection": {
+      "bytes": 7114,
+      "path": "~/skippercast-data/2026-10-07-pge-south/outputs/t08-four128-20261019/window-prescan/block-selection.json",
+      "sha256": "c72283765485e78c05a5a0d38e2e36220d9b9038eab07c3670e619310febb095"
+    }
+  },
+  "interpreter": "~/repos/skippercast/.venv/bin/python",
+  "label": "doc5e",
+  "layout": 5,
+  "limits": {
+    "scratch_limit_bytes": 2153776561,
+    "scratch_prior_bytes": 1616905649,
+    "source_limit_bytes": 1666915452,
+    "source_prior_bytes": 1372854908
+  },
+  "mission_root": "~/skippercast-data/2026-10-07-pge-south/outputs/t08-four128-20261019/mission",
+  "mode": "historical-replay",
+  "prepare_sha256": null,
+  "project_root": "~/skippercast-data/2026-10-07-pge-south",
+  "retained": {
+    "cap": 167772160,
+    "prior": 58079477,
+    "trial": 33554432
+  },
+  "run_tag": "20261019t08",
+  "schema": "coastal-four128-admission-config-v1",
+  "staging_root": "~/skippercast-data/2026-10-07-pge-south/scratch/t08-four128-20261019-staging-doc5e",
+  "texts": {
+    "checks": [
+      "executor head/clean/origin",
+      "runtime control and controller sha256 recomputed",
+      "budget_limits(signed amendment)",
+      "prepare.py run into fresh staging; grant/carry/index accounting verified",
+      "documents 1-4 status and freshness",
+      "runtime validate_runtime_review self-check"
+    ],
+    "limitation": "Prelaunch runtime binding only; not scientific acceptance, not execution authority beyond the coordinator gates.",
+    "retained_meaning": "Signed amendment v4: 160 MiB cumulative; doc5d prior 49,996,283 B plus attempt 5 charge 8,083,194 B = 58,079,477 B. Ruled complete actual_bytes plus still-open reserved bytes; not the active writer audit total.",
+    "scratch_basis": "Fable ruling t_08ab4e95 2026-10-19 18:20 PDT; signed amendment "
+  },
+  "windows": [
+    [
+      3762,
+      3488,
+      128,
+      128
+    ],
+    [
+      3890,
+      3488,
+      128,
+      128
+    ],
+    [
+      3762,
+      3360,
+      128,
+      128
+    ],
+    [
+      3890,
+      3360,
+      128,
+      128
+    ]
+  ]
+}
