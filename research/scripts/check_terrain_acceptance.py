@@ -29,8 +29,9 @@ Nothing here reads a source, downloads or writes outside ``<prep-root>``
 (renders go to ``core-<X>/<output-dir>``; the receipt defaults to
 ``<prep-root>/t13-receipt.json``). Exit codes: 0 PASS, 3 PARTIAL (some cores
 held by their reviewer, the rest pass), 1 FAIL, 2 usage error or a missing
-dependency (numpy, rasterio, and for ``run`` jsonschema; one stderr line names
-them before any core is touched).
+dependency (numpy and rasterio in this interpreter; for ``run`` also
+jsonschema in the ``--python`` renderer environment, probed by running that
+interpreter; one stderr line names them before any core is touched).
 
     PYTHONPATH=src python -B research/scripts/check_terrain_acceptance.py run \\
         --prep-root <prep-root> --expect-cores 4 [--style style.json]
@@ -331,11 +332,16 @@ def render_command(args, core_dir):
     return command
 
 
-def render_core(args, core_dir):
-    command = render_command(args, core_dir)
+def renderer_env(args):
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
     if args.pythonpath:
         env['PYTHONPATH'] = str(Path(args.pythonpath).resolve())
+    return env
+
+
+def render_core(args, core_dir):
+    command = render_command(args, core_dir)
+    env = renderer_env(args)
     try:
         done = subprocess.run(command, env=env, capture_output=True, text=True, timeout=args.timeout_s, check=False)
         code, out, err = done.returncode, done.stdout, done.stderr
@@ -647,15 +653,9 @@ def git_identity(pythonpath):
         return dict(sha=None, dirty=None, checkout=str(top))
 
 
-def preflight_modules(args):
-    """Modules this run imports: the checks need numpy and rasterio; ``run`` also
-    launches the renderer, whose ``terrain_only.verify`` needs jsonschema. A
-    renderer on another ``--python`` reports its own missing jsonschema as the
-    ``terrain_only_dependency:jsonschema`` hold."""
-    names = ['numpy', 'rasterio']
-    if args.mode == 'run' and Path(args.python).resolve() == Path(sys.executable).resolve():
-        names.append('jsonschema')
-    return names
+CHECKER_MODULES = ('numpy', 'rasterio')
+RENDERER_MODULES = ('jsonschema',)  # terrain_only.verify
+PROBE_TIMEOUT_S = 60
 
 
 def missing_dependencies(names):
@@ -669,6 +669,53 @@ def missing_dependencies(names):
         except ImportError:
             missing.append(name)
     return missing
+
+
+# Runs missing_dependencies' loop inside the renderer interpreter; prints one JSON line.
+RENDERER_PROBE = '''import importlib, json, sys
+missing = []
+for name in sys.argv[1:]:
+    try:
+        importlib.import_module(name)
+    except ImportError:
+        missing.append(name)
+print(json.dumps(dict(prefix=sys.prefix, missing=missing)))
+'''
+
+
+def probe_renderer(args, names=RENDERER_MODULES):
+    """Import ``names`` in the ``--python`` renderer with the environment
+    ``render_core`` gives it. Its interpreter path, even when it resolves to the
+    checker's binary, does not identify its site-packages, so only the renderer
+    itself can say what it imports. Returns (prefix, missing); raises ValueError
+    when the renderer cannot run the probe."""
+    try:
+        done = subprocess.run([args.python, '-B', '-c', RENDERER_PROBE, *names], env=renderer_env(args),
+                              capture_output=True, text=True, timeout=PROBE_TIMEOUT_S, check=False)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ValueError(type(error).__name__) from error
+    try:
+        result = json.loads(done.stdout.strip().splitlines()[-1])
+        return result['prefix'], result['missing']
+    except (IndexError, ValueError, KeyError, TypeError) as error:
+        raise ValueError(f'exit {done.returncode}') from error
+
+
+def preflight(args):
+    """One stderr line naming what is missing, or None. The checks need numpy and
+    rasterio here; ``run`` also needs jsonschema in the renderer environment."""
+    missing = missing_dependencies(CHECKER_MODULES)
+    if missing:
+        return f"{', '.join(missing)} required: install skippercast[survey] into {sys.prefix}"
+    if args.mode != 'run':
+        return None
+    try:
+        prefix, missing = probe_renderer(args)
+    except ValueError as error:
+        return f'renderer --python {args.python} cannot run the dependency probe ({error})'
+    if missing:
+        return f"{', '.join(missing)} required: install skippercast[survey] into {prefix} (renderer --python)"
+    return None
 
 
 def main(argv=None):
@@ -689,9 +736,11 @@ def main(argv=None):
     parser.add_argument('--reviewer', default='opus-coder', help='recorded as the requested reviewer')
     args = parser.parse_args(argv)
 
-    missing = missing_dependencies(preflight_modules(args))
-    if missing:
-        print(f"{', '.join(missing)} required: install skippercast[survey] into {sys.prefix}", file=sys.stderr)
+    if args.pythonpath is None and os.environ.get('PYTHONPATH'):
+        args.pythonpath = os.environ['PYTHONPATH'].split(os.pathsep)[0]
+    problem = preflight(args)
+    if problem:
+        print(problem, file=sys.stderr)
         return 2
 
     prep_root = args.prep_root.resolve()
@@ -703,8 +752,6 @@ def main(argv=None):
         parser.error(f'--prep-root {prep_root} is not a directory')
     if receipt_path.exists() and not args.overwrite_receipt:
         parser.error(f'{receipt_path} exists; pass --overwrite-receipt to replace it')
-    if args.pythonpath is None and os.environ.get('PYTHONPATH'):
-        args.pythonpath = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     try:
         names = discover_cores(prep_root, args.cores.split(',') if args.cores else None)
     except ValueError as error:
