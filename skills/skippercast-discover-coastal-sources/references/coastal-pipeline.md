@@ -348,6 +348,106 @@ labels, not already-open issue numbers or assigned authorizations. Existing
 reviewers and publisher serialize exact scopes; this document grants neither
 account access nor a new retry allowance.
 
+### SC-1: closure against the original phase exits
+
+This is a reporting closure, not a declaration that phases 1-4 are complete.
+Snapshot: 2026-10-20, repository base `bde9c6dff`; subsequent work must supply
+new reviewed evidence before changing these statuses. The original private
+`skippercast-plan-fable.md`, section "PHASES AND EXIT CRITERIA", has SHA256
+`3dfc1e4a0af6929df6b60fb9b162621998d734d994b7528a0143351d97a0abad`.
+This crosswalk addresses Fable audit S1 / SC-1 (audit SHA256
+`41fdd644cefe0138ecd6fdb6cc734b56054bf3cc0d488c3e927a40f84595e842`).
+Phase 0 and optional phase 5 are outside this closure.
+
+`MET` means evidence meets the named criterion within its stated scope;
+`MET-WITH-GAP` means bounded evidence exists but an explicit part remains
+unproved; `NOT MET` means a required integrated capability or demonstration is
+absent. Neither of the latter two statuses counts as full phase completion.
+In particular, the bounded driver PASS in R9/R10 is not a phase-exit verdict.
+The plan's COAST-PROD numbering is not this skill's numbering; the crosswalk
+above and the rows introduced by Grahammmm/skippercast#743 at `820b310f2`
+remain authoritative for that distinction. References to "#743 row" below mean
+those skill-table criteria, not the report's identically numbered IDs.
+
+| Original phase | Exit status | Closure boundary |
+| --- | --- | --- |
+| 1: discovery | NOT MET | Reviewed intake/recovery and three manual ENC runs exist, but the governed live catalog is not yet consumed by the coordinator. |
+| 2: mapping at scale | MET-WITH-GAP | The 128x128 run and independent receipt/array validation passed; the plan's literal second `validate_handoff` run is N/A without a render-handoff manifest. Cap-stop evidence is test-proven, not a live byte-cap stop. |
+| 3: render and browser | MET-WITH-GAP | Private four128 terrain previews and archived software-browser evidence passed; real hole/disjoint preservation and current-main browser/GPU acceptance remain unproved. |
+| 4: integrated operation and dashboard | NOT MET | Operations tests and a local read-only dashboard exist, but no literal clean-state discover-to-render mission succeeded twice; installed closure also remains unproved. |
+
+Each conjunct of the original exits is accounted for below. R1-R12 are the
+byte-verified, outputs-relative receipt pins in the next table. Review metadata
+without such a receipt is labeled explicitly rather than assigned an invented
+receipt or inherited PASS.
+
+| Phase / original exit criterion | Status | Evidence, #743 cross-reference and remaining gap |
+| --- | --- | --- |
+| 1 / discovery-held-intake PR merged | MET | Grahammmm/skippercast#725 merged as `25645c9f3db145fe9811d49a9ce582a10f9fd3cd`; #743 row 03 records 18 passing intake tests per pass. R9/R10 preserve that evidence mapping, not a historical T04 JSON receipt. |
+| 1 / ENC hazard green for three consecutive research-daily runs | MET | T05 independent acceptance t_8c1765f2: authorized manual runs `39358992811`, `39359201036`, `39359417623` at merge `5098bc7d5f42743a99cf100ff81ae3a58e1c9b90`. This is review metadata, not a new outputs receipt. G's c4-A manual-run substitution applies; Greenwood upstream-unavailable in run 2 was an explicit accepted warning, not complete source coverage. |
+| 1 / live governed discovery writes the frozen catalog the coordinator reads; allowlist, caps, receipts | NOT MET | At this snapshot Grahammmm/skippercast#734 is OPEN at `0b9f0d8869c7e6187f59f353863e2760855c6807`; merging it alone does not supply the missing catalog-to-coordinator bridge. R9/R10 document zero-network discovery dry-run only; #743 row 06 and "Remaining gaps" explicitly preserve this limit. SC-2 then SC-3 own closure. |
+| 1 / plan COAST-PROD-02 real-data receipt recovery PASS | MET | R5-R8 retain both reruns and their independent validation/closure; R9/R10 record 43 receipt checks and 8+8 settled admissions. This is #743 row 03, NOT skill row 02 installed closure. Original R7 still says INDEPENDENT_PASS. |
+| 2 / parameterized windows, unit tests for 32/64/128 | MET | T07 t_3295bd05 independent review: 80 tests and 24 subtests, including successful prepare at all three sizes; T07b t_98318db0 separately established 12/12 mapped TIFF equality for the prior 4,096-pair rehearsal. Review metadata only; not a claim of a fresh native-source 32-cell rerun on main. |
+| 2 / 128x128 H11952 run within budget, independently verified by second validate_handoff | MET-WITH-GAP | Attempt 6 R1/R2 and reruns R5-R7 establish completed bounded acquire/qualify/map and independent validation (1,154 checks for the reruns). #743 rows 03/04/06; R10 explains `validate_handoff.py` is N/A because the render-handoff manifest is missing. Receipt/array audit is the accepted bounded substitute, not execution of that named validator. |
+| 2 / plan COAST-PROD-03 private handoff PASS | MET | R3 closes original R2 via separately accepted T13 science/artifact evidence for attempt-6 private terrain-only cores A-D only. R8 closes R7 without granting science acceptance to the rerun packets. #743 row 04; originals and qualifiers remain unchanged. |
+| 2 / deliberate failure injection proves stop at the cap | MET | R11/R12: 8 operations tests, 0 skipped per pass; #743 row 06. T12 t_b149f55f independently verified injected byte-reservation shortage/exhaustion, wall-clock and retry bounds. Test-proven cap stop; the live failed attempt stopped at RuntimeMaxSec, not a demonstrated live byte-cap stop. |
+| 3 / terrain_only PASS on 128x128 preserving holes/disjoint cores (plan 04) | MET-WITH-GAP | R4 PASS and R3 science closure apply to four fully supported attempt-6 cores; #743 rows 04/05. Holes N/A, zero unsupported cells: live hole/disjoint-core preservation NOT demonstrated. Synthetic coverage in Grahammmm/skippercast#739 is not real-data proof. SC-5 requires a separately admitted hole-bearing run. |
+| 3 / bottom-view loader ported to main with node test | MET-WITH-GAP | T09 t_a6e7d8a2 reviewed local loader revision `ddc891d0d7970103213724440831ae36389547a0`: renderer 120 tests, loader 8 tests, typecheck/build/client integrity passed. But that revision is not an ancestor of this main snapshot, and `packages/coast/src/bottom/loader.ts` / `tests/coast/bottom-loader.test.ts` are absent; GitHub does not resolve the commit. This is reviewed local code, NOT a port on main. Follow-up t_75588db8 owns reconciliation/publication; #743 row 05's private preview is separate. |
+| 3 / AgentOrange browser interaction/frame-timing archive (plan 06) | MET-WITH-GAP | R9/R10 bind the independently approved T11 archive t_fe397592; #743 crosswalk and public/paired-browser caveat. Two passes are pinned LEGACY-view software-render evidence (authorized CDP alternative), not current-main browser/GPU acceptance. Audit S1 additionally retains the 2 m selected-copy failure; SC-11 t_5191657d owns that gap. |
+| 4 / resume, recovery, cleanup tests pass in CI survey-science (plan 05) | MET-WITH-GAP | R11/R12 prove focused offline test passes; #743 row 06 explicitly says no T12 CI JSON receipt exists. These local executions are not evidence of the named CI job. |
+| 4 / dashboard shows stage status, budget and ledger-derived needs-G queue | MET-WITH-GAP | T14 t_405dfd21 independent Opus review: 7/7 tests, comparison against 190 retained ledgers with holds, read-only inputs unchanged. Review metadata only, no outputs receipt; deliverable is local-only, not committed/deployed. Plan-derived hardcoded holds can stale and budget stop flags are not automatically ledger needs-G entries. Do not infer an installed production dashboard. |
+| 4 / clean-state discover -> acquire -> qualify -> map -> render succeeds twice | NOT MET | R5-R8 establish two acquire/qualify/map reruns only. R4 renders separately prepared attempt-6 cores; R9/R10 re-verify those renders, not rerender the rerun outputs. #743 row 06 and "Remaining gaps"; no bridge or rerun render-handoff manifest. The delegated bounded T15 substitution does not meet this literal exit. SC-3/SC-4 and subsequent separately admitted integration evidence are required. |
+
+The installed-package criterion is a separate unresolved dependency, not a
+seventh driver PASS: #743 skill row 02 remains "not demonstrated". Source-tree
+inspection in R9/R10 does not prove wheel/package/skills/launcher closure.
+SC-6 owns that evidence. No status here relaxes PRIVATE,
+`publication_prohibited`, pending-science rerun outputs, expired/future review
+horizons, immutable failed charges, native source isolation or budget admission.
+Machine-valid output remains review-required, not semantic acceptance.
+
+#### SC-1 retained receipt pins
+
+All paths below are private-store locators relative to the same `outputs/`
+root used above; none is shipped in Git. Full SHA256 values were recomputed
+from the retained metadata bytes for this closure. No source arrays were opened
+and no original receipt was edited.
+
+| Ref | Receipt path | SHA256 |
+| --- | --- | --- |
+| R1 | `outputs/t08-four128-20261019/receipt.json` | `5df6526c28c57074a56136c10ef9e179928a0ee8af50ab5816855934f35a4d74` |
+| R2 | `outputs/t08-four128-20261019/validation/receipt.json` | `2796e40d8b3057f1adb1d3039e9e5dbac406f9405f5010883ba01c6327f37b2b` |
+| R3 | `outputs/t08-four128-20261019/validation/science-closure-receipt.json` | `ff1ebe1de9f486640eb758e0b1a2b2923c8b42b416a255014fd0f0c0fa978923` |
+| R4 | `outputs/t13-four128-terrain-acceptance-20261020/t13-receipt.json` | `d80ecebab98004e79c6bb4d5b7c6015fed21f442c64ef0283dee714b22b80e94` |
+| R5 | `outputs/t15-four128-rerun1-20261020/receipt.json` | `fad41b67c39abc145b6f64d9ad5f8450cd90093d4c95bbf257d7c14b5716851b` |
+| R6 | `outputs/t15-four128-rerun2-20261020/receipt.json` | `ddc6845b8158b1fb314116875f6c37d368ad8dda0216b0c5577222eac07d0c9b` |
+| R7 | `outputs/t15-clean-reruns-20261020/validation/receipt.json` | `f3510f03f431ad4a9119fa20f5aef2f81d2b4b88f3b040ac2efdfc1851b7a306` |
+| R8 | `outputs/t15-clean-reruns-20261020/validation/closure-receipt.json` | `a1ac2e6a45ad5a844cfadc64c3b915640717d391dea1171d78c0ed6738deff50` |
+| R9 | `outputs/t15-clean-reruns-20261020/COAST-PROD-report-v2.json` | `d602cebb6d0af2bc6ed6391ae86295f77633ca89078e7847791293feb68e721c` |
+| R10 | `outputs/t15-clean-reruns-20261020/COAST-PROD-report-v2.md` | `2f676e52306d7c3520be67e24385e0c4863c3615e6d45f72e6b3b0e321e2d476` |
+| R11 | `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-1/receipts/t12-operations-tests.json` | `77dce430a3164dd853842287eeb1f9f53c1187fce8b8eca04f8020970d3c560f` |
+| R12 | `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-2/receipts/t12-operations-tests.json` | `1209f15224fb21fad874cc0f4f293fbf393b1369bbde59d3bdec3d7ad34dbcd8` |
+
+#### Existing follow-up chain (not duplicate work)
+
+The audit follow-ups were already opened when SC-1 started. These are work
+owners, not evidence of completion or authorization to launch a mission:
+
+| Audit step | Existing card / owner | Required dependency and result |
+| --- | --- | --- |
+| SC-2 = HO-5 | hermes-ops `t_f0ab9496`, opus-coder | Finish Grahammmm/skippercast#734 through exact-head review/CI/merge, or record explicit deferral; no bridge acceptance implied. |
+| SC-3 | skippercast `t_8d008066`, opus-coder | After SC-2, consume its frozen catalog in the governed source-free acquire bridge; allowlist/cap tests and dry-run receipt, offline tests. |
+| SC-4 | skippercast `t_583cd0cf`, luna-worker | Inventory snapshot-only modules as needed-by-stage or retire with reasons; no code moved. Feeds SC-5 and the later literal phase-4 integration scope. |
+| SC-5 | skippercast `t_50b01c75`, opus-coder | Use SC-4 inventory plus fresh finite admission/amendment and independent validation for a real masked/unsupported window set; `--require-holes` PASS. No new download or launch is authorized here. |
+| SC-6 | skippercast `t_37e063a6`, deepseek-coder | Separate clean-venv wheel/package/skills/launcher hashes and negative consumer evidence, independently reviewed before skill row 02 changes. Not satisfied by plan report 02. |
+
+SC-11 `t_5191657d` separately owns the 2 m selected-copy/browser gap. Do not
+duplicate the running SC-2..SC-6 jobs, write their canonical stores, reset their
+receipts or treat this dependency map as approval of their eventual artifacts.
+SC-1 additionally opened `t_75588db8` (opus-coder, independent Sol review) to
+reconcile/publish the reviewed T09 loader missing from main; this closure does
+not implement it or infer release from the old card's done status.
+
 ### Private terrain runbook
 
 1. Recover original immutable receipts before any run. Match the native producer,
