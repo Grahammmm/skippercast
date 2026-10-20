@@ -1,21 +1,35 @@
 """The four128 harness reads cumulative source/scratch accounting from one signed
-budget amendment that carries the failed 2026-10-11 charges.
+budget amendment that carries every failed attempt's charges.
 
-The failed attempt's two conservative source reservations (73,515,136 B) and its
-full scratch reservation (536,870,912 B) stay charged; nothing is refunded, and
-the extra allowance must equal the shortfall exactly.
+The failed 2026-10-11 attempt's two conservative source reservations (73,515,136 B)
+and its full scratch reservation (536,870,912 B) stay charged, and so does the
+uncertain source reservation of attempt 2 of the 2026-10-19 trial (36,757,568 B,
+amendment revision 2). Nothing is refunded, the extra allowance must equal the
+shortfall exactly, and a revision-1 amendment that omits attempt 2 is refused.
 """
 import copy
+import hashlib
 import importlib
+import json
 import os
 import sys
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from tests._support import ROOT
 
 SCRIPTS = ROOT / "research" / "scripts"
 MODULES = ("coastal_four128_runtime", "coastal_four128_resources")
+
+# The signed documents live on the maintainer machine only. When present they are
+# checked byte-for-byte against the pinned digests and the in-code copies below;
+# CI exercises the same accounting blocks through those copies.
+SIGNED = Path.home() / "agent-work" / "t08a" / "budget"
+SIGNED_V1 = (SIGNED / "four128-budget-amendment.json",
+             "62df4400d9448fe4ed36284d9985f6a76290855e5036db0521f5a1d7045d2f63")
+SIGNED_V2 = (SIGNED / "four128-budget-amendment-v2.json",
+             "c0f8ffad8e6b28ca5dd6bc0f3058539d9b1e27b6d4a5c28faf1a9026ba1323cd")
 
 
 def _load(name, env):
@@ -27,7 +41,8 @@ def _load(name, env):
         return importlib.import_module(name)
 
 
-def amendment():
+def amendment_v1():
+    """Revision 1 (2026-10-19 18:05 PDT): carries the 2026-10-11 charges only."""
     return dict(
         schema="coastal-four128-budget-amendment-v1",
         status="SIGNED_DELEGATED_BUDGET_AUTHORITY",
@@ -43,6 +58,31 @@ def amendment():
     )
 
 
+def amendment():
+    """Revision 2 (signed 2026-10-20T02:50Z): adds the attempt-2 uncertain reservation."""
+    doc = amendment_v1()
+    doc["amendment_revision"] = 2
+    doc["source"].update(failed_trial_2_charged_bytes=36757568, prior_effective_bytes=931764092,
+                         additional_bytes=110272704, cumulative_limit_bytes=1225824636)
+    return doc
+
+
+SOURCE_KEYS = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
+               "prior_effective_bytes", "previous_cumulative_limit_bytes", "additional_bytes",
+               "cumulative_limit_bytes", "fresh_allowance_bytes", "refunds", "downloads")
+SCRATCH_KEYS = ("charged_prior_bytes", "previous_cumulative_maximum_bytes", "additional_bytes",
+                "cumulative_maximum_bytes", "trial_reservation_bytes", "refunds")
+
+
+def signed(entry):
+    path, sha256 = entry
+    if not path.is_file():
+        return None
+    data = path.read_bytes()
+    assert hashlib.sha256(data).hexdigest() == sha256, f"signed amendment changed: {path}"
+    return json.loads(data)
+
+
 class BudgetAmendment(unittest.TestCase):
     def setUp(self):
         self.resources = _load("coastal_four128_resources", {})
@@ -51,12 +91,48 @@ class BudgetAmendment(unittest.TestCase):
         for module in MODULES:
             sys.modules.pop(module, None)
 
+    def test_constants_carry_both_failed_attempts(self):
+        r = self.resources
+        self.assertEqual(r.FAILED_TRIAL2_SOURCE_CHARGED, 36757568)
+        self.assertEqual(r.SOURCE_PRIOR_FLOOR, 931764092)
+        self.assertEqual(r.SOURCE_PRIOR_FLOOR, r.PRE_FAILURE_SOURCE_PRIOR + r.FAILED_TRIAL_SOURCE_CHARGED
+                         + r.FAILED_TRIAL2_SOURCE_CHARGED)
+        self.assertEqual(r.SOURCE_PRIOR_FLOOR + r.FRESH_SOURCE - r.RECORDED_SOURCE_LIMIT, 110272704)
+
     def test_exact_reconciled_amendment_is_admitted(self):
         limits = self.resources.budget_limits(amendment())
-        self.assertEqual(limits, dict(source_prior_bytes=895006524, source_limit_bytes=1189067068,
+        self.assertEqual(limits, dict(source_prior_bytes=931764092, source_limit_bytes=1225824636,
                                       scratch_prior_bytes=1616905649, scratch_limit_bytes=2153776561))
         self.assertEqual(limits["source_prior_bytes"] + 294060544, limits["source_limit_bytes"])
         self.assertEqual(limits["scratch_prior_bytes"] + 536870912, limits["scratch_limit_bytes"])
+
+    def test_revision_1_amendment_is_now_refused(self):
+        with self.assertRaisesRegex(ValueError, "exact integer source accounting"):
+            self.resources.budget_limits(amendment_v1())
+        # Naming the key without carrying the charge is refused as well.
+        doc = amendment_v1()
+        doc["source"]["failed_trial_2_charged_bytes"] = 0
+        with self.assertRaises(ValueError):
+            self.resources.budget_limits(doc)
+
+    def test_signed_documents_on_this_machine(self):
+        """The real signed revision 2 is admitted with the ruled numbers; revision 1 is refused.
+
+        Off the maintainer machine (CI) the files are absent and the in-code copies
+        above carry the same accounting blocks."""
+        v2 = signed(SIGNED_V2)
+        if v2 is not None:
+            self.assertEqual(self.resources.budget_limits(v2), self.resources.budget_limits(amendment()))
+            self.assertEqual({k: v2["source"][k] for k in SOURCE_KEYS},
+                             {k: amendment()["source"][k] for k in SOURCE_KEYS})
+            self.assertEqual({k: v2["scratch"][k] for k in SCRATCH_KEYS},
+                             {k: amendment()["scratch"][k] for k in SCRATCH_KEYS})
+            self.assertEqual(v2["amendment_revision"], 2)
+            self.assertEqual(v2["supersedes"]["sha256"], SIGNED_V1[1])
+        v1 = signed(SIGNED_V1)
+        if v1 is not None:
+            with self.assertRaises(ValueError):
+                self.resources.budget_limits(v1)
 
     def refused(self, mutate):
         doc = amendment()
@@ -65,10 +141,23 @@ class BudgetAmendment(unittest.TestCase):
             self.resources.budget_limits(doc)
 
     def test_omitting_failed_source_charges_is_refused(self):
-        def omit(doc):
-            doc["source"].update(failed_trial_charged_bytes=0, prior_effective_bytes=821491388,
-                                 additional_bytes=0, cumulative_limit_bytes=1115551932)
-        self.refused(omit)
+        def omit_20261011(doc):
+            doc["source"].update(failed_trial_charged_bytes=0, prior_effective_bytes=858248956,
+                                 additional_bytes=36757568, cumulative_limit_bytes=1152309500)
+        self.refused(omit_20261011)
+
+        def omit_attempt2(doc):
+            doc["source"].update(failed_trial_2_charged_bytes=0, prior_effective_bytes=895006524,
+                                 additional_bytes=73515136, cumulative_limit_bytes=1189067068)
+        self.refused(omit_attempt2)
+
+        def drop_attempt2_key(doc):
+            del doc["source"]["failed_trial_2_charged_bytes"]
+        self.refused(drop_attempt2_key)
+
+        def prior_without_attempt2(doc):
+            doc["source"].update(prior_effective_bytes=895006524)
+        self.refused(prior_without_attempt2)
 
     def test_unsigned_or_self_signed_amendment_is_refused(self):
         self.refused(lambda d: d.update(status="PROPOSED_PENDING_SIGNOFF"))
@@ -85,7 +174,8 @@ class BudgetAmendment(unittest.TestCase):
         self.refused(lambda d: d["source"].update(refunds=True))
         self.refused(lambda d: d["source"].update(downloads=1))
         self.refused(lambda d: d["source"].update(fresh_allowance_bytes=220545408))
-        self.refused(lambda d: d["source"].update(prior_effective_bytes=float(895006524)))
+        self.refused(lambda d: d["source"].update(prior_effective_bytes=float(931764092)))
+        self.refused(lambda d: d["source"].update(failed_trial_2_charged_bytes=float(36757568)))
 
     def test_scratch_refund_or_margin_is_refused(self):
         def refund(doc):
@@ -97,6 +187,53 @@ class BudgetAmendment(unittest.TestCase):
             doc["scratch"]["cumulative_maximum_bytes"] += 1
         self.refused(margin)
         self.refused(lambda d: d["scratch"].update(refunds=True))
+
+
+# Retained-output carry for the next attempt (coastal_four128_prepare.py
+# --prior-retained-bytes). Counted per preserved managed-output.json ledger as
+# complete entries' actual_bytes plus reserved entries still open (T08-FIX rule).
+MISSIONS = Path.home() / "skippercast-data/2026-10-07-pge-south/outputs/t08-four128-20261019"
+PRIOR_RETAINED_BASE = 40773417
+RETAINED_CAP = 167772160
+TRIAL_OUTPUT_TOTAL = 33554432
+ATTEMPT_LEDGERS = {  # ledger sha256, complete actual bytes, open reserved bytes
+    "mission-attempt1-failed-init-slice":
+        ("01bf091aaffb17db9f70cdcc2030d51a136aad28680d938e5ba5aa2d42f6074f", 183752, 36864),
+    "mission-attempt2-failed-native-bootstrap-missing":
+        ("15b3d9c14a9188cb98e9e7b6404c15787c811e1dde625a600ad6c281a9bd115a", 254423, 4194304),
+}
+NEW_PRIOR_RETAINED = 45442760
+
+
+def charged(ledger):
+    files = ledger["files"].values()
+    if any(e["state"] not in ("complete", "reserved") for e in files):
+        raise ValueError("unknown managed entry state")
+    complete = sum(e["actual_bytes"] for e in files if e["state"] == "complete")
+    reserved = sum(e["bytes"] for e in files if e["state"] == "reserved")
+    return complete, reserved
+
+
+class RetainedOutputCarry(unittest.TestCase):
+    def test_new_prior_carries_both_failed_attempts(self):
+        total = sum(complete + reserved for _, complete, reserved in ATTEMPT_LEDGERS.values())
+        self.assertEqual(total, 220616 + 4448727)
+        self.assertEqual(NEW_PRIOR_RETAINED, PRIOR_RETAINED_BASE + total)
+        self.assertLessEqual(NEW_PRIOR_RETAINED + TRIAL_OUTPUT_TOTAL, RETAINED_CAP)
+
+    def test_attempt_ledgers_on_this_machine(self):
+        """Recompute from the preserved ledgers when present (read-only; CI uses the pins)."""
+        for name, (sha256, complete, reserved) in ATTEMPT_LEDGERS.items():
+            path = MISSIONS / name / "managed-output.json"
+            if not path.is_file():
+                continue
+            data = path.read_bytes()
+            with self.subTest(attempt=name):
+                self.assertEqual(hashlib.sha256(data).hexdigest(), sha256)
+                ledger = json.loads(data)
+                self.assertEqual(charged(ledger), (complete, reserved))
+                self.assertEqual(ledger["plan"]["prior_retained_bytes"], PRIOR_RETAINED_BASE)
+                self.assertEqual(ledger["plan"]["cumulative_cap_bytes"], RETAINED_CAP)
 
 
 class RuntimeBindsAmendment(unittest.TestCase):
@@ -116,31 +253,35 @@ class RuntimeBindsAmendment(unittest.TestCase):
         self.assertFalse(hasattr(runtime, "PRIOR_SOURCE"))
         self.assertFalse(hasattr(runtime, "SOURCE_LIMIT"))
         text = (SCRIPTS / "coastal_four128_runtime.py").read_text()
-        for literal in ("821491388", "1115551932", "2147483648"):
+        for literal in ("821491388", "1115551932", "2147483648", "931764092", "1225824636"):
             self.assertNotIn(literal, text)
         prepare = (SCRIPTS / "coastal_four128_prepare.py").read_text()
-        for literal in ("821491388", "1115551932"):
+        for literal in ("821491388", "1115551932", "931764092", "1225824636"):
             self.assertNotIn(literal, prepare)
 
     def test_grant_must_match_signed_amendment(self):
         runtime = self.runtime()
-        ref = dict(path="metadata/four128-budget-amendment.json", contract="coastal-four128-budget-amendment-v1",
+        ref = dict(path="metadata/four128-budget-amendment-v2.json", contract="coastal-four128-budget-amendment-v1",
                    bytes=1, sha256="0" * 64)
-        grant = dict(approved_budget_amendment=ref, prior_effective_bytes=895006524,
-                     prior_effective_source_bytes=895006524, cumulative_limit_bytes=1189067068,
+        grant = dict(approved_budget_amendment=ref, prior_effective_bytes=931764092,
+                     prior_effective_source_bytes=931764092, cumulative_limit_bytes=1225824636,
                      source_volume_cap_bytes=294060544)
         with mock.patch.object(runtime, "metadata_document", return_value=amendment()) as read:
             limits = runtime.limits_for(grant)
             read.assert_called_once_with(runtime.R, ref, "coastal-four128-budget-amendment-v1")
-            self.assertEqual(limits["source_limit_bytes"], 1189067068)
-            for key, value in (("prior_effective_bytes", 821491388),
-                               ("prior_effective_source_bytes", 821491388),
-                               ("cumulative_limit_bytes", 1115551932),
+            self.assertEqual(limits["source_limit_bytes"], 1225824636)
+            for key, value in (("prior_effective_bytes", 895006524),
+                               ("prior_effective_source_bytes", 895006524),
+                               ("cumulative_limit_bytes", 1189067068),
                                ("source_volume_cap_bytes", 220545408)):
                 stale = copy.deepcopy(grant)
                 stale[key] = value
                 with self.subTest(key=key), self.assertRaisesRegex(ValueError, "signed budget amendment"):
                     runtime.limits_for(stale)
+        # A grant still bound to the revision-1 amendment is refused outright.
+        with mock.patch.object(runtime, "metadata_document", return_value=amendment_v1()):
+            with self.assertRaises(ValueError):
+                runtime.limits_for(grant)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """Private ordered live controls. No native dispatch without parent release command."""
-import argparse,json,os,sys,time,hashlib,subprocess
+import argparse,json,os,stat,sys,time,hashlib,subprocess
 from pathlib import Path
 # Mission root, code root and interpreter were pinned to the 2026-10-11 attempt.
 # A fresh run names its own (absent) mission root and the exact checkout/venv it
@@ -253,6 +253,7 @@ def supplied(path):
     if set(d)!={'path','bytes','sha256','contract'}:raise ValueError('exact descriptor')
     load(R,d,contract=d['contract']);return d
 def preflight():
+    native_worker_ready()
     d,grant=index();limits=limits_for(grant)
     now=time.time()
     p=prepare(R,d['grant'],d['requests'],start_epoch=now,deadline_epoch=now+3600,
@@ -598,9 +599,33 @@ def fresh_run_identity():
         raise ValueError('trial scratch already exists; preserve it and choose a fresh run tag')
     return True
 
+def native_worker_ready():
+    """The native stages can start: same checks the supervisor and worker make first.
+
+    Attempt 1 of 2026-10-19 died when the runner's source guard refused gitignored
+    __pycache__ under the code root; attempt 2 died at A-acquire because the native
+    worker bootstrap was absent. Both are checked here before any clock or receipt."""
+    package=W/'src/skippercast'
+    bootstrap=package/'coastal/authenticated_v1/bootstrap.py'
+    try:info=os.lstat(bootstrap)
+    except FileNotFoundError:raise ValueError('native worker bootstrap missing: '+str(bootstrap)) from None
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError('native worker bootstrap must be a regular file: '+str(bootstrap))
+    # coordinator/authenticated.py argv_for launches the bootstrap beside its own package.
+    coordinator=Path(os.path.abspath(sys.modules['skippercast.coastal.coordinator.authenticated'].__file__))
+    if Path(os.path.abspath(coordinator.parent.parent/'authenticated_v1/bootstrap.py'))!=Path(os.path.abspath(bootstrap)):
+        raise ValueError('coordinator would launch a native worker outside the pinned code root')
+    # The exact guard _runner_bootstrap.py and bootstrap.py run, loaded without importing the project.
+    guard=package/'coastal/_source_bootstrap.py'
+    namespace={'__name__':'_coastal_source_guard'}
+    exec(compile(guard.read_bytes(),str(guard),'exec'),namespace)
+    namespace['guard_project_source'](package)
+    return str(bootstrap)
+
 def run():
     # External observer owns no scientific subprocesses; all driver/phase supervisors are in SLICE.
     fresh_run_identity()
+    native_worker_ready()
     _,grant=index();limits=limits_for(grant);audit();bound=initial_capacity()
     if (N/'control/run-started.json').exists() or (N/'control/outer-clock.json').exists():
         raise ValueError('finite batch already attempted; no retry or clock reset')

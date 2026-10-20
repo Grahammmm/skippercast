@@ -34,13 +34,19 @@ ENV = {"PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
 # reservation. Those charges stay charged: a fresh eight-copy trial needs explicit
 # extra authority, recorded in one signed amendment the harness reads instead of
 # constants. Floors refuse any prior that omits the failed attempt.
+# Revision 2 of the amendment (2026-10-19) adds attempt 2 of the fresh 2026-10-19
+# trial: it failed at A-acquire (native worker bootstrap absent) after reserving
+# one source admission (36,757,568 B) that stays charged as uncertain. Attempt 1
+# charged no source bytes. A revision-1 amendment, which omits that charge, is
+# refused.
 BUDGET_AMENDMENT = "coastal-four128-budget-amendment-v1"
 AMENDMENT_STATUS = "SIGNED_DELEGATED_BUDGET_AUTHORITY"
 AMENDMENT_SIGNERS = ("fable-2nd-look", "astra-orchestrator")
 HARNESS_AUTHOR = "opus-coder"
 PRE_FAILURE_SOURCE_PRIOR = 821491388
 FAILED_TRIAL_SOURCE_CHARGED = 73515136
-SOURCE_PRIOR_FLOOR = PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED
+FAILED_TRIAL2_SOURCE_CHARGED = 36757568
+SOURCE_PRIOR_FLOOR = PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED + FAILED_TRIAL2_SOURCE_CHARGED
 RECORDED_SOURCE_LIMIT = 1115551932
 FRESH_SOURCE = 294060544
 SCRATCH_PRIOR_FLOOR = 1616905649
@@ -70,15 +76,17 @@ def budget_limits(doc):
     source, scratch = doc.get("source"), doc.get("scratch")
     if not isinstance(source, dict) or not isinstance(scratch, dict):
         raise ValueError("source and scratch accounting required")
-    keys = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "prior_effective_bytes",
-            "previous_cumulative_limit_bytes", "additional_bytes", "cumulative_limit_bytes",
-            "fresh_allowance_bytes")
+    keys = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
+            "prior_effective_bytes", "previous_cumulative_limit_bytes", "additional_bytes",
+            "cumulative_limit_bytes", "fresh_allowance_bytes")
     if any(not _exact_int(source.get(k)) for k in keys):
         raise ValueError("exact integer source accounting required")
     prior, cap = source["prior_effective_bytes"], source["cumulative_limit_bytes"]
     if (source["pre_failure_prior_bytes"] != PRE_FAILURE_SOURCE_PRIOR
             or source["failed_trial_charged_bytes"] != FAILED_TRIAL_SOURCE_CHARGED
-            or prior != source["pre_failure_prior_bytes"] + source["failed_trial_charged_bytes"]
+            or source["failed_trial_2_charged_bytes"] != FAILED_TRIAL2_SOURCE_CHARGED
+            or prior != (source["pre_failure_prior_bytes"] + source["failed_trial_charged_bytes"]
+                         + source["failed_trial_2_charged_bytes"])
             or prior < SOURCE_PRIOR_FLOOR
             or source["previous_cumulative_limit_bytes"] != RECORDED_SOURCE_LIMIT
             or source["fresh_allowance_bytes"] != FRESH_SOURCE

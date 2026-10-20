@@ -94,5 +94,78 @@ class FreshRunIdentity(unittest.TestCase):
         self.assertIn("--slice=skippercast-four128approved20261019t08.slice", argv)
 
 
+class NativeWorkerPreflight(unittest.TestCase):
+    """preflight() and run() refuse a code root whose native stages cannot start,
+    before any clock or receipt: missing or linked worker bootstrap (attempt 2) or
+    project bytecode the supervisor's source guard refuses (attempt 1)."""
+
+    def setUp(self):
+        self.runtime = _load("coastal_four128_runtime", {
+            "SKIPPERCAST_FOUR128_RUN_TAG": "20261019t08",
+            "SKIPPERCAST_FOUR128_MISSION_ROOT": "/nonexistent/outputs/t08-four128-20261019",
+            "SKIPPERCAST_FOUR128_CODE_ROOT": str(ROOT),
+        })
+        self.tmp = tempfile.TemporaryDirectory()
+        code = Path(self.tmp.name) / "code"
+        package = code / "src" / "skippercast"
+        lane = package / "coastal" / "authenticated_v1"
+        lane.mkdir(parents=True)
+        source = ROOT / "src" / "skippercast" / "coastal"
+        for relative in ("_source_bootstrap.py", "authenticated_v1/bootstrap.py",
+                         "coordinator/authenticated.py"):
+            target = package / "coastal" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((source / relative).read_bytes())
+        self.code, self.package, self.bootstrap = code, package, lane / "bootstrap.py"
+        self.runtime.W = code
+        self.runtime.SCRATCH = Path(self.tmp.name) / "absent-scratch"
+        coordinator = sys.modules["skippercast.coastal.coordinator.authenticated"]
+        self.pinned = mock.patch.object(coordinator, "__file__",
+                                        str(package / "coastal" / "coordinator" / "authenticated.py"))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+        for module in ("coastal_four128_runtime", "coastal_four128_resources"):
+            sys.modules.pop(module, None)
+
+    def test_source_only_tree_with_bootstrap_is_ready(self):
+        with self.pinned:
+            self.assertEqual(self.runtime.native_worker_ready(), str(self.bootstrap))
+
+    def test_missing_bootstrap_is_refused(self):
+        self.bootstrap.unlink()
+        with self.pinned, self.assertRaisesRegex(ValueError, "native worker bootstrap missing"):
+            self.runtime.native_worker_ready()
+
+    def test_linked_bootstrap_is_refused(self):
+        real = self.bootstrap.with_name("real-bootstrap.txt")
+        self.bootstrap.rename(real)
+        self.bootstrap.symlink_to(real)
+        with self.pinned, self.assertRaisesRegex(ValueError, "must be a regular file"):
+            self.runtime.native_worker_ready()
+
+    def test_project_bytecode_is_refused(self):
+        (self.package / "coastal" / "__pycache__").mkdir()
+        with self.pinned, self.assertRaisesRegex(ValueError, "compiled bytecode"):
+            self.runtime.native_worker_ready()
+
+    def test_coordinator_outside_code_root_is_refused(self):
+        with mock.patch.object(sys.modules["skippercast.coastal.coordinator.authenticated"], "__file__",
+                               str(Path(self.tmp.name) / "elsewhere/skippercast/coastal/coordinator/authenticated.py")):
+            with self.assertRaisesRegex(ValueError, "outside the pinned code root"):
+                self.runtime.native_worker_ready()
+
+    def test_run_and_preflight_check_the_worker_before_any_receipt(self):
+        self.bootstrap.unlink()
+        runtime = self.runtime
+        with self.pinned, mock.patch.object(runtime, "index", side_effect=AssertionError("index reached")), \
+                mock.patch.object(runtime, "put", side_effect=AssertionError("receipt written")):
+            with self.assertRaisesRegex(ValueError, "native worker bootstrap missing"):
+                runtime.run()
+            with self.assertRaisesRegex(ValueError, "native worker bootstrap missing"):
+                runtime.preflight()
+        self.assertFalse(runtime.SCRATCH.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
