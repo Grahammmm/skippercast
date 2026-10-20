@@ -182,6 +182,14 @@ test.describe('offline', () => {
   test.use({serviceWorkers: 'allow'});
   test('a region saved from v2 opens offline from its pack, the app included', async ({page, context, pageErrors, v2, isMobile}) => {
     await stubLiveFeeds(page);
+    const tideId = '9000002';
+    await page.addInitScript(id => localStorage.setItem('skippercast-tide-station-v1.morro-bay', id), tideId);
+    await page.route('**/mdapi/prod/webapi/stations.json?*', route => route.fulfill({json: {stations: [
+      {id: tideId, name: 'Offline fixture station', lat: 35.36, lng: -120.85, type: 'R'},
+    ]}}));
+    await page.route('**/api/prod/datagetter?*', route => route.fulfill({json: {predictions: [
+      {t: '2026-10-08 21:00', v: '2.3', type: 'H'}, {t: '2026-10-08 22:00', v: '1.2'},
+    ]}}));
     await v2.open('app', AREA);
     await (await accountMenu(page, isMobile)).getByRole('button', {name: 'Save for offline'}).click();
     const dialog = page.getByRole('dialog', {name: 'Save for offline'});
@@ -190,6 +198,15 @@ test.describe('offline', () => {
     await v2.a11y('v2-offline');
     await dialog.getByRole('button', {name: `Save ${NAME} for offline`}).click();
     await expect(dialog.getByRole('status').first()).toContainText(`Saved ${NAME} · `, {timeout: 90_000});
+    const tideKeys = await page.evaluate(async id => {
+      const cacheName = (await caches.keys()).find(name => name.startsWith('sc-pack-morro-bay-'));
+      if (!cacheName) return [];
+      return (await (await caches.open(cacheName)).keys()).map(request => request.url)
+        .filter(url => new URL(url).hostname === 'api.tidesandcurrents.noaa.gov' && new URL(url).pathname.endsWith('/datagetter'))
+        .map(url => new URL(url).searchParams).filter(params => params.get('station') === id)
+        .map(params => params.get('interval')).sort();
+    }, tideId);
+    expect(tideKeys).toEqual(['6', 'hilo']);
     await expect(dialog.locator('.app-offline-list li').first()).toContainText(new RegExp(`^${NAME}Saved (just now|\\d+ min ago) · `));
     await expect(dialog.locator('.app-offline-list li').first()).toContainText(/of 95 chart tiles · \d+ of 95 base map tiles \(zoom 8–12\)/);
     // The save registered the worker; once it controls the page, the pack answers offline.
