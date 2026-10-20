@@ -18,6 +18,8 @@
 // age and holds or resumes the loop (FE-22, web/map/clouds.ts).
 // Water temp (FE-16) gives the drawn analysis's range in whole °F, its product,
 // date and age, and the basis with its error, or why nothing draws.
+// Temp contrast (CI6-03) gives its fixed scale in °F per nautical mile, its product,
+// date and age, and the basis with its support rule, or why nothing draws.
 // Swell (FE-17) gives the drawn hour's heights, periods and direction, its fixed
 // colour scale, the model with its run, age and valid hour as a model forecast,
 // and the basis, or why nothing draws.
@@ -52,6 +54,7 @@ import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
+import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellPartition, swellState} from '../map/swell.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
@@ -152,6 +155,20 @@ function WaterTempRow() {
       <Popover iconOnly summary="Water temp basis">{s.basis}</Popover>
       {a ? <p class="app-legend-note ui-mono" data-stamp="water-temp">{a.product} · {a.stamp}</p> : null}
       {s.reason ? <p class="app-legend-note" data-reason="water-temp">{s.reason}</p> : null}
+    </li>
+  );
+}
+
+/** The Temp contrast row (on the Chart): the fixed scale in °F per nautical mile, product and age, or why nothing draws. */
+function ContrastRow() {
+  const s = contrastState.value, d = s.drawn;
+  return (
+    <li class="app-legend-sst-contrast">
+      Temp contrast
+      <Popover iconOnly summary="Temp contrast basis">{s.basis}</Popover>
+      {d ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="sst-contrast">{CONTRAST_SCALE[0]}<span class="app-swatch" data-layer="sst-contrast" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{CONTRAST_SCALE[1]}+ °F per nautical mile</p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-contrast">{d.product} · {d.stamp}</p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-contrast">{s.reason}</p> : null}
     </li>
   );
 }
@@ -274,6 +291,7 @@ export function Legend() {
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
           : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
+          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} />
           : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
