@@ -3,21 +3,22 @@
 // the brief and the Conditions view already load (/api/forecast, web/conditions.ts).
 // The feed is the only source.
 //
-// - Step 0, gridded or point series: a region's forecast is gridded when its
-//   forecast points form a lattice that packages/coast surfaceField accepts.
-//   That is the Swell layer's own test (web/map/forecast-grid.ts parseForecast),
-//   and today Morro Bay (3 × 3 at 0.25°) and Cambria (2 × 2) pass it. Every
-//   other region has a few named points. For those the card says so, shows the
-//   regional values at the point the brief uses (named), and stops there: no
-//   value is presented as the mark's own.
-// - Nearest cell: every model sample in the feed names the model cell it came
-//   from (the sampler's dominant cell, docs/forecast-data.md), and every WCOFS
-//   sample names its ocean cell. For a gridded region each model reads the
-//   sample whose cell is nearest the mark, with ties going to the sample
-//   requested nearer the mark. A cell more than 1.5 grid lengths from the mark
-//   is not the mark's cell (the pipeline's WCOFS rule, intelligence.py
-//   forecast_currents), so that row is a gap. The card names the model, its
-//   grid spacing and the distance from the mark to the sampled cell.
+// - Step 0, gridded or point series: the feed's model wind and seas (GFS,
+//   GFS-Wave, IFS, WAM) are point series in every region. The sampler
+//   (server/model-api.js, docs/forecast-data.md) interpolates each model
+//   bilinearly between the four cells around each named forecast point; the
+//   latitude and longitude it reports are only the dominant cell's, and the
+//   value is not that cell's. Points that happen to form a lattice (Morro Bay,
+//   Cambria) are still interpolated points, not model cells. So the card says
+//   so, shows those rows at the regional point the brief reads, named, and
+//   stops there: no model value is placed at the mark or at a cell.
+// - Surface current: the feed's NOAA WCOFS samples are native ocean cells,
+//   each with its own position (the pipeline keeps the nearest ocean cell's
+//   own value, intelligence.py forecast_currents). The current row reads the
+//   sampled cell nearest the mark when one lies within 1.5 grid lengths of it
+//   (the pipeline's WCOFS reach) and names that cell's distance from the
+//   mark. Otherwise it reads the regional point's sample, named, as the model
+//   rows do.
 // - Families: NOAA (GFS wind, GFS-Wave seas) and ECMWF (IFS wind, WAM seas),
 //   v1's two families as the Conditions view names them, each read on its
 //   own and never averaged. The surface current is NOAA WCOFS for both.
@@ -31,25 +32,24 @@
 // Erasable syntax only: tests/test_mark_forecast.mjs imports it by type stripping.
 import {FAMILIES, MODEL_NAMES, type ConditionsForecast, type Family} from '../conditions.ts';
 import {compass} from '../landing/readings.ts';
-import {parseForecast, sample} from '../map/forecast-grid.ts';
+import {sample} from '../map/forecast-grid.ts';
 import {forecastTime} from '../map/frames.ts';
 
 const HOUR = 3_600_000;
-const KM_PER_DEGREE = 111.2;
-/** A cell farther than this many grid lengths from the mark is not the mark's cell. */
+/** A WCOFS cell farther than this many grid lengths from the mark is not the mark's cell. */
 export const CELL_REACH = 1.5;
 
-/** Each model's grid spacing as docs/forecast-data.md states it, and in km for the reach rule (latitude degrees). */
-export const MODEL_GRIDS: Readonly<Record<string, {readonly spacing: string; readonly km: number}>> = {
-  gfs_global: {spacing: 'about 13 km', km: 13},
-  ncep_gfswave016: {spacing: '0.16°', km: 0.16 * KM_PER_DEGREE},
-  ecmwf_ifs025: {spacing: '0.25°', km: 0.25 * KM_PER_DEGREE},
-  ecmwf_wam: {spacing: '0.25°', km: 0.25 * KM_PER_DEGREE},
+/** Each model's grid spacing as docs/forecast-data.md states it. */
+export const MODEL_GRIDS: Readonly<Record<string, string>> = {
+  gfs_global: 'about 13 km',
+  ncep_gfswave016: '0.16°',
+  ecmwf_ifs025: '0.25°',
+  ecmwf_wam: '0.25°',
 };
 export const CURRENT_MODEL = 'NOAA WCOFS';
 
 export interface LatLon {readonly lat: number; readonly lon: number}
-/** One sample the feed offers: the forecast point it was requested at and the cell it came from. */
+/** One native-cell sample the feed offers: the forecast point it was published for and the cell it is. */
 export interface Candidate {readonly index: number; readonly point: string; readonly requested: LatLon; readonly cell: LatLon}
 
 /** Great-circle distance in km (the pipeline's haversine, R = 6371 km). */
@@ -60,7 +60,7 @@ export function distanceKm(a: LatLon, b: LatLon): number {
 }
 
 /**
- * The candidate whose cell is nearest `mark`, within `reachKm`; ties (several points sampled from one cell)
+ * The candidate whose cell is nearest `mark`, within `reachKm`; ties (one cell published for several points)
  * go to the one requested nearer the mark, then to feed order. Null when no cell is within reach.
  */
 export function nearestCell<C extends Candidate>(candidates: readonly C[], mark: LatLon, reachKm: number): (C & {readonly km: number}) | null {
@@ -86,7 +86,7 @@ export interface MarkReading {
   readonly gap: string;
   /** The forecast point whose sample was read. */
   readonly point: string | null;
-  /** The sampled cell and its distance from the mark (gridded regions only). */
+  /** The native cell read and its distance from the mark: WCOFS current only, when a sampled cell is within reach. */
   readonly cell: (LatLon & {readonly km: number}) | null;
   /** The listed hour read, epoch ms; null for a gap. */
   readonly validAt: number | null;
@@ -94,12 +94,12 @@ export interface MarkReading {
   readonly issuedAt: number | null;
 }
 export interface MarkForecast {
-  /** Step 0: whether the region's forecast is a grid or a few named points. */
-  readonly kind: 'grid' | 'points';
+  /** Step 0 for model wind and seas: the feed carries point series (interpolated at named points), in every region. */
+  readonly kind: 'points';
   /** The dock's hour, epoch ms. */
   readonly at: number;
-  /** For point series: the regional point the values are read at. */
-  readonly point: string | null;
+  /** The regional point the model rows are read at: the point the brief reads. */
+  readonly point: string;
   readonly families: readonly {readonly family: Family; readonly label: string; readonly rows: readonly MarkReading[]}[];
   readonly current: MarkReading;
 }
@@ -165,35 +165,31 @@ function modelValue(label: 'Wind' | 'Seas', series: unknown, t: number, end: num
   return `${height.toFixed(1)} ft · ${Math.round(period)} s${from === null ? '' : ` from ${compass(from)} ${Math.round(from)}°`}`;
 }
 
-/** One model's row: at the sampled cell nearest the mark (grid), or at the regional point (points). */
-function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly {id: string; lat: number; lon: number}[], where: {mark: LatLon} | {point: number},
+/**
+ * One model's row at the regional forecast point `index`: the sampler's interpolation there. The series' reported
+ * latitude and longitude (the dominant cell) are never read: the value is the point's, not that cell's.
+ */
+function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly {id: string; lat: number; lon: number}[], index: number,
   at: number, now: number, tz: string): MarkReading {
-  const name = MODEL_NAMES[id] ?? id, grid = MODEL_GRIDS[id]?.spacing ?? 'unstated';
+  const name = MODEL_NAMES[id] ?? id, grid = MODEL_GRIDS[id] ?? 'unstated', point = points[index]!.id;
   const m = f.models?.[id], data = Array.isArray(m?.data) && m.data.length === points.length ? m.data as unknown[] : null;
-  if (!data) return gapRow(label, name, grid, `the regional forecast carries no ${name} samples`);
+  if (!data) return gapRow(label, name, grid, `the regional forecast carries no ${name} samples`, {point});
   const issued = finite(m?.meta?.last_run_initialisation_time) ? m.meta.last_run_initialisation_time * 1000 : null;
   const end = finite(m?.meta?.data_end_time) ? m.meta.data_end_time : null;
-  let index: number, cell: MarkReading['cell'] = null;
-  if ('mark' in where) {
-    const candidates: Candidate[] = points.flatMap((p, i) => {
-      const s = data[i] as Series | null;
-      return s && finite(s.latitude) && finite(s.longitude) ? [{index: i, point: p.id, requested: {lat: p.lat, lon: p.lon}, cell: {lat: s.latitude, lon: s.longitude}}] : [];
-    });
-    const reach = CELL_REACH * (MODEL_GRIDS[id]?.km ?? 0), chosen = nearestCell(candidates, where.mark, reach);
-    if (!chosen) return gapRow(label, name, grid, `no ${name} cell lies within ${km1(reach)} km (1.5 grid lengths) of this mark`);
-    index = chosen.index; cell = {...chosen.cell, km: chosen.km};
-  } else index = where.point;
-  const point = points[index]!.id, times = (data[index] as Series | null)?.hourly?.time;
+  const times = (data[index] as Series | null)?.hourly?.time, retrieved = finite(f.retrieved) ? f.retrieved : NaN;
   const listed = Array.isArray(times) ? times.filter(finite).map(s => s * 1000) : [];
-  const t = issued === null ? null : forecastTime(listed, issued, finite(f.retrieved) ? f.retrieved : NaN, new Date(at), new Date(now));
-  if (t === null) return gapRow(label, name, grid, gateGap(name, listed, issued, finite(f.retrieved) ? f.retrieved : NaN, at, now, tz), {point, cell, issuedAt: issued});
+  const t = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
+  if (t === null) return gapRow(label, name, grid, gateGap(name, listed, issued, retrieved, at, now, tz), {point, issuedAt: issued});
   const value = modelValue(label, data[index], t / 1000, end);
-  if (value === null) return gapRow(label, name, grid, `the ${name} sample has no ${label === 'Wind' ? 'wind' : 'seas'} value for ${hourText(t, tz)}`, {point, cell, issuedAt: issued});
-  return {label, model: name, grid, value, gap: '', point, cell, validAt: t, issuedAt: issued};
+  if (value === null) return gapRow(label, name, grid, `the ${name} sample has no ${label === 'Wind' ? 'wind' : 'seas'} value for ${hourText(t, tz)}`, {point, issuedAt: issued});
+  return {label, model: name, grid, value, gap: '', point, cell: null, validAt: t, issuedAt: issued};
 }
 
-/** The surface current row from the feed's WCOFS samples: nearest cell to the mark (grid), or the regional point's sample (points). */
-function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: number}[], where: {mark: LatLon} | {point: number}, at: number, now: number, tz: string): MarkReading {
+/**
+ * The surface current row from the feed's WCOFS native-cell samples: the sampled cell nearest the mark within
+ * 1.5 grid lengths, else the regional point's own sample (named, no distance).
+ */
+function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: number}[], mark: LatLon, regional: number, at: number, now: number, tz: string): MarkReading {
   const c = f.currents, name = CURRENT_MODEL, resolution = finite(c?.resolution_km) ? c.resolution_km : null;
   const grid = resolution === null ? 'unstated' : `about ${km1(resolution)} km`;
   if (!c || c.status !== 'ok') return gapRow('Current', name, grid, `the regional forecast carries no ${name} surface-current forecast${typeof c?.status === 'string' && c.status !== 'missing' ? ` (${c.status})` : ''}`);
@@ -204,55 +200,42 @@ function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: num
     const index = points.findIndex(q => q.id === id);
     return {index, samples: index < 0 || !Array.isArray(list) ? [] : list.filter((s): s is number[] => Array.isArray(s) && s.length >= 5 && s.slice(0, 5).every(finite))};
   }).filter(p => p.index >= 0);
-  const pool = 'mark' in where ? samples : samples.filter(p => p.index === where.point);
-  const listed = [...new Set(pool.flatMap(p => p.samples.map(s => s[0]! * 1000)))].sort((a, b) => a - b);
-  const retrieved = finite(f.retrieved) ? f.retrieved : NaN;
+  const listed = [...new Set(samples.flatMap(p => p.samples.map(s => s[0]! * 1000)))].sort((a, b) => a - b);
+  const retrieved = finite(f.retrieved) ? f.retrieved : NaN, pointId = points[regional]!.id;
   const t = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
-  const pointId = 'point' in where ? points[where.point]?.id ?? null : null;
   if (t === null) return gapRow('Current', name, grid, gateGap(name, listed, issued, retrieved, at, now, tz), {point: pointId, issuedAt: issued});
-  const at_t = pool.flatMap(p => p.samples.filter(s => s[0]! * 1000 === t).map(s => ({index: p.index, point: points[p.index]!.id, s})));
-  let pick: {point: string; s: number[]; km?: number} | null;
-  if ('mark' in where) {
-    const reach = CELL_REACH * (resolution ?? 0);
-    const chosen = nearestCell(at_t.map(x => ({...x, requested: {lat: points[x.index]!.lat, lon: points[x.index]!.lon}, cell: {lat: x.s[1]!, lon: x.s[2]!}})), where.mark, reach);
-    if (!chosen) return gapRow('Current', name, grid, `no ${name} cell sampled for ${hourText(t, tz)} lies within ${km1(reach)} km (1.5 grid lengths) of this mark`, {issuedAt: issued});
-    pick = chosen;
-  } else pick = at_t[0] ?? null;
-  if (!pick) return gapRow('Current', name, grid, `the ${name} forecast has no sample at forecast point ${pointId} for ${hourText(t, tz)}`, {point: pointId, issuedAt: issued});
+  const at_t = samples.flatMap(p => p.samples.filter(s => s[0]! * 1000 === t).map(s => ({index: p.index, point: points[p.index]!.id, s})));
+  const reach = CELL_REACH * (resolution ?? 0);
+  const near = nearestCell(at_t.map(x => ({...x, requested: {lat: points[x.index]!.lat, lon: points[x.index]!.lon}, cell: {lat: x.s[1]!, lon: x.s[2]!}})), mark, reach);
+  const pick: {point: string; s: number[]; km?: number} | null = near ?? at_t.find(x => x.index === regional) ?? null;
+  if (!pick) return gapRow('Current', name, grid, `no ${name} cell sampled for ${hourText(t, tz)} lies within ${km1(reach)} km (1.5 grid lengths) of this mark, and forecast point ${pointId} has no sample then`, {point: pointId, issuedAt: issued});
   const [, lat, lon, speed, toward] = pick.s as [number, number, number, number, number];
   return {label: 'Current', model: name, grid, value: `${speed.toFixed(2)} kt toward ${Math.round(toward)}° true`, gap: '', point: pick.point,
     cell: pick.km === undefined ? null : {lat, lon, km: pick.km}, validAt: t, issuedAt: issued};
 }
 
-/** Step 0 for the loaded feed: 'grid' when its points form a lattice the Swell layer accepts, else 'points'; null without a feed. */
-export function forecastKind(feed: unknown, region: string): 'grid' | 'points' | null {
-  const f = parseForecast(feed, region);
-  return f ? (f.step ? 'grid' : 'points') : null;
-}
-
 /**
  * The forecast for a mark at `mark` and the dock's hour `at` (epoch ms), from the regional forecast `f` as the
- * brief loaded it; null without that region's feed.
+ * brief loaded it; null without that region's feed or its regional point.
  */
 export function markForecast(f: ConditionsForecast | null, region: string, mark: LatLon, at: number, now: number, tz: string): MarkForecast | null {
   const feed = f?.region === region ? f.feed as Feed | undefined : undefined;
-  const kind = feed ? forecastKind(feed, region) : null, points = feed ? feedPoints(feed) : null;
-  if (!f || !feed || !kind || !points) return null;
+  const points = feed && feed.region_id === region ? feedPoints(feed) : null;
+  if (!f || !feed || !points) return null;
   const regional = points.findIndex(p => p.id === f.point.id);
-  const where = kind === 'grid' ? {mark} : {point: regional};
-  if (kind === 'points' && regional < 0) return null;
+  if (regional < 0) return null;
   const families = (Object.keys(FAMILIES) as Family[]).map(family => ({
     family, label: FAMILIES[family].label,
-    rows: [modelRow('Wind', FAMILIES[family].wind, feed, points, where, at, now, tz), modelRow('Seas', FAMILIES[family].wave, feed, points, where, at, now, tz)],
+    rows: [modelRow('Wind', FAMILIES[family].wind, feed, points, regional, at, now, tz), modelRow('Seas', FAMILIES[family].wave, feed, points, regional, at, now, tz)],
   }));
-  return {kind, at, point: kind === 'points' ? f.point.id : null, families, current: currentRow(feed, points, where, at, now, tz)};
+  return {kind: 'points', at, point: f.point.id, families, current: currentRow(feed, points, mark, regional, at, now, tz)};
 }
 
-/** A row's source line: model, grid, where it was sampled, and its hour when that differs from the dock's. */
+/** A row's source line: model, grid, where it was read, and its hour when that differs from the dock's. */
 export function readingSource(r: MarkReading, at: number, tz: string): string {
   return [
     `${r.model} · ${r.grid} grid`,
-    r.cell ? `cell ${km1(r.cell.km)} km from this mark` : r.point ? `point ${r.point}` : '',
+    r.cell ? `cell ${km1(r.cell.km)} km from this mark` : r.point ? `forecast point ${r.point}` : '',
     r.validAt !== null && r.validAt !== at ? `valid ${hourText(r.validAt, tz)}` : '',
     r.issuedAt !== null && r.value !== null ? `run ${runText(r.issuedAt, tz)}` : '',
   ].filter(Boolean).join(' · ');

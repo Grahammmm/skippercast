@@ -1,10 +1,10 @@
-// The mark card's forecast (BP CI6-06): wind, seas and surface current at a
-// reef mark or a ranked trip spot for the dock's hour, from the regional
-// forecast the brief loads (web/brief/mark-forecast.ts has the rules). A
-// gridded region reads each model at the sampled cell nearest the mark and
-// names the model, its grid and that cell's distance. A region with only named
-// points says so and shows the regional point's values, named. NOAA and ECMWF
-// keep their own rows. A gap reads "—" with its reason.
+// The mark card's forecast (BP CI6-06): wind, seas and surface current for a
+// reef mark or a ranked trip spot at the dock's hour, from the regional
+// forecast the brief loads (web/brief/mark-forecast.ts has the rules). Model
+// wind and seas are point series in every region, so the block says so and
+// shows them at the regional point, named. The WCOFS surface current reads the
+// sampled ocean cell nearest the mark, with its distance, when one is in
+// reach. NOAA and ECMWF keep their own rows. A gap reads "—" with its reason.
 import {useEffect} from 'preact/hooks';
 import {regionInfo, zone} from '../app/App.tsx';
 import {dockState} from '../app/TimeDock.tsx';
@@ -12,11 +12,11 @@ import {Popover} from '../ui/Popover.tsx';
 import {ensureRegionalForecast, regionalForecast} from './Brief.tsx';
 import {CELL_REACH, hourText, markForecast, readingSource, type LatLon, type MarkReading} from './mark-forecast.ts';
 
-const BASIS_GRID = `Model forecasts from the regional forecast feed, read at the sampled model cell nearest this mark; a cell more than ${CELL_REACH} grid lengths away is left blank. `
-  + 'Each value is a model grid cell, never a measurement at the mark. The two model families keep their own rows and are never averaged. '
+const basis = (point: string) => 'The regional forecast feed carries model wind and seas as series interpolated at a few named points, '
+  + `so those rows are forecast point ${point}'s values, the point the brief reads, not values at this mark or at a model cell. `
+  + `The NOAA WCOFS surface current is published as ocean-cell samples: the row reads the sampled cell nearest this mark when one lies within ${CELL_REACH} grid lengths, `
+  + `otherwise forecast point ${point}'s sample. The two model families keep their own rows and are never averaged. `
   + 'A run older than 36 hours, a feed retrieved over 6 hours ago or a missing value leaves a gap.';
-const BASIS_POINTS = 'This region\'s forecast feed samples a few named points, so the values are the regional point\'s, the same point the brief reads. '
-  + 'The two model families keep their own rows and are never averaged. A run older than 36 hours, a feed retrieved over 6 hours ago or a missing value leaves a gap.';
 
 function Row({name, r, at, tz}: {name: string; r: MarkReading; at: number; tz: string}) {
   return (
@@ -36,17 +36,15 @@ export function MarkForecast({place, now = new Date()}: {place: LatLon; now?: Da
   const tz = zone(), at = dockState(now, tz).at, f = markForecast(regionalForecast.value, info.id, place, at, now.getTime(), tz);
   return (
     <section class="app-mark-forecast" aria-label="Forecast at this mark">
-      <p class="app-mark-forecast-head"><span class="ui-eyebrow">{f?.kind === 'points' ? 'Regional forecast' : 'Forecast here'}</span> <span class="ui-mono">valid {hourText(at, tz)}</span></p>
+      <p class="app-mark-forecast-head"><span class="ui-eyebrow">Regional forecast</span> <span class="ui-mono">valid {hourText(at, tz)}</span></p>
       {!f ? <p class="app-mark-forecast-note">The regional forecast has not loaded, so these rows are empty.</p> : (
         <>
-          {f.kind === 'points'
-            ? <p class="app-mark-forecast-note">This region's forecast is a few named points, with no grid to sample at this mark. Values at forecast point {f.point}.</p>
-            : null}
+          <p class="app-mark-forecast-note">This region's wind and seas forecast is a few named points, with no model grid to sample at this mark. Wind and seas at forecast point {f.point}.</p>
           <dl>
             {f.families.flatMap(family => family.rows.map(r => <Row key={`${family.family}-${r.label}`} name={`${family.label} ${r.label.toLowerCase()}`} r={r} at={at} tz={tz} />))}
             <Row name="Surface current" r={f.current} at={at} tz={tz} />
           </dl>
-          <Popover>{f.kind === 'points' ? BASIS_POINTS : BASIS_GRID}</Popover>
+          <Popover>{basis(f.point)}</Popover>
         </>
       )}
     </section>

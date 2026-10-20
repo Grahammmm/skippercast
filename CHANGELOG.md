@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The mark card shows the forecast at a reef mark or ranked trip spot for the selected hour: NOAA and ECMWF wind and seas plus the WCOFS surface current, each with its model, grid spacing and the distance to the sampled cell. Regions whose forecast is only a few named points show the regional point's values, named, instead.
+- The mark card shows the forecast for a reef mark or ranked trip spot at the selected hour. NOAA and ECMWF wind and seas each get their own row, labelled with model and grid spacing. The forecast feed only has those at a few named points, so the card says so and shows the regional point's values, naming the point. The NOAA WCOFS surface current comes from the sampled ocean cell nearest the mark, with that cell's distance, when one is within 1.5 grid lengths.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
