@@ -2,10 +2,34 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import {planTiles, tileURL, tileKey, packRequests, relativeTime, formatBytes, bannerText, installHint, isIOS, stampedHeaders,
-  SHARED_FILES, TILE_CAP, ENC_ORIGIN} from '../dist/offline-core.js';
+  SHARED_FILES, TILE_CAP, ENC_ORIGIN, planBasemap} from '../dist/offline-core.js';
 
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const morro = JSON.parse(read('../dist/regions/morro-bay/region.json'));
+
+test('Morro Bay pack coverage: swell forecast, chart tiles and basemap; no prefetched SST or current tiles', () => {
+  const origin = 'https://skippercast.test';
+  const urls = packRequests({origin, region: morro, shared: SHARED_FILES});
+  assert.ok(urls.includes(`${origin}/api/forecast?region=morro-bay`), 'swell is in the saved forecast bundle, still subject to its age gate');
+  assert.ok(urls.includes(morro.habitat_feed), 'the manifest is listed, not its referenced ocean tiles');
+  assert.equal(urls.some(u => /habitat-tiles\//.test(u)), false, 'neither SST nor current tiles are prefetched');
+  assert.equal(urls.some(u => /\/api\/coast\//.test(u)), false, 'Morro Bay ocean readings use the separate Coastal readings save');
+  assert.ok(planTiles(morro.bounds).tiles.length > 0, 'chart tiles are planned');
+  assert.ok(planBasemap(morro.bounds).tiles.length > 0, 'basemap ranges are planned');
+  const pack = read('../dist/offline-pack.js'), trip = read('../web/trip.ts');
+  assert.match(pack, /store\(tileURL\(t, layers\), tileKey\(/, 'the chart plan is saved');
+  assert.match(trip, /new PMTiles\(rangeRecorder\(/, 'the basemap reader saves ranges');
+  assert.match(trip, /reader\.getZxy\(t\.z, t\.x, t\.y/, 'every planned basemap tile is requested');
+  assert.doesNotMatch(trip, /habitat-tiles|habitat-dynamics/, 'v2 extras do not add ocean tiles');
+  assert.match(pack, /at >= sessionStart/, 'recently viewed data can be copied, not a guarantee of ocean coverage');
+});
+
+test('save-for-offline UI reminds users to check before leaving coverage without a full-coverage promise', () => {
+  const ui = read('../web/app/Trip.tsx');
+  assert.match(ui, /<p>Check the saved pack before leaving coverage\.<\/p>/);
+  assert.match(ui, /Water temp and current tiles are not prefetched/);
+  assert.doesNotMatch(ui, /full functionality|\d+ miles/i);
+});
 
 test('Morro Bay chart tiles at zoom 8-12 fit under the cap, and every tile is inside the grid', () => {
   const plan = planTiles(morro.bounds);

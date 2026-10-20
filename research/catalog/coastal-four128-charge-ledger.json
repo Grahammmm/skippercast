@@ -2,13 +2,13 @@
   "schema": "coastal-four128-charge-ledger-v1",
   "trust": "Repository-reviewed accounting projection of signed delegated-authority amendments. Signer fields are historical role attestations, not cryptographic signatures. Original bytes remain archived and are hash-bound below; this file issues no new authority.",
   "head": {
-    "revision": 6,
-    "path": "~/agent-work/t08a/budget/four128-budget-amendment-v6.json",
-    "sha256": "7ef41e152ac8b8fad0677e2718f2c4f2589621120a33e1d2eb1a2715fd8bc890",
-    "supersedes_sha256": "150f78452dd1aeb1952c372ec4415edbe54a530780db500492d444e9b8bca9d9",
+    "revision": 7,
+    "path": "~/agent-work/t08a/budget/four128-budget-amendment-v7.json",
+    "sha256": "b644414e17d01fa47daef3416ecf860a4267a5bf181cc15a519b8f8964a4ee47",
+    "supersedes_sha256": "7ef41e152ac8b8fad0677e2718f2c4f2589621120a33e1d2eb1a2715fd8bc890",
     "status": "SIGNED_DELEGATED_BUDGET_AUTHORITY",
-    "signer": {"profile": "fable-2nd-look", "model": "claude-fable-5-1", "reviewer_id": "fable-2nd-look-claude-fable-5-1-t_c4601ed8"},
-    "signed_at": "2026-10-20T07:24:06.632497+00:00"
+    "signer": {"model": "claude-fable-5-1", "profile": "astra-orchestrator", "reviewer_id": "astra-orchestrator-claude-fable-5-1-t_c6674145", "task": "t_c6674145"},
+    "signed_at": "2026-10-20T17:29:29.143369+00:00"
   },
   "source": {
     "pre_failure_prior_bytes": 821491388,
@@ -20,10 +20,12 @@
     "trial_6_charged_bytes": 294060544,
     "validation_hash_reads_charged_bytes": 73515136,
     "rerun_1_charged_bytes": 294060544,
-    "prior_effective_bytes": 2034491132,
+    "rerun_2_charged_bytes": 294060544,
+    "sc5_geometry_prescan_charged_bytes": 36757568,
+    "prior_effective_bytes": 2365309244,
     "previous_cumulative_limit_bytes": 1115551932,
-    "additional_bytes": 1212999744,
-    "cumulative_limit_bytes": 2328551676,
+    "additional_bytes": 1543817856,
+    "cumulative_limit_bytes": 2659369788,
     "fresh_allowance_bytes": 294060544,
     "refunds": false,
     "downloads": 0

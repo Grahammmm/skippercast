@@ -27,6 +27,7 @@
 // list or its defaults, plus its last explicitly chosen Currents source. In v2 a link without ?current= draws the WCOFS
 // forecast when the rail's list includes Currents (#482); v1 keeps `off`.
 import {batch, computed, signal} from '@preact/signals';
+import {coordinateFormat} from '../dist/coordinates.js';
 import {DEFAULT_PROFILE, isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
 import {parseGrade, type GradeFilter} from './grade.ts';
 import {canonicalHour, fishLink} from './fish-links.ts';
@@ -44,6 +45,7 @@ export const URL_KEYS = ['region', 'coast', 'view', 'target', 'grade', 'hour', '
 export type UrlKey = typeof URL_KEYS[number];
 export type UrlState = Record<Exclude<UrlKey, CoastKey>, string | null> & Partial<Record<CoastKey, string>> & {selection: string | null};
 export type Units = 'nautical';
+export type CoordinateFormat = 'dd' | 'ddm' | 'dms';
 
 /** Masthead views (v2). `?view=` is shared with v1's map position "lat,lng,zoom". */
 export const APP_VIEWS = ['coast', 'conditions', 'history', 'fleet', 'reports'] as const;
@@ -53,6 +55,7 @@ export type Base = typeof BASES[number];
 /** `?layers=none` writes an empty rail; an absent key means stored or profile defaults. */
 export const NO_LAYERS = 'none';
 export const STORAGE_KEYS = {
+  coordinates: 'skippercast-coordinates-v1',
   current: 'skippercast-current-v1',
   profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1', presentation: 'skippercast-presentation-v1',
   /** Your own comfort limits per profile (web/limits.ts); device only, never sent. */
@@ -81,6 +84,14 @@ export const hour = signal<string | null>(null);
 export const selection = signal<string | null>(null);
 /** Knots, feet and nautical miles: the app's only unit system today. */
 export const units = signal<Units>('nautical');
+export const coordinates = signal<CoordinateFormat>('dd');
+export function loadCoordinateFormat(): void {
+  coordinates.value = coordinateFormat(readStored(STORAGE_KEYS.coordinates)) as CoordinateFormat;
+}
+export function setCoordinateFormat(value: string): void {
+  coordinates.value = coordinateFormat(value) as CoordinateFormat;
+  writeStored(STORAGE_KEYS.coordinates, coordinates.value);
+}
 export const profile = signal<Profile>(DEFAULT_PROFILE);
 /** The masthead view when ?view= names one; v1 map positions leave it at coast. */
 export const appView = signal<AppView>('coast');
