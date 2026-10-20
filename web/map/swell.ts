@@ -324,7 +324,7 @@ export function createSwell(o: SwellOptions): {
       drawnKey = key; drawnShape = shape; drawnOn = e;
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), MPA_FILL);
+      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), ['wind-casing', MPA_FILL]);
       if (f) {
         e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
         e.setData(ISOLINE_SOURCE, periodLines(f));

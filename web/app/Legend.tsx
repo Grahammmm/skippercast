@@ -53,6 +53,7 @@ import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '.
 import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
+import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
@@ -157,6 +158,15 @@ function WaterTempRow() {
 }
 
 /** The Swell row (on the Chart): the drawn hour's reading, scale, model run and valid hour, or why nothing draws. */
+function WindRow() {
+  const s = windState.value;
+  return <li class="app-legend-wind">Wind · arrows toward · knots
+    <Popover iconOnly summary="Wind basis">{s.basis}</Popover>
+    {s.drawn ? <p class="app-legend-note ui-mono" data-stamp="wind">NOAA NCEP · GFS · {s.drawn.stamp}</p> : null}
+    {s.reason ? <p class="app-legend-note" data-reason="wind">{s.reason}</p> : null}
+  </li>;
+}
+
 function SwellRow() {
   const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value;
   const fieldReason = !f && r?.rings.length && reason.startsWith('Swell unavailable:')
@@ -272,7 +282,7 @@ export function Legend() {
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
           : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
-          : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
+          : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />

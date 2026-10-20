@@ -281,8 +281,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under the swell field when it is drawn, else under the protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, MPA_FILL]);
+      // § 9 order: under swell, else wind, else the protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, 'wind-casing', MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),
