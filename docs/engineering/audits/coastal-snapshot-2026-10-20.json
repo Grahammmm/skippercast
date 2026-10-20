@@ -1,0 +1,853 @@
+{
+  "counts": {
+    "different": 20,
+    "identical": 31,
+    "snapshot-only": 17
+  },
+  "main_revision": "bde9c6dff45dfdf7b813ee217f0bfde058d4b274",
+  "modules": [
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 80,
+        "sha256": "5f66276dd825d15954220dbf19ec5d0ed1a176d29c38989b24aff7d190bb8fd2"
+      },
+      "path": "src/skippercast/coastal/__init__.py",
+      "snapshot": {
+        "bytes": 80,
+        "sha256": "5f66276dd825d15954220dbf19ec5d0ed1a176d29c38989b24aff7d190bb8fd2"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 6156,
+        "sha256": "c766f90d5869e516e1d8a89186d68de7461b003883ced75faaf9f56e5450cd9a"
+      },
+      "path": "src/skippercast/coastal/_owned_processes.py",
+      "snapshot": {
+        "bytes": 6156,
+        "sha256": "c766f90d5869e516e1d8a89186d68de7461b003883ced75faaf9f56e5450cd9a"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 762,
+        "sha256": "93ff9093fc94c1fd9254f7c2975fe94ed675723d8423c28cd105e1cc0523a5ee"
+      },
+      "path": "src/skippercast/coastal/_runner_bootstrap.py",
+      "snapshot": {
+        "bytes": 762,
+        "sha256": "93ff9093fc94c1fd9254f7c2975fe94ed675723d8423c28cd105e1cc0523a5ee"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 1384,
+        "sha256": "3a57713600537741a171200b58eccbe9c167e90cd7ec482e7ea73830ef4d9c8e"
+      },
+      "path": "src/skippercast/coastal/_source_bootstrap.py",
+      "snapshot": {
+        "bytes": 1384,
+        "sha256": "3a57713600537741a171200b58eccbe9c167e90cd7ec482e7ea73830ef4d9c8e"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/asset_selection.py",
+      "snapshot": {
+        "bytes": 22570,
+        "sha256": "1beede01e709f88e1d0ff3d21b5b4e3566c14152211b72fc25665d7eb036bc76"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 77,
+        "sha256": "e80bf8d0997be69f91c4fbb24d0b81b9dc910dd5ebb20841693d3e52c5620f70"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/__init__.py",
+      "snapshot": {
+        "bytes": 77,
+        "sha256": "e80bf8d0997be69f91c4fbb24d0b81b9dc910dd5ebb20841693d3e52c5620f70"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 12949,
+        "sha256": "4896c14ab099f7eb389058383dfe9740972bc21a2f162e56503fd1870a0d79a6"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/adapter_bag.py",
+      "snapshot": {
+        "bytes": 12937,
+        "sha256": "3b50b0c1b6bc7d4d809ff355a896e9f2c5deab2c3187a18dcea8d6e4b4b99327"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 2528,
+        "sha256": "c331611e1d0b6902d8cfb6b766121b879506ca22de2db83b60a0e67399da5c0a"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/authority.py",
+      "snapshot": {
+        "bytes": 2528,
+        "sha256": "c331611e1d0b6902d8cfb6b766121b879506ca22de2db83b60a0e67399da5c0a"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 1017,
+        "sha256": "5f2512e64534ad7c5c386af3ecdf3039afcf807a4930113f67ed496fa7fd0c73"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/bootstrap.py",
+      "snapshot": {
+        "bytes": 1017,
+        "sha256": "5f2512e64534ad7c5c386af3ecdf3039afcf807a4930113f67ed496fa7fd0c73"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 1432,
+        "sha256": "96e5ebbf2eeb3b62b85160f2ddc24117321656bdbf02409c2bfa313de03914b5"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/metadata_bag.py",
+      "snapshot": {
+        "bytes": 1432,
+        "sha256": "96e5ebbf2eeb3b62b85160f2ddc24117321656bdbf02409c2bfa313de03914b5"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 13785,
+        "sha256": "996eca6e3e1312144eeee0518f58f8f2f516b67f391867ddea6c324ebf5a189c"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/observer.py",
+      "snapshot": {
+        "bytes": 13785,
+        "sha256": "996eca6e3e1312144eeee0518f58f8f2f516b67f391867ddea6c324ebf5a189c"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 8438,
+        "sha256": "b96658b786c375fe2974dd11ddf5d6afa4a500af7469001f44aa6f659c435d80"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/planner.py",
+      "snapshot": {
+        "bytes": 8438,
+        "sha256": "b96658b786c375fe2974dd11ddf5d6afa4a500af7469001f44aa6f659c435d80"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 4595,
+        "sha256": "f61bd453bb25114843af2dc4259877f6d0b4f779d2163433e8ab83cd971a7def"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/policy.py",
+      "snapshot": {
+        "bytes": 4595,
+        "sha256": "f61bd453bb25114843af2dc4259877f6d0b4f779d2163433e8ab83cd971a7def"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 8806,
+        "sha256": "517c3769ba7d9b38edd70336e55ee06587cedd16ea9a0d0fde9d08d5b6e53ef0"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/profiles.py",
+      "snapshot": {
+        "bytes": 7997,
+        "sha256": "1a7a093e5fa6da9051737dd96e3b53c087a0771eae753ae708d0488c6f5701a8"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 16929,
+        "sha256": "cf3f918a1aa4bd601f2b45d9dbf06f93f5b7ef65511ecd735f4afca9ff89dbf8"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/snapshot.py",
+      "snapshot": {
+        "bytes": 16929,
+        "sha256": "cf3f918a1aa4bd601f2b45d9dbf06f93f5b7ef65511ecd735f4afca9ff89dbf8"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 14958,
+        "sha256": "7b933134603fb605f83c41317436ae889fccc6d0aabd73bf2292604ec1b49415"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/source_reuse.py",
+      "snapshot": {
+        "bytes": 14777,
+        "sha256": "cddc6132c906cad5ee208a806a88cbe93e7e97e2237faa02ace6146da6832be8"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 3531,
+        "sha256": "aeb279428213b8de39047723ce85cdc84cecc361c52eb3863c007118ffdaafb2"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/supplement.py",
+      "snapshot": {
+        "bytes": 3531,
+        "sha256": "aeb279428213b8de39047723ce85cdc84cecc361c52eb3863c007118ffdaafb2"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 22819,
+        "sha256": "1ce96037efbc5d298c3ca0c19a9cd63b25ce45212d212cc1a19592a3617126d3"
+      },
+      "path": "src/skippercast/coastal/authenticated_v1/worker.py",
+      "snapshot": {
+        "bytes": 22819,
+        "sha256": "1ce96037efbc5d298c3ca0c19a9cd63b25ce45212d212cc1a19592a3617126d3"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 2034,
+        "sha256": "3f52f3dd0694268e99c22e022f670374d5850b1f49bbbb9a78ca971a7e7b543a"
+      },
+      "path": "src/skippercast/coastal/bag_v2.py",
+      "snapshot": {
+        "bytes": 1708,
+        "sha256": "03d7071b4023fddc9515991558b6133a5e2ca987effdca139004a4df43df737e"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/bottom_float32.py",
+      "snapshot": {
+        "bytes": 17921,
+        "sha256": "1722a1e71b17e4c4713a7b6b7da52fda4649c930957537a8521a63b28cf6619f"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 34573,
+        "sha256": "69c2a44ca5c416c9fb5b02c74037c98aac1398698046e8afe990dc2f4195fd73"
+      },
+      "path": "src/skippercast/coastal/budget.py",
+      "snapshot": {
+        "bytes": 34573,
+        "sha256": "69c2a44ca5c416c9fb5b02c74037c98aac1398698046e8afe990dc2f4195fd73"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 4849,
+        "sha256": "8e18b824d98568b858722eef45eb292883f8c0d5ae5f274ca58c476f9e95fe2e"
+      },
+      "path": "src/skippercast/coastal/cli.py",
+      "snapshot": {
+        "bytes": 3137,
+        "sha256": "85a77efc1aa5bcdee2bf07b4169ee460d32cf48d20b59f6228be5f410048bdc9"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 582,
+        "sha256": "7c1a01b4f7c8ab78e230d01002a24bd385c5a19c43a66d60d70df61846e36dfa"
+      },
+      "path": "src/skippercast/coastal/client_policy.py",
+      "snapshot": {
+        "bytes": 582,
+        "sha256": "7c1a01b4f7c8ab78e230d01002a24bd385c5a19c43a66d60d70df61846e36dfa"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 15751,
+        "sha256": "9eb5addd47517d02014f8b30abb5b8f79502460e3af9f370e00832a129baea42"
+      },
+      "path": "src/skippercast/coastal/contained_batch.py",
+      "snapshot": {
+        "bytes": 15751,
+        "sha256": "9eb5addd47517d02014f8b30abb5b8f79502460e3af9f370e00832a129baea42"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 76,
+        "sha256": "54aaf18e05986340574ab55c235c334d71902c5b09fc29677e1cc381d29c2ab7"
+      },
+      "path": "src/skippercast/coastal/coordinator/__init__.py",
+      "snapshot": {
+        "bytes": 76,
+        "sha256": "54aaf18e05986340574ab55c235c334d71902c5b09fc29677e1cc381d29c2ab7"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 55924,
+        "sha256": "66bd74008dcb0a55cdfb5a82c930d7c33b64d1f2220cf419cf0b6fe087f5552d"
+      },
+      "path": "src/skippercast/coastal/coordinator/authenticated.py",
+      "snapshot": {
+        "bytes": 55593,
+        "sha256": "59841ba9da5d856e07d22fbba1c214c334b4270a4c3da68a73b3758e48a58c23"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/coordinator/authenticated_cli.py",
+      "snapshot": {
+        "bytes": 7422,
+        "sha256": "c56e7f30406a5e4dc2cfffab065131b7423d137e61c263d5bec828d5fe0db687"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 11067,
+        "sha256": "d5205d12628289f4200fc7e5c7759be240c1fc63281774619aa8722875ecfaf7"
+      },
+      "path": "src/skippercast/coastal/coordinator/loop.py",
+      "snapshot": {
+        "bytes": 11067,
+        "sha256": "d5205d12628289f4200fc7e5c7759be240c1fc63281774619aa8722875ecfaf7"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 58091,
+        "sha256": "ef83bd845a665ae28c4a67c0d09cf3ea1ea5d8c50f52f4c33c53e6a376931bc1"
+      },
+      "path": "src/skippercast/coastal/coordinator/ordered_trial.py",
+      "snapshot": {
+        "bytes": 54940,
+        "sha256": "37222d82522910304c1ee54e66d9f93664aabe8016c2bcb16f564c5e3a95b96a"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 10776,
+        "sha256": "61db9d017428590b6546842ced4eecd29a0561b4ac5f82e9827f372cdc29674a"
+      },
+      "path": "src/skippercast/coastal/coordinator/packet_release.py",
+      "snapshot": {
+        "bytes": 10305,
+        "sha256": "91beed2fb2196b5f8fc762f978257da6f591a911dc87b161525e11294d441a60"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 2169,
+        "sha256": "4ea589bd0cc88cde1cbbacc5af28cbde6a11edf120933f601170e60797087a28"
+      },
+      "path": "src/skippercast/coastal/coordinator/segments.py",
+      "snapshot": {
+        "bytes": 2169,
+        "sha256": "4ea589bd0cc88cde1cbbacc5af28cbde6a11edf120933f601170e60797087a28"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 42303,
+        "sha256": "f3a080ea720b188cd4cdb19d4d6554f7663373e77774a05fa476903ad03b667b"
+      },
+      "path": "src/skippercast/coastal/coordinator/source_free.py",
+      "snapshot": {
+        "bytes": 35439,
+        "sha256": "31264381726794a8b7300b09e522d4c07772f08bd763a1459e1b12cee2500def"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 4650,
+        "sha256": "18fd7da06e87366a1e194799f60514f50dae63a6050cdc449666b11122edaa13"
+      },
+      "path": "src/skippercast/coastal/coordinator/stages.py",
+      "snapshot": {
+        "bytes": 3768,
+        "sha256": "adeed015bcfc952fffebbfd3f8679924d1c0509a853b66ebd59641d87889c918"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 66004,
+        "sha256": "5e6bee2e3726adcc88dbe68b8a6bb352021813b1a3297b454cba56fb7f972df9"
+      },
+      "path": "src/skippercast/coastal/coordinator/store.py",
+      "snapshot": {
+        "bytes": 61079,
+        "sha256": "3742afb840e62a1ac4d3dd0232f2d2a14437005653d2aed448523f5aa5673176"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 35698,
+        "sha256": "07f231fc54fbd38f2860534eb44fd74cdac3f672b128ab751c4fca12c8c30c13"
+      },
+      "path": "src/skippercast/coastal/derived_batch.py",
+      "snapshot": {
+        "bytes": 35686,
+        "sha256": "97d2f19ca5a4570bd379e35118fa5b4c10702fd86dcf47bccca3fe06770f9d33"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/discover.py",
+      "skill_counterpart": {
+        "byte_identical_to_snapshot": false,
+        "bytes": 41730,
+        "path": "skills/skippercast-discover-coastal-sources/scripts/discover.py",
+        "sha256": "82fa8b798ac7d710f52969b3372208241882e288724845542c68b5ae60d21327"
+      },
+      "snapshot": {
+        "bytes": 42208,
+        "sha256": "30c00ff1909f35141cee706e6a5f8919e7e731f49143384347de790cdc9e0aa4"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/formats.py",
+      "skill_counterpart": {
+        "byte_identical_to_snapshot": false,
+        "bytes": 9556,
+        "path": "skills/skippercast-discover-coastal-sources/scripts/formats.py",
+        "sha256": "57d47b448fa08885e6550a49e594d1ac21fc64f925cde42149bb9fe14bbd4b60"
+      },
+      "snapshot": {
+        "bytes": 10172,
+        "sha256": "b0f6944d7a4bb8331a1a2e61bdfa0bb6418d31e05e6332ad6ba32b4172b8a0ae"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/gsf_resume.py",
+      "skill_counterpart": {
+        "byte_identical_to_snapshot": false,
+        "bytes": 15404,
+        "path": "skills/skippercast-discover-coastal-sources/scripts/gsf_resume.py",
+        "sha256": "2f51081696589970457b8784b6591d5ee366b7a0309425bdc42459ba69f664e4"
+      },
+      "snapshot": {
+        "bytes": 17716,
+        "sha256": "205984070390b2453750e69868d643b9bccd6e0a82cd7d9feede1b5d884466be"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 53,
+        "sha256": "5a8994064a5ac8e5a0fefd0b355c8f655f577bf6d356b9424c47dc50d5ecd6dd"
+      },
+      "path": "src/skippercast/coastal/handoff/__init__.py",
+      "snapshot": {
+        "bytes": 53,
+        "sha256": "5a8994064a5ac8e5a0fefd0b355c8f655f577bf6d356b9424c47dc50d5ecd6dd"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 9158,
+        "sha256": "0f36ddb043b864e9459e3e5d29867c771ee7bf79bfd6e2769a13371580fd2ebd"
+      },
+      "path": "src/skippercast/coastal/handoff/common.py",
+      "snapshot": {
+        "bytes": 8749,
+        "sha256": "e8b912080841bebaa28ecf0ec637d3553f7bc8baf8505b7887ad461aaaf99b40"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 14722,
+        "sha256": "7399f1f7b92042ee71ec5ff503cdff224159b0a63ccf272be9623346c02f475c"
+      },
+      "path": "src/skippercast/coastal/handoff/mapping_input.py",
+      "snapshot": {
+        "bytes": 13800,
+        "sha256": "220c56c7f5083eb556b70bcf536dd623969a11d02ffd57e165bcc2251ce11fbc"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 7780,
+        "sha256": "7b323b39d2b7b1455539eb915c8d70f53822c54ca64a7b9727a86b31c6894a58"
+      },
+      "path": "src/skippercast/coastal/handoff/render.py",
+      "snapshot": {
+        "bytes": 7780,
+        "sha256": "7b323b39d2b7b1455539eb915c8d70f53822c54ca64a7b9727a86b31c6894a58"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/hermes_client.py",
+      "snapshot": {
+        "bytes": 24485,
+        "sha256": "ccc976a4d04ed55d74c75ab2a70034152784526276b6553e403359c734243284"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/hermes_preflight.py",
+      "snapshot": {
+        "bytes": 13195,
+        "sha256": "bdc0f4abeaa9288c3c53d931da03b4566800bc354eaf05f4bbef5114e477e22a"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/holds.py",
+      "snapshot": {
+        "bytes": 425,
+        "sha256": "1362a091c296f77d2c7af015715ae89fc689ac809a5d8aed9c6256a2057c1074"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/legacy_cache.py",
+      "snapshot": {
+        "bytes": 4480,
+        "sha256": "0ad10abd925ce2eb4abd8badf4b2e3c3ce7a2aaa68ca9bbe481e040de8230339"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 10160,
+        "sha256": "8514ba1f92d1d4772adfe6f9ff2aa15f25ba97c34c29bfca4164728412ca4150"
+      },
+      "path": "src/skippercast/coastal/mapping.py",
+      "snapshot": {
+        "bytes": 10505,
+        "sha256": "e654ffca84cb0c4ba6536c747988ccd84bddadbfff689cdbccc8fb7be6690f63"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 321,
+        "sha256": "e07d0c3b9845314923bba5fe9a06893ecb166d26640d9fa8681c52f2802b0d19"
+      },
+      "path": "src/skippercast/coastal/native_guard_v2.py",
+      "snapshot": {
+        "bytes": 321,
+        "sha256": "e07d0c3b9845314923bba5fe9a06893ecb166d26640d9fa8681c52f2802b0d19"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/native_raster_v2.py",
+      "snapshot": {
+        "bytes": 4857,
+        "sha256": "951ef450fb9c30bf6c08c421266688c64e277e1d0433f6a090ed565266135944"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/native_v2.py",
+      "snapshot": {
+        "bytes": 9990,
+        "sha256": "9f21d4ce6d50ef21adc1f5070bb399f9f06053c455c45e1cd211f616c58d9966"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 31487,
+        "sha256": "20fa6f3a37db00a742e9d5321f5a1902fe0427ab6a4486bf7764884bea2141c0"
+      },
+      "path": "src/skippercast/coastal/output_writer.py",
+      "snapshot": {
+        "bytes": 27949,
+        "sha256": "b92d7e687de07dc98b95568a7536a20a184e65806b0b3be6b83e5e549585fc46"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/quality.py",
+      "skill_counterpart": {
+        "byte_identical_to_snapshot": false,
+        "bytes": 33465,
+        "path": "skills/skippercast-discover-coastal-sources/scripts/quality.py",
+        "sha256": "d14ee63bab88a0f060e3272cd1765a5b4d72523a4575ffd89c8a4c1feed82aaa"
+      },
+      "snapshot": {
+        "bytes": 35491,
+        "sha256": "56d68d9e458cb326f38cc4cbaba89b4121563388f525556c880c277ec5a5bbc8"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 8015,
+        "sha256": "6e9f1e18b7b4745e70464b730d40d6d33af4fcdad18600fcf6c872e3b7b856c5"
+      },
+      "path": "src/skippercast/coastal/receipts.py",
+      "snapshot": {
+        "bytes": 8015,
+        "sha256": "6e9f1e18b7b4745e70464b730d40d6d33af4fcdad18600fcf6c872e3b7b856c5"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 71,
+        "sha256": "4afd968f1fab2c0a104329a2533ae21cf11b8629220158eae7ed6cc480e3fe98"
+      },
+      "path": "src/skippercast/coastal/render/__init__.py",
+      "snapshot": {
+        "bytes": 71,
+        "sha256": "4afd968f1fab2c0a104329a2533ae21cf11b8629220158eae7ed6cc480e3fe98"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 10945,
+        "sha256": "f6eb31c258f71f0cad474ee88e87e8eca9f6a1fe67246e1992339101f1a68300"
+      },
+      "path": "src/skippercast/coastal/render/align.py",
+      "snapshot": {
+        "bytes": 10945,
+        "sha256": "f6eb31c258f71f0cad474ee88e87e8eca9f6a1fe67246e1992339101f1a68300"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 10292,
+        "sha256": "c3a6f0678a693a7b0f0ada2d891add312bb3454548fea15f8fb68156cdc7d757"
+      },
+      "path": "src/skippercast/coastal/render/mesh.py",
+      "snapshot": {
+        "bytes": 9732,
+        "sha256": "ec9984bd4cc08502764353f72409991d923f77ec01fade5633d921359bb64f80"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 12252,
+        "sha256": "ae2503049c48bdcb1c85602e7bcf671f8277fb809b3fe3322714441ec2f9e255"
+      },
+      "path": "src/skippercast/coastal/render/preview.py",
+      "snapshot": {
+        "bytes": 12252,
+        "sha256": "ae2503049c48bdcb1c85602e7bcf671f8277fb809b3fe3322714441ec2f9e255"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 26618,
+        "sha256": "1d8e3e8789264fe16708eaa333f2dd4ee8f223e7a150f3e89c79b66e636e0ae5"
+      },
+      "path": "src/skippercast/coastal/render/terrain_demo.py",
+      "snapshot": {
+        "bytes": 26618,
+        "sha256": "1d8e3e8789264fe16708eaa333f2dd4ee8f223e7a150f3e89c79b66e636e0ae5"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 29023,
+        "sha256": "5db3945c5ba5a354002ea6efaf6d8c37efafd8030fa19b1a027c50e6218ed28a"
+      },
+      "path": "src/skippercast/coastal/render/terrain_only.py",
+      "snapshot": {
+        "bytes": 29413,
+        "sha256": "ef38204c6bd89a854fde8b8ad31008b0c27b791b99a7b583888aba07ebf83616"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/render_batch.py",
+      "snapshot": {
+        "bytes": 8671,
+        "sha256": "27a030b8dc915eb63b9d290405532285c7bbbf6695de89e125c48492b8ed6749"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 60,
+        "sha256": "572047b85d664a1e1006f27b7080e3dacf29a2e331cffdbc45a13626b093a4a7"
+      },
+      "path": "src/skippercast/coastal/resources/__init__.py",
+      "snapshot": {
+        "bytes": 60,
+        "sha256": "572047b85d664a1e1006f27b7080e3dacf29a2e331cffdbc45a13626b093a4a7"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 7442,
+        "sha256": "66c65a4d15d0793f35aff435af6d0894356ca569cce924f6a54995f27a9c646b"
+      },
+      "path": "src/skippercast/coastal/retention.py",
+      "snapshot": {
+        "bytes": 7442,
+        "sha256": "66c65a4d15d0793f35aff435af6d0894356ca569cce924f6a54995f27a9c646b"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/run_bounded.py",
+      "skill_counterpart": {
+        "byte_identical_to_snapshot": false,
+        "bytes": 14012,
+        "path": "skills/skippercast-map-coast/scripts/run_bounded.py",
+        "sha256": "b852be5108fe6e56df7790531929f5bc5043c572de43a0f27d98ab64a8b20a62"
+      },
+      "snapshot": {
+        "bytes": 13673,
+        "sha256": "1e826f113f35ec71fae4937af729f356d48bd75adb4bd106fda41e2c094bd9f5"
+      }
+    },
+    {
+      "comparison": "identical",
+      "main": {
+        "bytes": 31884,
+        "sha256": "2e90f4e8d593d11c201f1d5538873159acb494e408d9a21754750542f3f9193f"
+      },
+      "path": "src/skippercast/coastal/runner.py",
+      "snapshot": {
+        "bytes": 31884,
+        "sha256": "2e90f4e8d593d11c201f1d5538873159acb494e408d9a21754750542f3f9193f"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 13410,
+        "sha256": "7c0265408c83b9f74b5bebea1d53c46ba73804a12bc776a5a338aa32e5cda616"
+      },
+      "path": "src/skippercast/coastal/stage_cli.py",
+      "snapshot": {
+        "bytes": 11860,
+        "sha256": "6d87d9bdb1ef28f70e9552eb5664ef91d8fcfd6e230a60746169c63c1430e139"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/validate_handoff.py",
+      "skill_counterpart": {
+        "byte_identical_to_snapshot": false,
+        "bytes": 8966,
+        "path": "skills/skippercast-map-coast/scripts/validate_handoff.py",
+        "sha256": "d72deb3088d4c9fb98a7817109ab2817c70e327553fd0dc2218c92ce1af74008"
+      },
+      "snapshot": {
+        "bytes": 9044,
+        "sha256": "13df0459da4d1354a0941744add85cb4bc1b693befc1cbf14aa06731eae72640"
+      }
+    },
+    {
+      "comparison": "snapshot-only",
+      "main": null,
+      "path": "src/skippercast/coastal/validate_terrain_display_handoff.py",
+      "snapshot": {
+        "bytes": 12084,
+        "sha256": "705a4ed59ba9f638cb40a83a9ae4afab9c6bd655f912d986526d0e43b014f497"
+      }
+    },
+    {
+      "comparison": "different",
+      "main": {
+        "bytes": 15657,
+        "sha256": "dc6e7d4b40cdaf84a863a3b86de5e33459bdcd2b7ef3de7bf0cedb3592c4263c"
+      },
+      "path": "src/skippercast/coastal/vertical.py",
+      "snapshot": {
+        "bytes": 15143,
+        "sha256": "2ac895606f23654be9f3e854d19422b20a4c585d6de6ff3dbd0dbf5478fcad76"
+      }
+    }
+  ],
+  "schema": "coastal-snapshot-inventory-v1",
+  "scope": "src/skippercast/coastal/**/*.py",
+  "snapshot_locator": "work/source-reuse-admission-20261011",
+  "snapshot_only_resources": [
+    {
+      "bytes": 1770,
+      "path": "src/skippercast/coastal/resources/gsf-resume-receipt-v1.schema.json",
+      "sha256": "008498875ca05b543ff82e82124cda46427d7e4fdfdbdb5c00c58af8e676b2d4"
+    },
+    {
+      "bytes": 910,
+      "path": "src/skippercast/coastal/resources/gsf_probe.c",
+      "sha256": "d4af7c27bc2b178da0b1aa5cd77f747c9fef8f608c924e8a806ca3a7f58763a7"
+    },
+    {
+      "bytes": 8840,
+      "path": "src/skippercast/coastal/resources/gsf_scan.c",
+      "sha256": "846e2e398d352bfd75241a7aa62d5b6afaa6aaf1f0d159203935cb247763c45e"
+    },
+    {
+      "bytes": 1308,
+      "path": "src/skippercast/coastal/resources/private-mapping-input-v1.schema.json",
+      "sha256": "85db14cee0be218ab756fc07f54ab0238b21308368acca789c4b8cc622ef3025"
+    },
+    {
+      "bytes": 4148,
+      "path": "src/skippercast/coastal/resources/quality-receipt-v1.schema.json",
+      "sha256": "5849bc7e6d5b2a80de81f61c05066d54c41a5f6fc5b4fefc22066b5449ff0d32"
+    },
+    {
+      "bytes": 3789,
+      "path": "src/skippercast/coastal/resources/source-manifest-v1.schema.json",
+      "sha256": "9f8ee2d674c0a4cfa8a03bbb52e57e44d6074e4f592afc2cb3f2a4a51f87894d"
+    },
+    {
+      "bytes": 9578,
+      "path": "src/skippercast/coastal/resources/terrain-display-handoff-v1.schema.json",
+      "sha256": "19a4d132836edc2e96509ec573d693d6b0bf122aa2e6aa8a8ef05ca9b3711bc3"
+    }
+  ],
+  "source_manifest_encoding": "sorted relative path + TAB + snapshot sha256 + LF; UTF-8",
+  "source_manifest_sha256": "a470d795d2b5b56accefaf39373e8f902d54153d33d1a1bd2db5858ec75abc7c"
+}
