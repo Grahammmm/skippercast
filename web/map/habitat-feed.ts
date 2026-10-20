@@ -21,6 +21,7 @@ import type {CurrentCell, CurrentField} from '../../packages/coast/src/ocean-typ
 import type {SSTPoint, SurfaceTemperature} from '../../packages/coast/src/spatial-types.ts';
 
 export const SST_LAYER_ID = 'sst-analysis';
+export const CHLOROPHYLL_LAYER_ID = 'chlorophyll-observation';
 export const WCOFS_LAYER_ID = 'wcofs-surface-forecast';
 const TIMEOUT_MS = 15_000;
 const MAX_TILES = 64;
@@ -167,6 +168,49 @@ async function manifestLayer(regionId: string, o: ReadOptions, read: (data: unkn
 }
 
 const loads = (layer: Layer): boolean => layer.status === 'ok' || layer.status === 'retained';
+
+export interface ChlorophyllObservation {
+  readonly product: string;
+  readonly sampleAt: string;
+  readonly maxAgeMs: number;
+  readonly resolution: readonly [number, number];
+  readonly cells: readonly {lat: number; lon: number; value: number}[];
+}
+export type RegionalChlorophyll =
+  | {readonly state: 'none' | 'error' | 'listed'}
+  | {readonly state: 'ready'; readonly observation: ChlorophyllObservation};
+
+/** Strict display boundary, independent of acquisition/reuse/retrieval time. */
+export function chlorophyllFresh(o: ChlorophyllObservation, now: Date): boolean {
+  const age = now.getTime() - Date.parse(o.sampleAt);
+  return Number.isFinite(age) && age >= -HOUR && Number.isFinite(o.maxAgeMs) && o.maxAgeMs > 0 && age < o.maxAgeMs;
+}
+
+/** Native observed cells only: no interpolation and no fallback to an older populated scene. */
+export async function regionalChlorophyll(regionId: string, o: ReadOptions): Promise<RegionalChlorophyll> {
+  try {
+    const found = await manifestLayer(regionId, o, data => layerOf(data, regionId, CHLOROPHYLL_LAYER_ID, 'observation', ['chlorophyll_mg_m3']));
+    if (typeof found === 'string') return {state: found};
+    const {layer, manifestURL, get} = found;
+    const latest = layer.frames.filter(f => numeric(f.valid_cells) && f.valid_cells > 0).map(f => f.time).sort((a, b) => a - b).at(-1);
+    const sample = instant(layer.raw.sample_at);
+    if (!loads(layer) || latest === undefined || !sample || Date.parse(sample) !== latest * 1000 || layer.stride !== 1)
+      return {state: 'listed'};
+    const observation: ChlorophyllObservation = {product: layer.product, sampleAt: new Date(latest * 1000).toISOString(),
+      maxAgeMs: layer.maxAgeMs, resolution: layer.resolution, cells: []};
+    if (!chlorophyllFresh(observation, o.now)) return {state: 'listed'};
+    const rows = await allRows(get, manifestURL, regionId, layer), index = layer.fields.indexOf('chlorophyll_mg_m3');
+    const cells = (rows.get(latest) ?? []).flatMap(r => {
+      const value = r[index], lat = r[0] as number, lon = r[1] as number;
+      return numeric(value) && value >= 0.001 && value <= 100 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
+        ? [{lat, lon, value}] : [];
+    });
+    return cells.length ? {state: 'ready', observation: {...observation, cells}} : {state: 'listed'};
+  } catch (error) {
+    if (o.signal?.aborted) throw error;
+    return {state: 'error'};
+  }
+}
 
 /**
  * The region's surface-temperature analysis from its feed. Tiles are read only for a layer whose own status is

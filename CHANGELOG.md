@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an optional surface chlorophyll map layer with native observed cells, a logarithmic mg/m³ legend and the feed's strict sample-age limit; cloud gaps stay empty.
+
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.

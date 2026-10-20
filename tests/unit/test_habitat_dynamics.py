@@ -7,11 +7,34 @@ import unittest
 from unittest.mock import patch
 
 from skippercast.pipeline.habitat_dynamics import (
-    frame_for_time, gradients, publish_tiles, species_support, _copy_previous_tiles, _cleanup_tiles, satellite, run,
+    frame_for_time, gradients, publish_tiles, species_support, _copy_previous_tiles, _cleanup_tiles, _satellite_layer, satellite, run,
 )
 
 
 class HabitatDynamicsTests(unittest.TestCase):
+    def test_chlorophyll_native_tiles_and_cloud_gaps(self):
+        samples = {(35, -121): {"chlorophyll": 0.5},
+                   (35, -120.9625): {"chlorophyll": None},
+                   (35, -120.925): {"chlorophyll": 2}}
+        layer = _satellite_layer(samples, [.0375, .0375], {"2026-10-17T12:00:00Z"},
+                                 "https://example.test/index.json", "synthetic-viirs",
+                                 {"attrs": {"NC_GLOBAL": {"license": "fixture"}}},
+                                 "chlorophyll", [-121.1, 34.9, -120.8, 35.1])
+        layer.update(id="chlorophyll-observation", max_age_hours=96)
+        with tempfile.TemporaryDirectory() as root:
+            manifest = publish_tiles(layer, Path(root), "test-coast")
+            self.assertEqual(manifest["resolution_degrees"], [.0375, .0375])
+            self.assertEqual(manifest["sample_at"], "2026-10-17T12:00:00Z")
+            self.assertEqual(manifest["max_age_hours"], 96)
+            cells = []
+            for tile in manifest["tiles"]:
+                data = (Path(root)/tile["path"]).read_bytes()
+                self.assertEqual(hashlib.sha256(data).hexdigest(), tile["sha256"])
+                cells.extend(json.loads(data)["frames"][0]["cells"])
+            self.assertEqual(cells, [[35, -121, .5], [35, -120.925, 2]])
+            layer["frames"][0].update(cells=[], valid_cells=0)
+            self.assertEqual(publish_tiles(layer, Path(root), "test-coast")["tiles"], [])
+
     def layer(self, kind="forecast"):
         return {"id": "test", "kind": kind, "status": "ok", "issued_at": "2026-09-22T03:00:00Z",
                 "max_age_hours": 36, "frames": [{"time": 1790042400, "valid_cells": 1}, {"time": 1790053200, "valid_cells": 1}]}
