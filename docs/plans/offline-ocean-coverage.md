@@ -68,8 +68,8 @@ is within a minute of it):
 
 WCOFS is limited by its retrieval clock, not by its 36-hour issue age. The
 readers withdraw a WCOFS field 6 hours after `data_retrieved_at`
-(`packages/coast/src/map-sources.ts:28–31`,
-`packages/coast/src/state/current-layer.ts:30–31`). A pack therefore cannot
+(`packages/coast/src/map-sources.ts:29`,
+`packages/coast/src/state/current-layer.ts:31–32`). A pack therefore cannot
 keep WCOFS drawable for longer than the producer's last retrieval plus 6 hours,
 and this plan does not change that gate. The conditions branch is rewritten on
 each publish, so its history shows only this one manifest, and how often the
@@ -79,7 +79,12 @@ retrieval refreshes is not measured here (see Open questions).
 
 D1. Scope. Only the two layers the v2 readers draw from a regional feed are
 saved: `sst-analysis` (`regionalSST`) and `wcofs-surface-forecast`
-(`regionalCurrents`) in `web/map/habitat-feed.ts`. These stay out of scope:
+(`regionalCurrents`) in `web/map/habitat-feed.ts`. Temp contrast
+(`regionalContrast`, PR #791) reads the same `sst-analysis` tiles, so a saved
+SST layer is also present for it offline. Its own gates decide, unchanged. It
+reports a failed read as `error` without a network flag, and this plan makes
+no Trip-line or coverage claim for it; offline labelling for Temp contrast
+would be a separate card. These stay out of scope:
 
 - chlorophyll and any other manifest layer (no reader);
 - HF radar (published only in the coast packet);
@@ -196,20 +201,20 @@ hour and the grid.
   `analysed_at` is the latest populated frame time (as `regionalSST` picks
   it), and `retrieved_at` is `sources['sst-analysis'].data_retrieved_at`.
   The readers' gates: `regionalSST` loads only while
-  `now − analysed_at < max_age` (`habitat-feed.ts:189`). `judge` then
+  `now − analysed_at < max_age` (`habitat-feed.ts:193`). `judge` then
   requires both clocks fresh, with `−5 min ≤ now − t < limit`
-  (`web/map/sst.ts:104, 163`), and its re-judge timer uses this same
-  `min(...) + limit` (`sst.ts:298`). Before the deadline, it is still not
+  (`web/map/sst.ts:105, 165`), and its re-judge timer uses this same
+  `min(...) + limit` (`sst.ts:299`). Before the deadline, it is still not
   drawn if the analysis is later than the selected hour, or if the grid
   cannot be drawn.
 - WCOFS (`wcofs-surface-forecast`):
   `drawable_until = min(retrieved_at + 6 h, issued_at + 36 h, issued_at + max_age_hours)`.
   The readers' gates: `regionalCurrents` loads only while
-  `now − issued_at < max_age` (`habitat-feed.ts:220`).
+  `now − issued_at < max_age` (`habitat-feed.ts:282`).
   `selectCurrentFrame` refuses once `now − fetchedAt > 6 h` or
   `now − issuedAt > 36 h`, and refuses either clock more than 5 min ahead
-  (`map-sources.ts:28–35`). `selectedCurrent` keeps a frame only while
-  `min(fetchedAt + 6 h, issuedAt + 36 h) > now` (`current-layer.ts:30–31`).
+  (`map-sources.ts:29, 36`). `selectedCurrent` keeps a frame only while
+  `min(fetchedAt + 6 h, issuedAt + 36 h) > now` (`current-layer.ts:31–32`).
   Together, a field is drawable only while `now < drawable_until`. Before the
   deadline, it is still not drawn unless the selected hour lies between the
   first and last frame and within 90 min of a populated frame, and the frame's
