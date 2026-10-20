@@ -15,31 +15,43 @@ def main():
  a=argparse.ArgumentParser()
  a.add_argument("--staging-root",type=Path,required=True)
  a.add_argument("--mission-root",type=Path,required=True)
- a.add_argument("--prior-retained-bytes",type=int,default=32119472)
+ # Fresh independent four128 role documents (scope, rights, strict trial policy,
+ # scientific preflight). The expired 2026-10-11 copies are never re-admitted.
+ a.add_argument("--evidence-root",type=Path,required=True)
+ # Retained-output authority is an owner decision: no defaults.
+ a.add_argument("--cumulative-cap-bytes",type=int,required=True)
+ a.add_argument("--prior-retained-bytes",type=int,required=True)
  a.add_argument("--prospective-released-bytes",action="store_true")
  x=a.parse_args()
  root=x.staging_root.absolute();mission=x.mission_root.absolute()
  if (not root.is_relative_to(B/"scratch") or root.exists() or mission.exists()
      or not mission.is_relative_to(B/"outputs") or root.is_relative_to(mission)):
   raise ValueError("fresh external scratch metadata stage and absent future mission required")
+ historical=B/"outputs/source-reuse-admission-engineering-20261011"
+ evidence=x.evidence_root.absolute()
+ if evidence==historical or not evidence.is_dir() or evidence.is_symlink():
+  raise ValueError("fresh independent evidence root required; expired 2026-10-11 documents are not re-admitted")
+ retention=declaration(x.prior_retained_bytes,x.cumulative_cap_bytes,profile=COMPACT_V3_PROFILE)
  root.mkdir(parents=True)
- evidence=B/"outputs/source-reuse-admission-engineering-20261011"
  old=B/"outputs/ordered-coastal-rehearsed-live-20261010/execution/metadata"
  def put(name,doc):
   path=root/"metadata"/name
   if path.exists():raise ValueError("preserve metadata candidate")
   write(path,doc);return ref(root,path,doc["schema"])
- def copy_role(name):
-  source=evidence/name;doc=json.loads(source.read_text())
+ def copy_role(name,base=evidence):
+  source=base/name
+  if source.is_symlink():raise ValueError("evidence link")
+  doc=json.loads(source.read_text())
   path=root/"metadata"/name;path.parent.mkdir(parents=True,exist_ok=True)
   path.write_bytes(source.read_bytes())
   return ref(root,path,doc["schema"])
- segment=copy_role("independent-four128-segment.json")
+ # Segment geometry and the budget arithmetic are retained facts, not expiring reviews.
+ segment=copy_role("independent-four128-segment.json",historical)
  scope=copy_role("independent-four128-scope-review.json")
  rights=copy_role("independent-four128-rights-review.json")
  trial=copy_role("independent-four128-strict-trial-policy.json")
  science=copy_role("independent-four128-scientific-preflight.json")
- arithmetic=copy_role("approved-trial-budget-arithmetic-v1.json")
+ arithmetic=copy_role("approved-trial-budget-arithmetic-v1.json",historical)
  code,deps=implementation_hashes(root)
  carry=put("carry.json",dict(schema="coastal-authenticated-carry-v1",
   cumulative_limit_bytes=1115551932,prior_effective_bytes=821491388,
@@ -55,7 +67,7 @@ def main():
   source_volume_cap_bytes=294060544,prior_effective_bytes=821491388,
   prior_effective_source_bytes=821491388,cumulative_limit_bytes=1115551932,
   approved_budget_arithmetic=arithmetic,
-  output_retention=declaration(x.prior_retained_bytes,67108864,profile=COMPACT_V3_PROFILE),
+  output_retention=retention,
   output_root=str(mission),publication=False,
   meaning="Prospective approved four128 native-grid target. Source and all pixel quality remain unverified; no historical-support promotion.")
  held=put("grant-held.json",grant)

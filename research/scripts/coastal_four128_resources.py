@@ -9,9 +9,19 @@ import time
 import uuid
 
 SCHEMA = "coastal-authenticated-unit-v1"
-UNITS = {key: 'skippercast-four128approved-' + key.lower() + '-20261011.service' for key in ['probe'] + [w+'-'+stage for w in 'ABCD' for stage in ('acquire','qualify','map','hold')]}
-UNITS.update({w+'-review-'+stage:'skippercast-four128approved-'+w.lower()+'-review-'+stage+'-20261011.service' for w in 'ABCD' for stage in ('acquire','qualify')})
-UNITS.update({key:"skippercast-four128approved-"+key+"-20261011.service" for key in ("source-size-probe","interrupted-map","recovery-map","render-handoff","terrain-review","render-handoff-recovered","terrain-review-recovered")})
+# Every transient unit, the shared slice and the trial scratch carry one run tag.
+# The default keeps the 2026-10-11 attempt's names readable; a fresh run names
+# its own tag so it never collides with (or reuses) an earlier attempt's units
+# or scratch.
+HISTORICAL_RUN_TAG = "20261011"
+RUN_TAG = os.environ.get("SKIPPERCAST_FOUR128_RUN_TAG", HISTORICAL_RUN_TAG)
+if not re.fullmatch(r"[0-9]{8}[a-z0-9]{0,8}", RUN_TAG):
+    raise ValueError("run tag must be YYYYMMDD plus up to 8 lowercase letters/digits")
+SLICE = "skippercast-four128approved" + RUN_TAG + ".slice"
+UNITS = {key: 'skippercast-four128approved-' + key.lower() + '-' + RUN_TAG + '.service' for key in ['probe'] + [w+'-'+stage for w in 'ABCD' for stage in ('acquire','qualify','map','hold')]}
+UNITS.update({w+'-review-'+stage:'skippercast-four128approved-'+w.lower()+'-review-'+stage+'-'+RUN_TAG+'.service' for w in 'ABCD' for stage in ('acquire','qualify')})
+UNITS.update({key:"skippercast-four128approved-"+key+"-"+RUN_TAG+".service" for key in ("source-size-probe","interrupted-map","recovery-map","render-handoff","terrain-review","render-handoff-recovered","terrain-review-recovered")})
+CONTROL_UNITS = {key:"skippercast-four128approved-"+key+RUN_TAG+".service" for key in ("watchdog","driver")}
 ENV = {"PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
        "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1",
        "GDAL_NUM_THREADS": "1", "PROJ_NETWORK": "OFF"}
@@ -22,7 +32,7 @@ def launch_command(phase, python, wrapper):
     if not Path(python).is_absolute() or not Path(wrapper).is_absolute():
         raise ValueError("pinned absolute runtime paths required")
     args = ["/usr/bin/systemd-run", "--user", "--wait", "--pipe", "--collect",
-            "--unit=" + UNITS[phase], "--slice=skippercast-four128approved20261011.slice",
+            "--unit=" + UNITS[phase], "--slice=" + SLICE,
             "--property=RuntimeMaxSec=180", "--property=KillMode=control-group",
             "--property=KillSignal=SIGKILL", "--property=MemoryMax=1073741824",
             "--property=MemorySwapMax=0", "--property=CPUQuota=200%",

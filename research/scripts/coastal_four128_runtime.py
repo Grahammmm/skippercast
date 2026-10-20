@@ -4,7 +4,8 @@ from pathlib import Path
 # Mission root, code root and interpreter were pinned to the 2026-10-11 attempt.
 # A fresh run names its own (absent) mission root and the exact checkout/venv it
 # runs from; defaults keep the historical attempt's identity readable.
-N=Path(os.environ.get('SKIPPERCAST_FOUR128_MISSION_ROOT','/home/user/skippercast-data/2026-10-07-pge-south/outputs/ordered-four128-approved-20261011'))
+HISTORICAL_MISSION=Path('/home/user/skippercast-data/2026-10-07-pge-south/outputs/ordered-four128-approved-20261011')
+N=Path(os.environ.get('SKIPPERCAST_FOUR128_MISSION_ROOT',str(HISTORICAL_MISSION)))
 W=Path(os.environ.get('SKIPPERCAST_FOUR128_CODE_ROOT','/home/user/skippercast-data/2026-10-07-pge-south/work/source-reuse-admission-20261011'))
 PYTHON=os.environ.get('SKIPPERCAST_FOUR128_PYTHON','/home/user/skippercast-data/2026-10-07-pge-south/repo/.venv/bin/python')
 R=N/'execution'; M=N/'mapping-execution'
@@ -12,7 +13,7 @@ sys.dont_write_bytecode=True
 sys.path.insert(0,str(W/'src'))
 sys.path.insert(0,'/home/user/skippercast-data/2026-10-07-pge-south/work/combined-coastal-integration-20261009/var/python-integration-dependencies')
 sys.path.insert(0,str(Path(__file__).parent))
-from coastal_four128_resources import capture,UNITS
+from coastal_four128_resources import capture,UNITS,CONTROL_UNITS,SLICE,RUN_TAG,HISTORICAL_RUN_TAG
 from skippercast.coastal.receipts import managed_writes, atomic_json, digest as receipt_digest
 from skippercast.coastal.output_writer import ManagedOutputs
 
@@ -39,9 +40,9 @@ from skippercast.coastal.coordinator.loop import implementation_hashes
 from skippercast.coastal.coordinator.store import Store
 from skippercast.coastal.coordinator.source_free import policy as mapping_policy
 from skippercast.coastal.handoff.common import load,write,ref,epoch
-SLICE='skippercast-four128approved20261011.slice'
 ROOTS=[str(N)]
-SCRATCH=Path('/home/user/skippercast-data/2026-10-07-pge-south/scratch/four128-approved-20261011')
+# Slice, unit and scratch names follow SKIPPERCAST_FOUR128_RUN_TAG (coastal_four128_resources).
+SCRATCH=Path('/home/user/skippercast-data/2026-10-07-pge-south/scratch/four128-approved-'+RUN_TAG)
 PRIOR_SOURCE=821491388
 SOURCE_LIMIT=1115551932
 WALL=3600
@@ -355,7 +356,7 @@ def unit_command(key,extra=(),*,runtime=180,wait=True):
     if key not in allowed and key not in ('watchdog','driver'):raise ValueError('exact finite unit key required')
     if type(runtime) is not int or not 0<runtime<=3600:raise ValueError('finite unit runtime')
     if key not in ('watchdog','driver') and runtime!=180:raise ValueError('fixed stage runtime')
-    unit='skippercast-four128approved-'+key+'20261011.service' if key in ('watchdog','driver') else UNITS[key]
+    unit=CONTROL_UNITS[key] if key in ('watchdog','driver') else UNITS[key]
     argv=['/usr/bin/systemd-run','--user','--collect','--unit='+unit,'--slice='+SLICE,
           '--property=RuntimeMaxSec='+str(runtime),'--property=KillMode=control-group','--property=KillSignal=SIGKILL',
           '--property=MemoryMax=1073741824','--property=MemorySwapMax=0','--property=CPUQuota=200%',
@@ -365,7 +366,7 @@ def unit_command(key,extra=(),*,runtime=180,wait=True):
                 'MKL_NUM_THREADS':'1','GDAL_NUM_THREADS':'1','PROJ_NETWORK':'OFF',
                 # Transient units do not inherit the caller's environment: carry the roots explicitly.
                 'SKIPPERCAST_FOUR128_MISSION_ROOT':str(N),'SKIPPERCAST_FOUR128_CODE_ROOT':str(W),
-                'SKIPPERCAST_FOUR128_PYTHON':PYTHON}.items():
+                'SKIPPERCAST_FOUR128_PYTHON':PYTHON,'SKIPPERCAST_FOUR128_RUN_TAG':RUN_TAG}.items():
         argv+=['--setenv='+k+'='+v]
     cpus=sorted(os.sched_getaffinity(0))[:2]
     argv+=['/usr/bin/taskset','-c',','.join(map(str,cpus)),
@@ -423,7 +424,7 @@ def control_envelope(kind):
     membership=Path('/proc/self/cgroup').read_text().strip()
     if not membership.startswith('0::/') or '\n' in membership:raise ValueError('unified control membership')
     cg=membership[3:];leaf=Path('/sys/fs/cgroup'+cg);parent=leaf.parent
-    unit='skippercast-four128approved-'+kind+'20261011.service'
+    unit=CONTROL_UNITS[kind]
     keys=('ExecMainPID','ControlGroup','RuntimeMaxUSec','ActiveState','InvocationID',
           'ExecMainStartTimestampMonotonic','KillMode','KillSignal','MemoryMax','TasksMax','CPUQuotaPerSecUSec')
     result=subprocess.run(['/usr/bin/systemctl','--user','show',unit,*['--property='+k for k in keys]],
@@ -455,7 +456,7 @@ def live_watchdog():
     clock=load_clock();path=N/'control/parent-envelope.json'
     if path.is_symlink() or path.stat().st_size>65536:raise ValueError('bounded watchdog receipt')
     doc=json.loads(path.read_text());props=doc['properties']
-    unit='skippercast-four128approved-watchdog20261011.service'
+    unit=CONTROL_UNITS['watchdog']
     result=subprocess.run(['/usr/bin/systemctl','--user','show',unit,'--property=ActiveState',
                           '--property=ExecMainPID','--property=InvocationID','--property=ControlGroup'],
                           capture_output=True,text=True,check=True,timeout=5)
@@ -563,8 +564,20 @@ def initial_capacity():
         bound["ledger_growth"]=managed_ledger_growth_bound(grant,entries)
     return bound
 
+def fresh_run_identity():
+    """A new mission names a new run tag, and its trial scratch must be absent.
+
+    Checked before any clock or receipt is written, so a name collision holds the
+    run instead of failing at SCRATCH.mkdir after the outer clock has started."""
+    if N!=HISTORICAL_MISSION and RUN_TAG==HISTORICAL_RUN_TAG:
+        raise ValueError('fresh mission root requires its own SKIPPERCAST_FOUR128_RUN_TAG')
+    if SCRATCH.exists() or SCRATCH.is_symlink():
+        raise ValueError('trial scratch already exists; preserve it and choose a fresh run tag')
+    return True
+
 def run():
     # External observer owns no scientific subprocesses; all driver/phase supervisors are in SLICE.
+    fresh_run_identity()
     index();audit();bound=initial_capacity()
     if (N/'control/run-started.json').exists() or (N/'control/outer-clock.json').exists():
         raise ValueError('finite batch already attempted; no retry or clock reset')
