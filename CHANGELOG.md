@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Choose a NOAA tide prediction station within the region, or the nearest listed station to the port. The browser remembers each region's choice and offline chart packs include its predictions; bar and shore assessments keep their reviewed reference station.
+- Ranked places (Where to look, the trip planner's Best available and its pins on the Chart) are now checked against the NOAA shoreline: only places confirmed on water are ranked. A place on land, within 25 m of the shoreline, or outside the shoreline's coverage is withheld, and the basis counts it ("N spots withheld: land/water not confirmed"). Regions without a shoreline rank no places until one is imported. This is a planning screen, not a navigation boundary.
 - Temp contrast, a new map layer that is off by default: it shows the change in sea-surface temperature per nautical mile in the region's published daily analysis. It draws only cells whose change exceeds the summed analysis error and is withheld past 72 hours (CI6-03).
 - Offline packs now remind you to check before leaving coverage and explain missing water-temperature and current data instead of leaving the layer blank without an offline reason.
 - Choose decimal degrees, degrees and decimal minutes, or degrees minutes seconds in the account menu for mark positions, trip plans and downloaded notes. GPX coordinates remain decimal degrees.
