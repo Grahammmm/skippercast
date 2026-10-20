@@ -79,6 +79,8 @@ def test_default_allowlist_admits_the_reviewed_ncei_host(world):
     ("https://data.ngdc.noaa.gov.evil.test/x.bag", "access_host_not_on_reviewed_allowlist"),
     ("https://user:pw@data.ngdc.noaa.gov/x.bag", "access_url_credentials_or_port"),
     ("https://data.ngdc.noaa.gov:8443/x.bag", "access_url_credentials_or_port"),
+    ("https://data.ngdc.noaa.gov:notaport/x.bag", "access_url_malformed"),
+    ("https://[data.ngdc.noaa.gov/x.bag", "access_url_malformed"),
     ("", "access_url_not_https"),
 ])
 def test_access_url_must_be_https_on_an_exact_allowlisted_host(world, url, reason):
@@ -279,6 +281,67 @@ def test_run_writes_native_jobs_inside_root_and_enqueue_feeds_acquire(world, tmp
         assert bridge.enqueue(store, ref, code_sha="a" * 64, deps_sha="b" * 64) == ids
     finally:
         store.close()
+
+
+def _enqueue_relative(root_arg, receipt):
+    """Both the receipt ref and every native-job ref verify against the root and enqueue."""
+    from skippercast.coastal.coordinator.stages import verify_ref
+    from skippercast.coastal.coordinator.store import Store
+    from tests._coastal_operations import policy
+    root = Path(root_arg).resolve()
+    ref = dict(path=receipt["output"]["path"], sha256=receipt["output"]["sha256"],
+               bytes=receipt["output"]["bytes"], kind="input", contract=bridge.RECEIPT)
+    assert not Path(ref["path"]).is_absolute()
+    assert verify_ref(root, ref).parent.parent == root
+    for job in receipt["jobs"]:
+        assert not Path(job["input_manifest"]["path"]).is_absolute()
+        verify_ref(root, job["input_manifest"])
+    store = Store(Path(root_arg) / "var/coastal/coordinator.sqlite", root=root_arg, policy=policy())
+    try:
+        store.add_segment(dict(schema="coastal-segment-v1", segment_id=receipt["segment"]["segment_id"],
+                               region="t12-operations", crs="EPSG:3310", bbox=[0, 0, 5000, 5000],
+                               bbox_crs84=fx.SEGMENT_BBOX))
+        ids = bridge.enqueue(store, ref, code_sha="a" * 64, deps_sha="b" * 64)
+        rows = store.db.execute("SELECT stage,state,record_json FROM jobs").fetchall()
+        assert [(r["stage"], r["state"]) for r in rows] == [("acquire", "queued")]
+        assert json.loads(rows[0]["record_json"])["job_id"] == ids[0]
+        assert json.loads(rows[0]["record_json"])["input_manifest"] == receipt["jobs"][0]["input_manifest"]
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("absolute_root", [False, True], ids=["relative-root", "absolute-root"])
+def test_run_with_relative_output_writes_consistent_refs_and_enqueues(world, monkeypatch, absolute_root):
+    # tmp_path is absolute; work from its parent so root and out are genuinely relative.
+    monkeypatch.chdir(world["tmp"].parent)
+    rel_root = Path(world["tmp"].name) / "queue"
+    assert not rel_root.is_absolute() and rel_root.resolve() == world["root"].resolve()
+    root_arg = world["root"] if absolute_root else rel_root
+    out = rel_root / "relative-output"
+    assert not out.is_absolute()
+    receipt = bridge.run(root_arg, world["path"], world["plan"], out, allowlist=ALLOW)
+    assert receipt["output"]["path"] == "relative-output/bridge-receipt.json"
+    assert receipt["jobs"][0]["input_manifest"]["path"] == "relative-output/native-job-00.json"
+    assert sorted(p.name for p in (world["root"] / "relative-output").iterdir()) == [
+        "bridge-receipt.json", "native-job-00.json"]
+    _enqueue_relative(root_arg, receipt)
+    # The no-reuse gate holds for the same relative directory and its absolute spelling.
+    for again in (out, world["root"] / "relative-output"):
+        with pytest.raises(ValueError, match="never reused"):
+            bridge.run(root_arg, world["path"], world["plan"], again, allowlist=ALLOW)
+
+
+def test_relative_output_outside_the_root_is_refused_before_any_write(world, monkeypatch):
+    monkeypatch.chdir(world["tmp"])
+    for out in (Path("outside"), Path("queue/../outside"), Path("queue/..")):
+        with pytest.raises(ValueError, match="inside the coordinator queue root|plain final name"):
+            bridge.run(Path("queue"), world["path"], world["plan"], out, allowlist=ALLOW)
+    assert not (world["tmp"] / "outside").exists()
+    escape = world["root"] / "escape"
+    escape.symlink_to(world["tmp"], target_is_directory=True)
+    with pytest.raises(ValueError, match="inside the coordinator queue root"):
+        bridge.run(Path("queue"), world["path"], world["plan"], Path("queue/escape/out"), allowlist=ALLOW)
+    assert not (world["tmp"] / "out").exists()
 
 
 def test_enqueue_refuses_a_segment_that_differs(world):

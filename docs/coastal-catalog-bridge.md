@@ -33,7 +33,8 @@ is held, and the receipt records the reasons:
   its terrain status is `candidate_for_qualification`;
 - its `access_url` uses HTTPS with no credentials and no port, on a host that
   is an exact member of `skippercast.http.default_allowlist()`. A suffix
-  wildcard never admits a host, and the bridge never adds one;
+  wildcard never admits a host, and the bridge never adds one. A URL that
+  cannot be parsed is held as `access_url_malformed`;
 - its catalog `extent.bbox` (CRS84) overlaps the segment's `bbox_crs84`, and
   its `expires_at` is a UTC stamp in the future;
 - its cached ref passes the `lstat` checks above. When the catalog states a
@@ -73,7 +74,10 @@ queue root, plus `bridge-receipt.json`
 the hash binding. `catalog_bridge.enqueue(store, receipt_ref, code_sha=...,
 deps_sha=...)` then queues each job at `acquire` through `Store.enqueue`. Before
 that, `enqueue` checks that the Store's segment has the same `bbox_crs84` as
-the bridged one. Neither command reuses an output directory.
+the bridged one. Neither command reuses an output directory. `--root` and
+`--out` may be relative: the bridge resolves the output's parent before it
+checks containment or writes, so every recorded ref stays relative to the
+resolved queue root.
 
 ## Boundaries
 

@@ -100,11 +100,15 @@ def check_catalog(catalog):
 
 def host_decision(url, allowlist):
     """HTTPS on an exact allowlisted host, no credentials, no port. Never widens the list."""
-    parts = urllib.parse.urlsplit(url if isinstance(url, str) else "")
-    host = parts.hostname
+    try:
+        parts = urllib.parse.urlsplit(url if isinstance(url, str) else "")
+        host = parts.hostname
+        port = parts.port
+    except ValueError:
+        return None, "access_url_malformed"
     if parts.scheme != "https" or not host:
         return host, "access_url_not_https"
-    if parts.username or parts.password or parts.port is not None:
+    if parts.username or parts.password or port is not None:
         return host, "access_url_credentials_or_port"
     if host not in allowlist.exact:
         return host, "access_host_not_on_reviewed_allowlist"
@@ -226,7 +230,7 @@ def _decide(root, selection, row, catalog, segment, allowlist, now):
             holds.append("catalog_candidate_expired")
     except ValueError:
         holds.append("catalog_candidate_expiry_unknown")
-    decision = dict(source_id=row["source_id"], publisher_id=row.get("publisher_id"),
+    decision: dict = dict(source_id=row["source_id"], publisher_id=row.get("publisher_id"),
                     access_url=row.get("access_url"), access_host=host)
     try:
         source = cached_source(root, selection.get("source"))
@@ -286,12 +290,20 @@ def native_job(plan, selection, decision, catalog_ref):
 
 
 def _create(directory, inside=None):
+    """Make a new output directory, returned as resolved-parent / leaf.
+
+    Normalizing before any check or write keeps a relative `out` consistent with the
+    resolved queue root, so every ref later derived with `relative_to(root)` holds.
+    """
     directory = Path(directory)
-    if directory.exists() or directory.is_symlink():
-        raise ValueError("output directory exists; a bridge attempt is never reused")
+    if directory.name in ("", ".", ".."):
+        raise ValueError("output directory needs a plain final name")
     if not directory.parent.is_dir():
         raise ValueError("output parent must already exist")
-    if inside is not None and not directory.parent.resolve().is_relative_to(inside):
+    directory = directory.parent.resolve(strict=True) / directory.name
+    if directory.exists() or directory.is_symlink():
+        raise ValueError("output directory exists; a bridge attempt is never reused")
+    if inside is not None and not directory.parent.is_relative_to(inside):
         raise ValueError("bridge output must be inside the coordinator queue root")
     directory.mkdir(mode=0o700)
     return directory
