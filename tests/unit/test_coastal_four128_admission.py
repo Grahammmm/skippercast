@@ -333,7 +333,8 @@ def test_cli_refuses_historical_config_for_live_action(tmp_path):
         assert 'historical configs cannot issue or assemble' in result.stderr
 
 
-def test_issue_pipeline_with_synthetic_prepare_and_real_renderer(tmp_path, monkeypatch):
+@pytest.mark.parametrize('failure', [None, 'diagnostics', 'empty', 'existing_receipt', 'unwritable_receipt'])
+def test_issue_pipeline_with_synthetic_prepare_and_real_renderer(tmp_path, monkeypatch, capsys, failure):
     cfg, kwargs = fixture(tmp_path)
     stage = Path(cfg['staging_root'])
     prepared = tmp_path / 'prepared'
@@ -359,10 +360,58 @@ def test_issue_pipeline_with_synthetic_prepare_and_real_renderer(tmp_path, monke
         calls.append(argv)
         assert argv[3].endswith('coastal_four128_prepare.py')
         assert '--prospective-released-bytes' in argv
+        assert options['check'] is True and options['capture_output'] is True and options['text'] is True
         shutil.copytree(prepared, stage)
+        if failure:
+            raise subprocess.CalledProcessError(7, argv,
+                output=None if failure == 'empty' else 'earlier progress\nlast stdout line\n',
+                stderr=None if failure == 'empty' else 'ValueError: independent source-specific rights binding invalid\n')
         return SimpleNamespace(stdout=json.dumps(kwargs['package']))
 
     monkeypatch.setattr(adm.subprocess, 'run', prepare)
+    if failure:
+        failed_path = Path(cfg['issuance_receipt'] + '.failed.json')
+        if failure == 'existing_receipt':
+            adm.write_new(failed_path, b'prior failure receipt\n')
+        elif failure == 'unwritable_receipt':
+            monkeypatch.setattr(adm, 'write_new', mock.Mock(side_effect=PermissionError('fixture permission denial')))
+        with pytest.raises(SystemExit) as error:
+            adm.issue(cfg, 'f' * 64)
+        assert error.value.code == 1
+        assert len(calls) == 1  # never retry prepare
+        captured = capsys.readouterr()
+        assert not captured.out
+        if failure != 'empty':
+            assert 'ValueError: independent source-specific rights binding invalid\n' in captured.err
+            assert 'last stdout line\n' in captured.err and 'earlier progress' not in captured.err
+        if failure in ('existing_receipt', 'unwritable_receipt'):
+            assert 'Failed issuance receipt not written:' in captured.err
+            if failure == 'existing_receipt':
+                assert failed_path.read_bytes() == b'prior failure receipt\n'
+            else:
+                assert not failed_path.exists()
+        else:
+            report = json.loads(failed_path.read_text())
+            assert report['schema'] == 'coastal-four128-config-issuance-failure-v1'
+            assert report['status'] == 'ISSUANCE_FAILED_STAGE_PRESERVED'
+            assert report['config_sha256'] == 'f' * 64
+            assert (report['head'], report['run_tag']) == (cfg['head'], cfg['run_tag'])
+            assert (report['staging_root'], report['mission_root']) == (str(stage), cfg['mission_root'])
+            assert report['execution_authorized'] is False
+            assert report['prepare'] == dict(returncode=7,
+                stderr='' if failure == 'empty' else 'ValueError: independent source-specific rights binding invalid\n',
+                last_stdout_line='' if failure == 'empty' else 'last stdout line')
+        assert not Path(cfg['issuance_receipt']).exists()
+        assert not Path(cfg['assembly_receipt']).exists()
+        assert not Path(cfg['mission_root']).exists()
+        assert {p.relative_to(stage): p.read_bytes() for p in stage.rglob('*.json')} == {
+            p.relative_to(prepared): p.read_bytes() for p in prepared.rglob('*.json')}
+        with pytest.raises(ValueError, match='staging clean state differs'):
+            adm.issue(cfg, 'f' * 64)
+        with pytest.raises(ValueError, match='bounded regular metadata file required'):
+            adm.assemble(cfg, 'f' * 64)
+        assert len(calls) == 1
+        return
     report = adm.issue(cfg, 'f' * 64)
     assert len(calls) == 1
     assert report['status'] == 'ISSUED_REVIEW_REQUIRED'
