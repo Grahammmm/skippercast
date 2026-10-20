@@ -87,7 +87,6 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
         <section aria-labelledby={`${id}-account`}>
           <h2 id={`${id}-account`} class="ui-eyebrow">{s.state === 'signed-in' ? (s.name ? `Signed in as ${s.name}` : 'Signed in') : 'Account'}</h2>
           <p>{ACCOUNT_LINE[s.state]}</p>
-          <Button variant="quiet" size="sm" onClick={run(() => tourAction('replay'))}>Replay controls tour</Button>
           {s.state === 'signed-in' || s.state === 'signed-out'
             ? <Button variant={s.state === 'signed-out' ? 'primary' : 'ghost'} size="sm" onClick={run(openAccountDialog)}>
                 {s.state === 'signed-out' ? 'Sign in or create an account' : 'Account, passkeys and sign out'}</Button>
@@ -116,6 +115,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
             <li><Button size="sm" variant="quiet" icon="pin" disabled={!regionId} onClick={run(openTrip)}>
               Trip plan and GPX{tripIds.value.length ? ` · ${tripIds.value.length} saved` : ''}</Button></li>
             <li><Button size="sm" variant="quiet" icon="download" disabled={!regionId} onClick={run(() => { offlineOpen.value = true; })}>Save for offline</Button></li>
+            <li><Button size="sm" variant="quiet" onClick={run(() => tourAction('replay'))}>Replay controls tour</Button></li>
             <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />Offline spot notes (new tab)</a></li>
           </ul>
         </section>
