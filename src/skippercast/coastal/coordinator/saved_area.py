@@ -1,6 +1,7 @@
 """Explicit closed-producer adoption; never a native phase or source authority."""
 import hashlib, json, math, sqlite3
 from pathlib import Path
+from types import MappingProxyType
 from .stages import digest
 from .authenticated import metadata_document, IDENTITY_FIELDS, bounded_control_bytes
 from ..handoff.common import load, resolve, epoch
@@ -8,6 +9,37 @@ from ..authenticated_v1.profiles import grant_identity
 CONTRACT = 'coastal-saved-area-continuation-v1'
 ADOPTION = 'coastal-saved-area-adoption-v1'
 SCHEMA = "CREATE TABLE IF NOT EXISTS saved_area_adoptions(grant_sha TEXT PRIMARY KEY, adoption_sha TEXT NOT NULL, record_json TEXT NOT NULL)"
+# Native grid of the ORIGINAL saved-area A block only (H11952 2 m BAG, window A
+# at col 3890, row 3488: affine origin 721091 + 2*3890, 3826155 - 2*3488).
+# These are pinned constants, deliberately not derived from the grant or the
+# observation. Adopting any other block needs a deliberate update or an explicit
+# per-block parameter, never a looser check.
+SAVED_AREA_A_NATIVE_GRID = MappingProxyType(dict(
+    shape=(10495, 10034),
+    transform=(2.0, 0.0, 728871.0, 0.0, -2.0, 3819179.0),
+    resolution_m=(2.0, 2.0),
+    epsg=26910,
+    valid_count=16384,
+    valid_fraction=1,
+))
+
+def require_saved_area_a_native_grid(facts, window):
+    """Refuse unless the native facts match saved-area A exactly; name the first differing field."""
+    from pyproj import CRS
+    g=SAVED_AREA_A_NATIVE_GRID
+    h=facts['header'];c=CRS.from_user_input(h['horizontal_crs']);c=c.source_crs if c.is_bound else c
+    # Same order and comparisons as the original single condition, evaluated lazily.
+    checks=(('shape',lambda:h['shape']!=list(g['shape'])),
+            ('window',lambda:h['window']!=window),
+            ('transform',lambda:h['transform']!=list(g['transform'])),
+            ('resolution_m',lambda:h['resolution_m']!=list(g['resolution_m'])),
+            ('horizontal_crs',lambda:not c.equals(CRS.from_epsg(g['epsg']))),
+            ('valid_count',lambda:facts['valid_count']!=g['valid_count']),
+            ('valid_fraction',lambda:facts['valid_fraction']!=g['valid_fraction']))
+    for field,differs in checks:
+        if differs():
+            raise ValueError('original native grid CRS/affine/full-support scope differs: '+field
+                             +' does not match pinned saved-area A grid')
 
 def continuation_grant(grant):
     if grant.get('saved_area_continuation_contract') != CONTRACT:
@@ -147,13 +179,7 @@ def validate_adoption(root, descriptor, new_grant, *, now, horizon):
         or vertical.get('sign')!='positive_down' or vertical.get('units')!='m' or vertical.get('conflicts')!=[]
         or vertical.get('lineage',{}).get('datum_transform') is not False):
         raise ValueError('saved normalized MLLW lineage cannot change')
-    from pyproj import CRS
-    h=facts['header'];c=CRS.from_user_input(h['horizontal_crs']);c=c.source_crs if c.is_bound else c
-    if (h['shape']!=[10495,10034] or h['window']!=new_grant['window_set'][0]
-        or h['transform']!=[2.0,0.0,728871.0,0.0,-2.0,3819179.0]
-        or h['resolution_m']!=[2.0,2.0] or not c.equals(CRS.from_epsg(26910))
-        or facts['valid_count']!=16384 or facts['valid_fraction']!=1):
-        raise ValueError('original native grid CRS/affine/full-support scope differs')
+    require_saved_area_a_native_grid(facts,new_grant['window_set'][0])
     for role in ('policy_evaluation','verified_policy'):
         policy=load(origin,result[role],contract='coastal-fixed-patch-policy-evaluation-v1')
         if policy.get('paired_eligibility_quality_pass') is not True or policy.get('holds')!=[] or policy.get('facts_digest')!=observation['facts_digest']:
