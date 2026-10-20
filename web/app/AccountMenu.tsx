@@ -15,6 +15,8 @@ import {PortDialog} from '../landing/PortInput.tsx';
 import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
 import {region, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
+import {tourTransition, type TourAction, type TourState} from '../tour.ts';
+import {ControlsTour} from './ControlsTour.tsx';
 
 const ACCOUNT_LINE: Readonly<Record<Session['state'], string>> = {
   'loading': 'Checking your account…',
@@ -38,6 +40,7 @@ function LazyAlerts({regionId}: {regionId: string}) {
 export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(false);
+  const [tour, setTour] = useState<TourState>(null);
   const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null);
   const id = useId();
   const s = session.value, b = boat.value, regionId = region.value;
@@ -57,6 +60,11 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   }, [open]);
 
   const close = () => { setOpen(false); trigger.current?.focus(); };
+  const tourAction = (action: TourAction) => {
+    const next = tourTransition(tour, action);
+    setTour(next);
+    if (next === null) trigger.current?.focus();
+  };
   /** Close first so the v1 dialogs return focus to the menu button. */
   const run = (action: () => unknown) => () => { close(); void action(); };
   const onDismissKey = (event: KeyboardEvent) => {
@@ -79,6 +87,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
         <section aria-labelledby={`${id}-account`}>
           <h2 id={`${id}-account`} class="ui-eyebrow">{s.state === 'signed-in' ? (s.name ? `Signed in as ${s.name}` : 'Signed in') : 'Account'}</h2>
           <p>{ACCOUNT_LINE[s.state]}</p>
+          <Button variant="quiet" size="sm" onClick={run(() => tourAction('replay'))}>Replay controls tour</Button>
           {s.state === 'signed-in' || s.state === 'signed-out'
             ? <Button variant={s.state === 'signed-out' ? 'primary' : 'ghost'} size="sm" onClick={run(openAccountDialog)}>
                 {s.state === 'signed-out' ? 'Sign in or create an account' : 'Account, passkeys and sign out'}</Button>
@@ -114,6 +123,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
       {alerts && regionId
         ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title="Trip alerts"><LazyAlerts regionId={regionId} /></PortDialog>
         : null}
+      {tour !== null ? <ControlsTour step={tour} act={tourAction} /> : null}
     </div>
   );
 }
