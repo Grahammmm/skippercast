@@ -7,7 +7,7 @@ schemas/fleet-profile.schema.json and pass the policy checks below, which the
 schema cannot express:
 
 - no `source_url` (in a provenance object or a conflict) on an off-limits host (D7);
-- every provenance `source_url` an https URL with a host and no credentials (the
+- every `source_url` (provenance or conflict) an https URL with a host and no credentials (the
   schema admits `http://`; ingest stores only https, `ops.https_url`);
 - a value on an off-limits host (a booking link, an Instagram or Facebook handle
   or URL) only when it was read off a page (`method` `page`): the operator's
@@ -145,9 +145,13 @@ def policy_errors(doc, off_limits=None):
     for index, conflict in enumerate(conflicts):
         values = conflict.get("values") if isinstance(conflict, dict) else None
         for j, entry in enumerate(values if isinstance(values, list) else ()):
-            source_host = _host(entry.get("source_url") if isinstance(entry, dict) else None)
+            source_url = entry.get("source_url") if isinstance(entry, dict) else None
+            source_host = _host(source_url)
             if _on_host(source_host, hosts):
                 errors.append(f"conflicts[{index}].values[{j}]: source_url on an off-limits host ({source_host})")
+            elif isinstance(source_url, str) and https_url(source_url) is None:
+                errors.append(f"conflicts[{index}].values[{j}]: source_url must be an https URL with a host and "
+                              "no credentials (ingest stores no other)")
     ais = boat.get("ais") if isinstance(boat.get("ais"), dict) else {}
     boat_mmsi, ais_mmsi = _value(boat.get("mmsi")), _value(ais.get("mmsi"))
     if boat_mmsi is not None and ais_mmsi is not None and str(boat_mmsi) != str(ais_mmsi):

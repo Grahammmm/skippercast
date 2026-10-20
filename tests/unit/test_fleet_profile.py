@@ -100,6 +100,20 @@ class PolicyTests(unittest.TestCase):
                     self.assertEqual(errors, ['boat.reputation.other[0]: source_url must be an https URL with a host '
                                               'and no credentials (ingest stores no other)'])
 
+    def test_a_conflict_source_url_must_be_https(self):
+        """T17: conflicts[] citations reach a fact-conflict review, so they follow the same https rule."""
+        for url, ok in (('https://registry.example/', True), ('http://registry.example/', False),
+                        ('https://user:pw@registry.example/', False), ('https://localhost/', False),
+                        ('ftp://registry.example/', False)):
+            with self.subTest(url):
+                doc = load('six-pack.json')
+                doc['conflicts'][0]['values'][0]['source_url'] = url
+                errors = profile.policy_errors(doc)
+                self.assertEqual(errors == [], ok, errors)
+                if not ok:
+                    self.assertEqual(errors, ['conflicts[0].values[0]: source_url must be an https URL with a host '
+                                              'and no credentials (ingest stores no other)'])
+
     def test_notes_are_capped(self):
         doc = load('party.json')
         doc['notes'] = 'x' * profile.MAX_NOTES
