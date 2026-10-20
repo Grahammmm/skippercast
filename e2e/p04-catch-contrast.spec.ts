@@ -45,12 +45,14 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-08 chlorophyll: MapStage adds only the createChlorophyll layer; check_contrast.mjs changes only the
+// legendTsx source hash and citations, leaving contrast() untouched. Both rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
-  "web/app/MapStage.tsx": "25a446d17624bf555b684077e0a56091cfa6f32a94a03560aaa5be54a85bd367",
+  "web/app/MapStage.tsx": "aa60b23c2d670e2d46e3cdc92a6eafb99ea18f7688e2a64b2b5f2b4db1bff26e",
   "web/tokens.css": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
   "web/app/app.css": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
@@ -63,7 +65,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "32e6c43cbd87fe14536cef1835a1b1b4bb79f92662529ba98df249a91fa4d7c5",
+  "scripts/check_contrast.mjs": "b3e4fd1aefc6838e5398cc0c12473325f575eefc5a3a4531a49c212d8d11a425",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
