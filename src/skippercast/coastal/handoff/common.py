@@ -172,10 +172,24 @@ def _local_hdf5_tree(h5py, start, label):
                 raise ValueError(f'{label} container object unsupported')
 
 
+NETCDF_STEM_SIDECARS = ('.aux', '.aux.xml', '.msk', '.ovr', '.rrd')
+
+
 def _no_netcdf_sidecars(path):
-    # GDAL's PAM would let an unbound .aux.xml override georeferencing or nodata.
-    for auxiliary in (Path(str(path)+'.aux.xml'), path.with_suffix('.aux'), Path(str(path)+'.ovr')):
-        if auxiliary.exists() or auxiliary.is_symlink():
+    """Refuse every GDAL-probed sidecar of a netCDF source before GDAL opens it.
+
+    PAM (.aux.xml), masks (.msk), overviews (.ovr/.rrd) and auxiliary files
+    (.aux) can override georeferencing or nodata, or point GDAL at further
+    datasets (a mask can be a VRT referencing a file outside the queue). The
+    bridge lane binds no netCDF sidecar lineage, so any name GDAL derives from
+    the filename (``crm.nc.*``) or the stem (``crm.aux``...) is refused,
+    case-insensitively and whether a file, directory or (dangling) symlink.
+    """
+    filename, stem = path.name.lower(), path.stem.lower()
+    stem_forms = {stem+extension for extension in NETCDF_STEM_SIDECARS}
+    for sibling in path.parent.iterdir():
+        name = sibling.name.lower()
+        if name != filename and (name.startswith(filename+'.') or name in stem_forms):
             raise ValueError('netCDF sidecar refused before GDAL')
 
 

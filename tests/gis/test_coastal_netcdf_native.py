@@ -178,6 +178,63 @@ def test_netcdf_container_defects_are_refused_before_reading(tmp_path, defect):
         mapping_input.observe(tmp_path, artifact, window=[0, 0, SIDE, SIDE], vertical=None)
 
 
+def _external_mask_vrt(sidecar, outside):
+    """A GDAL-written warped-VRT mask whose source raster sits outside the queue root."""
+    from rasterio.vrt import WarpedVRT
+    mask = np.full((SIDE, SIDE), 255, dtype='uint8')
+    mask[1, 1] = 0
+    with rasterio.open(outside, 'w', driver='GTiff', width=SIDE, height=SIDE, count=1, dtype='uint8',
+                       crs='EPSG:3310', transform=from_origin(0, 100, 2, 2)) as ds:
+        ds.write(mask, 1)
+    with rasterio.open(outside) as ds, WarpedVRT(ds) as vrt:
+        raster_copy(vrt, sidecar, driver='VRT')
+    assert str(outside) in sidecar.read_text()
+
+
+SIDECARS = ['crm.nc.msk', 'CRM.NC.MSK', 'crm.nc.aux', 'crm.nc.AUX', 'crm.aux', 'crm.AUX',
+            'crm.nc.aux.xml', 'crm.nc.ovr', 'crm.nc.OVR', 'crm.nc.rrd', 'crm.msk']
+
+
+@pytest.mark.parametrize('fmt', ['NC', 'NC4'])
+@pytest.mark.parametrize('name', SIDECARS)
+@pytest.mark.parametrize('kind', ['external_vrt', 'dangling_symlink'])
+def test_netcdf_sidecars_are_refused_before_gdal_opens_anything(tmp_path, monkeypatch, fmt, name, kind):
+    """Review round 1: a .nc.msk VRT made GDAL open a raster outside the queue before observe refused it."""
+    root = tmp_path / 'queue'
+    root.mkdir()
+    artifact = ref(root, make_nc(root / 'crm.nc', fmt=fmt), 'native-raster-v1')
+    block = vertical_block(root, artifact)
+    outside = tmp_path / 'outside_queue_mask.tif'
+    if kind == 'external_vrt':
+        _external_mask_vrt(root / name, outside)
+    else:
+        (root / name).symlink_to(outside)  # dangling: the target never exists
+    opened = []
+
+    def refuse_gdal(*args, **kwargs):
+        opened.append(args)
+        raise AssertionError('GDAL opened the source before the sidecar preflight refused it')
+    monkeypatch.setattr(rasterio, 'open', refuse_gdal)
+    with pytest.raises(ValueError, match='netCDF sidecar refused before GDAL'):
+        validate_native_source(root, artifact, netcdf=True)
+    with pytest.raises(ValueError, match='netCDF sidecar refused before GDAL'):
+        mapping_input.observe(root, artifact, window=[0, 0, SIDE, SIDE], vertical=block)
+    assert opened == []
+
+
+def test_unrelated_netcdf_neighbours_do_not_trip_the_sidecar_preflight(tmp_path):
+    """Only GDAL-derived names are refused: other sources and receipts may share the directory."""
+    source = make_nc(tmp_path / 'crm.nc')
+    make_nc(tmp_path / 'crm2.nc')
+    (tmp_path / 'crm.json').write_text('{}')
+    (tmp_path / 'other.nc.aux.xml').write_text('<PAMDataset/>')
+    artifact = ref(tmp_path, source, 'native-raster-v1')
+    assert validate_native_source(tmp_path, artifact, netcdf=True) == source.resolve()
+    observed, *_ = mapping_input.observe(tmp_path, artifact, window=[0, 0, SIDE, SIDE],
+                                         vertical=vertical_block(tmp_path, artifact))
+    assert observed['valid_count'] == SIDE * SIDE - 1
+
+
 def test_acquire_and_qualify_stages_read_a_netcdf_native_job(tmp_path):
     """The real stage CLI: acquire observes the cached .nc; qualify writes the mapping input."""
     (tmp_path / 'sources').mkdir()
