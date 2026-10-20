@@ -76,6 +76,8 @@ function ChartPack() {
     <section class="app-offline" aria-labelledby="app-offline-pack">
       <h3 id="app-offline-pack">Chart pack</h3>
       <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12 and this app on this device. The list below shows when each region was saved.</p>
+      <p>Check the saved pack before leaving coverage.</p>
+      <p>Water temp and current tiles are not prefetched. Recently viewed tiles may be saved; coverage varies. For Morro Bay and Cambria, save Coastal readings below for water temperature and currents.</p>
       <div class="app-offline-actions">
         <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>Save {name} for offline</Button>
         {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : null}
