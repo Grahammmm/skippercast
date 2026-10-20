@@ -38,9 +38,11 @@ import type {Report} from '../../packages/coast/src/types.ts';
 import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
+import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offline.ts';
 import {MPA_FILL} from './mpa.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
@@ -125,8 +127,9 @@ function grid(sst: SurfaceTemperature): {field: SurfaceField; range: [number, nu
 }
 
 /** What Water temp shows for the report's state at the dock's hour `at`. */
-export function analysisStatus(on: boolean, status: CoastStatus, report: Report | null, at: Date, now: Date, tz: string): WaterTempStatus {
+export function analysisStatus(on: boolean, status: CoastStatus, report: Report | null, at: Date, now: Date, tz: string, offline = false): WaterTempStatus {
   if (!on) return OFF;
+  if (offline && status === 'error' && !report) return none(NOT_SAVED, COAST_NOT_SAVED);
   if (status === 'unbound') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.');
   if (status === 'error' || status === 'invalid') return none('unavailable', 'Water temp unavailable: the coast report failed to load.');
   if (status === 'expired') return none('expired', 'Water temp unavailable: the coast report passed its age limit.');
@@ -144,8 +147,9 @@ const stale = (product: string, analysedAt: string, limit: number, tz: string): 
 };
 
 /** What Water temp shows from the region's own feed (`null` while it loads) for a place with no local report. */
-export function regionalStatus(on: boolean, feed: RegionalSST | null, at: Date, now: Date, tz: string): WaterTempStatus {
+export function regionalStatus(on: boolean, feed: RegionalSST | null, at: Date, now: Date, tz: string, offline = false): WaterTempStatus {
   if (!on) return OFF;
+  if (offline && feed?.state === 'error' && feed.network) return none(NOT_SAVED, TILES_NOT_SAVED);
   if (!feed) return none('loading', 'Loading the region\'s surface-temperature analysis.');
   if (feed.state === 'none') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.');
   if (feed.state === 'error') return none('unavailable', 'Water temp unavailable: the region\'s surface-temperature analysis failed to load or failed its checks.');
@@ -231,6 +235,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
   const {engine, zone, place, data = coastData, palette = () => readPalette(), now = () => new Date(),
     fetchFn = (...a) => fetch(...a), page = () => location.href} = o;
   const tick = signal(0);
+  const connection = watchOffline();
   const on = computed(() => layers.value.includes(REGISTRY_ID));
   const report = computed(() => place() !== null ? data.coastStatus.value.report : 'loading');
   /** The regional feed's latest result for a region, null while its first read is in flight. */
@@ -240,9 +245,9 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
     const t = now(), p = place(), at = terrainHour(hour.value, t, day.value, zone());
     if (report.value === 'unbound' && p) {
       const f = feed.value;
-      return regionalStatus(on.value, f?.region === p.regionId ? f.result : null, at, t, zone());
+      return regionalStatus(on.value, f?.region === p.regionId ? f.result : null, at, t, zone(), connection.offline.value);
     }
-    return analysisStatus(on.value, report.value, data.coastReport.value?.data ?? null, at, t, zone());
+    return analysisStatus(on.value, report.value, data.coastReport.value?.data ?? null, at, t, zone(), connection.offline.value);
   });
   let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
   let drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
@@ -281,8 +286,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under swell, else wind, else the protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, 'wind-casing', MPA_FILL]);
+      // § 9 order: under Temp contrast, else swell, else wind, else the protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),
@@ -301,6 +306,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       return a && drawnKey === a.key && shownPresentation.peek() === 'chart' ? sstMark(a, at, now(), zone()) : null;
     },
     destroy() {
+      connection.destroy();
       for (const dispose of disposers) dispose();
       clearTimeout(timer);
       feedAbort?.abort();

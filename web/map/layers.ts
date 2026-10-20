@@ -76,6 +76,8 @@ export const DENSITY_SOURCE = 'marks-density';
 export const SELECTION_SOURCE = 'selection';
 /** The trip planner's ranked spots (web/map/ranked.ts, #495). */
 export const RANKED_SOURCE = 'trip-ranked';
+/** Temp contrast's supported analysis cells (web/map/contrast.ts, CI6-03). */
+export const CONTRAST_SOURCE = 'sst-contrast';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 export const MPA_SOURCE = 'mpas';
@@ -106,6 +108,12 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'The bound coast report\'s daily sea-surface temperature analysis, or else the region\'s own published analysis checked by hash in the browser, named with its product, grid and age where it draws and withheld past its 72-hour age limit; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),
   entry({id: 'water-temp-contours', label: 'Water temp contours', control: 'water-temp', presentations: ['chart'], time: ['observed'],
     basis: 'Half-degree Fahrenheit contours of the same analysis, labelled at whole degrees.', task: 'FE-16'}),
+  // CI6-03: its own rail entry, off by default, because Water temp (on by default for Shore) must not turn it on.
+  entry({id: 'sst-contrast', label: 'Temp contrast', control: 'sst-contrast', presentations: ['chart'], time: ['observed'], sources: [CONTRAST_SOURCE],
+    attribution: 'NOAA CoastWatch SST analysis',
+    legend: [{label: 'Temperature change per distance, °F per nautical mile', swatch: 'contrast1'}],
+    basis: 'The region\'s published daily sea-surface temperature analysis, partly interpolated, with gaps under cloud filled, drawn as the change in temperature per nautical mile only in grid cells where the change across neighbouring cells exceeds their summed analysis error; named with its product, grid and age where it draws and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location.',
+    task: 'CI6-03'}),
   entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],
     basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
   entry({id: 'wind', label: 'Wind', control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
