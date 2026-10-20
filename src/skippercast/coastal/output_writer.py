@@ -232,24 +232,46 @@ class ManagedOutputs:
             raise ValueError('reserved ledger namespace')
         return target
 
+    def _observe(self):
+        """One walk of the on-disk tree, in walk order, for _charge().
+
+        Holds (relative path, size) per regular file. It stops at the first
+        entry the audit refuses or cannot lstat and records that error in its
+        place, so _charge() raises exactly what the inline walk raised, at the
+        same point. An observation is valid only inside the lock hold that took
+        it and only until something other than the caller's own pending
+        reservation changes; never keep one across a lock release or a write.
+        """
+        seen=[]
+        for directory,dirs,files in os.walk(self.root,followlinks=False):
+            for name in (*dirs,*files):
+                p=Path(directory)/name
+                try:info=p.lstat()
+                except OSError as exc:
+                    seen.append(exc);return seen
+                if stat.S_ISLNK(info.st_mode) or (name in files and (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1)):
+                    seen.append(ValueError('single-link regular managed tree required'));return seen
+                if name in files:seen.append((p.relative_to(self.root).as_posix(),info.st_size))
+        return seen
+
     def _audit(self,state):
+        return self._charge(state,self._observe())
+
+    def _charge(self,state,seen):
+        """The ceiling audit of _audit() over an observation from _observe()."""
         charged={role:0 for role in self.limits};charged['control']=OVERHEAD
         for e in state['files'].values():charged[e['role']]+=e['bytes']
         observed=0;unknown=0
-        for directory,dirs,files in os.walk(self.root,followlinks=False):
-            for name in (*dirs,*files):
-                p=Path(directory)/name;info=p.lstat()
-                if stat.S_ISLNK(info.st_mode) or (name in files and (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1)):
-                    raise ValueError('single-link regular managed tree required')
-                if name not in files:continue
-                observed+=info.st_size;rel=p.relative_to(self.root).as_posix()
-                if rel in state['files']:
-                    if info.st_size>state['files'][rel]['bytes']:raise ValueError('managed retained file exceeded ceiling')
-                elif rel in ('managed-output.json','managed-output.pending'):
-                    if info.st_size>METADATA_MAX:raise ValueError('metadata retained ceiling exceeded')
-                elif rel=='managed-output.lock':
-                    if info.st_size!=0:raise ValueError('lock retained ceiling exceeded')
-                else:unknown+=info.st_size
+        for item in seen:
+            if isinstance(item,BaseException):raise item
+            rel,size=item;observed+=size
+            if rel in state['files']:
+                if size>state['files'][rel]['bytes']:raise ValueError('managed retained file exceeded ceiling')
+            elif rel in ('managed-output.json','managed-output.pending'):
+                if size>METADATA_MAX:raise ValueError('metadata retained ceiling exceeded')
+            elif rel=='managed-output.lock':
+                if size!=0:raise ValueError('lock retained ceiling exceeded')
+            else:unknown+=size
         charged['control']+=unknown
         if any(charged[r]>self.limits[r] for r in self.limits) or sum(charged.values())>self.plan['total_bytes']:
             raise ValueError('aggregate managed output allowance exhausted')
@@ -264,70 +286,98 @@ class ManagedOutputs:
     def audit(self):
         with self.lock():return self._audit(self._read())
 
-    def reserve_file(self,name,*,role,max_bytes,intent):
+    def _admit(self,name,role,max_bytes,intent):
+        """Argument checks reserve_file() makes before it takes the lock."""
         self.validate_finite_identity(name,intent)
         self._target(name)
         if role not in LIMITS or type(max_bytes) is not int or max_bytes<0 or not isinstance(intent,str) or not intent:
             raise ValueError('exact role, byte ceiling and intent required')
+
+    def _reserve_locked(self,state,seen,name,*,role,max_bytes,intent):
+        """reserve_file() body. The caller holds the lock and passes the state
+        from its own _read() and a walk from _observe() taken in this lock hold
+        after that state's last save. Returns (live ledger entry, saved).
+
+        A new entry is charged twice over ONE walk: before it is added and
+        after. Between the two nothing touches the tree, and the new path is
+        refused above if anything exists there, so a second walk would see the
+        same files classified the same way.
+        """
+        self._charge(state,seen)
+        entry:dict=dict(role=role,bytes=max_bytes,intent=intent,state='reserved',
+                        binding=digest(dict(path=name,role=role,bytes=max_bytes,intent=intent)))
+        if name in state['files']:
+            old=state['files'][name]
+            if any(old[k]!=entry[k] for k in ('role','bytes','intent')):
+                raise ValueError('managed file identity changed; no refund or new lease')
+            return old,False
+        if len(state['files'])>=MAX_FILES:raise ValueError('file registry exhausted')
+        if any(Path(name).is_relative_to(Path(other)) or Path(other).is_relative_to(Path(name))
+               for other in state['files']):raise ValueError('managed output paths overlap')
+        if self._target(name).exists():raise ValueError('unregistered existing file preserved')
+        state['files'][name]=entry
+        self._charge(state,seen)
+        self._save(state)
+        return entry,True
+
+    def reserve_file(self,name,*,role,max_bytes,intent):
+        self._admit(name,role,max_bytes,intent)
         with self.lock():
-            state=self._read();self._audit(state)
-            entry=dict(role=role,bytes=max_bytes,intent=intent,state='reserved',
-                       binding=digest(dict(path=name,role=role,bytes=max_bytes,intent=intent)))
-            if name in state['files']:
-                old=state['files'][name]
-                if any(old[k]!=entry[k] for k in ('role','bytes','intent')):
-                    raise ValueError('managed file identity changed; no refund or new lease')
-                return dict(old)
-            if len(state['files'])>=MAX_FILES:raise ValueError('file registry exhausted')
-            if any(Path(name).is_relative_to(Path(other)) or Path(other).is_relative_to(Path(name))
-                   for other in state['files']):raise ValueError('managed output paths overlap')
-            if self._target(name).exists():raise ValueError('unregistered existing file preserved')
-            state['files'][name]=entry
-            self._audit(state)
-            self._save(state)
+            state=self._read()
+            entry,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
             return dict(entry)
 
     @contextmanager
     def writer(self,name,*,role,max_bytes,intent):
-        self.reserve_file(name,role=role,max_bytes=max_bytes,intent=intent)
+        # Reserve and publish under ONE lock hold with one ledger read. The
+        # reservation's audit is the prepublication audit: only its own ledger
+        # save (bounded by _save) happens between it and the open below.
+        self._admit(name,role,max_bytes,intent)
         with self.lock():
-            state=self._read();self._audit(state);entry=state['files'][name]
-            target=self._target(name)
-            if target.exists():raise ValueError('existing managed output preserved; verify reuse explicitly')
-            target.parent.mkdir(parents=True,exist_ok=True)
-            # Persist each new ancestor entry before publishing a managed file.
-            parent=target.parent
-            while parent!=self.root:
-                sync_directory(parent.parent)
-                parent=parent.parent
-            fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-            try:
-                with os.fdopen(fd,'wb') as stream:
-                    sync_directory(target.parent)
-                    bounded=BoundedFile(stream,max_bytes)
-                    yield bounded
-                    stream.flush();os.fsync(stream.fileno())
-                entry.update(state='complete',actual_bytes=target.stat().st_size,
-                             sha256=hashlib.sha256(target.read_bytes()).hexdigest())
-            except BaseException:
-                entry['state']='uncertain'
-                self._save(state)
-                raise
+            state=self._read()
+            entry,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
+            with self._publish_locked(state,entry,name,max_bytes) as stream:
+                yield stream
+
+    @contextmanager
+    def _publish_locked(self,state,entry,name,max_bytes):
+        target=self._target(name)
+        if target.exists():raise ValueError('existing managed output preserved; verify reuse explicitly')
+        target.parent.mkdir(parents=True,exist_ok=True)
+        # Persist each new ancestor entry before publishing a managed file.
+        parent=target.parent
+        while parent!=self.root:
+            sync_directory(parent.parent)
+            parent=parent.parent
+        fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        try:
+            with os.fdopen(fd,'wb') as stream:
+                sync_directory(target.parent)
+                bounded=BoundedFile(stream,max_bytes)
+                yield bounded
+                stream.flush();os.fsync(stream.fileno())
+            entry.update(state='complete',actual_bytes=target.stat().st_size,
+                         sha256=hashlib.sha256(target.read_bytes()).hexdigest())
+        except BaseException:
+            entry['state']='uncertain'
             self._save(state)
-            self._audit(state)
+            raise
+        self._save(state)
+        self._audit(state)
 
     def write_bytes(self,name,data,*,role,max_bytes,intent):
         if not isinstance(data,bytes):raise TypeError('bytes required')
         if len(data)>max_bytes:raise ValueError('managed file ceiling exceeded before admission')
-        old=self.reserve_file(name,role=role,max_bytes=max_bytes,intent=intent)
+        self._admit(name,role,max_bytes,intent)
         target=self._target(name)
-        if old['state']=='complete':
-            with self.lock():
-                state=self._read();self._audit(state);e=state['files'][name]
+        with self.lock():
+            state=self._read()
+            e,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
+            if e['state']=='complete':
                 if target.stat().st_size!=len(data) or e.get('actual_bytes')!=len(data) or e.get('sha256')!=hashlib.sha256(data).hexdigest() or hashlib.sha256(target.read_bytes()).hexdigest()!=e['sha256']:
                     raise ValueError('completed managed output bytes changed')
-            return False
-        with self.writer(name,role=role,max_bytes=max_bytes,intent=intent) as stream:stream.write(data)
+                return False
+            with self._publish_locked(state,e,name,max_bytes) as stream:stream.write(data)
         return True
 
     def relative_path(self,path):
@@ -463,9 +513,10 @@ class ManagedOutputs:
         """Append through the same immutable full ceiling; failed logs are held."""
         if not isinstance(data,bytes):raise TypeError('bytes required')
         name=self.relative_path(name)
-        self.reserve_file(name,role=role,max_bytes=max_bytes,intent=intent)
+        self._admit(name,role,max_bytes,intent)
         with self.lock():
-            state=self._read();self._audit(state);entry=state['files'][name]
+            state=self._read()
+            entry,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
             path=self._target(name);size=path.stat().st_size if path.exists() else 0
             if path.exists() and (entry['state']!='complete' or entry.get('actual_bytes')!=size
                     or hashlib.sha256(path.read_bytes()).hexdigest()!=entry.get('sha256')):
@@ -510,11 +561,18 @@ class ManagedOutputs:
             raise ValueError('finite checkpoint update allowance required')
         raw=(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n').encode()
         if len(raw)>max_bytes:raise ValueError('checkpoint ceiling exceeded before write')
-        self.reserve_file(name,role=role,max_bytes=max_bytes,intent=intent)
+        self._admit(name,role,max_bytes,intent)
         temporary=f'.managed-checkpoints/{name}'
-        self.reserve_file(temporary,role=role,max_bytes=max_bytes,intent=digest([intent,'checkpoint-temporary']))
+        temporary_intent=digest([intent,'checkpoint-temporary'])
         with self.lock():
-            state=self._read();self._audit(state);entry=state['files'][name]
+            state=self._read();seen=self._observe()
+            entry,saved=self._reserve_locked(state,seen,name,role=role,max_bytes=max_bytes,intent=intent)
+            # Same order as two reserve_file() calls: the checkpoint is reserved
+            # (and saved) before the temporary's arguments are checked. Walk
+            # again only if that reservation saved the ledger.
+            self._admit(temporary,role,max_bytes,temporary_intent)
+            if saved:seen=self._observe()
+            self._reserve_locked(state,seen,temporary,role=role,max_bytes=max_bytes,intent=temporary_intent)
             target=self._target(name);staged=self._target(temporary)
             updates=entry.get('updates',0)
             if updates>=max_updates:raise ValueError('finite checkpoint update allowance exhausted')
