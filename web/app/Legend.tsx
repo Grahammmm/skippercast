@@ -262,7 +262,7 @@ export function DensityRow() {
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
 function StationsRow() {
   const s = stationState.value, rings = nearshoreState.value, entry = layerEntry('stations');
-  return <li>Stations
+  return <li class="app-legend-stations">Stations
     <Popover iconOnly summary="Stations basis">{entry.basis}<p>{entry.attribution}</p></Popover>
     <p class="app-legend-note">{s.note}</p>
     <ul>{entry.legend.map(row => <li key={row.label}><span class="app-key" aria-hidden="true" style={{background: `var(--${row.swatch})`}} />{row.label}</li>)}</ul>
