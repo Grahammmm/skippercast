@@ -78,6 +78,30 @@ policies, source catalogs, caches, reaches, screens or publication outputs,
 and it makes no habitat, fish-presence, depth-datum, measurement or ranking
 claim.
 
+## Private terrain acceptance and clean reruns
+
+`research/scripts/check_terrain_acceptance.py` renders reviewed terrain-only
+packets, one per `core-<X>/` directory, with the existing
+`skippercast.coastal.render.terrain_only` CLI (`run`), or checks renders that
+already exist (`verify`). It writes one receipt. For each core it checks the
+output hashes, that the render is bound to the reviewed acceptance digest, and
+that the preview is a bounded 640x480 PNG. It also checks that holes and
+separate supported regions are kept: mesh support equals the mask, no-data
+stays NaN, and every triangle lies inside a quad whose corners are all
+supported. Across cores it checks for a single CRS and no overlap. It counts
+supported cells, holes and connected regions; it does not judge geography or
+depth, so a vision-capable reviewer must still look at the previews.
+
+`research/scripts/rerun_clean_twice.py` runs a declared step list twice. Each
+pass starts in a new empty root with its own `HOME` and `TMPDIR`. The script
+hashes guarded read-only trees before and after each pass and compares the
+declared outputs between passes. It writes one report covering COAST-PROD-01
+to COAST-PROD-06. An id with no mapped step is `NO_RECEIPT` and a declared hold
+is `HELD`. Neither counts as a PASS.
+
+Both scripts produce private, review-required evidence. They never read sources,
+download or publish.
+
 ## Workflows
 
 Research runs only in `.github/workflows/research-*.yml`, each with a read-only
