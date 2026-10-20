@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Offline packs now remind you to check before leaving coverage and explain missing water-temperature and current data instead of leaving the layer blank without an offline reason.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
