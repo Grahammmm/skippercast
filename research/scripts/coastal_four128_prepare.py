@@ -6,7 +6,7 @@ from pathlib import Path
 B=Path.home()/"skippercast-data"/"2026-10-07-pge-south"
 W=Path(__file__).resolve().parents[2]
 sys.path[:0]=[str(W/"src"),str(B/"work/combined-coastal-integration-20261009/var/python-integration-dependencies"),str(Path(__file__).resolve().parent)]
-from coastal_four128_resources import budget_limits,FRESH_SOURCE
+from coastal_four128_resources import budget_limits_bytes,FRESH_SOURCE
 from skippercast.coastal.handoff.common import ref,write,load
 from skippercast.coastal.coordinator.loop import implementation_hashes
 from skippercast.coastal.coordinator.packet_release import build_acquisition_package,validate_acquisition_package
@@ -40,7 +40,7 @@ def main():
  amendment_path=x.budget_amendment.absolute()
  if amendment_path.is_symlink() or not amendment_path.is_file():
   raise ValueError("signed budget amendment file required")
- limits=budget_limits(json.loads(amendment_path.read_text()))
+ limits=budget_limits_bytes(amendment_path.read_bytes())
  prior,limit=limits["source_prior_bytes"],limits["source_limit_bytes"]
  root.mkdir(parents=True)
  old=B/"outputs/ordered-coastal-rehearsed-live-20261010/execution/metadata"

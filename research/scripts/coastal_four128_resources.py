@@ -1,5 +1,7 @@
 """Private trial envelope: command construction and read-only verification, never service launch."""
 import datetime as dt
+import hashlib
+import json
 import math
 import os
 from pathlib import Path
@@ -66,27 +68,83 @@ BUDGET_AMENDMENT = "coastal-four128-budget-amendment-v1"
 AMENDMENT_STATUS = "SIGNED_DELEGATED_BUDGET_AUTHORITY"
 AMENDMENT_SIGNERS = ("fable-2nd-look", "astra-orchestrator")
 HARNESS_AUTHOR = "opus-coder"
-PRE_FAILURE_SOURCE_PRIOR = 821491388
-FAILED_TRIAL_SOURCE_CHARGED = 73515136
-FAILED_TRIAL2_SOURCE_CHARGED = 36757568
-FAILED_TRIAL4_SOURCE_CHARGED = 110272704
-PRESCAN_SOURCE_CHARGED = 73515136
-FAILED_TRIAL5_SOURCE_CHARGED = 257302976
-# Attempt 6 COMPLETED at ed28dc69 (2026-10-20T06:37Z): eight settled admissions, charged.
-TRIAL6_SOURCE_CHARGED = 294060544
-# Independent validation of attempt 6 (t_b40d52c8): two read-only BAG hash passes, charged.
-VALIDATION_HASH_SOURCE_CHARGED = 73515136
-# T15 clean-state rerun 1 COMPLETED at 292cb0aa, run tag 20261020r1, 2026-10-20T07:13Z:
-# eight settled admissions, charged.
-RERUN1_SOURCE_CHARGED = 294060544
-SOURCE_PRIOR_FLOOR = (PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED + FAILED_TRIAL2_SOURCE_CHARGED
-                      + FAILED_TRIAL4_SOURCE_CHARGED + PRESCAN_SOURCE_CHARGED + FAILED_TRIAL5_SOURCE_CHARGED
-                      + TRIAL6_SOURCE_CHARGED + VALIDATION_HASH_SOURCE_CHARGED + RERUN1_SOURCE_CHARGED)
-RECORDED_SOURCE_LIMIT = 1115551932
-FRESH_SOURCE = 294060544
-SCRATCH_PRIOR_FLOOR = 1616905649
-RECORDED_SCRATCH_LIMIT = 2147483648
-TRIAL_SCRATCH = 536870912
+LEDGER_RELATIVE = 'research/catalog/coastal-four128-charge-ledger.json'
+
+
+def load_charge_ledger(path):
+    """Read reviewed data, never an environment-selected accounting floor.
+
+    The original signed amendment is pinned by raw SHA256. This projection is
+    anchored by repository review, not by a newly invented signing key.
+    """
+    path = Path(path)
+    if path.is_symlink() or any(p.is_symlink() for p in path.parents):
+        raise ValueError('charge ledger symlink')
+    ledger = json.loads(path.read_text())
+    if ledger.get('schema') != 'coastal-four128-charge-ledger-v1':
+        raise ValueError('charge ledger schema')
+    head = ledger['head']
+    if (head['status'] != AMENDMENT_STATUS
+            or head['signer']['profile'] not in AMENDMENT_SIGNERS
+            or not head['signer'].get('model') or 'opus' in head['signer']['model'].lower()
+            or not re.fullmatch('[0-9a-f]{64}', head['sha256'])
+            or not re.fullmatch('[0-9a-f]{64}', head['supersedes_sha256'])
+            or type(head['revision']) is not int or head['revision'] < 1):
+        raise ValueError('signed charge ledger head required')
+    source, scratch = ledger['source'], ledger['scratch']
+    charges = {k: v for k, v in source.items()
+               if k == 'pre_failure_prior_bytes' or k.endswith('_charged_bytes')}
+    if not charges or 'pre_failure_prior_bytes' not in charges:
+        raise ValueError('charge ledger has no baseline')
+    for block in (source, scratch):
+        if any(type(v) is not int or v < 0 for k, v in block.items() if k.endswith('_bytes')):
+            raise ValueError('exact integer charge ledger accounting required')
+        if block.get('refunds') is not False:
+            raise ValueError('charge ledger refunds forbidden')
+    prior = sum(charges.values())
+    if (type(source.get('downloads')) is not int or source['downloads'] != 0
+            or prior != source['prior_effective_bytes']
+            or source['additional_bytes'] != max(0, prior + source['fresh_allowance_bytes'] - source['previous_cumulative_limit_bytes'])
+            or source['cumulative_limit_bytes'] != source['previous_cumulative_limit_bytes'] + source['additional_bytes']
+            or scratch['additional_bytes'] != max(0, scratch['charged_prior_bytes'] + scratch['trial_reservation_bytes'] - scratch['previous_cumulative_maximum_bytes'])
+            or scratch['cumulative_maximum_bytes'] != scratch['previous_cumulative_maximum_bytes'] + scratch['additional_bytes']):
+        raise ValueError('charge ledger does not balance')
+    return ledger
+
+
+CHARGE_LEDGER = load_charge_ledger(Path(__file__).resolve().parents[2] / LEDGER_RELATIVE)
+SOURCE_CHARGES = {k: v for k, v in CHARGE_LEDGER['source'].items()
+                  if k == 'pre_failure_prior_bytes' or k.endswith('_charged_bytes')}
+# Compatibility names for historical consumers; validation iterates the ledger,
+# so future signed charges require a reviewed data update, not Python edits.
+PRE_FAILURE_SOURCE_PRIOR = SOURCE_CHARGES['pre_failure_prior_bytes']
+FAILED_TRIAL_SOURCE_CHARGED = SOURCE_CHARGES['failed_trial_charged_bytes']
+FAILED_TRIAL2_SOURCE_CHARGED = SOURCE_CHARGES['failed_trial_2_charged_bytes']
+FAILED_TRIAL4_SOURCE_CHARGED = SOURCE_CHARGES['failed_trial_4_charged_bytes']
+PRESCAN_SOURCE_CHARGED = SOURCE_CHARGES['window_prescan_charged_bytes']
+FAILED_TRIAL5_SOURCE_CHARGED = SOURCE_CHARGES['failed_trial_5_charged_bytes']
+TRIAL6_SOURCE_CHARGED = SOURCE_CHARGES['trial_6_charged_bytes']
+VALIDATION_HASH_SOURCE_CHARGED = SOURCE_CHARGES['validation_hash_reads_charged_bytes']
+RERUN1_SOURCE_CHARGED = SOURCE_CHARGES['rerun_1_charged_bytes']
+SOURCE_PRIOR_FLOOR = sum(SOURCE_CHARGES.values())
+RECORDED_SOURCE_LIMIT = CHARGE_LEDGER['source']['previous_cumulative_limit_bytes']
+FRESH_SOURCE = CHARGE_LEDGER['source']['fresh_allowance_bytes']
+SCRATCH_PRIOR_FLOOR = CHARGE_LEDGER['scratch']['charged_prior_bytes']
+RECORDED_SCRATCH_LIMIT = CHARGE_LEDGER['scratch']['previous_cumulative_maximum_bytes']
+TRIAL_SCRATCH = CHARGE_LEDGER['scratch']['trial_reservation_bytes']
+
+
+def budget_limits_bytes(raw):
+    """Live callers must bind actual signed bytes, not just self-claimed roles."""
+    if hashlib.sha256(raw).hexdigest() != CHARGE_LEDGER['head']['sha256']:
+        raise ValueError('signed amendment differs from reviewed charge ledger head')
+    doc = json.loads(raw)
+    if (doc.get('amendment_revision') != CHARGE_LEDGER['head']['revision']
+            or doc.get('signer') != CHARGE_LEDGER['head']['signer']
+            or doc.get('signed_at') != CHARGE_LEDGER['head']['signed_at']
+            or doc.get('supersedes', {}).get('sha256') != CHARGE_LEDGER['head']['supersedes_sha256']):
+        raise ValueError('signed amendment differs from charge ledger attestation')
+    return budget_limits(doc)
 
 
 def _exact_int(value):
@@ -111,28 +169,15 @@ def budget_limits(doc):
     source, scratch = doc.get("source"), doc.get("scratch")
     if not isinstance(source, dict) or not isinstance(scratch, dict):
         raise ValueError("source and scratch accounting required")
-    keys = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
-            "failed_trial_4_charged_bytes", "window_prescan_charged_bytes", "failed_trial_5_charged_bytes",
-            "trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "rerun_1_charged_bytes",
+    keys = (*SOURCE_CHARGES,
             "prior_effective_bytes", "previous_cumulative_limit_bytes", "additional_bytes",
             "cumulative_limit_bytes", "fresh_allowance_bytes")
     if any(not _exact_int(source.get(k)) for k in keys):
         raise ValueError("exact integer source accounting required")
     prior, cap = source["prior_effective_bytes"], source["cumulative_limit_bytes"]
-    if (source["pre_failure_prior_bytes"] != PRE_FAILURE_SOURCE_PRIOR
-            or source["failed_trial_charged_bytes"] != FAILED_TRIAL_SOURCE_CHARGED
-            or source["failed_trial_2_charged_bytes"] != FAILED_TRIAL2_SOURCE_CHARGED
-            or source["failed_trial_4_charged_bytes"] != FAILED_TRIAL4_SOURCE_CHARGED
-            or source["window_prescan_charged_bytes"] != PRESCAN_SOURCE_CHARGED
-            or source["failed_trial_5_charged_bytes"] != FAILED_TRIAL5_SOURCE_CHARGED
-            or source["trial_6_charged_bytes"] != TRIAL6_SOURCE_CHARGED
-            or source["validation_hash_reads_charged_bytes"] != VALIDATION_HASH_SOURCE_CHARGED
-            or source["rerun_1_charged_bytes"] != RERUN1_SOURCE_CHARGED
-            or prior != (source["pre_failure_prior_bytes"] + source["failed_trial_charged_bytes"]
-                         + source["failed_trial_2_charged_bytes"] + source["failed_trial_4_charged_bytes"]
-                         + source["window_prescan_charged_bytes"] + source["failed_trial_5_charged_bytes"]
-                         + source["trial_6_charged_bytes"] + source["validation_hash_reads_charged_bytes"]
-                         + source["rerun_1_charged_bytes"])
+    if (any(source[k] != value for k, value in SOURCE_CHARGES.items())
+            or {k for k in source if k.endswith('_charged_bytes')} != {k for k in SOURCE_CHARGES if k.endswith('_charged_bytes')}
+            or prior != sum(source[k] for k in SOURCE_CHARGES)
             or prior < SOURCE_PRIOR_FLOOR
             or source["previous_cumulative_limit_bytes"] != RECORDED_SOURCE_LIMIT
             or source["fresh_allowance_bytes"] != FRESH_SOURCE

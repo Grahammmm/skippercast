@@ -19,6 +19,7 @@ sys.path.insert(0,str(PROJECT/'work/combined-coastal-integration-20261009/var/py
 sys.path.insert(0,str(Path(__file__).parent))
 from coastal_four128_resources import capture,UNITS,CONTROL_UNITS,SLICE,RUN_TAG,HISTORICAL_RUN_TAG
 from coastal_four128_resources import budget_limits,BUDGET_AMENDMENT,FRESH_SOURCE,TRIAL_SCRATCH
+from coastal_four128_resources import CHARGE_LEDGER,LEDGER_RELATIVE
 from skippercast.coastal.receipts import managed_writes, atomic_json, digest as receipt_digest
 from skippercast.coastal.output_writer import ManagedOutputs
 
@@ -76,6 +77,8 @@ def hard_deadline_within(started,runtime,deadline_monotonic):
 def limits_for(grant):
     """Exact cumulative accounting bound into one released grant."""
     amendment=metadata_document(R,grant.get('approved_budget_amendment') or {},BUDGET_AMENDMENT)
+    if grant['approved_budget_amendment']['sha256']!=CHARGE_LEDGER['head']['sha256']:
+        raise ValueError('signed amendment differs from reviewed charge ledger head')
     limits=budget_limits(amendment)
     if (grant.get('prior_effective_bytes')!=limits['source_prior_bytes']
             or grant.get('prior_effective_source_bytes')!=limits['source_prior_bytes']
@@ -138,7 +141,7 @@ def validate_runtime_review(d,review,*,now,horizon=None):
         raise ValueError('independent review differs from exact runtime/code/carry/science bindings')
     if not d['runtime_controls'] or {item['path'] for item in d['runtime_controls']}!={
             'research/scripts/coastal_four128_runtime.py','research/scripts/coastal_four128_resources.py',
-            'research/scripts/coastal_four128_artifact_review.py'}:
+            'research/scripts/coastal_four128_artifact_review.py',LEDGER_RELATIVE}:
         raise ValueError('complete independently reviewed control set required')
     horizon=now+3600 if horizon is None else horizon
     if not epoch(review['checked_at'])<=now<horizon<epoch(review['valid_until']):
