@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The target picker says what the region has for each target beside its name: ranked by mapped habitat, search plan only, or not researched in this region. Targets the region names as unresearched are listed but cannot be selected.
+- Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
