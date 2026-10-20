@@ -77,3 +77,13 @@ def plan(catalog, catalog_sha, selections, *, bbox=None, segment_id="seg:3310:0:
 def selection(source_id, source, window=None, **extra):
     return dict(source_id=source_id, source=source, window=window or [0, 0, 4, 4], vertical=None,
                 rights=dict(private_use=True, evidence=[]), **extra)
+
+
+def window_set(source_id, source, windows, grid=None, **extra):
+    """A G5 window-set selection: a deterministic tiling of one source into multiple windows."""
+    value = dict(source_id=source_id, source=source, windows=windows, vertical=None,
+                 rights=dict(private_use=True, evidence=[]))
+    if grid is not None:
+        value["grid"] = grid
+    value.update(extra)
+    return value

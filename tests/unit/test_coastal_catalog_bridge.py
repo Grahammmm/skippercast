@@ -15,6 +15,7 @@ import pytest
 from skippercast.coastal.coordinator import catalog_bridge as bridge
 from skippercast.http import Allowlist, default_allowlist
 from tests import _coastal_catalog_fixture as fx
+from tests._support import FIXTURES
 
 ALLOW = Allowlist([fx.HOST])
 
@@ -104,7 +105,7 @@ def test_bridge_never_widens_the_allowlist(world):
 
 
 def test_job_count_cap_refuses_before_any_write(world):
-    rows = [fx.candidate(f"s{i}.bag") for i in range(bridge.MAX_JOBS + 1)]
+    rows = [fx.candidate(f"s{i}.bag") for i in range(bridge.MAX_SOURCES + 1)]
     sels = [fx.selection(r["source_id"], world["source"]) for r in rows]
     path, plan = rebuild(world, rows, sels)
     with pytest.raises(ValueError, match="1..4"):
@@ -429,3 +430,118 @@ def test_bridge_module_imports_no_network_client():
     forbidden = {"socket", "urllib.request", "http.client", "requests", "httpx", "ssl", "subprocess"}
     assert not names & forbidden, names & forbidden
     assert "...live_discovery" not in names and "..live_discovery" not in names
+
+
+def _tile(width, height, tile=512):
+    """Row-major 512x512 tiling of a native grid, from its north-west corner."""
+    return [[x, y, min(tile, width - x), min(tile, height - y)]
+            for y in range(0, height, tile) for x in range(0, width, tile)]
+
+
+def _assert_tiles(windows, width, height):
+    """The windows partition the grid exactly: in bounds, no overlap, no gap."""
+    area = 0
+    for index, (x, y, w, h) in enumerate(windows):
+        assert 0 <= x and 0 <= y and x + w <= width and y + h <= height, (index, windows[index])
+        area += w * h
+        for x2, y2, w2, h2 in windows[:index]:
+            assert not (x < x2 + w2 and x2 < x + w and y < y2 + h2 and y2 < y + h), "overlap"
+    assert area == width * height, "gap"
+
+
+def test_window_set_plan_enqueues_one_job_per_window_in_index_order(world):
+    """A 64-window plan enqueues 64 acquire jobs whose windows tile the raster (G5)."""
+    from skippercast.coastal.coordinator.store import Store
+    from tests._coastal_operations import policy
+    grid = {"width": 4096, "height": 4096}
+    windows = _tile(grid["width"], grid["height"])
+    assert len(windows) == bridge.MAX_WINDOWS == 64
+    sel = fx.window_set(world["rows"][0]["source_id"], world["source"], windows, grid=grid)
+    plan = fx.plan(world["catalog"], world["sha"], [sel])
+    receipt = bridge.run(world["root"], world["path"], plan, world["root"] / "bridge-ws", allowlist=ALLOW)
+    assert len(receipt["jobs"]) == 64
+    # The receipt lists every window with its index and manifest sha256, in index order.
+    assert [job["window_index"] for job in receipt["jobs"]] == list(range(64))
+    assert [job["window"] for job in receipt["jobs"]] == windows
+    assert [job["input_manifest"]["sha256"] for job in receipt["jobs"]]
+    # A cached source is counted once toward the byte budget, not once per window.
+    assert receipt["caps"]["selected_bytes"] == world["source"]["bytes"]
+    store = Store(world["root"] / "var/coastal/coordinator.sqlite", root=world["root"], policy=policy())
+    try:
+        store.add_segment(dict(schema="coastal-segment-v1", segment_id=plan["segment"]["segment_id"],
+                               region="t12-operations", crs="EPSG:3310", bbox=[0, 0, 5000, 5000],
+                               bbox_crs84=fx.SEGMENT_BBOX))
+        ref = dict(path=receipt["output"]["path"], sha256=receipt["output"]["sha256"],
+                   bytes=receipt["output"]["bytes"], kind="input", contract=bridge.RECEIPT)
+        ids = bridge.enqueue(store, ref, code_sha="a" * 64, deps_sha="b" * 64)
+        assert len(ids) == 64
+        # Job ids come back in index order: ids[i] is the i-th window's acquire job.
+        for i, job_id in enumerate(ids):
+            queued = json.loads(store.db.execute("SELECT record_json FROM jobs WHERE job_id=?",
+                                                 (job_id,)).fetchone()[0])
+            assert queued["input_manifest"] == receipt["jobs"][i]["input_manifest"]
+            manifest = json.loads((world["root"] / queued["input_manifest"]["path"]).read_text())
+            assert manifest["window"] == windows[i]
+    finally:
+        store.close()
+    _assert_tiles(windows, grid["width"], grid["height"])
+
+
+def test_four_window_plan_keeps_today_receipt_except_the_raised_job_cap(world):
+    """Backward compatibility: today's max plan (four sources, one window each) is unchanged.
+
+    The gate decisions, the selected/held lists and every native-job manifest (the
+    ``would_enqueue`` sha256s) stay byte-identical to today's receipt; the only delta is
+    the caps block, which this card raises (MAX_JOBS: 4 -> N x sources, G5).
+    """
+    source = world["source"]
+    rows = [fx.candidate(f"s{i}.bag", size=source["bytes"], source_hash=source["sha256"])
+            for i in range(bridge.MAX_SOURCES)]
+    sels = [fx.selection(r["source_id"], source) for r in rows]
+    path, plan = rebuild(world, rows, sels)
+    receipt = bridge.dry_run(world["root"], path, plan, world["tmp"] / "dry", allowlist=ALLOW)
+    golden = json.loads((FIXTURES / "bridge-4-window-dry-run-receipt.json").read_text())
+    for key in ("decisions", "would_enqueue", "selected_source_ids", "held_source_ids",
+                "plan_sha256", "catalog", "segment_id", "schema", "network_requests",
+                "source_opens", "source_bytes_read", "review_required", "mapping_accepted",
+                "execution_authorized", "note"):
+        assert receipt[key] == golden[key], key
+    assert len(receipt["would_enqueue"]) == 4
+    assert receipt["caps"] == dict(golden["caps"], max_jobs=bridge.MAX_JOBS,
+                                   max_sources=bridge.MAX_SOURCES,
+                                   max_windows_per_source=bridge.MAX_WINDOWS)
+
+
+def test_65th_window_is_refused_before_any_write(world):
+    windows = [[0, 0, 512, 512]] * 65
+    sel = fx.window_set(world["rows"][0]["source_id"], world["source"], windows)
+    plan = fx.plan(world["catalog"], world["sha"], [sel])
+    out = world["tmp"] / "refused-65"
+    with pytest.raises(ValueError, match="window_set_size"):
+        bridge.dry_run(world["root"], world["path"], plan, out, allowlist=ALLOW)
+    assert not out.exists()
+
+
+def test_window_above_the_acquire_bound_is_refused_before_any_write(world):
+    windows = [[0, 0, 512, 512]] * 63 + [[0, 0, 513, 512]]
+    sel = fx.window_set(world["rows"][0]["source_id"], world["source"], windows)
+    plan = fx.plan(world["catalog"], world["sha"], [sel])
+    out = world["tmp"] / "refused-overcap"
+    with pytest.raises(ValueError, match="native_window_bound"):
+        bridge.dry_run(world["root"], world["path"], plan, out, allowlist=ALLOW)
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("windows, grid, match", [
+    ([[0, 0, 512, 512], [256, 0, 512, 512]], {"width": 1024, "height": 512}, "overlap"),
+    ([[0, 0, 512, 512]], {"width": 1024, "height": 512}, "gap"),
+    ([[512, 0, 512, 512]], {"width": 512, "height": 512}, "outside"),
+    ([[512, 0, 512, 512], [0, 0, 512, 512]], {"width": 1024, "height": 512}, "row-major"),
+])
+def test_window_set_must_tile_its_declared_grid(world, windows, grid, match):
+    sel = fx.window_set(world["rows"][0]["source_id"], world["source"], windows, grid=grid)
+    plan = fx.plan(world["catalog"], world["sha"], [sel])
+    out = world["tmp"] / f"tile-{match}"
+    with pytest.raises(ValueError, match=match):
+        bridge.dry_run(world["root"], world["path"], plan, out, allowlist=ALLOW)
+    assert not out.exists()

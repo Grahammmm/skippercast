@@ -13,8 +13,11 @@ existing input contract, `coastal-native-job-v1`, and nothing more:
   candidate's `access_url` must be HTTPS on a host that is an exact member of
   the reviewed source allowlist (`skippercast.http.default_allowlist`). A
   suffix wildcard never admits a host and the bridge never adds one;
-- caps are fixed before any write: at most `MAX_JOBS` acquire jobs, at most
-  `MAX_TOTAL_BYTES` of cached source across them, zero requests per job;
+- caps are fixed before any write: at most `MAX_JOBS` acquire jobs (a plan may
+  carry, per distinct source, a deterministic 512x512 tiling of up to
+  `MAX_WINDOWS` windows, one acquire job per window), at most `MAX_TOTAL_BYTES`
+  of cached source across them (each cached source counted once), zero requests
+  per job;
 - the catalog must still say `review_required=true` and authorize nothing.
   A bridged job is evidence for the existing coordinator gates, not scientific
   acceptance: qualification, mapping and rendering keep their own holds.
@@ -41,7 +44,9 @@ PLAN = "coastal-catalog-acquire-bridge-plan-v1"
 RECEIPT = "coastal-catalog-acquire-bridge-receipt-v1"
 DRY_RUN = "coastal-catalog-acquire-bridge-dry-run-v1"
 NATIVE_JOB = "coastal-native-job-v1"
-MAX_JOBS = 4
+MAX_SOURCES = 4                         # distinct sources per bridge plan
+MAX_WINDOWS = 64                        # deterministic 512x512 windows per source (G5: N = 64)
+MAX_JOBS = MAX_SOURCES * MAX_WINDOWS    # acquire jobs per plan (N x sources)
 MAX_TOTAL_BYTES = 2 * 1024**3          # the acquire stage's default per-job byte ceiling
 MAX_WALL_S = 3600
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024    # catalog / plan metadata read bound
@@ -134,6 +139,48 @@ def _window(value):
     return value
 
 
+def _selection_windows(selection):
+    """The ordered native windows a selection carries: one acquire job per window.
+
+    A selection carries either a single ``window`` (today's shape, unchanged) or a
+    ``windows`` list -- the deterministic 512x512 tiling of that source (G5 window-set).
+    The list order is the row-major tile index, so the receipt and the enqueue return
+    follow that index order.
+    """
+    if "windows" in selection:
+        raw = selection["windows"]
+        if not isinstance(raw, list) or not raw:
+            raise ValueError("window-set selections need a non-empty windows list")
+        return raw
+    return [selection.get("window")]
+
+
+def _check_tiling(windows, grid):
+    """A window set tiles its declared native grid without overlap or gap, row-major.
+
+    ``grid`` is the owner's declared native sub-grid (``width``, ``height`` in cells) that
+    the listed windows cover exactly. Overlap, gap, out-of-bounds and out-of-order sets are
+    refused before any write. Called only for window sets whose windows are all well-formed.
+    """
+    if not isinstance(grid, dict) or set(grid) != {"width", "height"}:
+        raise ValueError("window-set grid needs exactly width and height")
+    width, height = grid["width"], grid["height"]
+    if type(width) is not int or type(height) is not int or width <= 0 or height <= 0:
+        raise ValueError("window-set grid width and height must be positive integers")
+    area = 0
+    for index, (x, y, w, h) in enumerate(windows):
+        if x < 0 or y < 0 or x + w > width or y + h > height:
+            raise ValueError("window outside the declared source grid")
+        area += w * h
+        for x2, y2, w2, h2 in windows[:index]:
+            if x < x2 + w2 and x2 < x + w and y < y2 + h2 and y2 < y + h:
+                raise ValueError("windows overlap")
+    if area != width * height:
+        raise ValueError("windows do not tile the declared source grid without gap")
+    if windows != sorted(windows, key=lambda w: (w[1], w[0])):
+        raise ValueError("windows must be listed row-major from the north-west corner")
+
+
 def _hash_binding(declared, sha256):
     """Bind to the catalog's hash only when it is a SHA-256; otherwise record it as unknown."""
     if declared in (None, "", "unknown"):
@@ -202,18 +249,31 @@ def check_plan(plan, catalog_raw, catalog):
         raise ValueError("max_total_bytes must be a positive integer within the bridge cap")
     check_budget(plan.get("budget"))
     selections = plan.get("selections")
-    if not isinstance(selections, list) or not 1 <= len(selections) <= MAX_JOBS:
-        raise ValueError(f"plan must select 1..{MAX_JOBS} catalog candidates")
+    if not isinstance(selections, list) or not 1 <= len(selections) <= MAX_SOURCES:
+        raise ValueError(f"plan must select 1..{MAX_SOURCES} catalog candidates")
     ids = [s.get("source_id") if isinstance(s, dict) else None for s in selections]
     if None in ids or len(set(ids)) != len(ids):
         raise ValueError("each selection names one distinct source_id")
+    total_windows = 0
     for s in selections:
-        window = s.get("window")
-        if (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)
-                and window[2] * window[3] > MAX_WINDOW_CELLS):
-            # A window the acquire stage would refuse never reaches the queue.
-            raise ValueError(f"native_window_bound: {s['source_id']} window exceeds "
-                             f"{MAX_WINDOW_CELLS} cells, the acquire stage's bound")
+        windows = _selection_windows(s)
+        if len(windows) > MAX_WINDOWS:
+            raise ValueError(f"window_set_size: {s['source_id']} carries {len(windows)} windows, "
+                             f"above the {MAX_WINDOWS}-window per-source cap")
+        total_windows += len(windows)
+        if total_windows > MAX_JOBS:
+            raise ValueError(f"plan carries {total_windows} windows, above the {MAX_JOBS}-job cap")
+        well_formed = True
+        for window in windows:
+            if (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)
+                    and window[2] * window[3] > MAX_WINDOW_CELLS):
+                # A window the acquire stage would refuse never reaches the queue.
+                raise ValueError(f"native_window_bound: {s['source_id']} window exceeds "
+                                 f"{MAX_WINDOW_CELLS} cells, the acquire stage's bound")
+            if not (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)):
+                well_formed = False
+        if "windows" in s and well_formed and s.get("grid") is not None:
+            _check_tiling(windows, s["grid"])
     return segment, selections
 
 
@@ -242,7 +302,8 @@ def _decide(root, selection, row, catalog, segment, allowlist, now):
                     access_url=row.get("access_url"), access_host=host)
     try:
         source = cached_source(root, selection.get("source"))
-        _window(selection.get("window"))
+        for window in _selection_windows(selection):
+            _window(window)
     except (ValueError, OSError) as exc:
         holds.append("cached_source_or_window_invalid:" + str(exc)[:200])
         return dict(decision, state="held", holds=holds)
@@ -280,11 +341,12 @@ def evaluate(root, catalog_path, plan, *, allowlist=None, now=None):
                 decisions=decisions, selected_bytes=total)
 
 
-def native_job(plan, selection, decision, catalog_ref):
+def native_job(plan, selection, decision, catalog_ref, *, window=None):
     """The acquire stage's existing input contract, with catalog lineage attached."""
     job = dict(schema=NATIVE_JOB, synthetic=plan.get("synthetic", False),
                segment_id=plan["segment"]["segment_id"], source=decision["source"],
-               window=selection["window"], vertical=selection.get("vertical"),
+               window=selection["window"] if window is None else window,
+               vertical=selection.get("vertical"),
                rights=selection.get("rights"),
                catalog_lineage=dict(catalog_id=catalog_ref["catalog_id"], catalog_sha256=catalog_ref["sha256"],
                                     source_id=decision["source_id"], publisher_id=decision["publisher_id"],
@@ -334,7 +396,8 @@ def _receipt(schema, plan, checked):
                 segment_id=checked["segment"]["segment_id"], decisions=checked["decisions"],
                 selected_source_ids=[d["source_id"] for d in selected],
                 held_source_ids=[d["source_id"] for d in checked["decisions"] if d["state"] != "selected"],
-                caps=dict(max_jobs=MAX_JOBS, max_total_bytes=MAX_TOTAL_BYTES,
+                caps=dict(max_jobs=MAX_JOBS, max_sources=MAX_SOURCES, max_windows_per_source=MAX_WINDOWS,
+                          max_total_bytes=MAX_TOTAL_BYTES,
                           plan_max_total_bytes=plan["max_total_bytes"], selected_bytes=checked["selected_bytes"],
                           acquire_budget=plan["budget"]),
                 network_requests=0, source_opens=0, source_bytes_read=0,
@@ -348,10 +411,20 @@ def dry_run(root, catalog_path, plan, out, *, allowlist=None, now=None):
     checked = evaluate(root, catalog_path, plan, allowlist=allowlist, now=now)
     out = _create(out)
     receipt = _receipt(DRY_RUN, plan, checked)
-    receipt["would_enqueue"] = [dict(stage="acquire", source_id=d["source_id"],
-                                     native_job_sha256=digest(native_job(plan, checked["selections"][d["source_id"]],
-                                                                         d, checked["catalog_ref"])))
-                                for d in checked["decisions"] if d["state"] == "selected"]
+    would_enqueue = []
+    for decision in checked["decisions"]:
+        if decision["state"] != "selected":
+            continue
+        selection = checked["selections"][decision["source_id"]]
+        for window_index, window in enumerate(_selection_windows(selection)):
+            entry: dict = dict(stage="acquire", source_id=decision["source_id"],
+                               native_job_sha256=digest(native_job(plan, selection, decision,
+                                                                   checked["catalog_ref"], window=window)))
+            if "windows" in selection:
+                entry["window_index"] = window_index
+                entry["window"] = window
+            would_enqueue.append(entry)
+    receipt["would_enqueue"] = would_enqueue
     raw = _freeze(out / "bridge-dry-run-receipt.json", receipt)
     return dict(receipt, output=dict(path="bridge-dry-run-receipt.json", sha256=_sha(raw), bytes=len(raw)))
 
@@ -362,13 +435,23 @@ def run(root, catalog_path, plan, out, *, allowlist=None, now=None):
     checked = evaluate(root, catalog_path, plan, allowlist=allowlist, now=now)
     out = _create(out, inside=root)
     jobs = []
-    for index, decision in enumerate(d for d in checked["decisions"] if d["state"] == "selected"):
-        manifest = native_job(plan, checked["selections"][decision["source_id"]], decision, checked["catalog_ref"])
-        path = out / f"native-job-{index:02}.json"
-        raw = _freeze(path, manifest)
-        jobs.append(dict(source_id=decision["source_id"], stage="acquire",
-                         input_manifest=dict(path=path.relative_to(root).as_posix(), sha256=_sha(raw),
-                                             bytes=len(raw), kind="input", contract=NATIVE_JOB)))
+    index = 0
+    for decision in checked["decisions"]:
+        if decision["state"] != "selected":
+            continue
+        selection = checked["selections"][decision["source_id"]]
+        for window_index, window in enumerate(_selection_windows(selection)):
+            manifest = native_job(plan, selection, decision, checked["catalog_ref"], window=window)
+            path = out / f"native-job-{index:02}.json"
+            raw = _freeze(path, manifest)
+            entry: dict = dict(source_id=decision["source_id"], stage="acquire",
+                               input_manifest=dict(path=path.relative_to(root).as_posix(), sha256=_sha(raw),
+                                                   bytes=len(raw), kind="input", contract=NATIVE_JOB))
+            if "windows" in selection:
+                entry["window_index"] = window_index
+                entry["window"] = window
+            jobs.append(entry)
+            index += 1
     receipt = _receipt(RECEIPT, plan, checked)
     receipt.update(jobs=jobs, budget=plan["budget"], segment=checked["segment"])
     raw = _freeze(out / "bridge-receipt.json", receipt)
