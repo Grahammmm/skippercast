@@ -153,6 +153,7 @@ test('a spot\'s card has v1\'s lines in the planner\'s order and reviews the spo
     regulations: {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', label: 'CDFW ocean fishing regulations'},
     basis: `${reefs[0].target.terrain_interpretation} ${reefs[0].target.special_note} ${reefs[0].target.evidence_status}`,
     trip: 'test-reef-00',
+    position: {latitude: reefs[0].target.latitude, longitude: reefs[0].target.longitude},
   });
   for (const line of [card.name, card.kind, card.reading, card.source, card.rules]) assert.doesNotMatch(line, PROMISE);
   assert.equal(rankedCard({...reefs[0].target, trip_fit: undefined, evidence_confidence: null}, null).reading, 'Habitat fit unrated');

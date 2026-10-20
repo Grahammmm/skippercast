@@ -2,8 +2,10 @@
 
 ## Unreleased
 
+- Temp contrast, a new map layer that is off by default: it shows the change in sea-surface temperature per nautical mile in the region's published daily analysis. It draws only cells whose change exceeds the summed analysis error and is withheld past 72 hours (CI6-03).
 - Offline packs now remind you to check before leaving coverage and explain missing water-temperature and current data instead of leaving the layer blank without an offline reason.
 - Replay a short, skippable controls tour from the account menu on desktop or phone: time dock, layers, offline saving and evidence limits. Profile setup and the first-visit Chart flyover are unchanged.
+- Choose decimal degrees, degrees and decimal minutes, or degrees minutes seconds in the account menu for mark positions, trip plans and downloaded notes. GPX coordinates remain decimal degrees.
 - Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.

@@ -302,7 +302,8 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('.landing-fresh')).toHaveText('Buoy feed updated 12 min ago');
   await expect(page.locator('#landing-readout-title')).toHaveText('Latest readings · Morro Bay & Avila area');
   await expect(page.locator('[data-fleet]')).toHaveCount(0);
-  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(6);
+  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(7);   // one per rail entry, Temp contrast included (CI6-03)
+  await expect(page.locator('.landing-dots a[data-layer="sst-contrast"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=sst-contrast&ui=v2$/);
   await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&current=wcofs&ui=v2$/);
   await page.locator('[data-reading="tide"] summary').click();
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('mean lower low water');

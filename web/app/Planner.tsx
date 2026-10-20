@@ -5,6 +5,8 @@
 // web/app/trip.css.
 import {useEffect} from 'preact/hooks';
 import {signal} from '@preact/signals';
+import {coordinates} from '../state.ts';
+import {formatCoordinates} from '../../dist/coordinates.js';
 import {exportEvidenceLabel} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, Target, TripSpecies} from '../planner.ts';
@@ -34,6 +36,7 @@ function SpotRow({t, checked, onToggle}: {t: Target; checked: boolean; onToggle:
       <span>
         <strong>{t.trip_rank ? `#${t.trip_rank} · ${fitLabel(t.trip_fit)} · ${t.evidence_confidence?.percent}% confidence` : t.label}</strong>
         <small>{exportEvidenceLabel(t)}</small>
+        <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
         {t.trip_rank ? <small>{t.terrain_interpretation}</small> : null}
       </span>

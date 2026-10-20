@@ -13,7 +13,7 @@ import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
-import {region, species} from '../state.ts';
+import {coordinates, region, setCoordinateFormat, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 import {tourTransition, type TourAction, type TourState} from '../tour.ts';
 import {ControlsTour} from './ControlsTour.tsx';
@@ -107,6 +107,12 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
             ))}
           </div>
           <Button size="sm" variant="quiet" onClick={run(openBoatSheet)}>Enter my exact boat</Button>
+        </section>
+        <section aria-labelledby={`${id}-coordinates`}>
+          <h2 id={`${id}-coordinates`} class="ui-eyebrow">Coordinate format</h2>
+          <p>Saved in this browser. GPX always uses decimal degrees.</p>
+          {([['dd', 'Decimal degrees'], ['ddm', 'Degrees and decimal minutes'], ['dms', 'Degrees minutes seconds']] as const).map(([value, label]) =>
+            <Button key={value} size="sm" pressed={coordinates.value === value} onClick={() => setCoordinateFormat(value)}>{label}</Button>)}
         </section>
         <section aria-labelledby={`${id}-alerts`}>
           <h2 id={`${id}-alerts`} class="ui-eyebrow">Trip alerts</h2>
