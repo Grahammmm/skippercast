@@ -176,8 +176,9 @@ Only when every tile of the layer passes are they written, through the
 existing extras `put`, which adds each body's length to the pack's `bytes`.
 If any tile fails, the buffered bodies are dropped. Nothing of that layer
 reaches the pack, and the layer is recorded as `failed` with the first reason.
-So the extras API needs no delete or byte-adjust operation, and a failed layer
-leaves no keys and no counted bytes behind. Memory use is bounded by
+So the extras API needs no delete or byte-adjust operation, and a layer that
+fails validation leaves no keys and no counted bytes behind. A failure while
+writing is handled in D5a. Memory use is bounded by
 `OCEAN_BYTE_CAP`. The readers refuse a partial grid anyway, so a partial layer
 would only cost bytes while promising coverage.
 
@@ -187,6 +188,48 @@ from the exact bytes the phase validated. It is written whenever the path is
 because the readers then report offline what the manifest says (stale, or not
 saved) instead of a bare network failure. Cancelling at any point deletes the
 whole candidate pack, as now.
+
+D5a. Two kinds of failure. Buffering makes validation all-or-nothing. It does
+not make the writes a transaction: the extras `put` adds the body's length
+to `bytes` before `await cache.put` and has no rollback
+(`dist/offline-pack.js:115`). So the plan separates two kinds of failure:
+
+- Nonfatal: everything decided before the first ocean write. That covers the
+  manifest fetch and checks, the caps (D4), save-time eligibility (D6), and
+  each tile's fetch, HTTP status, `X-SC-Offline`, length, SHA-256 and identity
+  (D5). These record a layer as `failed`, `over-cap` or `not-current` (or the
+  manifest as `stored: false`). The pack still commits, and no key or byte of
+  that layer was ever written.
+- Fatal: any rejection from `put` while writing a validated layer or the
+  manifest. This includes `QuotaExceededError`, `InvalidStateError` and any
+  other `cache.put` error. The ocean phase does not catch it. It rethrows it
+  as `Error('storage on this device is full or unavailable. Saved regions are
+  unchanged.', {cause})`, and `savePack`'s existing outer catch deletes the
+  whole candidate cache (`dist/offline-pack.js:130–132`). `PACK_META` is never
+  written. Older packs of the region are deleted only after `PACK_META` is
+  written (`dist/offline-pack.js:126`), so the prior committed pack stays
+  exactly as it was. `track('offline_saved')` is not called, and the Trip
+  dialog shows its existing "Could not save: …" status, not "Saved". The
+  counted `bytes`, including the failed body's, die with the candidate,
+  because no meta records them. The phase writes a layer's buffered tiles
+  one at a time (fetching stays at concurrency 4), so no ocean `put` is still
+  in flight when the rejection reaches the outer catch and the candidate is
+  deleted.
+
+The plan does not commit a pack that holds part of a layer, and it does not
+retry without the ocean layers (see Open questions). It does not swallow a
+write error in order to keep a pack, so it needs no rollback or byte-adjust
+API, and the extras API stays as it is. This is deliberately stricter than
+the other phases today. `store` (files, chart tiles, v2 shell and hashed
+files) catches a `cache.put` error and records a miss, after counting the
+bytes (`dist/offline-pack.js:65–78`). A basemap `put` rejection is caught by
+the `getZxy` try and also becomes a miss (`web/trip.ts:192`). Those are
+existing behaviours outside ocean keys, and this plan leaves them alone
+(D11). Ocean layers are different because the meta promises a whole,
+verified layer. A swallowed write would leave part of a layer in the pack
+under a `failed` record, so the ocean phase never writes through `store` and
+never swallows a `put` rejection. A `put` rejection after the signal has
+aborted is still the cancellation path (`AbortError`, "Cancelled").
 
 D6. What `saved` means, and the drawable deadline. `saved` means
 integrity-complete storage of a layer that the readers would draw at save time
@@ -339,8 +382,13 @@ only under `ocean`.
   over-cap or not-current layers are never counted, because they were never
   written (D5).
 
-Ocean failures never fail the pack. Only a missing region config does, as now.
-Cancelling deletes the whole candidate pack, as now. Replacing a pack deletes
+Nonfatal ocean failures (D5a: fetch, validation, caps and eligibility, all
+decided before any ocean write) never fail the pack, and they are recorded
+here. A fatal one, a storage write rejected while writing a validated layer
+or the manifest, fails the whole save: no meta is written, the candidate is
+deleted, and the prior pack is kept (D5a). Otherwise only a missing region
+config fails the pack, as now. Cancelling deletes the whole candidate pack,
+as now. Replacing a pack deletes
 the older pack together with its ocean entries. It never touches coastal
 caches or `sc-data`.
 
@@ -462,6 +510,25 @@ Partial save:
    `drawable_until` from the earlier one.
 9. Cancelling during the ocean phase deletes the whole candidate pack, and the
    previous pack, `sc-data` and the coastal snapshot are unchanged.
+9a. Fault injection, later tile write (D5a). A prior committed pack of the
+   region exists. The fake `caches` makes `cache.put` reject with
+   `QuotaExceededError` on the second WCOFS tile, after SST and the first
+   WCOFS tile were written. Then: `savePack` rejects with the D5a storage
+   message (with the original error as `cause`), and the Trip status is
+   "Could not save: …", never "Saved". The candidate `sc-pack-<region>-*`
+   cache is gone from `caches.keys()`. The prior pack's cache name, keys,
+   bodies and `PACK_META` are byte-identical to before. `listPacks()` returns
+   only the prior pack with its old meta. No new `PACK_META` exists anywhere,
+   `track('offline_saved')` is not called, and `sc-data` and the coastal
+   caches are unchanged. The same with the rejection on the first SST tile.
+9b. Fault injection, manifest write. Both layers' tiles are written, and the
+   final manifest `put` rejects. The checks are the same as 9a: no committed
+   pack holds those tiles without their manifest, and the prior pack is kept.
+9c. Fault injection, first save. 9a with no prior pack leaves no
+   `sc-pack-<region>-*` cache at all. A nonfatal failure in the same run
+   (WCOFS tile 500, as in test 6) with every `put` succeeding still commits,
+   which shows the two kinds are kept apart. A `put` that rejects after the
+   signal aborts gives "Cancelled. Nothing new was saved.", as in test 9.
 
 Offline startup:
 
@@ -535,9 +602,11 @@ Separation and unchanged contracts:
 2. Pack integration and the ocean phase. Three parts: the `sc-data` copy
    filter in `dist/offline-pack.js` (D3a); a new `web/map/ocean-pack.ts`
    wired into `web/trip.ts` `v2Pack` (D1–D7), which exports `layerOf` from
-   `habitat-feed.ts`; and the meta record (D9). Tests 1–10, 12, 14–16 and 19.
-   Depends on card 1. The extras API (`store`/`put`) is unchanged, because
-   layers are buffered (D5).
+   `habitat-feed.ts`; and the meta record (D9). Tests 1–10 (with 9a–9c), 12,
+   14–16 and 19. Depends on card 1. The extras API (`store`/`put`) is
+   unchanged: layers are buffered (D5), and a rejected ocean `put` is fatal and
+   rethrown, never caught (D5a). The new storage-failure message passes the
+   copy lint.
 3. Trip dialog coverage lines and copy (D10), with tests 17, 18 and 21, plus
    the copy lint. Depends on card 2. Also update `docs/web-app.md` "Data,
    storage and offline".
@@ -567,3 +636,9 @@ a reader gate or changes producer data.
   the layer reports `over-cap` and does not silently shrink.
 - `MIN_WINDOW` of 60 min is a reversible default. Card 2 may tune it with
   review. It never lets a layer past the readers' own gates.
+- On a storage write failure, should the save retry once without the ocean
+  layers? Default: no. D5a fails the save and keeps the prior pack. A retry
+  would need a second, ocean-free candidate and its own tests. If real saves
+  show quota failures, revisit it as a separate card. That card should also
+  look at the existing `store` and basemap paths, which record a failed write
+  as a miss after counting its bytes.
