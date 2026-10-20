@@ -55,8 +55,13 @@ ENV = {"PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
 # revision-4 cap exactly. It also charges, in advance and never refunded, the two
 # read-only SHA256 passes over the cached BAG made by the independent validation
 # of attempt 6 (73,515,136 B; same treatment as the two pre-scan opens). Revision 5
-# authorises one fresh eight-admission rerun. A revision-4 amendment, and the
+# authorised one fresh eight-admission rerun. A revision-4 amendment, and the
 # unused revision-5 draft that omits the validation reads, are refused.
+# Revision 6 of the amendment (2026-10-20T07:24Z) adds T15 clean-state rerun 1,
+# which COMPLETED at 292cb0aa (run tag 20261020r1, launched 2026-10-20T07:13Z): its
+# eight settled source admissions (294,060,544 B) are charged, no refunds, and
+# exhaust the revision-5 cap exactly. Revision 6 authorises rerun 2 only (one fresh
+# eight-admission allowance). A revision-5 amendment, which omits rerun 1, is refused.
 BUDGET_AMENDMENT = "coastal-four128-budget-amendment-v1"
 AMENDMENT_STATUS = "SIGNED_DELEGATED_BUDGET_AUTHORITY"
 AMENDMENT_SIGNERS = ("fable-2nd-look", "astra-orchestrator")
@@ -71,9 +76,12 @@ FAILED_TRIAL5_SOURCE_CHARGED = 257302976
 TRIAL6_SOURCE_CHARGED = 294060544
 # Independent validation of attempt 6 (t_b40d52c8): two read-only BAG hash passes, charged.
 VALIDATION_HASH_SOURCE_CHARGED = 73515136
+# T15 clean-state rerun 1 COMPLETED at 292cb0aa, run tag 20261020r1, 2026-10-20T07:13Z:
+# eight settled admissions, charged.
+RERUN1_SOURCE_CHARGED = 294060544
 SOURCE_PRIOR_FLOOR = (PRE_FAILURE_SOURCE_PRIOR + FAILED_TRIAL_SOURCE_CHARGED + FAILED_TRIAL2_SOURCE_CHARGED
                       + FAILED_TRIAL4_SOURCE_CHARGED + PRESCAN_SOURCE_CHARGED + FAILED_TRIAL5_SOURCE_CHARGED
-                      + TRIAL6_SOURCE_CHARGED + VALIDATION_HASH_SOURCE_CHARGED)
+                      + TRIAL6_SOURCE_CHARGED + VALIDATION_HASH_SOURCE_CHARGED + RERUN1_SOURCE_CHARGED)
 RECORDED_SOURCE_LIMIT = 1115551932
 FRESH_SOURCE = 294060544
 SCRATCH_PRIOR_FLOOR = 1616905649
@@ -105,8 +113,9 @@ def budget_limits(doc):
         raise ValueError("source and scratch accounting required")
     keys = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
             "failed_trial_4_charged_bytes", "window_prescan_charged_bytes", "failed_trial_5_charged_bytes",
-            "trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "prior_effective_bytes",
-            "previous_cumulative_limit_bytes", "additional_bytes", "cumulative_limit_bytes", "fresh_allowance_bytes")
+            "trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "rerun_1_charged_bytes",
+            "prior_effective_bytes", "previous_cumulative_limit_bytes", "additional_bytes",
+            "cumulative_limit_bytes", "fresh_allowance_bytes")
     if any(not _exact_int(source.get(k)) for k in keys):
         raise ValueError("exact integer source accounting required")
     prior, cap = source["prior_effective_bytes"], source["cumulative_limit_bytes"]
@@ -118,10 +127,12 @@ def budget_limits(doc):
             or source["failed_trial_5_charged_bytes"] != FAILED_TRIAL5_SOURCE_CHARGED
             or source["trial_6_charged_bytes"] != TRIAL6_SOURCE_CHARGED
             or source["validation_hash_reads_charged_bytes"] != VALIDATION_HASH_SOURCE_CHARGED
+            or source["rerun_1_charged_bytes"] != RERUN1_SOURCE_CHARGED
             or prior != (source["pre_failure_prior_bytes"] + source["failed_trial_charged_bytes"]
                          + source["failed_trial_2_charged_bytes"] + source["failed_trial_4_charged_bytes"]
                          + source["window_prescan_charged_bytes"] + source["failed_trial_5_charged_bytes"]
-                         + source["trial_6_charged_bytes"] + source["validation_hash_reads_charged_bytes"])
+                         + source["trial_6_charged_bytes"] + source["validation_hash_reads_charged_bytes"]
+                         + source["rerun_1_charged_bytes"])
             or prior < SOURCE_PRIOR_FLOOR
             or source["previous_cumulative_limit_bytes"] != RECORDED_SOURCE_LIMIT
             or source["fresh_allowance_bytes"] != FRESH_SOURCE

@@ -9,10 +9,11 @@ two window pre-scan opens of the cached BAG (73,515,136 B, both revision 3) and 
 seven reservations of attempt 5 (257,302,976 B, revision 4: six settled A/B/C
 acquire+qualify, one uncertain D-acquire), the eight settled admissions of the
 completed attempt 6 (294,060,544 B) and the two read-only BAG hash passes of its
-independent validation (73,515,136 B, both revision 5).
+independent validation (73,515,136 B, both revision 5), and the eight settled
+admissions of T15 clean-state rerun 1 (294,060,544 B, revision 6).
 Nothing is refunded, the extra allowance must equal the shortfall exactly, and a
-revision-1, -2, -3 or -4 amendment, or the unused revision-5 draft that omits the
-validation reads, is refused.
+revision-1, -2, -3, -4 or -5 amendment, or the unused revision-5 draft that omits
+the validation reads, is refused.
 """
 import copy
 import hashlib
@@ -46,6 +47,8 @@ SIGNED_V5 = (SIGNED / "four128-budget-amendment-v5.json",
 # The first revision-5 signature omitted the validation hash reads; renamed aside, never used.
 SIGNED_V5_DRAFT = (SIGNED / "four128-budget-amendment-v5-superseded-unused-omits-validation-hash-reads.json",
                    "d822d56b951e733c709cb28f2e2bf291da48c595a364883a68333cf8fb0a078b")
+SIGNED_V6 = (SIGNED / "four128-budget-amendment-v6.json",
+             "7ef41e152ac8b8fad0677e2718f2c4f2589621120a33e1d2eb1a2715fd8bc890")
 
 
 def _load(name, env):
@@ -115,11 +118,20 @@ def amendment_v5_draft():
     return doc
 
 
-def amendment():
+def amendment_v5():
     """Revision 5 (re-signed 2026-10-20): attempt 6 and the two validation hash reads."""
     doc = amendment_v5_draft()
     doc["source"].update(validation_hash_reads_charged_bytes=73515136, prior_effective_bytes=1740430588,
                          additional_bytes=918939200, cumulative_limit_bytes=2034491132)
+    return doc
+
+
+def amendment():
+    """Revision 6 (signed 2026-10-20T07:24Z): T15 clean-state rerun 1 (eight settled admissions)."""
+    doc = amendment_v5()
+    doc["amendment_revision"] = 6
+    doc["source"].update(rerun_1_charged_bytes=294060544, prior_effective_bytes=2034491132,
+                         additional_bytes=1212999744, cumulative_limit_bytes=2328551676)
     return doc
 
 
@@ -128,7 +140,7 @@ def assert_self_consistent(doc):
     s = doc["source"]
     charges = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
                "failed_trial_4_charged_bytes", "window_prescan_charged_bytes", "failed_trial_5_charged_bytes",
-               "trial_6_charged_bytes", "validation_hash_reads_charged_bytes")
+               "trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "rerun_1_charged_bytes")
     assert s["prior_effective_bytes"] == sum(s.get(k, 0) for k in charges), "unbalanced prior"
     assert s["additional_bytes"] == s["prior_effective_bytes"] + 294060544 - 1115551932, "unbalanced additional"
     assert s["cumulative_limit_bytes"] == 1115551932 + s["additional_bytes"], "unbalanced cap"
@@ -136,9 +148,9 @@ def assert_self_consistent(doc):
 
 SOURCE_KEYS = ("pre_failure_prior_bytes", "failed_trial_charged_bytes", "failed_trial_2_charged_bytes",
                "failed_trial_4_charged_bytes", "window_prescan_charged_bytes", "failed_trial_5_charged_bytes",
-               "trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "prior_effective_bytes",
-               "previous_cumulative_limit_bytes", "additional_bytes", "cumulative_limit_bytes",
-               "fresh_allowance_bytes", "refunds", "downloads")
+               "trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "rerun_1_charged_bytes",
+               "prior_effective_bytes", "previous_cumulative_limit_bytes", "additional_bytes",
+               "cumulative_limit_bytes", "fresh_allowance_bytes", "refunds", "downloads")
 SCRATCH_KEYS = ("charged_prior_bytes", "previous_cumulative_maximum_bytes", "additional_bytes",
                 "cumulative_maximum_bytes", "trial_reservation_bytes", "refunds")
 
@@ -173,27 +185,30 @@ class BudgetAmendment(unittest.TestCase):
         self.assertEqual(r.TRIAL6_SOURCE_CHARGED, 8 * 36757568)  # A-D acquire+qualify, all settled
         self.assertEqual(r.VALIDATION_HASH_SOURCE_CHARGED, 73515136)
         self.assertEqual(r.VALIDATION_HASH_SOURCE_CHARGED, 2 * 36757568)  # two read-only hash passes
-        self.assertEqual(r.SOURCE_PRIOR_FLOOR, 1740430588)
+        self.assertEqual(r.RERUN1_SOURCE_CHARGED, 294060544)
+        self.assertEqual(r.RERUN1_SOURCE_CHARGED, 8 * 36757568)  # rerun 1: A-D acquire+qualify, all settled
+        self.assertEqual(r.SOURCE_PRIOR_FLOOR, 2034491132)
         self.assertEqual(r.SOURCE_PRIOR_FLOOR, r.PRE_FAILURE_SOURCE_PRIOR + r.FAILED_TRIAL_SOURCE_CHARGED
                          + r.FAILED_TRIAL2_SOURCE_CHARGED + r.FAILED_TRIAL4_SOURCE_CHARGED
                          + r.PRESCAN_SOURCE_CHARGED + r.FAILED_TRIAL5_SOURCE_CHARGED
-                         + r.TRIAL6_SOURCE_CHARGED + r.VALIDATION_HASH_SOURCE_CHARGED)
+                         + r.TRIAL6_SOURCE_CHARGED + r.VALIDATION_HASH_SOURCE_CHARGED
+                         + r.RERUN1_SOURCE_CHARGED)
         self.assertEqual(r.RECORDED_SOURCE_LIMIT, 1115551932)
         self.assertEqual(r.FRESH_SOURCE, 294060544)
-        self.assertEqual(r.SOURCE_PRIOR_FLOOR + r.FRESH_SOURCE - r.RECORDED_SOURCE_LIMIT, 918939200)
+        self.assertEqual(r.SOURCE_PRIOR_FLOOR + r.FRESH_SOURCE - r.RECORDED_SOURCE_LIMIT, 1212999744)
 
     def test_exact_reconciled_amendment_is_admitted(self):
         assert_self_consistent(amendment())
         limits = self.resources.budget_limits(amendment())
-        self.assertEqual(limits, dict(source_prior_bytes=1740430588, source_limit_bytes=2034491132,
+        self.assertEqual(limits, dict(source_prior_bytes=2034491132, source_limit_bytes=2328551676,
                                       scratch_prior_bytes=1616905649, scratch_limit_bytes=2153776561))
         self.assertEqual(limits["source_prior_bytes"] + 294060544, limits["source_limit_bytes"])
         self.assertEqual((limits["source_limit_bytes"] - limits["source_prior_bytes"]) // 36757568, 8)
         self.assertEqual(limits["scratch_prior_bytes"] + 536870912, limits["scratch_limit_bytes"])
 
-    def test_revision_1_to_4_and_the_v5_draft_are_now_refused(self):
+    def test_revision_1_to_5_and_the_v5_draft_are_now_refused(self):
         for label, old in (("v1", amendment_v1()), ("v2", amendment_v2()), ("v3", amendment_v3()),
-                           ("v4", amendment_v4()), ("v5-draft", amendment_v5_draft())):
+                           ("v4", amendment_v4()), ("v5-draft", amendment_v5_draft()), ("v5", amendment_v5())):
             with self.subTest(revision=label), \
                     self.assertRaisesRegex(ValueError, "exact integer source accounting"):
                 self.resources.budget_limits(old)
@@ -204,51 +219,69 @@ class BudgetAmendment(unittest.TestCase):
             self.resources.budget_limits(doc)
         doc = amendment_v3()
         doc["source"].update(failed_trial_5_charged_bytes=0, trial_6_charged_bytes=0,
-                             validation_hash_reads_charged_bytes=0)
+                             validation_hash_reads_charged_bytes=0, rerun_1_charged_bytes=0)
         assert_self_consistent(doc)
         with self.assertRaisesRegex(ValueError, "carry the failed charges"):
             self.resources.budget_limits(doc)
         doc = amendment_v4()
-        doc["source"].update(trial_6_charged_bytes=0, validation_hash_reads_charged_bytes=0)
+        doc["source"].update(trial_6_charged_bytes=0, validation_hash_reads_charged_bytes=0,
+                             rerun_1_charged_bytes=0)
         assert_self_consistent(doc)
         with self.assertRaisesRegex(ValueError, "carry the failed charges"):
             self.resources.budget_limits(doc)
         doc = amendment_v5_draft()
-        doc["source"].update(validation_hash_reads_charged_bytes=0)
+        doc["source"].update(validation_hash_reads_charged_bytes=0, rerun_1_charged_bytes=0)
+        assert_self_consistent(doc)
+        with self.assertRaisesRegex(ValueError, "carry the failed charges"):
+            self.resources.budget_limits(doc)
+        doc = amendment_v5()
+        doc["source"].update(rerun_1_charged_bytes=0)
         assert_self_consistent(doc)
         with self.assertRaisesRegex(ValueError, "carry the failed charges"):
             self.resources.budget_limits(doc)
 
     def test_signed_documents_on_this_machine(self):
-        """The real re-signed revision 5 is admitted with the ruled numbers; revisions 1-4 and the
+        """The real signed revision 6 is admitted with the ruled numbers; revisions 1-5 and the
         superseded revision-5 draft are refused.
 
         Off the maintainer machine (CI) the files are absent and the in-code copies
         above carry the same accounting blocks."""
+        v6 = signed(SIGNED_V6)
+        if v6 is not None:
+            self.assertEqual(self.resources.budget_limits(v6), self.resources.budget_limits(amendment()))
+            self.assertEqual(self.resources.budget_limits(v6),
+                             dict(source_prior_bytes=2034491132, source_limit_bytes=2328551676,
+                                  scratch_prior_bytes=1616905649, scratch_limit_bytes=2153776561))
+            self.assertEqual(v6["source"]["additional_bytes"], 1212999744)
+            self.assertEqual({k: v6["source"][k] for k in SOURCE_KEYS},
+                             {k: amendment()["source"][k] for k in SOURCE_KEYS})
+            self.assertEqual({k: v6["scratch"][k] for k in SCRATCH_KEYS},
+                             {k: amendment()["scratch"][k] for k in SCRATCH_KEYS})
+            self.assertEqual(v6["amendment_revision"], 6)
+            self.assertEqual(v6["supersedes"]["sha256"], SIGNED_V5[1])
+            # Informational: the retained-output carry is bound by coastal_four128_prepare.py, not here.
+            self.assertEqual(v6["retained_output"]["prior_retained_bytes"], 78101927)
         v5 = signed(SIGNED_V5)
         if v5 is not None:
-            self.assertEqual(self.resources.budget_limits(v5), self.resources.budget_limits(amendment()))
-            self.assertEqual(self.resources.budget_limits(v5),
-                             dict(source_prior_bytes=1740430588, source_limit_bytes=2034491132,
-                                  scratch_prior_bytes=1616905649, scratch_limit_bytes=2153776561))
-            self.assertEqual({k: v5["source"][k] for k in SOURCE_KEYS},
-                             {k: amendment()["source"][k] for k in SOURCE_KEYS})
-            self.assertEqual({k: v5["scratch"][k] for k in SCRATCH_KEYS},
-                             {k: amendment()["scratch"][k] for k in SCRATCH_KEYS})
+            # Revision 5 keeps its signed accounting but is now refused: it omits rerun 1.
+            later = ("rerun_1_charged_bytes",)
+            self.assertEqual({k: v5["source"][k] for k in SOURCE_KEYS if k not in later},
+                             {k: amendment_v5()["source"][k] for k in SOURCE_KEYS if k not in later})
+            self.assertNotIn("rerun_1_charged_bytes", v5["source"])
             self.assertEqual(v5["amendment_revision"], 5)
             self.assertEqual(v5["supersedes"]["sha256"], SIGNED_V4[1])
             self.assertEqual(v5["retained_output"]["prior_retained_bytes"], 68088433)
         draft = signed(SIGNED_V5_DRAFT)
         if draft is not None:
             # The unused draft keeps its signed accounting but omits the validation hash reads.
-            missing = "validation_hash_reads_charged_bytes"
-            self.assertEqual({k: draft["source"][k] for k in SOURCE_KEYS if k != missing},
-                             {k: amendment_v5_draft()["source"][k] for k in SOURCE_KEYS if k != missing})
-            self.assertNotIn(missing, draft["source"])
+            missing = ("validation_hash_reads_charged_bytes", "rerun_1_charged_bytes")
+            self.assertEqual({k: draft["source"][k] for k in SOURCE_KEYS if k not in missing},
+                             {k: amendment_v5_draft()["source"][k] for k in SOURCE_KEYS if k not in missing})
+            self.assertNotIn("validation_hash_reads_charged_bytes", draft["source"])
         v4 = signed(SIGNED_V4)
         if v4 is not None:
-            # Revision 4 keeps its signed accounting but is now refused: it omits attempt 6.
-            later = ("trial_6_charged_bytes", "validation_hash_reads_charged_bytes")
+            # Revision 4 keeps its signed accounting but is refused: it omits attempt 6.
+            later = ("trial_6_charged_bytes", "validation_hash_reads_charged_bytes", "rerun_1_charged_bytes")
             self.assertEqual({k: v4["source"][k] for k in SOURCE_KEYS if k not in later},
                              {k: amendment_v4()["source"][k] for k in SOURCE_KEYS if k not in later})
             self.assertNotIn("trial_6_charged_bytes", v4["source"])
@@ -257,11 +290,12 @@ class BudgetAmendment(unittest.TestCase):
         v3 = signed(SIGNED_V3)
         if v3 is not None:
             # Revision 3 keeps its signed accounting but is refused: it omits attempts 5 and 6.
-            later = ("failed_trial_5_charged_bytes", "trial_6_charged_bytes", "validation_hash_reads_charged_bytes")
+            later = ("failed_trial_5_charged_bytes", "trial_6_charged_bytes", "validation_hash_reads_charged_bytes",
+                     "rerun_1_charged_bytes")
             self.assertEqual({k: v3["source"][k] for k in SOURCE_KEYS if k not in later},
                              {k: amendment_v3()["source"][k] for k in SOURCE_KEYS if k not in later})
             self.assertNotIn("failed_trial_5_charged_bytes", v3["source"])
-        for entry in (SIGNED_V5_DRAFT, SIGNED_V4, SIGNED_V3, SIGNED_V2, SIGNED_V1):
+        for entry in (SIGNED_V5, SIGNED_V5_DRAFT, SIGNED_V4, SIGNED_V3, SIGNED_V2, SIGNED_V1):
             old = signed(entry)
             if old is not None:
                 with self.subTest(path=entry[0].name), \
@@ -279,70 +313,81 @@ class BudgetAmendment(unittest.TestCase):
     def test_omitting_failed_source_charges_is_refused(self):
         # Each document below still balances internally; only the omitted charge is wrong.
         def omit_20261011(doc):
-            doc["source"].update(failed_trial_charged_bytes=0, prior_effective_bytes=1666915452,
-                                 additional_bytes=845424064, cumulative_limit_bytes=1960975996)
+            doc["source"].update(failed_trial_charged_bytes=0, prior_effective_bytes=1960975996,
+                                 additional_bytes=1139484608, cumulative_limit_bytes=2255036540)
         self.refused(omit_20261011, balanced=True)
 
         def omit_attempt2(doc):
-            doc["source"].update(failed_trial_2_charged_bytes=0, prior_effective_bytes=1703673020,
-                                 additional_bytes=882181632, cumulative_limit_bytes=1997733564)
+            doc["source"].update(failed_trial_2_charged_bytes=0, prior_effective_bytes=1997733564,
+                                 additional_bytes=1176242176, cumulative_limit_bytes=2291794108)
         self.refused(omit_attempt2, balanced=True)
 
         def omit_attempt4(doc):
-            doc["source"].update(failed_trial_4_charged_bytes=0, prior_effective_bytes=1630157884,
-                                 additional_bytes=808666496, cumulative_limit_bytes=1924218428)
+            doc["source"].update(failed_trial_4_charged_bytes=0, prior_effective_bytes=1924218428,
+                                 additional_bytes=1102727040, cumulative_limit_bytes=2218278972)
         self.refused(omit_attempt4, balanced=True)
 
         def omit_prescan(doc):
-            doc["source"].update(window_prescan_charged_bytes=0, prior_effective_bytes=1666915452,
-                                 additional_bytes=845424064, cumulative_limit_bytes=1960975996)
+            doc["source"].update(window_prescan_charged_bytes=0, prior_effective_bytes=1960975996,
+                                 additional_bytes=1139484608, cumulative_limit_bytes=2255036540)
         self.refused(omit_prescan, balanced=True)
 
         def one_prescan_open(doc):
-            doc["source"].update(window_prescan_charged_bytes=36757568, prior_effective_bytes=1703673020,
-                                 additional_bytes=882181632, cumulative_limit_bytes=1997733564)
+            doc["source"].update(window_prescan_charged_bytes=36757568, prior_effective_bytes=1997733564,
+                                 additional_bytes=1176242176, cumulative_limit_bytes=2291794108)
         self.refused(one_prescan_open, balanced=True)
 
         def omit_attempt5(doc):
-            doc["source"].update(failed_trial_5_charged_bytes=0, prior_effective_bytes=1483127612,
-                                 additional_bytes=661636224, cumulative_limit_bytes=1777188156)
+            doc["source"].update(failed_trial_5_charged_bytes=0, prior_effective_bytes=1777188156,
+                                 additional_bytes=955696768, cumulative_limit_bytes=2071248700)
         self.refused(omit_attempt5, balanced=True)
 
         def settled_attempt5_only(doc):  # refunding the uncertain D-acquire reservation
-            doc["source"].update(failed_trial_5_charged_bytes=220545408, prior_effective_bytes=1703673020,
-                                 additional_bytes=882181632, cumulative_limit_bytes=1997733564)
+            doc["source"].update(failed_trial_5_charged_bytes=220545408, prior_effective_bytes=1997733564,
+                                 additional_bytes=1176242176, cumulative_limit_bytes=2291794108)
         self.refused(settled_attempt5_only, balanced=True)
 
         def omit_attempt6(doc):
-            doc["source"].update(trial_6_charged_bytes=0, prior_effective_bytes=1446370044,
-                                 additional_bytes=624878656, cumulative_limit_bytes=1740430588)
+            doc["source"].update(trial_6_charged_bytes=0, prior_effective_bytes=1740430588,
+                                 additional_bytes=918939200, cumulative_limit_bytes=2034491132)
         self.refused(omit_attempt6, balanced=True)
 
         def seven_attempt6_admissions(doc):  # refunding one settled attempt-6 admission
-            doc["source"].update(trial_6_charged_bytes=257302976, prior_effective_bytes=1703673020,
-                                 additional_bytes=882181632, cumulative_limit_bytes=1997733564)
+            doc["source"].update(trial_6_charged_bytes=257302976, prior_effective_bytes=1997733564,
+                                 additional_bytes=1176242176, cumulative_limit_bytes=2291794108)
         self.refused(seven_attempt6_admissions, balanced=True)
 
-        def omit_validation_reads(doc):  # the superseded draft's numbers under the new key
-            doc["source"].update(validation_hash_reads_charged_bytes=0, prior_effective_bytes=1666915452,
-                                 additional_bytes=845424064, cumulative_limit_bytes=1960975996)
+        def omit_validation_reads(doc):
+            doc["source"].update(validation_hash_reads_charged_bytes=0, prior_effective_bytes=1960975996,
+                                 additional_bytes=1139484608, cumulative_limit_bytes=2255036540)
         self.refused(omit_validation_reads, balanced=True)
 
         def one_validation_read(doc):
-            doc["source"].update(validation_hash_reads_charged_bytes=36757568, prior_effective_bytes=1703673020,
-                                 additional_bytes=882181632, cumulative_limit_bytes=1997733564)
+            doc["source"].update(validation_hash_reads_charged_bytes=36757568, prior_effective_bytes=1997733564,
+                                 additional_bytes=1176242176, cumulative_limit_bytes=2291794108)
         self.refused(one_validation_read, balanced=True)
 
+        def omit_rerun1(doc):  # revision 5's numbers under the new key
+            doc["source"].update(rerun_1_charged_bytes=0, prior_effective_bytes=1740430588,
+                                 additional_bytes=918939200, cumulative_limit_bytes=2034491132)
+        self.refused(omit_rerun1, balanced=True)
+
+        def seven_rerun1_admissions(doc):  # refunding one settled rerun-1 admission
+            doc["source"].update(rerun_1_charged_bytes=257302976, prior_effective_bytes=1997733564,
+                                 additional_bytes=1176242176, cumulative_limit_bytes=2291794108)
+        self.refused(seven_rerun1_admissions, balanced=True)
+
         for key in ("failed_trial_2_charged_bytes", "failed_trial_4_charged_bytes", "window_prescan_charged_bytes",
-                    "failed_trial_5_charged_bytes", "trial_6_charged_bytes", "validation_hash_reads_charged_bytes"):
+                    "failed_trial_5_charged_bytes", "trial_6_charged_bytes", "validation_hash_reads_charged_bytes",
+                    "rerun_1_charged_bytes"):
             def drop_key(doc, key=key):
                 del doc["source"][key]
             with self.subTest(drop=key):
                 self.refused(drop_key)
 
-        # prior omits attempt 4, the pre-scan, both, attempt 5, attempt 6 or the validation reads
+        # prior omits attempt 4, the pre-scan, both, attempt 5, attempt 6, the validation reads or rerun 1
         for prior in (931764092, 1005279228, 1042036796, 1115551932, 1372854908, 1446370044,
-                      1666915452, 1703673020):
+                      1666915452, 1703673020, 1740430588, 1960975996, 1997733564):
             with self.subTest(prior=prior):
                 self.refused(lambda d, prior=prior: d["source"].update(prior_effective_bytes=prior))
 
@@ -448,46 +493,50 @@ class RuntimeBindsAmendment(unittest.TestCase):
         self.assertFalse(hasattr(runtime, "SOURCE_LIMIT"))
         text = (SCRIPTS / "coastal_four128_runtime.py").read_text()
         for literal in ("821491388", "1115551932", "2147483648", "931764092", "1225824636", "1409612476",
-                        "1372854908", "1666915452", "1960975996", "1740430588", "2034491132"):
+                        "1372854908", "1666915452", "1960975996", "1740430588", "2034491132", "2328551676"):
             self.assertNotIn(literal, text)
         prepare = (SCRIPTS / "coastal_four128_prepare.py").read_text()
         for literal in ("821491388", "1115551932", "931764092", "1225824636", "1409612476",
-                        "1372854908", "1666915452", "1960975996", "1740430588", "2034491132"):
+                        "1372854908", "1666915452", "1960975996", "1740430588", "2034491132", "2328551676"):
             self.assertNotIn(literal, prepare)
 
     def test_grant_must_match_signed_amendment(self):
         runtime = self.runtime()
-        ref = dict(path="metadata/four128-budget-amendment-v5.json", contract="coastal-four128-budget-amendment-v1",
+        ref = dict(path="metadata/four128-budget-amendment-v6.json", contract="coastal-four128-budget-amendment-v1",
                    bytes=1, sha256="0" * 64)
-        grant = dict(approved_budget_amendment=ref, prior_effective_bytes=1740430588,
-                     prior_effective_source_bytes=1740430588, cumulative_limit_bytes=2034491132,
+        grant = dict(approved_budget_amendment=ref, prior_effective_bytes=2034491132,
+                     prior_effective_source_bytes=2034491132, cumulative_limit_bytes=2328551676,
                      source_volume_cap_bytes=294060544)
         with mock.patch.object(runtime, "metadata_document", return_value=amendment()) as read:
             limits = runtime.limits_for(grant)
             read.assert_called_once_with(runtime.R, ref, "coastal-four128-budget-amendment-v1")
-            self.assertEqual(limits["source_limit_bytes"], 2034491132)
-            # Revision-2/3/4 or v5-draft numbers, or a prior that omits a later charge, are stale.
+            self.assertEqual(limits["source_limit_bytes"], 2328551676)
+            # Revision-2/3/4/5 or v5-draft numbers, or a prior that omits a later charge, are stale.
             for key, value in (("prior_effective_bytes", 931764092),
                                ("prior_effective_bytes", 1042036796),
                                ("prior_effective_bytes", 1115551932),
                                ("prior_effective_bytes", 1372854908),
                                ("prior_effective_bytes", 1666915452),
+                               ("prior_effective_bytes", 1740430588),
                                ("prior_effective_source_bytes", 1042036796),
                                ("prior_effective_source_bytes", 1115551932),
                                ("prior_effective_source_bytes", 1372854908),
                                ("prior_effective_source_bytes", 1666915452),
+                               ("prior_effective_source_bytes", 1740430588),
                                ("cumulative_limit_bytes", 1225824636),
                                ("cumulative_limit_bytes", 1409612476),
                                ("cumulative_limit_bytes", 1666915452),
                                ("cumulative_limit_bytes", 1960975996),
+                               ("cumulative_limit_bytes", 2034491132),
                                ("source_volume_cap_bytes", 220545408)):
                 stale = copy.deepcopy(grant)
                 stale[key] = value
                 with self.subTest(key=key, value=value), \
                         self.assertRaisesRegex(ValueError, "signed budget amendment"):
                     runtime.limits_for(stale)
-        # A grant still bound to a revision-1, -2, -3 or -4 amendment, or the v5 draft, is refused outright.
-        for old in (amendment_v1(), amendment_v2(), amendment_v3(), amendment_v4(), amendment_v5_draft()):
+        # A grant still bound to a revision-1 to -5 amendment, or the v5 draft, is refused outright.
+        for old in (amendment_v1(), amendment_v2(), amendment_v3(), amendment_v4(), amendment_v5_draft(),
+                    amendment_v5()):
             with mock.patch.object(runtime, "metadata_document", return_value=old):
                 with self.assertRaises(ValueError):
                     runtime.limits_for(grant)
