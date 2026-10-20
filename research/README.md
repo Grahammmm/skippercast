@@ -80,6 +80,10 @@ claim.
 
 ## Private terrain acceptance and clean reruns
 
+Four128 admission uses a single JSON-configured issuer/assembler with historical
+byte replay and a hash-bound charge ledger. See [four128 admission](four128-admission.md)
+for the separate replay/live modes, review boundary, commands and rerun card template.
+
 `research/scripts/check_terrain_acceptance.py` renders reviewed terrain-only
 packets, one per `core-<X>/` directory, with the existing
 `skippercast.coastal.render.terrain_only` CLI (`run`), or checks renders that
