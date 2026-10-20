@@ -78,8 +78,10 @@ def _prepare(root, packets, side, now, horizon, *, declared_window_count=None):
                 config=dict(window_side=side,window_count=count,support_policy=PARTIAL_SUPPORT)
                 selected=policy_for_profile(CONTAINED,config)
                 supported=int(valid.sum())
-                # Holes stay unsupported nodata; every supported cell keeps the strict limits.
+                # Holes stay unsupported nodata and must be exactly the native mask-invalid
+                # cells (no unmasked raw-NaN holes); every supported cell keeps the strict limits.
                 if (item['result'].get('policy_sha256')!=policy_sha(CONTAINED,config)
+                        or not np.array_equal(valid,~data['elevation_mask'] & ~data['uncertainty_mask'])
                         or int(facts['valid_count'])!=supported
                         or supported<selected['minimum_supported_pairs']
                         or side*side-supported<selected['minimum_unsupported_pairs']

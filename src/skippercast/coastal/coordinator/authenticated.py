@@ -377,6 +377,19 @@ def validate_input(root,manifest_ref,*,stage,segment,code_sha,deps_sha,now,missi
             trial.get("minimum_supported_pairs")!=policy_for_profile(selected["name"],packet)["minimum_supported_pairs"]
             or trial.get("minimum_unsupported_pairs")!=1 or trial.get("unsupported_cells")!="mask_invalid_only_as_nodata")):
         raise ValueError("trial support policy binding invalid")
+    if partial is not None:
+        # The partial policy is admitted only inside its ordered four128 scope:
+        # every native admission (enqueue, worker authorization, completion)
+        # re-validates the bound independent geographic review and pinned
+        # window geometry here, before any Budget reservation or source access.
+        from skippercast.coastal.authenticated_v1.profiles import PARTIAL_WINDOWS
+        from skippercast.coastal.coordinator.ordered_trial import validate_scope_packet
+        scope=dict(schema="coastal-authenticated-policy-v1",window_set=PARTIAL_WINDOWS,
+                   **{key:packet.get(key) for key in ("source","source_root","source_relative_path","execution_profile",
+                      "window_side","window_count","support_policy","ordered_scope_contract","geographic_review",
+                      "output_retention","output_root","larger_runtime_contract","source_reuse_contract",
+                      "saved_area_continuation_contract")})
+        validate_scope_packet(root,scope,packet,now=now,horizon=mission_deadline)
     if (packet.get("trial_policy_sha256")!=packet["trial_policy_evidence"]["sha256"] or trial.get("independent") is not True
         or trial.get("source",{}).get("sha256")!=source["sha256"] or trial.get("source",{}).get("bytes")!=source["bytes"]
         or trial.get("window_shape")!=[side,side] or trial.get("halo")!=0 or trial.get("total_pairs")!=pairs

@@ -104,6 +104,18 @@ def test_partial_policy_keeps_strict_limits(monkeypatch, spec, message):
         _prepare(monkeypatch, _packets(spec))
 
 
+def test_partial_policy_refuses_unmasked_nonfinite_holes(monkeypatch):
+    """Review round 1 hardening: holes must be exactly the native mask-invalid cells.
+
+    Raw-NaN cells that the BAG masks do not mark invalid are not admissible
+    holes; the map gate enforces its mask-invalid-only contract on its own.
+    """
+    windows = _packets(dict(holes=4, policy=PARTIAL_SUPPORT))
+    windows[0][1][1]['elevation_mask'][:] = False
+    with pytest.raises(ValueError, match='partial-support'):
+        _prepare(monkeypatch, windows)
+
+
 def test_one_support_policy_per_batch(monkeypatch):
     with pytest.raises(ValueError, match='support policy'):
         _prepare(monkeypatch, _packets(dict(holes=0, policy=None), dict(holes=4, policy=PARTIAL_SUPPORT)))

@@ -112,19 +112,94 @@ def test_support_policy_is_closed(name, config):
 
 # ------------------------------------------------------- grant and packet
 
+def _ordered(**extra):
+    """The full ordered four128 authority a partial grant must carry."""
+    fields = dict(ordered_scope_contract=LARGER_SCOPE, larger_runtime_contract=LARGER_RUNTIME,
+                  geographic_review={'path': 'metadata/scope-review.json', 'sha256': 'e' * 64, 'bytes': 1,
+                                     'contract': SCOPE_REVIEW},
+                  output_retention=declaration(0, 32 * 1024 * 1024, profile=COMPACT_V2_PROFILE),
+                  output_root='/tmp/skippercast-output')
+    fields.update(extra)
+    return fields
+
+
+def _partial_packet(grant, window):
+    packet = {key: grant[key] for key in ('execution_profile', 'window_side', 'window_count', 'source',
+                                          'source_root', 'source_relative_path', 'ordered_scope_contract',
+                                          'geographic_review', 'output_retention', 'output_root',
+                                          'larger_runtime_contract') if key in grant}
+    packet['fixed_center_plan'] = {'native_window': window}
+    return packet
+
+
 def test_partial_grant_identity_binds_support_policy_and_packets():
-    grant = _grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT)
+    grant = _grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT, **_ordered())
     domain = grant_identity(grant)
     assert domain['support_policy'] == PARTIAL_SUPPORT
-    assert digest(domain) != digest(grant_identity(_grant(PARTIAL_WINDOWS)))
-    packet = {'execution_profile': CONTAINED, 'window_side': SIDE, 'window_count': 4, 'source': _source(),
-              'source_root': '/tmp/s', 'source_relative_path': 'x.bag',
-              'fixed_center_plan': {'native_window': PARTIAL_WINDOWS[0]}}
+    assert digest(domain) != digest(grant_identity(_grant(PARTIAL_WINDOWS, **_ordered())))
+    packet = _partial_packet(grant, PARTIAL_WINDOWS[0])
     with pytest.raises(ValueError, match='support policy'):
         validate_grant_packet(grant, packet)
     assert validate_grant_packet(grant, dict(packet, support_policy=PARTIAL_SUPPORT)) == domain
     with pytest.raises(ValueError, match='support policy'):
-        validate_grant_packet(_grant(PARTIAL_WINDOWS), dict(packet, support_policy=PARTIAL_SUPPORT))
+        validate_grant_packet(_grant(PARTIAL_WINDOWS, **_ordered()), dict(packet, support_policy=PARTIAL_SUPPORT))
+
+
+# Review round 1 (P1): the partial policy is pinned at the shared authority
+# boundary, not only in the ordered-trial scope review. An unscoped, reshaped
+# or relocated partial grant fails closed in grant_identity itself, so
+# Store.enqueue_authenticated and every validate_grant_packet caller refuse it.
+
+def test_partial_grant_without_ordered_authority_fails_closed():
+    with pytest.raises(ValueError, match='ordered four128'):
+        grant_identity(_grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT))
+    for missing in ('ordered_scope_contract', 'larger_runtime_contract', 'geographic_review',
+                    'output_retention', 'output_root'):
+        fields = _ordered()
+        fields.pop(missing)
+        with pytest.raises(ValueError, match='ordered|runtime|geometry'):
+            grant_identity(_grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT, **fields))
+    with pytest.raises(ValueError, match='ordered four128'):
+        grant_identity(_grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT, **_ordered(geographic_review=None)))
+
+
+def test_partial_grant_shape_count_and_windows_are_pinned():
+    # The round-1 reproduction: a 32x32/count=1 partial grant on [0,0,32,32].
+    small = _grant([[0, 0, 32, 32]], window_side=32, window_count=1, support_policy=PARTIAL_SUPPORT, **_ordered())
+    with pytest.raises(ValueError, match='pinned to the ordered four128 scope'):
+        grant_identity(small)
+    small_config = {'window_side': 32, 'window_count': 1, 'support_policy': PARTIAL_SUPPORT}
+    for call in (lambda: profile(CONTAINED, small_config), lambda: policy_for_profile(CONTAINED, small_config),
+                 lambda: policy_sha(CONTAINED, small_config)):
+        with pytest.raises(ValueError, match='pinned to the ordered four128 scope'):
+            call()
+    with pytest.raises(ValueError, match='pinned to the ordered four128 scope'):
+        profile(CONTAINED, dict(PARTIAL, window_count=2))
+    shifted = [list(w) for w in PARTIAL_WINDOWS]
+    shifted[0][0] += 1
+    with pytest.raises(ValueError, match='window set'):
+        grant_identity(_grant(shifted, support_policy=PARTIAL_SUPPORT, **_ordered()))
+    with pytest.raises(ValueError, match='window set'):
+        grant_identity(_grant(LARGER_WINDOWS, support_policy=PARTIAL_SUPPORT, **_ordered()))
+    # A packet window outside the pinned set is refused against a valid grant.
+    grant = _grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT, **_ordered())
+    packet = dict(_partial_packet(grant, [4403, 3872, 128, 128]), support_policy=PARTIAL_SUPPORT)
+    with pytest.raises(ValueError, match='window outside'):
+        validate_grant_packet(grant, packet)
+    # ...and a packet stripped of the ordered contract is refused against it.
+    for missing in ('ordered_scope_contract', 'geographic_review', 'output_retention', 'output_root',
+                    'larger_runtime_contract'):
+        stripped = dict(_partial_packet(grant, PARTIAL_WINDOWS[0]), support_policy=PARTIAL_SUPPORT)
+        stripped.pop(missing)
+        with pytest.raises(ValueError, match='differs from immutable grant'):
+            validate_grant_packet(grant, stripped)
+
+
+def test_partial_policy_refuses_reuse_and_continuation_contracts():
+    for extra in ({'source_reuse_contract': 'coastal-source-reuse-v1'},
+                  {'saved_area_continuation_contract': 'coastal-saved-area-continuation-v1'}):
+        with pytest.raises(ValueError):
+            grant_identity(_grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT, **_ordered(**extra)))
 
 
 def test_support_policy_rejected_outside_contained_profile():
@@ -149,7 +224,7 @@ def test_partial_window_set_is_pinned_separately():
     assert PARTIAL_BOUNDS == [x0 + 2 * min(cols), top - 2 * (max(rows) + SIDE),
                               x0 + 2 * (max(cols) + SIDE), top - 2 * min(rows)]
     # grant_identity accepts the non-contiguous contained set (non-overlapping).
-    assert grant_identity(_grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT))['window_set'] == PARTIAL_WINDOWS
+    assert grant_identity(_grant(PARTIAL_WINDOWS, support_policy=PARTIAL_SUPPORT, **_ordered()))['window_set'] == PARTIAL_WINDOWS
 
 
 def _write_metadata(root, name, document, contract):
@@ -208,7 +283,7 @@ def test_partial_scope_mismatches_are_refused(tmp_path, case):
     with pytest.raises(ValueError):
         validate_scope_review(tmp_path, grant, now=100.0, horizon=200.0)
     if case in ('strict_set_partial_grant', 'partial_set_strict_grant'):
-        with pytest.raises(ValueError, match='ordered four128 scope'):
+        with pytest.raises(ValueError, match='ordered four128'):
             _grant_context(grant, CODE_SHA, DEPS_SHA)
 
 

@@ -8,11 +8,30 @@ MANAGED_EIGHT_COPY = 'coastal-managed-eight-copy-four128-v1'
 # window; every supported cell keeps the strict depth/uncertainty limits. Absent
 # means the strict all-pairs policy, so strict identities and digests are unchanged.
 PARTIAL_SUPPORT = 'coastal-contained-partial-support-v1'
+ORDERED_SCOPE = 'coastal-ordered-four128-v2'
+# The only window set the partial policy may admit: four non-overlapping,
+# segment-contained 128 windows with 14/4/299/18 mask-invalid cells from the
+# FIX3 pre-scan (hole-candidates.json sha256 024d474a8832...). Pinned here, at
+# the shared authority boundary, so every grant/packet/policy path enforces it.
+PARTIAL_WINDOWS = [[4402,3872,128,128],[3762,3744,128,128],[3634,3616,128,128],[4018,3488,128,128]]
 def support_policy(name=None, configuration=None):
-    value=(configuration or {}).get('support_policy')
+    config=configuration or {};value=config.get('support_policy')
     if value is None:return None
     if name!=CONTAINED or value!=PARTIAL_SUPPORT:raise ValueError('unsupported contained support policy')
+    side=config.get('window_side');count=config.get('window_count')
+    if type(side) is not int or side!=128 or type(count) is not int or count!=4:
+        raise ValueError('partial support is pinned to the ordered four128 scope')
     return value
+def _partial_grant(grant):
+    """Fail closed: a partial grant always carries the pinned set and full ordered authority."""
+    if grant.get('window_set')!=PARTIAL_WINDOWS:
+        raise ValueError('partial support is pinned to the ordered four128 window set')
+    if (grant.get('ordered_scope_contract')!=ORDERED_SCOPE
+        or grant.get('larger_runtime_contract')!=MANAGED_EIGHT_COPY
+        or any(grant.get(key) is None for key in ('geographic_review','output_retention','output_root'))
+        or grant.get('source_reuse_contract') is not None
+        or grant.get('saved_area_continuation_contract') is not None):
+        raise ValueError('partial support requires the ordered four128 geographic/output/runtime authority')
 def profile(name=None, configuration=None):
     if name not in (None,LARGER,CONTAINED):raise ValueError('unsupported authenticated execution profile')
     support_policy(name,configuration)
@@ -40,7 +59,9 @@ def grant_identity(grant):
                 if a[0]<b[0]+side and b[0]<a[0]+side and a[1]<b[1]+side and b[1]<a[1]+side:
                     raise ValueError('contained native windows overlap')
         result.update(execution_profile=CONTAINED,window_side=side,window_count=count,window_set=copy.deepcopy(windows))
-        if support_policy(CONTAINED,grant) is not None:result['support_policy']=PARTIAL_SUPPORT
+        if support_policy(CONTAINED,grant) is not None:
+            _partial_grant(grant)
+            result['support_policy']=PARTIAL_SUPPORT
     elif chosen['name']:
         windows=grant.get('window_set')
         if (not isinstance(windows,list) or len(windows)!=4 or

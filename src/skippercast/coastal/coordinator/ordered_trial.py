@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 from ..handoff.common import load, ref, write, digest, confined, epoch
-from ..authenticated_v1.profiles import grant_identity, validate_grant_packet, CONTAINED, PARTIAL_SUPPORT, support_policy
+from ..authenticated_v1.profiles import grant_identity, validate_grant_packet, CONTAINED, PARTIAL_SUPPORT, PARTIAL_WINDOWS, support_policy
 from ..authenticated_v1.policy import WINDOW_QUALITY_HOLDS
 from .authenticated import INPUT_CONTRACT, actual_unit_check, metadata_document, _source_identity
 from .loop import Coordinator, controller_lock, implementation_hashes
@@ -31,11 +31,9 @@ LARGER_WINDOWS = [[3762,3488,128,128],[3890,3488,128,128],[3762,3360,128,128],[3
 LARGER_BOUNDS = [728615,3818923,729127,3819435]
 LARGER_AFFINE = [2,0,721091,0,-2,3826155]
 # SC-5 (G option A, 2026-10-20): the separately pinned partial-support four128
-# set. Four non-overlapping, segment-contained windows with 14/4/299/18
-# mask-invalid cells from the FIX3 pre-scan (hole-candidates.json sha256
-# 024d474a8832...); every mask-valid cell there is eligible. Admitted only with
+# set (PARTIAL_WINDOWS, pinned in authenticated_v1.profiles so grant identity
+# enforces it) and its native bounds. Admitted only with
 # support_policy=PARTIAL_SUPPORT; the strict scope keeps LARGER_WINDOWS.
-PARTIAL_WINDOWS = [[4402,3872,128,128],[3762,3744,128,128],[3634,3616,128,128],[4018,3488,128,128]]
 PARTIAL_BOUNDS = [728359,3818155,730151,3819179]
 
 def scope_windows(grant):
