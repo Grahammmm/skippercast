@@ -68,7 +68,9 @@ const fullTraffic = deployment => {
 // The commit production serves, traced from the live version's provenance, with the reason
 // when it cannot be traced ({commit: '', reason}). The deploy workflow holds a deploy of that
 // commit or an older one, and holds every deploy when the commit cannot be traced.
-//   - A code upload (workers/triggered_by "upload") names its commit in the deploy message.
+//   - A code upload (workers/triggered_by "upload" or "version_upload" — Wrangler reports
+//     the pipeline's own `wrangler deploy` as "version_upload") names its commit in the
+//     deploy message.
 //   - A secrets change ("secret") copies the code of the version created just before it, and
 //     Cloudflare refuses one unless that version is deployed; so it is traced to that version
 //     only when the newest deployment older than the change served that version at 100%.
@@ -90,7 +92,7 @@ export function traceLiveCommit(deployments = [], versions = []) {
     if (!version) return unknown(`version ${id} is not in the versions listing`);
     const at = stamp(version.metadata.created_on);
     const trigger = version.annotations?.['workers/triggered_by'];
-    if (trigger === 'upload') {
+    if (trigger === 'upload' || trigger === 'version_upload') {
       const match = DEPLOY_MESSAGE.exec(version.annotations?.['workers/message'] ?? '');
       return match ? {commit: match[1], reason: `version ${id} was deployed from ${match[1]}`}
         : unknown(`code version ${id} has no "<sha> run <id>" deploy message`);
