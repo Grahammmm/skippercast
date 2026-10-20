@@ -97,6 +97,8 @@ const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);
   assert.match(html, /<header class="app-masthead">/);
+  assert.match(html, /Replay controls tour<\/button>/);
+  assert.doesNotMatch(html, /Step 1 of 4/, 'the tour is opt-in, not competing with FirstRun or the flyover');
   assert.match(html, /class="app-brand" href="\/"[^>]*>.*SkipperCast/);
   assert.match(html, /class="app-location ui-mono" data-region="morro-bay">Morro Bay —</, 'the location names the region and leaves the centre blank until it loads');
   assert.match(html, /<nav aria-label="Views">/);
