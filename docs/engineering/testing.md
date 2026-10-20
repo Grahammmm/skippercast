@@ -25,6 +25,8 @@ python -m pytest -m claims                          # every claims pin
 python scripts/run_core_tests.py --scope live       # the live-conditions gate
 ```
 
+The root `conftest.py` turns bytecode writing off (`sys.dont_write_bytecode`, and `PYTHONDONTWRITEBYTECODE=1` for subprocesses) so a test run leaves no `src/skippercast/**/__pycache__`, which the coastal source guard (`src/skippercast/coastal/_source_bootstrap.py`) refuses; outside pytest, use `python -B` in a worktree a coastal runner will use, and remove any `__pycache__` the guard names.
+
 The classes still run under `unittest` (the research workflows use `python -m unittest research.tests.gis.test_<name>`).
 
 ## Layers
