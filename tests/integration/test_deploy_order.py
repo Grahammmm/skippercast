@@ -18,8 +18,15 @@ A, B, C = 'a' * 40, 'b' * 40, 'c' * 40
 REPO = 'Grahammmm/skippercast'
 
 
+def held_line(selected, current):
+    return ('HELD: Offline-checks commit ' + selected + ' is no longer current main (' + current
+            + '); nothing deployed; production unchanged. The deploy for current main runs when its'
+            + ' own Offline checks pass.')
+
+
 class DeploymentOrderTests(unittest.TestCase):
-    def run_gate(self, selected=B, current=B, event='workflow_run', ref='refs/heads/main', metadata=None, error=None):
+    def run_gate(self, selected=B, current=B, event='workflow_run', ref='refs/heads/main', metadata=None, error=None,
+                 summary=True):
         doc = {'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': current}}
         calls = []
         def read(request, timeout):
@@ -30,8 +37,10 @@ class DeploymentOrderTests(unittest.TestCase):
             return io.BytesIO(json.dumps(doc if metadata is None else metadata).encode())
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / 'output'
+            summary_file = Path(temp) / 'summary'
             env = {'GITHUB_EVENT_NAME': event, 'GITHUB_REF': ref, 'GITHUB_REPOSITORY': REPO,
-                   'GITHUB_SHA': current, 'DEPLOY_SHA': selected, 'GITHUB_OUTPUT': str(output)}
+                   'GITHUB_SHA': current, 'DEPLOY_SHA': selected, 'GITHUB_OUTPUT': str(output),
+                   'GITHUB_STEP_SUMMARY': str(summary_file) if summary else ''}
             stdout, stderr = io.StringIO(), io.StringIO()
             code = 0
             with patch.dict(os.environ, env), patch('urllib.request.OpenerDirector.open', side_effect=read), \
@@ -40,6 +49,7 @@ class DeploymentOrderTests(unittest.TestCase):
                     exec(compile(SCRIPT, 'workflow-source-gate', 'exec'), {'__name__': '__main__'})
                 except SystemExit as stop:
                     code = stop.code
+            self.summary = summary_file.read_text() if summary_file.exists() else ''
             return code, output.read_text() if output.exists() else '', stdout.getvalue(), stderr.getvalue(), calls
 
     def test_valid_current_source_uses_selected_ci_sha_and_no_credentials(self):
@@ -48,6 +58,7 @@ class DeploymentOrderTests(unittest.TestCase):
                 code, output, stdout, stderr, calls = self.run_gate(event=event)
                 self.assertEqual(code, 0, stderr)
                 self.assertEqual(output, 'eligible=true\n')
+                self.assertEqual(self.summary, 'Deploying `' + B + '`\n')
                 self.assertEqual(len(calls), 1)
                 self.assertEqual(calls[0][0].full_url, 'https://api.github.com/repos/' + REPO + '/git/ref/heads/main')
                 self.assertIsNone(calls[0][0].get_header('Authorization'))
@@ -56,8 +67,18 @@ class DeploymentOrderTests(unittest.TestCase):
     def test_obsolete_auto_result_uses_ci_sha_not_default_branch_context_sha(self):
         code, output, stdout, stderr, _ = self.run_gate(selected=A, current=B)
         self.assertEqual(code, 0, stderr)
-        self.assertEqual(output, 'eligible=false\n')
-        self.assertIn('deployment held before checkout', stdout)
+        self.assertEqual(output, 'eligible=false\nheld=' + held_line(A, B) + '\n')
+        self.assertIn('::warning::' + held_line(A, B), stdout)
+        self.assertNotIn('::notice::', stdout)
+        self.assertEqual(self.summary, '**' + held_line(A, B) + '** Offline-checks commit: `' + A
+                         + '`; current main: `' + B + '`\n')
+
+    def test_missing_step_summary_never_changes_the_gate(self):
+        for selected, eligible in ((B, 'eligible=true\n'), (A, 'eligible=false\nheld=' + held_line(A, B) + '\n')):
+            with self.subTest(selected=selected):
+                code, output, _, stderr, _ = self.run_gate(selected=selected, current=B, summary=False)
+                self.assertEqual((code, output), (0, eligible), stderr)
+                self.assertEqual(self.summary, '')
 
     def test_delayed_completion_and_old_retry_never_promote_after_new_source(self):
         for case in ('delayed-completion', 'old-retry'):
@@ -73,7 +94,7 @@ class DeploymentOrderTests(unittest.TestCase):
     def test_pending_new_main_does_not_promote_an_older_green_ancestor(self):
         code, output, _, stderr, _ = self.run_gate(selected=B, current=C)
         self.assertEqual(code, 0, stderr)
-        self.assertEqual(output, 'eligible=false\n')
+        self.assertEqual(output, 'eligible=false\nheld=' + held_line(B, C) + '\n')
 
     def test_non_main_or_stale_manual_source_fails_before_checkout(self):
         for ref, selected, current in [('refs/heads/topic', B, B), ('refs/tags/main', B, B), ('refs/heads/main', A, B)]:
@@ -146,6 +167,17 @@ class DeploymentOrderTests(unittest.TestCase):
         self.assertNotIn('needs: source', rollback)
         self.assertNotIn('check_deploy_source', rollback)
         self.assertIn("inputs.action == 'rollback'", rollback)
+
+    def test_held_job_is_visible_credential_free_and_never_deploys(self):
+        held = SOURCE.split('\n  held:\n', 1)[1]
+        self.assertIn('    needs: source\n', held)
+        self.assertIn("if: needs.source.result == 'success' && needs.source.outputs.eligible == 'false'"
+                      " && github.event_name == 'workflow_run'\n", held)
+        self.assertIn('timeout-minutes: 2\n', held)
+        self.assertIn('HELD: ${{ needs.source.outputs.held }}', held)
+        for absent in ('secrets.', 'vars.', 'actions/checkout', 'github.token', 'WRANGLER', 'exit 1'):
+            self.assertNotIn(absent, held)
+        self.assertIn('held: ${{ steps.current.outputs.held }}', SOURCE)
 
 
 if __name__ == '__main__':
