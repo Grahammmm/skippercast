@@ -208,6 +208,7 @@ export function createPlanner(deps: PlannerDeps) {
       await portsLoaded;
       const loaded = await loadReefs(region.id);
       if (mine !== revision) return;
+      // Distances run from the chosen listed port (web/ranking.ts `Origin`), never the device position; no port, no distance.
       const port = ports.value.find(p => p.id === f.port);
       if (f.scope === 'map' && !map.getSize().x) throw Error('Open the map first to choose its area.');
       if (f.depth > 300 || f.depth < 25 || !Number.isFinite(f.distance) || f.distance <= 0) throw Error('Choose a depth from 25–300 ft and a positive distance.');

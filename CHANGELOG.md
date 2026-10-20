@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
@@ -14,6 +15,7 @@
 - A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
 - The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
 - The licences page and NOTICE name the MapLibre GL JS version the app ships (6.14.0), and a check keeps them in step with future updates.
+- "Where to look" distances always run from the region's harbor, never from your device's location; where a region has no published harbor position, each place shows a dash and the basis says no distance is shown.
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
 ### Coastal readiness inspection

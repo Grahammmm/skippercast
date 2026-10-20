@@ -53,11 +53,134 @@ class DeploySourceTests(unittest.TestCase):
                     read.assert_not_called()
 
     def test_stale_sha_and_bad_main_ref_fail(self):
-        for main in ({'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': 'b' * 40}},
-                     {}, [], {'ref': 'refs/heads/topic', 'object': REF['object']},
-                     {'ref': 'refs/heads/main', 'object': {'type': 'tag', 'sha': SHA}}):
+        for main in ({}, [], {'ref': 'refs/heads/topic', 'object': REF['object']},
+                     {'ref': 'refs/heads/main', 'object': {'type': 'tag', 'sha': SHA}},
+                     {'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': 'bad'}}):
             with self.subTest(main=main), self.assertRaises(guard.SourceError):
                 self.check(main=main)
+
+    def compare_check(self, compared, sha=SHA, head='b' * 40):
+        """verify_source with main at head; compared is the compare document for sha...head."""
+        requests = []
+        def read(path):
+            requests.append(path)
+            if '/git/ref/' in path:
+                return {'ref': 'refs/heads/main', 'object': {'type': 'commit', 'sha': head}}
+            if '/compare/' in path:
+                return compared
+            return {'total_count': 1, 'workflow_runs': [copy.deepcopy(RUN)]}
+        return guard.verify_source(REPO, 'refs/heads/main', sha, read), requests
+
+    def test_an_ancestor_of_main_passes_and_any_other_commit_fails(self):
+        run, requests = self.compare_check({'status': 'ahead', 'ahead_by': 3, 'behind_by': 0})
+        self.assertEqual(run, 101)
+        self.assertEqual(requests[1], '/repos/' + REPO + '/compare/' + SHA + '...' + 'b' * 40 + '?per_page=1')
+        for compared in ({'status': 'behind', 'ahead_by': 0, 'behind_by': 2}, {'status': 'diverged', 'ahead_by': 1, 'behind_by': 1},
+                         {'status': 'identical', 'ahead_by': 0, 'behind_by': 0}, {'status': 'ahead', 'behind_by': 1},
+                         {'status': 'ahead'}, {'status': 'ahead', 'behind_by': False}, {}, [], None):
+            with self.subTest(compared=compared), self.assertRaises(guard.SourceError):
+                self.compare_check(compared)
+
+    def production(self, production, compared=None, event='workflow_run', error=None):
+        requests = []
+        def read(path):
+            requests.append(path)
+            if error:
+                raise error
+            return compared
+        return guard.production_hold(REPO, SHA, production, event, read), requests
+
+    def test_production_guard_holds_the_live_commit_and_anything_older(self):
+        older, newer = 'b' * 40, 'c' * 40
+        self.assertEqual(self.production(older, {'status': 'ahead', 'ahead_by': 2, 'behind_by': 0}),
+                         (None, ['/repos/' + REPO + '/compare/' + older + '...' + SHA + '?per_page=1']))
+        for event in ('workflow_run', 'workflow_dispatch'):
+            with self.subTest(event=event):
+                reason, _ = self.production(newer, {'status': 'behind', 'ahead_by': 0, 'behind_by': 4}, event)
+                self.assertEqual(reason, 'production already serves ' + newer + ', which is newer than ' + SHA)
+        # The live commit itself: an automatic run holds; a manual dispatch may redeploy it (new vars or secrets).
+        self.assertEqual(self.production(SHA), ('production already serves ' + SHA, []))
+        self.assertEqual(self.production(SHA, event='workflow_dispatch'), (None, []))
+
+    def test_unknown_production_holds_on_every_event_and_only_unconfigured_passes(self):
+        for event in ('workflow_run', 'workflow_dispatch'):
+            for production, state, unknown in (('', 'known', ''), ('', 'unknown', 'split traffic'), ('', '', ''),
+                                               ('b' * 40, 'unknown', 'x'), ('', 'Unconfigured', '')):
+                with self.subTest(event=event, state=state, production=production):
+                    requests = []
+                    reason = guard.production_hold(REPO, SHA, production, event, requests.append, state=state, unknown=unknown)
+                    self.assertIn('the commit production serves could not be traced', reason)
+                    if unknown:
+                        self.assertIn('(' + unknown + ')', reason)
+                    self.assertEqual(requests, [], 'nothing is compared with an unknown production')
+            with self.subTest(event=event, state='unconfigured'):
+                self.assertIsNone(guard.production_hold(REPO, SHA, '', event, None, state='unconfigured'))
+
+    def test_production_off_main_waits_for_a_person(self):
+        from urllib.error import HTTPError
+        diverged = {'status': 'diverged', 'ahead_by': 1, 'behind_by': 1}
+        reason, _ = self.production('b' * 40, diverged)
+        self.assertIn('not on main', reason)
+        self.assertIsNone(self.production('b' * 40, diverged, 'workflow_dispatch')[0])
+        missing = HTTPError('https://api.github.com/x', 404, 'Not Found', {}, None)
+        self.assertIn('not on main', self.production('b' * 40, error=missing)[0])
+        self.assertIsNone(self.production('b' * 40, error=missing, event='workflow_dispatch')[0])
+        for error in (HTTPError('https://api.github.com/x', 500, 'boom', {}, None), URLError('down')):
+            with self.subTest(error=error), self.assertRaises(OSError):
+                self.production('b' * 40, error=error)
+        for bad in ('bad', 'B' * 40):
+            with self.subTest(bad=bad), self.assertRaises(guard.SourceError):
+                self.production(bad)
+
+    def test_cli_production_writes_hold_outputs_and_never_fails_a_hold(self):
+        env = {'GITHUB_REPOSITORY': REPO, 'GITHUB_REF': 'refs/heads/main', 'DEPLOY_SHA': SHA,
+               'GITHUB_EVENT_NAME': 'workflow_run', 'PRODUCTION_SHA': SHA}
+        cases = [(SHA, 'known', 'true', 'production already serves ' + SHA), ('', 'unconfigured', 'false', ''),
+                 ('', 'unknown', 'true', 'the commit production serves could not be traced (split traffic)'),
+                 ('', None, 'true', 'the commit production serves could not be traced (no live commit was read)')]
+        with tempfile.TemporaryDirectory() as temp:
+            for n, (live, state, hold, reason) in enumerate(cases):
+                output = Path(temp) / ('out-%d' % n)
+                case = {**env, 'PRODUCTION_SHA': live, 'GITHUB_OUTPUT': str(output), 'PRODUCTION_REASON': 'split traffic'}
+                if state is None:
+                    del case['PRODUCTION_REASON']
+                else:
+                    case['PRODUCTION_STATE'] = state
+                clean = {k: v for k, v in os.environ.items() if k not in ('PRODUCTION_STATE', 'PRODUCTION_REASON', 'DEPLOY_TREE')}
+                with self.subTest(state=state), patch.dict(os.environ, {**clean, **case}, clear=True), \
+                        patch.object(guard, 'verify_source', return_value=101) as verify:
+                    self.assertEqual(guard.main(['--production']), 0)
+                    verify.assert_called_once_with(REPO, 'refs/heads/main', SHA)
+                lines = output.read_text().splitlines()
+                self.assertEqual(lines[0], 'hold=' + hold)
+                self.assertTrue(lines[1].startswith('reason=' + reason), lines[1])
+            # Without --production nothing is compared or written.
+            with patch.dict(os.environ, {**env, 'GITHUB_OUTPUT': str(Path(temp) / 'plain')}), \
+                    patch.object(guard, 'verify_source', return_value=101), patch.object(guard, 'production_hold') as hold:
+                self.assertEqual(guard.main([]), 0)
+                hold.assert_not_called()
+            self.assertFalse((Path(temp) / 'plain').exists())
+            self.assertEqual(guard.main(['--other']), 2)
+
+    def test_the_candidate_checkout_must_be_exactly_the_selected_commit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            git = ['git', '-C', temp, '-c', 'user.name=t', '-c', 'user.email=t@example.com']
+            subprocess.run(['git', 'init', '-q', temp], check=True)
+            subprocess.run(git + ['commit', '-q', '--allow-empty', '-m', 'candidate'], check=True)
+            head = subprocess.run(git + ['rev-parse', 'HEAD'], check=True, capture_output=True, text=True).stdout.strip()
+            guard.verify_checkout(temp, head)
+            with self.assertRaisesRegex(guard.SourceError, 'the candidate checkout is ' + head + ', not ' + SHA):
+                guard.verify_checkout(temp, SHA)
+            with self.assertRaisesRegex(guard.SourceError, 'unreadable'):
+                guard.verify_checkout(str(Path(temp) / 'missing'), head)
+            # The CLI stops before any metadata read or production comparison.
+            env = {'GITHUB_REPOSITORY': REPO, 'GITHUB_REF': 'refs/heads/main', 'DEPLOY_SHA': SHA, 'DEPLOY_TREE': temp,
+                   'PRODUCTION_STATE': 'unconfigured', 'GITHUB_OUTPUT': str(Path(temp) / 'out')}
+            for argv in ([], ['--production']):
+                with self.subTest(argv=argv), patch.dict(os.environ, env), patch.object(guard, 'verify_source') as verify:
+                    self.assertEqual(guard.main(argv), 1)
+                    verify.assert_not_called()
+            self.assertFalse((Path(temp) / 'out').exists())
 
     def test_non_success_and_wrong_provenance_fail(self):
         cases = [('status', 'queued'), ('status', 'in_progress'), ('conclusion', None),
@@ -120,11 +243,14 @@ class DeploySourceTests(unittest.TestCase):
         with patch.dict(os.environ, {'SOURCE_READ_TOKEN': 'read-only'}), patch.object(guard, 'urlopen', return_value=Response()) as open_url:
             guard.public_metadata('/repos/' + REPO + '/git/ref/heads/main')
         self.assertEqual(open_url.call_args.args[0].get_header('Authorization'), 'Bearer read-only')
-        # The workflow supplies only its own token under contents: read; never a repository secret.
+        # The workflow supplies only its own token: contents: read for every job but the report,
+        # which can write check runs and nothing else; never a repository secret.
         text = (ROOT / '.github/workflows/deploy-cloudflare.yml').read_text()
         self.assertIn('permissions:\n  contents: read\n', text)
         keys = [line for line in text.splitlines() if re.match(r'\s*permissions:', line)]
-        self.assertEqual(keys, ['permissions:'], 'no job widens the top-level contents: read')
+        self.assertEqual(keys, ['permissions:', '    permissions:'], 'only the report job sets its own permissions')
+        report = text.split('\n  report:', 1)[1].split('\n  rollback:', 1)[0]
+        self.assertIn('    permissions:\n      checks: write\n    env:', report)
         tokens = [line.strip() for line in text.splitlines() if 'SOURCE_READ_TOKEN:' in line]
         self.assertEqual(tokens, ['SOURCE_READ_TOKEN: ${{ github.token }}'] * 3)
 
@@ -183,7 +309,7 @@ class DeploySourceTests(unittest.TestCase):
         deploy, rollback = text.split('\n  rollback:', 1)
         first = deploy.index('Reject manual non-main deployment before checkout')
         checkout = deploy.index('- uses: actions/checkout')
-        ci = deploy.index('run: python3 scripts/check_deploy_source.py')
+        ci = deploy.index('run: python3 "$CONTROLLER/scripts/check_deploy_source.py"')
         self.assertLess(first, checkout)
         self.assertLess(checkout, ci)
         for later in ('- uses: actions/setup-node', 'Install locked web dependencies', 'id: deploy'):
