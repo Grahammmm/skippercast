@@ -95,11 +95,12 @@ function browser() {
 test('live layer replaces hour, expires without interaction, hides on region/off and destroys', async t => {
   t.mock.timers.enable({apis: ['setTimeout']}); browser();
   let clock = NOW.getTime(), fail = false;
-  const e = {overlay: null, data: {}, setOverlay(id, value) { assert.equal(id, 'wind'); this.overlay = value; }, setData(id, value) { this.data[id] = value; }};
+  const e = {overlay: null, data: {}, before: null, setOverlay(id, value, before) { assert.equal(id, 'wind'); this.overlay = value; this.before = before; }, setData(id, value) { this.data[id] = value; }};
   const engine = signal(e);
   const s = createWind({engine, zone: () => TZ, page: () => location.href, palette: () => palette, now: () => new Date(clock),
     fetchFn: async () => ({ok: !fail, json: async () => feed()})});
   t.after(() => s.destroy()); await flush();
+  assert.deepEqual(e.before, ['depth-contours-edge', 'mpa-fill'], 'wind inserts below depth contours, else MPAs');
   assert.equal(e.data['wind-labels'].features[0].properties.label, '12 kt');
   engine.value = null; assert.equal(e.overlay, null);
   engine.value = e; assert.ok(e.overlay, 'same engine remount restores the frame');

@@ -45,6 +45,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-13 (shelf depth contours): app.css adds only the two depth-contour legend swatch rules and joins the
+// contour row to the wrapping legend rows; MapStage.tsx only adds createDepthContours to the Chart's layers. The
+// Reports catch flow renders neither, and check_contrast.mjs rebinds only the surface-proof hashes and cited lines
+// (moved, byte-identical), with contrast() untouched. All three rebound.
 // CI6-17 (tide station selection): App.tsx only configures the tide selector
 // from region metadata; the Reports catch flow and its contrast results are unaffected.
 // CI6-03 (Temp contrast layer): web/tokens.css adds only theme-invariant --contrast-0/1/2 after --swell-3; app.css
@@ -52,17 +56,21 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // rule; MapStage.tsx adds only the createContrast chart layer. The Reports catch flow mounts none of them.
 // check_contrast.mjs rebinds only the tokens/app/Legend surface hashes and their shifted line citations, with
 // surface results unchanged and contrast() untouched. All four rebound.
+// CI6-13 merge-forward onto CI6-03: the union of both entries above and nothing else. app.css carries both sides'
+// rules unchanged; MapStage.tsx adds both chart layers; check_contrast.mjs rebinds the union's surface hashes and
+// shifted line citations, with contrast() untouched. All four rebound.
 // CI6-10 wind adds a chart-only createWind factory to MapStage; Reports does not mount it. The reviewed contrast()
 // implementation and this test's rendered catch path are unchanged; MapStage and check_contrast source hashes rebound.
+// Wind/contour merge-forward retains all three factories and both legend rows; only union hashes/line citations rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
-  "web/app/MapStage.tsx": "7d71e7e7f2dd032f47526d6ef875155441877ef89e8125a6ec5e687f7a65e023",
+  "web/app/MapStage.tsx": "8f10ac93e298dc585f8df4b4088ae5f0605626aaea0336e8f5620331bd41d896",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
-  "web/app/app.css": "06d7540fe086ad8bbd250bbd15721f48368a07dfa9ec8ea8e7da9124ddbc6acc",
+  "web/app/app.css": "8a550d59481c70301e5c506bdef04cc2d4b286ae14068d7ed0c9eed66d7a110a",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -72,7 +80,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "93eed33584e75bbaa2b00bd787aea4f2c7fc329e451739ca4f040a30d38e24be",
+  "scripts/check_contrast.mjs": "339983c039719051a9371bac519398fea84c61de3a7cd1eafc148487b53c601a",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

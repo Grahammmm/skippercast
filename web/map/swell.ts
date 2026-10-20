@@ -43,6 +43,7 @@ import {fieldTexture, isolines} from './field.ts';
 import {WAVE_MODEL, loadForecast, swellPoints, type WaveForecast} from './forecast-grid.ts';
 import {forecastTime} from './frames.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
@@ -324,7 +325,8 @@ export function createSwell(o: SwellOptions): {
       drawnKey = key; drawnShape = shape; drawnOn = e;
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), ['wind-casing', MPA_FILL]);
+      // § 9 order: under wind, else depth contours, else protected areas.
+      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), ['wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       if (f) {
         e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
         e.setData(ISOLINE_SOURCE, periodLines(f));
