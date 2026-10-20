@@ -112,6 +112,38 @@ test('the commit production serves is traced from the live version\'s provenance
   assert.equal(liveCommit(laterLive, later), CUR_SHA);
 });
 
+test('a version_upload trigger is a code upload, like upload', () => {
+  const tagged = (id, at, message) => ({id, metadata: {created_on: at},
+    annotations: {'workers/triggered_by': 'version_upload', 'workers/message': message}});
+  // wrangler deploy 4.142.0 labels its versions "version_upload"; the message still names the commit.
+  const vUpload = tagged('f2b6afc8-0000-4000-8000-000000000001', '2026-10-20T17:08:00.000Z', `${CUR_SHA} run 39463174683`);
+  const prod = [deployment('d1', '2026-10-20T17:08:00.000Z', vUpload.id, 'wrangler')];
+  const traced = traceLiveCommit(prod, [vUpload]);
+  assert.equal(traced.commit, CUR_SHA, traced.reason);
+  assert.equal(liveCommit(prod, [vUpload]), CUR_SHA);
+  // A version_upload whose message is free-form or missing still names no commit.
+  for (const message of [undefined, `hotfix on top of ${CUR_SHA}`]) {
+    const untagged = tagged('f2b6afc8-0000-4000-8000-000000000002', '2026-10-20T17:08:00.000Z', message);
+    const got = traceLiveCommit([deployment('d1', '2026-10-20T17:08:00.000Z', untagged.id, 'wrangler')], [untagged]);
+    assert.equal(got.commit, '', got.reason);
+    assert.match(got.reason, /no "<sha> run <id>" deploy message/);
+  }
+});
+
+test('the production listing shape (version_upload at 100%, "<sha> run <id>") is traced', () => {
+  // Regression for #766's hold: production served a wrangler deploy whose trigger Cloudflare
+  // labelled "version_upload" rather than "upload".
+  const SHA = 'ad1118ef747a35bcfb2fc401020399d24fbe6d7a';
+  const LIVE = 'f2b6afc8-b6d7-4a20-86df-44df78a55a76';
+  const versions = [{id: LIVE, metadata: {created_on: '2026-10-20T17:08:00.000Z'},
+    annotations: {'workers/triggered_by': 'version_upload', 'workers/message': `${SHA} run 39463174683`}}];
+  const deployments = [{id: 'd1', created_on: '2026-10-20T17:08:00.000Z', source: 'wrangler',
+    strategy: 'percentage', versions: [{version_id: LIVE, percentage: 100}]}];
+  const traced = traceLiveCommit(deployments, versions);
+  assert.equal(traced.commit, SHA, traced.reason);
+  assert.equal(liveCommit(deployments, versions), SHA);
+});
+
 test('a live commit that cannot be traced is unknown, never guessed', () => {
   const unknown = (deployments, versions, reason) => {
     const traced = traceLiveCommit(deployments, versions);

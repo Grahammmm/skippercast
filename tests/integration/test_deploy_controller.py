@@ -99,9 +99,9 @@ def step(name):
     return textwrap.dedent('\n'.join(lines))
 
 
-def code(version_id, at, sha):
+def code(version_id, at, sha, trigger='version_upload'):
     return {'id': version_id, 'metadata': {'created_on': at, 'source': 'wrangler'},
-            'annotations': {'workers/triggered_by': 'upload', 'workers/message': sha + ' run 1'}}
+            'annotations': {'workers/triggered_by': trigger, 'workers/message': sha + ' run 1'}}
 
 
 def secrets(version_id, at):
@@ -281,6 +281,11 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
         cases = {
             'untagged code upload live': dict(versions=untagged,
                                               deployments=DEPLOYMENTS + [deployment('d3', '2026-10-20T13:00:00Z', ('v-hand', 100))]),
+            'version_upload with a free-form message': dict(
+                versions=VERSIONS + [{'id': 'v-ff', 'metadata': {'created_on': '2026-10-20T13:00:00Z'},
+                                      'annotations': {'workers/triggered_by': 'version_upload',
+                                                      'workers/message': 'hotfix on top of ' + PROD}}],
+                deployments=DEPLOYMENTS + [deployment('d3', '2026-10-20T13:00:00Z', ('v-ff', 100))]),
             'split traffic': dict(deployments=DEPLOYMENTS + [deployment('d3', '2026-10-20T13:00:00Z', ('v-prod-s', 90), ('v-prod', 10))]),
             'live version missing': dict(versions=VERSIONS[:1]),
             'no deployments': dict(deployments=[]),
@@ -316,6 +321,16 @@ class ControllerWithPreChangeCandidate(unittest.TestCase):
                 self.assertNotIn('deploy', results)
                 self.assert_no_production_writes()
                 subprocess.run(['git', '-C', str(self.candidate), 'clean', '-qfdx'], check=True)
+        # The older "upload" vocabulary stays covered: it traces to the same hold.
+        with self.subTest(production='upload trigger'):
+            self.log.unlink(missing_ok=True)
+            older_vocab = dict(versions=VERSIONS + [code('v-new-u', '2026-10-20T13:00:00Z', self.sha, 'upload')],
+                               deployments=DEPLOYMENTS + [deployment('d3', '2026-10-20T13:00:00Z', ('v-new-u', 100))])
+            results, out = self.deploy_job(**older_vocab)
+            self.assertEqual((out['production_state'], out['production_sha'], out['hold']), ('known', self.sha, 'true'))
+            self.assertIn('production already serves ' + self.sha, out['reason'])
+            self.assertNotIn('deploy', results)
+            self.assert_no_production_writes()
 
     def test_unconfigured_cloudflare_reads_and_writes_nothing(self):
         results, out = self.deploy_job(configured=False)
