@@ -218,4 +218,24 @@ test.describe('offline', () => {
     await context.setOffline(false);
     expect(pageErrors).toEqual([]);
   });
+
+  test('a region saved without a tide-station choice adds no NOAA predictions to its pack', async ({page, v2, isMobile}) => {
+    await stubLiveFeeds(page);
+    await page.route('**/mdapi/prod/webapi/stations.json?*', route => route.fulfill({json: {stations: []}}));
+    await page.route('**/api/prod/datagetter?*', route => route.fulfill({json: {predictions: [{t: '2026-10-08 21:00', v: '2.3', type: 'H'}]}}));
+    await v2.open('app', AREA);
+    await (await accountMenu(page, isMobile)).getByRole('button', {name: 'Save for offline'}).click();
+    const dialog = page.getByRole('dialog', {name: 'Save for offline'});
+    await dialog.getByRole('button', {name: `Save ${NAME} for offline`}).click();
+    await expect(dialog.getByRole('status').first()).toContainText(`Saved ${NAME} · `, {timeout: 90_000});
+
+    const tidePackStations = await page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find(name => name.startsWith('sc-pack-morro-bay-'));
+      if (!cacheName) return [];
+      return (await (await caches.open(cacheName)).keys()).map(request => request.url)
+        .filter(url => new URL(url).hostname === 'api.tidesandcurrents.noaa.gov' && new URL(url).pathname.endsWith('/datagetter'))
+        .map(url => new URL(url).searchParams.get('station'));
+    });
+    expect([...new Set(tidePackStations)].sort()).toEqual(['9412110']);
+  });
 });
