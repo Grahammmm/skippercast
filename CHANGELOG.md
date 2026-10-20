@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Trip plans name protected-area boundaries containing selected spots and link the agency rules; blocked plans can download context-only notes while GPX remains withheld.
+
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
