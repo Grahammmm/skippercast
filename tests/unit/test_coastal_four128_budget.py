@@ -503,7 +503,7 @@ class RuntimeBindsAmendment(unittest.TestCase):
     def test_grant_must_match_signed_amendment(self):
         runtime = self.runtime()
         ref = dict(path="metadata/four128-budget-amendment-v6.json", contract="coastal-four128-budget-amendment-v1",
-                   bytes=1, sha256="0" * 64)
+                   bytes=1, sha256=runtime.CHARGE_LEDGER['head']['sha256'])
         grant = dict(approved_budget_amendment=ref, prior_effective_bytes=2034491132,
                      prior_effective_source_bytes=2034491132, cumulative_limit_bytes=2328551676,
                      source_volume_cap_bytes=294060544)
@@ -511,6 +511,10 @@ class RuntimeBindsAmendment(unittest.TestCase):
             limits = runtime.limits_for(grant)
             read.assert_called_once_with(runtime.R, ref, "coastal-four128-budget-amendment-v1")
             self.assertEqual(limits["source_limit_bytes"], 2328551676)
+            wrong_head = copy.deepcopy(grant)
+            wrong_head['approved_budget_amendment']['sha256'] = '0' * 64
+            with self.assertRaisesRegex(ValueError, 'charge ledger head'):
+                runtime.limits_for(wrong_head)
             # Revision-2/3/4/5 or v5-draft numbers, or a prior that omits a later charge, are stale.
             for key, value in (("prior_effective_bytes", 931764092),
                                ("prior_effective_bytes", 1042036796),

@@ -322,6 +322,39 @@ def test_held_step_receipt_fails_even_when_its_checks_hold(tools, capsys):
     assert "verdict = 'HELD', not PASS" in report(tools)['coast_prod']['COAST-PROD-01']['reasons'][0]
 
 
+# --- item 130: the top-level verdict is exactly "PASS"; qualifiers live in other fields ---
+
+@pytest.mark.parametrize('verdict', ['PASS_WITH_GAPS', 'pass', 'PASS ', 'PASS (qualified)'])
+def test_qualified_or_inexact_pass_verdict_is_not_pass(tools, verdict):
+    receipt = cited(tools, 'qualified.json', verdict)
+    ref, problems = module.check_receipt(receipt, PASS_CHECK, label='qualified.json')
+    assert ref is None
+    assert f'receipt qualified.json verdict = {verdict!r}, not PASS' in problems
+
+
+@pytest.mark.parametrize('verdict', ['PASS_WITH_GAPS', 'pass', 'PASS '])
+def test_cited_receipt_with_inexact_pass_verdict_never_backs_an_id(tools, capsys, verdict):
+    receipt = cited(tools, 'qualified.json', verdict)
+    prod = all_six()
+    prod['COAST-PROD-02'] = dict(evidence=[citation(receipt, receipt_checks=[dict(pointer='/verdict',
+                                                                                   equals=verdict)])])
+    code, out = run(spec_for(tools, [good_step(tools)], prod), capsys)
+    assert code == 1 and out['verdict'] == 'NOT_PASS' and out['coast_prod']['COAST-PROD-02'] == 'FAIL'
+    entry = report(tools)['coast_prod']['COAST-PROD-02']
+    assert entry['receipts'] == []
+    assert any(f'verdict = {verdict!r}, not PASS' in reason for reason in entry['reasons'])
+
+
+def test_exact_pass_with_qualifications_list_is_accepted(tools, capsys):
+    body = dict(verdict='PASS', qualifications=['fixture qualification', 'HELD'], gaps=['fixture gap'],
+                notes='qualifiers sit beside the verdict and never change it')
+    receipt = cited(tools, 'qualified-pass.json', body=json.dumps(body))
+    ref, problems = module.check_receipt(receipt, PASS_CHECK, label='qualified-pass.json')
+    assert problems == [] and ref is not None and ref['sha256'] == module.sha256_file(receipt)
+    code, out = run(spec_for(tools, [good_step(tools)], all_cited(receipt)), capsys)
+    assert code == 0 and out['verdict'] == 'PASS' and set(out['coast_prod'].values()) == {'PASS'}
+
+
 # --- round-1 review: the driver owns per-pass isolation variables ---
 
 @pytest.mark.parametrize('key', ['HOME', 'TMPDIR', 'XDG_CACHE_HOME', 'PYTHONDONTWRITEBYTECODE',
