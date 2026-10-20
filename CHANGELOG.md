@@ -13,7 +13,7 @@
 - Shore runs on the Chart go on Hold, with the reason on the card, while a marine alert covers the area, the marine alert check is not current, or the county posts a beach-health advisory, closure or warning there.
 - A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
 - The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
-- The licences page and NOTICE name the MapLibre GL JS version the app ships (6.12.0), and a check keeps them in step with future updates.
+- The licences page and NOTICE name the MapLibre GL JS version the app ships (6.14.0), and a check keeps them in step with future updates.
 
 - The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
 ### Coastal readiness inspection
@@ -110,6 +110,8 @@
 - The new home page and map now send the site's anonymous usage statistics: uncaught error reports (scrubbed message, script file name, line and column, build, hashed request id) and three visit steps, each with the region, build and `s` visit source: `port_selected` (a port chosen in the map's port chooser), `spot_saved` (a spot added to the trip) and `offline_saved` (a region saved for offline). The new home page sends error reports only. No cookies or identifiers, and nothing under Do Not Track or Global Privacy Control. The privacy notice now describes exactly what is collected, where it is stored (Cloudflare Workers Analytics Engine, kept three months) and that the daily operations report copies step counts and the top scrubbed errors into public GitHub Actions run summaries. The v1 About text no longer says there is no analytics.
 
 ### Internal
+
+- The research-daily NOAA ENC hazard step retries NOAA's transient "Could not find service" 500 (bounded, capped backoff) on the same reviewed host; if NOAA stays down it writes an explicit `upstream_unavailable` receipt and the inventory report warns instead of failing, while a missing, corrupt or incomplete snapshot still fails closed. Each run attempt has its own identity (`github:<run id>:<attempt>`, or `ENC_INVOCATION_ID` locally), so output from an earlier run or attempt, or a status naming the wrong artifact, never counts. No new hosts were added. See [research-daily ENC unavailable](docs/operations/runbooks/research-daily-enc-unavailable.md).
 
 - Add regression coverage for perspective-mode isolation and camera behavior.
 

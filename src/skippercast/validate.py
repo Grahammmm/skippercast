@@ -59,6 +59,7 @@ KINDS = {
     "fleet-region": "fleet-region.schema.json",
     "fleet-profile": "fleet-profile.schema.json",
 
+    'coastal-discovery-lead-v1': 'coastal-discovery-lead-v1.schema.json',
     'coastal-terrain-only-input-v1': 'coastal-terrain-only-input-v1.schema.json',
     'coastal-terrain-only-render-v1': 'coastal-terrain-only-render-v1.schema.json',
     'coastal-terrain-only-science-review-v1': 'coastal-terrain-only-science-review-v1.schema.json',
