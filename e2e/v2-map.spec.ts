@@ -570,8 +570,13 @@ test('Currents draw the bound forecast as animated streamlines, read on click an
   expect(drawn.water).toBeGreaterThan(1000);
   // A click on open water inside the field reads the blended current.
   const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
-  // Left of the desktop rail, above the mobile sheet's peek.
-  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.4);
+  // Left of the desktop rail, below the phone's header and above its sheet's peek, and above the laptop's
+  // legend (CI6-02: the laptop command bar may wrap to two rows, which shortens the map and brings the
+  // legend up to 40% of its height).
+  const [x, y] = [box.x + box.width * 0.3, box.y + box.height * (narrow(page) ? 0.4 : 0.3)];
+  expect(await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.matches('canvas.maplibregl-canvas, canvas.chart-flow--dash') ?? false, [x, y]),
+    'the click reaches the map, not the chrome over it').toBe(true);
+  await page.mouse.click(x, y);
   await expect(page.locator('.app-mark h2')).toHaveText('Surface current');
   await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d\d kt toward \d{1,3}° true$/);
   await expect(page.locator('.app-mark-source')).toHaveText('NOAA WCOFS surface forecast · issued 3 h ago');

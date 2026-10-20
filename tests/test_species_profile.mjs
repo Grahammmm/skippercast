@@ -13,8 +13,9 @@ import {pathToFileURL} from 'node:url';
 import test from 'node:test';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
-import {coastTargetsFor, loadPlans, regionPlans, targetsFor} from '../web/species.ts';
-import {markFeatures} from '../web/map/habitat.ts';
+import {coastTargetsFor, loadPlans, optionText, reefRanked, regionAtlas, regionPlans, regionTargets, regionUnavailable, TARGET_STATE_TEXT, targetsFor, targetState, unavailableTargets} from '../web/species.ts';
+import {hasCoastTerrain} from '../web/coast-context.ts';
+import {habitatFamily, markFeatures} from '../web/map/habitat.ts';
 import {terrainState} from '../web/map/stage.ts';
 import {PROFILE_TABLE} from '../web/profile.ts';
 import {configureStore, current, layers, profile, profilePatch, readURL, species, syncFromURL, withParams} from '../web/state.ts';
@@ -40,7 +41,7 @@ async function loadMenu() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {TargetSelect} from './web/app/CommandBar.tsx';
       export * as state from './web/state.ts';
-      export {regionPlans} from './web/species.ts';
+      export {regionAtlas, regionPlans, regionUnavailable} from './web/species.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -82,7 +83,7 @@ test('Shore hides reef marks and lists surfperch first, on the Chart and in the 
     m.state.syncFromURL(`${ORIGIN}?region=morro-bay&profile=shore&presentation=${presentation}`);
     const html = m.render(m.h(m.TargetSelect));
     assert.deepEqual(options(html), ['surfperch', 'halibut'], presentation);
-    assert.match(html, /<option selected value="surfperch">Barred surfperch<\/option>/, presentation);
+    assert.match(html, /<option selected value="surfperch">Barred surfperch · not researched in this region<\/option>/, presentation);
   }
   m.regionPlans.value = null;
 });
@@ -163,4 +164,112 @@ test('the region\'s plans load for that region only', async () => {
     assert.equal(regionPlans.value.region, 'morro-bay');
     regionPlans.value = null;
   }
+});
+
+// CI6-02: species honesty in the target picker. Every state comes from committed data: the region's
+// search plans and `map.unavailable_targets`, whether it has coastal terrain or survey atlas marks, and
+// the plan's kind. catalog/search-methods.json is read only, to check the reef rule against the catalog.
+const committed = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
+const regionData = id => committed(`dist/regions/${id}/region.json`);
+const plansOf = id => committed(`dist/regions/${id}/search-plans.json`).profiles;
+const atlasMarks = id => (committed(`dist/${regionData(id).assets.atlas}`).targets ?? []).length;
+/** The coverage the picker reads for region `id`, from its committed files. */
+const coverageOf = id => ({unavailable: unavailableTargets(regionData(id)), plansLoaded: true, ranks: hasCoastTerrain(id) || atlasMarks(id) > 0});
+const METHODS = committed('catalog/search-methods.json').species;
+
+test('CI6-02: every Morro Bay species shows its state from committed data (Accept 1, 2)', () => {
+  const region = regionData('morro-bay'), plans = plansOf('morro-bay'), coverage = coverageOf('morro-bay');
+  assert.deepEqual(region.species, ['reef', 'halibut', 'salmon', 'albacore', 'bluefin', 'dungeness'], 'the region\'s researched target list');
+  assert.equal(coverage.ranks, true, 'Morro Bay has coastal terrain and survey atlas marks to rank');
+  const states = Object.fromEntries(region.species.map(id => [id, targetState(id, 'boat', plans, coverage)]));
+  assert.deepEqual(states, {reef: 'ranked', halibut: 'plan', salmon: 'plan', albacore: 'plan', bluefin: 'plan', dungeness: 'plan'});
+  // Not a per-species table: ranked exactly where the catalog's search method is a reef method.
+  for (const id of region.species) assert.equal(states[id] === 'ranked', METHODS[id].kind === 'reef', id);
+  // The menu lists every species with the same state, beside its own name.
+  const listed = targetsFor('boat', 'morro-bay', plans, null, coverage);
+  for (const id of region.species) {
+    const t = listed.find(o => o.id === id);
+    assert.ok(t, `${id} stays listed (Accept 4)`);
+    assert.equal(t.state, states[id], id);
+    assert.equal(optionText(t), `${plans[id].name} · ${TARGET_STATE_TEXT[states[id]]}`);
+  }
+  // The coast targets the terrain scores are ranked; the region's unavailable target is not researched.
+  assert.deepEqual(listed.filter(t => t.group !== 'plan').map(t => [t.id, t.state]),
+    [['lingcod', 'ranked'], ['rockfish-reef', 'ranked'], ['gopher-rockfish', 'ranked'], ['cabezon-shallow-reef', 'ranked']]);
+  assert.deepEqual(Object.keys(coverage.unavailable), ['lobster']);
+  assert.equal(targetState('lobster', 'boat', plans, coverage), 'unresearched', 'map.unavailable_targets');
+  assert.equal(targetsFor('boat', 'morro-bay', plans, 'lobster', coverage)[0].state, 'unresearched', 'a link naming it says so');
+  // Shore ranks no places (its runs show on the Chart): halibut has a plan only; surfperch is outside the researched list.
+  assert.deepEqual(targetsFor('shore', 'morro-bay', plans, null, coverage).map(t => [t.id, t.state]), [['surfperch', 'unresearched'], ['halibut', 'plan']]);
+  assert.deepEqual(targetsFor('spear', 'morro-bay', plans, null, coverage).map(t => t.state), ['ranked', 'ranked', 'ranked', 'ranked', 'ranked']);
+});
+
+test('CI6-02: "ranked" needs places to rank and the reef habitat family the ranking reads', () => {
+  // Without terrain or atlas marks, the reef plan is a search plan only; atlas marks make it ranked.
+  assert.equal(hasCoastTerrain('crescent-city'), false);
+  assert.equal(atlasMarks('crescent-city'), 0);
+  assert.equal(targetState('reef', 'boat', plansOf('crescent-city'), coverageOf('crescent-city')), 'plan');
+  assert.ok(atlasMarks('southern-california') > 0);
+  const socal = plansOf('southern-california'), cover = coverageOf('southern-california');
+  assert.equal(targetState('reef', 'boat', socal, cover), 'ranked');
+  assert.equal(targetState('kelp-bass', 'boat', socal, cover), 'plan', 'a habitat plan outside the reef family is not ranked');
+  assert.deepEqual(['salmon', 'dungeness'].map(id => targetState(id, 'boat', socal, cover)), ['unresearched', 'unresearched'], 'southern-california names them unavailable');
+  // reefRanked is the family web/map/habitat.ts ranks, for every target any profile lists in any region.
+  for (const id of ['morro-bay', 'southern-california', 'crescent-city', 'cambria-san-simeon']) {
+    const plans = plansOf(id);
+    for (const p of ['boat', 'shore', 'spear', 'kayak']) for (const t of targetsFor(p, id, plans))
+      assert.equal(reefRanked(t.id, plans), habitatFamily(t.id) === 'reef', `${id} ${p} ${t.id}`);
+  }
+});
+
+test('CI6-02: states wait for the data that decides them, and use no catch, feeding, hotspot or bite wording (Accept 3)', () => {
+  for (const text of Object.values(TARGET_STATE_TEXT)) assert.doesNotMatch(text, /catch|feed|hot ?spot|bite|fish (?:are|is) (?:here|present)/i, text);
+  configureStore({v2: true, storage: null});
+  syncFromURL(`${ORIGIN}?region=morro-bay&profile=shore`);
+  // Before the plans load, a target nothing ranks has no state yet rather than a wrong one.
+  assert.deepEqual(regionTargets('shore', 'morro-bay', null).map(t => [t.id, t.state]), [['surfperch', null], ['halibut', null]]);
+  assert.equal(regionTargets('boat', 'morro-bay', null)[0].state, 'ranked', 'lingcod: the terrain ranks it with or without plans');
+  regionPlans.value = {region: 'morro-bay', plans: PLANS};
+  regionUnavailable.value = {region: 'morro-bay', targets: unavailableTargets(regionData('morro-bay'))};
+  assert.deepEqual(regionTargets('shore', 'morro-bay', null).map(t => t.state), ['unresearched', 'plan']);
+  assert.equal(regionTargets('boat', 'morro-bay', 'lobster')[0].state, 'unresearched');
+  // Another region's facts never apply.
+  regionUnavailable.value = {region: 'southern-california', targets: {halibut: 'x'}};
+  assert.equal(regionTargets('shore', 'morro-bay', null)[1].state, 'plan');
+  // An atlas-only region is ranked once its marks load, and only for itself.
+  syncFromURL(`${ORIGIN}?region=southern-california&profile=boat`);
+  regionPlans.value = {region: 'southern-california', plans: plansOf('southern-california')};
+  assert.equal(regionTargets('boat', 'southern-california', 'reef').find(t => t.id === 'reef').state, 'plan', 'no marks loaded yet');
+  regionAtlas.value = {region: 'southern-california', marks: atlasMarks('southern-california')};
+  assert.equal(regionTargets('boat', 'southern-california', 'reef').find(t => t.id === 'reef').state, 'ranked');
+  regionAtlas.value = {region: 'morro-bay', marks: 132};
+  assert.equal(regionTargets('boat', 'southern-california', 'reef').find(t => t.id === 'reef').state, 'plan');
+  regionPlans.value = null; regionUnavailable.value = null; regionAtlas.value = null;
+});
+
+test('CI6-02: the command bar shows each target\'s state and lists the region\'s unavailable targets, unselectable', async () => {
+  const m = await loadMenu();
+  m.state.configureStore({v2: true, storage: null});
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&profile=boat`);
+  m.regionPlans.value = {region: 'morro-bay', plans: PLANS};
+  m.regionUnavailable.value = {region: 'morro-bay', targets: unavailableTargets(regionData('morro-bay'))};
+  const html = m.render(m.h(m.TargetSelect)).replace(/&amp;/g, '&');
+  const shown = Object.fromEntries([...html.matchAll(/<option(?: selected)? value="([^"]+)"(?: disabled)?>([^<]+)<\/option>/g)].map(o => [o[1], o[2]]));
+  assert.deepEqual(shown, {
+    lingcod: 'Lingcod · ranked by mapped habitat',
+    reef: 'Lingcod & rockfish · ranked by mapped habitat',
+    halibut: 'California halibut · search plan only',
+    salmon: 'Chinook salmon · search plan only',
+    albacore: 'Albacore tuna · search plan only',
+    bluefin: 'Pacific bluefin tuna · search plan only',
+    dungeness: 'Dungeness crab · search plan only',
+    'rockfish-reef': 'Reef rockfish · ranked by mapped habitat',
+    'gopher-rockfish': 'Gopher rockfish · ranked by mapped habitat',
+    'cabezon-shallow-reef': 'Cabezon · ranked by mapped habitat',
+    lobster: 'Lobster · not researched in this region',
+  });
+  assert.match(html, /<optgroup label="Other targets"><option value="lobster" disabled>/, 'listed, never selectable');
+  // The search narrows by name, never by state words.
+  assert.deepEqual(options(html), ['lingcod', 'reef', 'halibut', 'salmon', 'albacore', 'bluefin', 'dungeness', 'rockfish-reef', 'gopher-rockfish', 'cabezon-shallow-reef']);
+  m.regionPlans.value = null; m.regionUnavailable.value = null;
 });
