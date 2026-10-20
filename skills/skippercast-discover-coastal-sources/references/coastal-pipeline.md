@@ -213,24 +213,118 @@ production mission has run.
 
 ### Current proof and missing evidence
 
-At accepted source `1a450b9866081a17be54aea5673b2f1de53f019f`, the prior
+At historical source `1a450b9866081a17be54aea5673b2f1de53f019f`, the prior
 [PR657](https://github.com/Grahammmm/skippercast/pull/657) integration and
 [PR660](https://github.com/Grahammmm/skippercast/pull/660) terrain-only admission
 repair are reusable. Their retained reports describe 54 tests/65 subtests and
 32 synthetic/admission cases respectively. Those reports do not establish the
-current installed package, immutable real-data bundle or completed real render.
-Site CI and deployment are separate evidence. Current skill lessons acknowledge
-bounded real-data/recovery work; recover its actual immutable receipts rather
-than denying it or promoting prose to production acceptance.
+current installed package. New private evidence below records an immutable
+real-data handoff and completed terrain-only previews, not production acceptance.
+[PR738](https://github.com/Grahammmm/skippercast/pull/738) merged as
+`050b242f410f53152ba8da2dfeaab2ade22e7d9a`; site CI/deployment and installed
+runtime equivalence remain separate evidence.
+
+Evidence snapshot: 2026-10-20. All real-data records below are PRIVATE,
+`publication_prohibited`; pending-science map outputs remain pending-science
+unless a separately cited science review accepts the exact packet. Paths beginning
+`outputs/` are relative private-store locators, not files shipped in Git. Hashes
+are SHA256 prefixes (12 hex), recomputed from the retained bytes for this update.
+Machine-valid output remains review-required, not semantic acceptance.
+
+- Six four128 attempts on H11952: attempts 1-5 failed/held with preserved receipts
+  and no refunds; attempt 6 completed acquire/qualify/map at `ed28dc69` with four
+  pending-science cores. Receipt: `outputs/t08-four128-20261019/receipt.json`
+  (`5df6526c28c5`, t_41de4cd3); independent private map validation:
+  `outputs/t08-four128-20261019/validation/receipt.json` (`2796e40d8b30`,
+  t_b40d52c8), verdict `PASS_PRIVATE_MAP_HANDOFF_PENDING_SCIENCE`.
+- Two clean-state acquire/qualify/map reruns completed: run tag `20261020r1`,
+  head `292cb0aa`, `outputs/t15-four128-rerun1-20261020/receipt.json`
+  (`fad41b67c39a`, t_187849bc); run tag `20261020r2`, head `16418f92`,
+  `outputs/t15-four128-rerun2-20261020/receipt.json` (`ddc6845b8158`, t_2e07206c).
+  Each charged 294,060,544 source bytes with zero fresh downloads; these outputs
+  stop at map, pending-science, not render. Budget chain v2..v6: signed amendments,
+  private; preserved failed charges are not renewed allowances.
+- Independent rerun validation: `outputs/t15-clean-reruns-20261020/validation/receipt.json`
+  (`f3510f03f431`, t_c49a9aa8), verdict `INDEPENDENT_PASS`, 1,154 checks.
+  Its per-file determinism results are reproduced below, not flattened to an
+  all-files-identical claim.
+- T15c-b report: `outputs/t15-clean-reruns-20261020/COAST-PROD-report.json`
+  (`490b27d73fc6`) and `outputs/t15-clean-reruns-20261020/COAST-PROD-report.md`
+  (`2ef8b989969c`), t_02003ddc (replacement for t_2fd4cbf6). Driver exit 1,
+  `NOT_PASS`; dry-run exit 0. Verbatim plan/driver statuses: `01 PASS, 02 PASS,
+  03 FAIL, 04 PASS, 05 PASS, 06 PASS`. The report was independently approved for
+  accuracy, NOT overall production acceptance.
+
+The plan/report numbers are NOT the same criteria as this skill table: plan 01
+is package/import inspection (skill 01); plan 02 is receipt recovery (skill 03),
+not installed closure (skill 02); plan 03 is private handoff (skill 04); plan 04
+is terrain preview (skill 05); plan 05 is operations tests (partial skill 06);
+plan 06 is an archived legacy software-browser view, not integrated operations.
+Do not transfer PASS between differently named criteria. Plan 03 remains FAIL:
+the driver requires top-level verdict exactly `PASS`, but the two validation
+receipts above say `PASS_PRIVATE_MAP_HANDOFF_PENDING_SCIENCE` and
+`INDEPENDENT_PASS`. Their qualifiers and citations are preserved, not rewritten
+or dropped to obtain PASS.
+
+The acceptance requirements are unchanged: inspection must retain held attempts
+and charges and reject absent/corrupt/escaping inputs without worker launch;
+installed closure needs canonical/declared-root positive and traversal, symlink,
+hash and byte-cap negative consumer evidence. Recovery retains original
+window/affine/CRS and raw/normalized lineage. Independent handoff review must cover
+support, sign/scale/units, nominal datum, geography, uncertainty and the requested
+context/horizon; imagery is optional only for the terrain-only scope. Real
+hole/disjoint-core preservation remains an unmet preview requirement, not waived
+by these fully supported windows. Integrated operations still needs idempotent
+resume, interrupted-worker recovery, child cleanup, artifact return, observable
+held/failed states and complete cost/usage bounds for the same mission. Preserve
+uncertain processes and terminal failures; no evidence row grants new execution,
+account access, retry allowance or public/paired website acceptance.
 
 | Dependency task | Deliverable and inputs | Acceptance and authority |
 | --- | --- | --- |
-| COAST-PROD-01: inspection interface | `coastal.cli` status/identity and `tests/unit/test_coastal_cli.py`, using existing queue/schema/code identity contracts | Temporary synthetic queue retains held attempts and charges; absent/corrupt/escaping inputs fail honestly. No worker launch. Independent exact source review and normal PR checks precede integration. |
-| COAST-PROD-02: installed closure | Existing package/wheel/build receipt, exact dependency and skill hashes, packaged resources and supported launcher identity | Compare actual installed consumer and canonical/declared-root positive plus traversal/symlink/hash/byte-cap negative receipts. Source-checkout inspection is insufficient. Missing environment or installation is a separate qualified task, not an implicit install instruction. |
-| COAST-PROD-03: recover retained real inputs | Existing mission/checkpoint, window/affine/CRS, masks, raw/normalized pairs, derived outputs, rights and complete charged ledger | Original producer supplies immutable locators/hashes; no source reopen or reacquisition to reconstruct missing records. Science owner supplies the corresponding independent attestation. Keep unavailable evidence unknown. |
-| COAST-PROD-04: private handoff | Accepted native producer/result identity and exact source-free plan, registered arrays and terrain-only input/review | Independent science/artifact review covers support, sign/scale/units, nominal datum, geography, uncertainty and the requested context/horizon. Imagery is optional for this explicitly terrain-only scope. Preserve genuine holds. |
-| COAST-PROD-05: real preview | Same accepted terrain bytes, pinned loader/renderer and finite private output reservation | Actual output proves holes/disjoint cores, geography and depth; independently inspect fixed-camera preview. Existing exhausted native/provider/render operations are not renewed by source preparation or these docs. Execution needs its applicable bounded authority. |
-| COAST-PROD-06: integrated operations | Same mission/queue identity, accepted stage outputs, original charges and supervisor evidence | Demonstrate idempotent resume, interrupted-worker recovery, child cleanup, artifact return, observable held/failed states and complete cost/usage bounds. Preserve uncertain processes and terminal failures. Public/paired website acceptance follows separately. |
+| COAST-PROD-01: inspection interface | `coastal.cli` status/identity and `tests/unit/test_coastal_cli.py`, existing queue/schema/code identity contracts | PRIVATE evidence: plan 01 PASS for staged source-tree checks at `050b242f`, 12 tests per pass; no worker launch, not installed acceptance. No historical T02 JSON receipt: not demonstrated / unknown. Fresh receipts: `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-1/receipts/package-check.json` (`153daf7b1b46`) and `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-2/receipts/package-check.json` (`f1551501c589`), t_02003ddc. Real-data lane remains publication_prohibited. |
+| COAST-PROD-02: installed closure | Actual package/wheel/build, dependency and skill hashes, packaged resources and launcher identity; positive and negative consumer checks | PRIVATE evidence: installed closure not demonstrated / unknown; actual installed-consumer/wheel equivalence receipt missing. Plan 02 PASS is receipt recovery, NOT this criterion. Report citation: `outputs/t15-clean-reruns-20261020/COAST-PROD-report.json` (`490b27d73fc6`, t_02003ddc). Source-tree package tests cannot certify installation; no install is authorized. Real-data lane remains publication_prohibited. |
+| COAST-PROD-03: recover retained real inputs | Original mission/checkpoint, windows, masks, raw/normalized pairs, rights, derived outputs and complete charged ledger; separate independent science attestation | PRIVATE, publication_prohibited, pending-science recovery evidence: plan 02 PASS for 18 intake tests and 8 operations tests per pass plus 43 receipt checks and 8+8 settled admissions. No historical T04/T12 JSON receipts: not demonstrated / unknown. Fresh intake receipts: `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-1/receipts/t04-intake-tests.json` (`90dd447bb883`) and `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-2/receipts/t04-intake-tests.json` (`70691d70674f`); verification receipts: `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-1/receipts/rerun-receipt-verification.json` and `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-2/receipts/rerun-receipt-verification.json` (both `3c49b8024223`), t_02003ddc. Operations pins are below. Retained real-input/ledger validation: `outputs/t15-clean-reruns-20261020/validation/receipt.json` (`f3510f03f431`, t_c49a9aa8). No source reopening to reconstruct missing evidence; machine checks do not supply science acceptance. |
+| COAST-PROD-04: private handoff | Native/result identity and exact source-free plan, registered arrays, terrain-only input and independent science/artifact review | PRIVATE, publication_prohibited: original pending-science validation `outputs/t08-four128-20261019/validation/receipt.json` (`2796e40d8b30`, t_b40d52c8), verdict `PASS_PRIVATE_MAP_HANDOFF_PENDING_SCIENCE`; plan 03 FAIL remains as explained above. Separately accepted T13 packets/reviews are pinned below (t_d433a9bc), not a retroactive relabeling of the original handoff. terrain acceptance PASS on 128x128 four128 output; holes N/A on these windows; live hole/disjoint-core preservation NOT demonstrated (0 unsupported cells by the 2026-10-19 21:10 window selection); demonstrated only on the synthetic cores of research/tests/gis/test_check_terrain_acceptance_render.py at #739 da55d1e88. |
+| COAST-PROD-05: real preview | Accepted T13 terrain bytes, pinned loader/renderer, finite private reservation and independent fixed-camera inspection | PRIVATE, publication_prohibited: `outputs/t13-four128-terrain-acceptance-20261020/t13-receipt.json` (`d80ecebab980`, t_189fbd03), PASS, 4 cores, 0 held, generated `2026-10-20T07:18:22Z`, renderer `ed28dc69`, checker from #739. Opus vision review completed/approved on t_189fbd03: all four full-resolution previews and read-only depth/seam/georeference probes found no defects. terrain acceptance PASS on 128x128 four128 output; holes N/A on these windows; live hole/disjoint-core preservation NOT demonstrated (0 unsupported cells by the 2026-10-19 21:10 window selection); demonstrated only on the synthetic cores of research/tests/gis/test_check_terrain_acceptance_render.py at #739 da55d1e88. Not habitat, imagery, website or renewed execution acceptance. |
+| COAST-PROD-06: integrated operations | Same mission/queue, accepted outputs, original charges, supervisor, resume/recovery/cleanup/artifact-return and cost-stop evidence | PRIVATE, publication_prohibited, rerun outputs pending-science: literal integrated pipeline not demonstrated / unknown; runnable discover bridge and rerun render-handoff manifest missing. Bounded plan 05 PASS: 8 operations tests, 0 skipped per pass; `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-1/receipts/t12-operations-tests.json` (`77dce430a316`) and `outputs/t15-clean-reruns-20261020/driver/run-20261020-t02003ddc/pass-2/receipts/t12-operations-tests.json` (`1209f15224fb`), t_02003ddc. No T12 CI JSON receipt: not demonstrated / unknown; these are test runs, not CI-run proof. Rerun receipts `outputs/t15-four128-rerun1-20261020/receipt.json` (`fad41b67c39a`, t_187849bc) and `outputs/t15-four128-rerun2-20261020/receipt.json` (`ddc6845b8158`, t_2e07206c), independent validation `outputs/t15-clean-reruns-20261020/validation/receipt.json` (`f3510f03f431`, t_c49a9aa8), and report `outputs/t15-clean-reruns-20261020/COAST-PROD-report.json` (`490b27d73fc6`, t_02003ddc) document the limits and determinism below. |
+
+T13b-2 science acceptance (t_d433a9bc) is limited to these H11952 windows,
+each 128x128: A `[3762,3488]`, B `[3890,3488]`, C `[3762,3360]`, D `[3890,3360]`.
+Source/renderer lineage is `ed28dc69`; review ran at `292cb0aa` with relevant
+terrain code verified unchanged. All packets are PRIVATE, `publication_prohibited`;
+each review expires on 2026-10-22 at approximately 07:09:43Z. These historical
+acceptances do not grant a future execution/review horizon.
+
+| Core | Acceptance path and SHA256 prefix | Science-review path and SHA256 prefix |
+| --- | --- | --- |
+| A | `outputs/t13-four128-terrain-acceptance-20261020/core-A/acceptance.json` (`b0541830a9f0`) | `outputs/t13-four128-terrain-acceptance-20261020/core-A/science-review.json` (`86a567766fbb`) |
+| B | `outputs/t13-four128-terrain-acceptance-20261020/core-B/acceptance.json` (`ff2b98370be0`) | `outputs/t13-four128-terrain-acceptance-20261020/core-B/science-review.json` (`c457b57b4bf6`) |
+| C | `outputs/t13-four128-terrain-acceptance-20261020/core-C/acceptance.json` (`ec482896f6d3`) | `outputs/t13-four128-terrain-acceptance-20261020/core-C/science-review.json` (`7bbb3935aaef`) |
+| D | `outputs/t13-four128-terrain-acceptance-20261020/core-D/acceptance.json` (`b833919c882a`) | `outputs/t13-four128-terrain-acceptance-20261020/core-D/science-review.json` (`cbe28006e727`) |
+
+Rerun 1 vs rerun 2 determinism, exactly as T15-VAL-b (t_c49a9aa8) reports:
+12 equal, 4 different of 16. The 12 GeoTIFFs are byte-identical. Each of the four
+`acceptance-pending-review.json(facts)` comparisons differs only in
+`provenance.upstream_receipt_sha256` (per-run binding, not terrain content).
+
+| Window (x, y, width, height) | mask.tif | terrain.tif | uncertainty.tif | acceptance-pending-review.json(facts) |
+| --- | --- | --- | --- | --- |
+| [3762,3488,128,128] | equal | equal | equal | different: provenance.upstream_receipt_sha256 |
+| [3890,3488,128,128] | equal | equal | equal | different: provenance.upstream_receipt_sha256 |
+| [3762,3360,128,128] | equal | equal | equal | different: provenance.upstream_receipt_sha256 |
+| [3890,3360,128,128] | equal | equal | equal | different: provenance.upstream_receipt_sha256 |
+
+Remaining gaps: discover is a zero-network dry-run from unmerged #734, not a
+runnable discover-to-coordinator bridge at any cited head (T15a t_2da6ffcf).
+The side=32 native chain is snapshot-only, not exercised on main. Both four128
+reruns stop at map; no render-handoff manifest exists. T13 independently rendered
+separately prepared attempt-6 cores; T15c only re-verified those renders read-only,
+not rerendered the rerun outputs. Literal discover -> acquire -> qualify -> map ->
+render from clean state twice is NOT demonstrated. Plan 06 PASS covers only the
+approved legacy software-render browser archive (t_fe397592), not current-main
+browser/GPU acceptance; GPU qualification remains HELD. A live hole-bearing
+window run is future separately admitted work, not covered by these receipts.
 
 Use these task IDs in contributor issues and PR descriptions. They are dependency
 labels, not already-open issue numbers or assigned authorizations. Existing
