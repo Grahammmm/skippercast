@@ -181,7 +181,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
   // Rail and legend: swell and water temp on, the rest off; protected areas stay listed while their geometry loads (FE-19).
   const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
-  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
+  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', 'Swell + wind': 'true', 'Charter fleet': 'false', Clouds: 'false'});
   assert.match(coastView, /class="app-legend-water-temp"/);
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.

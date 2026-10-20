@@ -250,7 +250,7 @@ test('off by default; on, it reads the feed once an hour and draws; off again or
   await until(() => contrastState.value.drawn);
   assert.equal(s.asked.length, 3, 'the manifest and its two tiles');
   assert.equal(railNotes.value['sst-contrast'], 'analysis Oct 15 · 24 h old');
-  assert.deepEqual(e.before, [SWELL_LAYER, MPA_FILL]);
+  assert.deepEqual(e.before, [SWELL_LAYER, 'wind-casing', MPA_FILL]);
   assert.deepEqual(e.data.at(-1)[0], CONTRAST_SOURCE);
   assert.equal(e.data.at(-1)[1].features.length, 6);
   chartMark.value = c.reading({lon: lon(2), lat: lat(2)});
