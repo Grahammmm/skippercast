@@ -143,6 +143,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       <p class="app-mark-kind">{selected.kind}</p>
       <p class="ui-reading">{selected.reading}</p>
       <p class="app-mark-source ui-mono">{selected.source}</p>
+      {selected.provider ? <a href={selected.provider.href} target="_blank" rel="noopener">{selected.provider.label}</a> : null}
       {selected.rules ? (
         <p class="app-mark-rules">{selected.rules}{selected.regulations ? <>{' '}
           <a href={selected.regulations.href} target="_blank" rel="noopener" aria-label={`${selected.regulations.label} (official page, opens in a new tab)`}>{selected.regulations.label}</a>

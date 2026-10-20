@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "ndbc": {
+      "url": "https://www.ndbc.noaa.gov/activestations.xml",
+      "retrieved_at": "2026-10-20T18:16:33.650708Z",
+      "sha256": "52f85a0af2deda821e5a459cadeec2b4002073079c8564f61905d60767e77235"
+    },
+    "coops": {
+      "url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions",
+      "retrieved_at": "2026-10-20T18:16:37.467566Z",
+      "sha256": "8d09fc8cc9281f029ca1833b9dd5a39517efb87a8cae2dfeda577bb74f304a65"
+    }
+  },
+  "stations": {
+    "ndbc:46011": {
+      "provider": "ndbc",
+      "id": "46011",
+      "name": "SANTA MARIA - 21NM NW of Point Arguello, CA",
+      "latitude": 34.937,
+      "longitude": -120.999,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46012": {
+      "provider": "ndbc",
+      "id": "46012",
+      "name": "HALF MOON BAY - 24NM SSW of San Francisco, CA",
+      "latitude": 37.356,
+      "longitude": -122.881,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46013": {
+      "provider": "ndbc",
+      "id": "46013",
+      "name": "BODEGA BAY - 48NM NW of San Francisco, CA",
+      "latitude": 38.235,
+      "longitude": -123.317,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46014": {
+      "provider": "ndbc",
+      "id": "46014",
+      "name": "PT ARENA - 19NM North of Point Arena, CA",
+      "latitude": 39.225,
+      "longitude": -123.98,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46015": {
+      "provider": "ndbc",
+      "id": "46015",
+      "name": "PORT ORFORD - 15 NM West of Port Orford, OR",
+      "latitude": 42.754,
+      "longitude": -124.839,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46022": {
+      "provider": "ndbc",
+      "id": "46022",
+      "name": "EEL RIVER - 17NM WSW of Eureka, CA",
+      "latitude": 40.716,
+      "longitude": -124.54,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46025": {
+      "provider": "ndbc",
+      "id": "46025",
+      "name": "Santa Monica Basin - 33NM WSW of Santa Monica, CA",
+      "latitude": 33.765,
+      "longitude": -119.077,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46026": {
+      "provider": "ndbc",
+      "id": "46026",
+      "name": "SAN FRANCISCO - 18NM West of San Francisco, CA",
+      "latitude": 37.75,
+      "longitude": -122.838,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46027": {
+      "provider": "ndbc",
+      "id": "46027",
+      "name": "ST GEORGES - 8 NM NW of Crescent City, CA",
+      "latitude": 41.84,
+      "longitude": -124.382,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46028": {
+      "provider": "ndbc",
+      "id": "46028",
+      "name": "CAPE SAN MARTIN - 55NM West NW of Morro Bay, CA",
+      "latitude": 35.763,
+      "longitude": -121.9,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46042": {
+      "provider": "ndbc",
+      "id": "46042",
+      "name": "MONTEREY - 27NM WNW of Monterey, CA",
+      "latitude": 36.787,
+      "longitude": -122.408,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46053": {
+      "provider": "ndbc",
+      "id": "46053",
+      "name": "EAST SANTA BARBARA  - 12NM Southwest of Santa Barbara, CA",
+      "latitude": 34.246,
+      "longitude": -119.842,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46054": {
+      "provider": "ndbc",
+      "id": "46054",
+      "name": "WEST SANTA BARBARA  38 NM West of Santa Barbara, CA",
+      "latitude": 34.274,
+      "longitude": -120.468,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46086": {
+      "provider": "ndbc",
+      "id": "46086",
+      "name": "SAN CLEMENTE BASIN - 27NM SE Of San Clemente Is, CA",
+      "latitude": 32.504,
+      "longitude": -118.029,
+      "program": "NDBC Meteorological/Ocean",
+      "owner": "NDBC"
+    },
+    "ndbc:46213": {
+      "provider": "ndbc",
+      "id": "46213",
+      "name": "Cape Mendocino, CA (094)",
+      "latitude": 40.291,
+      "longitude": -124.748,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "ndbc:46215": {
+      "provider": "ndbc",
+      "id": "46215",
+      "name": "Diablo Canyon, CA (076)",
+      "latitude": 35.204,
+      "longitude": -120.859,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "ndbc:46221": {
+      "provider": "ndbc",
+      "id": "46221",
+      "name": "Santa Monica Bay, CA (028)",
+      "latitude": 33.86,
+      "longitude": -118.641,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "ndbc:46222": {
+      "provider": "ndbc",
+      "id": "46222",
+      "name": "San Pedro, CA (092)",
+      "latitude": 33.614,
+      "longitude": -118.314,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "ndbc:46236": {
+      "provider": "ndbc",
+      "id": "46236",
+      "name": "Monterey Canyon Outer, CA  (156)",
+      "latitude": 36.759,
+      "longitude": -121.95,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "ndbc:46244": {
+      "provider": "ndbc",
+      "id": "46244",
+      "name": "Humboldt Bay, North Spit, CA (168)",
+      "latitude": 40.896,
+      "longitude": -124.358,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "ndbc:46258": {
+      "provider": "ndbc",
+      "id": "46258",
+      "name": "Mission Bay West, CA (220)",
+      "latitude": 32.749,
+      "longitude": -117.502,
+      "program": "IOOS Partners",
+      "owner": "SCRIPPS"
+    },
+    "coops:9410166": {
+      "provider": "coops",
+      "id": "9410166",
+      "name": "San Diego, Quarantine Station",
+      "latitude": 32.7033,
+      "longitude": -117.235,
+      "type": "S",
+      "reference_id": "9410170"
+    },
+    "coops:9410170": {
+      "provider": "coops",
+      "id": "9410170",
+      "name": "SAN DIEGO (Broadway)",
+      "latitude": 32.71555555555555,
+      "longitude": -117.1766666666667,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9410660": {
+      "provider": "coops",
+      "id": "9410660",
+      "name": "LOS ANGELES (Outer Harbor)",
+      "latitude": 33.72,
+      "longitude": -118.272,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9410680": {
+      "provider": "coops",
+      "id": "9410680",
+      "name": "Long Beach, Terminal Island",
+      "latitude": 33.7517,
+      "longitude": -118.227,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9411340": {
+      "provider": "coops",
+      "id": "9411340",
+      "name": "Santa Barbara",
+      "latitude": 34.40458888888889,
+      "longitude": -119.6924944444445,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9412110": {
+      "provider": "coops",
+      "id": "9412110",
+      "name": "PORT SAN LUIS",
+      "latitude": 35.16888888888889,
+      "longitude": -120.7541666666667,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9412553": {
+      "provider": "coops",
+      "id": "9412553",
+      "name": "San Simeon",
+      "latitude": 35.6417,
+      "longitude": -121.188,
+      "type": "S",
+      "reference_id": "9412110"
+    },
+    "coops:9413450": {
+      "provider": "coops",
+      "id": "9413450",
+      "name": "MONTEREY, MONTEREY BAY",
+      "latitude": 36.6088889,
+      "longitude": -121.8913889,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9413745": {
+      "provider": "coops",
+      "id": "9413745",
+      "name": "Santa Cruz, Monterey Bay",
+      "latitude": 36.9583,
+      "longitude": -122.017,
+      "type": "S",
+      "reference_id": "9413450"
+    },
+    "coops:9414131": {
+      "provider": "coops",
+      "id": "9414131",
+      "name": "Pillar Point Harbor, Half Moon Bay",
+      "latitude": 37.5025,
+      "longitude": -122.4821666666667,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9415020": {
+      "provider": "coops",
+      "id": "9415020",
+      "name": "Point Reyes",
+      "latitude": 37.9941667,
+      "longitude": -122.9736111,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9415625": {
+      "provider": "coops",
+      "id": "9415625",
+      "name": "Bodega Harbor entrance",
+      "latitude": 38.3083,
+      "longitude": -123.055,
+      "type": "S",
+      "reference_id": "9414290"
+    },
+    "coops:9416841": {
+      "provider": "coops",
+      "id": "9416841",
+      "name": "ARENA COVE",
+      "latitude": 38.91455555555556,
+      "longitude": -123.7110833333333,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9417426": {
+      "provider": "coops",
+      "id": "9417426",
+      "name": "NOYO HARBOR",
+      "latitude": 39.42577777777778,
+      "longitude": -123.8051111111111,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9418024": {
+      "provider": "coops",
+      "id": "9418024",
+      "name": "Shelter Cove",
+      "latitude": 40.025001525878906,
+      "longitude": -124.05799865722656,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9418767": {
+      "provider": "coops",
+      "id": "9418767",
+      "name": "HUMBOLDT BAY (North Spit)",
+      "latitude": 40.76690555555555,
+      "longitude": -124.2173444444445,
+      "type": "R",
+      "reference_id": ""
+    },
+    "coops:9419750": {
+      "provider": "coops",
+      "id": "9419750",
+      "name": "CRESCENT CITY",
+      "latitude": 41.74561111111111,
+      "longitude": -124.1843888888889,
+      "type": "R",
+      "reference_id": ""
+    }
+  }
+}

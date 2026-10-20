@@ -261,6 +261,8 @@ export function createSwell(o: SwellOptions): {
     place = () => null, data = coastData} = o;
   const tick = signal(0), load = signal<SwellLoad>({state: 'idle', region: null, forecast: null, at: 0});
   const on = computed(() => layers.value.includes(REGISTRY_ID));
+  // One renderer/hit target owns MOP rings even with both controls enabled.
+  const ringsOn = computed(() => on.value || layers.value.includes('stations'));
   const status = computed(() => {
     void tick.value;
     const t = now(), l = load.value, id = region.value;
@@ -269,7 +271,7 @@ export function createSwell(o: SwellOptions): {
   // The rings read the bound report at the dock's hour; outside a binding the report is null and nothing draws.
   const rings = computed(() => {
     void tick.value;
-    if (!on.value) return null;
+    if (!ringsOn.value) return null;
     const t = now(), report = data.coastReport.value?.data ?? null;
     return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
   });
@@ -299,7 +301,7 @@ export function createSwell(o: SwellOptions): {
     // Ask for the coast report only while Swell is on, for the region's place once it is known.
     effect(() => {
       const p = place();
-      if (!on.value || !p) return;
+      if (!ringsOn.value || !p) return;
       data.setPlace(p);
       void data.load('report');
     }),
@@ -336,7 +338,7 @@ export function createSwell(o: SwellOptions): {
     effect(() => {
       const l = load.value, f = l.forecast, t = now().getTime();
       clearTimeout(timer);
-      if (!on.value) return;
+      if (!ringsOn.value) return;
       // A ring leaves when its site's run passes 48 hours or its retrieval 3 hours (freshNearshore).
       const sites = (rings.value?.rings ?? []).flatMap(r => [Date.parse(r.site.issuedAt ?? '') + 48 * HOUR, Date.parse(r.site.fetchedAt) + 3 * HOUR]);
       const limits = [...l.region ? [l.at + REFRESH_MS] : [], ...[...f?.model ? [f.model.issued * 1000 + 36 * HOUR, f.retrieved + 6 * HOUR] : [], ...sites].filter(x => x > t)];

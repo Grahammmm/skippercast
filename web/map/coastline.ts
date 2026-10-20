@@ -53,6 +53,8 @@ export function coastlineLayers(p: Palette): LineLayer[] {
 /** What the mark card shows for any Chart selection (web/app/MarkCard.tsx renders it). */
 export interface ChartMark {
   readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string;
+  /** Official measurement/model provider, distinct from regulations or licensing. */
+  readonly provider?: {readonly href: string; readonly label: string};
   /** The official page with the rules that apply there (FE-19's protected areas); the card's Regulations action opens it. */
   readonly regulations?: {readonly href: string; readonly label: string};
   /** The regulations line (FE-18): what the feature's own build screened, and the rules check. */
