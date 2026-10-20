@@ -369,14 +369,22 @@ def validate_input(root,manifest_ref,*,stage,segment,code_sha,deps_sha,now,missi
     trial=meta(packet["trial_policy_evidence"],"coastal-bounded-patch-quality-policy-v3" if selected["name"]=="coastal-contained-windows-v3" else "coastal-bounded-patch-quality-policy-v2" if selected["name"] else "coastal-bounded-patch-quality-policy-v1")
     if selected['name']=='coastal-contained-windows-v3' and any(trial.get(k)!=packet.get(k) for k in ('window_side','window_count')):raise ValueError('contained trial binding invalid')
     if trial.get("execution_profile")!=selected["name"]:raise ValueError("trial profile binding invalid")
+    from skippercast.coastal.authenticated_v1.policy import policy_for_profile
+    from skippercast.coastal.authenticated_v1.profiles import support_policy
+    partial=support_policy(selected["name"],packet)
+    required=pairs if partial is None else "all_mask_valid"
+    if (trial.get("support_policy")!=partial or partial is not None and (
+            trial.get("minimum_supported_pairs")!=policy_for_profile(selected["name"],packet)["minimum_supported_pairs"]
+            or trial.get("minimum_unsupported_pairs")!=1 or trial.get("unsupported_cells")!="mask_invalid_only_as_nodata")):
+        raise ValueError("trial support policy binding invalid")
     if (packet.get("trial_policy_sha256")!=packet["trial_policy_evidence"]["sha256"] or trial.get("independent") is not True
         or trial.get("source",{}).get("sha256")!=source["sha256"] or trial.get("source",{}).get("bytes")!=source["bytes"]
         or trial.get("window_shape")!=[side,side] or trial.get("halo")!=0 or trial.get("total_pairs")!=pairs
-        or trial.get("required_nominally_eligible_pairs")!=pairs or trial.get("legacy_25ft_minimum_applied") is not False
+        or trial.get("required_nominally_eligible_pairs")!=required or trial.get("legacy_25ft_minimum_applied") is not False
         or trial.get("nominal_depth",{}).get("minimum_m")!=0 or trial.get("nominal_depth",{}).get("maximum_m")!=91.44
         or trial.get("nominal_depth",{}).get("minimum_inclusive") is not True or trial.get("nominal_depth",{}).get("maximum_inclusive") is not True
         or trial.get("product_uncertainty",{}).get("units")!="m" or trial.get("product_uncertainty",{}).get("type")!="productUncert"
-        or trial.get("product_uncertainty",{}).get("required_quality_pairs")!=pairs or trial.get("product_uncertainty",{}).get("minimum_m")!=0
+        or trial.get("product_uncertainty",{}).get("required_quality_pairs")!=required or trial.get("product_uncertainty",{}).get("minimum_m")!=0
         or trial.get("product_uncertainty",{}).get("minimum_inclusive") is not False or trial.get("product_uncertainty",{}).get("maximum_m")!=1
         or trial.get("product_uncertainty",{}).get("maximum_inclusive") is not True):
         raise ValueError("source-bound fixed trial policy invalid")
@@ -425,7 +433,7 @@ def validate_input(root,manifest_ref,*,stage,segment,code_sha,deps_sha,now,missi
         if connection is None:raise ValueError('committed producer registry required')
         observation=committed_document(connection,root,packet['reviewed_observation'],OBSERVATION_CONTRACT)
         plan=committed_document(connection,root,observation['plan'],'coastal-authenticated-window-plan-v1')
-        for key in ('source','source_root','source_relative_path','source_row','metadata_sha256','segment','segment_id','rights','synthetic','policy_sha256','trial_policy_sha256','execution_profile','window_side','window_count'):
+        for key in ('source','source_root','source_relative_path','source_row','metadata_sha256','segment','segment_id','rights','synthetic','policy_sha256','trial_policy_sha256','execution_profile','window_side','window_count','support_policy'):
             if observation.get(key)!=packet.get(key):raise ValueError('reviewed factual context changed: '+key)
         if observation.get('machine_holds') or observation.get('facts_digest')!=digest(observation['native_facts']) or observation.get('policy_ready') is not True or observation.get('policy_holds'):
 
@@ -577,7 +585,7 @@ def validate_completion(store,job,token,result_ref,result,authority):
         or plan.get("spec_sha256")!=digest(packet["fixed_center_plan"]) or plan.get("halo")!=0
         or observation["window"][2:]!=[profile(packet.get("execution_profile"),packet)["side"]]*2):
         raise ValueError("scientific observation/plan binding invalid")
-    for key in ("source","source_root","source_relative_path","source_row","segment","segment_id","rights","synthetic","policy_sha256","trial_policy_sha256","execution_profile","window_side","window_count"):
+    for key in ("source","source_root","source_relative_path","source_row","segment","segment_id","rights","synthetic","policy_sha256","trial_policy_sha256","execution_profile","window_side","window_count","support_policy"):
         if observation.get(key)!=packet.get(key):raise ValueError("factual context mismatch:"+key)
     if (result["source"]!=packet["source"] or proof.get("source")!=packet["source"]
         or proof.get("source_root")!=job["source_root"] or proof.get("source_relative_path")!=job["source_relative_path"]

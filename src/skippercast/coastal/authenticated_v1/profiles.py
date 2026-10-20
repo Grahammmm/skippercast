@@ -3,8 +3,19 @@ import copy
 LARGER = 'coastal-four-window-128-v2'
 CONTAINED = 'coastal-contained-windows-v3'
 MANAGED_EIGHT_COPY = 'coastal-managed-eight-copy-four128-v1'
+# SC-5 (G option A, 2026-10-20): a separate pinned support policy for contained
+# windows. Mask-invalid cells stay unsupported/nodata instead of holding the
+# window; every supported cell keeps the strict depth/uncertainty limits. Absent
+# means the strict all-pairs policy, so strict identities and digests are unchanged.
+PARTIAL_SUPPORT = 'coastal-contained-partial-support-v1'
+def support_policy(name=None, configuration=None):
+    value=(configuration or {}).get('support_policy')
+    if value is None:return None
+    if name!=CONTAINED or value!=PARTIAL_SUPPORT:raise ValueError('unsupported contained support policy')
+    return value
 def profile(name=None, configuration=None):
     if name not in (None,LARGER,CONTAINED):raise ValueError('unsupported authenticated execution profile')
+    support_policy(name,configuration)
     side=128 if name else 16;count=4 if name else 1
     if name==CONTAINED:
         config=configuration or {};side=config.get('window_side');count=config.get('window_count')
@@ -29,6 +40,7 @@ def grant_identity(grant):
                 if a[0]<b[0]+side and b[0]<a[0]+side and a[1]<b[1]+side and b[1]<a[1]+side:
                     raise ValueError('contained native windows overlap')
         result.update(execution_profile=CONTAINED,window_side=side,window_count=count,window_set=copy.deepcopy(windows))
+        if support_policy(CONTAINED,grant) is not None:result['support_policy']=PARTIAL_SUPPORT
     elif chosen['name']:
         windows=grant.get('window_set')
         if (not isinstance(windows,list) or len(windows)!=4 or
@@ -84,6 +96,7 @@ def validate_grant_packet(grant,packet):
         if any(packet.get(k)!=grant[k] for k in ('ordered_scope_contract','geographic_review','output_retention','output_root')):
             raise ValueError('packet ordered geometry/output contract differs from immutable grant')
     if packet.get('execution_profile')!=selected['name']:raise ValueError('input profile differs from immutable grant')
+    if packet.get('support_policy')!=domain.get('support_policy'):raise ValueError('packet support policy differs from immutable grant')
     if selected['name']==CONTAINED and any(packet.get(k)!=domain[k] for k in ('window_side','window_count')):
         raise ValueError('contained input shape/count differs from immutable grant')
     if any(packet.get(key)!=domain[key] for key in ('source','source_root','source_relative_path')):
