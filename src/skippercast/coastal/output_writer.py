@@ -103,6 +103,18 @@ def sync_directory(path):
     try:os.fsync(fd)
     finally:os.close(fd)
 
+def register_disjoint(path, registered, ancestors):
+    """Admit one managed path unless it equals, contains or lies inside an earlier one.
+
+    Same outcome as checking path.is_relative_to(other) or other.is_relative_to(path)
+    against every earlier path, in O(depth) set lookups instead of O(n) Path
+    comparisons, so a full ledger read stays linear in its entries."""
+    parents=[parent for parent in path.parents if parent!=Path('.')]
+    if path in registered or path in ancestors or any(parent in registered for parent in parents):
+        raise ValueError('managed output paths overlap')
+    registered.add(path)
+    ancestors.update(parents)
+
 class BoundedFile:
     """Sequential bytes only: no seek, truncate, fileno or bypassing file handle."""
     def __init__(self, stream, maximum):
@@ -189,13 +201,10 @@ class ManagedOutputs:
         files=state.get('files')
         if not isinstance(files,dict) or len(files)>MAX_FILES:
             raise ValueError('bounded file registry required')
-        paths=[]
+        registered=set();ancestors=set()
         for name,e in files.items():
             self._target(name)
-            path=Path(name)
-            if any(path.is_relative_to(other) or other.is_relative_to(path) for other in paths):
-                raise ValueError('managed output paths overlap')
-            paths.append(path)
+            register_disjoint(Path(name),registered,ancestors)
             if not isinstance(e,dict):raise ValueError('managed file reservation required')
             if e.get('role') not in LIMITS or type(e.get('bytes')) is not int or e['bytes']<0 or not isinstance(e.get('intent'),str) or not e['intent'] or e.get('state') not in ('reserved','complete','uncertain'):
                 raise ValueError('managed file reservation changed')

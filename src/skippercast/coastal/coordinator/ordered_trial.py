@@ -19,11 +19,15 @@ PREPARATION = "coastal-ordered-trial-preparation-v1"
 ACTION = "coastal-ordered-trial-action-v1"
 STATE = "coastal-ordered-trial-state-v1"
 WINDOWS = [[4046,3531,32,32],[3958,3474,32,32],[3764,3429,32,32],[3859,3366,32,32]]
+SUPPORTED_WINDOW_SIDES = (32, 64, 128)
 LARGER_SCOPE = "coastal-ordered-four128-v2"
 LARGER_RUNTIME = "coastal-managed-eight-copy-four128-v1"
 SCOPE_REVIEW = "coastal-ordered-scope-review-v1"
-LARGER_WINDOWS = [[3890,3488,128,128],[4018,3488,128,128],[3890,3360,128,128],[4018,3360,128,128]]
-LARGER_BOUNDS = [728871,3818923,729383,3819435]
+# T08-FIX3 (G option A, Fable ruling 2026-10-19 21:50 PDT): attempt 4's block at
+# origin [3890,3360] had mask-invalid cells in B and D, so the whole 2x2 block
+# moved one column west to the fully valid block the window pre-scan selected.
+LARGER_WINDOWS = [[3762,3488,128,128],[3890,3488,128,128],[3762,3360,128,128],[3890,3360,128,128]]
+LARGER_BOUNDS = [728615,3818923,729127,3819435]
 LARGER_AFFINE = [2,0,721091,0,-2,3826155]
 
 def validate_larger_runtime(grant):
@@ -50,7 +54,7 @@ def validate_scope_review(root,grant,*,now,horizon):
     if domain.get("execution_profile")!=CONTAINED or domain.get("window_count")!=4:
         raise ValueError("contained four-window admission required")
     side=domain.get("window_side")
-    if side==32:
+    if side in SUPPORTED_WINDOW_SIDES and side != 128:
         if grant.get("ordered_scope_contract") is not None or grant.get("geographic_review") is not None:
             raise ValueError("legacy scope cannot inherit a new geographic admission")
         return None
@@ -214,6 +218,10 @@ def prepare(root, grant_ref, request_refs, *, start_epoch, deadline_epoch,
             raise ValueError("exact nonrefundable continuation source carry required")
     review=validate_scope_review(root,grant,now=start,horizon=end)
     windows=domain["window_set"]
+    # The verified 32-cell trial stays pinned to its four historical windows so it
+    # reproduces the prior 4,096 pairs byte-identically. 64 and 128 admit their own
+    # windows inside the same supported-side gate (128 is further bound by the
+    # larger-scope review above); this is a trial-preservation guard, not a size pin.
     if domain["window_side"]==32 and windows!=WINDOWS:
         raise ValueError("fixed ordered four-window scope required")
     from ..authenticated_v1.source_reuse import source_volume_cap
