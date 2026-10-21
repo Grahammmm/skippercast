@@ -77,7 +77,10 @@ GeoTIFF, RAT, archive or generated-subset bodies. It verifies the NOS count and
 unique object-ID set, batches those IDs with geometry, records all survey-envelope
 associations (including exclusions outside the segment boxes), and includes every
 regular/VR BAG link returned by each intersecting survey directory. The filename
-VR hint is not a format validation. NOS file sizes still need HEAD preflight.
+VR hint is not a format validation. Add `--probe-nos-sizes` to obtain each BAG's
+Content-Length/ETag/Last-Modified with HEAD only (also pass it on offline replay
+to reuse those header receipts). Missing sizes and conflicting committed pins
+remain explicit holds; without this flag NOS file sizes need later preflight.
 
 BlueTopo selection reads the current listed scheme, transforms its CRS, intersects
 all 22 segment boxes, and reconciles BOTH raster and RAT links against current

@@ -365,6 +365,9 @@ def reconcile(seed, extra, nos, blue):
         if row['url'] in files:
             raise Hold('Supplement unexpectedly duplicates seed')
         files[row['url']] = dict(row)
+        if row.get('bytes') is None and ('/thredds/dodsC/' in row['url'] or '/services/GridServer?' in row['url']):
+            holds.append({'source': row['source'], 'url': row['url'],
+                'reason': 'Generated subset requires reviewed transfer/size preflight; metadata acceptance alone is not runnable-payload acceptance.'})
     audit = []
     for result, ids, replaced in [
         (nos, {'noaa-nos-statewide', 'ncei-footprints'}, {'noaa-gis-footprint-metadata', 'nos-bag-ca-inventory-gaps'}),
@@ -389,12 +392,30 @@ def reconcile(seed, extra, nos, blue):
             files[row['url']] = row
     reconciled, remaining = [], []
     for gap in seed['unresolved']:
+        survey = re.search(r'/([A-Z]\d{5})/BAG/', gap.get('url', ''))
+        excluded = nos is not None and survey and survey[1] in nos[2] and not nos[2][survey[1]]['segments']
+        if gap.get('source') == 'noaa-nos' and excluded:
+            reconciled.append({**gap, 'resolution': 'Official survey envelope outside all campaign segment boxes',
+                               'envelope_evidence': nos[2][survey[1]]})
+            continue
         if gap['id'] in resolved or (gap['id'].startswith('association-') and gap.get('url') in files):
             reconciled.append(gap)
         else:
             remaining.append(gap)
+    notes = []
+    present = {
+        'usgs-ds781-eureka-index-mismatch': any('/10.5066-P9EC35PF/' in u and u.endswith('/Bathymetry_OffshoreEureka.zip') for u in files),
+        'csumb-sfml-point-sur-cooper-hurricane': all(
+            any('/ventresca/' + name + '/' in u for u in files)
+            for name in ('PointSur', 'CooperPoint', 'HurricanePoint')),
+    }
+    for hold in list(holds):
+        if present.get(hold['source']):
+            notes.append({**hold, 'resolution': 'Already-inventoried reconciliation confirmed against exact plan URLs'})
+            holds.remove(hold)
     return {**seed, 'scope': 'Campaign raw-mirror candidates; unresolved holds forbid complete status.',
             'supplement_sha256': SUPPLEMENT_SHA, 'enumeration_audit': audit,
+            'reconciled_supplement_notes': notes,
             'reconciled_seed_gaps': reconciled, 'unresolved': remaining + holds,
             'files': sorted(files.values(), key=lambda r: (SEGMENTS.index(r['segments'][0]), r['source'], r['url']))}
 

@@ -162,3 +162,20 @@ def test_metadata_budget_fails_without_request(tmp_path):
         metadata.get(e.S3 + '?list-type=2')
     with pytest.raises(Hold, match='bound reached'):
         metadata.head(e.DIRECTORY + 'H12001-H14000/H13089/BAG/a.bag')
+
+
+def test_nos_exclusions_are_explained_not_silently_dropped():
+    url = e.DIRECTORY + 'D00001-D02000/D00186/BAG/a.bag'
+    seed = {'files': [], 'unresolved': [{'id': 'association-a', 'source': 'noaa-nos', 'url': url}]}
+    nos = ([], [], {'D00186': {'segments': [], 'bounds': [-121, 36, -120, 37]}})
+    result = e.reconcile(seed, {'files': [], 'unresolved': []}, nos, None)
+    assert not result['unresolved'] and not result['files']
+    assert result['reconciled_seed_gaps'][0]['resolution'].startswith('Official survey envelope outside')
+
+
+def test_generated_subset_metadata_does_not_clear_transfer_hold():
+    extra = {'files': [{'source': 'crm', 'segments': ['C1'], 'bytes': None,
+                       'url': 'https://www.ngdc.noaa.gov/thredds/dodsC/crm/fixture.dods?z[0:1:2]'}],
+             'unresolved': []}
+    result = e.reconcile({'files': [], 'unresolved': []}, extra, None, None)
+    assert 'preflight' in result['unresolved'][0]['reason']
