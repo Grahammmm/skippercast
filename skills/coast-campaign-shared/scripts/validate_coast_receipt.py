@@ -67,8 +67,8 @@ def _consistency(value):
                 raise ValueError('window identity/directory digest mismatch')
             if w['owner_segment_id'] != value['coordinator_segment_id']:
                 raise ValueError('window owner differs from plan coordinator')
-        if value['would_enqueue_count'] != len(value['windows']):
-            raise ValueError('would_enqueue_count differs from admitted windows')
+        # would_enqueue_count describes the producer dry-run list, not all
+        # admission windows: held/cache-miss windows remain in windows[].
     if name == 'coast-run-summary-v1':
         keys = [w['window_key'] for w in value['windows']]
         partition = [k for group in value['partition'].values() for k in group]

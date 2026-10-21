@@ -52,6 +52,23 @@ def test_committed_valid_and_invalid_fixtures(name):
         validator.validate(invalid,resolver,root_id='queue:synthetic')
 
 
+def test_held_admission_keeps_windows_outside_producer_enqueue_list(graph):
+    instances, _, resolver = graph
+    admission = copy.deepcopy(instances['admission'])
+    windows = copy.deepcopy(admission['windows'])
+    assert len(windows) == 1
+    admission['would_enqueue_count'] = 0
+    admission['held_source_ids'] = [windows[0]['source_id']]
+    admission['holds'] = ['prefetch cache miss']
+
+    result = validator.validate(admission, resolver, root_id='queue:synthetic')
+
+    assert result['would_enqueue_count'] == 0
+    assert result['windows'] == windows
+    assert result['held_source_ids'] == [windows[0]['source_id']]
+    assert result['holds'] == ['prefetch cache miss']
+
+
 def test_diagnostic_verdict_does_not_follow_failed_expectations(graph):
     _, bindings, resolver = graph
     queue = Path(bindings['queue:synthetic'])
