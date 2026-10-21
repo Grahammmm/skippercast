@@ -81,6 +81,8 @@ export const CONTRAST_SOURCE = 'sst-contrast';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 export const MPA_SOURCE = 'mpas';
+/** The region's shelf depth contours (web/map/depth-contours.ts, CI6-13). */
+export const DEPTH_CONTOURS_SOURCE = 'depth-contours';
 /**
  * The on-map CC BY 4.0 credit for ds582 (catalog `cdfw-mpas`): creator, dataset, licence. The legend
  * row's basis gives it in full with the metadata and licence links. Kept short so that, beside the
@@ -116,6 +118,14 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     task: 'CI6-03'}),
   entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],
     basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
+  entry({id: 'wind', label: 'Wind', control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
+    attribution: 'NOAA NCEP', legend: [{label: '10 m wind · arrows toward · knots', swatch: 'text'}],
+    basis: 'NOAA GFS 10 m wind from the native approximately 13 km forecast tiles, sampled on the regional forecast grid, not observations; runs older than 36 hours or retrievals older than 6 hours are withheld. Arrows point toward; labels are knots.', task: 'CI6-10'}),
+  // CI6-13: shelf contours from reviewed survey grids, every zoom, Chart only; the ENC base above zoom 10 is unchanged.
+  entry({id: 'depth-contours', label: 'Depth contours', control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
+    attribution: 'USGS · CSUMB survey grids', legend: [{label: 'Depth contour every 30 ft; heavier every 150 ft', swatch: 'depth1'}, {label: 'Survey edge: no reviewed grid beyond', swatch: 'muted'}],
+    basis: 'Shelf depth contours every 30 ft to 600 ft, traced from reviewed seafloor survey grids (in Morro Bay the USGS/CSUMB 2 m grids, surveyed 2008, averaged to 16 m blocks) and withheld one year after their source review; depths are feet below each survey\'s own vertical datum, which the grids leave unverified (the USGS report names MLLW), so they are not chart depths and not for navigation, and the lines stop at the dashed survey edge where no reviewed grid continues.', task: 'CI6-13'}),
+
   entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'fill', color: 'mpaFill', opacity: 'mpaFillOpacity', outline: 'mpaLine'}, sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
     legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],

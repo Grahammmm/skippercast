@@ -20,10 +20,12 @@ import {sample as v1Sample} from '../dist/marine-data.js';
 import {fieldColor} from '../packages/coast/src/map/surface-field.ts';
 import {FILES, luminance, themes} from '../scripts/check_contrast.mjs';
 import {chartMark} from '../web/map/chart.ts';
+import {CONTRAST_LAYER} from '../web/map/contrast.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {WAVE_MODEL, latticePoints, parseForecast, sample, swellPoints} from '../web/map/forecast-grid.ts';
 import {forecastTime} from '../web/map/frames.ts';
 import {railNotes} from '../web/map/layers.ts';
+import {DEPTH_BOTTOM, contoursOverlay} from '../web/map/depth-contours.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {ramps, readPalette} from '../web/map/palette.ts';
 import {CONTOUR_LABELS, CONTOUR_LAYER, SST_LAYER, waterTempOverlay} from '../web/map/sst.ts';
@@ -245,7 +247,7 @@ test('toggling Swell adds the texture, isolines and strokes only; off removes th
   await flush();
   assert.deepEqual(asked, ['https://s.test/api/forecast?region=morro-bay']);
   assert.deepEqual(e.calls, [['overlay', [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER]], ['image', SWELL_SOURCE], ['data', ISOLINE_SOURCE], ['data', STROKE_SOURCE]]);
-  assert.equal(e.before, MPA_FILL, 'under the protected areas (§ 9 order)');
+  assert.deepEqual(e.before, ['wind-casing', DEPTH_BOTTOM, MPA_FILL], 'under wind, depth contours and protected areas (§ 9 order)');
   assert.equal(railNotes.value.swell, 'valid Fri 1 pm · run 12 h old');
   assert.equal(swellState.value.drawn.field.quads.length, 4);
   chartMark.value = s.reading({lon: -121.5, lat: 35.3});
@@ -313,7 +315,7 @@ test('a failed refresh keeps the last good run; a region change withdraws the fi
   assert.equal(chartMark.value, null, 'destroy clears a field card');
 });
 
-test('in the stack the water temperature sits under the swell field, whichever is drawn first', () => {
+test('in the stack the water temperature sits under the swell field, and both under the depth contours, whichever is drawn first', () => {
   const maps = [];
   class FakeMap {
     constructor(options) { this.handlers = {}; this.sources = {}; this.layers = options.style.layers.map(l => l.id); this.keyboard = this.touchZoomRotate = {disableRotation() {}}; maps.push(this); }
@@ -331,18 +333,20 @@ test('in the stack the water temperature sits under the swell field, whichever i
   const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
     workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
   const swellIds = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER], sstIds = [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS];
-  for (const order of [['sst', 'swell'], ['swell', 'sst']]) {
+  // The `before` lists the layers pass (sst.ts, swell.ts, depth-contours.ts), in every order they can arrive.
+  const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
+  const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, SWELL_LAYER, DEPTH_BOTTOM, MPA_FILL]),
+    swell: e => e.setOverlay('swell', swellOverlay(sentinel), [DEPTH_BOTTOM, MPA_FILL]), contours: e => e.setOverlay('depth-contours', contours, MPA_FILL)};
+  const orders = [['sst', 'swell', 'contours'], ['sst', 'contours', 'swell'], ['swell', 'sst', 'contours'], ['swell', 'contours', 'sst'], ['contours', 'sst', 'swell'], ['contours', 'swell', 'sst']];
+  for (const order of orders) {
     const eng = createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'water'}, {id: MPA_FILL}, {id: 'coastline'}]},
       camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}});
     const map = maps.at(-1);
     map.fire('style.load');
-    for (const which of order) {
-      if (which === 'sst') eng.setOverlay('water-temp', waterTempOverlay(sentinel), [SWELL_LAYER, MPA_FILL]);
-      else eng.setOverlay('swell', swellOverlay(sentinel), MPA_FILL);
-    }
-    assert.deepEqual(map.layers, ['water', ...sstIds, ...swellIds, MPA_FILL, 'coastline'], order.join(' then '));
+    for (const which of order) draw[which](eng);
+    assert.deepEqual(map.layers, ['water', ...sstIds, ...swellIds, ...contourIds, MPA_FILL, 'coastline'], order.join(' then '));
     eng.setOverlay('swell', null);
-    assert.deepEqual(map.layers, ['water', ...sstIds, MPA_FILL, 'coastline']);
+    assert.deepEqual(map.layers, ['water', ...sstIds, ...contourIds, MPA_FILL, 'coastline']);
   }
 });
 
@@ -371,7 +375,7 @@ test('the legend gives the hour\'s reading, the fixed scale and the model run as
   assert.match(legend, /data-scale="swell">0 ft<span class="app-swatch" data-layer="swell" aria-hidden="true"><\/span><span class="app-visually-hidden"> to <\/span>15\+ ft</);
   assert.match(legend, /data-stamp="swell">NOAA GFS-Wave model forecast · run Oct 8, 11 pm · 12 h old · valid Fri Oct 9, 1 pm</);
   assert.match(legend, /A model forecast, not a buoy observation\./);
-  assert.match(m.render(m.h(m.LayerRail)), /Swell<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);
+  assert.match(m.render(m.h(m.LayerRail)), /Swell \+ wind<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);
   m.swellState.value = swellStatus(true, {state: 'error', region: 'morro-bay', forecast: null, at: 0}, AT, NOW, TZ);
   const none = m.render(m.h(m.Legend));
   assert.doesNotMatch(none, /data-range="swell"|data-stamp="swell"/);

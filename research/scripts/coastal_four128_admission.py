@@ -426,7 +426,31 @@ def issue(cfg, config_sha):
         '--budget-amendment', str(path(cfg['inputs']['amendment']['path'])), '--prospective-released-bytes']
     if policy:
         argv += ['--support-policy', policy]
-    result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=300)
+    try:
+        result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=300)
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr or ''
+        lines = (exc.stdout or '').strip().splitlines()
+        last_stdout = lines[-1] if lines else ''
+        if stderr:
+            print(stderr, file=sys.stderr, end='' if stderr.endswith('\n') else '\n')
+        if last_stdout:
+            print(last_stdout, file=sys.stderr)
+        # assemble() requires the successful issuance schema at issuance_receipt.
+        # Keep failure diagnostics beside it, never masquerading as that authority
+        # or modifying any partial stage bytes. Exclusive creation preserves prior
+        # diagnostics too; failure to save them must not hide the child output.
+        failed_receipt = str(cfg['issuance_receipt']) + '.failed.json'
+        report = dict(schema='coastal-four128-config-issuance-failure-v1',
+            status='ISSUANCE_FAILED_STAGE_PRESERVED', config_sha256=config_sha,
+            head=cfg['head'], run_tag=cfg['run_tag'], checked_at=iso(time.time()),
+            staging_root=str(stage), mission_root=str(mission), execution_authorized=False,
+            prepare=dict(returncode=exc.returncode, stderr=stderr, last_stdout_line=last_stdout))
+        try:
+            write_new(failed_receipt, encoded(report))
+        except (OSError, ValueError) as receipt_error:
+            print('Failed issuance receipt not written: ' + str(receipt_error), file=sys.stderr)
+        raise SystemExit(1) from exc
     package = json.loads(result.stdout.strip().splitlines()[-1])
     index, grant, amendment = prepare_inputs(cfg, package)
     require((index['code_sha'], index['deps_sha']) == implementation_hashes(ROOT), 'current implementation identity differs')
