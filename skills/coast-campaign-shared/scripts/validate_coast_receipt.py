@@ -274,7 +274,7 @@ class GraphValidator:
             if any(doc.get(k) != v for k, v in expected.items()):
                 raise ValueError('lattice ID/projected bbox mismatch')
             inverse = Transformer.from_crs('EPSG:3310', 'OGC:CRS84', always_xy=True)
-            if doc.get('bbox_crs84') != list(inverse.transform_bounds(*bbox, densify_pts=41)):
+            if not inverse_bounds_equal(doc.get('bbox_crs84'), list(inverse.transform_bounds(*bbox, densify_pts=41))):
                 raise ValueError('lattice CRS84 bbox mismatch')
         elif name == bridge.CATALOG:
             bridge.check_catalog(doc)
@@ -346,7 +346,11 @@ class GraphValidator:
         if (math.ceil(x1/5000)-math.floor(x0/5000)) * (math.ceil(y1/5000)-math.floor(y0/5000)) > 4096:
             raise ValueError('campaign lattice exceeds 4096 record validation bound')
         records = from_bbox(campaign['bbox_crs84'], region=campaign['campaign_segment_id'])
-        if record not in records:
+        # Projected lattice fields remain exact. Only inverse projection is
+        # subject to the measured, two-ULP libm portability bound.
+        if not any({k:v for k,v in r.items() if k != 'bbox_crs84'} ==
+                   {k:v for k,v in record.items() if k != 'bbox_crs84'} and
+                   inverse_bounds_equal(record['bbox_crs84'], r['bbox_crs84']) for r in records):
             raise ValueError('campaign lattice record mismatch')
         if record['segment_id'] != doc['coordinator_segment_id'] or plan['segment'] != {k: record[k] for k in ('segment_id', 'bbox_crs84')}:
             raise ValueError('plan segment binding mismatch')
@@ -431,6 +435,27 @@ class GraphValidator:
             overlaps = sorted(r['segment_id'] for r in records if footprint.intersection(box(*r['bbox_crs84'])).area > 0)
             if sorted(window['overlapping_segment_ids']) != overlaps:
                 raise ValueError('window overlap inventory mismatch')
+
+
+def inverse_bounds_equal(observed, expected):
+    """Compare inverse-projected bounds within two representable doubles.
+
+    Ubuntu 24.04 and 26.04 with pyproj 3.8.0 / PROJ 9.8.1 produce
+    one/two-ULP latitude differences for the committed native lattice fixture.
+    This is not a geographic epsilon: hashes, projected cells and pinned
+    record-to-plan coordinates remain exact. No relative/decimal tolerance.
+    """
+    import math
+    if not isinstance(observed, list) or len(observed) != 4:
+        return False
+    for actual, target in zip(observed, expected):
+        if isinstance(actual, bool) or not isinstance(actual, (int, float)) or not math.isfinite(actual):
+            return False
+        lower = math.nextafter(math.nextafter(target, -math.inf), -math.inf)
+        upper = math.nextafter(math.nextafter(target, math.inf), math.inf)
+        if not lower <= actual <= upper:
+            return False
+    return True
 
 
 def validate(value, resolver, *, root_id):
