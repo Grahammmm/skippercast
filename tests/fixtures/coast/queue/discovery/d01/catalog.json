@@ -1,0 +1,89 @@
+{
+  "bbox": [
+    -120.65,
+    34.44,
+    -120.46,
+    34.56
+  ],
+  "bounded_plan_finished": true,
+  "candidates": [
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/input.bag",
+      "alternate_of": null,
+      "catalog_id": "ncei",
+      "expires_at": "2099-01-01T00:00:00.870400Z",
+      "extent": {
+        "actual_data_support": null,
+        "actual_support_status": "unverified",
+        "bbox": [
+          -120.6,
+          34.45,
+          -120.5,
+          34.55
+        ],
+        "bbox_crs": "CRS84",
+        "catalog_geometry": null,
+        "overlap_test": "bbox_only"
+      },
+      "field_evidence": {},
+      "habitat": {
+        "accepted": false,
+        "blockers": [],
+        "status": "unassessed"
+      },
+      "metadata": {
+        "crs": "EPSG:4326",
+        "resolution": null,
+        "rights": null,
+        "size_bytes": 73,
+        "source_hash": "938a6e12ad520722743a61910d6ac73957d613c7f8968144040392e9f5c9ecdf",
+        "vertical_datum": null,
+        "z_units": null
+      },
+      "next_action": "inspect one bounded native terrain window",
+      "provenance": {
+        "catalog_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/",
+        "request_id": 1,
+        "response_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "publisher_id": "input.bag",
+      "rejection_reasons": [],
+      "render": {
+        "accepted": false,
+        "blockers": [],
+        "status": "blocked"
+      },
+      "source_id": "ncei:input.bag",
+      "terrain": {
+        "accepted": false,
+        "blockers": [],
+        "status": "candidate_for_qualification"
+      },
+      "title": "input.bag",
+      "unknowns": []
+    }
+  ],
+  "catalog_id": "a0bc09edb93ff6b60759afed3ec379c0525f3c8823f5c4c6c43ddc999d81de12",
+  "checked_from": "2026-10-20T00:00:00Z",
+  "checked_until": "2026-10-20T00:05:00Z",
+  "coordinator_boundary": "Metadata catalog only.",
+  "discovery_complete": true,
+  "execution_authorized": false,
+  "lead_source_ids": [
+    "ncei:input.bag"
+  ],
+  "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "manifest_status": "PARTIAL",
+  "mapping_accepted": false,
+  "method_revision": "synthetic-method-1",
+  "plan_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "policy_revision": "synthetic-policy-1",
+  "region": "synthetic-region",
+  "review_required": true,
+  "schema": "coastal-frozen-discovery-catalog-v1",
+  "source_revision": "synthetic-source-1",
+  "unattempted_queries": [],
+  "usable_source_ids": [
+    "ncei:input.bag"
+  ]
+}

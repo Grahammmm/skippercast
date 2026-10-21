@@ -19,6 +19,11 @@ SCHEMAS = SHARED / 'schemas'
 # Enumerated producer-native contracts. Only these explicitly named reference
 # slots receive the original queue namespace. Unknown path-bearing fields refuse.
 NATIVE_FIELDS = {
+    'coastal-segment-v1': set(),
+    'coastal-frozen-discovery-catalog-v1': set(),
+    'coastal-catalog-acquire-bridge-plan-v1': {'selections.*.source', 'selections.*.review', 'selections.*.source_row', 'selections.*.rights.evidence.*'},
+    'coastal-catalog-acquire-bridge-dry-run-v1': {'decisions.*.source'},
+    'coastal-catalog-acquire-bridge-receipt-v1': {'decisions.*.source', 'jobs.*.input_manifest'},
     'coastal-native-job-v1': {'source', 'review', 'source_row', 'rights.evidence.*'},
     'coastal-cached-observation-v1': {'source', 'facts.source', 'facts.source_auxiliary.*'},
     'coastal-stage-result-v1': {'artifacts.*', 'next_job.input_manifest'},
@@ -197,6 +202,10 @@ class GraphValidator:
             if errors:
                 raise ValueError('threshold schema: ' + errors[0].message)
         elif name in NATIVE_FIELDS:
+            try:
+                self.check_producer(doc)
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError('malformed native producer: ' + name) from error
             self.walk_native(doc, root_id=root_id, contract=name)
         else:
             raise ValueError('unresolved-reference: unsupported JSON producer schema ' + repr(name))
@@ -226,21 +235,67 @@ class GraphValidator:
             wildcard = '.'.join(path[:-1] + ['*'])
             if isinstance(value, dict):
                 if (slot in allowed or pattern in allowed or wildcard in allowed) and 'path' in value:
+                    if set(value) - {'path', 'sha256', 'bytes', 'contract', 'kind'}:
+                        raise ValueError('unresolved-reference: unknown native ref field ' + slot)
                     self.reference(native_ref(value, root_id))
                 elif 'path' in value or 'root_id' in value:
                     raise ValueError('unresolved-reference: unknown native ref slot ' + slot)
-                elif value is not doc and 'schema' in value:
+                elif value is not doc and 'schema' in value and not (contract.startswith('coastal-catalog-acquire-bridge-') and slot == 'catalog'):
                     self.document(value, root_id=root_id)
                 else:
                     for key, child in value.items():
+                        if key.endswith(('_path', '_ref', '_file')):
+                            raise ValueError('unresolved-reference: unknown native path field ' + '.'.join(path + [key]))
                         visit(child, path + [key])
             elif isinstance(value, list):
                 for i, child in enumerate(value):
                     visit(child, path + [str(i)])
         visit(doc, [])
 
+    def check_producer(self, doc):
+        """Bounded native metadata adapters; no fetch, Store, or execution calls."""
+        from skippercast.coastal.coordinator import catalog_bridge as bridge
+        from skippercast.coastal.coordinator.segments import segment
+        name = doc['schema']
+        canonical(doc)
+        fields = {
+            'coastal-segment-v1': {'schema', 'segment_id', 'region', 'crs', 'bbox', 'bbox_crs84', 'synthetic'},
+            bridge.CATALOG: {'schema', 'region', 'bbox', 'source_revision', 'policy_revision', 'method_revision', 'plan_sha256', 'manifest_sha256', 'checked_from', 'checked_until', 'manifest_status', 'bounded_plan_finished', 'discovery_complete', 'unattempted_queries', 'lead_source_ids', 'usable_source_ids', 'candidates', 'mapping_accepted', 'execution_authorized', 'review_required', 'coordinator_boundary', 'catalog_id'},
+            bridge.PLAN: {'schema', 'catalog_id', 'catalog_sha256', 'segment', 'synthetic', 'max_total_bytes', 'budget', 'selections'},
+            bridge.DRY_RUN: {'schema', 'plan_sha256', 'catalog', 'segment_id', 'decisions', 'selected_source_ids', 'held_source_ids', 'caps', 'network_requests', 'source_opens', 'source_bytes_read', 'review_required', 'mapping_accepted', 'execution_authorized', 'note', 'would_enqueue'},
+        }
+        fields[bridge.RECEIPT] = (fields[bridge.DRY_RUN] - {'would_enqueue'}) | {'jobs', 'budget', 'segment'}
+        if name in fields and set(doc) - fields[name]:
+            raise ValueError('unknown producer field: ' + name)
+        if name == 'coastal-segment-v1':
+            from pyproj import Transformer
+            bbox = doc['bbox']
+            expected = segment(bbox[0], bbox[1], region=doc['region'])
+            if any(doc.get(k) != v for k, v in expected.items()):
+                raise ValueError('lattice ID/projected bbox mismatch')
+            inverse = Transformer.from_crs('EPSG:3310', 'OGC:CRS84', always_xy=True)
+            if not inverse_bounds_equal(doc.get('bbox_crs84'), list(inverse.transform_bounds(*bbox, densify_pts=41))):
+                raise ValueError('lattice CRS84 bbox mismatch')
+        elif name == bridge.CATALOG:
+            bridge.check_catalog(doc)
+        elif name == bridge.PLAN:
+            bridge.check_budget(doc.get('budget'))
+            if not isinstance(doc.get('selections'), list) or not 1 <= len(doc['selections']) <= bridge.MAX_JOBS:
+                raise ValueError('bounded bridge selections required')
+        elif name in (bridge.DRY_RUN, bridge.RECEIPT):
+            if (doc.get('review_required') is not True or doc.get('execution_authorized') is not False
+                    or doc.get('mapping_accepted') is not False or doc.get('network_requests') != 0):
+                raise ValueError('bridge is review-required source-free metadata')
+            if not isinstance(doc.get('would_enqueue' if name == bridge.DRY_RUN else 'jobs'), list):
+                raise ValueError('bridge job population must be a list')
+
     def crosscheck(self, doc, error_branch):
         name = doc['schema']
+        if name == 'coast-admission-v1':
+            try:
+                self.admission(doc)
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError('malformed admission producer binding') from error
         if 'context' in doc:
             context = loads(self.resolver.read(doc['context']))
             for key in ('campaign_segment_id','coordinator_segment_id','plan_id','plan_sha256','review_round','attempt'):
@@ -266,6 +321,141 @@ class GraphValidator:
             for key in ('verdict','packet','open_report','context','validation_scope'):
                 if doc[key] != verdict[key]:
                     raise ValueError('ledger/verdict mismatch: ' + key)
+
+    def admission(self, doc):
+        from skippercast.coastal.coordinator import catalog_bridge as bridge
+        from skippercast.coastal.coordinator.segments import from_bbox
+        from skippercast.coastal.coordinator.stages import digest
+        contracts = {'campaign': 'coast-campaign-v1', 'plan_file': bridge.PLAN,
+                     'segment_record': 'coastal-segment-v1', 'catalog': bridge.CATALOG,
+                     'dry_run': bridge.DRY_RUN, 'discovery': 'coast-discovery-evidence-v1'}
+        values = {k: self.reference(doc[k], contract=v) for k, v in contracts.items()}
+        campaign, plan, record, catalog, dry, discovery = (values[k] for k in contracts)
+        if campaign['campaign_segment_id'] != doc['campaign_segment_id'] or discovery['catalog'] != doc['catalog']:
+            raise ValueError('campaign/discovery binding mismatch')
+        # Bound lattice expansion before the native producer constructs its list.
+        from pyproj import Transformer
+        import math
+        west,south,east,north = campaign['bbox_crs84']
+        if not (-180 <= west < east <= 180 and -90 <= south < north <= 90):
+            raise ValueError('invalid campaign bbox')
+        projected = Transformer.from_crs('OGC:CRS84','EPSG:3310',always_xy=True).transform_bounds(west,south,east,north,densify_pts=41)
+        if not all(math.isfinite(v) for v in projected):
+            raise ValueError('invalid campaign projected bounds')
+        x0,y0,x1,y1 = projected
+        if (math.ceil(x1/5000)-math.floor(x0/5000)) * (math.ceil(y1/5000)-math.floor(y0/5000)) > 4096:
+            raise ValueError('campaign lattice exceeds 4096 record validation bound')
+        records = from_bbox(campaign['bbox_crs84'], region=campaign['campaign_segment_id'])
+        # Projected lattice fields remain exact. Only inverse projection is
+        # subject to the measured, two-ULP libm portability bound.
+        if not any({k:v for k,v in r.items() if k != 'bbox_crs84'} ==
+                   {k:v for k,v in record.items() if k != 'bbox_crs84'} and
+                   inverse_bounds_equal(record['bbox_crs84'], r['bbox_crs84']) for r in records):
+            raise ValueError('campaign lattice record mismatch')
+        if record['segment_id'] != doc['coordinator_segment_id'] or plan['segment'] != {k: record[k] for k in ('segment_id', 'bbox_crs84')}:
+            raise ValueError('plan segment binding mismatch')
+        if digest(plan) != doc['plan_sha256'] or dry['plan_sha256'] != doc['plan_sha256']:
+            raise ValueError('plan digest binding mismatch')
+        bridge.check_plan(plan, self.resolver.read(doc['catalog']), catalog)
+        if dry['catalog'] != dict(sha256=doc['catalog']['sha256'], bytes=doc['catalog']['bytes'], catalog_id=catalog['catalog_id'], schema=bridge.CATALOG):
+            raise ValueError('dry catalog binding mismatch')
+        if (dry['segment_id'] != record['segment_id'] or doc['would_enqueue_count'] != len(dry['would_enqueue'])
+                or any(doc[k] != dry[k] for k in ('selected_source_ids', 'held_source_ids'))):
+            raise ValueError('dry population/segment binding mismatch')
+        decisions = dry['decisions']
+        if [d['source_id'] for d in decisions] != [s['source_id'] for s in plan['selections']]:
+            raise ValueError('dry decisions population mismatch')
+        selected = [d for d in decisions if d['state'] == 'selected']
+        if any(d['state'] not in ('selected', 'held') or (d['state'] == 'selected' and d['holds']) for d in decisions):
+            raise ValueError('dry decision state/holds mismatch')
+        for decision, selection in zip(decisions, plan['selections']):
+            if 'source' in decision and decision['source'] != selection['source']:
+                raise ValueError('dry source differs from pinned plan')
+        checked = dict(segment=plan['segment'], catalog_ref=dry['catalog'], decisions=decisions,
+                       selected_bytes=sum(d['source']['bytes'] for d in selected))
+        if checked['selected_bytes'] > plan['max_total_bytes'] or any(d['source']['bytes'] > plan['budget']['bytes'] for d in selected):
+            raise ValueError('selected sources exceed plan budget')
+        expected = bridge._receipt(bridge.DRY_RUN, plan, checked)
+        selections = {s['source_id']: s for s in plan['selections']}
+        expected['would_enqueue'] = [dict(stage='acquire', source_id=d['source_id'], native_job_sha256=digest(
+            bridge.native_job(plan, selections[d['source_id']], d, dry['catalog']))) for d in selected]
+        if expected != dry:
+            raise ValueError('dry caps/native job binding mismatch')
+        if [w['source_id'] for w in doc['windows']] != [s['source_id'] for s in plan['selections']]:
+            raise ValueError('plan window population mismatch')
+        source_ids = [s['source_id'] for s in doc['sources']]
+        if len(set(source_ids)) != len(source_ids) or set(source_ids) != {s['source_id'] for s in plan['selections']}:
+            raise ValueError('admission source population mismatch')
+        sources = {s['source_id']: s for s in doc['sources']}
+        for selection in plan['selections']:
+            hot = native_ref(selection['source'], doc['plan_file']['root_id'])
+            if hot not in sources[selection['source_id']]['hot_cache']:
+                raise ValueError('source hot-cache binding mismatch')
+        if not set(doc['selected_source_ids'] + doc['held_source_ids']) <= set(campaign['source_inventory']):
+            raise ValueError('source absent from frozen campaign inventory')
+        grids = {g['grid_sha256']: g for g in doc['grids']}
+        if len(grids) != len(doc['grids']):
+            raise ValueError('duplicate grid identity')
+        for window, selection in zip(doc['windows'], plan['selections']):
+            grid = grids[window['grid_sha256']]
+            definition = grid.get('definition')
+            if (not definition or digest(definition) != window['grid_sha256'] or window['idx'] != 0
+                    or definition['pixel_window'] != selection['window'] or window['pixel_window'] != selection['window']
+                    or definition['source_sha256'] != selection['source']['sha256'] or grid['source_id'] != window['source_id']):
+                raise ValueError('single-selected grid/window binding mismatch')
+            if window['window_key'] not in campaign['intended_windows']:
+                raise ValueError('window absent from frozen campaign inventory')
+            from pyproj import Transformer
+            import math
+            col, row, width, height = window['pixel_window']
+            bridge._window(window['pixel_window'])
+            if col + width > definition['width'] or row + height > definition['height']:
+                raise ValueError('window outside raster grid')
+            a,b,c,d,e,f = definition['affine_transform']
+            x,y = col + width/2, row + height/2
+            cx,cy = Transformer.from_crs(definition['raster_crs'], 'EPSG:3310', always_xy=True).transform(a*x+b*y+c,d*x+e*y+f)
+            owner = f'seg:3310:{math.floor(cx/5000)*5000}:{math.floor(cy/5000)*5000}:5000'
+            if owner != record['segment_id']:
+                raise ValueError('pixel centre owner mismatch')
+            from shapely.geometry import Polygon, box
+            geographic = Transformer.from_crs(definition['raster_crs'], 'OGC:CRS84', always_xy=True)
+            corners = [(col,row),(col+width,row),(col+width,row+height),(col,row+height)]
+            points = []
+            for start,end in zip(corners,corners[1:]+corners[:1]):
+                for step in range(42):
+                    px = start[0]+(end[0]-start[0])*step/42
+                    py = start[1]+(end[1]-start[1])*step/42
+                    points.append(geographic.transform(a*px+b*py+c,d*px+e*py+f))
+            footprint = Polygon(points)
+            if (not footprint.is_valid or footprint.is_empty
+                    or footprint.intersection(box(*campaign['bbox_crs84'])).area <= 0
+                    or footprint.intersection(box(*record['bbox_crs84'])).area <= 0
+                    or any(abs(expected-observed) > 1e-10 for expected,observed in zip(footprint.bounds,window['footprint']))):
+                raise ValueError('window footprint binding mismatch')
+            overlaps = sorted(r['segment_id'] for r in records if footprint.intersection(box(*r['bbox_crs84'])).area > 0)
+            if sorted(window['overlapping_segment_ids']) != overlaps:
+                raise ValueError('window overlap inventory mismatch')
+
+
+def inverse_bounds_equal(observed, expected):
+    """Compare inverse-projected bounds within two representable doubles.
+
+    Ubuntu 24.04 and 26.04 with pyproj 3.8.0 / PROJ 9.8.1 produce
+    one/two-ULP latitude differences for the committed native lattice fixture.
+    This is not a geographic epsilon: hashes, projected cells and pinned
+    record-to-plan coordinates remain exact. No relative/decimal tolerance.
+    """
+    import math
+    if not isinstance(observed, list) or len(observed) != 4:
+        return False
+    for actual, target in zip(observed, expected):
+        if isinstance(actual, bool) or not isinstance(actual, (int, float)) or not math.isfinite(actual):
+            return False
+        lower = math.nextafter(math.nextafter(target, -math.inf), -math.inf)
+        upper = math.nextafter(math.nextafter(target, math.inf), math.inf)
+        if not lower <= actual <= upper:
+            return False
+    return True
 
 
 def validate(value, resolver, *, root_id):

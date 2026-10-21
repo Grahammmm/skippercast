@@ -100,13 +100,23 @@ def schemas():
     result = {}
     def add(name, payload, **kw):
         result[name] = schema(name, payload, **kw)
+    pixel = arr(I, minItems=4, maxItems=4)
+    definition = obj(source_sha256=H, raster_crs=S, affine_transform=arr(dict(type='number'), minItems=6, maxItems=6),
+                     width=dict(type='integer', minimum=1), height=dict(type='integer', minimum=1),
+                     tile_width=dict(type='integer', minimum=1), tile_height=dict(type='integer', minimum=1),
+                     tiling_version=enum('single-selected-v1'), pixel_window=pixel)
+    execution_grid = obj(source_id=S, grid_sha256=H, definition=definition, cols=enum(1), rows=enum(1), total=enum(1))
+    admission_window = copy.deepcopy(WINDOW)
+    admission_window['properties']['pixel_window'] = pixel
+    add('campaign', dict(campaign_segment_id=IDENTITY['campaign_segment_id'], bbox_crs84=arr(dict(type='number'), minItems=4, maxItems=4),
+                         lane=S, source_inventory=STRINGS, intended_windows=STRINGS), plan=False)
+    add('discovery-evidence', dict(catalog=REF, evidence=REFS), plan=False)
     add('admission', dict(campaign=REF, plan_file=REF, segment_record=REF, catalog=REF, discovery=REF,
         sources=arr(obj(source_id=S, raw_provenance=REFS, retained_inputs=REFS, hot_cache=REFS, rights=S, datum=S, reader=S)),
-        grids=arr(obj(source_id=S, source_sha256=H, grid_sha256=H, raster_crs=S, affine_transform=arr(dict(type='number'), minItems=6, maxItems=6),
-                      width=I, height=I, tile_width=I, tile_height=I, tiling_version=S, cols=I, rows=I, total=I)),
-        windows=arr(WINDOW, minItems=1), budgets=BUDGET, usage_before=USAGE, usage_delta=USAGE,
+        grids=arr(execution_grid),
+        windows=arr(admission_window, minItems=1), budgets=BUDGET, usage_before=USAGE, usage_delta=USAGE,
         dry_run=REF, would_enqueue_count=I, selected_source_ids=STRINGS, held_source_ids=STRINGS,
-        preconditions=arr(obj(name=S, satisfied=B, evidence=REFS)), holds=STRINGS, replacement_plan_of=nullable(REF)))
+        preconditions=obj(exclusive_writer=enum(True), attested_by=S), holds=STRINGS, replacement_plan_of=nullable(REF)))
     add('enqueue-receipt', dict(admission=REF, bridge=REF, code_sha256=H, deps_sha256=H,
         store_path=enum('var/coastal/coordinator.sqlite'), intent=REF,
         jobs=arr(obj(window_key=S, source_id=S, root_job_id=S, input_manifest=REF, new_row=B), minItems=1)))
@@ -186,8 +196,8 @@ THRESHOLDS = dict(version=1, edge_step_should_m=2, edge_step_must_m=10, mask_con
 def materialize(destination):
     """Complete tiny fixture graph, all hashes real, rooted only under destination.
 
-    Deliberately synthetic opaque producer leaves are bytes, not evidence of mapping.
-    The graph includes a typed native adapter test separately in test_coast_contracts.
+    Admission edges pin real producer-native JSON and a complete actual lattice.
+    Other downstream synthetic leaves are not evidence of mapping or execution.
     """
     destination = Path(destination)
     queue = destination / 'queue'
@@ -208,6 +218,9 @@ def materialize(destination):
         instances[name] = value
         return put('valid/' + name + '.json', value)
     instances = {}
+    save('campaign', dict(base('campaign', plan=False), campaign_segment_id='synthetic', bbox_crs84=[-120.60,34.45,-120.59,34.46],
+                         lane='offline-synthetic', source_inventory=['source/a'], intended_windows=[]))
+    save('discovery-evidence', dict(base('discovery-evidence', plan=False), catalog=leaf, evidence=[leaf]))
     routing = dict(base('review-routing', plan=False), version=1, policy_status='operator_required', require_actual_model=True,
         require_runtime_provenance=True, allow_profile_fallback=False, disallowed_family_pairs=[], qualified_reviewers=[], allowed_pairs=[],
         history=[dict(version=1, reason='No operational routing granted; operator must supply qualified actual-model policy')])
@@ -222,6 +235,15 @@ def materialize(destination):
         grids=[dict(source_id='source/a', source_sha256=h, grid_sha256=h, raster_crs='EPSG:3310', affine_transform=[1,0,0,0,-1,0], width=1,height=1,tile_width=1,tile_height=1,tiling_version='fixture-v1',cols=1,rows=1,total=1)],
         windows=[window], budgets=dict(requests=0,bytes=1024,wall_s=1,cells=1), usage_before=usage, usage_delta=usage,
         dry_run=leaf, would_enqueue_count=1, selected_source_ids=['source/a'], held_source_ids=[], preconditions=[], holds=[], replacement_plan_of=None)
+    from tests.coast_real_admission_factory import populate_admission
+    admission, bindings = populate_admission(admission, {'queue:synthetic':str(queue.absolute())}, destination)
+    identity.update(coordinator_segment_id=admission['coordinator_segment_id'], plan_sha256=admission['plan_sha256'])
+    key = admission['windows'][0]['window_key']
+    # Normal fixtures now pin real producer-native JSON, not opaque text leaves.
+    instances['campaign'] = refs.loads((queue/admission['campaign']['path']).read_bytes())
+    put('valid/campaign.json', instances['campaign'])
+    instances['discovery-evidence'] = refs.loads((queue/admission['discovery']['path']).read_bytes())
+    put('valid/discovery-evidence.json', instances['discovery-evidence'])
     ar = save('admission', admission)
     en = save('enqueue-receipt', dict(base('enqueue-receipt'), admission=ar, bridge=leaf, code_sha256=h, deps_sha256=h,
         store_path='var/coastal/coordinator.sqlite', intent=leaf, jobs=[dict(window_key=key,source_id='source/a',root_job_id='synthetic-root',input_manifest=leaf,new_row=True)]))
@@ -242,7 +264,7 @@ def materialize(destination):
     check = dict(base('tier2-check'), **review, mode='rehash',integrity_ok=True,verified_inputs=[t1],observations=[],findings=[],counts=dict(must=0,should=0,info=0),wall_s=0)
     t2 = save('tier2-check', check)
     pop = dict(map_done=[],eligible=[],flagged=[key],held=[key],unfinished=[],unavailable=[])
-    sample = sys.modules['coast_sample'].sample([],[],plan_sha256=h,bridge_sha256=h)
+    sample = sys.modules['coast_sample'].sample([],[],plan_sha256=identity['plan_sha256'],bridge_sha256=h)
     packet = save('review-packet', dict(base('review-packet'), **review,admission=ar,run=run,tier1=t1,checks=dict(rehash=t2,budgets=t2,neighbours=t2),sources=['source/a'],lane='synthetic',
         run_author_model='synthetic-author',run_author_provenance=leaf,flags=[],routing=rr,reviewer_requirement='independent qualified actual-model',author_minutes=None,
         integrity_ok=True,population=pop,sample=sample))
@@ -284,7 +306,7 @@ def materialize(destination):
         tier1_confusion=None,tier2_packet_accuracy=None,metrics_unavailable_reason='integrity_failure',validation_scope='identity_snapshot',
         must_fix=[dict(window_key=None,severity='must',code='HASH_MISMATCH',detail='Synthetic corrupted run; corrective only',evidence=[])])
     put('diagnostic/verdict.json',bad_verdict)
-    bindings={'queue:synthetic':str(queue.absolute()),'archive:synthetic:close01':str(archive_root.absolute())}
+    bindings['archive:synthetic:close01'] = str(archive_root.absolute())
     return instances, bindings
 
 
