@@ -40,8 +40,13 @@ is held, and the receipt records the reasons:
 - its cached ref passes the `lstat` checks above. When the catalog states a
   size, the ref must match it. When the catalog states a SHA-256, the ref must
   match that too. Any other hash is recorded as `unknown`, not trusted;
-- its native window is a list of four integers with at most 1,048,576 cells,
-  the same bound as the Store's acquire dispatch gate.
+- its native window is a list of four integers with at most 262,144 cells,
+  the acquire stage's own bound (`mapping_input.MAX_CELLS`, enforced by
+  `mapping_input.observe`). The Store's acquire dispatch gate uses the same
+  constant, so a window the acquire stage would refuse is never queued: a
+  well-formed window above the bound refuses the whole plan before any write
+  (`native_window_bound`), and the dispatch gate holds such a job as
+  `native_window_bound`. The acquire bound is not raised to meet the bridge.
 
 ## Caps
 

@@ -33,6 +33,7 @@ import re
 import stat
 import urllib.parse
 
+from ..handoff.mapping_input import MAX_CELLS
 from .stages import digest, verify_ref
 
 CATALOG = "coastal-frozen-discovery-catalog-v1"
@@ -44,7 +45,7 @@ MAX_JOBS = 4
 MAX_TOTAL_BYTES = 2 * 1024**3          # the acquire stage's default per-job byte ceiling
 MAX_WALL_S = 3600
 MAX_DOCUMENT_BYTES = 4 * 1024 * 1024    # catalog / plan metadata read bound
-MAX_WINDOW_CELLS = 1048576              # same bound as the Store's acquire dispatch gate
+MAX_WINDOW_CELLS = MAX_CELLS            # the acquire stage's own bound (mapping_input.observe)
 NATIVE_SUFFIXES = (".bag", ".tif", ".tiff")
 GEOGRAPHIC = ("CRS84", "EPSG:4326")
 HEX64 = re.compile("[0-9a-f]{64}")
@@ -206,6 +207,13 @@ def check_plan(plan, catalog_raw, catalog):
     ids = [s.get("source_id") if isinstance(s, dict) else None for s in selections]
     if None in ids or len(set(ids)) != len(ids):
         raise ValueError("each selection names one distinct source_id")
+    for s in selections:
+        window = s.get("window")
+        if (isinstance(window, list) and len(window) == 4 and all(type(v) is int for v in window)
+                and window[2] * window[3] > MAX_WINDOW_CELLS):
+            # A window the acquire stage would refuse never reaches the queue.
+            raise ValueError(f"native_window_bound: {s['source_id']} window exceeds "
+                             f"{MAX_WINDOW_CELLS} cells, the acquire stage's bound")
     return segment, selections
 
 
