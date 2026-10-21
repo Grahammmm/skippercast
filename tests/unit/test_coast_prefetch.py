@@ -242,6 +242,15 @@ def test_mid_transfer_capacity_stop_not_retried_or_parked(tmp_path):
     assert not run.state
 
 
+def test_checkpoint_atomic_replacement_preserves_disk_reserve(tmp_path):
+    run = runner(tmp_path, Server())
+    run.disk_usage = lambda _: SimpleNamespace(free=p.RESERVE + 1)
+    path = run.root / 'checkpoint.json'
+    with pytest.raises(p.CapacityError):
+        run.checkpoint(path, {'bytes': 10})
+    assert not path.exists()
+
+
 def test_corrupted_final_preserved_and_not_retried(tmp_path):
     server = Server()
     run = runner(tmp_path, server)

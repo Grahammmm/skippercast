@@ -41,6 +41,71 @@ the reviewed COAST-HOSTS change to be merged. No whole-world dump or ungridded
 multibeam archive is implicitly authorized. The seed's `unresolved` list is not
 removed automatically by adding a file: a reviewer must reconcile each gap.
 
+### Reconcile the approved supplement and current NOAA metadata
+
+The metadata-only prerequisite `t_1a76ef56` was independently accepted by Sol.
+Its exact supplement SHA-256 is
+`cb2bd023b9ba3e42930ffd7c83f1f888ea44fd4e8d87db33fb1d4c2aa22b3619`.
+It adds seven candidate files, not seven scientifically accepted sources; the
+GEBCO reviewed-host subset, Borderland and Gridimage TIFF holds remain explicit.
+The enumerator rejects any different supplement hash. A new supplement needs a
+new independent review and a deliberate code change, not a CLI override.
+
+From this checkout, using the existing survey-stack venv (for scheme geometry):
+
+```sh
+PYTHONPATH=src:. "$HOME/repos/skippercast/.venv/bin/python" \
+  -m research.scripts.enumerate_coast_prefetch \
+  --supplement /path/to/accepted/campaign-prefetch-supplement.json \
+  --receipts var/prefetch-enumeration-YYYYMMDD \
+  --output var/coast-prefetch-reconciled.json
+PYTHONPATH=src:. "$HOME/repos/skippercast/.venv/bin/python" \
+  -m research.scripts.enumerate_coast_prefetch \
+  --supplement /path/to/accepted/campaign-prefetch-supplement.json \
+  --receipts var/prefetch-enumeration-YYYYMMDD --offline \
+  --output var/coast-prefetch-replayed.json
+```
+
+Exit 2 with a written plan means unresolved holds, not a completed inventory.
+`--only nos`, `--only bluetopo` or `--only supplement` provides bounded partial
+preparation; unexamined source gaps stay unresolved. The downloader still refuses
+an incomplete plan unless the operator explicitly chooses `--allow-incomplete`.
+
+The live enumerator fetches only bounded ArcGIS JSON, BAG directory HTML, S3 XML
+listings and the small BlueTopo geometry/link GeoPackage. It never fetches BAG,
+GeoTIFF, RAT, archive or generated-subset bodies. It verifies the NOS count and
+unique object-ID set, batches those IDs with geometry, records all survey-envelope
+associations (including exclusions outside the segment boxes), and includes every
+regular/VR BAG link returned by each intersecting survey directory. The filename
+VR hint is not a format validation. NOS file sizes still need HEAD preflight.
+
+BlueTopo selection reads the current listed scheme, transforms its CRS, intersects
+all 22 segment boxes, and reconciles BOTH raster and RAT links against current
+per-tile listings. Every scheme/tile S3 listing follows continuation tokens to
+completion and rejects missing/repeated tokens. Scheme SHA-256 pins are used for
+rasters/RATs; S3 ETags are never substituted. Undelivered tiles are recorded, not
+invented. The scheme and NCEI metadata snapshots also enter the mirror plan.
+
+Responses and SHA-256 receipts remain under `--receipts`, never in a canonical
+store. Reusing that directory resumes/replays its snapshot; a fresh snapshot uses
+a new directory. Interrupted runs retain successful responses. Each invocation
+is bounded to 2,000 requests/30 minutes, with serial one-second spacing, rejected
+redirects and durable host parking. Review a changed snapshot before using it.
+No CI test contacts these endpoints. Neither enumeration nor a dry-run authorizes
+the bulk service or mapping.
+
+### Generated-subset access remains a separate hold
+
+Metadata approval is not proof that a payload endpoint supports safe transfer.
+The downloader deliberately refuses unknown remote lengths rather than invent a
+byte total or launch an unbounded generated response. On 2026-10-20 a HEAD-only
+probe of the accepted subset URLs returned HTTP 403 for SoCal v2 and Vol7, HTTP
+200 **without Content-Length** for Vol6, and a GMRT timeout (host parked). No
+payload GET was attempted. These candidates need a reviewed downloadable bounded
+representation or independently established exact size before the full campaign
+can run; do not substitute a whole-volume/global file or expand hosts. A dry-run
+with unknown totals is honest planning output, not a promise of runnable subsets.
+
 Plan format (JSON): `schema_version: 1`, `files: [...]`, `unresolved: [...]`.
 Each file has:
 
@@ -215,7 +280,11 @@ never symlink around them. No mapping run is launched here.
 ```sh
 PYTHONPATH=src "$HOME/repos/skippercast/.venv/bin/python" -m pytest \
   tests/unit/test_coast_prefetch.py tests/unit/test_http.py \
-  tests/contract/test_research_boundary.py research/tests/test_coast_prefetch_seed.py
+  tests/contract/test_research_boundary.py tests/contract/test_test_layout.py \
+  research/tests/test_coast_prefetch_seed.py research/tests/test_coast_prefetch_enumeration.py
+# With the survey stack also exercise the synthetic GeoPackage CRS cases:
+PYTHONPATH=src:. "$HOME/repos/skippercast/.venv/bin/python" -m pytest \
+  tests/gis/test_coast_prefetch_scheme.py
 ```
 
 Tests exercise the real HTTP policy client against synthetic offline responses:

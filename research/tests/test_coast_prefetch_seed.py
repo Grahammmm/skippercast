@@ -1,12 +1,9 @@
 """The committed-evidence seed must never pose as a complete campaign inventory."""
-from pathlib import Path
-
+from research.lib.paths import ROOT
 from research.scripts.build_coast_prefetch_plan import BOUNDS, GAPS, build
 from skippercast.coastal.prefetch import SEGMENTS, load_plan
 from skippercast.http import Session
 import json
-
-ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_seed_has_campaign_order_and_explicit_gaps(tmp_path):
