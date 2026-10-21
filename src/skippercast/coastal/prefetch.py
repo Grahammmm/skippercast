@@ -329,6 +329,12 @@ class Prefetch:
         atomic_text(self.root / source / 'manifest.jsonl', text)
         atomic_text(self.mirror / (source + '.jsonl'), text)
 
+    def checkpoint(self, path, data):
+        # Atomic metadata replacement also needs space above the exFAT reserve.
+        text = json.dumps(data, indent=2, sort_keys=True) + '\n'
+        self.guard(len(text.encode()))
+        atomic_text(path, text)
+
     @staticmethod
     def validator(headers):
         etag = headers.get('ETag')
@@ -392,7 +398,7 @@ class Prefetch:
             raise Hold('Partial receipt exists without partial bytes')
         else:
             partial.touch()
-            atomic_json(meta_path, {'url': row['url'], 'total': total, 'validator': validator,
+            self.checkpoint(meta_path, {'url': row['url'], 'total': total, 'validator': validator,
                                     'final_url': head.final_url,
                                     'bytes': 0, 'sha256': hashlib.sha256(b'').hexdigest()})
 
@@ -444,7 +450,7 @@ class Prefetch:
                 offset = total
                 with partial.open('rb') as stream:
                     rolling = hashlib.file_digest(stream, 'sha256')
-            atomic_json(meta_path, {'url': row['url'], 'total': total, 'validator': validator,
+            self.checkpoint(meta_path, {'url': row['url'], 'total': total, 'validator': validator,
                                     'final_url': head.final_url,
                                     'bytes': offset, 'sha256': rolling.hexdigest()})
             self.write_status()
