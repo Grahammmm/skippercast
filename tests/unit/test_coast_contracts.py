@@ -43,8 +43,8 @@ def test_schema_roundtrip_and_ref_graph(name, graph):
 @pytest.mark.parametrize('name', sorted(schemas()))
 def test_committed_valid_and_invalid_fixtures(name):
     root = ROOT/'tests/fixtures/coast'
-    resolver = refs.Resolver({'queue:synthetic':str(root/'queue'), 'archive:synthetic:close01':str(root/'archive')},
-                             allowed_root_ids={'queue:synthetic','archive:synthetic:close01'})
+    resolver = refs.Resolver({'queue:synthetic':str(root/'queue'), 'archive:synthetic:close01':str(root/'archive'), 'raw:campaign':str(root/'raw')},
+                             allowed_root_ids={'queue:synthetic','archive:synthetic:close01','raw:campaign'})
     value = refs.loads((root/'queue/valid'/f'{name}.json').read_bytes())
     validator.validate(value,resolver,root_id='queue:synthetic')
     invalid = refs.loads((root/'queue/invalid'/f'{name}.json').read_bytes())
@@ -53,11 +53,19 @@ def test_committed_valid_and_invalid_fixtures(name):
 
 
 def test_held_admission_keeps_windows_outside_producer_enqueue_list(graph):
-    instances, _, resolver = graph
+    instances, bindings, resolver = graph
     admission = copy.deepcopy(instances['admission'])
     windows = copy.deepcopy(admission['windows'])
     assert len(windows) == 1
+    from skippercast.coastal.coordinator import catalog_bridge as bridge
+    queue = Path(bindings['queue:synthetic'])
+    plan = refs.loads(resolver.read(admission['plan_file']))
+    bridge.dry_run(queue,queue/admission['catalog']['path'],plan,queue/'plans/plan01/held-dry',now=4102444801)
+    path = 'plans/plan01/held-dry/bridge-dry-run-receipt.json'
+    raw = (queue/path).read_bytes()
+    admission['dry_run'] = dict(root_id='queue:synthetic',path=path,sha256=refs.sha256(raw),bytes=len(raw))
     admission['would_enqueue_count'] = 0
+    admission['selected_source_ids'] = []
     admission['held_source_ids'] = [windows[0]['source_id']]
     admission['holds'] = ['prefetch cache miss']
 
@@ -248,7 +256,7 @@ def test_cli_roundtrip_and_hash_dir(graph,tmp_path):
     roots=tmp_path/'roots.json'
     roots.write_bytes(refs.canonical(bindings))
     command=[sys.executable,str(SCRIPTS/'validate_coast_receipt.py'),str(Path(bindings['queue:synthetic'])/'valid/review-verdict.json'),
-        '--roots',str(roots),'--root-id','queue:synthetic','--allowed-root-id','queue:synthetic','--allowed-root-id','archive:synthetic:close01']
+        '--roots',str(roots),'--root-id','queue:synthetic','--allowed-root-id','queue:synthetic','--allowed-root-id','archive:synthetic:close01','--allowed-root-id','raw:campaign']
     result=subprocess.run(command,capture_output=True,text=True)
     assert result.returncode == 0,result.stderr
     assert json.loads(result.stdout)['scientific_acceptance'] is False
