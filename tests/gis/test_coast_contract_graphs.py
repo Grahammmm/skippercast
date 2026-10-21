@@ -138,13 +138,14 @@ def test_reference_symlink_parent_leaf_fifo_and_bytes(graph):
 
 def test_native_adapter_preserves_bytes_unknown_slots_refuse(graph):
     instances, _, resolver = graph
-    typed = instances['admission']['campaign']
-    native = {k:v for k,v in typed.items() if k != 'root_id'} | {'contract':'synthetic-file'}
-    doc=dict(schema='coastal-native-job-v1',source=native,segment_id='synthetic',window={'width':1})
+    typed = instances['admission']['sources'][0]['hot_cache'][0]
+    native = {k:v for k,v in typed.items() if k != 'root_id'} | {'contract':'native-raster-v1'}
+    doc=dict(schema='coastal-native-job-v1',source=native,segment_id=instances['admission']['coordinator_segment_id'],
+             synthetic=True, window=[0,0,1,1], vertical=None, rights=dict(private_use=True,evidence=[]))
     raw=refs.canonical(doc)
     validator.GraphValidator(resolver).document(doc,root_id='queue:synthetic')
     assert refs.canonical(doc) == raw
-    with pytest.raises(ValueError,match='unknown native ref slot'):
+    with pytest.raises(ValueError,match='unknown or missing native producer field'):
         validator.GraphValidator(resolver).document(dict(doc,unknown=native),root_id='queue:synthetic')
     with pytest.raises(ValueError,match='unsupported JSON producer'):
         validator.GraphValidator(resolver).document(dict(schema='unknown-v1',source=native),root_id='queue:synthetic')

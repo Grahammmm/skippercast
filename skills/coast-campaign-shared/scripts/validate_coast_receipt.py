@@ -13,6 +13,7 @@ import sys
 from jsonschema import Draft202012Validator, FormatChecker
 from coast_refs import Resolver, REF_KEYS, canonical, loads, native_ref
 from coast_sample import sample, window_dir, window_key
+import coast_native as native
 
 SHARED = Path(__file__).resolve().parents[1]
 SCHEMAS = SHARED / 'schemas'
@@ -24,12 +25,14 @@ NATIVE_FIELDS = {
     'coastal-catalog-acquire-bridge-plan-v1': {'selections.*.source', 'selections.*.review', 'selections.*.source_row', 'selections.*.rights.evidence.*'},
     'coastal-catalog-acquire-bridge-dry-run-v1': {'decisions.*.source'},
     'coastal-catalog-acquire-bridge-receipt-v1': {'decisions.*.source', 'jobs.*.input_manifest'},
+    native.STORE_JOB: {'input_manifest'},
     'coastal-native-job-v1': {'source', 'review', 'source_row', 'rights.evidence.*'},
-    'coastal-cached-observation-v1': {'source', 'facts.source', 'facts.source_auxiliary.*'},
+    'coastal-private-input-review-v2': set(),
+    'coastal-cached-observation-v1': {'source', 'facts.source', 'facts.source_auxiliary.*', 'facts.rights.evidence.*'},
     'coastal-stage-result-v1': {'artifacts.*', 'next_job.input_manifest'},
-    'private-mapping-input-v2': {'source', 'review', 'source_row', 'valid_support', 'rights.evidence.*', 'native_facts.source', 'native_facts.source_auxiliary.*'},
-    'coastal-mapping-run-v1': {'source', 'outputs.*'},
-    'coastal-terrain-summary-v1': set(),
+    'private-mapping-input-v2': {'source', 'review', 'source_row', 'segment', 'valid_support', 'rights.evidence.*', 'native_facts.source', 'native_facts.source_auxiliary.*', 'native_facts.rights.evidence.*'},
+    'coastal-mapping-run-v1': {'source', 'segment', 'outputs.*'},
+    'coastal-terrain-summary-v1': {'segment'},
 }
 OBSERVATION_FIELDS = {'expected_packet', 'observed_packet', 'problems', 'observations'}
 IDENTITY_ONLY_FIELDS = {'identity_provenance', 'run_author_provenance', 'posted_hashes', 'routing', 'thresholds', 'prompts'}
@@ -39,6 +42,7 @@ WORKFLOW_EDGES = {
     'tier1': 'coast-tier1-screen-v1', 'open_report': 'coast-open-report-v1',
     'packet': 'coast-review-packet-v1', 'verdict_file': 'coast-review-verdict-v1',
     'routing': 'coast-review-routing-v1', 'manifest': 'coast-archive-manifest-v1',
+    'job': native.STORE_JOB, 'result': 'coastal-stage-result-v1',
 }
 
 
@@ -141,8 +145,14 @@ class GraphValidator:
         raw = self.resolver.read(ref, retain=bool(structured))
         if contract:
             document = loads(raw)
-            if not isinstance(document, dict) or document.get('schema') != contract:
+            if not isinstance(document, dict) or (contract != native.STORE_JOB and document.get('schema') != contract):
                 raise ValueError('reference contract mismatch: ' + contract)
+            if contract == native.STORE_JOB:
+                native.check(document, contract)
+                origins = getattr(self.resolver, 'original_queue_roots', self.resolver.bindings)
+                if ref['root_id'] not in origins:
+                    raise ValueError('missing original queue root binding')
+                native.job_location(document, ref, origins[ref['root_id']])
         key = (canonical(ref), scope, contract)
         if key in self.visiting:
             raise ValueError('cyclic receipt graph')
@@ -153,7 +163,7 @@ class GraphValidator:
             doc = None
             if contract or ref['path'].endswith('.json'):
                 doc = loads(raw)
-                self.document(doc, root_id=ref['root_id'], scope=scope)
+                self.document(doc, root_id=ref['root_id'], scope=scope, contract=contract)
             elif ref['path'].endswith('.jsonl'):
                 from coast_ledger import verify_bytes
                 for row in verify_bytes(raw):
@@ -165,10 +175,16 @@ class GraphValidator:
         finally:
             self.visiting.remove(key)
 
-    def document(self, doc, *, root_id, scope='full_graph'):
+    def document(self, doc, *, root_id, scope='full_graph', contract=None):
         if not isinstance(doc, dict):
             raise ValueError('referenced JSON document must be an object')
         name = doc.get('schema', '')
+        if not isinstance(name, str):
+            raise ValueError('native/workflow schema must be a string')
+        if contract == native.STORE_JOB:
+            if name:
+                raise ValueError('Store job must retain schema-less producer bytes')
+            name = contract
         if name.startswith('coast-'):
             validate_schema(doc)
             _consistency(doc)
@@ -203,7 +219,9 @@ class GraphValidator:
                 raise ValueError('threshold schema: ' + errors[0].message)
         elif name in NATIVE_FIELDS:
             try:
-                self.check_producer(doc)
+                native.check(doc, name)
+                if name != native.STORE_JOB:
+                    self.check_producer(doc)
             except (KeyError, TypeError, IndexError) as error:
                 raise ValueError('malformed native producer: ' + name) from error
             self.walk_native(doc, root_id=root_id, contract=name)
@@ -237,13 +255,15 @@ class GraphValidator:
                 if (slot in allowed or pattern in allowed or wildcard in allowed) and 'path' in value:
                     if set(value) - {'path', 'sha256', 'bytes', 'contract', 'kind'}:
                         raise ValueError('unresolved-reference: unknown native ref field ' + slot)
-                    self.reference(native_ref(value, root_id))
+                    self.native_edge(value, root_id, contract, pattern, doc)
                 elif 'path' in value or 'root_id' in value:
                     raise ValueError('unresolved-reference: unknown native ref slot ' + slot)
-                elif value is not doc and 'schema' in value and not (contract.startswith('coastal-catalog-acquire-bridge-') and slot == 'catalog'):
+                elif value is not doc and 'schema' in value and value['schema'] not in native.INLINE and not (contract.startswith('coastal-catalog-acquire-bridge-') and slot == 'catalog'):
                     self.document(value, root_id=root_id)
                 else:
                     for key, child in value.items():
+                        if contract == native.STORE_JOB and key == 'root' and not path:
+                            continue  # independently bound original queue spelling; never opened
                         if key.endswith(('_path', '_ref', '_file')):
                             raise ValueError('unresolved-reference: unknown native path field ' + '.'.join(path + [key]))
                         visit(child, path + [key])
@@ -252,6 +272,52 @@ class GraphValidator:
                     visit(child, path + [str(i)])
         visit(doc, [])
 
+    def native_edge(self, value, root_id, parent, slot, doc):
+        contract = value.get('contract')
+        if parent == 'coastal-stage-result-v1':
+            supported = {
+                'acquire': {'coastal-cached-observation-v1', 'coastal-native-job-v1'},
+                'qualify': {'private-mapping-input-v2'},
+                'map': {'coastal-mapping-run-v1', 'coastal-normalized-terrain-v1', 'coastal-native-support-v2', 'coastal-terrain-summary-v1'},
+            }
+            if contract not in supported.get(doc['stage'], set()):
+                raise ValueError('unsupported native result artifact contract')
+        expected = {
+            'source': 'native-raster-v1', 'facts.source': 'native-raster-v1',
+            'native_facts.source': 'native-raster-v1',
+            'valid_support': 'coastal-native-support-v2',
+            'segment': 'coastal-segment-v1', 'review': 'coastal-private-input-review-v2',
+            'outputs.terrain': 'coastal-normalized-terrain-v1',
+            'outputs.mask': 'coastal-native-support-v2',
+            'outputs.cells': 'coastal-terrain-summary-v1',
+        }.get(slot)
+        if slot.endswith('source_auxiliary.*'):
+            expected = 'native-raster-auxiliary-v1'
+        if slot.endswith('rights.evidence.*'):
+            expected = 'coast-native-rights-evidence-v1'
+        if parent == native.STORE_JOB and slot == 'input_manifest':
+            # Store deliberately stores a three-field manifest Ref, dropping
+            # the input contract. Stage is the independent contract selector.
+            stage = doc['stage']
+            expected = 'private-mapping-input-v2' if stage == 'map' else 'coastal-native-job-v1'
+            if contract is not None and contract != expected:
+                raise ValueError('native input contract mismatch')
+            contract = expected
+        elif expected and contract is not None and contract != expected:
+            raise ValueError('native edge contract mismatch: ' + slot)
+        elif not contract and expected:
+            contract = expected
+        ref = native_ref(value, root_id)
+        if contract in native.BINARY:
+            if ref['path'].endswith(('.json', '.jsonl')):
+                raise ValueError('binary contract cannot hide structured provenance')
+            self.resolver.read(ref, retain=False)
+            self.verified.add((canonical(ref), 'full_graph', contract))
+        elif contract:
+            self.reference(ref, contract=contract)
+        else:
+            raise ValueError('held: native edge requires an explicit supported contract: ' + slot)
+
     def check_producer(self, doc):
         """Bounded native metadata adapters; no fetch, Store, or execution calls."""
         from skippercast.coastal.coordinator import catalog_bridge as bridge
@@ -259,7 +325,7 @@ class GraphValidator:
         name = doc['schema']
         canonical(doc)
         fields = {
-            'coastal-segment-v1': {'schema', 'segment_id', 'region', 'crs', 'bbox', 'bbox_crs84', 'synthetic'},
+            'coastal-segment-v1': {'schema', 'segment_id', 'region', 'crs', 'bbox', 'bbox_crs84', 'synthetic', 'boundary_policy', 'halo_m', 'intersection_area_m2', 'outside_support_area_m2'},
             bridge.CATALOG: {'schema', 'region', 'bbox', 'source_revision', 'policy_revision', 'method_revision', 'plan_sha256', 'manifest_sha256', 'checked_from', 'checked_until', 'manifest_status', 'bounded_plan_finished', 'discovery_complete', 'unattempted_queries', 'lead_source_ids', 'usable_source_ids', 'candidates', 'mapping_accepted', 'execution_authorized', 'review_required', 'coordinator_boundary', 'catalog_id'},
             bridge.PLAN: {'schema', 'catalog_id', 'catalog_sha256', 'segment', 'synthetic', 'max_total_bytes', 'budget', 'selections'},
             bridge.DRY_RUN: {'schema', 'plan_sha256', 'catalog', 'segment_id', 'decisions', 'selected_source_ids', 'held_source_ids', 'caps', 'network_requests', 'source_opens', 'source_bytes_read', 'review_required', 'mapping_accepted', 'execution_authorized', 'note', 'would_enqueue'},
@@ -274,7 +340,7 @@ class GraphValidator:
             if any(doc.get(k) != v for k, v in expected.items()):
                 raise ValueError('lattice ID/projected bbox mismatch')
             inverse = Transformer.from_crs('EPSG:3310', 'OGC:CRS84', always_xy=True)
-            if not inverse_bounds_equal(doc.get('bbox_crs84'), list(inverse.transform_bounds(*bbox, densify_pts=41))):
+            if 'bbox_crs84' in doc and not inverse_bounds_equal(doc['bbox_crs84'], list(inverse.transform_bounds(*bbox, densify_pts=41))):
                 raise ValueError('lattice CRS84 bbox mismatch')
         elif name == bridge.CATALOG:
             bridge.check_catalog(doc)
@@ -291,6 +357,39 @@ class GraphValidator:
 
     def crosscheck(self, doc, error_branch):
         name = doc['schema']
+        if name == 'coast-native-execution-v1':
+            job = self.reference(doc['job'], contract=native.STORE_JOB)
+            result = self.reference(doc['result'], contract='coastal-stage-result-v1')
+            if not isinstance(job, dict) or not isinstance(result, dict):
+                raise ValueError('native execution requires structured job and result')
+            for key in ('job_id', 'stage', 'segment_id', 'lease_token', 'code_sha', 'deps_sha', 'params_sha', 'input_manifest_sha'):
+                if result[key] != job[key]:
+                    raise ValueError('native job/result identity mismatch: ' + key)
+            directory = doc['job']['path'].removesuffix('/job.json')
+            if doc['result']['root_id'] != doc['job']['root_id'] or doc['result']['path'] != directory + '/output/result.json':
+                raise ValueError('native result output location mismatch')
+            expected_logs = {directory + '/stdout.log', directory + '/stderr.log'}
+            if {r['path'] for r in doc['logs']} != expected_logs or any(r['root_id'] != doc['job']['root_id'] for r in doc['logs']):
+                raise ValueError('native execution logs mismatch')
+            for artifact in result['artifacts']:
+                if not artifact['path'].startswith(directory + '/output/'):
+                    raise ValueError('native result artifact outside owned output')
+            if result['state'] == 'done':
+                expected = {'acquire': 'coastal-native-job-v1', 'qualify': 'private-mapping-input-v2', 'map': 'coastal-mapping-run-v1'}[job['stage']]
+                matching = [r for r in result['artifacts'] if r.get('contract') == expected]
+                if len(matching) != 1:
+                    raise ValueError('native result primary output identity mismatch')
+                original = self.reference(native_ref(job['input_manifest'], doc['job']['root_id']),
+                    contract='private-mapping-input-v2' if job['stage'] == 'map' else 'coastal-native-job-v1')
+                output = self.reference(native_ref(matching[0], doc['job']['root_id']), contract=expected)
+                if not isinstance(original, dict) or not isinstance(output, dict):
+                    raise ValueError('native execution requires structured input/output')
+                if job['stage'] == 'acquire' and output != original:
+                    raise ValueError('acquire did not preserve original native manifest')
+                if job['stage'] == 'qualify' and any(output[k] != original[k] for k in ('source', 'window', 'rights', 'review')):
+                    raise ValueError('qualification output/input identity mismatch')
+                if job['stage'] == 'map' and output['mapping_input'] != original:
+                    raise ValueError('map output/input identity mismatch')
         if name == 'coast-admission-v1':
             try:
                 self.admission(doc)

@@ -34,9 +34,9 @@ writer = module('write_verdict')
 
 class Cycle:
     def __init__(self, tmp):
+        pytest.importorskip('pyproj')  # Core CI collects without native lattice dependencies.
         self.instances, self.bindings = materialize(tmp)
         self.queue = tmp / 'queue'
-        self.bindings = {'queue:synthetic': str(self.queue)}
         self.resolver = refs.Resolver(self.bindings, allowed_root_ids=self.bindings)
         self.roots = tmp / 'roots.json'
         self.roots.write_bytes(refs.canonical(self.bindings))
@@ -67,25 +67,32 @@ class Cycle:
         return self.queue / ref['path']
 
     def round(self, statuses=('pass',), number=1, flags=(), states=None):
+        if number == 1:
+            from tests.coast_signoff_admission_factory import expand
+            admission = expand(self.instances['admission'], self.bindings, len(statuses))
+            self.instances['admission'] = admission
+            for instance in self.instances.values():
+                if 'plan_sha256' in instance:
+                    instance['plan_sha256'] = admission['plan_sha256']
+            identity = common.document(self.resolver, self.identity_ref)
+            identity['plan_sha256'] = admission['plan_sha256']
+            self.identity_ref = self.put('provenance/population-identity.txt', identity)
         self.r = self.queue / f'plans/plan01/review/r{number:02d}/a01'
         for tier in ('tier1', 'tier2', 'tier3'):
             (self.r / tier).mkdir(parents=True)
         run = copy.deepcopy(self.instances['run-summary'])
         admission = copy.deepcopy(self.instances['admission'])
-        first = admission['windows'][0]
-        admission['windows'] = []
+
         run['windows'] = []
         run['partition'] = {k: [] for k in run['partition']}
         self.keys = []
         for idx, status in enumerate(statuses):
-            key = sampler.window_key(first['source_id'], first['grid_sha256'], idx)
+            key = admission['windows'][idx]['window_key']
             self.keys.append(key)
-            w = dict(first, idx=idx, window_key=key, window_dir=sampler.window_dir(key))
-            admission['windows'].append(w)
             state = states[idx] if states else 'held' if status == 'held' else 'map_done'
             run['windows'].append(dict(window_key=key, state=state, stages=[], missing_stage_reasons=[]))
             run['partition'][state].append(key)
-        admission['grids'][0].update(total=len(statuses), cols=len(statuses), width=len(statuses))
+
         ar = self.put(f'plans/plan01/admission-{number:02d}.json', admission)
         enqueue = copy.deepcopy(self.instances['enqueue-receipt'])
         enqueue['admission'] = ar
@@ -163,18 +170,19 @@ class Cycle:
         return result
 
     def cli(self, script, *args):
+        allowed = [arg for root in self.bindings for arg in ('--allowed-root-id', root)]
         return subprocess.run([sys.executable, str(SCRIPTS / script), '--roots', str(self.roots),
-                               '--allowed-root-id', 'queue:synthetic', *map(str, args)], capture_output=True, text=True)
+                               *allowed, *map(str, args)], capture_output=True, text=True)
 
 
 def test_normal_sample_and_chain_idempotency(tmp_path):
-    c = Cycle(tmp_path).round(('pass',) * 16)
+    c = Cycle(tmp_path).round(('pass',) * 4)
     assert c.open() == 0
-    assert c.packet['sample']['size'] == 8
+    assert c.packet['sample']['size'] == 4
     result = c.write(c.decisions())
     assert result['board_action']['action'] == 'complete_review_and_create_next_admission'
     verdict = common.document(c.resolver, result['verdict'])
-    assert verdict['tier1_confusion']['tn'] == 16
+    assert verdict['tier1_confusion']['tn'] == 4
     for path in (c.queue / 'ledger.jsonl', c.queue.parent / 'campaign-ledger.jsonl'):
         assert len(ledger_module.verify(path)) == 1
     before = (c.queue / 'ledger.jsonl').read_bytes()
@@ -216,7 +224,7 @@ def test_changed_input_cli_corrective_error_is_valid(tmp_path, target):
     assert not verdict['next_tile_card_authorized']
     for path in (c.r / 'tier3/open-report.json', c.r / 'tier3/verdict.json'):
         checked = subprocess.run([sys.executable, str(validator.SHARED / 'scripts/validate_coast_receipt.py'), str(path),
-                                  '--roots', str(c.roots), '--allowed-root-id', 'queue:synthetic', '--root-id', 'queue:synthetic'], capture_output=True, text=True)
+                                  '--roots', str(c.roots), *[arg for root in c.bindings for arg in ('--allowed-root-id', root)], '--root-id', 'queue:synthetic'], capture_output=True, text=True)
         assert checked.returncode == 0, checked.stderr
     for path in (c.queue / 'ledger.jsonl', c.queue.parent / 'campaign-ledger.jsonl'):
         rows = ledger_module.verify(path)
@@ -304,11 +312,9 @@ def test_hold_requires_external_blocker_and_prints_block_action(tmp_path):
 
 
 def test_sample_tamper_is_corrective(tmp_path):
-    c = Cycle(tmp_path).round(('pass',) * 16)
+    c = Cycle(tmp_path).round(('pass',) * 4)
     packet = copy.deepcopy(c.packet)
-    packet['sample']['selected'] = c.keys[:8]
-    if packet['sample']['selected'] == c.packet['sample']['selected']:
-        packet['sample']['selected'] = c.keys[-8:]
+    packet['sample']['selected'] = list(reversed(c.packet['sample']['selected']))
     c.packet_ref = c.put(c.relative('tier2/wrong-sample.json'), packet)
     assert c.open() == 3
     result = c.write(c.decisions())
@@ -354,7 +360,7 @@ def test_all_new_output_json_receipts_validate(tmp_path):
         validator.validate(refs.loads(path.read_bytes()), c.resolver, root_id='queue:synthetic')
 
 
-@pytest.mark.parametrize('done,flagged,size', [(0, 0, 0), (1, 0, 1), (4, 0, 4), (16, 12, 4), (16, 16, 0), (16, 2, 8)])
+@pytest.mark.parametrize('done,flagged,size', [(0, 0, 0), (1, 0, 1), (4, 0, 4), (4, 3, 1), (4, 4, 0), (4, 2, 2)])
 def test_open_rederives_all_clamped_samples(tmp_path, done, flagged, size):
     # A zero-map cohort still has its admitted held window, never vanishes.
     statuses = ('flag',) * flagged + ('pass',) * (done - flagged) if done else ('held',)

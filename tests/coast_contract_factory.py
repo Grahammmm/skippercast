@@ -29,6 +29,7 @@ def load_helper(name):
 
 refs = load_helper('coast_refs')
 load_helper('coast_sample')
+load_helper('coast_native')
 
 
 def obj(**properties):
