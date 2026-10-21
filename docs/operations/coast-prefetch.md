@@ -91,11 +91,43 @@ invented. The scheme and NCEI metadata snapshots also enter the mirror plan.
 
 Responses and SHA-256 receipts remain under `--receipts`, never in a canonical
 store. Reusing that directory resumes/replays its snapshot; a fresh snapshot uses
-a new directory. Interrupted runs retain successful responses. Each invocation
+a new directory, **not a new host retry registry**. Metadata GETs, BAG HEADs,
+size preflight and downloads all use the same local
+`~/skippercast-data/campaign-raw-manifest/retry-state.json`. Each network request
+reloads it under a shared lock held through response/error persistence. Concurrent
+processes cannot overwrite other hosts' holds or race a new hold; even separate
+snapshots are serialized. Interrupted runs retain successful responses. Each invocation
 is bounded to 2,000 requests/30 minutes, with serial one-second spacing, rejected
 redirects and durable host parking. Review a changed snapshot before using it.
 No CI test contacts these endpoints. Neither enumeration nor a dry-run authorizes
 the bulk service or mapping.
+
+#### Migrate legacy host holds before any new live invocation
+
+Older builds kept retry state under each snapshot's `state/` directory. Reusing
+an old snapshot imports its holds automatically before a network request, but a
+fresh snapshot cannot discover unrelated old directories. Before switching builds,
+stop old prefetch/enumerator processes and explicitly import **all** retained
+retry registries, including one-off subset/WCS/HEAD probes. This operation is
+network-free, takes the same shared lock, retains the latest deadline and maximum
+failure count per host, preserves unrelated hosts, and never changes its inputs.
+Do not delete the old evidence. There is no CLI override for the shared location.
+
+For the retained 2026-10-20 run in this task worktree:
+
+```sh
+PYTHONPATH=src "$HOME/repos/skippercast/.venv/bin/python" \
+  -m skippercast.coastal.prefetch \
+  --import-retry-state var/prefetch-enumeration-20261020/state/retry-state.json \
+  --import-retry-state var/prefetch-wcs-heads-20261020/state/retry-state.json \
+  --import-retry-state var/prefetch-static-heads-20261020/state/retry-state.json
+```
+
+Verify the printed/read-back shared registry retains the `www.ngdc.noaa.gov`
+deadline **at least 1792638183.7253046** (the retained WCS HTTP 500 hold), as well
+as GMRT and any other existing holds. Do not contact that NOAA host before its
+deadline. Migration is not permission to start the campaign or clear source holds.
+Offline replay and dry-run never acquire/write the retry registry or make requests.
 
 ### Generated-subset access remains a separate hold
 
@@ -159,6 +191,7 @@ Fixed production locations (no CLI reserve or host-policy override):
 - Byte-identical manifest mirrors:
   `~/skippercast-data/campaign-raw-manifest/<source>.jsonl`.
 - Host retry state: `~/skippercast-data/campaign-raw-manifest/retry-state.json`.
+  Its adjacent `.lock` file synchronizes all prefetch modes on the local filesystem.
 - Dashboard: `~/agent-work/reports/coast-pilot/prefetch-status.json`.
 
 Every manifest record has URL, final URL, original bytes, local SHA-256, ETag,
@@ -182,6 +215,10 @@ checkpoint `.part.json` receipts. A disconnected range is retried from its prior
 checkpoint after the host cooldown; at most one in-flight range is discarded.
 On restart the committed partial prefix is SHA-256 verified. A crash during append
 may leave an uncommitted suffix; only that suffix is truncated and re-fetched.
+A crash before the very first checkpoint may leave an empty `.part` with no
+receipt; restart safely initializes it because there are no bytes to authenticate.
+Nonempty unreceipted partials and existing invalid/identity-changed receipts are
+still preserved and held; an empty file is not permission to ignore a receipt.
 A changed validator, redirect target or corrupted prefix is held for investigation.
 A server ignoring Range can return one complete file, but that response replaces
 the partial—it is never appended. Without validators, only one whole-file response
@@ -207,7 +244,8 @@ There are no inline network retries. A 429, any 5xx or transport error durably
 parks the actual affected host. Default delays grow 15 minutes, 30 minutes, etc.,
 up to one day; longer Retry-After is respected. **NOAA 500/503 waits at least one
 day.** Other URLs and redirects to that host are not contacted during the hold,
-even after process restart. Unaffected hosts may continue. Permanent HTTP errors,
+even after process restart or a fresh metadata snapshot. Unaffected hosts may continue.
+Imported or concurrently updated deadlines are never shortened. Permanent HTTP errors,
 identity mismatches and contract failures are holds, not rapid retry loops.
 
 Status contains each source's files done/total, verified bytes and structured

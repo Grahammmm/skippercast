@@ -46,7 +46,6 @@ class Metadata:
                                   user_agent=USER_AGENT + ' coast-prefetch-metadata')
         self.transport = Prefetch({'files': []}, session, mirror=directory / 'state',
                                   status=directory / 'status.json', lock_dir=directory / 'locks')
-        self.transport.state = read_json(directory / 'state/retry-state.json')
 
     def get(self, url, *, limit=8_000_000, scheme=False):
         # Exact route classes, not just hosts: callers cannot accidentally fetch a raster.
@@ -74,18 +73,9 @@ class Metadata:
         if self.requests >= 2000 or time.monotonic() - self.started > 1800:
             raise Hold('Metadata request/time bound reached; retain receipts and resume later')
         # No redirect following here: a metadata route must not become a payload route.
-        host, _ = self.transport.session.check_url(url)
-        if self.transport.clock() < self.transport.state.get(host, {}).get('retry_at', 0):
-            raise Hold('Metadata host parked: ' + host)
-        try:
-            self.requests += 1
-            response = self.transport.session.get(url, max_bytes=limit, attempts=1,
-                use_cache=False, follow_redirects='return', raise_for_status=False,
-                headers={'Accept-Encoding': 'identity'})
-        except OSError as error:
-            self.transport.park(host, str(error))
-        if response.status == 429 or response.status >= 500:
-            self.transport.park(host, f'HTTP {response.status}', response.status, response.headers)
+        self.requests += 1
+        response = self.transport.request('GET', url, max_bytes=limit,
+            follow_redirects=False, headers={'Accept-Encoding': 'identity'})
         if response.status != 200:
             raise Hold(f'Metadata HTTP {response.status}: {url}')
         body = response.body

@@ -25,6 +25,7 @@ from skippercast.paths import repo_root
 MOUNT = Path('/mnt/agentorange-backup')
 RAW = MOUNT / 'skippercast-campaign/raw'
 MIRROR = Path.home() / 'skippercast-data/campaign-raw-manifest'
+RETRY_STATE = MIRROR / 'retry-state.json'
 STATUS = Path.home() / 'agent-work/reports/coast-pilot/prefetch-status.json'
 RESERVE = 200_000_000_000  # decimal GB, not GiB; not operator-adjustable
 RANGE_BYTES = 64 * 1024 * 1024
@@ -201,12 +202,13 @@ class GuardedSink:
 class Prefetch:
     def __init__(self, plan: dict, session: Session, *, root=RAW, mirror=MIRROR,
                  status=STATUS, mount=MOUNT, clock=time.time, disk_usage=shutil.disk_usage,
-                 ismount=os.path.ismount, lock_dir=None):
+                 ismount=os.path.ismount, lock_dir=None, retry_state=None):
         self.plan, self.session = plan, session
         self.root, self.mirror, self.status = map(Path, (root, mirror, status))
         self.mount = Path(mount)
         self.clock, self.disk_usage, self.ismount = clock, disk_usage, ismount
         self.lock_dir = Path(lock_dir) if lock_dir else Path.home() / '.cache/skippercast/coast-prefetch'
+        self.retry_state = Path(retry_state) if retry_state is not None else RETRY_STATE
         self.state = {}
         self.records = {}
         self.results = {}
@@ -235,10 +237,47 @@ class Prefetch:
                 raise Hold('Another prefetch process owns this raw mirror') from error
             yield
 
-    def save_state(self):
-        atomic_json(self.mirror / 'retry-state.json', self.state)
+    @staticmethod
+    def merge_state(target, incoming):
+        # Never shorten an existing hold, even when importing an older snapshot.
+        for host, entry in incoming.items():
+            old = target.get(host, {})
+            winner = entry if entry.get('retry_at', 0) > old.get('retry_at', 0) else old
+            target[host] = {**winner, 'failures': max(old.get('failures', 0), entry.get('failures', 0))}
+
+    @contextmanager
+    def retry_lock(self):
+        # One stable local lock for ALL modes/snapshots, independent of raw root.
+        # Hold it through the request and error persistence: another process must
+        # not pass the cooldown check just before this one parks the host.
+        path = safe_path(self.retry_state.with_name(self.retry_state.name + '.lock'))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open('a') as stream:
+            fcntl.flock(stream, fcntl.LOCK_EX)
+            self.state = read_json(self.retry_state)
+            before = dict(self.state)
+            legacy = self.mirror / 'retry-state.json'
+            if legacy.absolute() != self.retry_state.absolute():
+                self.merge_state(self.state, read_json(legacy))
+            if self.state != before:
+                atomic_json(self.retry_state, self.state)
+            yield
+
+    def import_retry_state(self, paths):
+        """Network-free, additive migration of old per-snapshot registries."""
+        with self.retry_lock():
+            for path in paths:
+                if not safe_path(path).is_file():
+                    raise Hold(f'Missing retry-state import: {path}')
+                self.merge_state(self.state, read_json(path))
+            atomic_json(self.retry_state, self.state)
 
     def park(self, host: str, reason: str, status=None, headers=None):
+        with self.retry_lock():
+            self._park(host, reason, status, headers)
+
+    def _park(self, host: str, reason: str, status=None, headers=None):
+        # Caller owns retry_lock; no stale read/modify/write or nested flock.
         old = self.state.get(host, {})
         failures = min(old.get('failures', 0) + 1, 16)
         wait = min(86400, 900 * 2 ** (failures - 1))
@@ -247,12 +286,16 @@ class Prefetch:
             wait = max(wait, 86400)  # NOAA outage: next day, not immediate retry
         retry_after = parse_retry_after((headers or {}).get('Retry-After'), now=self.clock())
         wait = max(wait, retry_after or 0)
-        self.state[host] = {'failures': failures, 'retry_at': self.clock() + wait,
-                            'reason': reason, 'http_status': status}
-        self.save_state()
+        self.merge_state(self.state, {host: {'failures': failures, 'retry_at': self.clock() + wait,
+                                             'reason': reason, 'http_status': status}})
+        atomic_json(self.retry_state, self.state)
         raise Parked(f'{host}: {reason}; retry after {wait:.0f}s')
 
-    def request(self, method, url, **kwargs):
+    def request(self, method, url, *, follow_redirects=True, **kwargs):
+        with self.retry_lock():
+            return self._request(method, url, follow_redirects=follow_redirects, **kwargs)
+
+    def _request(self, method, url, *, follow_redirects, **kwargs):
         # Follow redirects explicitly so a parked TARGET host is never contacted.
         from urllib.parse import urljoin
         current = url
@@ -268,15 +311,17 @@ class Prefetch:
             except CapacityError:
                 raise
             except OSError as error:
-                self.park(host, str(error))
+                self._park(host, str(error))
             if response.status in (301, 302, 303, 307, 308):
+                if not follow_redirects:
+                    raise Hold(f'Metadata redirect refused: {current}')
                 location = response.headers.get('Location')
                 if not location:
                     raise Hold(f'Redirect without Location: {current}')
                 current = urljoin(current, location)
                 continue
             if response.status == 429 or 500 <= response.status <= 599:
-                self.park(host, f'HTTP {response.status}', response.status, response.headers)
+                self._park(host, f'HTTP {response.status}', response.status, response.headers)
             if response.status not in (200, 206):
                 raise Hold(f'HTTP {response.status}: {current}')
             if method == 'HEAD' and response.status != 200:
@@ -371,7 +416,7 @@ class Prefetch:
         validator = self.validator(head.headers)
         meta = read_json(meta_path)
         offset = 0
-        if partial.exists():
+        if partial.exists() and (meta_path.exists() or partial.stat().st_size):
             # Never concatenate different remote entities or an unchecked partial.
             if (meta.get('url') != row['url'] or meta.get('total') != total
                     or meta.get('final_url') != head.final_url
@@ -394,9 +439,12 @@ class Prefetch:
             # checkpoint prefix is authoritative; re-fetch only that suffix.
             with partial.open('r+b') as stream:
                 stream.truncate(offset)
-        elif meta:
+        elif meta_path.exists():
             raise Hold('Partial receipt exists without partial bytes')
         else:
+            # A crash before the first checkpoint may leave an empty .part and
+            # no receipt. No bytes exist to authenticate; safely initialize it.
+            # Nonempty unreceipted bytes and any existing receipt still fail closed.
             partial.touch()
             self.checkpoint(meta_path, {'url': row['url'], 'total': total, 'validator': validator,
                                     'final_url': head.final_url,
@@ -474,7 +522,8 @@ class Prefetch:
     def probe_sizes(self, output: Path):
         """Explicit metadata-only preflight. Dry-run itself never makes requests."""
         with self.lock():
-            self.state = read_json(self.mirror / 'retry-state.json')
+            with self.retry_lock():
+                pass
             result = {**self.plan, 'files': [dict(r) for r in self.plan['files']],
                       'unresolved': list(self.plan.get('unresolved', []))}
             for row in result['files']:
@@ -502,7 +551,8 @@ class Prefetch:
 
     def run(self, *, allow_incomplete=False):
         with self.lock():
-            self.state = read_json(self.mirror / 'retry-state.json')
+            with self.retry_lock():
+                pass
             if self.plan.get('unresolved') and not allow_incomplete:
                 message = 'Inventory unresolved; --dry-run shows holds. Only --allow-incomplete permits a partial pass.'
                 self.write_status(state='stopped', error=message)
@@ -538,14 +588,27 @@ class Prefetch:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--plan', type=Path, required=True)
+    parser.add_argument('--plan', type=Path)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('--dry-run', action='store_true')
     action.add_argument('--run', action='store_true')
     action.add_argument('--probe-sizes', action='store_true', help='Explicit HEAD-only preflight; writes a new review-required plan')
+    action.add_argument('--import-retry-state', type=Path, action='append',
+                        help='Network-free additive migration of legacy retry state (repeatable)')
     parser.add_argument('--output', type=Path, help='Required with --probe-sizes; must not overwrite its input')
     parser.add_argument('--allow-incomplete', action='store_true', help='Fetch known files but retain unresolved holds; never reports complete')
     args = parser.parse_args(argv)
+    if args.import_retry_state:
+        try:
+            run = Prefetch({'files': []}, TransferSession(), mirror=RETRY_STATE.parent)
+            run.import_retry_state(args.import_retry_state)
+            print(json.dumps({'retry_state': str(run.retry_state), 'parked_hosts': run.state}))
+            return 0
+        except (ValueError, OSError) as error:
+            print(json.dumps({'state': 'stopped', 'error': str(error)}))
+            return 2
+    if args.plan is None:
+        parser.error('--plan is required except for --import-retry-state')
     if args.probe_sizes and (args.output is None or args.output.absolute() == args.plan.absolute()):
         parser.error('--probe-sizes requires a distinct --output path')
     # Existing reviewed policy, including catalog URLs and its explicit built-in

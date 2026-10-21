@@ -14,6 +14,11 @@ URL = 'https://data.ngdc.noaa.gov/survey.bag'
 DATA = b'abcdefghij'
 
 
+@pytest.fixture(autouse=True)
+def isolated_retry_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(p, 'RETRY_STATE', tmp_path / 'shared/retry-state.json')
+
+
 class Reply(io.BytesIO):
     def __init__(self, status=200, body=b'', headers=None):
         super().__init__(body)
@@ -179,7 +184,7 @@ def test_http_failures_park_entire_host_across_restarts(tmp_path, status, delay)
     run = runner(tmp_path, server, data)
     assert run.run() == 75
     assert len(server.calls) == 1
-    retry = json.loads((run.mirror / 'retry-state.json').read_text())['data.ngdc.noaa.gov']
+    retry = json.loads(run.retry_state.read_text())['data.ngdc.noaa.gov']
     assert retry['retry_at'] == 1000 + delay
     assert runner(tmp_path, server, data).run() == 75
     assert len(server.calls) == 1
@@ -402,3 +407,139 @@ def test_cli_dry_run_is_network_free(tmp_path, monkeypatch, capsys):
     assert p.main(['--plan', str(path), '--dry-run']) == 0
     output = json.loads(capsys.readouterr().out)
     assert output['segments']['C1']['total_bytes'] == len(DATA)
+
+
+@pytest.mark.parametrize('side', ['before', 'after'])
+def test_first_checkpoint_crash_recovers_on_clean_restart(tmp_path, side):
+    server = Server()
+    run = runner(tmp_path, server)
+    checkpoint = run.checkpoint
+    def crash(path, data):
+        assert data['bytes'] == 0
+        if side == 'after':
+            checkpoint(path, data)
+        raise OSError('synthetic initial checkpoint interruption')
+    run.checkpoint = crash
+    assert run.run() == 2
+    partial = run.root / 'noaa-nos' / (p.filename(row()) + '.part')
+    assert partial.stat().st_size == 0
+    assert partial.with_name(partial.name + '.json').exists() == (side == 'after')
+    server.calls.clear()
+    restarted = runner(tmp_path, server)
+    assert restarted.run() == 0
+    assert [call[1] for call in server.calls] == ['HEAD', 'GET']
+    assert Path(receipt(restarted)['path']).read_bytes() == DATA
+    assert (restarted.mirror / 'noaa-nos.jsonl').read_bytes() == (restarted.root / 'noaa-nos/manifest.jsonl').read_bytes()
+
+
+@pytest.mark.parametrize('case', ['nonempty-unreceipted', 'empty-invalid-receipt', 'empty-changed-identity'])
+def test_initial_recovery_never_discards_suspect_bytes_or_receipts(tmp_path, case):
+    server = Server()
+    run = runner(tmp_path, server)
+    directory = run.root / 'noaa-nos'
+    directory.mkdir(parents=True)
+    partial = directory / (p.filename(row()) + '.part')
+    partial.write_bytes(b'preserve' if case == 'nonempty-unreceipted' else b'')
+    meta = partial.with_name(partial.name + '.json')
+    if case == 'empty-invalid-receipt':
+        p.atomic_json(meta, {})
+    elif case == 'empty-changed-identity':
+        p.atomic_json(meta, {'url': URL, 'total': len(DATA), 'final_url': URL,
+                            'bytes': 0, 'sha256': hashlib.sha256(b'').hexdigest(), 'validator': '"old"'})
+    before = partial.read_bytes()
+    assert run.run() == 2
+    assert [c[1] for c in server.calls] == ['HEAD']
+    assert partial.read_bytes() == before
+
+
+def test_preflight_and_download_share_cooldowns_across_mirrors(tmp_path):
+    server = Server(status=503)
+    first = runner(tmp_path, server)
+    assert first.probe_sizes(tmp_path / 'sized.json') == 2
+    server.calls.clear()
+    server.status = None
+    second = runner(tmp_path, server)
+    second.mirror = tmp_path / 'different-mirror'
+    assert second.run() == 75
+    assert not server.calls
+    # A long-lived preflight instance must reload another process's new hold.
+    third = runner(tmp_path, server)
+    third.mirror = tmp_path / 'third-mirror'
+    assert third.probe_sizes(tmp_path / 'sized-again.json') == 2
+    assert not server.calls
+    third.request('HEAD', 'https://pubs.usgs.gov/fixture', max_bytes=0)
+    assert [c[0] for c in server.calls] == ['pubs.usgs.gov']
+
+
+def test_concurrent_parking_merges_hosts_and_never_shortens_holds(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    barrier = Barrier(2)
+    runs = [runner(tmp_path, Server()), runner(tmp_path, Server())]
+    hosts = ['data.ngdc.noaa.gov', 'pubs.usgs.gov']
+    def park(index):
+        barrier.wait(timeout=5)
+        with pytest.raises(p.Parked):
+            runs[index].park(hosts[index], 'synthetic outage', 503)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(park, range(2)))
+    state = p.read_json(runs[0].retry_state)
+    assert set(state) == set(hosts)
+    assert state[hosts[0]]['retry_at'] == 87400
+    assert state[hosts[1]]['retry_at'] == 1900
+    with pytest.raises(p.Parked):
+        runs[1].park(hosts[0], 'shorter transport hold')
+    newer = p.read_json(runs[0].retry_state)
+    assert newer[hosts[0]]['retry_at'] == 87400
+    assert newer[hosts[0]]['failures'] == 2
+    assert newer[hosts[1]] == state[hosts[1]]
+
+
+def test_legacy_import_is_network_free_additive_and_preserves_originals(tmp_path, monkeypatch, capsys):
+    paths = [tmp_path / 'snapshot-a/state.json', tmp_path / 'snapshot-b/state.json']
+    p.atomic_json(paths[0], {'data.ngdc.noaa.gov': {'retry_at': 10000, 'failures': 2}})
+    p.atomic_json(paths[1], {'data.ngdc.noaa.gov': {'retry_at': 2000, 'failures': 1},
+                           'pubs.usgs.gov': {'retry_at': 3000}})
+    originals = [path.read_bytes() for path in paths]
+    def no_network(*args, **kwargs):
+        raise AssertionError('migration contacted source')
+    monkeypatch.setattr(Session, 'request', no_network)
+    assert p.main(['--import-retry-state', str(paths[0]), '--import-retry-state', str(paths[1])]) == 0
+    state = json.loads(capsys.readouterr().out)['parked_hosts']
+    assert state['data.ngdc.noaa.gov']['retry_at'] == 10000
+    assert state['pubs.usgs.gov']['retry_at'] == 3000
+    assert [path.read_bytes() for path in paths] == originals
+    run = runner(tmp_path, Server())
+    with pytest.raises(p.Parked):
+        run.request('HEAD', URL, max_bytes=0)
+
+
+def test_request_and_parking_are_one_cross_instance_transaction(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    entered, release, waiting = Event(), Event(), Event()
+    calls = []
+    def request(self, method, url, **kwargs):
+        calls.append(url)
+        entered.set()
+        assert release.wait(timeout=5)
+        return SimpleNamespace(status=503, headers={})
+    monkeypatch.setattr(p.TransferSession, 'request', request)
+    a, b = runner(tmp_path, Server()), runner(tmp_path, Server())
+    def first():
+        with pytest.raises(p.Parked):
+            a.request('HEAD', URL, max_bytes=0)
+    def second():
+        waiting.set()
+        with pytest.raises(p.Parked):
+            b.request('HEAD', URL, max_bytes=0)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        one = pool.submit(first)
+        assert entered.wait(timeout=5)
+        two = pool.submit(second)
+        assert waiting.wait(timeout=5)
+        release.set()
+        one.result(timeout=5)
+        two.result(timeout=5)
+    assert calls == [URL]
+    assert p.read_json(a.retry_state)['data.ngdc.noaa.gov']['retry_at'] == 87400
