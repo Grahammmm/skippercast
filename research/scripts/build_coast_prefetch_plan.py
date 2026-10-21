@@ -109,6 +109,9 @@ def build(root: Path) -> dict:
                 SFML, name + ': ' + record['survey_id'])
 
     envelopes = {}
+    usgs_bounds = {r['archive_url']: r['raster_bounds_wgs84']
+                   for r in read('dist/data/usgs-depth-datum-ledger.json')['sources']
+                   if r.get('raster_bounds_wgs84')}
     for region in read('research/receipts/noaa-region-bag-envelope-review.json')['regions']:
         for lead in region['leads']:
             envelopes[lead['bag_url']] = lead['bag_bounds']
@@ -118,14 +121,19 @@ def build(root: Path) -> dict:
         url = record['url']
         if url in rows:
             continue
-        box = envelopes.get(url) or record.get('adapter_review', {}).get('requested_bounds_wgs84')
-        source = 'noaa-nos' if '.bag' in url else 'csumb-sfml' if '/ships/' in url else 'usgs-other'
+        box = (envelopes.get(url) or usgs_bounds.get(url)
+               or record.get('adapter_review', {}).get('requested_bounds_wgs84'))
+        source = ('noaa-nos' if '.bag' in url else 'csumb-sfml' if '/ships/' in url
+                  else 'csmp' if url in usgs_bounds else 'usgs-other')
         if not box or url.endswith('/'):
             gaps.append({'id': 'association-' + record['id'], 'source': source, 'url': url,
                          'reason': 'No committed campaign segment association or URL is a directory, not a file.'})
             continue
-        add(url, source, segments_for(box), SFML if source == 'csumb-sfml' else NOAA if source == 'noaa-nos' else USGS,
-            'catalog/surveys.json: ' + record['id'],
+        licence = (SFML if source == 'csumb-sfml' else NOAA if source == 'noaa-nos'
+                   else USGS + SFML if source == 'csmp' else USGS)
+        add(url, source, segments_for(box), licence,
+            'catalog/surveys.json: ' + record['id'] +
+            ('; dist/data/usgs-depth-datum-ledger.json:raster_bounds_wgs84' if url in usgs_bounds else ''),
             association_basis='Committed bbox or inspected window; scheduling hint only, not native support.')
 
     caldig = read('research/catalog/usgs-caldig-v2.json')

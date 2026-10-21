@@ -37,3 +37,12 @@ def test_seed_carries_both_csmp_resolutions_sfml_and_vr():
 
 def test_seed_generation_is_deterministic():
     assert build(ROOT) == build(ROOT)
+
+
+def test_eureka_uses_committed_raster_envelope_not_wrong_index_link():
+    rows = [r for r in build(ROOT)['files'] if 'Bathymetry_OffshoreEureka.zip' in r['url']]
+    assert len(rows) == 1
+    assert rows[0]['segments'] == ['N6']
+    assert 'P9EC35PF' in rows[0]['url']
+    assert 'usgs-depth-datum-ledger' in rows[0]['evidence']
+    assert 'for-profit' in rows[0]['licence']
