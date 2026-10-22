@@ -64,8 +64,13 @@ Real-data correction (2026-10-22, t_ac49d46e)
 The first full cached-C1 run exposed two defects that tiny fixtures missed:
 individually simplified depth bands could intersect one another, and GDAL's
 approximate warp selected some adjacent pixels instead of the exact nearest
-source cell. The corrected producer jointly simplifies each contributor's
-complete MultiLineString with topology preservation before its final mask clip.
+source cell. The corrected producer simplifies each contour with topology
+preservation, then an exact edge-level STRtree finds every pair of lines in a
+contributor that now touch and reverts those lines to their unsimplified
+geometry, repeating until no new contact remains, before the final mask clip.
+(One GEOS call over a contributor's whole MultiLineString gave the same
+guarantee but did not finish on Cal DIG I's ~250k components within the run
+cap; the revert pass takes about 8 s there.)
 It also inverse-projects every XYZ pixel centre and samples the containing
 source pixel exactly, preserving unsupported-cell transparency. Neither change
 alters the half-cell bound, contour intervals, source masks or depth labels.

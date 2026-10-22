@@ -19,8 +19,10 @@ import rasterio
 from rasterio.features import shapes
 from rasterio.transform import from_bounds
 from rasterio.warp import transform_bounds
-from shapely.geometry import shape, mapping, LineString, MultiLineString
+import shapely
+from shapely.geometry import shape, mapping, LineString
 from shapely.ops import unary_union, transform, linemerge
+from shapely.strtree import STRtree
 from pyproj import Transformer
 
 LABEL = 'NOT FOR NAVIGATION; research preview; review_required'
@@ -145,18 +147,51 @@ def tile_range(bounds, zoom):
     return [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]
 
 
+def _edges(geometries, members):
+    """Two-point edges of the given lines, with the owning line index."""
+    coords, owners = shapely.get_coordinates(geometries[members], return_index=True)
+    owners = members[owners]
+    keep = owners[:-1] == owners[1:]
+    edges = shapely.linestrings(np.stack([coords[:-1][keep], coords[1:][keep]], axis=1))
+    return edges, owners[:-1][keep]
+
+
 def simplify_contours(lines, tolerance):
     """Preserve topology BETWEEN contours as well as within each contour.
 
     Independent Douglas-Peucker calls can move close depth bands across one
-    another. GEOS preserves their joint topology when given one collection;
-    component order and endpoints are retained for the parallel depth labels.
+    another. A single GEOS call over a whole contributor's MultiLineString
+    prevents that but does not scale to the real Cal DIG I source (about 250k
+    components, 3.3M vertices). Instead each line is simplified with topology
+    preserved, then an exact edge-level STRtree finds every pair of lines that
+    now touch; each simplified member of such a pair reverts to its original
+    geometry. Distinct-level originals never intersect, so repeating the check
+    for newly reverted lines reaches a fixpoint with no new intersections.
+    Order, count and endpoints are retained for the parallel depth labels.
     """
-    simplified = MultiLineString(lines).simplify(tolerance, preserve_topology=True)
-    result = list(simplified.geoms)
-    if len(result) != len(lines):
-        raise ValueError('Contour simplification changed component count')
-    return result
+    original = np.empty(len(lines), dtype=object)
+    original[:] = list(lines)
+    if not len(original):
+        return []
+    current = shapely.simplify(original, tolerance, preserve_topology=True)
+    reverted = ~shapely.is_simple(current) | shapely.is_empty(current)
+    current[reverted] = original[reverted]
+    changed = np.arange(len(original))  # first pass checks every line
+    while len(changed):
+        edges, owners = _edges(current, np.arange(len(original)))
+        tree = STRtree(edges)
+        probe, probe_owners = _edges(current, changed)
+        conflicts = set()
+        for start in range(0, len(probe), 50000):
+            left, right = tree.query(probe[start:start + 50000], predicate='intersects')
+            a, b = probe_owners[left + start], owners[right]
+            use = (a != b) & ~(reverted[a] & reverted[b])
+            conflicts.update(a[use].tolist())
+            conflicts.update(b[use].tolist())
+        changed = np.array(sorted(i for i in conflicts if not reverted[i]), dtype='int64')
+        current[changed] = original[changed]
+        reverted[changed] = True
+    return list(current)
 
 
 def nearest_terrain(values, valid, source_affine, source_crs, tile_affine):
@@ -299,7 +334,7 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                       zoom=zoom, terrain_tiles=len(tiles), value_convention='elevation_positive_up',
                       terrain_encoding='elevation_m = -10000 + (R*65536+G*256+B)*0.1; alpha=0 unsupported',
                       terrain_sampling='exact inverse-projected XYZ pixel centres; nearest source cell',
-                      simplification='joint topology-preserving per contributor; half-cell tolerance',
+                      simplification='per-line topology-preserving, half-cell tolerance; lines touching another line in the contributor revert to unsimplified',
                       contour_crs='EPSG:4326', tile_scheme='XYZ',
                       terrain_template='terrain/{z}/{x}/{y}.png', vector_template='vector/{z}/{x}/{y}.pbf',
                       limitations=['Synthetic/local preview only; no datum reconciliation or seam acceptance.'])

@@ -306,3 +306,29 @@ def test_regional_terrain_exact_nearest_and_mask(stack, tmp_path):
         old_mismatches += int((old != expected).sum())
     assert supported and unsupported
     assert old_mismatches > 0, 'Fixture must expose the old approximate-warp regression'
+
+
+def test_simplify_contours_reverts_conflicts_to_a_crossing_free_fixpoint(stack):
+    """Many tightly spaced noisy bands: per-line simplification crosses, the fix does not."""
+    np, *_, c2 = stack
+    from shapely.geometry import LineString
+    rng = np.random.default_rng(844)
+    x = np.linspace(0, 2000, 400)
+    base = 30 * np.sin(x / 150)
+    # Twenty bands 1 m apart (conflicts) and ten bands 20 m apart (none).
+    offsets = list(range(20)) + [40 + 20 * j for j in range(10)]
+    raw = [LineString(np.column_stack([x, k + base + rng.uniform(-0.45, 0.45, x.size)]))
+           for k in offsets]
+    assert not any(a.intersects(b) for i, a in enumerate(raw) for b in raw[i + 1:])
+    # Negative control: independent topology-preserving calls cross other bands.
+    old = [line.simplify(5, preserve_topology=True) for line in raw]
+    assert any(a.intersects(b) for i, a in enumerate(old) for b in old[i + 1:])
+    result = c2.simplify_contours(raw, 5)
+    assert len(result) == len(raw)
+    assert not any(a.intersects(b) for i, a in enumerate(result) for b in result[i + 1:])
+    assert all(line.is_simple and line.is_valid for line in result)
+    assert all(r.coords[0] == o.coords[0] and r.coords[-1] == o.coords[-1] for r, o in zip(result, raw))
+    assert all(r.hausdorff_distance(o) <= 5 + 1e-9 for r, o in zip(result, raw))
+    # Not a no-op: lines without conflicts keep their simplification.
+    assert all(len(r.coords) < len(o.coords) for r, o in zip(result[20:], raw[20:]))
+    assert c2.simplify_contours([], 5) == []
