@@ -32,12 +32,11 @@ def test_topology_counts_holes_regions_and_border_gaps():
     assert facts['mask_components_4'] == 2 and facts['mask_components_8'] == 2
     assert facts['enclosed_holes'] == 1 and facts['enclosed_hole_cells'] == 1
     assert facts['border_gap_cells'] == 9
-    # The renderer's fixed quad diagonal cuts the corner triangle (0,0),(1,0),(0,1)
-    # off beside the hole, so the mesh has one more piece than the mask.
-    assert facts['mesh_components'] == 3
+    # Three-corner triangles keep supported corners connected beside the hole.
+    assert facts['mesh_components'] == 2
     assert facts['mesh_components_spanning_mask_regions'] == 0
-    # (3,6) and (3,7) sit beside the border gap at (2,7) and join no triangle.
-    assert facts['supported_cells_in_no_triangle'] == 2
+    # The bottom-right three-corner quad now preserves both border samples.
+    assert facts['supported_cells_in_no_triangle'] == 0
 
 
 def test_no_expected_triangle_touches_an_unsupported_cell():
@@ -50,7 +49,7 @@ def test_no_expected_triangle_touches_an_unsupported_cell():
 def test_a_bridging_triangle_is_counted_as_spanning_two_regions():
     bridge = ((0, 3), (0, 6), (1, 6))
     facts = module.topology(TWO_REGIONS, [*faces_of(TWO_REGIONS), tuple(sorted(bridge))])
-    assert facts['mesh_components'] == 2
+    assert facts['mesh_components'] == 1
     assert facts['mesh_components_spanning_mask_regions'] == 1
 
 
@@ -70,6 +69,30 @@ def test_diagonal_touch_is_one_8_region_but_two_4_regions():
 def test_fully_supported_grid_has_the_renderer_triangle_count():
     full = grid('\n'.join(['#' * 32] * 32))
     assert len(module.expected_faces(full)) == 2 * 31 * 31 == 1922
+
+
+@pytest.mark.parametrize(('mask', 'expected'), [
+    ('.. ..', set()), ('#. ..', set()), ('.# ..', set()), ('.. #.', set()),
+    ('.. .#', set()), ('## ..', set()), ('#. #.', set()), ('#. .#', set()),
+    ('.# #.', set()), ('.# .#', set()), ('.. ##', set()),
+    ('.# ##', {((0, 1), (1, 0), (1, 1))}),
+    ('#. ##', {((0, 0), (1, 0), (1, 1))}),
+    ('## .#', {((0, 0), (0, 1), (1, 1))}),
+    ('## #.', {((0, 0), (0, 1), (1, 0))}),
+    ('## ##', {((0, 0), (0, 1), (1, 0)), ((0, 1), (1, 0), (1, 1))}),
+])
+def test_quad_topology_matches_frozen_support_cases(mask, expected):
+    # Literal cell coordinates, independent of the production triangulator.
+    assert module.expected_faces(grid(mask)) == expected
+
+
+def test_old_diagonal_omission_is_not_an_acceptable_surface():
+    support = grid('## .#')
+    expected = module.expected_faces(support)
+    assert expected == {((0, 0), (0, 1), (1, 1))}
+    assert module.topology(support, sorted(expected))['supported_cells_in_no_triangle'] == 0
+    # Removing only this face reproduces the former diagonal's failure.
+    assert module.topology(support, [])['supported_cells_in_no_triangle'] == 3
 
 
 def png_bytes(rows, filters):

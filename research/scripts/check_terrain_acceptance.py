@@ -245,9 +245,12 @@ def expected_faces(support):
     height, width = len(support), len(support[0])
     for r in range(height - 1):
         for c in range(width - 1):
-            for corners in (((r, c), (r + 1, c), (r, c + 1)), ((r, c + 1), (r + 1, c), (r + 1, c + 1))):
-                if all(support[y][x] for y, x in corners):
-                    faces.add(tuple(sorted(corners)))
+            tl, tr, bl, br = (r, c), (r, c + 1), (r + 1, c), (r + 1, c + 1)
+            supported = [point for point in (tl, tr, bl, br) if support[point[0]][point[1]]]
+            if len(supported) == 3:
+                faces.add(tuple(sorted(supported)))
+            elif len(supported) == 4:
+                faces.update((tuple(sorted((tl, bl, tr))), tuple(sorted((tr, bl, br)))))
     return faces
 
 
