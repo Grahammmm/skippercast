@@ -52,6 +52,8 @@ export function coastlineLayers(p: Palette): LineLayer[] {
 
 /** What the mark card shows for any Chart selection (web/app/MarkCard.tsx renders it). */
 export interface ChartMark {
+  /** Position supplied by the source; omitted for withheld marks and area-only cards. */
+  readonly position?: {latitude: number; longitude: number};
   readonly id: string; readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string;
   /** Official measurement/model provider, distinct from regulations or licensing. */
   readonly provider?: {readonly href: string; readonly label: string};

@@ -121,12 +121,21 @@ def put(path,doc,root=R):
                                intent='control:'+manager.relative_path(path)):
         raise ValueError('immutable control receipt already committed')
     return ref(root,path,doc['schema'])
+STRICT_SCIENCE_STATUS='PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_STRICT_POLICY'
+PARTIAL_SCIENCE_STATUS='PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_PARTIAL_POLICY'
 def validate_science(science,grant,*,now,horizon):
-    from skippercast.coastal.coordinator.ordered_trial import LARGER_WINDOWS
-    windows=LARGER_WINDOWS
+    from skippercast.coastal.coordinator.ordered_trial import scope_windows
+    from skippercast.coastal.authenticated_v1.profiles import CONTAINED,PARTIAL_SUPPORT,support_policy
+    # The grant's own (pinned) support policy selects windows and the only status
+    # it may carry: strict stays strict; partial needs the exact partial evidence.
+    policy=support_policy(CONTAINED,grant)
+    windows=scope_windows(grant)[0]
+    status=PARTIAL_SCIENCE_STATUS if policy==PARTIAL_SUPPORT else STRICT_SCIENCE_STATUS
     if (science.get('schema')!='coastal-ordered-independent-scientific-preflight-v1'
             or science.get('independent') is not True
-            or science.get('status')!='PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_STRICT_POLICY'
+            or science.get('status')!=status
+            or science.get('support_policy')!=policy
+            or grant.get('window_set')!=windows
             or science.get('source')!=grant['source']
             or science.get('native_window_set')!=windows
             or science.get('window_count')!=4 or type(science.get('window_count')) is not int
@@ -140,9 +149,17 @@ def validate_science(science,grant,*,now,horizon):
 def validate_runtime_review(d,review,*,now,horizon=None):
     if review.get('independent') is not True or review.get('status')!='PASS_EXACT_FINITE_PRELAUNCH' or review.get('holds')!=[] or review.get('grant')!=d['grant']:
         raise ValueError('current independent runtime acceptance required')
-    bindings=('runtime_controls','controller_sha256','code_sha','deps_sha','carry','independent_preflight','prior_output_carry','prior_scratch_carry','prior_scratch_bytes')
+    bindings=('runtime_controls','controller_sha256','code_sha','deps_sha','carry','independent_preflight','prior_output_carry','prior_scratch_carry','prior_scratch_bytes',
+              'support_policy','mask_topology_prescan')
     if any(review.get(key)!=d.get(key) for key in bindings):
         raise ValueError('independent review differs from exact runtime/code/carry/science bindings')
+    if review.get('support_policy') is not None:
+        # Opt-in partial support launches only behind a reviewed --require-holes pre-scan.
+        prescan=review.get('mask_topology_prescan')
+        if (not isinstance(prescan,dict) or prescan.get('require_holes_met') is not True
+                or prescan.get('independently_reviewed') is not True
+                or any(not isinstance(prescan.get(k),dict) or not prescan[k].get('sha256') for k in ('receipt','review'))):
+            raise ValueError('partial support requires the independently reviewed --require-holes pre-scan')
     if not d['runtime_controls'] or {item['path'] for item in d['runtime_controls']}!={
             'research/scripts/coastal_four128_runtime.py','research/scripts/coastal_four128_resources.py',
             'research/scripts/coastal_four128_artifact_review.py',LEDGER_RELATIVE}:
@@ -151,6 +168,12 @@ def validate_runtime_review(d,review,*,now,horizon=None):
     if not epoch(review['checked_at'])<=now<horizon<epoch(review['valid_until']):
         raise ValueError('independent runtime review expired')
     return True
+
+def policy_bindings(d,review,grant):
+    """The live index and document 5 carry exactly the grant's (opt-in) support policy."""
+    if review.get('support_policy')!=grant.get('support_policy') or d.get('support_policy')!=grant.get('support_policy'):
+        raise ValueError('runtime review/index support policy differs from the exact grant')
+    return grant.get('support_policy')
 
 def index():
     for root in (N,R,M):
@@ -176,6 +199,7 @@ def index():
     if grant['output_root']!=str(N) or grant['output_retention']['profile']!='coastal-managed-output-32-v3':
         raise ValueError('exact compact cumulative output admission required')
     review=metadata_document(R,d['independent_runtime_review'],'coastal-four128-independent-prelaunch-v1')
+    policy_bindings(d,review,grant)
     review_now=time.time()
     review_horizon=load(R,prepref())['deadline_epoch'] if (R/'metadata/live-preparation.json').exists() else review_now+3600
     validate_runtime_review(d,review,now=review_now,horizon=review_horizon)

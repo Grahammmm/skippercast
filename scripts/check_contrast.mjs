@@ -374,12 +374,12 @@ export function boundSurfaceContrast(request = {}) {
 export const SURFACE_SOURCE_SHA256 = {
   "panelCss": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  "tokensCss": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
+  "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
-  "appCss": "ea303c149ebac5db09e346fa3ba0915b10a3a24fdc41ccbaa4fecc9e82333a8b",
+  "appCss": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
   // CI6-18 adds a Stations row using the existing text/muted glass roles.
   // No backing, text paint or threshold changed; swatches/controls remain excluded.
-  "legendTsx": "61ab7e3051ea628e06606f139eece6d213d92b06fa3e96248ce8cbd73c351d01"
+  "legendTsx": "77fb9d8fd18dac77937dc61aa19b0c86fbe1ac5fba0a4c40b088235e565f8389"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -400,8 +400,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,157,186,202; Legend.tsx:270'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:157,168,215; Legend.tsx:77,172,270'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,157,188,205; Legend.tsx:322'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:157,168,220; Legend.tsx:85,203,322'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

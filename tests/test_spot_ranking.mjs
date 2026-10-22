@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {bestSpots,evidenceConfidence,waypointTitle} from '../dist/spot-ranking.js';
+import {bestSpots as checkedBestSpots,evidenceConfidence,waypointTitle} from '../dist/spot-ranking.js';
+// These tests cover the other filters: every spot is water here (the land/water check: test_land_water.mjs).
+const bestSpots=(atlas,screen,options={})=>checkedBestSpots(atlas,screen,{place:()=>({state:'water'}),...options});
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {buildExport,readDraft,offlineNotes} from '../dist/trip-export.js';
 import {gzipSync} from 'node:zlib';

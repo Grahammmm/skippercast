@@ -48,8 +48,8 @@ requires preserving them; the replay receipt confers no execution authority.
 ## One future-rerun config, not another Python version
 
 A future run needs a separately reviewed JSON config and a newly admitted task.
-No runnable live config is shipped here: the existing signed v6 allowance and
-old tags belong to already-run missions and must not be reused.
+No runnable live config is shipped here: signed allowances and old tags that
+belong to already-run missions must not be reused.
 
 Use the historical config structure as the field reference, with these changes:
 
@@ -81,6 +81,19 @@ Use the historical config structure as the field reference, with these changes:
 - `issuance_receipt`, `assembly_receipt`: distinct, absent receipt paths outside
   the mission and staging roots; `window_scope_change`: reviewed context rationale.
 
+Before requesting config review, authors must run a read-only, source-free dry
+validation on a temporary metadata copy of the candidate evidence role documents:
+build all four packets with `packet_release.canonical_packet`, then require
+`validate_acquisition_package` to return `PASS_METADATA_ONLY` for every packet in
+both held and prospective-released mode (toggle execution flags only in copies).
+Check the rights document's source-specific bindings, including `product_title`
+against each template's `source_row.title`, and retain the validation output with
+the exact candidate/config hashes for review. Run
+`tests/contract/test_four128_candidate_documents.py` as the fixture regression;
+passing fixtures alone does not validate a live candidate. No prepare, issue,
+assemble, native source/cache read, network request, or unit launch is part of
+this dry check, and a metadata PASS is not scientific or execution acceptance.
+
 The reviewer records the SHA256 of the completed config in the task. Both
 commands require that exact pin; it is a binding check, not a substitute for
 independent review or budget authority:
@@ -94,7 +107,12 @@ python -B research/scripts/coastal_four128_admission.py assemble \
 
 Issuance invokes the existing metadata-only prepare CLI into an absent staging
 root, checks accounting/geometry/identities/evidence and runs the runtime review
-validator before writing the issuance files. Assembly verifies the issuance
+validator before writing the issuance files. If prepare fails, issuance prints
+its stderr and final stdout line, exits 1 without retry, and preserves the stage.
+A diagnostic `ISSUANCE_FAILED_STAGE_PRESERVED` receipt is exclusively created at
+`<issuance_receipt>.failed.json`; the successful issuance path remains absent,
+so assembly cannot mistake the diagnostic for issuance authority. Existing
+failure receipts are never overwritten. Assembly verifies the issuance
 config binding and controls, checks the pinned historical context, creates the
 absent managed mission and writes staging metadata verbatim through
 `ManagedOutputs`. It then runs the real runtime `preflight` CLI. It never calls
@@ -133,12 +151,64 @@ For another failed/completed run or charged metadata read:
 4. Reissue document 5 against the new ledger/control hashes. Old doc5e/f/g
    configs remain replay-only and never acquire new authority.
 
+## Opt-in partial support (SC-5b)
+
+Strict remains the default: a config without `support_policy` admits only
+`ordered_trial.LARGER_WINDOWS`/`LARGER_BOUNDS` with the strict science status,
+and every historical config, replay byte and refusal is unchanged.
+
+A live config may add `"support_policy": "coastal-contained-partial-support-v1"`
+(the only accepted value; `profiles.PARTIAL_SUPPORT`). Then:
+
+- `windows`/`bounds` must equal `ordered_trial.scope_windows(...)` for that policy,
+  i.e. the pinned `PARTIAL_WINDOWS` and `PARTIAL_BOUNDS`. A config cannot name
+  other geometry; prepare takes geometry only from the same shared pin.
+- `issue` calls prepare with `--support-policy <policy>`. The grant, prospective
+  index and package carry `support_policy`; `prepare_inputs` refuses any
+  mismatch with the config. Packets inherit it through `packet_release`.
+- Documents 1–4 must each carry the same `support_policy`; document 4 must use
+  status `PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_PARTIAL_POLICY`. The runtime's
+  `validate_science` accepts that status only for a partial grant with the
+  pinned windows, and the strict status only for a strict grant.
+- `inputs.selection` is the ONE-open mask-topology receipt (below) and
+  `inputs.prescan_review` its independent review, both `{path, bytes, sha256}`.
+  Issuance recomputes the receipt from its row runs, requires the
+  `--require-holes` intent, a different-model/profile reviewer, the same
+  topology script bytes and a receipt `code_head` that is an ancestor of `head`.
+  Every document's `prescan_evidence` must cite that receipt.
+- Document 5 and the live index gain `support_policy` and
+  `mask_topology_prescan`; the runtime refuses a partial review without a
+  reviewed `require_holes_met` pre-scan, and `index()` binds both to the grant.
+
+### Mask-topology pre-scan (`coastal_four128_mask_topology.py`)
+
+`plan` is source-free: it binds the signed amendment's raw bytes to the charge
+ledger head, requires exactly one precharged pre-scan open (revision 7:
+`sc5_geometry_prescan_charged_bytes` 36,757,568 B inside the prior, eight run
+admissions in the fresh allowance), a 1 MiB receipt reservation, an absent
+`outputs/sc5-partial-20261020p1-prescan`, and prints the bounded `systemd-run`
+command. `scan` is the single charged open, run only by the admitted pre-scan
+card from the clean reviewed head inside that unit: one rasterio/GDAL BAG open,
+two masked band reads per pinned window, no re-hash, metadata pass, retry,
+search or relocation. It records unsupported cells as row runs and 4- and
+8-neighbour components tagged enclosed or border-connected. `verify`
+recomputes everything from the runs. The `--require-holes` intent is fixed in
+code before observation: every window has at least one unsupported cell and
+8,192 supported cells, and at least one window has an enclosed 4-neighbour
+unsupported region. A count of mask-invalid cells is not proof of a hole.
+If the gate fails, the receipt is preserved and the plan stops; there is no
+replacement window or second open. A met gate is still a machine observation
+that needs independent review, not scientific acceptance.
+
 ## Verification and limitations
 
 ```sh
 PYTHONPATH=src:. PYTHONDONTWRITEBYTECODE=1 python -B -m pytest \
   tests/unit/test_coastal_four128_admission.py \
+  tests/contract/test_four128_candidate_documents.py \
   tests/unit/test_coastal_four128_budget.py \
+  tests/unit/test_coastal_four128_mask_topology.py \
+  tests/gis/test_coastal_four128_mask_topology_scan.py \
   tests/unit/test_coastal_four128_home_paths.py \
   tests/contract/test_research_boundary.py tests/contract/test_test_layout.py
 ```
