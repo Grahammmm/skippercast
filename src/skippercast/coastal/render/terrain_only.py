@@ -252,8 +252,11 @@ def render_terrain(mesh,path,style):
     vertices,faces = mesh['vertices'],mesh['faces']
     projected, _basis = camera_projection(vertices, style['vertical_exaggeration'])
     span = np.ptp(projected[:,:2],axis=0)
-    scale = min(570/max(span[0],1e-9),280/max(span[1],1e-9))
-    screen = np.c_[320+projected[:,0]*scale,200-projected[:,1]*scale]
+    deep_datum = mesh['vertical'].get('deep_datum')
+    # Reserve a clear header band: outlier paint must not erase datum warnings.
+    plot_height, center_y = (250, 215) if deep_datum else (280, 200)
+    scale = min(570/max(span[0],1e-9),plot_height/max(span[1],1e-9))
+    screen = np.c_[320+projected[:,0]*scale,center_y-projected[:,1]*scale]
     zbuffer = np.full((HEIGHT,WIDTH),-np.inf)
     depths = np.full((HEIGHT,WIDTH),np.nan)
     slopes = np.full((HEIGHT,WIDTH),np.nan)
@@ -394,6 +397,9 @@ def render_terrain(mesh,path,style):
         (441,f'CONTOURS ABSOLUTE {interval*factor:.1f} {style["display_units"]}'),
         (453,'TRIANGLES INTERPOLATE SUPPORTED SAMPLES ONLY - ADD NO MEASUREMENT'),
         (465,'WEBSITE HELD - NO IMAGERY - NO SOURCE ACCESS')]
+    if deep_datum:
+        legend_rows.extend([(57,'NOT FOR NAVIGATION - DATUM OFFSET UNBOUNDED'),
+                            (70,deep_datum['note'])])
     image_legends = []
     for y,label in legend_rows:
         width = 616 if y < 60 else 524
@@ -473,7 +479,9 @@ def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_unti
         uncertainty_kind=document.get('uncertainty_kind','unavailable'),**rendered,
         artifacts=[dict(path=(out.relative_to(base)/name).as_posix(),**{k:v for k,v in ref(stage,name,contract,cap=MAX_FILE_BYTES).items() if k!='path'})
                    for name,contract in (('terrain-mesh.npz','coastal-terrain-only-mesh-v1'),('preview.png','coastal-terrain-only-png-v1'))],
-        limitations=document['limitations']+['Derived-only diagnostic; no original-source verification performed.',
+        limitations=document['limitations']+([
+            'NOT FOR NAVIGATION - datum offset unbounded. ' + mesh['vertical']['deep_datum']['note']
+        ] if mesh['vertical'].get('deep_datum') else [])+['Derived-only diagnostic; no original-source verification performed.',
             'Scientific review is an independent attestation, not cryptographic authority proof.',
             'Fixed orthographic camera; visual triangles are not additional measurements.',
             'Color tails remain orange/pink; contours and mesh depths retain absolute metres.',

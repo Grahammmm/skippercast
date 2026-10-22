@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Internal terrain-only previews retain the deep-datum NOT FOR NAVIGATION warning and the source datum/tide caveat in both the PNG and receipt; publication remains prohibited.
+
 - The Swell layer's selector switches between the primary swell, wind sea and secondary swell from the NOAA GFS-Wave wcoast.0p16 forecast, each drawn with height in feet, period and direction and named with its run time; the nearshore (CDIP MOP) rings are unchanged.
 - Chlorophyll feed limitations identify the current NOAA merged VIIRS product and its native grid spacing instead of the historical MODIS description; cloud gaps and freshness limits are unchanged.
 - Place a named waypoint on the Chart with a reef, wreck, bait, hazard or other category; save it in the browser’s region draft and export the category in GPX. User labels do not qualify habitat or depth, and current protected-area checks still apply.
