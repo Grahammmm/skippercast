@@ -223,7 +223,9 @@ class PublicationTests(unittest.TestCase):
                     'source_id': 'native', 'band_area_m2': 62500}
             ref = root/'var/seafloor/reference/cells.json'
             atomic_json(ref, {'cells': [cell]})
-            atomic_json(root/'catalog/surveys.json', {'surveys': []})
+            from tests.contract.test_seafloor_manifest import ROWS
+            native = dict(next(r for r in ROWS if r['status'] == 'usable'), id='native')
+            atomic_json(root/'catalog/surveys.json', {'surveys': [native]})
             atomic_json(root/'catalog/habitat-rules.json', {'rule_version': 'test'})
             atomic_json(root/'dist/data/seafloor-ledger.json', {
                 'reference_cells_sha256': sha256(ref), 'reaches': [

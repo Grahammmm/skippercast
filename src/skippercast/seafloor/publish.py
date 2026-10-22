@@ -40,6 +40,16 @@ def flat_properties(properties):
     return result
 
 
+def coverage_rights(properties, sources, *, use):
+    """Only unmeasured reference cells may lack a survey contributor."""
+    ident = properties.get('source_id', 'unknown')
+    if ident == 'unknown' and properties['tier'] == 0:
+        return []
+    if not isinstance(ident, str) or not ident or ident == 'unknown':
+        raise ValueError('Measured coverage source attribution is incomplete')
+    return feature_rights([ident], sources, use=use)
+
+
 def region_layers(root, region, *, rerun=True, now=None):
     root = Path(root)
     scope = processing_scope(root)
@@ -212,6 +222,12 @@ def region_layers(root, region, *, rerun=True, now=None):
                      'source_id': c.get('source_id', 'unknown'), 'reference_band': 'provisional',
                      'band_area_m2': c['band_area_m2'], 'planning_notice': NOTICE}}
                 for c in sorted(cells.values(), key=lambda c: c['id'])]
+    if sources is None:
+        sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
+    use = deployment_use(root)
+    for feature in features:
+        p = feature['properties']
+        p['source_rights'] = json.dumps(coverage_rights(p, sources, use=use), sort_keys=True)
     expires = min((datetime.fromisoformat(s.replace('Z', '+00:00'))+timedelta(days=35)
                    for s in dates), default=now or datetime.now(timezone.utc))
     return {'cells': features, 'habitat': habitat}, receipts, expires
@@ -233,7 +249,13 @@ def build(region, *, root=REPO, tool=None, now=None):
                          for key, value in receipts.items()}} if source_scope is not None else {})
     folder = root/'var/seafloor/public'/region
     archive = folder/f'seafloor-{region}.pmtiles'
-    credits = sorted({r['attribution'] for f in layers['habitat']
+    sources = {s['id']: s for s in read_json(root/'catalog/surveys.json')['surveys']}
+    use = deployment_use(root)
+    # Revalidate at the archive boundary too; never trust cached cell terms.
+    for feature in layers['cells']:
+        p = feature['properties']
+        p['source_rights'] = json.dumps(coverage_rights(p, sources, use=use), sort_keys=True)
+    credits = sorted({r['attribution'] for features in layers.values() for f in features
                       for r in json.loads(f['properties'].get('source_rights', '[]'))})
     build_vector_archive(tool, layers, archive, title=f'SkipperCast seafloor — {region}',
         attribution='; '.join(credits + ['CDFW / NOAA / eCFR spatial restrictions; SkipperCast']),
