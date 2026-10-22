@@ -17,6 +17,7 @@ from skippercast.platform.contracts import REPO, atomic_json, read_json
 from .coverage import cell_geometry
 from .io import sha256
 from .run import run
+from .physical_identity import current_physical_input_hash
 from .rights import feature_rights, deployment_use
 from .screen import input_identity, load_snapshot
 from .search_areas import published_contract
@@ -72,6 +73,12 @@ def region_layers(root, region, *, rerun=True, now=None):
                     or checkpoint.get('rules_sha256') != sha256(root/'catalog/habitat-rules.json')
                     or checkpoint.get('reference_sha256') != sha256(reference)):
                 raise ValueError('Coverage checkpoint inputs changed; rerun required')
+            try:
+                physical_hash = current_physical_input_hash(root, ident)
+            except (OSError, KeyError, TypeError, ValueError) as error:
+                raise ValueError('Coverage checkpoint inputs changed or unavailable; rerun required') from error
+            if checkpoint.get('physical_input_hash') != physical_hash:
+                raise ValueError('Coverage checkpoint physical inputs changed; rerun required')
             if sha256(folder/'coverage-cells.json') != checkpoint['cells_sha256']:
                 raise ValueError('Coverage checkpoint checksum mismatch')
             if source_scope is not None:

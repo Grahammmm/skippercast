@@ -60,7 +60,8 @@ def missing_gis_packages():
 
 
 def is_gis_path(path):
-    return 'gis' in Path(path).parts
+    # Retain the auditor's literal repro paths; this layer imports survey code.
+    return bool({'gis', 'audit_repro'} & set(Path(path).parts))
 
 
 def ignore_gis_directory(collection_path):
@@ -73,7 +74,7 @@ def ignore_gis_directory(collection_path):
     if os.environ.get(REQUIRE_GIS) == '1':
         return False
     path = Path(collection_path)
-    return path.is_dir() and path.name == 'gis' and bool(missing_gis_packages())
+    return path.is_dir() and path.name in {'gis', 'audit_repro'} and bool(missing_gis_packages())
 
 
 def mark_items(items, base, claims=False):

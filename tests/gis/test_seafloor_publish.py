@@ -232,11 +232,13 @@ class PublicationTests(unittest.TestCase):
             atomic_json(folder/'coverage-cells.json', {'cells': [cell]})
             atomic_json(folder/'habitat.geojson', {'features': [{'stale': 'must never publish'}]})
             atomic_json(folder/'coverage-checkpoint.json', {
+                'physical_input_hash': 'current-test-identity',
                 'catalog_sha256': sha256(root/'catalog/surveys.json'),
                 'rules_sha256': sha256(root/'catalog/habitat-rules.json'),
                 'reference_sha256': sha256(ref),
                 'cells_sha256': sha256(folder/'coverage-cells.json')})
-            with patch.object(publish, 'run') as rerun:
+            with patch.object(publish, 'run') as rerun, \
+                 patch.object(publish, 'current_physical_input_hash', return_value='current-test-identity'):
                 layers, receipts, _ = publish.region_layers(root, 'morro-bay')
                 self.assertEqual(layers['habitat'], [])
                 self.assertEqual(layers['cells'][0]['properties']['tier'], 1)

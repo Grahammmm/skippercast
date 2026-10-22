@@ -265,6 +265,12 @@ class ReachRunTests(unittest.TestCase):
             checkpoint = json.loads((root/'var/seafloor/reaches/fixture-r01/coverage-checkpoint.json').read_text())
             self.assertEqual(checkpoint['ledger_summary']['tier1_km2'], .05)
             self.assertEqual(checkpoint['ledger_summary']['tier2_km2'], 0)
+            from skippercast.seafloor.physical_identity import current_physical_input_hash
+            self.assertEqual(current_physical_input_hash(root, 'fixture-r01'), checkpoint['physical_input_hash'])
+            requirements = root/'requirements-survey.txt'
+            requirements.write_text('changed dependency identity')
+            self.assertNotEqual(current_physical_input_hash(root, 'fixture-r01'), checkpoint['physical_input_hash'])
+            requirements.write_text('fixture')
             output=root/'var/seafloor/reaches/fixture-r01/cells.json'
             saved=output.read_bytes(); output.write_text('corrupt')
             with self.assertRaisesRegex(ValueError,'hash verification'):

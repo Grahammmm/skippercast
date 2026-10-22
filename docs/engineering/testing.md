@@ -39,6 +39,7 @@ Layers are directories. `tests/conftest.py` and `research/tests/conftest.py` add
 | Contract | `tests/contract/` | | Checks over committed files: schemas, regions, catalogs, jurisdictions, commercial-source register, workflow action pins, receipt manifest, package extras, versions, the research boundary, this layout | `check` and `survey-science` |
 | Integration | `tests/integration/` | | Pipelines run end to end on fixtures in a temporary directory: live loop, region refresh and run manifests, branch/R2 publishers, habitat publication | `check` and `survey-science` |
 | GIS | `tests/gis/` | `gis` | Product code needing the pinned scientific/GIS stack (numpy, rasterio, shapely, pyproj, …): seafloor, forecast tiles, NOAA gridded feeds, region previews | `survey-science` only |
+| Audit repros (GIS) | `tests/audit_repro/` | `gis` | Retained original audit regressions; literal auditor paths are preserved, with the same missing-GIS collection gate | `survey-science` only |
 | Claims | `research/tests/` | `claims` | Pins of statements to committed research receipts and outputs, and tests of research scripts ([research/tests/README.md](../../research/tests/README.md)) | `check` and `survey-science` |
 | Claims (GIS) | `research/tests/gis/` | `claims`, `gis` | The same, for research needing the survey stack | `survey-science` only |
 
