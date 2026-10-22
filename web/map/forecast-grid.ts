@@ -21,9 +21,18 @@
 // Erasable syntax only: tests/test_swell_layer.mjs imports it by type stripping.
 import {surfaceField, type FieldPoint} from './surface-field.js';
 
-export const WAVE_MODEL = {id: 'ncep_gfswave016', name: 'NOAA GFS-Wave', resolution: '0.16°'} as const;
-/** The primary swell partition's hourly variables and units (v1's readConditions `swell`). */
-export const SWELL_VARS = {height: ['swell_wave_height', 'ft'], period: ['swell_wave_period', 's'], from: ['swell_wave_direction', '°']} as const;
+export const WAVE_MODEL = {id: 'ncep_gfswave016', name: 'NOAA GFS-Wave', grid: 'wcoast.0p16'} as const;
+/**
+ * The three partitions the Swell selector shows, each with its hourly variables and units (v1's
+ * readConditions `swell`, plus GFS-Wave's wind-sea and second swell partitions). All heights come
+ * in feet (the feed asks `length_unit=imperial`), periods in seconds and directions in degrees.
+ */
+export const SWELL_PARTITIONS = {
+  primary: {height: ['swell_wave_height', 'ft'], period: ['swell_wave_period', 's'], from: ['swell_wave_direction', '°']},
+  wind: {height: ['wind_wave_height', 'ft'], period: ['wind_wave_period', 's'], from: ['wind_wave_direction', '°']},
+  secondary: {height: ['secondary_swell_wave_height', 'ft'], period: ['secondary_swell_wave_period', 's'], from: ['secondary_swell_wave_direction', '°']},
+} as const;
+export type SwellPartition = keyof typeof SWELL_PARTITIONS;
 
 type Series = {hourly?: Record<string, unknown>; hourly_units?: Record<string, unknown>; utc_offset_seconds?: unknown};
 export interface GridPoint {readonly id: string; readonly lat: number; readonly lon: number; /** The point's series in the model's `data`. */ readonly index: number}
@@ -77,13 +86,14 @@ export function parseForecast(json: unknown, region: string, modelId: string = W
   return {region, retrieved: f.retrieved, lattice: step ? lattice : [], step: step ? [step[0], step[1]] : null, model};
 }
 
-/** The grid's primary swell at `epoch` (seconds): [height ft, period s, sin and cos of the from-direction] where all three answer. */
-export function swellPoints(f: WaveForecast, epoch: number): FieldPoint[] {
+/** The grid's swell at `epoch` (seconds) for `partition`: [height ft, period s, sin and cos of the from-direction] where all three answer. */
+export function swellPoints(f: WaveForecast, epoch: number, partition: SwellPartition = 'primary'): FieldPoint[] {
   if (!f.model) return [];
+  const vars = SWELL_PARTITIONS[partition];
   const meta = {data_end_time: f.model.end}, out: FieldPoint[] = [];
   for (const p of f.lattice) {
     const at = (v: readonly [string, string]): number | null => sample(f.model!.data[p.index], v[0], epoch, v[1], meta);
-    const height = at(SWELL_VARS.height), period = at(SWELL_VARS.period), from = at(SWELL_VARS.from);
+    const height = at(vars.height), period = at(vars.period), from = at(vars.from);
     if (height === null || period === null || from === null) continue;
     const r = from * Math.PI / 180;
     out.push({lon: p.lon, lat: p.lat, values: [height, period, Math.sin(r), Math.cos(r)]});

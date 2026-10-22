@@ -58,8 +58,10 @@ import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
+import {chlorophyllState} from '../map/chlorophyll.ts';
+import {PALETTE_TOKENS} from '../map/palette.ts';
 import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
-import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
+import {HEIGHT_SCALE, frameSummary, nearshoreState, swellPartition, swellState} from '../map/swell.ts';
 import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {stationState} from '../map/stations.ts';
@@ -151,7 +153,19 @@ function CurrentsRow() {
   );
 }
 
-/** The Water temp row (on the Chart): the drawn analysis's range, product and age, or why nothing draws. */
+/** The observed native cells, logarithmic scale and original sample date. */
+function ChlorophyllRow() {
+  const s = chlorophyllState.value, entry = layerEntry('chlorophyll');
+  return <li>Chlorophyll
+    <Popover iconOnly summary="Chlorophyll basis">{s.basis}</Popover>
+    {s.drawn ? <p class="app-legend-note">Log scale: {entry.legend.map(row => <span key={row.label}>
+      <span class="app-swatch" style={{background: `var(--${PALETTE_TOKENS[row.swatch!]})`}} aria-hidden="true"></span>{row.label}{' '}
+    </span>)}</p> : null}
+    <p class="app-legend-note ui-mono" data-stamp="chlorophyll">{s.note}</p>
+    <p class="app-legend-note">{entry.attribution}</p>
+  </li>;
+}
+
 function WaterTempRow() {
   const s = waterTempState.value, a = s.drawn;
   return (
@@ -197,6 +211,8 @@ function SwellRow() {
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}Swell
       <Popover iconOnly summary="Swell basis">{s.basis}{r ? <> {ringBasis(r.product)}</> : null}</Popover>
+      <Segmented label="Swell" value={swellPartition.value} onChange={v => { swellPartition.value = v; }}
+        options={[{value: 'primary', label: 'Primary swell'}, {value: 'wind', label: 'Wind sea'}, {value: 'secondary', label: 'Secondary swell'}]} />
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell">{frameSummary(f)}</p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
@@ -335,7 +351,7 @@ export function Legend() {
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
           : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
-          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} />
+          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
           : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : e.id === 'stations' ? <StationsRow key={e.id} />

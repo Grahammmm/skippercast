@@ -1,0 +1,1 @@
+{"edge_step_must_m":10,"edge_step_should_m":2,"history":[{"reason":"Rev4 defaults; changes require measured review, not per-run tuning","version":1}],"mask_continuity_min":0.8,"tier1_edge_valid_min":0.5,"tier1_slope_p99_max_deg":60,"tier1_valid_fraction_min":0.5,"version":1}

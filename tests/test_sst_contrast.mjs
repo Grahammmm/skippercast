@@ -183,7 +183,8 @@ test('the basis names product, grid and age, the support rule and what the field
   assert.match(e.legend[0].label, /°F per nautical mile/);
   const ids = LAYERS.map(l => l.id);
   assert.equal(ids.indexOf('sst-contrast'), ids.indexOf('water-temp-contours') + 1, '§ 9: above Water temp, under Swell');
-  assert.equal(ids.indexOf('swell'), ids.indexOf('sst-contrast') + 1);
+  assert.equal(ids.indexOf('chlorophyll'), ids.indexOf('sst-contrast') + 1);
+  assert.equal(ids.indexOf('swell'), ids.indexOf('chlorophyll') + 1);
   assert.ok(RAIL_IDS.includes('sst-contrast'));
   for (const p of Object.values(PROFILE_TABLE)) assert.ok(!p.defaultLayers.includes('sst-contrast'), `off by default for ${p.id}`);
 });
