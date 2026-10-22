@@ -18,6 +18,7 @@ import type {RailId} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
+import {STATION_BASIS} from './station-model.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
 export type LayerPresentation = 'chart' | 'terrain';
@@ -174,6 +175,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
     legend: [{label: 'Ranked trip spot; number: the planner\'s order', swatch: 'mint'}],
     basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks\' run-time screen are current.', task: 'FE-51'}),
+  entry({id: 'stations', label: 'Stations', control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
+    legend: [{label: 'Buoy observation', swatch: 'blue'}, {label: 'Tide prediction', swatch: 'mint'}, {label: 'Stale or unavailable', swatch: 'muted'}, {label: 'CDIP MOP model site: ring', swatch: 'blue'}],
+    attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: STATION_BASIS, task: 'CI6-18'}),
   entry({id: 'coastline', label: 'Coastline', control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.', task: 'FE-11'}),
 ]);
