@@ -7,11 +7,63 @@ import unittest
 from unittest.mock import patch
 
 from skippercast.pipeline.habitat_dynamics import (
-    frame_for_time, gradients, publish_tiles, species_support, _copy_previous_tiles, _cleanup_tiles, satellite, run,
+    frame_for_time, gradients, publish_tiles, species_support, _copy_previous_tiles, _cleanup_tiles, _satellite_layer, satellite, run,
 )
 
 
 class HabitatDynamicsTests(unittest.TestCase):
+    def test_chlorophyll_limitations_match_reviewed_viirs_source(self):
+        from skippercast.platform.contracts import load_catalogs
+        _, catalog = load_catalogs()
+        cfg = catalog["noaa-viirs-merged-chlorophyll"]
+        self.assertEqual(cfg["adapter"], "noaa-ncss-chlorophyll")
+        self.assertEqual(cfg["max_age_hours"], 96)
+        self.assertEqual(cfg["request"]["max_age_hours"], 96)
+        dataset = cfg["request"]["dataset"] + "/V2026290_D1_NPP-N20_WW00_chloci.nc"
+        layer = _satellite_layer({(35, -121): {"chlorophyll": .5}}, [.0375, .0375],
+                                 {"2026-10-17T12:00:00Z"}, cfg["documentation_url"], dataset,
+                                 {"attrs": {"NC_GLOBAL": {"license": "fixture"}}},
+                                 "chlorophyll", [-121.1, 34.9, -120.8, 35.1])
+        self.assertIn("NOAA NPP/NOAA-20 merged VIIRS OCI", layer["limitations"])
+        self.assertIn("0.0375° latitude by 0.0375° longitude grid spacing", layer["limitations"])
+        self.assertIn("clouds and failed retrievals remain gaps", layer["limitations"])
+        self.assertIn("not bait biomass or immediate feeding activity", layer["limitations"])
+        self.assertNotIn("MODIS", layer["limitations"])
+        self.assertNotIn("4.6 km", layer["limitations"])
+
+    def test_other_chlorophyll_sources_do_not_claim_viirs_identity_or_spacing(self):
+        layer = _satellite_layer({}, [.04167, .04167], {"2026-10-17T12:00:00Z"},
+                                 "https://example.test/index.json", "erdMH1chla1day_R2022NRT",
+                                 {"attrs": {"NC_GLOBAL": {"license": "fixture"}}},
+                                 "chlorophyll", [-121.1, 34.9, -120.8, 35.1])
+        self.assertIn("Daily satellite ocean-color observation", layer["limitations"])
+        self.assertIn("0.04167° latitude by 0.04167° longitude grid spacing", layer["limitations"])
+        self.assertNotIn("VIIRS", layer["limitations"])
+        self.assertNotIn("0.0375", layer["limitations"])
+
+    def test_chlorophyll_native_tiles_and_cloud_gaps(self):
+        samples = {(35, -121): {"chlorophyll": 0.5},
+                   (35, -120.9625): {"chlorophyll": None},
+                   (35, -120.925): {"chlorophyll": 2}}
+        layer = _satellite_layer(samples, [.0375, .0375], {"2026-10-17T12:00:00Z"},
+                                 "https://example.test/index.json", "synthetic-viirs",
+                                 {"attrs": {"NC_GLOBAL": {"license": "fixture"}}},
+                                 "chlorophyll", [-121.1, 34.9, -120.8, 35.1])
+        layer.update(id="chlorophyll-observation", max_age_hours=96)
+        with tempfile.TemporaryDirectory() as root:
+            manifest = publish_tiles(layer, Path(root), "test-coast")
+            self.assertEqual(manifest["resolution_degrees"], [.0375, .0375])
+            self.assertEqual(manifest["sample_at"], "2026-10-17T12:00:00Z")
+            self.assertEqual(manifest["max_age_hours"], 96)
+            cells = []
+            for tile in manifest["tiles"]:
+                data = (Path(root)/tile["path"]).read_bytes()
+                self.assertEqual(hashlib.sha256(data).hexdigest(), tile["sha256"])
+                cells.extend(json.loads(data)["frames"][0]["cells"])
+            self.assertEqual(cells, [[35, -121, .5], [35, -120.925, 2]])
+            layer["frames"][0].update(cells=[], valid_cells=0)
+            self.assertEqual(publish_tiles(layer, Path(root), "test-coast")["tiles"], [])
+
     def layer(self, kind="forecast"):
         return {"id": "test", "kind": kind, "status": "ok", "issued_at": "2026-09-22T03:00:00Z",
                 "max_age_hours": 36, "frames": [{"time": 1790042400, "valid_cells": 1}, {"time": 1790053200, "valid_cells": 1}]}

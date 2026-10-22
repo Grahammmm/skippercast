@@ -1,0 +1,616 @@
+{
+  "schema_version": 1,
+  "id": "outer-islands-borderland",
+  "name": "Outer islands and Borderland",
+  "status": "draft",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California \u00b7 Southern Groundfish Management Area",
+  "bounds": [
+    -119.7,
+    32.75,
+    -118.25,
+    33.6
+  ],
+  "fishing_bounds": [
+    -119.7,
+    32.75,
+    -118.25,
+    33.6
+  ],
+  "map": {
+    "center": [
+      33.175,
+      -118.975
+    ],
+    "zoom": 9,
+    "focus_areas": [
+      {
+        "id": "santa-barbara-island",
+        "name": "Santa Barbara Island",
+        "bounds": [
+          -119.11,
+          33.43,
+          -118.97,
+          33.53
+        ],
+        "forecast_point": "santa-barbara-island"
+      },
+      {
+        "id": "catalina",
+        "name": "Santa Catalina",
+        "bounds": [
+          -118.68,
+          33.26,
+          -118.23,
+          33.52
+        ],
+        "forecast_point": "catalina"
+      },
+      {
+        "id": "san-nicolas",
+        "name": "San Nicolas Island",
+        "bounds": [
+          -119.65,
+          33.13,
+          -119.25,
+          33.42
+        ],
+        "forecast_point": "san-nicolas"
+      },
+      {
+        "id": "san-clemente",
+        "name": "San Clemente Island",
+        "bounds": [
+          -118.75,
+          32.65,
+          -118.2,
+          33.13
+        ],
+        "forecast_point": "san-clemente"
+      }
+    ],
+    "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
+    "region_notice_ids": [
+      "health"
+    ],
+    "unavailable_targets": {
+      "dungeness": "Dungeness is not a promoted Southern California target. Crab traps and snares are prohibited south of Point Arguello; this is not a blanket prohibition on every method of crab collection. See official CDFW invertebrate rules.",
+      "salmon": "Salmon is not in this region\u2019s researched target list. That is not a closed-season determination; check the official CDFW salmon rules."
+    },
+    "local_areas": [
+      {
+        "id": "santa-barbara-island",
+        "name": "Santa Barbara Island",
+        "bounds": [
+          -119.11,
+          33.43,
+          -118.97,
+          33.53
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "catalina",
+        "name": "Santa Catalina",
+        "bounds": [
+          -118.68,
+          33.26,
+          -118.23,
+          33.52
+        ],
+        "notice_ids": [
+          "catalina"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "san-clemente",
+        "name": "San Clemente Island",
+        "bounds": [
+          -118.75,
+          32.65,
+          -118.2,
+          33.13
+        ],
+        "notice_ids": [
+          "san-clemente"
+        ]
+      },
+      {
+        "id": "san-nicolas",
+        "name": "San Nicolas Island",
+        "bounds": [
+          -119.65,
+          33.13,
+          -119.25,
+          33.42
+        ],
+        "notice_ids": [
+          "san-nicolas"
+        ]
+      }
+    ],
+    "discovery_bounds": [
+      -119.7,
+      32.75,
+      -118.25,
+      33.6
+    ],
+    "unavailable_target_sources": {
+      "dungeness": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "salmon": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern"
+    }
+  },
+  "harbor": {
+    "name": "Long Beach / San Pedro (reference)",
+    "latitude": 33.77,
+    "longitude": -118.26,
+    "entrance_note": "Choose your actual departure harbor; this is a regional reference. No route or entrance clearance is implied.",
+    "information_url": "https://dbw.parks.ca.gov/BoatingFacilities/",
+    "watch_keywords": [
+      "Boating Facility",
+      "California State Parks"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "catalina",
+      "name": "Santa Catalina Island",
+      "latitude": 33.36,
+      "longitude": -118.42,
+      "context": "los-angeles"
+    },
+    {
+      "id": "santa-barbara-island",
+      "name": "Santa Barbara Island",
+      "latitude": 33.48,
+      "longitude": -119.08,
+      "context": "outer-islands"
+    },
+    {
+      "id": "san-nicolas",
+      "name": "San Nicolas Island offshore sample",
+      "latitude": 33.3,
+      "longitude": -119.45,
+      "context": "outer-islands",
+      "offshore": true
+    },
+    {
+      "id": "san-clemente",
+      "name": "San Clemente Island west offshore sample",
+      "latitude": 32.9,
+      "longitude": -118.7,
+      "context": "outer-islands",
+      "offshore": true
+    },
+    {
+      "id": "offshore-central",
+      "name": "Catalina / San Clemente channel",
+      "latitude": 33.1,
+      "longitude": -119.0,
+      "context": "los-angeles",
+      "offshore": true
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ655",
+    "offshore": "PZZ676"
+  },
+  "stations": {
+    "tide": "9410660",
+    "tide_name": "Los Angeles",
+    "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+    "airport": "KLAX",
+    "airport_name": "Los Angeles airport",
+    "nearshore_buoy": "46221",
+    "nearshore_buoy_name": "Santa Monica Bay",
+    "offshore_buoy": "46025",
+    "offshore_buoy_name": "Santa Monica Basin",
+    "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+    "roles": {
+      "tide": {
+        "stations": [
+          "9410660",
+          "9410680"
+        ],
+        "evidence": "catalog/station-failover.json"
+      }
+    }
+  },
+  "mpa": {
+    "bounds": [
+      -119.7,
+      32.75,
+      -118.25,
+      33.6
+    ],
+    "minimum_features": 6
+  },
+  "species": [
+    "kelp-bass",
+    "yellowtail",
+    "halibut",
+    "white-seabass",
+    "sand-bass",
+    "spotted-bass",
+    "bluefin",
+    "yellowfin",
+    "dorado",
+    "bonito",
+    "barracuda",
+    "sheephead",
+    "whitefish",
+    "lobster",
+    "reef",
+    "albacore"
+  ],
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-cinms-bathymetry-2025",
+      "noaa-bag"
+    ],
+    "substrate": [
+      "noaa-cinms-substrate-2006",
+      "cdfw-artificial-reefs",
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "cdfw-kelp-2016",
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas",
+      "noaa-socal-gea"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "noaa-socal-gea",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "noaa-blended-sst",
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin",
+      "landing-reports"
+    ],
+    "charter-identity": [
+      "fleet-registry"
+    ],
+    "ais-history": [
+      "noaa-ais",
+      "gfw-effort"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "research",
+      "reason": "COAST campaign run segment S6. Native-survey discovery and qualification for this footprint have not run; no depth-qualified footprint is published in this package."
+    },
+    "substrate": {
+      "status": "research",
+      "reason": "Bound regional substrate sources are not yet clipped to this footprint or its native depth masks; no substrate claim is published here."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "CDFW 2016 canopy detections are imported for the southern-california package only; none are published in this package yet."
+    },
+    "protected-areas": {
+      "status": "research",
+      "reason": "No package-specific CDFW DS582 snapshot yet. A bounded snapshot and the NOAA Groundfish Exclusion Areas screen are required before preview."
+    },
+    "regulations": {
+      "status": "partial",
+      "reason": "Southern jurisdiction rules apply, but this footprint is not yet in the reviewed Southern regulation registry. The package stays draft until that hash-bound legal review."
+    },
+    "dynamic-closures": {
+      "status": "partial",
+      "reason": "CDFW in-season, health and gear watches plus NOAA exclusion areas. Navy/security access requires direct local clearance."
+    },
+    "wind-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS and ECMWF IFS at regional sea-grid samples."
+    },
+    "wave-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS Wave and ECMWF WAM at regional sea-grid samples."
+    },
+    "wave-observations": {
+      "status": "partial",
+      "reason": "Reference buoys 46221 Santa Monica Bay, CA (028), 46025 Santa Monica Basin - 33NM WSW of Santa Monica, CA; not continuous nearshore observations of this footprint."
+    },
+    "weather-observations": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "tides": {
+      "status": "ready",
+      "reason": "NOAA reference stations Los Angeles 9410660. These are not local current or drift predictions."
+    },
+    "surface-currents": {
+      "status": "partial",
+      "reason": "Operational HFR observations and WCOFS surface forecasts; local reception holes remain blank and horizon is at most 72 hours."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Promising primary sources identified; regional records, precision and rights still need review."
+    },
+    "sea-temperature": {
+      "status": "partial",
+      "reason": "Native 0.01-degree MUR analysis with dated source errors and masks; NOAA 0.04-degree WCOFS surface-temperature forecasts at actual populated times through at most 72 hours. Neither establishes fish-depth temperature or catch probability."
+    },
+    "chlorophyll": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "charter-identity": {
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "No verified local vessel histories or dwell clusters imported."
+    },
+    "harbor-access": {
+      "status": "partial",
+      "reason": "Reference harbor only. Actual departure harbor, route and entrance clearance remain trip-specific."
+    },
+    "wind-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "wave-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "forecast-verification": {
+      "status": "partial",
+      "reason": "New prospective archive begins with deployment; no backfilled skill or calibrated catch probability."
+    }
+  },
+  "assets": {
+    "atlas": "regions/outer-islands-borderland/atlas.json",
+    "habitats": "regions/outer-islands-borderland/habitats.json",
+    "protected_areas": "regions/outer-islands-borderland/protected-areas.geojson",
+    "regulations": "regions/southern-california/regulations.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/outer-islands-borderland/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/outer-islands-borderland/ecology.json",
+    "search_plans": "regions/outer-islands-borderland/search-plans.json"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/outer-islands-borderland/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/outer-islands-borderland/latest.json",
+  "landing_names": [],
+  "coverage_note": "COAST campaign run segment S6 (draft). Regional conditions sources are bound; no fishing target, qualified depth footprint or habitat claim is published. Unmapped areas and fish presence remain unknown.",
+  "landing_note": "No catch-position dataset has been imported for this footprint; landing totals are not fishing coordinates.",
+  "jurisdiction_id": "california-southern",
+  "pipeline_sources": {
+    "sst": "noaa-blended-sst",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
+    "currents": "noaa-ndbc-hfr-uswc-6km"
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      1,
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46221",
+        "latitude": 33.86,
+        "longitude": -118.641,
+        "name": "Santa Monica Bay, CA (028)",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46221"
+      },
+      {
+        "id": "46025",
+        "latitude": 33.765,
+        "longitude": -119.077,
+        "name": "Santa Monica Basin - 33NM WSW of Santa Monica, CA",
+        "variables": [
+          "wave_height",
+          "wind_speed_10m"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46025",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 3.8
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-southern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/outer-islands-borderland/intelligence.json",
+  "default_forecast_point": "catalina",
+  "contexts": {
+    "los-angeles": {
+      "name": "Los Angeles / Catalina",
+      "stations": {
+        "tide": "9410660",
+        "tide_name": "Los Angeles",
+        "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KLAX",
+        "airport_name": "Los Angeles airport",
+        "nearshore_buoy": "46221",
+        "nearshore_buoy_name": "Santa Monica Bay",
+        "offshore_buoy": "46025",
+        "offshore_buoy_name": "Santa Monica Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410660",
+              "9410680"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
+      },
+      "marine_zones": {
+        "coastal": "PZZ655",
+        "offshore": "PZZ676"
+      }
+    },
+    "outer-islands": {
+      "name": "Santa Barbara Island / outer waters",
+      "stations": {
+        "tide": "9410660",
+        "tide_name": "Los Angeles",
+        "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents. This distant mainland station is not an island current or local tidal-height prediction.",
+        "airport": "KLAX",
+        "airport_name": "Los Angeles airport",
+        "nearshore_buoy": "46221",
+        "nearshore_buoy_name": "Santa Monica Bay",
+        "offshore_buoy": "46025",
+        "offshore_buoy_name": "Santa Monica Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410660",
+              "9410680"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
+      },
+      "marine_zones": {
+        "coastal": "PZZ676",
+        "offshore": "PZZ676"
+      }
+    }
+  },
+  "closure_check": {
+    "url": "https://www.fisheries.noaa.gov/s3/2026-06/geas-updated-06-23-2026.csv",
+    "source_id": "noaa-socal-gea"
+  },
+  "regulations_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/outer-islands-borderland/habitat-dynamics.json",
+  "target_labels": {
+    "reef": "Rockfish"
+  },
+  "habitat_policy": {
+    "coastal_forecast_circles": false,
+    "unknown_depth_context": true,
+    "military_islands_withheld": [
+      "San Clemente",
+      "San Nicolas"
+    ],
+    "note": "Historical substrate and canopy outlines are ecological search context; measured depth qualification is separate. No invented catch hotspots."
+  }
+}
