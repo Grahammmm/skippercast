@@ -9,7 +9,7 @@ from rasterio.transform import from_origin
 from skippercast.coastal.handoff.common import ref, write
 from skippercast.coastal.render import mesh as textured
 from skippercast.coastal.render import terrain_demo, terrain_only
-from tests.audit_repro.test_render_terrain_triangulation import normalized_terrain
+from tests.gis.test_render_terrain_triangulation import normalized_terrain
 from tests.gis.test_render_deep_datum_warnings import NOW, accepted
 
 

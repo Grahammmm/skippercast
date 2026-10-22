@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Internal terrain-only depth bands now use the requested number of colours (2–32) without changing absolute depths, contour levels or the continuous-ramp mode.
 - Internal terrain meshes preserve the triangle when exactly three adjacent sample corners are supported, keep gaps with fewer than three corners open, and report supported samples omitted from final faces (including imagery exclusions); the private demo validates the same topology.
 - Internal terrain-only previews retain the deep-datum NOT FOR NAVIGATION warning and the source datum/tide caveat in both the PNG and receipt; publication remains prohibited.
 

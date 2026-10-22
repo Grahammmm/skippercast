@@ -7,8 +7,8 @@ import pytest
 from skippercast.coastal import vertical
 from skippercast.coastal.handoff.common import ref, write
 from skippercast.coastal.render import terrain_only
-from tests.audit_repro import test_render_deep_datum_disclaimer as deep_repro
-from tests.audit_repro.test_render_terrain_triangulation import normalized_terrain
+from tests.gis import test_render_deep_datum_disclaimer as deep_repro
+from tests.gis.test_render_terrain_triangulation import normalized_terrain
 
 NOW = datetime(2026, 10, 22, tzinfo=timezone.utc)
 

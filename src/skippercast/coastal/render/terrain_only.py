@@ -299,7 +299,8 @@ def render_terrain(mesh,path,style):
         low,high = low-.5,high+.5
     t = np.clip((np.nan_to_num(depths,nan=low)-low)/(high-low),0,1)
     if style['depth_bands']:
-        t = np.floor(t*(style['depth_bands']-1))/(style['depth_bands']-1)
+        bands = style['depth_bands']
+        t = np.minimum(np.floor(t*bands),bands-1)/(bands-1)
     rgb = np.stack([220-190*t,235-120*t,160+65*t],axis=-1)
     rgb *= shade[...,None]
     if style['slope_overlay']:
