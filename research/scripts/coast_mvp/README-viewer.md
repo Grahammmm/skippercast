@@ -106,10 +106,13 @@ caveats, the inventory's byte SHA-256 and a relative link to the complete C5
 rights page. `validateMvpManifest` rejects an adapted manifest that drops a
 CSUMB hold, invents one, loses a hash, terms link or required caveat, mixes in
 unadapted rows or points the rights page off-directory. The rights page path
-must pass `isLocalAssetPath`, which reuses the viewer's `localAsset` rule and
-additionally refuses `?`, `#` and `%`, so traversal (including encoded dot
-segments), backslashes, query/fragment, absolute and remote paths fail in the
-adapter, the validator and the CLI alike. The CLI also refuses an `--output`
+must pass `isLocalAssetPath`: the raw token must be a plain relative path of
+`[A-Za-z0-9._-]` segments joined by `/` (so no scheme, `?`, `#`, `%`,
+backslash, whitespace or control character that the URL parser would strip or
+rewrite), and it must then pass the viewer's own `localAsset` rule. Traversal
+(including encoded dot segments), query/fragment, absolute, scheme-qualified
+and remote paths, and padded or tab/CR/LF-bearing names fail in the
+adapter, the validator and the CLI alike; nothing is normalised. The CLI also refuses an `--output`
 that resolves to the linked rights page (or an input), before writing anything.
 The viewer shows the
 unresolved permission in the persistent banner, outside the collapsible panel.

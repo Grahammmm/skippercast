@@ -47,10 +47,14 @@ export function localAsset(path: string, base: URL): string {
 }
 /**
  * Pure, offline form of localAsset: true iff the viewer would load `path` as a file inside its manifest directory.
- * Stricter than localAsset on purpose: no `?`, `#` or `%` at all, so the URL path and the on-disk file name are identical.
+ * Stricter than localAsset on purpose: the raw token must be a plain relative path of `[A-Za-z0-9._-]` segments
+ * joined by `/`. That excludes schemes (`https:`, `file:`), `?`, `#`, `%`, backslashes and every whitespace or
+ * control character the URL parser would strip or rewrite, so the URL path and the on-disk file name are identical
+ * and the placeholder base below can never be matched by an absolute input.
  */
+const PLAIN_RELATIVE = /^(?!\/)[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
 export function isLocalAssetPath(path: unknown): path is string {
-  if (!text(path) || /[?#%]/.test(path)) return false;
+  if (typeof path !== 'string' || !PLAIN_RELATIVE.test(path)) return false;
   // Placeholder origin/directory only; nothing is fetched. Same function as the viewer, so the rules cannot drift.
   const base = new URL('https://coast-mvp.invalid/assets/manifest/');
   try { return !localAsset(path, base).endsWith('/'); } catch { return false; }

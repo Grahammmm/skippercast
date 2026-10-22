@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {adaptC5Rights} from '../packages/coast/src/coast3d/mvp-rights.ts';
 import {CSUMB_NOTICE, GEBCO_CAVEAT, NO_ENDORSEMENT, NOT_FOR_NAVIGATION, RIGHTS_REVIEW, isLocalAssetPath, localAsset, validateMvpManifest} from '../packages/coast/src/coast3d/mvp.ts';
@@ -155,12 +155,20 @@ test('adapter CLI pins the inventory bytes and leaves the previous manifest on f
   } finally { rmSync(work, {recursive: true, force: true}); }
 });
 
+// Review round 2: characters the URL parser strips or rewrites, so the viewer would load a different file.
+const WS_PAGES = [' rights.html', 'rights.html ', '  rights.html', '\trights.html', 'rights.html\t', 'ri\tghts.html',
+  'rights.html\n', '\nrights.html', 'ri\nghts.html', 'rights.html\r', '\rrights.html', 'ri\rghts.html', 'rights\u0000.html',
+  'rights\u007f.html', 'rights\u00a0.html', 'my rights.html', 'sub /rights.html'];
+// Review round 2: absolute inputs that match the offline placeholder base, and scheme forms.
+const ABSOLUTE_PAGES = ['https://coast-mvp.invalid/assets/manifest/rights.html', 'https://coast-mvp.invalid/assets/manifest/sub/rights.html',
+  'http://coast-mvp.invalid/assets/manifest/rights.html', 'HTTPS://COAST-MVP.INVALID/assets/manifest/rights.html',
+  'https:rights.html', 'https:/coast-mvp.invalid/assets/manifest/rights.html', 'blob:rights.html', 'c:rights.html'];
 // Review round 1: the rights page must obey the viewer's own containment rules at every boundary.
 const BAD_PAGES = ['../rights.html', '%2e%2e/rights.html', '.%2e/rights.html', '%2E%2E/rights.html', 'sub/../../rights.html',
   'sub/%2e%2e/%2e%2e/rights.html', '%252e%252e/rights.html', 'sub%2f..%2f..%2frights.html', '..\\rights.html', 'sub\\rights.html',
   'rights.html?x=1', 'rights.html#x', 'rights.html?', 'https://remote.example/rights.html', '//remote.example/rights.html',
   '/rights.html', 'file:///tmp/rights.html', 'javascript:alert(1)', 'data:text/html,x', 'user:pw@rights.html',
-  '', ' ', '.', './', 'sub/', '..', null, 42];
+  '', ' ', '.', './', 'sub/', '..', null, 42, ...ABSOLUTE_PAGES, ...WS_PAGES];
 const GOOD_PAGES = ['rights.html', './rights.html', 'sub/rights.html', 'sub/../rights.html'];
 
 test('rights page path: adapter, validator and viewer share one containment rule', () => {
@@ -179,9 +187,15 @@ test('rights page path: adapter, validator and viewer share one containment rule
     assert.throws(() => validateMvpManifest(m), /Incomplete rights inventory link/, label);
     // Every rejected path is also one the viewer refuses, except the few the offline rule refuses more strictly
     // (directories, and an empty query whose URL path would differ from the on-disk file name).
-    if (typeof page === 'string' && page.trim() && !['.', './', 'sub/', 'rights.html?'].includes(page)) {
+    if (typeof page === 'string' && page.trim() && !['.', './', 'sub/', 'rights.html?'].includes(page) && !WS_PAGES.includes(page)) {
       assert.throws(() => localAsset(page, viewerBase), undefined, label);
     }
+  }
+  // Why whitespace/control is refused rather than normalised: for stripped characters (edge C0/space, any tab/CR/LF)
+  // the viewer URL would not name the literal file. Interior NUL/DEL/NBSP/space are refused too, for one simple rule.
+  for (const page of WS_PAGES.filter(p => p !== p.trim() || /[\t\n\r]/.test(p))) {
+    let href; try { href = localAsset(page, viewerBase); } catch { continue; }
+    assert.notEqual(decodeURIComponent(new URL(href).pathname.slice(viewerBase.pathname.length)), page, JSON.stringify(page));
   }
 });
 
@@ -205,7 +219,12 @@ test('adapter CLI rejects unsafe rights-page paths and output aliasing without t
       r = run(page, join(outDir, 'other.json'));
       assert.equal(r.status, 0, `${page}: ${r.stderr}`);
     }
-    for (const page of BAD_PAGES.filter(p => typeof p === 'string' && p.trim() && !p.startsWith('-'))) {
+    // Round 2: a real file exists under each literal name, so only the path rule can stop it.
+    const literal = [...WS_PAGES, ...ABSOLUTE_PAGES].filter(p => !p.includes('\u0000') && !p.includes('//'));
+    for (const page of literal) {
+      const f = join(outDir, page); mkdirSync(dirname(f), {recursive: true}); writeFileSync(f, pageBytes);
+    }
+    for (const page of BAD_PAGES.filter(p => typeof p === 'string' && p.trim() && !p.startsWith('-') && !p.includes('\u0000'))) {
       r = run(page);
       assert.equal(r.status, 2, page); assert.match(r.stderr, /rights page must be a relative file inside the manifest directory/, page);
       assert.deepEqual(readFileSync(out), before, page);
@@ -219,8 +238,9 @@ test('adapter CLI rejects unsafe rights-page paths and output aliasing without t
     symlinkSync(join(outDir, 'rights.html'), join(outDir, 'alias.json'));
     r = run('rights.html', join(outDir, 'alias.json'));
     assert.equal(r.status, 2); assert.match(r.stderr, /must not overwrite the linked rights page/);
-    for (const p of [join(work, 'rights.html'), join(outDir, 'rights.html'), join(outDir, 'sub', 'rights.html')]) {
-      assert.deepEqual(readFileSync(p), pageBytes, p);
+    for (const p of [join(work, 'rights.html'), join(outDir, 'rights.html'), join(outDir, 'sub', 'rights.html'),
+      ...literal.map(p => join(outDir, p))]) {
+      assert.deepEqual(readFileSync(p), pageBytes, JSON.stringify(p));
     }
     assert.deepEqual(readFileSync(out), before);
     // Existing input protections still hold.
