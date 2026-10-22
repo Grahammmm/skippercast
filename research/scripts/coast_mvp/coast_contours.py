@@ -156,18 +156,73 @@ def _edges(geometries, members):
     return edges, owners[:-1][keep]
 
 
+def _swept_regions(original, current, members):
+    """Areas that each simplified chord of the given lines moves across.
+
+    Topology-preserving simplification keeps an in-order subset of a line's
+    own vertices, so every simplified edge p->q replaces the original chain
+    p..q. That chain closed by the chord bounds the area the line sweeps over.
+    When the closed chain self-intersects, its convex hull is used instead; it
+    covers every enclosed face. Returns (regions, owner line index) and the
+    lines whose vertices could not be matched in order (to be reverted).
+    """
+    coords, owner = shapely.get_coordinates(original[members], return_index=True)
+    simple, simple_owner = shapely.get_coordinates(current[members], return_index=True)
+    first = np.searchsorted(owner, np.arange(len(members)))
+    last = np.searchsorted(owner, np.arange(len(members)), side='right') - 1
+    # Exact (line, x, y) lookup of the first matching original vertex.
+    def keys(points, owners):
+        table = np.ascontiguousarray(np.column_stack([owners.astype('float64'), points]))
+        return table.view(np.dtype((np.void, 24))).ravel()
+    known, where = np.unique(keys(coords, owner), return_index=True)
+    probe = keys(simple, simple_owner)
+    slot = np.minimum(np.searchsorted(known, probe), len(known) - 1)
+    found = known[slot] == probe
+    position = where[slot]
+    # The final vertex of a closed line repeats its first: map it to the end.
+    tail = np.r_[simple_owner[:-1] != simple_owner[1:], True]
+    closes = tail & (simple == coords[last[simple_owner]]).all(axis=1)
+    position[closes] = last[simple_owner[closes]]
+    bad = ~found
+    step = simple_owner[:-1] == simple_owner[1:]
+    bad[:-1] |= step & (position[1:] <= position[:-1])
+    head = np.r_[True, ~step]
+    bad |= head & (position != first[simple_owner])
+    bad |= tail & (position != last[simple_owner])
+    failed = np.unique(simple_owner[bad])
+    use = step & ~np.isin(simple_owner[:-1], failed)
+    start, stop = position[:-1][use], position[1:][use]
+    region_owner = simple_owner[:-1][use]
+    keep = stop - start >= 2  # a chord that removed at least one vertex
+    start, stop, region_owner = start[keep], stop[keep], region_owner[keep]
+    if not len(start):
+        return np.empty(0, dtype=object), np.empty(0, dtype='int64'), members[failed]
+    count = stop - start + 1
+    offset = np.repeat(start - np.r_[0, np.cumsum(count)[:-1]], count)
+    chain = coords[offset + np.arange(count.sum())]
+    rings = shapely.linearrings(chain, indices=np.repeat(np.arange(len(count)), count))
+    regions = shapely.polygons(rings)
+    invalid = ~shapely.is_valid(regions)
+    regions[invalid] = shapely.convex_hull(rings[invalid])
+    return regions, members[region_owner], members[failed]
+
+
 def simplify_contours(lines, tolerance):
     """Preserve topology BETWEEN contours as well as within each contour.
 
     Independent Douglas-Peucker calls can move close depth bands across one
-    another. A single GEOS call over a whole contributor's MultiLineString
-    prevents that but does not scale to the real Cal DIG I source (about 250k
-    components, 3.3M vertices). Instead each line is simplified with topology
-    preserved, then an exact edge-level STRtree finds every pair of lines that
-    now touch; each simplified member of such a pair reverts to its original
-    geometry. Distinct-level originals never intersect, so repeating the check
-    for newly reverted lines reaches a fixpoint with no new intersections.
-    Order, count and endpoints are retained for the parallel depth labels.
+    another, or move a line right past a small enclosed contour so nesting
+    changes with no crossing left behind. A single GEOS call over a whole
+    contributor's MultiLineString prevents both but does not scale to the real
+    Cal DIG I source (about 250k components, 3.3M vertices). Instead each line
+    is simplified with topology preserved, and a simplified line keeps its
+    simplification only if no other line, original or simplified, touches or
+    lies inside any area its chords sweep across (exact STRtree over every
+    edge). Otherwise it reverts to its original geometry. Reverting only
+    removes geometry that was already checked, so one pass keeps every
+    original crossing and containment relation; a final edge-contact pass
+    remains as a guard. Order, count and endpoints are retained for the
+    parallel depth labels.
     """
     original = np.empty(len(lines), dtype=object)
     original[:] = list(lines)
@@ -176,6 +231,23 @@ def simplify_contours(lines, tolerance):
     current = shapely.simplify(original, tolerance, preserve_topology=True)
     reverted = ~shapely.is_simple(current) | shapely.is_empty(current)
     current[reverted] = original[reverted]
+    moved = np.flatnonzero(~reverted & (shapely.get_num_coordinates(current)
+                                        != shapely.get_num_coordinates(original)))
+    if len(moved):
+        regions, region_owners, failed = _swept_regions(original, current, moved)
+        old_edges, old_owners = _edges(original, np.arange(len(original)))
+        new_edges, new_owners = _edges(current, moved)
+        edges = np.concatenate([old_edges, new_edges])
+        owners = np.concatenate([old_owners, new_owners])
+        tree = STRtree(edges)
+        sweeps = set(failed.tolist())
+        for start in range(0, len(regions), 50000):
+            left, right = tree.query(regions[start:start + 50000], predicate='intersects')
+            a, b = region_owners[left + start], owners[right]
+            sweeps.update(a[a != b].tolist())
+        sweeps = np.array(sorted(sweeps), dtype='int64')
+        current[sweeps] = original[sweeps]
+        reverted[sweeps] = True
     changed = np.arange(len(original))  # first pass checks every line
     while len(changed):
         edges, owners = _edges(current, np.arange(len(original)))
@@ -334,7 +406,7 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                       zoom=zoom, terrain_tiles=len(tiles), value_convention='elevation_positive_up',
                       terrain_encoding='elevation_m = -10000 + (R*65536+G*256+B)*0.1; alpha=0 unsupported',
                       terrain_sampling='exact inverse-projected XYZ pixel centres; nearest source cell',
-                      simplification='per-line topology-preserving, half-cell tolerance; lines touching another line in the contributor revert to unsimplified',
+                      simplification='per-line topology-preserving, half-cell tolerance; a line reverts to unsimplified if another line in the contributor touches or lies inside an area its simplification sweeps across',
                       contour_crs='EPSG:4326', tile_scheme='XYZ',
                       terrain_template='terrain/{z}/{x}/{y}.png', vector_template='vector/{z}/{x}/{y}.pbf',
                       limitations=['Synthetic/local preview only; no datum reconciliation or seam acceptance.'])

@@ -65,12 +65,18 @@ The first full cached-C1 run exposed two defects that tiny fixtures missed:
 individually simplified depth bands could intersect one another, and GDAL's
 approximate warp selected some adjacent pixels instead of the exact nearest
 source cell. The corrected producer simplifies each contour with topology
-preservation, then an exact edge-level STRtree finds every pair of lines in a
-contributor that now touch and reverts those lines to their unsimplified
-geometry, repeating until no new contact remains, before the final mask clip.
+preservation, then keeps a line's simplification only if no other line in the
+contributor (original or simplified) touches or lies inside any area its
+simplification chords sweep across; otherwise the line reverts to its
+unsimplified geometry. Each chord replaces a run of the line's own vertices,
+so the run closed by the chord (or its convex hull if that ring
+self-intersects) is the swept area, tested with an exact edge-level STRtree.
+This keeps crossings out and also keeps nesting: a chord cannot jump a line
+past a small enclosed contour. A final edge-contact pass remains as a guard,
+before the final mask clip.
 (One GEOS call over a contributor's whole MultiLineString gave the same
 guarantee but did not finish on Cal DIG I's ~250k components within the run
-cap; the revert pass takes about 8 s there.)
+cap.)
 It also inverse-projects every XYZ pixel centre and samples the containing
 source pixel exactly, preserving unsupported-cell transparency. Neither change
 alters the half-cell bound, contour intervals, source masks or depth labels.

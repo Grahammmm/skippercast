@@ -332,3 +332,43 @@ def test_simplify_contours_reverts_conflicts_to_a_crossing_free_fixpoint(stack):
     # Not a no-op: lines without conflicts keep their simplification.
     assert all(len(r.coords) < len(o.coords) for r, o in zip(result[20:], raw[20:]))
     assert c2.simplify_contours([], 5) == []
+
+
+def test_simplify_contours_preserves_nesting_past_a_small_enclosed_contour(stack):
+    """A chord must not sweep a line past a contour it encloses (review 1007)."""
+    *_, c2 = stack
+    import shapely
+    from shapely.geometry import LineString, MultiLineString, Polygon
+    outer = LineString([(0, 0), (20, 0), (20, 20), (0, 20), (0, 12), (-4, 12), (-4, 8), (0, 8), (0, 0)])
+    inner = LineString([(-3, 9), (-2, 9), (-2, 11), (-3, 11), (-3, 9)])
+    assert Polygon(outer.coords).contains(inner) and not outer.intersects(inner)
+    # Negative control: per-line simplification alone loses the nesting with no crossing.
+    alone = outer.simplify(5, preserve_topology=True)
+    assert not alone.intersects(inner) and not Polygon(alone.coords).contains(inner)
+    # Positive control: the joint GEOS call keeps it.
+    joint = shapely.simplify(MultiLineString([outer, inner]), 5, preserve_topology=True)
+    assert Polygon(joint.geoms[0].coords).contains(joint.geoms[1])
+    result = c2.simplify_contours([outer, inner], 5)
+    assert Polygon(result[0].coords).contains(result[1])
+    assert not result[0].intersects(result[1])
+    # Far from any other line the same simplification is kept.
+    lone = c2.simplify_contours([outer, LineString([(100, 100), (101, 100), (101, 101), (100, 100)])], 5)
+    assert len(lone[0].coords) < len(outer.coords)
+
+
+@pytest.mark.parametrize('chain', [
+    [(0, 0), (10, 0), (10, 4), (12, 4), (12, 0), (30, 0)],  # bump: valid sweep polygon
+    [(0, 0), (4, 2), (6, -2), (10, 0)],  # chain crosses its chord: convex-hull sweep
+])
+def test_simplify_contours_open_line_does_not_jump_a_small_contour(stack, chain):
+    *_, c2 = stack
+    from shapely.geometry import LineString
+    line = LineString(chain)
+    ring = (LineString([(10.5, 1), (11.5, 1), (11.5, 2), (10.5, 2), (10.5, 1)]) if len(chain) == 6
+            else LineString([(6, -1.2), (7, -1.2), (7, -0.8), (6, -0.8), (6, -1.2)]))
+    alone = line.simplify(5, preserve_topology=True)
+    assert len(alone.coords) == 2 and not alone.intersects(ring) and not line.intersects(ring)
+    result = c2.simplify_contours([line, ring], 5)
+    assert result[0].equals_exact(line, 0) and result[1].equals_exact(ring, 0)
+    # Without the small contour the line simplifies.
+    assert len(c2.simplify_contours([line], 5)[0].coords) == 2
