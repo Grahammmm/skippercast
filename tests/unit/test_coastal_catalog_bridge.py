@@ -584,6 +584,20 @@ def test_window_set_requires_tiling_metadata(world):
     _refuse(world, _tile(1024, 1024), None, "tiling needs")
 
 
+@pytest.mark.parametrize("origin", [None, [-1, 0], [0, -1], [1024, 0], [0, 1024],
+                                    [128.0, 256], [True, 0], [128], "128,256"])
+def test_window_set_refuses_invalid_native_origin_before_write(world, origin):
+    geometry = fx.tiling(1024, 1024)
+    geometry["origin"] = origin
+    _refuse(world, _tile(1024, 1024), geometry, "origin")
+
+
+def test_window_set_requires_explicit_native_origin(world):
+    geometry = fx.tiling(1024, 1024)
+    del geometry["origin"]
+    _refuse(world, _tile(1024, 1024), geometry, "tiling needs")
+
+
 def test_window_set_refuses_a_noncanonical_tiling(world):
     # Two interior 512x256 tiles on a 1024x1024 grid are not the canonical 512x512 tiling.
     anchor, cell = [-120.6, 34.6], [0.0001, 0.0001]

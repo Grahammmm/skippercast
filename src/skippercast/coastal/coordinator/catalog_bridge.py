@@ -170,25 +170,27 @@ def _window_bbox(anchor, cell, x, y, w, h):
     return [west + x * dx, north - (y + h) * dy, west + (x + w) * dx, north - y * dy]
 
 
-def _canonical_tiles(tile, width, height):
-    """The deterministic row-major tiling of a native grid, with source-edge clipping."""
+def _canonical_tiles(tile, width, height, origin):
+    """Tile from the NW-valid native pixel, clipped at the full source bounds."""
     return [[x, y, min(tile, width - x), min(tile, height - y)]
-            for y in range(0, height, tile) for x in range(0, width, tile)]
+            for y in range(origin[1], height, tile) for x in range(origin[0], width, tile)]
 
 
-def _expected_windows(tile, width, height, anchor, cell, segment):
-    """The canonical tiling restricted to tiles whose footprint intersects the segment bbox."""
+def _expected_windows(tile, width, height, origin, anchor, cell, segment):
+    """Keep source-relative offsets; the geographic anchor belongs to ``origin``."""
     bbox = segment["bbox_crs84"]
-    return [w for w in _canonical_tiles(tile, width, height)
-            if _overlaps(_window_bbox(anchor, cell, *w), bbox)]
+    return [w for w in _canonical_tiles(tile, width, height, origin)
+            if _overlaps(_window_bbox(anchor, cell, w[0] - origin[0], w[1] - origin[1],
+                                      w[2], w[3]), bbox)]
 
 
 def _check_window_set(selection, segment):
     """Validate a window-set selection and return its ordered windows (G5).
 
     A window set must declare its native geometry as ``tiling``: the canonical
-    ``tile`` size (512), the valid grid's ``width`` and ``height`` in native cells,
-    the CRS84 ``anchor`` of the source's north-west valid cell, and the ``cell``
+    ``tile`` size (512), the full source's ``width`` and ``height`` in native cells,
+    the native ``origin`` [column, row] of its north-west valid cell,
+    that cell's CRS84 ``anchor``, and the ``cell``
     size in CRS84 degrees. Its ``windows`` must be exactly the deterministic tiling
     of that grid, row-major from the anchor, restricted to tiles whose footprint
     intersects the segment bbox.
@@ -205,8 +207,8 @@ def _check_window_set(selection, segment):
             raise ValueError(f"native_window_bound: {selection['source_id']} window exceeds "
                              f"{MAX_WINDOW_CELLS} cells, the acquire stage's bound")
     tiling = selection.get("tiling")
-    if not isinstance(tiling, dict) or set(tiling) != {"tile", "width", "height", "anchor", "cell"}:
-        raise ValueError("window-set tiling needs exactly tile, width, height, anchor and cell")
+    if not isinstance(tiling, dict) or set(tiling) != {"tile", "width", "height", "origin", "anchor", "cell"}:
+        raise ValueError("window-set tiling needs exactly tile, width, height, origin, anchor and cell")
     tile = tiling["tile"]
     if type(tile) is not int or tile != WINDOW_TILE:
         raise ValueError("window-set tile must be 512 native cells")
@@ -221,7 +223,11 @@ def _check_window_set(selection, segment):
     if (not isinstance(cell, list) or len(cell) != 2 or any(type(v) not in (int, float) for v in cell)
             or cell[0] <= 0 or cell[1] <= 0):
         raise ValueError("window-set cell size must be two positive CRS84 degrees")
-    expected = _expected_windows(tile, width, height, anchor, cell, segment)
+    origin = tiling["origin"]
+    if (not isinstance(origin, list) or len(origin) != 2 or any(type(v) is not int for v in origin)
+            or not 0 <= origin[0] < width or not 0 <= origin[1] < height):
+        raise ValueError("window-set origin must be a native [column, row] within the full source bounds")
+    expected = _expected_windows(tile, width, height, origin, anchor, cell, segment)
     if windows != expected:
         raise ValueError("windows must be exactly the deterministic tiling restricted to "
                          "segment-bbox tiles, in row-major order")

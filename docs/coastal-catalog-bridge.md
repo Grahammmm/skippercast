@@ -76,22 +76,30 @@ A window-set selection must also declare the source's native geometry as
 `tiling`, so the bridge can prove the tiling without opening the raster:
 
 - `tile`: the canonical tile size, fixed at `512` native cells;
-- `width`, `height`: the valid grid's dimensions in native cells;
-- `anchor`: the CRS84 `[west, north]` corner of the source's north-west valid
-  cell;
+- `width`, `height`: the full original raster's dimensions in native cells,
+  not a cropped valid-region size (each at most 32,768);
+- `origin`: required native `[column, row]` of the north-west valid cell in
+  that original raster. Both must be integers inside the full source bounds;
+  even a zero-origin source must declare `[0, 0]` explicitly;
+- `anchor`: the CRS84 `[west, north]` corner of the cell at `origin`;
 - `cell`: the CRS84 cell size in degrees as `[east, south]` (both positive for
   a north-up raster).
 
 The bridge re-derives the deterministic tiling from that geometry (row-major
-from the anchor, with the source-edge tiles clipped when the grid is not a
-multiple of 512), restricts it to the tiles whose CRS84 footprint intersects
+from `origin`, with tiles clipped at the original raster's right/bottom bounds),
+restricts it to the tiles whose CRS84 footprint intersects
 the segment's `bbox_crs84`, and requires the plan's `windows` to be exactly
 that set in row-major order. So a non-canonical shape, an out-of-bounds,
 duplicated or out-of-order window, and any tile outside the segment bbox, all
 refuse the plan before any write. A missing or malformed `tiling` is refused,
-never silently accepted. The anchor and cell size are owner-supplied native
-geometry from the frozen catalog; the bridge never opens or reprojects the
-raster itself.
+never silently accepted. Manifest windows retain original source-native offsets:
+for `origin=[128,256]`, the first full tile is `[128,256,512,512]`, never
+`[0,0,512,512]`. Footprints subtract `origin` before applying the geographic
+`anchor` and `cell` spacing. Geometry is owner-supplied, plan-hash-bound metadata
+associated with the selection's source SHA-256; the bridge checks its internal
+consistency, not its truth against raster bytes or nodata. It never opens or
+reprojects the raster. The owner must establish the north-west valid cell;
+interior nodata remains subject to the existing acquire/qualification gates.
 
 Each window is still held to the acquire stage's own bound of 262,144 cells
 (the per-job cap is unchanged), a window set is capped at `MAX_WINDOWS` (64)

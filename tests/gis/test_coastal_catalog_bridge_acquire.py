@@ -91,59 +91,112 @@ def test_frozen_catalog_lead_is_read_by_the_real_acquire_stage(ops, tmp_path, mo
     assert ops.store.db.execute("SELECT COUNT(*) FROM jobs WHERE stage!='acquire'").fetchone()[0] == 0
 
 
-def _tiles(width, height, tile=512):
-    return [[x, y, min(tile, width - x), min(tile, height - y)]
-            for y in range(0, height, tile) for x in range(0, width, tile)]
+@pytest.mark.parametrize("width,height,origin,subset,count", [
+    (4096, 4096, (0, 0), None, 64),
+    (1150, 1300, (128, 256), None, 6),
+    (1500, 1000, (128, 256), [1152, 768, 348, 232], 1),
+    (8192, 8192, (0, 0), [4096, 4096, 4096, 4096], 64),
+])
+def test_window_set_real_native_raster_run_and_enqueue(tmp_path, monkeypatch,
+                                                       width, height, origin, subset, count):
+    """Independent rasterio footprints, native coverage, hashes and ordinary queue order."""
+    from rasterio.windows import Window, bounds
+    from skippercast.coastal.coordinator.store import Store
 
-
-def _window_bbox(anchor, cell, x, y, w, h):
-    west, north = anchor
-    dx, dy = cell
-    return [west + x * dx, north - (y + h) * dy, west + (x + w) * dx, north - y * dy]
-
-
-def _overlaps(a, b):
-    w1, s1, e1, n1 = a
-    w2, s2, e2, n2 = b
-    return min(e1, e2) > max(w1, w2) and min(n1, n2) > max(s1, s2)
-
-
-def test_window_set_plan_tiles_a_real_geotiff_and_restricts_to_the_segment(tmp_path, monkeypatch):
-    """Acceptance (b) against a real raster: the bridge derives the canonical tiling from the
-    plan-bound transform and restricts it to tiles intersecting the segment bbox."""
     monkeypatch.setattr(socket, "create_connection",
                         lambda *a, **k: pytest.fail("bridge/enqueue must not open a connection"))
-    west, north, dx, dy = -120.6, 34.6, 0.0001, 0.0001   # dy is the southward cell size
-    width, height = 1500, 1000                            # partial edges (not a multiple of 512)
+    transform = from_origin(-120.6, 34.6, 0.0001, 0.0001)
     raster = tmp_path / "sources/synthetic.tif"
     raster.parent.mkdir(parents=True)
+    # uint8 keeps the largest synthetic raster bounded; 0 is nodata, 1 is valid.
+    pixels = np.zeros((height, width), dtype="uint8")
+    pixels[origin[1]:, origin[0]:] = 1
     with rasterio.open(raster, "w", driver="GTiff", width=width, height=height, count=1,
-                       dtype="float32", crs="OGC:CRS84",
-                       transform=from_origin(west, north, dx, -dy)) as ds:
-        ds.write(np.arange(width * height, dtype="float32").reshape(1, height, width))
+                       dtype="uint8", nodata=0, crs="EPSG:4326", transform=transform) as ds:
+        ds.write(pixels, 1)
     source = dict(path="sources/synthetic.tif", sha256=hashlib.sha256(raster.read_bytes()).hexdigest(),
                   bytes=raster.stat().st_size, contract="native-raster-v1")
-
-    anchor, cell = [west, north], [dx, dy]
-    # The segment bbox is the south-east clipped tile only.
-    se = [1024, 512, min(512, width - 1024), min(512, height - 512)]
-    segment = _window_bbox(anchor, cell, *se)
-    expected = [w for w in _tiles(width, height) if _overlaps(_window_bbox(anchor, cell, *w), segment)]
-    assert expected == [se] == [[1024, 512, 476, 488]]
-
-    footprint = [anchor[0], anchor[1] - height * cell[1], anchor[0] + width * cell[0], anchor[1]]
+    with rasterio.open(raster) as ds:
+        assert ds.transform.e < 0
+        mask = ds.read_masks(1)
+        assert [int(np.flatnonzero(mask.any(axis=0))[0]),
+                int(np.flatnonzero(mask.any(axis=1))[0])] == list(origin)
+        del mask
+        coverage = subset or [origin[0], origin[1], width - origin[0], height - origin[1]]
+        segment_bbox = list(bounds(Window(*coverage), ds.transform))
+        footprint = list(ds.bounds)
+        anchor = list(ds.transform * origin)
+        # Expected offsets are native coordinates, independent of bridge helpers.
+        expected = []
+        for row in range(origin[1], height, 512):
+            for col in range(origin[0], width, 512):
+                window = [col, row, min(512, width - col), min(512, height - row)]
+                west, south, east, north = bounds(Window(*window), ds.transform)
+                if (min(east, segment_bbox[2]) > max(west, segment_bbox[0])
+                        and min(north, segment_bbox[3]) > max(south, segment_bbox[1])):
+                    expected.append(window)
+    assert len(expected) == count
+    if origin != (0, 0) and subset is None:
+        assert expected[0] == [128, 256, 512, 512]
+        assert expected[-1] == [640, 1280, 510, 20]
+    if subset is not None and count == 1:
+        assert expected == [subset]
     rows = [fx.candidate("synthetic.tif", bbox=footprint, size=source["bytes"],
                          source_hash=source["sha256"])]
     catalog = fx.frozen_catalog(rows)
     catalog_path = tmp_path / "catalog.json"
     sha = fx.write_catalog(catalog_path, catalog)
     selection = fx.window_set(rows[0]["source_id"], source, expected,
-                              tiling=fx.tiling(width, height, anchor=anchor, cell=cell))
-    plan = fx.plan(catalog, sha, [selection], bbox=segment,
-                   budget=dict(fx.BUDGET, bytes=20_000_000), max_total_bytes=20_000_000)
-
+                              tiling=fx.tiling(width, height, origin=origin, anchor=anchor))
+    plan = fx.plan(catalog, sha, [selection], bbox=segment_bbox,
+                   budget=dict(fx.BUDGET, bytes=100_000_000), max_total_bytes=100_000_000)
     allow = Allowlist([fx.HOST])
-    root = tmp_path
-    dry = bridge.dry_run(root, catalog_path, plan, tmp_path / "dry", allowlist=allow)
-    assert [w["window"] for w in dry["would_enqueue"]] == expected
-    assert [w["window_index"] for w in dry["would_enqueue"]] == [0]
+    # Source-free even on genuine rasters: neither bridge nor enqueue may open one.
+    with monkeypatch.context() as guarded:
+        guarded.setattr(rasterio, "open", lambda *a, **k: pytest.fail("source-free bridge opened raster"))
+        receipt = bridge.run(tmp_path, catalog_path, plan, tmp_path / "bridge", allowlist=allow)
+    assert receipt["held_source_ids"] == []
+    assert receipt["caps"]["selected_bytes"] == source["bytes"]
+    assert [j["window_index"] for j in receipt["jobs"]] == list(range(count))
+    assert [j["window"] for j in receipt["jobs"]] == expected
+    store = Store(tmp_path / "var/coastal/coordinator.sqlite", root=tmp_path, policy=policy())
+    try:
+        store.add_segment(dict(schema="coastal-segment-v1", segment_id=plan["segment"]["segment_id"],
+                               region=REGION, crs="EPSG:3310", bbox=[0, 0, 5000, 5000],
+                               bbox_crs84=segment_bbox))
+        ref = dict(receipt["output"], kind="input", contract=bridge.RECEIPT)
+        ids = bridge.enqueue(store, ref, code_sha="a" * 64, deps_sha="b" * 64)
+        assert len(ids) == len(set(ids)) == count
+        assert store.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == count
+        seen = np.zeros((height, width), dtype="uint8")
+        with rasterio.open(raster) as ds:
+            for index, job_id in enumerate(ids):
+                queued = json.loads(store.db.execute("SELECT record_json FROM jobs WHERE job_id=?",
+                                                     (job_id,)).fetchone()[0])
+                manifest_ref = receipt["jobs"][index]["input_manifest"]
+                assert queued["input_manifest"] == manifest_ref
+                raw = (tmp_path / manifest_ref["path"]).read_bytes()
+                assert hashlib.sha256(raw).hexdigest() == manifest_ref["sha256"]
+                assert len(raw) == manifest_ref["bytes"]
+                manifest = json.loads(raw)
+                assert manifest["window"] == expected[index]
+                assert manifest["source"] == source
+                x, y, w, h = manifest["window"]
+                assert ds.read(1, window=Window(x, y, w, h)).shape == (h, w)
+                assert np.all(ds.read_masks(1, window=Window(x, y, w, h)) == 255)
+                west, south, east, north = bounds(Window(x, y, w, h), ds.transform)
+                assert min(east, segment_bbox[2]) > max(west, segment_bbox[0])
+                assert min(north, segment_bbox[3]) > max(south, segment_bbox[1])
+                seen[y:y + h, x:x + w] += 1
+        wanted = np.zeros_like(seen)
+        x, y, w, h = coverage
+        wanted[y:y + h, x:x + w] = 1
+        np.testing.assert_array_equal(seen, wanted)  # no native gaps, overlap or out-of-bbox tiles
+    finally:
+        store.close()
+    # The formerly accepted local/cropped offsets must now fail before any output.
+    if origin != (0, 0):
+        selection["windows"] = [[x - origin[0], y - origin[1], w, h] for x, y, w, h in expected]
+        with pytest.raises(ValueError, match="deterministic"):
+            bridge.run(tmp_path, catalog_path, plan, tmp_path / "wrong-origin", allowlist=allow)
+        assert not (tmp_path / "wrong-origin").exists()

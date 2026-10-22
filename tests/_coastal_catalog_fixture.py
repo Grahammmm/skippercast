@@ -89,10 +89,6 @@ def window_set(source_id, source, windows, tiling=None, **extra):
     return value
 
 
-def tiling(width, height, *, tile=512, anchor=(-120.6, 34.6), cell=(0.0001, 0.0001)):
-    """Window-set native geometry: the grid, the CRS84 NW-valid-cell anchor and the cell size.
-
-    ``anchor`` is ``[west, north]`` of the north-west valid cell's north-west corner and
-    ``cell`` the CRS84 degrees per cell as ``[east, south]`` (both positive).
-    """
-    return dict(tile=tile, width=width, height=height, anchor=list(anchor), cell=list(cell))
+def tiling(width, height, *, tile=512, origin=(0, 0), anchor=(-120.6, 34.6), cell=(0.0001, 0.0001)):
+    """Full source dimensions, native NW-valid origin, its CRS84 corner and cell size."""
+    return dict(tile=tile, width=width, height=height, origin=list(origin), anchor=list(anchor), cell=list(cell))
