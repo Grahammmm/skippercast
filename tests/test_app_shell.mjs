@@ -127,7 +127,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<section class="app-stage" aria-label="Map">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
-  assert.equal(count(html, /class="ui-rail-item"/g), 7);
+  assert.equal(count(html, /class="ui-rail-item"/g), 8);
   assert.match(html, /role="group" aria-label="Time"/);
   assert.match(html, /<input type="range" class="ui-range ui-dock-range" aria-label="Hour"/);
   assert.doesNotMatch(html, /app-mark/, 'no mark card without a selection');
@@ -290,7 +290,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=clouds`);
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
-  assert.equal(count(panel, /class="ui-rail-item"/g), 7);
+  assert.equal(count(panel, /class="ui-rail-item"/g), 8);
   assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
   assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
