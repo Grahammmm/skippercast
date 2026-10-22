@@ -32,6 +32,7 @@ from shapely.geometry import shape
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from skippercast.platform.contracts import REPO, atomic_json, load_catalogs, load_region  # noqa: E402
 from skippercast.platform import depth_contours as dc  # noqa: E402
+from skippercast.coastal import vertical  # noqa: E402
 
 STRIP_BLOCKS = 64
 # Survey-edge display: outline simplification, and the shortest piece kept (a smaller gap still stops the lines).
@@ -59,6 +60,23 @@ def native_offsets(grid, lattice):
     return round(col0), round(row0), int(dc.CELL_M / cell)
 
 
+def require_contour_vertical(grid):
+    """Refuse explicit metadata incompatible with this legacy elevation reader.
+
+    Missing metadata retains the original producer metre/elevation convention;
+    it does not establish a resolved vertical contract or certify a datum.
+    Conversion requires the separate evidence-bound coastal.vertical path.
+    Inspect both band/dataset tags and vertical CRS axes, not sample signs.
+    """
+    observed = vertical.from_raster(grid)
+    if observed['conflicts']:
+        raise ValueError(f'{grid.name}: conflicting vertical metadata: {observed["conflicts"]}')
+    if observed['units'] not in (None, 'm'):
+        raise ValueError(f'{grid.name}: contour grids require vertical units in metres')
+    if observed['sign_hint'] not in (None, 'positive_up'):
+        raise ValueError(f'{grid.name}: contour grids require positive-up elevation')
+
+
 def merged_blocks(paths, lattice):
     """The grids merged cell by cell (the first grid with valid water wins each native cell) and averaged into CELL_M blocks.
 
@@ -69,6 +87,8 @@ def merged_blocks(paths, lattice):
     _, _, width, height = lattice
     grids = [rasterio.open(p) for p in paths]
     try:
+        for grid in grids:
+            require_contour_vertical(grid)
         offsets = [native_offsets(g, lattice) for g in grids]
         if len({n for _, _, n in offsets}) != 1 or len({str(g.crs) for g in grids}) != 1:
             raise ValueError('Every grid must share one projected CRS and cell size')
