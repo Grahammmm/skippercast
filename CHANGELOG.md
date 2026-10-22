@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an opt-in local coast terrain-RGB / contour-MVT preview with synthetic fixtures, a persistent not-for-navigation banner and manifest-derived source rights. The public coast route is unchanged; measured-source integration and publication remain held.
+
 - The Chart's Stations layer shows configured buoy and tide stations, with provider links and timestamped readings labelled stale when old; bound CDIP MOP model sites are available without enabling the Swell field.
 - The Chart draws Morro Bay's shelf depth contours at every zoom: a line every 30 ft (heavier and labelled every 150 ft) to 480 ft, traced from the reviewed USGS/CSUMB 2 m survey grids (2008). A dashed survey edge marks where the reviewed grid stops; past it, a missing line means no reviewed data, not shallow water. Each line opens a card with its survey, date and vertical datum; the datum is unverified (the grids declare none), so these are not chart depths and not for navigation. The NOAA chart base is unchanged.
 - Choose a NOAA tide prediction station within the region, or the nearest listed station to the port. The browser remembers each region's choice and offline chart packs include its predictions; bar and shore assessments keep their reviewed reference station.
