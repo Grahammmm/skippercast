@@ -22,10 +22,51 @@ from rasterio.warp import reproject, Resampling, transform_bounds
 from shapely.geometry import shape, mapping, LineString
 from shapely.ops import unary_union, transform, linemerge
 from pyproj import Transformer
+from scipy import ndimage
 
 LABEL = 'NOT FOR NAVIGATION; research preview; review_required'
 FOOT = 0.3048
 WORLD = 20037508.342789244
+TERRAIN_ENCODING_VERSION = 2
+TERRAIN_FORMULA = 'elevation_m = -10000 + (R*65536+G*256+B)*0.1'
+# Raw terrain-RGB readers that ignore alpha see -10000 m wherever RGB is 0.
+# Version 2 never writes that for an unsupported cell: RGB is filled instead.
+TERRAIN_DECODE = dict(
+    version=TERRAIN_ENCODING_VERSION, formula=TERRAIN_FORMULA, step_m=0.1,
+    support='alpha', supported_alpha=255, unsupported_alpha=0,
+    unsupported_rgb='nearest_supported_fill',
+    unsupported_rgb_is_data=False,
+    note='Alpha is the only support signal. RGB under alpha=0 is a display fill copied '
+         'from the nearest supported cell in the same tile; it is not a measurement. '
+         'Version 1 tiles wrote RGB=0 (-10000 m) there.')
+
+
+def encode_terrain(elevation, supported):
+    """RGBA uint8 (4, h, w) from elevation (m) and a support mask.
+
+    Unsupported cells get alpha=0 and the nearest supported cell's RGB, never 0.
+    A tile with no supported cell cannot be filled and is refused.
+    """
+    supported = np.asarray(supported, dtype=bool)
+    if not supported.any():
+        raise ValueError('Terrain tile has no supported cell')
+    encoded = np.rint((np.asarray(elevation, dtype='float64') + 10000) * 10)
+    if ((encoded[supported] < 0) | (encoded[supported] > 16777215)).any():
+        raise ValueError('Elevation outside terrain-RGB range')
+    encoded = np.where(supported, encoded, 0).astype('uint32')
+    if not supported.all():
+        rows, cols = ndimage.distance_transform_edt(~supported, return_distances=False,
+                                                    return_indices=True)
+        encoded = encoded[rows, cols]
+    return np.stack([(encoded >> 16) & 255, (encoded >> 8) & 255,
+                     encoded & 255, supported * 255]).astype('uint8')
+
+
+def decode_terrain(rgba):
+    """Masked elevation (m) from RGBA terrain tiles; alpha != 255 is masked."""
+    rgba = np.asarray(rgba).astype('int64')
+    elevation = -10000 + (rgba[0] * 65536 + rgba[1] * 256 + rgba[2]) * 0.1
+    return np.ma.masked_array(elevation, mask=rgba[3] != 255)
 
 
 def levels(max_depth_ft):
@@ -232,6 +273,7 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
         geojson.write_text(json.dumps(dict(type='FeatureCollection', features=features), allow_nan=False) + '\n')
         engine.mvt(geojson, output / 'vector', zoom)
         terrain = output / 'terrain'
+        written = 0
         span = 2 * WORLD / (2 ** zoom)
         for x, y in tiles:
             west, north = -WORLD + x * span, WORLD - y * span
@@ -242,20 +284,19 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                       dst_transform=affine, dst_crs='EPSG:3857', dst_nodata=-999999,
                       resampling=Resampling.nearest)
             supported = warped != -999999
-            encoded = np.rint((warped.astype('float64') + 10000) * 10)
-            if ((encoded[supported] < 0) | (encoded[supported] > 16777215)).any():
-                raise ValueError('Elevation outside terrain-RGB range')
-            encoded = np.where(supported, encoded, 0).astype('uint32')
-            rgba = np.stack([(encoded >> 16) & 255, (encoded >> 8) & 255,
-                             encoded & 255, supported * 255]).astype('uint8')
+            if not supported.any():
+                continue
+            rgba = encode_terrain(warped, supported)
+            written += 1
             tile = terrain / str(zoom) / str(x) / f'{y}.png'
             tile.parent.mkdir(parents=True, exist_ok=True)
             with rasterio.open(tile, 'w', driver='PNG', width=256, height=256, count=4, dtype='uint8') as target:
                 target.write(rgba)
-        result = dict(schema_version=1, status='review_required', navigation=LABEL,
+        result = dict(schema_version=1, terrain_encoding_version=TERRAIN_ENCODING_VERSION, status='review_required', navigation=LABEL,
                       contour_features=len(features), levels_ft=depths, simplify_m=tolerance,
-                      zoom=zoom, terrain_tiles=len(tiles), value_convention='elevation_positive_up',
-                      terrain_encoding='elevation_m = -10000 + (R*65536+G*256+B)*0.1; alpha=0 unsupported',
+                      zoom=zoom, terrain_tiles=written, terrain_tiles_without_support=len(tiles) - written, value_convention='elevation_positive_up',
+                      terrain_encoding=TERRAIN_FORMULA + '; alpha=0 unsupported; RGB under alpha=0 is a fill, not data',
+                      terrain_decode=TERRAIN_DECODE,
                       contour_crs='EPSG:4326', tile_scheme='XYZ',
                       terrain_template='terrain/{z}/{x}/{y}.png', vector_template='vector/{z}/{x}/{y}.pbf',
                       limitations=['Synthetic/local preview only; no datum reconciliation or seam acceptance.'])

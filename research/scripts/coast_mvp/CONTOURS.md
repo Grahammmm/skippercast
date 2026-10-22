@@ -35,8 +35,17 @@ Output:
     terrain/{z}/{x}/{y}.png        XYZ 256x256 RGBA terrain-RGB
     manifest.json                 templates, encoding, counts, limitations
 
-Terrain encoding: elevation_m = -10000 + (R*65536 + G*256 + B)*0.1.
-Alpha=0 is unsupported; alpha=255 is supported. Terrain uses nearest source
+Terrain encoding (version 2): elevation_m = -10000 + (R*65536 + G*256 + B)*0.1.
+Alpha is the only support signal: alpha=255 supported, alpha=0 unsupported.
+Version 1 wrote RGB=0 under alpha=0, which a decoder that ignores alpha reads as
+-10000 m (a false cliff at every support edge). Version 2 fills RGB under alpha=0
+with the nearest supported cell in the same tile, so alpha-blind readers see a
+plausible, flat edge. That fill is a display device, not data; a tile with no
+supported cell is not written. Supported cells and alpha are unchanged from
+version 1, so alpha-aware readers need no change. manifest.json keeps
+schema_version 1 and adds terrain_encoding_version and terrain_decode (formula,
+support rule, fill rule) as the decode contract; terrain_tiles counts tiles written
+and terrain_tiles_without_support those skipped. Terrain uses nearest source
 sampling to avoid inventing interpolation across contributor boundaries;
 RGB precision is 0.1 metre, not a statement of source accuracy. Transparent
 pixels must not be interpreted as measured elevation. PNG georeferencing is

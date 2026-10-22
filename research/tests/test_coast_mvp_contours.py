@@ -221,3 +221,46 @@ def test_fail_closed_inputs(stack, make_rasters, case):
         (directory / 'output').mkdir()
     with pytest.raises((ValueError, FileExistsError)):
         run(c2, directory, **kwargs)
+
+
+def test_unsupported_terrain_cells_never_decode_to_minus_10000(stack, make_rasters):
+    np, rio, *_, c2 = stack
+    directory = make_rasters()
+    result = run(c2, directory)
+    decode = result['terrain_decode']
+    assert result['terrain_encoding_version'] == decode['version'] == 2
+    assert decode['support'] == 'alpha' and decode['unsupported_alpha'] == 0
+    assert decode['unsupported_rgb'] == 'nearest_supported_fill'
+    assert decode['unsupported_rgb_is_data'] is False
+    masked_cells = 0
+    for tile in (directory / 'output/terrain').rglob('*.png'):
+        with rio.open(tile) as grid:
+            rgba = grid.read()
+        decoded = c2.decode_terrain(rgba)
+        masked_cells += int(decoded.mask.sum())
+        # Round trip yields the mask; even a reader that ignores alpha sees no cliff.
+        assert np.array_equal(decoded.mask, rgba[3] != 255)
+        raw = -10000 + (rgba[0].astype("int64") * 65536 + rgba[1].astype("int64") * 256 + rgba[2]) * 0.1
+        assert raw.min() > -1000
+        lo, hi = decoded.min(), decoded.max()
+        assert raw.min() >= lo - 0.051 and raw.max() <= hi + 0.051
+    assert masked_cells
+
+
+def test_encode_terrain_fill_and_refusals(stack):
+    np, *_, c2 = stack
+    elevation = np.full((4, 4), -999999.0)
+    elevation[1:3, 1:3] = [[-5.0, -6.0], [-7.0, -8.0]]
+    supported = elevation != -999999
+    rgba = c2.encode_terrain(elevation, supported)
+    decoded = c2.decode_terrain(rgba)
+    assert np.array_equal(decoded.mask, ~supported)
+    assert np.allclose(decoded.data[supported], elevation[supported], atol=0.051)
+    assert decoded.data[0, 0] == pytest.approx(-5.0, abs=0.051)   # nearest supported cell
+    assert decoded.data[3, 3] == pytest.approx(-8.0, abs=0.051)
+    assert (rgba[3][~supported] == 0).all() and (rgba[3][supported] == 255).all()
+    assert not ((rgba[:3] == 0).all(axis=0)).any()
+    with pytest.raises(ValueError):
+        c2.encode_terrain(elevation, np.zeros((4, 4), dtype=bool))
+    with pytest.raises(ValueError):
+        c2.encode_terrain(np.full((4, 4), 2000000.0), np.ones((4, 4), dtype=bool))
