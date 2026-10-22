@@ -191,7 +191,13 @@ def evidence_summary(cfg, now):
         require(doc['schema'] == contract and doc['window_set'] == cfg['windows'], 'evidence contract/windows differ')
         require(doc.get('support_policy') == cfg.get('support_policy'), 'evidence support policy differs')
         require(epoch(doc['checked_at']) <= now and epoch(doc['valid_until']) > now + 7200, 'evidence freshness margin exhausted')
-        require('HOLD' not in str(doc.get('status', '')).upper() and not doc.get('holds', doc.get('holds_added', [])), 'evidence held')
+        # Both fields are independent vetoes: an empty holds list must never
+        # hide holds_added. Null/wrongly typed lists also fail closed.
+        require(doc.get('holds', []) == [] and doc.get('holds_added', []) == [], 'evidence held')
+        # Some role contracts use a decision instead of a status. Preserve that
+        # vocabulary, but never turn an explicit refusal into an admission.
+        status = str(doc.get('status', '')).upper()
+        require('HOLD' not in status and 'REFUSED' not in status, 'evidence held or refused')
         require(doc.get('reviewer_id') and 'opus' not in doc['reviewer_id'].lower(), 'independent evidence required')
         selection = cfg['inputs']['selection']
         prescan = doc.get('prescan_evidence', [])
